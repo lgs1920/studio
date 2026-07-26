@@ -24,6 +24,8 @@ export const TRACK_RENDER_SMOOTHING_MAX_STEP = 6
 
 const LINE_STRING = 'LineString'
 const MULTI_LINE_STRING = 'MultiLineString'
+const renderedTrackContentCache = new WeakMap()
+const MAX_SMOOTHED_SEGMENT_POINTS = 4096
 
 const finiteNumber = value => {
     if (value === null || value === undefined || value === '') {
@@ -57,6 +59,20 @@ const normalizeStep = (value, fallback = TRACK_RENDER_SMOOTHING_DEFAULT.step) =>
 const cloneCoordinate = coordinate => Array.isArray(coordinate) ? [...coordinate] : coordinate
 
 const deepClone = value => JSON.parse(JSON.stringify(value))
+
+const getWeakMapBucket = (cache, key) => {
+    if (!key || (typeof key !== 'object' && typeof key !== 'function')) {
+        return null
+    }
+
+    let bucket = cache.get(key)
+    if (!bucket) {
+        bucket = new Map()
+        cache.set(key, bucket)
+    }
+
+    return bucket
+}
 
 const interpolateCoordinate = (start, stop, ratio) => {
     const dimensions = Math.max(2, Math.min(start?.length ?? 0, stop?.length ?? 0))
@@ -131,8 +147,18 @@ export const resolveTrackRenderSmoothing = track => {
     return normalizeTrackRenderSmoothing(source, defaults)
 }
 
-export const trackRenderSmoothingKey = track => {
-    const smoothing = resolveTrackRenderSmoothing(track)
+const effectiveTrackRenderSmoothing = (track, {forceRenderSmoothing = false, renderSmoothing = undefined} = {}) => {
+    const smoothing = renderSmoothing === undefined
+                      ? resolveTrackRenderSmoothing(track)
+                      : normalizeTrackRenderSmoothing(renderSmoothing, resolveTrackRenderSmoothing(track))
+
+    return forceRenderSmoothing === true
+           ? {...smoothing, enabled: true}
+           : smoothing
+}
+
+export const trackRenderSmoothingKey = (track, options = {}) => {
+    const smoothing = effectiveTrackRenderSmoothing(track, options)
 
     return `${smoothing.enabled ? 1 : 0}:${smoothing.step}`
 }
@@ -141,19 +167,29 @@ export const smoothCoordinateSegment = (coordinates, step) => {
     let result = Array.isArray(coordinates) ? coordinates.map(cloneCoordinate) : []
 
     for (let index = 0; index < step; index++) {
+        const projectedLength = ((result.length - 1) * 2) + 1
+        if (projectedLength > MAX_SMOOTHED_SEGMENT_POINTS) {
+            break
+        }
         result = chaikinPass(result)
     }
 
     return result
 }
 
-export const getTrackRenderContent = track => {
+export const getTrackRenderContent = (track, options = {}) => {
     const content = track?.content
     const geometry = content?.geometry
-    const smoothing = resolveTrackRenderSmoothing(track)
+    const smoothing = effectiveTrackRenderSmoothing(track, options)
 
     if (!smoothing.enabled || !geometry || ![LINE_STRING, MULTI_LINE_STRING].includes(geometry.type)) {
         return content
+    }
+
+    const smoothingKey = trackRenderSmoothingKey(track, options)
+    const cachedContent = getWeakMapBucket(renderedTrackContentCache, content)?.get(smoothingKey)
+    if (cachedContent) {
+        return cachedContent
     }
 
     const renderContent = deepClone(content)
@@ -162,6 +198,8 @@ export const getTrackRenderContent = track => {
                                          ? smoothCoordinateSegment(geometry.coordinates, smoothing.step)
                                          : (geometry.coordinates ?? [])
                                              .map(segment => smoothCoordinateSegment(segment, smoothing.step))
+
+    getWeakMapBucket(renderedTrackContentCache, content)?.set(smoothingKey, renderContent)
 
     return renderContent
 }

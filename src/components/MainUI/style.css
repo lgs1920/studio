@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-06-02
- * Last modified: 2026-06-02
+ * Created on: 2026-07-13
+ * Last modified: 2026-07-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -79,8 +79,13 @@ html {
     flex-direction: column;
     margin: var(--lgs-gutter-s) var(--lgs-gutter-s) 0 var(--lgs-gutter-s);
     pointer-events: auto;
+    --sync-linked-actions-border-width: 2px;
     gap: var(--lgs-gutter-xs);
 
+}
+
+#secondary-buttons-bar-content > :not(.sync-linked-actions) {
+    margin-left: var(--sync-linked-actions-border-width);
 }
 
 .sync-linked-actions {
@@ -89,7 +94,27 @@ html {
     align-items: center;
     flex-direction: column;
     width: fit-content;
+    margin-top: var(--lgs-gutter);
+    border-radius: var(--lgs-border-radius-s);
+    border: var(--sync-linked-actions-border-width) solid transparent;
+    outline: none;
+    background-color: transparent;
     gap: var(--lgs-gutter-xs);
+}
+
+.sync-linked-actions.is-linked {
+    border-color: var(--wa-color-brand);
+    background-color: var(--wa-color-brand);
+}
+
+.sync-linked-actions.is-unlinked {
+    background-color: transparent;
+}
+
+.sync-linked-actions.is-unlinked:hover {
+    border-color: transparent;
+    outline: none;
+    background-color: transparent;
 }
 
 .sync-linked-actions-badge {
@@ -98,7 +123,7 @@ html {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    pointer-events: none;
+    pointer-events: auto;
 }
 
 .sync-link-badge::part(base) {
@@ -168,7 +193,7 @@ html {
 }
 
 .orbit-widget.wa-theme-lgs1920-on-map {
-    --orbit-widget-icon-color: var(--wa-color-brand-on-quiet);
+    --orbit-widget-icon-color: var(--lgs-text-on-color);
     padding: var(--lgs-on-map-padding, var(--lgs-gutter-xs)) !important;
     border-radius: var(--lgs-on-map-border-radius, var(--lgs-border-radius-s));
     background-color: color-mix(in oklab, var(--lgs-card-on-map-bg-color) 96%, black 4%);
@@ -216,6 +241,46 @@ html {
 
 .orbit-widget-footer-centered {
     justify-content: center;
+}
+
+.orbit-widget-footer-stack {
+    flex-direction: column;
+}
+
+.ion-token-prompt {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
+
+.ion-token-prompt-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: var(--lgs-gutter-s);
+}
+
+.ion-token-prompt-actions wa-button {
+    width: auto;
+}
+
+.ion-token-prompt wa-input {
+    width: 100%;
+}
+
+.ion-token-help-scroll {
+    width: 100%;
+    height: min(60vh, 40rem);
+    min-height: min(18rem, 60vh);
+    overflow: hidden;
+}
+
+.ion-token-help-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+    padding-right: var(--lgs-gutter-s);
 }
 
 .orbit-widget-divider {
@@ -318,7 +383,7 @@ html {
     --thumb-width: 0.8rem;
     --thumb-height: 0.8rem;
     --lgs-slider-track-color: color-mix(in oklab, var(--lgs-card-on-map-bg-color) 74%, var(--wa-color-brand) 26%);
-    --lgs-slider-thumb-color: var(--wa-color-brand);
+    --lgs-slider-thumb-color: var(--lgs-text-on-color);
 }
 
 .orbit-widget.wa-theme-lgs1920-on-map .panorama-widget-range::part(slider) {
@@ -342,7 +407,13 @@ html {
     font-size: var(--lgs-font-size-s);
     font-weight: 400;
     line-height: 1;
-    color: var(--wa-color-brand);
+    color: var(--lgs-text-on-color);
+}
+
+.orbit-widget.wa-theme-lgs1920-on-map wa-button::part(base),
+.orbit-widget.wa-theme-lgs1920-on-map wa-icon-button::part(base) {
+    color: var(--lgs-text-on-color);
+    border-color: var(--lgs-card-on-map-border-color);
 }
 
 .orbit-direction-toggle,
@@ -690,6 +761,14 @@ body.mobile .orbit-widget-body {
     max-height: calc(var(--lgs-line-dimension) - 2 * var(--lgs-gutter-xs));
 }
 
+.journey-toolbar.wa-theme-lgs1920-on-map :is(wa-button, wa-icon-button)::part(base) {
+    color: var(--lgs-text-on-color);
+}
+
+.journey-toolbar.wa-theme-lgs1920-on-map wa-icon {
+    color: var(--lgs-text-on-color);
+}
+
 
 /***************************************
  * Dropdown Toolbar
@@ -724,9 +803,9 @@ body.mobile .orbit-widget-body {
 }
 
 /***************************************
- * Flythrough Controls
+ * JourneyReplay Controls
  */
-.flythroughDuration {
+.replayDuration {
     width: 7rem;
 }
 
@@ -741,7 +820,7 @@ body.mobile .orbit-widget-body {
     overflow: hidden;
     transition: background-color var(--welcome-exit-duration, 3000ms) ease;
     color: var(--lgs-text-on-color);
-    background-color: var(--lgs-dark-color-95);
+    background-color: transparent;
     inset: 0;
     --welcome-overlay-transition-duration: 600ms;
 }
@@ -762,16 +841,22 @@ body.mobile .orbit-widget-body {
 
 .welcome-modal-media {
     transition: opacity var(--welcome-exit-duration, 3000ms) ease;
-    background: var(--lgs-dark-color-95) var(--welcome-background-image, url("/assets/images/welcome-splash.png")) center / cover no-repeat;
+    background: transparent;
 }
 
 .welcome-modal-video {
     width: 100%;
     height: 100%;
     transform: scale(1.015);
+    transition: opacity 350ms ease;
+    opacity: 0;
     filter: blur(var(--welcome-video-blur, 7px)) brightness(var(--welcome-video-brightness, .84)) saturate(var(--welcome-video-saturation, .72));
     object-fit: cover;
     object-position: center;
+}
+
+#welcome-modal.welcome-modal-video-ready .welcome-modal-video {
+    opacity: 1;
 }
 
 .welcome-modal-fog {
@@ -815,35 +900,37 @@ body.mobile .orbit-widget-body {
 
 #welcome-modal .welcome-logo {
     position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    width: min(28rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter))) !important;
-    min-height: 14rem;
-    color: white;
-    border-color: transparent;
-    background: transparent;
-    box-shadow: none;
-    text-shadow: 0 2px 18px var(--lgs-dark-color-90);
-    gap: var(--lgs-gutter);
+    display: block;
+    width: min(200px, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter))) !important;
+    margin-inline: auto;
 }
 
-#welcome-modal .welcome-logo img {
-    filter: brightness(0) invert(1) drop-shadow(0 2px 18px var(--lgs-dark-color-90));
+#welcome-modal .welcome-logo svg {
+    display: block;
+    width: 100%;
+    height: auto;
 }
 
-#welcome-modal .welcome-logo .the-slogan,
-#welcome-modal .welcome-logo .version-info {
-    color: white;
+#welcome-modal .welcome-slogan {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: min(28rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
+    margin: 0 0 var(--lgs-gutter);
+    color: var(--wa-color-brand-fill-loud);
+    filter: drop-shadow(0 2px 14px var(--lgs-dark-color-90));
 }
 
-#welcome-modal .welcome-logo-bootstrap {
-    padding: var(--lgs-gutter);
+#welcome-modal .welcome-slogan text {
+    font-size: clamp(3.5rem, calc(2.25 * var(--lgs-gutter)), 5rem);
+}
+
+#welcome-modal .welcome-slogan-stroke {
+    opacity: 1;
 }
 
 #welcome-modal > .welcome-modal-timer {
-    font-size: calc(var(--lgs-font-size-l) / 2);
-    font-weight: var(--lgs-font-weight-bold);
+    font-size: var(--lgs-font-size-s);
     line-height: 1;
     position: absolute;
     z-index: 4;

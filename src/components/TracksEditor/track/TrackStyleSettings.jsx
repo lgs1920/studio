@@ -38,6 +38,7 @@ import {
 import { colord }                                   from 'colord'
 import { useCallback, useEffect, useRef }           from 'react'
 import { useSnapshot }                              from 'valtio'
+import { useOptionalSnapshot }                      from '@Utils/ValtioUtils'
 import { Utils }                                    from '../Utils'
 import { TrackStylePreview }                        from './TrackStylePreview'
 
@@ -75,35 +76,39 @@ const TrackStyleField = ({label, hint, className = '', children}) => (
     </div>
 )
 
-const TrackStyleColorField = ({label, hint, value, onChange, className = ''}) => (
-    <TrackStyleField label={label} hint={hint} className={`lgs--track-style-color-field ${className}`.trim()}>
-        <div className="lgs--track-style-color-control">
-            <WaColorPicker
-                className="lgs--track-style-color-picker"
-                size="s"
-                aria-label={label}
-                value={toOpaqueColorValue(value)}
-                swatches={lgs.settings.getSwatches.list.join(';')}
-                onInput={(event) => onChange(composeColorValue(event.target.value, getOpacityValue(value)))}
-            />
-            <WaSlider
-                className="lgs--track-style-opacity-slider"
-                size="s"
-                label="Opacity"
-                min="0"
-                max="1"
-                step="0.05"
-                label-at-start
-                width-auto
-                placement="top"
-                withTooltip
-                value={getOpacityValue(value)}
-                valueFormatter={formatSliderPercent}
-                onInput={(event) => onChange(composeColorValue(toOpaqueColorValue(value), event.target.value))}
-            />
-        </div>
-    </TrackStyleField>
-)
+const TrackStyleColorField = ({label, hint, value, onChange, className = ''}) => {
+    const swatches = useOptionalSnapshot(lgs.settings.swatches, {list: []}).list.join(';')
+
+    return (
+        <TrackStyleField label={label} hint={hint} className={`lgs--track-style-color-field ${className}`.trim()}>
+            <div className="lgs--track-style-color-control">
+                <WaColorPicker
+                    className="lgs--track-style-color-picker"
+                    size="s"
+                    aria-label={label}
+                    value={toOpaqueColorValue(value)}
+                    swatches={swatches}
+                    onInput={(event) => onChange(composeColorValue(event.target.value, getOpacityValue(value)))}
+                />
+                <WaSlider
+                    className="lgs--track-style-opacity-slider"
+                    size="s"
+                    label="Opacity"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    label-at-start
+                    width-auto
+                    placement="top"
+                    withTooltip
+                    value={getOpacityValue(value)}
+                    valueFormatter={formatSliderPercent}
+                    onInput={(event) => onChange(composeColorValue(toOpaqueColorValue(value), event.target.value))}
+                />
+            </div>
+        </TrackStyleField>
+    )
+}
 
 const TrackStyleNumberField = ({label, unit, hint, className = '', ...props}) => (
     <TrackStyleField

@@ -7,14 +7,15 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2026-07-08
+ * Last modified: 2026-07-08
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { INFO_CHANGELOG_TAB, INFO_DRAWER } from '@Core/constants'
+import { LogoSvg }                         from '@Components/MainUI/LogoSvg'
 import { WaButton, WaDivider, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import React                           from 'react'
 
@@ -31,7 +32,8 @@ const DrawerFooter = React.memo(() => (
         <WaDivider/>
         <div className="drawer-pane-footer credits-pane-footer" slot="footer">
 
-            <div>
+            <div className="drawer-footer-studio">
+
                 <strong>{lgs?.servers?.studio?.shortname || 'Studio'}</strong>
                 <span>{lgs?.versions?.studio || 'N/A'}</span>
             </div>

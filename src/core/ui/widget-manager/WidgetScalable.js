@@ -50,6 +50,74 @@ export class WidgetScalable {
         return Number.isFinite(scale) ? scale : 1
     }
 
+    #toScaleLimit = (value, fallback, axis) => {
+        const raw = typeof value === 'object' ? value?.[axis] : value
+        const limit = Number(raw)
+        return Number.isFinite(limit) && limit > 0 ? limit : fallback
+    }
+
+    #getScaleRange = config => {
+        let minScaleX = 0
+        let minScaleY = 0
+        let maxScaleX = Infinity
+        let maxScaleY = Infinity
+
+        if (config?.dimensions && config.min && config.max) {
+            const {width, height} = config.dimensions
+            if (width > 0 && height > 0) {
+                minScaleX = config.min.width / width
+                minScaleY = config.min.height / height
+                maxScaleX = config.max.width / width
+                maxScaleY = config.max.height / height
+            }
+        }
+
+        minScaleX = this.#toScaleLimit(config?.minScale, minScaleX, 'x')
+        minScaleY = this.#toScaleLimit(config?.minScale, minScaleY, 'y')
+        maxScaleX = this.#toScaleLimit(config?.maxScale, maxScaleX, 'x')
+        maxScaleY = this.#toScaleLimit(config?.maxScale, maxScaleY, 'y')
+
+        return {
+            minScaleX,
+            minScaleY,
+            maxScaleX: Math.max(minScaleX, maxScaleX),
+            maxScaleY: Math.max(minScaleY, maxScaleY),
+        }
+    }
+
+    #getScaleSize = (config, scale, fallback) => {
+        const width = config?.dimensions?.width
+        const height = config?.dimensions?.height
+        if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+            return fallback
+        }
+
+        return [width * scale.x, height * scale.y]
+    }
+
+    #anchorAfterScale = (element, config) => {
+        const anchor = config?.anchorOnScale
+        if (!anchor) {
+            return
+        }
+
+        const methodName = {
+            center:         'toCenter',
+            top:            'toTop',
+            left:           'toLeft',
+            right:          'toRight',
+            bottom:         'toBottom',
+            'top-left':     'toTopLeft',
+            'top-right':    'toTopRight',
+            'bottom-left':  'toBottomLeft',
+            'bottom-right': 'toBottomRight',
+        }[anchor]
+
+        if (methodName && typeof this.#widgetManager[methodName] === 'function') {
+            this.#widgetManager[methodName](element, config.margin)
+        }
+    }
+
     /**
      * Clamps a scale {x, y} value according to config.min and config.max dimensions.
      * If ratio is locked, clamps both axes to the same value (most restrictive).
@@ -60,23 +128,14 @@ export class WidgetScalable {
      */
     clampScale = (scale, config) => {
         // Guard clause
-        if (!scale || !config?.dimensions || !config.min || !config.max) {
+        if (!scale) {
             return scale
         }
 
-        const {width, height} = config.dimensions
-        const minWidth = config.min.width
-        const minHeight = config.min.height
-        const maxWidth = config.max.width
-        const maxHeight = config.max.height
-
-        const minScaleX = minWidth / width
-        const minScaleY = minHeight / height
-        const maxScaleX = maxWidth / width
-        const maxScaleY = maxHeight / height
+        const {minScaleX, minScaleY, maxScaleX, maxScaleY} = this.#getScaleRange(config)
 
         // If ratio is locked, use the most restrictive scale factor
-        const isRatioLocked = config.ratio?.locked === true
+        const isRatioLocked = config?.ratio?.locked === true
 
         if (isRatioLocked) {
             // Compute allowed scale range for both axes
@@ -115,6 +174,7 @@ export class WidgetScalable {
             x: this.#toScaleValue(event.scale?.[0]),
             y: this.#toScaleValue(event.scale?.[1]),
         }
+        config.scale = this.clampScale(config.scale, config)
         this.#widgetTransform.applyScaleVariables(target, config.scale)
         this.#widgetManager.isScaling = false
     }
@@ -127,8 +187,17 @@ export class WidgetScalable {
         this.#widgetManager.isScaling = true
         event.target.classList.add('scaling')
         const config = await this.#widgetManager.retrieveConfig(event.target)
-        event.setMinScaleSize([config.min.width, config.min.height])
-        event.setMaxScaleSize([config.max.width, config.max.height])
+        const range = this.#getScaleRange(config)
+        event.setMinScaleSize(this.#getScaleSize(
+            config,
+            {x: range.minScaleX, y: range.minScaleY},
+            [config.min.width, config.min.height],
+        ))
+        event.setMaxScaleSize(this.#getScaleSize(
+            config,
+            {x: range.maxScaleX, y: range.maxScaleY},
+            [config.max.width, config.max.height],
+        ))
 
         if (config.animationWhenScaling) {
             event.target.classList.add(LGS_ANIMATION_SCALING)
@@ -159,8 +228,8 @@ export class WidgetScalable {
 
         // Now get the transforms (scale without translate)
         const transforms = this.#widgetTransform.getTransform(event.target)
-        config.scale = transforms.scale
-        this.#widgetTransform.applyScaleVariables(event.target, config.scale)
+        config.scale = this.clampScale(transforms.scale, config)
+        this.#widgetTransform.setScale(event.target, config.scale.x, config.scale.y)
         config.runtimeReady = true
 
         // Position was already updated by commitTranslateToPosition
@@ -168,6 +237,7 @@ export class WidgetScalable {
         const left = parseFloat(event.target.style.left || '0')
         const top = parseFloat(event.target.style.top || '0')
         config.position = {left, top}
+        this.#anchorAfterScale(event.target, config)
 
         if (config.persist) {
             await this.#widgetManager.saveWidgetPosition(config.id, config)

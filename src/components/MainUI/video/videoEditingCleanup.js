@@ -16,11 +16,48 @@
 
 import { CROP_TOOLS_WIDGETS, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 
+export const prepareVideoEditingUi = () => {
+    globalThis.__?.ui?.widgetCache?.hideAllExceptBoards?.(VIDEO_WIDGETS_BOARD)
+}
+
+const closeVideoCropperMenus = () => {
+    const cropper = globalThis.lgs?.stores?.ui?.video?.cropper
+    if (!cropper) {
+        return
+    }
+
+    cropper.ratioEditor = false
+    cropper.presetEditor = false
+    cropper.widgetEditor = false
+}
+
+export const prepareVideoCaptureUi = () => {
+    prepareVideoEditingUi()
+    closeVideoCropperMenus()
+    globalThis.__?.ui?.contextMenu?.hide?.()
+
+    const replayStore = globalThis.lgs?.stores?.replay
+    if (replayStore) {
+        // The capture canvas must stay free of the interactive MainUI for both
+        // standalone videos and replay-linked recordings.
+        replayStore.mainUiHidden = true
+    }
+}
+
+export const restoreVideoCaptureUi = () => {
+    globalThis.__?.ui?.widgetCache?.restoreAllHiddenWidgetsExcept?.(VIDEO_WIDGETS_BOARD)
+
+    const replayStore = globalThis.lgs?.stores?.replay
+    if (replayStore) {
+        replayStore.mainUiHidden = false
+    }
+}
+
 export const cancelVideoEditing = () => {
     lgs.stores.ui.video.editing = false
     __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGETS, true)
 
-    __.ui.widgetCache.restoreAllHiddenWidgetsExcept(VIDEO_WIDGETS_BOARD)
+    restoreVideoCaptureUi()
     __.ui.contextMenu.hide()
     __.ui.drawerManager.close()
 }

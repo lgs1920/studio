@@ -2,7 +2,9 @@
 # Layers and Terrains
 ########################################
 ## Current IDs
-base: arcgis-wayback-20191212         # ID of the current base
+base: arcgis-normal                   # ID of the current base
+base3d: null                          # ID of the current 3D base scene
+tiles3d: null                         # ID of the current 3D tiles overlay
 overlay: null                         # ID of the current overlay
 terrain: cesium-world                 # ID of the current terrain
 
@@ -20,16 +22,56 @@ filter:
 
 ## Providers List
 providers:
+  - id: reearth
+    name: Re:Earth
+    fullname: Re:Earth
+    credits: 'Re:Earth Terrain - Mapterhorn - EGM2008'
+    logo: 'https://avatars.githubusercontent.com/u/78837781?s=200&v=4'
+    url: "https://terrain.reearth.land/"
+    layers:
+      ## WorldTerrain
+      - name: World Terrain
+        id: reearth-world
+        image: reearth-world.png
+        usage:
+          type: free
+          doc: 'https://github.com/reearth/reearth-terrain'
+
+        type: terrain
+        terrainType: 'url'
+        url: 'https://terrain.reearth.land/cesium-mesh/ellipsoid'
+
+      ## Buildings
+      - name: Buildings
+        id: reearth-buildings
+        image: reearth-world.png
+        usage:
+          type: free
+          doc: 'https://github.com/reearth/reearth-buildings'
+
+        type: tiles3d
+        show: true
+        tiles3d:
+          kind: url
+          url: 'https://buildings.reearth.land/tileset.json'
+          flyToOnLoad: false
+          maximumScreenSpaceError: 16
+          errorLabel: 'Re:Earth Buildings server error'
+          errorLabelHeight: 120
+          errorLabelPerTileMaxHeight: 5000
+
   ## Cesium
   - id: cesium
     name: Cesium
-    credits: 'Credits CesiumJS'
+    fullname: Cesium
+    credits: 'Esri, Vantor, Earthstar Geographics, and the GIS User Community'
     logo: ''
     url: 'https://cesium.com/platform/cesiumjs/'
     layers:
       ## WorldTerrain
       - name: World Terrain
         id: cesium-world
+        assetId: 1
         image: cesium-world.png
         usage:
           type: free
@@ -50,10 +92,81 @@ providers:
         terrainType: 'ellipsoid'
         noRelief: true
 
-  ## IGN Provider
+      ## Google Photorealistic 3D Tiles
+      - name: Google Photo 3D
+        id: google-photorealistic-3d
+        image: cesium-world.png
+        assetId: 2275207
+        usage:
+          type: personal
+          doc: ''
+
+        type: base3d
+        sceneKind: google-photorealistic
+        base3d:
+          flyToOnLoad: false
+          showGlobe: true
+          showTerrain: false
+
+      ## Azure Maps Aerial
+      - name: Azure Maps Aerial
+        id: azure-maps-aerial
+        image: cesium-world.png
+        assetId: 3891168
+        usage:
+          type: personal
+          doc: ''
+
+        type: base
+        tile: ion
+        imageryKind: ion
+
+      ## Google Maps 2D Photos
+      - name: Google Maps 2D\Photos
+        id: google-maps-2d-satellite
+        image: cesium-world.png
+        assetId: 3830182
+        usage:
+          type: personal
+          doc: ''
+
+        type: base
+        tile: ion
+        imageryKind: google2d
+        mapType: satellite
+
+      ## Google Maps 2D Satellite with Labels
+      - name: Google Maps 2D\Photos + Labels
+        id: google-maps-2d-satellite-labels
+        image: cesium-world.png
+        assetId: 3830183
+        usage:
+          type: personal
+          doc: ''
+
+        type: base
+        tile: ion
+        imageryKind: google2d
+        mapType: satellite
+
+      ## Azure Maps With Label
+      - name: Azure Maps\Photos + Labels
+        id: azure-maps-with-label
+        image: cesium-world.png
+        assetId: 3891168
+        usage:
+          type: personal
+          doc: ''
+
+        type: overlay
+        tile: ion
+        imageryKind: ion
+
+  ## IGN Provider (France)
   - id: ign                           # Provider ID
     name: IGN (France)                    # Provider name
-    credits: 'Credits IGN (France)'       # Credits added to logo
+    fullname: Institut national de l'information géographique et forestière
+    credits: 'IGN (FR)'       # Credits added to logo
     # Logo
     logo: /assets/images/layers/logos/ign-simplifie.svg
     url: 'https://ign.fr'             # Provider Url
@@ -250,8 +363,9 @@ providers:
         type: overlay
   ## WayMarked Trail Provider
   - id: wmt
-    name: WayMarked Trail
-    credits: 'Credits https://waymarkedtrails.org/'
+    name: WMT
+    fullname: WayMarked Trails
+    credits: 'WMT'
     logo: ''
     url: 'https://waymarkedtrails.org/'
     layers:
@@ -273,8 +387,9 @@ providers:
 
   ## SwissTopo
   - id: swtopo
-    name: Swisstopo
-    credits: 'Credits Swisstopo'
+    name: swisstopo (Swiss)
+    fullname: swisstopo
+    credits: 'swisstopo (CH)'
     logo: https://www.geo.admin.ch/images/swiss-logo-flag.svg
     url: 'https://geo.admin.ch/'
     layers:
@@ -296,7 +411,7 @@ providers:
         credits: 'Credits Swisstopo'
 
       ## Photo
-      - name: Swisstopo Imagery
+      - name: Swisstopo Photos
         id: swtopo-img
         image: swtopo-img.png
         usage:
@@ -315,37 +430,38 @@ providers:
 
   ## wayback
   ## https://wayback.maptiles.arcgis.com/arcgis/rest/services/world_imagery/mapserver/wmts/1.0.0/wmtscapabilities.xml
-  - id: arcgis
-    name: ArcGIS
-    credits: 'Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'
+  - id: esri
+    name: ESRI Wayback
+    fullname: ESRI Wayback
+    credits: 'Esri'
     logo: ''
-    url: 'https://arcgis.com/'
+    url: 'https://livingatlas.arcgis.com//'
     layers:
       # Tracks
-      - name: Wayback Last\(2024-11-18)
-        id: arcgis-wayback-last
-        image: arcgis-wayback-last.png
+      - name: Summer\(20260630)
+        id: arcgis-normal
+        image: arcgis-normal.png
         usage:
           type: free
           doc: ''
 
         tile: wayback
-        url: 'https://wayback-b.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/49849/'
+        url: 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/22869/'
         minimumLevel: 0
         maximumLevel: 23
         doc: ''
         type: base
 
 
-      - name: Wayback\(2019-12-12)
-        id: arcgis-wayback-20191212
-        image: arcgis-wayback-20191212.png
+      - name: Winter\(20260226)
+        id: arcgis-winter
+        image: arcgis-winter.png
         usage:
           type: free
           doc: ''
 
         tile: wayback
-        url: 'https://wayback-b.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/4756/'
+        url: 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/64001/'
         minimumLevel: 0
         maximumLevel: 23
         doc: ''
@@ -354,9 +470,10 @@ providers:
   ## Open Street Map
 
   - id: osm
-    name: OpenStreetMap
-    credits: Credits Openstreetmap.org & contributors
-    logo: ''
+    name: OSM
+    fullname: OpenStreetMap
+    credits: 'OSM'
+    logo: /assets/images/layers/logos/openstreetmap.png
     url: 'https://www.openstreetmap.org'
     layers:
       # OpenStreetMap standard
@@ -376,8 +493,9 @@ providers:
 
   ## Open Topo Map Provider
   - id: otm
-    name: OpenTopoMap
-    credits: Credits OpenTopoMap.org
+    name: OTM
+    fullname: OpenTopoMap
+    credits: 'OTM'
     logo: 'https://opentopomap.org/img/OpenTopoMap_rechts.png'
     url: 'https://opentopomap.org'
     layers:
@@ -399,8 +517,9 @@ providers:
 
   ## MapTiler
   - id: mpt
-    name: Maptiler
-    credits: © MapTiler - © OpenStreetMap contributors
+    name: MapTiler
+    fullname: MapTiler
+    credits: 'MapTiler'
     logo: '/assets/images/logo-maptiler.png'
     url: 'https://www.maptiler.com'
     layers:
@@ -473,10 +592,11 @@ providers:
 
   ## Open Snow Map
   - id: osmorg
-    name: OpenSnowMap
-    credits: Credits OpenSnowMap.org
-    logo: ''
-    url: 'https://OpenSnowMap.org'
+    name: OSM.org
+    fullname: OpenSnowMap
+    credits: 'OSM.org'
+    logo: /assets/images/layers/logos/opensnowmap.png
+    url: 'https://www.opensnowmap.org'
     layers:
       #         ## Tracks
       #        - name: OpenSnowMap
@@ -506,7 +626,8 @@ providers:
   ## ThunderForest
   - id: thdfrst
     name: Thunderforest
-    credits: Credits Gravitystorm Limited
+    fullname: Thunderforest
+    credits: 'Thunderforest'
     logo: ''
     url: 'https://www.thunderforest.com/'
     layers:
@@ -562,22 +683,454 @@ providers:
         doc: 'https://www.thunderforest.com/'
         type: base
 
+
+  ## IGN Spain
+  - id: ign-es
+    name: IGN (Spain)
+    fullname: Instituto Geográfico Nacional / CNIG
+    credits: 'IGN (ES)'
+    logo: '/assets/images/layers/logos/Instituto_Geográfico_Nacional.png'
+    url: 'https://www.ign.es/'
+
+    layers:
+      ## Map
+      - name: Mapa
+        id: ign-es-mapa-raster
+        image: ign-es-mapa-raster.png
+        doc: 'https://www.ign.es/wmts/mapa-raster?request=GetCapabilities&service=WMTS'
+        credits: '© Instituto Geográfico Nacional / Centro Nacional de Información Geográfica'
+        countries: [ ES ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wmts
+        url: 'https://www.ign.es/wmts/mapa-raster'
+        layer: MTN
+        style: default
+        format: image/jpeg
+        tileMatrixSetID: GoogleMapsCompatible
+        minimumLevel: 0
+        maximumLevel: 19
+        other: '&Service=WMTS&Request=GetTile&Version=1.0.0'
+
+      # Photo
+      - name: Photos
+        id: ign-es-pnoa
+        image: ign-es-pnoa.png
+        doc: 'https://www.ign.es/wmts/pnoa-ma?request=GetCapabilities&service=WMTS'
+        credits: '© Instituto Geográfico Nacional / Centro Nacional de Información Geográfica'
+        countries: [ ES ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wmts
+        url: 'https://www.ign.es/wmts/pnoa-ma'
+        layer: OI.OrthoimageCoverage
+        style: default
+        format: image/jpeg
+        tileMatrixSetID: GoogleMapsCompatible
+        minimumLevel: 0
+        maximumLevel: 19
+        other: '&Service=WMTS&Request=GetTile&Version=1.0.0'
+
+      ## Old Map
+      - name: Primera Edición
+        id: ign-es-primera-edicion-mtn
+        image: ign-es-primera-edicion-mtn.png
+        doc: 'https://www.ign.es/wmts/primera-edicion-mtn?request=GetCapabilities&service=WMTS'
+        credits: '© Instituto Geográfico Nacional / Centro Nacional de Información Geográfica'
+        countries: [ ES ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wmts
+        url: 'https://www.ign.es/wmts/primera-edicion-mtn'
+        layer: mtn50-edicion1
+        style: default
+        format: image/jpeg
+        tileMatrixSetID: GoogleMapsCompatible
+        minimumLevel: 0
+        maximumLevel: 19
+        other: '&Service=WMTS&Request=GetTile&Version=1.0.0'
+
+  ## Germany - BKG Provider
+  - id: bkg-de
+    name: BKG (Germany)
+    fullname: Bundesamt für Kartographie und Geodäsie
+    credits: '© Bundesamt für Kartographie und Geodäsie (BKG)'
+    logo: '/assets/images/layers/logos/bkg-de.svg'
+    url: 'https://www.bkg.bund.de'
+    layers:
+
+      ## Germany - TopPlusOpen Map Layer
+      - name: TopPlusOpen (Map)
+        id: bkg-de-topplus-open
+        image: bkg-de-topplus-open.png
+        doc: 'https://sgx.geodatenzentrum.de/wmts_topplus_open/1.0.0/WMTSCapabilities.xml'
+        credits: '© Bundesamt für Kartographie und Geodäsie (BKG)'
+        countries: [ DE ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wmts
+        url: 'https://sgx.geodatenzentrum.de/wmts_topplus_open/tile/1.0.0/web/{Style}/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.png'
+        layer: web
+        style: default
+        format: image/png
+        tileMatrixSetID: WEBMERCATOR
+        tileMatrixLabels: [ '00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18' ]
+        minimumLevel: 0
+        maximumLevel: 18
+
+      ## Germany - Sentinel-2 Photo Layer
+      - name: Sentinel-2 (Photos)
+        id: bkg-de-sentinel2
+        image: bkg-de-sentinel2.png
+        doc: 'https://sgx.geodatenzentrum.de/wms_sentinel2_de?SERVICE=WMS&REQUEST=GetCapabilities&VERSION=1.3.0'
+        credits: '© Bundesamt für Kartographie und Geodäsie (BKG) / Copernicus'
+        countries: [ DE ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wms
+        url: 'https://sgx.geodatenzentrum.de/wms_sentinel2_de?'
+        layer: rgb
+        format: image/jpeg
+        version: 1.3.0
+        crs: CRS:84
+        minimumLevel: 0
+        maximumLevel: 19
+
+      ## Germany - TopPlusOpen Hillshade Overlay Layer
+      - name: TopPlusOpen Hillshade
+        id: bkg-de-topplus-hillshade
+        image: bkg-de-topplus-hillshade.png
+        doc: 'https://sgx.geodatenzentrum.de/wmts_topplus_open/1.0.0/WMTSCapabilities.xml'
+        credits: '© Bundesamt für Kartographie und Geodäsie (BKG)'
+        countries: [ DE ]
+        type: overlay
+        alpha: 0.5
+        show: false
+        usage:
+          type: free
+        tile: wmts
+        url: 'https://sgx.geodatenzentrum.de/wmts_topplus_open/tile/1.0.0'
+        layer: topplus_open_schattierung
+        style: normal
+        format: image/png
+        tileMatrixSetID: scale_3857
+        minimumLevel: 0
+        maximumLevel: 19
+        other: '&Service=WMTS&Request=GetTile&Version=1.0.0'
+
+  ## Norway - Kartverket Provider
+  - id: kartverket-no
+    name: Kartverket (Norway)
+    fullname: Kartverket
+    credits: '© Kartverket'
+    logo: '/assets/images/layers/logos/kartverket-no.svg'
+    url: 'https://www.kartverket.no'
+    layers:
+
+      ## Norway - Topografisk Norgeskart Map Layer
+      - name: Topografisk Norgeskart (Map)
+        id: kartverket-no-topo
+        image: kartverket-no-topo.png
+        doc: 'https://cache.kartverket.no/v1/wmts/1.0.0/WMTSCapabilities.xml'
+        credits: '© Kartverket'
+        countries: [ NO ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wmts
+        url: 'https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.png'
+        layer: topo
+        style: default
+        format: image/png
+        tileMatrixSetID: webmercator
+        tileMatrixLabels: [ '00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18' ]
+        minimumLevel: 0
+        maximumLevel: 18
+
+      ## Norway - Geocache Aerial Photo Layer
+      - name: Aerial Photos
+        id: kartverket-no-orto
+        image: kartverket-no-orto.png
+        doc: 'https://services.geodataonline.no/arcgis/rest/services/Geocache_WMAS_WGS84/GeocacheBilder/MapServer'
+        credits: '© Geodata AS, Kartverket, Geovekst og kommunene'
+        countries: [ NO ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wayback
+        url: 'https://services.geodataonline.no/arcgis/rest/services/Geocache_WMAS_WGS84/GeocacheBilder/MapServer/tile'
+        minimumLevel: 0
+        maximumLevel: 19
+
+      ## Norway - Terrain Hillshade Overlay Layer
+      - name: Hillshade
+        id: kartverket-no-hillshade
+        image: kartverket-no-hillshade.png
+        doc: 'https://cache.kartverket.no/capabilities/skyggeflate/WMTSCapabilities.xml?request=GetCapabilities'
+        credits: '© Kartverket'
+        countries: [ NO ]
+        type: overlay
+        alpha: 0.4
+        show: false
+        usage:
+          type: free
+        tile: wmts
+        url: 'https://cache.kartverket.no/skyggeflate/v1/wmts'
+        layer: skyggeflate
+        style: default
+        format: image/png
+        tileMatrixSetID: googlemaps
+        minimumLevel: 0
+        maximumLevel: 19
+        other: '&Service=WMTS&Request=GetTile&Version=1.0.0'
+
+  ## Great Britain - Ordnance Survey Provider
+  - id: os-gb
+    name: Ordnance Survey
+    fullname: Ordnance Survey
+    credits: '© Ordnance Survey'
+    logo: '/assets/images/layers/logos/os-gb.svg'
+    url: 'https://osdatahub.os.uk'
+    layers:
+
+      ## Great Britain - OS Outdoor Map Layer
+      - name: OS Outdoor (Map)
+        id: os-gb-outdoor
+        image: os-gb-outdoor.png
+        doc: 'https://osdatahub.os.uk/docs/wmts/technicalSpecification'
+        credits: 'Contains OS data © Crown copyright and database right'
+        countries: [ GB ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: freemium
+          doc: 'https://osdatahub.os.uk/docs/wmts/overview'
+          signin: 'https://osdatahub.os.uk/projects'
+          name: key
+        tile: wmts
+        url: 'https://api.os.uk/maps/raster/v1/wmts?{%authent%}'
+        layer: Outdoor_3857
+        style: default
+        format: image/png
+        tileMatrixSetID: EPSG:3857
+        minimumLevel: 0
+        maximumLevel: 19
+        other: '&Service=WMTS&Request=GetTile&Version=1.0.0'
+
+      ## Great Britain - OS Aerial Photo Layer
+      - name: OS Aerial (Photos)
+        id: os-gb-aerial
+        image: os-gb-aerial.png
+        doc: 'https://osdatahub.os.uk/docs/wmts/technicalSpecification'
+        credits: 'Contains OS data © Crown copyright and database right'
+        countries: [ GB ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: freemium
+          doc: 'https://osdatahub.os.uk/docs/wmts/overview'
+          signin: 'https://osdatahub.os.uk/projects'
+          name: key
+        tile: wmts
+        url: 'https://api.os.uk/maps/raster/v1/wmts?{%authent%}'
+        layer: Aerial_3857
+        style: default
+        format: image/jpeg
+        tileMatrixSetID: EPSG:3857
+        minimumLevel: 0
+        maximumLevel: 19
+        other: '&Service=WMTS&Request=GetTile&Version=1.0.0'
+
+      ## Great Britain - OS Open Greenspace Overlay Layer
+      - name: OS Open Greenspace
+        id: os-gb-greenspace
+        image: os-gb-greenspace.png
+        doc: 'https://osdatahub.os.uk/docs/wmts/technicalSpecification'
+        credits: 'Contains OS data © Crown copyright and database right'
+        countries: [ GB ]
+        type: overlay
+        alpha: 0.6
+        show: false
+        usage:
+          type: freemium
+          doc: 'https://osdatahub.os.uk/docs/wmts/overview'
+          signin: 'https://osdatahub.os.uk/projects'
+          name: key
+        tile: wmts
+        url: 'https://api.os.uk/maps/raster/v1/wmts'
+        layer: Greenspace_3857
+        style: default
+        format: image/png
+        tileMatrixSetID: EPSG:3857
+        minimumLevel: 0
+        maximumLevel: 19
+        other: '&Service=WMTS&Request=GetTile&Version=1.0.0'
+
+  ## Belgium - NGI Provider
+  - id: ngi-be
+    name: IGN / NGI (Belgium)
+    fullname: Institut Géographique National (IGN / NGI)
+    credits: '© Institut Géographique National Belgique'
+    logo: '/assets/images/layers/logos/ngi-be.svg'
+    url: 'https://www.ngi.be'
+    layers:
+
+      ## Belgium - CartoWeb Map Layer
+      - name: CartoWeb
+        id: ngi-be-cartoweb
+        image: ngi-be-cartoweb.png
+        doc: 'https://cartoweb.wmts.ngi.be/1.0.0/WMTSCapabilities.xml'
+        credits: '© IGN-NGI Belgique'
+        countries: [ BE ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wmts
+        url: 'https://cartoweb.wmts.ngi.be/1.0.0/topo/default/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.png'
+        layer: topo
+        style: default
+        format: image/png
+        tileMatrixSetID: 3857
+        minimumLevel: 7
+        maximumLevel: 17
+
+      ## Belgium - Orthophotos Photo Layer
+      - name: Orthophotos
+        id: ngi-be-ortho
+        image: ngi-be-ortho.png
+        doc: 'https://wmts.ngi.be/inspire/ortho/1.0.0/WMTSCapabilities.xml'
+        credits: '© IGN-NGI Belgique'
+        countries: [ BE ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wmts
+        url: 'https://wmts.ngi.be/inspire/ortho/1.0.0/orthoimage_coverage/default/{TileMatrixSet}/latest/{TileMatrix}/{TileRow}/{TileCol}.png'
+        layer: orthoimage_coverage
+        style: default
+        format: image/png
+        tileMatrixSetID: 3857
+        minimumLevel: 7
+        maximumLevel: 19
+
+      ## Belgium - Hillshade Hillshade Overlay Layer
+      - name: Hillshade
+        id: ngi-be-hillshade
+        image: ngi-be-hillshade.png
+        doc: 'https://topowms.ngi.be/cwa/wms/v1_0?request=GetCapabilities&service=WMS'
+        credits: '© IGN-NGI Belgique'
+        countries: [ BE ]
+        type: overlay
+        alpha: 0.4
+        show: false
+        usage:
+          type: free
+        tile: wms
+        url: 'https://topowms.ngi.be/cwa/wms/v1_0'
+        layer: hillshade
+        format: image/png
+
+  ## Netherlands - PDOK Provider
+  - id: pdok-nl
+    name: PDOK (Netherlands)
+    fullname: Publieke Dienstverlening Op de Kaart
+    credits: '© Kadaster / PDOK'
+    logo: '/assets/images/layers/logos/pdok-nl.svg'
+    url: 'https://www.pdok.nl'
+    layers:
+
+      ## Netherlands - BRT Background Map Layer
+      - name: BRT Background Map
+        id: pdok-nl-brt
+        image: pdok-nl-brt.png
+        doc: 'https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0?request=GetCapabilities&service=WMTS'
+        credits: '© Kadaster / PDOK'
+        countries: [ NL ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wmts
+        url: 'https://service.pdok.nl/kadaster/brt-achtergrondkaart/wmts/v2_0/standaard/{TileMatrixSet}/{TileMatrix}/{TileCol}/{TileRow}.png'
+        layer: standaard
+        style: default
+        format: image/png
+        tileMatrixSetID: EPSG:3857
+        tileMatrixLabels: [ '00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19' ]
+        minimumLevel: 0
+        maximumLevel: 19
+
+      ## Netherlands - Current Aerial Photo Layer
+      - name: Current Aerial Photos
+        id: pdok-nl-photo
+        image: pdok-nl-photo.png
+        doc: 'https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0?request=GetCapabilities&service=WMTS'
+        credits: '© Beeldmateriaal.nl / PDOK'
+        countries: [ NL ]
+        type: base
+        alpha: 1.0
+        show: true
+        usage:
+          type: free
+        tile: wmts
+        url: 'https://service.pdok.nl/hwh/luchtfotorgb/wmts/v1_0'
+        layer: Actueel_ortho25
+        style: default
+        format: image/jpeg
+        tileMatrixSetID: EPSG:3857
+        tileMatrixLabels: [ '00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21' ]
+        minimumLevel: 0
+        maximumLevel: 21
+
   ## Consortium of Ancient World Mappers
 #  - id: cawm
 #    name: AWM
-#    credits: Credits UNiv. Iowa Lib
-#    logo: 'https://opentopomap.org/img/OpenTopoMap_rechts.png'
-#    url: 'https://opentopomap.org'
+#    fullname: Consortium of Ancient World Mappers
+#    credits: 'Credits Univ. Iowa Lib'
+#    logo: ''
+#    url: 'https://cawm.lib.uiowa.edu/'
 #    layers:
 #      ## Open Topo Map standard
-#      - name: cawm
+#      - name: CAWM
 #        id: cawm-map
 #        image: otm-map.png
 #        usage:
 #          type: free
 #          doc: ''
 #
-#        tile: slippy
-#        url: https://cawm.lib.uiowa.edu/tiles
+#        tile: wmts
+#        url: 'https://cawm.lib.uiowa.edu/wmts'
+#        layer: tiles
+#        style: default
+#        format: image/png
+#        tileMatrixSetID: GoogleMapsCompatible
+#        minimumLevel: 0
+#        maximumLevel: 18
 #        doc: ''
 #        type: overlay

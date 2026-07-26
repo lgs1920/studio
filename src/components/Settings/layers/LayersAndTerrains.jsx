@@ -16,9 +16,9 @@
 
 import { PopupAnchor }                  from '@Components/PopupAnchor'
 import { LGSPopup }                     from '@Components/LGSPopup'
-import { ALL, BASE_ENTITY, FREE_ANONYMOUS_ACCESS, OVERLAY_ENTITY, TERRAIN_ENTITY, UNLOCKED } from '@Core/constants'
+import { ALL, BASE3D_ENTITY, BASE_ENTITY, FREE_ANONYMOUS_ACCESS, OVERLAY_ENTITY, PERSONAL_ACCESS, TERRAIN_ENTITY, TILES3D_ENTITY, UNLOCKED } from '@Core/constants'
 import {
-    WaButton, WaIcon, WaTab, WaTabGroup, WaTabPanel, WaTooltip,
+    WaBadge, WaButton, WaIcon, WaTab, WaTabGroup, WaTabPanel, WaTooltip,
 }                                       from '@web.awesome.me/webawesome-pro/dist/react'
 import { useSnapshot }                  from 'valtio'
 import {
@@ -42,6 +42,7 @@ export const LayersAndTerrains = () => {
     const editor = useSnapshot($editor)
     const $layers = lgs.settings.layers
     const layers = useSnapshot($layers)
+    const ion = useSnapshot(lgs.stores.ion)
 
     /**
      * Toggles the filter panel visibility and ensures settings are closed.
@@ -73,7 +74,11 @@ export const LayersAndTerrains = () => {
         const list = []
         // Ensure layers is an array to prevent filter is not a function error
         __.layersAndTerrainManager.layers.forEach(layer => {
-            if (layer?.type === type) {
+            if (
+                layer?.type === type
+                || (type === BASE_ENTITY && layer?.type === BASE3D_ENTITY)
+                || (type === OVERLAY_ENTITY && layer?.type === TILES3D_ENTITY)
+            ) {
                 let byName = true
                 let byUsage = true
                 let byCountries = true
@@ -99,9 +104,10 @@ export const LayersAndTerrains = () => {
                     // Apply filter by usage
                     if (layers.filter.byUsage && layers.filter.byUsage !== ALL) {
                         const viewUnlocked = layers.filter.byUsage === UNLOCKED
+                        const personalUnlocked = layer.usage?.type === PERSONAL_ACCESS ? ion.source === 'user' : false
                         byUsage = viewUnlocked
-                                  ? layer.usage?.type === FREE_ANONYMOUS_ACCESS || layer.usage?.unlocked === true
-                                  : layer.usage?.type !== FREE_ANONYMOUS_ACCESS && layer.usage?.unlocked !== true
+                                  ? layer.usage?.type === FREE_ANONYMOUS_ACCESS || layer.usage?.unlocked === true || personalUnlocked
+                                  : layer.usage?.type !== FREE_ANONYMOUS_ACCESS && layer.usage?.unlocked !== true && !personalUnlocked
                     }
 
                     // Apply filter by countries
@@ -168,6 +174,8 @@ export const LayersAndTerrains = () => {
     const canViewSettings = () =>
         editor.layer.selectedType === BASE_ENTITY || (editor.layer.selectedType === OVERLAY_ENTITY && layers.overlay !== '')
 
+    const selectedOverlaysCount = [layers.overlay, layers.tiles3d].filter(Boolean).length
+
     /**
      * Generates a unique key for entity components to optimize rendering
      * @param {string} type - The entity type
@@ -203,7 +211,17 @@ export const LayersAndTerrains = () => {
                     {'Bases'}
                 </WaTab>
                 <WaTab panel="tab-overlays" onClick={() => ($editor.layer.selectedType = OVERLAY_ENTITY)}>
-                    {'Overlays'}
+                    {selectedOverlaysCount > 0
+                     ? (
+                         <span className="lgs-tab-with-badge">
+                             <span>{'Overlays'}</span>
+                             <WaBadge className="lgs-tab-selection-count" variant="brand" appearance="filled" pill
+                                      aria-label={`${selectedOverlaysCount} selected overlays`}>
+                                 {selectedOverlaysCount}
+                             </WaBadge>
+                         </span>
+                     )
+                     : 'Overlays'}
                 </WaTab>
                 <WaTab panel="tab-terrains" onClick={() => ($editor.layer.selectedType = TERRAIN_ENTITY)}>
                     {'Terrains'}

@@ -70,6 +70,7 @@ import {
 import {
     UIToast,
 }                                     from '@Utils/UIToast'
+import { getGlobalHideOtherJourneys, refreshJourneyVisibility } from '@Core/ui/JourneyVisibility'
 import { decodeHTMLEntities }         from '@Utils/TextUtils'
 import {
     WaButton, WaCard, WaDetails, WaIcon, WaInput, WaOption, WaSelect, WaTab, WaTabGroup, WaTabPanel,
@@ -105,12 +106,11 @@ const REPORT_EXPORT_STAGES = {
     SNAPSHOTS: 'snapshots',
     WRITING:   'writing',
 }
-const REPORT_EXPORT_FLASH_DURATION = 860
 
 const REPORT_EXPORT_STAGE_ICONS = {
     [REPORT_EXPORT_STAGES.SNAPSHOTS]: {
         name:      'camera',
-        animation: 'fade',
+        animation: 'report-fade',
     },
     [REPORT_EXPORT_STAGES.WRITING]: {
         name:      'pencil',
@@ -193,7 +193,6 @@ export const JourneySettings = () => {
     const _elevationRequestId = useRef(0)
     const _exportFormat = useRef(JOURNEY_EXPORT_FORMATS.GPX)
     const _exportFileName = useRef('')
-    const _reportExportFlashTimeout = useRef(null)
 
     const [exportFormat, setExportFormatState] = useState(JOURNEY_EXPORT_FORMATS.GPX)
     const [exportFileName, setExportFileNameState] = useState('')
@@ -355,6 +354,12 @@ export const JourneySettings = () => {
         setJourneyEditorJourneyVisible(v)
         lgs.theJourney.updateVisibility(v)
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus: false})
+        if (getGlobalHideOtherJourneys()) {
+            await refreshJourneyVisibility({
+                hideOtherJourneys: true,
+                currentJourney:    lgs.theJourney,
+            })
+        }
         Utils.renderJourneySettings()
     }
 
@@ -570,30 +575,19 @@ export const JourneySettings = () => {
 
         const format = _exportFormat.current
         let reportExportActive = true
-        const clearReportExportFlashTimeout = () => {
-            clearTimeout(_reportExportFlashTimeout.current)
-            _reportExportFlashTimeout.current = null
-        }
         const setCurrentReportExportStage = payload => {
             if (!reportExportActive) {
                 return
             }
 
-            clearReportExportFlashTimeout()
             const stage = typeof payload === 'string' ? payload : payload?.stage
+
             const animation = {
                 stage,
-                id: payload?.id ?? `${stage}-${Date.now()}`,
+                id:   typeof payload === 'object' && payload?.id ? payload.id : `${stage}-${Date.now()}`,
             }
 
             setReportExportAnimation(animation)
-            if (stage === REPORT_EXPORT_STAGES.SNAPSHOTS) {
-                _reportExportFlashTimeout.current = setTimeout(() => {
-                    if (reportExportActive) {
-                        setReportExportAnimation(current => current?.id === animation.id ? null : current)
-                    }
-                }, REPORT_EXPORT_FLASH_DURATION)
-            }
         }
 
         try {
@@ -622,7 +616,6 @@ export const JourneySettings = () => {
         }
         finally {
             reportExportActive = false
-            clearReportExportFlashTimeout()
             setReportExportAnimation(null)
         }
     }

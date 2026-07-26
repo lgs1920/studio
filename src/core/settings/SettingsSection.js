@@ -178,7 +178,39 @@ export class SettingsSection {
             this.#syncUpdatedValues(newConfig, diffs.updated, SETTING_EXCLUSIONS, SETTING_EXCLUSION_ALLOWLIST, this.key)
         }
 
+        if (this.key === 'widgets') {
+            this.#syncAddedValues(newConfig, updated, [], [], this.key)
+            this.#data.added = this.#data.added || JSON.stringify(newConfig) !== JSON.stringify(origin)
+        }
+
         return newConfig
+    }
+
+    /**
+     * Returns true when the value is a plain object that can host nested settings.
+     * @param {any} value
+     * @returns {boolean}
+     */
+    #isPlainObject = value => typeof value === 'object' && value !== null && !Array.isArray(value)
+
+    /**
+     * Returns a migrated branch for nested settings when the stored shape no longer matches the template.
+     * Primitive values are preserved into a `content` field when the template exposes one.
+     *
+     * @param {object|array} templateValue
+     * @param {any} previousValue
+     * @returns {object|array}
+     */
+    #cloneMigratedBranch = (templateValue, previousValue) => {
+        const clone = JSON.parse(JSON.stringify(templateValue))
+
+        if (this.#isPlainObject(clone) && previousValue !== undefined && previousValue !== null && typeof previousValue !== 'object') {
+            if (Object.prototype.hasOwnProperty.call(clone, 'content')) {
+                clone.content = previousValue
+            }
+        }
+
+        return clone
     }
 
     /**
@@ -195,6 +227,10 @@ export class SettingsSection {
      * @private
      */
     #syncAddedValues = (target, toAdd, excludeKeys = [], allowKeys = [], parentKey = '') => {
+        if (!this.#isPlainObject(target) && !Array.isArray(target)) {
+            return target
+        }
+
         for (const key in toAdd) {
             if (Object.hasOwnProperty.call(toAdd, key)) {
                 const fullKey = parentKey ? `${parentKey}.${key}` : key
@@ -204,17 +240,14 @@ export class SettingsSection {
                         continue
                     }
 
-                    // Create branch if missing to allow deep attribute insertion
-                    if (!target[key]) {
-                        target[key] = Array.isArray(toAdd[key]) ? [] : {}
+                    // Migrate legacy scalar branches to the new nested structure before recursing.
+                    if (!this.#isPlainObject(target[key]) && !Array.isArray(target[key])) {
+                        target[key] = this.#cloneMigratedBranch(toAdd[key], target[key])
                     }
                     this.#syncAddedValues(target[key], toAdd[key], excludeKeys, allowKeys, fullKey)
                 }
-                else {
-                    // Add primitive only if it doesn't exist and isn't explicitly excluded
-                    if (!(key in target) && !isSettingPathExcluded(fullKey, excludeKeys, allowKeys)) {
-                        target[key] = toAdd[key]
-                    }
+                else if (!(key in target)) {
+                    target[key] = toAdd[key]
                 }
             }
         }

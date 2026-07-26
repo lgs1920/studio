@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2026-06-23
+ * Last modified: 2026-06-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,6 +19,62 @@
     display: flex;
     flex-direction: column;
     gap: var(--lgs-gutter-s)
+}
+
+.manage-profile-ui-sync-unsupported {
+    font-size: var(--lgs-font-size-s);
+    display: inline-flex;
+    align-items: center;
+    color: var(--wa-color-neutral-700);
+    gap: var(--lgs-gutter-xs);
+}
+
+.sync-profile-summary-icon[data-variant='success'] {
+    color: var(--wa-color-success-on-normal);
+}
+
+.sync-profile-summary-icon[data-variant='danger'] {
+    color: var(--wa-color-danger-on-normal);
+}
+
+
+.sync-folder-status::part(message) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--lgs-gutter-s);
+}
+
+.sync-folder-status-main {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    gap: 0.2rem;
+}
+
+.sync-folder-status-line {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    gap: var(--lgs-gutter-xs);
+}
+
+.sync-folder-status-line-title {
+    font-size: var(--lgs-font-size);
+    color: var(--lgs-font-color);
+}
+
+.sync-folder-status-line-detail {
+    font-size: var(--lgs-font-size);
+    color: var(--wa-color-neutral-700);
+}
+
+.sync-folder-status-action {
+    align-self: center;
+    flex: 0 0 auto;
+    width: auto !important;
+    margin-left: auto;
 }
 
 .manage-profile-ui ul {
@@ -46,10 +102,90 @@
     --fa-primary-opacity: 1;
 }
 
-.manage-profile-ui sl-panel {
-    font-size: var(--lgs-font-size-s);
+.manage-profile-ui sl-button,
+.manage-profile-ui wa-button {
+    width: 12rem;
 }
 
-.manage-profile-ui sl-button {
-    width: 12rem;
+.lgs-profile-import-export-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--lgs-gutter-s);
+}
+
+.lgs-profile-import-export-actions wa-button {
+    flex: 0 0 auto;
+    width: auto;
+}
+
+.ion-token-settings {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
+
+.ion-token-settings-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--lgs-gutter-s);
+}
+
+.ion-token-summary {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: var(--lgs-gutter-s);
+}
+
+.ion-token-summary-title {
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    gap: var(--lgs-gutter-xs);
+}
+
+.ion-token-summary-meta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-left: auto;
+    gap: var(--lgs-gutter-xs);
+}
+
+.ion-token-settings-actions,
+.ion-token-prompt-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--lgs-gutter-s);
+}
+
+.ion-token-settings-toolbar wa-button {
+    width: auto;
+}
+
+.ion-token-settings wa-input,
+.ion-token-prompt wa-input {
+    width: 100%;
+}
+
+.ion-token-settings wa-button,
+.ion-token-prompt wa-button {
+    width: auto;
+}
+
+.ion-token-help-scroll {
+    width: 100%;
+    height: min(60vh, 40rem);
+    min-height: min(18rem, 60vh);
+    overflow: hidden;
+}
+
+.ion-token-help-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+    padding-right: var(--lgs-gutter-s);
 }

@@ -46,7 +46,7 @@ export const DESKTOP_MIN = 992
  */
 export const CONFIGURATION = 'config.yaml'
 export const SETTINGS = 'settings.yaml'
-export const FLYTHROUGH_SETTINGS = 'flythrough.yaml'
+export const REPLAY_SETTINGS = 'replay.yaml'
 export const LAYERS_TERRAINS_SETTINGS = 'layers-terrains.yaml'
 export const SHORTCUTS_CATALOG = 'shortcuts.yaml'
 export const COUNTRIES = 'countries.yaml'
@@ -127,7 +127,9 @@ export const COLOR_SWATCHES_RANDOM = 'random'
 export const URL_AUTHENT_KEY = '{%authent%}'
 export const LAYERS = 'layers'
 export const BASE_ENTITY = 'base'
+export const BASE3D_ENTITY = 'base3d'
 export const OVERLAY_ENTITY = 'overlay'
+export const TILES3D_ENTITY = 'tiles3d'
 export const TERRAIN_ENTITY = 'terrain'
 export const BASE_INDEX = 0      // Layer index
 export const OVERLAY_INDEX = 1
@@ -145,6 +147,7 @@ export const DEFAULT_LAYERS_COLOR_SETTINGS = {
 export const LAYERS_THUMBS_DIR = '/assets/images/layers/thumbnails'
 export const PREMIUM_ACCESS = 'premium'
 export const FREEMIUM_ACCESS = 'freemium'
+export const PERSONAL_ACCESS = 'personal'
 export const FREE_ANONYMOUS_ACCESS = 'free'
 export const FREE_ACCOUNT_ACCESS = 'account'
 export const UNLOCKED_ACCESS = 'unlocked'
@@ -173,6 +176,10 @@ export const ACCESS_ICONS = {
     [FREE_ACCOUNT_ACCESS]:   {
         icon: 'user',
         text: 'Need account - Click to Sign Up',
+    },
+    [PERSONAL_ACCESS]:       {
+        icon: 'cloud',
+        text: 'Personal Cesium Ion token required',
     },
     [UNLOCKED_ACCESS]:       {
         icon: 'unlock',
@@ -259,7 +266,8 @@ export const JOURNEY_GROUPS_DRAWER = 'journey-groups-drawer'
 export const SETTINGS_EDITOR_DRAWER = 'settings-editor-drawer'
 export const POIS_EDITOR_DRAWER = 'pois-editor-drawer'
 export const WIDGETS_EDITOR_DRAWER = 'widgets-editor-drawer'
-export const FLYTHROUGH_DRAWER = 'flythrough-drawer'
+export const WIDGET_MANAGEMENT_DRAWER = 'widget-management-drawer'
+export const REPLAY_DRAWER = 'replay-drawer'
 
 /** Jaurney, Track, POI **/
 
@@ -470,6 +478,7 @@ export const VIDEO_TOOLS_WIDGETS   = 'video-tools-widgets',
 
 export const COMPASS_WIDGET       = 'compass-widget',
              CREDITS_WIDGET       = 'credits-widget',
+             LOGO_WIDGET          = 'logo-widget',
              CAMERA_INFORMATION_WIDGET = 'camera-information-widget',
              JOURNEY_TOOLBAR_WIDGET = 'journey-toolbar-widget',
              PROFILE_WIDGET       = 'profile-widget',
@@ -493,6 +502,11 @@ export const WIDGETS_CAPABILITIES   = [
                                                   [
                                                       CREDITS_WIDGET, {
                                                       component: 'CreditsWidget',
+                                                  },
+                                                  ],
+                                                  [
+                                                      LOGO_WIDGET, {
+                                                      component: 'LogoWidget',
                                                   },
                                                   ],
 

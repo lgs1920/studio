@@ -35,6 +35,7 @@ import { JOURNEY_WIDGETS, MULTI_PURPOSE_WIDGETS } from '@Core/constants'
 import { memo, useEffect, useRef, useState } from 'react'
 import { useSnapshot } from 'valtio'
 import { CropZoneWidget }        from './widgets/CropZoneWidget'
+import { CropZoneInfoPopup }     from './widgets/CropZoneInfoPopup'
 import './style.css'
 
 export const Cropper = memo(({overlay = false, className = '', context, options = {}, children}) => {
@@ -42,7 +43,9 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
     const _cropperContainer = useRef(null)
     const _overlay = useRef(null)
     const cropper = useSnapshot(context)
+    const video = useSnapshot(lgs.stores.ui.video)
     const [overlayElement, setOverlayElement] = useState(null)
+    const hideWidgetPanel = Boolean(video.preRecording || video.recording || video.snapshot || video.finalizing)
 
     useEffect(() => {
         if (_overlay.current) {
@@ -56,8 +59,8 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                 <CropRatioEditorWidget context={context} id="crop-ratio-editor"/>
             }
 
-            <div ref={_cropperContainer} className="crop-container">
-                {overlayElement && (
+            <div ref={_cropperContainer} className="crop-container lgs-on-map-theme-vars">
+                {overlayElement && !cropper.ratioEditor && (
                     <DefinedCropZone
                         className={[className, cropper.ratioEditor ? 'defined-crop-zone-hidden' : ''].filter(Boolean).join(' ')}
                         infoPosition={options.infoPosition}
@@ -69,17 +72,25 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                 {overlayElement && cropper.ratioEditor && (
                         <CropZoneWidget
                             className={className}
+                            containerClassName="crop-moveable-container-on-map"
+                            moveableClassName="lgs-on-map-theme-vars crop-moveable-on-map"
                             infoPosition={options.infoPosition}
                             infoComponent={options.infoComponent}
                             overlay={overlayElement}
                             context={context}
                         />
                 )}
-                {overlay && <div className="crop-overlay" ref={_overlay}/>}
+                {overlay && <div className="crop-overlay wa-theme-lgs1920-on-map" ref={_overlay}/>}
                 {children}
-                <WidgetsPanel id="widget-deck" context={context} groups={[MULTI_PURPOSE_WIDGETS, JOURNEY_WIDGETS]}/>
+                {!hideWidgetPanel && (
+                    <WidgetsPanel id="widget-deck" context={context} groups={[MULTI_PURPOSE_WIDGETS, JOURNEY_WIDGETS]}/>
+                )}
             </div>
-            <VideoSceneWidgetsPortal context={context} hidden={cropper.ratioEditor}/>
+            {(options.infoPosition || options.infoComponent) && (
+                <CropZoneInfoPopup id={context.id} infoComponent={options.infoComponent} showDimensions={options.infoPosition}/>
+            )}
+            {/* Crop and video widgets remain mounted together during composition. */}
+            <VideoSceneWidgetsPortal context={context}/>
         </>
     )
 })

@@ -50,10 +50,12 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
 .journey-content-wrapper {
     display: flex;
     flex-direction: column;
     height: 100%;
+    gap: var(--lgs-gutter-s);
 }
 
 wa-tab sl-icon {
@@ -709,6 +711,16 @@ wa-tab::part(base) {
     filter: drop-shadow(0 0 18px color-mix(in oklab, var(--wa-color-brand) 36%, transparent));
 }
 
+.journey-report-export-animation wa-icon[animation='report-fade'] {
+    animation-name: report-fade;
+    animation-delay: var(--animation-delay, 0s);
+    animation-direction: var(--animation-direction, normal);
+    animation-duration: var(--animation-duration, 1s);
+    animation-iteration-count: var(--animation-iteration-count, infinite);
+    animation-timing-function: var(--animation-timing, cubic-bezier(0.4, 0, 0.6, 1));
+    animation-fill-mode: forwards;
+}
+
 .journey-report-export-animation.is-snapshots wa-icon {
     --animation-duration: 0.72s;
     --animation-iteration-count: 1;
@@ -717,10 +729,53 @@ wa-tab::part(base) {
 
 .journey-report-export-animation.is-writing {
     opacity: 0.72;
+    animation: journey-report-writing-wave 1.45s ease-in-out infinite;
+    transform-origin: center;
+    will-change: transform;
 }
 
 .journey-report-export-animation.is-writing wa-icon {
     --animation-duration: 1.05s;
+}
+
+@keyframes journey-report-writing-wave {
+    0% {
+        transform: translate3d(0, 0, 0) rotate(0deg);
+    }
+
+    18% {
+        transform: translate3d(0.3rem, -0.18rem, 0) rotate(2deg);
+    }
+
+    36% {
+        transform: translate3d(0.55rem, 0, 0) rotate(0deg);
+    }
+
+    54% {
+        transform: translate3d(0.3rem, 0.18rem, 0) rotate(-2deg);
+    }
+
+    72% {
+        transform: translate3d(0.1rem, 0, 0) rotate(0deg);
+    }
+
+    100% {
+        transform: translate3d(0, 0, 0) rotate(0deg);
+    }
+}
+
+@keyframes report-fade {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: var(--fade-opacity, 0.12);
+    }
+
+    100% {
+        opacity: 0;
+    }
 }
 
 .journey-export-controls {
@@ -1046,7 +1101,7 @@ wa-tab::part(base) {
     display: inline-flex;
     align-items: center;
     min-width: 0;
-    gap: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-s);
 }
 
 .journey-groups-drawer-content {

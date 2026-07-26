@@ -67,11 +67,12 @@ export class WidgetResizable {
             return
         }
 
+        // Keep the outside overlay responsive without dispatching a crop event
+        // that could feed geometry back into Moveable during the same gesture.
         this.#widgetCropper.applyCropToOverlay(config)
-        this.#widgetCropper.dispatchCropUpdate(config, 'resize')
     }
 
-    #schedulePendingCropUpdate = (config) => {
+    #schedulePendingCropUpdate = config => {
         this.#pendingCropUpdateConfig = config
         if (this.#pendingCropUpdateFrame !== null) {
             return
@@ -246,7 +247,9 @@ export class WidgetResizable {
         this.#flushPendingCropUpdate()
 
         event.target.classList.remove('resizing', LGS_ANIMATION_RESIZING, `direction-${this.#cardinalDirections[this.#resizeDirection]}`)
-        const config = await this.#widgetManager.retrieveConfig(event.target)
+        const widgetId = this.#widgetManager.retrieveElementId(event.target)
+        const config = this.#widgetManager.getWidgetConfig(widgetId)
+                     ?? await this.#widgetManager.retrieveConfig(event.target)
         config.runtimeReady = true
         if (config?.isCropper) {
             config.element = event.target

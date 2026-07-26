@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2026-07-08
+ * Last modified: 2026-07-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,9 @@ import { AppUpdate }    from '@Components/AppUpdate'
 import {
     MapLayer,
 }                       from '@Components/cesium/MapLayer'
+import { Base3DLayer }  from '@Components/cesium/Base3DLayer'
+import { Base3DLoadingOverlay } from '@Components/cesium/Base3DLoadingOverlay'
+import { Tiles3DLayer } from '@Components/cesium/Tiles3DLayer'
 import {
     ensureViewer,
     Viewer,
@@ -46,6 +49,7 @@ import {
 import {
     WelcomeModal,
 }                       from '@Components/MainUI/WelcomeModal'
+import { IonTokenPrompt } from '@Components/MainUI/IonTokenPrompt'
 import {
     APP_EVENT, BASE_ENTITY, CURRENT_JOURNEY, OVERLAY_ENTITY, POI_STARTER_TYPE,
 }                       from '@Core/constants'
@@ -71,6 +75,7 @@ import {
 }                       from 'react'
 
 const APP_SURFACE_READY_TIMEOUT = 1500
+const INITIAL_FOCUS_READY_TIMEOUT = 2500
 
 const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve))
 
@@ -112,7 +117,6 @@ const AppSurface = ({onReady}) => {
         let cancelled = false
 
         const ready = async () => {
-            document.body.classList.remove('lgs-app-booting')
             await nextFrame()
             await nextFrame()
             await waitForAppSurfaceReady()
@@ -131,8 +135,16 @@ const AppSurface = ({onReady}) => {
 
     useEffect(() => {
         return () => {
-            __.ui.flythrough?.stop?.({emit: false})
-            __.ui.flythrough?.restoreJourneyToolbarVisibility?.()
+            __.ui.replay?.stop?.({emit: false})
+            __.ui.replay?.restoreJourneyToolbarVisibility?.()
+        }
+    }, [])
+
+    useEffect(() => {
+        void __.ui.ionTokenManager?.startPromptTimer?.()
+
+        return () => {
+            void __.ui.ionTokenManager?.stopPromptTimer?.()
         }
     }, [])
 
@@ -143,9 +155,13 @@ const AppSurface = ({onReady}) => {
             <MainUI/>
             <ResponsiveDevice/>
             <AppUpdate/>
+            <IonTokenPrompt/>
             <MapLayer type={BASE_ENTITY}/>
             <MapLayer type={OVERLAY_ENTITY}/>
             <Viewer/>
+            <Base3DLayer/>
+            <Base3DLoadingOverlay/>
+            <Tiles3DLayer/>
             <SelectionIndicator/>
             <Toast/>
         </>
@@ -208,6 +224,7 @@ export const LGS1920 = () => {
     const initializeData = async lgs => {
         await TerrainUtils.changeTerrain(lgs.settings.layers.terrain)
         await TrackUtils.readCurrentFromDB()
+        await __.ui.widgetCache.init()
     }
 
     const initializeDeferredJourneyData = useCallback(() => runDeferredJourneyDataLoad(), [])
@@ -275,24 +292,41 @@ export const LGS1920 = () => {
      * @param {Object} cameraStore - The camera settings
      */
     const setCameraFocus = (lgs, starter, focusTarget, cameraStore) => {
+        let focusReady = false
+        let focusReadyTimeout = null
+        const markInitialFocusReady = point => {
+            if (focusReady) {
+                return
+            }
+
+            focusReady = true
+            if (focusReadyTimeout !== null) {
+                window.clearTimeout(focusReadyTimeout)
+                focusReadyTimeout = null
+            }
+            const initEvent = new CustomEvent(APP_EVENT.INITIAL_FOCUS, {
+                detail: {
+                    point,
+                    timestamp: Date.now(),
+                },
+            })
+            window.dispatchEvent(initEvent)
+            setInitialFocusReady(true)
+        }
+
         const focusOptions = buildStartupCameraFocusOptions({
                                                                 cameraStore,
                                                                 focusTarget,
                                                                 noRelief: __.ui.sceneManager.noRelief(),
                                                                 rotate:   lgs.settings.ui.camera.start.rotate.app,
             rpm:      lgs.settings.starter.camera.rpm,
-            callback: point => {
-                const initEvent = new CustomEvent(APP_EVENT.INITIAL_FOCUS, {
-                    detail: {
-                        point,
-                        timestamp: Date.now(),
-                    },
-                })
-                window.dispatchEvent(initEvent)
-                setInitialFocusReady(true)
-            },
+            callback: markInitialFocusReady,
         })
         __.ui.sceneManager.focus(cameraStore.target, focusOptions)
+        focusReadyTimeout = window.setTimeout(
+            () => markInitialFocusReady(cameraStore.target),
+            INITIAL_FOCUS_READY_TIMEOUT,
+        )
         starter.animated = focusTarget === starter && lgs.settings.ui.camera.start.rotate.app
     }
 

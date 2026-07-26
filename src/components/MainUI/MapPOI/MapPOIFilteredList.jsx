@@ -49,7 +49,7 @@ const filterAndSortPois = (onlyJourney, filterSettings, list) => {
     const journeySlug = theJourney?.slug ?? null
 
     for (const [id, poi] of list) {
-        if (!poi?.id) {
+        if (!poi?.id || poi.tooClose === true) {
             continue
         }
         const isGlobal = poi.parent == null

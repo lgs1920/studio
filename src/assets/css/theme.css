@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-31
- * Last modified: 2026-05-31
+ * Created on: 2026-07-09
+ * Last modified: 2026-07-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,9 +16,15 @@
 
 
 /* WebAwesome theme contract overrides. */
+:root,
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
 :root {
-    --wa-font-family-body: "Wix Madefor Text", sans-serif;
-    --wa-font-family-heading: "Wix Madefor Text", sans-serif;
+    --wa-font-family-body: "Open Sans", sans-serif;
+    --wa-font-family-heading: "Noto Sans", sans-serif;
     --wa-font-family-code: "Roboto Mono", monospace;
     --wa-font-family-longform: "Roboto Serif", serif;
     --wa-font-weight-body: 400;
@@ -28,6 +34,13 @@
     --wa-border-radius-scale: 1;
     --wa-border-width-scale: 1.5;
     --wa-space-scale: 1;
+}
+
+:root,
+.wa-theme-lgs1920,
+.wa-theme-lgs1920-on-map {
+    font-optical-sizing: none;
+    font-synthesis: none;
 }
 
 /* LGS application tokens shared by global CSS, components and map overlays. */
@@ -54,7 +67,8 @@
     --lgs-border-radius-pill: 50%;
 
     /* Legacy LGS typography tokens used outside WebAwesome components. */
-    --lgs-font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    --lgs-font-family: "Open Sans", sans-serif;
+    --lgs-font-family-heading: "Noto Sans", sans-serif;
     --lgs-font-line-height: 1.2;
     --lgs-font-weight: 400;
     --lgs-font-weight-bold: 700;
@@ -74,7 +88,7 @@
     --lgs-dark-ui-bg-color: var(--lgs-dark-ui-5th-color);
 
     /* LGS type scale for app-level UI and non-WebAwesome content. */
-    --lgs-font-size: 0.9rem;
+    --lgs-font-size: 0.825rem;
     --lgs-font-size-s: 0.75rem;
     --lgs-font-size-xs: 0.5rem;
     --lgs-font-size-m: 1.1rem;
@@ -85,6 +99,10 @@
     --lgs-main-ui-zindex: 800;
     --lgs-ui-layer-zindex: 5000;
     --lgs-tools-ui-zindex: calc(var(--lgs-ui-layer-zindex) - 1);
+    /* Layer reserved for rendered video widgets below the widget UI controls. */
+    --lgs-video-widgets-zindex: calc(var(--lgs-tools-ui-zindex) - 1);
+    /* Layer reserved for widget menus and manipulation controls. */
+    --lgs-widget-ui-zindex: calc(var(--lgs-ui-layer-zindex) + 1);
     --lgs-toast-zindex: 2147483647;
     --lgs-drop-zone-zindex: 10;
     --lgs-context-menu-zindex: calc(var(--lgs-ui-layer-zindex) + 9000);
@@ -189,13 +207,18 @@
 
     --lgs-warning-color: var(--wa-color-warning);
 
+    /* Opacity shared by widget snap grid and centering guidelines. */
+    --lgs-widget-snap-guideline-opacity: 0.4;
+    /* Higher opacity used by widget centering guidelines. */
+    --lgs-widget-snap-center-opacity: 1;
+
     --lgs-warning-bg-color: hsla(24 100% 50%/ 0.8);
     --lgs-warning-border-color: hsla(32.1 97.7% 83.1% / 0.25);
 
     /* Tooltip and generic interaction states. */
-    --lgs-tooltip-color: var(--lgs-text-on-color);
-    --lgs-tooltip-bg-color: var(--lgs-first-color-90);
-    --lgs-tooltip-border-color: var(--lgs-third-color-90);
+    --lgs-tooltip-color: var(--wa-color-text-normal);
+    --lgs-tooltip-bg-color: var(--wa-color-surface-raised);
+    --lgs-tooltip-border-color: var(--wa-color-surface-border);
 
     --lgs-hover-color: var(--wa-color-brand);
     --lgs-hover-bg-color: var(--wa-color-brand-fill-quiet);
@@ -228,25 +251,25 @@
     --lgs-slogan-color: black;
 
     /* On-map card states. These feed widgets, deck panels and floating map surfaces. */
-    --lgs-card-on-map-bg-color: var(--lgs-dark-color-50);
+    --lgs-card-on-map-bg-color: color-mix(in oklab, var(--lgs-dark-color) 88%, var(--wa-color-brand) 12%);
     --lgs-card-on-map-bg-image: var(--lgs-on-map-surface-gradient);
     --lgs-card-on-map-bg-blend-mode: soft-light, screen, normal;
     --lgs-card-on-map-border-color: var(--lgs-light-color-25);
-    --lgs-card-on-map-hover-bg-color: var(--lgs-dark-color-75);
+    --lgs-card-on-map-hover-bg-color: color-mix(in oklab, var(--lgs-text-on-color) 12%, var(--lgs-card-on-map-bg-color) 88%);
     --lgs-card-on-map-hover-border-color: var(--lgs-light-color-50);
     --lgs-card-on-map-hover-outline-color: var(--lgs-card-on-map-border-color);
     --lgs-card-on-map-hover-outline: 1px solid var(--lgs-card-on-map-hover-outline-color);
     --lgs-card-on-map-hover-outline-offset: 1px;
-    --lgs-card-on-map-selected-bg-color: var(--lgs-dark-color);
+    --lgs-card-on-map-selected-bg-color: color-mix(in oklab, var(--wa-color-brand) 10%, var(--lgs-card-on-map-bg-color) 90%);
     --lgs-card-on-map-selected-bg-image: none;
     --lgs-card-on-map-selected-bg-blend-mode: normal;
     --lgs-card-on-map-selected-bg: var(--lgs-card-on-map-selected-bg-color);
     --lgs-card-on-map-selected-border-color: var(--lgs-light-color-75);
-    --lgs-disabled-color: var(--lgs-light-color-20);
-    --lgs-disabled-bg-color: var(--lgs-dark-color-20);
-    --lgs-card-on-map-disabled-color: var(--lgs-light-color-20);
-    --lgs-card-on-map-disabled-bg-color: var(--lgs-dark-color-20);
-    --lgs-card-on-map-disabled-border-color: var(--lgs-light-color-10);
+    --lgs-disabled-color: color-mix(in oklab, var(--lgs-text-on-color) 90%, var(--lgs-card-on-map-bg-color) 10%);
+    --lgs-disabled-bg-color: color-mix(in oklab, var(--lgs-card-on-map-bg-color) 98%, var(--lgs-text-on-color) 2%);
+    --lgs-card-on-map-disabled-color: var(--lgs-disabled-color);
+    --lgs-card-on-map-disabled-bg-color: var(--lgs-disabled-bg-color);
+    --lgs-card-on-map-disabled-border-color: color-mix(in oklab, var(--lgs-disabled-color) 38%, transparent);
 
     /* Form controls and selection tokens shared by WebAwesome wrappers. */
 
@@ -361,6 +384,22 @@ body {
     border: 1px solid color-mix(in oklab, var(--swatch-color) 65%, white 35%);
     border-radius: 0.24rem;
     background: var(--swatch-color);
+}
+
+.lgs-theme-color-swatch {
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 0.8rem;
+    height: 0.8rem;
+    border: 1px solid color-mix(in oklab, var(--swatch-color) 65%, white 35%);
+    border-radius: 0.24rem;
+    background: var(--swatch-color);
+}
+
+.lgs--theme-trigger-swatches {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
 }
 
 /*******************************************************************************
@@ -667,6 +706,12 @@ wa-drawer::part(body) {
     overflow: hidden;
 }
 
+wa-drawer [slot="label"] {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+}
+
 wa-tab-panel {
     overflow-y: hidden;
     --padding: var(--lgs-gutter-s) 0 0
@@ -690,6 +735,45 @@ wa-tab-group .lgs--tabs-right-menu {
     align-items: center;
     margin-left: auto;
     gap: 0;
+}
+
+.lgs-tab-with-badge {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    padding-inline-end: var(--lgs-gutter-xs);
+}
+
+.lgs-tab-with-badge-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
+}
+
+.lgs-tab-selection-count {
+    font-size: 7px;
+    line-height: 1;
+    position: absolute;
+    z-index: 1;
+    transform: translate(60%, -70%);
+    pointer-events: none;
+    --lgs-tab-selection-badge-size: 10px;
+    inset-block-start: 30%;
+    inset-inline-end: 2px;
+}
+
+.lgs-tab-selection-count::part(base) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    min-inline-size: var(--lgs-tab-selection-badge-size);
+    inline-size: var(--lgs-tab-selection-badge-size);
+    min-block-size: var(--lgs-tab-selection-badge-size);
+    block-size: var(--lgs-tab-selection-badge-size);
 }
 
 wa-drawer:not([placement="bottom"]):not([placement="top"]) wa-tab-panel::part(base) {
@@ -792,6 +876,37 @@ body.mobile wa-popup:has(.lgs--popup-in-drawer)::part(popup) {
 
 .credits-pane-footer {
     flex-direction: row !important;
+    color: #ffffff;
+    justify-content: flex-start;
+}
+
+.credits-pane-footer strong {
+    color: #ffffff;
+}
+
+.credits-pane-footer span {
+    color: var(--wa-color-brand);
+}
+
+.credits-pane-footer .drawer-footer-studio {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-width: 0;
+    gap: var(--lgs-gutter-xs);
+}
+
+.credits-pane-footer .drawer-footer-logo {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    height: 1.25rem;
+}
+
+.credits-pane-footer .drawer-footer-logo svg {
+    display: block;
+    width: auto;
+    height: 100%;
 }
 
 
@@ -809,6 +924,7 @@ wa-drawer.drawer-is-stacked::part(header-actions) {
  ******************************************************************************/
 
 wa-card {
+    color: var(--lgs-card-text-color, var(--wa-color-text-normal));
     box-shadow: none;
     --wa-panel-border-radius: var(--lgs-border-radius-s);
 }
@@ -816,6 +932,7 @@ wa-card {
 wa-card::part(body) {
     display: flex;
     padding: var(--lgs-gutter-s);
+    color: var(--lgs-card-text-color, var(--wa-color-text-normal));
     --spacing: var(--lgs-gutter-s);
 }
 
@@ -854,6 +971,7 @@ wa-card.wa-theme-lgs1920-on-map::part(body) {
 .lgs-card, .lgs-card::part(base), .lgs-one-line-card, .lgs-one-line-card::part(base) {
     display: flex;
     padding: var(--lgs-gutter-s);
+    color: var(--lgs-card-text-color, var(--wa-color-text-normal));
     border: 1px solid var(--lgs-card-border-color);
     border-radius: var(--lgs-border-radius-s);
     background-color: rgba(255, 255, 255, 0.15);
@@ -1106,19 +1224,34 @@ wa-scroller {
  ******************************************************************************/
 
 wa-tooltip {
-    /*--wa-tooltip-border-radius: var(--lgs-border-radius-xs);*/
-    /*--wa-tooltip-background-color: var(--lgs-tooltip-bg-color);*/
-    /*--wa-tooltip-content-color: var(--lgs-text-on-color);*/
-    /*--wa-tooltip-font-family: var(--wa-font-family-body);*/
-    /*--wa-tooltip-font-weight: var(--wa-font-weight-normal);*/
-    /*--wa-tooltip-font-size: var(--lgs-font-size-s);*/
-    /*--wa-tooltip-line-height: var(--wa-line-height-condensed);*/
-    /*--wa-tooltip-padding: var(--lgs-gutter-xs);*/
-    /*--wa-tooltip-arrow-size: 0;*/
-
-    /*box-shadow: var(--wa-shadow-l);*/
-    /*border-color: var(--lgs-tooltip-border-color);*/
+    --wa-tooltip-background-color: var(--lgs-tooltip-bg-color);
+    --wa-tooltip-border-color: var(--lgs-tooltip-border-color);
+    --wa-tooltip-content-color: var(--lgs-tooltip-color);
     --hide-delay: 0.2s;
+}
+
+:root.wa-light wa-tooltip {
+    --lgs-tooltip-color: var(--wa-color-neutral-10);
+    --lgs-tooltip-bg-color: var(--wa-color-neutral-95);
+    --lgs-tooltip-border-color: var(--wa-color-neutral-80);
+}
+
+:root.wa-dark wa-tooltip {
+    --lgs-tooltip-color: var(--wa-color-neutral-95);
+    --lgs-tooltip-bg-color: var(--wa-color-neutral-20);
+    --lgs-tooltip-border-color: var(--wa-color-neutral-40);
+}
+
+:root.wa-light :is(wa-dialog, wa-drawer) wa-tooltip {
+    --lgs-tooltip-color: var(--wa-color-neutral-95);
+    --lgs-tooltip-bg-color: var(--wa-color-neutral-20);
+    --lgs-tooltip-border-color: var(--wa-color-neutral-40);
+}
+
+:root.wa-dark :is(wa-dialog, wa-drawer) wa-tooltip {
+    --lgs-tooltip-color: var(--wa-color-neutral-10);
+    --lgs-tooltip-bg-color: var(--wa-color-neutral-95);
+    --lgs-tooltip-border-color: var(--wa-color-neutral-80);
 }
 
 wa-tooltip::part(body)::first-letter {
@@ -1237,6 +1370,10 @@ wa-details.lgs--details-hoverable:not([open]):hover {
     box-shadow: var(--wa-shadow-l);
 }
 
+wa-tab-panel wa-details.lgs--details-hoverable {
+    margin-right: 4px;
+    margin-left: 4px;
+}
 /*******************************************************************************
  * Context menu
  ******************************************************************************/
@@ -1402,6 +1539,14 @@ wa-input[label-at-start] label, wa-number-input[label-at-start] label {
     margin-block-end: 0 !important;
 }
 
+wa-number-input[label-at-start] {
+    flex-wrap: wrap;
+}
+
+wa-number-input[label-at-start]::part(hint) {
+    flex: 0 0 100%;
+}
+
 [label-at-start]::part(base) {
     flex: none;
     width: auto;
@@ -1425,9 +1570,8 @@ wa-number-input[no-end]::part(end), wa-number-input[no-start]::part(start) {
  ******************************************************************************/
 
 wa-slider {
-
+    font-size: var(--lgs-font-size);
     width: 100%;
-
 }
 
 wa-slider[label-at-start] {
@@ -1458,6 +1602,11 @@ wa-slider[size="s"] {
 
 wa-slider[label-at-start]::part(label) {
     margin-block-end: 0;
+}
+
+wa-slider[label-at-start]::part(hint) {
+    grid-column: 1 / -1;
+    margin-block-start: 0;
 }
 
 wa-slider::part(track) {
@@ -1881,11 +2030,15 @@ h1, h2, h3, p, ul, li {
 }
 
 h1 {
+    font-family: var(--lgs-font-family-heading);
     font-size: var(--lgs-font-size-l);
+    font-weight: 600;
 }
 
 h2 {
+    font-family: var(--lgs-font-family-heading);
     font-size: var(--lgs-font-size-m);
+    font-weight: 600;
 }
 
 ul {
@@ -1893,6 +2046,7 @@ ul {
 }
 
 h3 {
+    font-family: var(--lgs-font-family-heading);
     font-size: var(--lgs-font-size);
     font-weight: bold;
 }
@@ -2415,4 +2569,80 @@ wa-option:state(current) {
     margin-inline: calc(-1 * var(--lgs-select-option-current-expand));
     padding-inline-start: calc(0.25em + var(--lgs-select-option-current-expand));
     padding-inline-end: calc(1em + var(--lgs-select-option-current-expand));
+}
+
+/*******************************************************************************
+ * 3D Tilesets loading
+ ******************************************************************************/
+
+.base3d-loading-overlay {
+    position: fixed;
+    z-index: 2147483646;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 200px;
+    max-height: var(--lgs-line-dimension);
+    padding: var(--lgs-gutter-s);
+    pointer-events: none;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.base3d-loading-overlay::part(body) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    min-width: 0;
+    height: fit-content;
+    min-height: 0;
+    padding: var(--lgs-gutter-s);
+    white-space: nowrap;
+    gap: var(--lgs-gutter-s);
+}
+
+.base3d-loading-overlay wa-spinner {
+    flex: 0 0 auto;
+    --track-width: 3px;
+}
+
+.replay-camera-angle-overlay {
+    z-index: var(--lgs-ui-layer-zindex);
+    box-sizing: border-box;
+    width: 120px;
+    height: 72px;
+    pointer-events: none;
+    opacity: 0.85;
+    color: var(--replay-angle-fill, var(--wa-color-brand-fill-loud));
+}
+
+.replay-camera-angle-overlay svg {
+    display: block;
+    overflow: visible;
+    width: 100%;
+    height: 100%;
+}
+
+.replay-camera-angle-overlay-axis,
+.replay-camera-angle-overlay-angle {
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-width: 2;
+}
+
+.replay-camera-angle-overlay-axis {
+    opacity: 0.45;
+    stroke-dasharray: 6 6;
+}
+
+.replay-camera-angle-overlay-angle {
+    stroke-dasharray: 0;
+}
+
+.replay-camera-angle-overlay-origin {
+    opacity: 0.9;
+    fill: var(--replay-angle-border, currentColor);
 }

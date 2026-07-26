@@ -7,6 +7,7 @@
  ******************************************************************************/
 
 import { SceneUtils } from '@Utils/cesium/SceneUtils'
+import { getGlobalHideOtherJourneys, refreshJourneyVisibility } from '@Core/ui/JourneyVisibility'
 import { snapdom } from '@zumer/snapdom'
 import {
     Cartesian2,
@@ -537,6 +538,56 @@ export const currentViewerSnapshot = async () => {
     catch (error) {
         console.error(error)
         return null
+    }
+}
+
+export const stopReportCameraMotion = async () => {
+    if (globalThis.__?.ui?.cameraManager?.isRotating?.()) {
+        await globalThis.__.ui.cameraManager.stopRotate?.()
+    }
+
+    const panorama = globalThis.lgs?.stores?.ui?.mainUI?.panorama
+    if (panorama?.active) {
+        panorama.active = false
+        panorama.target = false
+        globalThis.lgs?.scene?.requestRender?.()
+    }
+
+    await waitForAnimationFrames(2)
+}
+
+export const withReportJourneyVisibility = async (journey, callback) => {
+    const currentJourney = journey ?? globalThis.lgs?.theJourney ?? null
+    const previousHideOtherJourneys = getGlobalHideOtherJourneys()
+    let restored = false
+
+    const restore = async () => {
+        if (restored) {
+            return
+        }
+        restored = true
+        await refreshJourneyVisibility({
+            hideOtherJourneys: previousHideOtherJourneys,
+            currentJourney,
+        })
+    }
+
+    await stopReportCameraMotion()
+    await refreshJourneyVisibility({
+        hideOtherJourneys: true,
+        currentJourney,
+        forceCurrentVisible: true,
+    })
+
+    try {
+        return {
+            result:  await callback?.(),
+            restore,
+        }
+    }
+    catch (error) {
+        await restore()
+        throw error
     }
 }
 

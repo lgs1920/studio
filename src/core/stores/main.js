@@ -27,7 +27,6 @@ export const main = {
     components: {
         fileLoader: {
             fileList: new proxyMap(),
-            loadSample: false,
         },
 
         camera: {
@@ -79,6 +78,10 @@ export const main = {
                 this.filtered.journey.clear()
 
                 this.list.forEach(($poi, id) => {
+                    if ($poi.tooClose === true) {
+                        return
+                    }
+
                     // Global list: usually based on visibility
                     if ($poi.visible !== false) {
                         this.filtered.global.set(id, true)
@@ -111,10 +114,13 @@ export const main = {
 
         layers: {
             base: null,
+            base3d: null,
+            base3dLoading: false,
             overlay: null,
+            tiles3d: null,
         },
 
-        flythroughRunner: {
+        replayRunner: {
             run:   false,
             pause: false,
             forward: true,
@@ -143,5 +149,7 @@ export const main = {
     canViewJourneyData: false,
     canViewProfile: false,
     theLayer:       null,
+    theBase3DLayer: null,
     theLayerOverlay: null,
+    theTiles3DLayer: null,
 }

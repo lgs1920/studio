@@ -16,7 +16,7 @@
 
 import { Widget }                                                                 from '@Components/MainUI/widgets/Widget'
 import { JourneyStats }                                                           from '@Components/Stats/JourneyStats'
-import { JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD } from '@Core/constants'
+import { JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { useManagedStylesheet }                                                   from '@Utils/useManagedStylesheet'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS }               from '@Utils/UnitUtils'
@@ -27,11 +27,23 @@ import journeyStatsStylesheetHref                                               
 const JOURNEY_STATS_WIDGET_CONTEXT_FALLBACK = {widgetsBoard: ''}
 const JOURNEY_STATS_WIDGET_STYLESHEET_ID = 'journey-stats-widget'
 
-export const JourneyStatsWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsBoard}) => {
+export const JourneyStatsWidget = ({
+    id,
+    context,
+    zIndex,
+    widgetsBoard: persistedWidgetsBoard,
+    mode = 'journey',
+    widgetKey = 'journey-stats-widget',
+}) => {
     useManagedStylesheet(JOURNEY_STATS_WIDGET_STYLESHEET_ID, journeyStatsStylesheetHref)
 
     const contextState = useOptionalSnapshot(context, JOURNEY_STATS_WIDGET_CONTEXT_FALLBACK)
-    const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
+    const video = useSnapshot(lgs.stores.ui.video)
+    const widgetsBoard = contextState.widgetsBoard
+                         || persistedWidgetsBoard
+                         || (video.editing || video.preRecording || video.recording || video.snapshot || video.finalizing
+                             ? VIDEO_WIDGETS_BOARD
+                             : '')
     const main = useSnapshot(lgs.stores.main)
     const journey = lgs.theJourney
     const journeySlug = main.theJourney?.slug ?? null
@@ -87,28 +99,38 @@ export const JourneyStatsWidget = ({id, context, zIndex, widgetsBoard: persisted
             mandatory:       false,
             stopPropagation: false,
             snap:            false,
+            refreshMode:     mode === 'dynamic' ? 'both' : undefined,
             widgetsBoard:    widgetsBoard,
             zIndex: zIndex,
         }
     }, [container, widgetsBoard, id, zIndex])
 
-    if (!journeySlug || !journey || !widgetsBoard || Object.keys(config).length === 0) {
+    const isVisible = useMemo(() => {
+        if (!widgetsBoard) {
+            return false
+        }
+
+        return true
+    }, [widgetsBoard])
+
+    if (!journeySlug || !journey || !widgetsBoard || Object.keys(config).length === 0 || !isVisible) {
         return null
     }
 
     return (
         <Widget
-            isVisible={true}
+            isVisible={isVisible}
             config={config}
             key={journeySlug}
         >
-            {metrics && (
-                <JourneyStats
-                    id={id}
-                    metrics={metrics}
-                    units={units}
-                />
-            )}
+            <JourneyStats
+                id={id}
+                metrics={metrics}
+                units={units}
+                mode={mode}
+                widgetKey={widgetKey}
+                widgetsBoard={widgetsBoard}
+            />
         </Widget>
     )
 }

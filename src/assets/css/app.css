@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-06-18
- * Last modified: 2026-06-18
+ * Created on: 2026-07-16
+ * Last modified: 2026-07-16
  *
  *
  * Copyright © 2026 LGS1920
@@ -207,7 +207,6 @@ body.lgs-app-booting #cesium-viewer {
 }
 
 .main-logo .version-info, .main-logo .welcome-modal-timer {
-    font-size: var(--lgs-font-size-s);
     line-height: 1;
     display: flex;
     align-items: center;
@@ -216,6 +215,7 @@ body.lgs-app-booting #cesium-viewer {
 
 .main-logo .welcome-modal-timer {
     font-size: var(--lgs-font-size-s);
+    font-weight: 400;
     position: absolute;
     top: var(--lgs-gutter-s);
     right: var(--lgs-gutter-s);
@@ -334,7 +334,36 @@ body.lgs-app-booting #cesium-viewer {
  ******************************************************************************/
 
 .lgs-widget-control-box {
-    z-index: var(--lgs-above-widgets) !important;
+    z-index: var(--lgs-widget-ui-zindex) !important;
+}
+
+/* Video widget preview: visible at its persisted position, never interactive. */
+.video-scene-widgets-portal-preview .lgs-widget-preview-only {
+    cursor: not-allowed !important;
+}
+
+.video-scene-widgets-portal-preview .lgs-widget-preview-only ~ .lgs-widget-control-box {
+    display: none !important;
+}
+
+.video-scene-widgets-portal-preview .lgs-widget-preview-forbidden {
+    position: absolute;
+    z-index: 10000;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: not-allowed;
+    opacity: 0;
+    pointer-events: auto;
+    color: var(--lgs-text-on-color, currentColor);
+    background: color-mix(in srgb, var(--lgs-dark-color, #000) 12%, transparent);
+    transition: opacity 0.15s ease-in-out;
+}
+
+.video-scene-widgets-portal-preview .lgs-widget-preview-forbidden:hover,
+.video-scene-widgets-portal-preview .lgs-widget-preview-only:hover .lgs-widget-preview-forbidden {
+    opacity: 1;
 }
 
 .lgs-widget-control-box * {
@@ -401,7 +430,25 @@ body.lgs-app-booting #cesium-viewer {
 }
 
 .lgs-widget-control-box .moveable-guideline {
-    background: var(--lgs-third-color-75) !important;
+    background: var(--wa-color-brand) !important;
+    opacity: var(--lgs-widget-snap-guideline-opacity);
+}
+
+.lgs-widget-control-box .moveable-guideline.lgs-widget-snap-grid-guideline {
+    background: var(--wa-color-brand) !important;
+}
+
+.lgs-widget-control-box .moveable-guideline.lgs-widget-snap-center-guideline {
+    background: var(--wa-color-warning) !important;
+    opacity: var(--lgs-widget-snap-center-opacity);
+}
+
+.lgs-widget-control-box .moveable-bold.lgs-widget-snap-element-guideline,
+.lgs-widget-control-box .moveable-dashed.lgs-widget-snap-element-guideline,
+.lgs-widget-control-box .moveable-guideline.lgs-widget-snap-element-guideline {
+    display: block !important;
+    background: var(--wa-color-brand) !important;
+    opacity: 1 !important;
 }
 
 /* snap inside a target */
@@ -571,14 +618,17 @@ body.lgs-app-booting #cesium-viewer {
 }
 
 .widget-deck-panel {
+    position: relative;
+    z-index: var(--lgs-widget-ui-zindex);
     overflow: hidden;
     align-items: stretch;
     flex-direction: column;
     box-sizing: border-box;
-    width: max-content;
-    min-width: max-content;
+    width: fit-content;
+    min-width: fit-content;
     padding: var(--lgs-gutter-xs);
     box-shadow: var(--lgs-on-map-floating-shadow, var(--wa-shadow-l));
+    --widget-deck-panel-max-width: 14rem;
     padding-block-end: calc(var(--lgs-gutter-s) + var(--lgs-gutter-xs));
     gap: 0;
 }
@@ -595,10 +645,11 @@ body.lgs-app-booting #cesium-viewer {
 .widget-deck-panel ul {
     display: flex;
     flex-direction: column;
-    width: max-content;
-    min-width: 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
     margin: 0;
-    padding: 0 var(--lgs-gutter-xs);
+    padding: 0;
     list-style: none;
     gap: 0;
 }
@@ -614,7 +665,9 @@ body.lgs-app-booting #cesium-viewer {
 .widget-deck-entry {
     display: flex;
     align-items: center;
+    flex-wrap: nowrap;
     box-sizing: border-box;
+    min-width: 0;
     margin: 2px;
     padding: 2px;
     transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
@@ -655,7 +708,114 @@ body.lgs-app-booting #cesium-viewer {
     border: 0;
 }
 
+.widget-grid-settings {
+    padding-block: var(--lgs-gutter-xs) !important;
+}
+
+.widget-grid-setting {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    width: 100%;
+}
+
+.widget-grid-setting wa-switch,
+.widget-grid-setting wa-input,
+.widget-grid-setting wa-number-input {
+    width: 100%;
+}
+
+.widget-grid-size-input {
+    width: 100%;
+}
+
+.widget-grid-setting-content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin-top: var(--lgs-gutter-xs);
+    gap: var(--lgs-gutter-xs);
+}
+
+.widget-grid-setting-row {
+    width: 100%;
+}
+
+.widget-grid-setting .widget-grid-switch {
+    display: block;
+}
+
+.widget-grid-setting .widget-grid-switch::part(base) {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.widget-grid-setting .widget-grid-switch::part(label) {
+    display: flex;
+    align-items: center;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.widget-grid-setting .widget-grid-switch::part(control) {
+    flex: 0 0 auto;
+}
+
+.widget-deck-entry .widget-grid-switch-label,
+.widget-deck-entry .widget-grid-input-label {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    width: auto;
+    gap: var(--lgs-gutter-xs);
+}
+
+.widget-grid-setting wa-input::part(base) {
+    min-width: 9rem;
+}
+
+.widget-grid-setting wa-number-input::part(base) {
+    width: 100%;
+}
+
+.widget-grid-setting wa-input::part(input),
+.widget-grid-setting wa-number-input::part(input) {
+    text-align: right;
+}
+
+.lgs-widget-grid-overlay {
+    position: fixed;
+    z-index: calc(var(--lgs-above-widgets) - 1002);
+    pointer-events: none;
+    overflow: hidden;
+    user-select: none;
+    contain: strict;
+}
+
+.lgs-widget-grid-overlay-line {
+    position: absolute;
+    display: block;
+    pointer-events: none;
+    opacity: var(--lgs-widget-snap-guideline-opacity);
+    background: var(--wa-color-brand);
+}
+
+.lgs-widget-grid-overlay-line-vertical {
+    top: 0;
+    bottom: 0;
+    width: 1px;
+}
+
+.lgs-widget-grid-overlay-line-horizontal {
+    right: 0;
+    left: 0;
+    height: 1px;
+}
+
 .widget-deck-entry wa-icon {
+    flex: 0 0 auto;
     width: calc(var(--lgs-font-size-s) + 4px);
     height: calc(var(--lgs-font-size-s) + 4px);
 }
@@ -669,7 +829,10 @@ body.lgs-app-booting #cesium-viewer {
 }
 
 .widget-deck-entry .widget-name {
+    overflow: hidden;
     text-align: left;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .widget-deck-entry .widget-remaining {
@@ -696,21 +859,72 @@ body.lgs-app-booting #cesium-viewer {
 }
 
 /*******************************************************************************
+ * Widget Management
+ ******************************************************************************/
+.widget-management-drawer-title {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
+}
+
+.widget-management-drawer-content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    gap: var(--lgs-gutter-xs);
+}
+
+.widget-management-drawer-board {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+}
+
+.widget-group-management {
+    margin-top: auto;
+}
+
+/*******************************************************************************
  * Widget Ordering
  ******************************************************************************/
 .widget-ordering-panel::part(body) {
     display: flex;
     flex-direction: column;
     height: 250px;
+    min-height: 0;
     gap: var(--lgs-gutter-xs);
+}
+
+.widget-ordering-panel-fill {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.widget-ordering-panel-fill::part(base),
+.widget-ordering-panel-fill::part(body) {
+    height: 100%;
+    min-height: 0;
+}
+
+.widget-ordering-panel-fill::part(body) {
+    flex: 1 1 auto;
 }
 
 /* Container et Scroll */
 .widget-list-container {
     overflow: hidden;
     height: 250px;
+    min-height: 0;
     touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
+}
+
+.widget-ordering-panel-fill .widget-list-container {
+    flex: 1 1 auto;
+    height: auto;
 }
 
 .reorder {
@@ -734,7 +948,6 @@ body.lgs-app-booting #cesium-viewer {
     flex-direction: column;
     min-width: 10rem;
     min-height: 100%;
-    margin-right: calc(-1 * var(--lgs-gutter-s));
     padding: var(--lgs-gutter-xs);
     text-wrap: nowrap;
     gap: var(--lgs-gutter-s);
@@ -764,6 +977,17 @@ body.lgs-app-booting #cesium-viewer {
 
 .widget-ordering-row .sortable-widget-info {
     flex: 1;
+}
+
+.widget-ordering-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-left: auto;
+}
+
+.widget-ordering-action-button {
+    flex: 0 0 auto;
 }
 
 .widget-ordering-row:hover {

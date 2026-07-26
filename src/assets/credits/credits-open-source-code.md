@@ -1,9 +1,6 @@
 ## Open Source Code
 
-Licence : As of today, there's not yet any licence.
-So, at this time, any use or reproduction of code is only possible with our permission. Thank you.
-
-The application, including studio, backend,APIs, is based on :
+The application, including studio, backend,APIs,site is based on :
 
 ### Map and 3D:
 * [cesiumjs](https://cesium.com/)  - The Map engine
@@ -16,8 +13,9 @@ The application, including studio, backend,APIs, is based on :
 ### User interface:
 * [React](https://react.dev/) - UI creation
 * [Valtio](https://valtio.pmnd.rs) - State management
-* [Shoelace](https://shoelace.style/) - The web components used for UI
 * [FontAwesome](https://fontawesome.com/) - The icons library
+* [WebAwesome](https://webawesome.com/) - The web components library
+* [Eleventy](https://www.11ty.dev/) - The web site engine
 * [echarts](https://echarts.apache.org/) - Chart library
 * [snapdom](https://snapdom.dev/) - next-generation DOM Capture Engine
 * [mediabunny](https://mediabunny.dev/) - Video reading/writing/encoding

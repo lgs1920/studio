@@ -49,6 +49,7 @@ export const PDF_COLORS = {
     text:       [0, 0, 0],
     muted:      [82, 82, 82],
     line:       [185, 185, 185],
+    trace:      [68, 68, 68],
     headerFill: [238, 238, 238],
     mapFill:    [249, 249, 249],
     white:      [255, 255, 255],

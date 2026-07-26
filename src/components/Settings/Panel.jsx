@@ -62,6 +62,7 @@ export const Panel = memo(() => {
                               open={true}
                               modal="false"
                               onWaAfterHide={closePanel}>
+                        <span slot="label"><WaIcon name="gear" variant="regular"/>{'Settings'}</span>
                         <PanelActions/>
                         <WaTabGroup>
                             <WaTab panel="tab-tools">
@@ -71,7 +72,7 @@ export const Panel = memo(() => {
                                 <WaIcon name="paintbrush-pencil" variant="regular"/>{'User Interface'}
                             </WaTab>
                             <WaTab panel="tab-user" id={'manage-user-profile'}>
-                                <WaTooltip for="user-profile-tab" placement={'top'}>{'Manage My Profile'}</WaTooltip>
+                                <WaTooltip for="user-profile-tab" placement={'top'}>{'Manage My Profile (Alt+Shift+U)'}</WaTooltip>
                                 <WaIcon id="user-profile-tab" name="circle-user" variant={'solid'}/>
                             </WaTab>
                             <WaTabPanel name="tab-tools"><GlobalSettings/></WaTabPanel>

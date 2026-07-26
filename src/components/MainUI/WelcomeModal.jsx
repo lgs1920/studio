@@ -7,25 +7,25 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-07-09
+ * Last modified: 2026-07-09
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { APP_EVENT, MILLIS, SECOND, SLOGAN }                 from '@Core/constants'
-import { LGSPopup }                    from '@Components/LGSPopup'
+import { LGSPopup }                                          from '@Components/LGSPopup'
+import { SloganSvg }                                         from '@Components/MainUI/SloganSvg'
+import { APP_EVENT, MILLIS, SECOND } from '@Core/constants'
 import { formatBuildInfo }                                   from '@Utils/BuildInfoUtils'
 import { UIToast }                                           from '@Utils/UIToast'
-import { WaButton, WaIcon, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon, WaSpinner }                       from '@web.awesome.me/webawesome-pro/dist/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { StudioLogo }                                        from './StudioLogo'
+import { LogoSvg }                                           from './LogoSvg'
 
 const DEFAULT_WELCOME_DISPLAY_TIME = 6
 const WELCOME_VIDEO_DESKTOP = '/assets/media/trekking-hero-desktop.mp4'
 const WELCOME_VIDEO_MOBILE = '/assets/media/trekking-hero-mobile.mp4'
-const WELCOME_FALLBACK_IMAGE = '/assets/images/welcome-splash.png'
 const WELCOME_MAX_FOG_DURATION = 3 * MILLIS
 const WELCOME_FOG_UPDATE_INTERVAL = 100
 const WELCOME_EXIT_DURATION = 3000
@@ -33,10 +33,13 @@ const WELCOME_EXIT_DURATION = 3000
 export const WelcomeModal = ({initComplete = false, appReady = false, settingsReady = false, onEnter}) => {
     const enterHandled = useRef(false)
     const exitTimerRef = useRef(null)
+    const countdownTimerRef = useRef(null)
     const [elapsedMillis, setElapsedMillis] = useState(0)
-    const [readyElapsedMillis, setReadyElapsedMillis] = useState(0)
+    const [countdownSeconds, setCountdownSeconds] = useState(null)
+    const [replayArmed, setReplayArmed] = useState(false)
     const [dismissed, setDismissed] = useState(false)
     const [exiting, setExiting] = useState(false)
+    const [videoReady, setVideoReady] = useState(false)
     const [buildInfoOpen, setBuildInfoOpen] = useState(false)
 
     const welcomeSettings = settingsReady ? lgs.settings?.ui?.welcome : null
@@ -46,13 +49,9 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
     const showIntro = welcomeSettings?.showIntro !== false
     const autoClose = welcomeSettings?.autoClose !== false
     const readyToEnter = initComplete && appReady
-    const readyElapsedSeconds = Math.floor(readyElapsedMillis / MILLIS)
-    const closure = showIntro && autoClose && readyToEnter ? Math.max(displayDuration - readyElapsedSeconds, 0) : 0
-    const autoCloseReached = showIntro && autoClose && readyToEnter && closure <= 0
-    const shouldAutoEnter = readyToEnter && (!showIntro || autoCloseReached)
+    const replayAvailable = replayArmed && showIntro && autoClose && countdownSeconds !== null
     const studioVersion = settingsReady ? (lgs.versions?.studio ?? lgs.versions?.version) : null
     const buildInfo = settingsReady ? formatBuildInfo(lgs.build) : null
-    const canShowFullLogo = settingsReady && Boolean(studioVersion)
     const fogDuration = Math.min(WELCOME_MAX_FOG_DURATION, displayDuration * MILLIS)
     const fogProgress = Math.min(elapsedMillis / fogDuration, 1)
     const fogStrength = Math.max(1 - fogProgress, 0)
@@ -63,11 +62,10 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
         '--welcome-video-saturation': (0.82 + fogProgress * 0.18).toFixed(3),
         '--welcome-scrim-opacity':    (0.58 - fogProgress * 0.10).toFixed(3),
         '--welcome-exit-duration':    `${WELCOME_EXIT_DURATION}ms`,
-        '--welcome-background-image': `url(${WELCOME_FALLBACK_IMAGE})`,
     }
 
     const hide = useCallback(({animate = true} = {}) => {
-        if (!readyToEnter) {
+        if (!readyToEnter && !replayArmed) {
             return
         }
 
@@ -106,7 +104,11 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
             setDismissed(true)
             onEnter?.()
         }, WELCOME_EXIT_DURATION)
-    }, [onEnter, readyToEnter, settingsReady])
+    }, [onEnter, readyToEnter, replayArmed, settingsReady])
+
+    const triggerReplay = useCallback(() => {
+        hide({animate: showIntro})
+    }, [hide, showIntro])
 
     const enter = () => {
         hide()
@@ -144,30 +146,61 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
                 window.clearTimeout(exitTimerRef.current)
                 exitTimerRef.current = null
             }
+            if (countdownTimerRef.current !== null) {
+                window.clearTimeout(countdownTimerRef.current)
+                countdownTimerRef.current = null
+            }
         }
     }, [])
 
     useEffect(() => {
-        if (!readyToEnter) {
+        if (!readyToEnter || !showIntro || !autoClose) {
+            setCountdownSeconds(null)
+            setReplayArmed(false)
+            if (countdownTimerRef.current !== null) {
+                window.clearTimeout(countdownTimerRef.current)
+                countdownTimerRef.current = null
+            }
             return undefined
         }
 
-        const startedAt = Date.now()
+        setReplayArmed(true)
+        let remainingSeconds = displayDuration
+        let cancelled = false
 
-        const timer = setInterval(() => {
-            setReadyElapsedMillis(Date.now() - startedAt)
-        }, WELCOME_FOG_UPDATE_INTERVAL)
-
-        return () => clearInterval(timer)
-    }, [readyToEnter])
-
-    useEffect(() => {
-        if (shouldAutoEnter) {
-            const frameId = requestAnimationFrame(() => hide({animate: showIntro}))
-            return () => cancelAnimationFrame(frameId)
+        const stopCountdown = () => {
+            if (countdownTimerRef.current !== null) {
+                window.clearTimeout(countdownTimerRef.current)
+                countdownTimerRef.current = null
+            }
         }
-        return undefined
-    }, [hide, shouldAutoEnter, showIntro])
+
+        const stepCountdown = () => {
+            if (cancelled) {
+                return
+            }
+
+            setCountdownSeconds(remainingSeconds)
+
+            if (remainingSeconds <= 0) {
+                stopCountdown()
+                triggerReplay()
+                return
+            }
+
+            countdownTimerRef.current = window.setTimeout(() => {
+                remainingSeconds -= 1
+                stepCountdown()
+            }, MILLIS)
+        }
+
+        stepCountdown()
+
+        return () => {
+            cancelled = true
+            stopCountdown()
+        }
+    }, [autoClose, displayDuration, readyToEnter, showIntro, triggerReplay])
 
     const links = useMemo(() => {
         if (!settingsReady) {
@@ -191,7 +224,7 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
 
     return (
         <div id="welcome-modal"
-             className={`lgs-theme${exiting ? ' welcome-modal-exiting' : ''}`}
+             className={`lgs-theme${exiting ? ' welcome-modal-exiting' : ''}${videoReady ? ' welcome-modal-video-ready' : ''}`}
              aria-busy={!readyToEnter}
              style={welcomeStyle}>
             <div className="welcome-modal-media" aria-hidden="true">
@@ -201,7 +234,10 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
                     muted
                     loop
                     playsInline
-                    poster={WELCOME_FALLBACK_IMAGE}
+                    preload="auto"
+                    onLoadedData={() => setVideoReady(true)}
+                    onCanPlay={() => setVideoReady(true)}
+                    onPlaying={() => setVideoReady(true)}
                 >
                     <source src={WELCOME_VIDEO_MOBILE} media="(max-width: 700px)" type="video/mp4"/>
                     <source src={WELCOME_VIDEO_DESKTOP} type="video/mp4"/>
@@ -210,39 +246,41 @@ export const WelcomeModal = ({initComplete = false, appReady = false, settingsRe
             <div className="welcome-modal-fog" aria-hidden="true"/>
             <div className="welcome-modal-scrim" aria-hidden="true"/>
 
-            {showIntro && autoClose && readyToEnter && closure > 0 && (
-                <div className="welcome-modal-timer">{closure} s</div>
+            {replayAvailable && countdownSeconds > 0 && (
+                <div className="welcome-modal-timer">{countdownSeconds} s</div>
             )}
 
             <div className="welcome-modal-content">
-                {canShowFullLogo ? (
-                    <StudioLogo
-                        width="100%"
-                        slogan={SLOGAN}
-                        addClassName="welcome-logo"
-                    />
-                ) : (
-                     <div className="main-logo signage-style welcome-logo welcome-logo-bootstrap">
-                         <img src="/assets/images/logo-lgs1920-studio.png" alt="LGS1920 Studio"/>
-                         <span className="the-slogan">{SLOGAN}</span>
-                     </div>
-                 )}
+                <LogoSvg
+                    src="/assets/logo/logo-vertical.svg"
+                    primaryColor="#ffffff"
+                    secondaryColor="#ffffff"
+                    secondaryOpacity={0}
+                    textPrimaryColor="#ffffff"
+                    textSecondaryColor="#ffffff"
+                    width="100%"
+                    className="welcome-logo"
+                    title="LGS1920 Studio logo"
+                />
+                <SloganSvg className="welcome-slogan"/>
 
-                {showIntro && settingsReady && (
+                {showIntro && (
                     <div className="welcome-enter-call-for-action">
-                        <WaButton
-                            className="welcome-site-button"
-                            appearance="outlined"
-                            variant="brand"
-                            href={__.app.buildUrl(lgs.configuration.website)}
-                            target="_blank"
-                            rel="noreferrer"
-                            onClick={enter}
-                        >
-                            <WaIcon slot="start" name="globe-pointer" variant="regular"/>
-                            {'Visit our Site'}
-                        </WaButton>
-                        {readyToEnter ? (
+                        {settingsReady && (
+                            <WaButton
+                                className="welcome-site-button"
+                                appearance="outlined"
+                                variant="brand"
+                                href={__.app.buildUrl(lgs.configuration.website)}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={enter}
+                            >
+                                <WaIcon slot="start" name="globe-pointer" variant="regular"/>
+                                {'Visit our Site'}
+                            </WaButton>
+                        )}
+                        {replayAvailable ? (
                             <WaButton className="welcome-explore-button" variant="brand" onClick={enter}>
                                 <WaIcon
                                     slot="start"

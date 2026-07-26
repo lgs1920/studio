@@ -235,9 +235,14 @@ export class WidgetCoreRegistry {
     disposeByGroup = (groupId, usePersist = false) => {
         const elementsToDispose = []
         for (const [elementId, config] of this.#widgets) {
-            if (config.group === groupId && (!usePersist || !config.persist)) {
-                elementsToDispose.push(elementId)
+            if (config.group !== groupId) {
+                continue
             }
+            if (usePersist && config.persist) {
+                this.#invalidateRuntimeConfig(elementId, config)
+                continue
+            }
+            elementsToDispose.push(elementId)
         }
         for (const elementId of elementsToDispose) {
             const config = this.getWidgetConfig(elementId)
@@ -257,6 +262,41 @@ export class WidgetCoreRegistry {
     }
 
     /**
+     * Releases runtime resources while preserving the widget configuration and persistence record.
+     * @param {string} elementId - Widget identifier
+     * @param {Object} config - Widget runtime configuration
+     */
+    #invalidateRuntimeConfig = (elementId, config) => {
+        if (config.observer) {
+            const observedTargets = config.observedTargets ?? [config.boundsContainer ?? config.container]
+            try {
+                observedTargets.filter(Boolean).forEach(target => config.observer.unobserve(target))
+            }
+            catch {
+                void 0
+            }
+            config.observer.disconnect()
+            config.observer = null
+        }
+        if (config.elementObserver) {
+            config.elementObserver.disconnect()
+            config.elementObserver = null
+        }
+        if (config.windowResizeHandler) {
+            window.removeEventListener('resize', config.windowResizeHandler)
+            config.windowResizeHandler = null
+        }
+        config.element = null
+        config.observedTargets = []
+        config.fromDB = false
+        config.fromRuntime = false
+        config.runtimeReady = false
+        config.skipInitialElementResizeSync = false
+        __.ui.widgetCache?.unmount?.(elementId)
+        this.#moveables.delete(elementId)
+    }
+
+    /**
      * Invalidates the runtime state of all widgets attached to a board without touching persistence.
      * This is used when a board is temporarily unmounted and needs to be reloaded from DB on the next mount.
      *
@@ -273,34 +313,7 @@ export class WidgetCoreRegistry {
             if (config.widgetsBoard !== widgetsBoard) {
                 continue
             }
-
-            if (config.observer) {
-                const observedTargets = config.observedTargets ?? [config.boundsContainer ?? config.container]
-                try {
-                    observedTargets.filter(Boolean).forEach(target => config.observer.unobserve(target))
-                }
-                catch {
-                    void 0
-                }
-                config.observer.disconnect()
-                config.observer = null
-            }
-            if (config.elementObserver) {
-                config.elementObserver.disconnect()
-                config.elementObserver = null
-            }
-            if (config.windowResizeHandler) {
-                window.removeEventListener('resize', config.windowResizeHandler)
-                config.windowResizeHandler = null
-            }
-            config.element = null
-            config.observedTargets = []
-            config.fromDB = false
-            config.fromRuntime = false
-            config.runtimeReady = false
-            config.skipInitialElementResizeSync = false
-            __.ui.widgetCache?.unmount?.(elementId)
-            this.#moveables.delete(elementId)
+            this.#invalidateRuntimeConfig(elementId, config)
             invalidated += 1
         }
 
@@ -447,6 +460,7 @@ export class WidgetCoreRegistry {
             config = {
                 animationWhenDragging:  initialConfig.animationWhenDragging ?? false,
                 animationWhenScaling:   initialConfig.animationWhenScaling ?? false,
+                anchorOnScale:          initialConfig.anchorOnScale ?? null,
                 attachTo:               anchor,
                 boundStatus:            {left: false, top: false, right: false, bottom: false},
                 bounds:                 {left: 0, top: 0, right: 0, bottom: 0},
@@ -460,6 +474,7 @@ export class WidgetCoreRegistry {
                 cropDimensions:         initialConfig.cropDimensions,
                 dimensions:             {width: 0, height: 0},
                 dynamic:                initialConfig.dynamic ?? false,
+                draggable:              initialConfig.draggable ?? true,
                 element:                initialConfig.element,
                 elementObserver:        null,
                 expandedDimensions:     initialConfig.expandedDimensions ?? null,
@@ -474,7 +489,9 @@ export class WidgetCoreRegistry {
                 mandatory:              initialConfig.mandatory ?? false,
                 margin:                 initialConfig.margin,
                 max:                    initialConfig.max ?? {width: 500, height: 500},
+                maxScale:               initialConfig.maxScale ?? null,
                 min:                    initialConfig.min ?? {width: 10, height: 10},
+                minScale:               initialConfig.minScale ?? null,
                 minCropSize:            initialConfig.minCropSize ?? {width: 100, height: 100},
                 observer:               null,
                 outsideOverlay:         initialConfig.outsideOverlay,
@@ -483,9 +500,11 @@ export class WidgetCoreRegistry {
                 previousCropDimensions: null,
                 ratio:                  ratio,
                 resizeFromCenter:       initialConfig.resizeFromCenter ?? false,
+                resizable:              initialConfig.resizable ?? false,
                 rotate:                 initialConfig.rotate ?? 0,
                 runtimeReady:           false,
                 scale:                  initialConfig.scale ?? {x: 1, y: 1},
+                scalable:               initialConfig.scalable ?? false,
                 setPosition:            initialConfig.setPosition,
                 showControlBox:         initialConfig.showControlBox,
                 snap:                   initialConfig.snap ?? false,
@@ -517,6 +536,24 @@ export class WidgetCoreRegistry {
             }
             if (initialConfig.boundsContainer) {
                 config.boundsContainer = initialConfig.boundsContainer
+            }
+            if (initialConfig.anchorOnScale !== undefined) {
+                config.anchorOnScale = initialConfig.anchorOnScale
+            }
+            if (initialConfig.draggable !== undefined) {
+                config.draggable = initialConfig.draggable
+            }
+            if (initialConfig.resizable !== undefined) {
+                config.resizable = initialConfig.resizable
+            }
+            if (initialConfig.scalable !== undefined) {
+                config.scalable = initialConfig.scalable
+            }
+            if (initialConfig.minScale !== undefined) {
+                config.minScale = initialConfig.minScale
+            }
+            if (initialConfig.maxScale !== undefined) {
+                config.maxScale = initialConfig.maxScale
             }
             if (initialConfig.group !== undefined) {
                 config.group = initialConfig.group
@@ -640,6 +677,12 @@ export class WidgetCoreRegistry {
             }
         }
 
+        // Crop dimensions are the rendered dimensions. Unlike regular visual
+        // widgets, a crop must never combine its width/height with a scale.
+        if (config.isCropper) {
+            config.scale = {x: 1, y: 1}
+        }
+
         this.#widgets.set(elementId, config)
         return config
     }
@@ -738,12 +781,14 @@ export class WidgetCoreRegistry {
         const fallbackTopRatio = config.savedRatios?.topRatio
         const leftRatio = Number.isFinite(computedLeftRatio) ? computedLeftRatio : (Number.isFinite(fallbackLeftRatio) ? fallbackLeftRatio : 0)
         const topRatio = Number.isFinite(computedTopRatio) ? computedTopRatio : (Number.isFinite(fallbackTopRatio) ? fallbackTopRatio : 0)
-        const scale = config.scale
-                     ? {
-                         x: Number.isFinite(Number(config.scale.x)) ? Number(config.scale.x) : 1,
-                         y: Number.isFinite(Number(config.scale.y)) ? Number(config.scale.y) : 1,
-                     }
-                     : {x: 1, y: 1}
+        const scale = config.isCropper
+                      ? {x: 1, y: 1}
+                      : config.scale
+                        ? {
+                            x: Number.isFinite(Number(config.scale.x)) ? Number(config.scale.x) : 1,
+                            y: Number.isFinite(Number(config.scale.y)) ? Number(config.scale.y) : 1,
+                        }
+                        : {x: 1, y: 1}
         const ratio = config.ratio
                       ? {
                           value: config.ratio.value ?? null,

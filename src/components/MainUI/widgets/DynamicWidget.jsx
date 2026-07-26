@@ -78,7 +78,9 @@ async function ensureWidget(id, props = {}) {
     const entity = lgs.stores.ui.widget.list.get(id) ?? {}
     const group = cache?.group ?? entity.group ?? props.group
     if (!group) {
-        console.warn(`[DynamicWidget] Skipping widget "${id}" because cache metadata is missing.`)
+        // Some imperative widgets own their DOM through a regular Widget host
+        // and only appear in the reactive list for selection or positioning.
+        // They are not entries in the dynamic widget catalog.
         return null
     }
 

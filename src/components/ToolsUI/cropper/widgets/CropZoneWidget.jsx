@@ -35,6 +35,8 @@ import { CropZone }              from './CropZone'
  */
 export const CropZoneWidget = memo(({
                                         className = '',
+                                        moveableClassName = '',
+                                        containerClassName = '',
                                         onDoubleClick,
                                         infoComponent = null,
                                         infoPosition = true,
@@ -47,8 +49,8 @@ export const CropZoneWidget = memo(({
     // Snapshot of the Valtio context
     const $context = useSnapshot(context)
     const video = useSnapshot(lgs.stores.ui.video)
-    const flythrough = useSnapshot(lgs.stores.flythrough)
-    const lockToCenter = Boolean(video.editing && flythrough.recordingSync === true)
+    const replay = useSnapshot(lgs.stores.replay)
+    const lockToCenter = Boolean(video.editing && replay.recordingSync === true)
 
     // Memoized configuration for the Widget component
     const config = useMemo(() => {
@@ -67,6 +69,7 @@ export const CropZoneWidget = memo(({
             isCropper:        true,
             resizable:        true,
             draggable:        !lockToCenter,
+            snappable:        true,
             outsideOverlay:   overlay,
             margin:           lgs?.gutter?.xs ?? 8,
             resizeFromCenter: true,
@@ -103,9 +106,22 @@ export const CropZoneWidget = memo(({
         return () => cancelAnimationFrame(raf)
     }, [$context.id, lockToCenter])
 
+    useEffect(() => {
+        // In composition mode this is the only crop representation mounted.
+        // Keep the shared context anchored to the interactive crop board so
+        // widgets and board-specific controls use the same reference.
+        context.widgetsBoard = $context.id
+    }, [context, $context.id])
+
     // Render the widget with the CropZone component
     return (
-        <Widget isVisible={true} config={config} className={className}>
+        <Widget
+            isVisible={true}
+            config={config}
+            className={className}
+            moveableClassName={moveableClassName}
+            containerClassName={containerClassName}
+        >
             <CropZone
                 onDoubleClick={onDoubleClick}
                 infoComponent={infoComponent}

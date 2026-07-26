@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-02
- * Last modified: 2026-05-02
+ * Created on: 2026-06-23
+ * Last modified: 2026-06-23
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,6 +28,8 @@ import serveStatic from 'serve-static'
 const DEV_PROXY_USER_AGENT = 'LGS1920 Studio Dev Proxy (contact@lgs1920.fr)'
 const DEV_PROXY_ALLOWED_TARGETS = new Set([
     'https://nominatim.openstreetmap.org:443',
+    'https://wms.pcn.minambiente.it:443',
+    'http://wms.pcn.minambiente.it:80',
 ])
 
 /**
@@ -282,6 +284,10 @@ export default defineConfig({
             {
                 find: '@Locales',
                 replacement: path.resolve(__dirname, 'src/locales')
+            },
+            {
+                find: '@Assets',
+                replacement: path.resolve(__dirname, 'src/assets')
             }
         ]
     },

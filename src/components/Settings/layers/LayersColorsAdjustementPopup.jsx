@@ -15,7 +15,8 @@
  ******************************************************************************/
 
 import { Range }                               from '@Components/Range'
-import { DEFAULT_LAYERS_COLOR_SETTINGS }       from '@Core/constants'
+import { BASE_ENTITY, DEFAULT_LAYERS_COLOR_SETTINGS, OVERLAY_ENTITY } from '@Core/constants'
+import { ensureLayerColorSettings } from '@Utils/cesium/LayerColorSettingsUtils'
 import { LayersUtils }                         from '@Utils/cesium/LayersUtils'
 import { WaButton, WaCard, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useEffect }                           from 'react'
@@ -70,30 +71,12 @@ export const LayersColorsAdjustementPopup = (props) => {
         LayersUtils.applySettings($layers.colorSettings[layerKey], editor.layer.selectedType)
     }
 
-    /**
-     * Ensures color settings are initialized properly for the selected layer.
-     */
-    const setColorSettings = () => {
-        const layerKey = layers[editor.layer.selectedType]
-
-        if (!$layers.colorSettings) {
-            $layers.colorSettings = {[layerKey]: {...DEFAULT_LAYERS_COLOR_SETTINGS}}
-        }
-
-        if (!$layers.colorSettings[layerKey]) {
-            $layers.colorSettings[layerKey] = {...DEFAULT_LAYERS_COLOR_SETTINGS}
-        }
-
-        if (__.app.isEmpty(lgs.theDefaultColorSettings)) {
-            lgs.theDefaultColorSettings = {...$layers.colorSettings[layerKey]}
-        }
-
-        LayersUtils.applySettings($layers.colorSettings[layerKey], editor.layer.selectedType)
-    }
-
     useEffect(() => {
-        setColorSettings()
-    }, [editor.layer.selectedType, editor.layer.settingsChanged, layers.base, layers.overlay, layers.terrain])
+        if (![BASE_ENTITY, OVERLAY_ENTITY].includes(editor.layer.selectedType)) {
+            return
+        }
+        ensureLayerColorSettings({layersProxy: $layers, selectedType: editor.layer.selectedType})
+    }, [editor.layer.selectedType, editor.layer.settingsChanged, $layers])
 
     return (
         <>

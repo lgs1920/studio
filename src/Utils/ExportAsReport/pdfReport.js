@@ -72,6 +72,7 @@ import { captureJourneyProfileImage } from './profile'
 import {
     captureJourney3DMapSnapshots,
     currentViewerSnapshot,
+    withReportJourneyVisibility,
     yieldToUI,
 } from './snapshots'
 
@@ -320,8 +321,9 @@ export const createTextWriter = (doc, studioLogo, icons = {}) => {
             doc.rect(PAGE_MARGIN, rowY, leftWidth, rowHeight)
 
             const iconX = PAGE_MARGIN + 2.1
-            const iconY = rowY + (rowHeight - 3.9) / 2
-            const labelX = drawPDFIcon(doc, icons, item.icon, iconX, iconY, 3.9) ? iconX + 5.8 : iconX
+            const iconSize = 4.5
+            const iconY = rowY + (rowHeight - iconSize) / 2
+            const labelX = drawPDFIcon(doc, icons, item.icon, iconX, iconY, iconSize) ? iconX + 6.2 : iconX
             doc.setFont('helvetica', 'bold')
             doc.setFontSize(9.6)
             setColor(doc, 'setTextColor', textColor)
@@ -415,8 +417,10 @@ export const createTextWriter = (doc, studioLogo, icons = {}) => {
                 doc.setFontSize(9.8)
                 setColor(doc, 'setTextColor', brandColor)
                 if (column.icon === 'mountains') {
-                    const iconDrawn = drawPDFIcon(doc, icons, 'mountains', x + padding, y + 2.25, 3.9)
-                    doc.text(column.label, x + padding + (iconDrawn ? 5.8 : 0), y + headerHeight / 2, {baseline: 'middle'})
+                    const iconSize = 3.2
+                    const iconY = y + (headerHeight - iconSize) / 2
+                    const iconDrawn = drawPDFIcon(doc, icons, 'mountains', x + padding, iconY, iconSize)
+                    doc.text(column.label, x + padding + (iconDrawn ? 5.0 : 0), y + headerHeight / 2, {baseline: 'middle'})
                 }
                 else {
                     doc.text(column.label, x + padding, y + headerHeight / 2, {baseline: 'middle'})
@@ -734,74 +738,89 @@ export const exportJourneyToPDF = async (journey, {
     }
 
     const theme = getExportTheme()
-    const viewerSnapshot = await currentViewerSnapshot()
-    await yieldToUI()
     const brandColor = parseCssColor(theme.brand, PDF_COLORS.text)
     const studioLogoPromise = loadStudioLogo()
-    const pdfIconsPromise = loadPDFIcons(theme, {trackColors: trackDrawings.map(({color}) => color)})
-    const profileImagePromise = captureJourneyProfileImage({
+    const pdfIconsPromise = loadPDFIcons(theme, {
+        trackColors: [
+            ...trackDrawings.map(({color}) => color),
+            PDF_COLORS.trace,
+        ],
+    })
+    const {result: {profileImage, mapSnapshots}, restore} = await withReportJourneyVisibility(journey, async () => {
+        const viewerSnapshot = await currentViewerSnapshot()
+        await yieldToUI()
+        const profileImagePromise = captureJourneyProfileImage({
                                                                                                                   journey,
                                                                                                                   trackDrawings,
                                                                                                                   backgroundSnapshot: viewerSnapshot,
                                                                                                                   theme,
                                                                                                               })
-    const mapSnapshotsPromise = captureJourney3DMapSnapshots(journey, {
-        trackDrawings,
-        onSnapshotFlash: ({index}) => setReportStage({
-            stage: 'snapshots',
-            id:    `snapshot-${index}-${Date.now()}`,
-        }),
+        const mapSnapshotsPromise = captureJourney3DMapSnapshots(journey, {
+            trackDrawings,
+            onSnapshotFlash: ({index}) => setReportStage({
+                stage: 'snapshots',
+                id:    `snapshot-${index}-${Date.now()}`,
+            }),
+        })
+            .finally(() => setReportStage('writing'))
+        const [profileImage, mapSnapshots] = await Promise.all([
+                                                                    profileImagePromise,
+                                                                    mapSnapshotsPromise,
+                                                                ])
+        return {profileImage, mapSnapshots}
     })
-        .finally(() => setReportStage('writing'))
-    const [studioLogo, pdfIcons, profileImage, mapSnapshots] = await Promise.all([
-                                                                                    studioLogoPromise,
-                                                                                    pdfIconsPromise,
-                                                                                    profileImagePromise,
-                                                                                    mapSnapshotsPromise,
-                                                                                ])
-    const reportCredits = ReportCredits.getReportCredits()
-    const [pdfProfileImage, pdfMapSnapshots] = await Promise.all([
-                                                                     normalizeImageForPDF(profileImage, {maxWidth: 1400, maxHeight: 800}),
-                                                                     Promise.all(mapSnapshots.map(snapshot => normalizeImageForPDF(snapshot))),
-                                                                 ])
-    const exportableMapSnapshots = pdfMapSnapshots.filter(Boolean)
-    const pdf2DMapImages = await createPDF2DMapImages({
-        trackDrawings,
-        pois: exportablePois,
-        endpointMarkers,
-    })
+    try {
+        const [studioLogo, pdfIcons] = await Promise.all([
+            studioLogoPromise,
+            pdfIconsPromise,
+        ])
+        const reportCredits = ReportCredits.getReportCredits()
+        const [pdfProfileImage, pdfMapSnapshots] = await Promise.all([
+                                                                         normalizeImageForPDF(profileImage, {maxWidth: 1400, maxHeight: 800}),
+                                                                         Promise.all(mapSnapshots.map(snapshot => normalizeImageForPDF(snapshot))),
+                                                                     ])
+        const exportableMapSnapshots = pdfMapSnapshots.filter(Boolean)
+        const pdf2DMapImages = await createPDF2DMapImages({
+            trackDrawings,
+            pois: exportablePois,
+            endpointMarkers,
+        })
 
-    await yieldToUI()
-    const doc = new jsPDF({
-                              orientation: 'landscape',
-                              unit:        'mm',
-                              format:      'a4',
-                          })
+        await yieldToUI()
+        const doc = new jsPDF({
+                                  orientation: 'landscape',
+                                  unit:        'mm',
+                                  format:      'a4',
+                              })
 
-    addJourneyDetails(doc, journey, listedPois, studioLogo, {profileImage: pdfProfileImage, icons: pdfIcons, addPage: false})
-    await yieldToUI()
-    drawOverviewPage(doc, journey, pdf2DMapImages, studioLogo, {
-        addPage: true,
-    })
-    await yieldToUI()
-    if (exportableMapSnapshots.length > 0) {
-        for (const mapSnapshot of exportableMapSnapshots) {
-            draw3DMapPage(doc, journey, mapSnapshot, studioLogo, {
-                addPage: true,
-                icons:   pdfIcons,
-                brandColor,
-            })
-            await yieldToUI()
+        addJourneyDetails(doc, journey, listedPois, studioLogo, {profileImage: pdfProfileImage, icons: pdfIcons, addPage: false})
+        await yieldToUI()
+        drawOverviewPage(doc, journey, pdf2DMapImages, studioLogo, {
+            addPage: true,
+        })
+        await yieldToUI()
+        if (exportableMapSnapshots.length > 0) {
+            for (const mapSnapshot of exportableMapSnapshots) {
+                draw3DMapPage(doc, journey, mapSnapshot, studioLogo, {
+                    addPage: true,
+                    icons:   pdfIcons,
+                    brandColor,
+                })
+                await yieldToUI()
+            }
+        }
+        addReportCredits(doc, studioLogo, {credits: reportCredits})
+        await yieldToUI()
+        doc.save(fileName)
+
+        return {
+            fileName,
+            poiCount: listedPois.length,
+            has3DMapSnapshot: exportableMapSnapshots.length > 0,
+            mapSnapshotCount: exportableMapSnapshots.length,
         }
     }
-    addReportCredits(doc, studioLogo, {credits: reportCredits})
-    await yieldToUI()
-    doc.save(fileName)
-
-    return {
-        fileName,
-        poiCount: listedPois.length,
-        has3DMapSnapshot: exportableMapSnapshots.length > 0,
-        mapSnapshotCount: exportableMapSnapshots.length,
+    finally {
+        await restore?.()
     }
 }

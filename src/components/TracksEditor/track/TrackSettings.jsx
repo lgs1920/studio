@@ -29,10 +29,6 @@ import { TrackStyleSettings }                        from './TrackStyleSettings'
 const DATA_PANEL = 'tab-data'
 /** @constant {string} EDIT_PANEL - Identifier for the edit panel tab */
 const EDIT_PANEL = 'tab-edit'
-/** @constant {string} POINTS_PANEL - Identifier for the points panel tab */
-const POINTS_PANEL = 'tab-points'
-/** @constant {string} POIS_PANEL - Identifier for the POIs panel tab */
-const POIS_PANEL = 'tab-pois'
 
 /**
  * A React component for managing track settings, including title, description, visibility, and style.
@@ -100,17 +96,8 @@ export const TrackSettings = () => {
         __.ui.profiler.updateTrackVisibility()
     }
 
-    /**
-     * Checks if a specific tab is active.
-     * @param {string} tab - The tab identifier to check
-     * @returns {boolean} Whether the tab is active
-     */
-    const isTabActive = tab => {
-        return __.ui.drawerManager.tabActive(tab)
-    }
-
     // Format visibility tooltip text based on track state
-    const textVisibilityTrack = sprintf('%s Track', journeyEditor.track.visible ? 'Hide' : 'Show')
+    const textVisibilityTrack = `${journeyEditor.track?.visible ? 'Hide' : 'Show'} Track`
 
     return (
         <>

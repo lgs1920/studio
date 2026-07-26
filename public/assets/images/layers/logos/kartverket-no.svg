@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Kartverket">
+  <rect width="128" height="128" rx="16" fill="#1f1f1f"/>
+  <rect x="14" y="14" width="100" height="100" rx="12" fill="#c61d2d"/>
+  <path d="M30 84 L52 52 L68 72 L88 36 L98 84 Z" fill="#ffffff" opacity="0.92"/>
+  <text x="64" y="114" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#ffffff">KART</text>
+</svg>

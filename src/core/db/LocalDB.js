@@ -36,6 +36,7 @@ export class LocalDB {
     #indexConfigs = {}
     #needsOneTimeRebuild = new Set()
     #oneTimeRebuilt = new Set()
+    #mutationListeners = new Set()
 
     set = this.put
     update = this.put
@@ -72,6 +73,34 @@ export class LocalDB {
 
     get transientStore() {
         return this.#stores.includes(this.#transients) ? this.#transients : null
+    }
+
+    get storeNames() {
+        return [...this.#stores]
+    }
+
+    get dbName() {
+        return this.#name
+    }
+
+    /**
+     * Register a mutation listener fired after successful write operations.
+     *
+     * The callback receives a small event object describing the operation and
+     * the store involved. The returned function can be used to unsubscribe.
+     *
+     * @param {Function} listener - Mutation callback.
+     * @returns {Function} Unsubscribe function.
+     */
+    subscribeMutations = listener => {
+        if (typeof listener !== 'function') {
+            return () => {}
+        }
+
+        this.#mutationListeners.add(listener)
+        return () => {
+            this.#mutationListeners.delete(listener)
+        }
     }
 
     /**
@@ -266,6 +295,12 @@ export class LocalDB {
                 await storeObj.put(content, key)
             })
             this.#memoryCache.delete(cacheKey)
+            this.#emitMutation({
+                                   action: 'put',
+                                   key,
+                                   store,
+                                   value,
+                               })
             resolveWrite()
         }
         finally {
@@ -301,6 +336,13 @@ export class LocalDB {
                 return true
             })
             this.#memoryCache.delete(cacheKey)
+            if (existed) {
+                this.#emitMutation({
+                                       action: 'delete',
+                                       key,
+                                       store,
+                                   })
+            }
             return existed
         }
         catch (error) {
@@ -327,6 +369,10 @@ export class LocalDB {
                     this.#memoryCache.delete(cacheKey)
                 }
             }
+            this.#emitMutation({
+                                   action: 'clear',
+                                   store,
+                               })
         }
         catch (error) {
             console.error(`Failed to clear store "${store}":`, error)
@@ -452,7 +498,7 @@ export class LocalDB {
                 req.onerror = () => resolve(0)
                 req.onblocked = () => resolve(2)
             }
-            catch (e) {
+            catch {
                 resolve(0)
             }
         })
@@ -498,6 +544,30 @@ export class LocalDB {
     }
 
     clearMemoryCache = () => this.#memoryCache.clear()
+
+    /**
+     * Notify listeners about a successful write operation.
+     *
+     * @param {Object} mutation - Mutation payload.
+     */
+    #emitMutation = mutation => {
+        if (this.#mutationListeners.size === 0) {
+            return
+        }
+
+        for (const listener of this.#mutationListeners) {
+            try {
+                listener({
+                             database: this.#name,
+                             timestamp: Date.now(),
+                             ...mutation,
+                         })
+            }
+            catch (error) {
+                console.error(`Mutation listener failed for "${this.#name}":`, error)
+            }
+        }
+    }
 
     /**
      * Transaction wrapper with retry

@@ -194,7 +194,12 @@ export const svgIconToPNG = async (iconDefinition, {size = 96, color = '#000000'
     }
 
     context.clearRect(0, 0, size, size)
-    context.drawImage(image, 0, 0, size, size)
+    const sourceRatio = image.width > 0 && image.height > 0 ? image.width / image.height : 1
+    const drawWidth = sourceRatio >= 1 ? size : size * sourceRatio
+    const drawHeight = sourceRatio >= 1 ? size / sourceRatio : size
+    const drawX = (size - drawWidth) / 2
+    const drawY = (size - drawHeight) / 2
+    context.drawImage(image, drawX, drawY, drawWidth, drawHeight)
 
     return await canvasToDataUrl(canvas)
 }

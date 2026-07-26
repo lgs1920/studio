@@ -19,6 +19,7 @@ import {
 }                     from '@Core/constants'
 import { Journey }    from '@Core/Journey'
 import { Track }      from '@Core/Track'
+import { getGlobalHideOtherJourneys, refreshJourneyVisibility } from '@Core/ui/JourneyVisibility'
 import { TrackUtils } from '@Utils/cesium/TrackUtils'
 
 export class Utils {
@@ -99,6 +100,12 @@ export class Utils {
         if (editorStore.journey.visible && shouldFocus) {
             lgs.theJourney.focus({action, rotate, resetCamera: true})
         }
+        if (getGlobalHideOtherJourneys()) {
+            await refreshJourneyVisibility({
+                hideOtherJourneys: true,
+                currentJourney:    editorStore.journey,
+            })
+        }
         await TrackUtils.saveCurrentTrackToDB(null)
         await TrackUtils.saveCurrentPOIToDB(null)
 
@@ -173,12 +180,68 @@ export class Utils {
 
         if (action !== UPDATE_JOURNEY_SILENTLY) {
             await journey.draw({action: action})
+            if (getGlobalHideOtherJourneys()) {
+                await refreshJourneyVisibility({
+                    hideOtherJourneys: true,
+                    currentJourney:    journey,
+                })
+            }
         }
         else if (focus) {
             journey.focus({action: action, rotate: lgs.settings.ui.camera.start.rotate.journey})
         }
 
         return journey
+    }
+
+    static refreshJourneysStatistics = async (activityId, {focus = false} = {}) => {
+        const editorJourney = lgs.theJourneyEditorProxy?.journey
+        const editorSlug = editorJourney?.slug ?? null
+        const journeys = Array.from(lgs.journeys.values()).filter(journey => journey?.activity === activityId)
+        const orderedJourneys = editorSlug
+                                ? [
+                                    ...journeys.filter(journey => journey?.slug === editorSlug),
+                                    ...journeys.filter(journey => journey?.slug !== editorSlug),
+                                ]
+                                : journeys
+        let updatedCurrentJourney = null
+        const yieldToMainThread = () => new Promise(resolve => {
+            const idleCallback = globalThis.requestIdleCallback
+            if (typeof idleCallback === 'function') {
+                idleCallback(() => resolve(), {timeout: 100})
+                return
+            }
+
+            setTimeout(resolve, 0)
+        })
+
+        for (const [index, journey] of orderedJourneys.entries()) {
+            if (journey?.slug === editorSlug) {
+                updatedCurrentJourney = await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus})
+            }
+            else {
+                await journey.extractMetrics()
+                lgs.saveJourneyInContext(journey)
+            }
+
+            if (index < orderedJourneys.length - 1) {
+                await yieldToMainThread()
+            }
+        }
+
+        if (updatedCurrentJourney) {
+            updatedCurrentJourney.addToContext()
+            const track = updatedCurrentJourney.tracks.get(lgs.theJourneyEditorProxy.track?.slug)
+                         ?? Array.from(updatedCurrentJourney.tracks.values())[0]
+            track?.addToContext()
+            track?.addToEditor()
+            TrackUtils.setProfileVisibility(updatedCurrentJourney)
+        }
+
+        Utils.renderJourneySettings()
+        __.ui.profiler?.draw()
+
+        return updatedCurrentJourney
     }
 
     settings = () => {

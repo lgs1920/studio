@@ -22,13 +22,13 @@ import {
 import { MapPOI }                        from '@Core/MapPOI'
 import { gpx, kml }                      from '@tmcw/togeojson'
 import { getGeom }                       from '@turf/invariant'
-import { normalizeTrackRenderSmoothing } from '@Utils/cesium/trackRenderSmoothing'
+import { defaultTrackRenderSmoothing, normalizeTrackRenderSmoothing } from '@Utils/cesium/trackRenderSmoothing'
 
 import {
     FEATURE_COLLECTION, FEATURE_LINE_STRING, FEATURE_MULTILINE_STRING, FEATURE_POINT, IMPORT_LOADING_ERROR, TrackUtils,
 }                             from '@Utils/cesium/TrackUtils'
 import {
-    extractJourneyMetadataFromGeoJson, extractJourneyMetadataFromGpxDocument, extractLgsPoiProperties,
+    applyGpxStyleExtensionProperties, extractJourneyMetadataFromGeoJson, extractJourneyMetadataFromGpxDocument, extractLgsPoiProperties,
     extractLgsTrackProperties,
 }                             from '@Utils/JourneyGpxUtils'
 import { decodeHTMLEntities } from '@Utils/TextUtils'
@@ -37,6 +37,8 @@ import { ElevationServer }    from './Elevation/ElevationServer'
 import { MapElement }         from './MapElement'
 import { getOrbitSettings }   from './OrbitSettings'
 import { Track }              from './Track'
+
+const START_STOP_TOO_CLOSE_DISTANCE = 100
 
 
 export class Journey extends MapElement {
@@ -64,7 +66,7 @@ export class Journey extends MapElement {
     cameraOrigin = {}
     rotation = {}
     panorama = {}
-    flythrough = {
+    replay = {
         start: [],
         stop:  [],
     }
@@ -97,14 +99,15 @@ export class Journey extends MapElement {
             this.countryCodes = options.countryCodes ?? []
             this.activity = options.activity ?? Journey.defaultActivity()
             this.activitySettings = Journey.activityProfile(this.activity, options.activitySettings)
-            this.renderSmoothing = options.renderSmoothing === undefined
-                                   ? undefined
-                                   : normalizeTrackRenderSmoothing(options.renderSmoothing)
+            this.renderSmoothing = normalizeTrackRenderSmoothing(
+                options.renderSmoothing,
+                defaultTrackRenderSmoothing(),
+            )
 
             this.camera = options.camera ?? null
             this.rotation = options.rotation ?? {}
             this.panorama = options.panorama ?? {}
-            this.flythrough = options.flythrough ?? {
+            this.replay = options.replay ?? {
                 start: [],
                 stop:  [],
             }
@@ -291,12 +294,13 @@ export class Journey extends MapElement {
         let instance = super.deserialize(props)
         instance.activity ??= Journey.defaultActivity()
         instance.activitySettings = Journey.activityProfile(instance.activity, instance.activitySettings)
-        instance.renderSmoothing = instance.renderSmoothing === undefined
-                                   ? undefined
-                                   : normalizeTrackRenderSmoothing(instance.renderSmoothing)
-        instance.flythrough = {
-            start: Array.isArray(instance.flythrough?.start) ? instance.flythrough.start : [],
-            stop:  Array.isArray(instance.flythrough?.stop) ? instance.flythrough.stop : [],
+        instance.renderSmoothing = normalizeTrackRenderSmoothing(
+            instance.renderSmoothing,
+            defaultTrackRenderSmoothing(),
+        )
+        instance.replay = {
+            start: Array.isArray(instance.replay?.start) ? instance.replay.start : [],
+            stop:  Array.isArray(instance.replay?.stop) ? instance.replay.stop : [],
         }
 
         // Transform Tracks from object to class
@@ -371,6 +375,7 @@ export class Journey extends MapElement {
                 case GPX: {
                     const gpxDocument = new DOMParser().parseFromString(content, 'text/xml')
                     this.geoJson = gpx(gpxDocument)
+                    applyGpxStyleExtensionProperties(this.geoJson, gpxDocument)
                     this.#applyJourneyMetadata(extractJourneyMetadataFromGpxDocument(gpxDocument))
                     break
                 }
@@ -678,9 +683,8 @@ export class Journey extends MapElement {
 
                         const key = getCoordKey(lon, lat)
                         const type = isStart ? POI_FLAG_START : POI_FLAG_STOP
-
-                        // Priority to lookup key, then fallback to existing track flag ID
-                        const existingPoi = existingLookup.get(key) || __.ui.poiManager.list.get(isStart ? track.flags.start : track.flags.stop)
+                        const previousFlagId = isStart ? track.flags.start : track.flags.stop
+                        const existingPoi = existingLookup.get(key)
 
                         const clampedHeight = await __.ui.poiManager.getHeightFromTerrain({
                                                                                               coordinates: {
@@ -689,23 +693,48 @@ export class Journey extends MapElement {
                                                                                                   height:    z ?? 0,
                                                                                               },
                                                                                           })
+                        const startPoi = isStart ? null : __.ui.poiManager.list.get(track.flags.start)
+                        const tooClose = !isStart
+                            && startPoi
+                            && __.ui.poiManager.haversineDistance(
+                                startPoi,
+                                {longitude: lon, latitude: lat},
+                            ) < START_STOP_TOO_CLOSE_DISTANCE
+
+                        const flagUpdates = {
+                            longitude:       lon,
+                            latitude:        lat,
+                            height:          z ?? undefined,
+                            simulatedHeight: clampedHeight,
+                            tooClose:        tooClose === true,
+                        }
 
                         if (existingPoi) {
-                            existingPoi.longitude = lon
-                            existingPoi.latitude = lat
-                            existingPoi.height = z ?? undefined
-                            existingPoi.simulatedHeight = clampedHeight
+                            await __.ui.poiManager.updatePOI(existingPoi.id, flagUpdates, {
+                                immediate:          true,
+                                skipLocationUpdate: true,
+                            })
+                            if (existingPoi.type === type) {
+                                if (isStart) {
+                                    track.flags.start = existingPoi.id
+                                }
+                                else {
+                                    track.flags.stop = existingPoi.id
+                                }
+                            }
                         }
                         else {
+                            const previousFlag = previousFlagId ? __.ui.poiManager.list.get(previousFlagId) : null
+                            if (previousFlag?.type === type && previousFlag.parent === trackSlug) {
+                                await __.ui.poiManager.remove({id: previousFlagId})
+                            }
+
                             const newPoi = new MapPOI({
                                                           ...common,
                                                           parent:          trackSlug,
                                                           type:            type,
                                                           title:           isStart ? 'Start' : 'End',
-                                                          longitude:       lon,
-                                                          latitude:        lat,
-                                                          height:          z ?? undefined,
-                                                          simulatedHeight: clampedHeight,
+                                                          ...flagUpdates,
                                                           color:           isStart ? lgs.settings.journey.pois.start.color : lgs.settings.journey.pois.stop.color,
                                                       })
                             await __.ui.poiManager.add(newPoi, false)
@@ -728,7 +757,8 @@ export class Journey extends MapElement {
 
         // Adjust visibility for flagged POIs if limited to journey boundaries
         if (this.poisOnLimits) {
-            Array.from(this.tracks.values()).forEach((track, index) => {
+            const tracks = Array.from(this.tracks.values())
+            tracks.forEach((track, index) => {
                 const startPoi = __.ui.poiManager.list.get(track.flags.start)
                 const stopPoi = __.ui.poiManager.list.get(track.flags.stop)
 
@@ -739,6 +769,17 @@ export class Journey extends MapElement {
                     stopPoi.visible = index === this.tracks.size - 1
                 }
             })
+
+            const firstStartPoi = __.ui.poiManager.list.get(tracks[0]?.flags?.start)
+            const lastStopPoi = __.ui.poiManager.list.get(tracks[tracks.length - 1]?.flags?.stop)
+            const tooClose = firstStartPoi && lastStopPoi
+                && __.ui.poiManager.haversineDistance(firstStartPoi, lastStopPoi) < START_STOP_TOO_CLOSE_DISTANCE
+            if (lastStopPoi && lastStopPoi.tooClose !== (tooClose === true)) {
+                await __.ui.poiManager.updatePOI(lastStopPoi.id, {tooClose: tooClose === true}, {
+                    immediate:          true,
+                    skipLocationUpdate: true,
+                })
+            }
         }
     }
 
@@ -807,19 +848,33 @@ export class Journey extends MapElement {
      * @param mode
      * @return {Promise<void>}
      */
-    draw = async ({action = DRAWING_FROM_UI, mode = FOCUS_ON_FEATURE}) => {
+    draw = async ({
+                      action = DRAWING_FROM_UI,
+                      mode = FOCUS_ON_FEATURE,
+                      hideOtherJourneys = false,
+                      currentJourneySlug = lgs.theJourney?.slug ?? null,
+                      forceCurrentVisible = false,
+                  } = {}) => {
         const promises = []
+        const isCurrentJourney = currentJourneySlug !== null && this.slug === currentJourneySlug
+        const isVisibleJourney = forceCurrentVisible && isCurrentJourney
+                                 ? true
+                                 : this.visible !== false
+        const forcedToHide = !isVisibleJourney || (hideOtherJourneys && !isCurrentJourney)
 
         // Draw Tracks and flags
         this.tracks.forEach(track => {
             // If journey is not visible, we force tracks to be hidden, whatever their visibility
             // else we use their status.
             promises.push(track.draw({
-                                         action: action, mode: NO_FOCUS, forcedToHide: !this.visible,
+                                         action:      action,
+                                         mode:        NO_FOCUS,
+                                         forcedToHide: forcedToHide,
                                      }))
         })
 
         await Promise.all(promises)
+        this.updateVisibility(isVisibleJourney && (!hideOtherJourneys || isCurrentJourney))
 
         // //Ready
         // const texts = new Map([
@@ -847,7 +902,7 @@ export class Journey extends MapElement {
         }
         props.journey = this
         props.target = this
-        __.ui.sceneManager.focusOnJourney(props)
+        return __.ui.sceneManager.focusOnJourney(props)
     }
 
     showAfterHeightSimulation = async () => {
@@ -860,21 +915,122 @@ export class Journey extends MapElement {
 
     setGlobalMetrics = () => {
         const tracks = Array.from(this.tracks.values())
-        const points = tracks.flatMap(track => Array.isArray(track.metrics?.points) ? track.metrics.points : [])
-        const global = Track.calculateGlobalMetrics({
-                                                        points:      points,
-                                                        rawPoints:   points,
-                                                        hasTime:     this.hasTime,
-                                                        hasAltitude: this.hasAltitude,
-                                                        activityProfile: Journey.activityProfile(this.activity, this.activitySettings),
-                                                    })
+        const global = {}
+        const points = []
+        let distance = 0
+        let duration = 0
+        let idleTime = 0
+        let movingDistance = 0
+        let movingDuration = 0
+        let minSpeed
+        let maxSpeed
+        let minPace
+        let maxPace
+        let minHeight
+        let maxHeight
+        let minSlope
+        let maxSlope
+
+        const createElevationBucket = () => ({elevation: 0, distance: 0, duration: 0, pace: 0, speed: 0, points: 0})
+        const addToElevationBucket = (bucket, source) => {
+            bucket.elevation += source.elevation ?? 0
+            bucket.distance += source.distance ?? 0
+            bucket.duration += source.duration ?? 0
+            bucket.points += source.points ?? 0
+        }
 
         if (this.hasAltitude) {
-            const minHeights = tracks.map(track => track.metrics?.global?.minHeight).filter(value => Number.isFinite(value))
-            const maxHeights = tracks.map(track => track.metrics?.global?.maxHeight).filter(value => Number.isFinite(value))
+            global.positive = createElevationBucket()
+            global.negative = createElevationBucket()
+            global.flat = createElevationBucket()
+        }
 
-            global.minHeight = minHeights.length ? Math.min(...minHeights) : undefined
-            global.maxHeight = maxHeights.length ? Math.max(...maxHeights) : undefined
+        tracks.forEach((track) => {
+            const trackPoints = Array.isArray(track.metrics?.points) ? track.metrics.points : []
+            if (trackPoints.length > 0) {
+                for (const point of trackPoints) {
+                    points.push(point)
+                }
+            }
+
+            const trackGlobal = track.metrics?.global ?? {}
+            distance += Number(trackGlobal.distance) || 0
+
+            if (this.hasTime) {
+                duration += Number(trackGlobal.duration) || 0
+                idleTime += Number(trackGlobal.idleTime) || 0
+                movingDistance += Number(trackGlobal.movingDistance) || 0
+                movingDuration += Number(trackGlobal.movingDuration) || 0
+                const trackMinSpeed = Number(trackGlobal.minSpeed)
+                const trackMaxSpeed = Number(trackGlobal.maxSpeed)
+                const trackMinPace = Number(trackGlobal.minPace)
+                const trackMaxPace = Number(trackGlobal.maxPace)
+                if (Number.isFinite(trackMinSpeed) && trackMinSpeed > 0) {
+                    minSpeed = minSpeed === undefined ? trackMinSpeed : Math.min(minSpeed, trackMinSpeed)
+                }
+                if (Number.isFinite(trackMaxSpeed) && trackMaxSpeed > 0) {
+                    maxSpeed = maxSpeed === undefined ? trackMaxSpeed : Math.max(maxSpeed, trackMaxSpeed)
+                }
+                if (Number.isFinite(trackMinPace) && trackMinPace > 0) {
+                    minPace = minPace === undefined ? trackMinPace : Math.min(minPace, trackMinPace)
+                }
+                if (Number.isFinite(trackMaxPace) && trackMaxPace > 0) {
+                    maxPace = maxPace === undefined ? trackMaxPace : Math.max(maxPace, trackMaxPace)
+                }
+            }
+
+            if (this.hasAltitude) {
+                const trackMinHeight = Number(trackGlobal.minHeight)
+                const trackMaxHeight = Number(trackGlobal.maxHeight)
+                const trackMinSlope = Number(trackGlobal.minSlope)
+                const trackMaxSlope = Number(trackGlobal.maxSlope)
+                if (Number.isFinite(trackMinHeight)) {
+                    minHeight = minHeight === undefined ? trackMinHeight : Math.min(minHeight, trackMinHeight)
+                }
+                if (Number.isFinite(trackMaxHeight)) {
+                    maxHeight = maxHeight === undefined ? trackMaxHeight : Math.max(maxHeight, trackMaxHeight)
+                }
+                if (Number.isFinite(trackMinSlope)) {
+                    minSlope = minSlope === undefined ? trackMinSlope : Math.min(minSlope, trackMinSlope)
+                }
+                if (Number.isFinite(trackMaxSlope)) {
+                    maxSlope = maxSlope === undefined ? trackMaxSlope : Math.max(maxSlope, trackMaxSlope)
+                }
+
+                addToElevationBucket(global.positive, trackGlobal.positive ?? {})
+                addToElevationBucket(global.negative, trackGlobal.negative ?? {})
+                addToElevationBucket(global.flat, trackGlobal.flat ?? {})
+            }
+        })
+
+        global.distance = distance
+        if (this.hasTime) {
+            global.duration = duration
+            global.idleTime = idleTime
+            global.movingDistance = movingDistance
+            global.movingDuration = movingDuration
+            global.averageSpeed = duration > 0 ? distance / duration : 0
+            global.averagePace = distance > 0 ? duration / distance : 0
+            global.averageSpeedMoving = movingDuration > 0 ? movingDistance / movingDuration : 0
+            global.averagePaceMoving = movingDistance > 0 ? movingDuration / movingDistance : 0
+            global.minSpeed = minSpeed ?? 0
+            global.maxSpeed = maxSpeed ?? 0
+            global.minPace = minPace ?? 0
+            global.maxPace = maxPace ?? 0
+        }
+
+        if (this.hasAltitude) {
+            global.minHeight = minHeight
+            global.maxHeight = maxHeight
+            global.minSlope = minSlope
+            global.maxSlope = maxSlope
+
+            global.positive.speed = global.positive.duration > 0 ? global.positive.distance / global.positive.duration : 0
+            global.positive.pace = global.positive.distance > 0 ? global.positive.duration / global.positive.distance : 0
+            global.negative.speed = global.negative.duration > 0 ? global.negative.distance / global.negative.duration : 0
+            global.negative.pace = global.negative.distance > 0 ? global.negative.duration / global.negative.distance : 0
+            global.flat.speed = global.flat.duration > 0 ? global.flat.distance / global.flat.duration : 0
+            global.flat.pace = global.flat.distance > 0 ? global.flat.duration / global.flat.distance : 0
         }
 
         return global
@@ -901,8 +1057,15 @@ export class Journey extends MapElement {
             return
         }
         // For a multi track journey, let's compute journey level metrics
-        this.metrics.points = Array.from(this.tracks.values())
-            .flatMap(track => Array.isArray(track.metrics?.points) ? track.metrics.points : [])
+        const metricsPoints = []
+        this.tracks.forEach(track => {
+            if (Array.isArray(track.metrics?.points) && track.metrics.points.length > 0) {
+                for (const point of track.metrics.points) {
+                    metricsPoints.push(point)
+                }
+            }
+        })
+        this.metrics.points = metricsPoints
         this.metrics.global = this.setGlobalMetrics()
     }
 

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-06-17
- * Last modified: 2026-06-17
+ * Created on: 2026-07-21
+ * Last modified: 2026-07-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,9 +20,9 @@
  * Renders a call-to-action bar for the video cropper interface.
  ******************************************************************************/
 import { Tunnel } from '@Components/Tunnel/Tunnel'
-import { FlythroughButton } from '@Components/Flythrough/FlythroughButton'
+import { JourneyReplayButton } from '@Components/JourneyReplay/JourneyReplayButton'
 import { VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
-import { cancelVideoEditing } from '@Components/MainUI/video/videoEditingCleanup'
+import { cancelVideoEditing, prepareVideoCaptureUi, prepareVideoEditingUi } from '@Components/MainUI/video/videoEditingCleanup'
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSnapshot } from 'valtio'
 import '../style.css'
@@ -49,8 +49,13 @@ const resolveRecorderToolbarPosition = (event) => {
  */
 export const VideoRecordingSettingsToolbar = memo(() => {
     const $video = lgs.stores.ui.video
-    const flythrough = useSnapshot(lgs.stores.flythrough)
+    const replay = useSnapshot(lgs.stores.replay)
     const video = useSnapshot($video)
+    const shouldShowToolbar = video.editing === true
+                              && !video.preRecording
+                              && !video.recording
+                              && !video.snapshot
+                              && !video.finalizing
     const videoCropConfig = __.ui.widgetManager.getWidgetConfig?.(VIDEO_CROP_ZONE)
     const hasDefinedCropDimensions = Number.isFinite(videoCropConfig?.cropDimensions?.width) &&
         Number.isFinite(videoCropConfig?.cropDimensions?.height) &&
@@ -58,42 +63,60 @@ export const VideoRecordingSettingsToolbar = memo(() => {
         videoCropConfig.cropDimensions.height > 0
 
     const _steps = useRef([])
+    const _cropSyncPromise = useRef(null)
 
     // --- Handlers ---
 
     const syncCropFrame = useCallback((phase = 'sync') => {
-        void __.ui.widgetManager.syncCropDimensionsFromElement(VIDEO_CROP_ZONE, true, phase)
+        if (_cropSyncPromise.current) {
+            return _cropSyncPromise.current
+        }
+
+        let promise
+        try {
+            promise = Promise.resolve(__.ui.widgetManager.syncCropDimensionsFromElement(VIDEO_CROP_ZONE, true, phase))
+        }
+        catch (error) {
+            promise = Promise.reject(error)
+        }
+
+        _cropSyncPromise.current = promise
+        promise.then(
+            () => {
+                if (_cropSyncPromise.current === promise) {
+                    _cropSyncPromise.current = null
+                }
+            },
+            () => {
+                if (_cropSyncPromise.current === promise) {
+                    _cropSyncPromise.current = null
+                }
+            },
+        )
+
+        return promise
     }, [])
 
-    /** Cancels the video editing process and restores widgets immediately. */
-    const handleCancel = useCallback(() => {
+    /** Persists the live crop before closing the video editor. */
+    const handleCancel = useCallback(async () => {
+        await syncCropFrame('editing-exit')
         cancelVideoEditing()
-    }, [])
+    }, [syncCropFrame])
 
-    const leadingAction = flythrough.recordingSync === true && Boolean(lgs.theJourney) ? (
-        <FlythroughButton
-            id="launch-the-flythrough-editor-from-video"
+    const leadingAction = replay.recordingSync === true && Boolean(lgs.theJourney) ? (
+        <JourneyReplayButton
+            id="launch-the-replay-editor-from-video"
             tooltip="top"
-            tooltipText="Open Flythrough drawer"
+            tooltipText="Journey Replay Settings"
             tooltipPlacement="top"
             tooltipStyle="tunnel"
             variant="neutral"
             appearance="plain"
             className=""
             showOnlyWhenLinked
-            ariaLabel="Open Flythrough drawer"
+            ariaLabel="Journey Replay Settings"
         />
     ) : null
-
-    const handleSnapShot = useCallback(async () => {
-        Object.assign($video, {
-            snapshot:     true,
-            preRecording: false,
-            recording:    false,
-        })
-        // Restoration logic should be triggered by the store observer or a dedicated event
-        // after the actual file is saved/processed.
-    }, [$video])
 
     const handleVideoRecording = useCallback(async (event) => {
         if (!__.recorder) {
@@ -101,10 +124,13 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             return
         }
 
+        prepareVideoCaptureUi()
         const toolbarPosition = resolveRecorderToolbarPosition(event)
         Object.assign($video, {
+            editing:      false,
             preRecording: true,
             recording:    false,
+            finalizing:   false,
             paused:       false,
             position: toolbarPosition,
             toolbarPosition,
@@ -115,13 +141,17 @@ export const VideoRecordingSettingsToolbar = memo(() => {
      * Side effect to hide background widgets when the toolbar appears.
      */
     useEffect(() => {
-        __.ui.widgetCache.hideAllExceptBoards(VIDEO_WIDGETS_BOARD)
-        // Note: Widgets will be restored by VideoRecorderToolbar when recording stops,
-        // or by handleCancel when user cancels editing
-    }, [])
+        if (!shouldShowToolbar) {
+            return
+        }
+
+        prepareVideoEditingUi()
+        // Note: Widgets are restored when the recording dialog/session is fully closed,
+        // or by handleCancel when user cancels editing.
+    }, [shouldShowToolbar])
 
     useEffect(() => {
-        if (!video.editing || flythrough.recordingSync !== true) {
+        if (!shouldShowToolbar || replay.recordingSync !== true) {
             return undefined
         }
 
@@ -140,7 +170,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             }
 
             __.ui.widgetManager.toCenter(element, 0)
-            syncCropFrame('flythrough-sync-center')
+            void syncCropFrame('replay-sync-center')
         }
 
         raf = requestAnimationFrame(centerCropZone)
@@ -149,79 +179,59 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             cancelled = true
             cancelAnimationFrame(raf)
         }
-    }, [flythrough.recordingSync, syncCropFrame, video.editing])
+    }, [replay.recordingSync, shouldShowToolbar, syncCropFrame])
 
     // --- Tunnel Steps ---
     const steps = useMemo(() => {
         _steps.current = [
             {
-                icon: 'camera-viewfinder',
-                text:       'Video parameters',
+                icon: 'paintbrush-pencil',
+                text:       'Compose video',
                 tooltip: {
-                    title: 'Video parameters',
-                    text:  'Choose the video format and presets before composing the capture.',
+                    title: 'Compose video',
+                    text:  'Choose the format, resize the crop, and arrange the widgets.',
                 },
                 done: hasDefinedCropDimensions,
+                // The crop zone is the initial view, but recording can be
+                // launched immediately with the current crop.
                 mandatory:  false,
                 beforeStep: () => {
                     $video.step = 0
                     Object.assign($video.cropper, {
                         ratioEditor:   true,
                         presetEditor: true,
-                        widgetEditor:  false,
+                        widgetEditor:  true,
                     })
                     __.ui.widgetManager.windowResizing = true
                     return true
                 },
                 afterStep:  () => {
-                    syncCropFrame('ratio-editor-exit')
+                    void syncCropFrame('composition-exit')
                     Object.assign($video.cropper, {
                         ratioEditor:   false,
                         presetEditor: false,
+                        widgetEditor:  false,
                     })
                     _steps.current[0].done = true
                     return true
                 },
             },
             {
-                icon: 'photo-film',
-                text:       'Add widgets',
-                tooltip: {
-                    title: 'Add widgets',
-                    text:  'Place, resize, and arrange the widgets that will appear in the video.',
-                },
-                done:       hasDefinedCropDimensions,
-                mandatory:  true,
-                beforeStep: () => {
-                    $video.step = 1
-                    Object.assign($video.cropper, {
-                        ratioEditor:  false,
-                        presetEditor: false,
-                        widgetEditor: true,
-                    })
-                    __.ui.widgetManager.windowResizing = false
-                    _steps.current[1].done = true
-                    _steps.current[2].done = true
-                    _steps.current[3].done = true
-                    return true
-                },
-                afterStep:  () => {
-                    $video.cropper.widgetEditor = false
-                    __.ui.drawerManager.close()
-                    return true
-                },
-            },
-            {
                 icon: 'clapperboard-play',
-                text:       'Start Recording',
+                text:       'Record',
+                variant:    'brand',
+                appearance: 'plain',
+                className:  'video-recorder-start-recording wa-theme-lgs1920',
                 tooltip: {
-                    title: 'Start recording',
+                    title: 'Record',
                     text: 'Record the selected zone.',
                 },
                 done:       false,
+                // Recording can start immediately with the current crop. The
+                // composition step remains available as an optional editor.
                 mandatory:  false,
                 beforeStep: () => {
-                    $video.step = 2
+                    $video.step = 1
                     Object.assign($video.cropper, {
                         ratioEditor:  false,
                         presetEditor: false,
@@ -231,51 +241,16 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                     return true
                 },
                 onClick: async (_index, event) => {
-                    syncCropFrame('before-recording')
+                    await syncCropFrame('before-recording')
                     await handleVideoRecording(event)
-                    Object.assign($video, {
-                        editing:    false,
-                        finalizing: false,
-                    })
-                    return true
-                },
-            },
-            {
-                icon: 'camera',
-                text:       'Snapshot',
-                tooltip: {
-                    title: 'Snapshot',
-                    text:  'Export one image from the current zone.',
-                },
-                done: false,
-                mandatory:  false,
-                beforeStep: () => {
-                    $video.step = 3
-                    Object.assign($video.cropper, {
-                        ratioEditor:  false,
-                        presetEditor: false,
-                        widgetEditor: false,
-                    })
-                    __.ui.widgetManager.windowResizing = false
-                    return true
-                },
-                onClick: async () => {
-                    syncCropFrame('before-snapshot')
-                    Object.assign($video, {
-                        recording:  false,
-                        editing:    false,
-                        finalizing: false,
-                    })
-                    _steps.current[3].done = true
-                    await handleSnapShot()
                     return true
                 },
             },
         ]
         return _steps.current
-    }, [$video, handleVideoRecording, handleSnapShot, hasDefinedCropDimensions, syncCropFrame])
+    }, [$video, handleVideoRecording, hasDefinedCropDimensions, syncCropFrame])
 
-    if (!video.editing) {
+    if (!shouldShowToolbar) {
         return null
     }
 
@@ -284,12 +259,15 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             <Tunnel
                 leadingAction={leadingAction}
                 steps={steps}
-                defaultStepIndex={hasDefinedCropDimensions ? 2 : 0}
+                // Keep the crop zone visible initially; recording is available
+                // immediately because the composition step is optional.
+                defaultStepIndex={0}
                 cancelTooltip={{
                     title: 'Cancel',
                     text:  'Leave video setup.',
                 }}
                 onCancel={handleCancel}
+                cancelAppearance="plain"
             />
         </div>
     )

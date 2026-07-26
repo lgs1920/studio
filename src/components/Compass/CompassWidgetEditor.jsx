@@ -27,6 +27,7 @@ import { colord, extend }                                             from 'colo
 import namesPlugin                                                    from 'colord/plugins/names'
 import { useCallback, useEffect, useMemo }                            from 'react'
 import { useSnapshot }                                                from 'valtio'
+import { useOptionalSnapshot }                                        from '@Utils/ValtioUtils'
 
 extend([namesPlugin])
 
@@ -249,7 +250,7 @@ export const CompassWidgetEditor = ({entity, syncGlobalCompass = false}) => {
         }
     }, [compassMode, _moveable])
 
-    const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
+    const swatches = useOptionalSnapshot(lgs.settings.swatches, {list: []}).list.join(';')
 
     if (!element) {
         return null

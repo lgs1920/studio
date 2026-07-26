@@ -43,6 +43,7 @@
     color: var(--track-widget-text-color);
     border: var(--track-widget-border) solid var(--track-widget-border);
     gap: var(--lgs-gutter-s);
+    overflow: hidden;
 }
 
 .journey-stats-widget wa-divider {
@@ -93,7 +94,9 @@
 .journey-stats-value,
 .journey-stats-val-huge,
 .journey-stats-label-bold,
-.journey-stats-unit-sub {
+.journey-stats-unit-sub,
+.journey-stats-date,
+.journey-stats-location {
     font-family: var(--track-widget-font);
     line-height: 1;
     display: flex;
@@ -101,6 +104,7 @@
     text-transform: uppercase;
     --data: calc(4 * var(--lgs-gutter));
     gap: var(--lgs-gutter-xs);
+    text-shadow: var(--journey-stats-text-shadow, none);
 }
 
 .journey-stats-label,
@@ -201,11 +205,42 @@
     gap: var(--lgs-gutter-xs);
 }
 
+.lgs-widget-separator-element {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: var(--lgs-gutter-xs);
+}
+
+.lgs-widget-separator-element-controls {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: var(--lgs-gutter-xs);
+}
+
+.lgs-widget-separator-element-row {
+    display: flex;
+    align-items: flex-start;
+    width: 100%;
+    gap: var(--lgs-gutter-s);
+}
+
+.lgs-widget-separator-element-sliders {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    gap: var(--lgs-gutter-s);
+}
+
 .journey-stats-widget-preview-chart {
     display: flex;
     align-items: center;
     justify-content: center;
     height: 250px;
+    overflow: hidden;
+    position: relative;
     background-size: cover;
     gap: var(--lgs-gutter-xs);
 }
@@ -219,12 +254,18 @@
     gap: var(--lgs-gutter-xs);
 }
 
-.journey-stats-widget-preview-chart .journey-stats-widget {
+.journey-stats-widget-preview-stage {
+    display: inline-block;
     transform-origin: center center;
 }
 
-.journey-stats-widget-preview-chart .journey-stats-widget {
-    transform: scale(0.7)
+.journey-stats-widget-preview-measure {
+    position: absolute;
+    top: 0;
+    left: 0;
+    visibility: hidden;
+    pointer-events: none;
+    display: inline-block;
 }
 
 .journey-stats-widget-editor-scroll {

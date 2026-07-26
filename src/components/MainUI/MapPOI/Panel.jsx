@@ -25,6 +25,7 @@ import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { createPortal }                                 from 'react-dom'
 import { useSnapshot }                                  from 'valtio'
 import { proxyMap }                                     from 'valtio/utils'
+import { WaIcon }                                       from '@web.awesome.me/webawesome-pro/dist/react'
 import DrawerFooter                                     from '../../DrawerFooter'
 import './style.css'
 
@@ -142,7 +143,7 @@ export const Panel = memo(() => {
                     className={classNames({'drawer-is-stacked': isStacked})}
                 >
                     <PanelActions stackedPanel={isStacked} onBack={isStacked ? closePanelWithManager : null}/>
-                    <span slot="label">{'Points Of Interest'}</span>
+                    <span slot="label"><WaIcon name="location-dot" variant="regular"/>{'Points of Interest'}</span>
 
                     <MapPOIEditListActions/>
                     <LGSScrollbars>

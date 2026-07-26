@@ -17,6 +17,9 @@
 import { NameValueUnit }                                from '@Components/DataDisplay/NameValueUnit'
 import { DateTimeDisplay }                              from '@Components/DateTimeDisplay'
 import { useWidgetScaleCorrection } from '@Components/MainUI/widgets/useWidgetScaleCorrection'
+import { VIDEO_WIDGETS_BOARD }                          from '@Core/constants'
+import { resolveReplayVideoStatsWidgetVisibility }      from '@Core/ui/replay/ReplayOverlayResolver'
+import { Widget2Canvas }                                from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
 import {
     JOURNEY_STATS_TEXT_ITEM_MAP,
     isJourneyStatsSummaryTextItem,
@@ -24,12 +27,17 @@ import {
     normalizeJourneyStatsSummaryBreaks,
     normalizeJourneyStatsTextOrder,
 }                                                       from '@Components/Stats/journeyStatsTextOrder'
+import {
+    buildDynamicJourneyReplayStatsMetrics,
+    resolveDynamicJourneyReplayStatsSample,
+}                                                       from '@Components/Stats/replayStatsWidgetUtils'
 import { WIDGET_RADIUS }                                from '@Core/constants'
 import { faArrowDownToLine, faArrowUpToLine }           from '@fortawesome/pro-regular-svg-icons'
 import { SlDivider, SlIcon }                            from '@shoelace-style/shoelace/dist/react'
 import { FA2SL }                                        from '@Utils/FA2SL'
 import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS, UnitUtils } from '@Utils/UnitUtils'
-import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useOptionalSnapshot }                          from '@Utils/ValtioUtils'
+import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                  from 'valtio'
 
 const scaleValue = (value, correction = 1) => {
@@ -127,11 +135,33 @@ const measureUnconstrainedContent = (target, content) => {
     return {width, height}
 }
 
+const getCurrentWidgetBox = (target, config) => {
+    const rect = target?.getBoundingClientRect?.()
+    const left = Number.parseFloat(target?.style?.left || '')
+    const top = Number.parseFloat(target?.style?.top || '')
+    const width = Number.parseFloat(target?.style?.width || '')
+    const height = Number.parseFloat(target?.style?.height || '')
+
+    return {
+        left:   Number.isFinite(left) ? left : (config?.position?.left ?? rect?.left ?? 0),
+        top:    Number.isFinite(top) ? top : (config?.position?.top ?? rect?.top ?? 0),
+        width:  Number.isFinite(width) && width > 0 ? width : (config?.dimensions?.width ?? rect?.width ?? 0),
+        height: Number.isFinite(height) && height > 0 ? height : (config?.dimensions?.height ?? rect?.height ?? 0),
+    }
+}
+
+const resolveWidgetConfiguration = (widgetKey) => {
+    const widgets = lgs.settings.widgets ?? {}
+    return widgets?.[widgetKey]?.configuration
+           ?? __.widgets.get(widgetKey)?.configuration
+           ?? null
+}
+
 /**
  * Statistical display component for journeys.
  * Maintains layout consistency by preserving slots even when values are zero.
  */
-export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
+export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journey', widgetKey = 'journey-stats-widget', widgetsBoard = null}) => {
     const main = useSnapshot(lgs.stores.main)
     const journey = lgs.theJourney
     const journeySlug = main.theJourney?.slug ?? null
@@ -139,8 +169,10 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
     const [journeyLocationState, setJourneyLocationState] = useState({slug: null, value: ''})
     const widgetRef = useRef(null)
 
-    const $configuration = lgs.settings.widgets['journey-stats-widget'].configuration
-    const configuration = useSnapshot($configuration)
+    const configuration = useOptionalSnapshot(
+        resolveWidgetConfiguration(widgetKey),
+        {default: {}, user: {}, elements: {}},
+    )
 
     const fallbackMetrics = useMemo(() => metrics ?? {}, [metrics])
     const $metrics = journey?.metrics ?? lgs.stores.main.components.journeyStats
@@ -150,7 +182,16 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
     const unitSystem = useSnapshot($unitSystem)
     const currentUnitSystem = unitSystem.current
     const isImperial = currentUnitSystem === 'imperial'
-
+    const replay = useSnapshot(lgs.stores.replay)
+    const video = useSnapshot(lgs.stores.ui.video)
+    const isDynamicMode = mode === 'dynamic'
+    const isVideoBoard = widgetsBoard === VIDEO_WIDGETS_BOARD
+    const useVideoStatsPlaceholder = isDynamicMode
+                                     && isVideoBoard
+                                     && Boolean(video.editing || video.preRecording)
+                                     && !video.recording
+                                     && !video.finalizing
+                                     && !video.snapshot
     const element = useMemo(() => {
         if (id && configuration.elements?.[id]) {
             return configuration.elements[id]
@@ -158,10 +199,30 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         return configuration.user ?? configuration.default
     }, [id, configuration])
 
+    const replayController = __.ui?.replay?.controller ?? null
+    const replayFrameState = replay?.deferredExportPlan?.runtime?.frameState
+                             ?? replay?.dynamicFrameState
+                             ?? null
+
+    const dynamicReplaySample = useMemo(() => {
+        if (!isDynamicMode) {
+            return null
+        }
+
+        return resolveDynamicJourneyReplayStatsSample({
+            replay,
+            controller: replayController,
+        })
+    }, [isDynamicMode, replay, replayController, replayFrameState])
+
     /**
      * Merges metrics based on defined data source (global, external, user)
      */
     const displayMetrics = useMemo(() => {
+        if (isDynamicMode) {
+            return buildDynamicJourneyReplayStatsMetrics(replay, journey, dynamicReplaySample)
+        }
+
         const source = element.dataSource || 'global'
         const global = metricsSnap.global || fallbackMetrics.global || {}
         const external = metricsSnap.external || fallbackMetrics.external || {}
@@ -181,11 +242,27 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
                 ...(source === 'user' ? {...(external.positive || {}), ...(user.positive || {})} : {}),
             }
         }
-    }, [element.dataSource, fallbackMetrics, metricsSnap])
+    }, [dynamicReplaySample, element.dataSource, fallbackMetrics, replay, isDynamicMode, metricsSnap])
+
+    useLayoutEffect(() => {
+        if (!isDynamicMode || !isVideoBoard || !id) {
+            return
+        }
+
+        Widget2Canvas.refresh(id)
+    }, [
+        id,
+        isDynamicMode,
+        isVideoBoard,
+        replayFrameState,
+        displayMetrics.distance,
+        displayMetrics.positive?.elevation,
+        displayMetrics.duration,
+    ])
 
     const formattedDuration = useMemo(() => {
         const seconds = displayMetrics?.duration
-        if (!Number.isFinite(seconds) || seconds <= 0) {
+        if (!Number.isFinite(seconds) || seconds < 0) {
             return null
         }
 
@@ -224,8 +301,10 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         min: formatPace(displayMetrics?.minPace),
     }), [displayMetrics?.averagePace, displayMetrics?.minPace, formatPace])
 
-    const hasDuration = journey?.hasTime ?? false
-    const hasElevation = journey?.hasAltitude ?? false
+    const hasDuration = isDynamicMode ? Boolean(replay?.elapsedMillis) : (journey?.hasTime ?? false)
+    const hasElevation = isDynamicMode
+                         ? displayMetrics?.hasElevation !== false
+                         : (journey?.hasAltitude ?? false)
     const date = journey ? __.ui.ui.formatJourneyDurationDates(journey.getDate()) : {}
     const hasDateRange = Boolean(date?.prefix && date?.sufix)
     const journeyLocation = (journeyLocationState.slug === journeySlug ? journeyLocationState.value : '') || journey?.location || ''
@@ -239,7 +318,9 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         () => new Set(normalizeJourneyStatsSummaryBreaks(element?.summaryBreaks)),
         [element?.summaryBreaks],
     )
-    const showAltitudeRow = (hasElevation || element?.altitude) && (displayMetrics.minHeight > 0 || displayMetrics.maxHeight > 0)
+    const showAltitudeRow = !isDynamicMode
+                            && (hasElevation || element?.altitude)
+                            && (displayMetrics.minHeight > 0 || displayMetrics.maxHeight > 0)
     const showSpeedRow = element?.performance && (displayMetrics.averageSpeed > 0 || displayMetrics.maxSpeed > 0)
     const showPaceRow = element?.performance && (paceValues.average !== null || paceValues.min !== null)
 
@@ -247,12 +328,17 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         const visibleById = {
             date:      showDate,
             location:  showLocation,
-            distance:  isJourneyStatsTextItemEnabled(element, 'distance') && displayMetrics.distance > 0,
-            elevation: isJourneyStatsTextItemEnabled(element, 'elevation') && displayMetrics.positive?.elevation > 0,
-            duration:  isJourneyStatsTextItemEnabled(element, 'duration') && Boolean(formattedDuration),
-            altitude:  showAltitudeRow,
-            speed:     showSpeedRow,
-            pace:      showPaceRow,
+            distance:  useVideoStatsPlaceholder
+                       ? isJourneyStatsTextItemEnabled(element, 'distance')
+                       : (isDynamicMode ? displayMetrics.distance >= 0 : (isJourneyStatsTextItemEnabled(element, 'distance') && displayMetrics.distance > 0)),
+            elevation: isJourneyStatsTextItemEnabled(element, 'elevation')
+                       && (useVideoStatsPlaceholder || (isDynamicMode ? hasElevation : (displayMetrics.positive?.elevation > 0 || displayMetrics.positive?.elevation === 0))),
+            duration:  useVideoStatsPlaceholder
+                       ? isJourneyStatsTextItemEnabled(element, 'duration')
+                       : (isDynamicMode ? Boolean(formattedDuration) : (isJourneyStatsTextItemEnabled(element, 'duration') && Boolean(formattedDuration))),
+            altitude:  useVideoStatsPlaceholder ? element?.altitude === true : showAltitudeRow,
+            speed:     useVideoStatsPlaceholder ? element?.performance === true : showSpeedRow,
+            pace:      useVideoStatsPlaceholder ? element?.performance === true : showPaceRow,
         }
 
         return textOrder.reduce((groups, itemId) => {
@@ -276,6 +362,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
     }, [
         displayMetrics.distance,
         displayMetrics.positive?.elevation,
+        hasElevation,
         element,
         formattedDuration,
         showAltitudeRow,
@@ -285,6 +372,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         showSpeedRow,
         summaryBreaks,
         textOrder,
+        useVideoStatsPlaceholder,
     ])
 
     const syncWidgetFrame = useCallback((attempt = 0) => {
@@ -293,7 +381,12 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         }
 
         requestAnimationFrame(() => {
-            const moveable = __.ui.widgetManager.getMoveable(id)?.current
+            const widgetManager = globalThis.__?.ui?.widgetManager
+            if (!widgetManager) {
+                return
+            }
+
+            const moveable = widgetManager.getMoveable(id)?.current
 
             if (!moveable) {
                 if (attempt < 6) {
@@ -312,6 +405,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
 
             const currentWidth = getRenderedSize(target, 'width')
             const currentHeight = getRenderedSize(target, 'height')
+            const currentBox = getCurrentWidgetBox(target, widgetManager.getWidgetConfig(id))
             const measuredSize = measureUnconstrainedContent(target, content)
 
             if (!measuredSize) {
@@ -321,17 +415,33 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
 
             const {width, height} = measuredSize
             const sizeChanged = Math.abs(currentWidth - width) > 0.5 || Math.abs(currentHeight - height) > 0.5
+            const centerX = currentBox.left + (currentBox.width / 2)
+            const centerY = currentBox.top + (currentBox.height / 2)
+            const nextLeft = centerX - (width / 2)
+            const nextTop = centerY - (height / 2)
 
             target.style.width = `${width}px`
             target.style.height = `${height}px`
+            target.style.left = `${nextLeft}px`
+            target.style.top = `${nextTop}px`
 
             if (sizeChanged) {
-                const config = __.ui.widgetManager.getWidgetConfig(id)
+                const config = widgetManager.getWidgetConfig(id)
                 if (config) {
                     config.dimensions = {width, height}
+                    config.position = {left: nextLeft, top: nextTop}
                     if (config.persist && config.runtimeReady) {
-                        void __.ui.widgetManager.saveWidgetPosition(id, config)
+                        void widgetManager.saveWidgetPosition(id, config)
                     }
+                }
+
+                if (lgs.stores?.ui?.widget?.list?.set) {
+                    const widgetEntry = lgs.stores.ui.widget.list.get(id) ?? {}
+                    lgs.stores.ui.widget.list.set(id, {
+                        ...widgetEntry,
+                        dimensions: {width, height},
+                        position:   {left: nextLeft, top: nextTop},
+                    })
                 }
             }
 
@@ -422,12 +532,14 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         return {
             ...style,
             color:          __.ui.ui.resolveItemColor(element.text, true),
-            textShadow:     element.text?.shadow?.show ? (
+            '--journey-stats-text-shadow': element.text?.shadow?.show ? (
                 `${shadowSize[0]}px ${shadowSize[1]}px ${shadowSize[2]}px ${textShadowColor}`
-            ) : undefined,
+            ) : 'none',
             border:         element.border.show ? `${scaleValue(element.border.thickness, borderCorrection)}px solid ${__.ui.ui.resolveItemColor(element.border, true)}` : 'none',
             padding:        resolvePadding(element, scaleCorrection),
-            background:     __.ui.ui.resolveItemColor(element.background, true),
+            background:     element.background?.show
+                            ? __.ui.ui.resolveItemColor(element.background, true)
+                            : 'transparent',
             backdropFilter: (element.background?.show && element.background?.blur)
                             ? 'blur(var(--lgs-blur-s))'
                             : 'blur(0)',
@@ -449,6 +561,15 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
     }, [element.separator])
 
     const renderTextItem = (itemId) => {
+        const placeholder = <span className="journey-stats-placeholder">{'00'}</span>
+        const durationPlaceholder = isImperial
+                                    ? '00:00'
+                                    : (
+                <>
+                    {'00'}<span className="duration-hour">h</span>{'00'}<span className="duration-minute">m</span>
+                </>
+            )
+
         switch (itemId) {
             case 'date':
                 return (
@@ -463,8 +584,10 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
             case 'distance':
                 return (
                     <div className="journey-stats-summary-item track-summary-column" key="distance">
-                        <div className="journey-stats-val-huge">
-                            <NameValueUnit value={displayMetrics.distance} units={DISTANCE_UNITS} noUnit/>
+                        <div className="journey-stats-val-huge dynamic-widget-part">
+                            {useVideoStatsPlaceholder
+                             ? placeholder
+                             : <NameValueUnit value={displayMetrics.distance} units={DISTANCE_UNITS} noUnit/>}
                         </div>
                         <div className="journey-stats-label-bold">{`Distance (${units.distance})`}</div>
                     </div>
@@ -472,9 +595,11 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
             case 'elevation':
                 return (
                     <div className="journey-stats-summary-item track-summary-column" key="elevation">
-                        <div className="journey-stats-val-huge">
-                            <NameValueUnit value={displayMetrics.positive.elevation} units={ELEVATION_UNITS} noUnit
-                                           precision="0"/>
+                        <div className="journey-stats-val-huge dynamic-widget-part">
+                            {useVideoStatsPlaceholder
+                             ? placeholder
+                             : <NameValueUnit value={displayMetrics.positive.elevation} units={ELEVATION_UNITS} noUnit
+                                              precision="0"/>}
                         </div>
                         <div className="journey-stats-label-bold">{`Elevation (${units.elevation})`}</div>
                     </div>
@@ -482,7 +607,9 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
             case 'duration':
                 return (
                     <div className="journey-stats-summary-item track-summary-column" key="duration">
-                        <div className="journey-stats-val-huge">{formattedDuration}</div>
+                        <div className="journey-stats-val-huge dynamic-widget-part">
+                            {useVideoStatsPlaceholder ? durationPlaceholder : formattedDuration}
+                        </div>
                         <div className="journey-stats-label-bold">{'DURATION'}</div>
                     </div>
                 )
@@ -490,8 +617,10 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
                 return (
                     <div className="journey-stats-row" key="altitude">
                         <div className="journey-stats-label">{'Altitude'}<span>{`(${units.elevation})`}</span></div>
-                        <div className="journey-stats-value">
-                            {displayMetrics.minHeight > 0 &&
+                        <div className="journey-stats-value dynamic-widget-part">
+                            {useVideoStatsPlaceholder
+                             ? placeholder
+                             : displayMetrics.minHeight > 0 &&
                                 <>
                                     <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowDownToLine)}/>
                                     <NameValueUnit value={displayMetrics.minHeight} units={ELEVATION_UNITS} noUnit
@@ -499,8 +628,10 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
                                 </>
                             }
                         </div>
-                        <div className="journey-stats-value">
-                            {displayMetrics.maxHeight > 0 &&
+                        <div className="journey-stats-value dynamic-widget-part">
+                            {useVideoStatsPlaceholder
+                             ? placeholder
+                             : displayMetrics.maxHeight > 0 &&
                                 <>
                                     <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowUpToLine)}/>
                                     <NameValueUnit value={displayMetrics.maxHeight} units={ELEVATION_UNITS} noUnit
@@ -514,13 +645,17 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
                 return (
                     <div className="journey-stats-row" key="speed">
                         <div className="journey-stats-label">{'Speed'}<span>{`(${units.speed})`}</span></div>
-                        <div className="journey-stats-value">
-                            {displayMetrics.averageSpeed > 0 &&
+                        <div className="journey-stats-value dynamic-widget-part">
+                            {useVideoStatsPlaceholder
+                             ? placeholder
+                             : displayMetrics.averageSpeed > 0 &&
                                 <NameValueUnit value={displayMetrics.averageSpeed} units={SPEED_UNITS} noUnit/>
                             }
                         </div>
-                        <div className="journey-stats-value">
-                            {displayMetrics.maxSpeed > 0 &&
+                        <div className="journey-stats-value dynamic-widget-part">
+                            {useVideoStatsPlaceholder
+                             ? placeholder
+                             : displayMetrics.maxSpeed > 0 &&
                                 <>
                                     <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowUpToLine)}/>
                                     <NameValueUnit value={displayMetrics.maxSpeed} units={SPEED_UNITS} noUnit/>
@@ -533,11 +668,13 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
                 return (
                     <div className="journey-stats-row" key="pace">
                         <div className="journey-stats-label">{'Pace'}<span>{`(${units.pace})`}</span></div>
-                        <div className="journey-stats-value">
-                            {paceValues.average && paceValues.average}
+                        <div className="journey-stats-value dynamic-widget-part">
+                            {useVideoStatsPlaceholder ? placeholder : paceValues.average && paceValues.average}
                         </div>
-                        <div className="journey-stats-value">
-                            {paceValues.min &&
+                        <div className="journey-stats-value dynamic-widget-part">
+                            {useVideoStatsPlaceholder
+                             ? placeholder
+                             : paceValues.min &&
                                 <>
                                     <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowUpToLine)}/>
                                     {paceValues.min}
@@ -573,12 +710,41 @@ export const JourneyStats = memo(({id, metrics, units, style = {}}) => {
         return group.items.map(renderTextItem)
     }
 
+    const isVisible = useMemo(() => {
+        if (!journeySlug || !journey) {
+            return false
+        }
+
+        if (!isVideoBoard) {
+            return true
+        }
+
+        return resolveReplayVideoStatsWidgetVisibility({mode, replay})
+    }, [replay, isVideoBoard, journey, journeySlug, mode])
+
+    const widgetStyle = useMemo(() => (
+        isVisible
+            ? mainStyle
+            : {
+                ...mainStyle,
+                visibility: 'hidden',
+                pointerEvents: 'none',
+            }
+    ), [isVisible, mainStyle])
+
     if (!journeySlug || !journey) {
         return null
     }
 
     return (
-        <div ref={widgetRef} className="journey-stats-widget" style={mainStyle}>
+        <div
+            ref={widgetRef}
+            className="journey-stats-widget static-widget-part"
+            style={widgetStyle}
+            aria-hidden={!isVisible}
+            data-video-overlay-mode={isVideoBoard ? mode : undefined}
+            data-video-overlay-visible={isVideoBoard ? String(isVisible) : undefined}
+        >
             {visibleTextGroups.map((group, index) => (
                 <Fragment key={`${group.group}-${group.items.join('-')}`}>
                     {index > 0 && <SlDivider style={separatorStyle}/>}

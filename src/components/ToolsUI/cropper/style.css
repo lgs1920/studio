@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-06-21
+ * Last modified: 2026-06-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -78,41 +78,108 @@
 /***************************************
  *  On map crop info
  **************************************/
-.crop-info, .crop-info-custom {
-    font-size: var(--lgs-font-size-s);
-    position: absolute;
-    z-index: calc(var(--crop-zindex) + 1);
-    display: flex;
-
-    align-items: center;
+.crop-info-popup-control {
     width: max-content;
-    pointer-events: none;
+    pointer-events: auto;
     opacity: 0.92;
-    gap: var(--lgs-gutter-xs);
 }
 
-.crop-ratio-widget.lgs-card.wa-theme-lgs1920-on-map,
-.crop-ratio-popup-menu.lgs-card.wa-theme-lgs1920-on-map {
+.crop-info-popup-widget-shell {
+    position: fixed;
+    z-index: calc(var(--lgs-tools-ui-zindex) + 3);
+    right: var(--lgs-gutter-s);
+    bottom: var(--lgs-gutter-s);
+    width: max-content !important;
+    min-width: 0 !important;
+    max-width: calc(100vw - 2 * var(--lgs-gutter-s)) !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    cursor: grab;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    touch-action: none;
+}
+
+.crop-info-popup-widget-shell.wa-theme-lgs1920-on-map {
+    color: var(--lgs-card-on-map-color);
+}
+
+.crop-info-popup-widget-shell.dragging {
+    cursor: grabbing;
+}
+
+.crop-info-popup-control > wa-button::part(base) {
+    font-size: var(--lgs-font-size-s);
+    box-sizing: border-box;
+    min-height: 2rem;
+    padding: var(--lgs-gutter-xxs) var(--lgs-gutter-xs);
+    cursor: pointer;
+}
+
+.crop-info-popup-control > wa-button wa-icon {
+    font-size: 1.1em;
+    line-height: 1;
+}
+
+.crop-info-popup-card.lgs-card {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + var(--lgs-gutter-xs));
+    display: flex;
+    flex-direction: column;
+    align-items: stretch !important;
+    box-sizing: border-box;
+    width: fit-content;
+    max-width: calc(100vw - 2 * var(--lgs-gutter));
+    height: auto !important;
+    max-height: calc(100vh - 2 * var(--lgs-gutter));
+    min-width: 0;
+    overflow: auto;
+    padding: var(--lgs-gutter-xs) var(--lgs-gutter-s);
+    gap: var(--lgs-gutter-xs);
     box-shadow: var(--lgs-on-map-floating-shadow, var(--sl-shadow-large)) !important;
     filter: drop-shadow(var(--lgs-on-map-floating-drop-shadow, 0 0.45rem 1rem rgb(0 0 0 / 0.22)));
 }
 
-.crop-info {
-    top: var(--lgs-gutter-xs);
-    left: var(--lgs-gutter-xs);
+.crop-info-popup-dimensions,
+.crop-info-popup-custom {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: max-content;
+    max-width: 100%;
+    min-width: 0;
+    gap: var(--lgs-gutter-xxs);
 }
 
-.crop-info-custom {
-    right: var(--lgs-gutter-xs);
-    bottom: var(--lgs-gutter-xs);
+.crop-info-popup-dimensions span,
+.crop-info-popup-custom span {
+    min-width: 0;
+    padding: 0;
+    overflow-wrap: anywhere;
 }
 
-[class^="crop-info"] span {
-    padding-inline: var(--lgs-gutter-s);
+.crop-info-popup-dimensions span:not(:last-child),
+.crop-info-popup-custom span:not(:last-child) {
+    border: 0;
 }
 
-[class^="crop-info"] :not(:last-child) {
-    border-right: 1px solid var(--lgs-card-on-map-border-color);
+.crop-zone-info,
+.video-settings-info {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: var(--lgs-gutter-xxs);
+}
+
+.crop-zone-info span,
+.video-settings-info span {
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 /***************************************
@@ -120,7 +187,7 @@
  **************************************/
 .crop-overlay {
     position: absolute;
-    z-index: calc(var(--crop-zindex) + 1);
+    z-index: calc(var(--crop-zindex) - 1);
     top: 0;
     left: 0;
     width: 100%;
@@ -135,6 +202,23 @@
     clip-rule: evenodd;
 
     backdrop-filter: blur(var(--lgs-blur));
+}
+
+.crop-overlay.wa-theme-lgs1920-on-map {
+    opacity: 0.82;
+    background-color: color-mix(in oklab, var(--lgs-dark-color-80) 52%, transparent);
+    background-image: var(--lgs-on-map-surface-gradient, var(--lgs-brand-overlay-gradient));
+}
+
+.lgs-widget-container.crop-moveable-container-on-map {
+    z-index: calc(var(--crop-zindex) + 1) !important;
+}
+
+.lgs-widget-control-box.crop-moveable-on-map,
+.lgs-widget-control-box.crop-moveable-on-map .moveable-control-box,
+.lgs-widget-control-box.crop-moveable-on-map .moveable-control,
+.lgs-widget-control-box.crop-moveable-on-map .moveable-line {
+    z-index: calc(var(--crop-zindex) + 1) !important;
 }
 
 /*******************************************************************************
@@ -184,7 +268,7 @@
     cursor: pointer;
     transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
     white-space: nowrap;
-    color: var(--lgs-light-color-75);
+    color: var(--lgs-text-on-color);
     border: 1px solid transparent;
     border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-xs));
     outline: var(--lgs-card-on-map-hover-outline);

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-22
+ * Created on: 2026-07-09
+ * Last modified: 2026-07-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,36 +16,51 @@
 
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import { faCheck }                    from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
-import { WaButton, WaDialog, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
-import React                          from 'react'
+import { SlButton, SlDialog, SlIcon }            from '@shoelace-style/shoelace/dist/react'
+import { WaButton, WaDialog, WaDivider, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import React, { useEffect, useState }            from 'react'
 import { default as ReactMarkdown }   from 'react-markdown'
 import { useSnapshot }                from 'valtio'
 import { FA2SL }         from '@Utils/FA2SL'
-import { markdown as infoText } from './info-layer.md'
+import infoText from './info-layer.md?raw'
 
 export const InfoLayerModal = () => {
     const editor = lgs.editorSettingsProxy
     const snap = useSnapshot(editor)
+    const [showScrollHint, setShowScrollHint] = useState(true)
 
     const closeInfoModal = () => editor.layer.infoDialog = false
+
+    useEffect(() => {
+        if (snap.layer.infoDialog) {
+            setShowScrollHint(true)
+        }
+    }, [snap.layer.infoDialog])
 
     return (
         <WaDialog open={snap.layer.infoDialog}
                   onAfterHide={closeInfoModal}
                   className={'lgs-theme'}
                   id={'info-layer-modal'}>
-            <span slot="label">
+            <div slot="label">
                 <WaIcon name="bell-exclamation" variant={'regular'}/>{'Disclaimer'}
-            </span>
-            <LGSScrollbars>
+            </div>
+
+            <LGSScrollbars onScrollStateChange={scrolled => setShowScrollHint(!scrolled)}>
                 <div>
-            <ReactMarkdown children={infoText}/>
+                    <ReactMarkdown>{infoText}</ReactMarkdown>
                 </div>
             </LGSScrollbars>
-            <WaButton slot="footer" variant="brand" onClick={closeInfoModal}>
-                <WaIcon slot="start" name="check" variant={'regular'}/>{'Close'}
-            </WaButton>
+
+            <div slot="footer" className="lgs--info-layer-footer">
+                <div className={`lgs--info-layer-scroll-hint${showScrollHint ? '' : ' is-hidden'}`}>
+                    <WaIcon name="arrow-down" variant="regular"/>
+                    <span>{'Scroll down'}</span>
+                </div>
+                <WaButton variant="brand" onClick={closeInfoModal}>
+                    <WaIcon slot="start" name="check" variant={'regular'}/>{'Close'}
+                </WaButton>
+            </div>
         </WaDialog>
     )
 

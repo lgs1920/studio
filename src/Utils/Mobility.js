@@ -15,10 +15,7 @@
  ******************************************************************************/
 
 import { MILLIS }        from '@Core/constants'
-import * as turfDistance from '@turf/distance'
-
-import { DateTime }   from 'luxon'
-import * as turfPoint from 'turf-point'
+import { DateTime }                       from 'luxon'
 
 export class Mobility {
     /**
@@ -38,10 +35,18 @@ export class Mobility {
         const endLatitude = Number(end?.latitude)
 
         if ([startLongitude, startLatitude, endLongitude, endLatitude].every(Number.isFinite)) {
-            return turfDistance.default(
-                turfPoint.default([startLongitude, startLatitude]),
-                turfPoint.default([endLongitude, endLatitude]),
-            ) * 1000
+            if (startLongitude === endLongitude && startLatitude === endLatitude) {
+                return 0
+            }
+
+            const toRadians = degrees => degrees * Math.PI / 180
+            const lat1 = toRadians(startLatitude)
+            const lat2 = toRadians(endLatitude)
+            const dLon = toRadians(endLongitude - startLongitude)
+            const cosine = Math.sin(lat1) * Math.sin(lat2) +
+                Math.cos(lat1) * Math.cos(lat2) * Math.cos(dLon)
+
+            return 6371000 * Math.acos(Math.min(1, Math.max(-1, cosine)))
         }
         return 0
     }

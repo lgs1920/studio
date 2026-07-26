@@ -16,7 +16,6 @@
 
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import { Track } from '@Core/Track'
-import { UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
 import { Utils } from '@Editor/Utils'
 import {
     WaButton, WaCallout, WaDivider, WaIcon, WaInput, WaOption, WaSelect,
@@ -25,14 +24,52 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSnapshot }                  from 'valtio/index'
 
 const SPEED_FACTOR = 3.6
+const PACE_FACTOR = 1000 / 60
 
 const THRESHOLDS = [
+    {
+        key:       'minSegmentDuration',
+        label:     'Minimum segment duration',
+        suffix:    's',
+        step:      1,
+        precision: 0,
+        default:   2,
+        hint:      'Segments shorter than this duration do not contribute to speed and pace cleaning.',
+    },
+    {
+        key:       'minSegmentDistance',
+        label:     'Minimum segment distance',
+        suffix:    'm',
+        step:      1,
+        precision: 0,
+        default:   3,
+        hint:      'Segments shorter than this distance do not contribute to speed and pace cleaning.',
+    },
+    {
+        key:       'altitudeSmoothingWindow',
+        label:     'Altitude smoothing window',
+        suffix:    'pt',
+        step:      1,
+        precision: 0,
+        default:   3,
+        hint:      'A centered window used to smooth altitude before computing slope and profile statistics.',
+    },
+    {
+        key:       'maxAltitudeJump',
+        label:     'Maximum altitude jump',
+        suffix:    'm',
+        step:      1,
+        precision: 0,
+        default:   10,
+        hint:      'Altitude changes above this value are clipped before smoothing to remove GNSS spikes.',
+    },
     {
         key:       'maxSpeed',
         label:     'Maximum speed',
         suffix:    'km/h',
         step:      0.1,
         precision: 1,
+        default:   0,
         toDisplay: value => value * SPEED_FACTOR,
         toStorage: value => value / SPEED_FACTOR,
         hint:      'Segments faster than this value are ignored as GPS spikes.',
@@ -43,6 +80,7 @@ const THRESHOLDS = [
         suffix:    'm/s',
         step:      0.1,
         precision: 2,
+        default:   0,
         hint:      'Positive elevation changes above this vertical rate are treated as impossible.',
     },
     {
@@ -51,7 +89,30 @@ const THRESHOLDS = [
         suffix:    'm/s',
         step:      0.1,
         precision: 2,
+        default:   0,
         hint:      'Negative elevation changes above this vertical rate are treated as impossible.',
+    },
+    {
+        key:       'maxPace',
+        label:     'Maximum pace',
+        suffix:    'min/km',
+        step:      0.1,
+        precision: 1,
+        default:   0,
+        toDisplay: value => value * PACE_FACTOR,
+        toStorage: value => value / PACE_FACTOR,
+        hint:      'Segments slower than this pace are treated as unreliable for speed and pace extrema.',
+    },
+    {
+        key:       'maxSpeedDelta',
+        label:     'Maximum speed delta',
+        suffix:    'km/h',
+        step:      0.1,
+        precision: 1,
+        default:   0,
+        toDisplay: value => value * SPEED_FACTOR,
+        toStorage: value => value / SPEED_FACTOR,
+        hint:      'Abrupt speed jumps above this delta are excluded from speed and pace extrema.',
     },
     {
         key:       'stopDuration',
@@ -59,6 +120,7 @@ const THRESHOLDS = [
         suffix:    's',
         step:      1,
         precision: 0,
+        default:   60,
         hint:      'A low-speed segment lasting at least this duration is counted as idle time.',
     },
     {
@@ -67,6 +129,7 @@ const THRESHOLDS = [
         suffix:    'km/h',
         step:      0.1,
         precision: 1,
+        default:   0,
         toDisplay: value => value * SPEED_FACTOR,
         toStorage: value => value / SPEED_FACTOR,
         hint:      'Segments below this speed can be considered stopped when they last long enough.',
@@ -133,21 +196,7 @@ export const JourneyStatisticsSettings = () => {
     }, [])
 
     const refreshJourneyStatistics = useMemo(() => __.tools.debounce(async (activityId) => {
-        const editorJourney = lgs.theJourneyEditorProxy?.journey
-        if (!editorJourney?.slug || editorJourney.activity !== activityId) {
-            return
-        }
-
-        const updated = await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus: false})
-        updated.addToContext()
-        updated.addToEditor()
-
-        const track = updated.tracks.get(lgs.theJourneyEditorProxy.track?.slug) ?? Array.from(updated.tracks.values())[0]
-        track?.addToContext()
-        track?.addToEditor()
-
-        Utils.renderJourneySettings()
-        __.ui.profiler?.draw()
+        await Utils.refreshJourneysStatistics(activityId, {focus: false})
     }, 350), [])
 
     const profiles = useMemo(() => {
@@ -203,7 +252,12 @@ export const JourneyStatisticsSettings = () => {
     }
 
     const displayValue = (field) => {
-        const value = Number(selectedProfile?.[field.key])
+        const fallback = Number.isFinite(Number(standardProfile?.[field.key]))
+                          ? Number(standardProfile[field.key])
+                          : field.default ?? 0
+        const value = Number.isFinite(Number(selectedProfile?.[field.key]))
+                      ? Number(selectedProfile[field.key])
+                      : fallback
         const display = field.toDisplay ? field.toDisplay(value) : value
         return roundValue(display, field.precision)
     }

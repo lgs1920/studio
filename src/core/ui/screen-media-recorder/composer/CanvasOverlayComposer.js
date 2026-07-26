@@ -46,6 +46,7 @@ export class CanvasOverlayComposer {
     #flushWebGLBuffer = null
     #blurBufferDirty = true
     #running = false
+    #continuousRendering = true
 
     // Cached source rect to avoid allocations inside the render loop.
     #srcRect = {x: 0, y: 0, w: 0, h: 0}
@@ -182,6 +183,26 @@ export class CanvasOverlayComposer {
     setFps = (fps = 0) => {
         this.#fixedMinFrameMs = (typeof fps === 'number' && fps > 0) ? (1000 / fps) : 0
         this.#minFrameMs = this.#fixedMinFrameMs
+    }
+
+    /**
+     * Enables or disables the compositor's background animation loop.
+     * Manual renderFrame calls remain available while the loop is disabled.
+     * @param {boolean} enabled - Whether continuous rendering should run
+     */
+    setContinuousRendering = (enabled = true) => {
+        this.#continuousRendering = enabled !== false
+        if (!this.#continuousRendering) {
+            if (this.#raf) {
+                cancelAnimationFrame(this.#raf)
+            }
+            this.#raf = null
+            return
+        }
+
+        if (this.#running && !this.#raf) {
+            this.#loop()
+        }
     }
 
     #traceRoundedRect(ctx, x, y, w, h, r) {
@@ -367,11 +388,11 @@ export class CanvasOverlayComposer {
 
     /** Main rAF loop with optional FPS throttling. */
     #loop = () => {
-        if (!this.#running) {
+        if (!this.#running || !this.#continuousRendering) {
             return
         }
         this.#raf = requestAnimationFrame((time) => {
-            if (!this.#running) {
+            if (!this.#running || !this.#continuousRendering) {
                 return
             }
             if (!this.#minFrameMs || (time - this.#lastFrameTime) >= this.#minFrameMs) {
@@ -385,6 +406,7 @@ export class CanvasOverlayComposer {
     /** Stop rendering and release references. */
     dispose = () => {
         this.#running = false
+        this.#continuousRendering = false
         if (this.#raf) {
             cancelAnimationFrame(this.#raf)
         }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-06-22
+ * Last modified: 2026-06-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,6 @@
 import { WIDGETS_STORE } from '@Core/constants'
 
 import { WaButton, WaDetails, WaDivider, WaIcon, WaSwitch } from '@web.awesome.me/webawesome-pro/dist/react'
-import React                                                from 'react'
 import { useSnapshot }                                      from 'valtio/index'
 import { useConfirm }                                       from '../../../Modals/ConfirmUI'
 import './style.css'
@@ -36,6 +35,10 @@ export const ResetProfile = () => {
      */
     const reset = async () => {
         if (await confirmReset()) {
+            await lgs.databaseSyncManager?.unlinkPersistentDirectory?.()
+            await __.ui.ionTokenManager?.resetIntroSeen?.()
+            await __.ui.ionTokenManager?.clear?.()
+
             if (account.reset.lgs1920) {
                 await lgs.db.lgs1920.deleteDB()
             }
@@ -161,7 +164,7 @@ export const ResetProfile = () => {
                 </WaSwitch>
 
                 <WaButton
-                    variant="warning"
+                    variant="danger"
                     appearance="filled"
                     onClick={reset}
                     disabled={isResetDisabled}

@@ -22,6 +22,7 @@ import { WaColorPicker, WaSlider }                from '@web.awesome.me/webaweso
 import { colord }                                 from 'colord'
 import { useCallback, useEffect, useMemo } from 'react'
 import { useSnapshot }                            from 'valtio'
+import { useOptionalSnapshot }                    from '@Utils/ValtioUtils'
 
 /**
  * Text color and opacity controls.
@@ -31,7 +32,7 @@ export const TextColorElement = ({id, title = '', children = null}) => {
     const configuration = useSnapshot($configuration)
     const $element = $configuration?.elements?.[id] ?? $configuration.user ?? $configuration.default
     const element = configuration?.elements?.[id] ?? configuration.user ?? configuration.default
-    const swatches = useMemo(() => lgs.settings.getSwatches.list.join(';'), [])
+    const swatches = useOptionalSnapshot(lgs.settings.swatches, {list: []}).list.join(';')
 
     const textOpacity = useMemo(() => sanitizeNumericControlValue(element?.text?.opacity, 1, {min: 0, max: 1}), [
         element?.text?.opacity,

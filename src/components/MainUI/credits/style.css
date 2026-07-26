@@ -1,14 +1,14 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *
+ *  
  * File: style.css
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-07-08
+ * Last modified: 2026-07-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,48 +19,124 @@
  */
 
 :root {
-    --lgs-credits-bar-height: calc(0.8 * var(--lgs-line-dimension));
+    --lgs-credits-bar-height: calc(0.65 * var(--lgs-line-dimension));
 }
 
 .credits-bar {
-    font-size: var(--lgs-font-size-s);
+    /*font-size: var(--lgs-font-size-s);*/
+    position: relative;
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     flex-direction: row-reverse;
     justify-content: right;
-    height: var(--lgs-credits-bar-height);
+    box-sizing: border-box;
+    min-height: var(--lgs-credits-logo-height);
     padding: var(--lgs-gutter-xs);
     pointer-events: auto;
+    color: #ffffff;
     gap: var(--lgs-gutter-xs);
-    --padding: var(--lgs-gutter-xs);
+    --lgs-credits-logo-height: calc(1.7 * var(--lgs-credits-bar-height));
+    --lgs-credits-item-gap: 0;
+    --lgs-credits-item-padding: var(--lgs-gutter-xs);
+    --lgs-credits-hover-radius: var(--lgs-gutter-xs);
+    --lgs-credits-hover-bg: color-mix(in oklab, var(--lgs-card-on-map-bg-color) 72%, transparent);
+}
+
+.lgs-widget.lgs-credits-widget {
+    min-width: max-content;
+}
+
+.credits-bar.credits-bar-widget-mode {
+    align-items: center;
+    justify-content: center;
+    --lgs-credits-item-gap: var(--lgs-gutter-xs);
+    --lgs-credits-item-padding: 0;
+}
+
+.credits-bar.credits-bar-no-main-logo {
+    min-height: var(--lgs-credits-bar-height);
 }
 
 .credits-bar > div {
     display: flex;
     align-content: center;
-    padding: var(--padding);
-    border-radius: var(--lgs-border-radius-xs);
+    align-items: center;
+    box-sizing: border-box;
     width: auto;
-    max-height: var(--lgs-credits-bar-height);
     min-height: var(--lgs-credits-bar-height);
+    margin-bottom: 0;
+    padding: 0;
+    border-radius: var(--lgs-border-radius-xs);
 }
 
 .credits-bar a {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    transition: background-color 140ms ease, backdrop-filter 140ms ease;
+    border-radius: var(--lgs-credits-hover-radius);
+}
+
+.credits-bar:not(.credits-bar-widget-mode) a:hover,
+.credits-bar:not(.credits-bar-widget-mode) a:focus-visible {
+    background-color: var(--lgs-credits-hover-bg);
+    backdrop-filter: blur(var(--lgs-blur));
+    -webkit-backdrop-filter: blur(var(--lgs-blur));
+}
+
+.credits-tooltips {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: visible;
+}
+
+.credits-bar .main-logo .credits-logo svg,
+.credits-bar .provider-credits img,
+.credits-bar .cesium-credits img,
+.credits-bar .provider-credits .credits {
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.32));
 }
 
 .credits-bar .main-logo {
+    overflow: visible;
+    align-self: flex-end;
+    width: 104px;
+    height: var(--lgs-credits-logo-height);
+    max-height: var(--lgs-credits-logo-height);
+    margin: 0;
+    opacity: 0.8;
     border-radius: var(--lgs-border-radius-xs);
-    background: var(--wa-color-brand-fill-loud);
+    background: transparent;
     box-shadow: none;
-    --padding: var(--lgs-gutter-xs);
+    --padding: 0;
 }
 
-.credits-bar .main-logo img {
-    width: 75%;
-    height: auto;
-    border-radius: 0 !important;
+.credits-bar.credits-bar-widget-mode .main-logo {
+    align-self: center;
+}
+
+.credits-bar .main-logo .main-logo-link {
+    display: inline-flex;
+    align-items: flex-end;
+    height: 100%;
+    line-height: 0;
+}
+
+.credits-bar .main-logo .credits-logo {
+    line-height: 0;
+    display: flex;
+    align-items: flex-end;
+    width: max-content;
+    height: 100%;
+}
+
+.credits-bar .main-logo .credits-logo svg {
+    display: block;
+    width: auto;
+    max-width: none;
+    height: 100%;
 }
 
 .credits-bar .provider-credits img {
@@ -68,7 +144,8 @@
     flex: 0 0 auto;
     width: auto;
     max-width: none;
-    height: calc(100% - var(--padding));
+    height: var(--lgs-credits-bar-height);
+    max-height: var(--lgs-credits-bar-height);
     border-radius: 0 !important;
     object-fit: contain;
 }
@@ -78,7 +155,8 @@
     flex: 0 0 auto;
     width: auto;
     max-width: none;
-    height: calc(100% - 2 * var(--padding));
+    height: var(--lgs-credits-bar-height);
+    max-height: var(--lgs-credits-bar-height);
     border-radius: 0 !important;
     object-fit: contain;
 }
@@ -86,7 +164,8 @@
 .provider-credits .credits {
     display: flex;
     align-items: center;
-    height: calc(100% - var(--padding));
+    justify-content: center;
+    height: var(--lgs-credits-bar-height);
 }
 
 .lgs-credits {
@@ -95,7 +174,7 @@
     align-items: center;
     flex-direction: row;
     flex-wrap: nowrap;
-    backdrop-filter: blur(var(--lgs-blur));
+    gap: var(--lgs-credits-item-gap);
 }
 
 .lgs-credits > a, .lgs-credits > a:link {
@@ -104,26 +183,23 @@
     display: flex;
     align-items: center;
     flex: 0 1 auto;
-    height: var(--lgs-credits-bar-height);
+    min-height: var(--lgs-credits-bar-height);
+    padding: var(--lgs-credits-item-padding);
     text-decoration: none;
-    color: var(--lgs-card-on-map-color, var(--lgs-light-color));
+    color: #ffffff;
 }
 
 
 .lgs-credits {
-    overflow: hidden;
-
-    white-space: nowrap; /* prevents text wrapping */
-    text-overflow: ellipsis; /* adds "..." if text overflows */
+    overflow: visible;
+    white-space: nowrap;
 
 }
 
-.lgs-credits a:first-child:not(:last-child) .credits {
-    border-right: 1px solid var(--lgs-card-on-map-border-color);
-    padding-inline: var(--lgs-gutter-s)
+.provider-credits:empty {
+    display: none;
 }
 
 .provider-credits {
-    color: var(--lgs-card-on-map-color, var(--lgs-light-color));
-    background-color: rgba(255, 255, 255, 0.5);
+    color: #ffffff;
 }

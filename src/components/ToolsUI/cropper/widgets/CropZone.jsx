@@ -14,28 +14,17 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { VIDEO_CROP_ZONE } from '@Core/constants'
-import { useCallback, useEffect, useRef } from 'react'
-import { CropZoneInfo } from './CropZoneInfo'
+import { useCallback, useRef } from 'react'
 
 /**
  * CropZone component for rendering the crop zone content with imperative API.
  */
-export const CropZone = ({onDoubleClick, infoComponent, infoPosition, children, context}) => {
+export const CropZone = ({onDoubleClick, children}) => {
     const _cropZone = useRef(null)
     const handleContextMenu = useCallback((e) => {
         e.preventDefault()
         e.stopPropagation()
     }, [])
-
-    useEffect(() => {
-        return () => {
-            if (!lgs.stores.ui.video.editing) {
-                return
-            }
-            void __.ui.widgetManager.syncCropDimensionsFromElement(context.id, true, 'unmount')
-        }
-    }, [context.id])
 
     return (
         <>
@@ -45,16 +34,6 @@ export const CropZone = ({onDoubleClick, infoComponent, infoPosition, children, 
                 onDoubleClick={onDoubleClick}
                 onContextMenu={handleContextMenu}
             >
-                {infoPosition && (
-                    <div className="crop-info lgs-one-line-card wa-theme-lgs1920-on-map small">
-                        <CropZoneInfo id={VIDEO_CROP_ZONE}/>
-                    </div>
-                )}
-                {infoComponent && (
-                    <div className="crop-info-custom lgs-one-line-card wa-theme-lgs1920-on-map small">
-                        {infoComponent}
-                    </div>
-                )}
                 {children}
             </div>
         </>

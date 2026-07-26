@@ -13,11 +13,14 @@
 version: 1.0
 
 ########################################
-# Cesium Ion Token
-# Please do not use It outside LGS1920 app
+# Cesium Ion
+# Shared token: please do not use it outside LGS1920 app
 ########################################
 
-ionToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4ZmZkZjZkYS1iODgwLTQzYzUtOTM5ZS1iYTc2Nzk0OTM1ZjQiLCJpZCI6MTkwODA4LCJpYXQiOjE3MDU2ODQ3OTZ9.BV6yuYzhp8A_cgEs5MbqZWZaCtyOW-08aSORPflJ3dw
+ion:
+  sharedToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI4ZmZkZjZkYS1iODgwLTQzYzUtOTM5ZS1iYTc2Nzk0OTM1ZjQiLCJpZCI6MTkwODA4LCJpYXQiOjE3MDU2ODQ3OTZ9.BV6yuYzhp8A_cgEs5MbqZWZaCtyOW-08aSORPflJ3dw
+  promptDelaySeconds: 480
+  promptWarningPercent: 80
 
 ########################################
 # Application settings
@@ -118,12 +121,29 @@ swatches:
   current: 0
 
 ########################################
+# Journey samples catalog
+########################################
+samples:
+  journeys:
+    basePath: samples/journeys
+    items:
+      - slug: lgs1920#gpx
+        name: LGS1920
+        description: La grande sure - 1920m
+        filename: LGS1920.gpx
+      - slug: mont-blanc#gpx
+        name: MB4806
+        description: Le Mont Blanc - 4806m
+        filename: Mont Blanc.gpx
+
+########################################
 # Tracks and POIs
 ########################################
 journey:
   thickness: 2            # Initial track thickness (pixels)
+  hideOtherJourneys: false # Keep only the current journey visible in scenes
   renderSmoothing:
-    enabled: false        # Smooth track rendering without modifying source coordinates
+    enabled: true         # Smooth track rendering without modifying source coordinates
     step: 1               # Chaikin smoothing passes
   activity:
     default: trek
@@ -133,40 +153,64 @@ journey:
       - id: trek
         label: Trek
         icon: person-hiking
+        minSegmentDuration: 2
+        minSegmentDistance: 3
+        maxAltitudeJump: 10
+        altitudeSmoothingWindow: 5
         maxSpeed: 3.0          # 10.8 km/h
         maxClimbRate: 1.5      # m/s
         maxDescentRate: 2.5    # m/s
+        maxPace: 0
+        maxSpeedDelta: 0
         stopDuration: 60
         stopSpeedLimit: 0.2
       - id: trail
         label: Trail
         icon: person-running
+        minSegmentDuration: 2
+        minSegmentDistance: 3
+        maxAltitudeJump: 10
+        altitudeSmoothingWindow: 5
         maxSpeed: 5.5          # 19.8 km/h
         maxClimbRate: 2.0
         maxDescentRate: 3.0
+        maxPace: 0
+        maxSpeedDelta: 0
         stopDuration: 45
         stopSpeedLimit: 0.3
       - id: bike
         label: Bike
         icon: bicycle
+        minSegmentDuration: 2
+        minSegmentDistance: 5
+        maxAltitudeJump: 20
+        altitudeSmoothingWindow: 4
         maxSpeed: 16.0         # 57.6 km/h
         maxClimbRate: 2.5
         maxDescentRate: 4.0
+        maxPace: 0
+        maxSpeedDelta: 0
         stopDuration: 45
         stopSpeedLimit: 0.6
       - id: ski-touring
         label: Ski touring
         icon: person-skiing-nordic
+        minSegmentDuration: 2
+        minSegmentDistance: 4
+        maxAltitudeJump: 15
+        altitudeSmoothingWindow: 5
         maxSpeed: 8.0          # 28.8 km/h
         maxClimbRate: 1.6
         maxDescentRate: 6.0
+        maxPace: 0
+        maxSpeedDelta: 0
         stopDuration: 60
         stopSpeedLimit: 0.25
   ## POIs
   pois:
 
-    ## FlythroughRunner mode
-    flythroughRunner:
+    ## JourneyReplayRunner mode
+    replayRunner:
       color: '#1689CCff'
       border: '#FFF'
     ## Start POI colors
@@ -335,6 +379,13 @@ ui:
     defaultOpacity: 0.9
     opacity: 0.9   # 0.3 - 1
 
+  ## Widgets
+  widgets:
+    grid:
+      enabled: false
+      size: 30
+      snap: true
+
   ## Profile
   profile:
     liveData: false
@@ -372,32 +423,56 @@ ui:
       - id: trek
         label: Trek
         icon: person-hiking
+        minSegmentDuration: 2
+        minSegmentDistance: 3
+        maxAltitudeJump: 10
+        altitudeSmoothingWindow: 5
         maxSpeed: 3.0
         maxClimbRate: 1.5
         maxDescentRate: 2.5
+        maxPace: 0
+        maxSpeedDelta: 0
         stopDuration: 60
         stopSpeedLimit: 0.2
       - id: trail
         label: Trail
         icon: person-running
+        minSegmentDuration: 2
+        minSegmentDistance: 3
+        maxAltitudeJump: 10
+        altitudeSmoothingWindow: 5
         maxSpeed: 5.5
         maxClimbRate: 2.0
         maxDescentRate: 3.0
+        maxPace: 0
+        maxSpeedDelta: 0
         stopDuration: 45
         stopSpeedLimit: 0.3
       - id: bike
         label: Bike
         icon: bicycle
+        minSegmentDuration: 2
+        minSegmentDistance: 5
+        maxAltitudeJump: 20
+        altitudeSmoothingWindow: 4
         maxSpeed: 16.0
         maxClimbRate: 2.5
         maxDescentRate: 4.0
+        maxPace: 0
+        maxSpeedDelta: 0
         stopDuration: 45
         stopSpeedLimit: 0.6
       - id: ski-touring
         label: Ski touring
         icon: person-skiing-nordic
+        minSegmentDuration: 2
+        minSegmentDistance: 4
+        maxAltitudeJump: 15
+        altitudeSmoothingWindow: 5
         maxSpeed: 8.0
         maxClimbRate: 1.6
         maxDescentRate: 6.0
+        maxPace: 0
+        maxSpeedDelta: 0
         stopDuration: 60
         stopSpeedLimit: 0.25

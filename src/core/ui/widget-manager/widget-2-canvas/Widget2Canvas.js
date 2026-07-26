@@ -22,15 +22,36 @@ import { snapdom }                                 from '@zumer/snapdom'
  * Correctly handles HiDPI scales and prevents edge truncation.
  */
 export class Widget2Canvas {
+    static #instances = new Map()
+
+    static get = widgetId => Widget2Canvas.#instances.get(widgetId) ?? null
+
+    static refresh = (widgetId, options = {}) => (
+        Widget2Canvas.get(widgetId)?.requestRefresh?.(options) ?? false
+    )
+
+    static flush = (widgetId, options = {}) => (
+        Widget2Canvas.get(widgetId)?.flush?.(options) ?? Promise.resolve(false)
+    )
+
     #original = null
     #canvas = null
     #options = {}
+    #widgetId = null
     #observer = null
     #tickFrame = null
     #tickLoopActive = false
     #pendingRefresh = false
+    #queuedRefresh = false
     #refreshing = false
+    #refreshIdleWaiters = []
     #destroyed = false
+    #parts = new Map()
+    #partOrder = []
+    #partsDirty = true
+    #captureSandbox = null
+
+    #timingLabel = 'Widget2Canvas'
 
     constructor(target, options = {}) {
         if (!target || !(target instanceof HTMLElement)) {
@@ -42,9 +63,14 @@ export class Widget2Canvas {
             scale: window.devicePixelRatio || 1,
             ...options,
         }
+        this.#widgetId = this.#options.widgetId ?? this.#original?.id ?? null
+        this.#timingLabel = `Widget2Canvas:${this.#widgetId ?? 'unknown'}`
     }
 
     init = async () => {
+        if (this.#widgetId) {
+            Widget2Canvas.#instances.set(this.#widgetId, this)
+        }
         if (!this.#shouldUseLiveLoop() || !this.#refreshLiveCanvas()) {
             await this.refresh()
         }
@@ -68,23 +94,12 @@ export class Widget2Canvas {
 
         if (this.#shouldUseMutationObserver()) {
             this.#observer = new MutationObserver((mutations) => {
-                if (!mutations.length || this.#pendingRefresh) {
+                if (!mutations.length) {
                     return
                 }
 
-                this.#pendingRefresh = true
-                requestAnimationFrame(async () => {
-                    try {
-                        if (this.#shouldUseLiveLoop() && this.#refreshLiveCanvas()) {
-                            return
-                        }
-                        // Refresh everything to ensure correct layering
-                        await this.refresh()
-                    }
-                    finally {
-                        this.#pendingRefresh = false
-                    }
-                })
+                this.#handleMutations(mutations)
+                this.requestRefresh({afterFrame: true})
             })
 
             this.#observer.observe(this.#original, {
@@ -114,7 +129,9 @@ export class Widget2Canvas {
                 return
             }
 
-            this.#refreshLiveCanvas()
+            if (!this.#refreshLiveCanvas() && this.#options.refreshMode === 'both') {
+                this.requestRefresh()
+            }
 
             if (this.#tickLoopActive && !this.#destroyed && this.#original) {
                 this.#tickFrame = requestAnimationFrame(tick)
@@ -122,6 +139,284 @@ export class Widget2Canvas {
         }
 
         this.#tickFrame = requestAnimationFrame(tick)
+    }
+
+    requestRefresh = ({afterFrame = false} = {}) => {
+        if (this.#destroyed || !this.#original) {
+            return false
+        }
+
+        if (this.#pendingRefresh || this.#refreshing) {
+            this.#queuedRefresh = true
+            return true
+        }
+
+        this.#pendingRefresh = true
+        const run = async () => {
+            try {
+                if (this.#shouldUseLiveLoop() && this.#refreshLiveCanvas()) {
+                    return
+                }
+                await this.refresh()
+            }
+            finally {
+                this.#pendingRefresh = false
+                if (this.#queuedRefresh && !this.#destroyed && this.#original) {
+                    this.#queuedRefresh = false
+                    this.requestRefresh({afterFrame: true})
+                    return
+                }
+                this.#resolveRefreshIdleWaiters(true)
+            }
+        }
+
+        if (afterFrame) {
+            requestAnimationFrame(() => void run())
+        }
+        else {
+            void run()
+        }
+        return true
+    }
+
+    flush = ({afterFrame = false} = {}) => {
+        if (this.#destroyed || !this.#original) {
+            return Promise.resolve(false)
+        }
+
+        this.requestRefresh({afterFrame})
+        return this.waitForIdle()
+    }
+
+    waitForIdle = () => {
+        if (!this.#pendingRefresh && !this.#refreshing && !this.#queuedRefresh) {
+            return Promise.resolve(true)
+        }
+
+        return new Promise(resolve => {
+            this.#refreshIdleWaiters.push(resolve)
+        })
+    }
+
+    #resolveRefreshIdleWaiters = (result) => {
+        const waiters = this.#refreshIdleWaiters.splice(0)
+        waiters.forEach(resolve => resolve(result))
+    }
+
+    #collectMarkedParts = () => {
+        if (!this.#original) {
+            return []
+        }
+
+        const selector = `.${STATIC_WIDGET_PART}, .${DYNAMIC_WIDGET_PART}`
+        const parts = []
+
+        if (this.#original.classList?.contains(STATIC_WIDGET_PART) || this.#original.classList?.contains(DYNAMIC_WIDGET_PART)) {
+            parts.push(this.#original)
+        }
+
+        parts.push(...this.#original.querySelectorAll(selector))
+        return parts
+    }
+
+    #syncPartRegistry = () => {
+        if (!this.#original) {
+            this.#parts.clear()
+            this.#partOrder = []
+            this.#partsDirty = false
+            return
+        }
+
+        const orderedParts = this.#collectMarkedParts()
+        const nextParts = new Map()
+
+        for (const element of orderedParts) {
+            if (!(element instanceof Element)) {
+                continue
+            }
+
+            const role = element.classList.contains(DYNAMIC_WIDGET_PART) ? 'dynamic' : 'static'
+            const existing = this.#parts.get(element)
+            nextParts.set(element, {
+                element,
+                role,
+                dirty: existing?.dirty ?? true,
+                canvas: existing?.canvas ?? null,
+            })
+        }
+
+        this.#parts = nextParts
+        this.#partOrder = orderedParts
+            .map(element => this.#parts.get(element))
+            .filter(Boolean)
+        this.#partsDirty = false
+    }
+
+    #markAllPartsDirty = () => {
+        this.#parts.forEach((entry) => {
+            entry.dirty = true
+        })
+        this.#partsDirty = true
+    }
+
+    #markPartDirty = (element) => {
+        if (!element) {
+            this.#markAllPartsDirty()
+            return
+        }
+
+        const entry = this.#parts.get(element)
+        if (entry) {
+            entry.dirty = true
+            return
+        }
+
+        this.#markAllPartsDirty()
+    }
+
+    #findMarkedAncestor = (node) => {
+        let current = node instanceof Element ? node : node?.parentElement
+
+        while (current && current !== this.#original) {
+            if (current.classList?.contains(STATIC_WIDGET_PART) || current.classList?.contains(DYNAMIC_WIDGET_PART)) {
+                return current
+            }
+            current = current.parentElement
+        }
+
+        if (this.#original?.classList?.contains(STATIC_WIDGET_PART) || this.#original?.classList?.contains(DYNAMIC_WIDGET_PART)) {
+            return this.#original
+        }
+
+        return null
+    }
+
+    #handleMutations = (mutations) => {
+        let shouldRescan = false
+
+        for (const mutation of mutations) {
+            if (mutation.type === 'childList') {
+                this.#markAllPartsDirty()
+                shouldRescan = true
+            }
+
+            const marked = this.#findMarkedAncestor(mutation.target)
+            if (marked) {
+                this.#markPartDirty(marked)
+                continue
+            }
+
+            this.#markAllPartsDirty()
+        }
+
+        if (shouldRescan) {
+            this.#partsDirty = true
+        }
+    }
+
+    #composeMarkedParts = async () => {
+        if (!this.#original) {
+            return null
+        }
+
+        const scale = this.#options.scale
+        const {width: logicalW, height: logicalH} = this.#readOriginalLogicalSize()
+
+        if (logicalW <= 0 || logicalH <= 0) {
+            return null
+        }
+
+        const buffer = document.createElement('canvas')
+        buffer.width = Math.ceil(logicalW * scale)
+        buffer.height = Math.ceil(logicalH * scale)
+        const ctx = buffer.getContext('2d')
+        const parentRect = this.#original.getBoundingClientRect()
+        const renderScaleX = parentRect.width > 0 ? (parentRect.width / logicalW) : 1
+        const renderScaleY = parentRect.height > 0 ? (parentRect.height / logicalH) : 1
+
+        this.#paintLiveBackdrop(ctx, buffer.width, buffer.height)
+
+        for (const entry of this.#partOrder) {
+            if (!entry?.element) {
+                continue
+            }
+
+            if (entry.dirty || !entry.canvas) {
+                entry.canvas = await this.#renderPart(entry.element, entry.role)
+                entry.dirty = false
+            }
+
+            const source = entry.canvas
+            const rect = entry.element.getBoundingClientRect()
+            if (!source || rect.width <= 0 || rect.height <= 0) {
+                continue
+            }
+
+            ctx.drawImage(
+                source,
+                ((rect.left - parentRect.left) / renderScaleX) * scale,
+                ((rect.top - parentRect.top) / renderScaleY) * scale,
+                (rect.width / renderScaleX) * scale,
+                (rect.height / renderScaleY) * scale,
+            )
+        }
+
+        return buffer
+    }
+
+    #copyCanvasBitmap = (canvas) => {
+        if (!(canvas instanceof HTMLCanvasElement)) {
+            return null
+        }
+
+        const copy = document.createElement('canvas')
+        copy.width = canvas.width
+        copy.height = canvas.height
+
+        const ctx = copy.getContext('2d')
+        if (!ctx) {
+            return null
+        }
+
+        ctx.drawImage(canvas, 0, 0)
+        return copy
+    }
+
+    #getCaptureSandbox = () => {
+        if (this.#captureSandbox?.isConnected) {
+            return this.#captureSandbox
+        }
+
+        const sandbox = document.createElement('div')
+        sandbox.className = 'lgs-widget-clone'
+        sandbox.style.position = 'absolute'
+        sandbox.style.top = '-100000px'
+        sandbox.style.left = '-100000px'
+        sandbox.style.visibility = 'visible'
+        sandbox.style.pointerEvents = 'none'
+        sandbox.style.opacity = '1'
+        sandbox.style.contain = 'layout style paint'
+
+        document.body.appendChild(sandbox)
+        this.#captureSandbox = sandbox
+        return sandbox
+    }
+
+    #buildStaticCaptureTarget = (el) => {
+        if (!el) {
+            return null
+        }
+
+        const clone = el.cloneNode(true)
+        clone.querySelectorAll(`.${DYNAMIC_WIDGET_PART}, canvas`).forEach((node) => {
+            if (node instanceof HTMLElement) {
+                node.style.visibility = 'hidden'
+            }
+        })
+
+        const sandbox = this.#getCaptureSandbox()
+        sandbox.appendChild(clone)
+        return clone
     }
 
     #readOriginalLogicalSize = () => {
@@ -254,46 +549,33 @@ export class Widget2Canvas {
         }
 
         if (this.#refreshing) {
+            this.#queuedRefresh = true
             return
         }
         this.#refreshing = true
+        const startedAt = this.#shouldLogTiming() ? performance.now() : 0
 
         try {
-            const staticParts = this.#original?.querySelectorAll(`.${STATIC_WIDGET_PART}`)
-            const dynamicParts = this.#original?.querySelectorAll(`.${DYNAMIC_WIDGET_PART}`)
+            if (this.#partsDirty) {
+                this.#syncPartRegistry()
+            }
 
-            // If no parts defined, render the whole element
-            if ((!staticParts || staticParts.length === 0) && (!dynamicParts || dynamicParts.length === 0)) {
+            if (!this.#partOrder.length) {
                 const fullCanvas = await this.#renderPart(this.#original)
                 this.#updateCanvas(fullCanvas)
                 return
             }
 
-            // Create a composition buffer
-            const buffer = document.createElement('canvas')
-            const {width: logicalW, height: logicalH} = this.#readOriginalLogicalSize()
-
-            buffer.width = Math.ceil(logicalW * this.#options.scale)
-            buffer.height = Math.ceil(logicalH * this.#options.scale)
-            const ctx = buffer.getContext('2d')
-
-            const allParts = [...(staticParts || []), ...(dynamicParts || [])]
-
-            for (const el of allParts) {
-                const partCanvas = await this.#renderPart(el)
-                const rect = el.getBoundingClientRect()
-                const parentRect = this.#original.getBoundingClientRect()
-
-                // Calculate relative position within the widget
-                const dx = (rect.left - parentRect.left) * this.#options.scale
-                const dy = (rect.top - parentRect.top) * this.#options.scale
-
-                ctx.drawImage(partCanvas, dx, dy)
+            const buffer = await this.#composeMarkedParts()
+            if (!buffer) {
+                return
             }
-
             this.#updateCanvas(buffer)
         }
         finally {
+            if (startedAt) {
+                this.#logTiming('refresh', startedAt)
+            }
             this.#refreshing = false
         }
     }
@@ -304,6 +586,16 @@ export class Widget2Canvas {
      * Scaled to match device pixel ratio or custom scale for maximum sharpness.
      */
     #elementToCanvasSource = async (el, options = {}) => {
+        const startedAt = this.#shouldLogTiming() ? performance.now() : 0
+        if (el instanceof HTMLCanvasElement) {
+            const canvasCopy = this.#copyCanvasBitmap(el)
+            if (canvasCopy) {
+                if (startedAt) {
+                    this.#logTiming(`canvas:${el.tagName?.toLowerCase?.() ?? 'canvas'}`, startedAt)
+                }
+                return canvasCopy
+            }
+        }
         if (el instanceof SVGElement) {
             const $clone = el.cloneNode(true)
             const style = getComputedStyle(el)
@@ -363,12 +655,19 @@ export class Widget2Canvas {
             img.src = `data:image/svg+xml;base64,${base64}`
 
             await img.decode()
+            if (startedAt) {
+                this.#logTiming(`svg:${el.tagName?.toLowerCase?.() ?? 'svg'}`, startedAt)
+            }
             return img
         }
 
-        return await snapdom.toCanvas(el, options)
+        const canvas = await snapdom.toCanvas(el, options)
+        if (startedAt) {
+            this.#logTiming(`snapdom:${el?.tagName?.toLowerCase?.() ?? 'node'}`, startedAt)
+        }
+        return canvas
     }
-    #renderPart = async (el) => {
+    #renderPart = async (el, role = 'dynamic') => {
         let target = el
         if (el instanceof SVGElement || this.#options.type === 'svg') {
             const childSvg = el.querySelector('svg')
@@ -376,7 +675,22 @@ export class Widget2Canvas {
                 target = childSvg
             }
         }
-        return await this.#elementToCanvasSource(target, this.#options)
+
+        let captureTarget = target
+        const shouldMaskDynamicChildren = role === 'static' && target instanceof HTMLElement && target.querySelector?.(`.${DYNAMIC_WIDGET_PART}`)
+
+        if (shouldMaskDynamicChildren) {
+            captureTarget = this.#buildStaticCaptureTarget(target)
+        }
+
+        try {
+            return await this.#elementToCanvasSource(captureTarget, this.#options)
+        }
+        finally {
+            if (captureTarget && captureTarget !== target && captureTarget.parentElement) {
+                captureTarget.remove()
+            }
+        }
     }
 
     /**
@@ -423,8 +737,22 @@ export class Widget2Canvas {
     getContext = () => this.#canvas?.getContext('2d') ?? null
     getCanvas = () => this.#canvas
 
+    #shouldLogTiming = () => this.#options.debugTiming === true
+
+    #logTiming = (phase, startedAt) => {
+        if (!startedAt || !this.#shouldLogTiming()) {
+            return
+        }
+
+        const duration = Math.round((performance.now() - startedAt) * 100) / 100
+        console.info(`[${this.#timingLabel}] ${phase} ${duration}ms`)
+    }
+
     destroy = () => {
         this.#destroyed = true
+        if (this.#widgetId && Widget2Canvas.get(this.#widgetId) === this) {
+            Widget2Canvas.#instances.delete(this.#widgetId)
+        }
         this.#observer?.disconnect()
         this.#observer = null
         this.#tickLoopActive = false
@@ -433,9 +761,16 @@ export class Widget2Canvas {
         }
         this.#tickFrame = null
         this.#pendingRefresh = false
+        this.#queuedRefresh = false
         this.#refreshing = false
+        this.#resolveRefreshIdleWaiters(false)
         this.#canvas?.remove()
         this.#canvas = null
         this.#original = null
+        this.#captureSandbox?.remove()
+        this.#captureSandbox = null
+        this.#parts.clear()
+        this.#partOrder = []
+        this.#partsDirty = true
     }
 }

@@ -59,17 +59,23 @@
     padding-inline-end: var(--lgs-gutter-s);
 }
 
+.video-recorder-widget {
+    /* Color used by video progress metadata */
+    --replay-progress-text-color: var(--lgs-button-plain-color);
+}
+
 .video-recorder-widget .duration,
 .video-recorder-widget .size {
+    color: var(--replay-progress-text-color);
     white-space: nowrap;
 }
 
-.video-recorder-widget .video-recorder-flythrough-progress {
+.video-recorder-widget .video-recorder-replay-progress {
     margin-right: var(--lgs-gutter-s);
 }
 
-.video-recorder-widget .video-recorder-flythrough-time,
-.video-recorder-widget .video-recorder-flythrough-distance {
+.video-recorder-widget .video-recorder-replay-time,
+.video-recorder-widget .video-recorder-replay-distance {
     display: inline-flex;
     width: max-content;
     margin-right: var(--lgs-gutter-s);
@@ -98,15 +104,20 @@
 .video-recorder-indicator {
     font-size: var(--lgs-font-size);
     margin: 0 var(--lgs-gutter) 0 var(--lgs-gutter-s);
-    --primary-color: var(--lgs-video-recorder-color, var(--lgs-error-color));
+    --primary-color: white;
     --primary-opacity: 1;
-    --secondary-color: var(--lgs-video-recorder-bg-color, var(--lgs-error-bg-color));
+    --secondary-color: var(--lgs-video-recorder-color, var(--lgs-error-color));
     --secondary-opacity: 1;
 }
 
+.video-recorder-indicator.preparing,
 .video-recorder-indicator.finalizing {
-    --primary-color: var(--lgs-video-warning-color, var(--lgs-warning-color));
-    --secondary-color: var(--lgs-video-warning-bg-color, var(--lgs-warning-bg-color));
+    --secondary-color: var(--lgs-video-warning-color, var(--lgs-warning-color));
+}
+
+.video-recorder-indicator.ready,
+.video-recorder-indicator.recording {
+    --secondary-color: var(--lgs-video-recorder-color, var(--lgs-error-color));
 }
 
 .video-pre-recording-in-progress, .video-recording-in-progress, .video-finalizing-in-progress, .photo-snapshot-in-progress {
@@ -121,9 +132,9 @@
     --dashing-width: 25px;
     --border-dance-duration: 40s;
     --video-recorder-bg-color: var(--wa-color-red-40);
-    --video-recorder-color: white;
+    --video-recorder-color: var(--lgs-text-on-color);
     --video-warning-bg-color: var(--wa-color-orange-40);
-    --video-warning-color: white;
+    --video-warning-color: var(--lgs-text-on-color);
 }
 
 .recording-in-progress .lgs-widget-inner-overlay {
@@ -193,6 +204,34 @@
     flex-shrink: 0;
 }
 
+#video-preview-dialog #video-preview-dialog-footer {
+    width: 100%;
+}
+
+#video-preview-dialog #video-preview-dialog-footer .buttons-bar {
+    width: 100%;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+#video-preview-dialog .video-preview-close-action {
+    display: inline-flex;
+    align-items: center;
+    order: -100;
+    justify-self: start;
+    margin-right: auto;
+    margin-left: 0;
+}
+
+#video-preview-dialog .video-preview-close-button {
+    margin: 0;
+}
+
+#video-preview-dialog .video-preview-create-hq-action {
+    display: inline-flex;
+    align-items: center;
+}
+
 #video-preview-dialog .video-file-actions {
     position: relative;
     width: 100%;
@@ -203,17 +242,25 @@
     min-width: 0;
 }
 
-#video-preview-dialog .video-file-label {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    gap: var(--lgs-gutter-s);
+#video-preview-dialog .video-file-actions wa-input[label-at-start]::part(base) {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
 }
 
-#video-preview-dialog .video-file-label-actions {
+#video-preview-dialog .video-file-label {
     display: inline-flex;
     align-items: center;
+    flex: none;
+    width: auto;
+}
+
+#video-preview-dialog .video-file-info-action {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    justify-content: center;
+    margin-left: auto;
 }
 
 #video-preview-dialog .video-recording-info-trigger::part(base) {
@@ -411,6 +458,14 @@
     gap: var(--lgs-gutter-xs);
 }
 
+.video-preset-custom .video-fps-widget .buttons-bar-on-map {
+    display: grid;
+    grid-template-columns: repeat(4, 2rem);
+    width: max-content;
+    justify-content: start;
+    gap: var(--lgs-gutter-xs);
+}
+
 .video-preset-custom .video-fps-widget > span,
 .video-preset-custom .video-quality-widget > span {
     font-size: var(--lgs-font-size-s);
@@ -453,7 +508,15 @@
 
 .video-fps-widget .buttons-bar-on-map, .video-quality-widget .buttons-bar-on-map {
     display: grid;
-    grid-template-columns: repeat(3, 2rem) !important;
+    justify-content: start;
+}
+
+.video-fps-widget .buttons-bar-on-map {
+    grid-template-columns: repeat(4, 2rem) !important;
+}
+
+.video-quality-widget .buttons-bar-on-map {
+    grid-template-columns: repeat(4, 2rem) !important;
 }
 
 /***************************************
@@ -480,19 +543,36 @@
 }
 
 @media (max-width: 640px) {
-    .video-recorder-widget .video-recorder-flythrough-progress {
+    #video-preview-dialog #video-preview-dialog-footer .buttons-bar {
+        flex-wrap: wrap;
+    }
+
+    #video-preview-dialog .video-preview-close-action {
+        display: none;
+    }
+
+    #video-preview-dialog .video-preview-create-hq-action {
+        flex: 0 0 100%;
+        justify-content: flex-end;
+    }
+
+    .video-recorder-widget .video-recorder-replay-progress {
         flex: 0 1 auto;
         margin-right: 0;
     }
 
-    .video-recorder-widget .video-recorder-flythrough-time,
-    .video-recorder-widget .video-recorder-flythrough-distance {
+    .video-recorder-widget .video-recorder-replay-time,
+    .video-recorder-widget .video-recorder-replay-distance {
         flex: 0 1 auto;
         margin-right: var(--lgs-gutter-xs, 0.25rem);
         padding-inline-end: var(--lgs-gutter-xs, 0.25rem);
     }
 
     .video-recorder-widget .video-recorder-spacer {
+        display: none;
+    }
+
+    .video-recorder-widget .video-recorder-start-recording > span {
         display: none;
     }
 }

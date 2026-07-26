@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { TerrainUtils } from '@Utils/cesium/TerrainUtils'
+import { BASE_ENTITY, TERRAIN_ENTITY } from '@Core/constants'
 
 /**
  * Manages layers and terrain for a mapping application, providing access to base layers, overlays, providers, and
@@ -41,11 +42,14 @@ export class LayersAndTerrainManager {
      */
     #overlay = null
     /**
-     * The current terrain configuration (not actively used in this implementation).
-     * @type {null}
+     * Default layer IDs read from the current IDs in layers-terrains.yaml.
+     * @type {{base: string|null, terrain: string|null}}
      * @private
      */
-    #terrain = null
+    #defaults = {
+        base: null,
+        terrain: null,
+    }
     /**
      * The current provider ID derived from the base layer.
      * @type {string|null}
@@ -82,15 +86,32 @@ export class LayersAndTerrainManager {
         }
 
         // Initialize private fields from settings
-        this.#base = lgs.settings.getLayers.base
-        this.#overlay = lgs.settings.getLayers.overlay
+        const startupLayers = lgs.savedConfiguration?.layers ?? {}
+        this.#base = lgs.settings.getLayers.base ?? lgs.settings.layers?.base ?? null
+        this.#overlay = lgs.settings.getLayers.overlay ?? lgs.settings.layers?.overlay ?? null
+        this.#defaults.base = startupLayers.base ?? null
+        this.#defaults.terrain = startupLayers.terrain ?? null
         this.#provider = this.#base?.split('-')[0] ?? null
 
         // Map providers and layers in a single pass, adding countries field
-        lgs.settings.layers.providers.forEach(provider => {
+        for (const provider of (lgs.settings.layers.providers ?? [])) {
+            if (!provider?.id || !Array.isArray(provider.layers)) {
+                continue
+            }
+
             this.#providers.set(provider.id, provider)
-            provider.layers.forEach(layer => {
-                const enhancedLayer = {...layer, provider: provider.id, countries: layer.countries ?? []}
+            for (const layer of provider.layers) {
+                if (!layer?.id) {
+                    continue
+                }
+
+                const enhancedLayer = {
+                    ...layer,
+                    provider:     provider.id,
+                    providerName: provider.name ?? '',
+                    providerFullname: provider.fullname ?? provider.name ?? '',
+                    countries:    layer.countries ?? [],
+                }
                 this.#bases.set(layer.id, enhancedLayer)
                 // Collect unique country names
                 if (Array.isArray(enhancedLayer.countries)) {
@@ -100,8 +121,32 @@ export class LayersAndTerrainManager {
                         }
                     })
                 }
-            })
-        });
+            }
+        }
+
+        const currentBase = lgs.settings.layers?.base ?? null
+        const currentTerrain = lgs.settings.layers?.terrain ?? null
+
+        if (!currentBase || !this.#bases.has(currentBase)) {
+            const fallbackBase = this.#defaults.base
+            if (fallbackBase && this.#bases.has(fallbackBase)) {
+                this.#base = fallbackBase
+                if (lgs.settings.layers?.base !== fallbackBase) {
+                    lgs.settings.layers.base = fallbackBase
+                }
+            }
+        }
+
+        if (!currentTerrain || !this.#bases.has(currentTerrain)) {
+            const fallbackTerrain = this.#defaults.terrain
+            if (fallbackTerrain && this.#bases.has(fallbackTerrain)) {
+                if (lgs.settings.layers?.terrain !== fallbackTerrain) {
+                    lgs.settings.layers.terrain = fallbackTerrain
+                }
+            }
+        }
+
+        this.#provider = this.getProviderByEntity(this.#base) ?? this.#provider
 
         // Set singleton instance
         LayersAndTerrainManager.instance = this
@@ -179,7 +224,14 @@ export class LayersAndTerrainManager {
      * @returns {string|null} The provider ID or null if entityId is invalid
      */
     getProviderByEntity = (entityId) => {
-        return entityId?.split('-')[0] ?? null
+        if (!entityId) {
+            return null
+        }
+        const entity = this.#bases.get(entityId)
+        if (entity?.provider) {
+            return entity.provider
+        }
+        return null
     }
 
     /**
@@ -199,7 +251,7 @@ export class LayersAndTerrainManager {
         if (!providerId) {
             return null
         }
-        return lgs.settings.layers.providers.find(provider => provider.id === providerId) ?? null
+        return lgs.settings.layers.providers.find(provider => provider?.id === providerId) ?? null
     }
 
     /**
@@ -207,12 +259,36 @@ export class LayersAndTerrainManager {
      * @param {string|null} entityId - The entity ID (e.g., layer ID)
      * @returns {Object|null} The provider object or null if not found
      */
-    getProviderProxyByEntity = (entityId) => {
+    getProviderProxyByEntity = (entityId, entityType = null) => {
         if (!entityId) {
-            return null
+            return this.#getFallbackProviderProxy(entityType)
         }
         const providerId = this.getProviderByEntity(entityId)
-        return this.getProviderProxy(providerId)
+        const provider = this.getProviderProxy(providerId)
+        if (provider) {
+            return provider
+        }
+        return this.#getFallbackProviderProxy(entityType)
+    }
+
+    #getFallbackEntityIdByType = (entityType) => {
+        switch (entityType) {
+            case BASE_ENTITY:
+                return this.#defaults.base
+            case TERRAIN_ENTITY:
+                return this.#defaults.terrain
+            default:
+                return null
+        }
+    }
+
+    #getFallbackProviderProxy = (entityType) => {
+        const fallbackEntityId = this.#getFallbackEntityIdByType(entityType)
+        if (!fallbackEntityId) {
+            return null
+        }
+        const fallbackProviderId = this.getProviderByEntity(fallbackEntityId)
+        return this.getProviderProxy(fallbackProviderId)
     }
 
     /**
@@ -224,8 +300,19 @@ export class LayersAndTerrainManager {
         if (!entityId) {
             return null
         }
-        const provider = this.getProviderProxy(this.getProviderByEntity(entityId))
-        return provider?.layers.find(layer => layer.id === entityId) ?? null
+        return this.#bases.get(entityId) ?? null
+    }
+
+    getEntityProxyByType = (entityId, entityType = null) => {
+        if (entityId) {
+            const entity = this.getEntityProxy(entityId)
+            if (entity) {
+                return entity
+            }
+        }
+
+        const fallbackEntityId = this.#getFallbackEntityIdByType(entityType)
+        return fallbackEntityId ? this.getEntityProxy(fallbackEntityId) : null
     }
 
     /**

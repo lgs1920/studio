@@ -7,16 +7,18 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-04-27
- * Last modified: 2026-04-27
+ * Created on: 2026-07-08
+ * Last modified: 2026-07-08
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY } from '@Core/constants'
+import { LogoSvg }                                     from '@Components/MainUI/LogoSvg'
 import { LayersAndTerrainManager }                     from '@Core/ui/LayerAndTerrainManager'
-import { memo, useEffect }                             from 'react'
+import { WaTooltip }                                   from '@web.awesome.me/webawesome-pro/dist/react'
+import { memo, useEffect, useId }                      from 'react'
 import { proxy, useSnapshot }                          from 'valtio'
 import { subscribeKey }                                from 'valtio/utils'
 import './style.css'
@@ -32,12 +34,18 @@ const $providers = proxy({
 
 /** List of available layer types */
 const LAYERS_TYPE = [BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY]
+const CREDIT_TYPE_LABELS = {
+    [BASE_ENTITY]:    'Base',
+    [OVERLAY_ENTITY]: 'Overlay',
+    [TERRAIN_ENTITY]: 'Terrain',
+}
 
-const CreditLink = memo(({provider}) => {
+const CreditLink = memo(({id, provider}) => {
+    const title = provider.fullname ?? provider.name
     return (
-        <a href={provider.url} target="_blank" rel="noreferrer">
+        <a id={id} href={provider.url} target="_blank" rel="noreferrer" aria-label={title}>
             {provider.logo
-             ? <img src={provider.logo} alt={provider.name}/>
+             ? <img src={provider.logo} alt={title}/>
              : <span className={'credits'}>{provider.name}</span>
             }
         </a>
@@ -50,9 +58,17 @@ const CreditLink = memo(({provider}) => {
  *
  * @returns {JSX.Element} The CreditsBar component.
  */
-export const CreditsBar = ({contentRef = null}) => {
+export const CreditsBar = ({contentRef = null, widgetMode = false, showMainLogo = true}) => {
 
     const providers = useSnapshot($providers)
+    const siteUrl = __.app.buildUrl(lgs?.configuration?.website || 'https://lgs1920.fr')
+    const tooltipIdPrefix = `credits-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`
+    const cesiumLinkId = `${tooltipIdPrefix}-cesium`
+    const mainLogoLinkId = `${tooltipIdPrefix}-lgs1920`
+    const providerCredits = LAYERS_TYPE
+        .map((type) => ({type, provider: providers[type]}))
+        .filter(({provider}) => provider)
+    const providerTooltip = (type, provider) => `${CREDIT_TYPE_LABELS[type]}: ${provider.name ?? provider.fullname}`
 
     /**
      * Retrieves and updates provider data dynamically.
@@ -64,13 +80,13 @@ export const CreditsBar = ({contentRef = null}) => {
     const getProviders = (type, layer = undefined) => {
         const manager = new LayersAndTerrainManager()
         const tmp = {
-            [BASE_ENTITY]: manager.getProviderProxyByEntity(lgs.settings.layers.base),
-            [OVERLAY_ENTITY]: manager.getProviderProxyByEntity(lgs.settings.layers.overlay),
-            [TERRAIN_ENTITY]: manager.getProviderProxyByEntity(lgs.settings.layers.terrain),
+            [BASE_ENTITY]: manager.getProviderProxyByEntity(lgs.settings.layers.base, BASE_ENTITY),
+            [OVERLAY_ENTITY]: manager.getProviderProxyByEntity(lgs.settings.layers.overlay, OVERLAY_ENTITY),
+            [TERRAIN_ENTITY]: manager.getProviderProxyByEntity(lgs.settings.layers.terrain, TERRAIN_ENTITY),
         }
 
         if (layer) {
-            tmp[type] = manager.getProviderProxyByEntity(layer)
+            tmp[type] = manager.getProviderProxyByEntity(layer, type)
         }
 
         // Remove duplicate providers
@@ -101,19 +117,57 @@ export const CreditsBar = ({contentRef = null}) => {
     }, [])
 
     return (
-        <div id="lgs-credits-bar" ref={contentRef} className="credits-bar">
-            <div className="main-logo">
-                <img src="/assets/images/logo-lgs1920.png" alt="LGS1920 Logo"/>
+        <div
+            id="lgs-credits-bar"
+            ref={contentRef}
+            className={`credits-bar${widgetMode ? ' credits-bar-widget-mode' : ''}${showMainLogo ? '' : ' credits-bar-no-main-logo'}`}
+        >
+            {showMainLogo && (
+                <div className="main-logo">
+                    <a
+                        id={mainLogoLinkId}
+                        className="main-logo-link"
+                        href={siteUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label="LGS1920 website"
+                    >
+                        <LogoSvg
+                            src="/assets/logo/logo-vertical.svg"
+                            primaryColor="#ffffff"
+                            secondaryColor="#ffffff"
+                            secondaryOpacity={0}
+                            textPrimaryColor="#ffffff"
+                            textSecondaryColor="#ffffff"
+                            className="credits-logo"
+                            style={{height: '100%'}}
+                            title="LGS1920 logo"
+                        />
+                    </a>
+                </div>
+            )}
+            <div className="provider-credits lgs-credits">
+                {providerCredits.map(({type, provider}) => (
+                    <CreditLink
+                        key={type}
+                        id={`${tooltipIdPrefix}-${type}`}
+                        provider={provider}
+                    />
+                ))}
             </div>
-            <div className="provider-credits lgs-credits lgs-one-line-card wa-theme-lgs1920-on-map">
-                {providers.terrain && <CreditLink provider={providers.terrain}/>}
-                {providers.overlay && <CreditLink provider={providers.overlay}/>}
-                {providers.base && <CreditLink provider={providers.base}/>}
-            </div>
-            <div className="cesium-credits lgs-credits lgs-one-line-card wa-theme-lgs1920-on-map">
-                <a href="https://www.cesium.com/" target="_blank" rel="noreferrer">
+            <div className="cesium-credits lgs-credits  ">
+                <a id={cesiumLinkId} href="https://www.cesium.com/" target="_blank" rel="noreferrer" aria-label="Cesium">
                     <img src="/assets/images/Cesium_light_color.svg" alt="Cesium"/>
                 </a>
+            </div>
+            <div className="credits-tooltips">
+                {showMainLogo && <WaTooltip for={mainLogoLinkId} placement="top">{'LGS1920 website'}</WaTooltip>}
+                {providerCredits.map(({type, provider}) => (
+                    <WaTooltip key={type} for={`${tooltipIdPrefix}-${type}`} placement="top">
+                        {providerTooltip(type, provider)}
+                    </WaTooltip>
+                ))}
+                <WaTooltip for={cesiumLinkId} placement="top">{'Cesium'}</WaTooltip>
             </div>
         </div>
     )

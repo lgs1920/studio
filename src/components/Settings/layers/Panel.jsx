@@ -50,7 +50,7 @@ export const Panel = () => {
                           placement={placement}
                           className={'lgs-theme'}
                 >
-                    <div slot={'label'}>{'Layers and Terrains'}</div>
+                    <div slot="label"><WaIcon name="layer-group" variant="regular"/>{'Map layers'}</div>
                     <PanelActions>
                         <WaTooltip for="lgs-disclaimer-button" placement={'top'}>{'Disclaimer'}</WaTooltip>
                         <WaButton id="lgs-disclaimer-button" onClick={openInfoModal} appearance={'plain'}

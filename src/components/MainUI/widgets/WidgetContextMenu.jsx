@@ -22,6 +22,17 @@ import { useMemo } from 'react'
 import { useSnapshot }           from 'valtio'
 
 const PERCENTAGE = 0.1
+const SCALE_ANCHOR_METHODS = {
+    center:         'toCenter',
+    top:            'toTop',
+    left:           'toLeft',
+    right:          'toRight',
+    bottom:         'toBottom',
+    'top-left':     'toTopLeft',
+    'top-right':    'toTopRight',
+    'bottom-left':  'toBottomLeft',
+    'bottom-right': 'toBottomRight',
+}
 
 const WidgetContextIconButton = ({id, icon, label, onClick}) => (
     <WaButton
@@ -156,14 +167,21 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
         }
 
         widgetConfig.scale = __.ui.widgetManager.adaptScaleToContainer(widgetConfig, container)
-        widgetConfig.position = __.ui.widgetManager.adaptPositionToContainer(widgetConfig, container)
+
+        __.ui.widgetManager.setScale(element, widgetConfig.scale.x, widgetConfig.scale.y)
+
+        const anchorMethod = SCALE_ANCHOR_METHODS[widgetConfig.anchorOnScale]
+        if (anchorMethod && typeof __.ui.widgetManager[anchorMethod] === 'function') {
+            __.ui.widgetManager[anchorMethod](element, widgetConfig.margin)
+        }
+        else {
+            widgetConfig.position = __.ui.widgetManager.adaptPositionToContainer(widgetConfig, container)
+            __.ui.widgetManager.applyPosition(element, widgetConfig.position)
+        }
 
         if (widgetConfig.persist) {
             __.ui.widgetManager.saveWidgetPosition(elementId, widgetConfig)
         }
-
-        __.ui.widgetManager.setScale(element, widgetConfig.scale.x, widgetConfig.scale.y)
-        __.ui.widgetManager.applyPosition(element, widgetConfig.position)
 
         if (factor === 1) {
             closeMenu()

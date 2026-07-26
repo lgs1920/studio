@@ -24,6 +24,23 @@ const resolveTextWidgetElement = (moveableId) => {
     return configuration?.elements?.[moveableId] ?? configuration?.user ?? configuration?.default ?? null
 }
 
+const measureGenericWidget = (target, config) => {
+    const rect = target?.getBoundingClientRect?.()
+    const styleWidth = Number.parseFloat(target?.style?.width || '')
+    const styleHeight = Number.parseFloat(target?.style?.height || '')
+    const width = Number.isFinite(styleWidth) && styleWidth > 0
+                  ? styleWidth
+                  : (Number.isFinite(rect?.width) && rect.width > 0 ? rect.width : config?.dimensions?.width ?? 0)
+    const height = Number.isFinite(styleHeight) && styleHeight > 0
+                   ? styleHeight
+                   : (Number.isFinite(rect?.height) && rect.height > 0 ? rect.height : config?.dimensions?.height ?? 0)
+
+    return {
+        width:  Math.ceil(width),
+        height: Math.ceil(height),
+    }
+}
+
 const resolveWidgetCenter = (target, config) => {
     const dimensions = config?.dimensions ?? {
         width:  Number.parseFloat(target?.style?.width || '') || target?.offsetWidth || 0,
@@ -55,17 +72,18 @@ export const realignWidgetAroundContent = (moveableId) => {
 
     const config = __.ui.widgetManager.getWidgetConfig(moveableId)
     const element = resolveTextWidgetElement(moveableId)
+    let measured
 
-    if (!config || !element) {
-        moveable?.current?.updateRect?.()
-        return
+    if (config && element) {
+        const correction = resolveWidgetScaleCorrection(moveableId)
+        measured = TextWidgetManager.instance.measureContent(element, WIDGET_SYSTEM_FONT_STACK, {
+            correction,
+            buffer:    0,
+        })
     }
-
-    const correction = resolveWidgetScaleCorrection(moveableId)
-    const measured = TextWidgetManager.instance.measureContent(element, WIDGET_SYSTEM_FONT_STACK, {
-        correction,
-        buffer:    0,
-    })
+    else {
+        measured = measureGenericWidget(target, config)
+    }
 
     const width = Number.isFinite(measured?.width) ? Math.ceil(measured.width) : 0
     const height = Number.isFinite(measured?.height) ? Math.ceil(measured.height) : 0

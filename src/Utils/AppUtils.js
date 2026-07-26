@@ -15,13 +15,14 @@
  ******************************************************************************/
 
 import {
-    BUILD, CONFIGURATION, COUNTRIES, FLYTHROUGH_SETTINGS, FREE_ANONYMOUS_ACCESS, LAYERS_TERRAINS_SETTINGS,
+    BUILD, CONFIGURATION, COUNTRIES, REPLAY_SETTINGS, FREE_ANONYMOUS_ACCESS, LAYERS_TERRAINS_SETTINGS,
     LGS_CONTEXT_MENU_HOOK, MILLIS, platforms, SERVERS, SETTINGS, SETTINGS_STORE, VAULT_STORE, WIDGET_LAYER_TOP, WIDGETS,
 }                                   from '@Core/constants'
 import { ElevationServer }          from '@Core/Elevation/ElevationServer'
 import { Settings }                 from '@Core/settings/Settings'
 import { SettingsSection }          from '@Core/settings/SettingsSection'
-import { ensureFlythroughSettings } from '@Core/ui/flythrough/FlythroughProgressionStyle'
+import { ionTokenManager }          from '@Core/ui/IonTokenManager'
+import { ensureJourneyReplaySettings } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import axios                        from 'axios'
 import * as Cesium                  from 'cesium'
 import YAML                         from 'yaml'
@@ -30,10 +31,12 @@ import { FA2SL }                    from './FA2SL'
 
 export class AppUtils {
     static THEME_STORAGE_KEY = 'theme'
+    static ON_MAP_THEME_STORAGE_KEY = 'onMapTheme'
     static BRAND_COLOR_STORAGE_KEY = 'brandColor'
     static ROOT_THEME_CLASS = 'wa-theme-lgs1920'
     static DEFAULT_BRAND_COLOR = 'yellow'
     static BRAND_COLORS = ['yellow', 'orange', 'red', 'pink', 'purple', 'blue', 'green', 'gray']
+    static ON_MAP_THEMES = ['default', 'spring', 'fall', 'winter']
 
     static LEGACY_ROOT_THEME_PREFIXES = [
         'sl-theme-',
@@ -124,6 +127,26 @@ export class AppUtils {
         return AppUtils.BRAND_COLORS.includes(resolvedColor) ? resolvedColor : AppUtils.DEFAULT_BRAND_COLOR
     }
 
+    static resolveOnMapTheme = (onMapTheme = null) => {
+        const fallbackTheme = localStorage.getItem(AppUtils.ON_MAP_THEME_STORAGE_KEY) || 'default'
+        const resolvedTheme = onMapTheme || fallbackTheme
+        const normalizedTheme = resolvedTheme === 'autumn' ? 'fall' : resolvedTheme
+        return AppUtils.ON_MAP_THEMES.includes(normalizedTheme) ? normalizedTheme : 'default'
+    }
+
+    static applyOnMapTheme = (onMapTheme = null) => {
+        if (typeof document === 'undefined') {
+            return 'default'
+        }
+
+        const resolvedTheme = AppUtils.resolveOnMapTheme(onMapTheme)
+        if (document.body) {
+            document.body.dataset.onMapTheme = resolvedTheme
+        }
+
+        return resolvedTheme
+    }
+
     static normalizeDocumentThemeClasses = (root = document.documentElement) => {
         if (!root) {
             return
@@ -146,7 +169,7 @@ export class AppUtils {
         }
     }
 
-    static setTheme = (theme = null, brandColor = null) => {
+    static setTheme = (theme = null, brandColor = null, onMapTheme = null) => {
         if (!theme) {
             theme = localStorage.getItem(AppUtils.THEME_STORAGE_KEY) || lgs.settings.theme || 'system'
         }
@@ -155,11 +178,14 @@ export class AppUtils {
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
         const isDark = theme === 'dark' || (theme === 'system' && mediaQuery.matches)
         const resolvedBrandColor = AppUtils.resolveBrandColor(brandColor)
+        const resolvedOnMapTheme = AppUtils.applyOnMapTheme(onMapTheme)
 
         AppUtils.normalizeDocumentThemeClasses(root)
         root.classList.add(AppUtils.ROOT_THEME_CLASS, `wa-brand-${resolvedBrandColor}`)
         root.classList.toggle('wa-dark', isDark)
         root.classList.toggle('wa-light', !isDark)
+
+        return resolvedOnMapTheme
     }
 
     /**
@@ -248,15 +274,15 @@ export class AppUtils {
             .then(text => YAML.parse(text),
             )
 
-        const flythrough = await fetch(FLYTHROUGH_SETTINGS, {cache: 'no-store'})
+        const replay = await fetch(REPLAY_SETTINGS, {cache: 'no-store'})
             .then(res => res.text())
             .then(text => YAML.parse(text),
             )
 
-        const flythroughYamlSettings = flythrough?.flythrough ?? flythrough ?? {}
+        const replayYamlSettings = replay?.replay ?? replay ?? {}
 
         settings.ui = settings.ui ?? {}
-        settings.ui.flythrough = AppUtils.deepClone(flythroughYamlSettings)
+        settings.ui.replay = AppUtils.deepClone(replayYamlSettings)
 
         // add settings section
         settings.widgets = raw.widgets
@@ -370,7 +396,9 @@ export class AppUtils {
         })
         await Promise.all(promises)
 
-        Object.assign(lgs.stores.flythrough, ensureFlythroughSettings())
+        Object.assign(lgs.stores.replay, ensureJourneyReplaySettings())
+
+        await ionTokenManager.load()
 
         // Removed useless sections in DB  //TODO do not read and check if nothing changed
         const DBSections = await lgs.db.settings.keys(SETTINGS_STORE)
@@ -380,19 +408,20 @@ export class AppUtils {
         }
 
         // Read and apply tokens
-        for (const provider of lgs.settings.layers.providers) {
-            let index = 0
-            for (const layer of provider.layers) {
-                if (layer.usage.type !== FREE_ANONYMOUS_ACCESS) {
+        for (const provider of lgs.settings.layers.providers ?? []) {
+            for (const layer of provider?.layers ?? []) {
+                if (!layer?.usage?.type) {
+                    continue
+                }
 
+                if (layer.usage.type !== FREE_ANONYMOUS_ACCESS) {
                     const token = await lgs.db.vault.get(layer.id, VAULT_STORE)
                     // We get a token, let's use it now
                     if (token) {
-                        provider.layers[index].usage.token = token
-                        provider.layers[index].usage.unlocked = true
+                        layer.usage.token = token
+                        layer.usage.unlocked = true
                     }
                 }
-                index++
             }
         }
 
@@ -432,7 +461,7 @@ export class AppUtils {
                 lgs.events = new EventEmitter()
 
                 // Cesium ION auth
-                Cesium.Ion.defaultAccessToken = lgs.configuration.ionToken
+                Cesium.Ion.defaultAccessToken = lgs.stores.ion.token || ionTokenManager.sharedToken
 
 
                 // Shoelace needs to avoid bubbling events. Here's an helper

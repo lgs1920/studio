@@ -17,24 +17,17 @@
 import './style.css'
 import { useWidgetScaleCorrection } from '@Components/MainUI/widgets/useWidgetScaleCorrection'
 import {
-    buildFlythroughProfileMetricSummary,
-    flythroughProfileDimensionIndexes,
-    flythroughProfileRowFromSample,
-    flythroughSampleFromProfileRow,
-} from '@Core/ui/flythrough/FlythroughProfileProgress'
+    buildJourneyReplayProfileMetricSummary,
+    replayProfileDimensionIndexes,
+    replayProfileRowFromSample,
+    replaySampleFromProfileRow,
+} from '@Core/ui/replay/JourneyReplayProfileProgress'
 import {
-    normalizeFlythroughProfileInfo,
-    normalizeFlythroughProgressionStyle,
-    normalizeFlythroughTrace,
-} from '@Core/ui/flythrough/FlythroughProgressionStyle'
-import {
-    FLYTHROUGH_EVENT_END,
-    FLYTHROUGH_EVENT_PAUSE,
-    FLYTHROUGH_EVENT_RESUME,
-    FLYTHROUGH_EVENT_START,
-    FLYTHROUGH_EVENT_STOP,
-    FLYTHROUGH_EVENT_UPDATE,
-} from '@Core/ui/flythrough/FlythroughPlaybackController'
+    normalizeJourneyReplayProfileInfo,
+    normalizeJourneyReplayProgressionStyle,
+    normalizeJourneyReplayTrace,
+} from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import { resolveReplayVisibilityState } from '@Core/ui/replay/ReplayOverlayResolver'
 import { CHART_ELEVATION_VS_DISTANCE, DISTANCE, ELEVATION, POINT, TIME } from '@Core/ui/Profiler'
 import { INTERNATIONAL } from '@Utils/UnitUtils'
 import { colord }        from 'colord'
@@ -131,15 +124,15 @@ const toNumber = value => {
     return Number.isFinite(numeric) ? numeric : 0
 }
 
-const FLYTHROUGH_PROFILE_COMPLETED_GRAPHIC = 'flythrough-profile-completed-graphic'
-const FLYTHROUGH_PROFILE_CURRENT_MARKER_GRAPHIC = 'flythrough-profile-current-marker-graphic'
-const FLYTHROUGH_PROFILE_HOVER_MARKER_GRAPHIC = 'flythrough-profile-hover-marker-graphic'
-const FLYTHROUGH_PROFILE_LOCKED_HORIZONTAL_GUIDE_GRAPHIC = 'flythrough-profile-locked-horizontal-guide-graphic'
-const FLYTHROUGH_PROFILE_LOCKED_VERTICAL_GUIDE_GRAPHIC = 'flythrough-profile-locked-vertical-guide-graphic'
-const FLYTHROUGH_PROFILE_OVERLAY_GRAPHIC = 'flythrough-profile-overlay-graphic'
+const REPLAY_PROFILE_COMPLETED_GRAPHIC = 'replay-profile-completed-graphic'
+const REPLAY_PROFILE_CURRENT_MARKER_GRAPHIC = 'replay-profile-current-marker-graphic'
+const REPLAY_PROFILE_HOVER_MARKER_GRAPHIC = 'replay-profile-hover-marker-graphic'
+const REPLAY_PROFILE_LOCKED_HORIZONTAL_GUIDE_GRAPHIC = 'replay-profile-locked-horizontal-guide-graphic'
+const REPLAY_PROFILE_LOCKED_VERTICAL_GUIDE_GRAPHIC = 'replay-profile-locked-vertical-guide-graphic'
+const REPLAY_PROFILE_OVERLAY_GRAPHIC = 'replay-profile-overlay-graphic'
 const PROFILE_LINE_WIDTH = 2
 
-const isFlythroughSeries = seriesId => String(seriesId ?? '').startsWith('flythrough-')
+const isJourneyReplaySeries = seriesId => String(seriesId ?? '').startsWith('replay-')
 const isFiniteCoordinate = value => Number.isFinite(Number(value))
 const finitePositive = (value, fallback) => {
     const numeric = Number(value)
@@ -209,8 +202,8 @@ const profileGraphicLineStyle = model => {
 
     return style
 }
-const flythroughProfileOverlayResetGraphic = () => ({
-    id:        FLYTHROUGH_PROFILE_OVERLAY_GRAPHIC,
+const replayProfileOverlayResetGraphic = () => ({
+    id:        REPLAY_PROFILE_OVERLAY_GRAPHIC,
     type:      'group',
     $action:   'replace',
     left:      0,
@@ -222,9 +215,9 @@ const flythroughProfileOverlayResetGraphic = () => ({
     children:  [],
 })
 
-const flythroughProfileHiddenGraphics = () => [
+const replayProfileHiddenGraphics = () => [
     {
-        id:        FLYTHROUGH_PROFILE_COMPLETED_GRAPHIC,
+        id:        REPLAY_PROFILE_COMPLETED_GRAPHIC,
         type:      'group',
         $action:   'replace',
         invisible: true,
@@ -232,7 +225,7 @@ const flythroughProfileHiddenGraphics = () => [
         children:  [],
     },
     {
-        id:        FLYTHROUGH_PROFILE_CURRENT_MARKER_GRAPHIC,
+        id:        REPLAY_PROFILE_CURRENT_MARKER_GRAPHIC,
         type:      'circle',
         $action:   'replace',
         invisible: true,
@@ -241,7 +234,7 @@ const flythroughProfileHiddenGraphics = () => [
         style:     {opacity: 0},
     },
     {
-        id:        FLYTHROUGH_PROFILE_HOVER_MARKER_GRAPHIC,
+        id:        REPLAY_PROFILE_HOVER_MARKER_GRAPHIC,
         type:      'circle',
         $action:   'replace',
         invisible: true,
@@ -250,7 +243,7 @@ const flythroughProfileHiddenGraphics = () => [
         style:     {opacity: 0},
     },
     {
-        id:        FLYTHROUGH_PROFILE_LOCKED_HORIZONTAL_GUIDE_GRAPHIC,
+        id:        REPLAY_PROFILE_LOCKED_HORIZONTAL_GUIDE_GRAPHIC,
         type:      'line',
         $action:   'replace',
         invisible: true,
@@ -259,7 +252,7 @@ const flythroughProfileHiddenGraphics = () => [
         style:     {opacity: 0},
     },
     {
-        id:        FLYTHROUGH_PROFILE_LOCKED_VERTICAL_GUIDE_GRAPHIC,
+        id:        REPLAY_PROFILE_LOCKED_VERTICAL_GUIDE_GRAPHIC,
         type:      'line',
         $action:   'replace',
         invisible: true,
@@ -267,7 +260,7 @@ const flythroughProfileHiddenGraphics = () => [
         shape:     {x1: 0, y1: 0, x2: 0, y2: 0},
         style:     {opacity: 0},
     },
-    flythroughProfileOverlayResetGraphic(),
+    replayProfileOverlayResetGraphic(),
 ]
 
 /**
@@ -288,20 +281,20 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
     const $unitStore = lgs.settings.unitSystem
     const unitStore = useSnapshot($unitStore)
     const unitSystem = unitStore.current
-    const flythroughSettings = useSnapshot(lgs.settings.ui.flythrough)
-    const flythroughProfileInfo = useMemo(
-        () => normalizeFlythroughProfileInfo(flythroughSettings.profileInfo),
-        [flythroughSettings.profileInfo],
+    const replaySettings = useSnapshot(lgs.settings.ui.replay)
+    const replayProfileInfo = useMemo(
+        () => normalizeJourneyReplayProfileInfo(replaySettings.profileInfo),
+        [replaySettings.profileInfo],
     )
-    const flythroughProgression = useMemo(
-        () => normalizeFlythroughProgressionStyle(flythroughSettings.progression),
-        [flythroughSettings.progression],
+    const replayProgression = useMemo(
+        () => normalizeJourneyReplayProgressionStyle(replaySettings.progression),
+        [replaySettings.progression],
     )
     const profileSettings = useSnapshot(lgs.settings.ui.profile)
-    const showFlythroughLiveData = profileSettings.liveData === true
-    const flythroughTrace = useMemo(
-        () => normalizeFlythroughTrace(flythroughSettings.trace),
-        [flythroughSettings.trace],
+    const showJourneyReplayLiveData = profileSettings.liveData === true
+    const replayTrace = useMemo(
+        () => normalizeJourneyReplayTrace(replaySettings.trace),
+        [replaySettings.trace],
     )
 
     const _chart = useRef(null)
@@ -310,7 +303,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
     const _instance = useRef({
                                  getEchartsInstance: () => _chart.current,
                              })
-    const _flythroughProfileGraphics = useRef({
+    const _replayProfileGraphics = useRef({
                                                   key:        null,
                                                   renderedKey: null,
                                                   geometries: [],
@@ -482,7 +475,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         return data.dataset
     }, [data])
     const profileTooltipMeta = useMemo(() => {
-        const indexes = flythroughProfileDimensionIndexes(data?.dimensions)
+        const indexes = replayProfileDimensionIndexes(data?.dimensions)
 
         return {
             totalDistanceFromStart: processedDataset.reduce((last, dataset) => {
@@ -504,7 +497,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             const lineModels = profileLineModels({
                 color:         option?.color,
                 renderStyle:   option?.renderStyle,
-                useTrackStyle: flythroughProfileInfo.useTrackStyle,
+                useTrackStyle: replayProfileInfo.useTrackStyle,
             })
 
             if (dataset?.id && !indexes.has(dataset.id)) {
@@ -515,7 +508,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         })
 
         return indexes
-    }, [data?.dataset, data?.options, flythroughProfileInfo.useTrackStyle])
+    }, [data?.dataset, data?.options, replayProfileInfo.useTrackStyle])
     /**
      * Build ECharts series object with optional gradient
      */
@@ -523,7 +516,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         const lineModels = profileLineModels({
                                                  color:         params.color,
                                                  renderStyle:   params.renderStyle,
-                                                 useTrackStyle: flythroughProfileInfo.useTrackStyle,
+                                                 useTrackStyle: replayProfileInfo.useTrackStyle,
                                              })
         const rgbColor = lineModels[0]?.color ?? profileColor(params.color)
 
@@ -557,11 +550,11 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             legendHoverLink: index === 0,
             z:               2 + index,
         }))
-    }, [flythroughProfileInfo.useTrackStyle, setColor])
+    }, [replayProfileInfo.useTrackStyle, setColor])
 
-    const flythroughMarkerStyle = useCallback(() => {
-        const progression = normalizeFlythroughProgressionStyle(
-            lgs.stores.flythrough?.progression ?? lgs.settings.ui?.flythrough?.progression,
+    const replayMarkerStyle = useCallback(() => {
+        const progression = normalizeJourneyReplayProgressionStyle(
+            lgs.stores.replay?.progression ?? lgs.settings.ui?.replay?.progression,
         )
 
         return {
@@ -635,7 +628,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
     ])
 
     const markerDataFromSample = useCallback((sample) => {
-        const row = flythroughProfileRowFromSample(sample, {
+        const row = replayProfileRowFromSample(sample, {
             dimensions:     data?.dimensions,
             unitSystem,
             distanceLabel:  DISTANCE,
@@ -705,7 +698,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         }
 
         let nearest = null
-        const sampler = __.ui.flythrough?.sampler ?? null
+        const sampler = __.ui.replay?.sampler ?? null
 
         data.dataset.forEach((dataset) => {
             const source = Array.isArray(dataset?.source) ? dataset.source : []
@@ -733,7 +726,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                             seriesIndex,
                             dataIndex,
                             delta,
-                            sample: flythroughSampleFromProfileRow(row, data.dimensions, sampler),
+                            sample: replaySampleFromProfileRow(row, data.dimensions, sampler),
                         }
                     }
                 }
@@ -746,8 +739,8 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         return nearest
     }, [data, interactiveSeriesIndexes])
 
-    const clearFlythroughProfileGraphicsCache = useCallback(() => {
-        _flythroughProfileGraphics.current = {
+    const clearJourneyReplayProfileGraphicsCache = useCallback(() => {
+        _replayProfileGraphics.current = {
             key:               null,
             renderedKey:       null,
             geometries:        [],
@@ -757,18 +750,18 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
     }, [])
 
     const profileTrackStyleKey = useMemo(() => JSON.stringify({
-                                                                  useTrackStyle: flythroughProfileInfo.useTrackStyle,
+                                                                  useTrackStyle: replayProfileInfo.useTrackStyle,
                                                                   options:       data?.options?.map(option => ({
                                                                       color:       option?.color,
                                                                       renderStyle: option?.renderStyle,
                                                                   })),
-                                                              }), [data?.options, flythroughProfileInfo.useTrackStyle])
+                                                              }), [data?.options, replayProfileInfo.useTrackStyle])
 
-    const flythroughCompletedGraphics = useCallback((sample, chart) => {
+    const replayCompletedGraphics = useCallback((sample, chart) => {
         const gridRect = readChartGridRect(chart)
         if (!sample || !chart || !gridRect || !data?.dimensions) {
             return {
-                id:        FLYTHROUGH_PROFILE_COMPLETED_GRAPHIC,
+                id:        REPLAY_PROFILE_COMPLETED_GRAPHIC,
                 type:      'group',
                 $action:   'replace',
                 invisible: true,
@@ -789,9 +782,9 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             readChartAxisExtent(chart, 'yAxis'),
             profileTrackStyleKey,
         ].join(':')
-        let geometries = _flythroughProfileGraphics.current.geometries
+        let geometries = _replayProfileGraphics.current.geometries
 
-        if (_flythroughProfileGraphics.current.key !== cacheKey) {
+        if (_replayProfileGraphics.current.key !== cacheKey) {
             const distanceIndex = data.dimensions.indexOf(DISTANCE)
             const elevationIndex = data.dimensions.indexOf(ELEVATION)
             const baseline = gridRect.y + gridRect.height
@@ -832,10 +825,10 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                     const lineModels = profileLineModels({
                                                              color:         option.color,
                                                              renderStyle:   option.renderStyle,
-                                                             useTrackStyle: flythroughProfileInfo.useTrackStyle,
+                                                             useTrackStyle: replayProfileInfo.useTrackStyle,
                                                          })
                     const rgbColor = lineModels[0]?.color ?? profileColor(option.color)
-                    const doneColor = profileColor(flythroughProgression.fill.color, rgbColor)
+                    const doneColor = profileColor(replayProgression.fill.color, rgbColor)
                     const gradientColor = element.gradient?.color
                                           ? colord(setColor(element.gradient)).toRgbString()
                                           : doneColor
@@ -864,12 +857,12 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         const samplePixel = chartPixelFromSample(sample, chart)
         const clipRight = samplePixel?.[0] ?? gridRect.x
         const clipWidth = Math.max(0, Math.min(gridRect.width, clipRight - gridRect.x))
-        const isFlythroughActive = Boolean(lgs.stores.flythrough?.active || lgs.stores.flythrough?.playing)
-        const showRemainingOverlay = isFlythroughActive
-                                     && flythroughTrace.remaining.useDefinedTrackStyle === false
-                                     && flythroughTrace.mode === 'full'
-        const remainingColor = profileColor(flythroughTrace.remaining.color, flythroughProgression.fill.color)
-        const doneColor = profileColor(flythroughProgression.fill.color, flythroughProgression.fill.color)
+        const isJourneyReplayActive = Boolean(lgs.stores.replay?.active || lgs.stores.replay?.playing)
+        const showRemainingOverlay = isJourneyReplayActive
+                                     && replayTrace.remaining.useDefinedTrackStyle === false
+                                     && replayTrace.mode === 'full'
+        const remainingColor = profileColor(replayTrace.remaining.color, replayProgression.fill.color)
+        const doneColor = profileColor(replayProgression.fill.color, replayProgression.fill.color)
         const overlayCacheKey = [
             cacheKey,
             doneColor,
@@ -877,11 +870,11 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             showRemainingOverlay ? '1' : '0',
         ].join(':')
 
-        const shouldReplaceChildren = _flythroughProfileGraphics.current.renderedKey !== overlayCacheKey
-        if (_flythroughProfileGraphics.current.key !== overlayCacheKey) {
+        const shouldReplaceChildren = _replayProfileGraphics.current.renderedKey !== overlayCacheKey
+        if (_replayProfileGraphics.current.key !== overlayCacheKey) {
             const completedChildren = geometries.flatMap(geometry => [
                 {
-                    id:      `${FLYTHROUGH_PROFILE_COMPLETED_GRAPHIC}:${geometry.id}:area`,
+                    id:      `${REPLAY_PROFILE_COMPLETED_GRAPHIC}:${geometry.id}:area`,
                     type:    'polygon',
                     silent:  true,
                     z:       8,
@@ -892,7 +885,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                     },
                 },
                 ...geometry.lineModels.map(lineModel => ({
-                    id:      `${FLYTHROUGH_PROFILE_COMPLETED_GRAPHIC}:${geometry.id}:line:${lineModel.key}`,
+                    id:      `${REPLAY_PROFILE_COMPLETED_GRAPHIC}:${geometry.id}:line:${lineModel.key}`,
                     type:    'polyline',
                     silent:  true,
                     z:       9,
@@ -910,7 +903,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
 
             const remainingChildren = showRemainingOverlay
                                       ? geometries.flatMap(geometry => geometry.lineModels.map(lineModel => ({
-                                          id:      `${FLYTHROUGH_PROFILE_COMPLETED_GRAPHIC}:${geometry.id}:line:${lineModel.key}:remaining`,
+                                          id:      `${REPLAY_PROFILE_COMPLETED_GRAPHIC}:${geometry.id}:line:${lineModel.key}:remaining`,
                                           type:    'polyline',
                                           silent:  true,
                                           z:       7,
@@ -926,7 +919,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                                       })))
                                       : []
 
-            _flythroughProfileGraphics.current = {
+            _replayProfileGraphics.current = {
                 key:               overlayCacheKey,
                 renderedKey:       null,
                 geometries,
@@ -936,7 +929,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         }
 
         const graphic = {
-            id:       FLYTHROUGH_PROFILE_COMPLETED_GRAPHIC,
+            id:       REPLAY_PROFILE_COMPLETED_GRAPHIC,
             type:     'group',
             $action:  shouldReplaceChildren ? 'replace' : 'merge',
             silent:   true,
@@ -952,15 +945,15 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             },
         }
 
-        graphic.children = _flythroughProfileGraphics.current.completedChildren
+        graphic.children = _replayProfileGraphics.current.completedChildren
 
         if (shouldReplaceChildren) {
-            _flythroughProfileGraphics.current.renderedKey = overlayCacheKey
+            _replayProfileGraphics.current.renderedKey = overlayCacheKey
         }
 
         const remainingGraphic = showRemainingOverlay
                                  ? {
-                                     id:      `${FLYTHROUGH_PROFILE_COMPLETED_GRAPHIC}:remaining`,
+                                     id:      `${REPLAY_PROFILE_COMPLETED_GRAPHIC}:remaining`,
                                      type:    'group',
                                      $action: 'replace',
                                      silent:  true,
@@ -974,7 +967,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                                              height: gridRect.height,
                                          },
                                      },
-                                     children: _flythroughProfileGraphics.current.remainingChildren,
+                                     children: _replayProfileGraphics.current.remainingChildren,
                                  }
                                  : null
 
@@ -983,19 +976,19 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         chartPixelFromSample,
         data,
         element,
-        flythroughProfileInfo.useTrackStyle,
-        flythroughProgression.fill.color,
-        flythroughTrace.mode,
-        flythroughTrace.remaining.color,
-        flythroughTrace.remaining.useDefinedTrackStyle,
+        replayProfileInfo.useTrackStyle,
+        replayProgression.fill.color,
+        replayTrace.mode,
+        replayTrace.remaining.color,
+        replayTrace.remaining.useDefinedTrackStyle,
         processedDataset,
         profileTrackStyleKey,
         setColor,
     ])
 
-    const flythroughMarkerGraphic = useCallback(({id, sample, chart, size, z}) => {
+    const replayMarkerGraphic = useCallback(({id, sample, chart, size, z}) => {
         const pixel = chartPixelFromSample(sample, chart)
-        const markerStyle = flythroughMarkerStyle()
+        const markerStyle = replayMarkerStyle()
         if (!pixel) {
             return {
                 id,
@@ -1053,17 +1046,17 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                 },
             ],
         }
-    }, [chartPixelFromSample, flythroughMarkerStyle])
+    }, [chartPixelFromSample, replayMarkerStyle])
 
     const lockedGuideGraphics = useCallback((sample, chart) => {
         const pixel = chartPixelFromSample(sample, chart)
         const gridRect = readChartGridRect(chart)
-        const color = colord(flythroughMarkerStyle().color).alpha(0.7).toRgbString()
+        const color = colord(replayMarkerStyle().color).alpha(0.7).toRgbString()
 
         if (!pixel || !gridRect) {
             return [
                 {
-                    id:        FLYTHROUGH_PROFILE_LOCKED_HORIZONTAL_GUIDE_GRAPHIC,
+                    id:        REPLAY_PROFILE_LOCKED_HORIZONTAL_GUIDE_GRAPHIC,
                     type:      'line',
                     $action:   'replace',
                     invisible: true,
@@ -1072,7 +1065,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                     style:     {opacity: 0},
                 },
                 {
-                    id:        FLYTHROUGH_PROFILE_LOCKED_VERTICAL_GUIDE_GRAPHIC,
+                    id:        REPLAY_PROFILE_LOCKED_VERTICAL_GUIDE_GRAPHIC,
                     type:      'line',
                     $action:   'replace',
                     invisible: true,
@@ -1085,7 +1078,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
 
         return [
             {
-                id:      FLYTHROUGH_PROFILE_LOCKED_HORIZONTAL_GUIDE_GRAPHIC,
+                id:      REPLAY_PROFILE_LOCKED_HORIZONTAL_GUIDE_GRAPHIC,
                 type:    'line',
                 $action: 'replace',
                 silent:  true,
@@ -1103,7 +1096,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                 },
             },
             {
-                id:      FLYTHROUGH_PROFILE_LOCKED_VERTICAL_GUIDE_GRAPHIC,
+                id:      REPLAY_PROFILE_LOCKED_VERTICAL_GUIDE_GRAPHIC,
                 type:    'line',
                 $action: 'replace',
                 silent:  true,
@@ -1121,12 +1114,12 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                 },
             },
         ]
-    }, [chartPixelFromSample, flythroughMarkerStyle])
+    }, [chartPixelFromSample, replayMarkerStyle])
 
-    const flythroughMetricLabel = useCallback((sample, flythroughState) => {
-        const summary = buildFlythroughProfileMetricSummary(sample, {
-            totalDistance:      Number(flythroughState?.totalDistance) || 0,
-            direction:          flythroughState?.direction,
+    const replayMetricLabel = useCallback((sample, replayState) => {
+        const summary = buildJourneyReplayProfileMetricSummary(sample, {
+            totalDistance:      Number(replayState?.totalDistance) || 0,
+            direction:          replayState?.direction,
             unitSystem,
             distancePrecision:  1,
             elevationPrecision: 0,
@@ -1147,13 +1140,13 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         _profileMetricBadge.current?.classList.add('profile-chart-metric-badge--hidden')
     }, [])
 
-    const flythroughMetricGraphic = useCallback((sample, flythroughState, chart) => {
-        if (!showFlythroughLiveData) {
+    const replayMetricGraphic = useCallback((sample, replayState, chart) => {
+        if (!showJourneyReplayLiveData) {
             hideProfileMetricBadge()
             return []
         }
 
-        const label = flythroughMetricLabel(sample, flythroughState)
+        const label = replayMetricLabel(sample, replayState)
         const badge = _profileMetricBadge.current
         if (!label) {
             badge?.classList.add('profile-chart-metric-badge--hidden')
@@ -1186,75 +1179,80 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         }
 
         return []
-    }, [flythroughMetricLabel, hideProfileMetricBadge, showFlythroughLiveData])
+    }, [replayMetricLabel, hideProfileMetricBadge, showJourneyReplayLiveData])
 
-    const flythroughProfileOption = useCallback((flythroughState, chart, controllerSampleOverride = null) => {
+    const replayProfileOption = useCallback((replayState, chart, controllerSampleOverride = null) => {
         if (!data?.dataset || !data?.dimensions) {
             return null
         }
 
-        const visible = flythroughState?.active
-            || flythroughState?.paused
-            || flythroughState?.playing
-            || flythroughState?.toolbarVisible
-        const controllerSample = controllerSampleOverride ?? __.ui.flythrough?.controller?.currentSample?.()
+        const resolvedReplayState = resolveReplayVisibilityState({replay: replayState})
+        const visible = resolvedReplayState?.active
+            || resolvedReplayState?.paused
+            || resolvedReplayState?.playing
+            || replayState?.toolbarVisible
+        const controllerSample = controllerSampleOverride
+                                 ?? resolvedReplayState?.sample
+                                 ?? __.ui.replay?.controller?.currentSample?.()
         const activeSample = visible
-                             ? (flythroughState?.playing ? (controllerSample ?? flythroughState?.sample) : (flythroughState?.sample ?? controllerSample))
+                             ? (resolvedReplayState?.playing
+                                ? (controllerSample ?? resolvedReplayState?.sample)
+                                : (resolvedReplayState?.sample ?? controllerSample))
                              : null
         const lockedSample = !activeSample && locked ? lockedProfileSample : null
         const displaySample = activeSample ?? lockedSample
-        const hoverSample = flythroughState?.hoverSample
+        const hoverSample = replayState?.hoverSample
         const metricState = activeSample
-                            ? flythroughState
+                            ? resolvedReplayState
                             : (lockedSample ? {
                                 totalDistance: profileTooltipMeta.totalDistanceFromStart,
                                 direction:     1,
                             } : null)
-        const overlayGraphics = flythroughMetricGraphic(hoverSample ?? displaySample, metricState, chart)
+        const overlayGraphics = replayMetricGraphic(hoverSample ?? displaySample, metricState, chart)
         if (!activeSample) {
-            _flythroughProfileGraphics.current.renderedKey = null
+            _replayProfileGraphics.current.renderedKey = null
         }
-        if (!displaySample || !showFlythroughLiveData) {
+        if (!displaySample || !showJourneyReplayLiveData) {
             hideProfileMetricBadge()
         }
         const graphics = activeSample
                          ? [
-                             ...flythroughCompletedGraphics(activeSample, chart),
+                             ...replayCompletedGraphics(activeSample, chart),
                              ...lockedGuideGraphics(activeSample, chart),
-                             flythroughMarkerGraphic({
-                                 id:     FLYTHROUGH_PROFILE_CURRENT_MARKER_GRAPHIC,
+                             replayMarkerGraphic({
+                                 id:     REPLAY_PROFILE_CURRENT_MARKER_GRAPHIC,
                                  sample: activeSample,
                                  chart,
                                  z:      20,
                              }),
-                             flythroughMarkerGraphic({
-                                 id:     FLYTHROUGH_PROFILE_HOVER_MARKER_GRAPHIC,
+                             replayMarkerGraphic({
+                                 id:     REPLAY_PROFILE_HOVER_MARKER_GRAPHIC,
                                  sample: hoverSample,
                                  chart,
                                  z:      21,
                              }),
-                             flythroughProfileOverlayResetGraphic(),
+                             replayProfileOverlayResetGraphic(),
                              ...overlayGraphics,
                          ]
                          : lockedSample
                            ? [
                                ...lockedGuideGraphics(lockedSample, chart),
-                               flythroughMarkerGraphic({
-                                   id:     FLYTHROUGH_PROFILE_CURRENT_MARKER_GRAPHIC,
+                               replayMarkerGraphic({
+                                   id:     REPLAY_PROFILE_CURRENT_MARKER_GRAPHIC,
                                    sample: lockedSample,
                                    chart,
                                    z:      20,
                                }),
-                               flythroughMarkerGraphic({
-                                   id:        FLYTHROUGH_PROFILE_HOVER_MARKER_GRAPHIC,
+                               replayMarkerGraphic({
+                                   id:        REPLAY_PROFILE_HOVER_MARKER_GRAPHIC,
                                    sample:    null,
                                    chart,
                                    z:         21,
                                }),
-                               flythroughProfileOverlayResetGraphic(),
+                               replayProfileOverlayResetGraphic(),
                                ...overlayGraphics,
                            ]
-                         : flythroughProfileHiddenGraphics()
+                         : replayProfileHiddenGraphics()
 
         return {
             animation: false,
@@ -1262,19 +1260,19 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         }
     }, [
         data,
-        flythroughCompletedGraphics,
-        flythroughMetricGraphic,
-        flythroughMarkerGraphic,
+        replayCompletedGraphics,
+        replayMetricGraphic,
+        replayMarkerGraphic,
         hideProfileMetricBadge,
         lockedGuideGraphics,
         locked,
         lockedProfileSample,
         profileTooltipMeta.totalDistanceFromStart,
-                                                    showFlythroughLiveData,
+                                                    showJourneyReplayLiveData,
     ])
 
-    const handleFlythroughProfileHover = useCallback((params) => {
-        if (preview || !data?.dimensions || params?.componentType !== 'series' || isFlythroughSeries(params.seriesId)) {
+    const handleJourneyReplayProfileHover = useCallback((params) => {
+        if (preview || !data?.dimensions || params?.componentType !== 'series' || isJourneyReplaySeries(params.seriesId)) {
             return
         }
 
@@ -1283,18 +1281,18 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             return
         }
 
-        const sampler = __.ui.flythrough?.sampler ?? null
-        const sample = flythroughSampleFromProfileRow(row, data.dimensions, sampler)
+        const sampler = __.ui.replay?.sampler ?? null
+        const sample = replaySampleFromProfileRow(row, data.dimensions, sampler)
         if (!sample) {
             return
         }
 
-        __.ui.flythrough?.handleProfileHover?.({sample})
+        __.ui.replay?.handleProfileHover?.({sample})
     }, [data, preview])
 
-    const handleFlythroughProfileLeave = useCallback(() => {
+    const handleJourneyReplayProfileLeave = useCallback(() => {
         if (!preview) {
-            __.ui.flythrough?.handleProfileLeave?.()
+            __.ui.replay?.handleProfileLeave?.()
         }
     }, [preview])
 
@@ -1346,8 +1344,8 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
     }, [locked, lockedProfileSample, preview])
 
     useEffect(() => {
-        clearFlythroughProfileGraphicsCache()
-    }, [clearFlythroughProfileGraphicsCache, data, element, processedDataset, unitSystem])
+        clearJourneyReplayProfileGraphicsCache()
+    }, [clearJourneyReplayProfileGraphicsCache, data, element, processedDataset, unitSystem])
 
     /**
      * Handle chart resizing and store state updates
@@ -1367,7 +1365,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         }
 
         try {
-            clearFlythroughProfileGraphicsCache()
+            clearJourneyReplayProfileGraphicsCache()
             chart.resize({width: size.width, height: size.height})
         }
         catch {
@@ -1376,7 +1374,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
 
         syncProfileDimensions()
         return true
-    }, [clearFlythroughProfileGraphicsCache, preview, syncProfileDimensions])
+    }, [clearJourneyReplayProfileGraphicsCache, preview, syncProfileDimensions])
 
     /**
      * Life cycle management: chart init, events and cleanup
@@ -1395,7 +1393,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         if (!preview) {
             __.ui.profiler.charts.set(CHART_ELEVATION_VS_DISTANCE, chart)
             onDataZoom = () => {
-                clearFlythroughProfileGraphicsCache()
+                clearJourneyReplayProfileGraphicsCache()
                 lgs.stores.main.components.profile.zoom = true
             }
             chart.on('dataZoom', onDataZoom)
@@ -1413,7 +1411,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             _chart.current = null
             chart.dispose()
         }
-    }, [clearFlythroughProfileGraphicsCache, configId, handleResize, id, preview])
+    }, [clearJourneyReplayProfileGraphicsCache, configId, handleResize, id, preview])
 
     useEffect(() => {
         if (locked) {
@@ -1433,7 +1431,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         }
 
         const chart = _instance.current?.getEchartsInstance?.()
-        const option = flythroughProfileOption(lgs.stores.flythrough ?? {}, chart)
+        const option = replayProfileOption(lgs.stores.replay ?? {}, chart)
         if (!chart || !option) {
             return
         }
@@ -1442,7 +1440,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             replaceMerge: ['graphic'],
             silent:       true,
         })
-    }, [flythroughProfileOption, locked, lockedProfileSample, preview])
+    }, [replayProfileOption, locked, lockedProfileSample, preview])
 
     useEffect(() => {
         if (preview) {
@@ -1455,30 +1453,30 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         }
         const zr = chart.getZr?.()
 
-        chart.on('mousemove', handleFlythroughProfileHover)
-        chart.on('globalout', handleFlythroughProfileLeave)
+        chart.on('mousemove', handleJourneyReplayProfileHover)
+        chart.on('globalout', handleJourneyReplayProfileLeave)
         zr?.on?.('click', handleProfileBlankClick)
 
         return () => {
-            chart.off('mousemove', handleFlythroughProfileHover)
-            chart.off('globalout', handleFlythroughProfileLeave)
+            chart.off('mousemove', handleJourneyReplayProfileHover)
+            chart.off('globalout', handleJourneyReplayProfileLeave)
             zr?.off?.('click', handleProfileBlankClick)
         }
     }, [
-        handleFlythroughProfileHover,
-        handleFlythroughProfileLeave,
+        handleJourneyReplayProfileHover,
+        handleJourneyReplayProfileLeave,
         handleProfileBlankClick,
         preview,
     ])
 
     useEffect(() => {
-        if (preview || !lgs.stores.flythrough) {
+        if (preview || !lgs.stores.replay) {
             return
         }
 
         let frame = null
-        const flythroughStore = lgs.stores.flythrough
-        const renderFlythroughProgress = (controllerSampleOverride = null, nextFlythroughState = flythroughStore) => {
+        const replayStore = lgs.stores.replay
+        const renderJourneyReplayProgress = (controllerSampleOverride = null, nextJourneyReplayState = replayStore) => {
             if (frame !== null) {
                 return
             }
@@ -1486,7 +1484,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             frame = requestAnimationFrame(() => {
                 frame = null
                 const chart = _instance.current?.getEchartsInstance?.()
-                const option = flythroughProfileOption(nextFlythroughState, chart, controllerSampleOverride)
+                const option = replayProfileOption(nextJourneyReplayState, chart, controllerSampleOverride)
                 if (!chart || !option) {
                     return
                 }
@@ -1496,53 +1494,19 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                 })
             })
         }
-        const applyFlythroughProgress = () => {
-            renderFlythroughProgress()
+        const applyJourneyReplayProgress = () => {
+            renderJourneyReplayProgress()
         }
 
-        applyFlythroughProgress()
-        const unsubscribe = subscribe(flythroughStore, applyFlythroughProgress)
-        const flythroughController = __.ui.flythrough?.controller
-        const handleControllerUpdate = (detail) => {
-            if (!detail) {
-                renderFlythroughProgress()
-                return
-            }
-
-            const nextFlythroughState = {
-                ...flythroughStore,
-                active:         detail.running || detail.paused,
-                paused:         detail.paused,
-                playing:        detail.running && !detail.paused,
-                sample:         detail.sample ?? flythroughStore.sample,
-                progress:       detail.progress ?? flythroughStore.progress,
-                duration:       detail.duration ?? flythroughStore.duration,
-                direction:      detail.direction ?? flythroughStore.direction,
-                loop:           detail.loop ?? flythroughStore.loop,
-                toolbarVisible:  flythroughStore.toolbarVisible,
-                hoverSample:    flythroughStore.hoverSample,
-            }
-            renderFlythroughProgress(detail.sample ?? null, nextFlythroughState)
-        }
-        const unsubscribeController = flythroughController
-                                      ? [
-                                          flythroughController.on(FLYTHROUGH_EVENT_START, handleControllerUpdate),
-                                          flythroughController.on(FLYTHROUGH_EVENT_UPDATE, handleControllerUpdate),
-                                          flythroughController.on(FLYTHROUGH_EVENT_PAUSE, handleControllerUpdate),
-                                          flythroughController.on(FLYTHROUGH_EVENT_RESUME, handleControllerUpdate),
-                                          flythroughController.on(FLYTHROUGH_EVENT_STOP, handleControllerUpdate),
-                                          flythroughController.on(FLYTHROUGH_EVENT_END, handleControllerUpdate),
-                                      ]
-                                      : []
-
+        applyJourneyReplayProgress()
+        const unsubscribe = subscribe(replayStore, applyJourneyReplayProgress)
         return () => {
             if (frame !== null) {
                 cancelAnimationFrame(frame)
             }
-            unsubscribeController.forEach(unsubscribeEvent => unsubscribeEvent?.())
             unsubscribe()
         }
-    }, [flythroughProfileOption, preview])
+    }, [replayProfileOption, preview])
 
     usePreviewChartResize(_instance, preview, [width, height, padding, borderWidth])
 
@@ -1634,7 +1598,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             return
         }
 
-        clearFlythroughProfileGraphicsCache()
+        clearJourneyReplayProfileGraphicsCache()
         chart.setOption(baseOptions, {
             replaceMerge: ['dataset', 'series', 'xAxis', 'yAxis'],
             lazyUpdate:   preview,
@@ -1643,7 +1607,7 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
         if (!preview) {
             requestAnimationFrame(handleResize)
         }
-    }, [baseOptions, clearFlythroughProfileGraphicsCache, element, data, preview, handleResize, hasAltitudeData])
+    }, [baseOptions, clearJourneyReplayProfileGraphicsCache, element, data, preview, handleResize, hasAltitudeData])
 
     if (!data || !element || !hasAltitudeData) {
         return null

@@ -20,13 +20,14 @@ import { ToggleStateIcon }                                           from '@Comp
 import {
     FOCUS_ICON, ROTATION_ICON, UPDATE_JOURNEY_SILENTLY,
 } from '@Core/constants'
+import { getGlobalHideOtherJourneys, refreshJourneyVisibility } from '@Core/ui/JourneyVisibility'
 import {
     JourneySelector,
 } from '@Editor/journey/JourneySelector'
 import { Utils }                                                     from '@Editor/Utils'
 import {
-    FLYTHROUGH_JOURNEY_TOOLBAR_VISIBILITY_EVENT,
-}                                                                 from '@Core/ui/flythrough/FlythroughMode'
+    REPLAY_JOURNEY_TOOLBAR_VISIBILITY_EVENT,
+}                                                                 from '@Core/ui/replay/JourneyReplayMode'
 import {
     WaButton, WaCard, WaIcon, WaSpinner, WaTooltip,
 } from '@web.awesome.me/webawesome-pro/dist/react'
@@ -58,12 +59,12 @@ export const JourneyToolbar = (props) => {
     const editorStore = useSnapshot($editorStore)
 
     const autoRotate = useSnapshot(lgs.settings.ui.camera.start.rotate)
-    const flythroughState = useSnapshot(lgs.stores.flythrough)
-    const flythroughActive = flythroughState.active || flythroughState.playing || flythroughState.paused
-    const rotationAllowedByFlythrough = !flythroughActive && flythroughState.orbitAllowed !== false
-    const flythroughRuntime = flythroughState
+    const replayState = useSnapshot(lgs.stores.replay)
+    const replayActive = replayState.active || replayState.playing || replayState.paused
+    const rotationAllowedByJourneyReplay = !replayActive && replayState.orbitAllowed !== false
+    const replayRuntime = replayState
     const [journeyToolbarTemporarilyHidden, setJourneyToolbarTemporarilyHidden] = useState(
-        __.ui.flythrough?.isJourneyToolbarTemporarilyHidden?.() === true,
+        __.ui.replay?.isJourneyToolbarTemporarilyHidden?.() === true,
     )
     const rotationAllowed = useRef(false)
     const manualRotate = useRef(null)
@@ -73,13 +74,13 @@ export const JourneyToolbar = (props) => {
 
     useEffect(() => {
         const syncVisibility = () => {
-            setJourneyToolbarTemporarilyHidden(__.ui.flythrough?.isJourneyToolbarTemporarilyHidden?.() === true)
+            setJourneyToolbarTemporarilyHidden(__.ui.replay?.isJourneyToolbarTemporarilyHidden?.() === true)
         }
 
         syncVisibility()
-        globalThis.window?.addEventListener?.(FLYTHROUGH_JOURNEY_TOOLBAR_VISIBILITY_EVENT, syncVisibility)
+        globalThis.window?.addEventListener?.(REPLAY_JOURNEY_TOOLBAR_VISIBILITY_EVENT, syncVisibility)
         return () => {
-            globalThis.window?.removeEventListener?.(FLYTHROUGH_JOURNEY_TOOLBAR_VISIBILITY_EVENT, syncVisibility)
+            globalThis.window?.removeEventListener?.(REPLAY_JOURNEY_TOOLBAR_VISIBILITY_EVENT, syncVisibility)
         }
     }, [])
 
@@ -116,6 +117,12 @@ export const JourneyToolbar = (props) => {
         $editorStore.journey.visible = visibility
         lgs.theJourney.updateVisibility(visibility)
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus: false})
+        if (getGlobalHideOtherJourneys()) {
+            await refreshJourneyVisibility({
+                hideOtherJourneys: true,
+                currentJourney:    lgs.theJourney,
+            })
+        }
         Utils.renderJourneySettings()
     }
 
@@ -124,7 +131,13 @@ export const JourneyToolbar = (props) => {
      * @param {Event} event - The click event
      */
     const forceRotate = async () => {
-        if (!rotationAllowedByFlythrough) {
+        if ($rotate.running) {
+            rotationAllowed.current = false
+            await stopRotate()
+            return
+        }
+
+        if (!rotationAllowedByJourneyReplay) {
             return
         }
         rotationAllowed.current = !rotationAllowed.current
@@ -142,7 +155,7 @@ export const JourneyToolbar = (props) => {
             await stopRotate()
             return
         }
-        if (!rotationAllowedByFlythrough) {
+        if (!rotationAllowedByJourneyReplay) {
             await focusOnJourney({rotate: false})
             return
         }
@@ -164,7 +177,7 @@ export const JourneyToolbar = (props) => {
                              })
     }
 
-    useEffect(() => {}, [flythroughRuntime.active, flythroughRuntime.playing, flythroughRuntime.paused])
+    useEffect(() => {}, [replayRuntime.active, replayRuntime.playing, replayRuntime.paused])
 
     useEffect(() => {
         if (toolbarRef) {
@@ -249,7 +262,7 @@ export const JourneyToolbar = (props) => {
                                             id="rotate-journey-toolbar"
                                             ref={manualRotate}
                                             onClick={forceRotate}
-                                            disabled={!rotationAllowedByFlythrough && !rotate.running}
+                                            disabled={!rotationAllowedByJourneyReplay && !rotate.running}
                                             size="s"
                                         >
                                             {journeyOrbitActive

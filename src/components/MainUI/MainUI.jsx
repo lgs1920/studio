@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-07-03
+ * Last modified: 2026-07-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,9 +31,9 @@ import { SyncLinkBadge }     from '@Components/MainUI/SyncLinkBadge'
 import { TextButton }        from '@Components/Text/TextButton'
 import { TracksEditor }                         from '@Components/TracksEditor/TracksEditor'
 import { JourneyGroupsDrawer }                  from '@Editor/groups/JourneyGroupsDrawer'
-import { FlythroughButton }         from '@Components/Flythrough/FlythroughButton'
-import { FlythroughControlsWidget } from '@Components/Flythrough/FlythroughControlsWidget'
-import { FlythroughDrawer }         from '@Components/Flythrough/FlythroughDrawer'
+import { JourneyReplayButton }         from '@Components/JourneyReplay/JourneyReplayButton'
+import { JourneyReplayControlsWidget } from '@Components/JourneyReplay/JourneyReplayControlsWidget'
+import { JourneyReplayDrawer }         from '@Components/JourneyReplay/JourneyReplayDrawer'
 import {
     BOTTOM, END, EVENTS, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END, MENU_END_START, MENU_START_END,
     MENU_START_START, SCENE_MODE_2D, SECOND, START, TOP,
@@ -57,6 +57,7 @@ import { PanelButton as POIEditButton } from './MapPOI/PanelButton'
 import { SceneModeSelector }            from './SceneModeSelector'
 import { SupportUI }                    from './SupportUI'
 import { SupportUIButton }   from './SupportUIButton'
+import { WidgetManagementDrawer } from './widgets/management/WidgetManagementDrawer'
 import { WidgetEditorPanel } from './widgets/editor/WidgetEditorPanel'
 
 import './style.css'
@@ -71,9 +72,7 @@ export const MainUI = memo(() => {
     const mainUI = useSnapshot(lgs.stores.ui.mainUI)
     const {drawers, toolBar} = useSnapshot(lgs.settings.ui.menu)
     const {video} = useSnapshot(lgs.stores.ui)
-    const flythrough = useSnapshot(lgs.stores.flythrough)
-
-
+    const replay = useSnapshot(lgs.stores.replay)
     const windowResized = useCallback(__.tools.debounce(() => {
         if (formerDevice.current !== __.device.isMobile) {
             __.ui.menuManager.reset()
@@ -223,15 +222,14 @@ export const MainUI = memo(() => {
     const tooltipDir = toolBar.fromStart ? 'right' : 'left'
     const {primaryEntrance, secondaryEntrance} = arrangeDrawers()
     const videoCaptureActive = video.preRecording || video.recording || video.snapshot || video.finalizing
-    const syncWithVideo = flythrough.recordingSync === true
-    const isFlythroughUiHidden = flythrough.mainUiHidden === true
+    const isJourneyReplayUiHidden = replay.mainUiHidden === true
 
     return (
         <>
             <MapPointContextMenuTrigger/>
-            <FlythroughControlsWidget/>
+            <JourneyReplayControlsWidget/>
             <MapPOIMonitor/>
-            {!isFlythroughUiHidden && (
+            {!isJourneyReplayUiHidden && (
                 <>
                     <div id="lgs-main-ui" onKeyDown={handleKeyDown}>
                         {!video.editing && (
@@ -253,10 +251,26 @@ export const MainUI = memo(() => {
                                         <GeocodingButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                         <OrbitButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                         {!videoCaptureActive && <FullScreenButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>}
-                                        <div className="sync-linked-actions">
-                                            <VideoButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
-                                            <FlythroughButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
-                                            <SyncLinkBadge visible={syncWithVideo} className="sync-linked-actions-badge"/>
+                                        <div
+                                            className={`sync-linked-actions ${
+                                                replay.recordingSync === true ? 'is-linked' : 'is-unlinked'
+                                            }`}
+                                        >
+                                            <VideoButton
+                                                tooltip={toolBar.fromStart ? 'left' : 'right'}
+                                                className="square-button sync-linked-video-button"
+                                                appearance="filled"
+                                            />
+                                            <SyncLinkBadge
+                                                visible={Boolean(theJourney)}
+                                                tooltip={toolBar.fromStart ? 'left' : 'right'}
+                                                className="sync-linked-actions-badge"
+                                            />
+                                            <JourneyReplayButton
+                                                tooltip={toolBar.fromStart ? 'left' : 'right'}
+                                                variant={replay.recordingSync === true ? 'warning' : 'brand'}
+                                                appearance="filled"
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -288,18 +302,19 @@ export const MainUI = memo(() => {
                         <LayersPanel/>
                         <TracksEditor/>
                         <JourneyGroupsDrawer/>
-                        <FlythroughDrawer/>
+                        <JourneyReplayDrawer/>
                         <MapPOIEditPanel/>
+                        <WidgetManagementDrawer/>
                         <WidgetEditorPanel/>
                     </div>
                     <SupportUI/>
                     <JourneyLoaderUI multiple/>
                     <ContextMenuRenderer/>
-                    <VideoDownloadAndShareDialog/>
 
                     {mainUI.callForActions.active && <CallForActions/>}
                 </>
             )}
+            <VideoDownloadAndShareDialog/>
 
         </>
     )

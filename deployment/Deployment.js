@@ -25,6 +25,18 @@ import { parse as parseYaml }    from 'yaml'
 import { zip }                   from 'zip-a-folder'
 
 const STUDIO_APP_NAME = 'LGS1920 Studio Development'
+const STUDIO_HTACCESS_CONTENT = `<IfModule mod_headers.c>
+    <FilesMatch ".+-[A-Za-z0-9_-]{8,}\\.(css|js|mjs|map|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|otf|eot|wasm)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+
+    <FilesMatch "^(index\\.html|service-worker-pwa\\.js|registerSW\\.js|manifest\\.webmanifest|build\\.json|version\\.json|branch\\.json|servers\\.json)$">
+        Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
+</IfModule>
+`
 
 /**
  * Manages the deployment of applications to various platforms (production, staging, test).
@@ -529,6 +541,10 @@ export class Deployment {
         console.log('    > Preparing files')
         switch (this.product) {
             case 'studio': {
+                const htaccessPath = path.join(this.localDistPath, '.htaccess')
+                fs.writeFileSync(htaccessPath, STUDIO_HTACCESS_CONTENT, 'utf8')
+                console.log(`    > ${this.yellow}Cache headers configured in .htaccess${this.reset}`)
+
                 const serviceWorkerPath = path.join(this.localDistPath, 'service-worker-pwa.js')
                 if (fs.existsSync(serviceWorkerPath)) {
                     const replaceServiceWorkerPlaceholder = (content, placeholder, value) => {

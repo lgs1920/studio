@@ -40,6 +40,19 @@ export class JourneyEditor {
     trackChanges = () => {
     }
 
+    #normalizeSwatchIndex = (value, length) => {
+        if (!Number.isFinite(length) || length <= 0) {
+            return 0
+        }
+
+        const index = Number(value)
+        if (!Number.isFinite(index)) {
+            return 0
+        }
+
+        return ((Math.trunc(index) % length) + length) % length
+    }
+
     /**
      * Set new color from color swatches
      *
@@ -48,21 +61,35 @@ export class JourneyEditor {
      * @return color {string}
      */
     newColor = (reset = false) => {
+        const palette = Array.isArray(lgs.settings.swatches.list) ? lgs.settings.swatches.list : []
+        const swatchesLength = palette.length
+
+        if (swatchesLength === 0) {
+            return '#ffffff'
+        }
 
         switch (lgs.settings.getSwatches.distribution) {
-            case COLOR_SWATCHES_NONE:       // Always the first
+            case COLOR_SWATCHES_NONE: {       // Always the first
                 this.swatchesIndex = 0
-                return lgs.settings.swatches.list[this.swatchesIndex]
-            case COLOR_SWATCHES_SEQUENCE:      // Increment index each time
-                this.swatchesIndex = lgs.settings.swatches.current++ ?? 0
-                if (this.swatchesIndex === this.swatchesLength || reset) {
-                    this.swatchesIndex = 0
-                }
-                lgs.settings.swatches.current = ++this.swatchesIndex
-                return lgs.settings.swatches.list[this.swatchesIndex]
-            case COLOR_SWATCHES_RANDOM:      // Randomize
-                this.swatchesIndex = Math.floor(Math.random() * this.swatchesLength)
-                return lgs.settings.swatches.list[this.swatchesIndex]
+                lgs.settings.swatches.current = 1
+                return palette[0]
+            }
+            case COLOR_SWATCHES_SEQUENCE: {   // Increment index each time
+                const currentIndex = this.#normalizeSwatchIndex(this.swatchesIndex, swatchesLength)
+                const nextIndex = reset ? 0 : currentIndex
+                this.swatchesIndex = (nextIndex + 1) % swatchesLength
+                lgs.settings.swatches.current = this.swatchesIndex
+                return palette[nextIndex] ?? palette[0]
+            }
+            case COLOR_SWATCHES_RANDOM: {     // Randomize
+                this.swatchesIndex = Math.floor(Math.random() * swatchesLength)
+                lgs.settings.swatches.current = (this.swatchesIndex + 1) % swatchesLength
+                return palette[this.swatchesIndex]
+            }
+            default: {
+                this.swatchesIndex = 0
+                return palette[0]
+            }
         }
     }
 

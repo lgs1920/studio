@@ -15,12 +15,13 @@
  ******************************************************************************/
 
 import {
-    HIGH_TERRAIN_PRECISION, NO_FOCUS, REFRESH_DRAWING, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS, SCENE_MODES,
+    HIGH_TERRAIN_PRECISION, SCENE_MODE_2D, SCENE_MODE_3D, SCENE_MODE_COLUMBUS, SCENE_MODES, TERRAIN_ENTITY,
 }                                  from '@Core/constants'
 import { MapTarget }               from '@Core/MapTarget'
 import { SceneUtils }              from '@Utils/cesium/SceneUtils'
 import { Mobility }                from '@Utils/Mobility'
 import { UIToast }                 from '@Utils/UIToast'
+import { getGlobalHideOtherJourneys, refreshJourneyVisibility } from '@Core/ui/JourneyVisibility'
 import { LayersAndTerrainManager } from './LayerAndTerrainManager'
 
 const finiteNumber = value => {
@@ -128,7 +129,7 @@ export class SceneManager {
 
     noRelief = () => {
         const manager = new LayersAndTerrainManager()
-        const terrain = manager.getEntityProxy(lgs.settings.layers.terrain)
+        const terrain = manager.getEntityProxyByType(lgs.settings.layers.terrain, TERRAIN_ENTITY)
         return lgs.settings.scene.mode.value * 1 === SCENE_MODE_2D.value
             || (terrain?.noRelief ?? false)
     }
@@ -146,15 +147,10 @@ export class SceneManager {
         // Remove starting animation (rotate,...)
         __.ui.cameraManager.stopWatching()
 
-        // Now it's time for the show. Draw all journeys
-        const items = []
-        lgs.journeys.forEach(journey => {
-            items.push(journey.draw({
-                                        action: REFRESH_DRAWING,
-                                        mode:   NO_FOCUS,
-                                    }))
+        // Now it's time for the show. Draw all journeys with the current global visibility policy.
+        await refreshJourneyVisibility({
+            hideOtherJourneys: getGlobalHideOtherJourneys(),
         })
-        await Promise.all(items)
         this.notifyMorph()
     }
 

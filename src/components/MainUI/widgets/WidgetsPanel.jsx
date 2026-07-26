@@ -17,7 +17,7 @@
 import { Compass } from '@Components/MainUI/compass/Compass'
 import { Widget }  from '@Components/MainUI/widgets/Widget'
 import { WidgetsPanelContent }                            from '@Components/MainUI/widgets/WidgetsPanelContent'
-import { HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS } from '@Core/constants'
+import { HOUR, LGS_WIDGET, MULTI_PURPOSE_WIDGETS }        from '@Core/constants'
 import React, { useEffect, useMemo, useState }            from 'react'
 import { useSnapshot }                                    from 'valtio'
 
@@ -43,8 +43,9 @@ export const WidgetsPanel = ({id, context, groups}) => {
             },
             top:         '10%',
             left:        '10%',
-            type:        LGS_VISUAL_WIDGET,
+            type:        LGS_WIDGET,
             attachTo:    'top-left',
+            snappable:   false,
             scalable:    false,
             id,
             persist:     true,

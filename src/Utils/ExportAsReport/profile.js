@@ -25,6 +25,8 @@ import { geoDistance } from './geometry'
 import { getJourneyTrackDrawings } from './journeyData'
 import { waitForAnimationFrames } from './snapshots'
 
+const PROFILE_FILL_COLOR = 'rgba(172, 177, 185, 0.28)'
+
 export const getTrackProfileSourcePoints = ({track, segments}) => {
     const metricPoints = Array.isArray(track?.metrics?.points) ? track.metrics.points : []
     const metricProfile = metricPoints
@@ -195,7 +197,7 @@ export const drawProfileDataset = (context, dataset, profileData, box) => {
     context.lineTo(points[points.length - 1].x, box.y + box.height)
     context.lineTo(points[0].x, box.y + box.height)
     context.closePath()
-    context.fillStyle = rgba(dataset.color, 0.18)
+    context.fillStyle = PROFILE_FILL_COLOR
     context.fill()
 
     context.beginPath()

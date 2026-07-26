@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-07-18
+ * Last modified: 2026-07-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,11 +28,18 @@ import {
 import {
     Widget2Canvas,
 }                                 from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
+import {
+    buildCenteredGridLines,
+    DEFAULT_WIDGET_GRID_SETTINGS,
+    getWidgetGridSettings,
+}                                 from '@Core/ui/widget-manager/widgetGridUtils'
+import { useOptionalSnapshot }     from '@Utils/ValtioUtils'
 import { WaIcon }                 from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                 from 'classnames'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import Moveable                   from 'react-moveable'
 import { useSnapshot }            from 'valtio'
+import { resolveActiveWidgetZIndex } from './widgetZIndex'
 
 const COLLAPSED_WIDGET_SIZE = 40
 const DEFAULT_COLLAPSED_WIDGET_ICON = 'sliders'
@@ -46,6 +53,84 @@ const SNAPSHOT_MAX_SIZE = 1024
 const SNAPSHOT_MIN_SIZE = 240
 const SNAPSHOT_MIN_PADDING = 80
 const SNAPSHOT_MAX_PADDING = 220
+const WIDGET_SNAP_GRID_GUIDELINE_CLASS = 'lgs-widget-snap-grid-guideline'
+const WIDGET_SNAP_CENTER_GUIDELINE_CLASS = 'lgs-widget-snap-center-guideline'
+const WIDGET_SNAP_ELEMENT_GUIDELINE_CLASS = 'lgs-widget-snap-element-guideline'
+
+/**
+ * Converts numeric positions into Moveable guidelines with a visual class.
+ * @param {number[]} positions - Guideline positions in viewport pixels
+ * @param {string} className - Class applied to rendered Moveable guidelines
+ * @returns {Array<{pos: number, className: string}>} Styled Moveable guidelines
+ */
+const createStyledGuidelines = (positions, className) => positions.map(pos => ({pos, className}))
+
+/**
+ * Merges Moveable guidelines while keeping the first style for duplicate positions.
+ * @param {...Array<{pos: number, className: string}>} guidelineGroups - Guideline groups
+ * @returns {Array<{pos: number, className: string}>} Unique styled guidelines
+ */
+const mergeStyledGuidelines = (...guidelineGroups) => {
+    const seenPositions = new Set()
+    return guidelineGroups.flat().filter(guideline => {
+        if (seenPositions.has(guideline.pos)) {
+            return false
+        }
+        seenPositions.add(guideline.pos)
+        return true
+    }).sort((a, b) => a.pos - b.pos)
+}
+
+/**
+ * Resolves the rendered widgets that can be used as Moveable snap targets.
+ * @param {Object} options - Resolution options
+ * @param {HTMLElement|null} options.board - Active widget board
+ * @param {string} options.currentWidgetId - ID of the widget being moved
+ * @param {string|null|undefined} options.widgetsBoard - Active board ID
+ * @param {Object} options.widgetListSnapshot - Reactive widget list snapshot
+ * @returns {HTMLElement[]} Rendered widgets on the active board
+ */
+const resolveWidgetElementGuidelines = ({board, currentWidgetId, widgetsBoard, widgetListSnapshot}) => {
+    if (!board || typeof document === 'undefined') {
+        return []
+    }
+
+    const boardWidgetIds = new Set(Array.from(widgetListSnapshot.entries())
+        .filter(([, entry]) => entry?.widgetsBoard === widgetsBoard || (!entry?.widgetsBoard && !widgetsBoard && board === lgs.canvas))
+        .map(([id]) => id))
+
+    return Array.from(document.querySelectorAll('.lgs-widget-container[data-widget] .lgs-widget'))
+        .filter(element => {
+            const widgetId = element.parentElement?.dataset.widget
+            const runtimeConfig = widgetId ? __.ui.widgetManager.getWidgetConfig(widgetId) : null
+            const belongsToBoard = boardWidgetIds.has(widgetId) || runtimeConfig?.widgetsBoard === widgetsBoard
+            return element !== board && widgetId !== currentWidgetId && belongsToBoard
+        })
+}
+
+/**
+ * Builds independent center guidelines for widgets on the active board.
+ * @param {HTMLElement[]} widgetElements - Rendered peer widgets
+ * @returns {{verticalGuidelines: Array<{pos: number, className: string}>, horizontalGuidelines: Array<{pos: number, className: string}>}}
+ */
+const buildWidgetCenterGuidelines = widgetElements => widgetElements.reduce((result, element) => {
+    const rect = element.getBoundingClientRect()
+    if (rect.width <= 0 || rect.height <= 0) {
+        return result
+    }
+
+    result.verticalGuidelines.push({
+        pos: rect.left + (rect.width / 2),
+        className: WIDGET_SNAP_ELEMENT_GUIDELINE_CLASS,
+    })
+    result.horizontalGuidelines.push({
+        pos: rect.top + (rect.height / 2),
+        className: WIDGET_SNAP_ELEMENT_GUIDELINE_CLASS,
+    })
+    return result
+}, {verticalGuidelines: [], horizontalGuidelines: []})
+
+export const WidgetPreviewContext = createContext(false)
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 
@@ -261,12 +346,14 @@ const createWidgetSnapshot = (sourceCanvas, canvasRect, widgetRect, previewerRec
  * @param {Object} props
  * @param {boolean} props.isVisible                 - Controls mounting of the widget
  * @param {string}  [props.className='']            - Additional CSS classes
+ * @param {string}  [props.moveableClassName='']    - Additional CSS classes for the Moveable control box
+ * @param {string}  [props.containerClassName='']   - Additional CSS classes for the widget container
  * @param {React.ReactNode} props.children          - Widget visual content
  * @param {Object} props.config                     - Complete widget configuration object
  * @param {React.RefObject} [props.childRef]        - Optional forwarded ref to inner content
  * @returns {JSX.Element|null}
  */
-export const Widget = ({isVisible, className = '', children, config, childRef}) => {
+export const Widget = ({isVisible, className = '', moveableClassName = '', containerClassName = '', children, config, childRef}) => {
     // Core DOM references
     const _widget = useRef(null)
     const _moveable = useRef(null)
@@ -281,12 +368,14 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const _prevRotate = useRef(0)
     const _suppressClickUntil = useRef(0)
     const _w2c = useRef(null)
+    const previewOnly = useContext(WidgetPreviewContext)
 
     // UI state
     const [bounds, setBounds] = useState({left: 0, top: 0, right: 0, bottom: 0})
     const [, setPosition] = useState({left: 0, top: 0})
     const [controlBox, setControlBox] = useState({renderDirections: [], zoom: 0, opacity: 0})
     const [guidelines, setGuidelines] = useState({verticalGuidelines: [], horizontalGuidelines: []})
+    const [guidelineRevision, setGuidelineRevision] = useState(0)
     const [isMouseOver, setIsMouseOver] = useState(false)
     const [isDragging, setIsDragging] = useState(false)
     const [boardContainer, setBoardContainer] = useState(null)
@@ -303,6 +392,11 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const drawers = useSnapshot($drawers)
     const $toolbars = lgs.settings.ui.toolbars
     const toolbars = useSnapshot($toolbars)
+    const gridSnapshot = useOptionalSnapshot(lgs.settings?.ui?.widgets?.grid, DEFAULT_WIDGET_GRID_SETTINGS)
+    const widgetGrid = useMemo(
+        () => getWidgetGridSettings(gridSnapshot),
+        [gridSnapshot.enabled, gridSnapshot.size, gridSnapshot.snap],
+    )
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
 
@@ -341,9 +435,11 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     const liveOpacity = config.type === LGS_TOOLBAR
                         ? (effectiveCollapsed ? 1 : (toolbars.opacity ?? config.opacity ?? 1))
                         : (config.opacity ?? 1)
+    const displayOpacity = liveOpacity
 
-    // Reactive depth resolution: priority to Store, fallback to initial Config
-    const activeZIndex = widgetListSnapshot.get(widgetId)?.zIndex ?? config.zIndex
+    // Reactive depth resolution: priority to Store, fallback to initial Config.
+    // Credits and Logo are composition infrastructure and must stay above ordinary widgets.
+    const activeZIndex = resolveActiveWidgetZIndex({widgetId, widgetListSnapshot, config, widgetDefinition})
     /**
      * Ensures Moveable handles are correctly layered when zIndex changes.
      */
@@ -434,7 +530,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         }
     }, [config.widgetsBoard, isTargetingBoard])
 
-    const interactionLocked = (video.preRecording || video.recording || video.snapshot || video.finalizing) && config.type === LGS_VISUAL_WIDGET
+    const interactionLocked = previewOnly || ((video.preRecording || video.recording || video.snapshot || video.finalizing) && config.type === LGS_VISUAL_WIDGET)
     const showGhostOnly = Boolean(config?.showGhostDuringRecording) && video.recording && config.type === LGS_VISUAL_WIDGET
     const canInteract = !interactionLocked && !effectiveLocked
     const canDrag = canInteract && (config?.draggable ?? true)
@@ -451,49 +547,78 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         }
     }, [config?.snapSensitivity])
     const {threshold: snapThreshold, gap: snapGap} = snapSettings
+    const canSnapWidget = isVisualWidget && (config?.snappable ?? true)
+    const canSnapCenter = canSnapWidget && !config.isCropper
+    const gridSnapEnabled = canSnapWidget && widgetGrid.enabled && widgetGrid.snap
 
-    const centerGuidelines = useMemo(() => {
+    const elementGuidelines = useMemo(() => {
+        if (!canSnapWidget) {
+            return []
+        }
+
+        const board = actualContainer ?? lgs.canvas
+        const peerWidgets = config.isCropper
+                            ? []
+                            : resolveWidgetElementGuidelines({
+                                  board,
+                                  currentWidgetId: widgetId,
+                                  widgetsBoard: config.widgetsBoard,
+                                  widgetListSnapshot,
+                              })
+        const elementGuidelines = peerWidgets.map(element => ({
+            element,
+            className: WIDGET_SNAP_ELEMENT_GUIDELINE_CLASS,
+            refresh: true,
+        }))
+        return board ? [board, ...elementGuidelines] : elementGuidelines
+    }, [actualContainer, canSnapWidget, config.isCropper, config.widgetsBoard, guidelineRevision, widgetId, widgetListSnapshot])
+
+    const buildGuidelines = useCallback(() => {
         const container = actualContainer ?? lgs.canvas
         if (!container) {
             return {verticalGuidelines: [], horizontalGuidelines: []}
         }
-        const {width, height, left, top} = container.getBoundingClientRect()
-        return {verticalGuidelines: [left + width / 2], horizontalGuidelines: [top + height / 2]}
-    }, [actualContainer])
-
-    const gridGuidelines = useMemo(() => {
-        if (!config?.snapGrid || !lgs.canvas) {
-            return {verticalGuidelines: [], horizontalGuidelines: []}
+        const rect = container.getBoundingClientRect()
+        const centerGuidelines = canSnapCenter
+                                  ? {
+                                      verticalGuidelines:   createStyledGuidelines([rect.left + (rect.width / 2)], WIDGET_SNAP_CENTER_GUIDELINE_CLASS),
+                                      horizontalGuidelines: createStyledGuidelines([rect.top + (rect.height / 2)], WIDGET_SNAP_CENTER_GUIDELINE_CLASS),
+                                  }
+                                  : {verticalGuidelines: [], horizontalGuidelines: []}
+        const peerWidgets = canSnapWidget && !config.isCropper
+                            ? resolveWidgetElementGuidelines({
+                                board: container,
+                                currentWidgetId: widgetId,
+                                widgetsBoard: config.widgetsBoard,
+                                widgetListSnapshot,
+                            })
+                            : []
+        const peerCenterGuidelines = buildWidgetCenterGuidelines(peerWidgets)
+        const gridGuidelines = gridSnapEnabled && !config.isCropper
+                               ? buildCenteredGridLines(rect, widgetGrid.size)
+                               : {verticalGuidelines: [], horizontalGuidelines: []}
+        const localGridGuidelines = canSnapWidget && !config.isCropper && config?.snapGrid
+                                    ? buildCenteredGridLines(rect, config.snapGrid)
+                                    : {verticalGuidelines: [], horizontalGuidelines: []}
+        return {
+            verticalGuidelines:   mergeStyledGuidelines(
+                centerGuidelines.verticalGuidelines,
+                peerCenterGuidelines.verticalGuidelines,
+                createStyledGuidelines(gridGuidelines.verticalGuidelines, WIDGET_SNAP_GRID_GUIDELINE_CLASS),
+                createStyledGuidelines(localGridGuidelines.verticalGuidelines, WIDGET_SNAP_GRID_GUIDELINE_CLASS),
+            ),
+            horizontalGuidelines: mergeStyledGuidelines(
+                centerGuidelines.horizontalGuidelines,
+                peerCenterGuidelines.horizontalGuidelines,
+                createStyledGuidelines(gridGuidelines.horizontalGuidelines, WIDGET_SNAP_GRID_GUIDELINE_CLASS),
+                createStyledGuidelines(localGridGuidelines.horizontalGuidelines, WIDGET_SNAP_GRID_GUIDELINE_CLASS),
+            ),
         }
-        const rect = lgs.canvas.getBoundingClientRect()
-        const {x: gx = 0, y: gy = 0} = config.snapGrid
-        const cx = rect.left + rect.width / 2
-        const cy = rect.top + rect.height / 2
-        const vertical = [cx], horizontal = [cy]
-        if (gx > 0) {
-            for (let x = cx + gx; x <= rect.right; x += gx) {
-                vertical.push(x)
-            }
-            for (let x = cx - gx; x >= rect.left; x -= gx) {
-                vertical.push(x)
-            }
-        }
-        if (gy > 0) {
-            for (let y = cy + gy; y <= rect.bottom; y += gy) {
-                horizontal.push(y)
-            }
-            for (let y = cy - gy; y >= rect.top; y -= gy) {
-                horizontal.push(y)
-            }
-        }
-        return {verticalGuidelines: vertical, horizontalGuidelines: horizontal}
-    }, [config.snapGrid])
+    }, [actualContainer, canSnapCenter, canSnapWidget, config.isCropper, config.snapGrid, config.widgetsBoard, gridSnapEnabled, widgetGrid.size, widgetId, widgetListSnapshot])
 
     useEffect(() => {
         const update = () => {
-            const v = [...new Set([...centerGuidelines.verticalGuidelines, ...gridGuidelines.verticalGuidelines])].sort((a, b) => a - b)
-            const h = [...new Set([...centerGuidelines.horizontalGuidelines, ...gridGuidelines.horizontalGuidelines])].sort((a, b) => a - b)
-            setGuidelines({verticalGuidelines: v, horizontalGuidelines: h})
+            setGuidelines(buildGuidelines())
             _moveable.current?.updateRect()
         }
         update()
@@ -503,8 +628,17 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         }
         const observer = new ResizeObserver(update)
         observer.observe(container)
-        return () => observer.unobserve(container)
-    }, [centerGuidelines, gridGuidelines, actualContainer])
+        const widgetsObserver = typeof MutationObserver === 'undefined' ? null : new MutationObserver(eventRecords => {
+            if (eventRecords.some(eventRecord => eventRecord.type === 'childList')) {
+                setGuidelineRevision(revision => revision + 1)
+            }
+        })
+        widgetsObserver?.observe(document.body, {childList: true, subtree: true})
+        return () => {
+            observer.unobserve(container)
+            widgetsObserver?.disconnect()
+        }
+    }, [actualContainer, buildGuidelines])
 
     // Pre-render snapshotting
     useEffect(() => {
@@ -548,8 +682,16 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         return path.some(target => target instanceof ElementClass && Boolean(target.closest?.('.lgs-widget-no-drag')))
     }
 
+    /**
+     * Updates the reactive widget entry only when a persisted field changes.
+     * @param {Object} patch - Reactive fields to merge into the widget entry
+     */
     const updateWidgetStoreEntry = useCallback((patch) => {
         const currentEntry = $widget.list.get(widgetId) ?? {}
+        const hasChanges = Object.entries(patch).some(([key, value]) => currentEntry[key] !== value)
+        if (!hasChanges) {
+            return
+        }
         $widget.list.set(widgetId, {...currentEntry, ...patch})
     }, [$widget.list, widgetId])
 
@@ -824,6 +966,10 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [isMouseOver])
 
     const handleDoubleClick = useCallback((event) => {
+        if (hasNoDragInPath(event)) {
+            return
+        }
+
         if (!canReduce) {
             openEditorFromDoubleClick(event)
             return
@@ -897,13 +1043,13 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }, [blockDoubleClick, canReduce, toggleCollapsed])
 
     const openContextMenu = useCallback((event) => {
-        if (interactionLocked) {
-            return
-        }
         event?.preventDefault?.()
         event?.stopPropagation?.()
         event?.nativeEvent?.stopImmediatePropagation?.()
         event?.stopImmediatePropagation?.()
+        if (interactionLocked) {
+            return
+        }
         const clientX = event.clientX ?? event.touches?.[0]?.clientX ?? 0
         const clientY = event.clientY ?? event.touches?.[0]?.clientY ?? 0
         lgs.stores.ui.contextMenu.visible = true
@@ -950,8 +1096,6 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         if (!canResize) {
             return
         }
-        event.target.style.width = `${event.width}px`
-        event.target.style.height = `${event.height}px`
         __.ui.widgetManager.onResize(event, {widget: _widget, child: _children}, setPosition)
     }, [canResize])
 
@@ -1161,6 +1305,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
 
             const fullConfig = {
                 animationWhenDragging: config.animationWhenDragging ?? config.type === LGS_TOOLBAR,
+                anchorOnScale:  config.anchorOnScale ?? null,
                 attachTo:       config.attachTo ?? 'top-left',
                 container:      __.ui.widgetManager.resolveWidgetsBoardReferenceContainer(config.widgetsBoard) ?? actualContainer,
                 boundsContainer: actualContainer,
@@ -1170,6 +1315,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 contextMenu:    __.ui.widgetManager.cloneContext(config?.contextMenu ?? {}, WIDGETS_CAPABILITIES),
                 cropDimensions: config.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0},
                 dynamic:        config.dynamic ?? false,
+                draggable:      config.draggable ?? true,
                 expandedDimensions: config.expandedDimensions ?? null,
                 expandedInlineDimensions: config.expandedInlineDimensions ?? null,
                 forceEven:      config.forceEven ?? false,
@@ -1184,7 +1330,9 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 min:            {width: config?.min?.width ?? 10, height: config?.min?.height ?? 10},
                 max:            {width: config?.max?.width ?? 500, height: config?.max?.height ?? 500},
                 mandatory:      config.mandatory ?? false,
-                opacity: liveOpacity,
+                maxScale:       config.maxScale ?? null,
+                minScale:       config.minScale ?? null,
+                opacity: displayOpacity,
                 outsideOverlay: config.outsideOverlay ?? false,
                 persist:        config.persist ?? false,
                 ratio:          config.ratio ?? null,
@@ -1194,6 +1342,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 scalable:       config.scalable ?? false,
                 showControlBox: config.showControlBox ?? true,
                 snap:           config.snap ?? false,
+                snappable:      isVisualWidget ? (config.snappable ?? true) : false,
                 stopPropagation: config.stopPropagation ?? false,
                 top:            config.top,
                 transient:      config.transient ?? false,
@@ -1252,6 +1401,8 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                             type:            fullConfig.snap,
                             outerTransforms: true,
                             outerShadows:    true,
+                            widgetId,
+                            debugTiming: false,//config.refreshMode === 'both',
                             refreshMode:     config.refreshMode ?? (interactionLocked ? 'live' : 'mutation'),
                         })
                         await _w2c.current.init()
@@ -1291,6 +1442,10 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
         return () => {
             cancelled = true
             clearTimeout(_controlBoxTimer.current)
+            if (_w2c.current) {
+                _w2c.current.destroy()
+                _w2c.current = null
+            }
             if (_initialized.current && _widget.current && !config?.persist) {
                 try {
                     __.ui.widgetManager.disposeElement(_widget.current)
@@ -1303,22 +1458,22 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
             __.recorder.removeEventListener(ScreenMediaRecorder.events.STOP, clean)
             __.recorder.removeEventListener(ScreenMediaRecorder.events.CANCEL, clean)
         }
-    }, [isVisible, config, widgetId, video.preRecording, video.recording, video.snapshot, video.finalizing, actualContainer])
+    }, [isVisible, config, widgetId, actualContainer])
 
     useEffect(() => {
         if (!_initialized.current || !_widget.current) {
             return
         }
 
-        _widget.current.style.opacity = liveOpacity
+        _widget.current.style.opacity = displayOpacity
 
         const elementId = __.ui.widgetManager.retrieveElementId(_widget.current) ?? widgetId
         const storedConfig = __.ui.widgetManager.getWidgetConfig(elementId)
 
-        if (storedConfig && storedConfig.opacity !== liveOpacity) {
+        if (!previewOnly && storedConfig && storedConfig.opacity !== liveOpacity) {
             __.ui.widgetManager.setConfig(elementId, {...storedConfig, opacity: liveOpacity})
         }
-    }, [widgetId, liveOpacity])
+    }, [widgetId, displayOpacity, liveOpacity, previewOnly])
 
     useEffect(() => {
         const canvas = _w2c.current?.getCanvas?.()
@@ -1335,7 +1490,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
     }
 
     return (
-        <div className="lgs-widget-container" data-widget={widgetId} style={{zIndex: activeZIndex}}>
+        <div className={classNames('lgs-widget-container', containerClassName)} data-widget={widgetId} style={{zIndex: activeZIndex}}>
             <div
                 className={classNames(LGS_WIDGET, {
                     [className]:    !!className && !effectiveCollapsed,
@@ -1350,6 +1505,7 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                     'lgs-one-line-card': effectiveCollapsed,
                     'wa-theme-lgs1920-on-map': effectiveCollapsed,
                     'recording-locked': interactionLocked,
+                    'lgs-widget-preview-only': previewOnly,
                 })}
                 ref={(el) => {
                     _widget.current = el
@@ -1392,10 +1548,15 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                         </div>
                     </div>
                 )}
+                {previewOnly && (
+                    <div className="lgs-widget-preview-forbidden" aria-hidden="true">
+                        <WaIcon name="ban" variant="regular"/>
+                    </div>
+                )}
             </div>
 
             <Moveable
-                className="lgs-widget-control-box"
+                className={classNames('lgs-widget-control-box', moveableClassName)}
                 style={{pointerEvents: isSelected && !effectiveLocked ? 'auto' : 'none'}}
                 container={lgs.canvas}
                 origin={false}
@@ -1430,19 +1591,19 @@ export const Widget = ({isVisible, className = '', children, config, childRef}) 
                 onRotateEnd={handleRotateEnd}
                 rotationPosition={'bottom'}
                 bounds={bounds}
-                elementGuidelines={[lgs.canvas]}
+                elementGuidelines={elementGuidelines}
                 horizontalGuidelines={guidelines.horizontalGuidelines}
                 verticalGuidelines={guidelines.verticalGuidelines}
-                snapCenter={true}
-                snapElement={true}
+                snapCenter={canSnapCenter}
+                snapElement={canSnapWidget}
                 snapGap={snapGap}
                 snapThreshold={snapThreshold}
                 snapRotationThreshold={5}
                 snapRotationDegrees={[0, -30, -45, -60, -90, -120, -135, -150, -180]}
-                snappable={config?.snappable ?? true}
-                snapDirections={{top: true, right: true, bottom: true, left: true, center: true, middle: true}}
-                elementSnapDirections={{top: true, left: true, bottom: true, right: true, center: true, middle: true}}
-                maxSnapElementGuidelineDistance={10}
+                snappable={canSnapWidget}
+                snapDirections={canSnapWidget ? {top: true, right: true, bottom: true, left: true, center: canSnapCenter, middle: canSnapCenter} : false}
+                elementSnapDirections={canSnapWidget ? {top: true, left: true, bottom: true, right: true, center: canSnapCenter, middle: canSnapCenter} : false}
+                maxSnapElementGuidelineDistance={canSnapWidget ? 10 : 0}
                 renderDirections={controlBox.renderDirections}
                 zoom={controlBox.zoom}
                 onRender={(event) => !config.isCropper && (event.target.style.cssText += event.cssText)}

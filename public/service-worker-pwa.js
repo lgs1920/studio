@@ -437,7 +437,8 @@ async function trimCacheByEntries(cache, maxEntries) {
 }
 
 const isManagedCacheName = cacheName =>
-    typeof cacheName === 'string' && (cacheName === CESIUM_CACHE || cacheName.startsWith(APP_CACHE_PREFIX))
+    typeof cacheName === 'string'
+    && (cacheName === CESIUM_CACHE || cacheName.startsWith('cesium-ion-assets-') || cacheName.startsWith(APP_CACHE_PREFIX))
 
 self.addEventListener('message', async event => {
     if (event.data?.type === 'SKIP_WAITING') {

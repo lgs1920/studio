@@ -18,6 +18,7 @@ import { WaButton, WaDivider, WaDropdown, WaDropdownItem, WaIcon } from '@web.aw
 import { useEffect, useState } from 'react'
 import { useSnapshot }         from 'valtio'
 import { AppUtils }            from '@Utils/AppUtils'
+import { attachMediaQueryChangeListener } from '@Utils/mediaQuery'
 
 const BRAND_OPTIONS = [
     {value: 'yellow', label: 'Yellow', swatch: 'var(--wa-color-yellow)'},
@@ -28,6 +29,19 @@ const BRAND_OPTIONS = [
     {value: 'blue', label: 'Blue', swatch: 'var(--wa-color-blue)'},
     {value: 'green', label: 'Green', swatch: 'var(--wa-color-green-90)'},
     {value: 'gray', label: 'Gray', swatch: 'var(--wa-color-gray)'},
+]
+
+const THEME_OPTIONS = [
+    {value: 'light', label: 'Light', icon: 'sun-bright'},
+    {value: 'dark', label: 'Dark', icon: 'moon-stars'},
+    {value: 'system', label: 'System', icon: 'desktop'},
+]
+
+const ON_MAP_THEME_OPTIONS = [
+    {value: 'spring', label: 'Spring', swatch: '#7bf1a8'},
+    {value: 'default', label: 'Summer', swatch: 'var(--wa-color-green-60)'},
+    {value: 'fall', label: 'Fall', swatch: '#c56e12'},
+    {value: 'winter', label: 'Winter', swatch: '#dbeafe'},
 ]
 
 const getSystemThemeIcon = (device) => {
@@ -41,60 +55,86 @@ const getSystemThemeIcon = (device) => {
 }
 
 /**
- * Theme Selector component
+ * Theme Selector component.
+ *
  * @returns {JSX.Element}
  */
-const ThemeSelector = () => {
+export const ThemeSelector = () => {
     const device = useSnapshot(lgs.stores.ui.device)
     const [theme, setTheme] = useState(localStorage.getItem(AppUtils.THEME_STORAGE_KEY) || 'system')
     const [brandColor, setBrandColor] = useState(AppUtils.resolveBrandColor())
-    const [isDark, setIsDark] = useState(false)
+    const [onMapTheme, setOnMapTheme] = useState(AppUtils.resolveOnMapTheme())
     const currentBrand = BRAND_OPTIONS.find(option => option.value === brandColor) || BRAND_OPTIONS[0]
+    const currentOnMapTheme = ON_MAP_THEME_OPTIONS.find(option => option.value === onMapTheme) || ON_MAP_THEME_OPTIONS[0]
     const systemThemeIcon = getSystemThemeIcon(device)
-    const currentThemeIcon = theme === 'system' ? systemThemeIcon : isDark ? 'moon-stars' : 'sun-bright'
+    const currentThemeIcon = theme === 'system' ? systemThemeIcon : theme === 'dark' ? 'moon-stars' : 'sun-bright'
 
     useEffect(() => {
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
 
         const updateTheme = () => {
-            const currentIsDark = theme === 'dark' || (theme === 'system' && mediaQuery.matches)
-            setIsDark(currentIsDark)
-            AppUtils.setTheme(theme, brandColor)
+            AppUtils.setTheme(theme, brandColor, onMapTheme)
         }
 
         updateTheme()
         localStorage.setItem(AppUtils.THEME_STORAGE_KEY, theme)
         localStorage.setItem(AppUtils.BRAND_COLOR_STORAGE_KEY, brandColor)
+        localStorage.setItem(AppUtils.ON_MAP_THEME_STORAGE_KEY, onMapTheme)
 
         if (theme === 'system') {
-            mediaQuery.addEventListener('change', updateTheme)
-            return () => mediaQuery.removeEventListener('change', updateTheme)
+            return attachMediaQueryChangeListener(mediaQuery, updateTheme)
         }
-    }, [theme, brandColor])
+    }, [theme, brandColor, onMapTheme])
 
     /**
      * Handle the selection event
      * @param {CustomEvent} event
      */
     const handleSelect = (event) => {
-        setTheme(event.detail.item.value)
+        const {value} = event.detail.item
+        if (THEME_OPTIONS.some(option => option.value === value)) {
+            setTheme(value)
+            return
+        }
+        if (ON_MAP_THEME_OPTIONS.some(option => option.value === value)) {
+            setOnMapTheme(value)
+        }
     }
 
     const handleBrandSelect = (event) => {
-        setBrandColor(event.detail.item.value)
+        const {value} = event.detail.item
+        if (BRAND_OPTIONS.some(option => option.value === value)) {
+            setBrandColor(value)
+            return
+        }
+        if (ON_MAP_THEME_OPTIONS.some(option => option.value === value)) {
+            setOnMapTheme(value)
+        }
     }
 
     return (
         <div className="lgs--theme-controls">
             <WaDropdown onWaSelect={handleBrandSelect} className="lgs--theme-selector">
                 <WaButton slot={'trigger'} appearance="plain" variant={'neutral'}>
-                    <span className="lgs-brand-color-swatch" style={{'--swatch-color': currentBrand.swatch}}/>
+                    <span className="lgs--theme-trigger-swatches">
+                        <span className="lgs-brand-color-swatch" style={{'--swatch-color': currentBrand.swatch}}/>
+                        <span className="lgs-theme-color-swatch" style={{'--swatch-color': currentOnMapTheme.swatch}}/>
+                    </span>
                 </WaButton>
 
                 {BRAND_OPTIONS.map((option) => (
                     <WaDropdownItem value={option.value} key={option.value}>
                         <span className="lgs--brand-option">
                             <span className="lgs-brand-color-swatch" style={{'--swatch-color': option.swatch}}/>
+                            <span>{option.label}</span>
+                        </span>
+                    </WaDropdownItem>
+                ))}
+                <WaDivider/>
+                {ON_MAP_THEME_OPTIONS.map(option => (
+                    <WaDropdownItem value={option.value} key={option.value}>
+                        <span className="lgs--brand-option">
+                            <span className="lgs-theme-color-swatch" style={{'--swatch-color': option.swatch}}/>
                             <span>{option.label}</span>
                         </span>
                     </WaDropdownItem>
@@ -106,20 +146,12 @@ const ThemeSelector = () => {
                     <WaIcon name={currentThemeIcon} variant="regular"/>
                 </WaButton>
 
-                <WaDropdownItem value={'light'}>
-                    <WaIcon slot="icon" name={'sun-bright'} variant="regular"/>{' Light '}
-                </WaDropdownItem>
-
-                <WaDropdownItem value={'dark'}>
-                    <WaIcon slot="icon" name={'moon-stars'} variant="regular"/>{' Dark '}
-                </WaDropdownItem>
-                <WaDivider/>
-                <WaDropdownItem value={'system'}>
-                    <WaIcon slot="icon" name={systemThemeIcon} variant="regular"/>{' System '}
-                </WaDropdownItem>
+                {THEME_OPTIONS.map(option => (
+                    <WaDropdownItem value={option.value} key={option.value}>
+                        <WaIcon slot="icon" name={option.icon} variant="regular"/>{` ${option.label} `}
+                    </WaDropdownItem>
+                ))}
             </WaDropdown>
         </div>
     )
 }
-
-export default ThemeSelector

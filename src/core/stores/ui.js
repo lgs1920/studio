@@ -89,6 +89,7 @@ export const ui = {
         quality: null,
         ratio:   null,
         fps:     null,
+        captureMode: 'speed',
         url:     null,
         editing:         false,
         recording:       false,

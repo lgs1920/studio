@@ -1,0 +1,4 @@
+interface:
+  display_name: "LGS1920 Studio Internal Database"
+  short_description: "Maintain Studio storage, APIs, and local sync"
+  default_prompt: "Use $lgs-1920-studio-internal-database to inspect or update the Studio internal database and local synchronization safely."

@@ -16,13 +16,17 @@
 
 import { JourneyFilesList }                                   from '@Components/FileLoader/JourneyFilesList'
 import {
+    journeySampleUrl,
+    normalizeJourneySamplesCatalog,
+}                                                             from '@Components/FileLoader/journeySamples'
+import {
     ALREADY_IMPORTED, IMPORT_FAILED, IMPORT_NOT_SUPPORTED, IMPORT_SUCCESS, JOURNEY_EXISTS, JOURNEY_KO, JOURNEY_OK,
     JOURNEY_WAITING, TrackUtils,
 }                                                             from '@Utils/cesium/TrackUtils'
 import { FileUtils }                                          from '@Utils/FileUtils'
 import { UIToast }                                            from '@Utils/UIToast'
-import { WaButton, WaDialog, WaDivider, WaIcon, WaInput, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
-import { useEffect, useId, useMemo, useRef, useState }    from 'react'
+import { WaButton, WaDialog, WaDivider, WaIcon, WaInput, WaOption, WaSelect, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useId, useMemo, useRef, useState }                  from 'react'
 import { v4 as uuid }                                         from 'uuid'
 import { useSnapshot }                                        from 'valtio'
 import './style.css'
@@ -108,9 +112,7 @@ const getRemoteDisplayName = (url) => {
     return getPathFilename(url) || REMOTE_JOURNEY_DEFAULT_NAME
 }
 
-const setSampleLoadedState = (value) => {
-    lgs.stores.main.components.fileLoader.sampleLoaded = value
-}
+const createJourneySlug = fileInfo => __.app.setSlug({content: [fileInfo.name, fileInfo.extension]})
 
 const closeJourneyLoader = () => {
     lgs.stores.ui.mainUI.journeyLoader.visible = false
@@ -203,38 +205,31 @@ export const JourneyLoaderUI = (props) => {
     const journeyLoader = useSnapshot($journeyLoader)
     const [remoteUrl, setRemoteUrl] = useState('')
     const [remoteLoading, setRemoteLoading] = useState(false)
-    const [sampleLoading, setSampleLoading] = useState(false)
+    const [sampleLoadingSlug, setSampleLoadingSlug] = useState('')
+    const [sampleSelection, setSampleSelection] = useState('')
+    const [sampleCatalogRevision, setSampleCatalogRevision] = useState(0)
 
-    const {fileList, sampleLoaded} = useSnapshot(lgs.stores.main.components.fileLoader)
+    const {fileList} = useSnapshot(lgs.stores.main.components.fileLoader)
+    const samplesSettings = useSnapshot(lgs.settings.samples)
 
     const _dialog = useRef(null)
     const _filesDropper = useRef(null)
 
     const _attemptCounter = useRef(0)
 
-    const GPX_SAMPLE_FILENAME = 'LGS1920.gpx'
-    const GPX_SAMPLE_URL = `${__.app.isDevelopment() ? '/public' : ''}/assets/samples/${GPX_SAMPLE_FILENAME}`
-    const sampleFileInfo = useMemo(() => FileUtils.getFileNameAndExtension(GPX_SAMPLE_FILENAME), [])
-    const sampleSlug = useMemo(() => __.app.setSlug({content: GPX_SAMPLE_FILENAME.split('.')}), [])
     const fileInputId = useId()
 
-    /**
-     * Resynchronize sampleLoaded state whenever the dialog opens.
-     * This ensures the button reappears if the sample was deleted elsewhere.
-     */
-    useEffect(() => {
-        if (journeyLoader.visible) {
-            const isPresent = lgs.journeys.has(sampleSlug)
-            if (lgs.stores.main.components.fileLoader.sampleLoaded !== isPresent) {
-                setSampleLoadedState(isPresent)
-            }
-        }
-    }, [journeyLoader.visible, sampleSlug])
-
-    /**
-     * Reactive visibility based on Valtio store state
-     */
-    const showSampleButton = !sampleLoaded
+    const journeySamples = useMemo(
+        () => normalizeJourneySamplesCatalog(samplesSettings),
+        [samplesSettings],
+    )
+    const loadedJourneysCount = lgs.journeys?.size ?? 0
+    const selectedSample = useMemo(
+        () => journeySamples.find(sample => sample.slug === sampleSelection) ?? null,
+        [journeySamples, sampleSelection, sampleCatalogRevision],
+    )
+    const sampleLoading = Boolean(sampleLoadingSlug)
+    const showSampleSelector = journeySamples.length > 0
 
     /**
      * Updates file status in the Valtio store
@@ -250,11 +245,6 @@ export const JourneyLoaderUI = (props) => {
                 journeyStatus: status,
                 error:         error || item.error,
             })
-
-            // Update sampleLoaded flag if this file matches the sample slug
-            if (status === JOURNEY_OK && item.slug === sampleSlug) {
-                setSampleLoadedState(true)
-            }
         }
     }
 
@@ -280,7 +270,7 @@ export const JourneyLoaderUI = (props) => {
      */
     const processLocalFile = async (file) => {
         const validation = validateFile(file)
-        const slug = __.app.slugify(file.name)
+        const slug = createJourneySlug(validation.file)
         const currentId = `id_${_attemptCounter.current++}`
 
         const item = createListItem(file, validation)
@@ -291,10 +281,6 @@ export const JourneyLoaderUI = (props) => {
 
         if (lgs.journeys.has(slug)) {
             updateFileStatus(currentId, JOURNEY_EXISTS, ALREADY_IMPORTED.text)
-            if (slug === sampleSlug) {
-                setSampleLoadedState(true)
-            }
-
             UIToast.warning({
                                 caption: ALREADY_IMPORTED.caption,
                                 text:    `<strong>${file.name}</strong> ${ALREADY_IMPORTED.text}`,
@@ -330,10 +316,6 @@ export const JourneyLoaderUI = (props) => {
             else {
                 const isDoublon = status === JOURNEY_EXISTS
                 updateFileStatus(currentId, isDoublon ? JOURNEY_EXISTS : JOURNEY_KO, isDoublon ? ALREADY_IMPORTED.text : IMPORT_FAILED.text)
-                if (isDoublon && slug === sampleSlug) {
-                    setSampleLoadedState(true)
-                }
-
                 UIToast.warning({
                                     caption: isDoublon ? ALREADY_IMPORTED.caption : IMPORT_FAILED.caption,
                                     text:    `<strong>${file.name}</strong> ${isDoublon ? ALREADY_IMPORTED.text : IMPORT_FAILED.text}`,
@@ -693,25 +675,33 @@ export const JourneyLoaderUI = (props) => {
     /**
      * Loads sample file and updates Valtio store state
      */
-    const loadSample = async () => {
+    const loadSample = async (sample) => {
         if (sampleLoading) {
             return
         }
 
-        setSampleLoading(true)
+        setSampleLoadingSlug(sample.slug)
         const currentId = `sample_${_attemptCounter.current++}`
-        const mockFile = {name: GPX_SAMPLE_FILENAME, lastModified: 0, size: 0, type: 'application/gpx+xml'}
-        const item = createListItem(mockFile, {validated: true, file: sampleFileInfo})
+        const sampleFileInfo = sample.file
+        const mockFile = {
+            name:         sample.filename,
+            lastModified: 0,
+            size:         sample.size ?? 0,
+            type:         sample.mime ?? 'application/gpx+xml',
+        }
+        const item = {
+            ...createListItem(mockFile, {validated: true, file: sampleFileInfo}),
+            slug: sample.slug,
+        }
 
         try {
-            if (lgs.journeys.has(sampleSlug)) {
-                setSampleLoadedState(true)
+            if (lgs.journeys.has(sample.slug)) {
                 item.journeyStatus = JOURNEY_EXISTS
                 item.error = ALREADY_IMPORTED.text
                 lgs.stores.main.components.fileLoader.fileList.set(currentId, item)
                 UIToast.warning({
                                     caption: ALREADY_IMPORTED.caption,
-                                    text:    `The sample <strong>${GPX_SAMPLE_FILENAME}</strong> ${ALREADY_IMPORTED.text}`,
+                                    text:    `The sample <strong>${sample.name}</strong> ${ALREADY_IMPORTED.text}`,
                                 })
                 return
             }
@@ -719,7 +709,9 @@ export const JourneyLoaderUI = (props) => {
             item.journeyStatus = JOURNEY_WAITING
             lgs.stores.main.components.fileLoader.fileList.set(currentId, item)
 
-            const response = await lgs.axios.get(GPX_SAMPLE_URL)
+            const response = await lgs.axios.get(
+                journeySampleUrl(sample, {isDevelopment: __.app.isDevelopment()}),
+            )
             const content = (typeof response.data === 'object') ? JSON.stringify(response.data) : response.data
             const status = await TrackUtils.loadJourneyFromFile({
                                                                     name:      sampleFileInfo.name,
@@ -729,18 +721,30 @@ export const JourneyLoaderUI = (props) => {
 
             if (status === JOURNEY_OK) {
                 updateFileStatus(currentId, JOURNEY_OK)
-                setSampleLoadedState(true)
             }
             else {
-                updateFileStatus(currentId, JOURNEY_KO, 'Sample load failed')
+                const isDoublon = status === JOURNEY_EXISTS
+                updateFileStatus(currentId, isDoublon ? JOURNEY_EXISTS : JOURNEY_KO, isDoublon ? ALREADY_IMPORTED.text : 'Sample load failed')
             }
         }
         catch (error) {
             updateFileStatus(currentId, JOURNEY_KO, 'Sample network error')
-            triggerFailureEvent(GPX_SAMPLE_FILENAME, error)
+            triggerFailureEvent(sample.filename, error)
         }
         finally {
-            setSampleLoading(false)
+            setSampleLoadingSlug('')
+            setSampleSelection('')
+            setSampleCatalogRevision(revision => revision + 1)
+        }
+    }
+
+    const handleSampleSelection = (event) => {
+        const slug = event.target.value
+        setSampleSelection(slug)
+
+        const sample = journeySamples.find(item => item.slug === slug)
+        if (sample) {
+            loadSample(sample)
         }
     }
 
@@ -782,7 +786,7 @@ export const JourneyLoaderUI = (props) => {
      */
     const createListItem = (file, validation) => {
         return {
-            slug:      __.app.slugify(file.name),
+            slug:      createJourneySlug(validation.file),
             uuid:      uuid(),
             file:      {
                 date:      file.lastModified,
@@ -889,24 +893,51 @@ export const JourneyLoaderUI = (props) => {
                     </>
                 }
 
-                {showSampleButton &&
+                {showSampleSelector &&
                     <>
                         {fileList.size === 0 && <WaDivider/>}
-                    <div className={'load-sample'}>
-                        {'Don\'t have any'}{lgs.journeys.size ? ' more ' : ' '}{'files handy?'}
-                        <br/>
-                        {'Play with a sample!'}
-                        <WaButton
-                            onClick={loadSample}
-                            variant="brand"
-                            size="s"
-                            loading={sampleLoading}
-                            disabled={sampleLoading}
-                        >
-                            <WaIcon slot="prefix" variant="regular" name="circle-plus"/>
-                            {'Load Sample'}
-                        </WaButton>
-                    </div>
+                        <div className="load-sample journey-samples">
+                            <div className="journey-samples-copy">
+                                <strong>
+                                    {'Don\'t have any'}{loadedJourneysCount ? ' more ' : ' '}{'files handy?'}
+                                </strong>
+                                {selectedSample?.description ? <span>{selectedSample.description}</span> : null}
+                            </div>
+
+                            <WaSelect
+                                id="journey-sample-selector"
+                                appearance="filled"
+                                size="s"
+                                label="Load a Sample"
+                                label-at-start
+                                placeholder="Select"
+                                value={sampleSelection}
+                                disabled={sampleLoading}
+                                onChange={handleSampleSelection}
+                            >
+                                {journeySamples.map(sample => {
+                                    const isLoaded = lgs.journeys.has(sample.slug)
+
+                                    return (
+                                        <WaOption
+                                            key={sample.slug}
+                                            value={sample.slug}
+                                            disabled={isLoaded}
+                                            title={sample.description || sample.name}
+                                        >
+                                            <WaIcon
+                                                slot="start"
+                                                name={isLoaded ? 'xmark' : 'check'}
+                                                variant="regular"
+                                                className={isLoaded ? 'status-error' : 'status-success'}
+                                                style={{color: isLoaded ? 'var(--lgs-error-color)' : 'var(--lgs-success-color)'}}
+                                            />
+                                            {sample.name}
+                                        </WaOption>
+                                    )
+                                })}
+                            </WaSelect>
+                        </div>
                     </>
                 }
 

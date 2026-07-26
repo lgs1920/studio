@@ -24,8 +24,8 @@ import {
 import PanelActions
     from '@Components/PanelsActions'
 import {
-    CREDITS_WIDGET, SCENE_WIDGETS_BOARD, SETTINGS_EDITOR_DRAWER, WIDGET_LAYER_START, WIDGET_LAYER_STEP,
-    WIDGETS_EDITOR_DRAWER,
+    COMPASS_WIDGET, CREDITS_WIDGET, LOGO_WIDGET, SCENE_WIDGETS_BOARD, SETTINGS_EDITOR_DRAWER, WIDGET_LAYER_START,
+    WIDGET_LAYER_STEP, WIDGETS_EDITOR_DRAWER,
 }   from '@Core/constants'
 import {
     WidgetRegistry,
@@ -230,7 +230,7 @@ export const WidgetEditorPanel = () => {
             .filter(([id, entry]) => {
                 const _widgetType = id.split('#')[0]
                 // Safe comparison with the current board
-                return entry?.widgetsBoard === cached.widgetsBoard && _widgetType !== CREDITS_WIDGET
+                return entry?.widgetsBoard === cached.widgetsBoard && _widgetType !== CREDITS_WIDGET && _widgetType !== LOGO_WIDGET
             })
             .map(([id, entry], index) => {
                 const _widgetType = id.split('#')[0]
@@ -254,7 +254,12 @@ export const WidgetEditorPanel = () => {
             .sort((a, b) => b.zIndex - a.zIndex)
     }, [widget.list, cached]) // Use 'cached' as a dependency to react to any change
 
+    const excludedOrderingWidgetTypes = useMemo(
+        () => cached?.widgetsBoard === SCENE_WIDGETS_BOARD ? [COMPASS_WIDGET, LOGO_WIDGET] : [LOGO_WIDGET],
+        [cached?.widgetsBoard],
+    )
     const activeWidgets = useMemo(() => activeWidgetsList(), [activeWidgetsList])
+    const hasBoardWidgets = activeWidgets.some(widgetEntry => !excludedOrderingWidgetTypes.includes(widgetEntry.type))
 
     if (!isVisible) {
         return null
@@ -284,11 +289,7 @@ export const WidgetEditorPanel = () => {
             onWaHide={closeEditor}
         >
             {lgs.stores.ui.widget.list.size > 1 &&
-
-                <div slot="label" className="drawer-header-title">
-                <WaIcon name={data.icon}/>
-                <span>{data.name}</span>
-            </div>
+                <div slot="label" className="drawer-header-title"><WaIcon name={data.icon ?? 'square'} variant="regular"/><span>{data.name}</span></div>
             }
             <PanelActions stackedPanel={isStacked} onBack={isStacked ? closeEditorWithManager : null}/>
 
@@ -299,9 +300,9 @@ export const WidgetEditorPanel = () => {
                             <WaIcon size="s" name="image"/> Preview
                         </WaTab>
 
-                        {activeWidgets.length > 1 &&
+                        {hasBoardWidgets &&
                         <WaTab slot="nav" panel="ordering">
-                            <WaIcon size="s" name="layer"/> Widgets stack
+                            <WaIcon size="s" name="layer"/> Widgets
                         </WaTab>
                         }
 
@@ -327,10 +328,13 @@ export const WidgetEditorPanel = () => {
                                 </Suspense>
                             </section>
                         </WaTabPanel>
-                        {activeWidgets.length > 1 &&
+                        {hasBoardWidgets &&
                         <WaTabPanel name="ordering">
                             <section className="editor-ordering-zone">
-                                <WidgetsOrderingPanelContent widgetsBoard={cached.widgetsBoard}/>
+                                <WidgetsOrderingPanelContent
+                                    widgetsBoard={cached.widgetsBoard}
+                                    excludedWidgetTypes={excludedOrderingWidgetTypes}
+                                />
                             </section>
                         </WaTabPanel>
                         }

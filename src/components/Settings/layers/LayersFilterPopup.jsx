@@ -16,12 +16,12 @@
 
 import {
     ALL, LOCKED, UNLOCKED,
-    BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY,
+    BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY, TILES3D_ENTITY,
 }                                 from '@Core/constants'
 import {
     WaButton, WaCallout, WaIcon, WaInput, WaOption, WaRadio, WaRadioGroup, WaSelect, WaTooltip,
 }                                 from '@web.awesome.me/webawesome-pro/dist/react'
-import { useCallback, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useSnapshot }            from 'valtio'
 
 /**
@@ -39,76 +39,6 @@ export const LayersFilterPopup = () => {
     /**
      * Re-evaluates filter state and updates type-specific counts using Core constants.
      */
-    const applyFilter = useCallback(() => {
-        const {byUsage, byName, byCountries} = $layers.filter
-        const searchStr = (byName || '').toLowerCase().trim()
-
-        // Update global active state
-        const isActive = byUsage !== ALL ||
-            searchStr !== '' ||
-            (byCountries && byCountries.length > 0)
-
-        $layers.filter.active = isActive
-
-        // Source data retrieval
-        const allLayers = Array.from(__.layersAndTerrainManager.layers.values())
-
-        // Initialize counters based on entity types
-        const counts = {
-            total:   0,
-            base:    0,
-            overlay: 0,
-            terrain: 0,
-        }
-
-        allLayers.forEach(layer => {
-            // 1. Name match logic
-            const itemName = (layer.name || '').toLowerCase()
-            const matchesName = searchStr === '' || itemName.includes(searchStr)
-            if (!matchesName) {
-                return
-            }
-
-            // 2. Usage match logic (Locked/Unlocked)
-            if (byUsage !== ALL) {
-                const isLocked = layer.locked === true
-                if (byUsage === LOCKED && !isLocked) {
-                    return
-                }
-                if (byUsage === UNLOCKED && isLocked) {
-                    return
-                }
-            }
-
-            // 3. Country match logic
-            if (byCountries && byCountries.length > 0) {
-                if (!layer.countryCode || !byCountries.includes(layer.countryCode)) {
-                    return
-                }
-            }
-
-            // All criteria met
-            counts.total++
-
-            // Increment type counters using BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY
-            if (layer.type === BASE_ENTITY) {
-                counts.base++
-            }
-            else if (layer.type === OVERLAY_ENTITY) {
-                counts.overlay++
-            }
-            else if (layer.type === TERRAIN_ENTITY) {
-                counts.terrain++
-            }
-        })
-
-        // Sync detailed results to proxy
-        $layers.filter.count = counts.total
-        $layers.filter.countBase = counts.base
-        $layers.filter.countOverlay = counts.overlay
-        $layers.filter.countTerrain = counts.terrain
-    }, [])
-
     const handleUsage = (event) => {
         $layers.filter.byUsage = event.target.value
     }
@@ -137,8 +67,62 @@ export const LayersFilterPopup = () => {
 
     // Recalculate whenever filter parameters change
     useEffect(() => {
-        applyFilter()
-    }, [layers.filter.byUsage, layers.filter.byName, layers.filter.byCountries, applyFilter])
+        const {byUsage, byName, byCountries} = $layers.filter
+        const searchStr = (byName || '').toLowerCase().trim()
+
+        $layers.filter.active = byUsage !== ALL
+            || searchStr !== ''
+            || (byCountries && byCountries.length > 0)
+
+        const counts = {
+            total:   0,
+            base:    0,
+            overlay: 0,
+            terrain: 0,
+        }
+
+        Array.from(__.layersAndTerrainManager.layers.values()).forEach(layer => {
+            const itemName = (layer.name || '').toLowerCase()
+            const matchesName = searchStr === '' || itemName.includes(searchStr)
+            if (!matchesName) {
+                return
+            }
+
+            if (byUsage !== ALL) {
+                const isLocked = layer.locked === true
+                if (byUsage === LOCKED && !isLocked) {
+                    return
+                }
+                if (byUsage === UNLOCKED && isLocked) {
+                    return
+                }
+            }
+
+            if (byCountries && byCountries.length > 0) {
+                if (!layer.countryCode || !byCountries.includes(layer.countryCode)) {
+                    return
+                }
+            }
+
+            counts.total++
+
+            if (layer.type === BASE_ENTITY) {
+                counts.base++
+            }
+            else if (layer.type === OVERLAY_ENTITY || layer.type === TILES3D_ENTITY) {
+                counts.overlay++
+            }
+            else if (layer.type === TERRAIN_ENTITY) {
+                counts.terrain++
+            }
+        })
+
+        $layers.filter.count = counts.total
+        $layers.filter.countBase = counts.base
+        $layers.filter.countOverlay = counts.overlay
+        $layers.filter.countTiles3D = 0
+        $layers.filter.countTerrain = counts.terrain
+    }, [$layers.filter])
 
     /**
      * Builds the breakdown string, excluding types with zero results.
@@ -155,7 +139,6 @@ export const LayersFilterPopup = () => {
         if (layers.filter.countTerrain > 0) {
             parts.push(`${layers.filter.countTerrain} Terrain`)
         }
-
         return parts.length > 0 ? ` (${parts.join(' / ')})` : ''
     }
 
