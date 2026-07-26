@@ -37,6 +37,7 @@ import {
     updateCamera,
 } from '@Core/ui/replay/JourneyReplayCameraBinding'
 import {
+    replayTurnDriftForGuideProgress,
     replayTurnDriftForProgress,
 } from '@Core/ui/replay/JourneyReplayCameraGuide'
 import {
@@ -292,6 +293,29 @@ describe('Journey replay camera paths', () => {
         expect(drift).not.toBeNull()
         expect(Math.abs(drift.headingOffsetRadians)).toBeGreaterThan(0)
         expect(Math.abs(drift.lateralOffsetMeters)).toBeGreaterThan(0)
+    })
+
+    it('interpolates turn drift without a nearest-guide step', () => {
+        const guide = [
+            {progress: 0, longitude: 0, latitude: 0},
+            {progress: 0.25, longitude: 1, latitude: 0},
+            {progress: 0.5, longitude: 2, latitude: 0},
+            {progress: 0.75, longitude: 2, latitude: 1},
+            {progress: 1, longitude: 2, latitude: 2},
+        ]
+        const before = replayTurnDriftForGuideProgress(guide, 0.375 - 0.000001, {
+            maxHeadingOffsetDeg:    10,
+            maxLateralOffsetMeters: 60,
+        })
+        const after = replayTurnDriftForGuideProgress(guide, 0.375 + 0.000001, {
+            maxHeadingOffsetDeg:    10,
+            maxLateralOffsetMeters: 60,
+        })
+
+        expect(before).not.toBeNull()
+        expect(after).not.toBeNull()
+        expect(Math.abs(before.lateralOffsetMeters - after.lateralOffsetMeters))
+            .toBeLessThan(0.01)
     })
 
     it('builds a stricter replay safety profile for dynamic tracking than navigation', () => {
@@ -678,7 +702,7 @@ describe('Journey replay camera paths', () => {
             progresses: Array.from({length: 513}, (_, index) => index / 512),
             sampleAtProgress: progress => ({
                 progress,
-                markerX: progress * 100,
+                markerX: progress * 400,
             }),
             frameForSample: sample => ({
                 destination: new Cartesian3(sample.markerX, 0, 0),
@@ -702,8 +726,12 @@ describe('Journey replay camera paths', () => {
 
         expect(path).not.toBeNull()
         expect(path.constrainedSamples).toBeGreaterThan(0)
-        path.frames.forEach(entry => {
-            const marker = new Cartesian3(entry.progress * 100, 100, 0)
+        path.frames.forEach((entry, index) => {
+            if (index > 0) {
+                expect(entry.frame.destination.x)
+                    .toBeGreaterThan(path.frames[index - 1].frame.destination.x)
+            }
+            const marker = new Cartesian3(entry.progress * 400, 100, 0)
             const point = projectTarget({
                 frame: entry.frame,
                 target: marker,
@@ -715,7 +743,7 @@ describe('Journey replay camera paths', () => {
         })
         Array.from({length: 1001}, (_, index) => index).forEach(index => {
             const progress = index / 1000
-            const marker = new Cartesian3(progress * 100, 100, 0)
+            const marker = new Cartesian3(progress * 400, 100, 0)
             const point = projectTarget({
                 frame: path.sampleAt(progress),
                 target: marker,
@@ -757,8 +785,135 @@ describe('Journey replay camera paths', () => {
         })
 
         expect(path).not.toBeNull()
-        expect(path.frames.length).toBeLessThanOrEqual(257)
+        expect(path.frames.length).toBeLessThanOrEqual(2049)
         expect(frameForSample).toHaveBeenCalledTimes(path.frames.length)
+    })
+
+    it('keeps camera velocity continuous across compiled path segments', () => {
+        const frame = (progress, x, y) => ({
+            progress,
+            frame: {
+                destination: new Cartesian3(x, y, 0),
+                direction:   new Cartesian3(0, 1, 0),
+                up:          new Cartesian3(0, 0, 1),
+            },
+        })
+        const path = {
+            frames: [
+                frame(0, 0, 0),
+                frame(0.25, 1, 0),
+                frame(0.5, 2, 0),
+                frame(0.75, 2, 1),
+                frame(1, 2, 2),
+            ],
+        }
+        const epsilon = 0.0001
+        const before = sampleConstrainedReplayCameraPath(path, 0.5 - epsilon)
+        const center = sampleConstrainedReplayCameraPath(path, 0.5)
+        const after = sampleConstrainedReplayCameraPath(path, 0.5 + epsilon)
+        const incoming = Cartesian3.normalize(
+            Cartesian3.subtract(center.destination, before.destination, new Cartesian3()),
+            new Cartesian3(),
+        )
+        const outgoing = Cartesian3.normalize(
+            Cartesian3.subtract(after.destination, center.destination, new Cartesian3()),
+            new Cartesian3(),
+        )
+
+        expect(Cartesian3.angleBetween(incoming, outgoing)).toBeLessThan(0.01)
+    })
+
+    it('keeps advancing with the nominal journey while the marker remains inside Z1', () => {
+        const path = buildConstrainedReplayCameraPath({
+            sampleAtProgress: progress => ({
+                progress,
+                markerX: progress * 100,
+            }),
+            frameForSample: sample => ({
+                destination: new Cartesian3(sample.markerX, 0, 0),
+                direction:   new Cartesian3(0, 1, 0),
+                up:          new Cartesian3(0, 0, 1),
+            }),
+            targetForSample: sample => new Cartesian3(sample.markerX, 100, 0),
+            projectTarget: () => ({
+                x: 50,
+                y: 50,
+            }),
+            trackingMode: 'navigation',
+            triggerZone: {
+                left:   0.2,
+                top:    0.2,
+                width:  0.6,
+                height: 0.6,
+            },
+            viewport: {
+                width:  100,
+                height: 100,
+            },
+        })
+
+        const destinations = path.frames.map(entry => entry.frame.destination.x)
+        expect(destinations.at(-1)).toBeCloseTo(100, 6)
+        destinations.slice(1).forEach((destination, index) => {
+            expect(destination).toBeGreaterThan(destinations[index])
+        })
+    })
+
+    it('returns to the nominal pitch after a temporary compiled redirect', () => {
+        const nominalDirection = new Cartesian3(1, 0, 0)
+        const nominalUp = new Cartesian3(0, 0, 1)
+        const redirectedNorthDirection = Cartesian3.normalize(
+            new Cartesian3(0, 1, -1),
+            new Cartesian3(),
+        )
+        const redirectedNorthUp = Cartesian3.normalize(
+            new Cartesian3(0, 1, 1),
+            new Cartesian3(),
+        )
+        const redirectedEastDirection = Cartesian3.normalize(
+            new Cartesian3(1, 0, -1),
+            new Cartesian3(),
+        )
+        const redirectedEastUp = Cartesian3.normalize(
+            new Cartesian3(1, 0, 1),
+            new Cartesian3(),
+        )
+        const path = buildConstrainedReplayCameraPath({
+            sampleAtProgress: progress => ({progress}),
+            frameForSample: sample => ({
+                destination: new Cartesian3(sample.progress * 100, 0, 0),
+                direction:   sample.progress < 0.25
+                             ? redirectedNorthDirection
+                             : sample.progress < 0.5
+                               ? redirectedEastDirection
+                               : nominalDirection,
+                up:          sample.progress < 0.25
+                             ? redirectedNorthUp
+                             : sample.progress < 0.5
+                               ? redirectedEastUp
+                               : nominalUp,
+            }),
+            targetForSample: sample => new Cartesian3(sample.progress * 100, 100, 0),
+            projectTarget: () => ({
+                x: 50,
+                y: 50,
+            }),
+            trackingMode: 'navigation',
+            triggerZone: {
+                left:   0.2,
+                top:    0.2,
+                width:  0.6,
+                height: 0.6,
+            },
+            viewport: {
+                width:  100,
+                height: 100,
+            },
+        })
+        const finalFrame = path.sampleAt(1)
+
+        expect(Cartesian3.distance(finalFrame.direction, nominalDirection)).toBeCloseTo(0, 6)
+        expect(Cartesian3.distance(finalFrame.up, nominalUp)).toBeCloseTo(0, 6)
     })
 
     it('checks the exact curved-journey marker between compiled path samples', () => {

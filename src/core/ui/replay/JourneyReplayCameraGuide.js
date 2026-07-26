@@ -420,27 +420,105 @@ const smoothstep = value => {
  *
  * @param {object[]} guide - Sorted replay camera guide.
  * @param {number} progress - Normalized replay progress.
- * @returns {number} Nearest guide index.
+ * @returns {number} Lower guide index.
  */
-const nearestCameraGuideIndex = (guide, progress) => {
+const lowerCameraGuideIndex = (guide, progress) => {
     let low = 0
     let high = Math.max(0, guide.length - 1)
     while (low < high) {
-        const middle = Math.floor((low + high) / 2)
+        const middle = Math.ceil((low + high) / 2)
         const middleProgress = finiteNumber(guide[middle]?.progress) ?? 0
-        if (middleProgress < progress) {
-            low = middle + 1
+        if (middleProgress <= progress) {
+            low = middle
         }
         else {
-            high = middle
+            high = middle - 1
+        }
+    }
+    return low
+}
+
+/**
+ * Resolve the turn drift stored at one guide point.
+ *
+ * @param {object[]} guide - Sorted camera guide.
+ * @param {number} index - Guide point index.
+ * @param {object} options - Drift limits.
+ * @returns {object} Drift values, using zeros when no turn is present.
+ */
+const replayTurnDriftAtGuideIndex = (guide, index, {
+    maxHeadingOffsetDeg,
+    maxLateralOffsetMeters,
+}) => {
+    const previous = guide[Math.max(0, index - 1)]
+    const current = guide[index]
+    const next = guide[Math.min(guide.length - 1, index + 1)]
+    if (!previous || !current || !next) {
+        return {
+            turnAngleRadians:     0,
+            headingOffsetRadians: 0,
+            lateralOffsetMeters:  0,
         }
     }
 
-    const rightIndex = low
-    const leftIndex = Math.max(0, rightIndex - 1)
-    const leftDistance = Math.abs((finiteNumber(guide[leftIndex]?.progress) ?? 0) - progress)
-    const rightDistance = Math.abs((finiteNumber(guide[rightIndex]?.progress) ?? 0) - progress)
-    return leftDistance <= rightDistance ? leftIndex : rightIndex
+    const incoming = projectToLocalMeters(previous, current)
+    const outgoing = projectToLocalMeters(current, next)
+    const incomingMagnitude = Math.hypot(incoming?.x ?? 0, incoming?.y ?? 0)
+    const outgoingMagnitude = Math.hypot(outgoing?.x ?? 0, outgoing?.y ?? 0)
+    if (
+        !incoming
+        || !outgoing
+        || incomingMagnitude <= 1e-6
+        || outgoingMagnitude <= 1e-6
+    ) {
+        return {
+            turnAngleRadians:     0,
+            headingOffsetRadians: 0,
+            lateralOffsetMeters:  0,
+        }
+    }
+
+    const dot = (incoming.x * outgoing.x) + (incoming.y * outgoing.y)
+    const cross = (incoming.x * outgoing.y) - (incoming.y * outgoing.x)
+    const turnAngleRadians = Math.atan2(cross, dot)
+    const turnStrength = smoothstep(
+        (Math.abs(turnAngleRadians) - CesiumMath.toRadians(4))
+        / Math.max(CesiumMath.toRadians(50), Number.EPSILON),
+    )
+    const turnSign = Math.sign(turnAngleRadians) || 1
+    return {
+        turnAngleRadians,
+        headingOffsetRadians: turnSign
+                              * CesiumMath.toRadians(maxHeadingOffsetDeg)
+                              * turnStrength,
+        lateralOffsetMeters: turnSign
+                             * Math.max(0, finiteNumber(maxLateralOffsetMeters) ?? 0)
+                             * turnStrength,
+    }
+}
+
+/**
+ * Interpolate scalar guide values with continuous velocity at every point.
+ *
+ * @param {number} previous - Previous control value.
+ * @param {number} start - Interval start value.
+ * @param {number} end - Interval end value.
+ * @param {number} next - Next control value.
+ * @param {number} ratio - Interval ratio.
+ * @returns {number} Cubic Hermite value.
+ */
+const interpolateTurnDriftValue = (previous, start, end, next, ratio) => {
+    const safeRatio = clamp(finiteNumber(ratio) ?? 0, 0, 1)
+    const squared = safeRatio * safeRatio
+    const cubed = squared * safeRatio
+    const startVelocity = (end - previous) * 0.5
+    const endVelocity = (next - start) * 0.5
+    return (
+        (((2 * cubed) - (3 * squared) + 1) * start)
+        + ((cubed - (2 * squared) + safeRatio) * startVelocity)
+        + (((-2 * cubed) + (3 * squared)) * end)
+        + ((cubed - squared) * endVelocity)
+    )
 }
 
 /**
@@ -462,42 +540,40 @@ export const replayTurnDriftForGuideProgress = (guide, progress, {
     }
 
     const safeProgress = clamp(Number(progress) || 0, 0, 1)
-    const currentIndex = nearestCameraGuideIndex(guide, safeProgress)
-    const previous = guide[Math.max(0, currentIndex - 1)]
-    const current = guide[currentIndex]
-    const next = guide[Math.min(guide.length - 1, currentIndex + 1)]
-    if (!previous || !current || !next) {
-        return null
+    const startIndex = lowerCameraGuideIndex(guide, safeProgress)
+    const endIndex = Math.min(guide.length - 1, startIndex + 1)
+    const previousIndex = Math.max(0, startIndex - 1)
+    const nextIndex = Math.min(guide.length - 1, endIndex + 1)
+    const startProgress = finiteNumber(guide[startIndex]?.progress) ?? safeProgress
+    const endProgress = finiteNumber(guide[endIndex]?.progress) ?? startProgress
+    const span = Math.max(Number.EPSILON, endProgress - startProgress)
+    const ratio = startIndex === endIndex
+                  ? 0
+                  : (safeProgress - startProgress) / span
+    const options = {
+        maxHeadingOffsetDeg,
+        maxLateralOffsetMeters,
     }
-
-    const incoming = projectToLocalMeters(previous, current)
-    const outgoing = projectToLocalMeters(current, next)
-    if (!incoming || !outgoing) {
-        return null
-    }
-
-    const incomingMagnitude = Math.hypot(incoming.x, incoming.y)
-    const outgoingMagnitude = Math.hypot(outgoing.x, outgoing.y)
-    if (incomingMagnitude <= 1e-6 || outgoingMagnitude <= 1e-6) {
-        return null
-    }
-
-    const dot = (incoming.x * outgoing.x) + (incoming.y * outgoing.y)
-    const cross = (incoming.x * outgoing.y) - (incoming.y * outgoing.x)
-    const turnAngleRadians = Math.atan2(cross, dot)
-    const turnStrength = smoothstep(
-        (Math.abs(turnAngleRadians) - CesiumMath.toRadians(4)) / Math.max(CesiumMath.toRadians(50), Number.EPSILON),
+    const previousDrift = replayTurnDriftAtGuideIndex(guide, previousIndex, options)
+    const startDrift = replayTurnDriftAtGuideIndex(guide, startIndex, options)
+    const endDrift = replayTurnDriftAtGuideIndex(guide, endIndex, options)
+    const nextDrift = replayTurnDriftAtGuideIndex(guide, nextIndex, options)
+    const interpolate = key => interpolateTurnDriftValue(
+        previousDrift[key],
+        startDrift[key],
+        endDrift[key],
+        nextDrift[key],
+        ratio,
     )
-    if (turnStrength <= 0) {
-        return null
+    const drift = {
+        turnAngleRadians:     interpolate('turnAngleRadians'),
+        headingOffsetRadians: interpolate('headingOffsetRadians'),
+        lateralOffsetMeters:  interpolate('lateralOffsetMeters'),
     }
-
-    const turnSign = Math.sign(turnAngleRadians) || 1
-    return {
-        turnAngleRadians,
-        headingOffsetRadians: turnSign * CesiumMath.toRadians(maxHeadingOffsetDeg) * turnStrength,
-        lateralOffsetMeters:  turnSign * Math.max(0, finiteNumber(maxLateralOffsetMeters) ?? 0) * turnStrength,
-    }
+    return Math.abs(drift.headingOffsetRadians) <= 1e-9
+           && Math.abs(drift.lateralOffsetMeters) <= 1e-6
+        ? null
+        : drift
 }
 
 /**

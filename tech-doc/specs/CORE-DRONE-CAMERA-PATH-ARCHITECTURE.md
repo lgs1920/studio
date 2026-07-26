@@ -41,18 +41,52 @@ The point-to-point runtime pipeline is:
 Continuous journey replay uses a separate compilation stage on top of the same
 camera frame model:
 
-1. materialize deterministic journey samples and nominal camera frames
-2. bake terrain redirection into nominal frames when line of sight is blocked
-3. project the current and look-ahead markers through candidate frames without
+1. materialize deterministic journey samples at a video-time cadence
+2. smooth nominal heading and pitch sequentially in logical replay time
+3. apply terrain redirection through a bounded attack/hold/release envelope
+4. advance every applied frame with the position and orientation delta of the
+   nominal path, including through sharp turns
+5. project the current and look-ahead markers through candidate frames without
    reading the currently rendered Cesium camera
-4. start a smooth correction before the marker leaves Z1
-5. land in the internal navigation landing zone or dynamic Z2
-6. verify every compiled sample and every exact requested replay progress
-7. cache the resulting path in memory
-8. let Draft and HQ sample this same path by replay progress
+6. start a correction before the marker leaves Z1
+7. land in the internal navigation landing zone or dynamic Z2
+8. relax the remaining correction back toward the moving nominal path
+9. sample positions and camera axes with C1-continuous cubic interpolation
+10. verify every compiled sample and every exact requested replay progress
+11. cache the resulting path in memory
+12. let Draft and HQ sample this same path by replay progress
 
 That means the deterministic engine is path-driven. Cesium `camera.flyTo` is
 not the core primitive for replay or live path sampling.
+
+### Root-cause analysis of the stepped replay
+
+The July 26 regression was not caused by the HQ encoder dropping frames. It
+was caused by the camera path supplied to those frames.
+
+Four independent discontinuities had accumulated:
+
+| Defect | Exact cause | Visible result |
+| --- | --- | --- |
+| Angular smoothing bypassed | Constrained compilation requested `cameraViewForSample(...)` with `source: 'drawer'`. That source intentionally bypasses heading hysteresis and `smoothRadians(...)`. Runtime playback still computed a smoothed view, but `JourneyReplayCameraBinding.js` returned early after applying the constrained frame, so that smoothed view was never rendered. | Heading and pitch changes could occur at a compiled node instead of over video time. |
+| Path too sparse | The path contained only 128 to 256 intervals. A 60-second replay therefore changed interpolation segment every approximately `0.47 s` to `0.23 s`. | Position and orientation looked like successive sections, even though every HQ frame was encoded. |
+| Linear frame interpolation | `destination`, `direction`, and `up` were linearly interpolated between adjacent cached frames. Value continuity was preserved, but velocity changed at every interval boundary. | The camera appeared to advance, pause, and restart at segment junctions. |
+| Unbounded terrain redirect | A visible redirect candidate became the new compiled nominal view and could remain active for the complete occluded stretch. There was no mandatory return phase or replay-end release. | A configured pitch near `-45°` could finish near `-66°`. |
+
+The HQ timeline itself is deterministic:
+
+1. `ReplayFrameTimeline` produces monotonically increasing timestamps separated
+   by exactly `1000 / fps`
+2. `ReplayVideoRenderSession.renderAll(...)` awaits and renders every frame in
+   order
+3. `renderReplayExportFrame(...)` seeks the exact progress and updates the
+   camera once for that frame
+4. live camera callbacks are ignored while HQ owns the export camera
+5. the offline encoder uses its quality policy after the pose has been rendered
+
+Slower wall-clock rendering can make export take longer, but it does not skip
+logical camera frames. Correcting encoder cadence alone therefore cannot fix a
+stepped trajectory.
 
 ### Core transfer builder
 
@@ -131,29 +165,204 @@ dimensions. It does not call `worldToWindowCoordinates` on the live camera.
 This removes the asynchronous one-frame discrepancy that previously caused
 Draft and HQ to disagree about Z1/Z2 collisions.
 
-The compiler keeps the current frame while both the current and look-ahead
-markers remain safe. When either marker threatens Z1, it interpolates toward a
-future nominal frame. If smoothing still leaves the current marker outside Z1,
-a coarse search followed by binary refinement finds the first interpolated
-frame that restores the constraint. `sampleAt(progress)` repeats the constraint
-check with the exact journey sample and rendered marker target at the requested
-progress. It does not linearly approximate that target from the two surrounding
-cached targets. If the interpolated nominal frame still cannot contain the
-exact target, the solver computes the smallest focus correction from the
-current camera position before refining the transition. Curved journey
-segments therefore cannot let the marker escape between cached samples.
+Compilation density is derived from both journey-guide density and replay
+duration. The interval count is:
 
-Path compilation is intentionally bounded before live playback starts. The
-solver reduces the camera guide to between 128 and 256 compilation intervals,
-then performs smooth interpolation and exact-progress validation at runtime.
-This prevents the first Draft tick from synchronously evaluating thousands of
-terrain-aware camera poses on the UI thread.
+```text
+max(ceil(cameraGuideLength / 2), ceil(durationSeconds * 30), 256)
+```
 
-Terrain redirect searches also retain their last valid redirect while the
-obstruction remains active. A missing redirect is retried at a bounded sample
-interval instead of running the complete candidate search for every compiled
-pose. Nominal line of sight is still checked for every pose, so the path returns
-to its normal trajectory immediately when the relief permits it.
+and is capped at `2048`. A normal 60-second replay therefore compiles `1800`
+intervals and `1801` frames instead of only 128 or 256 intervals. The cap
+prevents unbounded synchronous work on very long journeys.
+
+The raw view is deliberately read without mutable live-camera history, then
+smoothed sequentially by the compiler. Heading uses
+`replayHeadingEasingFactor(...)`, pitch uses the historical `0.08` factor, and
+both factors are normalized from their 60 FPS calibration to the elapsed
+logical time between compiled samples. Angular interpolation follows the
+shortest signed arc. A 90-degree desired heading change is therefore distributed
+over several compiled video-time samples.
+
+The compiler never freezes an otherwise safe camera frame in world space.
+Before evaluating Z1, it advances the previously applied frame with the full
+position and orientation change between the previous and current nominal
+frames. When no correction or residual return offset is present, this produces
+the current nominal frame exactly. The camera therefore continues to move at
+every compiled journey sample even while both current and look-ahead markers
+remain inside Z1.
+
+When either marker threatens Z1, the compiler interpolates toward a future
+nominal frame. If smoothing still leaves the current marker outside Z1, a
+coarse search followed by binary refinement finds the first interpolated frame
+that restores the constraint. Once the applied frame and look-ahead marker
+reach the internal navigation landing zone or dynamic Z2, the correction stops
+growing and is progressively blended back into the moving nominal frame.
+
+`sampleAt(progress)` repeats the constraint check with the exact journey sample
+and rendered marker target at the requested progress. It does not linearly
+approximate that target from the two surrounding cached targets. If the
+interpolated nominal frame still cannot contain the exact target, the solver
+computes the smallest focus correction from the current camera position before
+refining the transition. Curved journey segments therefore cannot let the
+marker escape between cached samples.
+
+Cached camera frames are not joined with a two-point linear interpolation.
+`sampleAt(progress)` reads the previous, start, end, and next frames and
+evaluates a cubic Hermite value for `destination`, `direction`, and `up`.
+Adjacent intervals share the same tangent at their common frame, so position
+and camera-axis velocity are C1-continuous. Direction is normalized and `up`
+is orthogonalized after interpolation. This removes the velocity break that
+made the camera movement visible as independent sections.
+
+#### Continuous nominal-frame transport
+
+The replay pipeline distinguishes three camera layers:
+
+- the **configured base view**, calculated from the journey and user camera
+  settings, including the configured pitch
+- the **compiled nominal frame**, which is the base view after turn drift and
+  an optional temporary terrain redirect have been baked into it
+- the **applied frame**, which is the compiled nominal frame plus any temporary
+  Z1/Z2 correction that still has to be preserved
+
+The transport algorithm operates between the compiled nominal frame and the
+applied frame. Clearing a terrain redirect changes the compiled nominal frame.
+Transport and recovery are then responsible for making that change reach the
+applied frame.
+
+For each compiled sample, let:
+
+- `N0` be the previous nominal frame
+- `N1` be the current nominal frame
+- `A0` be the previously applied frame
+- `R0` and `R1` be the orthonormal camera rotations of `N0` and `N1`
+- `D = R1 * transpose(R0)` be the nominal rotation delta
+
+The next transported frame is calculated as:
+
+```text
+positionOffset = A0.position - N0.position
+A1.position = N1.position + D * positionOffset
+A1.direction = normalize(D * A0.direction)
+A1.up = orthonormalize(D * A0.up, A1.direction)
+```
+
+The camera rotation uses the right, up, and backward axes. Applying `D` to both
+the correction offset and the camera axes is important on a 90-degree turn: a
+correction that was relative to the incoming section rotates with the outgoing
+section instead of remaining stuck in the old world direction.
+
+If `A0` equals `N0`, `positionOffset` is zero and the transported result equals
+`N1`. This invariant is what prevents the old move-stop-move behavior.
+
+#### Z1/Z2 correction and nominal recovery order
+
+Each compiled sample follows this exact order:
+
+1. transport the previous applied frame with the nominal path delta
+2. if a previous correction is returning, preserve its transported full
+   offset and reduce its weight with smoothstep over the configured response
+   duration
+3. project the current and look-ahead targets through the transported frame
+4. activate correction if either target threatens Z1
+5. interpolate toward the look-ahead nominal frame
+6. if the current target is still outside Z1, find the first safe frame through
+   coarse search and binary refinement
+7. mark the correction as returning after both current and look-ahead targets
+   reach the landing zone
+8. snap a negligible residual correction to the nominal frame
+
+A returning correction is considered negligible when its camera position is
+within `0.5 m` of nominal and both direction and up-vector squared distances
+are at most `1e-6`. Only such a negligible residual is snapped exactly to
+nominal. A material correction is never snapped on the final sample, because
+that would create a visible backward position or angle step.
+
+Here "nominal" means the compiled nominal frame. The terrain redirect weight is
+forced to zero at the final replay timestamp, even if terrain classification
+still reports the configured base view as occluded. The compiled nominal frame
+therefore ends with the configured base pitch. A final Z1 correction may still
+change the applied orientation. It is released with a finite smoothstep
+duration when the landing condition allows it, but continuity takes priority
+over forcing an exact final position.
+
+#### Pitch recovery through the three layers
+
+Pitch recovery requires both temporary correction layers to clear:
+
+```text
+configured pitch
+    -> optional terrain pitch offset
+    -> optional applied Z1/Z2 frame correction
+```
+
+Reducing the terrain weight restores the pitch in the compiled nominal frame.
+The applied frame must still advance with that new nominal orientation and
+release any remaining screen-space correction. Resetting only a redirect
+object is insufficient if the applied frame is stationary.
+
+Example sequence:
+
+1. the configured base view starts near `-45°`
+2. a 90-degree turn changes the camera line of sight
+3. terrain detection selects a negative pitch offset
+4. the offset weight rises with smoothstep over `0.75 s`
+5. the full offset is held for `0.75 s`, so the compiled nominal frame can
+   reach approximately `-65°` or `-66°`
+6. the weight falls with smoothstep over `1 s`, regardless of whether terrain
+   still classifies the configured view as occluded
+7. the replay-end envelope also multiplies the weight to zero during the final
+   second
+8. the orientation delta carries the resulting return into the applied frame
+9. any residual Z1/Z2 correction is blended out
+10. when the configured frame is safe in Z1, the applied pitch equals the
+    configured pitch again
+
+#### Corrected failure mode
+
+The previous implementation treated the applied camera pose as a stationary
+world-space frame while the marker remained safe. Its sequence was effectively:
+
+```text
+move camera -> marker reaches landing zone -> freeze camera
+            -> marker approaches Z1 edge -> move camera again
+```
+
+This produced visible movement by sections in Draft and HQ recordings. It also
+prevented a cleared terrain redirect from reaching the applied path. For
+example, a nominal pitch near `-45°` could receive a temporary redirect, reach
+approximately `-66°`, and remain there after visibility recovered because the
+applied frame was frozen.
+
+The corrected sequence is:
+
+```text
+advance with nominal path -> apply only the required correction
+                          -> transport that correction through turns
+                          -> blend correction back to nominal
+```
+
+The UI can display pitch magnitude near `45°` and `66°`, while the internal
+camera values are negative radians derived from approximately `-45°` and
+`-66°`. "Return to the original pitch" means returning to the current
+configured nominal pitch, such as `cameraSettings.pitch = -45`, not returning
+to zero or to the pitch of the Cesium camera before replay.
+
+Path compilation is intentionally bounded before live playback starts. It uses
+a 30-sample-per-second target, a minimum of 256 intervals, and a maximum of
+2048 intervals. The final path then uses cubic, velocity-continuous sampling
+and exact-progress validation. This is dense enough to align a normal HQ
+timeline with compiled poses while still bounding synchronous terrain work.
+
+Terrain redirect search runs once for a continuous occlusion episode. The
+selected candidate is not retained as an indefinite state: only its heading and
+pitch offsets are retained, and a deterministic attack/hold/release envelope
+controls their weight. After the cycle has returned to zero, the same
+continuous occlusion does not start another cycle. A new search becomes
+eligible only after the nominal line of sight has been visible again and a new
+occlusion begins. This prevents both a permanent `-66°` pitch and repetitive
+pitch pumping over a long ridge.
 
 The compiled cache survives Draft scene cleanup and HQ preparation. It is
 invalidated when the journey sampler changes, while the cache key also covers
@@ -220,12 +429,47 @@ The visibility stack is still the detection layer:
 
 The runtime behavior is:
 
-1. detect the occlusion
-2. bend the path around the relief if needed
-3. return to the nominal path as soon as line of sight becomes feasible again
+1. build the configured nominal view for the current journey sample
+2. test the line from the candidate camera frame to the rendered marker height
+3. search the bounded redirect candidates once when a new continuous occlusion
+   starts
+4. multiply the selected heading and pitch offsets by the deterministic
+   attack/hold/release weight
+5. bake only those weighted offsets into each compiled nominal frame
+6. test the unredirected nominal frame at every following sample
+7. prevent another redirect cycle until visibility has recovered once
+8. force the redirect weight to zero at cycle end and at replay end
+9. transport the resulting nominal orientation change into the applied path
+10. sample the resulting frames with C1-continuous cubic interpolation
 
 So relief is no longer only a visibility correction. It is now a path
-deformation rule with a return-to-nominal behavior.
+deformation rule with a bounded return-to-nominal behavior.
+
+The terrain redirect state does not redefine the configured pitch. It only adds
+a temporary offset to the nominal view. Current pitch-only candidates are
+`-4°`, `-6°`, `-8°`, `-10°`, `-14°`, `-18°`, and `-20°`; combined candidates
+can also add a heading offset. A configured `-45°` pitch can therefore become
+`-65°`, or display approximately `66°` when the underlying nominal value is not
+an exact integer. The offset returns to zero after the bounded cycle even if
+the unredirected terrain classification remains occluded. The same occlusion
+cannot immediately reactivate it.
+
+Candidate selection prefers the smallest visible change with the score:
+
+```text
+score = 2 * abs(pitchOffset) + abs(headingOffset)
+```
+
+Pitch changes are penalized twice as strongly as heading changes. A pitch
+change beginning at a 90-degree turn therefore means that the new line of sight
+after the turn required a redirect candidate; the heading turn itself does not
+modify the configured pitch.
+
+The constrained path must continue advancing while the redirect is active and
+after it clears. Otherwise the final visible result can remain near `-66°` even
+though the terrain redirect state has already been cleared. This is why pitch
+recovery is implemented together with continuous nominal-frame transport
+rather than only by resetting the redirect state.
 
 ### Turn anticipation, drift, and journey angle
 
@@ -242,8 +486,17 @@ remains a separate vertical framing control. In practice:
 - the drift should relax back to the nominal line after the turn
 
 The existing turn sampling and tangent derivation remain the basis for this
-behavior. The runtime now applies a turn drift envelope to the replay heading
-and can also widen the transfer frame through the same sampled path pipeline.
+behavior. Turn drift is evaluated at adjacent camera-guide points and its
+heading and lateral values are joined with four-point cubic Hermite
+interpolation. The previous nearest-guide lookup created a discrete drift step
+halfway between two guide points; that lookup is no longer used.
+
+A 90-degree journey turn changes the nominal camera rotation but does not
+change the configured pitch by itself. The compiler builds the rotation delta
+between the incoming and outgoing nominal camera bases and applies that same
+delta to the temporary correction. The correction therefore turns with the
+journey. After the turn or terrain obstruction ends, its vertical component is
+blended out until the applied pitch equals the configured nominal pitch.
 
 ### Replay integration
 
@@ -1162,12 +1415,31 @@ Scoring should prefer:
 
 ### Return to Nominal Path
 
-When the target becomes visible from the nominal pose, the runtime waits
-`returnDelayMs` to avoid oscillation, then fades correction to zero:
+The generic future visibility resolver can wait `returnDelayMs` after the
+target becomes visible from the nominal pose, then fade correction to zero:
 
 ```js
 correctionWeight: 1 -> 0 over returnDuration
 ```
+
+The current constrained Journey Replay compiler does not use a separate
+wall-clock `returnDelayMs`. Its deterministic equivalent is compiled directly
+into replay progress:
+
+- terrain visibility is re-evaluated at every compiled nominal frame
+- a terrain candidate follows a `0.75 s` attack, `0.75 s` hold, and `1 s`
+  release envelope
+- one continuous occlusion can start only one redirect cycle
+- the redirect contribution is exactly zero after the release and on the final
+  replay frame
+- a remaining Z1/Z2 correction is transported with the moving nominal frame
+  while a finite smoothstep weight reduces it to zero
+- negligible correction is snapped exactly to nominal
+- a material residual is preserved rather than snapped on the final frame
+
+The final compiled nominal frame cannot contain a terrain redirect and
+therefore contains the configured base pitch. The independent Z1 solver may
+still leave a smoothly transported correction in the applied frame.
 
 The return must preserve:
 
@@ -1460,8 +1732,12 @@ stabilization layer for this existing architecture:
 
 | Concern | Existing behavior | Current change | Consequence for the drone architecture |
 | --- | --- | --- | --- |
-| Camera transition in HQ | Deterministic recentering interpolated camera position and orientation with a smooth scalar easing. | Continuous replay samples a precompiled constrained frame path; point-to-point clips retain their dedicated transition path. | Keep continuous replay correction in the path compiler and clip transitions in the phase controller. |
+| Camera transition in HQ | Deterministic recentering interpolated camera position and orientation with a smooth scalar easing. | Continuous replay samples a precompiled constrained frame path with four-point cubic interpolation; point-to-point clips retain their dedicated transition path. | Keep continuous replay correction in the path compiler and clip transitions in the phase controller. |
 | Navigation and dynamic correction in HQ | Draft transitions and the HQ spring follower could diverge. | Both tracking modes now sample the same constrained path by normalized replay progress. | Z1/Z2 correction is part of canonical replay path materialization. |
+| Safe-zone camera movement | The constrained compiler retained one absolute applied frame until the marker threatened Z1 again, creating move-stop-move sections. | Every applied frame is transported with the nominal position and orientation delta before constraints are evaluated. | A constrained path must carry correction offsets over a continuously moving nominal path; it must not use a safe zone as a world-space camera hold. |
+| Compiled angle changes | The constrained path requested the drawer view, bypassing temporal heading and pitch smoothing. | Raw deterministic views are smoothed sequentially with factors normalized to logical replay time before frame construction. | A canonical path must own its temporal smoothing instead of computing a smoothed runtime view that is discarded. |
+| Compiled path cadence | Only 128 to 256 intervals were joined linearly. | Compilation targets 30 samples per second, is bounded to 256–2048 intervals, and runtime sampling is C1-continuous. | Encoder cadence cannot compensate for discontinuous pose velocity. |
+| Pitch after relief or a sharp turn | A redirect could remain active for a complete occluded stretch, so a temporary pitch such as `-66°` could survive until replay end. | Redirect offsets use a bounded smoothstep attack/hold/release cycle, cannot repeat during the same occlusion, and are forced to zero at replay end. | Terrain visibility may request a temporary deformation but cannot redefine the configured pitch indefinitely. |
 | HQ timing input | Camera updates could fall back to phase or sample time. | Updates use the actual export frame timestamp and normalize heading/pitch smoothing against elapsed video time. | The future path engine should receive one explicit logical timestamp and never infer export time from wall-clock state. |
 | HQ recenter duration | Navigation recentering used the normal replay duration. | Continuous Draft and HQ replay share one response duration; the historical `1.8` HQ multiplier remains limited to the legacy fallback. | Keep export-specific timing out of the canonical constrained path. |
 | Replay transfer cadence | Draft capture could require a time-paced transfer instead of a frame-paced update. | Replay camera transfers can now opt into time cadence when draft capture needs wall-clock pacing. | Keep cadence selection in the replay transfer helper, not in the canonical path compiler. |
@@ -1882,6 +2158,23 @@ package is proposed for this architecture.
 - keyframed altitude has no instant step;
 - hidden target activates correction progressively;
 - visible-again target returns progressively to nominal path;
+- every compiled destination advances while the nominal journey advances,
+  including while the marker remains safely inside Z1;
+- position velocity remains continuous on both sides of a compiled path frame;
+- turn drift has no nearest-guide discontinuity;
+- a 90-degree desired heading change is distributed over multiple compiled
+  video-time frames;
+- a constrained path continues advancing while current and look-ahead marker
+  containment is enforced;
+- terrain redirect weight is exactly zero after its bounded cycle and at replay
+  end;
+- a temporary terrain-style pitch redirect returns to nominal after a
+  90-degree heading change;
+- the `-45° -> approximately -65° -> -45°` regression scenario has no
+  per-frame pitch step larger than `6°` at 30 FPS;
+- the final replay frame never snaps a material position or orientation
+  correction;
+- a negligible final residual snaps exactly to nominal;
 - correction state is stable and does not flip left/right every frame;
 - controller pause/resume/seek works with simulated timers.
 
@@ -1891,6 +2184,12 @@ package is proposed for this architecture.
 - GPS multi-point path in mountain terrain;
 - target hidden by a ridge, dynamic correction, then nominal return;
 - target hidden by 3D tiles/buildings, lateral correction, then nominal return;
+- replay starting at a `45°` pitch, temporarily reaching approximately `66°`
+  around relief, then visibly returning to `45°`;
+- right-angle journey turn with continuous camera translation and no
+  move-stop-move sections before or after the turn;
+- frame-by-frame comparison of Draft and HQ camera position, heading, and pitch
+  at identical replay progresses;
 - strong acceleration followed by slow final approach;
 - stop during playback restores Cesium controls;
 - replay video with drone camera disabled and enabled.
@@ -1940,8 +2239,23 @@ Draft recording and HQ navigation and dynamic tracking use the same in-memory
 constrained path. The compiler tests current and predicted marker samples
 against runtime zones before starting a correction. It projects through
 candidate frames rather than through the asynchronously rendered Cesium camera.
+Before those projections, the applied frame is advanced by the nominal
+position and rotation delta for the current journey sample. A safe target
+therefore prevents an unnecessary Z1/Z2 correction but never freezes camera
+movement.
+
+When a correction is active, its position and orientation offsets rotate with
+the nominal frame, including across sharp heading changes. Reaching the landing
+zone starts a deterministic finite-duration return toward nominal. The terrain
+component ends on the configured base pitch because its envelope is forced to
+zero at replay end. A material Z1 correction is not snapped away on the last
+sample; preserving camera continuity takes priority over forcing an exact
+nominal final position.
+
 Every `sampleAt(progress)` call resolves the actual journey marker target and
 performs a final containment check, including progresses between cached frames.
+The cached frames are joined with shared-tangent cubic interpolation rather
+than independent linear segments.
 The path cache is preserved across Draft cleanup and reused during HQ
 preparation when its complete input key is unchanged.
 
