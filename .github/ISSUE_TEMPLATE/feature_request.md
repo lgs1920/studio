@@ -6,6 +6,8 @@ labels: enhancement
 assignees: chdenat
 ---
 
+<!-- issue-type: feature -->
+
 ## Context
 
 Describe the current situation or the problem that needs to be solved.
