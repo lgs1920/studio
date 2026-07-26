@@ -152,7 +152,7 @@ export const configure = (mode, options = {}) => {
                 renderSmoothing: smoothing,
             })
             state.samplerConfigKey = samplerConfigKey
-            call.resetCameraController()
+            call.resetCameraController({preserveConstrainedPath: false})
         }
 
         if (store) {

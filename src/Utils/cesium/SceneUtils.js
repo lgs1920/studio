@@ -26,6 +26,11 @@ import {
     BoundingSphere, Cartesian2, Cartesian3, Cartographic, Color, EasingFunction, HeadingPitchRange, Math as M, Matrix4,
     Rectangle, sampleTerrain, sampleTerrainMostDetailed, SceneMode,
 }                    from 'cesium'
+import { CameraUtils } from '@Utils/cesium/CameraUtils'
+import {
+    buildCameraTransferPath,
+    selectCameraTransferMode,
+} from '@Core/ui/replay/JourneyReplayCameraPath'
 
 const finiteNumber = value => {
     if (value === null || value === undefined || value === '') {
@@ -558,6 +563,11 @@ export class SceneUtils {
             }
         }
         const cancelFlight = () => {
+            if (cameraPathCancel) {
+                cameraPathCancel()
+                return
+            }
+
             endFlightOnce()
         }
         const startFlight = (fly) => {
@@ -581,8 +591,206 @@ export class SceneUtils {
             cancel:            cancelFlight,
         }
 
+        const transferThresholdKm = cameraPositionValue(options, 'transferDistanceThresholdKm', lgs.settings.camera.transferDistanceThresholdKm ?? 50)
+        const cameraWorldPosition = lgs.camera?.positionWC ?? lgs.camera?.position
+        const targetCartesian = Cartesian3.fromDegrees(longitude, latitude, height)
+        const endPosition = cameraDestination
+            ?? (options.boundingSphere
+                ? CameraUtils.cameraPositionFromTarget(target, {
+                    heading: M.toDegrees(heading),
+                    pitch:   M.toDegrees(pitch),
+                    range:   flyRange,
+                })
+                : null)
+        const transferDistance = cameraWorldPosition && endPosition
+                                 ? Cartesian3.distance(cameraWorldPosition, endPosition)
+                                 : null
+        const transferMode = selectCameraTransferMode(transferDistance, transferThresholdKm)
+        const useCameraPath = options.useCameraPath !== false
+            && Boolean(endPosition)
+            && transferMode !== 'direct'
+        let cameraPathCancel = null
+        let cameraPathReplanTimer = null
+        let cameraPathLiveApplying = false
+        let cameraPathLiveReplanning = false
+        let cameraPathFlightFinished = false
+        let cameraPathLastAppliedState = null
+
+        const currentCameraPose = () => {
+            const camera = lgs.camera
+            return {
+                position: camera?.positionWC ?? camera?.position ?? null,
+                heading:  finiteNumber(camera?.heading),
+                pitch:    finiteNumber(camera?.pitch),
+                roll:     finiteNumber(camera?.roll),
+            }
+        }
+
+        const cameraPoseMatches = (left, right) => {
+            if (!left || !right) {
+                return false
+            }
+
+            const position = left.position && right.position
+                ? Cartesian3.distance(left.position, right.position) <= 0.5
+                : false
+            const heading = Math.abs((left.heading ?? 0) - (right.heading ?? 0)) <= 0.01
+            const pitch = Math.abs((left.pitch ?? 0) - (right.pitch ?? 0)) <= 0.01
+            const roll = Math.abs((left.roll ?? 0) - (right.roll ?? 0)) <= 0.01
+            return position && heading && pitch && roll
+        }
+
+        const clearCameraPathReplanTimer = () => {
+            if (cameraPathReplanTimer !== null) {
+                clearTimeout(cameraPathReplanTimer)
+                cameraPathReplanTimer = null
+            }
+        }
+
+        const finishCameraPathFlight = async () => {
+            if (cameraPathFlightFinished) {
+                return
+            }
+
+            cameraPathFlightFinished = true
+            clearCameraPathReplanTimer()
+            stopCameraChangedListener()
+            cameraPathCancel = null
+            try {
+                await complete()
+            }
+            finally {
+                endFlightOnce()
+            }
+        }
+
+        const buildLiveCameraPath = (cameraStart) => {
+            if (!cameraStart || !endPosition || !targetCartesian) {
+                return null
+            }
+
+            const liveTransferMode = selectCameraTransferMode(Cartesian3.distance(cameraStart, endPosition), transferThresholdKm)
+            return buildCameraTransferPath({
+                start:       cameraStart,
+                end:         endPosition,
+                mode:        liveTransferMode,
+                sampleCount: liveTransferMode === 'blur-jump-refocus' ? 64 : 48,
+                liftMeters:  Math.max(120, pitchAdjustHeight),
+            })
+        }
+
+        const startLiveCameraPathFlight = () => {
+            const cameraStart = lgs.camera?.positionWC ?? lgs.camera?.position
+            const path = buildLiveCameraPath(cameraStart)
+            if (!path) {
+                return false
+            }
+
+            cameraPathFlightFinished = false
+
+            try {
+                cameraPathCancel = path.flyTo({
+                    camera: lgs.camera,
+                    target: targetCartesian,
+                    duration: flyingTime,
+                    beforeFrame: () => {
+                        cameraPathLiveApplying = true
+                    },
+                    afterFrame: () => {
+                        cameraPathLiveApplying = false
+                        cameraPathLastAppliedState = currentCameraPose()
+                    },
+                    complete: finishCameraPathFlight,
+                    cancel: () => {
+                        cameraPathCancel = null
+                        cameraPathLiveApplying = false
+                        if (cameraPathLiveReplanning) {
+                            return
+                        }
+
+                        endFlightOnce()
+                    },
+                })
+            }
+            catch (error) {
+                cameraPathLiveApplying = false
+                cameraPathCancel = null
+                console.error('[SceneUtils] Path flight failed.', error)
+                return false
+            }
+            return true
+        }
+
+        const scheduleLiveCameraPathReplan = () => {
+            if (cameraPathFlightFinished) {
+                return
+            }
+
+            clearCameraPathReplanTimer()
+            if (!cameraPathCancel) {
+                cameraPathReplanTimer = globalThis.setTimeout?.(() => {
+                    cameraPathReplanTimer = null
+                    if (!cameraPathFlightFinished) {
+                        startLiveCameraPathFlight()
+                    }
+                }, 80) ?? null
+                return
+            }
+
+            cameraPathLiveReplanning = true
+            try {
+                cameraPathCancel()
+            }
+            finally {
+                cameraPathLiveReplanning = false
+            }
+
+            cameraPathReplanTimer = globalThis.setTimeout?.(() => {
+                cameraPathReplanTimer = null
+                if (!cameraPathFlightFinished) {
+                    startLiveCameraPathFlight()
+                }
+            }, 80) ?? null
+        }
+
+        const removeCameraChangedListener = lgs.camera?.changed?.addEventListener?.(() => {
+            if (cameraPathFlightFinished || cameraPathLiveApplying) {
+                return
+            }
+
+            const cameraPose = currentCameraPose()
+            if (cameraPoseMatches(cameraPose, cameraPathLastAppliedState)) {
+                return
+            }
+
+            scheduleLiveCameraPathReplan()
+        })
+        const stopCameraChangedListener = () => {
+            if (typeof removeCameraChangedListener === 'function') {
+                removeCameraChangedListener()
+            }
+        }
+
         if (instantOrbitWithoutFlight) {
             await complete()
+            return true
+        }
+
+        if (useCameraPath) {
+            startFlight(() => {
+                if (!startLiveCameraPathFlight()) {
+                    stopCameraChangedListener()
+                    lgs.camera.flyTo({
+                        ...flyOptions,
+                        destination: cameraDestination ?? endPosition,
+                        orientation: {
+                            heading,
+                            pitch,
+                            roll,
+                        },
+                    })
+                }
+            })
             return true
         }
 

@@ -9,4 +9,6 @@ export * from './JourneyReplayCameraState'
 export * from './JourneyReplayCameraTransition'
 export * from './JourneyReplayCameraOverlay'
 export * from './JourneyReplayCameraBinding'
-
+export * from './JourneyReplayCameraPath'
+export * from './JourneyReplayConstrainedCameraPath'
+export * from './JourneyReplayCameraConstraintBinding'

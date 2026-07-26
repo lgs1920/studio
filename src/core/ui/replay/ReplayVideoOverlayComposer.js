@@ -151,14 +151,55 @@ export const buildReplayVideoComposerOverlays = ({
 
     const normalizedCrop = normalizeReplayVideoCropRect(cropRect) ?? {left: 0, top: 0, width: 0, height: 0}
     composer.beginUpdate()
-    let sceneOverlayCount = 0
+
+    const replayOverlayCandidates = Array.from(
+        globalThis.lgs?.viewer?.container?.querySelectorAll?.('[data-replay-video-overlay-canvas="true"]')
+        ?? globalThis.document?.querySelectorAll?.('[data-replay-video-overlay-canvas="true"]')
+        ?? [],
+    ).filter(element => element instanceof HTMLCanvasElement)
+    const sceneOverlayEntries = []
+    const seenSceneOverlayElements = new Set()
     for (const overlay of sceneOverlays ?? []) {
+        const element = overlay?.element ?? overlay?.canvas ?? null
+        if (!(element instanceof HTMLCanvasElement) || seenSceneOverlayElements.has(element)) {
+            continue
+        }
+
+        sceneOverlayEntries.push(overlay)
+        seenSceneOverlayElements.add(element)
+    }
+    for (const element of replayOverlayCandidates) {
+        if (seenSceneOverlayElements.has(element)) {
+            continue
+        }
+
+        sceneOverlayEntries.push({
+            canvas: element,
+        })
+        seenSceneOverlayElements.add(element)
+    }
+
+    let sceneOverlayCount = 0
+    for (const overlay of sceneOverlayEntries) {
         const element = overlay?.element ?? overlay?.canvas ?? null
         if (!(element instanceof HTMLCanvasElement)) {
             replayVideoTraceDebug('composer.scene-overlay.skip.invalid-element', {
                 hasOverlay: Boolean(overlay),
                 elementType: element?.constructor?.name ?? typeof element,
             })
+            continue
+        }
+
+        const elementStyle = getComputedStyleSafe(element)
+        const isReplayDiagnosticsCanvas = element.dataset?.replayVideoOverlayCanvas === 'true'
+        if (
+            !isReplayDiagnosticsCanvas
+            && (
+                element.hidden === true
+                || elementStyle?.display === 'none'
+                || elementStyle?.visibility === 'hidden'
+            )
+        ) {
             continue
         }
 
@@ -174,9 +215,9 @@ export const buildReplayVideoComposerOverlays = ({
         })
         sceneOverlayCount += 1
     }
-    if ((sceneOverlays ?? []).length > 0) {
+    if (sceneOverlayEntries.length > 0) {
         replayVideoTraceDebug('composer.scene-overlays.added', {
-            requested: sceneOverlays.length,
+            requested: sceneOverlayEntries.length,
             added: sceneOverlayCount,
             crop: normalizedCrop,
         })

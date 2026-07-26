@@ -75,6 +75,11 @@
     gap: var(--lgs-gutter-s);
 }
 
+.lgs--credits-dependencies-button {
+    width: fit-content;
+    align-self: flex-start;
+}
+
 .lgs--info-credits-tab {
     margin-inline-start: auto;
 }

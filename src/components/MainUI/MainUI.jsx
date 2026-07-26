@@ -42,6 +42,7 @@ import { memo, useCallback, useEffect, useRef } from 'react'
 import { sprintf }        from 'sprintf-js'
 import { subscribe, useSnapshot }               from 'valtio'
 import { JourneyLoaderUI }                      from '../FileLoader/JourneyLoaderUI'
+import { CodeDependenciesDrawer }               from '../InformationPanel/CodeDependenciesDrawer'
 import { Panel as InformationPanel }            from '../InformationPanel/Panel'
 import { PanelButton as InformationButton } from '../InformationPanel/PanelButton'
 import { Panel as LayersPanel }                 from '../Settings/layers/Panel'
@@ -298,6 +299,7 @@ export const MainUI = memo(() => {
                             </div>
                         )}
                         <InformationPanel/>
+                        <CodeDependenciesDrawer/>
                         <SettingsPanel/>
                         <LayersPanel/>
                         <TracksEditor/>

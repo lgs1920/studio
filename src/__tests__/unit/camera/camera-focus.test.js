@@ -17,7 +17,8 @@
 import { DEFAULT_2D_FOCUS_PITCH, SCENE_MODE_2D } from '@Core/constants'
 import { CameraUtils }                           from '@Utils/cesium/CameraUtils'
 import { SceneUtils }                            from '@Utils/cesium/SceneUtils'
-import { Math as M, SceneMode }                  from 'cesium'
+import * as CameraPath                           from '@Core/ui/replay/JourneyReplayCameraPath'
+import { Cartesian3, Math as M, SceneMode }      from 'cesium'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const lineFeature = coordinates => ({
@@ -69,6 +70,11 @@ const installFocusGlobals = journey => {
         scene:      {mode: SceneMode.SCENE2D},
         camera:     {
             flyToBoundingSphere: vi.fn(),
+            flyTo:               vi.fn(),
+            changed:             {
+                addEventListener: vi.fn(() => vi.fn()),
+            },
+            positionWC:          Cartesian3.fromDegrees(-120, 10, 1000),
         },
     })
 
@@ -195,6 +201,102 @@ describe('camera focus defaults', () => {
         expect(focusOptions.range).toBe(10000)
         expect(focusOptions.boundingSphereRange).toBe(0)
         expect(lgs.camera.flyToBoundingSphere).toHaveBeenCalledTimes(1)
+    })
+
+    it('starts a path-based focus with a flyTo preflight', async () => {
+        const journey = makeJourney()
+        installFocusGlobals(journey)
+        const pathFlyTo = vi.fn(({complete}) => {
+            complete?.()
+            return vi.fn()
+        })
+        const buildSpy = vi.spyOn(CameraPath, 'buildCameraTransferPath').mockReturnValue({
+            mode:        'spiral-conical',
+            distanceMeters: 200000,
+            sampleCount: 48,
+            samples:     [],
+            sampleAt:    () => new Cartesian3(1, 1, 1),
+            flyTo:       pathFlyTo,
+        })
+
+        await SceneUtils.focus({
+            longitude: 10,
+            latitude:  20,
+            height:    0,
+        }, {
+            cameraPosition: {
+                longitude: 10,
+                latitude:  20,
+                height:    1200,
+            },
+            useCameraPath: true,
+            flyingTime:    1,
+            initializer:   () => ({distance: 200000, height: 0, sameRotateTarget: false}),
+        })
+
+        expect(buildSpy).toHaveBeenCalled()
+        expect(pathFlyTo).toHaveBeenCalled()
+        expect(lgs.camera.flyTo).not.toHaveBeenCalled()
+        expect(lgs.camera.flyToBoundingSphere).not.toHaveBeenCalled()
+        buildSpy.mockRestore()
+    })
+
+    it('replans the focus path when the camera changes during the flight', async () => {
+        vi.useFakeTimers()
+        try {
+            const journey = makeJourney()
+            installFocusGlobals(journey)
+
+            let cameraChangedHandler = null
+            lgs.camera.changed.addEventListener = vi.fn(handler => {
+                cameraChangedHandler = handler
+                return vi.fn()
+            })
+            const pathCancels = []
+            const buildSpy = vi.spyOn(CameraPath, 'buildCameraTransferPath').mockImplementation(options => {
+                const cancel = vi.fn()
+                pathCancels.push(cancel)
+                return {
+                    mode:        options.mode,
+                    distanceMeters: 200000,
+                    sampleCount: 48,
+                    samples:     [],
+                    sampleAt:    () => new Cartesian3(1, 1, 1),
+                    flyTo:       vi.fn(() => cancel),
+                }
+            })
+
+            await SceneUtils.focus({
+                longitude: 10,
+                latitude:  20,
+                height:    0,
+            }, {
+                cameraPosition: {
+                    longitude: 10,
+                    latitude:  20,
+                    height:    1200,
+                },
+                useCameraPath: true,
+                flyingTime:    1,
+                initializer:   () => ({distance: 200000, height: 0, sameRotateTarget: false}),
+            })
+
+            expect(buildSpy).toHaveBeenCalledTimes(1)
+            expect(pathCancels).toHaveLength(1)
+
+            lgs.camera.positionWC = Cartesian3.fromDegrees(11, 21, 1300)
+            cameraChangedHandler?.()
+            await vi.advanceTimersByTimeAsync(100)
+
+            expect(pathCancels[0]).toHaveBeenCalledTimes(1)
+            expect(buildSpy).toHaveBeenCalledTimes(2)
+            expect(lgs.camera.flyTo).not.toHaveBeenCalled()
+
+            buildSpy.mockRestore()
+        }
+        finally {
+            vi.useRealTimers()
+        }
     })
 
     it('does not reuse a corrupted stored journey height when reset focusing', async () => {
