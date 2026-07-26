@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-07-26 — [`fix: stabilize replay camera path and HQ overlay capture`](https://github.com/lgs1920/studio/commit/29a72fee)
+
+- Allow replay camera transfers to switch between frame and time cadence for draft capture.
+- Support function-based camera transition cancellation tokens.
+- Keep hidden replay diagnostics canvases visible to the HQ overlay composer.
+
 ## 2026-07-26 — [`fix: align replay camera path cadence and cancellation`](https://github.com/lgs1920/studio/commit/4b28cdd6)
 
 - Allow replay camera transfers to run on a time cadence when draft capture needs it.

@@ -200,6 +200,9 @@ Responsibilities:
 - resolve widget visibility through `ReplayOverlayResolver`;
 - compute the same overlay metrics, scale, shadow, blur, radius, and z-order in
   both paths;
+- keep replay diagnostics canvases marked `data-replay-video-overlay-canvas="true"`
+  in the HQ composer even when the DOM node is hidden, so Z1/Z2 diagnostics stay
+  visible in deferred exports;
 - expose the shared widget readiness predicate used before recording/export.
 
 This is the shared overlay composition adapter.
