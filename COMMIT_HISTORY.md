@@ -1,5 +1,10 @@
 # Commit History
 
+## 2026-07-26 — [`fix: scope panorama transfer to the widget`](https://github.com/lgs1920/studio/commit/acaaccdf)
+
+- Keep the panorama flight local to `PanoramaWidget` and its transfer helper.
+- Remove the broader replay camera architecture changes from the commit.
+
 ## 2026-07-26 — [`merge: sync main into 1.0.0-beta.4`](https://github.com/lgs1920/studio/commit/ebc72195)
 
 - Merge the documentation changes from `main` into the `1.0.0-beta.4` branch.
