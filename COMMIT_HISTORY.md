@@ -1,5 +1,10 @@
 # Commit History
 
+## 2026-07-26 — [`docs: add standard issue templates`](https://github.com/lgs1920/studio/commit/953a6470)
+
+- Add dedicated bug and feature issue templates under `.github/ISSUE_TEMPLATE/`.
+- Disable blank issues and document the expected issue structure in `PROJECT_RULES.md`.
+
 ## 2026-07-25 — [`fix: throttle repeated codec error toasts`](https://github.com/lgs1920/studio/commit/3ef787f5)
 
 - Throttle repeated video codec error notifications to one toast every 30 seconds per recording session.
