@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-07-26 — [`docs: refresh replay camera and HQ overlay docs`](https://github.com/lgs1920/studio/commit/fe1ab707)
+
+- Refresh the replay core readme with the recent camera transfer and HQ overlay responsibilities.
+- Document the camera cadence and cancellation refinement in the drone camera path spec.
+- Note the hidden replay diagnostics canvas behavior in the replay video architecture TODO.
+
 ## 2026-07-26 — [`fix: stabilize replay camera path and HQ overlay capture`](https://github.com/lgs1920/studio/commit/29a72fee)
 
 - Allow replay camera transfers to switch between frame and time cadence for draft capture.

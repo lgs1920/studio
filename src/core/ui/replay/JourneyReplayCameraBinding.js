@@ -96,7 +96,6 @@ import {
 } from './JourneyReplayCameraVisibility'
 import {
     applyCameraView,
-    liveCameraPitch,
     markerPositionForSample,
     markerRenderHeightForSample,
     markerRenderCartesianForSample,
@@ -931,7 +930,7 @@ export const updateCamera = (mode, {
                     const frame = call.cameraRecenterFrame({
                         sample:         navigationTargetSample,
                         heading:        navigationTargetView?.heading ?? smoothHeading,
-                        pitch:          call.liveCameraPitch(navigationTargetView?.pitch ?? smoothPitch),
+                        pitch:          navigationTargetView?.pitch ?? smoothPitch,
                         cameraSettings,
                     })
                     if (frame) {
@@ -947,7 +946,7 @@ export const updateCamera = (mode, {
                     call.recenterCameraToSample({
                         sample:         navigationTargetSample,
                         heading:        navigationTargetView?.heading ?? smoothHeading,
-                        pitch:          call.liveCameraPitch(navigationTargetView?.pitch ?? smoothPitch),
+                        pitch:          navigationTargetView?.pitch ?? smoothPitch,
                         cameraSettings,
                         duration:       recenterDuration,
                         deterministic:  deterministicCamera,
@@ -1020,7 +1019,7 @@ export const updateCamera = (mode, {
                 const frame = call.cameraRecenterFrame({
                     sample:         trackingSample,
                     heading:        dynamicTargetView?.heading ?? smoothHeading,
-                    pitch:          call.liveCameraPitch(dynamicTargetView?.pitch ?? smoothPitch),
+                    pitch:          dynamicTargetView?.pitch ?? smoothPitch,
                     cameraSettings,
                 })
                 call.applyDeterministicCameraFollower({
@@ -1280,7 +1279,7 @@ export const updateCamera = (mode, {
                                       : targetNominalView?.heading ?? targetView.heading
                 const targetPitch = useRedirectTransition
                                     ? targetView.pitch
-                                    : call.liveCameraPitch(targetNominalView?.pitch ?? smoothPitch)
+                                    : targetNominalView?.pitch ?? smoothPitch
                 if (deterministicCamera && !useRedirectTransition && !immediateToleranceRecenter) {
                     const frame = call.cameraRecenterFrame({
                         sample:         targetSample,

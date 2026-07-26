@@ -97,7 +97,6 @@ import {
 } from './JourneyReplayCameraVisibility'
 import {
     applyCameraView,
-    liveCameraPitch,
     markerPositionForSample,
     markerRenderHeightForSample,
     markerRenderCartesianForSample,
@@ -509,7 +508,7 @@ export const startDeterministicCameraTransition = (mode, {
                 const correctedFrame = call.cameraRecenterFrame({
                     sample,
                     heading:        view.heading,
-                    pitch:          call.liveCameraPitch(view.pitch ?? pitch),
+                    pitch:          view.pitch ?? pitch,
                     cameraSettings:  replayCameraSettings,
                     cameraHeight:   view.cameraHeight,
                 })

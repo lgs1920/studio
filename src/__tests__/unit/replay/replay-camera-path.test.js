@@ -438,6 +438,77 @@ describe('Journey replay camera paths', () => {
         expect(state.deterministicCameraTransition.path.safetyProfile.zoneScale).toBeGreaterThan(1)
     })
 
+    it('keeps the nominal pitch when resolving a deterministic correction frame', () => {
+        vi.stubGlobal('lgs', {
+            theJourney: makeJourney(),
+            settings: {
+                camera: {
+                    transferDistanceThresholdKm: 50,
+                    pitchAdjustHeight:           600,
+                },
+            },
+        })
+
+        const {mode, state, call} = makeMode()
+        call.liveCameraPitch = vi.fn(() => -1.5)
+        call.markerRenderHeightForSample = vi.fn(() => 120)
+        call.cameraViewForSample = vi.fn(() => ({
+            heading:      0.25,
+            pitch:        -0.5,
+            cameraHeight: 800,
+        }))
+        call.cameraLineOfSightVisibleForFrame = vi.fn(() => false)
+        call.renderedTraceVisibleForSample = vi.fn(() => false)
+
+        const endFrame = {
+            destination:  new Cartesian3(120_000, 0, 0),
+            direction:    new Cartesian3(0, 1, 0),
+            correctedUp:  new Cartesian3(0, 0, 1),
+            safeHeading:  0,
+            safePitch:    -1,
+            currentHeight: 500,
+        }
+
+        startDeterministicCameraTransition(mode, {
+            sample:       {id: 'sample', progress: 0.5},
+            heading:      0,
+            pitch:        0,
+            endFrame,
+            duration:     1,
+            logicalNow:   10,
+            cameraSettings: {
+                hysteresis: {
+                    zone: {
+                        top:    0.2,
+                        left:   0.2,
+                        width:  0.6,
+                        height: 0.6,
+                    },
+                    marginRatio: 0.12,
+                    easing:      0.18,
+                },
+            },
+        })
+
+        const transition = state.deterministicCameraTransition
+        expect(transition).not.toBeNull()
+        transition.path.frameResolver({
+            path:   transition.path,
+            target: transition.target,
+            ratio:  0.5,
+            frame:  {
+                destination: new Cartesian3(1, 2, 3),
+                direction:   new Cartesian3(0, 1, 0),
+                up:          new Cartesian3(0, 0, 1),
+            },
+        })
+
+        expect(call.cameraRecenterFrame).toHaveBeenCalledOnce()
+        expect(call.cameraRecenterFrame).toHaveBeenCalledWith(expect.objectContaining({
+            pitch: -0.5,
+        }))
+    })
+
     it('projects a replay marker from a candidate frame without using the live Cesium camera', () => {
         const point = projectReplayTargetInCameraFrame({
             frame: {
