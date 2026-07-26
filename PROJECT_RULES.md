@@ -59,3 +59,5 @@ This is the canonical source for the project's AI-agent and development rules.
 - **Complete fields:** Every created issue must have all available fields filled in, including title, description, assignee, labels, type, milestone, backlog, and any other fields required by the issue tracker.
 - **Assignee:** Assign the issue to the user requesting its creation unless the user explicitly specifies another assignee.
 - **Milestone and backlog:** Before creating an issue, ask the user which milestone and backlog it belongs to. Do not create the issue until both choices have been confirmed.
+- **Issue body structure:** Write every issue body in the same structure: short context, requested behavior, acceptance criteria, and optional notes or questions. Keep the scope to one request per issue and prefer bullet lists for requirements.
+- **Issue templates:** Use `.github/ISSUE_TEMPLATE/bug_report.md` for bugs and `.github/ISSUE_TEMPLATE/feature_request.md` for new features or improvements. Keep the sections consistent with the issue type and use the reproduction section only for bugs.
