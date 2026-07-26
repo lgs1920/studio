@@ -11,9 +11,8 @@ This document describes how to add Cesium Ion layers to LGS1920 Studio beyond th
 
 It complements the existing documents:
 
-- [CESIUM-ION-TOKEN-MANAGEMENT.md](../current/CESIUM-ION-TOKEN-MANAGEMENT.md)
+- [CESIUM-ION-TOKEN-MANAGEMENT.md](../specs/CESIUM-ION-TOKEN-MANAGEMENT.md)
 - [README-CESIUM](README-CESIUM)
-- [ion-token-help.md](../current/CESIUM-ION-TOKEN-MANAGEMENT.md)
 
 ## Current State
 
