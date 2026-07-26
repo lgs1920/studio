@@ -1,5 +1,10 @@
 # Commit History
 
+## 2026-07-26 — [`docs: rename journey replay video issues`](https://github.com/lgs1920/studio/commit/f20f922e)
+
+- Rename the replay/video architecture analysis document to a hyphenated uppercase filename.
+- Update the root and technical documentation indexes to point to the renamed file.
+
 ## 2026-07-26 — [`docs: restructure tech docs hierarchy`](https://github.com/lgs1920/studio/commit/9646f47b)
 
 - Rename the technical documentation moved out of `current/src` and `todo/src` to flat uppercase filenames under `tech-doc/current/` and `tech-doc/todo/`.
