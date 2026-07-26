@@ -1,0 +1,26 @@
+name: Sync issue type
+
+on:
+  issues:
+    types:
+      - opened
+      - reopened
+      - edited
+      - labeled
+
+permissions:
+  issues: write
+
+jobs:
+  sync-issue-type:
+    if: ${{ github.event.issue.pull_request == null }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Sync the issue type from the template marker
+        run: node .github/scripts/sync-issue-type.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

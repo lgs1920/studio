@@ -1,5 +1,10 @@
 # Commit History
 
+## 2026-07-26 — [`docs: sync issue types from templates`](https://github.com/lgs1920/studio/commit/dcb2eeb0)
+
+- Add hidden issue-type markers to the bug and feature issue templates.
+- Add a GitHub Actions workflow and script that sync the repository issue type from the template marker or label fallback.
+
 ## 2026-07-25 — [`fix: throttle repeated codec error toasts`](https://github.com/lgs1920/studio/commit/3ef787f5)
 
 - Throttle repeated video codec error notifications to one toast every 30 seconds per recording session.

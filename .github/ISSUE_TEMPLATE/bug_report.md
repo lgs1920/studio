@@ -6,6 +6,8 @@ labels: bug
 assignees: chdenat
 ---
 
+<!-- issue-type: bug -->
+
 ## Context
 
 Describe the current situation and where the bug occurs.
