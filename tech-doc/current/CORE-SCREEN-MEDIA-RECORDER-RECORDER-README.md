@@ -18,7 +18,7 @@ Main files involved in recording:
 
 For the compositor internals, see also:
 
-- `src/core/ui/screen-media-recorder/composer/README.md`
+- `CORE-SCREEN-MEDIA-RECORDER-COMPOSER-README.md`
 
 ## Current pipeline
 

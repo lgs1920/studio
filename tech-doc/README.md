@@ -1,6 +1,6 @@
 # Technical Documentation
 
-This directory centralizes the repository technical documentation. Paths mirror the original source tree when a document belongs to a specific module.
+This directory centralizes the repository technical documentation. Implementation docs that describe current behavior are flattened under `current/` with uppercase file names.
 
 Implementation-document status is organized into two directories:
 
@@ -17,44 +17,44 @@ Implementation-document status is organized into two directories:
 
 ## Deployment
 
-- [Deployment](deployment/README.md)
+- [Deployment](current/DEPLOYMENT-README.md)
 
 ## Core
 
-- [Events](src/core/events/README.md)
-- [Elevation design](src/core/Elevation/design.md)
-- [Cache](src/core/cache/README.md)
+- [Events](current/CORE-EVENTS-README.md)
+- [Elevation design](current/CORE-ELEVATION-DESIGN.md)
+- [Cache](current/CORE-CACHE-README.md)
 - [Internal database architecture](current/CORE-INTERNAL-DATABASE-ARCHITECTURE.md)
-- [LocalDB API reference](src/core/db/README.md)
-- [Panels](src/core/ui/panels/README.md)
-- [Context menu](src/core/ui/context-menu/README.md)
+- [LocalDB API reference](current/CORE-LOCALDB-API-REFERENCE.md)
+- [Panels](current/CORE-UI-PANELS-README.md)
+- [Context menu](current/CORE-UI-CONTEXT-MENU-README.md)
 - [Drone camera path architecture](current/CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)
 
 ## Replay And Video
 
-- [Replay core](src/core/ui/replay/README-REPLAY.md)
+- [Replay core](current/CORE-UI-REPLAY-README-REPLAY.md)
 - [Replay video architecture](todo/CORE-REPLAY-VIDEO-ARCHITECTURE.md)
-- [JourneyReplay component notes](src/components/JourneyReplay/README-REPLAY.md)
-- [Screen media recorder](src/core/ui/screen-media-recorder/recorder/README.md)
-- [Canvas overlay composer](src/core/ui/screen-media-recorder/composer/README.md)
+- [JourneyReplay component notes](current/JOURNEYREPLAY-README-REPLAY.md)
+- [Screen media recorder](current/CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)
+- [Canvas overlay composer](current/CORE-SCREEN-MEDIA-RECORDER-COMPOSER-README.md)
 
 ## Widgets
 
-- [Widget manager](src/core/ui/widget-manager/README.md)
-- [Widget to canvas](src/core/ui/widget-manager/widget-2-canvas/README.md)
-- [Dynamic widget renderer](src/core/ui/widget-manager/dynamic-render/README.md)
-- [CSS assets](src/assets/README-CSS.md)
+- [Widget manager](current/CORE-WIDGET-MANAGER-README.md)
+- [Widget to canvas](current/CORE-WIDGET-MANAGER-WIDGET-2-CANVAS-README.md)
+- [Dynamic widget renderer](current/CORE-WIDGET-MANAGER-DYNAMIC-RENDER-README.md)
+- [CSS assets](current/ASSETS-README-CSS.md)
 
 ## Components
 
-- [Tunnel](src/components/Tunnel/README.md)
-- [Ion token technical notes](src/components/Settings/application/profile/ion-token-technical.md)
+- [Tunnel](current/TUNNEL-README.md)
+- [Ion token technical notes](current/CESIUM-ION-TOKEN-MANAGEMENT.md)
 
 ## Assets And Libraries
 
-- [EventEmitter](src/assets/libs/EventEmitter/README.md)
-- [Flags assets](public/assets/images/flags/README.md)
-- [Logo assets](public/assets/logo/README.md)
+- [EventEmitter](current/ASSETS-LIBS-EVENTEMITTER-README.md)
+- [Flags assets](current/PUBLIC-FLAGS-README.md)
+- [Logo assets](current/PUBLIC-LOGO-README.md)
 
 ## Current implementation documentation
 
@@ -63,6 +63,26 @@ Implementation-document status is organized into two directories:
 - [Video/replay test-suite failures — 2026-07-25](current/VIDEO_TEST_SUITE_FAILURES_2026-07-25.md)
 - [Internal database architecture](current/CORE-INTERNAL-DATABASE-ARCHITECTURE.md)
 - [Drone camera path architecture](current/CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)
+- [Deployment](current/DEPLOYMENT-README.md)
+- [Events](current/CORE-EVENTS-README.md)
+- [Elevation design](current/CORE-ELEVATION-DESIGN.md)
+- [Cache](current/CORE-CACHE-README.md)
+- [LocalDB API reference](current/CORE-LOCALDB-API-REFERENCE.md)
+- [Panels](current/CORE-UI-PANELS-README.md)
+- [Context menu](current/CORE-UI-CONTEXT-MENU-README.md)
+- [Replay core](current/CORE-UI-REPLAY-README-REPLAY.md)
+- [JourneyReplay component notes](current/JOURNEYREPLAY-README-REPLAY.md)
+- [Screen media recorder](current/CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)
+- [Canvas overlay composer](current/CORE-SCREEN-MEDIA-RECORDER-COMPOSER-README.md)
+- [Widget manager](current/CORE-WIDGET-MANAGER-README.md)
+- [Widget to canvas](current/CORE-WIDGET-MANAGER-WIDGET-2-CANVAS-README.md)
+- [Dynamic widget renderer](current/CORE-WIDGET-MANAGER-DYNAMIC-RENDER-README.md)
+- [CSS assets](current/ASSETS-README-CSS.md)
+- [Tunnel](current/TUNNEL-README.md)
+- [Ion token technical notes](current/CESIUM-ION-TOKEN-MANAGEMENT.md)
+- [EventEmitter](current/ASSETS-LIBS-EVENTEMITTER-README.md)
+- [Flags assets](current/PUBLIC-FLAGS-README.md)
+- [Logo assets](current/PUBLIC-LOGO-README.md)
 
 ## Implementation TODO documentation
 
