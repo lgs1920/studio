@@ -2,35 +2,345 @@
 
 ## Goal
 
-Add a camera manager able to play a drone-like camera trajectory over an exact
-duration. The camera is treated as a drone: it has its own GPS position, smooth
-motion constraints, an orientation, and one or more points of interest to look
-at while it moves.
+Define a reusable camera path system that can move the camera from point A to
+point B, or follow a richer route with targets, orbit-like motion, visibility
+corrections, and export-safe easing.
 
-This must not be implemented as another block of camera logic inside Journey
-Replay. The path model should be reusable, deterministic, and testable without a
-live Cesium scene. Cesium should only be used by adapters and runtime services.
+The path is a standalone runtime concept. It is not tied to `Journey` by
+default and it is not persisted as a product feature in V1. Journey remains the
+source of truth for replay-driven camera motion, and replay materializes the
+canonical path at runtime from the journey state.
+
+Replay must become a consumer of the same path engine. Draft playback and HQ
+export must evaluate the same canonical path definition for a given journey
+state. Cesium should only be used by adapters and runtime services.
+
+## Current Implementation
+
+The path architecture is implemented in the current code base. The relevant
+runtime files are:
+
+- `src/core/ui/replay/JourneyReplayCameraPath.js`
+- `src/core/ui/replay/JourneyReplayConstrainedCameraPath.js`
+- `src/core/ui/replay/JourneyReplayCameraConstraintBinding.js`
+- `src/core/ui/replay/JourneyReplayCameraCollision.js`
+- `src/core/ui/replay/JourneyReplayCameraTransition.js`
+- `src/core/ui/replay/JourneyReplayCameraBinding.js`
+- `src/Utils/cesium/SceneUtils.js`
+- `src/components/MainUI/PanoramaWidget.jsx`
+
+The point-to-point runtime pipeline is:
+
+1. resolve a start camera frame and an end camera frame
+2. choose a transfer mode from the configured distance threshold
+3. build a reusable sampled camera path
+4. attach a replay safety profile when the call comes from a replay fallback
+5. resolve visibility corrections when needed
+6. apply sampled frames with `camera.setView`
+
+Continuous journey replay uses a separate compilation stage on top of the same
+camera frame model:
+
+1. materialize deterministic journey samples and nominal camera frames
+2. bake terrain redirection into nominal frames when line of sight is blocked
+3. project the current and look-ahead markers through candidate frames without
+   reading the currently rendered Cesium camera
+4. start a smooth correction before the marker leaves Z1
+5. land in the internal navigation landing zone or dynamic Z2
+6. verify every compiled sample and every exact requested replay progress
+7. cache the resulting path in memory
+8. let Draft and HQ sample this same path by replay progress
+
+That means the deterministic engine is path-driven. Cesium `camera.flyTo` is
+not the core primitive for replay or live path sampling.
+
+### Core transfer builder
+
+`buildCameraTransferPath(...)` returns a deterministic path object. In the
+current implementation it exposes:
+
+- `mode`
+- `distanceMeters`
+- `sampleCount`
+- `samples`
+- `sampleAt(ratio)`
+- `flyTo({...})`
+- `antiCollisionBounds`
+- `safetyProfile`
+
+The supported modes are:
+
+- `direct`
+- `bezier-3d`
+- `elevate-then-move`
+- `blur-jump-refocus`
+- `spiral-horizontal`
+- `spiral-conical`
+- `spiral-vertical`
+
+Example:
+
+```js
+const safetyProfile = buildReplayTransferSafetyProfile(journey, {
+  trackingMode: marker.mode,
+  cameraSettings,
+  viewport: call.viewportRectForCesiumSurface?.() ?? null,
+  clearanceMeters: 500,
+})
+
+const path = buildCameraTransferPath({
+  start: startFrame.destination,
+  end: endFrame.destination,
+  mode: 'spiral-conical',
+  sampleCount: 80,
+  antiCollisionBounds: safetyProfile,
+  safetyProfile,
+})
+```
+
+The `flyTo(...)` method on the returned path is a sampler loop. It is not a
+wrapper around Cesium `camera.flyTo`. It exists so live preview can reuse the
+same path evaluator as deterministic playback.
+
+The path object also accepts an optional `frameResolver`. Point-to-point
+transfers use it for visibility corrections. Continuous replay screen
+constraints are compiled by `JourneyReplayConstrainedCameraPath.js`, because a
+single start/end transfer cannot guarantee the position of a moving marker.
+
+### Constrained replay compiler
+
+`buildConstrainedReplayCameraPath(...)` materializes the journey-derived replay
+camera path in memory. It receives deterministic callbacks for nominal camera
+frames, marker targets, and candidate-frame projection.
+
+The compiler exposes:
+
+- `frames`
+- `triggerZone`
+- `targetZone`
+- `durationSeconds`
+- `responseSeconds`
+- `lookaheadSeconds`
+- `constrainedSamples`
+- `sampleAt(progress)`
+
+The projection implemented by
+`projectReplayTargetInCameraFrame(...)` works from the candidate frame's
+`destination`, `direction`, and `up`, plus the Cesium frustum and crop
+dimensions. It does not call `worldToWindowCoordinates` on the live camera.
+This removes the asynchronous one-frame discrepancy that previously caused
+Draft and HQ to disagree about Z1/Z2 collisions.
+
+The compiler keeps the current frame while both the current and look-ahead
+markers remain safe. When either marker threatens Z1, it interpolates toward a
+future nominal frame. If smoothing still leaves the current marker outside Z1,
+a coarse search followed by binary refinement finds the first interpolated
+frame that restores the constraint. `sampleAt(progress)` repeats the constraint
+check with the exact journey sample and rendered marker target at the requested
+progress. It does not linearly approximate that target from the two surrounding
+cached targets. If the interpolated nominal frame still cannot contain the
+exact target, the solver computes the smallest focus correction from the
+current camera position before refining the transition. Curved journey
+segments therefore cannot let the marker escape between cached samples.
+
+Path compilation is intentionally bounded before live playback starts. The
+solver reduces the camera guide to between 128 and 256 compilation intervals,
+then performs smooth interpolation and exact-progress validation at runtime.
+This prevents the first Draft tick from synchronously evaluating thousands of
+terrain-aware camera poses on the UI thread.
+
+Terrain redirect searches also retain their last valid redirect while the
+obstruction remains active. A missing redirect is retried at a bounded sample
+interval instead of running the complete candidate search for every compiled
+pose. Nominal line of sight is still checked for every pose, so the path returns
+to its normal trajectory immediately when the relief permits it.
+
+The compiled cache survives Draft scene cleanup and HQ preparation. It is
+invalidated when the journey sampler changes, while the cache key also covers
+the guide, camera and marker settings, runtime zones, crop, replay timing, and
+frustum. Draft and HQ therefore consume the same in-memory path object whenever
+those inputs are unchanged.
+
+### Replay safety profile
+
+Replay uses a dedicated helper in `JourneyReplayCameraCollision.js`:
+
+```js
+const safetyProfile = buildReplayTransferSafetyProfile(journey, {
+  trackingMode,
+  cameraSettings,
+  viewport,
+  clearanceMeters,
+})
+```
+
+The helper combines:
+
+- the journey world-space bbox
+- the active replay zones
+- the tracking mode
+- the configured camera hysteresis settings
+
+The output contains:
+
+- `mode`
+- `zoneScale`
+- `clearanceMeters`
+- `zones.navigation`
+- `zones.dynamic.trigger`
+- `zones.dynamic.target`
+
+The safety profile remains useful for point-to-point replay transfers and
+fallbacks. It does not itself guarantee screen-space containment. That
+guarantee belongs to the constrained replay compiler, which evaluates actual
+candidate-frame projections against Z1/Z2.
+
+The practical effect is:
+
+- navigation paths remain smoother and less conservative
+- dynamic paths are widened and slowed down so Z1/Z2 are respected more
+  aggressively
+
+### Relief masking
+
+When the marker or the camera line of sight is hidden by terrain, the replay
+path now contours around the obstruction and then returns to the nominal
+trajectory as soon as the geometry allows it.
+
+The visibility stack is still the detection layer:
+
+- `cameraLineOfSightVisibleForFrame(...)` checks the terrain profile between
+  the camera and the marker
+- `renderedTraceVisibleForSample(...)` checks whether the rendered target is
+  actually visible in the scene
+- `findCameraRedirectState(...)` searches for a visible fallback framing when
+  the nominal view is occluded
+- `cameraViewVisibilityForSample(...)` validates both the current and the
+  future view before accepting the frame
+
+The runtime behavior is:
+
+1. detect the occlusion
+2. bend the path around the relief if needed
+3. return to the nominal path as soon as line of sight becomes feasible again
+
+So relief is no longer only a visibility correction. It is now a path
+deformation rule with a return-to-nominal behavior.
+
+### Turn anticipation, drift, and journey angle
+
+The replay path includes a real lateral drift in turns when the curvature
+justifies it. The camera can take a wider line through the bend instead of
+only rotating in place.
+
+The horizontal camera angle must follow the journey direction, while pitch
+remains a separate vertical framing control. In practice:
+
+- the journey tangent drives the horizontal angle
+- pitch controls only the vertical look
+- the path may add a lateral overshoot or drift around bends
+- the drift should relax back to the nominal line after the turn
+
+The existing turn sampling and tangent derivation remain the basis for this
+behavior. The runtime now applies a turn drift envelope to the replay heading
+and can also widen the transfer frame through the same sampled path pipeline.
+
+### Replay integration
+
+Point-to-point deterministic replay transitions consume the transfer builder:
+
+```js
+const transferPath = buildCameraTransferPath({
+  start: startFrame.destination,
+  end: end.destination,
+  mode: transferMode,
+  sampleCount: transferMode === 'direct'
+    ? 24
+    : Math.round((transferMode === 'elevate-then-move' ? 64 : 80) * transferScale),
+  liftMeters,
+  antiCollisionBounds: transferSafetyProfile,
+  safetyProfile: transferSafetyProfile,
+})
+```
+
+Continuous replay does not create successive point-to-point transitions.
+`JourneyReplayCameraBinding.js` resolves one cached constrained path from the
+journey, crop, camera settings, marker settings, mode, and frustum. Navigation
+and dynamic/hysteresis therefore use the same compiler while retaining their
+different trigger and landing zones.
+
+### Live focus
+
+Live focus in `SceneUtils.focus(...)` also uses the shared path builder.
+During the flight, the code can replan from the current camera pose if the user
+moves the camera. The target remains fixed and only the camera pose changes.
+
+The current design split is deliberate:
+
+- focus is interactive and keeps the target fixed
+- focus does not use replay anti-collision logic
+- replay does use replay anti-collision logic
+
+### Panorama and other direct consumers
+
+`PanoramaWidget.jsx` also uses the path builder instead of calling Cesium
+`flyTo` directly. That keeps the panorama entry flight aligned with the same
+distance-aware policy as replay and focus.
+
+## Product Direction
+
+- Paths are first-class runtime objects and can be created without a journey.
+- The canonical replay path is generated from journey state.
+- Focus, orbit, and panorama are not separate imperative camera systems. They
+  are path presets or API-generated path policies on top of the same evaluator.
+- `fly-to` is not only an instant Cesium call. It is a distance-aware transfer
+  policy that can choose between short travel, staged travel, or a far-distance
+  jump with a blur/defocus transition.
+- `roll` is supported by the engine even if the UI does not expose it everywhere
+  in V1.
+- Runtime corrections are live-preview behavior by default. Export and HQ can
+  bake a correction when necessary to guarantee a deterministic shot.
+- The path engine must support 3D Bezier geometry as a first-class path
+  representation, not only as an editor convenience.
 
 ## Confirmed Decisions
 
-- The first deliverable is an architecture document.
 - Public path coordinates are GPS values: `latitude`, `longitude`, `height`.
 - Every public path `height` is an absolute WGS84 ellipsoid height. Terrain
   offsets may be used while authoring, but are resolved before evaluation and
   export.
 - Public angles are degrees: `heading`/`yaw`, `pitch`, and optional `roll`.
-- The drone can look at one point, a sequence of points, or a group of points.
-- The drone can perform a real 360-degree move around a point while continuing a
-  larger travel path.
+- The camera can look at one point, a sequence of points, or a group of
+  points.
+- The camera can perform a real 360-degree move around a point while
+  continuing a larger travel path.
 - Altitude may be constant or animated, but never with abrupt steps.
-- If the target point becomes hidden, the runtime must be able to move the drone
-  dynamically so the target becomes visible, then return smoothly to the
+- If the target point becomes hidden, the runtime must be able to move the
+  camera dynamically so the target becomes visible, then return smoothly to the
   nominal path.
-- In turns, the drone can temporarily overshoot the nominal trajectory and
-  change its camera angle relative to the track. The effect is derived from
-  local curvature and uses easing when entering and leaving the turn.
+- In turns, the camera can temporarily overshoot the nominal trajectory and
+  change its camera angle relative to the journey direction. The effect is
+  derived from local curvature, uses easing when entering and leaving the turn,
+  and keeps pitch separate from the horizontal journey angle.
 - V1 uses `bezier-easing` for CSS-like cubic-bezier temporal easing. The public
   API can accept both named easing values and `[x1, y1, x2, y2]` easing curves.
+- A path can represent a direct transfer, a replay-derived route, a focus shot,
+  an orbit shot, a panorama-like shot, or a generic motion preset.
+- Camera thresholds such as distance transitions live in camera settings and are
+  not user-editable in the UI.
+
+## Cesium Building Blocks To Consider
+
+- `camera.setView` for immediate application of a deterministic pose
+- `camera.flyTo` only as a behavior reference or optional wrapper, not as the
+  core deterministic engine primitive
+- `camera.lookAt` and `camera.lookAtTransform` for pivot-based orbit and focus
+  behaviors
+- `camera.rotate` and `camera.zoom*` as low-level primitives inside a higher
+  level evaluator, not as public path API
+- `scene.pickFromRay`, `scene.pickFromRayMostDetailed`, and `sampleHeight*`
+  for visibility-aware correction
+- compositor blur or defocus transitions for long-distance camera transfers
 
 ## Core Concepts
 
@@ -131,7 +441,7 @@ future editor or auto-framing feature.
 
 ### GPS Path
 
-The primary mode is a real GPS path. Each keyframe gives the drone position.
+The primary mode is a real GPS path. Each keyframe gives the camera position.
 
 ```js
 {
@@ -141,7 +451,7 @@ The primary mode is a real GPS path. Each keyframe gives the drone position.
 }
 ```
 
-This mode is the most general. The drone is not constrained to orbit a target.
+This mode is the most general. The camera is not constrained to orbit a target.
 
 ### Derived Orbit
 
@@ -161,11 +471,74 @@ heading, pitch, and distance.
 The engine converts this to the same final pose as a GPS path. `orbit` is an
 authoring shortcut, not a separate runtime.
 
-### Free Fly-To Between Two Positions
+### 3D Bezier Path
 
-The path model must also provide a deterministic equivalent of a Cesium
-`flyTo` between two explicit camera positions. This mode is useful when the
-camera must travel from point A to point B without looking at a fixed target.
+The path model must also accept 3D Bezier geometry for smooth authored motion.
+This is required for the track editor and for future path presets that need
+continuous curvature.
+
+The control data should live in local 3D space, then be resolved to public GPS
+poses by the evaluator.
+
+```js
+{
+  mode: "bezier-3d",
+  frame: {
+    type: "local-enu",
+    origin: {
+      latitude: 45.9237,
+      longitude: 6.8694,
+      height: 2450
+    }
+  },
+  keyframes: [
+    {
+      at: 0,
+      anchor: { x: 0, y: 0, z: 0 },
+      handleOut: { x: 120, y: 40, z: 10 }
+    },
+    {
+      at: 0.5,
+      anchor: { x: 420, y: 280, z: 80 },
+      handleIn: { x: -80, y: -50, z: -10 },
+      handleOut: { x: 110, y: 60, z: 20 }
+    },
+    {
+      at: 1,
+      anchor: { x: 920, y: 650, z: 130 },
+      handleIn: { x: -120, y: -70, z: -20 }
+    }
+  ]
+}
+```
+
+Bezier 3D paths must support:
+
+- local ENU control handles
+- smooth position interpolation in 3D space
+- independent altitude shaping
+- deterministic export to sampled poses
+- conversion to a canonical runtime path used by Draft, HQ, and replay
+
+### Distance-Aware Camera Transfer
+
+The path model must provide a deterministic transfer between two explicit
+camera positions. This is the reusable version of `fly-to`, `focus`,
+`panorama`, and other point-to-point camera actions.
+
+The transfer policy should depend on distance, altitude delta, and framing
+requirements. For example:
+
+- short transfer: move directly while adjusting altitude and framing smoothly
+- medium transfer: climb or descend toward a safe flight altitude, then move
+  to the new point and settle into the final framing
+- long transfer: blur or defocus, move directly, then refocus and settle on the
+  target shot
+- spiral transfer: use a vertical, horizontal, or conical spiral to connect two
+  shots with a deliberate cinematic move instead of a straight displacement
+
+`X km` is intentionally fixed by camera settings and should not be exposed as a
+user-editable control.
 
 The public positions remain GPS coordinates with absolute WGS84 ellipsoid
 height:
@@ -194,8 +567,8 @@ height:
 }
 ```
 
-`fly-to` must use the same deterministic evaluator as every other clip. It
-must not call Cesium `flyTo` during playback or export. The runtime samples the
+`fly-to` must use the same deterministic evaluator as every other clip. It must
+not call Cesium `flyTo` during playback or export. The runtime samples the
 position at logical time, applies the selected easing, and sends the resulting
 pose to the Cesium adapter with `camera.setView`.
 
@@ -246,6 +619,33 @@ For `preserve-current`, the current orientation is captured at the clip start
 and remains the orientation baseline for the whole clip. It is not recomputed
 from the destination point and cannot accidentally turn the camera toward a
 POI.
+
+The camera transfer policy should choose one of these behaviors based on
+distance and framing:
+
+- `direct`: go from A to B with smooth interpolation
+- `elevate-then-move`: climb or descend to a travel altitude first, then move
+- `blur-jump-refocus`: hide the visual jump for long-distance transfers
+- `spiral-vertical`: wrap the transfer around a vertical helix while climbing
+  or descending
+- `spiral-horizontal`: wrap the transfer around a horizontal orbit while
+  moving to the new framing point
+- `spiral-conical`: combine radius and height evolution into a conical spiral
+- `preset`: a named reusable camera policy such as focus, orbit, panorama, or
+  replay-derived move
+
+Spiral variants mean:
+
+- `spiral-vertical`: the camera follows a helical path around the travel axis
+  while the altitude changes
+- `spiral-horizontal`: the camera circles laterally around the travel axis
+  while keeping the altitude mostly stable
+- `spiral-conical`: the camera changes radius and altitude together to create
+  a cone-like cinematic move
+
+The API should allow parametrable presets so the same policy can be reused with
+different targets, radii, distances, or framing rules without changing the
+canonical evaluator.
 
 ## 360-Degree Maneuver During Travel
 
@@ -666,9 +1066,9 @@ appliedPose = blend(nominalPose, correctedPose, correctionWeight)
 
 `correctionWeight` must be eased. It must never jump instantly from `0` to `1`.
 
-Z1/Z2 tracking is a screen-space tracking policy layered on top of this loop;
-it is not a second camera path. The nominal path first produces the current and
-predicted poses, then the tracking policy decides whether a recenter is needed:
+Z1/Z2 tracking is a screen-space correction policy compiled into the canonical
+replay path. The nominal path first produces current and predicted poses, then
+the compiler decides whether a correction is needed:
 
 ```js
 const nominalPose = path.poseAtProgress(progress)
@@ -682,24 +1082,27 @@ const tracking = trackingResolver.evaluate({
   crop: videoCropRect,
 })
 
-const appliedPose = tracking.correction
-  ? blend(nominalPose, tracking.correction, tracking.correctionWeight)
-  : nominalPose
+const constrainedPath = buildConstrainedReplayCameraPath({
+  nominalPath,
+  tracking,
+  crop: videoCropRect,
+})
+
+const appliedPose = constrainedPath.sampleAt(progress)
 ```
 
 Z1 remains the trigger zone. Leaving Z1, or predicting that the target will
 leave it, can start a recenter. Z2 remains the promised landing zone for
-dynamic tracking. The extended look-ahead between Z1 and Z2 must not perturb a
-target that is already safely inside Z2. This preserves the current navigation
-and hysteresis behavior while keeping the path evaluator independent of screen
-projection and Cesium state.
+dynamic tracking. Navigation derives an internal inset landing zone from Z1 to
+avoid immediate retriggering. The extended look-ahead must not perturb a target
+that is already safely inside the landing zone.
 
 The same tracking decision must be used by Draft and deterministic HQ export.
-Draft may use live wall-clock time and HQ may use the export frame timestamp,
-but both must evaluate the same nominal path, target, crop, zones, look-ahead,
-and correction state. If Cesium visibility or terrain loading can produce
-different results, the correction must either be baked into the export path or
-be explicitly treated as runtime-only behavior.
+Both now sample the same cached path with normalized replay progress. Draft's
+wall clock and HQ's export timestamp only determine progress; they no longer
+select separate transition or follower implementations. Terrain redirects are
+baked while nominal frames are compiled, before the screen-space constraint
+pass validates the result.
 
 ### Occlusion Detection
 
@@ -1057,10 +1460,10 @@ stabilization layer for this existing architecture:
 
 | Concern | Existing behavior | Current change | Consequence for the drone architecture |
 | --- | --- | --- | --- |
-| Camera transition in HQ | Deterministic recentering interpolated camera position and orientation with a smooth scalar easing. | Deterministic transitions use cubic Hermite interpolation and carry the previous frame velocity into the next transition. | Preserve this continuity rule in `DroneCameraPathController`; it is still implemented inside replay today. |
-| Navigation and dynamic correction in HQ | A deterministic recenter could be replaced by successive export-frame transitions and appear stepped. | Both tracking modes use the same deterministic follower with persistent velocity and a `1.5 s` response. | This is a correction/follow policy, not a path definition; it belongs behind a future correction resolver. |
+| Camera transition in HQ | Deterministic recentering interpolated camera position and orientation with a smooth scalar easing. | Continuous replay samples a precompiled constrained frame path; point-to-point clips retain their dedicated transition path. | Keep continuous replay correction in the path compiler and clip transitions in the phase controller. |
+| Navigation and dynamic correction in HQ | Draft transitions and the HQ spring follower could diverge. | Both tracking modes now sample the same constrained path by normalized replay progress. | Z1/Z2 correction is part of canonical replay path materialization. |
 | HQ timing input | Camera updates could fall back to phase or sample time. | Updates use the actual export frame timestamp and normalize heading/pitch smoothing against elapsed video time. | The future path engine should receive one explicit logical timestamp and never infer export time from wall-clock state. |
-| HQ recenter duration | Navigation recentering used the normal replay duration. | HQ multiplies the recenter duration by `1.8` to make offline movement less abrupt. | Make this an explicit export or motion-profile parameter instead of a replay-only multiplier. |
+| HQ recenter duration | Navigation recentering used the normal replay duration. | Continuous Draft and HQ replay share one response duration; the historical `1.8` HQ multiplier remains limited to the legacy fallback. | Keep export-specific timing out of the canonical constrained path. |
 | Narrow crop navigation zone | The narrow-crop trigger ratio was `15%`. | The ratio is now `22%`; standard crops remain at `30%`. | This screen-space collision policy stays in replay tracking settings, outside the pure drone path model. |
 | Draft stop frame | Completion notification was deferred to a later animation frame. | During recording, completion and the optional final-frame callback run immediately so the recorder can capture the final Cesium state. | Keep this recorder lifecycle behavior outside the pure path evaluator. |
 | HQ video encoding | HQ output requested `latencyMode: 'realtime'`. | HQ output requests `latencyMode: 'quality'` because export is offline and must avoid stepped frames under encoder pressure. | Encoding policy remains in `ReplayDeferredExporter`; the path engine only guarantees deterministic poses. |
@@ -1071,11 +1474,11 @@ The migration boundary is consequently:
 ```text
 Current:
 JourneyReplayMode -> camera view calculation -> Cesium camera.setView
-                 -> replay collision/recenter state
+                 -> constrained replay path cache
 CameraManager    -> persisted camera state and global camera services
 
 Target:
-JourneyReplay progress/time -> DroneCameraPath -> correction policy
+JourneyReplay progress/time -> constrained DroneCameraPath
                              -> Cesium adapter -> camera.setView
 CameraManager                 -> global camera services and lifecycle
 Replay                         -> phase selection, recorder/export timing
@@ -1531,11 +1934,14 @@ the narrow navigation zone is `237.6 × 422.4` pixels, not a square. Dynamic
 tracking keeps its separate Z1/Z2 configuration, with both zones using the
 same independent width and height ratios.
 
-Draft recording and replay/HQ navigation and dynamic tracking use the same
-collision path: both test the current and predicted marker samples against the
-runtime zones before starting a recenter. Draft keeps its live Cesium timing,
-while replay/HQ keeps deterministic frame timing; this timing difference must
-not change the Z1/Z2 collision decision.
+Draft recording and HQ navigation and dynamic tracking use the same in-memory
+constrained path. The compiler tests current and predicted marker samples
+against runtime zones before starting a correction. It projects through
+candidate frames rather than through the asynchronously rendered Cesium camera.
+Every `sampleAt(progress)` call resolves the actual journey marker target and
+performs a final containment check, including progresses between cached frames.
+The path cache is preserved across Draft cleanup and reused during HQ
+preparation when its complete input key is unchanged.
 
 ### Deterministic HQ camera ownership
 
@@ -1563,9 +1969,9 @@ shape to its internal `up` field before integrating the spring state. Reading
 `endFrame.up` directly leaves the follower target undefined and causes Cesium's
 `Cartesian3.subtract` validation to abort the export.
 
-Navigation and dynamic tracking share a `1.5 s` deterministic follower response
-during HQ export. This value controls the spring response toward a moving
-target; it does not change start/stop clip durations or Draft camera easing.
+Navigation and dynamic tracking use the replay camera response duration while
+compiling their shared path. HQ no longer owns a separate spring follower for
+continuous replay. Start and stop clips keep their own phase durations.
 
 The same validation applies to the smoothed replay trace used by the renderer.
 An incomplete left or right trace position is skipped or replaced by the
@@ -1613,18 +2019,44 @@ clips continue to use the live end-of-replay camera state.
 
 ## Open Questions
 
-- Should terrain-offset authoring be exposed in V1, while keeping resolved
-  public path heights absolute WGS84 values?
-- Should paths be stored in `journey.cameraPaths`,
-  `journey.replay.cameraPaths`, or user settings?
-- Is there one active path per journey, or a named path library?
-- During playback, should user controls be fully disabled or only ignored until
-  stop?
-- Should `roll` be exposed in V1 UI, or only kept in the model?
-- Should visibility corrections remain runtime-only, or can they be baked into a
-  deterministic export path?
-- What maximum correction is acceptable before declaring that a target cannot be
-  shown without changing the shot?
+- Which canonical path fields are mandatory in V1 versus generated by presets?
+- How should the API represent parametrable presets: nested `preset` objects,
+  named policy identifiers, or factory helpers?
+- Should `focus`, `orbit`, and `panorama` be exposed as public API names, or
+  only as generated policies?
+- Which 3D Bezier authoring primitives should be exposed in V1:
+  anchors only, anchors plus handles, or a higher-level spline editor?
+- What maximum correction is acceptable before declaring that a target cannot
+  be shown without changing the shot?
+
+## Proposed Plan
+
+1. Define the reusable path core.
+   - Generic path entity
+   - Position, target, and transfer policies
+   - Deterministic evaluator and validation
+2. Define path presets.
+   - Direct transfer
+   - Focus
+   - Orbit
+   - Panorama
+   - Replay-derived path
+3. Define replay integration.
+   - One path definition for Draft and HQ
+   - Replay path generated from journey state
+   - Same evaluator in both modes
+4. Define the distance-aware transfer policy.
+   - Short-distance direct movement
+   - Medium-distance climb/move/settle
+   - Long-distance blur-jump-refocus
+5. Define storage and ownership.
+   - Path library location
+   - Journey reference model
+   - Export/import shape
+6. Define authoring and UI follow-up.
+   - Path editor
+   - Preset selection
+   - Replay shot editing
 ## Sources
 
 - Cesium Camera documentation:

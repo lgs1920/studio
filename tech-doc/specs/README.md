@@ -22,7 +22,6 @@ This directory contains technical specifications and architecture documents that
 - [LocalDB API reference](CORE-LOCALDB-API-REFERENCE.md)
 - [Panels](CORE-UI-PANELS-README.md)
 - [Context menu](CORE-UI-CONTEXT-MENU-README.md)
-- [Drone camera path architecture](CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)
 
 ## Replay And Video
 
@@ -52,5 +51,6 @@ This directory contains technical specifications and architecture documents that
 ## Other specs
 
 - [Replay camera tracking zones](REPLAY_CAMERA_TRACKING_ZONES.md)
+- [Drone camera path architecture](CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)
 - [Journey replay/video issues](JOURNEY-REPLAY-VIDEO-ISSUES.md)
 - [Video/replay test-suite failures — 2026-07-25](VIDEO_TEST_SUITE_FAILURES_2026-07-25.md)

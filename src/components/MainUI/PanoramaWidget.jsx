@@ -43,6 +43,10 @@ import { faAngle, faMagnifyingGlassLocation, faVideo } from "@fortawesome/pro-re
 import { FA2SL } from "@Utils/FA2SL";
 import { foot, meter, UnitUtils } from "@Utils/UnitUtils";
 import { cameraViewToSlippyLevel } from "@Utils/cesium/CameraLevel";
+import {
+  buildCameraTransferPath,
+  selectCameraTransferMode,
+} from "@Core/ui/replay/JourneyReplayCameraPath";
 import { Cartesian3, Math as M } from "cesium";
 import {
   WaButton,
@@ -1012,44 +1016,89 @@ export const PanoramaWidget = memo(() => {
     void setPoiAnimated(true);
 
     let flightEnded = false;
+    let cameraPathCancel = null;
     const endFlight = () => {
       if (!flightEnded) {
         flightEnded = true;
         __.ui.cameraManager.endFlight?.();
       }
     };
+    const startPanoramaRotation = () => {
+      endFlight();
+      if (!$panorama.active) {
+        return;
+      }
+      renderFrame();
+      animationRef.current = window.requestAnimationFrame(tick);
+    };
+    const cameraWorldPosition = lgs.camera?.positionWC ?? lgs.camera?.position;
+    const cameraDestination = Cartesian3.fromDegrees(
+      target.longitude,
+      target.latitude,
+      (target.simulatedHeight ?? target.height ?? 0) + heightOffsetRef.current
+    );
+    const transferThresholdKm =
+      lgs.settings?.camera?.transferDistanceThresholdKm ?? 50;
+    const transferDistance = cameraWorldPosition
+      ? Cartesian3.distance(cameraWorldPosition, cameraDestination)
+      : null;
+    const transferMode = selectCameraTransferMode(
+      transferDistance,
+      transferThresholdKm
+    );
+    const cameraPath = cameraWorldPosition
+      ? buildCameraTransferPath({
+          start: cameraWorldPosition,
+          end: cameraDestination,
+          mode: transferMode,
+          sampleCount: transferMode === "blur-jump-refocus" ? 64 : 48,
+          liftMeters: Math.max(
+            120,
+            lgs.settings?.camera?.pitchAdjustHeight ?? 500
+          ),
+        })
+      : null;
 
     __.ui.cameraManager.beginFlight?.();
     try {
-      lgs.camera.flyTo({
-        destination: Cartesian3.fromDegrees(
-          target.longitude,
-          target.latitude,
-          (target.simulatedHeight ?? target.height ?? 0) +
-            heightOffsetRef.current
-        ),
-        orientation: {
-          heading: M.toRadians(headingRef.current),
-          pitch: M.toRadians(pitchRef.current),
-          roll: 0,
-        },
-        duration: 0.8,
-        complete: () => {
-          endFlight();
-          if (!$panorama.active) {
-            return;
-          }
-          renderFrame();
-          animationRef.current = window.requestAnimationFrame(tick);
-        },
-        cancel: endFlight,
-      });
+      if (cameraPath) {
+        cameraPathCancel = cameraPath.flyTo({
+          camera: lgs.camera,
+          orientation: {
+            heading: M.toRadians(headingRef.current),
+            pitch: M.toRadians(pitchRef.current),
+            roll: 0,
+          },
+          duration: 0.8,
+          complete: () => {
+            cameraPathCancel = null;
+            startPanoramaRotation();
+          },
+          cancel: () => {
+            cameraPathCancel = null;
+            endFlight();
+          },
+        });
+      } else {
+        lgs.camera.setView({
+          destination: cameraDestination,
+          orientation: {
+            heading: M.toRadians(headingRef.current),
+            pitch: M.toRadians(pitchRef.current),
+            roll: 0,
+          },
+        });
+        startPanoramaRotation();
+      }
     } catch (error) {
+      cameraPathCancel = null;
       endFlight();
       throw error;
     }
 
     return () => {
+      cameraPathCancel?.();
+      cameraPathCancel = null;
       endFlight();
       if (animationRef.current) {
         window.cancelAnimationFrame(animationRef.current);

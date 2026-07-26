@@ -280,7 +280,19 @@ export const dispose = (mode, ) => {
         state.unbind = []
     }
 
-export const resetCameraController = (mode, {preserveSavedCameraState = false} = {}) => {
+/**
+ * Reset replay camera runtime state.
+ *
+ * @param {object} mode - Replay session mode.
+ * @param {object} [options] - Reset options.
+ * @param {boolean} [options.preserveSavedCameraState=false] - Preserve the entry camera state.
+ * @param {boolean} [options.preserveConstrainedPath=true] - Preserve the Draft/HQ shared path.
+ * @returns {void}
+ */
+export const resetCameraController = (mode, {
+    preserveSavedCameraState = false,
+    preserveConstrainedPath = true,
+} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         call.stopCameraLiveSyncLoop()
@@ -288,6 +300,9 @@ export const resetCameraController = (mode, {preserveSavedCameraState = false} =
         state.cameraGuideSourceKey = null
         state.cameraGuidePositionProperty = null
         state.cameraGuidePositionPropertyKey = null
+        if (!preserveConstrainedPath) {
+            state.constrainedReplayCameraPath = null
+        }
         state.cameraMode = null
         state.cameraFlightActive = false
         call.cancelCameraBezierTransition(false)

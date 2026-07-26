@@ -218,3 +218,9 @@
 - [2026-07-22 — `docs: document internal skills`](https://github.com/lgs1920/studio/commit/9023ef5e)
 - Documented the versioned roadmap and cloud access milestone.
 - Split the 3D drone path editor specification from the drone camera runtime architecture.
+
+## 2026-07-26 — [`fix: open code dependencies in stacked drawer`](https://github.com/lgs1920/studio/commit/acaaccdf)
+
+- Added a stacked Code dependencies drawer to the Information panel.
+- Moved the dependency inventory behind the drawer and kept the Credits tab link lightweight.
+- Added coverage for the stacked drawer opening helper.
