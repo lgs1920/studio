@@ -1,5 +1,10 @@
 # Commit History
 
+## 2026-07-26 — [`fix: preserve replay camera pitch through corrections`](https://github.com/lgs1920/studio/commit/e06a6451)
+
+- Keep the nominal replay pitch when corrections rebuild camera frames.
+- Stop replay corrections from inheriting the live Cesium pitch as the target pitch.
+
 ## 2026-07-26 — [`docs: refresh replay camera and HQ overlay docs`](https://github.com/lgs1920/studio/commit/fe1ab707)
 
 - Refresh the replay core readme with the recent camera transfer and HQ overlay responsibilities.
