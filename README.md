@@ -222,7 +222,7 @@ Tests are organized under `src/__tests__/` by responsibility:
 ## Configuration Notes
 
 - Application settings are primarily defined in `public/settings.yaml`
-- Map, overlay, and terrain providers are documented in [tech-doc/README_PROVIDERS.md](tech-doc/README_PROVIDERS.md)
+- Map, overlay, and terrain providers are documented in [tech-doc/specs/HOW_TO_ADD_PROVIDERS_LAYERS.md](tech-doc/specs/HOW_TO_ADD_PROVIDERS_LAYERS.md)
 - Widget registration is defined in `public/widgets.yaml`
 - PWA behavior is configured through `vite.config.ts` and `public/service-worker-pwa.js`
 - Static version metadata is stored in `public/version.json` and `public/build.json`
@@ -231,7 +231,7 @@ Tests are organized under `src/__tests__/` by responsibility:
 
 The root dependency documentation has been synchronized with the current `package.json`:
 
-- Full package inventory: [tech-doc/README_DEPENDENCIES.md](tech-doc/README_DEPENDENCIES.md)
+- Full package inventory: [tech-doc/specs/README_DEPENDENCIES.md](tech-doc/specs/README_DEPENDENCIES.md)
 - Build and runtime commands: [package.json](package.json)
 
 ## Contributing

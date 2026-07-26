@@ -5,8 +5,9 @@ This directory contains technical specifications and architecture documents that
 ## Reference docs
 
 - [Dependencies](README_DEPENDENCIES.md)
-- [Providers](README_PROVIDERS.md)
+- [Providers](HOW_TO_ADD_PROVIDERS_LAYERS.md)
 - [Settings sync guide](SETTINGS_SYNC_GUIDE.md)
+- [Journey settings readme](JOURNEY_SETTINGS_README.md)
 
 ## Deployment
 
