@@ -260,6 +260,8 @@ export const SCENE_MODES = new Map([
 
 export const INFO_DRAWER = 'info-drawer'
 export const INFO_CHANGELOG_TAB = 'tab-whats-new'
+export const INFO_CREDITS_TAB = 'tab-credits'
+export const CODE_DEPENDENCIES_DRAWER = 'code-dependencies-drawer'
 export const LAYERS_DRAWER = 'layers-drawer'
 export const JOURNEY_EDITOR_DRAWER = 'journey-editor-drawer'
 export const JOURNEY_GROUPS_DRAWER = 'journey-groups-drawer'

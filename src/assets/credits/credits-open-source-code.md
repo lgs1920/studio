@@ -24,5 +24,7 @@ The application, including studio, backend,APIs,site is based on :
 ### Deployment
 
 * [PM2](https://pm2.keymetrics.io/)- Online application management
-### Other dependencies:
-* TODO
+
+### Other dependencies
+
+The remaining runtime, tooling, and trusted dependencies are listed in the Code dependencies drawer.
