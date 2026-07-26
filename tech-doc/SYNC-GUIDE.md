@@ -2,7 +2,7 @@
 
 This document explains the local database sync work that is already in place in LGS1920 Studio.
 
-For the database schema, complete JavaScript API, file formats, conflict rules, and implementation constraints, read the [internal database architecture](current/src/core/db/INTERNAL_DATABASE_ARCHITECTURE.md).
+For the database schema, complete JavaScript API, file formats, conflict rules, and implementation constraints, read the [internal database architecture](current/CORE-INTERNAL-DATABASE-ARCHITECTURE.md).
 
 ## What Is Already Implemented
 

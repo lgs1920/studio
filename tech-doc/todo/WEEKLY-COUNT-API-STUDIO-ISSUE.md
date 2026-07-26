@@ -2,7 +2,7 @@
 
 ## Context
 
-This issue implements the studio-side instrumentation for the weekly count API described in [COUNT_API_SPEC.md](COUNT_API_SPEC.md).
+This issue implements the studio-side instrumentation for the weekly count API described in [WEEKLY-COUNT-API-SPEC.md](WEEKLY-COUNT-API-SPEC.md).
 
 ## Goal
 
@@ -55,4 +55,3 @@ Call the backend count endpoints at the right lifecycle points without blocking 
 - displaying analytics in the UI
 - storing count state locally
 - retry logic beyond best-effort fire-and-forget requests
-

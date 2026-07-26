@@ -125,7 +125,7 @@ Replace the current separate Replay `start` / `replay` / `stop` clip UI with a t
 drawer. The timeline will combine start clips, one locked journey replay, stop clips, and widget clips across up to 20
 widget tracks. The same timeline state will drive Draft recording and HQ export deterministically.
 
-Technical spec: [Replay track timeline editor evolution](tech-doc/todo/src/core/ui/replay/REPLAY_TRACK_TIMELINE_EDITOR_EVOLUTION.md).
+Technical spec: [Replay track timeline editor evolution](tech-doc/todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md).
 
 ### 1.3 — 3D Camera Path Editor
 
@@ -135,7 +135,7 @@ with a dedicated visual preview/editor, while keeping the path engine determinis
 Journey Replay. The engine will be testable without a live Cesium scene, while Cesium remains the runtime adapter that
 applies the final camera pose.
 
-Technical spec: [Camera 3D path editor](tech-doc/todo/src/core/ui/camera/DRONE_CAMERA_3D_PATH_EDITOR_SPEC.md).
+Technical spec: [Camera 3D path editor](tech-doc/todo/CORE-DRONE-CAMERA-3D-PATH-EDITOR-SPEC.md).
 
 ## Technical Documentation
 
@@ -144,18 +144,18 @@ points include:
 
 - [Current technical documentation](tech-doc/current/)
 - [Implementation work to do](tech-doc/todo/)
-- [Internal database architecture](tech-doc/current/src/core/db/INTERNAL_DATABASE_ARCHITECTURE.md)
-- [Replay video architecture](tech-doc/todo/src/core/ui/replay/REPLAY_VIDEO_ARCHITECTURE.md)
+- [Internal database architecture](tech-doc/current/CORE-INTERNAL-DATABASE-ARCHITECTURE.md)
+- [Replay video architecture](tech-doc/todo/CORE-REPLAY-VIDEO-ARCHITECTURE.md)
 - [Journey replay/video issues](tech-doc/current/JOURNEY_REPLAY_VIDEO_ISSUES.md)
-- [Replay track timeline editor evolution](tech-doc/todo/src/core/ui/replay/REPLAY_TRACK_TIMELINE_EDITOR_EVOLUTION.md)
-- [Drone camera path architecture](tech-doc/current/src/core/ui/camera/DRONE_CAMERA_PATH_ARCHITECTURE.md)
+- [Replay track timeline editor evolution](tech-doc/todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md)
+- [Drone camera path architecture](tech-doc/current/CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)
 - [Brand and season swatch reactivity](tech-doc/todo/BRAND_SEASON_SWATCH_REACTIVITY_SPEC.md)
-- [Clip altitude data alignment](tech-doc/todo/src/core/ui/replay/CLIP_ALTITUDE_DATA_ALIGNMENT_SPEC.md)
-- [POI animation during replay](tech-doc/todo/src/core/ui/replay/POI_ANIMATION_DURING_REPLAY_SPEC.md)
+- [Clip altitude data alignment](tech-doc/todo/CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md)
+- [POI animation during replay](tech-doc/todo/CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md)
 - [Widget manager](tech-doc/src/core/ui/widget-manager/README.md)
 - [Screen media recorder](tech-doc/src/core/ui/screen-media-recorder/recorder/README.md)
 - [Canvas overlay composer](tech-doc/src/core/ui/screen-media-recorder/composer/README.md)
-- [Tracks editor spec](tech-doc/todo/src/components/TracksEditor/spec.md)
+- [Tracks editor spec](tech-doc/todo/TRACKSEDITOR-SPEC.md)
 - [All technical docs](tech-doc/README.md)
 
 ## Internal Skills
