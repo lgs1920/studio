@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-07-26 — [`docs: restructure tech docs hierarchy`](https://github.com/lgs1920/studio/commit/9646f47b)
+
+- Rename the technical documentation moved out of `current/src` and `todo/src` to flat uppercase filenames under `tech-doc/current/` and `tech-doc/todo/`.
+- Update all root, index, and internal documentation links to the new hierarchy.
+- Restore and rename the weekly count API issue docs under the new flat naming convention.
+
 ## 2026-07-26 — [`docs: sync issue types from templates`](https://github.com/lgs1920/studio/commit/dcb2eeb0)
 
 - Add hidden issue-type markers to the bug and feature issue templates.
