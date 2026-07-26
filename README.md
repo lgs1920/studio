@@ -152,9 +152,9 @@ points include:
 - [Brand and season swatch reactivity](tech-doc/todo/BRAND_SEASON_SWATCH_REACTIVITY_SPEC.md)
 - [Clip altitude data alignment](tech-doc/todo/CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md)
 - [POI animation during replay](tech-doc/todo/CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md)
-- [Widget manager](tech-doc/src/core/ui/widget-manager/README.md)
-- [Screen media recorder](tech-doc/src/core/ui/screen-media-recorder/recorder/README.md)
-- [Canvas overlay composer](tech-doc/src/core/ui/screen-media-recorder/composer/README.md)
+- [Widget manager](tech-doc/current/CORE-WIDGET-MANAGER-README.md)
+- [Screen media recorder](tech-doc/current/CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)
+- [Canvas overlay composer](tech-doc/current/CORE-SCREEN-MEDIA-RECORDER-COMPOSER-README.md)
 - [Tracks editor spec](tech-doc/todo/TRACKSEDITOR-SPEC.md)
 - [All technical docs](tech-doc/README.md)
 

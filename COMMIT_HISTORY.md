@@ -1,5 +1,10 @@
 # Commit History
 
+## 2026-07-26 — [`docs: flatten tech-doc docs into current`](https://github.com/lgs1920/studio/commit/751a5110)
+
+- Move the documentation previously stored under `tech-doc/deployment/`, `tech-doc/public/`, and `tech-doc/src/` into flat uppercase files under `tech-doc/current/`.
+- Update the root and technical documentation indexes, plus internal references, to the new `current/` hierarchy.
+
 ## 2026-07-26 — [`docs: rename journey replay video issues`](https://github.com/lgs1920/studio/commit/f20f922e)
 
 - Rename the replay/video architecture analysis document to a hyphenated uppercase filename.
