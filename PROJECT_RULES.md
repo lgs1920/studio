@@ -42,9 +42,12 @@ This is the canonical source for the project's AI-agent and development rules.
 
 - Keep implementation documentation under `tech-doc/`.
 - Put specifications that are proposed, pending validation, explicitly TODO, or describe future implementation work under `tech-doc/todo/`.
-- Put specifications and architecture documents that describe the current implementation under `tech-doc/current/`.
+- Put specifications and architecture documents that describe the current implementation under `tech-doc/specs/`.
+- Name `tech-doc` documentation files with uppercase, flat filenames using descriptive module prefixes when relevant, for example `CORE-...`, `JOURNEY_...`, or `HOW_TO_...`
+- Avoid nested document paths inside `tech-doc/specs/` and `tech-doc/todo/` unless a document intentionally remains in a shared reference location.
 - Keep general reference documentation in its existing module path unless it is an implementation specification.
 - Update links in `README.md`, `tech-doc/README.md`, and nearby technical documents when moving a document.
+- Every change to documentation under `tech-doc/` must be delivered through a pull request and merged to `main`.
 - Do not use `COMMIT_HISTORY.md` as the source of truth for documentation status; determine status from the document and the implementation.
 
 ## 5. Git & Release Workflow
@@ -61,3 +64,4 @@ This is the canonical source for the project's AI-agent and development rules.
 - **Milestone and backlog:** Before creating an issue, ask the user which milestone and backlog it belongs to. Do not create the issue until both choices have been confirmed.
 - **Issue body structure:** Write every issue body in the same structure: short context, requested behavior, acceptance criteria, and optional notes or questions. Keep the scope to one request per issue and prefer bullet lists for requirements.
 - **Issue templates:** Use `.github/ISSUE_TEMPLATE/bug_report.md` for bugs and `.github/ISSUE_TEMPLATE/feature_request.md` for new features or improvements. Keep the sections consistent with the issue type and use the reproduction section only for bugs.
+- **Issue type mapping:** Each issue template must include its hidden `issue-type` marker, and the automation must set the GitHub issue type accordingly (`bug` for `bug_report.md`, `feature` for `feature_request.md`).

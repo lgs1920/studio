@@ -1,9 +1,45 @@
 # Commit History
 
-## 2026-07-26 — [`docs: add standard issue templates`](https://github.com/lgs1920/studio/commit/953a6470)
+## 2026-07-26 — [`chore: new beta version 1.0.0-beta.4`](https://github.com/lgs1920/studio/commit/3383ea30)
 
-- Add dedicated bug and feature issue templates under `.github/ISSUE_TEMPLATE/`.
-- Disable blank issues and document the expected issue structure in `PROJECT_RULES.md`.
+- Start the `1.0.0-beta.4` branch line with the new beta version marker.
+
+## 2026-07-26 — [`docs: add tech-doc naming rule`](https://github.com/lgs1920/studio/commit/bf1fdfef)
+
+- Add an explicit naming rule for `tech-doc` documentation files in `PROJECT_RULES.md`.
+- Require uppercase, flat filenames with descriptive prefixes and no nested spec or todo document paths unless intentionally shared.
+
+## 2026-07-26 — [`docs: rename provider and settings docs`](https://github.com/lgs1920/studio/commit/4325fd5b)
+
+- Rename the provider reference to `tech-doc/specs/HOW_TO_ADD_PROVIDERS_LAYERS.md`.
+- Rename the journey settings note to `tech-doc/specs/JOURNEY_SETTINGS_README.md`.
+- Update the technical documentation indexes and root README links to the new names.
+
+## 2026-07-26 — [`docs: rename current docs to specs`](https://github.com/lgs1920/studio/commit/31fa0eaf)
+
+- Rename `tech-doc/current/` to `tech-doc/specs/` and move the dependency, provider, and sync guide references into the new specs tree.
+- Update the documentation indexes and technical rules so specs live under `tech-doc/specs/` and tech-doc changes are merged to `main`.
+
+## 2026-07-26 — [`docs: flatten tech-doc docs into current`](https://github.com/lgs1920/studio/commit/751a5110)
+
+- Move the documentation previously stored under `tech-doc/deployment/`, `tech-doc/public/`, and `tech-doc/src/` into flat uppercase files under `tech-doc/current/`.
+- Update the root and technical documentation indexes, plus internal references, to the new `current/` hierarchy.
+
+## 2026-07-26 — [`docs: rename journey replay video issues`](https://github.com/lgs1920/studio/commit/f20f922e)
+
+- Rename the replay/video architecture analysis document to a hyphenated uppercase filename.
+- Update the root and technical documentation indexes to point to the renamed file.
+
+## 2026-07-26 — [`docs: restructure tech docs hierarchy`](https://github.com/lgs1920/studio/commit/9646f47b)
+
+- Rename the technical documentation moved out of `current/src` and `todo/src` to flat uppercase filenames under `tech-doc/current/` and `tech-doc/todo/`.
+- Update all root, index, and internal documentation links to the new hierarchy.
+- Restore and rename the weekly count API issue docs under the new flat naming convention.
+
+## 2026-07-26 — [`docs: sync issue types from templates`](https://github.com/lgs1920/studio/commit/dcb2eeb0)
+
+- Add hidden issue-type markers to the bug and feature issue templates.
+- Add a GitHub Actions workflow and script that sync the repository issue type from the template marker or label fallback.
 
 ## 2026-07-25 — [`fix: throttle repeated codec error toasts`](https://github.com/lgs1920/studio/commit/3ef787f5)
 
