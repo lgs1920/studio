@@ -43,6 +43,8 @@ This is the canonical source for the project's AI-agent and development rules.
 - Keep implementation documentation under `tech-doc/`.
 - Put specifications that are proposed, pending validation, explicitly TODO, or describe future implementation work under `tech-doc/todo/`.
 - Put specifications and architecture documents that describe the current implementation under `tech-doc/specs/`.
+- Name `tech-doc` documentation files with uppercase, flat filenames using descriptive module prefixes when relevant, for example `CORE-...`, `JOURNEY_...`, or `HOW_TO_...`
+- Avoid nested document paths inside `tech-doc/specs/` and `tech-doc/todo/` unless a document intentionally remains in a shared reference location.
 - Keep general reference documentation in its existing module path unless it is an implementation specification.
 - Update links in `README.md`, `tech-doc/README.md`, and nearby technical documents when moving a document.
 - Every change to documentation under `tech-doc/` must be delivered through a pull request and merged to `main`.

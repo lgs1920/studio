@@ -1,5 +1,10 @@
 # Commit History
 
+## 2026-07-26 — [`docs: add tech-doc naming rule`](https://github.com/lgs1920/studio/commit/bf1fdfef)
+
+- Add an explicit naming rule for `tech-doc` documentation files in `PROJECT_RULES.md`.
+- Require uppercase, flat filenames with descriptive prefixes and no nested spec or todo document paths unless intentionally shared.
+
 ## 2026-07-26 — [`docs: rename provider and settings docs`](https://github.com/lgs1920/studio/commit/4325fd5b)
 
 - Rename the provider reference to `tech-doc/specs/HOW_TO_ADD_PROVIDERS_LAYERS.md`.
