@@ -44,7 +44,7 @@ The studio already has the lifecycle points needed for instrumentation:
 - `VideoRecordingScreenArea.initializeRecorder()` prepares the live draft recording
 - `VideoDownloadAndShareDialog.startHqExport()` starts the deferred HQ export flow
 
-The browser persistence architecture described in `tech-doc/current/src/core/db/INTERNAL_DATABASE_ARCHITECTURE.md` remains unrelated to this feature. The counting API is backend-only and must not be added to the IndexedDB layer.
+The browser persistence architecture described in `tech-doc/current/CORE-INTERNAL-DATABASE-ARCHITECTURE.md` remains unrelated to this feature. The counting API is backend-only and must not be added to the IndexedDB layer.
 
 ## Product requirements
 

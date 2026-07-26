@@ -4,7 +4,7 @@
 
 Provide a dedicated visual editor for authoring drone camera trajectories in
 3D. The editor is a later authoring surface on top of the deterministic drone
-path runtime described in [Drone camera path architecture](../../../../../current/src/core/ui/camera/DRONE_CAMERA_PATH_ARCHITECTURE.md).
+path runtime described in [Drone camera path architecture](../../current/CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md).
 
 The editor must let users shape a camera path visually, compare it with the
 journey route, position targets and orbit pivots, and export a runtime-safe
@@ -158,7 +158,7 @@ The export boundary must:
 ```text
 src/core/ui/camera/DroneCameraBezier3DPath.js
 src/core/ui/camera/DroneCameraPathThreePreview.js
-src/core/ui/camera/DRONE_CAMERA_3D_PATH_EDITOR_SPEC.md
+tech-doc/todo/CORE-DRONE-CAMERA-3D-PATH-EDITOR-SPEC.md
 src/__tests__/drone-camera-bezier-3d-path.test.js
 ```
 
@@ -213,4 +213,4 @@ interaction.
 ## Sources
 
 - [Three.js `CubicBezierCurve3`](https://threejs.org/docs/pages/CubicBezierCurve3.html)
-- [Drone camera path architecture](../../../../../current/src/core/ui/camera/DRONE_CAMERA_PATH_ARCHITECTURE.md)
+- [Drone camera path architecture](../../current/CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)

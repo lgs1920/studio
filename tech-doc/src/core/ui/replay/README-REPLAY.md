@@ -23,7 +23,7 @@ The implementation is split into a small set of focused modules:
 - `JourneyReplayDebug`: exposes debug snapshots and diagnostic logging.
 
 For a longer architecture walkthrough that maps the replay/video pipeline end
-to end, see [REPLAY_VIDEO_ARCHITECTURE.md](../../../../todo/src/core/ui/replay/REPLAY_VIDEO_ARCHITECTURE.md).
+to end, see [REPLAY_VIDEO_ARCHITECTURE.md](../../../../todo/CORE-REPLAY-VIDEO-ARCHITECTURE.md).
 
 ## Configuration model
 

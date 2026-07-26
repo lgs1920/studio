@@ -2,7 +2,7 @@
 
 ## Context
 
-This issue implements the backend side of the weekly count API described in [COUNT_API_SPEC.md](COUNT_API_SPEC.md).
+This issue implements the backend side of the weekly count API described in [WEEKLY-COUNT-API-SPEC.md](WEEKLY-COUNT-API-SPEC.md).
 
 ## Goal
 
@@ -70,4 +70,3 @@ The implementation must use a single JSON file, not a database, and it must seri
 - historical analytics beyond the current 7-day window
 - multi-process shared locking
 - persisting raw visitor IPs in the public response
-
