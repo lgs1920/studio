@@ -57,6 +57,26 @@ export const replayPitchLookaheadFactor = pitch => {
     return lerp(2.2, 1, rasanceProgress)
 }
 
+/**
+ * Returns a pacing factor for long replays.
+ *
+ * Longer replays require a slightly more aggressive response so the marker
+ * does not visually lag behind on extended trajectories. The returned factor
+ * is always positive and grows smoothly with the replay duration and path
+ * length.
+ *
+ * @param {number} durationSeconds - Full replay duration in seconds.
+ * @param {number} [totalDistance=0] - Total replay distance in meters.
+ * @returns {number} Pacing multiplier.
+ */
+export const replayDurationPaceFactor = (durationSeconds, totalDistance = 0) => {
+    const safeDuration = Math.max(1, finiteNumber(durationSeconds) ?? 1)
+    const safeDistance = Math.max(0, finiteNumber(totalDistance) ?? 0)
+    const durationScale = clamp(Math.max(0, safeDuration - 120) / 240, 0, 1)
+    const distanceScale = clamp(Math.max(0, safeDistance - 10000) / 15000, 0, 1)
+    return 1 + (durationScale * 0.08) + (distanceScale * 0.04)
+}
+
 export const replayCameraHeadingForPositionMode = ({axisHeading = 0, positionMode, headingOffset = 0} = {}) => {
     const heading = finiteNumber(axisHeading) ?? 0
     const offset = degreesToRadians(clamp(finiteNumber(headingOffset) ?? 0, REPLAY_CAMERA_HEADING_OFFSET_MIN, REPLAY_CAMERA_HEADING_OFFSET_MAX)) ?? 0

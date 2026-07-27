@@ -491,15 +491,21 @@ const replayTurnDriftAtGuideIndex = (guide, index, {
         (Math.abs(turnAngleRadians) - CesiumMath.toRadians(4))
         / Math.max(CesiumMath.toRadians(50), Number.EPSILON),
     )
+    const cornerSharpness = smoothstep(
+        (Math.abs(turnAngleRadians) - CesiumMath.toRadians(18))
+        / Math.max(CesiumMath.toRadians(42), Number.EPSILON),
+    )
     const turnSign = Math.sign(turnAngleRadians) || 1
     return {
         turnAngleRadians,
         headingOffsetRadians: turnSign
                               * CesiumMath.toRadians(maxHeadingOffsetDeg)
-                              * turnStrength,
+                              * turnStrength
+                              * lerp(0.85, 1.08, cornerSharpness),
         lateralOffsetMeters: turnSign
                              * Math.max(0, finiteNumber(maxLateralOffsetMeters) ?? 0)
-                             * turnStrength,
+                             * turnStrength
+                             * lerp(1, 0.3, cornerSharpness),
     }
 }
 

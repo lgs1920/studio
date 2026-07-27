@@ -20,6 +20,7 @@ import {
     replayInnerToleranceZoneBounds,
     replayToleranceZoneBounds,
     replayWindowCollisionFromPoint,
+    replayDurationPaceFactor,
 } from './JourneyReplayCameraMath'
 
 const REPLAY_CONSTRAINED_PATH_MIN_SAMPLES = 256
@@ -742,7 +743,8 @@ const normalizedProgresses = (progresses, durationSeconds) => {
 const responseRatioForSamples = (durationSeconds, responseSeconds, sampleCount) => {
     const stepSeconds = Math.max(1 / 240, durationSeconds / Math.max(1, sampleCount - 1))
     const response = Math.max(0.05, responseSeconds)
-    return clamp(1 - Math.exp(-stepSeconds / response), 0.02, 1)
+    const pace = replayDurationPaceFactor(durationSeconds, sampleCount)
+    return clamp(1 - Math.exp(-(stepSeconds * pace) / response), 0.02, 1)
 }
 
 /**
