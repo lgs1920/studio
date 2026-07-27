@@ -12,6 +12,7 @@ This directory contains proposed, pending-validation, explicitly TODO, or future
 - [Drone camera path architecture](../specs/CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)
 - [Drone camera 3D path editor](CORE-DRONE-CAMERA-3D-PATH-EDITOR-SPEC.md)
 - [Replay track timeline editor](CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md)
+- [Replay trace and marker glow/neon effects](CORE-REPLAY-TRACE-MARKER-GLOW-NEON-SPEC.md)
 - [Cesium Ion layers](CESIUM-ION-LAYERS-SPEC.md)
 - [Tracks editor](TRACKSEDITOR-SPEC.md)
 - [Profile TODO](PROFILE-TODO.md)
