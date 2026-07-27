@@ -1,5 +1,10 @@
 # Commit History
 
+## 2026-07-27 — [`docs(path): note terrain collision correction`](https://github.com/lgs1920/studio/commit/7f9b40eee2b572435defdfee530da466a6cc0a49)
+
+- Add a terrain collision avoidance note to the drone camera path architecture spec.
+- Clarify that terrain correction must be serialized in the path for replay, Draft, and HQ reuse.
+
 ## 2026-07-27 — [`docs(replay): add glow neon spec`](https://github.com/lgs1920/studio/commit/5804643ca00fd482f268fd6b2973c6b849dab551)
 
 - Add the replay trace and marker glow/neon specification under `tech-doc/todo/`.
