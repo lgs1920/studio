@@ -553,6 +553,13 @@ distance-aware policy as replay and focus.
   in V1.
 - Runtime corrections are live-preview behavior by default. Export and HQ can
   bake a correction when necessary to guarantee a deterministic shot.
+- Terrain collision avoidance is part of the path contract, not a one-off live
+  rescue. When the camera path intersects relief, the compiler must raise the
+  camera to a safe altitude, keep sampling ahead until the nominal altitude is
+  safe again, and then blend back to the normal path. The resulting correction
+  must be serialized in the path definition so replay, Draft, and HQ can reuse
+  the same terrain-aware route without recomputing terrain sampling at playback
+  time.
 - The path engine must support 3D Bezier geometry as a first-class path
   representation, not only as an editor convenience.
 
@@ -2373,6 +2380,7 @@ clips continue to use the live end-of-replay camera state.
    - Path editor
    - Preset selection
    - Replay shot editing
+
 ## Sources
 
 - Cesium Camera documentation:
