@@ -57,7 +57,7 @@ vi.mock('@Utils/UIToast', () => ({
 
 vi.mock('@Core/ui/replay/ReplayDeferredExporter', () => ({
     prepareReplayDeferredExportPlan: vi.fn(() => ({exporter: {}, plan: {runtime: {}}})),
-    warmReplayDeferredExportPlan:    vi.fn(),
+    warmReplayDeferredExportPlan:    vi.fn(() => Promise.resolve({plan: {runtime: {status: 'ready'}}})),
 }))
 
 vi.mock('@Core/ui/replay/ReplayVideoOverlayComposer', () => ({
@@ -132,6 +132,10 @@ describe('VideoRecordingScreenArea start flow', () => {
             },
             recorder,
             ui: {
+                replay: {
+                    captureCameraState: vi.fn(),
+                    waitForSceneRestore: vi.fn(() => Promise.resolve()),
+                },
                 replayVideoSync: {
                     arm: vi.fn(),
                 },
@@ -242,5 +246,29 @@ describe('VideoRecordingScreenArea start flow', () => {
         expect(globalThis.lgs.stores.ui.video.preRecording).toBe(false)
         expect(globalThis.lgs.stores.ui.video.recording).toBe(true)
         expect(CanvasOverlayComposer.mock.instances[0].setContinuousRendering).toHaveBeenCalledWith(false)
+    })
+
+    it('captures the draft camera before arming a linked replay recording', async () => {
+        globalThis.lgs.settings.ui.replay.recordingSync = true
+        globalThis.lgs.stores.replay.recordingSync = true
+
+        render(<VideoRecordingScreenArea/>)
+
+        await waitFor(() => {
+            expect(globalThis.__.ui.replayVideoSync.arm).toHaveBeenCalledTimes(1)
+        })
+
+        expect(globalThis.__.ui.replay.captureCameraState).toHaveBeenCalledTimes(1)
+        expect(globalThis.__.ui.replayVideoSync.arm).toHaveBeenCalledWith(expect.objectContaining({
+            recorder,
+            replay: globalThis.__.ui.replay,
+            store:  globalThis.lgs.stores.replay,
+        }))
+
+        const traceEntries = globalThis.__lgsReplayVideoTrace ?? []
+        expect(traceEntries.map(entry => entry.event)).toEqual(expect.arrayContaining([
+            'draft.recording.replay-camera.capture.start',
+            'draft.recording.replay-camera.capture.end',
+        ]))
     })
 })

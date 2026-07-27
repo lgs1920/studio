@@ -223,6 +223,8 @@ export class JourneyReplaySessionController {
     #cameraStateRestoredBeforeSceneCleanup = false
     #deferPlaybackCameraRestore = false
     #suppressPlaybackCameraSync = false
+    #terrainHeightLookupBypass = false
+    #terrainHeightLookupTrace = false
     #replayDrawerWasOpenBeforePlayback = false
     #lastCameraHeading = null
     #lastCameraPitch = null
@@ -510,6 +512,20 @@ export class JourneyReplaySessionController {
             get: () => this.#suppressPlaybackCameraSync,
             set: value => {
                 this.#suppressPlaybackCameraSync = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'terrainHeightLookupBypass', {
+            configurable: true,
+            get: () => this.#terrainHeightLookupBypass,
+            set: value => {
+                this.#terrainHeightLookupBypass = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'terrainHeightLookupTrace', {
+            configurable: true,
+            get: () => this.#terrainHeightLookupTrace,
+            set: value => {
+                this.#terrainHeightLookupTrace = value
             },
         })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'replayDrawerWasOpenBeforePlayback', {
@@ -898,6 +914,8 @@ export class JourneyReplaySessionController {
             cancelPendingSceneRestore: (...args) => JourneyReplaySessionSceneController.cancelPendingSceneRestore(this, ...args),
             restoreCameraState: (...args) => JourneyReplaySessionSceneController.restoreCameraState(this, ...args),
             setContinuousRender: (...args) => JourneyReplaySessionSceneController.setContinuousRender(this, ...args),
+            setTerrainHeightLookupBypass: (...args) => JourneyReplayCameraController.setTerrainHeightLookupBypass(this, ...args),
+            setTerrainHeightLookupTrace: (...args) => JourneyReplayCameraController.setTerrainHeightLookupTrace(this, ...args),
             abortPlaybackAfterListenerError: (...args) => JourneyReplaySessionSceneController.abortPlaybackAfterListenerError(this, ...args),
             scheduleProfileHoverMarker: (...args) => JourneyReplaySessionSceneController.scheduleProfileHoverMarker(this, ...args),
             renderProfileHoverMarker: (...args) => JourneyReplaySessionSceneController.renderProfileHoverMarker(this, ...args),
