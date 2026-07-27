@@ -14,6 +14,8 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import {buildReplayFrameState} from './JourneyReplayRuntime'
+
 export const REPLAY_EVENT_START = 'replay/start'
 export const REPLAY_EVENT_UPDATE = 'replay/update'
 export const REPLAY_EVENT_PAUSE = 'replay/pause'
@@ -400,6 +402,7 @@ export class JourneyReplayPlaybackController {
             replayFrameCount - 1,
             Math.max(0, Math.round(clamp(playbackProgress, 0, 1) * (replayFrameCount - 1))),
         )
+        const frameTimeMs = replayFrameIndex * frameIntervalMillis
         const phase = {
             kind: 'replay',
             slot: 'replay',
@@ -413,22 +416,26 @@ export class JourneyReplayPlaybackController {
         store.liveSample = sample
         store.dynamicStatsTick = frameNow
         store.replayFramePhase = phase
-        store.dynamicFrameState = {
-            active:        this.#running || this.#paused,
-            playing:       this.#running && !this.#paused,
-            paused:        this.#paused,
-            progress:      this.#progress,
-            direction:     this.#direction,
+        store.dynamicFrameState = buildReplayFrameState({
+            active:          this.#running || this.#paused,
+            playing:         this.#running && !this.#paused,
+            paused:          this.#paused,
+            index:           replayFrameIndex,
+            progress:        this.#progress,
+            direction:       this.#direction,
             sample,
-            elapsedMillis: sample?.journeyElapsedMillis ?? null,
-            durationMillis: sample?.journeyDurationMillis ?? this.#sampler?.durationMillis ?? null,
-            frameId:       this.#dynamicFrameId,
+            elapsedMillis:   sample?.journeyElapsedMillis ?? null,
+            durationMillis:  sample?.journeyDurationMillis ?? this.#sampler?.durationMillis ?? null,
+            frameId:         this.#dynamicFrameId,
+            frameCount:      replayFrameCount,
+            frameTimeMs,
+            frameIntervalMs: frameIntervalMillis,
             replayFrameIndex,
             replayFrameCount,
             phase,
-            source:        'controller',
-            updatedAt:     frameNow,
-        }
+            source:          'controller',
+            updatedAt:       frameNow,
+        })
 
         const now = this.#now()
         if (!force && now - this.#lastStoreSync < this.#storeSyncInterval) {

@@ -83,4 +83,61 @@ describe('getReplayVideoOverlayMetrics', () => {
             }),
         )
     })
+
+    it('can bypass replay widget visibility filtering during HQ export', () => {
+        const widgetEl = document.createElement('div')
+        widgetEl.hidden = true
+        const widgetCanvas = document.createElement('canvas')
+        widgetCanvas.className = 'lgs-widget-canvas'
+        widgetCanvas.width = 160
+        widgetCanvas.height = 90
+        widgetEl.appendChild(widgetCanvas)
+
+        const composer = {
+            addOverlay: vi.fn(),
+            beginUpdate: vi.fn(),
+            endUpdate: vi.fn(),
+        }
+
+        globalThis.lgs = {
+            viewer: {
+                container: document.createElement('div'),
+            },
+        }
+        globalThis.__ = {
+            ui: {
+                widgetCache: {
+                    getAll: vi.fn(() => new Map([
+                        ['journey-stats-widget', {mounted: true}],
+                    ])),
+                },
+                widgetManager: {
+                    getElementById: vi.fn(() => widgetEl),
+                    getWidgetConfig: vi.fn(() => ({
+                        position: {left: 12, top: 24},
+                    })),
+                },
+            },
+        }
+
+        buildReplayVideoComposerOverlays({
+            composer,
+            cropRect: {left: 0, top: 0, width: 320, height: 180},
+            widgetKeys: ['journey-stats-widget'],
+            skipVisibilityChecks: true,
+        })
+
+        expect(composer.beginUpdate).toHaveBeenCalledOnce()
+        expect(composer.addOverlay).toHaveBeenCalledOnce()
+        expect(composer.endUpdate).toHaveBeenCalledOnce()
+        expect(composer.addOverlay).toHaveBeenCalledWith(
+            widgetCanvas,
+            expect.objectContaining({
+                x: 12,
+                y: 24,
+                w: 160,
+                h: 90,
+            }),
+        )
+    })
 })

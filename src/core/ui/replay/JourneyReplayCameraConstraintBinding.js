@@ -21,6 +21,7 @@ import {
     replayAngularDelta,
     replayHeadingEasingFactor,
 } from './JourneyReplayCameraMath'
+import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
 import {REPLAY_MARKER_MODE_NAVIGATION} from './JourneyReplayProgressionStyle'
 import {
     JOURNEY_REPLAY_INTERNAL_CALL,
@@ -263,6 +264,17 @@ export const resolveConstrainedReplayCameraPath = (mode, {
     const guideProgresses = cameraGuide
         .map(point => finiteNumber(point?.progress))
         .filter(progress => progress !== null)
+    const compileStartedAt = globalThis.performance?.now?.() ?? Date.now()
+    replayVideoTraceDebug('camera.path.compile.start', {
+        key: pathKey,
+        trackingMode,
+        durationSeconds,
+        responseSeconds,
+        lookaheadSeconds,
+        guideProgressCount: guideProgresses.length,
+        viewportWidth: viewport.width,
+        viewportHeight: viewport.height,
+    })
     const normalizedTrackingMode = trackingMode === REPLAY_MARKER_MODE_NAVIGATION
                                    ? 'navigation'
                                    : 'dynamic'
@@ -482,6 +494,14 @@ export const resolveConstrainedReplayCameraPath = (mode, {
         durationSeconds,
         responseSeconds,
         lookaheadSeconds,
+    })
+    const compileEndedAt = globalThis.performance?.now?.() ?? Date.now()
+    replayVideoTraceDebug('camera.path.compile.end', {
+        key: pathKey,
+        elapsedMs: compileEndedAt - compileStartedAt,
+        compiled: path !== null,
+        frameCount: path?.frames?.length ?? 0,
+        constrainedSamples: path?.constrainedSamples ?? 0,
     })
     state.constrainedReplayCameraPath = path ? {
         key: pathKey,

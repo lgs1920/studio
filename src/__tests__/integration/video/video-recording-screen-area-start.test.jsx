@@ -208,6 +208,7 @@ describe('VideoRecordingScreenArea start flow', () => {
         delete globalThis.lgs
         delete globalThis.requestAnimationFrame
         delete globalThis.cancelAnimationFrame
+        delete globalThis.__lgsReplayVideoTrace
     })
 
     it('starts recording after expected video widgets are ready', async () => {
@@ -216,6 +217,28 @@ describe('VideoRecordingScreenArea start flow', () => {
         await waitFor(() => {
             expect(recorder.startVideo).toHaveBeenCalledTimes(1)
         })
+
+        const traceEntries = globalThis.__lgsReplayVideoTrace ?? []
+        const traceEvents = traceEntries.map(entry => entry.event)
+        expect(traceEvents).toEqual(expect.arrayContaining([
+            'draft.recording.initialize.start',
+            'draft.recording.ui.prepare.start',
+            'draft.recording.ui.prepare.end',
+            'draft.recording.crop.sync.start',
+            'draft.recording.crop.sync.end',
+            'draft.recording.replay-bridge.start',
+            'draft.recording.replay-bridge.end',
+            'draft.recording.scene-restore.wait.start',
+            'draft.recording.scene-restore.wait.end',
+            'draft.recording.composer.first-frame.end',
+            'draft.recording.initialize.end',
+            'draft.recorder.start.begin',
+            'draft.recorder.start.end',
+        ]))
+        expect(traceEntries.find(entry => entry.event === 'draft.recording.initialize.end')?.data).toEqual(expect.objectContaining({
+            syncRequested: false,
+        }))
+
         expect(globalThis.lgs.stores.ui.video.preRecording).toBe(false)
         expect(globalThis.lgs.stores.ui.video.recording).toBe(true)
         expect(CanvasOverlayComposer.mock.instances[0].setContinuousRendering).toHaveBeenCalledWith(false)

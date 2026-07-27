@@ -38,10 +38,22 @@ import {
     getJourneyReplayCameraPresetKey, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplaySettings,
 }                                                                      from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { gpx }                                                         from '@tmcw/togeojson'
+import { JSDOM }                                                       from 'jsdom'
 import { applyGpxStyleExtensionProperties, extractLgsTrackProperties } from '@Utils/JourneyGpxUtils'
 import { Cartesian3, Cartographic, Matrix4, Math as CesiumMath, Transforms } from 'cesium'
 import { proxy }                                                       from 'valtio'
 import { describe, expect, it, vi }                                    from 'vitest'
+
+if (typeof globalThis.document === 'undefined') {
+    const dom = new JSDOM('<!doctype html><html><body></body></html>')
+    globalThis.window = dom.window
+    globalThis.document = dom.window.document
+    globalThis.DOMParser = dom.window.DOMParser
+    globalThis.HTMLElement = dom.window.HTMLElement
+    globalThis.HTMLCanvasElement = dom.window.HTMLCanvasElement
+    globalThis.CustomEvent = dom.window.CustomEvent
+    globalThis.Node = dom.window.Node
+}
 
 vi.mock('@Components/Toast', () => ({
     LGS_ERROR_TOAST:       'danger',
@@ -86,6 +98,72 @@ describe('replay phase 1 playback controller', () => {
 
         expect(controller.progress).toBeCloseTo(0.5, 4)
         expect(updates.at(-1).longitude).toBeCloseTo(0.001, 5)
+    })
+
+    it('publishes the shared frame contract fields in the live dynamic frame state', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[0, 0, 0], [0.002, 0, 0]],
+                times:       ['2026-05-05T10:00:00.000Z', '2026-05-05T10:20:00.000Z'],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const previousLgs = globalThis.lgs
+        const frames = []
+
+        globalThis.lgs = {
+            events: {
+                emit: () => {},
+            },
+            scene: {
+                requestRender: () => {},
+            },
+            stores: {
+                replay: proxy({
+                    active:         false,
+                    playing:        false,
+                    paused:         false,
+                    progress:       0,
+                    elapsedMillis:   null,
+                    durationMillis:  null,
+                    sample:         null,
+                    totalDistance:  0,
+                    captureFps:     30,
+                }),
+            },
+        }
+
+        try {
+            const controller = new JourneyReplayPlaybackController({
+                requestFrame: callback => {
+                    frames.push(callback)
+                    return frames.length
+                },
+                cancelFrame: () => {},
+                now:         () => 0,
+            })
+
+            controller.configure({sampler, duration: 10})
+            controller.start()
+
+            expect(globalThis.lgs.stores.replay.dynamicFrameState).toEqual(expect.objectContaining({
+                active:          true,
+                playing:         true,
+                paused:          false,
+                index:           0,
+                frameIndex:      0,
+                frameCount:      301,
+                replayFrameIndex: 0,
+                replayFrameCount: 301,
+                frameTimeMs:     0,
+                frameIntervalMs: 1000 / 30,
+                source:          'controller',
+            }))
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
     })
 
     it('pauses and resumes without counting paused time', () => {
@@ -1718,7 +1796,7 @@ describe('replay phase 1 playback controller', () => {
             resolveFocus()
             await Promise.resolve()
 
-            await vi.advanceTimersByTimeAsync(2000)
+            vi.advanceTimersByTime(2000)
             await Promise.resolve()
             await Promise.resolve()
 

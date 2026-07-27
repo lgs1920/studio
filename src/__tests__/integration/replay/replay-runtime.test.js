@@ -33,6 +33,40 @@ describe('JourneyReplayRuntime', () => {
         expect(store.dynamicFrameState.elapsedMillis).toBe(250)
     })
 
+    it('publishes the shared frame contract fields for clip playback', () => {
+        const store = {
+            direction: 1,
+            elapsedMillis: 100,
+            durationMillis: 1000,
+        }
+
+        const phase = publishReplayClipFrameState({
+            store,
+            slot: REPLAY_CLIP_SLOT_START,
+            progress: 0.25,
+            sample: {
+                journeyElapsedMillis: 250,
+                journeyDurationMillis: 1000,
+            },
+        })
+
+        expect(store.dynamicFrameState).toEqual(expect.objectContaining({
+            active:          true,
+            playing:         false,
+            paused:          false,
+            index:           null,
+            frameIndex:      null,
+            frameId:         null,
+            frameCount:      null,
+            frameTimeMs:     null,
+            frameIntervalMs: null,
+            replayFrameIndex: null,
+            replayFrameCount: null,
+            phase,
+            source:          'clip',
+        }))
+    })
+
     it('publishes the stop phase at the end of the replay', () => {
         const store = {direction: -1}
         const phase = publishReplayClipFrameState({store, slot: REPLAY_CLIP_SLOT_STOP})

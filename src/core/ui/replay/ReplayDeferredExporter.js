@@ -22,9 +22,6 @@ import {
     ReplayFrameTimeline,
 }                              from '@Core/ui/replay/ReplayFrameTimeline'
 import {
-    resolveVideoOverlayVisibility,
-}                              from '@Core/ui/replay/ReplayOverlayResolver'
-import {
     buildReplayVideoComposerOverlays, isReplayVideoWidgetReady,
 }                              from '@Core/ui/replay/ReplayVideoOverlayComposer'
 import {
@@ -36,6 +33,9 @@ import {
 import {
     replayVideoTraceDebug,
 }                              from '@Core/ui/replay/ReplayVideoTraceDebug'
+import {
+    buildReplayFrameState,
+}                              from '@Core/ui/replay/JourneyReplayRuntime'
 import {
     CanvasOverlayComposer,
 }                              from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
@@ -286,12 +286,7 @@ export const captureReplayDeferredExportContext = ({
     const widgetEntries = [...(widgetCache?.getAll?.({widgetsBoard})?.entries?.() ?? [])]
     const overlays = widgetEntries.map(([widgetId, entry]) => {
         const widgetEl = widgetManager?.getElementById?.(widgetId) ?? entry?.element ?? null
-        const visible = resolveVideoOverlayVisibility({
-            widgetId,
-            widgetEl,
-            replay,
-            controller,
-        })
+        const visible = Boolean(entry?.mounted ?? widgetEl)
 
         return {
             id:      widgetId,
@@ -368,6 +363,17 @@ const resolveReplayExportVideoOutput = async ({width, height, browser = globalTh
 
     if (`${browser}`.toLowerCase() !== 'firefox') {
         for (const candidate of getAvcCandidates(safe)) {
+            const probeStartedAt = runtimeNow()
+            replayVideoTraceDebug('export.codec.probe.start', {
+                browser: `${browser}`.toLowerCase(),
+                width: safe.width,
+                height: safe.height,
+                bitrate,
+                hardwareAcceleration,
+                codec: candidate.codec,
+                candidate: candidate.label,
+                fullCodecString: candidate.fullCodecString,
+            })
             const supported = await withTimeout(
                 canEncodeVideo(candidate.codec, {
                     width:              safe.width,
@@ -381,6 +387,18 @@ const resolveReplayExportVideoOutput = async ({width, height, browser = globalTh
                 VIDEO_CODEC_PROBE_TIMEOUT_MS,
                 `Video codec probe timed out for ${candidate.label}.`,
             ).catch(() => false)
+            replayVideoTraceDebug('export.codec.probe.end', {
+                browser: `${browser}`.toLowerCase(),
+                width: safe.width,
+                height: safe.height,
+                bitrate,
+                hardwareAcceleration,
+                codec: candidate.codec,
+                candidate: candidate.label,
+                fullCodecString: candidate.fullCodecString,
+                supported,
+                elapsedMs: runtimeNow() - probeStartedAt,
+            })
 
             if (supported) {
                 return {
@@ -396,6 +414,17 @@ const resolveReplayExportVideoOutput = async ({width, height, browser = globalTh
         }
     }
 
+    const vp9ProbeStartedAt = runtimeNow()
+    replayVideoTraceDebug('export.codec.probe.start', {
+        browser: `${browser}`.toLowerCase(),
+        width: safe.width,
+        height: safe.height,
+        bitrate,
+        hardwareAcceleration,
+        codec: 'vp9',
+        candidate: 'vp9',
+        fullCodecString: null,
+    })
     const encodableCodecs = await withTimeout(
         getEncodableVideoCodecs(['vp9'], {
             width:                safe.width,
@@ -411,6 +440,18 @@ const resolveReplayExportVideoOutput = async ({width, height, browser = globalTh
         VIDEO_CODEC_PROBE_TIMEOUT_MS,
         'Video codec probe timed out for vp9.',
     ).catch(() => [])
+    replayVideoTraceDebug('export.codec.probe.end', {
+        browser: `${browser}`.toLowerCase(),
+        width: safe.width,
+        height: safe.height,
+        bitrate,
+        hardwareAcceleration,
+        codec: 'vp9',
+        candidate: 'vp9',
+        fullCodecString: null,
+        supported: encodableCodecs.length > 0,
+        elapsedMs: runtimeNow() - vp9ProbeStartedAt,
+    })
 
     const codec = encodableCodecs[0] ?? null
     if (!codec) {
@@ -428,40 +469,98 @@ const resolveReplayExportVideoOutput = async ({width, height, browser = globalTh
     }
 }
 
-const waitForAnimationFrames = (frameCount = 1) => new Promise(resolve => {
-    const raf = globalThis.requestAnimationFrame
-                ?? globalThis.window?.requestAnimationFrame?.bind(globalThis.window)
-                ?? (callback => setTimeout(callback, 0))
-    const frames = Math.max(1, Math.trunc(Number(frameCount) || 1))
-    let remaining = frames
-    const step = () => {
-        remaining -= 1
-        if (remaining <= 0) {
-            resolve()
-            return
-        }
-        raf(step)
-    }
-    raf(step)
-})
-
-const waitForReplayWidgetsReady = async ({widgetKeys = [], maxFrames = 30} = {}) => {
+/**
+ * Wait for replay widgets to report readiness with a wall-clock budget.
+ *
+ * The preparation phase must not depend on animation frame cadence because a
+ * background tab can throttle rAF to the point where export start becomes
+ * unusably slow.
+ *
+ * @param {object} options - Readiness wait options.
+ * @param {string[]} [options.widgetKeys=[]] - Widget identifiers to wait for.
+ * @param {number} [options.maxMillis=2000] - Maximum wall-clock wait budget.
+ * @param {number} [options.pollIntervalMs=50] - Poll interval between checks.
+ * @param {Function} [options.isWidgetReady=isReplayVideoWidgetReady] - Readiness predicate.
+ * @returns {Promise<boolean>} True when every widget became ready in time.
+ */
+export const waitForReplayWidgetsReady = async ({
+                                                    widgetKeys = [],
+                                                    maxMillis = 2000,
+                                                    pollIntervalMs = 50,
+                                                    isWidgetReady = isReplayVideoWidgetReady,
+                                                } = {}) => {
     const keys = Array.isArray(widgetKeys) ? widgetKeys.filter(Boolean) : []
+    const safeMaxMillis = Math.max(0, Math.trunc(Number(maxMillis) || 0))
+    const safePollIntervalMs = Math.max(0, Math.trunc(Number(pollIntervalMs) || 0))
+    const waitStartedAt = runtimeNow()
+    let pollCount = 0
+    replayVideoTraceDebug('export.widgets.wait.start', {
+        widgetCount: keys.length,
+        widgetKeys: keys,
+        maxMillis: safeMaxMillis,
+        pollIntervalMs: safePollIntervalMs,
+    })
+    let missingWidgetKeys = keys.filter(widgetId => !isWidgetReady(widgetId))
     if (keys.length === 0) {
+        replayVideoTraceDebug('export.widgets.wait.ready', {
+            widgetCount: 0,
+            widgetKeys: [],
+            skipped: true,
+            elapsedMs: 0,
+            pollCount: 0,
+        })
         return true
     }
 
-    const frames = Math.max(0, Math.trunc(Number(maxFrames) || 0))
-    for (let index = 0; index <= frames; index += 1) {
-        if (keys.every(isReplayVideoWidgetReady)) {
+    const deadline = Date.now() + safeMaxMillis
+
+    while (Date.now() <= deadline) {
+        if (missingWidgetKeys.length === 0) {
+            replayVideoTraceDebug('export.widgets.wait.ready', {
+                widgetCount: keys.length,
+                widgetKeys: keys,
+                elapsedMs: runtimeNow() - waitStartedAt,
+                pollCount,
+            })
             return true
         }
-        await waitForAnimationFrames(1)
+
+        replayVideoTraceDebug('export.widgets.wait.poll', {
+            widgetCount: keys.length,
+            widgetKeys: keys,
+            missingWidgetKeys,
+            elapsedMs: runtimeNow() - waitStartedAt,
+            pollCount,
+        })
+        pollCount += 1
+        if (safePollIntervalMs > 0) {
+            await delay(safePollIntervalMs)
+            missingWidgetKeys = keys.filter(widgetId => !isWidgetReady(widgetId))
+            continue
+        }
+
+        await delay(0)
+        missingWidgetKeys = keys.filter(widgetId => !isWidgetReady(widgetId))
     }
 
-    return keys.every(isReplayVideoWidgetReady)
+    missingWidgetKeys = keys.filter(widgetId => !isWidgetReady(widgetId))
+    replayVideoTraceDebug('export.widgets.wait.timeout', {
+        widgetCount: keys.length,
+        widgetKeys: keys,
+        missingWidgetKeys,
+        elapsedMs: runtimeNow() - waitStartedAt,
+        pollCount,
+        maxMillis: safeMaxMillis,
+    })
+    return missingWidgetKeys.length === 0
 }
 
+/**
+ * Yield the event loop for a bounded amount of wall-clock time.
+ *
+ * @param {number} millis - Delay duration in milliseconds.
+ * @returns {Promise<void>} Promise resolved after the delay.
+ */
 const delay = millis => new Promise(resolve => setTimeout(resolve, millis))
 
 /**
@@ -501,23 +600,25 @@ const publishReplayExportFrameState = ({
                           ?? finiteNumber(replay?.elapsedMillis, null)
                           ?? (durationMillis !== null ? Math.max(0, durationMillis * progress) : null)
 
-    const frameState = {
-        active:        true,
-        playing:       true,
-        paused:        false,
-        index:         Number.isFinite(Number(frame?.index)) ? Number(frame.index) : null,
+    const frameState = buildReplayFrameState({
+        active:          true,
+        playing:         true,
+        paused:          false,
+        index:           Number.isFinite(Number(frame?.index)) ? Number(frame.index) : null,
         progress,
         direction,
-        sample:        frameSample,
+        sample:          frameSample,
         elapsedMillis,
         durationMillis,
-        frameTimeMs:   finiteNumber(frame?.frameTimeMs, null),
-        frameCount:    finiteNumber(frame?.frameCount, null),
-        phase,
+        frameCount:      finiteNumber(frame?.frameCount, null),
+        frameTimeMs:     finiteNumber(frame?.frameTimeMs, null),
+        frameIntervalMs: finiteNumber(frame?.frameIntervalMs, null),
         replayFrameIndex: finiteNumber(phase?.replayFrameIndex, null),
         replayFrameCount: finiteNumber(phase?.replayFrameCount, null),
-        updatedAt:     globalThis.performance?.now?.() ?? Date.now(),
-    }
+        phase,
+        source:          'exporter',
+        updatedAt:       globalThis.performance?.now?.() ?? Date.now(),
+    })
 
     plan.runtime.frameState = frameState
     return frameState
@@ -1371,8 +1472,28 @@ export const runReplayDeferredMp4Export = async ({
     let exportSucceeded = false
     let replayComposer = null
     let replayComposerFallback = false
+    const exportStartedAt = runtimeNow()
+    const exportRuntimeStatus = () => {
+        if (signal?.aborted) {
+            return 'warm'
+        }
 
+        return exportSucceeded ? 'ready' : 'warm'
+    }
+
+    replayVideoTraceDebug('export.camera.ownership.start', {
+        hasBeginReplayCameraExport: typeof replayMode?.beginReplayCameraExport === 'function',
+    })
     replayMode?.beginReplayCameraExport?.()
+    replayVideoTraceDebug('export.run.start', {
+        label: plan.label,
+        captureMode: plan.captureMode,
+        outputWidth: outputDimensions.width,
+        outputHeight: outputDimensions.height,
+        frameCount: plan.manifest?.frameCount ?? null,
+        hasRestorePlaybackScene: typeof replayMode?.restorePlaybackScene === 'function',
+        hasPreparePlaybackSceneForExport: typeof replayMode?.preparePlaybackSceneForExport === 'function',
+    })
 
     if (plan.runtime) {
         plan.runtime.status = 'exporting'
@@ -1385,18 +1506,52 @@ export const runReplayDeferredMp4Export = async ({
         // Always leave a previous Draft scene before preparing HQ. This restores
         // the original track and camera focus when the user switches modes or
         // aborts between the two exports.
-        if (typeof replayMode?.restorePlaybackScene === 'function') {
-            await replayMode.restorePlaybackScene({force: true})
+        const restoreStartedAt = runtimeNow()
+        let restoreSucceeded = false
+        replayVideoTraceDebug('export.draft.restore.start', {
+            force: true,
+            hasRestorePlaybackScene: typeof replayMode?.restorePlaybackScene === 'function',
+        })
+        try {
+            if (typeof replayMode?.restorePlaybackScene === 'function') {
+                await replayMode.restorePlaybackScene({force: true})
+            }
+            restoreSucceeded = true
+        }
+        finally {
+            replayVideoTraceDebug('export.draft.restore.end', {
+                elapsedMs: runtimeNow() - restoreStartedAt,
+                restored: restoreSucceeded,
+                hasRestorePlaybackScene: typeof replayMode?.restorePlaybackScene === 'function',
+            })
         }
 
-        if (typeof replayMode?.preparePlaybackSceneForExport === 'function') {
-            const firstTimelinePhase = plan.videoTimeline?.phases?.[0] ?? null
-            await replayMode.preparePlaybackSceneForExport({
-                journey,
-                progress: originalProgress ?? 0,
-                hideReplayMarker: firstTimelinePhase?.slot === REPLAY_CLIP_SLOT_START && Boolean(firstTimelinePhase?.clip),
-            }) === true
-            await waitForAnimationFrames(2)
+        const scenePrepareStartedAt = runtimeNow()
+        let scenePrepared = false
+        const firstTimelinePhase = plan.videoTimeline?.phases?.[0] ?? null
+        replayVideoTraceDebug('export.scene.prepare.start', {
+            journeySlug: journey?.slug ?? replay?.journeySlug ?? null,
+            progress: originalProgress ?? 0,
+            hideReplayMarker: firstTimelinePhase?.slot === REPLAY_CLIP_SLOT_START && Boolean(firstTimelinePhase?.clip),
+            hasPreparePlaybackSceneForExport: typeof replayMode?.preparePlaybackSceneForExport === 'function',
+        })
+        try {
+            if (typeof replayMode?.preparePlaybackSceneForExport === 'function') {
+                await replayMode.preparePlaybackSceneForExport({
+                    journey,
+                    progress: originalProgress ?? 0,
+                    hideReplayMarker: firstTimelinePhase?.slot === REPLAY_CLIP_SLOT_START && Boolean(firstTimelinePhase?.clip),
+                }) === true
+            }
+            await delay(0)
+            scenePrepared = true
+        }
+        finally {
+            replayVideoTraceDebug('export.scene.prepare.end', {
+                elapsedMs: runtimeNow() - scenePrepareStartedAt,
+                prepared: scenePrepared,
+                hasPreparePlaybackSceneForExport: typeof replayMode?.preparePlaybackSceneForExport === 'function',
+            })
         }
 
         publishReplayExportFrameState({
@@ -1467,8 +1622,6 @@ export const runReplayDeferredMp4Export = async ({
                     sample: frameSample,
                     phase,
                 })
-                await waitForAnimationFrames(1)
-
                 const frameSource = sourceCanvas ?? defaultReplaySourceCanvas()
                 if (frameSource instanceof HTMLCanvasElement) {
                     const cropRect = outputRenderSpec?.cropRect
@@ -1519,8 +1672,9 @@ export const runReplayDeferredMp4Export = async ({
                             cropRect:      cropRect ?? {left: 0, top: 0, width: canvas.width, height: canvas.height},
                             replay,
                             controller,
+                            skipVisibilityChecks: true,
                         })
-                        await replayComposer.renderFrame({waitForNextFrame: true})
+                        await replayComposer.renderFrame()
 
                         const composedCanvas = replayComposer.getCanvas?.()
                         if (composedCanvas) {
@@ -1567,6 +1721,15 @@ export const runReplayDeferredMp4Export = async ({
         }
     }
     finally {
+        replayVideoTraceDebug('export.camera.ownership.end', {
+            hasEndReplayCameraExport: typeof replayMode?.endReplayCameraExport === 'function',
+        })
+        replayVideoTraceDebug('export.run.end', {
+            elapsedMs: runtimeNow() - exportStartedAt,
+            succeeded: exportSucceeded,
+            aborted: signal?.aborted === true,
+            runtimeStatus: exportRuntimeStatus(),
+        })
         replayMode?.endReplayCameraExport?.()
         if (controller?.seek && originalProgress !== null) {
             controller.seek(originalProgress)

@@ -29,6 +29,30 @@ runtime files are:
 - `src/Utils/cesium/SceneUtils.js`
 - `src/components/MainUI/PanoramaWidget.jsx`
 
+### Non-blocking Draft and HQ runtime policy
+
+Bulk constrained-path compilation is no longer invoked from Draft playback or
+HQ frame rendering. Compiling up to 2048 samples on the browser main thread
+could keep the recorder `START` event open for tens of seconds, prevent the
+`preRecording` UI state from being painted as active recording, and produce a
+single long `requestAnimationFrame` task.
+
+Draft now starts replay in a separate browser task after recorder startup and
+evaluates the existing bounded live camera correction for each replay update.
+HQ evaluates the deterministic camera follower from each explicit export frame
+timestamp. Both paths avoid full-route work in one browser callback.
+
+`buildConstrainedReplayCameraPath(...)` remains available as a pure compiler
+and is still covered by unit tests. It must not return to the Draft or HQ
+critical path until its work is moved off the main thread or split into
+cooperative chunks with a strict per-task time budget.
+
+The runtime records `camera.path.compile.skipped`,
+`draft.replay.start.scheduled`, and the `draft.recording.*` preparation stages.
+The Draft preparation summaries are also written directly to the browser
+console so a stall can be located without inspecting the in-memory trace
+buffer.
+
 The point-to-point runtime pipeline is:
 
 1. resolve a start camera frame and an end camera frame
@@ -349,11 +373,12 @@ camera values are negative radians derived from approximately `-45°` and
 configured nominal pitch, such as `cameraSettings.pitch = -45`, not returning
 to zero or to the pitch of the Cesium camera before replay.
 
-Path compilation is intentionally bounded before live playback starts. It uses
-a 30-sample-per-second target, a minimum of 256 intervals, and a maximum of
-2048 intervals. The final path then uses cubic, velocity-continuous sampling
-and exact-progress validation. This is dense enough to align a normal HQ
-timeline with compiled poses while still bounding synchronous terrain work.
+The standalone compiler uses a 30-sample-per-second target, a minimum of 256
+intervals, and a maximum of 2048 intervals. The final path uses cubic,
+velocity-continuous sampling and exact-progress validation. This density is
+useful for offline validation, but the cap does not make terrain and
+screen-space work safe for one main-thread callback. Runtime Draft and HQ
+therefore do not invoke this bulk compiler.
 
 Terrain redirect search runs once for a continuous occlusion episode. The
 selected candidate is not retained as an indefinite state: only its heading and
@@ -364,11 +389,10 @@ eligible only after the nominal line of sight has been visible again and a new
 occlusion begins. This prevents both a permanent `-66°` pitch and repetitive
 pitch pumping over a long ridge.
 
-The compiled cache survives Draft scene cleanup and HQ preparation. It is
+Compiled paths may still be cached by explicit compiler consumers. The cache is
 invalidated when the journey sampler changes, while the cache key also covers
 the guide, camera and marker settings, runtime zones, crop, replay timing, and
-frustum. Draft and HQ therefore consume the same in-memory path object whenever
-those inputs are unchanged.
+frustum. Draft preparation and HQ export do not create or wait for this cache.
 
 ### Replay safety profile
 
@@ -517,10 +541,10 @@ const transferPath = buildCameraTransferPath({
 ```
 
 Continuous replay does not create successive point-to-point transitions.
-`JourneyReplayCameraBinding.js` resolves one cached constrained path from the
-journey, crop, camera settings, marker settings, mode, and frustum. Navigation
-and dynamic/hysteresis therefore use the same compiler while retaining their
-different trigger and landing zones.
+`JourneyReplayCameraBinding.js` currently evaluates one bounded correction per
+replay update. Draft uses the live correction cadence and HQ uses the explicit
+export frame timestamp with the deterministic follower. The bulk constrained
+compiler is not resolved from this binding while it remains synchronous.
 
 ### Live focus
 
@@ -1357,12 +1381,12 @@ dynamic tracking. Navigation derives an internal inset landing zone from Z1 to
 avoid immediate retriggering. The extended look-ahead must not perturb a target
 that is already safely inside the landing zone.
 
-The same tracking decision must be used by Draft and deterministic HQ export.
-Both now sample the same cached path with normalized replay progress. Draft's
-wall clock and HQ's export timestamp only determine progress; they no longer
-select separate transition or follower implementations. Terrain redirects are
-baked while nominal frames are compiled, before the screen-space constraint
-pass validates the result.
+Draft and deterministic HQ export must apply the same tracking policy. The
+current non-blocking runtime evaluates that policy incrementally instead of
+sampling a bulk-compiled cache. Draft uses wall-clock progress and HQ uses its
+explicit export timestamp. The long-term architecture still requires one
+cooperatively compiled or off-main-thread path once that compiler can no longer
+freeze browser rendering.
 
 ### Occlusion Detection
 
@@ -1739,8 +1763,8 @@ stabilization layer for this existing architecture:
 
 | Concern | Existing behavior | Current change | Consequence for the drone architecture |
 | --- | --- | --- | --- |
-| Camera transition in HQ | Deterministic recentering interpolated camera position and orientation with a smooth scalar easing. | Continuous replay samples a precompiled constrained frame path with four-point cubic interpolation; point-to-point clips retain their dedicated transition path. | Keep continuous replay correction in the path compiler and clip transitions in the phase controller. |
-| Navigation and dynamic correction in HQ | Draft transitions and the HQ spring follower could diverge. | Both tracking modes now sample the same constrained path by normalized replay progress. | Z1/Z2 correction is part of canonical replay path materialization. |
+| Camera transition in HQ | Deterministic recentering interpolated camera position and orientation with a smooth scalar easing. | Continuous HQ replay uses the deterministic follower at the explicit frame timestamp; point-to-point clips retain their dedicated transition path. | Move continuous correction back to a canonical compiler only after compilation is cooperative or off the main thread. |
+| Navigation and dynamic correction in HQ | Draft transitions and the HQ spring follower could diverge. | Both tracking modes use the same settings, while Draft evaluates live updates and HQ evaluates deterministic export frames without bulk compilation. | Z1/Z2 correction remains part of the canonical path target architecture without blocking current capture startup. |
 | Safe-zone camera movement | The constrained compiler retained one absolute applied frame until the marker threatened Z1 again, creating move-stop-move sections. | Every applied frame is transported with the nominal position and orientation delta before constraints are evaluated. | A constrained path must carry correction offsets over a continuously moving nominal path; it must not use a safe zone as a world-space camera hold. |
 | Compiled angle changes | The constrained path requested the drawer view, bypassing temporal heading and pitch smoothing. | Raw deterministic views are smoothed sequentially with factors normalized to logical replay time before frame construction. | A canonical path must own its temporal smoothing instead of computing a smoothed runtime view that is discarded. |
 | Compiled path cadence | Only 128 to 256 intervals were joined linearly. | Compilation targets 30 samples per second, is bounded to 256–2048 intervals, and runtime sampling is C1-continuous. | Encoder cadence cannot compensate for discontinuous pose velocity. |
@@ -2242,14 +2266,13 @@ the narrow navigation zone is `237.6 × 422.4` pixels, not a square. Dynamic
 tracking keeps its separate Z1/Z2 configuration, with both zones using the
 same independent width and height ratios.
 
-Draft recording and HQ navigation and dynamic tracking use the same in-memory
-constrained path. The compiler tests current and predicted marker samples
-against runtime zones before starting a correction. It projects through
-candidate frames rather than through the asynchronously rendered Cesium camera.
-Before those projections, the applied frame is advanced by the nominal
-position and rotation delta for the current journey sample. A safe target
-therefore prevents an unnecessary Z1/Z2 correction but never freezes camera
-movement.
+The target architecture has Draft and HQ consume the same in-memory constrained
+path. The compiler tests current and predicted marker samples against runtime
+zones before starting a correction. It projects through candidate frames rather
+than through the asynchronously rendered Cesium camera. Before those
+projections, the applied frame is advanced by the nominal position and rotation
+delta for the current journey sample. A safe target therefore prevents an
+unnecessary Z1/Z2 correction but never freezes camera movement.
 
 When a correction is active, its position and orientation offsets rotate with
 the nominal frame, including across sharp heading changes. Reaching the landing
@@ -2259,12 +2282,12 @@ zero at replay end. A material Z1 correction is not snapped away on the last
 sample; preserving camera continuity takes priority over forcing an exact
 nominal final position.
 
-Every `sampleAt(progress)` call resolves the actual journey marker target and
-performs a final containment check, including progresses between cached frames.
-The cached frames are joined with shared-tangent cubic interpolation rather
-than independent linear segments.
-The path cache is preserved across Draft cleanup and reused during HQ
-preparation when its complete input key is unchanged.
+When bulk compilation is explicitly used, every `sampleAt(progress)` call
+resolves the actual journey marker target and performs a final containment
+check, including progresses between cached frames. The cached frames are joined
+with shared-tangent cubic interpolation rather than independent linear
+segments. Runtime capture does not create or wait for that cache while
+compilation remains synchronous.
 
 ### Deterministic HQ camera ownership
 
@@ -2292,9 +2315,10 @@ shape to its internal `up` field before integrating the spring state. Reading
 `endFrame.up` directly leaves the follower target undefined and causes Cesium's
 `Cartesian3.subtract` validation to abort the export.
 
-Navigation and dynamic tracking use the replay camera response duration while
-compiling their shared path. HQ no longer owns a separate spring follower for
-continuous replay. Start and stop clips keep their own phase durations.
+Navigation and dynamic tracking use the replay camera response duration. HQ
+currently owns a deterministic spring follower for continuous replay so each
+frame stays timestamp-driven without requiring bulk path compilation. Start and
+stop clips keep their own phase durations.
 
 The same validation applies to the smoothed replay trace used by the renderer.
 An incomplete left or right trace position is skipped or replaced by the

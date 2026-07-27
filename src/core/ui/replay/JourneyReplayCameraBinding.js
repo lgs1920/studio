@@ -134,12 +134,6 @@ import {
     selectCameraTransferMode,
 } from './JourneyReplayCameraPath'
 import {
-    sampleConstrainedReplayCameraPath,
-} from './JourneyReplayConstrainedCameraPath'
-import {
-    resolveConstrainedReplayCameraPath,
-} from './JourneyReplayCameraConstraintBinding'
-import {
     buildReplayAntiCollisionBounds,
 } from './JourneyReplayCameraCollision'
 import {
@@ -723,9 +717,6 @@ export const updateCamera = (mode, {
             frameIntervalMs,
         })
         const lookaheadSeconds = recenterDuration + frameLeadSeconds
-        const constrainedLookaheadSeconds = sharedRecenterDuration + replayFrameLeadSeconds({
-            fps: globalThis.lgs?.stores?.replay?.captureFps,
-        })
         const futureSample = call.cameraLookaheadSample(anchorSample, {lookaheadSeconds})
         const predictedSample = futureSample ?? anchorSample
         if (deterministicCamera && state.deterministicCameraTransition) {
@@ -783,54 +774,27 @@ export const updateCamera = (mode, {
 
         call.updateToleranceZoneOverlay(cameraSettings.hysteresis)
 
-        const runtimeTracking = replayRuntimeTrackingSettings(
-            globalThis.lgs?.settings?.ui?.replay?.camera ?? cameraSettings,
-            viewportRect,
-        )
-        const constrainedPathSupported = typeof globalThis.lgs?.viewer?.camera?.setView === 'function'
-        const constrainedPath = constrainedPathSupported
-            ? call.resolveConstrainedReplayCameraPath?.({
+        const recording = globalThis.lgs?.stores?.ui?.video?.recording === true
+        const shouldTraceCompilationBypass = source === 'start'
+                                             || (exportMode && state.exportPathCompilationBypassTraced !== true)
+        if (shouldTraceCompilationBypass) {
+            const phase = exportMode ? 'hq' : recording ? 'draft' : 'preview'
+            replayVideoTraceDebug('camera.path.compile.skipped', {
+                phase,
+                source,
+                exportMode,
+                recording,
                 trackingMode: marker.mode,
-                cameraSettings,
-                markerSettings,
-                runtimeTracking,
-                durationSeconds: settings.duration,
-                responseSeconds: sharedRecenterDuration,
-                lookaheadSeconds: constrainedLookaheadSeconds,
-            }) ?? resolveConstrainedReplayCameraPath(mode, {
-                trackingMode: marker.mode,
-                cameraSettings,
-                markerSettings,
-                runtimeTracking,
-                durationSeconds: settings.duration,
-                responseSeconds: sharedRecenterDuration,
-                lookaheadSeconds: constrainedLookaheadSeconds,
+                reason: 'runtime-bulk-compilation-disabled',
             })
-            : null
-        const constrainedFrame = sampleConstrainedReplayCameraPath(
-            constrainedPath,
-            progress ?? anchorSample.progress ?? 0,
-        )
-        if (constrainedFrame) {
-            if (
-                state.cameraBezierFrame !== null
-                || state.cameraBezierResolve !== null
-                || state.cameraFlightActive
-                || state.deterministicCameraTransition
-                || state.deterministicCameraFollowerActive
-            ) {
-                call.cancelCameraBezierTransition(false)
+            console.log('[Journey Replay] Bulk camera path compilation skipped', {
+                phase,
+                source,
+                trackingMode: marker.mode,
+            })
+            if (exportMode) {
+                state.exportPathCompilationBypassTraced = true
             }
-            state.deterministicCameraTransition = null
-            state.deterministicCameraFollowerAt = null
-            state.deterministicCameraFollowerActive = false
-            state.deterministicCameraFollowerVelocity = null
-            state.cameraRedirectState = null
-            state.cameraFlightActive = false
-            call.applyCameraFrame(constrainedFrame)
-            state.lastCameraHeading = smoothHeading
-            state.lastCameraPitch = smoothPitch
-            return
         }
 
         if (source === 'start' && immediateToleranceRecenter) {

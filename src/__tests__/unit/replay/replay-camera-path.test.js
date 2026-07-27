@@ -640,6 +640,7 @@ describe('Journey replay camera paths', () => {
             progress: nominalSample.progress,
             source:   'playback',
         })
+        expect(call.resolveConstrainedReplayCameraPath).not.toHaveBeenCalled()
         expect(state.cameraRedirectState).toBeNull()
         const visibilityModes = call.cameraViewVisibilityForSample.mock.calls.map(([payload]) => (
             payload.futureSample === null ? 'current' : 'future'

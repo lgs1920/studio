@@ -93,6 +93,7 @@ describe('JourneyReplayCameraConstraintBinding', () => {
     afterEach(() => {
         vi.restoreAllMocks()
         delete globalThis.lgs
+        delete globalThis.__lgsReplayVideoTrace
     })
 
     it('returns a terrain redirect to the nominal pitch after a bounded cycle', () => {
@@ -191,6 +192,85 @@ describe('JourneyReplayCameraConstraintBinding', () => {
             -0.5,
             -0.5,
         ])
+    })
+
+    it('traces constrained path compilation timings', () => {
+        globalThis.lgs = {
+            viewer: {
+                camera: {
+                    frustum: {
+                        fovy:        Math.PI / 3,
+                        aspectRatio: 1,
+                    },
+                },
+            },
+            stores: {
+                replay: {
+                    markerRadius: 35,
+                },
+            },
+        }
+
+        const buildSpy = vi.spyOn(ConstrainedReplayCameraPath, 'buildConstrainedReplayCameraPath')
+            .mockImplementation(options => {
+                options.frameForSample({
+                    distanceFromStart: 0,
+                    progress:          0,
+                    longitude:         2,
+                    latitude:          48,
+                    altitude:          120,
+                    height:            120,
+                }, 0)
+                return {frames: []}
+            })
+
+        const {mode} = makeMode()
+
+        resolveConstrainedReplayCameraPath(mode, {
+            trackingMode:   'navigation',
+            cameraSettings: {hysteresis: {}},
+            markerSettings: {},
+            runtimeTracking: {
+                navigation: {
+                    triggerZone: {
+                        top:    0.2,
+                        left:   0.2,
+                        width:  0.6,
+                        height: 0.6,
+                    },
+                },
+                dynamic: {
+                    triggerZone: {
+                        top:    0.2,
+                        left:   0.2,
+                        width:  0.6,
+                        height: 0.6,
+                    },
+                    targetZone: {
+                        top:    0.4,
+                        left:   0.4,
+                        width:  0.2,
+                        height: 0.2,
+                    },
+                },
+            },
+            durationSeconds: 10,
+            responseSeconds: 1,
+            lookaheadSeconds: 1,
+        })
+
+        expect(buildSpy).toHaveBeenCalledOnce()
+        const traceEntries = globalThis.__lgsReplayVideoTrace ?? []
+        const traceEvents = traceEntries.map(entry => entry.event)
+        expect(traceEvents).toContain('camera.path.compile.start')
+        expect(traceEvents).toContain('camera.path.compile.end')
+        const compileEnd = traceEntries.find(entry => entry.event === 'camera.path.compile.end')
+        expect(compileEnd?.data).toEqual(expect.objectContaining({
+            compiled: true,
+            frameCount: 0,
+            constrainedSamples: 0,
+            elapsedMs: expect.any(Number),
+        }))
     })
 
     it('forces the terrain redirect weight to zero at the replay end', () => {

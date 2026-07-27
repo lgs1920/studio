@@ -1,5 +1,12 @@
 # Commit History
 
+## 2026-07-27 — [`fix: stabilize replay Draft and HQ capture`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
+
+- Remove synchronous bulk camera path compilation from Draft and HQ runtime capture.
+- Start linked Draft replay outside the recorder start listener and expose preparation timing traces.
+- Stabilize deterministic HQ frame state, camera ownership, widget readiness, and overlay composition.
+- Add replay capture regression coverage and document the non-blocking runtime policy.
+
 ## 2026-07-27 — [`docs(path): note terrain collision correction`](https://github.com/lgs1920/studio/commit/7f9b40eee2b572435defdfee530da466a6cc0a49)
 
 - Add a terrain collision avoidance note to the drone camera path architecture spec.

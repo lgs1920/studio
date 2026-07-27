@@ -648,10 +648,16 @@ export const restoreJourneyToolbarVisibility = (mode, ) => {
 export const isJourneyToolbarTemporarilyHidden = mode => mode[JOURNEY_REPLAY_INTERNAL_STATE].journeyToolbarHidden === true
 
 export const bindRenderer = (mode, ) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+        const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         state.unbind.push(
             state.controller.on(REPLAY_EVENT_START, detail => {
+                const startListenerStartedAt = globalThis.performance?.now?.() ?? Date.now()
+                let listenerError = null
+                replayVideoTraceDebug('draft.replay.start.listener.begin', {
+                    progress: detail?.progress ?? null,
+                    hasSampler: Boolean(detail?.sampler),
+                })
                 try {
                     state.lastPlaybackUpdateProgressKey = null
                     call.setToleranceZoneOverlayVisible(true)
@@ -696,7 +702,16 @@ export const bindRenderer = (mode, ) => {
                     }
                 }
                 catch (error) {
+                    listenerError = error
                     call.abortPlaybackAfterListenerError(error)
+                }
+                finally {
+                    replayVideoTraceDebug('draft.replay.start.listener.end', {
+                        elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startListenerStartedAt,
+                        progress: detail?.progress ?? null,
+                        hasSampler: Boolean(detail?.sampler),
+                        errored: listenerError !== null,
+                    })
                 }
             }),
             state.controller.on(REPLAY_EVENT_UPDATE, detail => {

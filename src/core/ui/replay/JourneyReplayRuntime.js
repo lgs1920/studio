@@ -17,6 +17,78 @@ export const finiteNumber = value => {
 }
 
 /**
+ * Converts a value to a finite number while preserving empty values as null.
+ *
+ * @param {*} value - Value to convert.
+ * @returns {number|null} The finite number or null.
+ */
+const optionalFiniteNumber = value => {
+    if (value === null || value === undefined || value === '') {
+        return null
+    }
+
+    return finiteNumber(value)
+}
+
+/**
+ * Build a normalized replay frame payload shared by live playback, clip
+ * playback, and HQ export.
+ *
+ * @param {object} options - Frame payload options.
+ * @returns {object} Normalized frame payload.
+ */
+export const buildReplayFrameState = ({
+    active = false,
+    playing = false,
+    paused = false,
+    index = null,
+    progress = 0,
+    direction = 1,
+    sample = null,
+    elapsedMillis = null,
+    durationMillis = null,
+    frameId = null,
+    frameCount = null,
+    frameTimeMs = null,
+    frameIntervalMs = null,
+    replayFrameIndex = null,
+    replayFrameCount = null,
+    phase = null,
+    source = null,
+    updatedAt = null,
+} = {}) => {
+    const safeIndex = optionalFiniteNumber(index)
+    const safeFrameId = optionalFiniteNumber(frameId)
+    const safeReplayFrameIndex = optionalFiniteNumber(replayFrameIndex)
+    const safeFrameCount = optionalFiniteNumber(frameCount)
+    const safeReplayFrameCount = optionalFiniteNumber(replayFrameCount)
+    const resolvedIndex = safeIndex ?? safeReplayFrameIndex ?? safeFrameId ?? null
+    const resolvedFrameCount = safeFrameCount ?? safeReplayFrameCount ?? null
+
+    return {
+        active:          Boolean(active),
+        playing:         Boolean(playing),
+        paused:          Boolean(paused),
+        index:           resolvedIndex,
+        frameIndex:      resolvedIndex,
+        frameId:         safeFrameId,
+        frameCount:      resolvedFrameCount,
+        progress:        optionalFiniteNumber(progress) ?? 0,
+        direction:       Number(direction) < 0 ? -1 : 1,
+        sample:          sample ?? null,
+        elapsedMillis:   optionalFiniteNumber(elapsedMillis),
+        durationMillis:  optionalFiniteNumber(durationMillis),
+        frameTimeMs:     optionalFiniteNumber(frameTimeMs),
+        frameIntervalMs:  optionalFiniteNumber(frameIntervalMs),
+        replayFrameIndex: safeReplayFrameIndex,
+        replayFrameCount: safeReplayFrameCount,
+        phase,
+        source,
+        updatedAt:       optionalFiniteNumber(updatedAt) ?? globalThis.performance?.now?.() ?? Date.now(),
+    }
+}
+
+/**
  * Returns the replay runtime store when it is available.
  *
  * @returns {Object|null} The replay store.
@@ -144,21 +216,27 @@ export const publishReplayClipFrameState = ({
     const now = globalThis.performance?.now?.() ?? Date.now()
     store.clipSequenceActive = true
     store.replayFramePhase = phase
-    store.dynamicFrameState = {
-        active:        true,
-        playing:       false,
-        paused:        false,
+    store.dynamicFrameState = buildReplayFrameState({
+        active:         true,
+        playing:        false,
+        paused:         false,
         progress,
-        direction:     Number(store.direction) < 0 ? -1 : 1,
-        sample:        sample ?? store.sample ?? store.liveSample ?? null,
-        elapsedMillis: finiteNumber(sample?.journeyElapsedMillis) ?? finiteNumber(store.elapsedMillis),
-        durationMillis: finiteNumber(sample?.journeyDurationMillis)
-                        ?? finiteNumber(store.durationMillis),
+        direction:      Number(store.direction) < 0 ? -1 : 1,
+        sample:         sample ?? store.sample ?? store.liveSample ?? null,
+        elapsedMillis:   optionalFiniteNumber(sample?.journeyElapsedMillis)
+                         ?? optionalFiniteNumber(store.elapsedMillis),
+        durationMillis:  optionalFiniteNumber(sample?.journeyDurationMillis)
+                         ?? optionalFiniteNumber(store.durationMillis),
+        index:          null,
+        frameCount:     null,
+        frameTimeMs:    null,
+        frameIntervalMs: null,
+        frameId:        null,
         replayFrameIndex: null,
         replayFrameCount: null,
         phase,
-        source:        'clip',
-        updatedAt:     now,
-    }
+        source:         'clip',
+        updatedAt:      now,
+    })
     return phase
 }

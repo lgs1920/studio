@@ -17,6 +17,7 @@
 import { REPLAY_EVENT_STOP_CLIPS_COMPLETE } from './JourneyReplayMode'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { hasJourneyReplayStopClips } from '@Core/ui/replay/ReplayOverlayResolver'
+import { replayVideoTraceDebug } from './ReplayVideoTraceDebug'
 
 const defaultJourneyReplayStore = () => globalThis.lgs?.stores?.replay ?? null
 
@@ -190,18 +191,29 @@ export class JourneyReplayVideoSync {
             }
 
             const startGeneration = this.#captureGeneration
+            const startStartedAt = globalThis.performance?.now?.() ?? Date.now()
             this.#cancelPendingStart()
             if (!this.#armed || startGeneration !== this.#captureGeneration) {
                 this.#setVideoSafeMode(false)
                 return
             }
-            this.#replay?.cancelPendingSceneRestore?.()
-            if (this.#resetToStart && this.#replay?.running) {
-                this.#replay.stop?.({emit: false})
-            }
-            this.#replayCaptureActive = true
-            this.#replayStartPending = true
+            replayVideoTraceDebug('draft.replay.start.begin', {
+                armed: this.#armed,
+                resetToStart: this.#resetToStart === true,
+                captureMode: this.#captureMode,
+                captureFps: this.#captureFps,
+                generation: startGeneration,
+                replayRunning: this.#replay?.running === true,
+            })
+            let startSucceeded = false
+            let startError = null
             try {
+                this.#replay?.cancelPendingSceneRestore?.()
+                if (this.#resetToStart && this.#replay?.running) {
+                    this.#replay.stop?.({emit: false})
+                }
+                this.#replayCaptureActive = true
+                this.#replayStartPending = true
                 const startResult = this.#replay?.start?.({progress: 0})
                 await startResult
                 if (!this.#armed || startGeneration !== this.#captureGeneration) {
@@ -210,18 +222,62 @@ export class JourneyReplayVideoSync {
                 this.#replayCaptureToken = Number.isFinite(this.#replay?.clipSequenceToken)
                                           ? this.#replay.clipSequenceToken
                                           : null
+                startSucceeded = true
             }
-            catch {
+            catch (error) {
+                startError = error
+                replayVideoTraceDebug('draft.replay.start.error', {
+                    elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startStartedAt,
+                    generation: startGeneration,
+                    message: error?.message ?? null,
+                    name: error?.name ?? null,
+                    armed: this.#armed,
+                })
                 return
             }
             finally {
+                if (!startSucceeded) {
+                    this.#replayCaptureActive = false
+                }
                 this.#replayStartPending = false
+                replayVideoTraceDebug('draft.replay.start.end', {
+                    elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startStartedAt,
+                    generation: startGeneration,
+                    armed: this.#armed,
+                    captureMode: this.#captureMode,
+                    captureFps: this.#captureFps,
+                    succeeded: startSucceeded,
+                    errored: startError !== null,
+                    captureToken: this.#replayCaptureToken,
+                    captureActive: this.#replayCaptureActive,
+                    pendingStart: this.#replayStartPending,
+                })
             }
         }
 
         const handleRecorderStart = () => {
+            replayVideoTraceDebug('draft.recorder.start.received', {
+                armed: this.#armed,
+                captureMode: this.#captureMode,
+                captureFps: this.#captureFps,
+                resetToStart: this.#resetToStart === true,
+            })
             this.#setVideoCaptureCadence()
-            void startJourneyReplay()
+            this.#cancelPendingStart()
+            this.#replayStartPending = true
+            replayVideoTraceDebug('draft.replay.start.scheduled', {
+                captureMode: this.#captureMode,
+                captureFps: this.#captureFps,
+                generation: this.#captureGeneration,
+            })
+            console.log('[Journey Replay] Draft replay start scheduled after recorder startup', {
+                captureMode: this.#captureMode,
+                captureFps: this.#captureFps,
+            })
+            this.#pendingStartTimeout = globalThis.setTimeout(() => {
+                this.#pendingStartTimeout = null
+                void startJourneyReplay()
+            }, 0)
         }
 
         const handleRecorderPause = () => {

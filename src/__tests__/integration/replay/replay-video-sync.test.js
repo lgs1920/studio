@@ -81,6 +81,7 @@ describe('JourneyReplayVideoSync', () => {
         vi.useRealTimers()
         globalThis.lgs = undefined
         globalThis.requestAnimationFrame = undefined
+        delete globalThis.__lgsReplayVideoTrace
     })
 
     it('starts the replay when the recorder starts', () => {
@@ -92,11 +93,24 @@ describe('JourneyReplayVideoSync', () => {
 
         sync.arm()
         recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
+        expect(replay.start).not.toHaveBeenCalled()
         return new Promise(resolve => setTimeout(resolve, 0)).then(() => {
+            const traceEntries = globalThis.__lgsReplayVideoTrace ?? []
+            const traceEvents = traceEntries.map(entry => entry.event)
             expect(store.recordingSync).toBe(true)
             expect(globalThis.lgs.settings.ui.replay.recordingSync).toBe(true)
             expect(replay.setVideoSafeMode).toHaveBeenCalledWith(true)
             expect(replay.start).toHaveBeenCalledWith({progress: 0})
+            expect(traceEvents).toEqual(expect.arrayContaining([
+                'draft.recorder.start.received',
+                'draft.replay.start.scheduled',
+                'draft.replay.start.begin',
+                'draft.replay.start.end',
+            ]))
+            expect(traceEntries.find(entry => entry.event === 'draft.replay.start.end')?.data).toEqual(expect.objectContaining({
+                succeeded: true,
+                errored: false,
+            }))
         })
     })
 

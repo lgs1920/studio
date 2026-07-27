@@ -134,6 +134,12 @@ const resolveMetrics = ({widgetId, widgetEl, metricsCache = null, metricsCacheTt
     return metrics
 }
 
+/**
+ * Build the canvas overlays used by replay video composition.
+ *
+ * @param {object} options - Overlay build options.
+ * @param {boolean} [options.skipVisibilityChecks=false] - Include mounted widgets without replay visibility filtering.
+ */
 export const buildReplayVideoComposerOverlays = ({
                                                      composer,
                                                      cropRect,
@@ -144,6 +150,7 @@ export const buildReplayVideoComposerOverlays = ({
                                                      metricsCache = null,
                                                      metricsCacheTtlMs = DEFAULT_METRICS_CACHE_TTL_MS,
                                                      widgetsBoard = VIDEO_WIDGETS_BOARD,
+                                                     skipVisibilityChecks = false,
                                                  } = {}) => {
     if (!composer) {
         return
@@ -225,7 +232,7 @@ export const buildReplayVideoComposerOverlays = ({
 
     for (const key of getSortedVideoWidgetKeys({widgetKeys, widgetsBoard})) {
         const widgetEl = globalThis.__?.ui?.widgetManager?.getElementById?.(key)
-        if (!resolveVideoOverlayVisibility({widgetId: key, widgetEl, replay, controller})) {
+        if (!skipVisibilityChecks && !resolveVideoOverlayVisibility({widgetId: key, widgetEl, replay, controller})) {
             continue
         }
 

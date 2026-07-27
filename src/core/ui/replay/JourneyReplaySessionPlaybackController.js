@@ -536,7 +536,14 @@ export const refreshCamera = (mode, options = {}) => {
 export const beginReplayCameraExport = (mode, ) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        replayVideoTraceDebug('camera.export-ownership.start', {
+            replayExportCameraActive: state.replayExportCameraActive === true,
+            cameraUserAdjusting: state.cameraUserAdjusting === true,
+            cameraPointerActive: state.cameraPointerActive === true,
+            cameraManualInteractionTimer: state.cameraManualInteractionTimer !== null,
+        })
         state.replayExportCameraActive = true
+        state.exportPathCompilationBypassTraced = false
         state.cameraUserAdjusting = false
         state.cameraPointerActive = false
         if (state.cameraManualInteractionTimer !== null) {
@@ -549,6 +556,12 @@ export const beginReplayCameraExport = (mode, ) => {
 export const endReplayCameraExport = (mode, ) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        replayVideoTraceDebug('camera.export-ownership.end', {
+            replayExportCameraActive: state.replayExportCameraActive === true,
+            cameraUserAdjusting: state.cameraUserAdjusting === true,
+            cameraPointerActive: state.cameraPointerActive === true,
+            cameraManualInteractionTimer: state.cameraManualInteractionTimer !== null,
+        })
         state.replayExportCameraActive = false
     }
 
