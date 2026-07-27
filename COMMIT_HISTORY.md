@@ -1,5 +1,10 @@
 # Commit History
 
+## 2026-07-27 — [`docs(replay): document camera update tracing and cache`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
+
+- Document the replay camera update cache and the finer-grained update-step tracing.
+- Clarify that the hot replay camera path now reuses an ephemeral per-update cache for repeated visibility and collision checks.
+
 ## 2026-07-27 — [`fix: stabilize replay Draft and HQ capture`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
 
 - Remove synchronous bulk camera path compilation from Draft and HQ runtime capture.

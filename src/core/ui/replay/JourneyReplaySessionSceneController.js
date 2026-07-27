@@ -324,6 +324,8 @@ export const resetCameraController = (mode, {
         state.cameraRedirectState = null
         state.cameraUserAdjusting = false
         state.cameraApplyingView = false
+        state.terrainHeightLookupBypass = false
+        state.terrainHeightLookupTrace = false
         state.cameraPointerActive = false
         state.cameraAutoTrackingIgnoreUntil = 0
         state.journeyToolbarHidden = false
@@ -659,27 +661,55 @@ export const bindRenderer = (mode, ) => {
                     hasSampler: Boolean(detail?.sampler),
                 })
                 try {
-                    state.lastPlaybackUpdateProgressKey = null
-                    call.setToleranceZoneOverlayVisible(true)
-                    if (call.isReplayVideoLinked()) {
-                        call.hideJourneyToolbarVisibility()
+                    const traceStep = (step, extra = {}) => {
+                        console.log('[Journey Replay] Draft replay start step', {
+                            step,
+                            elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startListenerStartedAt,
+                            progress:  detail?.progress ?? null,
+                            hasSampler: Boolean(detail?.sampler),
+                            ...extra,
+                        })
+                        replayVideoTraceDebug('draft.replay.start.listener.step', {
+                            step,
+                            elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startListenerStartedAt,
+                            progress: detail?.progress ?? null,
+                            hasSampler: Boolean(detail?.sampler),
+                            ...extra,
+                        })
                     }
+                    state.lastPlaybackUpdateProgressKey = null
+                    traceStep('set-tolerance-zone-visible.begin')
+                    call.setToleranceZoneOverlayVisible(true)
+                    traceStep('set-tolerance-zone-visible.end')
+                    if (call.isReplayVideoLinked()) {
+                        traceStep('hide-journey-toolbar.begin')
+                        call.hideJourneyToolbarVisibility()
+                        traceStep('hide-journey-toolbar.end')
+                    }
+                    traceStep('set-continuous-render.begin')
                     call.setContinuousRender(true)
+                    traceStep('set-continuous-render.end')
+                    traceStep('renderer.show.begin')
                     state.renderer.show({
                         sampler: detail.sampler,
                         options: {smoothedGuide: call.smoothedGuide()},
                     })
+                    traceStep('renderer.show.end')
                     const startSample = detail.sample
                                         ?? detail.sampler?.atProgress?.(detail.progress ?? 0)
                                         ?? currentJourneyReplaySample(state.controller)
 
+                    traceStep('renderer.update.begin')
                     state.renderer.update({
                         ...detail,
                         forceGeometry: true,
                         hideTrace: true,
                         showTrace: isJourneyReplayVideoCaptureActive(),
                     })
+                    traceStep('renderer.update.end')
+                    traceStep('sync-nearby-pois.begin')
                     void call.syncNearbyPOIsForSample(startSample ?? detail.sample ?? null)
+                    traceStep('sync-nearby-pois.end')
                     if (!state.deferStartCameraRecenter) {
                         if (state.skipNextImmediateStartRecenter) {
                             state.skipNextImmediateStartRecenter = false
@@ -687,15 +717,19 @@ export const bindRenderer = (mode, ) => {
                             const startCameraSettings = normalizeJourneyReplayCamera(
                                 globalThis.lgs?.stores?.replay?.camera ?? replaySettings.camera,
                             )
+                            traceStep('update-tolerance-zone-overlay.begin')
                             call.updateToleranceZoneOverlay(startCameraSettings.hysteresis)
+                            traceStep('update-tolerance-zone-overlay.end')
                         }
                         else {
+                            traceStep('update-camera.begin')
                             call.updateCamera({
                                                    ...detail,
                                                    source:                    'start',
                                                    forceToleranceRecenter:     true,
                                                    immediateToleranceRecenter: true,
                                                })
+                            traceStep('update-camera.end')
                         }
                         const startProgress = finiteNumber(detail?.progress ?? startSample?.progress)
                         state.lastPlaybackUpdateProgressKey = Math.round((startProgress ?? 0) / CAMERA_UPDATE_MIN_PROGRESS_DELTA)
@@ -715,7 +749,24 @@ export const bindRenderer = (mode, ) => {
                 }
             }),
             state.controller.on(REPLAY_EVENT_UPDATE, detail => {
+                const updateListenerStartedAt = globalThis.performance?.now?.() ?? Date.now()
                 try {
+                    const traceUpdateStep = (step, extra = {}) => {
+                        console.log('[Journey Replay] Draft replay update step', {
+                            step,
+                            elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - updateListenerStartedAt,
+                            progress: detail?.progress ?? null,
+                            hasSampler: Boolean(detail?.sampler),
+                            ...extra,
+                        })
+                        replayVideoTraceDebug('draft.replay.update.listener.step', {
+                            step,
+                            elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - updateListenerStartedAt,
+                            progress: detail?.progress ?? null,
+                            hasSampler: Boolean(detail?.sampler),
+                            ...extra,
+                        })
+                    }
                     // `seek()` is also used to publish each deterministic HQ
                     // frame. The export renderer applies that frame below;
                     // running the live listener here would update the camera a
@@ -726,24 +777,47 @@ export const bindRenderer = (mode, ) => {
                     const videoCaptureActive = isJourneyReplayVideoCaptureActive()
                     const playbackProgress = finiteNumber(detail?.progress ?? detail?.sample?.progress)
                     const playbackProgressKey = Math.round((playbackProgress ?? 0) / CAMERA_UPDATE_MIN_PROGRESS_DELTA)
+                    traceUpdateStep('renderer.update.begin', {
+                        videoCaptureActive,
+                        playbackProgress,
+                        playbackProgressKey,
+                    })
                     state.renderer.update({
                         ...detail,
                         sampler: state.sampler,
                         showTrace: videoCaptureActive,
                     })
+                    traceUpdateStep('renderer.update.end')
+                    traceUpdateStep('sync-nearby-pois.begin')
                     void call.syncNearbyPOIsForSample(detail.sample ?? null)
+                    traceUpdateStep('sync-nearby-pois.end')
                     if (!videoCaptureActive && state.lastPlaybackUpdateProgressKey === playbackProgressKey) {
+                        traceUpdateStep('update-camera.skip', {
+                            reason: 'duplicate-progress-key',
+                            playbackProgressKey,
+                        })
                         return
                     }
 
                     state.lastPlaybackUpdateProgressKey = playbackProgressKey
+                    traceUpdateStep('update-camera.begin', {
+                        playbackProgressKey,
+                    })
                     call.updateCamera({
                         ...detail,
                         source: 'playback',
                     })
+                    traceUpdateStep('update-camera.end')
                 }
                 catch (error) {
                     call.abortPlaybackAfterListenerError(error)
+                }
+                finally {
+                    replayVideoTraceDebug('draft.replay.update.listener.end', {
+                        elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - updateListenerStartedAt,
+                        progress: detail?.progress ?? null,
+                        hasSampler: Boolean(detail?.sampler),
+                    })
                 }
             }),
             state.controller.on(REPLAY_EVENT_PAUSE, detail => {

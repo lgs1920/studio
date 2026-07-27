@@ -39,6 +39,7 @@ import {
 import {
     replayTurnDriftForGuideProgress,
     replayTurnDriftForProgress,
+    cameraAltitudeForSample,
 } from '@Core/ui/replay/JourneyReplayCameraGuide'
 import {
     buildCameraTransferPath,
@@ -60,9 +61,14 @@ import {
 } from '@Core/ui/replay/JourneyReplayCameraState'
 import {
     resetCameraInterpolationState,
+    cameraViewVisibilityForSample,
 } from '@Core/ui/replay/JourneyReplayCameraVisibility'
 import {
+    createReplayCameraUpdateCache,
+} from '@Core/ui/replay/JourneyReplayCameraUpdateCache'
+import {
     REPLAY_MARKER_MODE_HYSTERESIS,
+    REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {
     JOURNEY_REPLAY_INTERNAL_CALL,
@@ -90,6 +96,7 @@ const makeMode = () => {
         replayTurnDriftForProgress: vi.fn(() => null),
         markerPositionForSample: vi.fn(sample => sample),
         now: vi.fn(() => 0),
+        terrainHeightForLonLat: vi.fn(() => 123),
         cameraAltitudeForSample: vi.fn(() => 1000),
         headingFromPositionProperty: vi.fn(() => 0),
         smoothRadians: vi.fn((previous, next) => next),
@@ -648,6 +655,64 @@ describe('Journey replay camera paths', () => {
         expect(visibilityModes).toEqual(expect.arrayContaining(['current', 'future']))
     })
 
+    it('reuses the replay camera cache for repeated visibility checks', () => {
+        const {mode, call} = makeMode()
+        const cache = createReplayCameraUpdateCache()
+        const nominalView = {
+            sample: {
+                progress:          0.4,
+                distanceFromStart: 100,
+                longitude:         1,
+                latitude:          2,
+                altitude:          120,
+                height:            120,
+            },
+            heading:     0.35,
+            pitch:       -0.55,
+            cameraHeight: 800,
+        }
+        const futureSample = {
+            progress:          0.52,
+            distanceFromStart: 160,
+            longitude:         1.1,
+            latitude:          2.1,
+            altitude:          120,
+            height:            120,
+        }
+
+        call.cameraViewWithRedirectState = vi.fn(view => view)
+        call.cameraViewForSample = vi.fn(() => ({
+            sample:       futureSample,
+            heading:      0.2,
+            pitch:        -0.4,
+            cameraHeight: 700,
+        }))
+        call.cameraViewHasLineOfSight = vi.fn(() => true)
+
+        const first = cameraViewVisibilityForSample(mode, {
+            nominalView,
+            futureSample,
+            source:         'playback',
+            cameraSettings:  {pitch: -60},
+            markerSettings:  {mode: 'trace'},
+            cache,
+        })
+        const second = cameraViewVisibilityForSample(mode, {
+            nominalView,
+            futureSample,
+            source:         'playback',
+            cameraSettings:  {pitch: -60},
+            markerSettings:  {mode: 'trace'},
+            cache,
+        })
+
+        expect(first).toBe(true)
+        expect(second).toBe(true)
+        expect(call.cameraViewForSample).toHaveBeenCalledTimes(1)
+        expect(call.cameraViewHasLineOfSight).toHaveBeenCalledTimes(2)
+        expect(call.cameraViewWithRedirectState).toHaveBeenCalledTimes(2)
+    })
+
     it('projects a replay marker from a candidate frame without using the live Cesium camera', () => {
         const point = projectReplayTargetInCameraFrame({
             frame: {
@@ -1059,5 +1124,24 @@ describe('Journey replay camera paths', () => {
         resetCameraInterpolationState(mode, {preserveConstrainedPath: false})
 
         expect(mode[JOURNEY_REPLAY_INTERNAL_STATE].constrainedReplayCameraPath).toBeNull()
+    })
+    it('skips terrain lookups when the replay camera bypass is enabled', () => {
+        const {mode, call, state} = makeMode()
+        state.terrainHeightLookupBypass = true
+        const sample = {
+            longitude: 2,
+            latitude:  48,
+            altitude:  150,
+            height:    150,
+        }
+        const cameraSettings = {
+            altitudeMode: REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
+            altitude:     250,
+        }
+
+        const cameraHeight = cameraAltitudeForSample(mode, sample, cameraSettings)
+
+        expect(call.terrainHeightForLonLat).not.toHaveBeenCalled()
+        expect(cameraHeight).toBe(400)
     })
 })

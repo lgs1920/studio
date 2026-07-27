@@ -137,6 +137,9 @@ import {
     buildReplayAntiCollisionBounds,
 } from './JourneyReplayCameraCollision'
 import {
+    createReplayCameraUpdateCache,
+} from './JourneyReplayCameraUpdateCache'
+import {
     removeToleranceZoneOverlay,
     setToleranceZoneOverlayVisible,
     cameraAnglePreviewEntityCollection,
@@ -582,6 +585,18 @@ export const updateCamera = (mode, {
                      } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const updateStartedAt = globalThis.performance?.now?.() ?? Date.now()
+    const updateCache = createReplayCameraUpdateCache()
+    const traceUpdateStep = (step, extra = {}) => {
+        replayVideoTraceDebug('camera.update.step', {
+            step,
+            elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - updateStartedAt,
+            logicalTimeMs: finiteNumber(frameTimeMs),
+            source,
+            exportMode,
+            ...extra,
+        })
+    }
 
         if (!exportMode && state.replayExportCameraActive) {
             replayVideoTraceDebug('camera.update-skip', {
@@ -685,6 +700,9 @@ export const updateCamera = (mode, {
                 markerMode: marker.mode,
             })
         }
+        traceUpdateStep('camera-view.nominal.begin', {
+            progress,
+        })
         const nominalView = call.cameraViewForSample({
                                                           sample,
                                                           progress,
@@ -692,7 +710,11 @@ export const updateCamera = (mode, {
                                                           cameraSettings,
                                                           markerSettings,
                                                           motionProfile: source === 'drawer' ? null : replayMotionProfile,
+                                                          cache: updateCache,
                                                       })
+        traceUpdateStep('camera-view.nominal.end', {
+            hasNominalView: Boolean(nominalView),
+        })
         if (!nominalView) {
             return
         }
@@ -717,7 +739,13 @@ export const updateCamera = (mode, {
             frameIntervalMs,
         })
         const lookaheadSeconds = recenterDuration + frameLeadSeconds
+        traceUpdateStep('camera-lookahead.begin', {
+            lookaheadSeconds,
+        })
         const futureSample = call.cameraLookaheadSample(anchorSample, {lookaheadSeconds})
+        traceUpdateStep('camera-lookahead.end', {
+            hasFutureSample: Boolean(futureSample),
+        })
         const predictedSample = futureSample ?? anchorSample
         if (deterministicCamera && state.deterministicCameraTransition) {
             call.applyDeterministicCameraTransition(logicalNow)
@@ -822,8 +850,13 @@ export const updateCamera = (mode, {
             // Test both positions. In Draft the Cesium projection is updated
             // asynchronously and the predicted sample can briefly project back
             // inside Z1 even though the rendered marker has already left it.
-            const currentCollision = call.cameraCollisionForSample(anchorSample, navigationCameraSettings)
-            const predictedCollision = call.cameraCollisionForSample(predictedSample, navigationCameraSettings)
+            traceUpdateStep('navigation.collision.begin')
+            const currentCollision = call.cameraCollisionForSample(anchorSample, navigationCameraSettings, updateCache)
+            const predictedCollision = call.cameraCollisionForSample(predictedSample, navigationCameraSettings, updateCache)
+            traceUpdateStep('navigation.collision.end', {
+                currentHard: Boolean(currentCollision?.hard),
+                predictedHard: Boolean(predictedCollision?.hard),
+            })
             const outsideNavigationZone = Boolean(
                 currentCollision?.hard
                 || predictedCollision?.hard
@@ -869,19 +902,27 @@ export const updateCamera = (mode, {
                 const navigationTargetSample = !immediateToleranceRecenter && (source === 'playback' || exportMode)
                                                ? predictedSample
                                                : anchorSample
-                    const navigationTargetView = !immediateToleranceRecenter && navigationTargetSample
+                traceUpdateStep('navigation.target-view.begin', {
+                    immediateToleranceRecenter,
+                    navigationFollowerActive,
+                })
+                const navigationTargetView = !immediateToleranceRecenter && navigationTargetSample
                                              ? call.cameraViewForSample({
-                                                 sample:         navigationTargetSample,
-                                                 progress:       navigationTargetSample.progress ?? progress,
+                                                 sample:          navigationTargetSample,
+                                                 progress:        navigationTargetSample.progress ?? progress,
                                                  source,
                                                  cameraSettings,
                                                  markerSettings,
-                                                 collision:      true,
-                                                 motionProfile:  replayMotionProfile,
+                                                 collision:       true,
+                                                 motionProfile:   replayMotionProfile,
                                                  previousHeading: smoothHeading,
                                                  previousPitch:   smoothPitch,
+                                                 cache:           updateCache,
                                              })
                                              : null
+                traceUpdateStep('navigation.target-view.end', {
+                    hasNavigationTargetView: Boolean(navigationTargetView),
+                })
                 if (immediateToleranceRecenter) {
                     call.applyCameraView({
                         anchor: anchorSample,
@@ -979,6 +1020,7 @@ export const updateCamera = (mode, {
                     motionProfile:  replayMotionProfile,
                     previousHeading: smoothHeading,
                     previousPitch:   smoothPitch,
+                    cache:          updateCache,
                 })
                 const frame = call.cameraRecenterFrame({
                     sample:         trackingSample,
@@ -991,8 +1033,9 @@ export const updateCamera = (mode, {
                     logicalNow,
                 })
             }
-            const currentCollision = call.cameraCollisionForSample(anchorSample, dynamicCameraSettings)
-            const predictedCollision = call.cameraCollisionForSample(trackingSample, dynamicCameraSettings)
+            traceUpdateStep('hysteresis.collision.begin')
+            const currentCollision = call.cameraCollisionForSample(anchorSample, dynamicCameraSettings, updateCache)
+            const predictedCollision = call.cameraCollisionForSample(trackingSample, dynamicCameraSettings, updateCache)
             const outsideTolerance = Boolean(currentCollision?.hard || predictedCollision?.hard)
             const dynamicTargetCameraSettings = normalizeJourneyReplayCamera({
                 ...cameraSettings,
@@ -1001,8 +1044,12 @@ export const updateCamera = (mode, {
                     zone: runtimeTracking.dynamic.targetZone,
                 },
             })
-            const targetCollision = call.cameraCollisionForSample(trackingSample, dynamicTargetCameraSettings)
+            const targetCollision = call.cameraCollisionForSample(trackingSample, dynamicTargetCameraSettings, updateCache)
             const outsideDynamicTargetZone = Boolean(targetCollision?.hard)
+            traceUpdateStep('hysteresis.collision.end', {
+                outsideTolerance,
+                outsideDynamicTargetZone,
+            })
             const predictedScreen = call.trackingWindowPositionForSample(trackingSample)
             const dynamicTargetScreen = replayDynamicTargetPointInZone({
                 currentPoint:    currentScreen,
@@ -1011,12 +1058,14 @@ export const updateCamera = (mode, {
                 viewportHeight:  rect?.height,
                 zone:            runtimeTracking.dynamic.targetZone,
             })
+            traceUpdateStep('hysteresis.visibility.begin')
             const nominalCurrentVisible = call.cameraViewVisibilityForSample({
                                                                                   nominalView,
                                                                                   futureSample: null,
                                                                                   source,
                                                                                   cameraSettings,
                                                                                   markerSettings,
+                                                                                  cache: updateCache,
                                                                               })
             const nominalPredictedVisible = futureSample
                                             ? call.cameraViewVisibilityForSample({
@@ -1025,6 +1074,7 @@ export const updateCamera = (mode, {
                                                                                       source,
                                                                                       cameraSettings,
                                                                                       markerSettings,
+                                                                                      cache: updateCache,
                                                                                   })
                                             : nominalCurrentVisible
             const nominalVisible = nominalCurrentVisible && nominalPredictedVisible
@@ -1036,6 +1086,7 @@ export const updateCamera = (mode, {
                                                                                        source,
                                                                                        cameraSettings,
                                                                                        markerSettings,
+                                                                                       cache: updateCache,
                                                                                    })
                                              : false
             const redirectedVisible = state.cameraRedirectState
@@ -1046,9 +1097,15 @@ export const updateCamera = (mode, {
                                                                                 source,
                                                                                 cameraSettings,
                                                                                 markerSettings,
+                                                                                cache: updateCache,
                                                                             })
                                       : false
-            const renderedVisible = call.renderedTraceVisibleForSample(anchorSample)
+            const renderedVisible = call.renderedTraceVisibleForSample(anchorSample, updateCache)
+            traceUpdateStep('hysteresis.visibility.end', {
+                renderedVisible,
+                nominalVisible,
+                redirectedVisible,
+            })
             const renderedOccluded = renderedVisible === false
             // Dynamic tracking is governed by Z1. Visibility corrections inside
             // Z1 were causing a new flight to be issued on almost every update,
@@ -1126,6 +1183,10 @@ export const updateCamera = (mode, {
                     return
                 }
 
+                traceUpdateStep('hysteresis.redirect-search.begin', {
+                    hasRedirectState: Boolean(state.cameraRedirectState),
+                    redirectedVisible,
+                })
                 let redirectView = redirectedVisible && state.cameraRedirectState
                                    ? call.cameraViewWithRedirectState(nominalView, state.cameraRedirectState)
                                    : null
@@ -1137,6 +1198,7 @@ export const updateCamera = (mode, {
                                                                                   cameraSettings,
                                                                                   markerSettings,
                                                                                   reuseCurrentIfVisible: false,
+                                                                                  cache: updateCache,
                                                                               }) ?? call.findCameraRedirectState({
                                                                                                                       nominalView,
                                                                                                                       futureSample:          null,
@@ -1144,11 +1206,16 @@ export const updateCamera = (mode, {
                                                                                                                       cameraSettings,
                                                                                                                       markerSettings,
                                                                                                                       reuseCurrentIfVisible: false,
+                                                                                                                      cache: updateCache,
                                                                                                                   })
                     redirectView = state.cameraRedirectState
                                    ? call.cameraViewWithRedirectState(nominalView, state.cameraRedirectState)
                                    : null
                 }
+                traceUpdateStep('hysteresis.redirect-search.end', {
+                    hasRedirectView: Boolean(redirectView),
+                    redirectState: Boolean(state.cameraRedirectState),
+                })
 
                 if (redirectView) {
                     if (redirectedCurrentVisible) {
@@ -1204,6 +1271,7 @@ export const updateCamera = (mode, {
                                                                           cameraSettings,
                                                                           markerSettings,
                                                                           reuseCurrentIfVisible: false,
+                                                                          cache: updateCache,
                                                                       }) ?? call.findCameraRedirectState({
                                                                                                               nominalView,
                                                                                                               futureSample:          null,
@@ -1211,6 +1279,7 @@ export const updateCamera = (mode, {
                                                                                                               cameraSettings,
                                                                                                               markerSettings,
                                                                                                               reuseCurrentIfVisible: false,
+                                                                                                              cache: updateCache,
                                                                                                           })
                     if (nextRedirectState) {
                         targetView = call.cameraViewWithRedirectState(nominalView, nextRedirectState)
@@ -1238,6 +1307,7 @@ export const updateCamera = (mode, {
                                               motionProfile:  replayMotionProfile,
                                               previousHeading: smoothHeading,
                                               previousPitch:   smoothPitch,
+                                              cache:          updateCache,
                                           })
                                           : null
                 const targetHeading = useRedirectTransition

@@ -139,6 +139,12 @@ import {
     stopCameraLiveSyncLoop,
     updateCamera,
 } from './JourneyReplayCameraBinding'
+import {
+    memoizeReplayCameraUpdateCache,
+    replayCameraUpdateCameraSettingsKey,
+    replayCameraUpdateMarkerSettingsKey,
+    replayCameraUpdateSampleKey,
+} from './JourneyReplayCameraUpdateCache'
 
 export const headingBetweenPoints = (mode, start, end) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
@@ -734,8 +740,23 @@ export const cameraAltitudeForSample = (mode, sample, cameraSettings) => {
         if (finiteNumber(longitude) === null || finiteNumber(latitude) === null) {
             return cameraSettings.altitude
         }
+        const sampleHeight = finiteNumber(sample?.altitude ?? sample?.height) ?? finiteNumber(globalThis.lgs?.viewer?.camera?.positionCartographic?.height) ?? 0
+        if (state.terrainHeightLookupBypass === true) {
+            if (state.terrainHeightLookupTrace === true) {
+                replayVideoTraceDebug('camera.altitude.lookup.bypass', {
+                    longitude,
+                    latitude,
+                    sampleHeight,
+                    altitudeMode: cameraSettings.altitudeMode ?? null,
+                })
+            }
+            if (cameraSettings.altitudeMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET) {
+                return sampleHeight + cameraSettings.altitude
+            }
+            return cameraSettings.altitude
+        }
         const terrainHeight = call.terrainHeightForLonLat(longitude, latitude)
-        const groundHeight = terrainHeight ?? (finiteNumber(sample?.altitude ?? sample?.height) ?? 0)
+        const groundHeight = terrainHeight ?? sampleHeight
 
         if (cameraSettings.altitudeMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET) {
             return groundHeight + cameraSettings.altitude
@@ -754,6 +775,7 @@ export const cameraViewForSample = (mode, {
                                 motionProfile = null,
                                 previousHeading = mode[JOURNEY_REPLAY_INTERNAL_STATE].lastNominalCameraHeading ?? mode[JOURNEY_REPLAY_INTERNAL_STATE].lastCameraHeading,
                                 previousPitch = mode[JOURNEY_REPLAY_INTERNAL_STATE].lastNominalCameraPitch ?? mode[JOURNEY_REPLAY_INTERNAL_STATE].lastCameraPitch,
+                                cache = null,
                             } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -762,67 +784,88 @@ export const cameraViewForSample = (mode, {
             return null
         }
 
-        const normalizedPitch = finiteNumber(cameraSettings?.pitch) ?? -65
-        const pitch = source === 'drawer'
-                      ? degreesToRadians(normalizedPitch)
-                      : normalizedPitch <= -89
-                        ? SAFE_TOP_DOWN_PITCH
-                        : degreesToRadians(normalizedPitch)
-        let desiredHeading
-        if (collision && cameraSettings.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
-            desiredHeading = call.headingFromPositionProperty(progress)
-        }
-        else if (cameraSettings.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
-            if (Number.isFinite(cameraSettings?.heading)) {
-                desiredHeading = degreesToRadians(cameraSettings.heading)
+        const computeView = () => {
+            const normalizedPitch = finiteNumber(cameraSettings?.pitch) ?? -65
+            const pitch = source === 'drawer'
+                          ? degreesToRadians(normalizedPitch)
+                          : normalizedPitch <= -89
+                            ? SAFE_TOP_DOWN_PITCH
+                            : degreesToRadians(normalizedPitch)
+            let desiredHeading
+            if (collision && cameraSettings.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
+                desiredHeading = call.headingFromPositionProperty(progress)
+            }
+            else if (cameraSettings.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
+                if (Number.isFinite(cameraSettings?.heading)) {
+                    desiredHeading = degreesToRadians(cameraSettings.heading)
+                }
+                else {
+                    desiredHeading = finiteNumber(previousHeading)
+                        ?? finiteNumber(globalThis.lgs?.viewer?.camera?.heading)
+                        ?? 0
+                }
             }
             else {
-                desiredHeading = finiteNumber(previousHeading)
-                    ?? finiteNumber(globalThis.lgs?.viewer?.camera?.heading)
-                    ?? 0
-            }
-        }
-        else {
                 desiredHeading = replayCameraHeadingForPositionMode({
                                                                         axisHeading:  call.headingFromPositionProperty(progress),
                                                                         positionMode: cameraSettings.positionMode,
                                                                         headingOffset: cameraSettings.headingOffset,
                                                                     })
+            }
+            const heading = source === 'drawer'
+                            ? desiredHeading
+                            : replayCameraHeadingWithHysteresis({
+                                                                        previousHeading,
+                                                                        nextHeading: desiredHeading,
+                                                                        threshold:   cameraSettings.positionMode === REPLAY_CAMERA_POSITION_SYSTEM
+                                                                                     ? CAMERA_HEADING_HYSTERESIS_RADIANS
+                                                                                     : CAMERA_HEADING_MIN_CHANGE_RADIANS,
+                                                                    })
+            const smoothHeading = source === 'drawer'
+                                  ? heading
+                                  : call.smoothRadians(
+                    previousHeading,
+                    heading,
+                    call.timeNormalizedSmoothingFactor(
+                        call.headingEasingFactor(cameraSettings, heading),
+                        state.cameraSmoothingDeltaSeconds,
+                    ),
+                )
+            const smoothPitch = source === 'drawer'
+                                ? pitch
+                                : call.smoothRadians(
+                                    previousPitch,
+                                    pitch,
+                                    call.timeNormalizedSmoothingFactor(0.08, state.cameraSmoothingDeltaSeconds),
+                                )
+            const anchorSample = call.markerPositionForSample(sample, markerSettings)
+            return {
+                sample:       anchorSample,
+                progress:     clamp(Number(progress) || 0, 0, 1),
+                heading:      smoothHeading,
+                pitch:        smoothPitch,
+                cameraSettings,
+                markerSettings,
+                cameraHeight: call.cameraAltitudeForSample(anchorSample, cameraSettings),
+            }
         }
-        const heading = source === 'drawer'
-                        ? desiredHeading
-                        : replayCameraHeadingWithHysteresis({
-                                                                    previousHeading,
-                                                                    nextHeading: desiredHeading,
-                                                                    threshold:   cameraSettings.positionMode === REPLAY_CAMERA_POSITION_SYSTEM
-                                                                                 ? CAMERA_HEADING_HYSTERESIS_RADIANS
-                                                                                 : CAMERA_HEADING_MIN_CHANGE_RADIANS,
-                                                                })
-        const smoothHeading = source === 'drawer'
-                              ? heading
-                              : call.smoothRadians(
-                previousHeading,
-                heading,
-                call.timeNormalizedSmoothingFactor(
-                    call.headingEasingFactor(cameraSettings, heading),
-                    state.cameraSmoothingDeltaSeconds,
-                ),
-            )
-        const smoothPitch = source === 'drawer'
-                            ? pitch
-                            : call.smoothRadians(
-                                previousPitch,
-                                pitch,
-                                call.timeNormalizedSmoothingFactor(0.08, state.cameraSmoothingDeltaSeconds),
-                            )
-        const anchorSample = call.markerPositionForSample(sample, markerSettings)
-        return {
-            sample:       anchorSample,
-            progress:     clamp(Number(progress) || 0, 0, 1),
-            heading:      smoothHeading,
-            pitch:        smoothPitch,
-            cameraSettings,
-            markerSettings,
-            cameraHeight: call.cameraAltitudeForSample(anchorSample, cameraSettings),
+
+        if (cache) {
+            const cacheKey = [
+                replayCameraUpdateSampleKey({
+                    ...sample,
+                    progress,
+                }),
+                replayCameraUpdateCameraSettingsKey(cameraSettings),
+                replayCameraUpdateMarkerSettingsKey(markerSettings),
+                source ?? 'null',
+                collision === true ? '1' : '0',
+                JSON.stringify(motionProfile ?? null),
+                finiteNumber(previousHeading) ?? 'null',
+                finiteNumber(previousPitch) ?? 'null',
+            ].join('|')
+            return memoizeReplayCameraUpdateCache(cache, 'cameraViewForSample', cacheKey, computeView)
         }
+
+        return computeView()
     }
