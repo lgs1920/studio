@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-07-27 — [`docs(replay): add glow neon spec`](https://github.com/lgs1920/studio/commit/5804643ca00fd482f268fd6b2973c6b849dab551)
+
+- Add the replay trace and marker glow/neon specification under `tech-doc/todo/`.
+- Link the new spec from the `tech-doc` documentation indexes.
+- Keep the replay architecture document and unrelated runtime changes out of this documentation commit.
+
 ## 2026-07-26 — [`fix: smooth replay camera pitch and capture cadence`](https://github.com/lgs1920/studio/commit/e7e49f78f616da9733d7f8951029f24394158bde)
 
 - Keep the nominal replay pitch when corrections rebuild camera frames.
