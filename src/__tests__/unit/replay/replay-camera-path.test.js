@@ -42,6 +42,9 @@ import {
     cameraAltitudeForSample,
 } from '@Core/ui/replay/JourneyReplayCameraGuide'
 import {
+    replayDurationPaceFactor,
+} from '@Core/ui/replay/JourneyReplayCameraMath'
+import {
     buildCameraTransferPath,
     selectCameraTransferMode,
 } from '@Core/ui/replay/JourneyReplayCameraPath'
@@ -62,6 +65,7 @@ import {
 import {
     resetCameraInterpolationState,
     cameraViewVisibilityForSample,
+    cameraLookaheadSample,
 } from '@Core/ui/replay/JourneyReplayCameraVisibility'
 import {
     createReplayCameraUpdateCache,
@@ -923,6 +927,13 @@ describe('Journey replay camera paths', () => {
         destinations.slice(1).forEach((destination, index) => {
             expect(destination).toBeGreaterThan(destinations[index])
         })
+    })
+
+    it('increases the pacing factor for longer replays', () => {
+        const shortReplayPace = replayDurationPaceFactor(20, 1000)
+        const longReplayPace = replayDurationPaceFactor(240, 1000)
+
+        expect(longReplayPace).toBeGreaterThan(shortReplayPace)
     })
 
     it('returns to the nominal pitch after a temporary compiled redirect', () => {
