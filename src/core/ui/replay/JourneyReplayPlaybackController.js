@@ -333,7 +333,6 @@ export class JourneyReplayPlaybackController {
             }
         }
         catch (error) {
-            console.error('[JourneyReplayPlaybackController] Tick failed.', error)
         }
 
         this.#schedule()
@@ -358,7 +357,6 @@ export class JourneyReplayPlaybackController {
                 callback(detail)
             }
             catch (error) {
-                console.error(`[JourneyReplayPlaybackController] Listener failed for "${event}".`, error)
             }
         })
         if (!this.#shouldEmitGlobalEvent(event)) {
@@ -369,7 +367,6 @@ export class JourneyReplayPlaybackController {
             globalThis.lgs?.events?.emit?.(event, detail)
         }
         catch (error) {
-            console.error(`[JourneyReplayPlaybackController] Global event failed for "${event}".`, error)
         }
     }
 

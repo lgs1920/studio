@@ -145,6 +145,20 @@ export const VideoRecordingScreenArea = memo(() => {
             return true
         }
 
+        const replay = __.ui.replay
+        if (typeof replay?.captureCameraState === 'function') {
+            const cameraCaptureStartedAt = globalThis.performance?.now?.() ?? Date.now()
+            replayVideoTraceDebug('draft.recording.replay-camera.capture.start', {
+                captureMode: renderSpec?.captureMode ?? $video.captureMode ?? lgs.settings.ui.video.captureMode ?? 'speed',
+                startToken:   _recordingStartToken.current,
+            })
+            replay.captureCameraState()
+            replayVideoTraceDebug('draft.recording.replay-camera.capture.end', {
+                elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - cameraCaptureStartedAt,
+                startToken: _recordingStartToken.current,
+            })
+        }
+
         __.ui.replayVideoSync?.arm?.({
             recorder:          __.recorder,
             replay:            __.ui.replay,
@@ -241,10 +255,6 @@ export const VideoRecordingScreenArea = memo(() => {
                 elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - uiPrepareStartedAt,
                 startToken,
             })
-            console.log('[Replay Draft] Capture UI prepared', {
-                elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - uiPrepareStartedAt,
-                startToken,
-            })
 
             $video.settings = {quality: $video.quality, fps: $video.fps}
 
@@ -256,11 +266,6 @@ export const VideoRecordingScreenArea = memo(() => {
             })
             const videoFrame = await syncVideoCropFrame('before-record')
             replayVideoTraceDebug('draft.recording.crop.sync.end', {
-                elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - cropSyncStartedAt,
-                hasVideoFrame: Boolean(videoFrame),
-                startToken,
-            })
-            console.log('[Replay Draft] Crop synchronized', {
                 elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - cropSyncStartedAt,
                 hasVideoFrame: Boolean(videoFrame),
                 startToken,
@@ -294,11 +299,6 @@ export const VideoRecordingScreenArea = memo(() => {
                 startToken,
                 syncRequested: isJourneyReplaySyncRequested(),
             })
-            console.log('[Replay Draft] Replay bridge armed', {
-                elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - replayBridgeStartedAt,
-                startToken,
-                syncRequested: isJourneyReplaySyncRequested(),
-            })
 
             const sceneRestoreStartedAt = globalThis.performance?.now?.() ?? Date.now()
             replayVideoTraceDebug('draft.recording.scene-restore.wait.start', {
@@ -311,10 +311,6 @@ export const VideoRecordingScreenArea = memo(() => {
                 'Replay scene restoration timed out before video recording.',
             )
             replayVideoTraceDebug('draft.recording.scene-restore.wait.end', {
-                elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - sceneRestoreStartedAt,
-                startToken,
-            })
-            console.log('[Replay Draft] Previous replay scene restored', {
                 elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - sceneRestoreStartedAt,
                 startToken,
             })
@@ -348,12 +344,6 @@ export const VideoRecordingScreenArea = memo(() => {
                     mediaMetadata: recordingMetadata,
                 })
                 replayVideoTraceDebug('draft.recording.deferred-export.plan.end', {
-                    elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - deferredExportPrepareStartedAt,
-                    hasExporter: Boolean(exporter),
-                    hasPlan: Boolean(plan),
-                    startToken,
-                })
-                console.log('[Replay Draft] Deferred HQ plan prepared', {
                     elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - deferredExportPrepareStartedAt,
                     hasExporter: Boolean(exporter),
                     hasPlan: Boolean(plan),
@@ -442,10 +432,6 @@ export const VideoRecordingScreenArea = memo(() => {
                 elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - firstComposerFrameStartedAt,
                 startToken,
             })
-            console.log('[Replay Draft] First compositor frame ready', {
-                elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - firstComposerFrameStartedAt,
-                startToken,
-            })
             if (startToken !== _recordingStartToken.current) {
                 composer.dispose()
                 return false
@@ -457,11 +443,6 @@ export const VideoRecordingScreenArea = memo(() => {
         finally {
             const elapsedMs = (globalThis.performance?.now?.() ?? Date.now()) - initializeStartedAt
             replayVideoTraceDebug('draft.recording.initialize.end', {
-                elapsedMs,
-                startToken,
-                syncRequested: isJourneyReplaySyncRequested(),
-            })
-            console.log('[Replay Draft] Recorder preparation completed', {
                 elapsedMs,
                 startToken,
                 syncRequested: isJourneyReplaySyncRequested(),
@@ -517,10 +498,6 @@ export const VideoRecordingScreenArea = memo(() => {
                 elapsedMs: recorderStartElapsedMs,
                 startToken,
             })
-            console.log('[Replay Draft] Recorder started', {
-                elapsedMs: recorderStartElapsedMs,
-                startToken,
-            })
 
             markRecordingStarted()
         }
@@ -529,7 +506,6 @@ export const VideoRecordingScreenArea = memo(() => {
             disposeComposer()
             stopOverlaysRefresh()
             Object.assign($video, {preRecording: false, recording: false, finalizing: false, editing: true, size: 0})
-            console.error('[VideoRecordingScreenArea] Video recording start failed', e)
             UIToast.error({text: e?.message ?? 'Video recording could not be started.'})
         }
     }, [$video, initializeRecorder, markRecordingStarted, disposeComposer, stopOverlaysRefresh])

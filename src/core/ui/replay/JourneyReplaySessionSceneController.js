@@ -538,7 +538,6 @@ export const setContinuousRender = (mode, enabled) => {
 export const abortPlaybackAfterListenerError = (mode, error) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-        console.error('[JourneyReplayMode] Playback listener failed. JourneyReplay stopped.', error)
         state.clipSequenceToken++
         call.stopStopClipPOIMaskLoop()
         state.controller.stop({emit: false, clearProgress: false})
@@ -662,13 +661,6 @@ export const bindRenderer = (mode, ) => {
                 })
                 try {
                     const traceStep = (step, extra = {}) => {
-                        console.log('[Journey Replay] Draft replay start step', {
-                            step,
-                            elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startListenerStartedAt,
-                            progress:  detail?.progress ?? null,
-                            hasSampler: Boolean(detail?.sampler),
-                            ...extra,
-                        })
                         replayVideoTraceDebug('draft.replay.start.listener.step', {
                             step,
                             elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startListenerStartedAt,
@@ -752,13 +744,6 @@ export const bindRenderer = (mode, ) => {
                 const updateListenerStartedAt = globalThis.performance?.now?.() ?? Date.now()
                 try {
                     const traceUpdateStep = (step, extra = {}) => {
-                        console.log('[Journey Replay] Draft replay update step', {
-                            step,
-                            elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - updateListenerStartedAt,
-                            progress: detail?.progress ?? null,
-                            hasSampler: Boolean(detail?.sampler),
-                            ...extra,
-                        })
                         replayVideoTraceDebug('draft.replay.update.listener.step', {
                             step,
                             elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - updateListenerStartedAt,

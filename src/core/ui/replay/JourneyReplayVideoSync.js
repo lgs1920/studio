@@ -192,6 +192,8 @@ export class JourneyReplayVideoSync {
 
             const startGeneration = this.#captureGeneration
             const startStartedAt = globalThis.performance?.now?.() ?? Date.now()
+            const previousTerrainHeightLookupBypass = this.#replay?.terrainHeightLookupBypass === true
+            const previousTerrainHeightLookupTrace = this.#replay?.terrainHeightLookupTrace === true
             this.#cancelPendingStart()
             if (!this.#armed || startGeneration !== this.#captureGeneration) {
                 this.#setVideoSafeMode(false)
@@ -208,9 +210,29 @@ export class JourneyReplayVideoSync {
             let startSucceeded = false
             let startError = null
             try {
+                this.#replay?.setTerrainHeightLookupTrace?.(true)
+                this.#replay?.setTerrainHeightLookupBypass?.(true)
+                replayVideoTraceDebug('draft.replay.terrain.lookup.bypass.start', {
+                    generation: startGeneration,
+                    previousBypass: previousTerrainHeightLookupBypass,
+                    previousTrace: previousTerrainHeightLookupTrace,
+                })
                 this.#replay?.cancelPendingSceneRestore?.()
                 if (this.#resetToStart && this.#replay?.running) {
                     this.#replay.stop?.({emit: false})
+                }
+                replayVideoTraceDebug('draft.replay.camera.restore.start', {
+                    generation: startGeneration,
+                    hasRestoreCameraState: typeof this.#replay?.restoreCameraState === 'function',
+                })
+                this.#replay?.restoreCameraState?.({clear: false})
+                await waitForAnimationFrame()
+                replayVideoTraceDebug('draft.replay.camera.restore.end', {
+                    generation: startGeneration,
+                    hasRestoreCameraState: typeof this.#replay?.restoreCameraState === 'function',
+                })
+                if (!this.#armed || startGeneration !== this.#captureGeneration) {
+                    return
                 }
                 this.#replayCaptureActive = true
                 this.#replayStartPending = true
@@ -236,6 +258,13 @@ export class JourneyReplayVideoSync {
                 return
             }
             finally {
+                this.#replay?.setTerrainHeightLookupBypass?.(previousTerrainHeightLookupBypass)
+                this.#replay?.setTerrainHeightLookupTrace?.(previousTerrainHeightLookupTrace)
+                replayVideoTraceDebug('draft.replay.terrain.lookup.bypass.end', {
+                    generation: startGeneration,
+                    restoredBypass: previousTerrainHeightLookupBypass,
+                    restoredTrace: previousTerrainHeightLookupTrace,
+                })
                 if (!startSucceeded) {
                     this.#replayCaptureActive = false
                 }
@@ -269,10 +298,6 @@ export class JourneyReplayVideoSync {
                 captureMode: this.#captureMode,
                 captureFps: this.#captureFps,
                 generation: this.#captureGeneration,
-            })
-            console.log('[Journey Replay] Draft replay start scheduled after recorder startup', {
-                captureMode: this.#captureMode,
-                captureFps: this.#captureFps,
             })
             this.#pendingStartTimeout = globalThis.setTimeout(() => {
                 this.#pendingStartTimeout = null

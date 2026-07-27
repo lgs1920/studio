@@ -63,9 +63,7 @@ export const persistCurrentJourneyVisibility =  (mode, journey) => {
             return
         }
 
-        void Promise.resolve(journey.persistToDatabase()).catch(error => {
-            console.error('[JourneyReplayMode] Failed to persist current journey visibility.', error)
-        })
+        void Promise.resolve(journey.persistToDatabase())
     }
 
 export const restoreCurrentJourneyVisibility = (mode, {restorePOIs = true} = {}) => {

@@ -334,7 +334,6 @@ export const startCameraTransition = (mode, {
                     }
                 }
                 catch (error) {
-                    console.error('[JourneyReplayMode] Camera path transition failed.', error)
                 }
             }
 
@@ -351,7 +350,6 @@ export const startCameraTransition = (mode, {
                     return
                 }
                 catch (error) {
-                    console.error('[JourneyReplayMode] Camera transition failed.', error)
                 }
             }
 
@@ -359,7 +357,6 @@ export const startCameraTransition = (mode, {
                 settle(false)
             }
             catch (error) {
-                console.error('[JourneyReplayMode] Camera transition failed.', error)
                 settle(false)
             }
         })
@@ -814,11 +811,6 @@ export const updateCamera = (mode, {
                 recording,
                 trackingMode: marker.mode,
                 reason: 'runtime-bulk-compilation-disabled',
-            })
-            console.log('[Journey Replay] Bulk camera path compilation skipped', {
-                phase,
-                source,
-                trackingMode: marker.mode,
             })
             if (exportMode) {
                 state.exportPathCompilationBypassTraced = true
