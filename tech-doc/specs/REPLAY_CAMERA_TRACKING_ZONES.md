@@ -228,6 +228,11 @@ tiles hide the rendered marker, the camera may recenter for visibility when the
 marker is outside the trigger conditions. Corrections inside Z1 are suppressed
 unless visibility requires them.
 
+The replay marker itself always remains depth-tested. Its Cesium point uses
+`disableDepthTestDistance = 0`, so terrain relief and 3D tiles can mask it when
+they are between the camera and the marker. Camera visibility correction must
+not turn the marker into an overlay rendered above the relief.
+
 ## 6. Z1/Z2 diagnostic overlay
 
 The replay mode draws a visual overlay for the configured tracking zones. This

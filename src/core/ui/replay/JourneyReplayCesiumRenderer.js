@@ -768,6 +768,8 @@ export class JourneyReplayCesiumRenderer {
                     outlineColor:    style.borderColor,
                     outlineWidth,
                     heightReference: HeightReference.CLAMP_TO_GROUND,
+                    // Keep depth testing enabled so terrain and 3D tiles can occlude the marker.
+                    disableDepthTestDistance: 0,
                 },
             })
             this.#setCursorVisibility(true)
@@ -780,6 +782,8 @@ export class JourneyReplayCesiumRenderer {
         this.#cursor.point.outlineColor = style.borderColor
         this.#cursor.point.outlineWidth = outlineWidth
         this.#cursor.point.heightReference = HeightReference.CLAMP_TO_GROUND
+        // Keep depth testing enabled so terrain and 3D tiles can occlude the marker.
+        this.#cursor.point.disableDepthTestDistance = 0
         this.#setCursorVisibility(true)
     }
 

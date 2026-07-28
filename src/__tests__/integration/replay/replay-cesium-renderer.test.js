@@ -163,6 +163,7 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(visibleTraceEntities(dataSources).length).toBeGreaterThan(0)
         expect(replayEntity(dataSources, '#cursor')?.show).toBe(true)
         expect(replayEntity(dataSources, '#cursor-border')?.show).not.toBe(true)
+        expect(propertyValue(replayEntity(dataSources, '#cursor')?.point?.disableDepthTestDistance)).toBe(0)
 
         renderer.update({sample: midSample, sampler, forceGeometry: true, hideCursor: true})
 
@@ -173,6 +174,7 @@ describe('JourneyReplayCesiumRenderer', () => {
         renderer.update({sample: midSample, sampler, forceGeometry: true})
 
         expect(replayEntity(dataSources, '#cursor')?.show).toBe(true)
+        expect(propertyValue(replayEntity(dataSources, '#cursor')?.point?.disableDepthTestDistance)).toBe(0)
         expect(replayEntity(dataSources, '#cursor-border')?.show).not.toBe(true)
         expect(requestRender).toHaveBeenCalled()
     })
