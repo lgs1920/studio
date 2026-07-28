@@ -12,7 +12,7 @@ vi.mock('@Components/Toast', () => ({
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from '@Core/ui/replay/JourneyReplayInternal'
 import {REPLAY_EVENT_UPDATE} from '@Core/ui/replay/JourneyReplayPlaybackController'
 import {
-    bindRenderer, restorePlaybackSceneInternal,
+    abortPlaybackAfterListenerError, bindRenderer, restorePlaybackScene, restorePlaybackSceneInternal,
 } from '@Core/ui/replay/JourneyReplaySessionSceneController'
 
 const makeMode = () => {
@@ -124,6 +124,9 @@ describe('JourneyReplaySessionSceneController', () => {
 
         expect(renderer.update).toHaveBeenCalledTimes(2)
         expect(call.updateCamera).toHaveBeenCalledTimes(2)
+        expect(call.updateCamera.mock.calls.flat()).not.toEqual(expect.arrayContaining([
+            expect.objectContaining({logicalCamera: true}),
+        ]))
     })
 
     it('restores the captured focus after journey focus completes', async () => {
@@ -133,6 +136,9 @@ describe('JourneyReplaySessionSceneController', () => {
             altitude: 5000,
         }
         const state = {
+            renderer: {
+                clear: vi.fn(),
+            },
             cameraStateRestoredBeforeSceneCleanup: false,
             deferPlaybackCameraRestore: true,
             sceneRestoreDeferred: true,
@@ -176,6 +182,55 @@ describe('JourneyReplaySessionSceneController', () => {
         expect(call.restoreCameraState).toHaveBeenCalledTimes(1)
         expect(state.savedCameraState).toBeNull()
         expect(state.replayEntryCameraState).toBeNull()
+    })
+
+    it('keeps the internal restore finalizer active through the public restore wrapper', async () => {
+        const state = {
+            renderer: {
+                clear: vi.fn(),
+            },
+            cameraStateRestoredBeforeSceneCleanup: false,
+            deferPlaybackCameraRestore: true,
+            sceneRestoreDeferred: true,
+            sceneRestorePromise: null,
+            replayEntryCameraState: {destination: {}, orientation: {}},
+            savedCameraState: {destination: {}, orientation: {}},
+        }
+        const call = {
+            removeToleranceZoneOverlay:     vi.fn(),
+            restoreOtherJourneysVisibility: vi.fn(),
+            restoreCurrentJourneyVisibility: vi.fn(),
+            setJourneyReplayOrbitAllowed:   vi.fn(),
+            setToleranceZoneOverlayVisible: vi.fn(),
+            restoreJourneyToolbarVisibility: vi.fn(),
+            restoreJourneyReplayDrawerAfterPlayback: vi.fn(),
+            restoreMainUI:                  vi.fn(),
+            restoreNearbyPOIsAfterPlayback: vi.fn(() => Promise.resolve()),
+            resetCameraController:          vi.fn(),
+            focusJourneyAfterPlayback:     vi.fn(() => Promise.resolve()),
+            restoreCameraState:             vi.fn(() => {
+                state.savedCameraState = null
+            }),
+            restorePlaybackCameraSettings: vi.fn(),
+        }
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_CALL]:  call,
+            [JOURNEY_REPLAY_INTERNAL_STATE]: state,
+        }
+        call.restorePlaybackScene = vi.fn(() => restorePlaybackSceneInternal(mode))
+        globalThis.lgs = {
+            stores: {
+                replay: {
+                    active: true,
+                },
+            },
+        }
+
+        await expect(restorePlaybackScene(mode, {force: true})).resolves.toBe(true)
+
+        expect(call.focusJourneyAfterPlayback).toHaveBeenCalledTimes(1)
+        expect(call.restoreCameraState).toHaveBeenCalledTimes(1)
+        expect(state.sceneRestorePromise).toBeNull()
     })
 
     it('reapplies the active replay camera when an obsolete focus settles late', async () => {
@@ -244,5 +299,76 @@ describe('JourneyReplaySessionSceneController', () => {
             exportMode:    true,
         }))
         expect(call.restoreCameraState).not.toHaveBeenCalled()
+    })
+
+    it('restores focus and replay visibility after a premature listener failure', async () => {
+        const state = {
+            clipSequenceToken: 4,
+            controller: {
+                stop: vi.fn(),
+            },
+            renderer: {
+                clear: vi.fn(),
+            },
+            sceneRestoreDeferred: true,
+            sceneRestorePromise: null,
+            deferPlaybackCameraRestore: true,
+            cameraStateRestoredBeforeSceneCleanup: false,
+            replayExportCameraActive: true,
+            renderingReplayExportFrame: true,
+            logicalCameraTrajectory: true,
+            deferStartCameraRecenter: true,
+            savedCameraState: {destination: {}, orientation: {}},
+            replayEntryCameraState: {destination: {}, orientation: {}},
+        }
+        const call = {
+            stopStopClipPOIMaskLoop: vi.fn(),
+            cancelActiveCameraFlight: vi.fn(),
+            setContinuousRender: vi.fn(),
+            restoreOtherJourneysVisibility: vi.fn(),
+            restoreCurrentJourneyVisibility: vi.fn(),
+            setJourneyReplayOrbitAllowed: vi.fn(),
+            setToleranceZoneOverlayVisible: vi.fn(),
+            removeToleranceZoneOverlay: vi.fn(),
+            restoreJourneyToolbarVisibility: vi.fn(),
+            restoreJourneyReplayDrawerAfterPlayback: vi.fn(),
+            restoreMainUI: vi.fn(),
+            restoreNearbyPOIsAfterPlayback: vi.fn(() => Promise.resolve()),
+            resetCameraController: vi.fn(),
+            focusJourneyAfterPlayback: vi.fn(() => Promise.resolve()),
+            restoreCameraState: vi.fn(() => {
+                state.savedCameraState = null
+            }),
+            restorePlaybackCameraSettings: vi.fn(),
+        }
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_CALL]:  call,
+            [JOURNEY_REPLAY_INTERNAL_STATE]: state,
+        }
+        call.restorePlaybackScene = vi.fn(() => restorePlaybackSceneInternal(mode))
+        globalThis.lgs = {
+            stores: {
+                replay: {
+                    active: true,
+                    toolbarVisible: true,
+                    mainUiHidden: true,
+                },
+            },
+        }
+
+        await abortPlaybackAfterListenerError(mode, new Error('listener failed'))
+
+        expect(call.cancelActiveCameraFlight).toHaveBeenCalledTimes(1)
+        expect(call.focusJourneyAfterPlayback).toHaveBeenCalledTimes(1)
+        expect(call.restoreCurrentJourneyVisibility).toHaveBeenCalled()
+        expect(call.restoreCameraState).toHaveBeenCalledTimes(1)
+        expect(globalThis.lgs.stores.replay).toMatchObject({
+            active: false,
+            toolbarVisible: false,
+            mainUiHidden: false,
+        })
+        expect(state.replayExportCameraActive).toBe(false)
+        expect(state.renderingReplayExportFrame).toBe(false)
+        expect(state.logicalCameraTrajectory).toBe(false)
     })
 })

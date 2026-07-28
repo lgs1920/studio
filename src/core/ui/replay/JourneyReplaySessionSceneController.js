@@ -237,9 +237,10 @@ export const restorePlaybackScene = (mode, {force = false} = {}) => {
         }
 
         state.renderer.clear()
-        const restorePromise = call.restorePlaybackScene().then(() => true)
-        state.sceneRestorePromise = restorePromise
-        return restorePromise
+        // `restorePlaybackSceneInternal` owns the state promise and clears it
+        // after focus and camera restoration have both completed. Keep that
+        // identity intact so its finalizer cannot be skipped by this wrapper.
+        return call.restorePlaybackScene().then(() => true)
     }
 
 export const waitForSceneRestore = (mode) => {
@@ -571,21 +572,18 @@ export const abortPlaybackAfterListenerError = (mode, error) => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         state.clipSequenceToken++
         call.stopStopClipPOIMaskLoop()
+        call.cancelActiveCameraFlight()
         state.controller.stop({emit: false, clearProgress: false})
         call.setContinuousRender(false)
         state.renderer.clear()
-        call.restoreOtherJourneysVisibility()
-        call.restoreCurrentJourneyVisibility({restorePOIs: false})
-        call.setJourneyReplayOrbitAllowed(true)
-        state.deferStartCameraRecenter = false
-        call.resetCameraController({preserveSavedCameraState: true})
-        call.restoreJourneyToolbarVisibility()
-        call.restoreMainUI()
-        call.restorePlaybackCameraSettings({force: true})
-        resetRuntimeProgress(replayStore())
-        call.restoreCurrentJourneyVisibility()
-        call.restoreCameraState()
-        state.replayEntryCameraState = null
+        state.sceneRestoreDeferred = false
+        state.sceneRestorePromise = null
+        state.deferPlaybackCameraRestore = false
+        state.cameraStateRestoredBeforeSceneCleanup = false
+        state.replayExportCameraActive = false
+        state.renderingReplayExportFrame = false
+        state.logicalCameraTrajectory = false
+        return call.restorePlaybackScene()
     }
 
 export const scheduleProfileHoverMarker = (mode, sample) => {
@@ -824,7 +822,6 @@ export const bindRenderer = (mode, ) => {
                     call.updateCamera({
                         ...detail,
                         source: 'playback',
-                        logicalCamera: videoCaptureActive,
                     })
                     traceUpdateStep('update-camera.end')
                 }
@@ -854,7 +851,7 @@ export const bindRenderer = (mode, ) => {
                     state.lastPlaybackUpdateProgressKey = null
                     call.setContinuousRender(true)
                     state.renderer.update({...detail, forceGeometry: true, showTrace: isJourneyReplayVideoCaptureActive()})
-                    call.updateCamera({...detail, logicalCamera: isJourneyReplayVideoCaptureActive()})
+                    call.updateCamera(detail)
                 }
                 catch (error) {
                     call.abortPlaybackAfterListenerError(error)
