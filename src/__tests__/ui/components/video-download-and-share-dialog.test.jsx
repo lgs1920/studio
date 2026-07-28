@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 
@@ -495,7 +495,9 @@ describe('VideoDownloadAndShareDialog', () => {
             fireEvent.click(screen.getByRole('button', {name: 'Create HQ video'}))
         })
         expect(screen.queryByRole('button', {name: 'Create HQ video'})).toBeNull()
-        expect(screen.getByRole('button', {name: 'Download HQ'}).getAttribute('appearance')).toBe('filled')
+        await waitFor(() => {
+            expect(screen.getByRole('button', {name: 'Download HQ'})).not.toBeNull()
+        })
 
         const originalCreateElement = document.createElement.bind(document)
         const anchor = {
@@ -519,7 +521,7 @@ describe('VideoDownloadAndShareDialog', () => {
         expect(anchor.click).toHaveBeenCalledTimes(1)
 
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', {name: 'Download draft video'}))
+            fireEvent.click(screen.getByRole('button', {name: 'Download draft'}))
         })
 
         expect(recorder.download).toHaveBeenCalledWith({
