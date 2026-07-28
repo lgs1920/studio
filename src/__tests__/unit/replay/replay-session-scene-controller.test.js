@@ -11,7 +11,9 @@ vi.mock('@Components/Toast', () => ({
 
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from '@Core/ui/replay/JourneyReplayInternal'
 import {REPLAY_EVENT_UPDATE} from '@Core/ui/replay/JourneyReplayPlaybackController'
-import {bindRenderer} from '@Core/ui/replay/JourneyReplaySessionSceneController'
+import {
+    bindRenderer, restorePlaybackSceneInternal,
+} from '@Core/ui/replay/JourneyReplaySessionSceneController'
 
 const makeMode = () => {
     const listeners = new Map()
@@ -122,5 +124,57 @@ describe('JourneyReplaySessionSceneController', () => {
 
         expect(renderer.update).toHaveBeenCalledTimes(2)
         expect(call.updateCamera).toHaveBeenCalledTimes(2)
+    })
+
+    it('restores the captured focus after journey focus completes', async () => {
+        const cameraState = {
+            destination: {longitude: 2, latitude: 48, height: 5000},
+            orientation: {heading: 0.4, pitch: -0.8, roll: 0},
+            altitude: 5000,
+        }
+        const state = {
+            cameraStateRestoredBeforeSceneCleanup: false,
+            deferPlaybackCameraRestore: true,
+            sceneRestoreDeferred: true,
+            sceneRestorePromise: null,
+            replayEntryCameraState: cameraState,
+            savedCameraState: cameraState,
+        }
+        const call = {
+            removeToleranceZoneOverlay:     vi.fn(),
+            restoreOtherJourneysVisibility: vi.fn(),
+            restoreCurrentJourneyVisibility: vi.fn(),
+            setJourneyReplayOrbitAllowed:   vi.fn(),
+            setToleranceZoneOverlayVisible: vi.fn(),
+            restoreJourneyToolbarVisibility: vi.fn(),
+            restoreJourneyReplayDrawerAfterPlayback: vi.fn(),
+            restoreMainUI:                  vi.fn(),
+            restoreNearbyPOIsAfterPlayback: vi.fn(() => Promise.resolve()),
+            resetCameraController:          vi.fn(),
+            focusJourneyAfterPlayback:     vi.fn(() => Promise.resolve()),
+            restoreCameraState:             vi.fn(() => {
+                state.savedCameraState = null
+            }),
+            restorePlaybackCameraSettings: vi.fn(),
+        }
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_CALL]:  call,
+            [JOURNEY_REPLAY_INTERNAL_STATE]: state,
+        }
+        globalThis.lgs = {
+            stores: {
+                replay: {
+                    active: true,
+                    sample: {progress: 1},
+                },
+            },
+        }
+
+        await restorePlaybackSceneInternal(mode)
+
+        expect(call.focusJourneyAfterPlayback).toHaveBeenCalledTimes(1)
+        expect(call.restoreCameraState).toHaveBeenCalledTimes(1)
+        expect(state.savedCameraState).toBeNull()
+        expect(state.replayEntryCameraState).toBeNull()
     })
 })

@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import {buildReplayFrameState} from './JourneyReplayRuntime'
+import {createJourneyReplayLogicalFrame} from './JourneyReplayLogicalFrame'
 
 export const REPLAY_EVENT_START = 'replay/start'
 export const REPLAY_EVENT_UPDATE = 'replay/update'
@@ -338,17 +339,33 @@ export class JourneyReplayPlaybackController {
         this.#schedule()
     }
 
-    #eventDetail = sample => ({
-        controller: this,
-        sampler:    this.#sampler,
-        sample,
-        progress:   this.#progress,
-        duration:   this.#duration,
-        direction:  this.#direction,
-        loop:       this.#loop,
-        running:    this.#running,
-        paused:     this.#paused,
-    })
+    #eventDetail = sample => {
+        const runtimeFrame = globalThis.lgs?.stores?.replay?.dynamicFrameState ?? null
+        const logicalFrame = createJourneyReplayLogicalFrame({
+            sample,
+            progress:        this.#progress,
+            durationMillis:  runtimeFrame?.durationMillis ?? this.#duration * MILLIS,
+            frameTimeMs:     runtimeFrame?.frameTimeMs,
+            frameIntervalMs: runtimeFrame?.frameIntervalMs,
+            phase:           runtimeFrame?.phase,
+            source:          'replay-clock',
+        })
+
+        return {
+            controller:      this,
+            sampler:         this.#sampler,
+            sample,
+            progress:        this.#progress,
+            duration:        this.#duration,
+            direction:       this.#direction,
+            loop:            this.#loop,
+            running:         this.#running,
+            paused:          this.#paused,
+            frameTimeMs:     logicalFrame.frameTimeMs,
+            frameIntervalMs: logicalFrame.frameIntervalMs,
+            logicalFrame,
+        }
+    }
 
     #emit = (event, sample) => {
         const detail = this.#eventDetail(sample)
@@ -432,6 +449,10 @@ export class JourneyReplayPlaybackController {
             phase,
             source:          'controller',
             updatedAt:       frameNow,
+            renderMode:      'draft',
+            initialCameraState: globalThis.__?.ui?.replay?.savedCameraState ?? null,
+            renderSpec:      store.deferredExportPlan?.renderSpec ?? null,
+            visibleOverlayIds: store.deferredExportPlan?.runtime?.context?.visibleOverlayIds ?? [],
         })
 
         const now = this.#now()

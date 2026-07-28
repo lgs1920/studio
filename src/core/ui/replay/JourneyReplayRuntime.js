@@ -3,6 +3,7 @@
  */
 
 import {REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP, normalizeJourneyReplayClips} from './JourneyReplayClips'
+import {createReplayRenderModeContract} from './ReplayRenderModeContract'
 import {getJourneyReplaySettings} from './JourneyReplayProgressionStyle'
 
 /**
@@ -56,6 +57,13 @@ export const buildReplayFrameState = ({
     phase = null,
     source = null,
     updatedAt = null,
+    renderMode = null,
+    cameraPose = null,
+    trackPath = null,
+    initialCameraState = null,
+    renderSpec = null,
+    visibleOverlayIds = [],
+    outputProfile = null,
 } = {}) => {
     const safeIndex = optionalFiniteNumber(index)
     const safeFrameId = optionalFiniteNumber(frameId)
@@ -64,6 +72,28 @@ export const buildReplayFrameState = ({
     const safeReplayFrameCount = optionalFiniteNumber(replayFrameCount)
     const resolvedIndex = safeIndex ?? safeReplayFrameIndex ?? safeFrameId ?? null
     const resolvedFrameCount = safeFrameCount ?? safeReplayFrameCount ?? null
+
+    const renderContract = renderMode
+                           ? createReplayRenderModeContract({
+                               renderMode,
+                               logicalFrame: {
+                                   sample,
+                                   progress:        optionalFiniteNumber(progress) ?? 0,
+                                   elapsedMillis:   optionalFiniteNumber(elapsedMillis),
+                                   durationMillis:  optionalFiniteNumber(durationMillis),
+                                   frameTimeMs:     optionalFiniteNumber(frameTimeMs),
+                                   frameIntervalMs: optionalFiniteNumber(frameIntervalMs),
+                                   phase,
+                                   source,
+                               },
+                               cameraPose,
+                               trackPath,
+                               initialCameraState,
+                               renderSpec,
+                               visibleOverlayIds,
+                               outputProfile,
+                           })
+                           : null
 
     return {
         active:          Boolean(active),
@@ -85,6 +115,7 @@ export const buildReplayFrameState = ({
         phase,
         source,
         updatedAt:       optionalFiniteNumber(updatedAt) ?? globalThis.performance?.now?.() ?? Date.now(),
+        renderContract,
     }
 }
 

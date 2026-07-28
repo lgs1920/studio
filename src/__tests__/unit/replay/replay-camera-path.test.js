@@ -71,6 +71,7 @@ import {
     createReplayCameraUpdateCache,
 } from '@Core/ui/replay/JourneyReplayCameraUpdateCache'
 import {
+    REPLAY_MARKER_MODE_NAVIGATION,
     REPLAY_MARKER_MODE_HYSTERESIS,
     REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
@@ -78,6 +79,7 @@ import {
     JOURNEY_REPLAY_INTERNAL_CALL,
     JOURNEY_REPLAY_INTERNAL_STATE,
 } from '@Core/ui/replay/JourneyReplayInternal'
+import {createJourneyReplayLogicalFrame} from '@Core/ui/replay/JourneyReplayLogicalFrame'
 
 const makeMode = () => {
     const state = {
@@ -94,6 +96,7 @@ const makeMode = () => {
             up:          new Cartesian3(0, 0, 1),
         })),
         cameraTransitionVelocity: vi.fn(() => null),
+        startDeterministicCameraTransition: vi.fn(() => true),
         applyDeterministicCameraTransition: vi.fn(() => true),
         applyCameraFrame: vi.fn(frame => frame),
         buildCameraGuide: vi.fn(() => []),
@@ -657,6 +660,160 @@ describe('Journey replay camera paths', () => {
             payload.futureSample === null ? 'current' : 'future'
         ))
         expect(visibilityModes).toEqual(expect.arrayContaining(['current', 'future']))
+    })
+
+    it('applies the logical camera pose without asking Cesium to build a path', () => {
+        vi.stubGlobal('lgs', {
+            settings: {
+                ui: {
+                    replay: {
+                        camera: {
+                            positionMode: 'system',
+                            pitch:        -60,
+                            altitude:     1000,
+                            hysteresis:   {easing: 0.18},
+                        },
+                        marker: {mode: REPLAY_MARKER_MODE_HYSTERESIS},
+                    },
+                },
+            },
+            stores: {
+                replay: {
+                    camera: {positionMode: 'system', pitch: -60, altitude: 1000},
+                },
+            },
+            viewer: {
+                camera: {},
+            },
+        })
+
+        const {mode, state, call} = makeMode()
+        const sample = {
+            progress:   0.5,
+            longitude:  2,
+            latitude:   48,
+            altitude:   120,
+            height:     120,
+        }
+        const logicalFrame = createJourneyReplayLogicalFrame({
+            sample,
+            progress:       0.5,
+            durationMillis: 1000,
+            frameTimeMs:    500,
+        })
+        call.cameraViewForSample = vi.fn()
+        call.rememberNominalCameraView = vi.fn()
+        call.recenterCameraToSample = vi.fn()
+
+        updateCamera(mode, {
+            sample,
+            progress: 0.5,
+            source:   'playback',
+            logicalFrame,
+            logicalCamera: true,
+        })
+
+        expect(logicalFrame.cameraPose).toEqual(expect.objectContaining({
+            sample,
+            heading:      0,
+            pitch:        expect.closeTo(-Math.PI / 3),
+            cameraHeight: 1000,
+        }))
+        expect(call.recenterCameraToSample).toHaveBeenCalledWith(expect.objectContaining({
+            sample,
+            heading:       0,
+            pitch:         -Math.PI / 3,
+            instant:       true,
+            deterministic: true,
+            logicalNow:    500,
+        }))
+        expect(call.applyDeterministicCameraFollower).not.toHaveBeenCalled()
+        expect(call.startDeterministicCameraTransition).not.toHaveBeenCalled()
+        expect(call.cameraViewForSample).not.toHaveBeenCalled()
+        expect(state.deterministicCameraTransition).toBeNull()
+
+        // Once the logical camera is initialized, a stable frame must let the
+        // marker travel through Z1/Z2 instead of recentering it every frame.
+        state.lastAppliedCameraView = {
+            anchor:  sample,
+            heading: 0,
+            pitch:   -Math.PI / 3,
+        }
+        call.recenterCameraToSample.mockClear()
+        updateCamera(mode, {
+            sample: {...sample, progress: 0.6, longitude: 2.001},
+            progress: 0.6,
+            source: 'playback',
+            logicalCamera: true,
+        })
+        expect(call.recenterCameraToSample).not.toHaveBeenCalled()
+
+    })
+
+    it('keeps collision tracking active in logical navigation and dynamic modes', () => {
+        const sample = {
+            progress:          0.5,
+            distanceFromStart: 100,
+            longitude:         2,
+            latitude:          48,
+            altitude:          120,
+            height:            120,
+        }
+        const predictedSample = {
+            ...sample,
+            progress:          0.7,
+            distanceFromStart: 140,
+        }
+
+        for (const markerMode of [REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_HYSTERESIS]) {
+            vi.stubGlobal('lgs', {
+                settings: {
+                    ui: {
+                        replay: {
+                            camera: {
+                                positionMode: 'system',
+                                pitch:        -60,
+                                altitude:     1000,
+                                hysteresis:   {easing: 0.18},
+                            },
+                            marker: {mode: markerMode},
+                        },
+                    },
+                },
+                stores: {
+                    replay: {
+                        camera: {positionMode: 'system', pitch: -60, altitude: 1000},
+                    },
+                },
+                viewer: {camera: {}},
+            })
+
+            const {mode, call} = makeMode()
+            const nominalView = {
+                sample,
+                heading:      0,
+                pitch:        -Math.PI / 3,
+                cameraHeight: 1000,
+            }
+            call.cameraViewForSample = vi.fn(() => nominalView)
+            call.cameraLookaheadSample = vi.fn(() => predictedSample)
+            call.cameraCollisionForSample = vi.fn(() => ({hard: true}))
+            call.rememberNominalCameraView = vi.fn()
+            call.cameraViewVisibilityForSample = vi.fn(() => true)
+            call.findCameraRedirectState = vi.fn(() => null)
+            call.cameraViewWithRedirectState = vi.fn(view => view)
+            call.trackingWindowPositionForSample = vi.fn(() => ({x: 1900, y: 1000}))
+
+            updateCamera(mode, {
+                sample,
+                progress: 0.5,
+                source: 'playback',
+                logicalCamera: true,
+            })
+
+            expect(call.cameraCollisionForSample).toHaveBeenCalled()
+            expect(call.applyDeterministicCameraFollower).toHaveBeenCalled()
+        }
     })
 
     it('reuses the replay camera cache for repeated visibility checks', () => {

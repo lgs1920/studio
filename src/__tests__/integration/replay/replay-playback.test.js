@@ -159,6 +159,11 @@ describe('replay phase 1 playback controller', () => {
                 frameTimeMs:     0,
                 frameIntervalMs: 1000 / 30,
                 source:          'controller',
+                renderContract: expect.objectContaining({
+                    renderMode: 'draft',
+                    logicalFrame: expect.objectContaining({progress: 0}),
+                    scheduling: {realtime: true, frameByFrame: false},
+                }),
             }))
         }
         finally {
@@ -1648,13 +1653,15 @@ describe('replay phase 1 playback controller', () => {
         const focusPromise = new Promise(resolve => {
             resolveFocus = resolve
         })
+        let focusCallCount = 0
         journey.focus = vi.fn(() => {
+            focusCallCount += 1
             source.show = true
             poiRestoredEntity.show = true
             poiRestoredEntity.billboard.show = true
             poiStillHiddenEntity.show = true
             poiStillHiddenEntity.billboard.show = true
-            return focusPromise
+            return focusCallCount === 1 ? Promise.resolve() : focusPromise
         })
         const listeners = new Map()
         let sampler = null
@@ -1793,10 +1800,13 @@ describe('replay phase 1 playback controller', () => {
             expect(poiRestoredEntity.show).toBe(false)
             expect(poiStillHiddenEntity.show).toBe(false)
 
+            await vi.advanceTimersByTimeAsync(2000)
+
+            expect(journey.focus).toHaveBeenCalled()
+
             resolveFocus()
             await Promise.resolve()
 
-            vi.advanceTimersByTime(2000)
             await Promise.resolve()
             await Promise.resolve()
 

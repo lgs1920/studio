@@ -336,6 +336,10 @@ Consequently:
 - the same marker sample, projection, collision, and recentering decisions are
   reproduced from the export timeline.
 
+The deferred HQ export also captures the saved Cesium camera/focus snapshot
+from the draft start and feeds it into playback-scene preparation. This keeps
+HQ from starting on a different visual focus than the Draft that prepared it.
+
 ## 9. Implementation references
 
 - `src/core/ui/replay/JourneyReplayMode.js`: zone defaults, normalization,

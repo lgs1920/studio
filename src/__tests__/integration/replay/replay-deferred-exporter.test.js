@@ -331,6 +331,11 @@ describe('ReplayDeferredExporter', () => {
         const replay = {
             videoCropRect: {left: 10, top: 20, width: 640, height: 360},
             recordingSync: true,
+            savedCameraState: {
+                destination: {longitude: 60, latitude: 30, height: 123.457},
+                orientation: {heading: 0.25, pitch: -0.75, roll: 0.125},
+                altitude: 123.457,
+            },
         }
         const controller = {
             direction: 1,
@@ -338,6 +343,20 @@ describe('ReplayDeferredExporter', () => {
         }
         const widgetEl = document.createElement('div')
         widgetEl.dataset.videoOverlayVisible = 'true'
+        globalThis.lgs = {
+            viewer: {
+                camera: {
+                    heading: 0.5,
+                    pitch:   -0.5,
+                    roll:    0.25,
+                    positionCartographic: {
+                        longitude: Math.PI / 2,
+                        latitude:  Math.PI / 4,
+                        height:    321,
+                    },
+                },
+            },
+        }
 
         globalThis.__ = {
             ui: {
@@ -365,6 +384,11 @@ describe('ReplayDeferredExporter', () => {
             captureMode: 'quality',
             dimensions: {width: 1280, height: 720},
             cropRect: {left: 10, top: 20, width: 640, height: 360},
+            cameraState: {
+                destination: {longitude: 60, latitude: 30, height: 123.457},
+                orientation: {heading: 0.25, pitch: -0.75, roll: 0.125},
+                altitude: 123.457,
+            },
             recordingSync: true,
             visibleOverlayIds: ['journey-overlay#1'],
         })
@@ -395,6 +419,25 @@ describe('ReplayDeferredExporter', () => {
 
         expect(reusedPlan.reused).toBe(true)
         expect(reusedPlan.plan).toBe(freshPlan.plan)
+
+        replay.savedCameraState = {
+            destination: {longitude: 90, latitude: 45, height: 321},
+            orientation: {heading: 0.5, pitch: -0.5, roll: 0.25},
+            altitude: 321,
+        }
+        const cameraStalePlan = resolveReplayDeferredExportPlan({
+            replay,
+            journey: {slug: 'journey-a'},
+            controller,
+            fps: 30,
+            label: 'plan-a',
+            dimensions: {width: 1280, height: 720},
+            captureMode: 'quality',
+            uiToast: {success: vi.fn()},
+        })
+
+        expect(cameraStalePlan.reused).toBe(false)
+        expect(cameraStalePlan.plan.runtime.contextKey).not.toBe(context.contextKey)
 
         replay.videoCropRect = {left: 10, top: 20, width: 800, height: 360}
         const stalePlan = resolveReplayDeferredExportPlan({
@@ -738,14 +781,26 @@ describe('ReplayDeferredExporter', () => {
                 callback?.()
                 return 1
             })
-            globalThis.lgs = {
-                canvas: sourceCanvas,
-                scene: {
-                    render: vi.fn(),
-                    requestRender: vi.fn(),
+        globalThis.lgs = {
+            canvas: sourceCanvas,
+            scene: {
+                render: vi.fn(),
+                requestRender: vi.fn(),
+            },
+            viewer: {
+                camera: {
+                    heading: 0.5,
+                    pitch:   -0.5,
+                    roll:    0.25,
+                    positionCartographic: {
+                        longitude: Math.PI / 2,
+                        latitude:  Math.PI / 4,
+                        height:    321,
+                    },
                 },
-                stores: {
-                    ui: {
+            },
+            stores: {
+                ui: {
                         video: {
                             fps: 0,
                             quality: 0,
@@ -834,6 +889,11 @@ describe('ReplayDeferredExporter', () => {
                 journey: expect.objectContaining({slug: 'journey-a'}),
                 progress: 0,
                 hideReplayMarker: true,
+                cameraState: {
+                    destination: {longitude: 90, latitude: 45, height: 321},
+                    orientation: {heading: 0.5, pitch: -0.5, roll: 0.25},
+                    altitude: 321,
+                },
             }))
             expect(restorePlaybackScene).toHaveBeenCalledTimes(2)
             expect(restorePlaybackScene).toHaveBeenNthCalledWith(1, {force: true})

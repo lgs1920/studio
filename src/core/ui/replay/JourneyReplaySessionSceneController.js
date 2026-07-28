@@ -314,6 +314,7 @@ export const resetCameraController = (mode, {
         state.lastPlaybackUpdateProgressKey = null
         if (!preserveSavedCameraState) {
             state.savedCameraState = null
+            state.replayEntryCameraState = null
             state.playbackStartCameraSettings = null
         }
         state.lastCameraHeading = null
@@ -462,7 +463,9 @@ export const restorePlaybackSceneInternal = (mode, ) => {
         call.restoreMainUI()
         void call.restoreNearbyPOIsAfterPlayback()
         resetRuntimeProgress(replayStore())
-        call.restoreCurrentJourneyVisibility()
+        // Keep the captured POI visibility state until the focus operation has
+        // completed. `journey.focus()` can make every entity visible again.
+        call.restoreCurrentJourneyVisibility({restorePOIs: false})
         call.resetCameraController({preserveSavedCameraState: true})
         state.suppressPlaybackCameraSync = true
         let restorePromise
@@ -473,14 +476,21 @@ export const restorePlaybackSceneInternal = (mode, ) => {
                 return
             }
             state.deferPlaybackCameraRestore = false
+            // Focus can rewrite journey and POI visibility. Reapply the
+            // visibility captured before replay after focus has settled.
+            call.restoreCurrentJourneyVisibility()
             // Restoring the journey focus above changes the live Cesium view.
             // Reapply the exact camera captured before Draft/HQ playback so a
             // subsequent export does not inherit the focus angle.
             if (!state.cameraStateRestoredBeforeSceneCleanup) {
                 call.restoreCameraState()
             }
+            else {
+                state.savedCameraState = null
+            }
             state.cameraStateRestoredBeforeSceneCleanup = false
             call.restorePlaybackCameraSettings({force: true})
+            state.replayEntryCameraState = null
             state.sceneRestorePromise = null
         })
         state.sceneRestorePromise = restorePromise
@@ -554,6 +564,7 @@ export const abortPlaybackAfterListenerError = (mode, error) => {
         resetRuntimeProgress(replayStore())
         call.restoreCurrentJourneyVisibility()
         call.restoreCameraState()
+        state.replayEntryCameraState = null
     }
 
 export const scheduleProfileHoverMarker = (mode, sample) => {
@@ -720,6 +731,7 @@ export const bindRenderer = (mode, ) => {
                                                    source:                    'start',
                                                    forceToleranceRecenter:     true,
                                                    immediateToleranceRecenter: true,
+                                                   logicalCamera:             isJourneyReplayVideoCaptureActive(),
                                                })
                             traceStep('update-camera.end')
                         }
@@ -791,6 +803,7 @@ export const bindRenderer = (mode, ) => {
                     call.updateCamera({
                         ...detail,
                         source: 'playback',
+                        logicalCamera: videoCaptureActive,
                     })
                     traceUpdateStep('update-camera.end')
                 }
@@ -820,7 +833,7 @@ export const bindRenderer = (mode, ) => {
                     state.lastPlaybackUpdateProgressKey = null
                     call.setContinuousRender(true)
                     state.renderer.update({...detail, forceGeometry: true, showTrace: isJourneyReplayVideoCaptureActive()})
-                    call.updateCamera(detail)
+                    call.updateCamera({...detail, logicalCamera: isJourneyReplayVideoCaptureActive()})
                 }
                 catch (error) {
                     call.abortPlaybackAfterListenerError(error)
@@ -889,25 +902,17 @@ export const bindRenderer = (mode, ) => {
                         return
                     }
 
-                    const raf = globalThis.requestAnimationFrame
-                                ?? globalThis.window?.requestAnimationFrame?.bind(globalThis.window)
-                                ?? (callback => setTimeout(callback, 0))
-
-                    raf(() => {
-                        raf(() => {
-                            if (token === state.clipSequenceToken) {
-                                // The recorder captures the final Draft frame
-                                // synchronously from this notification. Keep
-                                // the completed trace rendered until that
-                                // capture has happened; clearing first makes
-                                // the trace disappear from the last frame.
-                                notifyStopClipsComplete()
-                                if (typeof afterFrame === 'function') {
-                                    afterFrame()
-                                }
-                            }
-                        })
-                    })
+                    // Without an active recorder there is no media frame to
+                    // protect with animation-frame delays. Finish immediately
+                    // so replay cleanup and journey restoration are observable
+                    // on the same exit path as Draft and HQ.
+                    if (token === state.clipSequenceToken) {
+                        notifyStopClipsComplete()
+                        if (typeof afterFrame === 'function') {
+                            afterFrame()
+                        }
+                    }
+                    return
                 }
                 const finalize = () => {
                     if (token !== state.clipSequenceToken) {

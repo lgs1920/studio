@@ -23,6 +23,7 @@ import {
     getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker,
 } from './JourneyReplayProgressionStyle'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
+import {resolveJourneyReplayLogicalCameraPose} from './JourneyReplayLogicalCameraPose'
 
 import {
     REPLAY_HEADING_TRANSITION_DURATION_SECONDS,
@@ -578,6 +579,8 @@ export const updateCamera = (mode, {
                          source = null,
                          frameTimeMs = null,
                          frameIntervalMs = null,
+                         logicalFrame = null,
+                         logicalCamera = false,
                          exportMode = false,
                      } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
@@ -619,11 +622,13 @@ export const updateCamera = (mode, {
             return
         }
 
+        const deterministicCamera = exportMode || logicalCamera === true
+
         if (state.cameraApplyingView) {
             // HQ owns the camera at each export timestamp. A live Cesium
             // flyTo left over from playback must not block subsequent video
             // frames while its wall-clock callback is pending.
-            if (exportMode) {
+            if (deterministicCamera) {
                 call.cancelCameraBezierTransition(false)
                 replayVideoTraceDebug('camera.update-skip', {
                     reason:        'camera-applying-view-cancelled',
@@ -675,11 +680,11 @@ export const updateCamera = (mode, {
                 maxLateralOffsetMeters: 60,
             },
         }
-        const deterministicCamera = exportMode
         // Use the export timeline as the smoothing clock. Camera orientation
         // must not advance once per callback independently of video time.
         const logicalNow = deterministicCamera
-                           ? finiteNumber(frameTimeMs)
+                           ? finiteNumber(logicalFrame?.frameTimeMs)
+                             ?? finiteNumber(frameTimeMs)
                              ?? finiteNumber(sample?.journeyElapsedMillis)
                              ?? call.now()
                            : call.now()
@@ -700,20 +705,31 @@ export const updateCamera = (mode, {
         traceUpdateStep('camera-view.nominal.begin', {
             progress,
         })
-        const nominalView = call.cameraViewForSample({
-                                                          sample,
-                                                          progress,
-                                                          source: source === 'start' ? 'drawer' : source,
-                                                          cameraSettings,
-                                                          markerSettings,
-                                                          motionProfile: source === 'drawer' ? null : replayMotionProfile,
-                                                          cache: updateCache,
-                                                      })
+        const nominalView = deterministicCamera
+                           ? resolveJourneyReplayLogicalCameraPose({
+                                 sample,
+                                 progress,
+                                 source: source === 'start' ? 'drawer' : source,
+                                 cameraSettings,
+                                 markerSettings,
+                             })
+                           : call.cameraViewForSample({
+                                 sample,
+                                 progress,
+                                 source: source === 'start' ? 'drawer' : source,
+                                 cameraSettings,
+                                 markerSettings,
+                                 motionProfile: source === 'drawer' ? null : replayMotionProfile,
+                                 cache: updateCache,
+                             })
         traceUpdateStep('camera-view.nominal.end', {
             hasNominalView: Boolean(nominalView),
         })
         if (!nominalView) {
             return
+        }
+        if (logicalFrame && logicalFrame.cameraPose === null) {
+            logicalFrame.cameraPose = nominalView
         }
         if (exportMode || globalThis.lgs?.stores?.ui?.video?.recording === true) {
             call.traceCameraChangeTiming({
@@ -729,8 +745,49 @@ export const updateCamera = (mode, {
         const anchorSample = nominalView.sample
         const smoothHeading = nominalView.heading
         const smoothPitch = nominalView.pitch
+
+        const applyLogicalCameraPose = view => {
+            if (!deterministicCamera || !view) {
+                return false
+            }
+
+            // Draft and HQ consume the same logical pose. Cesium only turns
+            // that pose into a renderable camera frame; it must not create a
+            // flight path from the current camera or resolve completion.
+            call.cancelCameraBezierTransition(false)
+            call.recenterCameraToSample({
+                                         sample:         view.sample,
+                                         heading:        view.heading,
+                                         pitch:          view.pitch,
+                                         cameraSettings: view.cameraSettings ?? cameraSettings,
+                                         cameraHeight:   view.cameraHeight,
+                                         instant:        true,
+                                         duration:       0,
+                                         deterministic:  true,
+                                         logicalNow,
+                                         force:           true,
+                                         trackingMode:   marker.mode,
+                                     })
+            state.lastCameraHeading = view.heading
+            state.lastCameraPitch = view.pitch
+            state.lastNominalCameraHeading = smoothHeading
+            state.lastNominalCameraPitch = smoothPitch
+            return true
+        }
+
+        const collisionTrackingMode = marker.mode === REPLAY_MARKER_MODE_NAVIGATION
+                                      || marker.mode === REPLAY_MARKER_MODE_HYSTERESIS
+        if (deterministicCamera
+            && collisionTrackingMode
+            && typeof call.cameraCollisionForSample !== 'function') {
+            if (!state.lastAppliedCameraView) {
+                applyLogicalCameraPose(nominalView)
+            }
+            return
+        }
+
         const sharedRecenterDuration = replayCameraRecenterDuration(cameraSettings.hysteresis.easing)
-        const recenterDuration = sharedRecenterDuration * (exportMode ? 1.8 : 1)
+        const recenterDuration = sharedRecenterDuration
         const frameLeadSeconds = replayFrameLeadSeconds({
             fps:             globalThis.lgs?.stores?.replay?.captureFps,
             frameIntervalMs,
@@ -739,7 +796,9 @@ export const updateCamera = (mode, {
         traceUpdateStep('camera-lookahead.begin', {
             lookaheadSeconds,
         })
-        const futureSample = call.cameraLookaheadSample(anchorSample, {lookaheadSeconds})
+        const futureSample = typeof call.cameraLookaheadSample === 'function'
+                            ? call.cameraLookaheadSample(anchorSample, {lookaheadSeconds})
+                            : null
         traceUpdateStep('camera-lookahead.end', {
             hasFutureSample: Boolean(futureSample),
         })
@@ -867,7 +926,7 @@ export const updateCamera = (mode, {
                                                    && now - state.lastNavigationRecenterAt < 80
             const navigationRecenterStillRunning = state.lastNavigationRecenterAt !== null
                                                    && now - state.lastNavigationRecenterAt < navigationRecenterLockMs
-            if ((forceToleranceRecenter || source === 'refresh') && !immediateToleranceRecenter && source !== 'playback' && !exportMode) {
+            if ((forceToleranceRecenter || source === 'refresh') && !immediateToleranceRecenter && source !== 'playback' && !deterministicCamera) {
                 call.applyCameraView({
                     anchor: anchorSample,
                     heading: smoothHeading,
@@ -916,12 +975,17 @@ export const updateCamera = (mode, {
                     hasNavigationTargetView: Boolean(navigationTargetView),
                 })
                 if (immediateToleranceRecenter) {
-                    call.applyCameraView({
-                        anchor: anchorSample,
-                        heading: smoothHeading,
-                        pitch:   smoothPitch,
-                        cameraSettings,
-                    })
+                    if (deterministicCamera) {
+                        applyLogicalCameraPose(nominalView)
+                    }
+                    else {
+                        call.applyCameraView({
+                            anchor: anchorSample,
+                            heading: smoothHeading,
+                            pitch:   smoothPitch,
+                            cameraSettings,
+                        })
+                    }
                 }
                 else if (deterministicCamera) {
                     const frame = call.cameraRecenterFrame({
@@ -954,6 +1018,11 @@ export const updateCamera = (mode, {
                 }
                 state.lastNavigationRecenterProgress = currentProgress
                 state.lastNavigationRecenterAt = now
+            }
+            else {
+                if (!state.lastAppliedCameraView) {
+                    applyLogicalCameraPose(nominalView)
+                }
             }
             state.lastCameraHeading = smoothHeading
             state.lastCameraPitch = smoothPitch
@@ -1170,6 +1239,11 @@ export const updateCamera = (mode, {
                                                          })
                         }
                     }
+                    else {
+                        if (!state.lastAppliedCameraView) {
+                            applyLogicalCameraPose(nominalView)
+                        }
+                    }
                     state.lastCameraHeading = smoothHeading
                     state.lastCameraPitch = smoothPitch
                     return
@@ -1211,12 +1285,17 @@ export const updateCamera = (mode, {
 
                 if (redirectView) {
                     if (redirectedCurrentVisible) {
-                        call.applyCameraView({
-                                                  anchor:  redirectView.sample,
-                                                  heading: redirectView.heading,
-                                                  pitch:   redirectView.pitch,
-                                                  cameraSettings,
-                                              })
+                        if (deterministicCamera) {
+                            applyLogicalCameraPose(redirectView)
+                        }
+                        else {
+                            call.applyCameraView({
+                                                      anchor:  redirectView.sample,
+                                                      heading: redirectView.heading,
+                                                      pitch:   redirectView.pitch,
+                                                      cameraSettings,
+                                                  })
+                        }
                     }
                     else {
                         call.recenterCameraToSample({

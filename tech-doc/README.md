@@ -50,6 +50,7 @@ Proposed work, pending validation, or future implementation work lives under `to
 - [Tracks editor](todo/TRACKSEDITOR-SPEC.md)
 - [Profile TODO](todo/PROFILE-TODO.md)
 - [Main UI TODO](todo/MAINUI-TODO.md)
+- [GitHub Actions deployment migration study](todo/CORE-GITHUB-ACTIONS-DEPLOYMENT-MIGRATION.md)
 - [Arrow widget](todo/ARROW_WIDGET_SPEC.md)
 - [Video widget](todo/VIDEO_WIDGET_SPEC.md)
 - [Oxlint TypeScript 7 migration](todo/OXLINT_TYPESCRIPT_7_MIGRATION_SPEC.md)

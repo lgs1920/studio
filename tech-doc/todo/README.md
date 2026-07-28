@@ -17,6 +17,8 @@ This directory contains proposed, pending-validation, explicitly TODO, or future
 - [Tracks editor](TRACKSEDITOR-SPEC.md)
 - [Profile TODO](PROFILE-TODO.md)
 - [Main UI TODO](MAINUI-TODO.md)
+- [Replay render mode architecture](CORE-REPLAY-RENDER-MODE-ARCHITECTURE.md)
+- [GitHub Actions deployment migration study](CORE-GITHUB-ACTIONS-DEPLOYMENT-MIGRATION.md)
 - [Brand and season swatch reactivity](BRAND_SEASON_SWATCH_REACTIVITY_SPEC.md)
 - [Arrow widget](ARROW_WIDGET_SPEC.md)
 - [Video widget](VIDEO_WIDGET_SPEC.md)

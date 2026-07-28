@@ -77,6 +77,29 @@ const PROFILE_HOVER_RENDER_INTERVAL = 120
 const METRIC_OVERLAY_TTL = 2000
 const REPLAY_HEADING_TRANSITION_DURATION_SECONDS = 2
 const SAFE_TOP_DOWN_PITCH = -(Math.PI / 2 - 0.0001)
+
+/**
+ * Clone a replay camera state before exposing it to another rendering path.
+ *
+ * @param {Object|null} cameraState - Camera state captured at replay entry.
+ * @returns {Object|null} An immutable-by-convention camera state snapshot.
+ */
+const cloneReplayCameraState = cameraState => {
+    if (!cameraState || typeof cameraState !== 'object') {
+        return null
+    }
+
+    return {
+        destination: {
+            ...cameraState.destination,
+        },
+        orientation: {
+            ...cameraState.orientation,
+        },
+        altitude: cameraState.altitude,
+    }
+}
+
 const CAMERA_GUIDE_MIN_STEPS = 512
 const CAMERA_GUIDE_MAX_STEPS = 4096
 const CAMERA_GUIDE_TARGET_SPACING_METERS = 12
@@ -204,6 +227,7 @@ export class JourneyReplaySessionController {
     #constrainedReplayCameraPath = null
     #cameraMode = null
     #cameraFlightActive = false
+    #logicalCameraTrajectory = false
     #replayExportClipFrameState = null
     #renderingReplayExportFrame = false
     #cameraBezierFrame = null
@@ -386,6 +410,13 @@ export class JourneyReplaySessionController {
             get: () => this.#cameraFlightActive,
             set: value => {
                 this.#cameraFlightActive = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'logicalCameraTrajectory', {
+            configurable: true,
+            get: () => this.#logicalCameraTrajectory,
+            set: value => {
+                this.#logicalCameraTrajectory = value === true
             },
         })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'replayExportClipFrameState', {
@@ -1068,6 +1099,24 @@ export class JourneyReplaySessionController {
 
     get clipSequenceToken() {
         return this[JOURNEY_REPLAY_INTERNAL_STATE].clipSequenceToken
+    }
+
+    /**
+     * Return the camera state shared by Draft and HQ replay rendering.
+     *
+     * @returns {Object|null} The replay-entry camera snapshot.
+     */
+    get savedCameraState() {
+        return cloneReplayCameraState(this[JOURNEY_REPLAY_INTERNAL_STATE].savedCameraState)
+    }
+
+    /**
+     * Return the camera view captured before replay rendering began.
+     *
+     * @returns {Object|null} The replay-entry camera snapshot.
+     */
+    get replayEntryCameraState() {
+        return cloneReplayCameraState(this[JOURNEY_REPLAY_INTERNAL_STATE].replayEntryCameraState)
     }
 
     #samplerConfigurationKey = ({
