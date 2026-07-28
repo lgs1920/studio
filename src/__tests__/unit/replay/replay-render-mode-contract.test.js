@@ -1,0 +1,69 @@
+import {describe, expect, it} from 'vitest'
+import {
+    createReplayRenderContext, createReplayRenderModeContract, REPLAY_RENDER_MODE_DRAFT,
+    REPLAY_RENDER_MODE_HQ,
+} from '@Core/ui/replay/ReplayRenderModeContract'
+
+describe('Replay render mode contract', () => {
+    const logicalFrame = {
+        sample:   {progress: 0.5, longitude: 2, latitude: 48},
+        progress: 0.5,
+        frameTimeMs: 500,
+    }
+    const renderSpec = {
+        fps:              30,
+        qualityIndex:     1,
+        captureMode:      'quality',
+        cropRect:         {left: 10, top: 20, width: 640, height: 360},
+        composerClip:     {x: 10, y: 20, width: 640, height: 360},
+        dimensions:       {width: 1280, height: 720},
+        outputDpr:        2,
+        nativeDimensions: {width: 1280, height: 720},
+        pixelBudget:      921600,
+    }
+
+    it('keeps visual inputs identical while isolating Draft and HQ scheduling', () => {
+        const common = {
+            logicalFrame,
+            cameraPose: {heading: 0.5, pitch: -0.75, cameraHeight: 1000},
+            trackPath: [[[2, 48, 100], [2.1, 48.1, 120]]],
+            initialCameraState: {
+                destination: {longitude: 2, latitude: 48, height: 5000},
+                orientation: {heading: 0.1, pitch: -1, roll: 0},
+            },
+            renderSpec,
+            visibleOverlayIds: ['journey-stats-widget'],
+        }
+        const draft = createReplayRenderModeContract({renderMode: REPLAY_RENDER_MODE_DRAFT, ...common})
+        const hq = createReplayRenderModeContract({renderMode: REPLAY_RENDER_MODE_HQ, ...common})
+
+        expect(draft.logicalFrame).toEqual(hq.logicalFrame)
+        expect(draft.cameraPose).toEqual(hq.cameraPose)
+        expect(draft.trackPath).toEqual(hq.trackPath)
+        expect(draft.renderSpec).toEqual(hq.renderSpec)
+        expect(draft.initialCameraState).toEqual(hq.initialCameraState)
+        expect(draft.scheduling).toEqual({realtime: true, frameByFrame: false})
+        expect(hq.scheduling).toEqual({realtime: false, frameByFrame: true})
+    })
+
+    it('invalidates a warm context when replay or render inputs change', () => {
+        const base = {
+            durationMillis: 1000,
+            direction: 1,
+            clipSignature: 'clips-a',
+            widgetSignature: 'widget-a',
+            initialCameraState: {destination: {longitude: 2, latitude: 48, height: 5000}},
+            renderSpec,
+            visibleOverlayIds: ['journey-stats-widget'],
+            recordingSync: true,
+        }
+        const context = createReplayRenderContext(base)
+
+        expect(createReplayRenderContext(base).contextKey).toBe(context.contextKey)
+        expect(createReplayRenderContext({...base, durationMillis: 2000}).contextKey).not.toBe(context.contextKey)
+        expect(createReplayRenderContext({...base, direction: -1}).contextKey).not.toBe(context.contextKey)
+        expect(createReplayRenderContext({...base, clipSignature: 'clips-b'}).contextKey).not.toBe(context.contextKey)
+        expect(createReplayRenderContext({...base, widgetSignature: 'widget-b'}).contextKey).not.toBe(context.contextKey)
+        expect(createReplayRenderContext({...base, renderSpec: {...renderSpec, outputDpr: 1}}).contextKey).not.toBe(context.contextKey)
+    })
+})
