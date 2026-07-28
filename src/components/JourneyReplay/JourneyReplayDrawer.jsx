@@ -571,6 +571,10 @@ export const JourneyReplayDrawer = memo(() => {
         }
     }, [replayState.active, replayState.paused, replayState.playing, replayState.sample, refreshJourneyReplay, stopRotateIfNeeded])
 
+    const updateDebugCamera = useCallback(event => {
+        updateCamera({debug: getChecked(event)})
+    }, [updateCamera])
+
     useEffect(() => () => {
         if (cameraUpdateSourceClearTimer.current !== null) {
             clearTimeout(cameraUpdateSourceClearTimer.current)
@@ -1354,6 +1358,17 @@ export const JourneyReplayDrawer = memo(() => {
                                                     <span slot="summary">{'Advanced camera setup'}</span>
                                                     <div className="replay-fieldset">
                                                         <WaDivider/>
+                                                        {syncWithVideo && (
+                                                            <WaSwitch
+                                                                className="replay-debug-camera-switch half-width"
+                                                                size="xs"
+                                                                label-at-start
+                                                                checked={camera.debug === true}
+                                                                onChange={updateDebugCamera}
+                                                            >
+                                                                {'Debug camera'}
+                                                            </WaSwitch>
+                                                        )}
                                                         <WaSelect appearance="filled"
                                                             label="Camera feel"
                                                             label-at-start

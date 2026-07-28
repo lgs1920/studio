@@ -112,6 +112,36 @@ import {
     resolveJourneyActivityIcon,
 } from './JourneyReplaySessionShared'
 
+/**
+ * Ensure linked replay diagnostics are visible before either Draft or HQ
+ * rendering starts.
+ *
+ * @param {object} mode - Replay mode.
+ * @returns {boolean} Whether linked replay diagnostics were enabled.
+ */
+const ensureReplayVideoDiagnosticsOverlay = mode => {
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    if (!call.isReplayVideoLinked()) {
+        return false
+    }
+
+    const replaySettings = getJourneyReplaySettings()
+    const runtimeStore = replayStore()
+    const replayCameraSettings = normalizeJourneyReplayCamera(
+        globalThis.lgs?.settings?.ui?.replay?.camera
+        ?? runtimeStore?.camera
+        ?? replaySettings.camera,
+    )
+    if (replayCameraSettings.debug !== true) {
+        call.removeToleranceZoneOverlay()
+        call.setToleranceZoneOverlayVisible(false)
+        return false
+    }
+    call.setToleranceZoneOverlayVisible(true)
+    call.updateToleranceZoneOverlay(replayCameraSettings.hysteresis)
+    return true
+}
+
 export const configure = (mode, options = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -300,6 +330,7 @@ export const start = (mode, options = {}) => {
         }
         if (videoReplayLinked) {
             call.hideMainUI()
+            ensureReplayVideoDiagnosticsOverlay(mode)
         }
 
         if (startList.length > 0) {
@@ -487,6 +518,7 @@ export const preparePlaybackSceneForExport = async (mode, {
             runtimeStore.clipSequenceActive = true
         }
         call.hideMainUI()
+        ensureReplayVideoDiagnosticsOverlay(mode)
         globalThis.lgs?.scene?.requestRender?.()
         return true
 

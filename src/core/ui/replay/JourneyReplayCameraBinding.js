@@ -219,6 +219,7 @@ export const recenterCameraToSample = (mode, {
                                             up: correctedUp,
                                         },
                                     })
+            call.refreshReplayDiagnosticsOverlay?.()
             finishFlight()
             return Promise.resolve()
         }
@@ -347,6 +348,7 @@ export const startCameraTransition = (mode, {
                             up:        endUp,
                         },
                     })
+                    call.refreshReplayDiagnosticsOverlay?.()
                     settle(true)
                     return
                 }

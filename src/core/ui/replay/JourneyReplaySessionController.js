@@ -267,6 +267,7 @@ export class JourneyReplaySessionController {
     #lastNavigationRecenterAt = null
     #lastNavigationRecenterProgress = null
     #toleranceZoneOverlayCanvas = null
+    #toleranceZoneOverlayCameraChangedRemove = null
     #lastDynamicTargetScreen = null
     #skipNextImmediateStartRecenter = false
     #toleranceZoneOverlay = null
@@ -706,6 +707,13 @@ export class JourneyReplaySessionController {
                 this.#toleranceZoneOverlayCanvas = value
             },
         })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'toleranceZoneOverlayCameraChangedRemove', {
+            configurable: true,
+            get: () => this.#toleranceZoneOverlayCameraChangedRemove,
+            set: value => {
+                this.#toleranceZoneOverlayCameraChangedRemove = value
+            },
+        })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'toleranceZoneOverlayVisible', {
             configurable: true,
             get: () => this.#toleranceZoneOverlayVisible,
@@ -1030,6 +1038,7 @@ export class JourneyReplaySessionController {
             videoCropRect: (...args) => JourneyReplayCameraController.videoCropRect(this, ...args),
             viewportRectForCesiumSurface: (...args) => JourneyReplayCameraController.viewportRectForCesiumSurface(this, ...args),
             updateToleranceZoneOverlay: (...args) => JourneyReplayCameraController.updateToleranceZoneOverlay(this, ...args),
+            refreshReplayDiagnosticsOverlay: (...args) => JourneyReplayCameraController.refreshReplayDiagnosticsOverlay(this, ...args),
             constrainedReplayProjectionViewport: (...args) => JourneyReplayCameraController.constrainedReplayProjectionViewport(this, ...args),
             constrainedReplayCameraPathKey: (...args) => JourneyReplayCameraController.constrainedReplayCameraPathKey(this, ...args),
             resolveConstrainedReplayCameraPath: (...args) => JourneyReplayCameraController.resolveConstrainedReplayCameraPath(this, ...args),

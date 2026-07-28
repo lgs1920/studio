@@ -514,17 +514,11 @@ export const applyJourneyReplayClipCameraPlan = async (mode, plan = null, {token
         })
     }
 
-export const isReplayVideoLinked = (mode) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-
-        const replay = globalThis.lgs?.stores?.replay
-        const replaySetting = globalThis.lgs?.settings?.ui?.replay?.recordingSync
-        if (replay?.recordingSync === false || replaySetting === false) {
-            return false
-        }
-        return replay?.recordingSync === true || replaySetting === true || Boolean(replay)
-    }
+export const isReplayVideoLinked = () => {
+    const replay = globalThis.lgs?.stores?.replay
+    const replaySetting = globalThis.lgs?.settings?.ui?.replay?.recordingSync
+    return replay?.recordingSync === true || replaySetting === true
+}
 
 export const renderReplayExportClipFrame = async (mode, {
                                               phase = null,
