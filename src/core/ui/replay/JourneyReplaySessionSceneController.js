@@ -452,6 +452,9 @@ export const restorePlaybackSceneInternal = (mode, ) => {
             return state.sceneRestorePromise
         }
 
+        // Clear the replay renderer before focus and visibility restoration so
+        // normal completion and premature aborts cannot leave replay graphics visible.
+        state.renderer.clear()
         state.sceneRestoreDeferred = false
         call.removeToleranceZoneOverlay()
         call.restoreOtherJourneysVisibility()

@@ -23,7 +23,6 @@ const defaultJourneyReplayStore = () => globalThis.lgs?.stores?.replay ?? null
 
 const waitForAnimationFrame = () => new Promise(resolve => {
     const requestFrame = globalThis.requestAnimationFrame
-                         ?? globalThis.window?.requestAnimationFrame?.bind(globalThis.window)
                          ?? (callback => setTimeout(callback, 0))
     requestFrame(() => resolve())
 })

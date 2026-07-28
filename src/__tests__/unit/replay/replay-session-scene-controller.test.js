@@ -178,6 +178,9 @@ describe('JourneyReplaySessionSceneController', () => {
 
         await restorePlaybackSceneInternal(mode)
 
+        expect(state.renderer.clear).toHaveBeenCalledTimes(1)
+        expect(call.restoreOtherJourneysVisibility).toHaveBeenCalledTimes(1)
+        expect(call.restoreCurrentJourneyVisibility).toHaveBeenCalled()
         expect(call.focusJourneyAfterPlayback).toHaveBeenCalledTimes(1)
         expect(call.restoreCameraState).toHaveBeenCalledTimes(1)
         expect(state.savedCameraState).toBeNull()

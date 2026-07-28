@@ -369,6 +369,8 @@ The practical rule is:
 
 - Draft FPS is a performance ceiling
 - HQ FPS is a quality / export setting
+- Camera lookahead uses the actual output-frame interval when available; if it
+  is missing, Draft falls back to 15 FPS and HQ falls back to 60 FPS.
 
 ## Acceptance criteria
 
