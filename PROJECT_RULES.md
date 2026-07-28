@@ -61,6 +61,7 @@ This is the canonical source for the project's AI-agent and development rules.
 
 ## 6. Issue Creation Workflow
 
+- **Clarification and validation:** Before creating an issue, ask the user for any missing explanations or clarifications needed to understand and scope the request. Then present the complete proposed issue content for explicit user validation. Do not create the issue until the user has validated the proposal.
 - **Complete fields:** Every created issue must have all available fields filled in, including title, description, assignee, labels, type, milestone, backlog, and any other fields required by the issue tracker.
 - **Assignee:** Assign the issue to the user requesting its creation unless the user explicitly specifies another assignee.
 - **Milestone and backlog:** When the user does not specify a backlog, use `Backlog`. When the user does not specify a milestone, use the latest available milestone. The user will update these values afterward if needed.

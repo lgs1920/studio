@@ -1,5 +1,10 @@
 # Commit History
 
+## 2026-07-28 — [`docs: require issue draft validation`](https://github.com/lgs1920/studio/commit/03ce0f44)
+
+- Require clarification of missing issue details before drafting an issue.
+- Require explicit user validation of the complete issue content before creation.
+
 ## 2026-07-28 — [`docs: update project rules`](https://github.com/lgs1920/studio/commit/f8b303ce)
 
 - Require project documentation and issue content to be written in English.
