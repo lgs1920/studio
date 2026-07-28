@@ -1,5 +1,10 @@
 # Commit History
 
+## 2026-07-28 — [`fix: align test setup and profile metrics`](https://github.com/lgs1920/studio/commit/0339f1d4624969122f7ec165b48cc5d92399f653)
+
+- Restrict Vitest discovery to actual test files and support Markdown imports and adopted style sheets in jsdom.
+- Align POI editor, track visibility, profile metrics, and elevation profile test coverage with the current implementation.
+
 ## 2026-07-28 — [`fix: replay video debug overlays`](https://github.com/lgs1920/studio/commit/3c51b4035e3b8709f211796e19b999722126877f)
 
 - Add a Debug camera switch to the Advanced camera setup for video-linked replay.
