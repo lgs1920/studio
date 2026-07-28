@@ -64,6 +64,7 @@ import {
 } from '@Core/ui/replay/JourneyReplayCameraState'
 import {
     resetCameraInterpolationState,
+    cameraViewWithRedirectState,
     cameraViewVisibilityForSample,
     cameraLookaheadSample,
 } from '@Core/ui/replay/JourneyReplayCameraVisibility'
@@ -119,6 +120,10 @@ const makeMode = () => {
             safeHeading: 0,
             safePitch:   -1,
         })),
+        cameraRedirectPitchLimits: vi.fn(() => ({
+            min: -Math.PI / 2,
+            max: -0.08726646259971647,
+        })),
         cameraLineOfSightVisibleForFrame: vi.fn(() => true),
         cancelCameraBezierTransition: vi.fn(() => null),
         removeToleranceZoneOverlay: vi.fn(() => null),
@@ -159,6 +164,24 @@ const makeJourney = () => ({
 describe('Journey replay camera paths', () => {
     afterEach(() => {
         vi.unstubAllGlobals()
+    })
+
+    it('applies a temporary pitch correction for an automatic redirect', () => {
+        const {mode, call} = makeMode()
+        const nominalView = {
+            heading: 0.25,
+            pitch:   -0.75,
+            roll:    0,
+        }
+
+        const redirectedView = cameraViewWithRedirectState(mode, nominalView, {
+            headingOffset: 0.4,
+            pitchOffset:   -0.3,
+        })
+
+        expect(redirectedView.heading).toBeCloseTo(0.65)
+        expect(redirectedView.pitch).toBeCloseTo(-1.05)
+        expect(call.cameraRedirectPitchLimits).toHaveBeenCalledOnce()
     })
 
     it('selects a transfer mode from the configured threshold', () => {
@@ -567,7 +590,7 @@ describe('Journey replay camera paths', () => {
         }))
     })
 
-    it('releases the redirect state once the nominal current view is visible again', () => {
+    it('releases the redirect state when current visibility returns despite predicted collision', () => {
         vi.stubGlobal('lgs', {
             viewer: {},
             theJourney: makeJourney(),
@@ -644,7 +667,9 @@ describe('Journey replay camera paths', () => {
             altitude:          120,
             height:            120,
         }))
-        call.cameraCollisionForSample = vi.fn(() => ({hard: false}))
+        call.cameraCollisionForSample = vi.fn(() => ({
+            hard: call.cameraCollisionForSample.mock.calls.length === 2,
+        }))
         call.renderedTraceVisibleForSample = vi.fn(() => true)
         call.cameraViewVisibilityForSample = vi.fn(({futureSample}) => !futureSample)
         call.cameraViewWithRedirectState = vi.fn(view => view)
@@ -666,6 +691,79 @@ describe('Journey replay camera paths', () => {
             payload.futureSample === null ? 'current' : 'future'
         ))
         expect(visibilityModes).toEqual(expect.arrayContaining(['current', 'future']))
+    })
+
+    it('resets the HQ follower before restoring the nominal pitch', () => {
+        vi.stubGlobal('lgs', {
+            settings: {
+                ui: {
+                    replay: {
+                        camera: {
+                            positionMode: 'system',
+                            heading:      0,
+                            pitch:        -45,
+                            altitude:     1000,
+                            hysteresis:   {easing: 0.18},
+                        },
+                        marker: {mode: REPLAY_MARKER_MODE_HYSTERESIS},
+                    },
+                },
+            },
+            stores: {
+                replay: {
+                    camera: {positionMode: 'system', heading: 0, pitch: -45, altitude: 1000},
+                    captureFps: 60,
+                },
+            },
+            viewer: {camera: {}},
+        })
+
+        const {mode, state, call} = makeMode()
+        state.cameraMode = REPLAY_MARKER_MODE_HYSTERESIS
+        state.cameraRedirectState = {
+            headingOffset: 0.25,
+            pitchOffset:   -0.2,
+        }
+        state.lastAppliedCameraView = {pitch: -1}
+        state.deterministicCameraFollowerActive = true
+        state.deterministicCameraFollowerAt = 100
+        state.deterministicCameraFollowerVelocity = {
+            destination: new Cartesian3(1, 0, 0),
+            direction:   new Cartesian3(0, 1, 0),
+            up:          new Cartesian3(0, 0, 1),
+        }
+        const sample = {
+            progress:          0.5,
+            distanceFromStart: 100,
+            longitude:         1,
+            latitude:          2,
+            altitude:          120,
+            height:            120,
+        }
+        call.cameraLookaheadSample = vi.fn(() => ({...sample, progress: 0.6, distanceFromStart: 120}))
+        call.cameraCollisionForSample = vi.fn(() => ({hard: false}))
+        call.cameraViewVisibilityForSample = vi.fn(({futureSample}) => !futureSample)
+        call.renderedTraceVisibleForSample = vi.fn(() => true)
+        call.recenterCameraToSample = vi.fn()
+        call.rememberNominalCameraView = vi.fn()
+
+        updateCamera(mode, {
+            sample,
+            progress:     sample.progress,
+            source:       'playback',
+            exportMode:   true,
+            logicalCamera: true,
+        })
+
+        expect(call.applyDeterministicCameraFollower).not.toHaveBeenCalled()
+        expect(call.recenterCameraToSample).toHaveBeenCalledWith(expect.objectContaining({
+            pitch:         expect.closeTo(-Math.PI / 4),
+            deterministic: true,
+            instant:       true,
+        }))
+        expect(state.deterministicCameraFollowerActive).toBe(false)
+        expect(state.deterministicCameraFollowerAt).toBeNull()
+        expect(state.deterministicCameraFollowerVelocity).toBeNull()
     })
 
     it('restores a temporary navigation pitch as soon as the marker is back in the safe zone', () => {

@@ -775,12 +775,19 @@ export const updateCamera = (mode, {
         const smoothHeading = nominalView.heading
         const smoothPitch = nominalView.pitch
 
+        const resetDeterministicCameraFollower = () => {
+            state.deterministicCameraFollowerAt = null
+            state.deterministicCameraFollowerActive = false
+            state.deterministicCameraFollowerVelocity = null
+        }
+
         const applyLogicalCameraPose = view => {
             if (!deterministicCamera || !view) {
                 return false
             }
 
             call.cancelCameraBezierTransition(false)
+            resetDeterministicCameraFollower()
             call.recenterCameraToSample({
                                          sample:         view.sample,
                                          heading:        view.heading,
@@ -878,6 +885,7 @@ export const updateCamera = (mode, {
         const futureSample = typeof call.cameraLookaheadSample === 'function'
                             ? call.cameraLookaheadSample(anchorSample, {lookaheadSeconds})
                             : null
+        const predictiveVisibilitySample = exportMode ? null : futureSample
         traceUpdateStep('camera-lookahead.end', {
             hasFutureSample: Boolean(futureSample),
         })
@@ -1228,17 +1236,16 @@ export const updateCamera = (mode, {
                                                                                   markerSettings,
                                                                                   cache: updateCache,
                                                                               })
-            const nominalPredictedVisible = futureSample
+            const nominalPredictedVisible = predictiveVisibilitySample
                                             ? call.cameraViewVisibilityForSample({
                                                                                       nominalView,
-                                                                                      futureSample,
+                                                                                      futureSample: predictiveVisibilitySample,
                                                                                       source,
                                                                                       cameraSettings,
                                                                                       markerSettings,
                                                                                       cache: updateCache,
                                                                                   })
                                             : nominalCurrentVisible
-            const nominalVisible = nominalCurrentVisible && nominalPredictedVisible
             const redirectedCurrentVisible = state.cameraRedirectState
                                              ? call.cameraViewVisibilityForSample({
                                                                                        nominalView,
@@ -1250,24 +1257,42 @@ export const updateCamera = (mode, {
                                                                                        cache: updateCache,
                                                                                    })
                                              : false
+            // Draft can use the future sample to prepare a heading/position
+            // redirect. HQ stays on the current marker for visibility so a
+            // predicted frame cannot accumulate a pitch correction.
             const redirectedVisible = state.cameraRedirectState
                                       ? call.cameraViewVisibilityForSample({
                                                                                 nominalView,
                                                                                 redirectState: state.cameraRedirectState,
-                                                                                futureSample,
+                                                                                futureSample: predictiveVisibilitySample,
                                                                                 source,
                                                                                 cameraSettings,
                                                                                 markerSettings,
                                                                                 cache: updateCache,
                                                                             })
-                                      : false
+                                      : redirectedCurrentVisible
             const renderedVisible = call.renderedTraceVisibleForSample(anchorSample, updateCache)
             traceUpdateStep('hysteresis.visibility.end', {
                 renderedVisible,
-                nominalVisible,
+                nominalVisible: nominalCurrentVisible && nominalPredictedVisible,
                 redirectedVisible,
             })
             const renderedOccluded = renderedVisible === false
+            const nominalPitchCanReturn = nominalCurrentVisible && !renderedOccluded
+            const canReleaseCameraRedirect = Boolean(
+                state.cameraRedirectState
+                && nominalPitchCanReturn
+                && (!predictiveVisibilitySample || nominalPredictedVisible),
+            )
+            if (canReleaseCameraRedirect && deterministicCamera) {
+                state.cameraRedirectState = null
+                // HQ must return to the exact nominal frame instead of
+                // carrying the previous redirect velocity into the pitch.
+                applyLogicalCameraPose(nominalView)
+                state.lastCameraHeading = smoothHeading
+                state.lastCameraPitch = smoothPitch
+                return
+            }
             // Dynamic tracking is governed by Z1. Visibility corrections inside
             // Z1 were causing a new flight to be issued on almost every update,
             // especially in Draft where depth is noisier than in HQ export.
@@ -1309,35 +1334,18 @@ export const updateCamera = (mode, {
             if (!outsideTolerance && !targetCorrectionDue && !forceToleranceRecenter && !immediateToleranceRecenter) {
                 state.lastToleranceRecenterProgress = null
                 if (!needsVisibilityCorrection) {
-                    if (state.cameraRedirectState && nominalCurrentVisible) {
-                        // Release the redirect as soon as the nominal view is
-                        // visible again so the pitch can recover to nominal.
+                    if (state.cameraRedirectState && nominalPitchCanReturn) {
                         state.cameraRedirectState = null
-                        if (deterministicCamera) {
-                            const frame = call.cameraRecenterFrame({
-                                sample:         anchorSample,
-                                heading:        nominalView.heading,
-                                pitch:          nominalView.pitch,
-                                cameraSettings,
-                            })
-                            state.deterministicCameraFollowerActive = true
-                            call.applyDeterministicCameraFollower({
-                                endFrame:       frame,
-                                logicalNow,
-                            })
-                        }
-                        else {
-                            call.recenterCameraToSample({
-                                                             sample:   anchorSample,
-                                                             heading:  nominalView.heading,
-                                                             pitch:    nominalView.pitch,
-                                                             cameraSettings,
-                                                             duration: CAMERA_REDIRECT_MAX_TRANSITION_SECONDS,
-                                                             deterministic: deterministicCamera,
-                                                             logicalNow,
-                                                             trackingMode: marker.mode,
-                                                         })
-                        }
+                        call.recenterCameraToSample({
+                                                         sample:   anchorSample,
+                                                         heading:  nominalView.heading,
+                                                         pitch:    nominalView.pitch,
+                                                         cameraSettings,
+                                                         duration: CAMERA_REDIRECT_MAX_TRANSITION_SECONDS,
+                                                         deterministic: false,
+                                                         logicalNow,
+                                                         trackingMode: marker.mode,
+                                                     })
                     }
                     else if (nominalPitchNeedsRestore()) {
                         restoreNominalCameraPose()
@@ -1355,12 +1363,17 @@ export const updateCamera = (mode, {
                     redirectedVisible,
                 })
                 let redirectView = redirectedVisible && state.cameraRedirectState
-                                   ? call.cameraViewWithRedirectState(nominalView, state.cameraRedirectState)
+                                   ? call.cameraViewWithRedirectState(
+                                       nominalView,
+                                       nominalPitchCanReturn
+                                           ? {...state.cameraRedirectState, pitchOffset: 0}
+                                           : state.cameraRedirectState,
+                                   )
                                    : null
                 if (!redirectView) {
                     state.cameraRedirectState = call.findCameraRedirectState({
                                                                                   nominalView,
-                                                                                  futureSample,
+                                                                                  futureSample: predictiveVisibilitySample,
                                                                                   source,
                                                                                   cameraSettings,
                                                                                   markerSettings,
@@ -1376,7 +1389,12 @@ export const updateCamera = (mode, {
                                                                                                                       cache: updateCache,
                                                                                                                   })
                     redirectView = state.cameraRedirectState
-                                   ? call.cameraViewWithRedirectState(nominalView, state.cameraRedirectState)
+                                   ? call.cameraViewWithRedirectState(
+                                       nominalView,
+                                       nominalPitchCanReturn
+                                           ? {...state.cameraRedirectState, pitchOffset: 0}
+                                           : state.cameraRedirectState,
+                                   )
                                    : null
                 }
                 traceUpdateStep('hysteresis.redirect-search.end', {
@@ -1432,13 +1450,18 @@ export const updateCamera = (mode, {
                 let nextRedirectState = canUseNominalView ? null : state.cameraRedirectState
 
                 if (!targetView && redirectedVisible && state.cameraRedirectState) {
-                    targetView = call.cameraViewWithRedirectState(nominalView, state.cameraRedirectState)
+                    targetView = call.cameraViewWithRedirectState(
+                        nominalView,
+                        nominalPitchCanReturn
+                            ? {...state.cameraRedirectState, pitchOffset: 0}
+                            : state.cameraRedirectState,
+                    )
                 }
 
                 if (!targetView) {
                     nextRedirectState = call.findCameraRedirectState({
                                                                           nominalView,
-                                                                          futureSample,
+                                                                          futureSample: predictiveVisibilitySample,
                                                                           source,
                                                                           cameraSettings,
                                                                           markerSettings,
@@ -1454,7 +1477,12 @@ export const updateCamera = (mode, {
                                                                                                               cache: updateCache,
                                                                                                           })
                     if (nextRedirectState) {
-                        targetView = call.cameraViewWithRedirectState(nominalView, nextRedirectState)
+                        targetView = call.cameraViewWithRedirectState(
+                            nominalView,
+                            nominalPitchCanReturn
+                                ? {...nextRedirectState, pitchOffset: 0}
+                                : nextRedirectState,
+                        )
                     }
                 }
 

@@ -189,6 +189,13 @@ After the recenter duration has elapsed, an additional correction is allowed
 if `outsideTargetZone` is still true. This catches cases where a steep camera
 angle lets the marker continue toward the crop edge during the transition.
 
+The future sample is used for Z1/Z2 positioning. Draft may also use it to
+prepare a heading/position visibility redirect, but its pitch offset is removed
+when the current nominal view is already visible. HQ uses the current marker
+for visibility redirects. When the nominal current view is visible again, the
+redirect is cleared and the nominal pitch is restored at the next camera
+update.
+
 ### 4.5 Predictive Z2 target point
 
 When a dynamic correction is required, the target point is selected inside Z2:

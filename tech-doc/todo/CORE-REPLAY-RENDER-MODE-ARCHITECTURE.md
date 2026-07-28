@@ -84,15 +84,24 @@ The replay may temporarily use another pitch only in these cases:
 
 Navigation uses Z1 only; it has no Z2 landing zone. Leaving Navigation Z1
 triggers the recenter, which may change the camera position and heading, but
-must use the current nominal pitch unless a temporary visibility correction is
-active. Dynamic mode is the only mode with a separate Z2 landing zone.
+must use the current nominal pitch. Dynamic mode is the only mode with a
+separate Z2 landing zone.
+
+Future prediction remains active for Z1/Z2 positioning and target selection.
+Draft may also use it to prepare a heading/position visibility redirect, but it
+must not add pitch while the current nominal view is already visible. HQ uses
+the current marker for visibility redirects. As soon as the current nominal
+view is visible again and the marker is not rendered behind relief, the
+redirect is cleared and the nominal pitch is restored. Explicit clip poses,
+user interaction, camera settings, and logical replay changes may still change
+the pitch.
 
 As soon as the user interaction has ended and the active collision or
 visibility correction no longer requires a redirect, the controller must clear
-the temporary offset and restore the nominal pitch for the current logical
-frame. Draft may use the shortest bounded camera transition; HQ applies the
-same logical pose at the current export timestamp. Neither mode waits for a
-bulk path compilation or a wall-clock flight callback before restoring it.
+the temporary offset and keep the nominal pitch for the current logical frame.
+Draft may use the shortest bounded camera transition; HQ applies the same
+logical pose at the current export timestamp. Neither mode waits for a bulk
+path compilation or a wall-clock flight callback before restoring it.
 
 ## Mode matrix
 
@@ -148,11 +157,10 @@ The current implementation addresses the core correction scope:
   bypassed by the shared render path. The nominal pose is applied only at
   logical camera initialization or after a correction; stable frames do not
   recenter the marker and therefore preserve Z1/Z2 tracking behavior.
-- Pitch changes are bounded to explicit start/stop poses, active user camera
-  interaction, or temporary dynamic visibility/collision redirects. Once the
-  marker is back inside Navigation Z1, or inside Dynamic Z2 with a visible
-  nominal view, the redirect is cleared and the current logical nominal pitch
-  is restored without waiting for path compilation.
+- Automatic relief/visibility redirects may change the pitch only while the
+  current marker is hidden. A Draft future sample may prepare heading/position
+  correction, but its pitch offset is removed when the current nominal view is
+  visible. HQ clears the redirect and restores the nominal pitch directly.
 - No complete constrained camera path is compiled synchronously at Draft
   startup or during HQ preparation. Both modes continue from their logical
   frame pipeline without waiting for bulk path compilation.
