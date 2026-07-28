@@ -628,6 +628,9 @@ describe('Journey replay camera paths', () => {
             headingOffset: 0.25,
             pitchOffset:   -0.2,
         }
+        state.lastAppliedCameraView = {
+            pitch: nominalView.pitch - 0.2,
+        }
         call.viewportRectForCesiumSurface = vi.fn(() => ({
             width:  1920,
             height: 1080,
@@ -656,10 +659,73 @@ describe('Journey replay camera paths', () => {
         })
         expect(call.resolveConstrainedReplayCameraPath).not.toHaveBeenCalled()
         expect(state.cameraRedirectState).toBeNull()
+        expect(call.recenterCameraToSample).toHaveBeenCalledWith(expect.objectContaining({
+            pitch: nominalView.pitch,
+        }))
         const visibilityModes = call.cameraViewVisibilityForSample.mock.calls.map(([payload]) => (
             payload.futureSample === null ? 'current' : 'future'
         ))
         expect(visibilityModes).toEqual(expect.arrayContaining(['current', 'future']))
+    })
+
+    it('restores a temporary navigation pitch as soon as the marker is back in the safe zone', () => {
+        vi.stubGlobal('lgs', {
+            settings: {
+                ui: {
+                    replay: {
+                        camera: {
+                            positionMode: 'system',
+                            heading:      0,
+                            pitch:        -45,
+                            altitude:     1000,
+                            hysteresis:   {easing: 0.18},
+                        },
+                        marker: {mode: REPLAY_MARKER_MODE_NAVIGATION},
+                    },
+                },
+            },
+            stores: {
+                replay: {
+                    camera: {positionMode: 'system', heading: 0, pitch: -45, altitude: 1000},
+                },
+            },
+            viewer: {camera: {}},
+        })
+
+        const {mode, state, call} = makeMode()
+        const sample = {
+            progress:          0.5,
+            distanceFromStart: 100,
+            longitude:         1,
+            latitude:          2,
+            altitude:          120,
+            height:            120,
+        }
+        const nominalView = {
+            sample,
+            heading:      0.35,
+            pitch:        -0.5,
+            cameraHeight: 800,
+        }
+        state.lastAppliedCameraView = {
+            pitch: -0.9,
+        }
+        call.cameraViewForSample = vi.fn(() => nominalView)
+        call.cameraCollisionForSample = vi.fn(() => ({hard: false}))
+        call.recenterCameraToSample = vi.fn()
+        call.rememberNominalCameraView = vi.fn()
+
+        updateCamera(mode, {
+            sample,
+            progress: sample.progress,
+            source:   'playback',
+        })
+
+        expect(call.recenterCameraToSample).toHaveBeenCalledWith(expect.objectContaining({
+            heading: nominalView.heading,
+            pitch:   nominalView.pitch,
+            force:   true,
+        }))
     })
 
     it('applies the logical camera pose without asking Cesium to build a path', () => {

@@ -801,12 +801,64 @@ export const updateCamera = (mode, {
             return true
         }
 
+        /**
+         * Check whether the applied camera still carries a temporary pitch
+         * different from the nominal logical replay pose.
+         *
+         * @returns {boolean} Whether the nominal pitch must be restored.
+         */
+        const nominalPitchNeedsRestore = () => {
+            const appliedPitch = finiteNumber(state.lastAppliedCameraView?.pitch)
+            const targetPitch = finiteNumber(smoothPitch)
+            if (appliedPitch === null || targetPitch === null) {
+                return false
+            }
+
+            return Math.abs(replayAngularDelta(appliedPitch, targetPitch) ?? 0) > CAMERA_VIEW_ANGLE_EPSILON_RADIANS
+        }
+
+        /**
+         * Return the camera to the nominal logical pose without waiting for a
+         * bulk constrained-path compilation.
+         *
+         * @param {object} [options] - Restore options.
+         * @param {number} [options.duration] - Draft transition duration.
+         * @returns {boolean} Whether a restore was scheduled or applied.
+         */
+        const restoreNominalCameraPose = ({duration = CAMERA_REDIRECT_MAX_TRANSITION_SECONDS} = {}) => {
+            if (!nominalPitchNeedsRestore()) {
+                return false
+            }
+
+            if (deterministicCamera) {
+                return applyLogicalCameraPose(nominalView)
+            }
+
+            call.recenterCameraToSample({
+                                         sample:   anchorSample,
+                                         heading:  smoothHeading,
+                                         pitch:    smoothPitch,
+                                         cameraSettings,
+                                         duration,
+                                         deterministic: false,
+                                         logicalNow,
+                                         force: true,
+                                         trackingMode: marker.mode,
+                                     })
+            state.lastCameraHeading = smoothHeading
+            state.lastCameraPitch = smoothPitch
+            return true
+        }
+
         const collisionTrackingMode = marker.mode === REPLAY_MARKER_MODE_NAVIGATION
                                       || marker.mode === REPLAY_MARKER_MODE_HYSTERESIS
         if (deterministicCamera
             && collisionTrackingMode
             && typeof call.cameraCollisionForSample !== 'function') {
-            if (!state.lastAppliedCameraView) {
+            if (nominalPitchNeedsRestore()) {
+                restoreNominalCameraPose()
+            }
+            else if (!state.lastAppliedCameraView) {
                 applyLogicalCameraPose(nominalView)
             }
             return
@@ -1065,7 +1117,10 @@ export const updateCamera = (mode, {
                 state.lastNavigationRecenterAt = now
             }
             else {
-                if (!state.lastAppliedCameraView) {
+                if (nominalPitchNeedsRestore()) {
+                    restoreNominalCameraPose()
+                }
+                else if (!state.lastAppliedCameraView) {
                     applyLogicalCameraPose(nominalView)
                 }
             }
@@ -1283,6 +1338,9 @@ export const updateCamera = (mode, {
                                                              trackingMode: marker.mode,
                                                          })
                         }
+                    }
+                    else if (nominalPitchNeedsRestore()) {
+                        restoreNominalCameraPose()
                     }
                     else if (deterministicCamera && !state.lastAppliedCameraView) {
                         applyLogicalCameraPose(nominalView)
