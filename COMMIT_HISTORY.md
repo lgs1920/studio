@@ -1,5 +1,10 @@
 # Commit History
 
+## 2026-07-28 — [`fix: replay video debug overlays`](https://github.com/lgs1920/studio/commit/3c51b4035e3b8709f211796e19b999722126877f)
+
+- Add a Debug camera switch to the Advanced camera setup for video-linked replay.
+- Keep replay camera diagnostics visible on screen and in the composed video when enabled.
+
 ## 2026-07-28 — [`docs: clarify project issue and rules workflow`](https://github.com/lgs1920/studio/commit/7f91689356c7e7f1d28ac9341c40de226983e468)
 
 - Clarify the English-only rule for documentation and issue content.
