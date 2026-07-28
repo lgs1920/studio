@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-07-28 — [`fix(replay): stop predictive pitch accumulation`](https://github.com/lgs1920/studio/commit/8d243946)
+
+- Keep Draft lookahead available for heading and position corrections without applying predictive pitch when the current view is already visible.
+- Make HQ use the current visibility state, reset deterministic follower velocity, and restore the exact nominal pitch.
+- Add camera regression coverage and document the Draft/HQ predictive pitch contract.
+
 ## 2026-07-28 — [`fix(replay): depth-test the replay marker against relief`](https://github.com/lgs1920/studio/commit/fc6e7b4d)
 
 - Keep the replay marker depth-tested so terrain relief and 3D tiles can occlude it.
