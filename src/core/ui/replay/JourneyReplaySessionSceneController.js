@@ -468,11 +468,32 @@ export const restorePlaybackSceneInternal = (mode, ) => {
         call.restoreCurrentJourneyVisibility({restorePOIs: false})
         call.resetCameraController({preserveSavedCameraState: true})
         state.suppressPlaybackCameraSync = true
+        const restoreClipSequenceToken = state.clipSequenceToken
         let restorePromise
         restorePromise = call.focusJourneyAfterPlayback({
             snapDistance: 50000,
         }).finally(() => {
             if (state.sceneRestorePromise !== restorePromise) {
+                // A cancelled restoration may finish its Cesium focus flight later.
+                // Reapply the current replay pose so stale focus cannot move the active replay.
+                const replayActive = state.controller?.running === true
+                                   || state.controller?.playing === true
+                                   || state.controller?.paused === true
+                const sample = replayActive
+                             ? currentJourneyReplaySample(state.controller)
+                             : null
+                if (restoreClipSequenceToken !== state.clipSequenceToken
+                    && replayActive
+                    && sample
+                    && typeof call.updateCamera === 'function') {
+                    call.updateCamera({
+                        sample,
+                        progress:      finiteNumber(state.controller?.progress ?? sample.progress) ?? 0,
+                        source:        'playback',
+                        logicalCamera: state.logicalCameraTrajectory === true,
+                        exportMode:    state.replayExportCameraActive === true,
+                    })
+                }
                 return
             }
             state.deferPlaybackCameraRestore = false

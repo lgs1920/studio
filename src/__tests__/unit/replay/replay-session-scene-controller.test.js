@@ -177,4 +177,72 @@ describe('JourneyReplaySessionSceneController', () => {
         expect(state.savedCameraState).toBeNull()
         expect(state.replayEntryCameraState).toBeNull()
     })
+
+    it('reapplies the active replay camera when an obsolete focus settles late', async () => {
+        let resolveFocus
+        const focusPromise = new Promise(resolve => {
+            resolveFocus = resolve
+        })
+        const state = {
+            clipSequenceToken: 2,
+            controller: {
+                running:       true,
+                playing:       true,
+                paused:        false,
+                progress:      0.4,
+                currentSample: () => ({progress: 0.4, longitude: 2, latitude: 48}),
+            },
+            renderer: {
+                clear: vi.fn(),
+            },
+            sceneRestoreDeferred: true,
+            sceneRestorePromise: null,
+            deferPlaybackCameraRestore: true,
+            cameraStateRestoredBeforeSceneCleanup: false,
+            logicalCameraTrajectory: true,
+            replayExportCameraActive: true,
+            savedCameraState: {destination: {}, orientation: {}},
+            replayEntryCameraState: {destination: {}, orientation: {}},
+        }
+        const call = {
+            removeToleranceZoneOverlay:     vi.fn(),
+            restoreOtherJourneysVisibility: vi.fn(),
+            restoreCurrentJourneyVisibility: vi.fn(),
+            setJourneyReplayOrbitAllowed:   vi.fn(),
+            setToleranceZoneOverlayVisible: vi.fn(),
+            restoreJourneyToolbarVisibility: vi.fn(),
+            restoreJourneyReplayDrawerAfterPlayback: vi.fn(),
+            restoreMainUI:                  vi.fn(),
+            restoreNearbyPOIsAfterPlayback: vi.fn(() => Promise.resolve()),
+            resetCameraController:          vi.fn(),
+            focusJourneyAfterPlayback:     vi.fn(() => focusPromise),
+            restoreCameraState:             vi.fn(),
+            restorePlaybackCameraSettings: vi.fn(),
+            updateCamera:                  vi.fn(),
+        }
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_CALL]:  call,
+            [JOURNEY_REPLAY_INTERNAL_STATE]: state,
+        }
+        globalThis.lgs = {
+            stores: {
+                replay: {
+                    active: true,
+                },
+            },
+        }
+
+        const restorePromise = restorePlaybackSceneInternal(mode)
+        state.sceneRestorePromise = null
+        state.clipSequenceToken++
+        resolveFocus()
+        await restorePromise
+
+        expect(call.updateCamera).toHaveBeenCalledWith(expect.objectContaining({
+            progress:      0.4,
+            logicalCamera: true,
+            exportMode:    true,
+        }))
+        expect(call.restoreCameraState).not.toHaveBeenCalled()
+    })
 })
