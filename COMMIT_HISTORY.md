@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-07-28 — [`fix(replay): restore nominal pitch after temporary camera corrections`](https://github.com/lgs1920/studio/commit/6f64303f)
+
+- Restore the logical nominal pitch after temporary navigation or Dynamic camera corrections.
+- Document the distinct Navigation Z1 and Dynamic Z1/Z2 pitch rules.
+- Add regression coverage for pitch restoration without bulk camera-path compilation.
+
 ## 2026-07-28 — [`fix(replay): align render contract consumers points 5-7`](https://github.com/lgs1920/studio/commit/02f21f5d)
 
 - Make Draft and HQ consume the same logical replay render contract.
