@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-07-28 — [`docs: update project rules`](https://github.com/lgs1920/studio/commit/f8b303ce)
+
+- Require project documentation and issue content to be written in English.
+- Define `Backlog` and the latest available milestone as defaults when issue values are not specified.
+- Require every `PROJECT_RULES.md` change to use a dedicated commit, pull request, and merge into `main`.
+
 ## 2026-07-26 — [`fix: preserve replay camera pitch through corrections`](https://github.com/lgs1920/studio/commit/e06a6451)
 
 - Keep the nominal replay pitch when corrections rebuild camera frames.
