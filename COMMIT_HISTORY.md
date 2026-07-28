@@ -1,5 +1,39 @@
 # Commit History
 
+## 2026-07-28 — [`docs: clarify project issue and rules workflow`](https://github.com/lgs1920/studio/commit/7f91689356c7e7f1d28ac9341c40de226983e468)
+
+- Clarify the English-only rule for documentation and issue content.
+- Define validation and default backlog/milestone behavior for issue creation.
+- Require project-rules changes to remain isolated in a dedicated change set.
+
+## 2026-07-28 — [`docs: add GitHub Actions deployment migration study`](https://github.com/lgs1920/studio/commit/c7b1c7b4e638aaefe9965209a0468ad77216af66)
+
+- Analyze staged migration strategies for Studio deployment through GitHub Actions.
+- Define security, release, rollback, validation, and environment requirements.
+- Keep deployment concerns separate from the Draft/HQ replay render-mode contract.
+
+## 2026-07-28 — [`test(ui): align video download dialog assertions`](https://github.com/lgs1920/studio/commit/f948ac3a93fd983d1f9c90ad50a676d66ca7dd3b)
+
+- Wait for the HQ download action to become available before asserting the dialog state.
+- Align the draft download assertion with the current button label.
+
+## 2026-07-28 — [`fix(ui): preserve cropper pointer pass-through`](https://github.com/lgs1920/studio/commit/29c01aa6f3db62cfc896ab3664ef4cd97c379952)
+
+- Keep the cropper shell and crop overlay transparent to pointer events.
+- Block input around the crop window while leaving the crop window available to Cesium.
+- Cover the pass-through behavior and capture-lock interaction with UI tests.
+
+## 2026-07-28 — [`test(replay): cover logical render contracts`](https://github.com/lgs1920/studio/commit/b84cfb2e13a35d848e3802b00d6b60907ff4c4e7)
+
+- Add unit coverage for logical camera poses, frames, clips, and track paths.
+- Verify that Draft and HQ share visual inputs while using distinct scheduling policies.
+
+## 2026-07-28 — [`fix(replay): complete camera state and render mode fixes (#410 #427)`](https://github.com/lgs1920/studio/commit/99f724fa3b67a361c98ba3517feeb5d08c86d806)
+
+- Complete replay camera state restoration and shared Draft/HQ render-mode contracts.
+- Add replay integration and unit coverage for camera paths, scene state, export, and playback.
+- Document the replay render-mode architecture and camera tracking-zone behavior.
+
 ## 2026-07-27 — [`docs(replay): document camera update tracing and cache`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
 
 - Document the replay camera update cache and the finer-grained update-step tracing.
