@@ -430,6 +430,12 @@ export class JourneyReplayPlaybackController {
         store.liveSample = sample
         store.dynamicStatsTick = frameNow
         store.replayFramePhase = phase
+        const deferredRenderContract = store.deferredExportPlan?.renderContract
+                                      ?? store.deferredExportPlan?.runtime?.context?.renderContract
+                                      ?? null
+        const initialCameraState = globalThis.__?.ui?.replay?.savedCameraState
+                                   ?? deferredRenderContract?.initialCameraState
+                                   ?? null
         store.dynamicFrameState = buildReplayFrameState({
             active:          this.#running || this.#paused,
             playing:         this.#running && !this.#paused,
@@ -450,9 +456,14 @@ export class JourneyReplayPlaybackController {
             source:          'controller',
             updatedAt:       frameNow,
             renderMode:      'draft',
-            initialCameraState: globalThis.__?.ui?.replay?.savedCameraState ?? null,
-            renderSpec:      store.deferredExportPlan?.renderSpec ?? null,
-            visibleOverlayIds: store.deferredExportPlan?.runtime?.context?.visibleOverlayIds ?? [],
+            trackPath:       deferredRenderContract?.trackPath ?? null,
+            initialCameraState,
+            renderSpec:      deferredRenderContract?.renderSpec
+                             ?? store.deferredExportPlan?.renderSpec
+                             ?? null,
+            visibleOverlayIds: deferredRenderContract?.visibleOverlayIds
+                               ?? store.deferredExportPlan?.runtime?.context?.visibleOverlayIds
+                               ?? [],
         })
 
         const now = this.#now()

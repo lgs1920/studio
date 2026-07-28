@@ -140,4 +140,53 @@ describe('getReplayVideoOverlayMetrics', () => {
             }),
         )
     })
+
+    it('uses the shared visibility resolver unless an explicit bypass is requested', () => {
+        const widgetEl = document.createElement('div')
+        widgetEl.dataset.videoOverlayVisible = 'false'
+        const widgetCanvas = document.createElement('canvas')
+        widgetCanvas.className = 'lgs-widget-canvas'
+        widgetEl.appendChild(widgetCanvas)
+
+        const composer = {
+            addOverlay: vi.fn(),
+            beginUpdate: vi.fn(),
+            endUpdate: vi.fn(),
+        }
+
+        globalThis.lgs = {
+            viewer: {
+                container: document.createElement('div'),
+            },
+            stores: {
+                replay: {
+                    recordingSync: true,
+                    dynamicFrameState: null,
+                },
+            },
+        }
+        globalThis.__ = {
+            ui: {
+                widgetCache: {
+                    getAll: vi.fn(() => new Map([
+                        ['custom-widget', {mounted: true}],
+                    ])),
+                },
+                widgetManager: {
+                    getElementById: vi.fn(() => widgetEl),
+                    getWidgetConfig: vi.fn(() => ({})),
+                },
+            },
+        }
+
+        buildReplayVideoComposerOverlays({
+            composer,
+            cropRect: {left: 0, top: 0, width: 320, height: 180},
+            widgetKeys: ['custom-widget'],
+        })
+
+        expect(composer.beginUpdate).toHaveBeenCalledOnce()
+        expect(composer.addOverlay).not.toHaveBeenCalled()
+        expect(composer.endUpdate).toHaveBeenCalledOnce()
+    })
 })

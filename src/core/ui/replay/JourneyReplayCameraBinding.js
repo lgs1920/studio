@@ -596,6 +596,9 @@ export const updateCamera = (mode, {
                      } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    if (logicalFrame) {
+        state.lastReplayLogicalFrame = logicalFrame
+    }
     const updateStartedAt = globalThis.performance?.now?.() ?? Date.now()
     const updateCache = createReplayCameraUpdateCache()
     const traceUpdateStep = (step, extra = {}) => {

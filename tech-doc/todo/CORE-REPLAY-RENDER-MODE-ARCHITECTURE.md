@@ -251,6 +251,24 @@ They are related, but they are not the same decision.
 
 If the product later supports explicit `720p`, `1080p`, or `4K` exports, that should remain an output-profile layer on top of the render-mode layer.
 
+## Contract consumption rules
+
+The contract is consumed by two separate orchestration paths:
+
+- Draft publishes the live `dynamicFrameState` through the recorder path. Its
+  camera pose is completed by the live Cesium adapter after each logical update;
+  Draft must not call the HQ exporter or wait for a frame-by-frame session.
+- HQ publishes the deterministic `runtime.frameState` from the offline export
+  timeline. The export frame renderer owns the camera for that timestamp; the
+  live replay update listener must not apply a second pose.
+- Both paths pass widget overlays through `ReplayOverlayResolver`. HQ must not
+  bypass that resolver when composing a frame, because the same phase and
+  replay-aware visibility rules must apply to Draft and HQ.
+
+The contract therefore carries the same logical sample, camera pose, track path,
+initial camera state, crop/render specification, and visible overlay set. Only
+the scheduler and capture owner differ.
+
 ## Files likely affected
 
 - `src/components/MainUI/video/VideoRecordingScreenArea.jsx`

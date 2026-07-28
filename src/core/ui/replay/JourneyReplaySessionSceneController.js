@@ -30,6 +30,7 @@ import { REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP, normalizeJourneyReplayCl
 import {
     currentJourneyReplayPoiBehavior, currentJourneyReplaySample, finiteNumber, isJourneyReplayVideoCaptureActive,
     publishReplayClipFrameState, replayStore, resetRuntimeProgress, resolveJourneyReplayRuntimeClips,
+    updateReplayFrameRenderContract,
 } from './JourneyReplayRuntime'
 import * as JourneyReplayCameraController from './JourneyReplayCameraController'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
@@ -323,6 +324,7 @@ export const resetCameraController = (mode, {
         state.lastNominalCameraHeading = null
         state.lastNominalCameraPitch = null
         state.lastAppliedCameraView = null
+        state.lastReplayLogicalFrame = null
         state.cameraRedirectState = null
         state.cameraUserAdjusting = false
         state.cameraApplyingView = false
@@ -765,6 +767,9 @@ export const bindRenderer = (mode, ) => {
                                                    immediateToleranceRecenter: true,
                                                    logicalCamera:             isJourneyReplayVideoCaptureActive(),
                                                })
+                            updateReplayFrameRenderContract({
+                                logicalFrame: detail?.logicalFrame,
+                            })
                             traceStep('update-camera.end')
                         }
                         const startProgress = finiteNumber(detail?.progress ?? startSample?.progress)
@@ -836,6 +841,9 @@ export const bindRenderer = (mode, ) => {
                         ...detail,
                         source: 'playback',
                     })
+                    updateReplayFrameRenderContract({
+                        logicalFrame: detail?.logicalFrame,
+                    })
                     traceUpdateStep('update-camera.end')
                 }
                 catch (error) {
@@ -865,6 +873,9 @@ export const bindRenderer = (mode, ) => {
                     call.setContinuousRender(true)
                     state.renderer.update({...detail, forceGeometry: true, showTrace: isJourneyReplayVideoCaptureActive()})
                     call.updateCamera(detail)
+                    updateReplayFrameRenderContract({
+                        logicalFrame: detail?.logicalFrame,
+                    })
                 }
                 catch (error) {
                     call.abortPlaybackAfterListenerError(error)

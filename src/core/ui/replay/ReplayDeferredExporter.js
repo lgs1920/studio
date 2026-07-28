@@ -678,6 +678,9 @@ const publishReplayExportFrameState = ({
                                            frame = null,
                                            sample = null,
                                            phase = null,
+                                           logicalFrame = null,
+                                           cameraPose = null,
+                                           trackPath = null,
                                        } = {}) => {
     if (!plan?.runtime) {
         return null
@@ -721,6 +724,15 @@ const publishReplayExportFrameState = ({
         source:          'exporter',
         updatedAt:       globalThis.performance?.now?.() ?? Date.now(),
         renderMode:      'hq',
+        cameraPose:      cameraPose
+                         ?? logicalFrame?.cameraPose
+                         ?? plan.renderContract?.cameraPose
+                         ?? plan.runtime?.context?.renderContract?.cameraPose
+                         ?? null,
+        trackPath:       trackPath
+                        ?? plan.renderContract?.trackPath
+                        ?? plan.runtime?.context?.renderContract?.trackPath
+                        ?? null,
         initialCameraState: plan.runtime?.context?.cameraState ?? null,
         renderSpec:      plan.renderSpec ?? null,
         visibleOverlayIds: plan.runtime?.context?.visibleOverlayIds ?? [],
@@ -1766,6 +1778,11 @@ export const runReplayDeferredMp4Export = async ({
                     },
                     sample: frameSample,
                     phase,
+                    logicalFrame: replayMode?.lastReplayLogicalFrame ?? null,
+                    trackPath: plan.renderContract?.trackPath
+                               ?? plan.runtime?.context?.renderContract?.trackPath
+                               ?? controller?.sampler?.logicalTrackPath
+                               ?? null,
                 })
                 const frameSource = sourceCanvas ?? defaultReplaySourceCanvas()
                 if (frameSource instanceof HTMLCanvasElement) {
@@ -1817,7 +1834,6 @@ export const runReplayDeferredMp4Export = async ({
                             cropRect:      cropRect ?? {left: 0, top: 0, width: canvas.width, height: canvas.height},
                             replay,
                             controller,
-                            skipVisibilityChecks: true,
                         })
                         await replayComposer.renderFrame()
 

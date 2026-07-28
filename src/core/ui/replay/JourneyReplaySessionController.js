@@ -255,6 +255,7 @@ export class JourneyReplaySessionController {
     #lastNominalCameraHeading = null
     #lastNominalCameraPitch = null
     #lastAppliedCameraView = null
+    #lastReplayLogicalFrame = null
     #cameraRedirectState = null
     #cameraUserAdjusting = false
     #cameraApplyingView = false
@@ -600,6 +601,13 @@ export class JourneyReplaySessionController {
             get: () => this.#lastAppliedCameraView,
             set: value => {
                 this.#lastAppliedCameraView = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'lastReplayLogicalFrame', {
+            configurable: true,
+            get: () => this.#lastReplayLogicalFrame,
+            set: value => {
+                this.#lastReplayLogicalFrame = value
             },
         })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'cameraRedirectState', {
@@ -1125,6 +1133,15 @@ export class JourneyReplaySessionController {
      */
     get replayEntryCameraState() {
         return cloneReplayCameraState(this[JOURNEY_REPLAY_INTERNAL_STATE].replayEntryCameraState)
+    }
+
+    /**
+     * Return the latest renderer-independent replay frame passed to the camera adapter.
+     *
+     * @returns {Object|null} The latest logical replay frame.
+     */
+    get lastReplayLogicalFrame() {
+        return this[JOURNEY_REPLAY_INTERNAL_STATE].lastReplayLogicalFrame
     }
 
     #samplerConfigurationKey = ({

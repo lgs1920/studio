@@ -120,6 +120,64 @@ export const buildReplayFrameState = ({
 }
 
 /**
+ * Refresh the visual contract attached to the active replay frame.
+ *
+ * Draft publishes its frame before the Cesium adapter has applied the camera
+ * pose. This helper lets the live path publish the completed logical frame
+ * without changing the scheduling or capture owner.
+ *
+ * @param {Object} options - Contract update options.
+ * @returns {Object|null} The updated render contract.
+ */
+export const updateReplayFrameRenderContract = ({
+                                                       store = replayStore(),
+                                                       logicalFrame = null,
+                                                       cameraPose = undefined,
+                                                       trackPath = undefined,
+                                                       initialCameraState = undefined,
+                                                       renderSpec = undefined,
+                                                       visibleOverlayIds = undefined,
+                                                       outputProfile = undefined,
+                                                   } = {}) => {
+    const frameState = store?.dynamicFrameState
+    if (!frameState) {
+        return null
+    }
+
+    const previousContract = frameState.renderContract ?? {}
+    const nextLogicalFrame = logicalFrame
+                             ? {
+                                 ...(previousContract.logicalFrame ?? {}),
+                                 ...logicalFrame,
+                             }
+                             : previousContract.logicalFrame ?? null
+    const renderContract = createReplayRenderModeContract({
+        renderMode:        previousContract.renderMode ?? 'draft',
+        logicalFrame:      nextLogicalFrame,
+        cameraPose:        cameraPose === undefined
+                           ? nextLogicalFrame?.cameraPose ?? previousContract.cameraPose ?? null
+                           : cameraPose,
+        trackPath:         trackPath === undefined ? previousContract.trackPath ?? null : trackPath,
+        initialCameraState: initialCameraState === undefined
+                            ? previousContract.initialCameraState ?? null
+                            : initialCameraState,
+        renderSpec:        renderSpec === undefined ? previousContract.renderSpec ?? null : renderSpec,
+        visibleOverlayIds: visibleOverlayIds === undefined
+                           ? previousContract.visibleOverlayIds ?? []
+                           : visibleOverlayIds,
+        outputProfile:     outputProfile === undefined
+                           ? previousContract.outputProfile ?? null
+                           : outputProfile,
+    })
+
+    store.dynamicFrameState = {
+        ...frameState,
+        renderContract,
+    }
+    return renderContract
+}
+
+/**
  * Returns the replay runtime store when it is available.
  *
  * @returns {Object|null} The replay store.
