@@ -817,6 +817,89 @@ describe('replay phase 1 playback controller', () => {
         }
     })
 
+    it('preserves the pre-replay camera snapshot across repeated starts', async () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const previousDoubleUnderscore = globalThis.__
+        const replay = defaultJourneyReplaySettings()
+        const camera = {
+            heading:              0.4,
+            pitch:                -0.7,
+            roll:                 0,
+            positionCartographic: {longitude: 0.1, latitude: 0.2, height: 2400},
+            moveStart:            {addEventListener: () => {}, removeEventListener: () => {}},
+            moveEnd:              {addEventListener: () => {}, removeEventListener: () => {}},
+            cancelFlight:         () => {},
+            lookAtTransform:      () => {},
+        }
+        camera.setView = vi.fn(({destination, orientation}) => {
+            const position = Cartographic.fromCartesian(destination)
+            camera.heading = orientation?.heading ?? camera.heading
+            camera.pitch = orientation?.pitch ?? camera.pitch
+            camera.positionCartographic = position
+        })
+
+        globalThis.lgs = {
+            theJourney: journey,
+            settings:   {ui: {replay, journeyToolbar: {show: true}}},
+            stores:     {replay: proxy({progress: 0, camera: replay.camera})},
+            viewer:     {trackedEntity: null, camera},
+            scene:      {requestRender: () => {}, globe: {getHeight: () => 120}},
+        }
+        globalThis.__ = {
+            ui: {
+                cameraManager: {stopRotate: vi.fn()},
+            },
+        }
+
+        try {
+            const mode = new JourneyReplayMode({
+                controller: new JourneyReplayPlaybackController({
+                    requestFrame: () => 1,
+                    cancelFrame:  () => {},
+                    now:          () => 0,
+                }),
+                renderer: {
+                    clear:  () => {},
+                    show:   () => {},
+                    update: () => {},
+                },
+            })
+
+            mode.start()
+
+            expect(mode.replayEntryCameraState).toEqual(expect.objectContaining({
+                destination: expect.objectContaining({height: 2400}),
+            }))
+            expect(mode.savedCameraState.destination.height).toBe(2400)
+            expect(camera.positionCartographic.height).not.toBeCloseTo(2400, 3)
+
+            const firstReplayEntryCameraState = mode.replayEntryCameraState
+            mode.stop({emit: false})
+            await mode.waitForSceneRestore()
+            mode.start()
+
+            const secondReplayEntryCameraState = mode.replayEntryCameraState
+            expect(secondReplayEntryCameraState.destination.longitude)
+                .toBeCloseTo(firstReplayEntryCameraState.destination.longitude, 9)
+            expect(secondReplayEntryCameraState.destination.latitude)
+                .toBeCloseTo(firstReplayEntryCameraState.destination.latitude, 9)
+            expect(secondReplayEntryCameraState.destination.height)
+                .toBeCloseTo(firstReplayEntryCameraState.destination.height, 6)
+            expect(secondReplayEntryCameraState.orientation)
+                .toEqual(firstReplayEntryCameraState.orientation)
+        }
+        finally {
+            globalThis.__ = previousDoubleUnderscore
+            globalThis.lgs = previousLgs
+        }
+    })
+
     it('keeps camera settings changed by a user camera action during playback', () => {
         const journey = makeJourney([
                                         makeTrack({
