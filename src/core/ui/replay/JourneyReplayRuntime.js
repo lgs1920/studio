@@ -127,6 +127,22 @@ export const buildReplayFrameState = ({
 export const replayStore = () => globalThis.lgs?.stores?.replay
 
 /**
+ * Returns whether replay playback currently owns camera updates.
+ *
+ * A configured sampler may still expose a sample after replay playback has
+ * stopped. That sample must not make a settings refresh move the live camera.
+ *
+ * @param {Object|null} replay - Replay runtime state.
+ * @returns {boolean} Whether replay playback or clip playback is active.
+ */
+export const isJourneyReplayCameraActive = replay => Boolean(
+    replay?.active
+    || replay?.playing
+    || replay?.paused
+    || replay?.clipSequenceActive,
+)
+
+/**
  * Returns whether the replay trace is currently being captured for video.
  *
  * @returns {boolean} Whether the video scene should display the replay trace.

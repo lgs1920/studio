@@ -402,6 +402,9 @@ export const bindMarkerInteractions = (mode) => {
         }
         const manualStart = ({pointer = false} = {}) => {
             if (state.suppressPlaybackCameraSync) {
+                if (!pointer) {
+                    return
+                }
                 state.suppressPlaybackCameraSync = false
             }
             if (state.cameraFlightActive && !pointer) {
@@ -423,6 +426,9 @@ export const bindMarkerInteractions = (mode) => {
             call.startCameraLiveSyncLoop()
         }
         const manualEnd = ({immediate = false} = {}) => {
+            if (state.suppressPlaybackCameraSync && !state.cameraPointerActive) {
+                return
+            }
             if (state.cameraFlightActive && !state.cameraPointerActive) {
                 state.cameraUserAdjusting = false
                 call.stopCameraLiveSyncLoop()
