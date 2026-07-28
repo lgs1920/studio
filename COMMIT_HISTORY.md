@@ -1,5 +1,10 @@
 # Commit History
 
+## 2026-07-28 — [`fix(replay): depth-test the replay marker against relief`](https://github.com/lgs1920/studio/commit/fc6e7b4d)
+
+- Keep the replay marker depth-tested so terrain relief and 3D tiles can occlude it.
+- Add renderer regression coverage and document the relief-masking rule.
+
 ## 2026-07-28 — [`fix(replay): restore nominal pitch after temporary camera corrections`](https://github.com/lgs1920/studio/commit/6f64303f)
 
 - Restore the logical nominal pitch after temporary navigation or Dynamic camera corrections.
