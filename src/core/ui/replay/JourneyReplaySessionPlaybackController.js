@@ -222,9 +222,7 @@ export const start = (mode, options = {}) => {
         const shouldHideOtherJourneys = options.hideOtherJourneys
                                         ?? getJourneyReplayHideOtherJourneys()
         const videoReplayLinked = call.isReplayVideoLinked()
-        state.logicalCameraTrajectory = isJourneyReplayVideoCaptureActive()
-        // Replay owns the camera from the first frame, regardless of whether
-        // it is connected to the Draft recorder or the HQ exporter.
+        state.logicalCameraTrajectory = false
         void globalThis.__?.ui?.cameraManager?.stopRotate?.()
         call.setJourneyReplayOrbitAllowed(!videoReplayLinked)
         call.restoreOtherJourneysVisibility()
