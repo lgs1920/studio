@@ -15,9 +15,11 @@
  ******************************************************************************/
 
 import { CompassFull }                                                from '@Components/MainUI/compass/CompassFull'
+import { CompassFlat }                                                from '@Components/MainUI/compass/CompassFlat'
 import { CompassLight }                                    from '@Components/MainUI/compass/CompassLight'
 import { CompassWindRose }                                            from '@Components/MainUI/compass/CompassWindRose'
 import {
+    COMPASS_FLAT,
     COMPASS_FULL,
     COMPASS_LIGHT,
     COMPASS_WIDGET,
@@ -102,6 +104,12 @@ export const CompassSettings = () => {
                                 <CompassWindRose width="24" height="24"/>
                             </span>
                             {'Rose'}
+                        </WaOption>
+                        <WaOption value={COMPASS_FLAT.toString()} label="Flat">
+                            <span slot="start" className="compass-select-thumbnail">
+                                <CompassFlat width="24" height="24"/>
+                            </span>
+                            {'Flat'}
                         </WaOption>
                     </WaSelect>
                     <WaButton id="edit-compass-widget-in-settings" appearance="plain" variant="brand"

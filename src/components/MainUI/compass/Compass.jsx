@@ -16,8 +16,9 @@
 
 import { CompassFull }  from '@Components/MainUI/compass/CompassFull'
 import { CompassLight } from '@Components/MainUI/compass/CompassLight'
+import { CompassFlat }  from '@Components/MainUI/compass/CompassFlat'
 import { CompassWindRose }                                from '@Components/MainUI/compass/CompassWindRose'
-import { COMPASS_FULL, COMPASS_LIGHT, COMPASS_WIND_ROSE } from '@Core/constants'
+import { COMPASS_FLAT, COMPASS_FULL, COMPASS_LIGHT, COMPASS_WIND_ROSE } from '@Core/constants'
 import { Math as CMath }               from 'cesium'
 import classNames                      from 'classnames'
 import { colord }                                  from 'colord'
@@ -212,7 +213,8 @@ export const Compass = ({fixed, inWidget = false, entity, syncBounds = true}) =>
         const currentModeString = currentMode?.toString()
         const hasVisualMode = currentModeString === COMPASS_FULL.toString() ||
             currentModeString === COMPASS_LIGHT.toString() ||
-            currentModeString === COMPASS_WIND_ROSE.toString()
+            currentModeString === COMPASS_WIND_ROSE.toString() ||
+            currentModeString === COMPASS_FLAT.toString()
         if (!syncBounds || !inWidget || !hasVisualMode) {
             return
         }
@@ -310,6 +312,7 @@ export const Compass = ({fixed, inWidget = false, entity, syncBounds = true}) =>
                 'mode-full':      currentMode.toString() === COMPASS_FULL.toString(),
                 'mode-light':     currentMode.toString() === COMPASS_LIGHT.toString(),
                 'mode-wind-rose': currentMode.toString() === COMPASS_WIND_ROSE.toString(),
+                'mode-flat':      currentMode.toString() === COMPASS_FLAT.toString(),
             })}
             ref={_compass}
             style={dynamicVars}
@@ -322,6 +325,9 @@ export const Compass = ({fixed, inWidget = false, entity, syncBounds = true}) =>
             )}
             {currentMode.toString() === COMPASS_WIND_ROSE.toString() && (
                 <CompassWindRose ref={_rotatingPart}/>
+            )}
+            {currentMode.toString() === COMPASS_FLAT.toString() && (
+                <CompassFlat ref={_rotatingPart}/>
             )}
         </div>
     )
