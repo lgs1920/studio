@@ -61,7 +61,22 @@ describe('TrackUtils css color normalization', () => {
             viewer: {
                 dataSources: {
                     length: 3,
-                    get: index => [journeySource, trackSource, straySource][index] ?? null,
+                    get:      index => [journeySource, trackSource, straySource][index] ?? null,
+                    getByName: () => [],
+                },
+            },
+            settings: {
+                widgets: {
+                    'profile-widget': {
+                        configuration: {
+                            default: {show: false},
+                        },
+                    },
+                },
+            },
+            stores: {
+                main: {
+                    canViewJourneyData: false,
                 },
             },
         }

@@ -82,6 +82,7 @@ describe('openPOIEditor', () => {
         expect(__.ui.drawerManager.open).toHaveBeenCalledWith(POIS_EDITOR_DRAWER, {
             action: 'edit-current',
             entity: poi.id,
+            stacked: false,
             tab:    null,
         })
         expect(Utils.updateJourneyEditor).not.toHaveBeenCalled()
@@ -105,6 +106,7 @@ describe('openPOIEditor', () => {
         expect(__.ui.drawerManager.open).toHaveBeenCalledWith(JOURNEY_EDITOR_DRAWER, {
             action: 'edit-current',
             entity: poi.id,
+            stacked: false,
             tab:    'tab-pois',
         })
     })
@@ -119,6 +121,7 @@ describe('openPOIEditor', () => {
         expect(__.ui.drawerManager.open).toHaveBeenCalledWith(JOURNEY_EDITOR_DRAWER, {
             action: 'edit-current',
             entity: poi.id,
+            stacked: false,
             tab:    'tab-pois',
         })
     })
