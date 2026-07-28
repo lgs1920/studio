@@ -12,7 +12,7 @@ import {TrackUtils} from '@Utils/cesium/TrackUtils'
 import {faCamera} from '@fortawesome/pro-solid-svg-icons'
 import {faPersonHiking} from '@fortawesome/pro-regular-svg-icons'
 import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
-import {finiteNumber, replayStore} from './JourneyReplayRuntime'
+import {finiteNumber, isJourneyReplayCameraActive, replayStore} from './JourneyReplayRuntime'
 import {
     clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForPositionMode, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayFrameLeadSeconds, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
 } from './JourneyReplayCameraMath'
@@ -394,6 +394,9 @@ export const bindMarkerInteractions = (mode) => {
             call.updateCameraFromCesiumControls()
         }
         const refreshToleranceCameraAfterManualMove = () => {
+            if (!isJourneyReplayCameraActive(replayStore())) {
+                return
+            }
             const settings = getJourneyReplaySettings()
             const marker = normalizeJourneyReplayMarker(globalThis.lgs?.stores?.replay?.marker ?? settings.marker)
             if (marker.mode === REPLAY_MARKER_MODE_HYSTERESIS) {

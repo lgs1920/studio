@@ -81,4 +81,82 @@ describe('JourneyReplay camera interaction lifecycle', () => {
         expect(call.updateCameraFromCesiumControls).not.toHaveBeenCalled()
         expect(refreshCamera).not.toHaveBeenCalled()
     })
+
+    it('does not recenter after a camera move once replay is inactive', () => {
+        const replay = defaultJourneyReplaySettings()
+        const cameraListeners = {}
+        const camera = {
+            changed: {
+                addEventListener:    listener => {
+                    cameraListeners.changed = listener
+                },
+                removeEventListener: vi.fn(),
+            },
+            moveStart: {
+                addEventListener:    listener => {
+                    cameraListeners.moveStart = listener
+                },
+                removeEventListener: vi.fn(),
+            },
+            moveEnd: {
+                addEventListener:    listener => {
+                    cameraListeners.moveEnd = listener
+                },
+                removeEventListener: vi.fn(),
+            },
+        }
+        const scene = {canvas: null}
+        const refreshCamera = vi.fn()
+        const call = {
+            cesiumScene:                   () => scene,
+            now:                           () => 0,
+            startCameraLiveSyncLoop:       vi.fn(),
+            stopCameraLiveSyncLoop:        vi.fn(),
+            updateCameraFromCesiumControls: vi.fn(),
+        }
+        const state = {
+            cameraAutoTrackingIgnoreUntil: 0,
+            cameraApplyingView:            false,
+            cameraFlightActive:             false,
+            cameraManualInteractionTimer:  null,
+            cameraPointerActive:            false,
+            cameraUserAdjusting:            false,
+            suppressPlaybackCameraSync:     false,
+            unbind:                         [],
+        }
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_CALL]:  call,
+            [JOURNEY_REPLAY_INTERNAL_STATE]: state,
+            refreshCamera,
+        }
+
+        globalThis.lgs = {
+            settings: {
+                ui: {
+                    replay: {
+                        ...replay,
+                        marker: {
+                            ...replay.marker,
+                            mode: REPLAY_MARKER_MODE_HYSTERESIS,
+                        },
+                    },
+                },
+            },
+            stores: {
+                replay: {
+                    active:            false,
+                    clipSequenceActive: false,
+                    marker:            {mode: REPLAY_MARKER_MODE_HYSTERESIS},
+                },
+            },
+            viewer: {camera},
+        }
+
+        bindMarkerInteractions(mode)
+        cameraListeners.moveStart()
+        cameraListeners.moveEnd()
+
+        expect(call.updateCameraFromCesiumControls).toHaveBeenCalledOnce()
+        expect(refreshCamera).not.toHaveBeenCalled()
+    })
 })
