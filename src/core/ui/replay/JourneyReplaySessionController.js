@@ -1041,7 +1041,6 @@ export class JourneyReplaySessionController {
             refreshReplayDiagnosticsOverlay: (...args) => JourneyReplayCameraController.refreshReplayDiagnosticsOverlay(this, ...args),
             constrainedReplayProjectionViewport: (...args) => JourneyReplayCameraController.constrainedReplayProjectionViewport(this, ...args),
             constrainedReplayCameraPathKey: (...args) => JourneyReplayCameraController.constrainedReplayCameraPathKey(this, ...args),
-            resolveConstrainedReplayCameraPath: (...args) => JourneyReplayCameraController.resolveConstrainedReplayCameraPath(this, ...args),
             recenterCameraToSample: (...args) => JourneyReplayCameraController.recenterCameraToSample(this, ...args),
             startCameraTransition: (...args) => JourneyReplayCameraController.startCameraTransition(this, ...args),
             bindMarkerInteractions: (...args) => JourneyReplayCameraController.bindMarkerInteractions(this, ...args),
@@ -1111,16 +1110,16 @@ export class JourneyReplaySessionController {
     }
 
     /**
-     * Return the camera state shared by Draft and HQ replay rendering.
+     * Return the camera state captured before replay entry.
      *
-     * @returns {Object|null} The replay-entry camera snapshot.
+     * @returns {Object|null} The pre-replay camera snapshot used for restoration and HQ preparation.
      */
     get savedCameraState() {
         return cloneReplayCameraState(this[JOURNEY_REPLAY_INTERNAL_STATE].savedCameraState)
     }
 
     /**
-     * Return the camera view captured before replay rendering began.
+     * Return the camera state used to initialize replay rendering.
      *
      * @returns {Object|null} The replay-entry camera snapshot.
      */

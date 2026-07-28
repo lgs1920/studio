@@ -26,6 +26,7 @@ export const createJourneyReplayLogicalFrame = ({
                                                      frameTimeMs = null,
                                                      frameIntervalMs = null,
                                                      cameraPose = null,
+                                                     cameraFrame = null,
                                                      phase = null,
                                                      source = 'replay',
                                                  } = {}) => {
@@ -43,6 +44,7 @@ export const createJourneyReplayLogicalFrame = ({
         frameTimeMs:     resolvedFrameTimeMs,
         frameIntervalMs: finiteNumber(frameIntervalMs),
         cameraPose:      cameraPose ?? null,
+        cameraFrame:     cameraFrame ?? null,
         phase:           phase ?? null,
         source,
     }

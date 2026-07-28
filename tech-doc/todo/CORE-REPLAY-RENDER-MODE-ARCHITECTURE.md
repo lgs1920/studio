@@ -46,6 +46,26 @@ Temporal determinism is stricter:
 
 In other words, both modes should be visually deterministic for a given logical frame, but only HQ should be fully deterministic in how that frame is produced over time.
 
+## Non-blocking path resolution invariant
+
+Neither replay mode may perform a full constrained camera-path compilation
+synchronously during replay startup or HQ preparation. A bulk path build can
+freeze the UI and delay the first replay frame, so it must never gate:
+
+- Draft startup, with or without start clips
+- the transition from start clips to replay playback
+- HQ scene preparation or export initialization
+
+This rule applies to navigation and dynamic (`hysteresis`) tracking, including
+all Z1/Z2 collision decisions. The shared resolver may compute the logical
+camera state needed for the current frame, but it must not require a complete
+replay-path compilation before playback can continue.
+
+Any future path precomputation must be incremental, asynchronous, bounded, and
+optional. It must never block the first frame or replace the current-frame
+fallback. A synchronous `prepareConstrainedReplayCameraPath` step is explicitly
+forbidden.
+
 ## Mode matrix
 
 | Concern | Draft Mode | HQ Mode | Shared contract |
@@ -100,6 +120,9 @@ The current implementation addresses the core correction scope:
   bypassed by the shared render path. The nominal pose is applied only at
   logical camera initialization or after a correction; stable frames do not
   recenter the marker and therefore preserve Z1/Z2 tracking behavior.
+- No complete constrained camera path is compiled synchronously at Draft
+  startup or during HQ preparation. Both modes continue from their logical
+  frame pipeline without waiting for bulk path compilation.
 - Draft remains on the live recorder path, while HQ remains on the sequential
   offline exporter path. The output profile remains separate from render mode.
 
@@ -253,7 +276,8 @@ If the product later supports explicit `720p`, `1080p`, or `4K` exports, that sh
 
 1. Define a single render-mode contract object.
 2. Define a renderer-independent logical replay frame, camera-pose, and track-path contract.
-3. Move trajectory, camera-path interpolation, and transition timing into the shared resolver.
+3. Move trajectory, camera-path interpolation, and transition timing into the
+   shared resolver without introducing a synchronous full-path compilation step.
 4. Add a Cesium output adapter that applies a resolved logical pose without deciding it.
 5. Make Draft Mode consume that contract through the live recorder path only.
 6. Make HQ Mode consume that contract through the deterministic export path only.
@@ -271,13 +295,17 @@ If the product later supports explicit `720p`, `1080p`, or `4K` exports, that sh
     marker inside the designated video capture area. The requested minimum
     targets are 5% and 30%; the implementation must preserve valid nested-zone
     geometry and document which bound applies to Z1 and Z2.
+16. Add regression tests proving that neither Draft startup nor HQ preparation
+    invokes a blocking full-path compilation.
 
 ## Product decisions
 
 These decisions define the target contract for implementation:
 
 1. Resolution selection is a separate output-profile layer, not part of render mode.
-2. Draft Mode warms HQ only when replay sync is enabled.
+2. Draft Mode may prepare lightweight HQ metadata only when replay sync is
+   enabled; it must never synchronously compile the complete constrained camera
+   path.
 3. The parity target is visual parity on the composed frame, not pixel parity after encoding.
 4. HQ must never automatically replace the draft blob in the final dialog.
 5. Draft and HQ do not have to share the same export FPS.
@@ -300,7 +328,11 @@ In practice:
 
 HQ warm-up is only useful when the replay pipeline is linked.
 
-When replay sync is disabled, Draft Mode should stay lightweight and must not spend work preparing an HQ export plan that the user will not consume.
+When replay sync is disabled, Draft Mode should stay lightweight and must not
+spend work preparing an HQ export plan that the user will not consume. When
+replay sync is enabled, preparation may cache lightweight render metadata, but
+it must not synchronously compile a complete camera path or block replay
+startup, HQ scene preparation, or the first exported frame.
 
 ### Parity target
 
@@ -353,6 +385,10 @@ The practical rule is:
 - Draft and HQ can coexist as independent media artifacts
 - Draft Mode remains capped at 15 FPS or below
 - HQ uses its configured FPS
+- Neither mode performs a blocking full camera-path compilation before its
+  first replay frame
+- A synchronous `prepareConstrainedReplayCameraPath` call is not part of the
+  replay startup or HQ preparation contract
 
 ## Reference docs
 

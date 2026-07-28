@@ -519,16 +519,25 @@ export const restorePlaybackSceneInternal = (mode, ) => {
         return restorePromise
     }
 
-export const restoreCameraState = (mode, {clear = true} = {}) => {
+/**
+ * Apply a captured replay camera state without replacing the saved pre-replay focus.
+ *
+ * @param {object} mode - Replay session mode.
+ * @param {object} [options] - Camera restore options.
+ * @param {boolean} [options.clear=true] - Clear the saved pre-replay state after use.
+ * @param {object|null} [options.cameraState=null] - Explicit camera state to apply.
+ * @returns {boolean} Whether a camera state was applied.
+ */
+export const restoreCameraState = (mode, {clear = true, cameraState = null} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         const camera = globalThis.lgs?.viewer?.camera
-        const savedCameraState = state.savedCameraState
-        if (clear) {
+        const savedCameraState = cameraState ?? state.savedCameraState
+        if (clear && cameraState === null) {
             state.savedCameraState = null
         }
         if (!camera || !savedCameraState) {
-            return
+            return false
         }
 
         camera.cancelFlight?.()
@@ -541,6 +550,7 @@ export const restoreCameraState = (mode, {clear = true} = {}) => {
             ),
             orientation: savedCameraState.orientation,
         })
+        return true
     }
 
 export const setContinuousRender = (mode, enabled) => {

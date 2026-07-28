@@ -816,6 +816,72 @@ describe('Journey replay camera paths', () => {
         }
     })
 
+    it('applies the prepared constrained path for Draft and HQ logical frames', () => {
+        vi.stubGlobal('lgs', {
+            settings: {
+                ui: {
+                    replay: {
+                        camera: {
+                            positionMode: 'system',
+                            heading:      0,
+                            pitch:        -60,
+                            altitude:     1000,
+                        },
+                        marker: {mode: REPLAY_MARKER_MODE_NAVIGATION},
+                    },
+                },
+            },
+            stores: {
+                replay: {
+                    camera: {positionMode: 'system', heading: 0, pitch: -60, altitude: 1000},
+                },
+            },
+            viewer: {camera: {}},
+        })
+
+        const {mode, state, call} = makeMode()
+        const pathFrame = {
+            destination: new Cartesian3(10, 20, 30),
+            direction:   new Cartesian3(0, 1, 0),
+            up:          new Cartesian3(0, 0, 1),
+        }
+        state.constrainedReplayCameraPath = {
+            path: {
+                sampleAt: vi.fn(() => pathFrame),
+            },
+        }
+        call.applyCameraFrame = vi.fn(() => true)
+        call.cameraViewForSample = vi.fn(() => null)
+        call.rememberNominalCameraView = vi.fn()
+        const logicalFrame = createJourneyReplayLogicalFrame({
+            sample: {
+                progress: 0.5,
+                longitude: 2,
+                latitude:  48,
+                altitude:  120,
+                height:    120,
+            },
+            progress:     0.5,
+            durationMillis: 1000,
+            frameTimeMs:  500,
+        })
+
+        updateCamera(mode, {
+            sample: logicalFrame.sample,
+            progress: 0.5,
+            source:   'playback',
+            logicalFrame,
+        })
+
+        expect(call.applyCameraFrame).toHaveBeenCalledWith(pathFrame)
+        expect(logicalFrame.cameraFrame).toBe(pathFrame)
+        expect(logicalFrame.cameraPose).toEqual(expect.objectContaining({
+            logical: true,
+            cameraHeight: 1000,
+        }))
+        expect(call.cameraViewForSample).not.toHaveBeenCalled()
+    })
+
     it('reuses the replay camera cache for repeated visibility checks', () => {
         const {mode, call} = makeMode()
         const cache = createReplayCameraUpdateCache()

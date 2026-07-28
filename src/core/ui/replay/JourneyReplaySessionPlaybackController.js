@@ -276,12 +276,10 @@ export const start = (mode, options = {}) => {
         }
         else {
             traceStartStep('restore-camera-state.begin')
-            state.savedCameraState = {
-                destination: {...state.replayEntryCameraState.destination},
-                orientation: {...state.replayEntryCameraState.orientation},
-                altitude: state.replayEntryCameraState.altitude,
-            }
-            call.restoreCameraState({clear: false})
+            call.restoreCameraState({
+                                       clear:       false,
+                                       cameraState: state.replayEntryCameraState,
+                                   })
             traceStartStep('restore-camera-state.end')
         }
         traceStartStep('capture-drawer-state.begin')
@@ -359,6 +357,8 @@ export const start = (mode, options = {}) => {
                     }
 
                     state.deferStartCameraRecenter = false
+                    // Do not compile the constrained camera path synchronously here.
+                    // That bulk compilation freezes Draft and HQ replay startup.
                     traceStartStep('controller.start.begin', {phase: 'start-clips'})
                     startResult = state.controller.start({
                         progress: options.progress ?? 0,
@@ -374,12 +374,12 @@ export const start = (mode, options = {}) => {
         else {
             state.deferStartCameraRecenter = false
             traceStartStep('place-camera-at-playback-start.begin')
-            state.skipNextImmediateStartRecenter = hasReplayEntryCameraState
-                ? false
-                : call.placeCameraAtPlaybackStart(startSample, options.progress ?? 0) === true
+            state.skipNextImmediateStartRecenter = call.placeCameraAtPlaybackStart(startSample, options.progress ?? 0) === true
             traceStartStep('place-camera-at-playback-start.end', {
                 skipNextImmediateStartRecenter: state.skipNextImmediateStartRecenter,
             })
+            // Do not compile the constrained camera path synchronously here.
+            // That bulk compilation freezes Draft and HQ replay startup.
             traceStartStep('controller.start.begin', {phase: 'no-start-clips'})
             startResult = state.controller.start({
                 progress: options.progress ?? 0,
@@ -457,6 +457,11 @@ export const preparePlaybackSceneForExport = async (mode, {
                                     }
                                     : null
         if (providedCameraState) {
+            state.savedCameraState = {
+                destination: {...providedCameraState.destination},
+                orientation: {...providedCameraState.orientation},
+                altitude:    providedCameraState.altitude,
+            }
             state.replayEntryCameraState = {
                 destination: {...providedCameraState.destination},
                 orientation: {...providedCameraState.orientation},
@@ -465,11 +470,6 @@ export const preparePlaybackSceneForExport = async (mode, {
         }
         const hasReplayEntryCameraState = Boolean(state.replayEntryCameraState)
         if (hasReplayEntryCameraState) {
-            state.savedCameraState = {
-                destination: {...state.replayEntryCameraState.destination},
-                orientation: {...state.replayEntryCameraState.orientation},
-                altitude: state.replayEntryCameraState.altitude,
-            }
             call.restoreCameraState({clear: false})
         }
         else {
@@ -489,10 +489,13 @@ export const preparePlaybackSceneForExport = async (mode, {
             journey.visible = true
             journey.updateVisibility?.(true)
 
-            if (!hasReplayEntryCameraState && startClips.length === 0) {
+            if (startClips.length === 0) {
                 call.placeCameraAtPlaybackStart(sample, safeProgress)
             }
         }
+
+        // Do not compile the constrained camera path synchronously during HQ preparation.
+        // Export preparation must return control to the fixed-frame renderer immediately.
 
         call.setJourneyReplayOrbitAllowed(false)
         call.restoreOtherJourneysVisibility()

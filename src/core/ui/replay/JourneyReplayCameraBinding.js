@@ -688,6 +688,20 @@ export const updateCamera = (mode, {
                 maxLateralOffsetMeters: 60,
             },
         }
+        const sharedPathFrame = logicalFrame
+                                  ? logicalFrame.cameraFrame
+                                    ?? state.constrainedReplayCameraPath?.path?.sampleAt?.(progress)
+                                    ?? null
+                                  : null
+        const sharedLogicalPose = sharedPathFrame
+                                  ? resolveJourneyReplayLogicalCameraPose({
+                                        sample,
+                                        progress,
+                                        source: source === 'start' ? 'drawer' : source,
+                                        cameraSettings,
+                                        markerSettings,
+                                    })
+                                  : null
         // Use the export timeline as the smoothing clock. Camera orientation
         // must not advance once per callback independently of video time.
         const logicalNow = deterministicCamera
@@ -713,7 +727,8 @@ export const updateCamera = (mode, {
         traceUpdateStep('camera-view.nominal.begin', {
             progress,
         })
-        const nominalView = deterministicCamera
+        const nominalView = sharedLogicalPose
+                           ?? (deterministicCamera
                            ? resolveJourneyReplayLogicalCameraPose({
                                  sample,
                                  progress,
@@ -729,7 +744,7 @@ export const updateCamera = (mode, {
                                  markerSettings,
                                  motionProfile: source === 'drawer' ? null : replayMotionProfile,
                                  cache: updateCache,
-                             })
+                             }))
         traceUpdateStep('camera-view.nominal.end', {
             hasNominalView: Boolean(nominalView),
         })
@@ -862,6 +877,24 @@ export const updateCamera = (mode, {
         }
 
         call.updateToleranceZoneOverlay(cameraSettings.hysteresis)
+
+        if (sharedPathFrame && sharedLogicalPose) {
+            logicalFrame.cameraPose = sharedLogicalPose
+            logicalFrame.cameraFrame = sharedPathFrame
+            const applied = call.applyCameraFrame(sharedPathFrame)
+            if (applied) {
+                call.rememberCameraView?.({
+                    anchor:  sharedLogicalPose.sample,
+                    heading: sharedLogicalPose.heading,
+                    pitch:   sharedLogicalPose.pitch,
+                })
+                state.lastCameraHeading = sharedLogicalPose.heading
+                state.lastCameraPitch = sharedLogicalPose.pitch
+                state.lastNominalCameraHeading = sharedLogicalPose.heading
+                state.lastNominalCameraPitch = sharedLogicalPose.pitch
+                return
+            }
+        }
 
         const recording = globalThis.lgs?.stores?.ui?.video?.recording === true
         const shouldTraceCompilationBypass = source === 'start'

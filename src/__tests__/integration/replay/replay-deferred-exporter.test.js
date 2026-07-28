@@ -336,6 +336,11 @@ describe('ReplayDeferredExporter', () => {
                 orientation: {heading: 0.25, pitch: -0.75, roll: 0.125},
                 altitude: 123.457,
             },
+            replayEntryCameraState: {
+                destination: {longitude: 2, latitude: 48, height: 900},
+                orientation: {heading: 0.8, pitch: -0.5, roll: 0},
+                altitude: 900,
+            },
         }
         const controller = {
             direction: 1,

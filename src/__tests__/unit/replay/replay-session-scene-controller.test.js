@@ -12,7 +12,7 @@ vi.mock('@Components/Toast', () => ({
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from '@Core/ui/replay/JourneyReplayInternal'
 import {REPLAY_EVENT_UPDATE} from '@Core/ui/replay/JourneyReplayPlaybackController'
 import {
-    abortPlaybackAfterListenerError, bindRenderer, restorePlaybackScene, restorePlaybackSceneInternal,
+    abortPlaybackAfterListenerError, bindRenderer, restoreCameraState, restorePlaybackScene, restorePlaybackSceneInternal,
 } from '@Core/ui/replay/JourneyReplaySessionSceneController'
 
 const makeMode = () => {
@@ -231,6 +231,45 @@ describe('JourneyReplaySessionSceneController', () => {
         expect(call.focusJourneyAfterPlayback).toHaveBeenCalledTimes(1)
         expect(call.restoreCameraState).toHaveBeenCalledTimes(1)
         expect(state.sceneRestorePromise).toBeNull()
+    })
+
+    it('applies the replay entry camera without replacing the pre-replay snapshot', () => {
+        const state = {
+            savedCameraState: {
+                destination: {longitude: 2, latitude: 48, height: 2400},
+                orientation: {heading: 0.4, pitch: -0.7, roll: 0},
+                altitude: 2400,
+            },
+        }
+        const replayEntryCameraState = {
+            destination: {longitude: 2.001, latitude: 48.001, height: 900},
+            orientation: {heading: 0.8, pitch: -0.5, roll: 0},
+            altitude: 900,
+        }
+        const camera = {
+            cancelFlight: vi.fn(),
+            lookAtTransform: vi.fn(),
+            setView:      vi.fn(),
+        }
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_CALL]:  {},
+            [JOURNEY_REPLAY_INTERNAL_STATE]: state,
+        }
+        globalThis.lgs = {
+            viewer: {camera},
+        }
+
+        expect(restoreCameraState(mode, {
+            clear:       false,
+            cameraState: replayEntryCameraState,
+        })).toBe(true)
+
+        expect(state.savedCameraState).toEqual({
+            destination: {longitude: 2, latitude: 48, height: 2400},
+            orientation: {heading: 0.4, pitch: -0.7, roll: 0},
+            altitude: 2400,
+        })
+        expect(camera.setView).toHaveBeenCalledTimes(1)
     })
 
     it('reapplies the active replay camera when an obsolete focus settles late', async () => {
