@@ -751,9 +751,6 @@ export const updateCamera = (mode, {
                 return false
             }
 
-            // Draft and HQ consume the same logical pose. Cesium only turns
-            // that pose into a renderable camera frame; it must not create a
-            // flight path from the current camera or resolve completion.
             call.cancelCameraBezierTransition(false)
             call.recenterCameraToSample({
                                          sample:         view.sample,
@@ -1239,10 +1236,8 @@ export const updateCamera = (mode, {
                                                          })
                         }
                     }
-                    else {
-                        if (!state.lastAppliedCameraView) {
-                            applyLogicalCameraPose(nominalView)
-                        }
+                    else if (deterministicCamera && !state.lastAppliedCameraView) {
+                        applyLogicalCameraPose(nominalView)
                     }
                     state.lastCameraHeading = smoothHeading
                     state.lastCameraPitch = smoothPitch
