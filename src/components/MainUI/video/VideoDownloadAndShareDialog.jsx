@@ -59,10 +59,20 @@ const withVideoDraftSuffix = (value, fallback = DEFAULT_VIDEO_FILENAME) => {
     return `${stem}${VIDEO_DRAFT_SUFFIX}`
 }
 
-const restoreVideoReplayScene = () => {
+/**
+ * Stop replay playback and wait until its camera and scene focus restoration has settled.
+ *
+ * @returns {Promise<void>} Promise resolved after the final view is ready to reveal
+ */
+const preFocusVideoReplayScene = async () => {
     globalThis.__?.ui?.replayVideoSync?.stopJourneyReplay?.({deferSceneRestore: false})
-    globalThis.__?.ui?.replay?.restorePlaybackScene?.({force: true})
+    await Promise.resolve(globalThis.__?.ui?.replay?.restorePlaybackScene?.({force: true}))
+}
 
+/**
+ * Release transient replay state after the final camera view is ready.
+ */
+const clearVideoReplayRuntimeState = () => {
     const replayStore = globalThis.lgs?.stores?.replay
     if (!replayStore) {
         return
@@ -143,6 +153,7 @@ export const VideoDownloadAndShareDialog = () => {
     const _suppressNextDialogHideCleanup = useRef(false)
     const _shareInFlight = useRef(false)
     const _dialogCleanupDone = useRef(true)
+    const _replayScenePreFocused = useRef(false)
     const releaseMediaUrl = useCallback(() => {
         const url = _mediaBlob.current.url
         if (url) {
@@ -174,6 +185,27 @@ export const VideoDownloadAndShareDialog = () => {
     const isReplayVideoLinked = lgs.stores?.replay
                                   ? lgs.stores.replay.recordingSync !== false
                                   : false
+
+    /**
+     * Prepare the final replay camera view before showing the media dialog.
+     *
+     * @param {object} [options] - Preparation options
+     * @param {boolean} [options.force=false] - Repeat preparation when a previous attempt completed
+     * @returns {Promise<void>} Promise resolved when the final view has settled
+     */
+    const prepareReplaySceneForDialog = useCallback(async ({force = false} = {}) => {
+        if (!force && _replayScenePreFocused.current) {
+            return
+        }
+
+        try {
+            await preFocusVideoReplayScene()
+            _replayScenePreFocused.current = true
+        }
+        catch (error) {
+            console.error('Unable to pre-focus the replay scene:', error)
+        }
+    }, [])
 
     const downloadBlobFile = useCallback((blob, downloadFilename) => {
         if (!(blob instanceof Blob) || !downloadFilename) {
@@ -256,7 +288,7 @@ export const VideoDownloadAndShareDialog = () => {
      */
     useEffect(() => {
 
-        const handleStopRecording = (event) => {
+        const handleStopRecording = async (event) => {
             const blob = event.detail?.blob
             if (!(blob instanceof Blob) || blob.size === 0) {
                 console.error('Invalid video blob received')
@@ -277,6 +309,7 @@ export const VideoDownloadAndShareDialog = () => {
             setMediaUrl(url)
             setFilename(safeFilename)
             setCanDownloadAndShare(true)
+            await prepareReplaySceneForDialog()
             setDialogOpen(true)
         }
 
@@ -322,7 +355,7 @@ export const VideoDownloadAndShareDialog = () => {
             releaseMediaUrl()
             void __.recorder?.releaseMedia?.()
         }
-    }, [getRecorderFilenameStem, releaseMediaUrl])
+    }, [getRecorderFilenameStem, prepareReplaySceneForDialog, releaseMediaUrl])
 
     /**
      * Sync blurred video with main video playback.
@@ -531,6 +564,7 @@ export const VideoDownloadAndShareDialog = () => {
             })
             _dialogHiddenForHqExport.current = false
             _suppressNextDialogHideCleanup.current = false
+            await prepareReplaySceneForDialog()
             setDialogOpen(true)
         }
         catch (error) {
@@ -551,12 +585,13 @@ export const VideoDownloadAndShareDialog = () => {
             })
             _dialogHiddenForHqExport.current = false
             _suppressNextDialogHideCleanup.current = false
+            await prepareReplaySceneForDialog({force: true})
             setDialogOpen(true)
         }
         finally {
             _hqExportAbortController.current = null
         }
-    }, [__.recorder, getHqExportFilename, getHqFilenameStem, getMediaData, getVideoExtension, getVideoMimeType, isHqExporting, isReplayVideoLinked, releaseHqMediaUrl, waitForAnimationFrame])
+    }, [__.recorder, getHqExportFilename, getHqFilenameStem, getMediaData, getVideoExtension, getVideoMimeType, isHqExporting, isReplayVideoLinked, prepareReplaySceneForDialog, releaseHqMediaUrl, waitForAnimationFrame])
 
     /**
      * Handle share action with Web Share API fallback.
@@ -693,7 +728,7 @@ export const VideoDownloadAndShareDialog = () => {
     /**
      * Handle cancel and cleanup.
      */
-    const handleCancel = useCallback(() => {
+    const handleCancel = useCallback(async () => {
         if (_dialogCleanupDone.current) {
             setDialogOpen(false)
             return
@@ -702,7 +737,9 @@ export const VideoDownloadAndShareDialog = () => {
         _hqExportAbortController.current?.abort?.()
         _dialogHiddenForHqExport.current = false
         _suppressNextDialogHideCleanup.current = false
-        restoreVideoReplayScene()
+        await prepareReplaySceneForDialog()
+        _replayScenePreFocused.current = false
+        clearVideoReplayRuntimeState()
         setDialogOpen(false)
         setIsRecordingInfoOpen(false)
         cancelVideoEditing()
@@ -727,7 +764,7 @@ export const VideoDownloadAndShareDialog = () => {
         setCanDownloadAndShare(false)
         setFilename('')
         void __.recorder?.releaseMedia?.()
-    }, [releaseHqMediaUrl, releaseMediaUrl])
+    }, [prepareReplaySceneForDialog, releaseHqMediaUrl, releaseMediaUrl])
 
     /**
      * Keep the cleanup aligned with the native dialog close flow.
@@ -742,7 +779,7 @@ export const VideoDownloadAndShareDialog = () => {
             return
         }
 
-        handleCancel()
+        void handleCancel()
     }, [handleCancel])
 
     return (

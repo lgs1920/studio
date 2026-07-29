@@ -147,6 +147,7 @@ describe('JourneyReplayVideoSync', () => {
             emit:              false,
             deferSceneRestore: false,
         })
+        expect(replay.restorePlaybackScene).toHaveBeenCalledWith({force: true})
     })
 
     it('uses a tighter publication cadence in quality capture mode', () => {

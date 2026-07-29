@@ -284,9 +284,9 @@ describe('VideoDownloadAndShareDialog', () => {
         globalThis.cancelAnimationFrame = undefined
     })
 
-    const openDialog = () => {
+    const openDialog = async () => {
         render(<VideoDownloadAndShareDialog/>)
-        act(() => {
+        await act(async () => {
             recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.STOP, {
                 detail: {
                     blob: new Blob(['video'], {type: 'video/mp4'}),
@@ -296,7 +296,10 @@ describe('VideoDownloadAndShareDialog', () => {
         expect(screen.queryByTestId('video-preview-dialog')).not.toBeNull()
     }
 
-    const expectDialogCleanup = () => {
+    const expectDialogCleanup = async () => {
+        await waitFor(() => {
+            expect(screen.queryByTestId('video-preview-dialog')).toBeNull()
+        })
         expect(globalThis.__.ui.replay.restorePlaybackScene).toHaveBeenCalledTimes(1)
         expect(globalThis.__.ui.replay.restorePlaybackScene).toHaveBeenCalledWith({force: true})
         expect(globalThis.__.ui.replayVideoSync.stopJourneyReplay).toHaveBeenCalledWith({deferSceneRestore: false})
@@ -307,40 +310,74 @@ describe('VideoDownloadAndShareDialog', () => {
         expect(screen.queryByTestId('video-preview-dialog')).toBeNull()
     }
 
-    it('uses the same cleanup for the footer close button', () => {
-        openDialog()
+    it('uses the same cleanup for the footer close button', async () => {
+        await openDialog()
 
-        fireEvent.click(screen.getByRole('button', {name: 'Close'}))
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', {name: 'Close'}))
+        })
 
-        expectDialogCleanup()
+        await expectDialogCleanup()
     })
 
-    it('uses the same cleanup for the native dialog close button', () => {
-        openDialog()
+    it('uses the same cleanup for the native dialog close button', async () => {
+        await openDialog()
 
-        fireEvent.click(screen.getByRole('button', {name: 'Native dialog close'}))
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', {name: 'Native dialog close'}))
+        })
 
-        expectDialogCleanup()
+        await expectDialogCleanup()
     })
 
-    it('uses the same cleanup for an Escape dialog close', () => {
-        openDialog()
+    it('uses the same cleanup for an Escape dialog close', async () => {
+        await openDialog()
 
-        fireEvent.click(screen.getByRole('button', {name: 'Escape dialog close'}))
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', {name: 'Escape dialog close'}))
+        })
 
-        expectDialogCleanup()
+        await expectDialogCleanup()
     })
 
-    it('cleans up when the dialog itself reports an external forced close', () => {
-        openDialog()
+    it('waits for replay scene focus restoration before opening the preview dialog', async () => {
+        let resolveRestore
+        globalThis.__.ui.replay.restorePlaybackScene.mockImplementationOnce(() => new Promise(resolve => {
+            resolveRestore = resolve
+        }))
 
-        fireEvent.click(screen.getByRole('button', {name: 'Forced dialog self close'}))
+        render(<VideoDownloadAndShareDialog/>)
+        await act(async () => {
+            recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.STOP, {
+                detail: {
+                    blob: new Blob(['video'], {type: 'video/mp4'}),
+                },
+            }))
+            await Promise.resolve()
+        })
 
-        expectDialogCleanup()
+        expect(screen.queryByTestId('video-preview-dialog')).toBeNull()
+        expect(globalThis.__.ui.replay.restorePlaybackScene).toHaveBeenCalledWith({force: true})
+
+        await act(async () => {
+            resolveRestore()
+        })
+
+        expect(screen.queryByTestId('video-preview-dialog')).not.toBeNull()
     })
 
-    it('ignores hide events bubbling from nested Web Awesome components', () => {
-        openDialog()
+    it('cleans up when the dialog itself reports an external forced close', async () => {
+        await openDialog()
+
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', {name: 'Forced dialog self close'}))
+        })
+
+        await expectDialogCleanup()
+    })
+
+    it('ignores hide events bubbling from nested Web Awesome components', async () => {
+        await openDialog()
 
         fireEvent.click(screen.getByRole('button', {name: 'Nested component hide'}))
 
@@ -351,7 +388,7 @@ describe('VideoDownloadAndShareDialog', () => {
     })
 
     it('shares the live recording by default', async () => {
-        openDialog()
+        await openDialog()
 
         expect(screen.getByLabelText('File name input').value).toBe('recording-draft')
         expect(screen.getByRole('button', {name: 'Share'}).getAttribute('appearance')).toBe('filled')
@@ -367,7 +404,7 @@ describe('VideoDownloadAndShareDialog', () => {
     })
 
     it('forces the live draft filename on download', async () => {
-        openDialog()
+        await openDialog()
 
         expect(screen.getByRole('button', {name: 'Download'}).getAttribute('appearance')).toBe('filled')
 
@@ -389,7 +426,7 @@ describe('VideoDownloadAndShareDialog', () => {
             },
         }
 
-        openDialog()
+        await openDialog()
 
         expect(screen.getByTestId('recording-info').getAttribute('data-dimensions')).toBe('640x360')
         expect(screen.getByTestId('recording-info').getAttribute('data-quality')).toBe('HD')
@@ -456,7 +493,7 @@ describe('VideoDownloadAndShareDialog', () => {
             },
         }
 
-        openDialog()
+        await openDialog()
 
         await act(async () => {
             fireEvent.click(screen.getByRole('button', {name: 'Create HQ video'}))
@@ -489,7 +526,7 @@ describe('VideoDownloadAndShareDialog', () => {
             },
         }
 
-        openDialog()
+        await openDialog()
 
         await act(async () => {
             fireEvent.click(screen.getByRole('button', {name: 'Create HQ video'}))
@@ -550,7 +587,7 @@ describe('VideoDownloadAndShareDialog', () => {
             deferredExportPlan: {runtime: {contextKey: 'ctx-1'}},
         }
 
-        openDialog()
+        await openDialog()
 
         await act(async () => {
             fireEvent.click(screen.getByRole('button', {name: 'Create HQ video'}))
@@ -566,6 +603,7 @@ describe('VideoDownloadAndShareDialog', () => {
         expect(screen.getByLabelText('File name input').value).toBe('recording-draft')
         expect(screen.getByRole('button', {name: 'Share'})).not.toBeNull()
         expect(screen.queryByRole('button', {name: 'Share HQ'})).toBeNull()
+        expect(globalThis.__.ui.replay.restorePlaybackScene).toHaveBeenCalledTimes(2)
     })
 
     it('switches the app back into editing mode while HQ creation is running', async () => {
@@ -579,7 +617,7 @@ describe('VideoDownloadAndShareDialog', () => {
             deferredExportPlan: {runtime: {contextKey: 'ctx-1'}},
         }
 
-        openDialog()
+        await openDialog()
 
         await act(async () => {
             fireEvent.click(screen.getByRole('button', {name: 'Create HQ video'}))
