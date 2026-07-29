@@ -1,5 +1,17 @@
 # Commit History
 
+## 2026-07-29 — [`fix(video): prevent replay focus flash on exit`](https://github.com/lgs1920/studio/commit/e8486c589fac0404919e631232503625b6a74d51)
+
+- Pre-focus the final replay scene before opening the video dialog after completion or early exits.
+- Reuse the same focus and cleanup path for cancel, abort, and native dialog close flows.
+- Add regression coverage for deferred scene restoration and focus ordering.
+
+## 2026-07-29 — [`fix(replay): correct Draft replay timeline progress`](https://github.com/lgs1920/studio/commit/09f8515cc74077ecaf7ce6bf0528a19510bbf408)
+
+- Calculate Draft progress from the complete replay timeline, including enabled start and stop clips.
+- Prefer recorder elapsed time and the controller playback duration over sampler-only frame metadata.
+- Add regression coverage for missing frame metadata, pre-plan progress, preparation reset, and final completion.
+
 ## 2026-07-29 — [`fix(replay): correct Draft replay progress percentage`](https://github.com/lgs1920/studio/commit/b0a24598a67ab327c56dd5b23bec45e78370b619)
 
 - Resolve Draft replay progress from rendered frames or elapsed timeline time, with clamped 0–100 percent output.

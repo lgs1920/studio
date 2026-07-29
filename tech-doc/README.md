@@ -36,6 +36,7 @@ Proposed work, pending validation, or future implementation work lives under `to
 - [EventEmitter](specs/ASSETS-LIBS-EVENTEMITTER-README.md)
 - [Flags assets](specs/PUBLIC-FLAGS-README.md)
 - [Logo assets](specs/PUBLIC-LOGO-README.md)
+- [GitHub Project release and branch workflow](specs/TECH-GITHUB-PROJECT-RELEASE-WORKFLOW-SPEC.md)
 
 ## TODO
 
