@@ -19,6 +19,10 @@
  ******************************************************************************/
 import { JourneyReplayProgressBar } from '@Components/JourneyReplay/JourneyReplayProgressBar'
 import { restoreVideoCaptureUi } from '@Components/MainUI/video/videoEditingCleanup'
+import {
+    resolveReplayTimelineDuration,
+    resolveReplayTimelineProgress,
+} from '@Core/ui/replay/ReplayProgress'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { UIToast }                          from '@Utils/UIToast'
 import { UnitUtils }                        from '@Utils/UnitUtils'
@@ -82,7 +86,6 @@ const RecorderControls = memo(({recording, paused, recorder, starting, onFinaliz
     )
 })
 
-const clampProgress = value => Math.max(0, Math.min(1, Number(value) || 0))
 const finiteNumber = value => {
     const numeric = Number(value)
     return Number.isFinite(numeric) ? numeric : null
@@ -97,17 +100,37 @@ export const VideoRecorderToolbar = ({toolbar}) => {
     const video = useSnapshot($video)
     const syncWithJourneyReplay = replay.recordingSync === true
     const isMobile = __.device?.isMobile === true
-    const videoTimelineDurationMillis = finiteNumber(replay.deferredExportPlan?.videoTimeline?.durationMillis)
+    const hasDraftVideoTimeline = finiteNumber(replay.deferredExportPlan?.videoTimeline?.durationMillis) > 0
+    const videoTimelineDurationMillis = resolveReplayTimelineDuration({
+        videoTimelineDurationMillis: replay.deferredExportPlan?.videoTimeline?.durationMillis,
+        replayDurationMillis:       replay.durationMillis,
+    })
 
     const [state, setState] = useState({
                                            recordedDuration: 0,
                                            recordedSize: 0,
                                            finalizing:   false,
                                        })
-    const draftVideoProgress = syncWithJourneyReplay
-                               && videoTimelineDurationMillis !== null
-                               && videoTimelineDurationMillis > 0
-                               ? clampProgress(state.recordedDuration / videoTimelineDurationMillis)
+    const _wasPreRecording = useRef(false)
+
+    useEffect(() => {
+        if (video.preRecording && !_wasPreRecording.current) {
+            setState(previous => ({
+                                     ...previous,
+                                     recordedDuration: 0,
+                                     recordedSize:     0,
+                                     finalizing:       false,
+                                 }))
+        }
+
+        _wasPreRecording.current = video.preRecording
+    }, [video.preRecording])
+
+    const draftVideoProgress = syncWithJourneyReplay && hasDraftVideoTimeline
+                               ? resolveReplayTimelineProgress({
+                                   elapsedMillis:  state.recordedDuration,
+                                   durationMillis: videoTimelineDurationMillis,
+                               })
                                : null
     const indicatorState = video.finalizing
                           ? 'finalizing'
@@ -159,11 +182,14 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         }
 
         const handleInfo = (event) => {
-            // Use the duration directly from the event
+            const duration = finiteNumber(event.detail?.duration)
+            const size = finiteNumber(event.detail?.size)
             setState((prev) => ({
                 ...prev,
-                recordedSize:     event.detail.size,
-                recordedDuration: event.detail.duration,
+                recordedSize:     size === null ? prev.recordedSize : Math.max(0, size),
+                recordedDuration: duration === null
+                                  ? prev.recordedDuration
+                                  : Math.max(prev.recordedDuration, duration),
             }))
         }
 
@@ -208,15 +234,32 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 __.recorder.stopVideo()
             }
 
-            updateState({
-                            preRecording: false,
-                            recording:    false,
-                            paused:       false,
-                            step:         null,
-                            size:         0,
-                            recordedDuration: 0,
-                            recordedSize: 0,
-                        })
+            const finalDuration = finiteNumber(event.detail?.duration)
+                                  ?? finiteNumber(__.recorder?.mediaData?.duration)
+            const finalSize = finiteNumber(event.detail?.size)
+                              ?? finiteNumber(__.recorder?.mediaData?.size)
+
+            const stopState = {
+                preRecording: false,
+                recording:    false,
+                paused:       false,
+                step:         null,
+                size:         0,
+            }
+            if (event.type === ScreenMediaRecorder.events.CANCEL) {
+                stopState.recordedDuration = 0
+                stopState.recordedSize = 0
+            }
+            else {
+                if (finalDuration !== null) {
+                    stopState.recordedDuration = Math.max(0, finalDuration)
+                }
+                if (finalSize !== null) {
+                    stopState.recordedSize = Math.max(0, finalSize)
+                }
+            }
+
+            updateState(stopState)
 
             switch (event.type) {
                 case ScreenMediaRecorder.events.STOP:

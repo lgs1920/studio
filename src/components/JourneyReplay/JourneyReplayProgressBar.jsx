@@ -16,6 +16,10 @@
 
 import { REPLAY_DRAWER } from '@Core/constants'
 import { REPLAY_LABEL }  from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import {
+    clampReplayProgress,
+    resolveReplayTimelineProgress,
+}                           from '@Core/ui/replay/ReplayProgress'
 import { captureReplayCropSnapshot } from '@Core/ui/ReplayCropSnapshot'
 import { DISTANCE_UNITS, km, UnitUtils } from '@Utils/UnitUtils'
 import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
@@ -25,7 +29,6 @@ import { v4 as uuid } from 'uuid'
 
 const MINUTE_MILLIS = 60 * 1000
 const PLACEHOLDER_VALUE = '--'
-const clampProgress = value => Math.max(0, Math.min(1, Number(value) || 0))
 const finiteNumber = value => {
     const numeric = Number(value)
     return Number.isFinite(numeric) ? numeric : null
@@ -69,11 +72,11 @@ const playbackProgressFromSample = ({sample, totalDistance, direction, fallback}
                             : finiteNumber(sample?.distanceFromStart)
 
     if (total !== null && total > 0 && coveredDistance !== null) {
-        return clampProgress(coveredDistance / total)
+        return clampReplayProgress(coveredDistance / total)
     }
 
     if (sampleProgress !== null) {
-        return clampProgress(direction < 0 ? 1 - sampleProgress : sampleProgress)
+        return clampReplayProgress(direction < 0 ? 1 - sampleProgress : sampleProgress)
     }
 
     return fallback
@@ -177,23 +180,34 @@ export const JourneyReplayProgressBar = memo(({
     const isUiHidden = replay.mainUiHidden === true
     const isClipSequenceActive = replay.clipSequenceActive === true
     const hasPlaybackSample = Boolean((replay.active || replay.playing || replay.paused) && replay.sample)
-    const progress = hasPlaybackSample ? clampProgress(replay.progress) : 0
+    const progress = hasPlaybackSample ? clampReplayProgress(replay.progress) : 0
     const direction = Number(replay.direction) < 0 ? -1 : 1
     const totalMillis = finiteNumber(replay.durationMillis)
     const elapsedMillis = finiteNumber(replay.elapsedMillis)
     const hasJourneyTime = hasPlaybackSample && totalMillis !== null && totalMillis > 0 && elapsedMillis !== null
     const totalDistance = hasPlaybackSample ? replay.totalDistance ?? 0 : 0
     const distanceUnit = DISTANCE_UNITS[unitSystem] ?? km
-    const playbackProgress = playbackProgressFromSample({
-        sample: hasPlaybackSample ? replay.sample : null,
-        totalDistance,
-        direction,
-        fallback: direction < 0 ? 1 - progress : progress,
-    })
+    const draftFrameState = replay.dynamicFrameState
+    const draftPlaybackProgress = replay.recordingSync === true
+                                  ? resolveReplayTimelineProgress({
+                                      frameIndex:    draftFrameState?.replayFrameIndex ?? draftFrameState?.frameIndex,
+                                      frameCount:    draftFrameState?.replayFrameCount ?? draftFrameState?.frameCount,
+                                      elapsedMillis: draftFrameState?.elapsedMillis ?? elapsedMillis,
+                                      durationMillis: draftFrameState?.durationMillis ?? totalMillis,
+                                      fallback:      direction < 0 ? 1 - progress : progress,
+                                  })
+                                  : null
+    const playbackProgress = draftPlaybackProgress
+                            ?? playbackProgressFromSample({
+                                sample: hasPlaybackSample ? replay.sample : null,
+                                totalDistance,
+                                direction,
+                                fallback: direction < 0 ? 1 - progress : progress,
+                            })
     const overrideProgress = progressOverride === null || progressOverride === undefined
                              ? null
                              : finiteNumber(progressOverride)
-    const displayProgress = overrideProgress !== null ? clampProgress(overrideProgress) : playbackProgress
+    const displayProgress = overrideProgress !== null ? clampReplayProgress(overrideProgress) : playbackProgress
     const coveredDistance = hasPlaybackSample && replay.sample
                             ? (direction < 0 ? replay.sample.remainingDistance : replay.sample.distanceFromStart)
                             : totalDistance * playbackProgress
