@@ -1,5 +1,10 @@
 # Commit History
 
+## 2026-07-29 — [`chore: synchronize path aliases`](https://github.com/lgs1920/studio/commit/43756c42a7402b6fdc2bf86d9f7af131672c5315)
+
+- Synchronize TypeScript, Vite, and Vitest path aliases.
+- Add aliases for assets, widgets, settings, tests, events, core UI, and database modules.
+
 ## 2026-07-29 — [`fix(video): prevent replay focus flash on exit`](https://github.com/lgs1920/studio/commit/e8486c589fac0404919e631232503625b6a74d51)
 
 - Pre-focus the final replay scene before opening the video dialog after completion or early exits.
