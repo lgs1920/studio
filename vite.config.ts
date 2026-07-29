@@ -289,6 +289,30 @@ export default defineConfig({
             {
                 find: '@Assets',
                 replacement: path.resolve(__dirname, 'src/assets')
+            },
+            {
+                find: '@Widgets',
+                replacement: path.resolve(__dirname, 'src/components/MainUI/widgets')
+            },
+            {
+                find: '@Settings',
+                replacement: path.resolve(__dirname, 'src/components/Settings')
+            },
+            {
+                find: '@Tests',
+                replacement: path.resolve(__dirname, 'src/__tests__')
+            },
+            {
+                find: '@Events',
+                replacement: path.resolve(__dirname, 'src/core/events')
+            },
+            {
+                find: '@UI',
+                replacement: path.resolve(__dirname, 'src/core/ui')
+            },
+            {
+                find: '@Database',
+                replacement: path.resolve(__dirname, 'src/core/db')
             }
         ]
     },
