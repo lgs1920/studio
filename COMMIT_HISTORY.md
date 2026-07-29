@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-07-29 — [`fix(replay): correct Draft replay progress percentage`](https://github.com/lgs1920/studio/commit/b0a24598a67ab327c56dd5b23bec45e78370b619)
+
+- Resolve Draft replay progress from rendered frames or elapsed timeline time, with clamped 0–100 percent output.
+- Use the complete Draft video timeline, keep updates monotonic, and preserve the final 100 percent state on stop.
+- Add unit, UI, and integration coverage for frame progress, elapsed-time fallback, and Draft recording completion.
+
 ## 2026-07-28 — [`fix(replay): stop predictive pitch accumulation`](https://github.com/lgs1920/studio/commit/8d243946)
 
 - Keep Draft lookahead available for heading and position corrections without applying predictive pitch when the current view is already visible.
