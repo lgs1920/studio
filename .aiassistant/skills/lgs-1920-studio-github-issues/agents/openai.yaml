@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitHub Issues and Project Workflow"
+  short_description: "Manage LGS1920 issues and release planning"
+  default_prompt: "Use $lgs-1920-studio-github-issues to triage issues and update the GitHub Project."

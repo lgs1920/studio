@@ -17,7 +17,9 @@ This specification applies to the LGS1920 organization project and the
 `lgs1920/studio` repository. The organization project may also contain related
 backend and website work. Repository-specific milestones remain useful for
 issue tracking, while the project-level target release provides a shared view
-when a delivery spans multiple repositories.
+when a delivery spans multiple repositories. Repository milestones are retained
+as legacy metadata during the migration, but they are not required for new
+planning work.
 
 ## Project configuration
 
@@ -46,7 +48,7 @@ The supported statuses are:
 ### Target release field
 
 The `Target release` single-select field identifies the intended product
-release across repositories:
+release across repositories and is the project-level source of truth:
 
 - `Unplanned`
 - `1.0.0-beta.4`
@@ -54,9 +56,10 @@ release across repositories:
 - `1.2.0`
 - `1.3.0`
 
-New release values must be added only when a release is approved. A target
-release does not replace a repository milestone when repository-level progress
-tracking is required.
+The field also contains legacy release values copied from existing milestones
+so that historical planning information is not lost during migration. New
+release values must be added only when a release is approved. New issues should
+use `Target release` directly and should not require a repository milestone.
 
 ### Existing project metadata
 
@@ -64,13 +67,14 @@ The following metadata remains authoritative for its existing purpose:
 
 - `Priority` expresses urgency or product importance.
 - `Labels` express type and area.
-- `Milestone` groups issues and pull requests inside a repository.
+- `Milestone` preserves repository-level historical associations during the
+  migration and is optional for new planning work.
 - `Repository` identifies the owning repository.
 - `Linked pull requests` connects planning work to implementation.
 - `Parent issue` and `Sub-issues progress` express hierarchy and decomposition.
 
-Versions must not be encoded again in labels or statuses when the milestone or
-`Target release` field already provides that information.
+Versions must not be encoded again in labels or statuses when `Target release`
+already provides that information.
 
 ## Project views
 
@@ -196,9 +200,13 @@ Before publishing a release:
 
 The project configuration can be migrated without moving existing items. The
 status renames preserve the purpose of the existing values, while new statuses
-are available for future work. Existing version-specific views and historical
-staging tags should remain untouched until their usage and retention policy are
-reviewed separately.
+are available for future work. The `Target release` value has been copied from
+the milestone on all 245 project elements that had a milestone. The release
+views now filter on `Target release` rather than `Milestone`.
+
+The original milestones have not been removed yet. They should remain until
+the migration has been reviewed and any repository-level reporting or release
+history depending on them has been replaced.
 
 The repository branch and release protections remain a repository-settings
 concern. They should be enabled in a separate controlled change after the CI

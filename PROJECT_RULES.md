@@ -62,9 +62,30 @@ This is the canonical source for the project's AI-agent and development rules.
 ## 6. Issue Creation Workflow
 
 - **Clarification and validation:** Before creating an issue, ask the user for any missing explanations or clarifications needed to understand and scope the request. Then present the complete proposed issue content for explicit user validation. Do not create the issue until the user has validated the proposal.
-- **Complete fields:** Every created issue must have all available fields filled in, including title, description, assignee, labels, type, milestone, backlog, and any other fields required by the issue tracker.
+- **Complete fields:** Every created issue must have all known and applicable fields filled in, including title, description, assignee, labels, type, priority, repository, Project status, and `Target release`. Do not invent a release, label, priority, or other value when the information is not known.
 - **Assignee:** Assign the issue to the user requesting its creation unless the user explicitly specifies another assignee.
-- **Milestone and backlog:** When the user does not specify a backlog, use `Backlog`. When the user does not specify a milestone, use the latest available milestone. The user will update these values afterward if needed.
+- **Release planning:** Use the Project-level `Target release` field as the source of truth for release planning across repositories. Use `Unplanned` when no approved release has been selected. Add a new target-release option only after the release has been approved.
+- **Milestone migration:** A milestone is not required for a new issue when `Target release` is known. For an existing issue with a milestone, copy the exact milestone title to the matching `Target release` option when one exists. Keep the milestone during the migration until the result and dependent reporting have been reviewed. Do not clear or delete milestones automatically, and report any mismatch or conflict.
+- **Backlog status:** Use the Project `Status` value `Backlog` for accepted work that is not ready to start. Do not treat backlog as a release field or encode versions in labels or statuses when `Target release` already provides that information.
 - **Issue body structure:** Write every issue body in the same structure: short context, requested behavior, acceptance criteria, and optional notes or questions. Keep the scope to one request per issue and prefer bullet lists for requirements.
 - **Issue templates:** Use `.github/ISSUE_TEMPLATE/bug_report.md` for bugs and `.github/ISSUE_TEMPLATE/feature_request.md` for new features or improvements. Keep the sections consistent with the issue type and use the reproduction section only for bugs.
 - **Issue type mapping:** Each issue template must include its hidden `issue-type` marker, and the automation must set the GitHub issue type accordingly (`bug` for `bug_report.md`, `feature` for `feature_request.md`).
+
+### Project workflow statuses
+
+Use the shared organization Project and keep its `Status` field limited to the delivery workflow:
+
+New issues start in `Triage` unless their validated scope already justifies a different workflow state.
+
+- `Triage`: new work that needs clarification, ownership, or prioritization.
+- `Backlog`: accepted work that is not ready to start.
+- `Ready`: scoped work with acceptance criteria and a target release.
+- `In Progress`: active implementation.
+- `Review`: a linked pull request is open.
+- `QA`: review is approved and validation is in progress.
+- `Blocked`: an explicit dependency or decision prevents progress.
+- `Done`: the linked pull request is merged and the work is complete.
+
+Move an issue to `Review` when its pull request opens, to `QA` after review approval, and to `Done` only after merge. Add every implementation issue to the Project and link it to its pull request.
+
+Keep one shared Project across releases. Do not create a Project or a workflow status for each version. Preserve historical views, milestones, tags, and branches unless the user explicitly approves their removal.
