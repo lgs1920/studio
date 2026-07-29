@@ -14,6 +14,12 @@ describe('replay progress helpers', () => {
 
     it('falls back to elapsed time when frame metadata is unavailable', () => {
         expect(resolveReplayTimelineProgress({elapsedMillis: 250, durationMillis: 1000})).toBe(0.25)
+        expect(resolveReplayTimelineProgress({
+            frameIndex:    null,
+            frameCount:    101,
+            elapsedMillis: 250,
+            durationMillis: 1000,
+        })).toBe(0.25)
     })
 
     it('clamps progress at the timeline boundaries', () => {
@@ -30,6 +36,19 @@ describe('replay progress helpers', () => {
         expect(resolveReplayTimelineDuration({
             videoTimelineDurationMillis: null,
             replayDurationMillis:       1000,
+        })).toBe(1000)
+        expect(resolveReplayTimelineDuration({
+            replayDurationMillis: 1000,
+            clips: {
+                start: [{params: {duration: 2}, enabled: true}],
+                stop:  [{params: {duration: 3}, enabled: true}],
+            },
+        })).toBe(6000)
+        expect(resolveReplayTimelineDuration({
+            replayDurationMillis: 1000,
+            clips: {
+                start: [{params: {duration: 2}, enabled: false}],
+            },
         })).toBe(1000)
     })
 })

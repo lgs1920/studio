@@ -2,6 +2,26 @@
  * Replay progress helpers shared by live playback and Draft recording UI.
  */
 
+const finiteNumber = value => {
+    if (value === null || value === undefined || value === '') {
+        return null
+    }
+
+    const numeric = Number(value)
+    return Number.isFinite(numeric) ? numeric : null
+}
+
+const replayClipDurationMillis = clip => {
+    const durationSeconds = finiteNumber(clip?.params?.duration)
+                              ?? finiteNumber(clip?.values?.duration)
+                              ?? finiteNumber(clip?.duration)
+    return Math.max(0, durationSeconds ?? 0) * 1000
+}
+
+const replayClipsDurationMillis = clips => [...(clips?.start ?? []), ...(clips?.stop ?? [])]
+    .filter(clip => clip?.enabled !== false)
+    .reduce((total, clip) => total + replayClipDurationMillis(clip), 0)
+
 /**
  * Clamp a replay progress value to the inclusive [0, 1] range.
  *
@@ -14,28 +34,35 @@ export const clampReplayProgress = value => {
 }
 
 /**
- * Return the first positive finite duration from the available replay timelines.
+ * Return the complete Draft timeline duration from the available replay data.
  *
  * The prepared video timeline includes Draft start and stop clips. The replay
- * duration is retained as a fallback while the deferred export plan is being
- * prepared or when a standalone replay has no video timeline.
+ * duration plus enabled start and stop clips is retained as a fallback while
+ * the deferred export plan is being prepared.
  *
  * @param {Object} options - Timeline duration candidates.
  * @param {*} options.videoTimelineDurationMillis - Full Draft video duration.
- * @param {*} options.replayDurationMillis - Journey replay duration fallback.
+ * @param {*} options.replayDurationMillis - Journey replay playback duration.
+ * @param {Object|null} options.clips - Optional Draft start and stop clips.
  * @returns {number|null} The usable duration, or null when none is available.
  */
 export const resolveReplayTimelineDuration = ({
                                                   videoTimelineDurationMillis = null,
                                                   replayDurationMillis = null,
+                                                  clips = null,
                                               } = {}) => {
-    const videoDuration = Number(videoTimelineDurationMillis)
-    if (Number.isFinite(videoDuration) && videoDuration > 0) {
+    const videoDuration = finiteNumber(videoTimelineDurationMillis)
+    if (videoDuration !== null && videoDuration > 0) {
         return videoDuration
     }
 
-    const replayDuration = Number(replayDurationMillis)
-    return Number.isFinite(replayDuration) && replayDuration > 0 ? replayDuration : null
+    const replayDuration = finiteNumber(replayDurationMillis)
+    if (replayDuration === null || replayDuration <= 0) {
+        return null
+    }
+
+    const clipsDuration = replayClipsDurationMillis(clips)
+    return replayDuration + clipsDuration
 }
 
 /**
@@ -60,15 +87,15 @@ export const resolveReplayTimelineProgress = ({
                                                   durationMillis = null,
                                                   fallback = null,
                                               } = {}) => {
-    const safeFrameIndex = Number(frameIndex)
-    const safeFrameCount = Number(frameCount)
-    if (Number.isFinite(safeFrameIndex) && Number.isFinite(safeFrameCount) && safeFrameCount > 1) {
+    const safeFrameIndex = finiteNumber(frameIndex)
+    const safeFrameCount = finiteNumber(frameCount)
+    if (safeFrameIndex !== null && safeFrameCount !== null && safeFrameCount > 1) {
         return clampReplayProgress(safeFrameIndex / (safeFrameCount - 1))
     }
 
-    const safeElapsedMillis = Number(elapsedMillis)
-    const safeDurationMillis = Number(durationMillis)
-    if (Number.isFinite(safeElapsedMillis) && Number.isFinite(safeDurationMillis) && safeDurationMillis > 0) {
+    const safeElapsedMillis = finiteNumber(elapsedMillis)
+    const safeDurationMillis = finiteNumber(durationMillis)
+    if (safeElapsedMillis !== null && safeDurationMillis !== null && safeDurationMillis > 0) {
         return clampReplayProgress(safeElapsedMillis / safeDurationMillis)
     }
 
