@@ -16,13 +16,13 @@
 
 import {defineConfig} from 'vitest/config';
 import react from '@vitejs/plugin-react';
-import mdPlugin from 'vite-plugin-markdown';
+import mdPlugin, {Mode} from 'vite-plugin-markdown';
 import {fileURLToPath} from 'url';
 
 export default defineConfig({
     plugins: [
         react(),
-        mdPlugin({mode: ['html', 'markdown']}),
+        mdPlugin({mode: [Mode.HTML, Mode.MARKDOWN]}),
     ],
     test: {
         environment: 'jsdom',

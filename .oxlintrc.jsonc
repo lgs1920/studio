@@ -1,0 +1,35 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["eslint", "typescript", "react"],
+  "env": {
+    "browser": true,
+    "builtin": true
+  },
+  "globals": {
+    "lgs": "readonly",
+    "__": "readonly"
+  },
+  "settings": {
+    "react": {
+      "version": "19.2.8"
+    }
+  },
+  "ignorePatterns": [
+    "dist/**",
+    "dev-dist/**",
+    "dist-ssr/**",
+    "scripts/fixtures/oxlint/**",
+    "**/.eslintrc.cjs"
+  ],
+  "options": {
+    "typeAware": true,
+    "reportUnusedDisableDirectives": "error"
+  },
+  "rules": {
+    "react/rules-of-hooks": "warn",
+    "react/exhaustive-deps": "warn",
+    "react/only-export-components": ["warn", {
+      "allowConstantExport": true
+    }]
+  }
+}

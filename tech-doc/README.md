@@ -37,6 +37,7 @@ Proposed work, pending validation, or future implementation work lives under `to
 - [Flags assets](specs/PUBLIC-FLAGS-README.md)
 - [Logo assets](specs/PUBLIC-LOGO-README.md)
 - [GitHub Project release and branch workflow](specs/TECH-GITHUB-PROJECT-RELEASE-WORKFLOW-SPEC.md)
+- [Oxlint TypeScript 7 migration](specs/CORE-OXLINT-TYPESCRIPT-7-MIGRATION.md)
 
 ## TODO
 
@@ -54,5 +55,4 @@ Proposed work, pending validation, or future implementation work lives under `to
 - [GitHub Actions deployment migration study](todo/CORE-GITHUB-ACTIONS-DEPLOYMENT-MIGRATION.md)
 - [Arrow widget](todo/ARROW_WIDGET_SPEC.md)
 - [Video widget](todo/VIDEO_WIDGET_SPEC.md)
-- [Oxlint TypeScript 7 migration](todo/OXLINT_TYPESCRIPT_7_MIGRATION_SPEC.md)
 - [Replay video architecture](todo/CORE-REPLAY-VIDEO-ARCHITECTURE.md)

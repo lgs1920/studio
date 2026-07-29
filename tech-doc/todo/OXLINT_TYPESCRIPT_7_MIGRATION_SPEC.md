@@ -2,7 +2,11 @@
 
 ## Status
 
-Proposal pending validation before implementation.
+Implemented. The current implementation is documented in
+[CORE-OXLINT-TYPESCRIPT-7-MIGRATION.md](../specs/CORE-OXLINT-TYPESCRIPT-7-MIGRATION.md).
+
+This file is retained as the original issue proposal so the issue's historical
+link remains valid.
 
 ## Objective
 

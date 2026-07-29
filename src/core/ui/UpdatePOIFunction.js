@@ -14,16 +14,12 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-    // Ancien code
-const handleChangeLatitude = async event => {
-    point = Object.assign($pois.list.get(point.id), {
-        latitude: event.target.value * 1,
-    })
-    $pois.list.set(point.id, point)
-    await __.ui.poiManager.persistToDatabase(point)
-}
-
-// Nouveau code simplifié
+/**
+ * Updates a point latitude through the POI manager.
+ *
+ * @param {Object} event - Latitude input event.
+ * @returns {Promise<void>}
+ */
 const handleChangeLatitude = async event => {
     await __.ui.poiManager.updatePOI(point.id, {
         latitude: event.target.value * 1

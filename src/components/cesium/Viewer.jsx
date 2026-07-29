@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 import '@shoelace-style/shoelace/dist/themes/light.css'
-/* eslint-disable react-refresh/only-export-components */
+/* oxlint-disable react/only-export-components */
 import { CanvasEventManager } from '@Core/events/CanvasEventManager'
 import { LayersUtils }        from '@Utils/cesium/LayersUtils'
 import { SceneUtils }                                                                                  from '@Utils/cesium/SceneUtils'

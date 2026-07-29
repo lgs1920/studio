@@ -14,8 +14,6 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-/* eslint-disable react-hooks/immutability */
-
 import { SelectLocation }              from '@Components/MainUI/geocoding/SelectLocation'
 import WaDialogNonModal                from '@Components/WaDialogNonModal'
 import { SECOND }                      from '@Core/constants'

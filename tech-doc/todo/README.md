@@ -25,4 +25,3 @@ This directory contains proposed, pending-validation, explicitly TODO, or future
 - [Replay video architecture](CORE-REPLAY-VIDEO-ARCHITECTURE.md)
 - [Clip altitude data alignment](CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md)
 - [POI animation during replay](CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md)
-- [Oxlint TypeScript 7 migration](OXLINT_TYPESCRIPT_7_MIGRATION_SPEC.md)
