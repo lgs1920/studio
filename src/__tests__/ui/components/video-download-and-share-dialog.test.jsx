@@ -18,6 +18,18 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 
+const countMocks = vi.hoisted(() => ({
+    sendDraftVideo: vi.fn(async () => true),
+    sendHqVideo:    vi.fn(async () => true),
+}))
+
+vi.mock('@Utils/CountApi', () => ({
+    CountApi: {
+        sendDraftVideo: countMocks.sendDraftVideo,
+        sendHqVideo:    countMocks.sendHqVideo,
+    },
+}))
+
 vi.mock('@Components/MainUI/video/RecordingInfo', () => ({
     RecordingInfo: ({mediaData}) => (
         <div
@@ -390,6 +402,8 @@ describe('VideoDownloadAndShareDialog', () => {
     it('shares the live recording by default', async () => {
         await openDialog()
 
+        expect(countMocks.sendDraftVideo).toHaveBeenCalledTimes(1)
+
         expect(screen.getByLabelText('File name input').value).toBe('recording-draft')
         expect(screen.getByRole('button', {name: 'Share'}).getAttribute('appearance')).toBe('filled')
 
@@ -436,6 +450,8 @@ describe('VideoDownloadAndShareDialog', () => {
             fireEvent.click(screen.getByRole('button', {name: 'Create HQ video'}))
         })
 
+        expect(countMocks.sendDraftVideo).toHaveBeenCalledTimes(1)
+        expect(countMocks.sendHqVideo).toHaveBeenCalledTimes(1)
         expect(prepareVideoCaptureUi).toHaveBeenCalledTimes(1)
         expect(exportReplayDeferredMp4).toHaveBeenCalledTimes(1)
         expect(exportReplayDeferredMp4.mock.calls[0]?.[0]).toMatchObject({

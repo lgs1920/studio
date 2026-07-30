@@ -31,6 +31,7 @@ import {
 import {
     getTrackDashPattern, normalizeTrackRenderStyle, TRACK_RENDER_WIDTH_UNITS,
 }                                                      from '@Utils/cesium/trackRenderStyle'
+import { CountApi }                                     from '@Utils/CountApi'
 import {
     BoundingSphere, Cartesian2, Cartesian3, Cartographic, Color as CColor, CustomDataSource, GeoJsonDataSource,
     HeightReference, HorizontalOrigin, Math as M, PolylineDashMaterialProperty, PolylineOutlineMaterialProperty,
@@ -241,6 +242,8 @@ export class TrackUtils {
 
                 await __.ui.cameraManager.stopRotate()
                 __.ui.profiler.draw()
+
+                void CountApi.sendJourney()
 
                 return JOURNEY_OK
             }

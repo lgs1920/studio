@@ -28,6 +28,7 @@ import { exportReplayDeferredMp4 } from '@Core/ui/replay/ReplayDeferredExporter'
 import { buildReplayVideoRenderSpec } from '@Core/ui/replay/ReplayVideoRenderSpec'
 import { cancelVideoEditing, prepareVideoCaptureUi } from '@Components/MainUI/video/videoEditingCleanup'
 import { VIDEO_CROP_ZONE } from '@Core/constants'
+import { CountApi } from '@Utils/CountApi'
 import {
     WaButton, WaButtonGroup, WaDialog, WaDropdown, WaDropdownItem, WaIcon, WaInput, WaTooltip,
 }                        from '@web.awesome.me/webawesome-pro/dist/react'
@@ -309,6 +310,7 @@ export const VideoDownloadAndShareDialog = () => {
             setMediaUrl(url)
             setFilename(safeFilename)
             setCanDownloadAndShare(true)
+            void CountApi.sendDraftVideo()
             await prepareReplaySceneForDialog()
             setDialogOpen(true)
         }
@@ -558,6 +560,7 @@ export const VideoDownloadAndShareDialog = () => {
             setFilename(payload.filename)
             setHqMedia(payload)
             setHqExportStatus('ready')
+            void CountApi.sendHqVideo()
             Object.assign(lgs.stores.ui.video, {
                 editing:    false,
                 finalizing: false,
