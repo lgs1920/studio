@@ -17,6 +17,11 @@ const REPLAY_TRACKING_NAVIGATION_NARROW_CROP_RATIO = 0.75
 const REPLAY_TRACKING_NAVIGATION_NARROW_ZONE_RATIO = 0.22
 const REPLAY_TRACKING_DYNAMIC_TRIGGER_ZONE_RATIO = 0.75
 const REPLAY_TRACKING_DYNAMIC_TARGET_ZONE_RATIO = 0.3
+export const REPLAY_TRACKING_DYNAMIC_Z1_MIN_RATIO = 0.3
+export const REPLAY_TRACKING_DYNAMIC_Z2_MIN_RATIO = 0.05
+export const REPLAY_TRACKING_NAVIGATION_MINIMUM_CORRECTION_SECONDS = 2
+const REPLAY_TRACKING_SHORT_REPLAY_TRANSITION_MULTIPLIER = 5
+const REPLAY_TRACKING_CALCULATION_LAG_GUARD_SECONDS = 0.25
 export const REPLAY_DRAFT_LOOKAHEAD_FPS = 15
 export const REPLAY_HQ_LOOKAHEAD_FPS = 60
 
@@ -339,6 +344,160 @@ export const replayRuntimeTrackingSettings = (settings = {}, viewport = {}) => {
                     ?? finiteNumber(dynamic.targetWidth)
                     ?? REPLAY_TRACKING_DYNAMIC_TARGET_ZONE_RATIO,
             ),
+        },
+    }
+}
+
+/**
+ * Resolve a smooth pressure value for replay tracking zones.
+ *
+ * The pressure reaches one when the remaining replay time is too short for a
+ * complete camera transition. Short replays receive the same pressure from
+ * their first frame so that the camera starts correcting before a delayed
+ * calculation can push the marker outside the capture area.
+ *
+ * @param {object} options - Timing inputs.
+ * @param {number} options.durationSeconds - Full replay duration.
+ * @param {number} options.progress - Current normalized replay progress.
+ * @param {number} options.transitionSeconds - Camera transition duration.
+ * @param {number} options.frameLeadSeconds - Output frame lead.
+ * @param {number} options.calculationLagSeconds - Expected calculation delay.
+ * @returns {object} Adaptive timing diagnostics.
+ */
+export const replayTrackingZonePressure = ({
+                                                 durationSeconds,
+                                                 progress,
+                                                 transitionSeconds,
+                                                 frameLeadSeconds,
+                                                 calculationLagSeconds,
+                                             } = {}) => {
+    const duration = Math.max(0.1, finiteNumber(durationSeconds) ?? 60)
+    const safeProgress = clamp(finiteNumber(progress) ?? 0, 0, 1)
+    const transition = Math.max(0.1, finiteNumber(transitionSeconds) ?? 1)
+    const frameLead = Math.max(0, finiteNumber(frameLeadSeconds) ?? (1 / 30))
+    const calculationLag = Math.max(0, finiteNumber(calculationLagSeconds) ?? REPLAY_TRACKING_CALCULATION_LAG_GUARD_SECONDS)
+    const transitionBudget = transition + frameLead + calculationLag
+    const remaining = Math.max(0, duration * (1 - safeProgress))
+    const shortReplayWindow = transitionBudget * REPLAY_TRACKING_SHORT_REPLAY_TRANSITION_MULTIPLIER
+    const durationPressure = clamp(
+        (shortReplayWindow - duration) / Math.max(transitionBudget, shortReplayWindow - transitionBudget),
+        0,
+        1,
+    )
+    const remainingPressure = clamp(
+        (transitionBudget * 2 - remaining) / Math.max(transitionBudget, Number.EPSILON),
+        0,
+        1,
+    )
+
+    return {
+        durationSeconds:        duration,
+        progress:               safeProgress,
+        remainingSeconds:       remaining,
+        transitionBudgetSeconds: transitionBudget,
+        durationPressure,
+        remainingPressure,
+        pressure:               Math.max(durationPressure, remainingPressure),
+    }
+}
+
+/**
+ * Check whether a navigation correction is still inside its minimum hold
+ * window.
+ *
+ * @param {object} options - Logical correction timing.
+ * @param {number} options.startedAt - Logical time at which correction began.
+ * @param {number} options.logicalNow - Current logical time.
+ * @param {number} options.minimumSeconds - Minimum correction duration.
+ * @returns {boolean} Whether the correction must remain active.
+ */
+export const replayNavigationCorrectionWindowActive = ({
+                                                             startedAt,
+                                                             logicalNow,
+                                                             minimumSeconds,
+                                                         } = {}) => {
+    const start = startedAt === null || startedAt === undefined ? null : finiteNumber(startedAt)
+    const now = logicalNow === null || logicalNow === undefined ? null : finiteNumber(logicalNow)
+    const minimumMillis = Math.max(
+        0,
+        (finiteNumber(minimumSeconds) ?? REPLAY_TRACKING_NAVIGATION_MINIMUM_CORRECTION_SECONDS) * 1000,
+    )
+    return start !== null && now !== null && now >= start && now - start < minimumMillis
+}
+
+/**
+ * Adapt a centered tracking zone while preserving its normalized geometry.
+ *
+ * @param {object} zone - Base centered zone.
+ * @param {number} minimumRatio - Minimum width and height ratio.
+ * @param {number} pressure - Adaptive pressure from zero to one.
+ * @returns {object} Adapted centered zone.
+ */
+const replayAdaptCenteredTrackingZone = (zone, minimumRatio, pressure) => {
+    const bounds = replayToleranceZoneBounds(zone)
+    const baseRatio = Math.min(
+        Math.max(0.01, bounds.right - bounds.left),
+        Math.max(0.01, bounds.bottom - bounds.top),
+    )
+    const safeMinimumRatio = clamp(finiteNumber(minimumRatio) ?? baseRatio, 0.01, baseRatio)
+    const ratio = lerp(baseRatio, safeMinimumRatio, clamp(finiteNumber(pressure) ?? 0, 0, 1))
+    return replayCenteredZone(ratio, ratio)
+}
+
+/**
+ * Resolve the active replay tracking zones for the current logical frame.
+ *
+ * Dynamic Z1 is the outer trigger zone and has a 30% minimum. Dynamic Z2 is
+ * the inner landing zone and has a 5% minimum. Navigation has no Z2 landing
+ * zone and keeps its configured crop-aware Z1 geometry.
+ *
+ * @param {object} settings - Replay camera settings.
+ * @param {object} viewport - Active crop viewport.
+ * @param {object} options - Logical replay timing inputs.
+ * @returns {object} Active zones and diagnostic timing values.
+ */
+export const replayAdaptiveRuntimeTrackingSettings = (settings = {}, viewport = {}, options = {}) => {
+    const tracking = replayRuntimeTrackingSettings(settings, viewport)
+    const pressure = replayTrackingZonePressure(options)
+    const dynamicTriggerZone = replayAdaptCenteredTrackingZone(
+        tracking.dynamic.triggerZone,
+        REPLAY_TRACKING_DYNAMIC_Z1_MIN_RATIO,
+        pressure.pressure,
+    )
+    const dynamicTargetZone = replayAdaptCenteredTrackingZone(
+        tracking.dynamic.targetZone,
+        REPLAY_TRACKING_DYNAMIC_Z2_MIN_RATIO,
+        pressure.pressure,
+    )
+    const dynamicTriggerBounds = replayToleranceZoneBounds(dynamicTriggerZone)
+    const dynamicTargetBounds = replayToleranceZoneBounds(dynamicTargetZone)
+    const maximumNestedTargetRatio = Math.max(
+        0.01,
+        Math.min(
+            dynamicTriggerBounds.right - dynamicTriggerBounds.left,
+            dynamicTriggerBounds.bottom - dynamicTriggerBounds.top,
+        ) - 0.01,
+    )
+    const nestedTargetRatio = Math.min(
+        dynamicTargetBounds.right - dynamicTargetBounds.left,
+        dynamicTargetBounds.bottom - dynamicTargetBounds.top,
+        maximumNestedTargetRatio,
+    )
+
+    return {
+        navigation: {
+            triggerZone: tracking.navigation.triggerZone,
+        },
+        dynamic: {
+            triggerZone: dynamicTriggerZone,
+            targetZone:  replayCenteredZone(nestedTargetRatio, nestedTargetRatio),
+        },
+        diagnostics: {
+            ...pressure,
+            minimumRatios: {
+                z1: REPLAY_TRACKING_DYNAMIC_Z1_MIN_RATIO,
+                z2: REPLAY_TRACKING_DYNAMIC_Z2_MIN_RATIO,
+            },
         },
     }
 }

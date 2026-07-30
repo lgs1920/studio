@@ -789,7 +789,6 @@ describe('Journey replay camera paths', () => {
             },
             viewer: {camera: {}},
         })
-
         const {mode, state, call} = makeMode()
         const sample = {
             progress:          0.5,
@@ -1044,6 +1043,87 @@ describe('Journey replay camera paths', () => {
             cameraHeight: 1000,
         }))
         expect(call.cameraViewForSample).not.toHaveBeenCalled()
+    })
+
+    it('keeps a forced HQ navigation correction active for two logical seconds', () => {
+        vi.stubGlobal('lgs', {
+            settings: {
+                ui: {
+                    replay: {
+                        camera: {
+                            positionMode: 'system',
+                            heading:      0,
+                            pitch:        -60,
+                            altitude:     1000,
+                            hysteresis:   {easing: 0.18},
+                        },
+                        marker: {mode: REPLAY_MARKER_MODE_NAVIGATION},
+                    },
+                },
+            },
+            stores: {
+                replay: {
+                    camera: {positionMode: 'system', heading: 0, pitch: -60, altitude: 1000},
+                },
+            },
+            viewer: {camera: {}},
+        })
+
+        const {mode, state, call} = makeMode()
+        const sample = {
+            progress:          0.5,
+            distanceFromStart: 100,
+            longitude:         2,
+            latitude:          48,
+            altitude:          120,
+            height:            120,
+        }
+        const pathFrame = {
+            destination: new Cartesian3(10, 20, 30),
+            direction:   new Cartesian3(0, 1, 0),
+            up:          new Cartesian3(0, 0, 1),
+        }
+        let collisionCallCount = 0
+        state.lastAppliedCameraView = {pitch: -Math.PI / 3}
+        state.constrainedReplayCameraPath = {
+            path: {
+                sampleAt: vi.fn(() => pathFrame),
+            },
+        }
+        call.cameraViewForSample = vi.fn(({sample: viewSample}) => ({
+            sample: viewSample,
+            heading: 0,
+            pitch:   -Math.PI / 3,
+        }))
+        call.cameraCollisionForSample = vi.fn(() => {
+            collisionCallCount += 1
+            return {hard: collisionCallCount <= 2}
+        })
+        call.rememberNominalCameraView = vi.fn()
+        call.applyCameraFrame = vi.fn(() => true)
+
+        const update = (frameTimeMs, forceToleranceRecenter = false) => updateCamera(mode, {
+            sample,
+            progress: 0.5,
+            source:   'playback',
+            frameTimeMs,
+            forceToleranceRecenter,
+            logicalCamera: true,
+            logicalFrame: createJourneyReplayLogicalFrame({
+                sample,
+                progress: 0.5,
+                durationMillis: 10_000,
+                frameTimeMs,
+            }),
+        })
+
+        update(0, true)
+        update(1_000)
+        update(2_000)
+
+        expect(call.applyDeterministicCameraFollower).toHaveBeenCalledTimes(2)
+        expect(call.applyCameraFrame).toHaveBeenCalledWith(pathFrame)
+        expect(state.navigationCorrectionSince).toBeNull()
     })
 
     it('reuses the replay camera cache for repeated visibility checks', () => {

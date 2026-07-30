@@ -711,6 +711,7 @@ export const cancelCameraBezierTransition = (mode, resolveValue = false) => {
         state.deterministicCameraFollowerAt = null
         state.deterministicCameraFollowerActive = false
         state.deterministicCameraFollowerVelocity = null
+        state.navigationCorrectionSince = null
         state.cameraSmoothingDeltaSeconds = null
         state.lastCameraLogicalNow = null
         state.lastCameraTimingLogicalNow = null

@@ -267,6 +267,7 @@ export class JourneyReplaySessionController {
     #lastToleranceRecenterProgress = null
     #lastNavigationRecenterAt = null
     #lastNavigationRecenterProgress = null
+    #navigationCorrectionSince = null
     #toleranceZoneOverlayCanvas = null
     #toleranceZoneOverlayCameraChangedRemove = null
     #lastDynamicTargetScreen = null
@@ -685,6 +686,13 @@ export class JourneyReplaySessionController {
             get: () => this.#lastNavigationRecenterProgress,
             set: value => {
                 this.#lastNavigationRecenterProgress = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'navigationCorrectionSince', {
+            configurable: true,
+            get: () => this.#navigationCorrectionSince,
+            set: value => {
+                this.#navigationCorrectionSince = value
             },
         })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'lastDynamicTargetScreen', {

@@ -14,7 +14,7 @@ import {faPersonHiking} from '@fortawesome/pro-regular-svg-icons'
 import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
 import {finiteNumber, isJourneyReplayCameraActive, replayStore} from './JourneyReplayRuntime'
 import {
-    clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForPositionMode, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayCameraFrameLeadSeconds, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
+    clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForPositionMode, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayFrameLeadSeconds, replayCameraFrameLeadSeconds, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayAdaptiveRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat, replayNavigationCorrectionWindowActive
 } from './JourneyReplayCameraMath'
 import {
     REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET, REPLAY_CAMERA_POSITION_AHEAD,
@@ -878,6 +878,36 @@ export const updateCamera = (mode, {
             fps:             globalThis.lgs?.stores?.replay?.captureFps,
             frameIntervalMs,
         })
+        const configuredDurationSeconds = finiteNumber(state.controller?.duration)
+                                         ?? finiteNumber(globalThis.lgs?.stores?.replay?.duration)
+                                         ?? 60
+        const logicalDurationMillis = finiteNumber(logicalFrame?.durationMillis)
+        const durationSeconds = logicalDurationMillis === null || logicalDurationMillis <= 0
+                                ? configuredDurationSeconds
+                                : logicalDurationMillis / 1000
+        // Adaptive zone geometry is a shared logical decision. Keep its lag
+        // budget independent from the Draft/HQ output cadence.
+        const adaptiveFrameLeadSeconds = replayFrameLeadSeconds({fps: 30})
+        const runtimeTracking = replayAdaptiveRuntimeTrackingSettings(
+            globalThis.lgs?.settings?.ui?.replay?.camera ?? cameraSettings,
+            viewportRect,
+            {
+                durationSeconds,
+                progress,
+                transitionSeconds: recenterDuration,
+                frameLeadSeconds: adaptiveFrameLeadSeconds,
+            },
+        )
+        traceUpdateStep('tracking.zones.adaptive', {
+            pressure:              runtimeTracking.diagnostics.pressure,
+            remainingSeconds:      runtimeTracking.diagnostics.remainingSeconds,
+            transitionBudgetSeconds: runtimeTracking.diagnostics.transitionBudgetSeconds,
+            minimumZ1Ratio:         runtimeTracking.diagnostics.minimumRatios.z1,
+            minimumZ2Ratio:         runtimeTracking.diagnostics.minimumRatios.z2,
+            navigationZone:         runtimeTracking.navigation.triggerZone,
+            dynamicTriggerZone:     runtimeTracking.dynamic.triggerZone,
+            dynamicTargetZone:      runtimeTracking.dynamic.targetZone,
+        })
         const lookaheadSeconds = recenterDuration + frameLeadSeconds
         traceUpdateStep('camera-lookahead.begin', {
             lookaheadSeconds,
@@ -936,6 +966,7 @@ export const updateCamera = (mode, {
             state.lastToleranceRecenterProgress = null
             state.lastNavigationRecenterAt = null
             state.lastNavigationRecenterProgress = null
+            state.navigationCorrectionSince = null
             state.deterministicCameraTransition = null
             state.deterministicCameraFollowerAt = null
             state.deterministicCameraFollowerActive = false
@@ -945,7 +976,7 @@ export const updateCamera = (mode, {
 
         call.updateToleranceZoneOverlay(cameraSettings.hysteresis)
 
-        if (sharedPathFrame && sharedLogicalPose) {
+        const applySharedPathFrame = () => {
             logicalFrame.cameraPose = sharedLogicalPose
             logicalFrame.cameraFrame = sharedPathFrame
             const applied = call.applyCameraFrame(sharedPathFrame)
@@ -959,6 +990,20 @@ export const updateCamera = (mode, {
                 state.lastCameraPitch = sharedLogicalPose.pitch
                 state.lastNominalCameraHeading = sharedLogicalPose.heading
                 state.lastNominalCameraPitch = sharedLogicalPose.pitch
+            }
+            return applied
+        }
+
+        // HQ normally consumes the shared logical frame directly. A forced
+        // navigation correction must temporarily take ownership of the camera
+        // so that it can be applied and held on the same logical clock.
+        const navigationCorrectionPending = state.navigationCorrectionSince !== null
+        const canUseSharedPath = marker.mode !== REPLAY_MARKER_MODE_NAVIGATION
+                                 || (!forceToleranceRecenter && !navigationCorrectionPending)
+        if (sharedPathFrame
+            && sharedLogicalPose
+            && canUseSharedPath) {
+            if (applySharedPathFrame()) {
                 return
             }
         }
@@ -995,7 +1040,6 @@ export const updateCamera = (mode, {
         }
 
         if (marker.mode === REPLAY_MARKER_MODE_NAVIGATION) {
-            const runtimeTracking = replayRuntimeTrackingSettings(globalThis.lgs?.settings?.ui?.replay?.camera ?? cameraSettings, viewportRect)
             const navigationCameraSettings = normalizeJourneyReplayCamera({
                 ...cameraSettings,
                 hysteresis: {
@@ -1012,6 +1056,7 @@ export const updateCamera = (mode, {
             traceUpdateStep('navigation.collision.end', {
                 currentHard: Boolean(currentCollision?.hard),
                 predictedHard: Boolean(predictedCollision?.hard),
+                adaptivePressure: runtimeTracking.diagnostics.pressure,
             })
             const outsideNavigationZone = Boolean(
                 currentCollision?.hard
@@ -1020,6 +1065,26 @@ export const updateCamera = (mode, {
             )
             const now = logicalNow
             const currentProgress = finiteNumber(progress)
+            let navigationCorrectionActive = replayNavigationCorrectionWindowActive({
+                startedAt: state.navigationCorrectionSince,
+                logicalNow: now,
+            })
+            if (immediateToleranceRecenter) {
+                state.navigationCorrectionSince = null
+                navigationCorrectionActive = false
+            }
+            else if (outsideNavigationZone && !navigationCorrectionActive) {
+                state.navigationCorrectionSince = now
+                navigationCorrectionActive = true
+            }
+            else if (!outsideNavigationZone
+                     && state.navigationCorrectionSince !== null
+                     && !navigationCorrectionActive) {
+                state.navigationCorrectionSince = null
+                if (deterministicCamera) {
+                    resetDeterministicCameraFollower()
+                }
+            }
             const navigationRecenterLockMs = Math.max(
                 REPLAY_TOLERANCE_RECENTER_REPLACE_DELAY_MS,
                 Math.ceil(recenterDuration * 1000) + 180,
@@ -1046,14 +1111,27 @@ export const updateCamera = (mode, {
                 !forceToleranceRecenter
                 && !immediateToleranceRecenter
                 && outsideNavigationZone
-                && (sameNavigationProgressRecenter || navigationRecenterStillRunning)
+                && (sameNavigationProgressRecenter || navigationRecenterStillRunning || navigationCorrectionActive)
                 && !deterministicCamera
             ) {
                 state.lastCameraHeading = smoothHeading
                 state.lastCameraPitch = smoothPitch
                 return
             }
-            const navigationFollowerActive = deterministicCamera && state.deterministicCameraFollowerActive
+            if (
+                navigationCorrectionActive
+                && !deterministicCamera
+                && !forceToleranceRecenter
+                && !immediateToleranceRecenter
+                && !outsideNavigationZone
+            ) {
+                // Keep the active Draft flight untouched until its minimum
+                // logical correction window has elapsed.
+                state.lastCameraHeading = smoothHeading
+                state.lastCameraPitch = smoothPitch
+                return
+            }
+            const navigationFollowerActive = deterministicCamera && navigationCorrectionActive
             if (outsideNavigationZone || forceToleranceRecenter || immediateToleranceRecenter || navigationFollowerActive) {
                 const navigationTargetSample = !immediateToleranceRecenter && (source === 'playback' || exportMode)
                                                ? predictedSample
@@ -1125,6 +1203,9 @@ export const updateCamera = (mode, {
                 state.lastNavigationRecenterAt = now
             }
             else {
+                if (sharedPathFrame && sharedLogicalPose) {
+                    applySharedPathFrame()
+                }
                 if (nominalPitchNeedsRestore()) {
                     restoreNominalCameraPose()
                 }
@@ -1138,7 +1219,6 @@ export const updateCamera = (mode, {
         }
 
         if (marker.mode === REPLAY_MARKER_MODE_HYSTERESIS) {
-            const runtimeTracking = replayRuntimeTrackingSettings(globalThis.lgs?.settings?.ui?.replay?.camera ?? cameraSettings, viewportRect)
             const dynamicCameraSettings = normalizeJourneyReplayCamera({
                 ...cameraSettings,
                 hysteresis: {

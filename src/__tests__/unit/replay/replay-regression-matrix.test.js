@@ -1,8 +1,13 @@
 import {
+    replayAdaptiveRuntimeTrackingSettings,
     replayFrameLeadSeconds,
     replayIsWindowPointOutsideToleranceZone,
     replayRuntimeTrackingSettings,
+    replayNavigationCorrectionWindowActive,
+    replayTrackingZonePressure,
     replayToleranceZoneBounds,
+    REPLAY_TRACKING_DYNAMIC_Z1_MIN_RATIO,
+    REPLAY_TRACKING_DYNAMIC_Z2_MIN_RATIO,
 } from '@Core/ui/replay/JourneyReplayCameraMath'
 import {
     createReplayRenderModeContract,
@@ -128,6 +133,114 @@ describe('replay regression matrix', () => {
         expect(replayFrameLeadSeconds({fps: configuredHqFps})).toBeCloseTo(1 / configuredHqFps, 6)
         expect(replayFrameLeadSeconds({fps: configuredDraftFps, frameIntervalMs: 1000 / configuredHqFps}))
             .toBeCloseTo(1 / configuredHqFps, 6)
+    })
+
+    it('adapts dynamic Z1 and Z2 early for short replays while preserving nesting', () => {
+        const viewport = REPLAY_REGRESSION_VIEWPORTS.standard
+        const base = replayAdaptiveRuntimeTrackingSettings({}, viewport, {
+            durationSeconds: 60,
+            progress:        0,
+            transitionSeconds: 1,
+            frameLeadSeconds: 1 / 30,
+        })
+        const short = replayAdaptiveRuntimeTrackingSettings({}, viewport, {
+            durationSeconds: 5,
+            progress:        0,
+            transitionSeconds: 1,
+            frameLeadSeconds: 1 / 30,
+        })
+        const final = replayAdaptiveRuntimeTrackingSettings({}, viewport, {
+            durationSeconds: 60,
+            progress:        1,
+            transitionSeconds: 1,
+            frameLeadSeconds: 1 / 30,
+        })
+        const baseZ1 = replayToleranceZoneBounds(base.dynamic.triggerZone)
+        const baseZ2 = replayToleranceZoneBounds(base.dynamic.targetZone)
+        const shortZ1 = replayToleranceZoneBounds(short.dynamic.triggerZone)
+        const shortZ2 = replayToleranceZoneBounds(short.dynamic.targetZone)
+        const finalZ1 = replayToleranceZoneBounds(final.dynamic.triggerZone)
+        const finalZ2 = replayToleranceZoneBounds(final.dynamic.targetZone)
+
+        expect(short.diagnostics.pressure).toBeGreaterThan(0)
+        expect(shortZ1.right - shortZ1.left).toBeLessThan(baseZ1.right - baseZ1.left)
+        expect(shortZ2.right - shortZ2.left).toBeLessThan(baseZ2.right - baseZ2.left)
+        expect(finalZ1.right - finalZ1.left).toBeCloseTo(REPLAY_TRACKING_DYNAMIC_Z1_MIN_RATIO, 6)
+        expect(finalZ2.right - finalZ2.left).toBeCloseTo(REPLAY_TRACKING_DYNAMIC_Z2_MIN_RATIO, 6)
+        expect(finalZ2.left).toBeGreaterThan(finalZ1.left)
+        expect(finalZ2.right).toBeLessThan(finalZ1.right)
+        expect(finalZ2.top).toBeGreaterThan(finalZ1.top)
+        expect(finalZ2.bottom).toBeLessThan(finalZ1.bottom)
+    })
+
+    it('keeps adaptive collision zones identical for Draft and HQ', () => {
+        const viewport = REPLAY_REGRESSION_VIEWPORTS.standard
+        const options = {
+            durationSeconds:   4,
+            progress:          0.35,
+            transitionSeconds: 1.2,
+            frameLeadSeconds:  1 / 30,
+        }
+        const draft = replayAdaptiveRuntimeTrackingSettings({}, viewport, options)
+        const hq = replayAdaptiveRuntimeTrackingSettings({}, viewport, options)
+
+        expect(draft).toEqual(hq)
+    })
+
+    it('increases adaptive pressure when delayed calculations reduce the transition budget', () => {
+        const nominal = replayTrackingZonePressure({
+            durationSeconds:       10,
+            progress:              0,
+            transitionSeconds:     1,
+            frameLeadSeconds:      1 / 30,
+            calculationLagSeconds: 0.25,
+        })
+        const delayed = replayTrackingZonePressure({
+            durationSeconds:       10,
+            progress:              0,
+            transitionSeconds:     1,
+            frameLeadSeconds:      0.4,
+            calculationLagSeconds: 1,
+        })
+
+        expect(delayed.transitionBudgetSeconds).toBeGreaterThan(nominal.transitionBudgetSeconds)
+        expect(delayed.pressure).toBeGreaterThan(nominal.pressure)
+    })
+
+    it('holds a forced navigation correction for two logical seconds', () => {
+        expect(replayNavigationCorrectionWindowActive({
+                                                       startedAt: 1_000,
+                                                       logicalNow: 2_999,
+                                                   })).toBe(true)
+        expect(replayNavigationCorrectionWindowActive({
+                                                       startedAt: 1_000,
+                                                       logicalNow: 3_000,
+                                                   })).toBe(false)
+        expect(replayNavigationCorrectionWindowActive({
+                                                       startedAt: 1_000,
+                                                       logicalNow: 900,
+                                                   })).toBe(false)
+    })
+
+    it('repairs custom dynamic zones that would otherwise break Z1/Z2 nesting', () => {
+        const tracking = replayAdaptiveRuntimeTrackingSettings({
+            tracking: {
+                dynamic: {
+                    triggerZone: {top: 0.4, left: 0.4, width: 0.2, height: 0.2},
+                    targetZone:  {top: 0.1, left: 0.1, width: 0.8, height: 0.8},
+                },
+            },
+        }, REPLAY_REGRESSION_VIEWPORTS.standard, {
+            durationSeconds: 60,
+            progress:        0,
+        })
+        const z1 = replayToleranceZoneBounds(tracking.dynamic.triggerZone)
+        const z2 = replayToleranceZoneBounds(tracking.dynamic.targetZone)
+
+        expect(z2.left).toBeGreaterThan(z1.left)
+        expect(z2.right).toBeLessThan(z1.right)
+        expect(z2.top).toBeGreaterThan(z1.top)
+        expect(z2.bottom).toBeLessThan(z1.bottom)
     })
 
     it('freezes the shared initial camera and logical frame while keeping scheduling separate', () => {
