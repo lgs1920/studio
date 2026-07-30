@@ -15,9 +15,12 @@
  ******************************************************************************/
 
 import { cleanup, fireEvent, render } from '@testing-library/react'
+import { CURRENT_POI } from '@Core/constants'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 import { proxyMap } from 'valtio/utils'
+import { Cartesian3 } from 'cesium'
+import * as CameraPath from '@Core/ui/replay/JourneyReplayCameraPath'
 
 vi.mock('@Components/MainUI/widgets/Widget', () => ({
     Widget: ({children, className = '', config, isVisible = true}) => isVisible ? (
@@ -58,6 +61,11 @@ vi.mock('@Utils/FA2SL', () => ({
     },
 }))
 
+vi.mock('@Core/ui/replay/JourneyReplayCameraPath', () => ({
+    buildCameraTransferPath: vi.fn(),
+    selectCameraTransferMode: vi.fn(() => 'spiral-conical'),
+}))
+
 vi.mock('cesium', async importOriginal => {
     const actual = await importOriginal()
     return {
@@ -96,7 +104,7 @@ const setupPanoramaGlobals = () => {
     const canvas = document.createElement('canvas')
     document.body.appendChild(canvas)
 
-    globalThis.lgs = {
+        globalThis.lgs = {
         camera: {
             heading:              0,
             pitch:                -0.2,
@@ -106,6 +114,7 @@ const setupPanoramaGlobals = () => {
                 latitude:  2,
                 height:    1200,
             },
+            positionWC: Cartesian3.fromDegrees(1, 2, 1200),
             changed: {
                 addEventListener: vi.fn(() => vi.fn()),
             },
@@ -162,7 +171,13 @@ const setupPanoramaGlobals = () => {
                         heightOffset: 100,
                         pitch:        -12,
                         rpm:          1,
-                        target:       null,
+                        target:       {
+                            element: CURRENT_POI,
+                            slug:    'poi-1',
+                            longitude: 1,
+                            latitude:  2,
+                            height:    1200,
+                        },
                         visible:      true,
                     }),
                     rotate: proxy({
@@ -391,5 +406,29 @@ describe('PanoramaWidget interactions', () => {
 
         fireEvent.click(toggle)
         expect(lgs.stores.ui.widget.list.has('orbit-interaction-hints-widget')).toBe(false)
+    })
+
+    it('starts panorama movement with the path API instead of Cesium flyTo', async () => {
+        setupPanoramaGlobals()
+        const pathFlyTo = vi.fn(() => vi.fn())
+        CameraPath.buildCameraTransferPath.mockReturnValue({
+            flyTo: pathFlyTo,
+            sampleAt: vi.fn(),
+        })
+        const {PanoramaWidget} = await import('@Components/MainUI/PanoramaWidget')
+
+        render(<PanoramaWidget/>)
+
+        expect(CameraPath.buildCameraTransferPath).toHaveBeenCalled()
+        expect(pathFlyTo).toHaveBeenCalled()
+        expect(pathFlyTo).toHaveBeenCalledWith(expect.objectContaining({
+            orientation: {
+                heading: 0,
+                pitch:   -12 * globalThis.Math.PI / 180,
+                roll:    0,
+            },
+        }))
+        expect(pathFlyTo.mock.calls[0][0].target).toBeUndefined()
+        expect(lgs.camera.flyTo).not.toHaveBeenCalled()
     })
 })

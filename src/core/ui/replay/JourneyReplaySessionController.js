@@ -201,6 +201,7 @@ export class JourneyReplaySessionController {
     #cameraGuideSourceKey = null
     #cameraGuidePositionProperty = null
     #cameraGuidePositionPropertyKey = null
+    #constrainedReplayCameraPath = null
     #cameraMode = null
     #cameraFlightActive = false
     #replayExportClipFrameState = null
@@ -239,6 +240,7 @@ export class JourneyReplaySessionController {
     #lastToleranceRecenterProgress = null
     #lastNavigationRecenterAt = null
     #lastNavigationRecenterProgress = null
+    #toleranceZoneOverlayCanvas = null
     #lastDynamicTargetScreen = null
     #skipNextImmediateStartRecenter = false
     #toleranceZoneOverlay = null
@@ -361,6 +363,13 @@ export class JourneyReplaySessionController {
             get: () => this.#cameraGuidePositionPropertyKey,
             set: value => {
                 this.#cameraGuidePositionPropertyKey = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'constrainedReplayCameraPath', {
+            configurable: true,
+            get: () => this.#constrainedReplayCameraPath,
+            set: value => {
+                this.#constrainedReplayCameraPath = value
             },
         })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'cameraMode', {
@@ -641,6 +650,13 @@ export class JourneyReplaySessionController {
             get: () => this.#toleranceZoneOverlay,
             set: value => {
                 this.#toleranceZoneOverlay = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'toleranceZoneOverlayCanvas', {
+            configurable: true,
+            get: () => this.#toleranceZoneOverlayCanvas,
+            set: value => {
+                this.#toleranceZoneOverlayCanvas = value
             },
         })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'toleranceZoneOverlayVisible', {
@@ -965,6 +981,9 @@ export class JourneyReplaySessionController {
             videoCropRect: (...args) => JourneyReplayCameraController.videoCropRect(this, ...args),
             viewportRectForCesiumSurface: (...args) => JourneyReplayCameraController.viewportRectForCesiumSurface(this, ...args),
             updateToleranceZoneOverlay: (...args) => JourneyReplayCameraController.updateToleranceZoneOverlay(this, ...args),
+            constrainedReplayProjectionViewport: (...args) => JourneyReplayCameraController.constrainedReplayProjectionViewport(this, ...args),
+            constrainedReplayCameraPathKey: (...args) => JourneyReplayCameraController.constrainedReplayCameraPathKey(this, ...args),
+            resolveConstrainedReplayCameraPath: (...args) => JourneyReplayCameraController.resolveConstrainedReplayCameraPath(this, ...args),
             recenterCameraToSample: (...args) => JourneyReplayCameraController.recenterCameraToSample(this, ...args),
             startCameraTransition: (...args) => JourneyReplayCameraController.startCameraTransition(this, ...args),
             bindMarkerInteractions: (...args) => JourneyReplayCameraController.bindMarkerInteractions(this, ...args),

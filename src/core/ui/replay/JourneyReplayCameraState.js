@@ -597,7 +597,17 @@ export const cancelCameraBezierTransition = (mode, resolveValue = false) => {
         const hadActiveTransition = state.cameraBezierFrame !== null
             || state.cameraBezierResolve !== null
             || state.cameraFlightActive
-        if (state.cameraBezierFrame !== null) {
+        if (typeof state.cameraBezierFrame === 'function') {
+            try {
+                state.cameraBezierFrame()
+            }
+            catch {
+                // Transition cancellation is best-effort.
+            }
+            state.cameraBezierFrame = null
+        }
+        else if (state.cameraBezierFrame !== null) {
+            globalThis.cancelAnimationFrame?.(state.cameraBezierFrame)
             globalThis.clearTimeout?.(state.cameraBezierFrame)
             state.cameraBezierFrame = null
         }
@@ -621,4 +631,3 @@ export const cancelCameraBezierTransition = (mode, resolveValue = false) => {
         state.lastCameraTimingWallNow = null
         state.cameraTimingChange = null
     }
-

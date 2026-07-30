@@ -83,6 +83,7 @@ echarts-for-react
 elysia
 eslint-import-resolver-alias
 eslint-plugin-import
+fflate
 fs
 fs.promises
 geo-coordinates-parser

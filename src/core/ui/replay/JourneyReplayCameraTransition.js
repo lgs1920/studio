@@ -76,6 +76,7 @@ import {
     headingFromPositionProperty,
     cameraAltitudeForSample,
     cameraViewForSample,
+    replayTurnDriftForProgress,
 } from './JourneyReplayCameraGuide'
 import {
     rememberNominalCameraView,
@@ -96,7 +97,6 @@ import {
 } from './JourneyReplayCameraVisibility'
 import {
     applyCameraView,
-    liveCameraPitch,
     markerPositionForSample,
     markerRenderHeightForSample,
     markerRenderCartesianForSample,
@@ -116,6 +116,14 @@ import {
     traceCameraChangeTiming,
     cancelCameraBezierTransition,
 } from './JourneyReplayCameraState'
+import {
+    buildCameraTransferPath,
+    selectCameraTransferMode,
+    cameraTransferFrameAt,
+} from './JourneyReplayCameraPath'
+import {
+    buildReplayTransferSafetyProfile,
+} from './JourneyReplayCameraCollision'
 import {
     removeToleranceZoneOverlay,
     setToleranceZoneOverlayVisible,
@@ -196,7 +204,7 @@ export const interpolateCameraFrame = (mode,
         start,
         end,
         ratio = 1,
-        {startVelocity = null, endVelocity = null, durationMs = 0} = {},
+        {startVelocity = null, endVelocity = null, durationMs = 0, path = null, target = null} = {},
     ) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -212,17 +220,18 @@ export const interpolateCameraFrame = (mode,
             return null
         }
         const rawRatio = clamp(ratio, 0, 1)
+        const easedRatio = smoothClipProgress(rawRatio)
         const hasVelocity = startVelocity || endVelocity
         if (!hasVelocity) {
-            const t = smoothClipProgress(rawRatio)
+            const sampledFrame = path ? cameraTransferFrameAt(path, target, easedRatio) : null
             return {
-                destination: safeCartesian3Lerp(start.destination, end.destination, t),
-                direction:   safeCartesian3Normalize(
-                    safeCartesian3Lerp(start.direction, end.direction, t),
+                destination: sampledFrame?.destination ?? path?.sampleAt?.(easedRatio) ?? safeCartesian3Lerp(start.destination, end.destination, easedRatio),
+                direction:   sampledFrame?.direction ?? safeCartesian3Normalize(
+                    safeCartesian3Lerp(start.direction, end.direction, easedRatio),
                     start.direction,
                 ),
-                up:          safeCartesian3Normalize(
-                    safeCartesian3Lerp(start.up, end.up, t),
+                up:          sampledFrame?.up ?? safeCartesian3Normalize(
+                    safeCartesian3Lerp(start.up, end.up, easedRatio),
                     start.up,
                 ),
             }
@@ -256,20 +265,21 @@ export const interpolateCameraFrame = (mode,
             return result
         }
 
+        const sampledFrame = path ? cameraTransferFrameAt(path, target, easedRatio) : null
         return {
-            destination: interpolate(
+            destination: sampledFrame?.destination ?? path?.sampleAt?.(easedRatio) ?? interpolate(
                 start.destination,
                 end.destination,
                 startVelocity?.destination,
                 endVelocity?.destination,
             ),
-            direction: safeCartesian3Normalize(interpolate(
+            direction: sampledFrame?.direction ?? safeCartesian3Normalize(interpolate(
                 start.direction,
                 end.direction,
                 startVelocity?.direction,
                 endVelocity?.direction,
             ), start.direction),
-            up: safeCartesian3Normalize(interpolate(
+            up: sampledFrame?.up ?? safeCartesian3Normalize(interpolate(
                 start.up,
                 end.up,
                 startVelocity?.up,
@@ -367,6 +377,9 @@ export const startDeterministicCameraTransition = (mode, {
                                                endFrame,
                                                duration = 0,
                                                logicalNow = 0,
+                                               trackingMode = REPLAY_MARKER_MODE_NAVIGATION,
+                                               cameraSettings = null,
+                                               viewport = null,
                                            } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -387,16 +400,148 @@ export const startDeterministicCameraTransition = (mode, {
             direction:   Cartesian3.clone(endFrame.direction, new Cartesian3()),
             up:          Cartesian3.clone(endFrame.correctedUp, new Cartesian3()),
         }
+        const target = call.markerRenderCartesianForSample?.(sample) ?? null
+        const replayMotionProfile = {
+            turnDrift: {
+                enabled:               true,
+                maxHeadingOffsetDeg:    10,
+                maxLateralOffsetMeters: 60,
+            },
+        }
+        const applyLocalFrameOffset = (frame, offsetTarget, focusTarget, {
+            eastMeters = 0,
+            northMeters = 0,
+            upMeters = 0,
+        } = {}) => {
+            if (!frame || !offsetTarget) {
+                return frame
+            }
+
+            const targetTransform = Transforms.eastNorthUpToFixedFrame(offsetTarget)
+            const east = Matrix4.getColumn(targetTransform, 0, new Cartesian3())
+            const north = Matrix4.getColumn(targetTransform, 1, new Cartesian3())
+            const up = Matrix4.getColumn(targetTransform, 2, new Cartesian3())
+            const offset = Cartesian3.add(
+                Cartesian3.add(
+                    Cartesian3.multiplyByScalar(east, eastMeters, new Cartesian3()),
+                    Cartesian3.multiplyByScalar(north, northMeters, new Cartesian3()),
+                    new Cartesian3(),
+                ),
+                Cartesian3.multiplyByScalar(up, upMeters, new Cartesian3()),
+                new Cartesian3(),
+            )
+            const destination = Cartesian3.add(frame.destination, offset, new Cartesian3())
+            const lookAtTarget = focusTarget ?? offsetTarget
+            if (!lookAtTarget) {
+                return {
+                    ...frame,
+                    destination,
+                }
+            }
+            const direction = Cartesian3.normalize(
+                Cartesian3.subtract(lookAtTarget, destination, new Cartesian3()),
+                new Cartesian3(),
+            )
+            const rightCandidate = Cartesian3.cross(direction, up, new Cartesian3())
+            const right = Cartesian3.magnitudeSquared(rightCandidate) > CARTESIAN_EPSILON
+                          ? Cartesian3.normalize(rightCandidate, rightCandidate)
+                          : Cartesian3.clone(east, new Cartesian3())
+            const correctedUp = Cartesian3.normalize(
+                Cartesian3.cross(right, direction, new Cartesian3()),
+                new Cartesian3(),
+            )
+            return {
+                ...frame,
+                destination,
+                direction,
+                up: correctedUp,
+            }
+        }
+        const transferThresholdKm = finiteNumber(globalThis.lgs?.settings?.camera?.transferDistanceThresholdKm) ?? 50
+        const transferDistance = Cartesian3.distance(startFrame.destination, end.destination)
+        const transferSafetyProfile = buildReplayTransferSafetyProfile(globalThis.lgs?.theJourney, {
+            trackingMode,
+            cameraSettings,
+            viewport: viewport ?? call.viewportRectForCesiumSurface?.() ?? null,
+            clearanceMeters: Math.max(100, finiteNumber(globalThis.lgs?.settings?.camera?.pitchAdjustHeight) ?? 500),
+        })
+        const transferScale = Math.max(0.75, finiteNumber(transferSafetyProfile?.zoneScale) ?? 1)
+        const transferMode = selectCameraTransferMode(transferDistance, transferThresholdKm / transferScale)
+        const transferPath = buildCameraTransferPath({
+            start:       startFrame.destination,
+            end:         end.destination,
+            mode:        transferMode,
+            sampleCount: transferMode === 'direct'
+                         ? 24
+                         : Math.round((transferMode === 'elevate-then-move' ? 64 : 80) * transferScale),
+            liftMeters:  Math.max(120, finiteNumber(globalThis.lgs?.settings?.camera?.pitchAdjustHeight) ?? 500),
+            antiCollisionBounds: transferSafetyProfile,
+            safetyProfile:       transferSafetyProfile,
+            frameResolver: ({path, target: resolvedTarget, ratio, frame}) => {
+                const replayCameraSettings = cameraSettings ?? globalThis.lgs?.settings?.ui?.replay?.camera ?? {}
+                const replayMarkerSettings = normalizeJourneyReplayMarker(globalThis.lgs?.settings?.ui?.replay?.marker ?? {})
+                const lineOfSightVisible = call.cameraLineOfSightVisibleForFrame({
+                    destination: frame?.destination,
+                    sample,
+                    targetHeight: call.markerRenderHeightForSample(sample),
+                })
+                const renderedVisible = call.renderedTraceVisibleForSample(sample)
+                if (lineOfSightVisible && renderedVisible !== false) {
+                    return frame
+                }
+
+                const view = call.cameraViewForSample({
+                    sample,
+                    progress:       sample?.progress ?? ratio ?? 0,
+                    source:         'playback',
+                    cameraSettings:  replayCameraSettings,
+                    markerSettings:  replayMarkerSettings,
+                    motionProfile:   replayMotionProfile,
+                    collision:      true,
+                    previousHeading: endFrame?.safeHeading ?? heading,
+                    previousPitch:   endFrame?.safePitch ?? pitch,
+                })
+                if (!view) {
+                    return frame
+                }
+
+                const correctedFrame = call.cameraRecenterFrame({
+                    sample,
+                    heading:        view.heading,
+                    pitch:          view.pitch ?? pitch,
+                    cameraSettings:  replayCameraSettings,
+                    cameraHeight:   view.cameraHeight,
+                })
+
+                const drift = replayTurnDriftForProgress(mode, sample?.progress ?? ratio, replayMotionProfile.turnDrift)
+                const reliefHeight = Math.max(
+                    80,
+                    finiteNumber(globalThis.lgs?.settings?.camera?.pitchAdjustHeight) ?? 500,
+                )
+                return applyLocalFrameOffset(
+                    correctedFrame ?? frame,
+                    resolvedTarget ?? target,
+                    target,
+                    {
+                        eastMeters: drift?.lateralOffsetMeters ? drift.lateralOffsetMeters * 0.2 : 0,
+                        northMeters: 0,
+                        upMeters:    reliefHeight * 0.35,
+                    },
+                )
+            },
+        })
         state.deterministicCameraTransition = {
             startAt: transitionStartAt,
             endAt:   transitionStartAt + durationMs,
             start:   startFrame,
             end,
+            target,
             startVelocity: previousVelocity,
             endVelocity:   null,
             sample,
             heading,
             pitch,
+            path: transferPath,
         }
 
         return call.applyDeterministicCameraTransition(logicalNow)
@@ -421,7 +566,9 @@ export const applyDeterministicCameraTransition =  (mode, logicalNow) => {
             {
                 startVelocity: transition.startVelocity,
                 endVelocity:   transition.endVelocity,
-                durationMs:     span,
+                durationMs:    span,
+                path:          transition.path,
+                target:        transition.target,
             },
         ))
         if (ratio >= 1) {
@@ -667,4 +814,3 @@ export const headingEasingFactor = (mode, cameraSettings, targetHeading) => {
         maxFactor:       0.18,
     })
 }
-

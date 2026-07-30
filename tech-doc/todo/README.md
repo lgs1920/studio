@@ -9,6 +9,7 @@ This directory contains proposed, pending-validation, explicitly TODO, or future
 - [HQ video resolution profiles](HQ_4K_VIDEO_EXPORT_SPEC.md)
 - [Journey import formats](JOURNEY_IMPORT_FORMATS_SPEC.md)
 - [Translation notes](Translate.md)
+- [Drone camera path architecture](../specs/CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)
 - [Drone camera 3D path editor](CORE-DRONE-CAMERA-3D-PATH-EDITOR-SPEC.md)
 - [Replay track timeline editor](CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md)
 - [Cesium Ion layers](CESIUM-ION-LAYERS-SPEC.md)

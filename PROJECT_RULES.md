@@ -5,7 +5,7 @@ This is the canonical source for the project's AI-agent and development rules.
 ## 1. Core Directives
 
 - **Language:** All conversational responses must be in **French**.
-- **Documentation:** All JSDoc blocks, inline comments, and code documentation must be strictly in **English**. Any project documentation requested by the user must also be written in **English**.
+- **Documentation and issues:** All JSDoc blocks, inline comments, code documentation, project documentation, and issue content must be strictly in **English**.
 - **Autonomy:** If a choice is ambiguous, stop and ask. **Important**: Final decisions are made by the user.
 - **Direct logging:** When the user explicitly asks for direct logging, use the appropriate built-in console method in the function body (`console.log`, `console.error`, or `console.table`) and do not route it through helper methods or wrappers.
 
@@ -53,15 +53,18 @@ This is the canonical source for the project's AI-agent and development rules.
 ## 5. Git & Release Workflow
 
 - **Commit Messages:** Must follow the key-based format: `feat`, `fix`, `refactor`, `docs`, `style`, `test`, `chore`.
-- **Commit Logic:** Never create commits automatically. Only create a commit when the user explicitly requests it.
+- **Commit Logic:** Never create commits automatically. Only create a commit when the user explicitly requests it. Do not stage or commit proactively on your own initiative.
+- **Project rules changes:** Every modification to `PROJECT_RULES.md` must be isolated in a dedicated commit, submitted through a dedicated pull request, and merged into `main`.
+- **Dependency inventory:** When a commit changes `package.json` dependencies or dependency-related credits, update `tech-doc/specs/README_DEPENDENCIES.md` in the same change set if the inventory is still meant to mirror the current package list.
 - **Commit history:** `COMMIT_HISTORY.md` when preparing a commit.
 - **Commit history entry:** Record every commit in `COMMIT_HISTORY.md` with its date, exact commit message, and a GitHub link in the format `https://github.com/lgs1920/studio/commit/<commit-id>`.
 
 ## 6. Issue Creation Workflow
 
+- **Clarification and validation:** Before creating an issue, ask the user for any missing explanations or clarifications needed to understand and scope the request. Then present the complete proposed issue content for explicit user validation. Do not create the issue until the user has validated the proposal.
 - **Complete fields:** Every created issue must have all available fields filled in, including title, description, assignee, labels, type, milestone, backlog, and any other fields required by the issue tracker.
 - **Assignee:** Assign the issue to the user requesting its creation unless the user explicitly specifies another assignee.
-- **Milestone and backlog:** Before creating an issue, ask the user which milestone and backlog it belongs to. Do not create the issue until both choices have been confirmed.
+- **Milestone and backlog:** When the user does not specify a backlog, use `Backlog`. When the user does not specify a milestone, use the latest available milestone. The user will update these values afterward if needed.
 - **Issue body structure:** Write every issue body in the same structure: short context, requested behavior, acceptance criteria, and optional notes or questions. Keep the scope to one request per issue and prefer bullet lists for requirements.
 - **Issue templates:** Use `.github/ISSUE_TEMPLATE/bug_report.md` for bugs and `.github/ISSUE_TEMPLATE/feature_request.md` for new features or improvements. Keep the sections consistent with the issue type and use the reproduction section only for bugs.
 - **Issue type mapping:** Each issue template must include its hidden `issue-type` marker, and the automation must set the GitHub issue type accordingly (`bug` for `bug_report.md`, `feature` for `feature_request.md`).

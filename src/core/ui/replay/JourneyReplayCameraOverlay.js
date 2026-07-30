@@ -7,6 +7,7 @@ import {ArcType, Cartesian2, Cartesian3, Cartographic, CatmullRomSpline, Color, 
 import {REPLAY_DRAWER, VIDEO_CROP_ZONE} from '@Core/constants'
 import {Journey} from '@Core/Journey'
 import {CameraUtils} from '@Utils/cesium/CameraUtils'
+import {cameraViewToSlippyLevel} from '@Utils/cesium/CameraLevel'
 import {POIUtils} from '@Utils/cesium/POIUtils'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
 import {faCamera} from '@fortawesome/pro-solid-svg-icons'
@@ -146,6 +147,179 @@ export const removeToleranceZoneOverlay = (mode) => {
 
         state.toleranceZoneOverlay?.remove?.()
         state.toleranceZoneOverlay = null
+        state.toleranceZoneOverlayCanvas?.remove?.()
+        state.toleranceZoneOverlayCanvas = null
+    }
+
+/**
+ * Draw the replay diagnostic overlay canvas.
+ *
+ * The canvas mirrors the DOM tolerance overlay but remains capturable by the
+ * video compositor, which only reads canvas sources.
+ *
+ * @param {object} options - Draw options.
+ * @param {HTMLCanvasElement} options.canvas - Overlay canvas.
+ * @param {object} options.rect - Viewport rectangle in CSS pixels.
+ * @param {object} options.outerBounds - Outer tolerance bounds in normalized coordinates.
+ * @param {object|null} options.innerBounds - Optional inner tolerance bounds in normalized coordinates.
+ * @param {object} options.marker - Normalized marker settings.
+ * @param {object} options.camera - Cesium camera.
+ * @param {object} options.scene - Cesium scene.
+ * @returns {void}
+ */
+const drawReplayDiagnosticsOverlayCanvas = ({
+    canvas,
+    rect,
+    outerBounds,
+    innerBounds = null,
+    marker,
+    camera,
+    scene,
+} = {}) => {
+    if (!(canvas instanceof HTMLCanvasElement) || !rect?.width || !rect?.height) {
+        return
+    }
+
+    const dpr = Math.max(1, globalThis.devicePixelRatio || 1)
+    const width = Math.max(2, Math.round(rect.width))
+    const height = Math.max(2, Math.round(rect.height))
+    const physicalWidth = Math.max(2, Math.round(width * dpr))
+    const physicalHeight = Math.max(2, Math.round(height * dpr))
+    if (canvas.width !== physicalWidth || canvas.height !== physicalHeight) {
+        canvas.width = physicalWidth
+        canvas.height = physicalHeight
+    }
+    canvas.style.width = `${width}px`
+    canvas.style.height = `${height}px`
+    canvas.style.left = `${rect.left}px`
+    canvas.style.top = `${rect.top}px`
+
+    const context = canvas.getContext?.('2d', {alpha: true, desynchronized: true})
+    if (!context) {
+        return
+    }
+
+    context.setTransform(dpr, 0, 0, dpr, 0, 0)
+    context.clearRect(0, 0, width, height)
+
+    const isNavigationMode = marker?.mode === REPLAY_MARKER_MODE_NAVIGATION
+    const zoneFill = isNavigationMode ? 'rgba(0, 128, 255, 0.10)' : 'rgba(255, 0, 0, 0.10)'
+    const zoneStroke = isNavigationMode ? 'rgba(88, 165, 255, 0.95)' : 'rgba(255, 90, 90, 0.95)'
+    const innerStroke = 'rgba(255, 255, 255, 0.65)'
+    const outerLeft = outerBounds.left * width
+    const outerTop = outerBounds.top * height
+    const outerWidth = (outerBounds.right - outerBounds.left) * width
+    const outerHeight = (outerBounds.bottom - outerBounds.top) * height
+
+    const drawRoundedRect = (x, y, w, h, radius = 10) => {
+        const safeRadius = Math.max(0, Math.min(radius, w / 2, h / 2))
+        context.beginPath()
+        context.moveTo(x + safeRadius, y)
+        context.arcTo(x + w, y, x + w, y + h, safeRadius)
+        context.arcTo(x + w, y + h, x, y + h, safeRadius)
+        context.arcTo(x, y + h, x, y, safeRadius)
+        context.arcTo(x, y, x + w, y, safeRadius)
+        context.closePath()
+    }
+
+    const drawZoneBadge = (label, x, y, fillStyle) => {
+        const badgeWidth = 42
+        const badgeHeight = 22
+        context.save()
+        context.fillStyle = fillStyle
+        drawRoundedRect(x, y, badgeWidth, badgeHeight, 8)
+        context.fill()
+        context.fillStyle = '#ffffff'
+        context.font = '700 13px system-ui, sans-serif'
+        context.textAlign = 'center'
+        context.textBaseline = 'middle'
+        context.fillText(label, x + (badgeWidth / 2), y + (badgeHeight / 2) + 0.5)
+        context.restore()
+    }
+
+    context.save()
+    context.fillStyle = zoneFill
+    drawRoundedRect(outerLeft, outerTop, outerWidth, outerHeight, 8)
+    context.fill()
+    context.lineWidth = 2
+    context.strokeStyle = zoneStroke
+    context.stroke()
+    drawZoneBadge('Z1', outerLeft + 10, outerTop + 10, zoneStroke)
+
+    if (innerBounds) {
+        const innerLeft = outerLeft + ((innerBounds.left - outerBounds.left) * width)
+        const innerTop = outerTop + ((innerBounds.top - outerBounds.top) * height)
+        const innerWidth = (innerBounds.right - innerBounds.left) * width
+        const innerHeight = (innerBounds.bottom - innerBounds.top) * height
+        context.setLineDash([10, 6])
+        context.lineWidth = 1.5
+        context.strokeStyle = innerStroke
+        drawRoundedRect(innerLeft, innerTop, innerWidth, innerHeight, 8)
+        context.stroke()
+        drawZoneBadge('Z2', innerLeft + 10, innerTop + 10, 'rgba(0, 0, 0, 0.45)')
+        context.setLineDash([])
+    }
+    context.restore()
+
+    const heading = finiteNumber(camera?.heading)
+    const pitch = finiteNumber(camera?.pitch)
+    const roll = finiteNumber(camera?.roll)
+    const heightMeters = finiteNumber(camera?.positionCartographic?.height)
+    const zoom = cameraViewToSlippyLevel(camera, scene, {fallbackHeight: heightMeters})
+    const lines = [
+        `Angle  H ${heading !== null ? `${Math.round(CesiumMath.toDegrees(heading))}°` : '—'}  P ${pitch !== null ? `${Math.round(CesiumMath.toDegrees(pitch))}°` : '—'}  R ${roll !== null ? `${Math.round(CesiumMath.toDegrees(roll))}°` : '—'}`,
+        `Cam    ${heightMeters !== null ? `${Math.round(heightMeters)} m` : '—'}`,
+        `Zoom   ${zoom !== null && zoom !== undefined ? `L${Math.round(zoom)}` : '—'}`,
+    ]
+    const padding = 12
+    const lineHeight = 18
+    context.save()
+    context.font = '600 13px system-ui, sans-serif'
+    context.textAlign = 'left'
+    context.textBaseline = 'top'
+    const textWidths = lines.map(line => context.measureText(line).width)
+    const panelWidth = Math.max(250, Math.min(width - 24, Math.ceil(Math.max(...textWidths, 0) + (padding * 2))))
+    const panelHeight = (lines.length * lineHeight) + (padding * 2)
+    drawRoundedRect(12, 12, panelWidth, panelHeight, 12)
+    context.fillStyle = 'rgba(0, 0, 0, 0.68)'
+    context.fill()
+    context.lineWidth = 1
+    context.strokeStyle = 'rgba(255, 255, 255, 0.15)'
+    context.stroke()
+    context.fillStyle = '#ffffff'
+    lines.forEach((line, index) => {
+        context.fillText(line, 12 + padding, 12 + padding + (index * lineHeight))
+    })
+    context.restore()
+}
+
+/**
+ * Resolve the canvas used to capture replay diagnostics.
+ *
+ * @param {object} mode - Replay mode.
+ * @returns {HTMLCanvasElement|null} Diagnostics canvas.
+ */
+const resolveReplayDiagnosticsOverlayCanvas = (mode) => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+
+        const container = globalThis.lgs?.viewer?.container ?? globalThis.document?.body ?? null
+        if (!container || typeof globalThis.document?.createElement !== 'function') {
+            return null
+        }
+
+        let canvas = state.toleranceZoneOverlayCanvas
+        if (!(canvas instanceof HTMLCanvasElement) || canvas.isConnected !== true) {
+            canvas = globalThis.document.createElement('canvas')
+            canvas.className = 'replay-tolerance-zone-overlay-canvas'
+            canvas.dataset.replayVideoOverlayCanvas = 'true'
+            canvas.style.position = 'absolute'
+            canvas.style.pointerEvents = 'none'
+            canvas.style.zIndex = '10002'
+            container.appendChild(canvas)
+            state.toleranceZoneOverlayCanvas = canvas
+        }
+
+        return canvas
     }
 
     /**
@@ -162,6 +336,10 @@ export const setToleranceZoneOverlayVisible = (mode, visible = true) => {
             if (state.toleranceZoneOverlay) {
                 state.toleranceZoneOverlay.hidden = true
                 state.toleranceZoneOverlay.style.display = 'none'
+            }
+            if (state.toleranceZoneOverlayCanvas) {
+                state.toleranceZoneOverlayCanvas.hidden = true
+                state.toleranceZoneOverlayCanvas.style.display = 'none'
             }
             return false
         }
@@ -512,6 +690,7 @@ export const updateToleranceZoneOverlay =  (mode, hysteresis) => {
         overlay.style.position = 'absolute'
         overlay.style.pointerEvents = 'none'
         overlay.style.display = state.toleranceZoneOverlayVisible ? '' : 'none'
+        overlay.style.visibility = 'hidden'
         overlay.style.left = `${rect.left + (outerBounds.left * rect.width)}px`
         overlay.style.top = `${rect.top + (outerBounds.top * rect.height)}px`
         overlay.style.width = `${(outerBounds.right - outerBounds.left) * rect.width}px`
@@ -542,4 +721,20 @@ export const updateToleranceZoneOverlay =  (mode, hysteresis) => {
         }
         container.appendChild(overlay)
         state.toleranceZoneOverlay = overlay
+
+        const diagnosticsCanvas = call.resolveReplayDiagnosticsOverlayCanvas?.() ?? resolveReplayDiagnosticsOverlayCanvas(mode)
+        if (diagnosticsCanvas) {
+            diagnosticsCanvas.hidden = !state.toleranceZoneOverlayVisible
+            diagnosticsCanvas.style.display = state.toleranceZoneOverlayVisible ? '' : 'none'
+            diagnosticsCanvas.style.visibility = state.toleranceZoneOverlayVisible ? 'visible' : 'hidden'
+            drawReplayDiagnosticsOverlayCanvas({
+                canvas: diagnosticsCanvas,
+                rect,
+                outerBounds,
+                innerBounds,
+                marker,
+                camera: viewer?.camera ?? null,
+                scene: viewer?.scene ?? globalThis.lgs?.scene ?? null,
+            })
+        }
     }

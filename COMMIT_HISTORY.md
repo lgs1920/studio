@@ -1,5 +1,56 @@
 # Commit History
 
+## 2026-07-28 — [`docs: require issue draft validation`](https://github.com/lgs1920/studio/commit/03ce0f44)
+
+- Require clarification of missing issue details before drafting an issue.
+- Require explicit user validation of the complete issue content before creation.
+
+## 2026-07-28 — [`docs: update project rules`](https://github.com/lgs1920/studio/commit/f8b303ce)
+
+- Require project documentation and issue content to be written in English.
+- Define `Backlog` and the latest available milestone as defaults when issue values are not specified.
+- Require every `PROJECT_RULES.md` change to use a dedicated commit, pull request, and merge into `main`.
+
+## 2026-07-26 — [`fix: preserve replay camera pitch through corrections`](https://github.com/lgs1920/studio/commit/e06a6451)
+
+- Keep the nominal replay pitch when corrections rebuild camera frames.
+- Stop replay corrections from inheriting the live Cesium pitch as the target pitch.
+
+## 2026-07-26 — [`docs: refresh replay camera and HQ overlay docs`](https://github.com/lgs1920/studio/commit/fe1ab707)
+
+- Refresh the replay core readme with the recent camera transfer and HQ overlay responsibilities.
+- Document the camera cadence and cancellation refinement in the drone camera path spec.
+- Note the hidden replay diagnostics canvas behavior in the replay video architecture TODO.
+
+## 2026-07-26 — [`fix: stabilize replay camera path and HQ overlay capture`](https://github.com/lgs1920/studio/commit/29a72fee)
+
+- Allow replay camera transfers to switch between frame and time cadence for draft capture.
+- Support function-based camera transition cancellation tokens.
+- Keep hidden replay diagnostics canvases visible to the HQ overlay composer.
+
+## 2026-07-26 — [`fix: align replay camera path cadence and cancellation`](https://github.com/lgs1920/studio/commit/4b28cdd6)
+
+- Allow replay camera transfers to run on a time cadence when draft capture needs it.
+- Make camera transition cancellation handle function-based cancel tokens safely.
+
+## 2026-07-26 — [`fix: scope panorama transfer to the widget`](https://github.com/lgs1920/studio/commit/6f30bf95)
+
+- Keep the panorama flight local to `PanoramaWidget` and its transfer helper.
+- Remove the broader replay camera architecture changes from the commit.
+
+## 2026-07-26 — [`fix: scope panorama transfer to the widget`](https://github.com/lgs1920/studio/commit/acaaccdf)
+
+- Keep the panorama flight local to `PanoramaWidget` and its transfer helper.
+- Remove the broader replay camera architecture changes from the commit.
+
+## 2026-07-26 — [`merge: sync main into 1.0.0-beta.4`](https://github.com/lgs1920/studio/commit/ebc72195)
+
+- Merge the documentation changes from `main` into the `1.0.0-beta.4` branch.
+
+## 2026-07-26 — [`chore: new beta version 1.0.0-beta.4`](https://github.com/lgs1920/studio/commit/3383ea30)
+
+- Start the `1.0.0-beta.4` branch line with the new beta version marker.
+
 ## 2026-07-26 — [`docs: add tech-doc naming rule`](https://github.com/lgs1920/studio/commit/bf1fdfef)
 
 - Add an explicit naming rule for `tech-doc` documentation files in `PROJECT_RULES.md`.
@@ -210,6 +261,12 @@
 - [2026-07-22 — `docs: document internal skills`](https://github.com/lgs1920/studio/commit/9023ef5e)
 - Documented the versioned roadmap and cloud access milestone.
 - Split the 3D drone path editor specification from the drone camera runtime architecture.
+
+## 2026-07-26 — [`fix: open code dependencies in stacked drawer`](https://github.com/lgs1920/studio/commit/acaaccdf)
+
+- Added a stacked Code dependencies drawer to the Information panel.
+- Moved the dependency inventory behind the drawer and kept the Credits tab link lightweight.
+- Added coverage for the stacked drawer opening helper.
 
 ## 2026-07-30 — [`docs: define site and backend issue mirroring`](https://github.com/lgs1920/studio/commit/1802ff1858927fda9b0b807632681b6fa8641b8f)
 

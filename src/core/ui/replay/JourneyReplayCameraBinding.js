@@ -96,7 +96,6 @@ import {
 } from './JourneyReplayCameraVisibility'
 import {
     applyCameraView,
-    liveCameraPitch,
     markerPositionForSample,
     markerRenderHeightForSample,
     markerRenderCartesianForSample,
@@ -131,6 +130,19 @@ import {
     headingEasingFactor,
 } from './JourneyReplayCameraTransition'
 import {
+    buildCameraTransferPath,
+    selectCameraTransferMode,
+} from './JourneyReplayCameraPath'
+import {
+    sampleConstrainedReplayCameraPath,
+} from './JourneyReplayConstrainedCameraPath'
+import {
+    resolveConstrainedReplayCameraPath,
+} from './JourneyReplayCameraConstraintBinding'
+import {
+    buildReplayAntiCollisionBounds,
+} from './JourneyReplayCameraCollision'
+import {
     removeToleranceZoneOverlay,
     setToleranceZoneOverlayVisible,
     cameraAnglePreviewEntityCollection,
@@ -158,6 +170,7 @@ export const recenterCameraToSample = (mode, {
                                    deterministic = false,
                                    logicalNow = null,
                                    force = false,
+                                   trackingMode = null,
                                }) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -195,6 +208,9 @@ export const recenterCameraToSample = (mode, {
                 endFrame: frame,
                 duration,
                 logicalNow,
+                trackingMode,
+                cameraSettings,
+                viewport: call.viewportRectForCesiumSurface?.() ?? null,
             }))
         }
         if (instant || duration <= 0) {
@@ -257,10 +273,6 @@ export const startCameraTransition = (mode, {
         const startHeight = finiteNumber(globalThis.lgs?.viewer?.camera?.positionCartographic?.height)
                             ?? cameraHeight
                             ?? frame.currentHeight
-        const maximumHeight = Math.max(
-            finiteNumber(startHeight) ?? 0,
-            finiteNumber(frame.currentHeight) ?? 0,
-        )
 
         state.cameraFlightActive = true
         state.cameraApplyingView = true
@@ -285,78 +297,69 @@ export const startCameraTransition = (mode, {
                 done(result)
             }
 
-            // The live Draft recorder can render the Cesium scene without
-            // running the normal camera flight lifecycle. In that situation
-            // flyTo may never invoke complete/cancel, leaving the replay
-            // permanently locked in #cameraApplyingView. Use the same frame
-            // interpolation as HQ while a Draft is being captured.
-            const videoStore = globalThis.lgs?.stores?.ui?.video
-            // `recordingSync` is true for the Draft launched from the replay
-            // progress bar as well. It must not route through flyTo: Draft
-            // capture does not reliably deliver flyTo callbacks, which leaves
-            // collision/recenter state locked after the first correction.
-            const draftRecording = videoStore?.recording === true
-            if (draftRecording) {
-                const startFrame = call.currentCameraFrame(frame)
-                if (!startFrame) {
-                    state.cameraApplyingView = false
-                    state.cameraFlightActive = false
-                    settle(false)
-                    return
-                }
-                const startedAt = call.now()
-                const transitionDuration = Math.max(1, (Number(duration) || 0) * 1000)
-                const tick = () => {
-                    if (state.cameraBezierResolve === null) {
-                        return
-                    }
+            const transferThresholdKm = finiteNumber(globalThis.lgs?.settings?.camera?.transferDistanceThresholdKm) ?? 50
+            const cameraWorldPosition = viewer.camera?.positionWC ?? viewer.camera?.position
+            const transferDistance = cameraWorldPosition
+                ? Cartesian3.distance(cameraWorldPosition, endPosition)
+                : null
+            const transferMode = selectCameraTransferMode(transferDistance, transferThresholdKm)
+            const transferPath = cameraWorldPosition
+                ? buildCameraTransferPath({
+                    start:       cameraWorldPosition,
+                    end:         endPosition,
+                    mode:        transferMode,
+                    sampleCount: transferMode === 'blur-jump-refocus' ? 64 : 48,
+                    liftMeters:  Math.max(120, finiteNumber(globalThis.lgs?.settings?.camera?.pitchAdjustHeight) ?? 500),
+                    antiCollisionBounds: buildReplayAntiCollisionBounds(globalThis.lgs?.theJourney, {
+                        trackingMode:        getJourneyReplaySettings().marker.mode,
+                        cameraSettings,
+                        viewport:            call.viewportRectForCesiumSurface(),
+                        clearanceMeters: Math.max(100, finiteNumber(globalThis.lgs?.settings?.camera?.pitchAdjustHeight) ?? 500),
+                    }),
+                })
+                : null
 
-                    const ratio = clamp((call.now() - startedAt) / transitionDuration, 0, 1)
-                    call.applyCameraFrame(call.interpolateCameraFrame(startFrame, {
-                        destination: endPosition,
-                        direction:   endDirection,
-                        up:          endUp,
-                    }, ratio))
-                    if (ratio >= 1) {
-                        settle(true)
+            const draftTiming = globalThis.lgs?.stores?.ui?.video?.recording === true
+                                || globalThis.lgs?.stores?.ui?.video?.preRecording === true
+            if (transferPath) {
+                try {
+                    const cancelTransition = transferPath.flyTo({
+                        camera: viewer.camera,
+                        target: frame.target,
+                        duration: Math.max(0, Number(duration) || 0),
+                        cadence: draftTiming ? 'time' : 'frame',
+                        complete: () => settle(true),
+                        cancel:   () => settle(false),
+                    })
+                    if (typeof cancelTransition === 'function') {
+                        state.cameraBezierFrame = cancelTransition
                         return
                     }
-                    state.cameraBezierFrame = globalThis.setTimeout?.(tick, 16) ?? null
                 }
-                tick()
-                return
+                catch (error) {
+                    console.error('[JourneyReplayMode] Camera path transition failed.', error)
+                }
             }
 
-            if (typeof viewer.camera.flyTo === 'function') {
+            if (typeof viewer.camera.setView === 'function') {
                 try {
-                    viewer.camera.flyTo({
+                    viewer.camera.setView({
                         destination: endPosition,
                         orientation: {
                             direction: endDirection,
                             up:        endUp,
                         },
-                        duration: Math.max(0, Number(duration) || 0),
-                        maximumHeight,
-                        easingFunction: EasingFunction.CUBIC_IN_OUT,
-                        complete: () => settle(true),
-                        cancel:   () => settle(false),
                     })
+                    settle(true)
                     return
                 }
                 catch (error) {
-                    console.error('[JourneyReplayMode] Camera flyTo transition failed.', error)
+                    console.error('[JourneyReplayMode] Camera transition failed.', error)
                 }
             }
 
             try {
-                viewer.camera.setView?.({
-                    destination: endPosition,
-                    orientation: {
-                        direction: endDirection,
-                        up:        endUp,
-                    },
-                })
-                settle(true)
+                settle(false)
             }
             catch (error) {
                 console.error('[JourneyReplayMode] Camera transition failed.', error)
@@ -659,6 +662,13 @@ export const updateCamera = (mode, {
         const markerSettings = normalizeJourneyReplayMarker(globalThis.lgs?.settings?.ui?.replay?.marker
                                                             ?? globalThis.lgs?.stores?.replay?.marker
                                                             ?? settings.marker)
+        const replayMotionProfile = {
+            turnDrift: {
+                enabled:               true,
+                maxHeadingOffsetDeg:    10,
+                maxLateralOffsetMeters: 60,
+            },
+        }
         const deterministicCamera = exportMode
         // Use the export timeline as the smoothing clock. Camera orientation
         // must not advance once per callback independently of video time.
@@ -687,6 +697,7 @@ export const updateCamera = (mode, {
                                                           source: source === 'start' ? 'drawer' : source,
                                                           cameraSettings,
                                                           markerSettings,
+                                                          motionProfile: source === 'drawer' ? null : replayMotionProfile,
                                                       })
         if (!nominalView) {
             return
@@ -705,13 +716,16 @@ export const updateCamera = (mode, {
         const anchorSample = nominalView.sample
         const smoothHeading = nominalView.heading
         const smoothPitch = nominalView.pitch
-        const recenterDuration = replayCameraRecenterDuration(cameraSettings.hysteresis.easing)
-                                 * (exportMode ? 1.8 : 1)
+        const sharedRecenterDuration = replayCameraRecenterDuration(cameraSettings.hysteresis.easing)
+        const recenterDuration = sharedRecenterDuration * (exportMode ? 1.8 : 1)
         const frameLeadSeconds = replayFrameLeadSeconds({
             fps:             globalThis.lgs?.stores?.replay?.captureFps,
             frameIntervalMs,
         })
         const lookaheadSeconds = recenterDuration + frameLeadSeconds
+        const constrainedLookaheadSeconds = sharedRecenterDuration + replayFrameLeadSeconds({
+            fps: globalThis.lgs?.stores?.replay?.captureFps,
+        })
         const futureSample = call.cameraLookaheadSample(anchorSample, {lookaheadSeconds})
         const predictedSample = futureSample ?? anchorSample
         if (deterministicCamera && state.deterministicCameraTransition) {
@@ -742,6 +756,7 @@ export const updateCamera = (mode, {
                         duration:       REPLAY_HEADING_TRANSITION_DURATION_SECONDS,
                         deterministic:  deterministicCamera,
                         logicalNow,
+                        trackingMode:   marker.mode,
                     })
                 }
                 state.lastCameraHeading = smoothHeading
@@ -767,6 +782,56 @@ export const updateCamera = (mode, {
         }
 
         call.updateToleranceZoneOverlay(cameraSettings.hysteresis)
+
+        const runtimeTracking = replayRuntimeTrackingSettings(
+            globalThis.lgs?.settings?.ui?.replay?.camera ?? cameraSettings,
+            viewportRect,
+        )
+        const constrainedPathSupported = typeof globalThis.lgs?.viewer?.camera?.setView === 'function'
+        const constrainedPath = constrainedPathSupported
+            ? call.resolveConstrainedReplayCameraPath?.({
+                trackingMode: marker.mode,
+                cameraSettings,
+                markerSettings,
+                runtimeTracking,
+                durationSeconds: settings.duration,
+                responseSeconds: sharedRecenterDuration,
+                lookaheadSeconds: constrainedLookaheadSeconds,
+            }) ?? resolveConstrainedReplayCameraPath(mode, {
+                trackingMode: marker.mode,
+                cameraSettings,
+                markerSettings,
+                runtimeTracking,
+                durationSeconds: settings.duration,
+                responseSeconds: sharedRecenterDuration,
+                lookaheadSeconds: constrainedLookaheadSeconds,
+            })
+            : null
+        const constrainedFrame = sampleConstrainedReplayCameraPath(
+            constrainedPath,
+            progress ?? anchorSample.progress ?? 0,
+        )
+        if (constrainedFrame) {
+            if (
+                state.cameraBezierFrame !== null
+                || state.cameraBezierResolve !== null
+                || state.cameraFlightActive
+                || state.deterministicCameraTransition
+                || state.deterministicCameraFollowerActive
+            ) {
+                call.cancelCameraBezierTransition(false)
+            }
+            state.deterministicCameraTransition = null
+            state.deterministicCameraFollowerAt = null
+            state.deterministicCameraFollowerActive = false
+            state.deterministicCameraFollowerVelocity = null
+            state.cameraRedirectState = null
+            state.cameraFlightActive = false
+            call.applyCameraFrame(constrainedFrame)
+            state.lastCameraHeading = smoothHeading
+            state.lastCameraPitch = smoothPitch
+            return
+        }
 
         if (source === 'start' && immediateToleranceRecenter) {
             state.cameraRedirectState = null
@@ -840,7 +905,7 @@ export const updateCamera = (mode, {
                 const navigationTargetSample = !immediateToleranceRecenter && (source === 'playback' || exportMode)
                                                ? predictedSample
                                                : anchorSample
-                const navigationTargetView = !immediateToleranceRecenter && navigationTargetSample
+                    const navigationTargetView = !immediateToleranceRecenter && navigationTargetSample
                                              ? call.cameraViewForSample({
                                                  sample:         navigationTargetSample,
                                                  progress:       navigationTargetSample.progress ?? progress,
@@ -848,6 +913,7 @@ export const updateCamera = (mode, {
                                                  cameraSettings,
                                                  markerSettings,
                                                  collision:      true,
+                                                 motionProfile:  replayMotionProfile,
                                                  previousHeading: smoothHeading,
                                                  previousPitch:   smoothPitch,
                                              })
@@ -864,7 +930,7 @@ export const updateCamera = (mode, {
                     const frame = call.cameraRecenterFrame({
                         sample:         navigationTargetSample,
                         heading:        navigationTargetView?.heading ?? smoothHeading,
-                        pitch:          call.liveCameraPitch(navigationTargetView?.pitch ?? smoothPitch),
+                        pitch:          navigationTargetView?.pitch ?? smoothPitch,
                         cameraSettings,
                     })
                     if (frame) {
@@ -880,12 +946,13 @@ export const updateCamera = (mode, {
                     call.recenterCameraToSample({
                         sample:         navigationTargetSample,
                         heading:        navigationTargetView?.heading ?? smoothHeading,
-                        pitch:          call.liveCameraPitch(navigationTargetView?.pitch ?? smoothPitch),
+                        pitch:          navigationTargetView?.pitch ?? smoothPitch,
                         cameraSettings,
                         duration:       recenterDuration,
                         deterministic:  deterministicCamera,
                         logicalNow,
                         force:          outsideNavigationZone || forceToleranceRecenter,
+                        trackingMode:   marker.mode,
                     })
                 }
                 state.lastNavigationRecenterProgress = currentProgress
@@ -945,13 +1012,14 @@ export const updateCamera = (mode, {
                     source,
                     cameraSettings,
                     markerSettings,
+                    motionProfile:  replayMotionProfile,
                     previousHeading: smoothHeading,
                     previousPitch:   smoothPitch,
                 })
                 const frame = call.cameraRecenterFrame({
                     sample:         trackingSample,
                     heading:        dynamicTargetView?.heading ?? smoothHeading,
-                    pitch:          call.liveCameraPitch(dynamicTargetView?.pitch ?? smoothPitch),
+                    pitch:          dynamicTargetView?.pitch ?? smoothPitch,
                     cameraSettings,
                 })
                 call.applyDeterministicCameraFollower({
@@ -1083,6 +1151,7 @@ export const updateCamera = (mode, {
                                                              duration: CAMERA_REDIRECT_MAX_TRANSITION_SECONDS,
                                                              deterministic: deterministicCamera,
                                                              logicalNow,
+                                                             trackingMode: marker.mode,
                                                          })
                         }
                     }
@@ -1133,6 +1202,7 @@ export const updateCamera = (mode, {
                                                          duration: CAMERA_REDIRECT_MAX_TRANSITION_SECONDS,
                                                          deterministic: deterministicCamera,
                                                          logicalNow,
+                                                         trackingMode: marker.mode,
                                                      })
                     }
                 }
@@ -1191,7 +1261,7 @@ export const updateCamera = (mode, {
                 const targetSample = (outsideTolerance || targetCorrectionDue) && !useRedirectTransition
                                      ? trackingSample
                                      : targetView.sample
-                const targetNominalView = !useRedirectTransition
+                    const targetNominalView = !useRedirectTransition
                                           ? call.cameraViewForSample({
                                               sample:         targetSample,
                                               progress:       targetSample?.progress ?? progress,
@@ -1199,6 +1269,7 @@ export const updateCamera = (mode, {
                                               cameraSettings,
                                               markerSettings,
                                               collision:      outsideTolerance || targetCorrectionDue,
+                                              motionProfile:  replayMotionProfile,
                                               previousHeading: smoothHeading,
                                               previousPitch:   smoothPitch,
                                           })
@@ -1208,7 +1279,7 @@ export const updateCamera = (mode, {
                                       : targetNominalView?.heading ?? targetView.heading
                 const targetPitch = useRedirectTransition
                                     ? targetView.pitch
-                                    : call.liveCameraPitch(targetNominalView?.pitch ?? smoothPitch)
+                                    : targetNominalView?.pitch ?? smoothPitch
                 if (deterministicCamera && !useRedirectTransition && !immediateToleranceRecenter) {
                     const frame = call.cameraRecenterFrame({
                         sample:         targetSample,
@@ -1251,6 +1322,7 @@ export const updateCamera = (mode, {
                                 : replayCameraRecenterDuration(cameraSettings.hysteresis.easing),
                     deterministic: deterministicCamera,
                     logicalNow,
+                    trackingMode: marker.mode,
                     })
                 }
                 state.lastToleranceRecenterProgress = currentProgress
