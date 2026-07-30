@@ -122,6 +122,59 @@ Validation should prove:
 - hidden tracks do not become visible because of camera recentering;
 - clip timing stays aligned between Draft and HQ.
 
+## 1.5. Spec-to-code audit and delivery plan
+
+The table below is the working map for implementation follow-up. It separates
+what is already coherent from what still needs code work or stronger contract
+coverage.
+
+| Section | State | What matches the code | What still needs work | Next action |
+| --- | --- | --- | --- | --- |
+| 1.1 Related issue synthesis | Partial | The spec correctly groups the camera work into path-space, screen-space, and timeline concerns | The issues are still not fully represented as one code contract | Keep the synthesis as the roadmap and attach each issue to one implementation slice |
+| 1.2 Complete analysis | Mostly coherent | The split between path generation, screen-space correction, and clip timing already exists in the codebase | The shared contract is still incomplete for every edge case | Freeze the responsibilities by layer and validate them with regression tests |
+| 1.3 Decision | Partial | Cesium is treated as a renderer, not as the source of replay truth | Some corrections still live too much in runtime-only state | Move the decisive values into the logical frame and path model |
+| 1.4 Implementation | Partial | The listed files already contain most of the mechanics | The contract surface is still missing a few fields and first-class artifacts | Extend the logical frame, render contract, and replay path model |
+| 2 Decision schema | Coherent | Z1/Z2 geometry, adaptive sizing, and visibility separation already exist | Some rules are only implicit in helpers, not explicit in the shared contract | Expose the active zones and diagnostics at the frame boundary |
+| 2.4 Adaptive short-replay sizing | Coherent but needs hardening | The 30% / 5% minimums and the correction window already exist in the math layer | End-to-end proof for short captures and delayed calculations is still needed | Add contract-level diagnostics and regression coverage |
+| 3 Trigger algorithm | Coherent | Crop-local projection and current-plus-predicted checks are already implemented | Multi-format parity still needs to remain stable through refactors | Keep the crop-aware tests and extend them to the full capture matrix |
+| 4 Predictive processing | Coherent | Look-ahead is already used without advancing the replay timeline | Draft/HQ parity must stay locked under future changes | Keep the predictive logic renderer-independent and test it against both modes |
+| Hidden tracks and visibility redirects | Coherent | Visibility handling is separated from pose resolution | Recenter-related regressions remain possible if the camera contract changes | Preserve the visibility tests and keep hidden tracks depth-tested |
+| 5 Terrain correction persistence | Partial | Terrain collision handling already exists | The correction is still too transient and not yet a replayable path artifact | Serialize the correction into the path model and reuse it in Draft/HQ |
+| 6 Clip timeline alignment | Partial | The controller and exporter already share the logical frame pipeline | The clip timeline is not yet a first-class contract object | Normalize replay/start/stop phases into a shared timeline contract |
+| 7 Speed-dependent roll | Missing | No renderer-independent roll model is present yet | Tight turns still resolve without a bounded speed-based bank | Add roll to the logical pose and clamp it to 45 degrees |
+
+### Delivery plan
+
+1. Expand the shared logical camera contract.
+
+   Add the missing replay-frame fields first, because every later change needs
+   a stable place to read and publish them.
+
+2. Persist terrain collision corrections.
+
+   Move the terrain redirect result out of transient runtime state and into the
+   replayable path model so Draft and HQ reuse the same correction.
+
+3. Normalize the clip timeline.
+
+   Make replay, start, and stop clips consume one explicit logical timeline so
+   Draft and HQ cannot drift apart again.
+
+4. Expose adaptive zone diagnostics at the contract boundary.
+
+   Keep the current Z1/Z2 math, but publish the active zones and pressure so
+   the parity rules stay visible and testable.
+
+5. Add speed-dependent roll.
+
+   Resolve roll from the logical path, keep it deterministic, and clamp it to
+   45 degrees.
+
+6. Close the regression matrix.
+
+   Add tests that prove the full camera contract instead of only individual
+   helpers.
+
 ## 2. Decision schema
 
 The camera is driven by one frame contract. The important part is not the UI

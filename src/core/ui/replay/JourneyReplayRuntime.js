@@ -64,6 +64,7 @@ export const buildReplayFrameState = ({
     renderSpec = null,
     visibleOverlayIds = [],
     outputProfile = null,
+    tracking = null,
 } = {}) => {
     const safeIndex = optionalFiniteNumber(index)
     const safeFrameId = optionalFiniteNumber(frameId)
@@ -83,6 +84,7 @@ export const buildReplayFrameState = ({
                                    durationMillis:  optionalFiniteNumber(durationMillis),
                                    frameTimeMs:     optionalFiniteNumber(frameTimeMs),
                                    frameIntervalMs: optionalFiniteNumber(frameIntervalMs),
+                                   tracking,
                                    phase,
                                    source,
                                },
@@ -138,6 +140,7 @@ export const updateReplayFrameRenderContract = ({
                                                        renderSpec = undefined,
                                                        visibleOverlayIds = undefined,
                                                        outputProfile = undefined,
+                                                       tracking = undefined,
                                                    } = {}) => {
     const frameState = store?.dynamicFrameState
     if (!frameState) {
@@ -149,8 +152,18 @@ export const updateReplayFrameRenderContract = ({
                              ? {
                                  ...(previousContract.logicalFrame ?? {}),
                                  ...logicalFrame,
+                                 tracking: tracking === undefined
+                                           ? logicalFrame?.tracking ?? previousContract.logicalFrame?.tracking ?? null
+                                           : tracking,
                              }
-                             : previousContract.logicalFrame ?? null
+                             : previousContract.logicalFrame
+                               ? {
+                                   ...previousContract.logicalFrame,
+                                   tracking: tracking === undefined
+                                             ? previousContract.logicalFrame?.tracking ?? null
+                                             : tracking,
+                               }
+                               : null
     const renderContract = createReplayRenderModeContract({
         renderMode:        previousContract.renderMode ?? 'draft',
         logicalFrame:      nextLogicalFrame,

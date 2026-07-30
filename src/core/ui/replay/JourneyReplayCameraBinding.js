@@ -898,6 +898,9 @@ export const updateCamera = (mode, {
                 frameLeadSeconds: adaptiveFrameLeadSeconds,
             },
         )
+        if (logicalFrame) {
+            logicalFrame.tracking = runtimeTracking
+        }
         traceUpdateStep('tracking.zones.adaptive', {
             pressure:              runtimeTracking.diagnostics.pressure,
             remainingSeconds:      runtimeTracking.diagnostics.remainingSeconds,

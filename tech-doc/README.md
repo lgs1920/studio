@@ -47,6 +47,7 @@ Proposed work, pending validation, or future implementation work lives under `to
 - [Drone camera 3D path editor](todo/CORE-DRONE-CAMERA-3D-PATH-EDITOR-SPEC.md)
 - [Replay track timeline editor](todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md)
 - [Replay trace and marker glow/neon effects](todo/CORE-REPLAY-TRACE-MARKER-GLOW-NEON-SPEC.md)
+- [Replay camera spec gap analysis](todo/CORE-REPLAY-CAMERA-SPEC-GAP-ANALYSIS.md)
 - [Cesium Ion layers](todo/CESIUM-ION-LAYERS-SPEC.md)
 - [Tracks editor](todo/TRACKSEDITOR-SPEC.md)
 - [Profile TODO](todo/PROFILE-TODO.md)

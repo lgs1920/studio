@@ -109,6 +109,7 @@ export const resolveJourneyReplayLogicalCameraPose = ({
         progress: clamp(Number(progress) || 0, 0, 1),
         heading: desiredHeading,
         pitch,
+        roll: 0,
         cameraSettings,
         markerSettings,
         cameraHeight,

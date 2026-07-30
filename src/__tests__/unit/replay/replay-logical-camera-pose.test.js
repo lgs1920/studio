@@ -28,6 +28,7 @@ describe('Journey replay logical camera pose', () => {
         expect(pose.progress).toBe(0.5)
         expect(pose.heading).toBeGreaterThan(Math.PI / 2)
         expect(pose.pitch).toBeCloseTo(-Math.PI / 4)
+        expect(pose.roll).toBe(0)
         expect(pose.cameraHeight).toBe(420)
         expect(pose.logical).toBe(true)
     })

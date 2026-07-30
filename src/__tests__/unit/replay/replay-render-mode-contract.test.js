@@ -10,6 +10,15 @@ describe('Replay render mode contract', () => {
         sample:   {progress: 0.5, longitude: 2, latitude: 48},
         progress: 0.5,
         frameTimeMs: 500,
+        tracking: {
+            navigation: {
+                triggerZone: {left: 0.35, top: 0.35, width: 0.3, height: 0.3},
+            },
+            dynamic: {
+                triggerZone: {left: 0.125, top: 0.125, width: 0.75, height: 0.75},
+                targetZone:  {left: 0.35, top: 0.35, width: 0.3, height: 0.3},
+            },
+        },
     }
     const renderSpec = {
         fps:              30,
@@ -26,7 +35,7 @@ describe('Replay render mode contract', () => {
     it('keeps visual inputs identical while isolating Draft and HQ scheduling', () => {
         const common = {
             logicalFrame,
-            cameraPose: {heading: 0.5, pitch: -0.75, cameraHeight: 1000},
+            cameraPose: {heading: 0.5, pitch: -0.75, roll: 0, cameraHeight: 1000},
             trackPath: [[[2, 48, 100], [2.1, 48.1, 120]]],
             initialCameraState: {
                 destination: {longitude: 2, latitude: 48, height: 5000},
@@ -39,6 +48,7 @@ describe('Replay render mode contract', () => {
         const hq = createReplayRenderModeContract({renderMode: REPLAY_RENDER_MODE_HQ, ...common})
 
         expect(draft.logicalFrame).toEqual(hq.logicalFrame)
+        expect(draft.logicalFrame.tracking).toEqual(logicalFrame.tracking)
         expect(draft.cameraPose).toEqual(hq.cameraPose)
         expect(draft.trackPath).toEqual(hq.trackPath)
         expect(draft.renderSpec).toEqual(hq.renderSpec)
@@ -69,12 +79,19 @@ describe('Replay render mode contract', () => {
     })
 
     it('publishes the completed logical camera frame after the adapter applies it', () => {
+        const frameTracking = {
+            navigation: {triggerZone: {left: 0.35, top: 0.35, width: 0.3, height: 0.3}},
+        }
         const store = {
             dynamicFrameState: {
                 sample: {progress: 0.5},
                 renderContract: createReplayRenderModeContract({
                     renderMode: REPLAY_RENDER_MODE_DRAFT,
-                    logicalFrame: {sample: {progress: 0.5}, progress: 0.5},
+                    logicalFrame: {
+                        sample: {progress: 0.5},
+                        progress: 0.5,
+                        tracking: frameTracking,
+                    },
                     trackPath: [[[2, 48, 100], [2.1, 48.1, 120]]],
                     initialCameraState: {
                         destination: {longitude: 2, latitude: 48, height: 5000},
@@ -88,8 +105,9 @@ describe('Replay render mode contract', () => {
             sample: {progress: 0.5},
             progress: 0.5,
             frameTimeMs: 500,
-            cameraPose: {heading: 0.7, pitch: -0.8, cameraHeight: 1100},
+            cameraPose: {heading: 0.7, pitch: -0.8, roll: 0, cameraHeight: 1100},
             cameraFrame: {position: {x: 1, y: 2, z: 3}},
+            tracking: frameTracking,
         }
 
         const contract = updateReplayFrameRenderContract({store, logicalFrame})
