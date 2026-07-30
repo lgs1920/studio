@@ -267,3 +267,9 @@
 - Added a stacked Code dependencies drawer to the Information panel.
 - Moved the dependency inventory behind the drawer and kept the Credits tab link lightweight.
 - Added coverage for the stacked drawer opening helper.
+
+## 2026-07-30 — [`docs: define site and backend issue mirroring`](https://github.com/lgs1920/studio/commit/1802ff1858927fda9b0b807632681b6fa8641b8f)
+
+- Require every open Site and Backend issue to have a corresponding Studio mirror.
+- Preserve issue types, use domain-specific title prefixes and labels, and maintain reciprocal links.
+- Prevent duplicate mirrors by checking existing open and closed Studio issues.
