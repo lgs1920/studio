@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-07-30 — [`fix(replay): persist terrain redirects and harden replay coverage`](https://github.com/lgs1920/studio/commit/db2accebfa9c78d0bd01c38869a0f5967ba6a37b)
+
+- Persist terrain redirect annotations on the compiled replay path.
+- Strengthen the adaptive tracking and logical roll regression coverage.
+- Keep the replay camera spec aligned with the implemented terrain and timing contracts.
+
 ## 2026-07-30 — [`fix(replay): add logical roll banking`](https://github.com/lgs1920/studio/commit/3e48bd1a3d7375720ccdf0d5054120ab9c10bfb6)
 
 - Compute replay camera roll from turn curvature and local segment speed.
