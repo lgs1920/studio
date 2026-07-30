@@ -298,6 +298,8 @@ export const resolveConstrainedReplayCameraPath = (mode, {
     let previousPitch = null
     let previousProgress = null
     let terrainRedirectCycle = null
+    let activeTerrainRedirect = null
+    const terrainRedirects = []
     let terrainOcclusionHandled = false
     /**
      * Project a marker through a candidate compiled frame.
@@ -402,6 +404,15 @@ export const resolveConstrainedReplayCameraPath = (mode, {
                     redirectState,
                     startSeconds: sampleTimeSeconds,
                 }
+                activeTerrainRedirect = {
+                    startProgress: safeProgress,
+                    startSeconds:  sampleTimeSeconds,
+                    redirectState: {...redirectState},
+                    endProgress:    null,
+                    endSeconds:     null,
+                    durationSeconds: null,
+                }
+                terrainRedirects.push(activeTerrainRedirect)
             }
         }
 
@@ -437,6 +448,15 @@ export const resolveConstrainedReplayCameraPath = (mode, {
                 }) ?? frame
             }
             if (elapsedSeconds >= TERRAIN_REDIRECT_CYCLE_SECONDS) {
+                if (activeTerrainRedirect) {
+                    activeTerrainRedirect.endProgress = safeProgress
+                    activeTerrainRedirect.endSeconds = sampleTimeSeconds
+                    activeTerrainRedirect.durationSeconds = Math.max(
+                        0,
+                        sampleTimeSeconds - activeTerrainRedirect.startSeconds,
+                    )
+                    activeTerrainRedirect = null
+                }
                 terrainRedirectCycle = null
             }
         }
@@ -495,6 +515,15 @@ export const resolveConstrainedReplayCameraPath = (mode, {
         responseSeconds,
         lookaheadSeconds,
     })
+    if (activeTerrainRedirect) {
+        activeTerrainRedirect.endProgress = 1
+        activeTerrainRedirect.endSeconds = compiledDurationSeconds
+        activeTerrainRedirect.durationSeconds = Math.max(
+            0,
+            compiledDurationSeconds - activeTerrainRedirect.startSeconds,
+        )
+        activeTerrainRedirect = null
+    }
     const compileEndedAt = globalThis.performance?.now?.() ?? Date.now()
     replayVideoTraceDebug('camera.path.compile.end', {
         key: pathKey,
@@ -505,7 +534,13 @@ export const resolveConstrainedReplayCameraPath = (mode, {
     })
     state.constrainedReplayCameraPath = path ? {
         key: pathKey,
-        path,
+        path: {
+            ...path,
+            terrainRedirects: terrainRedirects.map(entry => ({
+                ...entry,
+                redirectState: {...entry.redirectState},
+            })),
+        },
     } : null
     return path
 }

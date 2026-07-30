@@ -124,4 +124,108 @@ describe('Journey replay logical camera pose', () => {
         expect(Math.abs(slowTurn.roll)).toBeLessThanOrEqual(Math.PI / 4)
         expect(Math.abs(fastTurn.roll)).toBeLessThanOrEqual(Math.PI / 4)
     })
+
+    it('keeps straight segments level and flips roll sign on the opposite turn direction', () => {
+        const straightPose = resolveJourneyReplayLogicalCameraPose({
+            sample: {
+                progress: 0.5,
+                distanceFromStart: 5000,
+                remainingDistance:  5000,
+                journeyDurationMillis: 10000,
+                longitude: 2,
+                latitude:  48,
+                altitude:  120,
+                source: {
+                    startPoint: {
+                        longitude: 1.99,
+                        latitude:  48,
+                        journeyElapsedMillis: 1000,
+                        timeMillis: 1000,
+                    },
+                    endPoint: {
+                        longitude: 2.01,
+                        latitude:  48,
+                        journeyElapsedMillis: 3000,
+                        timeMillis: 3000,
+                    },
+                },
+            },
+            cameraSettings: {
+                positionMode: 'system',
+                heading: 0,
+                pitch:   -45,
+                altitude: 300,
+            },
+            markerSettings: {},
+        })
+        const leftTurnPose = resolveJourneyReplayLogicalCameraPose({
+            sample: {
+                progress: 0.5,
+                distanceFromStart: 5000,
+                remainingDistance:  5000,
+                journeyDurationMillis: 10000,
+                longitude: 2,
+                latitude:  48,
+                altitude:  120,
+                source: {
+                    startPoint: {
+                        longitude: 1.99,
+                        latitude:  48,
+                        journeyElapsedMillis: 1000,
+                        timeMillis: 1000,
+                    },
+                    endPoint: {
+                        longitude: 2,
+                        latitude:  48.01,
+                        journeyElapsedMillis: 3000,
+                        timeMillis: 3000,
+                    },
+                },
+            },
+            cameraSettings: {
+                positionMode: 'system',
+                heading: 0,
+                pitch:   -45,
+                altitude: 300,
+            },
+            markerSettings: {},
+        })
+        const rightTurnPose = resolveJourneyReplayLogicalCameraPose({
+            sample: {
+                progress: 0.5,
+                distanceFromStart: 5000,
+                remainingDistance:  5000,
+                journeyDurationMillis: 10000,
+                longitude: 2,
+                latitude:  48,
+                altitude:  120,
+                source: {
+                    startPoint: {
+                        longitude: 1.99,
+                        latitude:  48,
+                        journeyElapsedMillis: 1000,
+                        timeMillis: 1000,
+                    },
+                    endPoint: {
+                        longitude: 2,
+                        latitude:  47.99,
+                        journeyElapsedMillis: 3000,
+                        timeMillis: 3000,
+                    },
+                },
+            },
+            cameraSettings: {
+                positionMode: 'system',
+                heading: 0,
+                pitch:   -45,
+                altitude: 300,
+            },
+            markerSettings: {},
+        })
+
+        expect(straightPose.roll).toBeCloseTo(0, 6)
+        expect(Math.abs(leftTurnPose.roll)).toBeGreaterThan(0)
+        expect(Math.abs(rightTurnPose.roll)).toBeGreaterThan(0)
+        expect(leftTurnPose.roll * rightTurnPose.roll).toBeLessThan(0)
+    })
 })

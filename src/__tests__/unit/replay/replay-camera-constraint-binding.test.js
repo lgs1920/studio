@@ -192,6 +192,16 @@ describe('JourneyReplayCameraConstraintBinding', () => {
             -0.5,
             -0.5,
         ])
+        expect(mode[JOURNEY_REPLAY_INTERNAL_STATE].constrainedReplayCameraPath.path.terrainRedirects).toEqual([
+            expect.objectContaining({
+                startProgress: 0,
+                endProgress:   0.3,
+                redirectState: expect.objectContaining({
+                    headingOffset: 0.2,
+                    pitchOffset:   -0.1,
+                }),
+            }),
+        ])
     })
 
     it('traces constrained path compilation timings', () => {

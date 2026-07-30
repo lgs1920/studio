@@ -14,6 +14,7 @@ import {
     REPLAY_RENDER_MODE_DRAFT,
     REPLAY_RENDER_MODE_HQ,
 } from '@Core/ui/replay/ReplayRenderModeContract'
+import {buildReplayFrameState} from '@Core/ui/replay/JourneyReplayRuntime'
 import {describe, expect, it} from 'vitest'
 
 import {
@@ -205,6 +206,41 @@ describe('replay regression matrix', () => {
 
         expect(delayed.transitionBudgetSeconds).toBeGreaterThan(nominal.transitionBudgetSeconds)
         expect(delayed.pressure).toBeGreaterThan(nominal.pressure)
+    })
+
+    it('publishes short-replay adaptive tracking unchanged through the logical frame contract', () => {
+        const viewport = REPLAY_REGRESSION_VIEWPORTS.standard
+        const tracking = replayAdaptiveRuntimeTrackingSettings({}, viewport, {
+            durationSeconds: 5,
+            progress:        0.1,
+            transitionSeconds: 1,
+            frameLeadSeconds:  1 / 30,
+            calculationLagSeconds: 1,
+        })
+        const logicalFrame = buildReplayFrameState({
+            progress: 0.1,
+            durationMillis: 5000,
+            tracking,
+            phase: {
+                kind: 'replay',
+                slot: 'replay',
+                progress: 0.1,
+            },
+        })
+        const draft = createReplayRenderModeContract({
+            renderMode: REPLAY_RENDER_MODE_DRAFT,
+            logicalFrame,
+        })
+        const hq = createReplayRenderModeContract({
+            renderMode: REPLAY_RENDER_MODE_HQ,
+            logicalFrame,
+        })
+
+        expect(tracking.diagnostics.pressure).toBeGreaterThan(0)
+        expect(draft.logicalFrame.tracking).toEqual(tracking)
+        expect(hq.logicalFrame.tracking).toEqual(tracking)
+        expect(draft.logicalFrame.timeline).toEqual(logicalFrame.timeline)
+        expect(hq.logicalFrame.timeline).toEqual(logicalFrame.timeline)
     })
 
     it('holds a forced navigation correction for two logical seconds', () => {
