@@ -62,6 +62,7 @@ This is the canonical source for the project's AI-agent and development rules.
 ## 6. Issue Creation Workflow
 
 - **Clarification and validation:** Before creating an issue, ask the user for any missing explanations or clarifications needed to understand and scope the request. Then present the complete proposed issue content for explicit user validation. Do not create the issue until the user has validated the proposal.
+- **Solution and implementation plan:** For every issue, propose a solution and an implementation plan for explicit user validation. Do not create or implement the issue until the proposed solution and plan have been validated.
 - **Complete fields:** Every created issue must have all known and applicable fields filled in, including title, description, assignee, labels, type, priority, repository, Project status, and `Target release`. Do not invent a release, label, priority, or other value when the information is not known.
 - **Assignee:** Assign the issue to the user requesting its creation unless the user explicitly specifies another assignee.
 - **Release planning:** Use the Project-level `Target release` field as the source of truth for release planning across repositories. Use `Unplanned` when no approved release has been selected. Add a new target-release option only after the release has been approved.
