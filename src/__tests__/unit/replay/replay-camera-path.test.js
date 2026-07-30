@@ -40,6 +40,7 @@ import {
     replayTurnDriftForGuideProgress,
     replayTurnDriftForProgress,
     cameraAltitudeForSample,
+    cameraViewForSample,
 } from '@Core/ui/replay/JourneyReplayCameraGuide'
 import {
     replayDurationPaceFactor,
@@ -588,6 +589,72 @@ describe('Journey replay camera paths', () => {
         expect(call.cameraRecenterFrame).toHaveBeenCalledWith(expect.objectContaining({
             pitch: -0.5,
         }))
+    })
+
+    it('banks the replay camera more strongly on faster turns', () => {
+        const {mode} = makeMode()
+        const baseSample = {
+            progress: 0.5,
+            distanceFromStart: 5000,
+            remainingDistance:  5000,
+            journeyDurationMillis: 10000,
+            longitude: 2.01,
+            latitude:  48,
+            altitude:  120,
+            source: {
+                startPoint: {
+                    longitude: 2,
+                    latitude:  48,
+                    journeyElapsedMillis: 1000,
+                    timeMillis: 1000,
+                },
+                endPoint: {
+                    longitude: 2.01,
+                    latitude:  48.01,
+                    journeyElapsedMillis: 3000,
+                    timeMillis: 3000,
+                },
+            },
+        }
+
+        const slowView = cameraViewForSample(mode, {
+            sample: baseSample,
+            progress: 0.5,
+            source: 'drawer',
+            cameraSettings: {
+                positionMode: 'system',
+                heading: 0,
+                pitch:   -45,
+                altitude: 300,
+            },
+            markerSettings: {},
+        })
+        const fastView = cameraViewForSample(mode, {
+            sample: {
+                ...baseSample,
+                source: {
+                    ...baseSample.source,
+                    endPoint: {
+                        ...baseSample.source.endPoint,
+                        journeyElapsedMillis: 1500,
+                        timeMillis:           1500,
+                    },
+                },
+            },
+            progress: 0.5,
+            source: 'drawer',
+            cameraSettings: {
+                positionMode: 'system',
+                heading: 0,
+                pitch:   -45,
+                altitude: 300,
+            },
+            markerSettings: {},
+        })
+
+        expect(Math.abs(fastView.roll)).toBeGreaterThan(Math.abs(slowView.roll))
+        expect(Math.abs(slowView.roll)).toBeLessThanOrEqual(Math.PI / 4)
+        expect(Math.abs(fastView.roll)).toBeLessThanOrEqual(Math.PI / 4)
     })
 
     it('releases the redirect state when current visibility returns despite predicted collision', () => {

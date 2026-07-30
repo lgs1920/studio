@@ -58,4 +58,70 @@ describe('Journey replay logical camera pose', () => {
 
         expect(pose.timeline).toEqual(phase)
     })
+
+    it('banks more on faster turns while staying capped at 45 degrees', () => {
+        const baseSample = {
+            progress: 0.5,
+            distanceFromStart: 5000,
+            remainingDistance:  5000,
+            journeyDurationMillis: 10000,
+            source: {
+                startPoint: {
+                    longitude: 2,
+                    latitude:  48,
+                    journeyElapsedMillis: 1000,
+                    timeMillis: 1000,
+                },
+                endPoint: {
+                    longitude: 2.01,
+                    latitude:  48.01,
+                    journeyElapsedMillis: 3000,
+                    timeMillis: 3000,
+                },
+            },
+        }
+
+        const slowTurn = resolveJourneyReplayLogicalCameraPose({
+            sample: {
+                ...baseSample,
+                longitude: 2.01,
+                latitude:  48,
+                altitude:  120,
+            },
+            cameraSettings: {
+                positionMode: 'system',
+                heading: 0,
+                pitch:   -45,
+                altitude: 300,
+            },
+            markerSettings: {},
+        })
+        const fastTurn = resolveJourneyReplayLogicalCameraPose({
+            sample: {
+                ...baseSample,
+                longitude: 2.01,
+                latitude:  48,
+                altitude:  120,
+                source: {
+                    ...baseSample.source,
+                    endPoint: {
+                        ...baseSample.source.endPoint,
+                        journeyElapsedMillis: 1500,
+                        timeMillis:           1500,
+                    },
+                },
+            },
+            cameraSettings: {
+                positionMode: 'system',
+                heading: 0,
+                pitch:   -45,
+                altitude: 300,
+            },
+            markerSettings: {},
+        })
+
+        expect(Math.abs(fastTurn.roll)).toBeGreaterThan(Math.abs(slowTurn.roll))
+        expect(Math.abs(slowTurn.roll)).toBeLessThanOrEqual(Math.PI / 4)
+        expect(Math.abs(fastTurn.roll)).toBeLessThanOrEqual(Math.PI / 4)
+    })
 })

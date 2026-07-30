@@ -141,7 +141,7 @@ coverage.
 | Hidden tracks and visibility redirects | Coherent | Visibility handling is separated from pose resolution | Recenter-related regressions remain possible if the camera contract changes | Preserve the visibility tests and keep hidden tracks depth-tested |
 | 5 Terrain correction persistence | Partial | Terrain collision handling already exists | The correction is still too transient and not yet a replayable path artifact | Serialize the correction into the path model and reuse it in Draft/HQ |
 | 6 Clip timeline alignment | Partial | The controller and exporter already share the logical frame pipeline | The clip timeline is not yet a first-class contract object | Normalize replay/start/stop phases into a shared timeline contract |
-| 7 Speed-dependent roll | Missing | No renderer-independent roll model is present yet | Tight turns still resolve without a bounded speed-based bank | Add roll to the logical pose and clamp it to 45 degrees |
+| 7 Speed-dependent roll | Implemented | The logical pose now computes a bounded roll from turn curvature and segment speed, and Draft/HQ both reuse it | Broader regression coverage is still useful for additional path shapes | Keep the roll contract and extend the regression matrix when new path modes are added |
 
 ### Delivery plan
 
@@ -165,10 +165,10 @@ coverage.
    Keep the current Z1/Z2 math, but publish the active zones and pressure so
    the parity rules stay visible and testable.
 
-5. Add speed-dependent roll.
+5. Keep speed-dependent roll under regression coverage.
 
    Resolve roll from the logical path, keep it deterministic, and clamp it to
-   45 degrees.
+   45 degrees
 
 6. Close the regression matrix.
 

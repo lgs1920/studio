@@ -1,6 +1,6 @@
 # Replay Camera Spec Gap Analysis and Alignment Plan
 
-Status: draft proposal — aligns #425, #428, #429, #431
+Status: draft proposal — aligns #425, #428, #429; #431 implemented
 
 Date: 2026-07-30
 
@@ -58,7 +58,7 @@ guardrails, not as open work:
 | #425 | Terrain collision avoidance must be recorded in the replay camera path and reused without recomputation | Terrain redirects exist, but they are kept in session memory through the constrained path cache | The correction is not yet a first-class persisted replay-path artifact | Serialize the terrain-correction result into the replay path model and make HQ/Draft consume that stored data |
 | #428 | Draft and HQ must use the same normalized clip timeline | Clip flow is normalized through controller and exporter orchestration, but the timeline is not a shared first-class object in the replay contract | Clip alignment still depends on orchestration details instead of an explicit logical clip timeline | Promote clip phases, boundary timestamps, and clip identity into the shared logical frame / render contract |
 | #429 | Short replays must adapt Z1/Z2 early enough to absorb calculation lag and speed differences | Adaptive zone math exists and is already covered by unit tests | The adaptive decision is still mostly runtime-local and not yet exposed as a reusable replay-frame contract with full end-to-end validation | Keep the math, expose the active adaptive geometry as contract data, and add integration coverage for short captures and delayed updates |
-| #431 | Replay camera turns must bank with speed-dependent roll, capped at 45° | Logical pose resolution currently returns heading, pitch, and altitude only | No renderer-independent roll model exists yet | Add curvature/speed-based roll to the logical camera pose, path compiler, and render contract |
+| #431 | Replay camera turns must bank with speed-dependent roll, capped at 45° | Logical pose resolution now returns heading, pitch, altitude, and bounded roll | The shared roll contract is implemented; broader path coverage still deserves regression tests | Keep the roll contract and extend coverage when new turn profiles appear |
 
 ## Gap details by issue
 
@@ -113,19 +113,15 @@ pressure metrics at the replay-frame boundary, not only in trace logging.
 
 ### #431 — Speed-dependent roll on tight turns
 
-This feature is still missing from the renderer-independent camera pose.
+This issue is now implemented in the logical camera pose and replay camera
+view path.
 
-Current code resolves heading, pitch, and altitude, then applies camera
-redirects and path corrections. It does not compute a stable roll model from
-path curvature and speed.
+Current code resolves heading, pitch, altitude, and a bounded roll derived
+from turn curvature and segment speed. Draft and HQ both reuse the same roll
+value through the shared logical frame contract.
 
-To satisfy the issue, roll must:
-
-- be computed from the logical path, not from Cesium camera state
-- follow turn direction and speed
-- stay bounded to 45 degrees
-- ease in and out around straight segments
-- be serialized through the same logical frame contract used by Draft and HQ
+The remaining work is regression coverage for additional turn shapes, not the
+core roll contract itself.
 
 ## Implementation plan
 
@@ -207,7 +203,8 @@ Primary files:
 
 ### Phase 5 — Add speed-dependent roll
 
-Implement issue #431 as a renderer-independent camera-path rule.
+Keep issue #431 under regression coverage as a renderer-independent
+camera-path rule.
 
 Required changes:
 
@@ -236,7 +233,7 @@ Required test coverage:
 - Draft and HQ resolve the same clip timeline
 - short replays keep the marker inside the capture area
 - delayed calculations still produce the same adaptive zones
-- speed changes increase or reduce roll predictably
+- speed changes continue to increase or reduce roll predictably
 - roll never exceeds the 45-degree clamp
 - hidden-track visibility still survives recentering and redirect
 
