@@ -445,3 +445,9 @@
 - Added a stacked Code dependencies drawer to the Information panel.
 - Moved the dependency inventory behind the drawer and kept the Credits tab link lightweight.
 - Added coverage for the stacked drawer opening helper.
+
+## 2026-07-30 — [`fix(replay): keep unsafe recentering and turn drift logical`](https://github.com/lgs1920/studio/commit/aeabcce75c55e33c54d7f5180f19a0469c2b1962)
+
+- Reissue navigation recentering while the marker is still outside the safe crop.
+- Apply replay turn drift in the logical camera view instead of ignoring the motion profile.
+- Restore the nominal pitch from the latest applied camera state when the live camera view has drifted.
