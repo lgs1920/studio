@@ -65,3 +65,8 @@ This is the canonical source for the project's AI-agent and development rules.
 - **Issue body structure:** Write every issue body in the same structure: short context, requested behavior, acceptance criteria, and optional notes or questions. Keep the scope to one request per issue and prefer bullet lists for requirements.
 - **Issue templates:** Use `.github/ISSUE_TEMPLATE/bug_report.md` for bugs and `.github/ISSUE_TEMPLATE/feature_request.md` for new features or improvements. Keep the sections consistent with the issue type and use the reproduction section only for bugs.
 - **Issue type mapping:** Each issue template must include its hidden `issue-type` marker, and the automation must set the GitHub issue type accordingly (`bug` for `bug_report.md`, `feature` for `feature_request.md`).
+- **Cross-repository issue mirroring:** Every open issue in `lgs1920/site` and `lgs1920/backend` must have a corresponding issue in `lgs1920/studio`.
+- **Mirror title and label:** Prefix the Studio mirror title with `[Site]` or `[Backend]` and apply the matching lowercase `site` or `backend` label.
+- **Mirror type:** The Studio mirror must use the same GitHub issue type as the source issue. If the source issue has no type, determine and set its correct type before creating the mirror.
+- **Reciprocal links:** Add a cross-reference in both the source issue and its Studio mirror.
+- **Duplicate prevention:** Before creating a mirror, search open and closed Studio issues for an existing reference to the source issue and reuse the existing mirror when one exists.
