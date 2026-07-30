@@ -21,6 +21,107 @@ The related issues describe one camera contract split across three concerns:
 - screen-space corrections: adaptive Z1/Z2 collision and visibility;
 - timeline consistency: shared replay clip timing.
 
+## 1.2. Complete analysis
+
+The camera problems in this area are not independent. They are the same
+contract observed from different failure modes.
+
+### Path-space analysis
+
+This is the camera pose before Cesium renders it.
+
+- steep or low-altitude paths can collide with terrain;
+- tight turns need a bounded roll response to avoid flat-looking motion;
+- the corrected pose must remain deterministic so Draft and HQ share it.
+
+The result is a logical camera-path correction, not a scene-only patch.
+
+### Screen-space analysis
+
+This is the camera decision after the current and predicted samples are
+projected into the viewport.
+
+- Z1 must catch the marker before it leaves the useful capture area;
+- Z2 must remain the promised landing zone in dynamic mode;
+- short replays need earlier adaptation so the camera does not arrive too
+  late;
+- hidden tracks or trace segments must stay hidden even when the camera
+  recenters for visibility.
+
+The result is a frame-local correction, not a replay-path rewrite.
+
+### Timeline analysis
+
+This is the ordering of replay clips and the deterministic separation between
+Draft and HQ scheduling.
+
+- replay, start, and stop clips must resolve to the same logical frame;
+- clip boundaries must not drift between modes;
+- the same logical frame must produce the same camera decision in both modes;
+- rendering mode may change pacing, but not the underlying replay timeline.
+
+The result is a shared timeline contract, not a recorder-specific behavior.
+
+### Root cause summary
+
+The real source of inconsistency is a split between three authorities:
+
+1. path generation;
+2. camera correction in screen space;
+3. clip and export timing.
+
+The fix is to keep those authorities separate in responsibility, but unified in
+the frame contract they consume.
+
+## 1.3. Decision
+
+The chosen solution is a three-layer replay-camera contract:
+
+- path-space corrections live in the logical camera/path resolver;
+- screen-space corrections live in the Z1/Z2 decision model;
+- timeline consistency lives in the shared replay frame contract.
+
+This gives one decision source for Draft and HQ while keeping Cesium as a
+renderer, not the authority.
+
+The concrete rules are:
+
+- terrain altitude correction is stored in the replayable camera path;
+- speed-dependent roll is computed from curvature and speed, then clamped to
+  45°;
+- Z1/Z2 adaptation is applied from the active logical frame and never breaks
+  nested-zone geometry;
+- hidden tracks remain hidden even when the camera recenters for visibility;
+- replay clips resolve on the same normalized timeline in Draft and HQ.
+
+## 1.4. Implementation
+
+The implementation should follow the same split:
+
+- `JourneyReplayCameraMath.js`
+  - compute turn roll, altitude correction, predictive distances, zone math,
+    and frame-local camera helpers;
+- `JourneyReplayCameraBinding.js`
+  - apply the resolved camera decision to the active replay update path;
+- `JourneyReplayCameraVisibility.js`
+  - keep visibility and hidden-track rules separate from pose resolution;
+- `JourneyReplayCameraOverlay.js`
+  - expose the Z1/Z2 diagnostic overlay and debug labels;
+- `JourneyReplaySessionController.js`
+  - keep Draft and HQ synchronized on the same logical frame and capture
+    contract;
+- replay clip logic
+  - consume the same timeline so clip boundaries stay identical between modes.
+
+Validation should prove:
+
+- the same logical frame yields the same camera pose in Draft and HQ;
+- terrain corrections are replayed deterministically;
+- roll is stable, bounded, and reversible;
+- Z1/Z2 adaptation keeps the marker inside capture bounds;
+- hidden tracks do not become visible because of camera recentering;
+- clip timing stays aligned between Draft and HQ.
+
 ## 2. Decision schema
 
 The camera is driven by one frame contract. The important part is not the UI
