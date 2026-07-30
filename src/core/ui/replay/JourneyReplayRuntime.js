@@ -31,6 +31,22 @@ const optionalFiniteNumber = value => {
     return finiteNumber(value)
 }
 
+const replayClipSignature = clips => {
+    const normalized = normalizeJourneyReplayClips(clips ?? {})
+    return JSON.stringify({
+        start: (normalized.start ?? []).map(clip => ({
+            clipId: clip.clipId,
+            params: clip.params ?? {},
+            enabled: clip.enabled !== false,
+        })),
+        stop: (normalized.stop ?? []).map(clip => ({
+            clipId: clip.clipId,
+            params: clip.params ?? {},
+            enabled: clip.enabled !== false,
+        })),
+    })
+}
+
 /**
  * Build a normalized replay frame payload shared by live playback, clip
  * playback, and HQ export.
@@ -65,6 +81,8 @@ export const buildReplayFrameState = ({
     visibleOverlayIds = [],
     outputProfile = null,
     tracking = null,
+    clips = null,
+    clipSignature = null,
 } = {}) => {
     const safeIndex = optionalFiniteNumber(index)
     const safeFrameId = optionalFiniteNumber(frameId)
@@ -74,6 +92,8 @@ export const buildReplayFrameState = ({
     const resolvedIndex = safeIndex ?? safeReplayFrameIndex ?? safeFrameId ?? null
     const resolvedFrameCount = safeFrameCount ?? safeReplayFrameCount ?? null
 
+    const resolvedClipSignature = clipSignature
+                                  ?? (clips ? replayClipSignature(clips) : null)
     const renderContract = renderMode
                            ? createReplayRenderModeContract({
                                renderMode,
@@ -85,8 +105,10 @@ export const buildReplayFrameState = ({
                                    frameTimeMs:     optionalFiniteNumber(frameTimeMs),
                                    frameIntervalMs: optionalFiniteNumber(frameIntervalMs),
                                    tracking,
+                                   timeline:        phase ? {...phase} : null,
                                    phase,
                                    source,
+                                   clipSignature: resolvedClipSignature,
                                },
                                cameraPose,
                                trackPath,
@@ -94,6 +116,7 @@ export const buildReplayFrameState = ({
                                renderSpec,
                                visibleOverlayIds,
                                outputProfile,
+                               clipSignature: resolvedClipSignature,
                            })
                            : null
 
@@ -114,6 +137,9 @@ export const buildReplayFrameState = ({
         frameIntervalMs:  optionalFiniteNumber(frameIntervalMs),
         replayFrameIndex: safeReplayFrameIndex,
         replayFrameCount: safeReplayFrameCount,
+        tracking:        tracking ?? null,
+        timeline:        phase ? {...phase} : null,
+        clipSignature:   resolvedClipSignature,
         phase,
         source,
         updatedAt:       optionalFiniteNumber(updatedAt) ?? globalThis.performance?.now?.() ?? Date.now(),
@@ -141,6 +167,8 @@ export const updateReplayFrameRenderContract = ({
                                                        visibleOverlayIds = undefined,
                                                        outputProfile = undefined,
                                                        tracking = undefined,
+                                                       clips = undefined,
+                                                       clipSignature = undefined,
                                                    } = {}) => {
     const frameState = store?.dynamicFrameState
     if (!frameState) {
@@ -148,6 +176,10 @@ export const updateReplayFrameRenderContract = ({
     }
 
     const previousContract = frameState.renderContract ?? {}
+    const resolvedClipSignature = clipSignature
+                                  ?? previousContract.clipSignature
+                                  ?? previousContract.logicalFrame?.clipSignature
+                                  ?? (clips ? replayClipSignature(clips) : null)
     const nextLogicalFrame = logicalFrame
                              ? {
                                  ...(previousContract.logicalFrame ?? {}),
@@ -155,6 +187,14 @@ export const updateReplayFrameRenderContract = ({
                                  tracking: tracking === undefined
                                            ? logicalFrame?.tracking ?? previousContract.logicalFrame?.tracking ?? null
                                            : tracking,
+                                 timeline: logicalFrame?.timeline
+                                           ?? logicalFrame?.phase
+                                           ?? previousContract.logicalFrame?.timeline
+                                           ?? previousContract.logicalFrame?.phase
+                                           ?? null,
+                                 clipSignature: logicalFrame?.clipSignature
+                                                ?? previousContract.logicalFrame?.clipSignature
+                                                ?? resolvedClipSignature,
                              }
                              : previousContract.logicalFrame
                                ? {
@@ -162,6 +202,11 @@ export const updateReplayFrameRenderContract = ({
                                    tracking: tracking === undefined
                                              ? previousContract.logicalFrame?.tracking ?? null
                                              : tracking,
+                                   timeline: previousContract.logicalFrame?.timeline
+                                             ?? previousContract.logicalFrame?.phase
+                                             ?? null,
+                                   clipSignature: previousContract.logicalFrame?.clipSignature
+                                                  ?? resolvedClipSignature,
                                }
                                : null
     const renderContract = createReplayRenderModeContract({
@@ -181,6 +226,7 @@ export const updateReplayFrameRenderContract = ({
         outputProfile:     outputProfile === undefined
                            ? previousContract.outputProfile ?? null
                            : outputProfile,
+        clipSignature:     resolvedClipSignature,
     })
 
     store.dynamicFrameState = {

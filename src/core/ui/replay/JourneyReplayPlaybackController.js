@@ -347,6 +347,8 @@ export class JourneyReplayPlaybackController {
             durationMillis:  runtimeFrame?.durationMillis ?? this.#duration * MILLIS,
             frameTimeMs:     runtimeFrame?.frameTimeMs,
             frameIntervalMs: runtimeFrame?.frameIntervalMs,
+            tracking:        runtimeFrame?.tracking ?? null,
+            timeline:        runtimeFrame?.timeline ?? runtimeFrame?.phase ?? null,
             phase:           runtimeFrame?.phase,
             source:          'replay-clock',
         })
@@ -407,6 +409,7 @@ export class JourneyReplayPlaybackController {
             return
         }
 
+        const previousFrameState = store.dynamicFrameState ?? null
         const frameNow = this.#now()
         this.#dynamicFrameId += 1
         const frameIntervalMillis = MILLIS / safeFps(store.captureFps)
@@ -452,6 +455,10 @@ export class JourneyReplayPlaybackController {
             frameIntervalMs: frameIntervalMillis,
             replayFrameIndex,
             replayFrameCount,
+            tracking:        previousFrameState?.tracking
+                             ?? previousFrameState?.renderContract?.logicalFrame?.tracking
+                             ?? null,
+            timeline:        phase,
             phase,
             source:          'controller',
             updatedAt:       frameNow,
@@ -464,6 +471,7 @@ export class JourneyReplayPlaybackController {
             visibleOverlayIds: deferredRenderContract?.visibleOverlayIds
                                ?? store.deferredExportPlan?.runtime?.context?.visibleOverlayIds
                                ?? [],
+            clips:           store.clips ?? null,
         })
 
         const now = this.#now()

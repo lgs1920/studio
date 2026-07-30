@@ -706,6 +706,8 @@ export const updateCamera = (mode, {
                                         source: source === 'start' ? 'drawer' : source,
                                         cameraSettings,
                                         markerSettings,
+                                        phase: logicalFrame?.phase ?? null,
+                                        timeline: logicalFrame?.timeline ?? logicalFrame?.phase ?? null,
                                     })
                                   : null
         // Use the export timeline as the smoothing clock. Camera orientation
@@ -741,6 +743,8 @@ export const updateCamera = (mode, {
                                  source: source === 'start' ? 'drawer' : source,
                                  cameraSettings,
                                  markerSettings,
+                                 phase: logicalFrame?.phase ?? null,
+                                 timeline: logicalFrame?.timeline ?? logicalFrame?.phase ?? null,
                              })
                            : call.cameraViewForSample({
                                  sample,

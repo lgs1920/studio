@@ -32,4 +32,30 @@ describe('Journey replay logical camera pose', () => {
         expect(pose.cameraHeight).toBe(420)
         expect(pose.logical).toBe(true)
     })
+
+    it('defaults the logical timeline to the replay phase when one is not provided explicitly', () => {
+        const phase = {
+            kind: 'replay',
+            slot: 'replay',
+            progress: 0.5,
+        }
+        const pose = resolveJourneyReplayLogicalCameraPose({
+            sample: {
+                progress: 0.5,
+                longitude: 2,
+                latitude:  48,
+                altitude:  120,
+            },
+            cameraSettings: {
+                positionMode: 'system',
+                heading: 0,
+                pitch:   -45,
+                altitude: 300,
+            },
+            markerSettings: {},
+            phase,
+        })
+
+        expect(pose.timeline).toEqual(phase)
+    })
 })

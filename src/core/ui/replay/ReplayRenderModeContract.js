@@ -115,6 +115,7 @@ export const createReplayRenderModeContract = ({
                                                    renderSpec = null,
                                                    visibleOverlayIds = [],
                                                    outputProfile = null,
+                                                   clipSignature = null,
                                                } = {}) => {
     const mode = normalizeReplayRenderMode(renderMode)
     return {
@@ -127,6 +128,7 @@ export const createReplayRenderModeContract = ({
         renderSpec: normalizeRenderSpec(renderSpec),
         visibleOverlayIds: normalizeOverlayIds(visibleOverlayIds),
         outputProfile: cloneValue(outputProfile),
+        clipSignature: clipSignature ?? logicalFrame?.clipSignature ?? null,
         scheduling: {
             realtime:    mode === REPLAY_RENDER_MODE_DRAFT,
             frameByFrame: mode === REPLAY_RENDER_MODE_HQ,
@@ -159,6 +161,7 @@ export const createReplayRenderContext = ({
         renderSpec,
         trackPath,
         visibleOverlayIds,
+        clipSignature,
     })
     const context = {
         version:        REPLAY_RENDER_MODE_CONTRACT_VERSION,

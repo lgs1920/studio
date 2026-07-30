@@ -82,6 +82,8 @@ export const resolveJourneyReplayLogicalCameraPose = ({
                                                            progress = sample?.progress ?? 0,
                                                            cameraSettings = null,
                                                            markerSettings = null,
+                                                           phase = null,
+                                                           timeline = null,
                                                        } = {}) => {
     if (!sample || !cameraSettings) {
         return null
@@ -113,6 +115,7 @@ export const resolveJourneyReplayLogicalCameraPose = ({
         cameraSettings,
         markerSettings,
         cameraHeight,
+        timeline: timeline ?? phase ?? null,
         logical: true,
     }
 }

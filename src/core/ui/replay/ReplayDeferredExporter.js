@@ -190,7 +190,7 @@ const replayClipSignature = clips => JSON.stringify({
     })),
 })
 
-const buildReplayVideoTimeline = ({
+export const buildReplayVideoTimeline = ({
                                       replayDurationMillis = 0,
                                       fps = defaultReplayExportFps(),
                                       direction = 1,
@@ -254,7 +254,7 @@ const buildReplayVideoTimeline = ({
     }
 }
 
-const resolveReplayVideoFramePhase = ({timeline = null, frame = null} = {}) => {
+export const resolveReplayVideoFramePhase = ({timeline = null, frame = null} = {}) => {
     const frameIntervalMs = timeline?.fps > 0 ? (1000 / timeline.fps) : (1000 / 30)
     const phaseFrameMetrics = ({phase = null, localMillis = 0} = {}) => {
         if (!phase) {
@@ -720,6 +720,8 @@ const publishReplayExportFrameState = ({
         frameIntervalMs: finiteNumber(frame?.frameIntervalMs, null),
         replayFrameIndex: finiteNumber(phase?.replayFrameIndex, null),
         replayFrameCount: finiteNumber(phase?.replayFrameCount, null),
+        tracking:        logicalFrame?.tracking ?? null,
+        timeline:        logicalFrame?.timeline ?? phase ?? null,
         phase,
         source:          'exporter',
         updatedAt:       globalThis.performance?.now?.() ?? Date.now(),
@@ -736,6 +738,7 @@ const publishReplayExportFrameState = ({
         initialCameraState: plan.runtime?.context?.cameraState ?? null,
         renderSpec:      plan.renderSpec ?? null,
         visibleOverlayIds: plan.runtime?.context?.visibleOverlayIds ?? [],
+        clips:           replay?.clips ?? null,
     })
 
     plan.runtime.frameState = frameState

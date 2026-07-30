@@ -10,6 +10,11 @@ describe('Replay render mode contract', () => {
         sample:   {progress: 0.5, longitude: 2, latitude: 48},
         progress: 0.5,
         frameTimeMs: 500,
+        timeline: {
+            kind: 'replay',
+            slot: 'replay',
+            progress: 0.5,
+        },
         tracking: {
             navigation: {
                 triggerZone: {left: 0.35, top: 0.35, width: 0.3, height: 0.3},
@@ -43,16 +48,19 @@ describe('Replay render mode contract', () => {
             },
             renderSpec,
             visibleOverlayIds: ['journey-stats-widget'],
+            clipSignature: 'clips-a',
         }
         const draft = createReplayRenderModeContract({renderMode: REPLAY_RENDER_MODE_DRAFT, ...common})
         const hq = createReplayRenderModeContract({renderMode: REPLAY_RENDER_MODE_HQ, ...common})
 
         expect(draft.logicalFrame).toEqual(hq.logicalFrame)
         expect(draft.logicalFrame.tracking).toEqual(logicalFrame.tracking)
+        expect(draft.logicalFrame.timeline).toEqual(logicalFrame.timeline)
         expect(draft.cameraPose).toEqual(hq.cameraPose)
         expect(draft.trackPath).toEqual(hq.trackPath)
         expect(draft.renderSpec).toEqual(hq.renderSpec)
         expect(draft.initialCameraState).toEqual(hq.initialCameraState)
+        expect(draft.clipSignature).toBe('clips-a')
         expect(draft.scheduling).toEqual({realtime: true, frameByFrame: false})
         expect(hq.scheduling).toEqual({realtime: false, frameByFrame: true})
     })
@@ -90,6 +98,11 @@ describe('Replay render mode contract', () => {
                     logicalFrame: {
                         sample: {progress: 0.5},
                         progress: 0.5,
+                        timeline: {
+                            kind: 'replay',
+                            slot: 'replay',
+                            progress: 0.5,
+                        },
                         tracking: frameTracking,
                     },
                     trackPath: [[[2, 48, 100], [2.1, 48.1, 120]]],
@@ -98,6 +111,7 @@ describe('Replay render mode contract', () => {
                     },
                     renderSpec,
                     visibleOverlayIds: ['journey-stats-widget'],
+                    clipSignature: 'clips-a',
                 }),
             },
         }
@@ -107,6 +121,11 @@ describe('Replay render mode contract', () => {
             frameTimeMs: 500,
             cameraPose: {heading: 0.7, pitch: -0.8, roll: 0, cameraHeight: 1100},
             cameraFrame: {position: {x: 1, y: 2, z: 3}},
+            timeline: {
+                kind: 'replay',
+                slot: 'replay',
+                progress: 0.5,
+            },
             tracking: frameTracking,
         }
 
@@ -119,6 +138,7 @@ describe('Replay render mode contract', () => {
             initialCameraState: expect.objectContaining({
                 destination: expect.objectContaining({longitude: 2, latitude: 48, height: 5000}),
             }),
+            clipSignature: 'clips-a',
         }))
         expect(contract.logicalFrame).toEqual(expect.objectContaining(logicalFrame))
         expect(store.dynamicFrameState.renderContract).toEqual(contract)

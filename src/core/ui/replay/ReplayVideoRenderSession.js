@@ -96,6 +96,7 @@ export class ReplayVideoRenderSession {
             durationMillis:  frame.durationMillis,
             frameTimeMs:     frame.frameTimeMs,
             frameIntervalMs: frame.frameIntervalMs,
+            timeline:        options.phase ?? null,
             phase:           options.phase ?? null,
             source:          this.#renderMode,
         }

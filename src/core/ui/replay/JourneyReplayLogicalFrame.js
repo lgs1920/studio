@@ -28,6 +28,7 @@ export const createJourneyReplayLogicalFrame = ({
                                                      cameraPose = null,
                                                      cameraFrame = null,
                                                      tracking = null,
+                                                     timeline = null,
                                                      phase = null,
                                                      source = 'replay',
                                                  } = {}) => {
@@ -47,6 +48,7 @@ export const createJourneyReplayLogicalFrame = ({
         cameraPose:      cameraPose ?? null,
         cameraFrame:     cameraFrame ?? null,
         tracking:        tracking ?? null,
+        timeline:        timeline ?? phase ?? null,
         phase:           phase ?? null,
         source,
     }

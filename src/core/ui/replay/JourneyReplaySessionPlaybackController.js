@@ -686,6 +686,7 @@ export const renderReplayExportFrame = async (mode, {phase = null, frame = null,
                     frameIntervalMs: finiteNumber(frame?.frameIntervalMs)
                                      ?? finiteNumber(phase?.frameIntervalMs)
                                      ?? null,
+                    timeline:        phase ?? null,
                     phase,
                     source:          'hq-export',
                 })
