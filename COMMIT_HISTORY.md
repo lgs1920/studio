@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-07-30 — [`fix(replay): add logical roll banking`](https://github.com/lgs1920/studio/commit/3e48bd1a3d7375720ccdf0d5054120ab9c10bfb6)
+
+- Compute replay camera roll from turn curvature and local segment speed.
+- Reuse the same bounded roll value in the logical pose and replay camera view path.
+- Keep the replay camera spec and gap analysis aligned with the implemented roll contract.
+
 ## 2026-07-30 — [`fix(replay): complete adaptive tracking and clip timeline contracts`](https://github.com/lgs1920/studio/commit/e5697251c1f11a307c49f266b5e85a26f2036967)
 
 - Publish adaptive tracking geometry on the replay logical frame and render contract.
