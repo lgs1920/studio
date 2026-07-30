@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="840" viewBox="0 0 1600 840" role="img" aria-labelledby="title desc">
+  <title id="title">Replay camera visibility stack</title>
+  <desc id="desc">Layered diagram showing replay state, camera decision, Cesium rendering, and diagnostic overlay.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f8fafc }
+      .title { font: 700 34px Inter, Arial, sans-serif; fill: #0f172a }
+      .subtitle { font: 400 18px Inter, Arial, sans-serif; fill: #475569 }
+      .coltitle { font: 700 22px Inter, Arial, sans-serif; fill: #0f172a }
+      .item { font: 500 18px Inter, Arial, sans-serif; fill: #0f172a }
+      .small { font: 500 15px Inter, Arial, sans-serif; fill: #334155 }
+      .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2.5 }
+      .box-blue { fill: #eff6ff; stroke: #60a5fa; stroke-width: 2.5 }
+      .box-amber { fill: #fff7ed; stroke: #fb923c; stroke-width: 2.5 }
+      .box-green { fill: #ecfdf5; stroke: #34d399; stroke-width: 2.5 }
+      .stack { fill: #e2e8f0; opacity: .55 }
+    </style>
+  </defs>
+  <rect class="bg" x="0" y="0" width="1600" height="840" />
+  <text class="title" x="80" y="78">Replay camera visibility stack</text>
+  <text class="subtitle" x="80" y="114">Hidden tracks stay hidden; camera correction only changes the pose.</text>
+
+  <rect class="stack" x="70" y="160" width="1460" height="610" rx="26"/>
+
+  <rect class="box" x="120" y="210" width="1360" height="108" rx="20"/>
+  <text class="coltitle" x="160" y="250">Replay state</text>
+  <text class="item" x="160" y="284">Marker visibility • Trace visibility • Replay phase</text>
+
+  <rect class="box-blue" x="120" y="350" width="1360" height="108" rx="20"/>
+  <text class="coltitle" x="160" y="390">Camera decision</text>
+  <text class="item" x="160" y="424">Z1 collision • Z2 landing validation • visibility redirect</text>
+
+  <rect class="box-amber" x="120" y="490" width="1360" height="108" rx="20"/>
+  <text class="coltitle" x="160" y="530">Cesium rendering</text>
+  <text class="item" x="160" y="564">Depth-tested marker • Terrain and 3D tile occlusion • Nominal pitch</text>
+
+  <rect class="box-green" x="120" y="630" width="1360" height="108" rx="20"/>
+  <text class="coltitle" x="160" y="670">Diagnostic overlay</text>
+  <text class="item" x="160" y="704">Z1 bounds • Z2 bounds • Recenter reason</text>
+
+  <text class="small" x="920" y="706">disableDepthTestDistance = 0 keeps the marker depth-tested.</text>
+</svg>

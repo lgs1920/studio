@@ -314,11 +314,8 @@ High-level orchestration for the replay feature.
 - bind the playback controller and renderer;
 - relay `start`, `pause`, `resume`, `stop`, and `seek`;
 - keep Cesium camera behavior in sync with the runtime;
-- detect tolerance-zone exits from the current marker projected in Cesium window coordinates;
-- apply a centered dead zone so the camera can stay still while the marker remains near the middle of the frame;
-- treat non-projectable markers as outside the safe zone so the camera recenters instead of drifting away;
-- keep the visibility correction strict enough to preserve the marker and the trailing sampled trace points during grazing views;
-- avoid thrashing by replacing an active recenter only after a short delay when the marker stays outside;
+- delegate camera-zone, pitch, altitude, and visibility details to
+  `REPLAY_CAMERA_TRACKING_ZONES.md`;
 - forward profile and debug state.
 
 ### Example
@@ -336,58 +333,11 @@ replay.configure({
 replay.start()
 ```
 
-### Camera algorithm
+### Camera architecture note
 
-`JourneyReplayMode` uses a two-stage decision tree for the camera.
-
-1. It first builds a nominal camera view from the current playback sample.
-2. It then measures whether that view is still inside the tolerance zone and whether the marker and the sampled trace remain visible.
-3. If the view is still stable, it does nothing.
-4. If the view is outside the dead zone, or if the marker/trace becomes hidden, it recenters the camera.
-
-The dead zone is driven by `camera.hysteresis.marginRatio`. The zone is centered in the viewport, so the camera can drift a little before the algorithm reacts. That prevents the visible "breathing" effect when the marker only moves slightly.
-The tolerance zone overlay stays visible during playback for the non-`Trace` tracking modes, so the recenter window is easy to read while the FT runs.
-Smaller `marginRatio` values make the hysteresis less sensitive and leave a larger stable zone in the middle of the viewport.
-For `Behind` and `Ahead`, the nominal heading also includes `camera.headingOffset` in degrees, clamped between `-90` and `90`. The drawer slider is intentionally reversed: moving it to the left applies a negative offset in the camera model, and moving it to the right applies a positive one. While the slider is being edited, the runtime shows a transparent angle overlay anchored on the first replay sample. The solid axis shows the chosen `Behind` or `Ahead` side, and the dashed line shows the selected camera bias. The overlay disappears after 5 seconds without slider changes, or as soon as the user clicks elsewhere. That offset is applied before the existing heading hysteresis and visibility checks, so it behaves like a simple angular bias on top of the current trace-facing view.
-
-### Visibility model
-
-The visibility checks use three layers:
-
-1. A geometric line-of-sight test against terrain heights.
-2. A rendered visibility test against the current Cesium scene.
-3. A visibility correction that looks at the marker and at the sampled trace points behind it.
-
-The rendered check first tries `scene.pickPosition()` when it is available. That catches occlusion from 3D tiles or other rendered relief. If it cannot use the depth buffer, the code falls back to `globe.pick()` and terrain height sampling.
-
-For the trace, the algorithm samples the current marker plus trailing points along the path. A point is only considered visible if every sampled point that can be evaluated is visible. This is stricter than the original marker-only check and is meant to keep the line from disappearing at shallow viewing angles.
-
-### Redirect search
-
-When the nominal view fails, the mode tries to recover with a small set of candidate camera offsets:
-
-- a few pitch-down candidates;
-- a few heading offsets;
-- mixed heading/pitch candidates when a pure pitch change is not enough.
-
-Each candidate is scored so that the smallest useful adjustment wins. The redirect state is reused when possible, which avoids recomputing a new solution on every frame.
-
-If a redirected view is still visible in the Cesium scene, the code applies it directly with `setView()`. Otherwise it uses a short `flyTo()` transition. The transition duration is capped so the correction stays smooth but does not become a long camera move.
-
-### Hysteresis and thrash control
-
-The mode keeps a short-lived recenter timestamp and progress key. This stops the camera from restarting the same recenter on every playback update while the marker is still outside the zone.
-
-When the user interacts with the camera manually, the live sync path is isolated from the playback path. The code cancels the current animated transition before applying a user-driven recenter, then it restores the playback state cleanly when the interaction ends.
-
-### Sampling rules
-
-The path sampler is used twice:
-
-- to drive the nominal camera along the replay path;
-- to sample trailing trace points for visibility checks.
-
-The camera logic intentionally uses sampled points rather than only the current marker. That is what keeps the rendered trace from vanishing on long, low-angle views.
+This module only owns orchestration. The concrete zone geometry, predictive
+look-ahead, visibility correction, pitch and altitude behavior, and diagnostic
+overlay rules are specified in `REPLAY_CAMERA_TRACKING_ZONES.md`.
 
 ## `JourneyReplayDebug.js`
 

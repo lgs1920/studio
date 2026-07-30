@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">Replay camera decision flow</title>
+  <desc id="desc">Flowchart showing how replay camera decisions move from projection to mode selection and correction.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#475569" />
+    </marker>
+    <style>
+      .bg { fill: #f8fafc }
+      .title { font: 700 34px Inter, Arial, sans-serif; fill: #0f172a }
+      .subtitle { font: 400 18px Inter, Arial, sans-serif; fill: #475569 }
+      .node { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2.5 }
+      .node-blue { fill: #eff6ff; stroke: #60a5fa; stroke-width: 2.5 }
+      .node-amber { fill: #fff7ed; stroke: #fb923c; stroke-width: 2.5 }
+      .node-green { fill: #ecfdf5; stroke: #34d399; stroke-width: 2.5 }
+      .text { font: 600 18px Inter, Arial, sans-serif; fill: #0f172a }
+      .small { font: 500 15px Inter, Arial, sans-serif; fill: #334155 }
+      .arrow { stroke: #475569; stroke-width: 3; fill: none; marker-end: url(#arrow) }
+      .label { font: 700 16px Inter, Arial, sans-serif; fill: #0f172a }
+    </style>
+  </defs>
+  <rect class="bg" x="0" y="0" width="1600" height="1000" />
+  <text class="title" x="80" y="78">Replay camera decision flow</text>
+  <text class="subtitle" x="80" y="114">The camera resolves one logical frame at a time, not a free-running animation.</text>
+
+  <rect class="node-blue" x="610" y="150" width="380" height="82" rx="18"/>
+  <text class="text" x="800" y="186" text-anchor="middle">Replay update</text>
+  <text class="small" x="800" y="212" text-anchor="middle">current and predicted marker samples</text>
+
+  <rect class="node" x="150" y="290" width="290" height="90" rx="18"/>
+  <text class="text" x="295" y="327" text-anchor="middle">Project samples</text>
+  <text class="small" x="295" y="353" text-anchor="middle">Cesium window coordinates</text>
+
+  <rect class="node" x="470" y="290" width="290" height="90" rx="18"/>
+  <text class="text" x="615" y="327" text-anchor="middle">Crop-local conversion</text>
+  <text class="small" x="615" y="353" text-anchor="middle">viewport rectangle applied</text>
+
+  <rect class="node" x="790" y="290" width="290" height="90" rx="18"/>
+  <text class="text" x="935" y="327" text-anchor="middle">Mode selection</text>
+  <text class="small" x="935" y="353" text-anchor="middle">navigation or dynamic</text>
+
+  <rect class="node-blue" x="150" y="455" width="320" height="94" rx="18"/>
+  <text class="text" x="310" y="492" text-anchor="middle">Navigation branch</text>
+  <text class="small" x="310" y="518" text-anchor="middle">leave Z1 if current or predicted sample exits</text>
+
+  <rect class="node-blue" x="540" y="455" width="320" height="94" rx="18"/>
+  <text class="text" x="700" y="492" text-anchor="middle">Dynamic branch</text>
+  <text class="small" x="700" y="518" text-anchor="middle">Z1 trigger and Z2 landing validation</text>
+
+  <rect class="node-amber" x="930" y="455" width="310" height="94" rx="18"/>
+  <text class="text" x="1085" y="492" text-anchor="middle">Visibility redirect</text>
+  <text class="small" x="1085" y="518" text-anchor="middle">terrain or 3D-tile occlusion</text>
+
+  <rect class="node-green" x="1220" y="455" width="220" height="94" rx="18"/>
+  <text class="text" x="1330" y="492" text-anchor="middle">Final pose</text>
+  <text class="small" x="1330" y="518" text-anchor="middle">nominal or corrected</text>
+
+  <rect class="node" x="150" y="650" width="320" height="104" rx="18"/>
+  <text class="text" x="310" y="688" text-anchor="middle">Keep nominal pose</text>
+  <text class="small" x="310" y="714" text-anchor="middle">when Z1 remains safe</text>
+
+  <rect class="node-amber" x="540" y="650" width="320" height="104" rx="18"/>
+  <text class="text" x="700" y="688" text-anchor="middle">Recenter toward predicted sample</text>
+  <text class="small" x="700" y="714" text-anchor="middle">standard correction path</text>
+
+  <rect class="node-green" x="930" y="650" width="310" height="104" rx="18"/>
+  <text class="text" x="1085" y="688" text-anchor="middle">Bias target inside Z2</text>
+  <text class="small" x="1085" y="714" text-anchor="middle">dynamic early-warning correction</text>
+
+  <path class="arrow" d="M 800 232 L 800 270" />
+  <path class="arrow" d="M 295 380 L 295 435" />
+  <path class="arrow" d="M 615 380 L 615 435" />
+  <path class="arrow" d="M 935 380 L 935 435" />
+
+  <path class="arrow" d="M 310 549 L 310 645" />
+  <path class="arrow" d="M 700 549 L 700 645" />
+  <path class="arrow" d="M 1085 549 L 1085 645" />
+  <path class="arrow" d="M 1330 549 L 1330 645" />
+
+  <path class="arrow" d="M 700 549 C 700 575 700 595 1085 595" />
+  <text class="label" x="840" y="585">visibility redirect if needed</text>
+</svg>

@@ -13,6 +13,47 @@ The same camera-tracking rules are used by Draft recording and HQ export. HQ
 does not use a different visual configuration: it evaluates the same algorithm
 at deterministic export timestamps.
 
+## 1.1. Related issue synthesis
+
+The related issues describe one camera contract split across three concerns:
+
+- path-space corrections: terrain altitude and speed-dependent roll;
+- screen-space corrections: adaptive Z1/Z2 collision and visibility;
+- timeline consistency: shared replay clip timing.
+
+## 2. Decision schema
+
+The camera is driven by one frame contract. The important part is not the UI
+mode label, but the decision path used for each logical replay frame.
+
+The figures below replace the text-only diagrams and keep the rules readable in
+the rendered documentation.
+
+![Replay camera frame contract](assets/replay-camera/replay-camera-frame-contract.svg)
+
+![Replay camera decision flow](assets/replay-camera/replay-camera-decision-flow.svg)
+
+![Replay camera execution flow](assets/replay-camera/replay-camera-execution-flow.svg)
+
+### 2.1 Decision matrix
+
+| Situation | Navigation | Dynamic | Result |
+| --- | --- | --- | --- |
+| Current marker stays inside Z1 | Keep nominal pose | Keep nominal pose | No correction |
+| Current or predicted marker leaves Z1 | Recenter | Recenter | Standard correction |
+| Marker is inside Z1 but outside Z2 | N/A | Bias target inside Z2 | Early-warning correction |
+| Projection fails | Treat as outside | Treat as outside | Visibility-safe correction |
+| Marker is hidden by terrain or tiles | Allow visibility redirect | Allow visibility redirect | Preserve readability |
+
+### 2.2 Visibility and depth schema
+
+![Replay camera visibility stack](assets/replay-camera/replay-camera-visibility-stack.svg)
+
+The replay marker itself always remains depth-tested. Its Cesium point uses
+`disableDepthTestDistance = 0`, so terrain relief and 3D tiles can mask it when
+they are between the camera and the marker. Camera visibility correction must
+not turn the marker into an overlay rendered above the relief.
+
 ## 2. Zone definitions
 
 Coordinates are normalized to the viewport: `(0, 0)` is the top-left and
@@ -54,6 +95,31 @@ Dynamic mode uses two nested concepts:
 Z1 is deliberately large: dynamic tracking starts early, before the marker
 reaches the viewport edge. Z2 is the stable central area where the marker is
 placed after a correction.
+
+![Replay camera zones](assets/replay-camera/replay-camera-zones.svg)
+
+### Adaptive short-replay sizing
+
+The dynamic zones are adapted from the logical replay duration, current
+progress, camera transition duration, output-frame lead, and a calculation-lag
+guard. The pressure is evaluated from the replay clock, not from Cesium wall
+clock timing, so Draft and HQ can make the same decision for the same logical
+frame.
+
+The active zones are reduced smoothly when the replay is short or when the
+remaining replay time is too small for a complete transition:
+
+- dynamic Z1 remains the outer trigger zone and never goes below `30% × 30%`;
+- dynamic Z2 remains the inner landing zone and never goes below `5% × 5%`;
+- Z2 stays centered and strictly nested inside Z1;
+- navigation keeps its single crop-aware Z1 and has no Z2 landing zone.
+
+The `camera.update.step` trace entry named `tracking.zones.adaptive` exposes the
+pressure, remaining time, transition budget, active zones, and the explicit Z1
+and Z2 minimum ratios. A forced navigation correction is held for at least two
+logical seconds in both Draft and HQ. HQ temporarily bypasses the shared
+nominal path during that window, then returns to it when the correction is
+released.
 
 ## 3. Trigger algorithm
 
@@ -219,7 +285,17 @@ tracking sample so that the geographic camera position remains synchronized
 with the replay path. When a redirect is required for visibility, the redirect
 view takes precedence.
 
-## 5. Camera recentering and hysteresis
+## 5. Camera pitch, altitude, and hidden-track rules
+
+![Replay camera pitch and altitude rules](assets/replay-camera/replay-camera-pitch-altitude.svg)
+
+If the replay layer hides a track or trace segment, the camera logic must not
+override that visibility choice. Camera correction may change the pose to keep
+the visible marker readable, but it does not promote a hidden track into a
+visible one. The trace and marker remain governed by the replay visibility
+contract, not by the camera correction path.
+
+## 6. Camera recentering and hysteresis
 
 The camera transition uses the configured replay easing and recenter duration.
 The implementation keeps the last recenter progress and timestamp to avoid
@@ -240,11 +316,13 @@ The replay marker itself always remains depth-tested. Its Cesium point uses
 they are between the camera and the marker. Camera visibility correction must
 not turn the marker into an overlay rendered above the relief.
 
-## 6. Z1/Z2 diagnostic overlay
+## 7. Z1/Z2 diagnostic overlay
 
 The replay mode draws a visual overlay for the configured tracking zones. This
 overlay is intentionally useful beyond the current UI: it can be reused later
-as a debugging surface for camera-tracking investigations.
+as a debugging surface for camera-tracking investigations. Adaptive logical
+zone values are additionally exposed by the replay trace so the overlay does
+not become a source of camera decisions.
 
 The overlay has the following structure:
 
@@ -254,7 +332,7 @@ The overlay has the following structure:
     └── .replay-tolerance-zone-overlay-inner [data-zone="z2"]
 ```
 
-The outer element represents the active trigger zone. The inner element is
+The outer element represents the displayed trigger zone. The inner element is
 present only for dynamic mode and represents the target zone. The parent also
 publishes the active mode through `data-mode`.
 
@@ -264,7 +342,9 @@ changes. It has `pointer-events: none`, which means it cannot interfere with
 camera controls or replay interaction.
 
 The overlay is visible by default during replay, Draft playback, and HQ preview
-so the active crop-local Z1/Z2 decision can be inspected directly. It remains
+so the configured crop-local Z1/Z2 geometry can be inspected directly. The
+adaptive active geometry is available in the `tracking.zones.adaptive` trace
+entry. The overlay remains
 non-interactive and is excluded from captured output through the existing
 overlay/capture rules. It can be hidden at runtime with:
 
@@ -289,70 +369,7 @@ diagnostic additions without changing replay behavior. Existing selectors and
 `data-zone` attributes should remain stable so automated tests and debugging
 tools can continue to identify Z1 and Z2.
 
-## 7. Final Draft frame and trace lifetime
-
-At replay end, the completed trace must remain rendered while the recorder
-captures the final Draft frame. The final-frame sequence is:
-
-1. render the replay at progress `1` and keep the completed trace visible;
-2. wait for the final widget/render frames;
-3. notify the video synchronizer to capture the final frame;
-4. clear the replay renderer and restore the normal journey scene.
-
-The notification must happen before renderer cleanup. Clearing the renderer
-first produces a last video frame without the trace, even though all preceding
-Draft frames contain it. Stop clips already follow the same ordering: the final
-frame notification is emitted before the replay scene is finalized.
-
-The video synchronizer starts `stopVideo({captureFinalFrame: true})`
-immediately after the final-frame notification. Replay cleanup is also guarded
-while the recorder reports that it is still recording. This is necessary
-because final-frame capture and video encoding are asynchronous; returning from
-the notification handler does not mean that the source canvas has already been
-read.
-
-Before the recorder submits that final frame, the video compositor is explicitly
-rendered again from the current Cesium canvas. This final recomposition is used
-for Draft and HQ. Without it, Draft can submit the previous compositor frame:
-the Cesium trace may still be visible on screen while the encoded last frame
-still contains stale composition data.
-
-This ordering applies to the visible Cesium trace; it is not replaced by a
-separate video trace overlay. Keeping the trace terrain-clamped ensures that
-the final frame has the same geometry as the preceding Draft frames.
-
-## 8. Draft and HQ execution
-
-Draft playback receives live Cesium render-loop updates. HQ export advances the
-replay to an exact logical timestamp before each encoded frame. The HQ runtime
-publishes that frame state to dynamic widgets and the renderer.
-
-`recordingSync` identifies a live Draft controlled by the replay toolbar. It
-must not select the deterministic HQ camera clock; otherwise collision
-transitions are created but never advanced by the Draft render loop.
-
-During HQ export, `controller.seek()` publishes frame state but its normal live
-update listener must not apply the camera. The export frame renderer is the
-single owner of the deterministic camera update; applying both paths on the
-same frame produces visible camera jitter.
-
-Consequently:
-
-- navigation uses Z1 = 30% × 30% normally, or 22% × 22% for a narrow crop, in
-  both Draft and HQ;
-- dynamic mode uses Z1 = 75% × 75% and Z2 = 30% × 30% in both Draft and HQ;
-- camera look-ahead includes one output-frame interval in both Draft and HQ;
-- navigation and dynamic HQ corrections use the same deterministic follower
-  with a `1.5 s` response;
-- no free-running widget timer is required during HQ export;
-- the same marker sample, projection, collision, and recentering decisions are
-  reproduced from the export timeline.
-
-The deferred HQ export also captures the saved Cesium camera/focus snapshot
-from the draft start and feeds it into playback-scene preparation. This keeps
-HQ from starting on a different visual focus than the Draft that prepared it.
-
-## 9. Implementation references
+## 8. Implementation references
 
 - `src/core/ui/replay/JourneyReplayMode.js`: zone defaults, normalization,
   projection tests, target calculation, and camera tracking;

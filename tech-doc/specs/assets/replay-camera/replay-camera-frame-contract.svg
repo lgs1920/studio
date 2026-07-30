@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Replay camera frame contract</title>
+  <desc id="desc">Inputs, decisions, and outputs for one replay camera frame.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#4b5563" />
+    </marker>
+    <style>
+      .bg { fill: #f8fafc }
+      .title { font: 700 34px Inter, Arial, sans-serif; fill: #0f172a }
+      .subtitle { font: 400 18px Inter, Arial, sans-serif; fill: #475569 }
+      .section { font: 700 22px Inter, Arial, sans-serif; fill: #0f172a }
+      .item { font: 500 18px Inter, Arial, sans-serif; fill: #0f172a }
+      .small { font: 500 15px Inter, Arial, sans-serif; fill: #334155 }
+      .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2 }
+      .box-accent { fill: #eff6ff; stroke: #60a5fa; stroke-width: 2.5 }
+      .box-warn { fill: #fff7ed; stroke: #fb923c; stroke-width: 2.5 }
+      .box-good { fill: #ecfdf5; stroke: #34d399; stroke-width: 2.5 }
+      .line { stroke: #64748b; stroke-width: 3; fill: none; marker-end: url(#arrow) }
+      .lane { fill: #e2e8f0; opacity: .55 }
+    </style>
+  </defs>
+  <rect class="bg" x="0" y="0" width="1600" height="900" />
+  <text class="title" x="80" y="80">Replay camera frame contract</text>
+  <text class="subtitle" x="80" y="116">One logical frame decides pose, zone behavior, visibility redirects, and diagnostic output.</text>
+
+  <rect class="lane" x="70" y="160" width="1460" height="200" rx="24"/>
+  <rect class="lane" x="70" y="390" width="1460" height="180" rx="24"/>
+  <rect class="lane" x="70" y="595" width="1460" height="220" rx="24"/>
+
+  <text class="section" x="110" y="205">Inputs</text>
+  <rect class="box" x="110" y="230" width="250" height="98" rx="18"/>
+  <text class="item" x="135" y="270">Current sample</text>
+  <text class="small" x="135" y="298">marker at current time</text>
+
+  <rect class="box" x="390" y="230" width="250" height="98" rx="18"/>
+  <text class="item" x="415" y="270">Predicted sample</text>
+  <text class="small" x="415" y="298">look-ahead sample</text>
+
+  <rect class="box" x="670" y="230" width="220" height="98" rx="18"/>
+  <text class="item" x="695" y="270">Replay clock</text>
+  <text class="small" x="695" y="298">Draft or HQ timebase</text>
+
+  <rect class="box" x="920" y="230" width="240" height="98" rx="18"/>
+  <text class="item" x="945" y="270">Output-frame lead</text>
+  <text class="small" x="945" y="298">capture FPS or export FPS</text>
+
+  <rect class="box" x="1190" y="230" width="250" height="98" rx="18"/>
+  <text class="item" x="1215" y="270">Crop rectangle</text>
+  <text class="small" x="1215" y="298">viewport-local bounds</text>
+
+  <path class="line" d="M 235 328 L 235 392" />
+  <path class="line" d="M 515 328 L 515 392" />
+  <path class="line" d="M 780 328 L 780 392" />
+  <path class="line" d="M 1040 328 L 1040 392" />
+  <path class="line" d="M 1315 328 L 1315 392" />
+
+  <text class="section" x="110" y="435">Decisions</text>
+  <rect class="box-accent" x="110" y="460" width="250" height="96" rx="18"/>
+  <text class="item" x="135" y="499">Mode selection</text>
+  <text class="small" x="135" y="527">navigation or dynamic</text>
+
+  <rect class="box-accent" x="390" y="460" width="230" height="96" rx="18"/>
+  <text class="item" x="415" y="499">Z1 collision</text>
+  <text class="small" x="415" y="527">exit or remain inside</text>
+
+  <rect class="box-warn" x="650" y="460" width="250" height="96" rx="18"/>
+  <text class="item" x="675" y="499">Z2 landing validation</text>
+  <text class="small" x="675" y="527">dynamic correction only</text>
+
+  <rect class="box-warn" x="930" y="460" width="250" height="96" rx="18"/>
+  <text class="item" x="955" y="499">Visibility redirect</text>
+  <text class="small" x="955" y="527">terrain or 3D tile loss</text>
+
+  <rect class="box-good" x="1210" y="460" width="230" height="96" rx="18"/>
+  <text class="item" x="1235" y="499">Pitch / altitude</text>
+  <text class="small" x="1235" y="527">bounded temporary change</text>
+
+  <path class="line" d="M 235 556 L 235 622" />
+  <path class="line" d="M 505 556 L 505 622" />
+  <path class="line" d="M 775 556 L 775 622" />
+  <path class="line" d="M 1055 556 L 1055 622" />
+  <path class="line" d="M 1325 556 L 1325 622" />
+
+  <text class="section" x="110" y="665">Outputs</text>
+  <rect class="box" x="110" y="690" width="280" height="100" rx="18"/>
+  <text class="item" x="135" y="730">Nominal camera pose</text>
+  <text class="small" x="135" y="758">returned when no correction is needed</text>
+
+  <rect class="box" x="425" y="690" width="300" height="100" rx="18"/>
+  <text class="item" x="450" y="730">Temporary redirect pose</text>
+  <text class="small" x="450" y="758">used while marker readability is at risk</text>
+
+  <rect class="box" x="760" y="690" width="250" height="100" rx="18"/>
+  <text class="item" x="785" y="730">Diagnostic trace</text>
+  <text class="small" x="785" y="758">reason, bounds, and frame state</text>
+
+  <rect class="box" x="1045" y="690" width="270" height="100" rx="18"/>
+  <text class="item" x="1070" y="730">Zone overlay</text>
+  <text class="small" x="1070" y="758">Z1 / Z2 visualization for debug</text>
+
+  <path class="line" d="M 260 612 L 260 690" />
+  <path class="line" d="M 575 612 L 575 690" />
+  <path class="line" d="M 885 612 L 885 690" />
+  <path class="line" d="M 1175 612 L 1175 690" />
+</svg>

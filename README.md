@@ -146,7 +146,7 @@ points include:
 - [Implementation work to do](tech-doc/todo/)
 - [Internal database architecture](tech-doc/specs/CORE-INTERNAL-DATABASE-ARCHITECTURE.md)
 - [Replay video architecture](tech-doc/todo/CORE-REPLAY-VIDEO-ARCHITECTURE.md)
-- [Journey replay/video issues](tech-doc/specs/JOURNEY-REPLAY-VIDEO-ISSUES.md)
+- [JourneyReplay component notes](tech-doc/specs/JOURNEYREPLAY-README-REPLAY.md)
 - [Replay track timeline editor evolution](tech-doc/todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md)
 - [Drone camera path architecture](tech-doc/specs/CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)
 - [Brand and season swatch reactivity](tech-doc/todo/BRAND_SEASON_SWATCH_REACTIVITY_SPEC.md)

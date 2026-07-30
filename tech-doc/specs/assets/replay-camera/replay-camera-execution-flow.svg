@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="800" viewBox="0 0 1600 800" role="img" aria-labelledby="title desc">
+  <title id="title">Replay camera execution flow</title>
+  <desc id="desc">Sequence showing how Draft and HQ consume the same camera resolver.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#475569" />
+    </marker>
+    <style>
+      .bg { fill: #f8fafc }
+      .title { font: 700 34px Inter, Arial, sans-serif; fill: #0f172a }
+      .subtitle { font: 400 18px Inter, Arial, sans-serif; fill: #475569 }
+      .lane { fill: #e2e8f0; opacity: .55 }
+      .actor { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2.5 }
+      .actor-blue { fill: #eff6ff; stroke: #60a5fa; stroke-width: 2.5 }
+      .actor-green { fill: #ecfdf5; stroke: #34d399; stroke-width: 2.5 }
+      .actor-amber { fill: #fff7ed; stroke: #fb923c; stroke-width: 2.5 }
+      .text { font: 600 18px Inter, Arial, sans-serif; fill: #0f172a }
+      .small { font: 500 15px Inter, Arial, sans-serif; fill: #334155 }
+      .arrow { stroke: #475569; stroke-width: 3; fill: none; marker-end: url(#arrow) }
+      .label { font: 700 16px Inter, Arial, sans-serif; fill: #0f172a }
+    </style>
+  </defs>
+  <rect class="bg" x="0" y="0" width="1600" height="800" />
+  <text class="title" x="80" y="78">Replay camera execution flow</text>
+  <text class="subtitle" x="80" y="114">Draft is live, HQ is deterministic, but both consume the same resolved frame.</text>
+
+  <rect class="lane" x="70" y="160" width="1460" height="170" rx="24"/>
+  <rect class="lane" x="70" y="350" width="1460" height="170" rx="24"/>
+  <rect class="lane" x="70" y="540" width="1460" height="170" rx="24"/>
+
+  <text class="label" x="110" y="205">Replay UI</text>
+  <text class="label" x="110" y="395">Draft recorder</text>
+  <text class="label" x="110" y="585">HQ exporter</text>
+
+  <rect class="actor" x="280" y="180" width="235" height="78" rx="18"/>
+  <text class="text" x="397" y="214" text-anchor="middle">Start recording</text>
+  <text class="small" x="397" y="240" text-anchor="middle">user initiates draft capture</text>
+
+  <rect class="actor-blue" x="560" y="180" width="275" height="78" rx="18"/>
+  <text class="text" x="698" y="214" text-anchor="middle">Resolve logical frame</text>
+  <text class="small" x="698" y="240" text-anchor="middle">current sample + predictive sample</text>
+
+  <rect class="actor-green" x="885" y="180" width="275" height="78" rx="18"/>
+  <text class="text" x="1023" y="214" text-anchor="middle">Apply nominal pose</text>
+  <text class="small" x="1023" y="240" text-anchor="middle">Cesium only renders the result</text>
+
+  <rect class="actor-amber" x="1190" y="180" width="240" height="78" rx="18"/>
+  <text class="text" x="1310" y="214" text-anchor="middle">Render live frame</text>
+  <text class="small" x="1310" y="240" text-anchor="middle">Draft output</text>
+
+  <rect class="actor" x="280" y="370" width="250" height="78" rx="18"/>
+  <text class="text" x="405" y="404" text-anchor="middle">Start deferred export</text>
+  <text class="small" x="405" y="430" text-anchor="middle">HQ requested from the same replay</text>
+
+  <rect class="actor-blue" x="560" y="370" width="275" height="78" rx="18"/>
+  <text class="text" x="698" y="404" text-anchor="middle">Seek deterministic frame</text>
+  <text class="small" x="698" y="430" text-anchor="middle">timeline-based export step</text>
+
+  <rect class="actor-green" x="885" y="370" width="275" height="78" rx="18"/>
+  <text class="text" x="1023" y="404" text-anchor="middle">Apply same logical pose</text>
+  <text class="small" x="1023" y="430" text-anchor="middle">same frame, same camera decision</text>
+
+  <rect class="actor-amber" x="1190" y="370" width="240" height="78" rx="18"/>
+  <text class="text" x="1310" y="404" text-anchor="middle">Render offline frame</text>
+  <text class="small" x="1310" y="430" text-anchor="middle">HQ output</text>
+
+  <rect class="actor" x="280" y="560" width="250" height="78" rx="18"/>
+  <text class="text" x="405" y="594" text-anchor="middle">Stop / finalize</text>
+  <text class="small" x="405" y="620" text-anchor="middle">final frame is captured first</text>
+
+  <rect class="actor-blue" x="560" y="560" width="275" height="78" rx="18"/>
+  <text class="text" x="698" y="594" text-anchor="middle">Restore scene state</text>
+  <text class="small" x="698" y="620" text-anchor="middle">camera and visibility reset</text>
+
+  <rect class="actor-green" x="885" y="560" width="275" height="78" rx="18"/>
+  <text class="text" x="1023" y="594" text-anchor="middle">Export complete</text>
+  <text class="small" x="1023" y="620" text-anchor="middle">final blob / download</text>
+
+  <path class="arrow" d="M 515 219 L 548 219" />
+  <path class="arrow" d="M 835 219 L 878 219" />
+  <path class="arrow" d="M 1160 219 L 1182 219" />
+
+  <path class="arrow" d="M 530 409 L 548 409" />
+  <path class="arrow" d="M 835 409 L 878 409" />
+  <path class="arrow" d="M 1160 409 L 1182 409" />
+
+  <path class="arrow" d="M 530 599 L 548 599" />
+  <path class="arrow" d="M 835 599 L 878 599" />
+</svg>

@@ -985,6 +985,6 @@ The following decisions require explicit project validation before implementatio
 
 - [Replay render mode architecture](CORE-REPLAY-RENDER-MODE-ARCHITECTURE.md)
 - [Deployment specification](../specs/DEPLOYMENT-README.md)
-- [Replay/video issue analysis](../specs/JOURNEY-REPLAY-VIDEO-ISSUES.md)
+- [Replay/video issue analysis](../specs/JOURNEYREPLAY-README-REPLAY.md)
 - [Replay core documentation](../specs/CORE-UI-REPLAY-README-REPLAY.md)
 - [Screen media recorder](../specs/CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)

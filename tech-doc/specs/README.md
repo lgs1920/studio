@@ -54,5 +54,4 @@ This directory contains technical specifications and architecture documents that
 - [Oxlint TypeScript 7 migration](CORE-OXLINT-TYPESCRIPT-7-MIGRATION.md)
 - [Replay camera tracking zones](REPLAY_CAMERA_TRACKING_ZONES.md)
 - [Drone camera path architecture](CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)
-- [Journey replay/video issues](JOURNEY-REPLAY-VIDEO-ISSUES.md)
 - [Video/replay test-suite failures — 2026-07-25](VIDEO_TEST_SUITE_FAILURES_2026-07-25.md)

@@ -454,7 +454,7 @@ The practical rule is:
 ## Reference docs
 
 - [Replay / Video Architecture](CORE-REPLAY-VIDEO-ARCHITECTURE.md)
-- [Journey replay / video issues](../specs/JOURNEY-REPLAY-VIDEO-ISSUES.md)
+- [JourneyReplay component notes](../specs/JOURNEYREPLAY-README-REPLAY.md)
 - [HQ video resolution profiles](HQ_4K_VIDEO_EXPORT_SPEC.md)
 - [Screen media recorder](../specs/CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)
 - [Canvas overlay composer](../specs/CORE-SCREEN-MEDIA-RECORDER-COMPOSER-README.md)

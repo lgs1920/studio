@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="840" viewBox="0 0 1400 840" role="img" aria-labelledby="title desc">
+  <title id="title">Replay camera pitch and altitude rules</title>
+  <desc id="desc">Decision stack showing nominal pitch, temporary deviations, and altitude handling.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f8fafc }
+      .title { font: 700 34px Inter, Arial, sans-serif; fill: #0f172a }
+      .subtitle { font: 400 18px Inter, Arial, sans-serif; fill: #475569 }
+      .head { font: 700 22px Inter, Arial, sans-serif; fill: #0f172a }
+      .item { font: 500 18px Inter, Arial, sans-serif; fill: #0f172a }
+      .small { font: 500 15px Inter, Arial, sans-serif; fill: #334155 }
+      .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2.5 }
+      .box-blue { fill: #eff6ff; stroke: #60a5fa; stroke-width: 2.5 }
+      .box-amber { fill: #fff7ed; stroke: #fb923c; stroke-width: 2.5 }
+      .box-green { fill: #ecfdf5; stroke: #34d399; stroke-width: 2.5 }
+      .lane { fill: #e2e8f0; opacity: .55 }
+      .arrow { stroke: #475569; stroke-width: 3; fill: none; marker-end: url(#arrow) }
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 12 6 L 0 12 z" fill="#475569" />
+    </marker>
+  </defs>
+  <rect class="bg" x="0" y="0" width="1400" height="840" />
+  <text class="title" x="80" y="78">Replay camera pitch and altitude rules</text>
+  <text class="subtitle" x="80" y="114">Pitch can deviate temporarily; altitude must stay frame-local and bounded.</text>
+
+  <rect class="lane" x="70" y="160" width="1260" height="180" rx="24"/>
+  <rect class="lane" x="70" y="370" width="1260" height="180" rx="24"/>
+  <rect class="lane" x="70" y="580" width="1260" height="180" rx="24"/>
+
+  <text class="head" x="120" y="205">Pitch decision</text>
+  <rect class="box" x="120" y="230" width="320" height="92" rx="18"/>
+  <text class="item" x="145" y="266">Nominal pitch</text>
+  <text class="small" x="145" y="294">restored as soon as redirect is no longer required</text>
+
+  <rect class="box-amber" x="490" y="230" width="360" height="92" rx="18"/>
+  <text class="item" x="515" y="266">Temporary deviation</text>
+  <text class="small" x="515" y="294">clip pose, user interaction, visibility redirect</text>
+
+  <rect class="box-green" x="900" y="230" width="360" height="92" rx="18"/>
+  <text class="item" x="925" y="266">Forbidden</text>
+  <text class="small" x="925" y="294">late bulk compilation changing pitch after resolution</text>
+
+  <text class="head" x="120" y="415">Altitude decision</text>
+  <rect class="box-blue" x="120" y="440" width="360" height="92" rx="18"/>
+  <text class="item" x="145" y="476">Absolute altitude</text>
+  <text class="small" x="145" y="504">clip poses, replay target, redirect target</text>
+
+  <rect class="box" x="530" y="440" width="360" height="92" rx="18"/>
+  <text class="item" x="555" y="476">Relative altitude</text>
+  <text class="small" x="555" y="504">camera height above the marker and editor input</text>
+
+  <rect class="box-green" x="940" y="440" width="260" height="92" rx="18"/>
+  <text class="item" x="965" y="476">Frame-local</text>
+  <text class="small" x="965" y="504">always tied to the current logical frame</text>
+
+  <text class="head" x="120" y="625">Hidden-track visibility</text>
+  <rect class="box" x="120" y="650" width="300" height="92" rx="18"/>
+  <text class="item" x="145" y="686">Hidden trace stays hidden</text>
+  <text class="small" x="145" y="714">camera correction does not unhide a track</text>
+
+  <rect class="box-amber" x="460" y="650" width="320" height="92" rx="18"/>
+  <text class="item" x="485" y="686">Marker visibility is separate</text>
+  <text class="small" x="485" y="714">from trace visibility and diagnostic overlay</text>
+
+  <rect class="box-green" x="820" y="650" width="360" height="92" rx="18"/>
+  <text class="item" x="845" y="686">Final-frame capture preserves state</text>
+  <text class="small" x="845" y="714">the completed trace remains rendered at stop</text>
+
+  <path class="arrow" d="M 440 276 L 480 276" />
+  <path class="arrow" d="M 850 276 L 892 276" />
+  <path class="arrow" d="M 480 486 L 520 486" />
+  <path class="arrow" d="M 890 486 L 932 486" />
+  <path class="arrow" d="M 420 696 L 452 696" />
+  <path class="arrow" d="M 780 696 L 812 696" />
+</svg>
