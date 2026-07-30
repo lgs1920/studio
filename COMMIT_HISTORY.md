@@ -1,5 +1,9 @@
 # Commit History
 
+## 2026-07-30 — [`docs: require issue solution and plan validation`](https://github.com/lgs1920/studio/commit/9756731a)
+
+- Require every issue to include a proposed solution and implementation plan validated by the user before creation or implementation.
+
 ## 2026-07-29 — [`chore: synchronize path aliases`](https://github.com/lgs1920/studio/commit/43756c42a7402b6fdc2bf86d9f7af131672c5315)
 
 - Synchronize TypeScript, Vite, and Vitest path aliases.
