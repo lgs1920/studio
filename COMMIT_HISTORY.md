@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-07-30 — [`fix(replay): expose adaptive tracking in logical frames`](https://github.com/lgs1920/studio/commit/17eb5ada10ffef2163d6d5fedf3c55ac7e210bb4)
+
+- Add `roll` to the logical replay camera pose and render contract.
+- Publish adaptive replay tracking data on the logical frame for Draft and HQ parity.
+- Add replay camera spec gap analysis and spec audit guidance for the remaining issues.
+
 ## 2026-07-30 — [`docs: require issue solution and plan validation`](https://github.com/lgs1920/studio/commit/9756731a)
 
 - Require every issue to include a proposed solution and implementation plan validated by the user before creation or implementation.
