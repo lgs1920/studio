@@ -210,3 +210,9 @@
 - [2026-07-22 — `docs: document internal skills`](https://github.com/lgs1920/studio/commit/9023ef5e)
 - Documented the versioned roadmap and cloud access milestone.
 - Split the 3D drone path editor specification from the drone camera runtime architecture.
+
+## 2026-07-30 — [`docs: define site and backend issue mirroring`](https://github.com/lgs1920/studio/commit/1802ff1858927fda9b0b807632681b6fa8641b8f)
+
+- Require every open Site and Backend issue to have a corresponding Studio mirror.
+- Preserve issue types, use domain-specific title prefixes and labels, and maintain reciprocal links.
+- Prevent duplicate mirrors by checking existing open and closed Studio issues.
