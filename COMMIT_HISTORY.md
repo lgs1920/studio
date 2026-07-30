@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-07-30 — [`fix(replay): complete adaptive tracking and clip timeline contracts`](https://github.com/lgs1920/studio/commit/e5697251c1f11a307c49f266b5e85a26f2036967)
+
+- Publish adaptive tracking geometry on the replay logical frame and render contract.
+- Add logical timeline and clip signature propagation across Draft, HQ, and deferred export.
+- Add end-to-end replay deferred exporter timeline coverage for clip phase ordering.
+
 ## 2026-07-30 — [`fix(replay): expose adaptive tracking in logical frames`](https://github.com/lgs1920/studio/commit/17eb5ada10ffef2163d6d5fedf3c55ac7e210bb4)
 
 - Add `roll` to the logical replay camera pose and render contract.
