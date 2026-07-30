@@ -591,6 +591,92 @@ describe('Journey replay camera paths', () => {
         }))
     })
 
+    it('adds turn drift to the logical replay view when a motion profile is available', () => {
+        const {mode, call} = makeMode()
+        call.buildCameraGuide = vi.fn(() => [
+            {
+                progress: 0,
+                longitude: 2,
+                latitude:  48,
+            },
+            {
+                progress: 0.5,
+                longitude: 2.001,
+                latitude:  48,
+            },
+            {
+                progress: 1,
+                longitude: 2.001,
+                latitude:  48.001,
+            },
+        ])
+
+        const baseView = cameraViewForSample(mode, {
+            sample: {
+                progress: 0.5,
+                longitude: 2,
+                latitude:  48,
+                altitude:  120,
+                source: {
+                    startPoint: {
+                        longitude: 2,
+                        latitude:  48,
+                    },
+                    endPoint: {
+                        longitude: 2.001,
+                        latitude:  48.001,
+                    },
+                },
+            },
+            progress: 0.5,
+            source:   'playback',
+            cameraSettings: {
+                positionMode: 'system',
+                heading:      0,
+                pitch:        -45,
+                altitude:     300,
+            },
+            markerSettings: {},
+        })
+        const driftedView = cameraViewForSample(mode, {
+            sample: {
+                progress: 0.5,
+                longitude: 2,
+                latitude:  48,
+                altitude:  120,
+                source: {
+                    startPoint: {
+                        longitude: 2,
+                        latitude:  48,
+                    },
+                    endPoint: {
+                        longitude: 2.001,
+                        latitude:  48.001,
+                    },
+                },
+            },
+            progress: 0.5,
+            source:   'playback',
+            cameraSettings: {
+                positionMode: 'system',
+                heading:      0,
+                pitch:        -45,
+                altitude:     300,
+            },
+            markerSettings: {},
+            motionProfile: {
+                turnDrift: {
+                    enabled:               true,
+                    maxHeadingOffsetDeg:    10,
+                    maxLateralOffsetMeters: 60,
+                },
+            },
+        })
+
+        expect(Math.abs(driftedView.heading)).toBeGreaterThan(Math.abs(baseView.heading))
+        expect(driftedView.pitch).toBeCloseTo(baseView.pitch, 6)
+    })
+
     it('banks the replay camera more strongly on faster turns', () => {
         const {mode} = makeMode()
         const baseSample = {
@@ -1044,6 +1130,102 @@ describe('Journey replay camera paths', () => {
             expect(call.cameraCollisionForSample).toHaveBeenCalled()
             expect(call.applyDeterministicCameraFollower).toHaveBeenCalled()
         }
+    })
+
+    it('keeps retrying an unsafe navigation recenter while the current correction is still fresh', () => {
+        vi.stubGlobal('lgs', {
+            settings: {
+                ui: {
+                    replay: {
+                        camera: {
+                            positionMode: 'system',
+                            heading:      0,
+                            pitch:        -60,
+                            altitude:     1000,
+                            hysteresis:   {
+                                easing:      0.18,
+                                marginRatio: 0.12,
+                                zone: {
+                                    top:    0.2,
+                                    left:   0.2,
+                                    width:  0.6,
+                                    height: 0.6,
+                                },
+                            },
+                        },
+                        marker: {mode: REPLAY_MARKER_MODE_NAVIGATION},
+                    },
+                },
+                camera: {
+                    transferDistanceThresholdKm: 50,
+                    pitchAdjustHeight:           600,
+                },
+            },
+            stores: {
+                replay: {
+                    captureFps: 30,
+                },
+                ui: {
+                    video: {
+                        recording: false,
+                    },
+                },
+            },
+            viewer: {
+                camera: {},
+            },
+        })
+
+        const {mode, state, call} = makeMode()
+        state.cameraMode = REPLAY_MARKER_MODE_NAVIGATION
+        state.lastToleranceRecenterAt = 0
+        state.lastToleranceRecenterProgress = 0.5
+        state.lastAppliedCameraView = {
+            pitch: -0.5,
+        }
+        const sample = {
+            progress:          0.5,
+            distanceFromStart: 100,
+            longitude:         2,
+            latitude:          48,
+            altitude:          120,
+            height:            120,
+        }
+        call.cameraViewForSample = vi.fn(() => ({
+            sample,
+            heading:      0.35,
+            pitch:        -0.5,
+            cameraHeight: 800,
+        }))
+        call.cameraLookaheadSample = vi.fn(() => ({
+            ...sample,
+            progress:          0.7,
+            distanceFromStart:  140,
+        }))
+        call.cameraCollisionForSample = vi.fn(() => ({hard: true}))
+        call.cameraViewVisibilityForSample = vi.fn(() => true)
+        call.findCameraRedirectState = vi.fn(() => null)
+        call.cameraViewWithRedirectState = vi.fn(view => view)
+        call.trackingWindowPositionForSample = vi.fn(() => ({x: 1900, y: 1000}))
+        call.rememberNominalCameraView = vi.fn()
+        call.recenterCameraToSample = vi.fn(() => true)
+
+        updateCamera(mode, {
+            sample,
+            progress:      0.5,
+            source:        'playback',
+            logicalCamera: false,
+            frameTimeMs:   40,
+        })
+        updateCamera(mode, {
+            sample,
+            progress:      0.5,
+            source:        'playback',
+            logicalCamera: false,
+            frameTimeMs:   60,
+        })
+
+        expect(call.recenterCameraToSample).toHaveBeenCalledTimes(2)
     })
 
     it('applies the prepared constrained path for Draft and HQ logical frames', () => {

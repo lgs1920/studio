@@ -847,11 +847,15 @@ export const cameraViewForSample = (mode, {
                                     pitch,
                                     call.timeNormalizedSmoothingFactor(0.08, state.cameraSmoothingDeltaSeconds),
                                 )
+            const turnDrift = source === 'drawer' || motionProfile?.turnDrift?.enabled !== true
+                              ? null
+                              : replayTurnDriftForProgress(mode, progress, motionProfile.turnDrift)
+            const driftHeading = finiteNumber(turnDrift?.headingOffsetRadians) ?? 0
             const anchorSample = call.markerPositionForSample(sample, markerSettings)
             return {
                 sample:       anchorSample,
                 progress:     clamp(Number(progress) || 0, 0, 1),
-                heading:      smoothHeading,
+                heading:      smoothHeading + driftHeading,
                 pitch:        smoothPitch,
                 roll:        resolveJourneyReplayLogicalCameraRoll({sample: anchorSample}),
                 cameraSettings,

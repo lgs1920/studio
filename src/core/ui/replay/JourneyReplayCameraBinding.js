@@ -820,6 +820,7 @@ export const updateCamera = (mode, {
          */
         const nominalPitchNeedsRestore = () => {
             const appliedPitch = finiteNumber(state.lastAppliedCameraView?.pitch)
+                                   ?? finiteNumber(state.lastCameraPitch)
             const targetPitch = finiteNumber(smoothPitch)
             if (appliedPitch === null || targetPitch === null) {
                 return false
@@ -1117,7 +1118,7 @@ export const updateCamera = (mode, {
             if (
                 !forceToleranceRecenter
                 && !immediateToleranceRecenter
-                && outsideNavigationZone
+                && !outsideNavigationZone
                 && (sameNavigationProgressRecenter || navigationRecenterStillRunning || navigationCorrectionActive)
                 && !deterministicCamera
             ) {
@@ -1400,6 +1401,7 @@ export const updateCamera = (mode, {
                                          && now - state.lastToleranceRecenterAt < 80
             const activeRecenterStillFresh = state.lastToleranceRecenterAt !== null
                                             && now - state.lastToleranceRecenterAt < toleranceRecenterLockMs
+            const recenterAlreadySafe = !outsideTolerance && !needsVisibilityCorrection
             // Once the previous easing has completed, also validate the
             // promised Z2 landing zone. This catches the closed-pitch case
             // where the marker continues to the crop edge during the flight.
@@ -1410,7 +1412,7 @@ export const updateCamera = (mode, {
                 !forceToleranceRecenter
                 && !immediateToleranceRecenter
                 && (sameProgressRecenter || activeRecenterStillFresh)
-                && (outsideTolerance || needsVisibilityCorrection)
+                && recenterAlreadySafe
                 && !targetCorrectionDue
                 && !deterministicCamera
             ) {
