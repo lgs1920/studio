@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-07-31 — [`fix: replace toast management with Web Awesome (#442)`](https://github.com/lgs1920/studio/commit/6f30ff98)
+
+- Replace React-Toastify with Web Awesome toast components.
+- Preserve rich toast content and prevent React/Web Awesome DOM removal races.
+- Add toast animation and UI coverage.
+
 ## 2026-07-30 — [`fix(replay): persist terrain redirects and harden replay coverage`](https://github.com/lgs1920/studio/commit/db2accebfa9c78d0bd01c38869a0f5967ba6a37b)
 
 - Persist terrain redirect annotations on the compiled replay path.

@@ -84,7 +84,6 @@
         "react-moveable": "^0.56.0",
         "react-responsive": "^10.0.1",
         "react-svg": "^17.2.4",
-        "react-toastify": "^11.1.0",
         "simple-git": "^3.36.0",
         "smart-timeout": "^2.7.1",
         "sortablejs": "^1.15.7",

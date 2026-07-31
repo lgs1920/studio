@@ -1822,83 +1822,24 @@ wa-callout::part(message) {
  ******************************************************************************/
 
 
-.lgs-toast-layer {
-    position: fixed;
+.lgs-toaster {
+    /* Keep toast notifications above all application overlays. */
     z-index: var(--lgs-toast-zindex) !important;
-    overflow: visible;
-    margin: 0;
-    padding: 0;
-    pointer-events: none;
-    border: none;
-    background: transparent;
-    inset: 0;
+    /* Match the responsive width used by the application surface. */
+    --width: var(--lgs-max-mobile-width);
 }
 
-.lgs-toast-layer:popover-open {
-    display: block;
-}
-
-.Toastify__toast-container.lgs-toaster {
-    z-index: var(--lgs-toast-zindex) !important;
-    width: var(--lgs-max-mobile-width);
-    padding: 0;
-    pointer-events: none;
-}
-
-.Toastify__toast-container--bottom-left.lgs-toaster {
-    bottom: var(--bottom);
-    left: var(--left);
-}
-
-.Toastify__toast.lgs-toast {
-    position: relative;
-    overflow: visible;
-    min-height: 0;
-    margin: 0 0 var(--lgs-gutter-s) 0;
-    padding: 0;
-    pointer-events: auto;
-    border-radius: 0;
-    background: transparent !important;
-    box-shadow: none !important;
-}
-
-.Toastify__toast-container.lgs-toaster .Toastify__toast:last-child {
-    margin-bottom: 0;
-}
-
-.Toastify__toast-body {
-    margin: 0;
-    padding: 0;
-}
-
-.Toastify__close-button {
-    position: absolute;
-    z-index: 1;
-    top: var(--lgs-gutter-xs);
-    right: var(--lgs-gutter-xs);
-    opacity: 1;
-    color: var(--lgs-toast-close-color, var(--wa-color-text-normal));
-}
-
-.Toastify__close-button > svg {
-    fill: currentColor;
-}
-
-.Toastify__close-button:hover {
-    opacity: 0.85;
-    color: var(--lgs-toast-close-color, var(--wa-color-text-normal));
-}
-
-.lgs-toast-callout {
-    display: flex;
+.lgs-toast {
     width: 100%;
-    --wa-color-fill-quiet: color-mix(in srgb, var(--wa-color-fill-loud) 18%, var(--wa-color-surface-default));
-    --wa-color-border-quiet: color-mix(in srgb, var(--wa-color-border-loud) 30%, var(--wa-color-surface-default));
+    animation: lgs-toast-slide-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.lgs-toast-callout::part(message) {
-    padding-right: calc(var(--lgs-gutter) + 1.5rem);
-    padding-bottom: calc(var(--lgs-gutter-s) + 0.45rem);
+.lgs-toast--hiding {
+    animation: lgs-toast-slide-out 220ms cubic-bezier(0.7, 0, 0.84, 0) both;
+}
+
+.lgs-toast::part(content) {
+    width: 100%;
 }
 
 .toast-caption {
@@ -1924,51 +1865,6 @@ wa-callout::part(message) {
     margin-top: var(--lgs-gutter-xxs);
 }
 
-.lgs-toast--primary {
-    --lgs-toast-progress-color: var(--wa-color-brand-fill-loud);
-    --lgs-toast-progress-track: color-mix(in srgb, var(--wa-color-brand-fill-loud) 18%, transparent);
-    --lgs-toast-close-color: var(--wa-color-brand-on-quiet);
-}
-
-.lgs-toast--success {
-    --lgs-toast-progress-color: var(--wa-color-success-fill-loud);
-    --lgs-toast-progress-track: color-mix(in srgb, var(--wa-color-success-fill-loud) 18%, transparent);
-    --lgs-toast-close-color: var(--wa-color-success-on-quiet);
-}
-
-.lgs-toast--warning {
-    --lgs-toast-progress-color: var(--wa-color-warning-fill-loud);
-    --lgs-toast-progress-track: color-mix(in srgb, var(--wa-color-warning-fill-loud) 20%, transparent);
-    --lgs-toast-close-color: var(--wa-color-warning-on-quiet);
-}
-
-.lgs-toast--danger {
-    --lgs-toast-progress-color: var(--wa-color-danger-fill-loud);
-    --lgs-toast-progress-track: color-mix(in srgb, var(--wa-color-danger-fill-loud) 18%, transparent);
-    --lgs-toast-close-color: var(--wa-color-danger-on-quiet);
-}
-
-.lgs-toast .Toastify__progress-bar--wrp {
-    right: var(--lgs-gutter-s);
-    bottom: var(--lgs-gutter-s);
-    left: var(--lgs-gutter-s);
-    overflow: hidden;
-    width: auto;
-    height: 4px;
-    border-radius: 999px;
-    background: var(--lgs-toast-progress-track);
-}
-
-.lgs-toast .Toastify__progress-bar--bg {
-    display: none;
-}
-
-.lgs-toast-progress {
-    opacity: 1;
-    border-radius: 999px;
-    background: var(--lgs-toast-progress-color) !important;
-}
-
 .toast-error {
     font-size: var(--lgs-font-size-s);
     padding: var(--lgs-gutter-s);
@@ -1976,6 +1872,37 @@ wa-callout::part(message) {
     border: 1px solid var(--lgs-error-color);
     border-radius: var(--lgs-border-radius-s);
     background-color: var(--lgs-error-bg-color);
+}
+
+@keyframes lgs-toast-slide-in {
+    from {
+        opacity: 0;
+        transform: translateX(-100%);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes lgs-toast-slide-out {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lgs-toast,
+    .lgs-toast--hiding {
+        animation-duration: 1ms;
+    }
 }
 
 /*******************************************************************************
