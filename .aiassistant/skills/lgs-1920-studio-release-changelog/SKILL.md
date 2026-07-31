@@ -1,19 +1,66 @@
 ---
 name: lgs-1920-studio-release-changelog
-description: Prepare LGS1920 release notes, commit history entries, README updates, version validation, and release-ready documentation from implemented changes and closed issues.
+description: Prepare LGS1920 release changelogs, commit history entries, README updates, version validation, and release-ready documentation from implemented changes and repository issues.
 ---
 
-# Release Notes and Commit History
+# Release Changelog and Commit History
 
-Use this skill when preparing a commit, release, or commit history update. Inspect the current diff, existing README and commit history conventions, package version, and related tests first.
+Use this skill when preparing a release changelog, commit, or commit history update. Inspect the current diff, existing README and commit history conventions, package version, target release, repository issue data, and related tests first.
+
+## Changelog file and header rules
+
+- Store release files in `public/assets/changelog/`.
+- Use the exact filename `YYYYMMDD-<version>.md`. `YYYYMMDD` is the release date and `<version>` is the exact version, including prerelease identifiers. If the target file is absent, create it automatically with today's date; do not wait for a separate file-creation request.
+- Before creating a file, inspect the nearest existing changelog in the same release line. Preserve its heading level, title style, section spelling, and blank-line conventions. Existing historical files may use either `#` or `##`; new files must follow the closest applicable pattern rather than retroactively changing old files.
+- The first heading must identify the release and its user-facing theme. Use the established repository pattern, for example `## Replay, HQ Video Export, Widgets, and Map Providers`, followed by the release content. Do not add a generated date line unless the established pattern for the selected release line includes one.
+- Never overwrite an existing target changelog. Update it only when the user explicitly asks for a revision.
+
+## Issue source and ownership
+
+- Treat `studio`, `site`, and `backend` as separate issue repositories. Attribute each issue to the repository that owns it and link to that repository's issue URL.
+- Never create or use a mirror issue in `studio` for a `site` or `backend` issue. If legacy mirrors are found, list them separately as migration data; do not include their duplicate numbers in release notes.
+- For legacy cleanup, confirm the owning issue, remove references to the mirror from the owning issue and related documents, then delete only the confirmed mirror. Verify that no active issue still links to the deleted URL.
+- Do not invent issue numbers, repository ownership, release membership, issue state, or user-facing outcomes. When ownership or release membership is ambiguous, report it instead of guessing.
+
+## Changelog structure
+
+Use the following logical structure, adapting section titles to the nearest existing changelog:
+
+1. User-facing capabilities and improvements.
+2. Fixes and reliability.
+3. Closed issues, grouped by owning repository.
+4. Remaining bugs, grouped by owning repository.
+5. Remaining features, grouped by owning repository.
+6. Technical enhancements and existing resource links.
+
+For closed issues, render only repositories that have at least one issue:
+
+```markdown
+## Closed Issues
+
+### Studio
+
+- [#123](https://github.com/lgs1920/studio/issues/123) Issue title
+
+### Site
+
+- [#456](https://github.com/lgs1920/site/issues/456) Issue title
+```
+
+Apply the same repository grouping to `Remaining Bugs` and `Remaining Features`. Omit a repository heading and its entries when that repository has no issue in the category. Omit the category heading entirely when no repository has an issue in that category. Do not render empty headings, placeholder text, or empty lists.
+
+Use consistent repository labels (`Studio`, `Site`, `Backend`) and preserve the issue title's meaning while correcting only obvious formatting errors. Closed issues belong under the repository where they were closed; an issue moved between repositories must be listed using its final owning URL.
 
 Workflow:
 
-1. Group changes by user-facing capability, fixes, reliability, and technical maintenance.
-2. Describe outcomes clearly and avoid implementation-only noise unless it affects users or maintainers.
-3. Link closed issues using the repository's existing format and distinguish shipped features from known issues.
-4. Update the required project documentation and `COMMIT_HISTORY.md` with the current date, preserving existing sections.
-5. Check that wording matches the actual diff and that version or beta labels are consistent.
-6. Run relevant validation and report remaining uncommitted changes without altering unrelated work.
+1. Determine the exact target version and release date. Use today's date when creating a missing changelog file.
+2. Inspect the nearest existing changelog and create the target file if necessary, matching its filename and header conventions.
+3. Inspect the current diff and issue data from `studio`, `site`, and `backend`. Separate shipped outcomes, closed issues, remaining bugs, and remaining features.
+4. Group every issue by owning repository and apply the conditional-heading rules above.
+5. Group changes by user-facing capability, fixes, reliability, and technical maintenance. Describe outcomes clearly and avoid implementation-only noise unless it affects users or maintainers.
+6. Link issues using their owning repository URLs and distinguish shipped features from remaining issues. Never include mirror issue links.
+7. Update the required project documentation and `COMMIT_HISTORY.md` with the current date, preserving existing sections.
+8. Check that wording matches the actual diff, issue state, repository ownership, and version or beta labels.
+9. Run relevant validation and report remaining uncommitted changes without altering unrelated work.
 
 Do not invent features, issue numbers, dates, or compatibility claims. Follow the repository commit key format when a commit is explicitly requested.
