@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-07-25
- * Last modified: 2026-07-24
+ * Created on: 2026-07-31
+ * Last modified: 2026-07-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -921,7 +921,7 @@ export const VideoDownloadAndShareDialog = () => {
                                             name="share-nodes"
                                             variant="regular"
                                         />
-                                        {'Share HQ'}
+                                        {'Share'}
                                     </WaButton>
                                     <WaDropdown placement="bottom-end" onWaSelect={handleShareVariantSelect}>
                                         <WaButton
@@ -934,11 +934,11 @@ export const VideoDownloadAndShareDialog = () => {
                                         </WaButton>
                                         <WaDropdownItem value="hq">
                                             <WaIcon slot="icon" name="film" variant="regular"/>
-                                            {'Share HQ video'}
+                                            {'Share HQ'}
                                         </WaDropdownItem>
                                         <WaDropdownItem value="draft">
                                             <WaIcon slot="icon" name="file-video" variant="regular"/>
-                                            {'Share draft video'}
+                                            {'Share draft'}
                                         </WaDropdownItem>
                                     </WaDropdown>
                                 </WaButtonGroup>
