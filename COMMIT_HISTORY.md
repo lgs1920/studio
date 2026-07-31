@@ -1,5 +1,10 @@
 # Commit History
 
+## 2026-07-31 — [`docs: define issue ownership and release changelog workflows`](https://github.com/lgs1920/studio/commit/7f5df226)
+
+- Define ownership rules for `studio`, `site`, and `backend` issues without mirror duplication.
+- Document release changelog structure, repository grouping, and versioned file conventions.
+
 ## 2026-07-31 — [`fix: replace toast management with Web Awesome (#442)`](https://github.com/lgs1920/studio/commit/6f30ff98)
 
 - Replace React-Toastify with Web Awesome toast components.
