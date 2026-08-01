@@ -211,7 +211,16 @@ export class CameraUtils {
         const pitch = M.toRadians(hpr.pitch);
         const range = hpr.range;
         const cameraPosition = new Cartesian3();
-        Matrix4.multiplyByPoint(transform, new Cartesian3(Math.cos(heading) * range, Math.sin(heading) * range, pitch), cameraPosition);
+        const horizontalRange = Math.cos(pitch) * range
+        Matrix4.multiplyByPoint(
+            transform,
+            new Cartesian3(
+                Math.cos(heading) * horizontalRange,
+                Math.sin(heading) * horizontalRange,
+                Math.sin(pitch) * range,
+            ),
+            cameraPosition,
+        )
 
         const cartographicPosition = Cartographic.fromCartesian(cameraPosition);
 
