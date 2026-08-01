@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: vite.config.ts
+ * File: vite.config.mts
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
@@ -31,6 +31,7 @@ const DEV_PROXY_ALLOWED_TARGETS = new Set([
     'https://wms.pcn.minambiente.it:443',
     'http://wms.pcn.minambiente.it:80',
 ])
+const PROJECT_ROOT = import.meta.dirname
 
 /**
  * Injects current git branch name into a local JSON file for development tracking.
@@ -41,7 +42,7 @@ function saveBranchInLocal(): Plugin {
         name: 'inject-git-branch',
         apply: 'serve' as const,
         configureServer() {
-            const _branchPath = path.resolve(__dirname, 'public/branch.json')
+            const _branchPath = path.resolve(PROJECT_ROOT, 'public/branch.json')
             const _branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim()
 
             let _branchData: { branch?: string } = {}
@@ -66,8 +67,8 @@ function serveCesiumDev(): Plugin {
         name: 'serve-cesium-dev',
         apply: 'serve' as const,
         configureServer({middlewares}) {
-            const _engineSource = path.resolve(__dirname, 'node_modules/@cesium/engine/Source')
-            const _widgetsSource = path.resolve(__dirname, 'node_modules/@cesium/widgets/Source')
+            const _engineSource = path.resolve(PROJECT_ROOT, 'node_modules/@cesium/engine/Source')
+            const _widgetsSource = path.resolve(PROJECT_ROOT, 'node_modules/@cesium/widgets/Source')
 
             const _serveEngine = serveStatic(_engineSource, {
                 setHeaders: (res) => {
@@ -264,55 +265,55 @@ export default defineConfig({
         alias: [
             {
                 find: '@Utils',
-                replacement: path.resolve(__dirname, 'src/Utils')
+                replacement: path.resolve(PROJECT_ROOT, 'src/Utils')
             },
             {
                 find: '@Editor',
-                replacement: path.resolve(__dirname, 'src/components/TracksEditor')
+                replacement: path.resolve(PROJECT_ROOT, 'src/components/TracksEditor')
             },
             {
                 find: '@Components',
-                replacement: path.resolve(__dirname, 'src/components')
+                replacement: path.resolve(PROJECT_ROOT, 'src/components')
             },
             {
                 find: '@Stores',
-                replacement: path.resolve(__dirname, 'src/core/stores')
+                replacement: path.resolve(PROJECT_ROOT, 'src/core/stores')
             },
             {
                 find: '@Core',
-                replacement: path.resolve(__dirname, 'src/core')
+                replacement: path.resolve(PROJECT_ROOT, 'src/core')
             },
             {
                 find: '@Locales',
-                replacement: path.resolve(__dirname, 'src/locales')
+                replacement: path.resolve(PROJECT_ROOT, 'src/locales')
             },
             {
                 find: '@Assets',
-                replacement: path.resolve(__dirname, 'src/assets')
+                replacement: path.resolve(PROJECT_ROOT, 'src/assets')
             },
             {
                 find: '@Widgets',
-                replacement: path.resolve(__dirname, 'src/components/MainUI/widgets')
+                replacement: path.resolve(PROJECT_ROOT, 'src/components/MainUI/widgets')
             },
             {
                 find: '@Settings',
-                replacement: path.resolve(__dirname, 'src/components/Settings')
+                replacement: path.resolve(PROJECT_ROOT, 'src/components/Settings')
             },
             {
                 find: '@Tests',
-                replacement: path.resolve(__dirname, 'src/__tests__')
+                replacement: path.resolve(PROJECT_ROOT, 'src/__tests__')
             },
             {
                 find: '@Events',
-                replacement: path.resolve(__dirname, 'src/core/events')
+                replacement: path.resolve(PROJECT_ROOT, 'src/core/events')
             },
             {
                 find: '@UI',
-                replacement: path.resolve(__dirname, 'src/core/ui')
+                replacement: path.resolve(PROJECT_ROOT, 'src/core/ui')
             },
             {
                 find: '@Database',
-                replacement: path.resolve(__dirname, 'src/core/db')
+                replacement: path.resolve(PROJECT_ROOT, 'src/core/db')
             }
         ]
     },

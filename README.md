@@ -225,7 +225,7 @@ Tests are organized under `src/__tests__/` by responsibility:
 - Application settings are primarily defined in `public/settings.yaml`
 - Map, overlay, and terrain providers are documented in [tech-doc/specs/HOW_TO_ADD_PROVIDERS_LAYERS.md](tech-doc/specs/HOW_TO_ADD_PROVIDERS_LAYERS.md)
 - Widget registration is defined in `public/widgets.yaml`
-- PWA behavior is configured through `vite.config.ts` and `public/service-worker-pwa.js`
+- PWA behavior is configured through `vite.config.mts` and `public/service-worker-pwa.js`
 - Static version metadata is stored in `public/version.json` and `public/build.json`
 
 ## Dependencies

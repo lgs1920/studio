@@ -1,5 +1,10 @@
 # Commit History
 
+## 2026-08-01 — [`fix: align Vite config with native loader`](https://github.com/lgs1920/studio/commit/e51186816b45fcb84b984173afc9250553ee9e34)
+
+- Rename the Vite configuration to `.mts` so its ESM syntax is compatible with the native config loader.
+- Replace CommonJS `__dirname` usage with `import.meta.dirname` and update related documentation references.
+
 ## 2026-07-28 — [`docs: require issue draft validation`](https://github.com/lgs1920/studio/commit/03ce0f44)
 
 - Require clarification of missing issue details before drafting an issue.
