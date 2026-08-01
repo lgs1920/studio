@@ -50,6 +50,30 @@ const hasMapCoordinates = (target) =>
   finiteNumber(target?.latitude) !== null &&
   finiteNumber(targetHeightOf(target)) !== null;
 
+const hasCameraCoordinates = (position) =>
+  finiteNumber(position?.longitude) !== null &&
+  finiteNumber(position?.latitude) !== null &&
+  finiteNumber(position?.height) !== null;
+
+const CAMERA_LOCAL_STORAGE_KEY = 'lgs1920.camera.snapshot';
+
+const readLocalCamera = () => {
+  try {
+    const value = window.localStorage.getItem(CAMERA_LOCAL_STORAGE_KEY);
+    return value ? JSON.parse(value) : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeLocalCamera = camera => {
+  try {
+    window.localStorage.setItem(CAMERA_LOCAL_STORAGE_KEY, JSON.stringify(camera));
+  } catch {
+    // IndexedDB remains the durable fallback when localStorage is unavailable.
+  }
+};
+
 const orbitRangeForHeight = (height, targetHeight, pitch, fallbackRange) => {
   const relativeHeight = Number(height) - Number(targetHeight);
   const pitchSine = Math.sin(Math.abs(Number(pitch)));
@@ -222,7 +246,7 @@ export class CameraManager {
    * @param last is the reference time (ie the last known)
    *
    */
-  saveInformation = (last, { sync = true } = {}) => {
+  saveInformation = async (last, { sync = true } = {}) => {
     if (sync) {
       this.syncPositionInformation();
     }
@@ -232,15 +256,24 @@ export class CameraManager {
       this.saveTimer = null;
     }
     const currentCamera = snapshot(this.store);
+    if (!hasMapCoordinates(currentCamera.target) || !hasCameraCoordinates(currentCamera.position)) {
+      return;
+    }
+
+    writeLocalCamera(currentCamera);
+
+    const writes = [
+      lgs.db.lgs1920.put(CURRENT_CAMERA, currentCamera, CURRENT_STORE),
+    ];
     if (lgs.theJourney) {
       lgs.theJourney.camera = currentCamera;
-      lgs.db.lgs1920.put(
+      writes.push(lgs.db.lgs1920.put(
         lgs.theJourney.slug,
         Journey.unproxify(snapshot(lgs.theJourney)),
         JOURNEYS_STORE
-      );
+      ));
     }
-    lgs.db.lgs1920.put(CURRENT_CAMERA, currentCamera, CURRENT_STORE);
+    await Promise.all(writes);
   };
 
   /**
@@ -267,7 +300,10 @@ export class CameraManager {
    * @return {Promise<*|null>}
    */
   readCameraInformation = async ({ fallback = true } = {}) => {
-    let data = await lgs.db.lgs1920.get(CURRENT_CAMERA, CURRENT_STORE);
+    let data = readLocalCamera();
+    if (!data || !hasMapCoordinates(data.target) || !hasCameraCoordinates(data.position)) {
+      data = await lgs.db.lgs1920.get(CURRENT_CAMERA, CURRENT_STORE);
+    }
     if (!data || __.app.isEmpty(data.target)) {
       return fallback ? this.focusToStarterPOI() : null;
     }
