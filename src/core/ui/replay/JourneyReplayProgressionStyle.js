@@ -106,14 +106,16 @@ export const DEFAULT_REPLAY_CAMERA = {
     pitch:         -65,
     heading:       0,
     hysteresis:    {
-        marginRatio:   0.4,
+        // Keep the beta.2 tolerance envelope: a wide inner zone prevents
+        // small route changes from starting a new camera correction.
+        marginRatio:   0.12,
         zone:        {
             top:    0,
             left:   0,
             width:  1,
             height: 1,
         },
-        easing:        0.08,
+        easing:        0.18,
     },
 }
 

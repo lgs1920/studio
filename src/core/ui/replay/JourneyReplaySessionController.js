@@ -1008,6 +1008,7 @@ export class JourneyReplaySessionController {
             windowPositionForSample: (...args) => JourneyReplayCameraController.windowPositionForSample(this, ...args),
             trackingWindowPositionForSample: (...args) => JourneyReplayCameraController.trackingWindowPositionForSample(this, ...args),
             cameraCollisionForSample: (...args) => JourneyReplayCameraController.cameraCollisionForSample(this, ...args),
+            cameraCollisionForFrame: (...args) => JourneyReplayCameraController.cameraCollisionForFrame(this, ...args),
             terrainHeightForLonLat: (...args) => JourneyReplayCameraController.terrainHeightForLonLat(this, ...args),
             persistCameraSettings: (...args) => JourneyReplayCameraController.persistCameraSettings(this, ...args),
             updateCameraSettingsFromCesiumControls: (...args) => JourneyReplayCameraController.updateCameraSettingsFromCesiumControls(this, ...args),

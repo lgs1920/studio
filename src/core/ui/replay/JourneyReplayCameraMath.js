@@ -8,8 +8,8 @@ import {
     REPLAY_CAMERA_POSITION_AHEAD, REPLAY_CAMERA_HEADING_OFFSET_MAX, REPLAY_CAMERA_HEADING_OFFSET_MIN,
 } from './JourneyReplayProgressionStyle'
 
-const CAMERA_HEADING_HYSTERESIS_RADIANS = CesiumMath.toRadians(12)
-const CAMERA_HEADING_MIN_CHANGE_RADIANS = CesiumMath.toRadians(5)
+const CAMERA_HEADING_HYSTERESIS_RADIANS = CesiumMath.toRadians(16)
+const CAMERA_HEADING_MIN_CHANGE_RADIANS = CesiumMath.toRadians(8)
 const CAMERA_RASANT_PITCH_LIMIT_RADIANS = CesiumMath.toRadians(-5)
 const CAMERA_RASANT_PITCH_RELEASE_RADIANS = CesiumMath.toRadians(-35)
 const REPLAY_TRACKING_NAVIGATION_ZONE_RATIO = 0.3
@@ -25,6 +25,55 @@ export const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 export const lerp = (start, end, ratio) => start + ((end - start) * ratio)
 
 export const hasFiniteLonLat = point => finiteNumber(point?.longitude) !== null && finiteNumber(point?.latitude) !== null
+
+/**
+ * Project a target through a candidate camera frame without reading the live
+ * renderer camera.
+ *
+ * @param {object} options - Candidate frame and viewport inputs.
+ * @returns {{x: number, y: number, depth: number}|null} Crop-local position.
+ */
+export const projectReplayTargetInCameraFrame = ({
+    frame,
+    target,
+    viewport,
+    verticalFovRadians = Math.PI / 3,
+    aspectRatio = null,
+} = {}) => {
+    if (!frame?.destination || !frame?.direction || !frame?.up || !target) {
+        return null
+    }
+
+    const canvasWidth = finiteNumber(viewport?.canvasWidth) ?? finiteNumber(viewport?.width)
+    const canvasHeight = finiteNumber(viewport?.canvasHeight) ?? finiteNumber(viewport?.height)
+    const cropLeft = finiteNumber(viewport?.left) ?? 0
+    const cropTop = finiteNumber(viewport?.top) ?? 0
+    if (canvasWidth === null || canvasHeight === null || canvasWidth <= 0 || canvasHeight <= 0) {
+        return null
+    }
+
+    const direction = Cartesian3.normalize(frame.direction, new Cartesian3())
+    const up = Cartesian3.normalize(frame.up, new Cartesian3())
+    const right = Cartesian3.normalize(Cartesian3.cross(direction, up, new Cartesian3()), new Cartesian3())
+    const relative = Cartesian3.subtract(target, frame.destination, new Cartesian3())
+    const depth = Cartesian3.dot(relative, direction)
+    if (!Number.isFinite(depth) || depth <= Number.EPSILON) {
+        return null
+    }
+
+    const safeFov = clamp(finiteNumber(verticalFovRadians) ?? (Math.PI / 3), Math.PI / 180, Math.PI - (Math.PI / 180))
+    const safeAspect = Math.max(Number.EPSILON, finiteNumber(aspectRatio) ?? (canvasWidth / canvasHeight))
+    const tangentY = Math.tan(safeFov / 2)
+    const tangentX = tangentY * safeAspect
+    const normalizedX = Cartesian3.dot(relative, right) / Math.max(depth * tangentX, Number.EPSILON)
+    const normalizedY = Cartesian3.dot(relative, up) / Math.max(depth * tangentY, Number.EPSILON)
+
+    return {
+        x: ((normalizedX + 1) * 0.5 * canvasWidth) - cropLeft,
+        y: ((1 - normalizedY) * 0.5 * canvasHeight) - cropTop,
+        depth,
+    }
+}
 
 export const sanitizeOrientationRadians = (value, fallback) => finiteNumber(value) ?? fallback
 

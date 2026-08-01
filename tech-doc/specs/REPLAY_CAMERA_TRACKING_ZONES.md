@@ -10,8 +10,10 @@ until the marker reaches a defined trigger zone, then recenters the camera so
 the marker remains comfortably visible.
 
 The same camera-tracking rules are used by Draft recording and HQ export. HQ
-does not use a different visual configuration: it evaluates the same algorithm
-at deterministic export timestamps.
+does not use a different visual configuration: it evaluates the same Turf-based
+sampler and collision policy at deterministic export timestamps. Draft evaluates
+the same policy on the live Cesium camera frame without compiling the complete
+route on the browser main thread.
 
 ## 2. Zone definitions
 
@@ -77,13 +79,25 @@ every video format, including landscape, square, and portrait 9:16 crops.
 The current and predicted samples are both checked because Cesium projection
 can be updated asynchronously while Draft playback is running. Draft and HQ
 use the same normalized Z1/Z2 definitions and collision decisions; only their
-camera clocks differ.
+camera clocks and frame-application adapters differ. A missing viewport,
+non-finite screen point, or target behind the candidate camera is a hard
+collision, never an implicit safe result.
 
 The look-ahead also includes one output-frame interval. Draft resolves that
 interval from `replay.captureFps`; HQ resolves it from the export timeline FPS.
 Therefore a 15 FPS capture anticipates `66.67 ms`, while a 60 FPS capture
 anticipates `16.67 ms`. This compensates for the larger position jump between
 low-FPS frames without changing the visual size of Z1 or Z2.
+
+Navigation additionally uses a fixed two-second predictive horizon. A predicted
+Z1 violation starts a two-second recenter transition before the marker leaves
+the zone, and the transition target is the route sample at that same `t + 2 s`
+horizon. An already violated Z1 targets the current anchor and uses a short
+bounded recovery transition. Every transition sub-frame is checked against the
+candidate camera frame: hard recovery validates the current anchor, while a
+predictive recovery validates the route sample at the corresponding fraction
+of the two-second horizon. A candidate that is invalid or outside Z1 is
+replaced with a safe frame before it is rendered.
 
 ## 4. Predictive processing
 
@@ -108,16 +122,31 @@ sampler converts that duration to distance. To avoid an insignificant or zero
 look-ahead, the selected distance is at least the greater of:
 
 - the duration-derived distance;
-- `120 m`;
-- `1%` of the complete sampled path.
+- `120 m`.
 
-The sampler clamps the requested distance at the end of the path. If no later
-sample exists, the current anchor is retained.
+The sampler clamps the requested distance at the end of the path. The runtime
+uses a minimum metric horizon of `120 m` when the time-derived distance is too
+small. If no later sample exists, the current anchor is retained.
 
 This normal future sample is used in both navigation and dynamic mode. In
 navigation mode, leaving Z1 is tested with both the current and predicted
 positions. The camera aims at the predicted position when a correction is
-needed.
+needed, except for an already hard current violation, which is corrected
+against the current anchor to remove the marker lag at the Z1 corner.
+
+### 4.1.1 Navigation heading and drift smoothing
+
+Navigation heading is derived from the Turf path tangent and a symmetric
+spatial window, not from the last rendered Cesium camera heading. The default
+window follows the beta.2 behavior: a `2.5 s` future chord, a minimum `400 m`
+metric window, and a nine-sample PCA axis oriented by the future chord. This
+filters short alternating zigzags while still turning before a sustained bend.
+
+The resulting heading is applied with frame-rate-independent response factors
+clamped to `0.04..0.18`. The navigation drift offset is also low-pass filtered
+with a `1.5 s` response and limited to `6°` / `40 m`; a turn drift is only
+enabled once the route turn exceeds `12°`. These limits affect heading and
+lateral motion only. They never relax the hard Z1/crop collision.
 
 ### 4.2 Extended dynamic look-ahead
 
@@ -162,9 +191,11 @@ The algorithm uses both positions because the current marker may still be
 inside Z1 while its predicted position is already leaving it. This is also a
 guard against asynchronous projection updates in live Draft playback.
 
-If a screen position cannot be projected, it is treated as outside the relevant
-zone. The camera therefore prefers a visibility correction over silently
-allowing the marker to disappear.
+If a screen position cannot be projected, it is treated as a hard collision and
+therefore outside the relevant zone. The camera prefers a visibility correction
+over silently allowing the marker to disappear. The same rule is applied to a
+live Draft projection and to every candidate frame of a deterministic HQ
+transition.
 
 ### 4.4 Predictive collision and visibility checks
 
@@ -176,6 +207,21 @@ currentCollision   = collision(anchorSample, Z1)
 predictedCollision = collision(trackingSample, Z1)
 outsideTolerance   = currentCollision.hard OR predictedCollision.hard
 ```
+
+For Navigation, the selected camera target and duration are deterministic:
+
+```text
+if currentCollision.hard:
+    targetSample     = anchorSample
+    transition       = min(0.24 s, configuredRecenterDuration)
+else if predictedCollision.hard:
+    targetSample     = sampleAtTime(currentTime + 2 s)
+    transition       = 2 s
+```
+
+The two values in the predictive branch are intentionally coupled. Reducing
+the target lead while keeping a two-second transition makes the live marker
+outrun the camera and appear late in the lower-right or upper-right part of Z1.
 
 Dynamic mode separately tests the selected tracking sample against Z2. This
 second test is not the initial trigger; it validates whether the promised
@@ -334,7 +380,8 @@ transitions are created but never advanced by the Draft render loop.
 During HQ export, `controller.seek()` publishes frame state but its normal live
 update listener must not apply the camera. The export frame renderer is the
 single owner of the deterministic camera update; applying both paths on the
-same frame produces visible camera jitter.
+same frame produces visible camera jitter. Draft remains the owner of live
+camera application and uses the live candidate frame for collision checks.
 
 Consequently:
 
@@ -342,11 +389,14 @@ Consequently:
   both Draft and HQ;
 - dynamic mode uses Z1 = 75% × 75% and Z2 = 30% × 30% in both Draft and HQ;
 - camera look-ahead includes one output-frame interval in both Draft and HQ;
-- navigation and dynamic HQ corrections use the same deterministic follower
-  with a `1.5 s` response;
+- Navigation predictive corrections use a coupled `2 s` route horizon and
+  transition; current hard violations use the current anchor;
+- navigation drift uses the beta.2-style spatial heading window and a `1.5 s`
+  lateral response filter;
 - no free-running widget timer is required during HQ export;
-- the same marker sample, projection, collision, and recentering decisions are
-  reproduced from the export timeline.
+- the same Turf marker sample, crop-local projection, collision, and recentering
+  policy are reproduced from the export timeline; only the camera application
+  clock is live in Draft and explicit in HQ.
 
 The deferred HQ export also captures the saved Cesium camera/focus snapshot
 from the draft start and feeds it into playback-scene preparation. This keeps
@@ -354,8 +404,16 @@ HQ from starting on a different visual focus than the Draft that prepared it.
 
 ## 9. Implementation references
 
-- `src/core/ui/replay/JourneyReplayMode.js`: zone defaults, normalization,
-  projection tests, target calculation, and camera tracking;
+- `src/core/ui/replay/JourneyReplayCameraBinding.js`: Draft/HQ camera ownership,
+  Navigation target selection, and hard transition guards;
+- `src/core/ui/replay/JourneyReplayCameraState.js`: crop-local live and
+  candidate-frame collision evaluation;
+- `src/core/ui/replay/JourneyReplayCameraMath.js`: normalized zones, projection,
+  and collision geometry;
+- `src/core/ui/replay/JourneyReplayPathSampler.js`: Turf metric samples,
+  look-ahead, and route tangent heading;
+- `src/core/ui/replay/JourneyReplayTurfPath.ts`: renderer-independent Turf path
+  construction;
 - `src/core/ui/replay/JourneyReplayPlaybackController.js`: live replay ticks
   and dynamic frame state;
 - `src/core/ui/replay/ReplayDeferredExporter.js`: deterministic HQ frame

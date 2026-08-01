@@ -15,6 +15,21 @@ Replay must become a consumer of the same path engine. Draft playback and HQ
 export must evaluate the same canonical path definition for a given journey
 state. Cesium should only be used by adapters and runtime services.
 
+### Canonical replay geometry
+
+Replay route geometry is prepared by `JourneyReplayTurfPath`. Turf is the
+renderer-independent source of truth for geodesic distance, cumulative route
+distance, route position, altitude interpolation, local tangent, and
+look-ahead. The replay sampler consumes this path by metric distance, so Draft,
+HQ, and deferred video rendering receive identical geographic samples.
+
+Cesium is not used to construct, measure, extrapolate, or interpolate the
+replay route. It remains an adapter concern for converting a canonical sample
+into a render camera frame, projecting a target into the active crop, and
+applying the final frame to the scene. A renderer adapter must not replace the
+Turf sample with a live-camera position or a linear longitude/latitude
+projection.
+
 ## Current Implementation
 
 The path architecture is implemented in the current code base. The relevant
@@ -62,26 +77,59 @@ The point-to-point runtime pipeline is:
 5. resolve visibility corrections when needed
 6. apply sampled frames with `camera.setView`
 
-Continuous journey replay uses a separate compilation stage on top of the same
-camera frame model:
+### Current replay corrections (2026-08-01)
 
-1. materialize deterministic journey samples at a video-time cadence
+Continuous journey replay now uses a bounded per-update evaluator on top of the
+same camera frame model. It does not build a complete constrained route during
+Draft startup or while an HQ frame is being rendered. The current contract is:
+
+1. resolve the logical Turf sample at the current replay time;
+2. resolve the metric look-ahead sample from the same sampler;
+3. compute the nominal heading from the real Turf tangent and beta.2-style
+   spatial window, then apply time-based smoothing;
+4. project the current and look-ahead marker through the current/candidate
+   camera frame in crop-local coordinates;
+5. treat an invalid projection as a hard Z1 violation;
+6. for a current violation, target the current marker with a short bounded
+   recovery; for a predictive violation, target `sampleAtTime(t + 2 s)` with a
+   `2 s` transition;
+7. validate every transition sub-frame before applying it;
+8. apply the result through the live Draft adapter or the explicit HQ timestamp.
+
+The target sample and transition duration are deliberately coupled. A target at
+`t + 1 s` with a `2 s` transition leaves the marker ahead of the camera and was
+the source of the observed lower-right Z1 lag. A hard current violation never
+uses the future target, because correcting an already-lost frame against a
+future point compounds the lag.
+
+Navigation heading uses a minimum `400 m` metric window, a `2.5 s` future chord,
+and a nine-sample PCA axis oriented by that chord. The response factor is
+clamped to `0.04..0.18`, navigation drift is filtered with a `1.5 s` response,
+and lateral/heading drift is limited to `40 m` / `6°`. A turn drift requires a
+route turn of at least `12°`. These smoothing limits reduce beta.2-style zigzag
+oscillation without weakening the hard crop/Z1 guard.
+
+Cesium is still used only after this evaluation: candidate projection, terrain
+visibility checks, and final rendering. It does not construct, measure,
+extrapolate, or compile the geographic replay path.
+
+Continuous journey replay therefore evaluates the following shared logic:
+
+1. materialize Turf journey samples at the current logical time
 2. smooth nominal heading and pitch sequentially in logical replay time
 3. apply terrain redirection through a bounded attack/hold/release envelope
-4. advance every applied frame with the position and orientation delta of the
-   nominal path, including through sharp turns
+4. advance the nominal logical pose in replay time, including through turns
 5. project the current and look-ahead markers through candidate frames without
-   reading the currently rendered Cesium camera
+   using a live-camera position as route geometry
 6. start a correction before the marker leaves Z1
-7. land in the internal navigation landing zone or dynamic Z2
-8. relax the remaining correction back toward the moving nominal path
-9. sample positions and camera axes with C1-continuous cubic interpolation
-10. verify every compiled sample and every exact requested replay progress
-11. cache the resulting path in memory
-12. let Draft and HQ sample this same path by replay progress
+7. land in the navigation target or dynamic Z2
+8. relax the remaining correction back toward the moving nominal pose
+9. validate the candidate against crop-local Z1/Z2 bounds
+10. apply one frame through the owner of the current clock: Draft or HQ
 
-That means the deterministic engine is path-driven. Cesium `camera.flyTo` is
-not the core primitive for replay or live path sampling.
+That means the route geometry is Turf/path-driven and the camera application is
+clock-driven. Cesium `camera.flyTo` is not the core primitive for replay or live
+path sampling.
 
 ### Root-cause analysis of the stepped replay
 

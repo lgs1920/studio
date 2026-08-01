@@ -231,18 +231,13 @@ export const cameraLookaheadSample = (mode, sample, {lookaheadSeconds = null} = 
             return null
         }
 
-        const durationMillis = finiteNumber(state.sampler?.durationMillis)
-        const totalDistance = finiteNumber(state.sampler?.totalDistance) ?? 0
         const seconds = finiteNumber(lookaheadSeconds)
-        const timedDistance = seconds !== null && durationMillis !== null && durationMillis > 0
-                              ? totalDistance * (seconds / (durationMillis / 1000))
-                              : null
-        const lookaheadDistance = Math.max(
-            timedDistance ?? 0,
-            CAMERA_REDIRECT_LOOKAHEAD_DISTANCE_METERS,
-            totalDistance * 0.01,
-        )
-        const next = state.sampler.atDistance(currentDistance + lookaheadDistance)
+        const next = typeof state.sampler.lookaheadAtProgress === 'function'
+            ? state.sampler.lookaheadAtProgress(sample.progress, {
+                seconds: seconds ?? 1,
+                minimumMeters: CAMERA_REDIRECT_LOOKAHEAD_DISTANCE_METERS,
+            })
+            : state.sampler.atDistance(currentDistance + CAMERA_REDIRECT_LOOKAHEAD_DISTANCE_METERS)
         if (!next || Math.abs((finiteNumber(next?.distanceFromStart) ?? 0) - currentDistance) <= 0.0001) {
             return null
         }

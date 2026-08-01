@@ -41,6 +41,9 @@ import {
     CAMERA_TIMING_START_ANGLE_RADIANS,
     CAMERA_TIMING_SETTLE_ANGLE_RADIANS,
     CAMERA_DETERMINISTIC_FOLLOW_RESPONSE_SECONDS,
+    REPLAY_NAVIGATION_MAX_HEADING_DRIFT_DEGREES,
+    REPLAY_NAVIGATION_MAX_LATERAL_DRIFT_METERS,
+    REPLAY_NAVIGATION_MIN_TURN_DRIFT_DEGREES,
     CAMERA_REDIRECT_MAX_TRANSITION_SECONDS,
     CAMERA_REDIRECT_LOOKAHEAD_DISTANCE_METERS,
     CAMERA_REDIRECT_TRACE_VISIBILITY_OFFSETS_METERS,
@@ -103,6 +106,7 @@ import {
     windowPositionForSample,
     trackingWindowPositionForSample,
     cameraCollisionForSample,
+    cameraCollisionForFrame,
     terrainHeightForLonLat,
     persistCameraSettings,
     updateCameraSettingsFromCesiumControls,
@@ -157,6 +161,12 @@ import {
     updateToleranceZoneOverlay,
 } from './JourneyReplayCameraOverlay'
 
+const REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS = 2
+// The predictive target and the transition duration must describe the same
+// logical interval. A shorter target lead makes the live marker outrun the
+// camera before a two-second transition has finished.
+const REPLAY_NAVIGATION_TARGET_LEAD_RATIO = 1
+
 export const recenterCameraToSample = (mode, {
                                    sample,
                                    heading,
@@ -169,6 +179,7 @@ export const recenterCameraToSample = (mode, {
                                    logicalNow = null,
                                    force = false,
                                    trackingMode = null,
+                                   transitionGuard = null,
                                }) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -205,11 +216,11 @@ export const recenterCameraToSample = (mode, {
                 pitch:   safePitch,
                 endFrame: frame,
                 duration,
-                logicalNow,
-                trackingMode,
-                cameraSettings,
-                viewport: call.viewportRectForCesiumSurface?.() ?? null,
-            }))
+                                         logicalNow,
+                                         trackingMode,
+                                         cameraSettings,
+                                         viewport: call.viewportRectForCesiumSurface?.() ?? null,
+                                     }))
         }
         if (instant || duration <= 0) {
             viewer.camera.setView?.({
@@ -231,6 +242,7 @@ export const recenterCameraToSample = (mode, {
             cameraHeight:   frame.currentHeight,
             duration,
             endFrame:       frame,
+            transitionGuard,
         })
     }
 
@@ -242,6 +254,7 @@ export const startCameraTransition = (mode, {
                                         cameraHeight = null,
                                         endFrame = null,
                                         duration = REPLAY_HEADING_TRANSITION_DURATION_SECONDS,
+                                        transitionGuard = null,
                                     }) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -315,6 +328,9 @@ export const startCameraTransition = (mode, {
                         viewport:            call.viewportRectForCesiumSurface(),
                         clearanceMeters: Math.max(100, finiteNumber(globalThis.lgs?.settings?.camera?.pitchAdjustHeight) ?? 500),
                     }),
+                    frameResolver: typeof transitionGuard === 'function'
+                        ? ({frame, ratio}) => transitionGuard({frame, ratio}) ?? frame
+                        : null,
                 })
                 : null
 
@@ -638,6 +654,11 @@ export const updateCamera = (mode, {
 
         const deterministicCamera = exportMode || logicalCamera === true
 
+        const draftReplayTransitionActive = !deterministicCamera
+                                           && source === 'playback'
+                                           && marker.mode === REPLAY_MARKER_MODE_NAVIGATION
+                                           && typeof state.cameraBezierFrame === 'function'
+
         if (state.cameraApplyingView) {
             // HQ owns the camera at each export timestamp. A live Cesium
             // flyTo left over from playback must not block subsequent video
@@ -650,7 +671,7 @@ export const updateCamera = (mode, {
                     source,
                 })
             }
-            else {
+            else if (!draftReplayTransitionActive) {
                 return
             }
         }
@@ -690,10 +711,21 @@ export const updateCamera = (mode, {
         const replayMotionProfile = {
             turnDrift: {
                 enabled:               true,
-                maxHeadingOffsetDeg:    10,
-                maxLateralOffsetMeters: 60,
+                maxHeadingOffsetDeg:    marker.mode === REPLAY_MARKER_MODE_NAVIGATION
+                    ? REPLAY_NAVIGATION_MAX_HEADING_DRIFT_DEGREES
+                    : 10,
+                maxLateralOffsetMeters: marker.mode === REPLAY_MARKER_MODE_NAVIGATION
+                    ? REPLAY_NAVIGATION_MAX_LATERAL_DRIFT_METERS
+                    : 60,
+                minTurnAngleDeg:        marker.mode === REPLAY_MARKER_MODE_NAVIGATION
+                    ? REPLAY_NAVIGATION_MIN_TURN_DRIFT_DEGREES
+                    : 8,
             },
         }
+        const logicalAxisHeading = marker.mode === REPLAY_MARKER_MODE_NAVIGATION
+                                   && typeof call.headingFromPositionProperty === 'function'
+            ? call.headingFromPositionProperty(progress)
+            : null
         const sharedPathFrame = logicalFrame
                                   ? logicalFrame.cameraFrame
                                     ?? state.constrainedReplayCameraPath?.path?.sampleAt?.(progress)
@@ -706,6 +738,8 @@ export const updateCamera = (mode, {
                                         source: source === 'start' ? 'drawer' : source,
                                         cameraSettings,
                                         markerSettings,
+                                        axisHeading: logicalAxisHeading,
+                                        useAxisHeadingForSystem: marker.mode === REPLAY_MARKER_MODE_NAVIGATION,
                                     })
                                   : null
         // Use the export timeline as the smoothing clock. Camera orientation
@@ -741,6 +775,8 @@ export const updateCamera = (mode, {
                                  source: source === 'start' ? 'drawer' : source,
                                  cameraSettings,
                                  markerSettings,
+                                 axisHeading: logicalAxisHeading,
+                                 useAxisHeadingForSystem: marker.mode === REPLAY_MARKER_MODE_NAVIGATION,
                              })
                            : call.cameraViewForSample({
                                  sample,
@@ -878,7 +914,9 @@ export const updateCamera = (mode, {
             fps:             globalThis.lgs?.stores?.replay?.captureFps,
             frameIntervalMs,
         })
-        const lookaheadSeconds = recenterDuration + frameLeadSeconds
+        const lookaheadSeconds = marker.mode === REPLAY_MARKER_MODE_NAVIGATION
+            ? REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS
+            : (recenterDuration * 1.25) + frameLeadSeconds
         traceUpdateStep('camera-lookahead.begin', {
             lookaheadSeconds,
         })
@@ -945,7 +983,10 @@ export const updateCamera = (mode, {
 
         call.updateToleranceZoneOverlay(cameraSettings.hysteresis)
 
-        if (sharedPathFrame && sharedLogicalPose) {
+        if (sharedPathFrame
+            && sharedLogicalPose
+            && (marker.mode !== REPLAY_MARKER_MODE_NAVIGATION
+                || typeof call.cameraCollisionForSample !== 'function')) {
             logicalFrame.cameraPose = sharedLogicalPose
             logicalFrame.cameraFrame = sharedPathFrame
             const applied = call.applyCameraFrame(sharedPathFrame)
@@ -1007,8 +1048,18 @@ export const updateCamera = (mode, {
             // asynchronously and the predicted sample can briefly project back
             // inside Z1 even though the rendered marker has already left it.
             traceUpdateStep('navigation.collision.begin')
-            const currentCollision = call.cameraCollisionForSample(anchorSample, navigationCameraSettings, updateCache)
-            const predictedCollision = call.cameraCollisionForSample(predictedSample, navigationCameraSettings, updateCache)
+            const currentFrame = call.currentCameraFrame?.(null)
+            const collisionForSample = sampleForCollision => currentFrame
+                && typeof call.cameraCollisionForFrame === 'function'
+                ? call.cameraCollisionForFrame({
+                    frame: currentFrame,
+                    sample: sampleForCollision,
+                    cameraSettings: navigationCameraSettings,
+                    viewport: viewportRect,
+                })
+                : call.cameraCollisionForSample(sampleForCollision, navigationCameraSettings, updateCache)
+            const currentCollision = collisionForSample(anchorSample)
+            const predictedCollision = collisionForSample(predictedSample)
             traceUpdateStep('navigation.collision.end', {
                 currentHard: Boolean(currentCollision?.hard),
                 predictedHard: Boolean(predictedCollision?.hard),
@@ -1018,19 +1069,26 @@ export const updateCamera = (mode, {
                 || predictedCollision?.hard
                 || forceToleranceRecenter,
             )
+            const currentNavigationViolation = Boolean(currentCollision?.hard || forceToleranceRecenter)
             const now = logicalNow
             const currentProgress = finiteNumber(progress)
             const navigationRecenterLockMs = Math.max(
                 REPLAY_TOLERANCE_RECENTER_REPLACE_DELAY_MS,
-                Math.ceil(recenterDuration * 1000) + 180,
+                Math.ceil(
+                    (currentNavigationViolation
+                        ? Math.min(0.24, recenterDuration)
+                        : REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS) * 1000,
+                ) + 180,
             )
-            const sameNavigationProgressRecenter = currentProgress !== null
-                                                   && state.lastNavigationRecenterProgress !== null
-                                                   && state.lastNavigationRecenterAt !== null
-                                                   && Math.abs(currentProgress - state.lastNavigationRecenterProgress) <= 0.000001
-                                                   && now - state.lastNavigationRecenterAt < 80
-            const navigationRecenterStillRunning = state.lastNavigationRecenterAt !== null
-                                                   && now - state.lastNavigationRecenterAt < navigationRecenterLockMs
+            // A hard collision must not cancel and recreate the same Draft
+            // transition on every render tick. The transition guard validates
+            // each sub-frame; the lock only prevents transition starvation.
+            const draftNavigationCorrectionLocked = !deterministicCamera
+                                                     && draftReplayTransitionActive
+                                                     && !immediateToleranceRecenter
+                                                     && !forceToleranceRecenter
+                                                     && state.lastNavigationRecenterAt !== null
+                                                     && now - state.lastNavigationRecenterAt < navigationRecenterLockMs
             if ((forceToleranceRecenter || source === 'refresh') && !immediateToleranceRecenter && source !== 'playback' && !deterministicCamera) {
                 call.applyCameraView({
                     anchor: anchorSample,
@@ -1042,22 +1100,35 @@ export const updateCamera = (mode, {
                 state.lastCameraPitch = smoothPitch
                 return
             }
-            if (
-                !forceToleranceRecenter
-                && !immediateToleranceRecenter
-                && outsideNavigationZone
-                && (sameNavigationProgressRecenter || navigationRecenterStillRunning)
-                && !deterministicCamera
-            ) {
-                state.lastCameraHeading = smoothHeading
-                state.lastCameraPitch = smoothPitch
-                return
-            }
             const navigationFollowerActive = deterministicCamera && state.deterministicCameraFollowerActive
-            if (outsideNavigationZone || forceToleranceRecenter || immediateToleranceRecenter || navigationFollowerActive) {
-                const navigationTargetSample = !immediateToleranceRecenter && (source === 'playback' || exportMode)
-                                               ? predictedSample
-                                               : anchorSample
+            const predictiveNavigationSafe = currentCollision?.hard !== true
+                                             && predictedCollision?.hard !== true
+            if (navigationFollowerActive && predictiveNavigationSafe && !forceToleranceRecenter) {
+                state.deterministicCameraFollowerActive = false
+                state.deterministicCameraFollowerAt = null
+                state.deterministicCameraFollowerVelocity = null
+            }
+            if ((outsideNavigationZone
+                || forceToleranceRecenter
+                || immediateToleranceRecenter
+                || (navigationFollowerActive && !predictiveNavigationSafe))
+                && !draftNavigationCorrectionLocked) {
+                const predictiveNavigationTargetSample = !immediateToleranceRecenter
+                                                         && (source === 'playback' || exportMode)
+                    ? (typeof call.cameraLookaheadSample === 'function'
+                        ? call.cameraLookaheadSample(anchorSample, {
+                              lookaheadSeconds: REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS
+                                  * REPLAY_NAVIGATION_TARGET_LEAD_RATIO,
+                          })
+                        : null) ?? predictedSample
+                    : anchorSample
+                // A current hard violation must be corrected against the
+                // marker that is already outside Z1. A future-only violation
+                // is paired with the full two-second transition horizon so
+                // the marker and camera arrive at the same logical sample.
+                const navigationTargetSample = currentNavigationViolation
+                    ? anchorSample
+                    : predictiveNavigationTargetSample
                 traceUpdateStep('navigation.target-view.begin', {
                     immediateToleranceRecenter,
                     navigationFollowerActive,
@@ -1100,12 +1171,41 @@ export const updateCamera = (mode, {
                         cameraSettings,
                     })
                     if (frame) {
+                        const candidateCollision = typeof call.cameraCollisionForFrame === 'function'
+                            ? call.cameraCollisionForFrame({
+                                frame: {
+                                    destination: frame.destination,
+                                    direction:   frame.direction,
+                                    up:          frame.correctedUp,
+                                },
+                                sample: navigationTargetSample,
+                                cameraSettings: navigationCameraSettings,
+                                viewport: viewportRect,
+                            })
+                            : null
                         state.deterministicCameraTransition = null
-                        state.deterministicCameraFollowerActive = true
-                        call.applyDeterministicCameraFollower({
-                            endFrame:       frame,
-                            logicalNow,
-                        })
+                        state.deterministicCameraFollowerActive = false
+                        state.deterministicCameraFollowerVelocity = null
+                        if (currentCollision?.hard === true
+                            || (outsideNavigationZone && !deterministicCamera)
+                            || forceToleranceRecenter
+                            || candidateCollision?.hard === true) {
+                            // A hard current violation is corrected immediately.
+                            // A predictive-only violation uses the deterministic
+                            // follower below so HQ does not snap on every frame.
+                            call.applyCameraFrame({
+                                destination: frame.destination,
+                                direction:   frame.direction,
+                                up:          frame.correctedUp,
+                            })
+                        }
+                        else {
+                            state.deterministicCameraFollowerActive = true
+                            call.applyDeterministicCameraFollower({
+                                endFrame: frame,
+                                logicalNow,
+                            })
+                        }
                     }
                 }
                 else {
@@ -1114,11 +1214,67 @@ export const updateCamera = (mode, {
                         heading:        navigationTargetView?.heading ?? smoothHeading,
                         pitch:          navigationTargetView?.pitch ?? smoothPitch,
                         cameraSettings,
-                        duration:       recenterDuration,
+                        // Navigation has a hard Z1 contract. An animated
+                        // correction can leave the marker outside the crop
+                        // while the target transition is still running.
+                        duration:       currentNavigationViolation
+                                         ? Math.min(0.24, recenterDuration)
+                                         : REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS,
                         deterministic:  deterministicCamera,
                         logicalNow,
                         force:          outsideNavigationZone || forceToleranceRecenter,
                         trackingMode:   marker.mode,
+                        transitionGuard: typeof call.cameraCollisionForFrame === 'function'
+                            ? ({frame, ratio}) => {
+                                const transitionSample = currentNavigationViolation
+                                    ? anchorSample
+                                    : ratio >= 1
+                                      ? navigationTargetSample
+                                      : call.cameraLookaheadSample(anchorSample, {
+                                          lookaheadSeconds: REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS
+                                              * REPLAY_NAVIGATION_TARGET_LEAD_RATIO
+                                              * ratio,
+                                      }) ?? anchorSample
+                                const collision = call.cameraCollisionForFrame({
+                                    frame,
+                                    sample: transitionSample,
+                                    cameraSettings: navigationCameraSettings,
+                                    viewport: viewportRect,
+                                })
+                                if (!collision?.hard) {
+                                    return frame
+                                }
+
+                                const safeView = call.cameraViewForSample({
+                                    sample: transitionSample,
+                                    progress: transitionSample?.progress ?? progress,
+                                    source,
+                                    cameraSettings,
+                                    markerSettings,
+                                    collision: true,
+                                    motionProfile: replayMotionProfile,
+                                    previousHeading: smoothHeading,
+                                    previousPitch: smoothPitch,
+                                    cache: updateCache,
+                                })
+                                const safeFrame = safeView
+                                    ? call.cameraRecenterFrame({
+                                        sample: safeView.sample,
+                                        heading: safeView.heading,
+                                        pitch: safeView.pitch,
+                                        cameraSettings,
+                                        cameraHeight: safeView.cameraHeight,
+                                    })
+                                    : null
+                                return safeFrame
+                                    ? {
+                                        destination: safeFrame.destination,
+                                        direction: safeFrame.direction,
+                                        up: safeFrame.correctedUp,
+                                    }
+                                    : frame
+                            }
+                            : null,
                     })
                 }
                 state.lastNavigationRecenterProgress = currentProgress

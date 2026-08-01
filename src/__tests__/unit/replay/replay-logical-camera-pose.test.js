@@ -31,4 +31,27 @@ describe('Journey replay logical camera pose', () => {
         expect(pose.cameraHeight).toBe(420)
         expect(pose.logical).toBe(true)
     })
+
+    it('uses the predicted path heading for HQ Navigation system mode', () => {
+        const pose = resolveJourneyReplayLogicalCameraPose({
+            sample: {
+                progress: 0.5,
+                longitude: 2,
+                latitude:  48,
+                altitude: 120,
+            },
+            cameraSettings: {
+                positionMode: 'system',
+                heading:      0,
+                altitudeMode: 'constant',
+                altitude:     1000,
+                pitch:        -60,
+            },
+            markerSettings: {mode: 'navigation'},
+            axisHeading: 0.8,
+            useAxisHeadingForSystem: true,
+        })
+
+        expect(pose.heading).toBeCloseTo(0.8, 6)
+    })
 })

@@ -34,14 +34,26 @@ export const CAMERA_GUIDE_MAX_STEPS = 4096
 export const CAMERA_GUIDE_TARGET_SPACING_METERS = 12
 export const CAMERA_GUIDE_TURN_STEP_RADIANS = Math.PI / 18
 export const CARTESIAN_EPSILON = 1e-7
-export const CAMERA_HEADING_HYSTERESIS_RADIANS = CesiumMath.toRadians(12)
+export const CAMERA_HEADING_HYSTERESIS_RADIANS = CesiumMath.toRadians(16)
 export const CAMERA_HEADING_LOOKAHEAD_PROGRESS = 0.16
-export const CAMERA_HEADING_MIN_CHANGE_RADIANS = CesiumMath.toRadians(5)
+export const CAMERA_HEADING_MIN_CHANGE_RADIANS = CesiumMath.toRadians(8)
+export const CAMERA_NAVIGATION_HEADING_LOOKAHEAD_SECONDS = 2.5
+// beta.2 used the same metric horizon behind and ahead of the marker. A
+// symmetric window prevents alternating route vertices from steering the
+// camera before the bend is sustained by the path.
+export const CAMERA_NAVIGATION_HEADING_WINDOW_SECONDS = 2.5
+export const CAMERA_NAVIGATION_HEADING_MIN_WINDOW_METERS = 400
+// beta.2 response envelope, applied after the wider spatial heading window.
+export const CAMERA_HEADING_MIN_RESPONSE_FACTOR = 0.04
+export const CAMERA_HEADING_MAX_RESPONSE_FACTOR = 0.18
 export const CAMERA_VIEW_POSITION_EPSILON_METERS = 0.5
 export const CAMERA_VIEW_ANGLE_EPSILON_RADIANS = CesiumMath.toRadians(0.25)
 export const CAMERA_TIMING_START_ANGLE_RADIANS = CesiumMath.toRadians(2)
 export const CAMERA_TIMING_SETTLE_ANGLE_RADIANS = CesiumMath.toRadians(0.75)
-export const CAMERA_DETERMINISTIC_FOLLOW_RESPONSE_SECONDS = 1.5
+export const CAMERA_DETERMINISTIC_FOLLOW_RESPONSE_SECONDS = 2.2
+export const REPLAY_NAVIGATION_MAX_HEADING_DRIFT_DEGREES = 6
+export const REPLAY_NAVIGATION_MAX_LATERAL_DRIFT_METERS = 40
+export const REPLAY_NAVIGATION_MIN_TURN_DRIFT_DEGREES = 12
 export const CAMERA_REDIRECT_MAX_TRANSITION_SECONDS = 1
 export const CAMERA_REDIRECT_LOOKAHEAD_DISTANCE_METERS = 120
 export const CAMERA_REDIRECT_TRACE_VISIBILITY_OFFSETS_METERS = Object.freeze([6, 12, 18, 24])
@@ -122,5 +134,3 @@ export const resolveJourneyActivityIcon = (journey = null) => {
 }
 
 export {replayPitchLookaheadFactor} from './JourneyReplayCameraMath'
-
-

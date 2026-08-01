@@ -131,8 +131,8 @@ describe('replay settings normalization', () => {
                                                    width:  1,
                                                    height: 1,
                                                })
-        expect(camera.hysteresis.marginRatio).toBeCloseTo(0.4, 6)
-        expect(camera.hysteresis.easing).toBeCloseTo(0.08, 6)
+        expect(camera.hysteresis.marginRatio).toBeCloseTo(0.12, 6)
+        expect(camera.hysteresis.easing).toBeCloseTo(0.18, 6)
         expect(getJourneyReplayCameraPresetKey(camera)).toBe(REPLAY_CAMERA_PRESET_DEFAULT)
 
         const bounds = replayToleranceZoneBounds({

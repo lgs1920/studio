@@ -873,6 +873,8 @@ export const sampleConstrainedReplayCameraPath = (path, progress = 0) => {
  * @param {Function} options.sampleAtProgress - Journey sampler callback.
  * @param {Function} options.frameForSample - Nominal camera frame callback.
  * @param {Function} options.targetForSample - Marker Cartesian callback.
+ * @param {Function} [options.futureSampleAtProgress] - Metric lookahead callback.
+ * @param {Function} [options.futureFrameAtProgress] - Pure future nominal frame callback.
  * @param {Function} options.projectTarget - Pure candidate-frame projection callback.
  * @param {string} options.trackingMode - Navigation or dynamic tracking mode.
  * @param {object} options.triggerZone - Z1 trigger zone.
@@ -889,6 +891,8 @@ export const buildConstrainedReplayCameraPath = ({
     sampleAtProgress,
     frameForSample,
     targetForSample,
+    futureSampleAtProgress,
+    futureFrameAtProgress,
     projectTarget,
     trackingMode,
     triggerZone,
@@ -992,7 +996,22 @@ export const buildConstrainedReplayCameraPath = ({
             }
         }
 
-        const futureEntry = entries[Math.min(entries.length - 1, index + lookaheadCount)]
+        const predictedSample = typeof futureSampleAtProgress === 'function'
+            ? futureSampleAtProgress(entry.progress, safeLookaheadSeconds)
+            : null
+        const predictedTarget = predictedSample
+            ? targetForSample(predictedSample, entry.progress)
+            : null
+        const futureEntry = predictedSample && isCartesian3Like(predictedTarget)
+            ? {
+                ...entry,
+                sample: predictedSample,
+                target: predictedTarget,
+                nominalFrame: typeof futureFrameAtProgress === 'function'
+                    ? futureFrameAtProgress(predictedSample, entry.progress) ?? entry.nominalFrame
+                    : entry.nominalFrame,
+            }
+            : entries[Math.min(entries.length - 1, index + lookaheadCount)]
         const collisionOptions = {
             projectTarget,
             zone: triggerZone,
@@ -1036,6 +1055,13 @@ export const buildConstrainedReplayCameraPath = ({
                     viewport,
                     markerRadius: safeMarkerRadius,
                 })
+            }
+            if (trackingMode === 'navigation' && !frameContainsTarget({
+                ...collisionOptions,
+                frame: nextFrame,
+                target: entry.target,
+            })) {
+                nextFrame = focusConstrainedReplayFrame(nextFrame, entry.target)
             }
             currentFrame = nextFrame
 

@@ -35,6 +35,9 @@ import {
     CAMERA_HEADING_HYSTERESIS_RADIANS,
     CAMERA_HEADING_LOOKAHEAD_PROGRESS,
     CAMERA_HEADING_MIN_CHANGE_RADIANS,
+    CAMERA_NAVIGATION_HEADING_LOOKAHEAD_SECONDS,
+    CAMERA_NAVIGATION_HEADING_WINDOW_SECONDS,
+    CAMERA_NAVIGATION_HEADING_MIN_WINDOW_METERS,
     CAMERA_VIEW_POSITION_EPSILON_METERS,
     CAMERA_VIEW_ANGLE_EPSILON_RADIANS,
     CAMERA_TIMING_START_ANGLE_RADIANS,
@@ -455,6 +458,7 @@ const lowerCameraGuideIndex = (guide, progress) => {
 const replayTurnDriftAtGuideIndex = (guide, index, {
     maxHeadingOffsetDeg,
     maxLateralOffsetMeters,
+    minTurnAngleDeg,
 }) => {
     const previous = guide[Math.max(0, index - 1)]
     const current = guide[index]
@@ -487,8 +491,11 @@ const replayTurnDriftAtGuideIndex = (guide, index, {
     const dot = (incoming.x * outgoing.x) + (incoming.y * outgoing.y)
     const cross = (incoming.x * outgoing.y) - (incoming.y * outgoing.x)
     const turnAngleRadians = Math.atan2(cross, dot)
+    const minimumTurnRadians = CesiumMath.toRadians(
+        Math.max(0, finiteNumber(minTurnAngleDeg) ?? 4),
+    )
     const turnStrength = smoothstep(
-        (Math.abs(turnAngleRadians) - CesiumMath.toRadians(4))
+        (Math.abs(turnAngleRadians) - minimumTurnRadians)
         / Math.max(CesiumMath.toRadians(50), Number.EPSILON),
     )
     const cornerSharpness = smoothstep(
@@ -541,11 +548,13 @@ const interpolateTurnDriftValue = (previous, start, end, next, ratio) => {
  * @param {object} [options] - Drift tuning options.
  * @param {number} [options.maxHeadingOffsetDeg=10] - Maximum horizontal heading drift in degrees.
  * @param {number} [options.maxLateralOffsetMeters=60] - Maximum lateral drift in meters.
+ * @param {number} [options.minTurnAngleDeg=4] - Minimum sustained turn angle in degrees.
  * @returns {{turnAngleRadians: number, headingOffsetRadians: number, lateralOffsetMeters: number}|null} Drift envelope.
  */
 export const replayTurnDriftForGuideProgress = (guide, progress, {
     maxHeadingOffsetDeg = 10,
     maxLateralOffsetMeters = 60,
+    minTurnAngleDeg = 4,
 } = {}) => {
     if (!Array.isArray(guide) || guide.length < 3) {
         return null
@@ -565,6 +574,7 @@ export const replayTurnDriftForGuideProgress = (guide, progress, {
     const options = {
         maxHeadingOffsetDeg,
         maxLateralOffsetMeters,
+        minTurnAngleDeg,
     }
     const previousDrift = replayTurnDriftAtGuideIndex(guide, previousIndex, options)
     const startDrift = replayTurnDriftAtGuideIndex(guide, startIndex, options)
@@ -599,16 +609,19 @@ export const replayTurnDriftForGuideProgress = (guide, progress, {
  * @param {object} [options] - Drift tuning options.
  * @param {number} [options.maxHeadingOffsetDeg=10] - Maximum horizontal heading drift in degrees.
  * @param {number} [options.maxLateralOffsetMeters=60] - Maximum lateral drift in meters.
+ * @param {number} [options.minTurnAngleDeg=4] - Minimum sustained turn angle in degrees.
  * @returns {{turnAngleRadians: number, headingOffsetRadians: number, lateralOffsetMeters: number}|null} Drift envelope.
  */
 export const replayTurnDriftForProgress = (mode, progress, {
     maxHeadingOffsetDeg = 10,
     maxLateralOffsetMeters = 60,
+    minTurnAngleDeg = 4,
 } = {}) => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
     return replayTurnDriftForGuideProgress(call.buildCameraGuide(), progress, {
         maxHeadingOffsetDeg,
         maxLateralOffsetMeters,
+        minTurnAngleDeg,
     })
 }
 
@@ -705,6 +718,13 @@ export const headingFromPositionProperty =  (mode, progress) => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         const safeProgress = clamp(Number(progress) || 0, 0, 1)
+        if (typeof state.sampler?.headingAtProgress === 'function') {
+            return state.sampler.headingAtProgress(safeProgress, {
+                lookaheadSeconds: CAMERA_NAVIGATION_HEADING_LOOKAHEAD_SECONDS,
+                windowSeconds:   CAMERA_NAVIGATION_HEADING_WINDOW_SECONDS,
+                minimumMeters:   CAMERA_NAVIGATION_HEADING_MIN_WINDOW_METERS,
+            })
+        }
         const guide = call.buildCameraGuide()
         if (!guide?.length) {
             return 0

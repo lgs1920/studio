@@ -75,6 +75,8 @@ const pathHeadingForSample = sample => {
  * renderer, terrain provider, Cesium camera, or camera flight callback.
  *
  * @param {Object} options - Logical pose inputs.
+ * @param {number|null} [options.axisHeading] - Canonical path heading in radians.
+ * @param {boolean} [options.useAxisHeadingForSystem=false] - Let Navigation use the path heading in system position mode.
  * @returns {Object|null} A renderer-independent camera pose.
  */
 export const resolveJourneyReplayLogicalCameraPose = ({
@@ -82,18 +84,22 @@ export const resolveJourneyReplayLogicalCameraPose = ({
                                                            progress = sample?.progress ?? 0,
                                                            cameraSettings = null,
                                                            markerSettings = null,
+                                                           axisHeading = null,
+                                                           useAxisHeadingForSystem = false,
                                                        } = {}) => {
     if (!sample || !cameraSettings) {
         return null
     }
 
     const anchorSample = markerPositionForSample(sample, markerSettings)
-    const axisHeading = pathHeadingForSample(sample)
+    const resolvedAxisHeading = finiteNumber(axisHeading) ?? pathHeadingForSample(sample)
     const positionMode = cameraSettings.positionMode ?? REPLAY_CAMERA_POSITION_SYSTEM
     const headingOffset = degreesToRadians(clamp(finiteNumber(cameraSettings.headingOffset) ?? 0, -180, 180)) ?? 0
     const desiredHeading = positionMode === REPLAY_CAMERA_POSITION_SYSTEM
-                           ? degreesToRadians(cameraSettings.heading) ?? axisHeading
-                           : (positionMode === REPLAY_CAMERA_POSITION_AHEAD ? axisHeading + Math.PI : axisHeading) + headingOffset
+                           ? useAxisHeadingForSystem && finiteNumber(axisHeading) !== null
+                               ? resolvedAxisHeading
+                               : degreesToRadians(cameraSettings.heading) ?? resolvedAxisHeading
+                           : (positionMode === REPLAY_CAMERA_POSITION_AHEAD ? resolvedAxisHeading + Math.PI : resolvedAxisHeading) + headingOffset
     const normalizedPitch = finiteNumber(cameraSettings.pitch) ?? -65
     const pitch = normalizedPitch <= -89
                   ? SAFE_TOP_DOWN_PITCH

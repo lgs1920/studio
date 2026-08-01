@@ -14,7 +14,7 @@ import {faPersonHiking} from '@fortawesome/pro-regular-svg-icons'
 import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
 import {finiteNumber, replayStore} from './JourneyReplayRuntime'
 import {
-    clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForPositionMode, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
+    clamp, lerp, hasFiniteLonLat, projectReplayTargetInCameraFrame, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForPositionMode, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
 } from './JourneyReplayCameraMath'
 import {
     REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET, REPLAY_CAMERA_POSITION_AHEAD,
@@ -358,12 +358,15 @@ export const cameraCollisionForSample = (mode, sample, cameraSettings, cache = n
             const viewer = globalThis.lgs?.viewer
             const scene = call.cesiumScene()
             const windowPosition = call.trackingWindowPositionForSample(sample)
-            if (!viewer || !scene || !windowPosition) {
-                const outerBounds = replayToleranceZoneBounds(cameraSettings?.hysteresis?.zone)
-                const safeBounds = replayInnerToleranceZoneBounds(
-                    outerBounds,
-                    finiteNumber(cameraSettings?.hysteresis?.marginRatio) ?? 0.12,
-                )
+            const rect = call.viewportRectForCesiumSurface()
+            const outerBounds = replayToleranceZoneBounds(cameraSettings?.hysteresis?.zone)
+            const safeBounds = replayInnerToleranceZoneBounds(
+                outerBounds,
+                finiteNumber(cameraSettings?.hysteresis?.marginRatio) ?? 0.12,
+            )
+            if (!viewer || !scene || !windowPosition || !rect
+                || (finiteNumber(rect.width) ?? 0) <= 0
+                || (finiteNumber(rect.height) ?? 0) <= 0) {
                 return {
                     side:       null,
                     outer:      outerBounds,
@@ -375,21 +378,24 @@ export const cameraCollisionForSample = (mode, sample, cameraSettings, cache = n
                 }
             }
 
-            const rect = call.viewportRectForCesiumSurface()
             const markerRadius = finiteNumber(globalThis.lgs?.stores?.replay?.markerRadius) ?? 35
-            const overlayBounds = replayToleranceZoneBounds(cameraSettings?.hysteresis?.zone)
-            const safeBounds = replayInnerToleranceZoneBounds(
-                overlayBounds,
-                finiteNumber(cameraSettings?.hysteresis?.marginRatio) ?? 0.12,
-            )
-            return replayWindowCollisionFromPoint({
-                                                      point:        windowPosition,
-                                                      width:        rect.width,
-                                                      height:       rect.height,
-                                                      outerBounds:  overlayBounds,
-                                                      safeBounds,
-                                                      markerRadius,
-                                                  })
+            const collision = replayWindowCollisionFromPoint({
+                point:        windowPosition,
+                width:        rect.width,
+                height:       rect.height,
+                outerBounds,
+                safeBounds,
+                markerRadius,
+            })
+            return collision ?? {
+                side:       null,
+                outer:      outerBounds,
+                inner:      safeBounds,
+                screen:     null,
+                error:      1,
+                hard:       true,
+                shouldMove: true,
+            }
         }
 
         const cacheKey = [
@@ -398,6 +404,58 @@ export const cameraCollisionForSample = (mode, sample, cameraSettings, cache = n
         ].join('|')
         return memoizeReplayCameraUpdateCache(cache, 'cameraCollisionForSample', cacheKey, computeCollision)
     }
+
+/**
+ * Evaluate a replay target against a candidate camera frame.
+ *
+ * @param {object} mode - Replay camera mode.
+ * @param {object} options - Candidate frame and collision inputs.
+ * @returns {object} Candidate-frame collision result.
+ */
+export const cameraCollisionForFrame = (mode, {
+    frame,
+    sample,
+    cameraSettings,
+    viewport = null,
+} = {}) => {
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const target = call.markerRenderCartesianForSample(sample)
+    const rect = viewport ?? call.viewportRectForCesiumSurface()
+    const frustum = globalThis.lgs?.viewer?.camera?.frustum
+    const verticalFovRadians = finiteNumber(frustum?.fovy) ?? finiteNumber(frustum?.fov) ?? (Math.PI / 3)
+    const aspectRatio = finiteNumber(frustum?.aspectRatio)
+                        ?? ((rect?.canvasWidth ?? rect?.width ?? 0) / Math.max(1, rect?.canvasHeight ?? rect?.height ?? 1))
+    const point = projectReplayTargetInCameraFrame({
+        frame,
+        target,
+        viewport: rect,
+        verticalFovRadians,
+        aspectRatio,
+    })
+    const outerBounds = replayToleranceZoneBounds(cameraSettings?.hysteresis?.zone)
+    const safeBounds = replayInnerToleranceZoneBounds(
+        outerBounds,
+        finiteNumber(cameraSettings?.hysteresis?.marginRatio) ?? 0.12,
+    )
+    const markerRadius = finiteNumber(globalThis.lgs?.stores?.replay?.markerRadius) ?? 35
+    const collision = replayWindowCollisionFromPoint({
+        point,
+        width:       rect?.width,
+        height:      rect?.height,
+        outerBounds,
+        safeBounds,
+        markerRadius,
+    })
+    return collision ?? {
+        side:       null,
+        outer:      outerBounds,
+        inner:      safeBounds,
+        screen:     null,
+        error:      1,
+        hard:       true,
+        shouldMove: true,
+    }
+}
 
 export const terrainHeightForLonLat = (mode, longitude, latitude) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]

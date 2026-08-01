@@ -61,6 +61,8 @@ import {
 } from '@Core/ui/replay/JourneyReplayCameraTransition'
 import {
     cancelCameraBezierTransition,
+    cameraCollisionForFrame,
+    cameraCollisionForSample,
 } from '@Core/ui/replay/JourneyReplayCameraState'
 import {
     resetCameraInterpolationState,
@@ -976,8 +978,413 @@ describe('Journey replay camera paths', () => {
             })
 
             expect(call.cameraCollisionForSample).toHaveBeenCalled()
-            expect(call.applyDeterministicCameraFollower).toHaveBeenCalled()
+            expect(
+                call.applyDeterministicCameraFollower.mock.calls.length
+                + call.applyCameraFrame.mock.calls.length,
+            ).toBeGreaterThan(0)
         }
+    })
+
+    it('keeps Draft Navigation collision checks active during a camera transition', () => {
+        vi.stubGlobal('lgs', {
+            settings: {
+                ui: {
+                    replay: {
+                        camera: {
+                            positionMode: 'system',
+                            pitch:        -60,
+                            altitude:     1000,
+                        },
+                        marker: {mode: REPLAY_MARKER_MODE_NAVIGATION},
+                    },
+                },
+            },
+            stores: {
+                replay: {
+                    camera: {positionMode: 'system', pitch: -60, altitude: 1000},
+                },
+            },
+            viewer: {camera: {}},
+        })
+
+        const {mode, state, call} = makeMode()
+        const sample = {
+            progress:          0.5,
+            distanceFromStart: 100,
+            longitude:         2,
+            latitude:          48,
+            altitude:          120,
+            height:            120,
+        }
+        const nominalView = {
+            sample,
+            heading:      0,
+            pitch:        -Math.PI / 3,
+            cameraHeight: 1000,
+        }
+
+        state.cameraApplyingView = true
+        state.cameraBezierFrame = vi.fn()
+        call.cameraViewForSample = vi.fn(() => nominalView)
+        call.cameraLookaheadSample = vi.fn(() => ({
+            ...sample,
+            progress:          0.7,
+            distanceFromStart: 140,
+        }))
+        call.cameraCollisionForSample = vi.fn(() => ({hard: true}))
+        call.rememberNominalCameraView = vi.fn()
+        call.recenterCameraToSample = vi.fn()
+
+        updateCamera(mode, {
+            sample,
+            progress: 0.5,
+            source:   'playback',
+        })
+
+        expect(call.cameraCollisionForSample).toHaveBeenCalledTimes(2)
+        expect(call.recenterCameraToSample).toHaveBeenCalledWith(expect.objectContaining({
+            force: true,
+        }))
+
+        state.lastNavigationRecenterAt = 0
+        call.now = vi.fn(() => 100)
+        call.recenterCameraToSample.mockClear()
+        updateCamera(mode, {
+            sample,
+            progress: 0.5,
+            source:   'playback',
+        })
+
+        expect(call.recenterCameraToSample).not.toHaveBeenCalled()
+    })
+
+    it('targets the current marker when Navigation is already outside Z1', () => {
+        vi.stubGlobal('lgs', {
+            settings: {
+                ui: {
+                    replay: {
+                        camera: {
+                            positionMode: 'system',
+                            pitch:        -60,
+                            altitude:     1000,
+                        },
+                        marker: {mode: REPLAY_MARKER_MODE_NAVIGATION},
+                    },
+                },
+            },
+            stores: {
+                replay: {
+                    camera: {positionMode: 'system', pitch: -60, altitude: 1000},
+                },
+            },
+            viewer: {camera: {}},
+        })
+
+        const {mode, call} = makeMode()
+        const anchorSample = {
+            progress:          0.5,
+            distanceFromStart: 100,
+            longitude:         2,
+            latitude:          48,
+            altitude:          120,
+            height:            120,
+        }
+        const futureSample = {
+            ...anchorSample,
+            progress:          0.6,
+            distanceFromStart: 220,
+        }
+        call.cameraViewForSample = vi.fn(({sample}) => ({
+            sample,
+            heading:      0,
+            pitch:        -Math.PI / 3,
+            cameraHeight: 1000,
+        }))
+        call.cameraLookaheadSample = vi.fn(() => futureSample)
+        call.cameraCollisionForSample = vi.fn(() => ({hard: true}))
+        call.rememberNominalCameraView = vi.fn()
+        call.recenterCameraToSample = vi.fn()
+
+        updateCamera(mode, {
+            sample:   anchorSample,
+            progress: anchorSample.progress,
+            source:   'playback',
+        })
+
+        expect(call.recenterCameraToSample).toHaveBeenCalledWith(expect.objectContaining({
+            sample:   anchorSample,
+            duration: expect.closeTo(0.24),
+            force:    true,
+        }))
+    })
+
+    it('keeps the predictive Navigation target aligned with the two-second transition', () => {
+        vi.stubGlobal('lgs', {
+            settings: {
+                ui: {
+                    replay: {
+                        camera: {
+                            positionMode: 'system',
+                            pitch:        -60,
+                            altitude:     1000,
+                        },
+                        marker: {mode: REPLAY_MARKER_MODE_NAVIGATION},
+                    },
+                },
+            },
+            stores: {
+                replay: {
+                    camera: {positionMode: 'system', pitch: -60, altitude: 1000},
+                },
+            },
+            viewer: {camera: {}},
+        })
+
+        const {mode, call} = makeMode()
+        const anchorSample = {
+            progress:          0.5,
+            distanceFromStart: 100,
+            longitude:         2,
+            latitude:          48,
+            altitude:          120,
+            height:            120,
+        }
+        const futureSample = {
+            ...anchorSample,
+            progress:          0.6,
+            distanceFromStart: 220,
+        }
+        const lookaheadSeconds = []
+        call.cameraViewForSample = vi.fn(({sample}) => ({
+            sample,
+            heading:      0,
+            pitch:        -Math.PI / 3,
+            cameraHeight: 1000,
+        }))
+        call.cameraLookaheadSample = vi.fn((sample, {lookaheadSeconds: seconds} = {}) => {
+            lookaheadSeconds.push(seconds)
+            return futureSample
+        })
+        call.cameraCollisionForSample = vi.fn(sample => ({hard: sample === futureSample}))
+        call.rememberNominalCameraView = vi.fn()
+        call.recenterCameraToSample = vi.fn()
+
+        updateCamera(mode, {
+            sample:   anchorSample,
+            progress: anchorSample.progress,
+            source:   'playback',
+        })
+
+        expect(lookaheadSeconds).toEqual([2, 2])
+        expect(call.recenterCameraToSample).toHaveBeenCalledWith(expect.objectContaining({
+            sample:   futureSample,
+            duration: 2,
+        }))
+    })
+
+    it('treats invalid Draft projections as hard camera collisions', () => {
+        const {mode, call} = makeMode()
+        const sample = {
+            progress:   0.5,
+            longitude:  2,
+            latitude:   48,
+            altitude:   120,
+            height:     120,
+        }
+        call.markerRenderCartesianForSample = vi.fn(() => new Cartesian3(0, 0, 1))
+        call.viewportRectForCesiumSurface = vi.fn(() => ({
+            left:        0,
+            top:         0,
+            width:       1920,
+            height:      1080,
+            canvasWidth: 1920,
+            canvasHeight: 1080,
+        }))
+        vi.stubGlobal('lgs', {
+            viewer: {
+                camera: {
+                    frustum: {
+                        fovy:         Math.PI / 3,
+                        aspectRatio:  16 / 9,
+                    },
+                },
+            },
+        })
+
+        const collision = cameraCollisionForFrame(mode, {
+            frame: {
+                destination: new Cartesian3(0, 0, 0),
+                direction:   new Cartesian3(0, 1, 0),
+                up:          new Cartesian3(0, 0, 1),
+            },
+            sample,
+            cameraSettings: {
+                hysteresis: {
+                    zone:        {top: 0.35, left: 0.35, width: 0.3, height: 0.3},
+                    marginRatio: 0.12,
+                },
+            },
+        })
+
+        expect(collision).toEqual(expect.objectContaining({
+            hard:       true,
+            shouldMove: true,
+        }))
+    })
+
+    it('treats a missing live Draft projection as a hard camera collision', () => {
+        const {mode, call} = makeMode()
+        call.cesiumScene = vi.fn(() => null)
+        const collision = cameraCollisionForSample(mode, {
+            progress:   0.5,
+            longitude:  2,
+            latitude:   48,
+            altitude:   120,
+            height:     120,
+        }, {
+            hysteresis: {
+                zone:        {top: 0.35, left: 0.35, width: 0.3, height: 0.3},
+                marginRatio: 0.12,
+            },
+        })
+
+        expect(collision).toEqual(expect.objectContaining({
+            hard:       true,
+            shouldMove: true,
+        }))
+    })
+
+    it('does not restart a valid predictive Draft Navigation transition every frame', () => {
+        vi.stubGlobal('lgs', {
+            settings: {
+                ui: {
+                    replay: {
+                        camera: {
+                            positionMode: 'system',
+                            pitch:        -60,
+                            altitude:     1000,
+                        },
+                        marker: {mode: REPLAY_MARKER_MODE_NAVIGATION},
+                    },
+                },
+            },
+            stores: {
+                replay: {
+                    camera: {positionMode: 'system', pitch: -60, altitude: 1000},
+                },
+            },
+            viewer: {camera: {}},
+        })
+
+        const {mode, state, call} = makeMode()
+        const sample = {
+            progress:          0.5,
+            distanceFromStart: 100,
+            longitude:         2,
+            latitude:          48,
+            altitude:          120,
+            height:            120,
+        }
+        state.cameraMode = REPLAY_MARKER_MODE_NAVIGATION
+        state.cameraApplyingView = true
+        state.cameraBezierFrame = vi.fn()
+        state.lastNavigationRecenterAt = 0
+        call.now = vi.fn(() => 100)
+        call.cameraViewForSample = vi.fn(({sample: targetSample}) => ({
+            sample:       targetSample,
+            heading:      0,
+            pitch:        -Math.PI / 3,
+            cameraHeight: 1000,
+        }))
+        call.cameraLookaheadSample = vi.fn(() => ({
+            ...sample,
+            progress:          0.7,
+            distanceFromStart: 140,
+        }))
+        let collisionCall = 0
+        call.cameraCollisionForSample = vi.fn(() => {
+            collisionCall += 1
+            return {hard: collisionCall === 2}
+        })
+        call.rememberNominalCameraView = vi.fn()
+        call.recenterCameraToSample = vi.fn()
+
+        updateCamera(mode, {
+            sample,
+            progress: 0.5,
+            source:   'playback',
+        })
+
+        expect(call.cameraCollisionForSample).toHaveBeenCalledTimes(2)
+        expect(call.recenterCameraToSample).not.toHaveBeenCalled()
+    })
+
+    it('uses the HQ follower for a predictive-only Navigation correction', () => {
+        vi.stubGlobal('lgs', {
+            settings: {
+                ui: {
+                    replay: {
+                        camera: {
+                            positionMode: 'system',
+                            pitch:        -60,
+                            altitude:     1000,
+                        },
+                        marker: {mode: REPLAY_MARKER_MODE_NAVIGATION},
+                    },
+                },
+            },
+            stores: {
+                replay: {
+                    camera: {positionMode: 'system', pitch: -60, altitude: 1000},
+                },
+            },
+            viewer: {camera: {}},
+        })
+
+        const {mode, call} = makeMode()
+        const sample = {
+            progress:          0.5,
+            distanceFromStart: 100,
+            longitude:         2,
+            latitude:          48,
+            altitude:          120,
+            height:            120,
+        }
+        const predictedSample = {
+            ...sample,
+            progress:          0.6,
+            distanceFromStart: 120,
+        }
+        const nominalView = {
+            sample:       predictedSample,
+            heading:      0.25,
+            pitch:        -Math.PI / 3,
+            cameraHeight: 1000,
+        }
+        let collisionCall = 0
+        call.cameraCollisionForFrame = vi.fn(() => {
+            collisionCall += 1
+            return {hard: collisionCall === 2}
+        })
+        call.cameraCollisionForSample = vi.fn(() => ({hard: false}))
+        call.cameraLookaheadSample = vi.fn(() => predictedSample)
+        call.cameraViewForSample = vi.fn(({sample: targetSample}) => ({
+            ...nominalView,
+            sample: targetSample,
+        }))
+        call.rememberNominalCameraView = vi.fn()
+
+        updateCamera(mode, {
+            sample,
+            progress:     sample.progress,
+            source:       'playback',
+            logicalCamera: true,
+            frameTimeMs:  1000,
+        })
+
+        expect(call.cameraCollisionForFrame).toHaveBeenCalledTimes(3)
+        expect(call.applyDeterministicCameraFollower).toHaveBeenCalledOnce()
+        expect(call.applyCameraFrame).not.toHaveBeenCalled()
     })
 
     it('applies the prepared constrained path for Draft and HQ logical frames', () => {

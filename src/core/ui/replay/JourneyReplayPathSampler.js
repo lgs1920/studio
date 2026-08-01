@@ -14,8 +14,8 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { Mobility } from '@Utils/Mobility'
 import {logicalCoordinateSegmentsFromTrack, logicalTrackPathFromJourney} from './JourneyReplayLogicalTrackPath'
+import { JourneyReplayTurfPath } from './JourneyReplayTurfPath'
 
 const LINE_STRING = 'LineString'
 const MULTI_LINE_STRING = 'MultiLineString'
@@ -48,6 +48,7 @@ const isoTime = millis => Number.isFinite(millis) ? new Date(millis).toISOString
 const rawCoordinateSegmentsCache = new WeakMap()
 const timeSegmentsCache = new WeakMap()
 const metricBreakpointsCache = new WeakMap()
+const segmentTurfPathCache = new WeakMap()
 
 const getWeakMapBucket = (cache, key) => {
     if (!key || (typeof key !== 'object' && typeof key !== 'function')) {
@@ -120,6 +121,135 @@ const cloneSample = sample => sample ? {
 } : null
 
 const interpolateValue = (start, end, ratio) => start + ((end - start) * ratio)
+
+/**
+ * Resolve the shortest signed angular delta between two headings.
+ *
+ * @param {number} start - Start heading in radians.
+ * @param {number} end - End heading in radians.
+ * @returns {number} Shortest signed delta in radians.
+ */
+const angularDelta = (start, end) => {
+    if (!Number.isFinite(start) || !Number.isFinite(end)) {
+        return null
+    }
+
+    const fullTurn = Math.PI * 2
+    return ((end - start + Math.PI) % fullTurn + fullTurn) % fullTurn - Math.PI
+}
+
+/**
+ * Resolve a local geodesic heading between two replay samples.
+ *
+ * @param {object|null} start - Start sample.
+ * @param {object|null} end - End sample.
+ * @returns {number|null} Heading in radians, clockwise from north.
+ */
+const headingBetweenSamples = (start, end) => {
+    const startLongitude = finiteNumber(start?.longitude)
+    const startLatitude = finiteNumber(start?.latitude)
+    const endLongitude = finiteNumber(end?.longitude)
+    const endLatitude = finiteNumber(end?.latitude)
+    if ([startLongitude, startLatitude, endLongitude, endLatitude].some(value => value === null)) {
+        return null
+    }
+
+    const radians = Math.PI / 180
+    let longitudeDelta = (endLongitude - startLongitude) * radians
+    while (longitudeDelta > Math.PI) {
+        longitudeDelta -= Math.PI * 2
+    }
+    while (longitudeDelta < -Math.PI) {
+        longitudeDelta += Math.PI * 2
+    }
+    const latitudeStart = startLatitude * radians
+    const latitudeEnd = endLatitude * radians
+    const east = longitudeDelta * Math.cos((latitudeStart + latitudeEnd) / 2)
+    const north = (endLatitude - startLatitude) * radians
+    if (Math.hypot(east, north) <= Number.EPSILON) {
+        return null
+    }
+
+    return Math.atan2(east, north)
+}
+
+/**
+ * Project a geographic sample into a local east/north metric frame.
+ *
+ * @param {Object} origin - Projection origin.
+ * @param {Object} sample - Geographic sample to project.
+ * @returns {{x: number, y: number}|null} Local metric coordinates.
+ */
+const projectToLocalMeters = (origin, sample) => {
+    const originLongitude = finiteNumber(origin?.longitude)
+    const originLatitude = finiteNumber(origin?.latitude)
+    const longitude = finiteNumber(sample?.longitude)
+    const latitude = finiteNumber(sample?.latitude)
+    if ([originLongitude, originLatitude, longitude, latitude].some(value => value === null)) {
+        return null
+    }
+
+    const radians = Math.PI / 180
+    const earthRadiusMeters = 6_371_008.8
+    const latitudeScale = Math.cos(originLatitude * radians)
+    return {
+        x: (longitude - originLongitude) * radians * earthRadiusMeters * latitudeScale,
+        y: (latitude - originLatitude) * radians * earthRadiusMeters,
+    }
+}
+
+/**
+ * Resolve a stable path heading from a spatial window using the beta.2 PCA
+ * method, oriented by the future route chord to preserve turn anticipation.
+ *
+ * @param {Object[]} samples - Ordered samples in the spatial window.
+ * @param {Object} current - Current replay sample.
+ * @param {Object} future - Future replay sample.
+ * @returns {number|null} Stable heading in radians.
+ */
+const headingFromWindowSamples = (samples, current, future) => {
+    if (!Array.isArray(samples) || samples.length < 2) {
+        return headingBetweenSamples(current, future)
+    }
+
+    const origin = samples[Math.floor(samples.length / 2)] ?? current
+    const localPoints = samples
+        .map(sample => projectToLocalMeters(origin, sample))
+        .filter(Boolean)
+    if (localPoints.length < 2) {
+        return headingBetweenSamples(current, future)
+    }
+
+    const meanX = localPoints.reduce((sum, point) => sum + point.x, 0) / localPoints.length
+    const meanY = localPoints.reduce((sum, point) => sum + point.y, 0) / localPoints.length
+    let covarianceXX = 0
+    let covarianceXY = 0
+    let covarianceYY = 0
+    localPoints.forEach(point => {
+        const deltaX = point.x - meanX
+        const deltaY = point.y - meanY
+        covarianceXX += deltaX * deltaX
+        covarianceXY += deltaX * deltaY
+        covarianceYY += deltaY * deltaY
+    })
+
+    if (covarianceXX + covarianceYY <= Number.EPSILON) {
+        return headingBetweenSamples(current, future)
+    }
+
+    const axisAngle = 0.5 * Math.atan2(
+        2 * covarianceXY,
+        covarianceXX - covarianceYY,
+    )
+    let heading = Math.atan2(Math.cos(axisAngle), Math.sin(axisAngle))
+    const futureHeading = headingBetweenSamples(current, future)
+    const orientationDelta = angularDelta(heading, futureHeading)
+    if (orientationDelta !== null && Math.abs(orientationDelta) > (Math.PI / 2)) {
+        heading += Math.PI
+    }
+
+    return heading
+}
 
 const interpolateNullableValue = (start, end, ratio) => {
     const startValue = finiteNumber(start)
@@ -308,6 +438,11 @@ export class JourneyReplayPathSampler {
                     return
                 }
 
+                const turfPath = new JourneyReplayTurfPath(points.map(point => [point.longitude, point.latitude, point.altitude]))
+                if (!turfPath.isValid) {
+                    return
+                }
+
                 JourneyReplayPathSampler.assignSegmentTimes(points, timeSegments[segmentIndex])
 
                 const startIndex = this.#samples.length
@@ -315,7 +450,7 @@ export class JourneyReplayPathSampler {
 
                 points.forEach((point, pointIndex) => {
                     const segmentDistance = pointIndex > 0
-                        ? Mobility.distance(points[pointIndex - 1], point)
+                        ? turfPath.cumulativeDistances[pointIndex] - turfPath.cumulativeDistances[pointIndex - 1]
                         : 0
 
                     if (pointIndex > 0) {
@@ -349,7 +484,7 @@ export class JourneyReplayPathSampler {
                     this.#samples.push(sample)
                 })
 
-                this.#segments.push({
+                const segment = {
                     key: `${track.slug}:${segmentIndex}`,
                     trackSlug: track.slug,
                     trackIndex,
@@ -358,7 +493,9 @@ export class JourneyReplayPathSampler {
                     endIndex: this.#samples.length - 1,
                     startDistance,
                     endDistance: cumulativeDistance,
-                })
+                }
+                segmentTurfPathCache.set(segment, turfPath)
+                this.#segments.push(segment)
             })
 
             const elevationBreakpoints = JourneyReplayPathSampler.cumulativeElevationBreakpointsFromTrack(
@@ -447,6 +584,122 @@ export class JourneyReplayPathSampler {
         return this.atDistance(this.#totalDistance * safeProgress)
     }
 
+    /**
+     * Resolve a metric lookahead sample from replay progress.
+     *
+     * The lookahead is derived from the local route speed and replay time,
+     * then clamped to a deterministic minimum and the route end. This keeps
+     * prediction independent from render cadence and from guide-point density.
+     *
+     * @param {number} progress - Normalized replay progress.
+     * @param {object} options - Lookahead configuration.
+     * @param {number} [options.seconds=1] - Prediction horizon in seconds.
+     * @param {number} [options.minimumMeters=120] - Minimum metric horizon.
+     * @returns {Object|null} Predicted replay sample.
+     */
+    lookaheadAtProgress = (progress = 0, {seconds = 1, minimumMeters = 120} = {}) => {
+        const anchor = this.atProgress(progress)
+        if (!anchor || this.#samples.length < 2 || this.#totalDistance <= 0) {
+            return anchor
+        }
+
+        const safeSeconds = Math.max(0, finiteNumber(seconds) ?? 0)
+        const safeMinimumMeters = Math.max(0, finiteNumber(minimumMeters) ?? 0)
+        const anchorDistance = anchor.distanceFromStart
+        const speedProbeMeters = Math.min(
+            Math.max(20, safeMinimumMeters),
+            Math.max(0, this.#totalDistance - anchorDistance),
+        )
+        const probeDistance = Math.min(this.#totalDistance, anchorDistance + speedProbeMeters)
+        const probe = this.atDistance(probeDistance)
+        const timeDeltaSeconds = Number.isFinite(anchor.timeMillis)
+                                 && Number.isFinite(probe?.timeMillis)
+                                 && probe.timeMillis > anchor.timeMillis
+            ? (probe.timeMillis - anchor.timeMillis) / 1000
+            : 0
+        const localSpeed = timeDeltaSeconds > 0
+            ? Math.max(0, (probeDistance - anchorDistance) / timeDeltaSeconds)
+            : 0
+        const predictedDistance = anchorDistance + Math.max(
+            safeMinimumMeters,
+            localSpeed * safeSeconds,
+        )
+
+        return this.atDistance(Math.min(this.#totalDistance, predictedDistance))
+    }
+
+    /**
+     * Resolve a stable route heading from a Turf metric window at replay progress.
+     *
+     * @param {number} progress - Normalized replay progress.
+     * @param {object} options - Heading prediction options.
+     * @param {number} [options.lookaheadSeconds=0] - Future tangent horizon.
+     * @param {number} [options.windowSeconds=0] - Chord window used to anticipate turns.
+     * @param {number} [options.minimumMeters=120] - Minimum local heading distance.
+     * @returns {number} Heading in radians, clockwise from north.
+     */
+    headingAtProgress = (progress = 0, {
+        lookaheadSeconds = 0,
+        windowSeconds = 0,
+        minimumMeters = 120,
+    } = {}) => {
+        const safeLookaheadSeconds = Math.max(0, finiteNumber(lookaheadSeconds) ?? 0)
+        const safeWindowSeconds = Math.max(0, finiteNumber(windowSeconds) ?? 0)
+        const safeMinimumMeters = Math.max(0, finiteNumber(minimumMeters) ?? 120)
+        const anchor = this.atProgress(progress)
+        if (!anchor) {
+            return 0
+        }
+
+        if (safeLookaheadSeconds <= 0) {
+            const segment = this.#segmentForDistance(anchor.distanceFromStart)
+            const turfPath = segment ? segmentTurfPathCache.get(segment) : null
+            const tangentDistance = segment
+                ? anchor.distanceFromStart - segment.startDistance
+                : 0
+            const tangent = turfPath?.tangentAtDistance(tangentDistance)
+            return Number.isFinite(tangent?.bearingDegrees)
+                ? tangent.bearingDegrees * (Math.PI / 180)
+                : 0
+        }
+
+        const future = this.lookaheadAtProgress(progress, {
+            seconds:       safeLookaheadSeconds,
+            minimumMeters: safeMinimumMeters,
+        })
+        if (!future) {
+            return 0
+        }
+
+        // beta.2 used a 400 m spatial window. Keep the horizon metric and
+        // deterministic, while allowing callers to request a smaller window
+        // for short synthetic paths and tests.
+        const futureDistance = Math.max(
+            safeMinimumMeters,
+            (future.distanceFromStart ?? 0) - (anchor.distanceFromStart ?? 0),
+        )
+        const pastWindowRatio = safeLookaheadSeconds > 0 && safeWindowSeconds > 0
+            ? clamp(safeWindowSeconds / safeLookaheadSeconds, 0.5, 1)
+            : 1
+        const pastDistance = Math.max(
+            0,
+            (anchor.distanceFromStart ?? 0) - (futureDistance * pastWindowRatio),
+        )
+        const sampleCount = 9
+        const windowSamples = Array.from({length: sampleCount}, (_, index) => {
+            const ratio = index / (sampleCount - 1)
+            return this.atDistance(
+                pastDistance + ((future.distanceFromStart - pastDistance) * ratio),
+            )
+        }).filter(Boolean)
+        const stableHeading = headingFromWindowSamples(windowSamples, anchor, future)
+        if (stableHeading !== null) {
+            return stableHeading
+        }
+
+        return headingBetweenSamples(anchor, future) ?? 0
+    }
+
     atDistance = (distance = 0) => {
         if (this.#samples.length === 0) {
             return null
@@ -486,6 +739,10 @@ export class JourneyReplayPathSampler {
         return interpolateSample(start, end, targetDistance, this.#totalDistance)
     }
 
+    #segmentForDistance = distance => this.#segments.find(segment => (
+        distance >= segment.startDistance && distance <= segment.endDistance
+    )) ?? this.#segments.at(-1)
+
     nearestToLonLat = (coordinates) => {
         const point = pointFromCoordinate(coordinates)
         if (!point || this.#samples.length === 0) {
@@ -496,7 +753,10 @@ export class JourneyReplayPathSampler {
         let nearestDistance = Infinity
 
         this.#samples.forEach(sample => {
-            const distance = Mobility.distance(point, sample)
+            const distance = JourneyReplayTurfPath.distanceBetween(
+                [point.longitude, point.latitude, point.altitude],
+                [sample.longitude, sample.latitude, sample.altitude],
+            )
             if (distance < nearestDistance) {
                 nearestDistance = distance
                 nearest = sample
@@ -590,9 +850,26 @@ export class JourneyReplayPathSampler {
             const start = segmentSamples[index - 1]
             const end = segmentSamples[index]
             if (targetDistance <= end.distanceFromStart) {
-                return end.distanceFromStart === start.distanceFromStart
-                       ? cloneSample(end)
-                       : interpolateSample(start, end, targetDistance, this.#totalDistance)
+                if (end.distanceFromStart === start.distanceFromStart) {
+                    return cloneSample(end)
+                }
+
+                const sample = interpolateSample(start, end, targetDistance, this.#totalDistance)
+                const segment = this.#segments.find(candidate => candidate.startIndex <= this.#samples.indexOf(start)
+                    && candidate.endIndex >= this.#samples.indexOf(end))
+                const turfPath = segment ? segmentTurfPathCache.get(segment) : null
+                if (!turfPath) {
+                    return sample
+                }
+
+                const position = turfPath.positionAtDistance(targetDistance - (segment.startDistance ?? 0))
+                return {
+                    ...sample,
+                    longitude: position.longitude,
+                    latitude: position.latitude,
+                    altitude: position.altitude,
+                    height: position.altitude,
+                }
             }
         }
 
@@ -689,7 +966,10 @@ export class JourneyReplayPathSampler {
         let distance = 0
         points.forEach((item, index) => {
             if (index > 0) {
-                distance += Mobility.distance(points[index - 1].point, item.point)
+                distance += JourneyReplayTurfPath.distanceBetween(
+                    [points[index - 1].point.longitude, points[index - 1].point.latitude],
+                    [item.point.longitude, item.point.latitude],
+                )
             }
             item.distance = distance
         })
@@ -902,7 +1182,10 @@ export class JourneyReplayPathSampler {
         let distance = 0
         points.forEach((point, index) => {
             if (index > 0) {
-                distance += Mobility.distance(points[index - 1], point)
+                distance += JourneyReplayTurfPath.distanceBetween(
+                    [points[index - 1].longitude, points[index - 1].latitude],
+                    [point.longitude, point.latitude],
+                )
             }
             point.replaySegmentDistance = distance
         })

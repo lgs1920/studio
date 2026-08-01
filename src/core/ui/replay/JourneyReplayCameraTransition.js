@@ -35,11 +35,16 @@ import {
     CAMERA_HEADING_HYSTERESIS_RADIANS,
     CAMERA_HEADING_LOOKAHEAD_PROGRESS,
     CAMERA_HEADING_MIN_CHANGE_RADIANS,
+    CAMERA_HEADING_MIN_RESPONSE_FACTOR,
+    CAMERA_HEADING_MAX_RESPONSE_FACTOR,
     CAMERA_VIEW_POSITION_EPSILON_METERS,
     CAMERA_VIEW_ANGLE_EPSILON_RADIANS,
     CAMERA_TIMING_START_ANGLE_RADIANS,
     CAMERA_TIMING_SETTLE_ANGLE_RADIANS,
     CAMERA_DETERMINISTIC_FOLLOW_RESPONSE_SECONDS,
+    REPLAY_NAVIGATION_MAX_HEADING_DRIFT_DEGREES,
+    REPLAY_NAVIGATION_MAX_LATERAL_DRIFT_METERS,
+    REPLAY_NAVIGATION_MIN_TURN_DRIFT_DEGREES,
     CAMERA_REDIRECT_MAX_TRANSITION_SECONDS,
     CAMERA_REDIRECT_LOOKAHEAD_DISTANCE_METERS,
     CAMERA_REDIRECT_TRACE_VISIBILITY_OFFSETS_METERS,
@@ -404,8 +409,15 @@ export const startDeterministicCameraTransition = (mode, {
         const replayMotionProfile = {
             turnDrift: {
                 enabled:               true,
-                maxHeadingOffsetDeg:    10,
-                maxLateralOffsetMeters: 60,
+                maxHeadingOffsetDeg:    trackingMode === REPLAY_MARKER_MODE_NAVIGATION
+                    ? REPLAY_NAVIGATION_MAX_HEADING_DRIFT_DEGREES
+                    : 10,
+                maxLateralOffsetMeters: trackingMode === REPLAY_MARKER_MODE_NAVIGATION
+                    ? REPLAY_NAVIGATION_MAX_LATERAL_DRIFT_METERS
+                    : 60,
+                minTurnAngleDeg:        trackingMode === REPLAY_MARKER_MODE_NAVIGATION
+                    ? REPLAY_NAVIGATION_MIN_TURN_DRIFT_DEGREES
+                    : 8,
             },
         }
         const applyLocalFrameOffset = (frame, offsetTarget, focusTarget, {
@@ -810,7 +822,7 @@ export const headingEasingFactor = (mode, cameraSettings, targetHeading) => {
         previousHeading: state.lastCameraHeading,
         nextHeading:     targetHeading,
         easing:          cameraSettings?.hysteresis?.easing,
-        minFactor:       0.04,
-        maxFactor:       0.18,
+        minFactor:       CAMERA_HEADING_MIN_RESPONSE_FACTOR,
+        maxFactor:       CAMERA_HEADING_MAX_RESPONSE_FACTOR,
     })
 }

@@ -24,6 +24,13 @@ import {
 import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
 import {REPLAY_MARKER_MODE_NAVIGATION} from './JourneyReplayProgressionStyle'
 import {
+    CAMERA_HEADING_MAX_RESPONSE_FACTOR,
+    CAMERA_HEADING_MIN_RESPONSE_FACTOR,
+    REPLAY_NAVIGATION_MAX_HEADING_DRIFT_DEGREES,
+    REPLAY_NAVIGATION_MAX_LATERAL_DRIFT_METERS,
+    REPLAY_NAVIGATION_MIN_TURN_DRIFT_DEGREES,
+} from './JourneyReplayCameraShared'
+import {
     JOURNEY_REPLAY_INTERNAL_CALL,
     JOURNEY_REPLAY_INTERNAL_STATE,
 } from './JourneyReplayInternal'
@@ -39,6 +46,7 @@ const TERRAIN_REDIRECT_RELEASE_SECONDS = 1
 const TERRAIN_REDIRECT_CYCLE_SECONDS = TERRAIN_REDIRECT_ATTACK_SECONDS
                                          + TERRAIN_REDIRECT_HOLD_SECONDS
                                          + TERRAIN_REDIRECT_RELEASE_SECONDS
+const REPLAY_TURN_DRIFT_RESPONSE_SECONDS = 1.5
 
 /**
  * Apply smoothstep easing to a normalized value.
@@ -287,8 +295,15 @@ export const resolveConstrainedReplayCameraPath = (mode, {
     const markerRadius = finiteNumber(globalThis.lgs?.stores?.replay?.markerRadius) ?? 35
     const turnDriftOptions = {
         enabled:               true,
-        maxHeadingOffsetDeg:    10,
-        maxLateralOffsetMeters: 60,
+        maxHeadingOffsetDeg:    trackingMode === REPLAY_MARKER_MODE_NAVIGATION
+            ? REPLAY_NAVIGATION_MAX_HEADING_DRIFT_DEGREES
+            : 10,
+        maxLateralOffsetMeters: trackingMode === REPLAY_MARKER_MODE_NAVIGATION
+            ? REPLAY_NAVIGATION_MAX_LATERAL_DRIFT_METERS
+            : 60,
+        minTurnAngleDeg:        trackingMode === REPLAY_MARKER_MODE_NAVIGATION
+            ? REPLAY_NAVIGATION_MIN_TURN_DRIFT_DEGREES
+            : 8,
     }
     const compiledDurationSeconds = Math.max(
         1,
@@ -297,6 +312,7 @@ export const resolveConstrainedReplayCameraPath = (mode, {
     let previousHeading = null
     let previousPitch = null
     let previousProgress = null
+    let previousLateralDriftMeters = 0
     let terrainRedirectCycle = null
     let terrainOcclusionHandled = false
     /**
@@ -335,6 +351,7 @@ export const resolveConstrainedReplayCameraPath = (mode, {
         }
 
         const safeProgress = clamp(finiteNumber(progress) ?? 0, 0, 1)
+        const hadPreviousProgress = previousProgress !== null
         const deltaSeconds = previousProgress === null
                              ? 0
                              : Math.max(
@@ -346,8 +363,8 @@ export const resolveConstrainedReplayCameraPath = (mode, {
                 previousHeading,
                 nextHeading: rawView.heading,
                 easing:      cameraSettings?.hysteresis?.easing,
-                minFactor:   0.04,
-                maxFactor:   0.18,
+                minFactor:   CAMERA_HEADING_MIN_RESPONSE_FACTOR,
+                maxFactor:   CAMERA_HEADING_MAX_RESPONSE_FACTOR,
             }),
             deltaSeconds,
         )
@@ -455,11 +472,29 @@ export const resolveConstrainedReplayCameraPath = (mode, {
             progress,
             turnDriftOptions,
         )
-        return drift?.lateralOffsetMeters && target
+        const driftLimit = Math.max(
+            0,
+            finiteNumber(turnDriftOptions.maxLateralOffsetMeters) ?? 0,
+        )
+        const rawLateralDriftMeters = clamp(
+            finiteNumber(drift?.lateralOffsetMeters) ?? 0,
+            -driftLimit,
+            driftLimit,
+        )
+        const driftResponse = trackingMode === REPLAY_MARKER_MODE_NAVIGATION
+            ? REPLAY_TURN_DRIFT_RESPONSE_SECONDS
+            : REPLAY_TURN_DRIFT_RESPONSE_SECONDS * 0.85
+        const driftFactor = hadPreviousProgress
+            ? 1 - Math.exp(-deltaSeconds / driftResponse)
+            : 0
+        previousLateralDriftMeters = clamp(previousLateralDriftMeters + (
+            rawLateralDriftMeters - previousLateralDriftMeters
+        ) * clamp(driftFactor, 0, 1), -driftLimit, driftLimit)
+        return Math.abs(previousLateralDriftMeters) > Number.EPSILON && target
             ? offsetConstrainedReplayFrame(
                 standardFrame,
                 target,
-                drift.lateralOffsetMeters,
+                previousLateralDriftMeters,
             )
             : standardFrame
     }
@@ -480,11 +515,50 @@ export const resolveConstrainedReplayCameraPath = (mode, {
      * @returns {object|null} Journey sample.
      */
     const sampleAtProgress = progress => state.sampler.atProgress(progress)
+    const futureSampleAtProgress = (progress, seconds) => state.sampler.lookaheadAtProgress(
+        progress,
+        {
+            seconds,
+            minimumMeters: 120,
+        },
+    )
+    const futureFrameAtProgress = (sample, progress) => {
+        const futureView = call.cameraViewForSample({
+            sample,
+            progress,
+            source: 'drawer',
+            cameraSettings,
+            markerSettings,
+            collision: true,
+            previousHeading: null,
+            previousPitch: null,
+        })
+        if (!futureView) {
+            return null
+        }
+
+        const frame = call.cameraRecenterFrame({
+            sample: futureView.sample,
+            heading: futureView.heading,
+            pitch: futureView.pitch,
+            cameraSettings,
+            cameraHeight: futureView.cameraHeight,
+        })
+        return frame
+            ? {
+                destination: frame.destination,
+                direction: frame.direction,
+                up: frame.correctedUp,
+            }
+            : null
+    }
     const path = buildConstrainedReplayCameraPath({
         progresses: guideProgresses,
         sampleAtProgress,
         frameForSample,
         targetForSample,
+        futureSampleAtProgress,
+        futureFrameAtProgress,
         projectTarget,
         trackingMode: normalizedTrackingMode,
         triggerZone,
