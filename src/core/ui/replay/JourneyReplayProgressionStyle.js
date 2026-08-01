@@ -98,7 +98,8 @@ export const DEFAULT_REPLAY_CAMERA = {
     positionMode:  REPLAY_CAMERA_POSITION_SYSTEM,
     altitudeMode:  REPLAY_CAMERA_ALTITUDE_CONSTANT,
     // Single persisted altitude value.
-    // In fixed mode it is an absolute altitude; in ground-offset mode it is the offset above terrain.
+    // In fixed mode it is an absolute altitude; in ground-offset mode it is
+    // the offset above the rendered replay marker.
     altitude:      1200,
     headingOffset: 0,
     debug:         false,
@@ -324,7 +325,8 @@ export const normalizeJourneyReplayMarker = (marker = {}) => ({
  *
  * `altitudeMode` switches how the single persisted altitude is interpreted:
  * - `constant`: absolute camera altitude.
- * - `ground-offset`: altitude above local terrain.
+ * - `ground-offset`: altitude above the rendered replay marker/terrain at the
+ *   marker position, never above the terrain below the displaced camera.
  *
  * `hysteresis` drives the Dynamic mode:
  * - `marginRatio`: inner safe zone width/height margin on each side.

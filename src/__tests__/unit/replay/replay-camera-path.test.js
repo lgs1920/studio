@@ -58,6 +58,7 @@ import {
 import {
     interpolateCameraFrame,
     startDeterministicCameraTransition,
+    cameraRecenterFrame as resolveCameraRecenterFrame,
 } from '@Core/ui/replay/JourneyReplayCameraTransition'
 import {
     cancelCameraBezierTransition,
@@ -830,6 +831,86 @@ describe('Journey replay camera paths', () => {
             pitch:   nominalView.pitch,
             force:   true,
         }))
+    })
+
+    it('applies a temporary pitch redirect when navigation is hidden by terrain', () => {
+        vi.stubGlobal('lgs', {
+            settings: {
+                ui: {
+                    replay: {
+                        camera: {
+                            positionMode: 'system',
+                            heading:      0,
+                            pitch:        -45,
+                            altitude:     1000,
+                            hysteresis:   {easing: 0.18},
+                        },
+                        marker: {mode: REPLAY_MARKER_MODE_NAVIGATION},
+                    },
+                },
+            },
+            stores: {
+                replay: {
+                    camera: {positionMode: 'system', heading: 0, pitch: -45, altitude: 1000},
+                    captureFps: 30,
+                },
+            },
+            viewer: {camera: {}},
+        })
+
+        const {mode, state, call} = makeMode()
+        state.cameraMode = REPLAY_MARKER_MODE_NAVIGATION
+        const sample = {
+            progress:          0.5,
+            distanceFromStart: 100,
+            longitude:         1,
+            latitude:          2,
+            altitude:          120,
+            height:            120,
+        }
+        const nominalView = {
+            sample,
+            heading:      0.35,
+            pitch:        -0.5,
+            cameraHeight: 800,
+        }
+        call.cameraViewForSample = vi.fn(() => nominalView)
+        call.cameraLookaheadSample = vi.fn(() => ({
+            ...sample,
+            progress:          0.6,
+            distanceFromStart: 120,
+        }))
+        call.cameraCollisionForSample = vi.fn(() => ({hard: false}))
+        call.renderedTraceVisibleForSample = vi.fn(() => false)
+        call.cameraViewVisibilityForSample = vi.fn(() => true)
+        call.cameraViewWithRedirectState = vi.fn((view, redirectState) => ({
+            ...view,
+            pitch: view.pitch + redirectState.pitchOffset,
+        }))
+        call.findCameraRedirectState = vi.fn(() => ({
+            headingOffset: 0,
+            pitchOffset:   -0.2,
+        }))
+        call.recenterCameraToSample = vi.fn()
+        call.rememberNominalCameraView = vi.fn()
+
+        updateCamera(mode, {
+            sample,
+            progress: sample.progress,
+            source:   'playback',
+        })
+
+        expect(call.findCameraRedirectState).toHaveBeenCalledOnce()
+        expect(call.recenterCameraToSample).toHaveBeenCalledWith(expect.objectContaining({
+            sample,
+            pitch:        -0.7,
+            force:        true,
+            trackingMode: REPLAY_MARKER_MODE_NAVIGATION,
+        }))
+        expect(state.cameraRedirectState).toEqual({
+            headingOffset: 0,
+            pitchOffset:   -0.2,
+        })
     })
 
     it('applies the logical camera pose without asking Cesium to build a path', () => {
@@ -2050,5 +2131,76 @@ describe('Journey replay camera paths', () => {
 
         expect(call.terrainHeightForLonLat).not.toHaveBeenCalled()
         expect(cameraHeight).toBe(400)
+    })
+
+    it('anchors ground offset to the marker instead of the live camera terrain', () => {
+        vi.stubGlobal('lgs', {
+            viewer: {
+                camera: {
+                    positionCartographic: {
+                        height: 9000,
+                    },
+                },
+            },
+        })
+
+        const {mode, call} = makeMode()
+        const sample = {
+            longitude: 2,
+            latitude:  48,
+            altitude:  300,
+            height:     300,
+        }
+        const markerHeight = 1200
+        call.markerRenderHeightForSample = vi.fn(() => markerHeight)
+        call.markerRenderCartesianForSample = vi.fn(() => Cartesian3.fromDegrees(
+            sample.longitude,
+            sample.latitude,
+            markerHeight,
+        ))
+        call.cameraAltitudeForSample = vi.fn(() => markerHeight + 800)
+
+        const frame = resolveCameraRecenterFrame(mode, {
+            sample,
+            heading:        0,
+            pitch:          -Math.PI / 4,
+            cameraSettings: {
+                altitudeMode: REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
+                altitude:     800,
+            },
+        })
+        expect(frame.targetHeight).toBe(markerHeight)
+        expect(frame.currentHeight).toBe(markerHeight + 800)
+        expect(frame.currentHeight).not.toBe(9000)
+        expect(call.cameraAltitudeForSample).toHaveBeenCalledWith(sample, expect.objectContaining({
+            altitudeMode: REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
+        }))
+    })
+
+    it('does not use the displaced camera height as a ground-offset fallback', () => {
+        vi.stubGlobal('lgs', {
+            viewer: {
+                camera: {
+                    positionCartographic: {
+                        height: 9000,
+                    },
+                },
+            },
+        })
+
+        const {mode, call} = makeMode()
+        call.terrainHeightForLonLat = vi.fn(() => null)
+
+        const cameraHeight = cameraAltitudeForSample(mode, {
+            longitude: 2,
+            latitude:  48,
+            altitude:  300,
+        }, {
+            altitudeMode: REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
+            altitude:     800,
+        })
+
+        expect(cameraHeight).toBe(1100)
+        expect(call.terrainHeightForLonLat).toHaveBeenCalledWith(2, 48)
     })
 })

@@ -17,6 +17,12 @@ const REPLAY_TRACKING_NAVIGATION_NARROW_CROP_RATIO = 0.75
 const REPLAY_TRACKING_NAVIGATION_NARROW_ZONE_RATIO = 0.22
 const REPLAY_TRACKING_DYNAMIC_TRIGGER_ZONE_RATIO = 0.75
 const REPLAY_TRACKING_DYNAMIC_TARGET_ZONE_RATIO = 0.3
+// Short captures need a stricter navigation trigger, while Dynamic keeps a
+// valid outer Z1 around its inner Z2 landing zone.
+export const REPLAY_TRACKING_NAVIGATION_MIN_ZONE_RATIO = 0.05
+export const REPLAY_TRACKING_DYNAMIC_MIN_ZONE_RATIO = 0.3
+const REPLAY_TRACKING_CALCULATION_LAG_SECONDS = 0.18
+const REPLAY_TRACKING_SHORT_CAPTURE_WINDOW_MULTIPLIER = 4
 export const REPLAY_DRAFT_LOOKAHEAD_FPS = 15
 export const REPLAY_HQ_LOOKAHEAD_FPS = 60
 
@@ -362,33 +368,232 @@ export const replayNavigationZone = (ratio, viewportWidth, viewportHeight) => {
     return replayCenteredZone(navigationRatio, navigationRatio)
 }
 
-export const replayRuntimeTrackingSettings = (settings = {}, viewport = {}) => {
+/**
+ * Resolve the shared timing budget used by adaptive replay tracking zones.
+ *
+ * The calculation is deliberately independent from Cesium and from the
+ * render owner. It accounts for the requested transition, one output-frame
+ * lead, a bounded calculation-lag allowance and the remaining replay time.
+ *
+ * @param {object} options - Replay timing inputs.
+ * @param {number} [options.durationSeconds=60] - Full replay timeline length.
+ * @param {number|null} [options.elapsedSeconds=null] - Current timeline time.
+ * @param {number|null} [options.remainingSeconds=null] - Explicit remaining time.
+ * @param {number} [options.transitionSeconds=2] - Requested camera transition.
+ * @param {number|null} [options.frameIntervalMs=null] - Output frame interval.
+ * @param {number|null} [options.fps=null] - Output FPS fallback.
+ * @param {number} [options.playbackRate=1] - Additional playback-rate factor.
+ * @returns {object} Renderer-independent adaptive timing diagnostics.
+ */
+export const replayAdaptiveTrackingTiming = ({
+                                                 durationSeconds = 60,
+                                                 elapsedSeconds = null,
+                                                 remainingSeconds = null,
+                                                 transitionSeconds = 2,
+                                                 frameIntervalMs = null,
+                                                 fps = null,
+                                                 playbackRate = 1,
+                                             } = {}) => {
+    const safeDurationSeconds = Math.max(0.05, finiteNumber(durationSeconds) ?? 60)
+    const safeTransitionSeconds = Math.max(0.05, finiteNumber(transitionSeconds) ?? 2)
+    const safePlaybackRate = Math.max(
+        0.1,
+        playbackRate === null || playbackRate === undefined || playbackRate === ''
+            ? 1
+            : finiteNumber(playbackRate) ?? 1,
+    )
+    const frameLeadSeconds = replayFrameLeadSeconds({
+        fps: finiteNumber(fps) ?? 30,
+        frameIntervalMs,
+    })
+    const calculationLagSeconds = REPLAY_TRACKING_CALCULATION_LAG_SECONDS
+    const effectiveTransitionSeconds = (safeTransitionSeconds * safePlaybackRate)
+                                        + frameLeadSeconds
+                                        + calculationLagSeconds
+    const explicitRemainingSeconds = remainingSeconds === null
+                                     || remainingSeconds === undefined
+                                     || remainingSeconds === ''
+        ? null
+        : finiteNumber(remainingSeconds)
+    const elapsed = elapsedSeconds === null
+                    || elapsedSeconds === undefined
+                    || elapsedSeconds === ''
+        ? null
+        : finiteNumber(elapsedSeconds)
+    const safeRemainingSeconds = explicitRemainingSeconds === null
+                                 ? elapsed === null
+                                   ? safeDurationSeconds
+                                   : clamp(safeDurationSeconds - elapsed, 0, safeDurationSeconds)
+                                 : clamp(explicitRemainingSeconds, 0, safeDurationSeconds)
+    const shortCaptureWindowSeconds = Math.max(
+        effectiveTransitionSeconds + 1,
+        effectiveTransitionSeconds * REPLAY_TRACKING_SHORT_CAPTURE_WINDOW_MULTIPLIER,
+    )
+    const adaptationSpanSeconds = Math.max(
+        0.05,
+        shortCaptureWindowSeconds - effectiveTransitionSeconds,
+    )
+    const availableSeconds = Math.min(safeDurationSeconds, safeRemainingSeconds)
+    const adaptationRatio = clamp(
+        (shortCaptureWindowSeconds - availableSeconds) / adaptationSpanSeconds,
+        0,
+        1,
+    )
+    const minimumTransitionSeconds = Math.min(
+        safeTransitionSeconds,
+        Math.max(Math.min(frameLeadSeconds, safeTransitionSeconds), safeRemainingSeconds),
+    )
+
+    return {
+        durationSeconds:            safeDurationSeconds,
+        elapsedSeconds:             elapsed === null
+                                      ? safeDurationSeconds - safeRemainingSeconds
+                                      : clamp(elapsed, 0, safeDurationSeconds),
+        remainingSeconds:           safeRemainingSeconds,
+        transitionSeconds:          safeTransitionSeconds,
+        minimumTransitionSeconds,
+        playbackRate:               safePlaybackRate,
+        frameLeadSeconds,
+        calculationLagSeconds,
+        effectiveTransitionSeconds,
+        shortCaptureWindowSeconds,
+        adaptationRatio,
+        minimumZoneRatios: {
+            // Navigation has a single Z1. Dynamic's outer Z1 and inner Z2
+            // both stop at 30%, so nesting remains valid at the floor.
+            navigationZ1: REPLAY_TRACKING_NAVIGATION_MIN_ZONE_RATIO,
+            dynamicZ1:     REPLAY_TRACKING_DYNAMIC_MIN_ZONE_RATIO,
+            dynamicZ2:     REPLAY_TRACKING_DYNAMIC_MIN_ZONE_RATIO,
+        },
+    }
+}
+
+/**
+ * Resize a normalized zone toward a centered minimum while preserving its
+ * current center and aspect ratio.
+ *
+ * @param {object} zone - Normalized zone.
+ * @param {number} minimumRatio - Minimum width and height ratio.
+ * @param {number} adaptationRatio - Interpolation amount from 0 to 1.
+ * @returns {object} Adapted normalized zone.
+ */
+const adaptReplayTrackingZone = (zone, minimumRatio, adaptationRatio) => {
+    const bounds = replayToleranceZoneBounds(zone)
+    const safeMinimumRatio = clamp(finiteNumber(minimumRatio) ?? 0.01, 0.01, 1)
+    const ratio = clamp(finiteNumber(adaptationRatio) ?? 0, 0, 1)
+    const width = clamp(lerp(bounds.right - bounds.left, safeMinimumRatio, ratio), safeMinimumRatio, 1)
+    const height = clamp(lerp(bounds.bottom - bounds.top, safeMinimumRatio, ratio), safeMinimumRatio, 1)
+    const centerX = (bounds.left + bounds.right) / 2
+    const centerY = (bounds.top + bounds.bottom) / 2
+    const left = clamp(centerX - (width / 2), 0, 1 - width)
+    const top = clamp(centerY - (height / 2), 0, 1 - height)
+    return {
+        top,
+        left,
+        width,
+        height,
+    }
+}
+
+/**
+ * Keep an inner tracking zone nested inside its outer zone.
+ *
+ * @param {object} outerZone - Normalized outer zone.
+ * @param {object} innerZone - Normalized inner zone.
+ * @returns {object} Nested normalized inner zone.
+ */
+const nestReplayTrackingZone = (outerZone, innerZone) => {
+    const outer = replayToleranceZoneBounds(outerZone)
+    const inner = replayToleranceZoneBounds(innerZone)
+    const width = Math.min(inner.right - inner.left, outer.right - outer.left)
+    const height = Math.min(inner.bottom - inner.top, outer.bottom - outer.top)
+    const requestedCenterX = (inner.left + inner.right) / 2
+    const requestedCenterY = (inner.top + inner.bottom) / 2
+    const centerX = clamp(requestedCenterX, outer.left + (width / 2), outer.right - (width / 2))
+    const centerY = clamp(requestedCenterY, outer.top + (height / 2), outer.bottom - (height / 2))
+    return {
+        top:    centerY - (height / 2),
+        left:   centerX - (width / 2),
+        width,
+        height,
+    }
+}
+
+/**
+ * Resolve renderer-independent collision zones for the current replay time.
+ *
+ * Without timing inputs this preserves the configured default geometry. With
+ * timing inputs, short captures progressively narrow Navigation Z1 to a 5%
+ * floor and Dynamic's outer Z1 and inner Z2 to a shared 30% floor. This
+ * explicit mapping keeps the outer/inner relationship valid and prevents a
+ * short capture from requesting an impossible inner target zone.
+ *
+ * @param {object} settings - Replay camera settings.
+ * @param {object} viewport - Active viewport dimensions.
+ * @param {object|null} timing - Shared replay timing inputs.
+ * @returns {object} Runtime tracking zones and optional timing diagnostics.
+ */
+export const replayRuntimeTrackingSettings = (settings = {}, viewport = {}, timing = null) => {
     const runtime = settings?.tracking ?? settings?.runtimeTracking ?? {}
     const navigation = runtime?.navigation ?? {}
     const dynamic = runtime?.dynamic ?? {}
+    const adaptiveTiming = timing && typeof timing === 'object'
+        ? timing.adaptationRatio !== undefined && timing.minimumZoneRatios
+          ? timing
+          : replayAdaptiveTrackingTiming(timing)
+        : null
+    const adaptationRatio = adaptiveTiming?.adaptationRatio ?? 0
+    const navigationBaseZone = navigation.triggerZone ?? replayNavigationZone(
+        finiteNumber(navigation.zoneRatio) ?? finiteNumber(navigation.width) ?? REPLAY_TRACKING_NAVIGATION_ZONE_RATIO,
+        viewport.width,
+        viewport.height,
+    )
+    const dynamicBaseTriggerZone = dynamic.triggerZone ?? replayCenteredZone(
+        finiteNumber(dynamic.triggerRatio) ?? finiteNumber(dynamic.width) ?? REPLAY_TRACKING_DYNAMIC_TRIGGER_ZONE_RATIO,
+        finiteNumber(dynamic.height) ?? finiteNumber(dynamic.triggerRatio) ?? REPLAY_TRACKING_DYNAMIC_TRIGGER_ZONE_RATIO,
+    )
+    const dynamicBaseTargetZone = dynamic.targetZone ?? replayCenteredZone(
+        finiteNumber(dynamic.targetWidth)
+            ?? finiteNumber(dynamic.targetRatio)
+            ?? REPLAY_TRACKING_DYNAMIC_TARGET_ZONE_RATIO,
+        finiteNumber(dynamic.targetHeight)
+            ?? finiteNumber(dynamic.targetRatio)
+            ?? finiteNumber(dynamic.targetWidth)
+            ?? REPLAY_TRACKING_DYNAMIC_TARGET_ZONE_RATIO,
+    )
+    const navigationZone = adaptiveTiming
+        ? adaptReplayTrackingZone(
+            navigationBaseZone,
+            REPLAY_TRACKING_NAVIGATION_MIN_ZONE_RATIO,
+            adaptationRatio,
+        )
+        : navigationBaseZone
+    const dynamicTriggerZone = adaptiveTiming
+        ? adaptReplayTrackingZone(
+            dynamicBaseTriggerZone,
+            REPLAY_TRACKING_DYNAMIC_MIN_ZONE_RATIO,
+            adaptationRatio,
+        )
+        : dynamicBaseTriggerZone
+    const dynamicTargetZone = adaptiveTiming
+        ? nestReplayTrackingZone(
+            dynamicTriggerZone,
+            adaptReplayTrackingZone(
+                dynamicBaseTargetZone,
+                REPLAY_TRACKING_DYNAMIC_MIN_ZONE_RATIO,
+                adaptationRatio,
+            ),
+        )
+        : dynamicBaseTargetZone
     return {
         navigation: {
-            triggerZone: navigation.triggerZone ?? replayNavigationZone(
-                finiteNumber(navigation.zoneRatio) ?? finiteNumber(navigation.width) ?? REPLAY_TRACKING_NAVIGATION_ZONE_RATIO,
-                viewport.width,
-                viewport.height,
-            ),
+            triggerZone: navigationZone,
         },
         dynamic:    {
-            triggerZone: dynamic.triggerZone ?? replayCenteredZone(
-                finiteNumber(dynamic.triggerRatio) ?? finiteNumber(dynamic.width) ?? REPLAY_TRACKING_DYNAMIC_TRIGGER_ZONE_RATIO,
-                finiteNumber(dynamic.height) ?? finiteNumber(dynamic.triggerRatio) ?? REPLAY_TRACKING_DYNAMIC_TRIGGER_ZONE_RATIO,
-            ),
-            targetZone:  dynamic.targetZone ?? replayCenteredZone(
-                finiteNumber(dynamic.targetWidth)
-                    ?? finiteNumber(dynamic.targetRatio)
-                    ?? REPLAY_TRACKING_DYNAMIC_TARGET_ZONE_RATIO,
-                finiteNumber(dynamic.targetHeight)
-                    ?? finiteNumber(dynamic.targetRatio)
-                    ?? finiteNumber(dynamic.targetWidth)
-                    ?? REPLAY_TRACKING_DYNAMIC_TARGET_ZONE_RATIO,
-            ),
+            triggerZone: dynamicTriggerZone,
+            targetZone:  dynamicTargetZone,
         },
+        ...(adaptiveTiming ? {timing: adaptiveTiming} : {}),
     }
 }
 

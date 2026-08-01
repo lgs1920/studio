@@ -539,6 +539,7 @@ export const findCameraRedirectState = (mode, {
                                     cameraSettings,
                                     markerSettings,
                                     reuseCurrentIfVisible = true,
+                                    minimumCandidateScore = null,
                                     cache = null,
                                 } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
@@ -586,6 +587,7 @@ export const findCameraRedirectState = (mode, {
 
             let bestCandidate = null
             let bestScore = Number.POSITIVE_INFINITY
+            const minimumScore = finiteNumber(minimumCandidateScore)
             for (const candidate of candidates) {
                 const visible = call.cameraViewVisibilityForSample({
                                                                         nominalView,
@@ -601,6 +603,9 @@ export const findCameraRedirectState = (mode, {
                 }
 
                 const score = call.cameraRedirectCandidateScore(candidate)
+                if (minimumScore !== null && score <= minimumScore) {
+                    continue
+                }
                 if (score < bestScore) {
                     bestCandidate = candidate
                     bestScore = score
@@ -618,6 +623,7 @@ export const findCameraRedirectState = (mode, {
             replayCameraUpdateMarkerSettingsKey(markerSettings),
             reuseCurrentIfVisible === true ? '1' : '0',
             replayCameraUpdateRedirectStateKey(state.cameraRedirectState),
+            finiteNumber(minimumCandidateScore) ?? 'null',
         ].join('|')
         return memoizeReplayCameraUpdateCache(cache, 'findCameraRedirectState', cacheKey, computeRedirectState)
     }
