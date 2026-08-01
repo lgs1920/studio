@@ -284,6 +284,34 @@ describe('replay phase 1 sampler', () => {
         expect(predicted.distanceFromStart - anchor.distanceFromStart).toBeLessThan(sampler.totalDistance * 0.01)
     })
 
+    it('keeps a time-based Navigation lookahead below the old metric floor', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#navigation-time-lookahead',
+                coordinates: [
+                    [0, 0, 0],
+                    [0.1, 0, 0],
+                    [0.2, 0, 0],
+                ],
+                times: [
+                    '2026-05-05T10:00:00.000Z',
+                    '2026-05-05T10:18:20.000Z',
+                    '2026-05-05T10:36:40.000Z',
+                ],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const anchor = sampler.atProgress(0.25)
+        const predicted = sampler.lookaheadAtProgress(0.25, {
+            seconds:       2,
+            minimumMeters: 0,
+        })
+        const distanceDelta = predicted.distanceFromStart - anchor.distanceFromStart
+
+        expect(distanceDelta).toBeGreaterThan(0)
+        expect(distanceDelta).toBeLessThan(32)
+    })
+
     it('starts turning the heading before a sharp route corner', () => {
         const journey = makeJourney([
             makeTrack({

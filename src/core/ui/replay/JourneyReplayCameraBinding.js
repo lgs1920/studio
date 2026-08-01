@@ -53,6 +53,9 @@ import {
     CAMERA_REDIRECT_RENDERED_DEPTH_CLEARANCE_METERS,
     REPLAY_TOLERANCE_RECENTER_REPLACE_DELAY_MS,
     REPLAY_TRACKING_DYNAMIC_LOOKAHEAD_FACTOR,
+    REPLAY_NAVIGATION_LOOKAHEAD_MINIMUM_METERS,
+    REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_MILLIS,
+    REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_LOOKAHEAD_SECONDS,
     CAMERA_ANGLE_PREVIEW_AXIS_LENGTH,
     CAMERA_ANGLE_PREVIEW_OFFSET_LENGTH,
     CAMERA_ANGLE_PREVIEW_ICON_SIZE,
@@ -694,6 +697,7 @@ export const updateCamera = (mode, {
         if (marker.mode === REPLAY_MARKER_MODE_TRACE) {
             state.cameraMode = marker.mode
             state.cameraFlightActive = false
+            state.navigationPredictiveViolationAt = null
             state.cameraRedirectState = null
             state.deterministicCameraFollowerAt = null
             state.deterministicCameraFollowerActive = false
@@ -920,8 +924,14 @@ export const updateCamera = (mode, {
         traceUpdateStep('camera-lookahead.begin', {
             lookaheadSeconds,
         })
+        const lookaheadMinimumMeters = marker.mode === REPLAY_MARKER_MODE_NAVIGATION
+            ? REPLAY_NAVIGATION_LOOKAHEAD_MINIMUM_METERS
+            : CAMERA_REDIRECT_LOOKAHEAD_DISTANCE_METERS
         const futureSample = typeof call.cameraLookaheadSample === 'function'
-                            ? call.cameraLookaheadSample(anchorSample, {lookaheadSeconds})
+                            ? call.cameraLookaheadSample(anchorSample, {
+                                lookaheadSeconds,
+                                minimumMeters: lookaheadMinimumMeters,
+                            })
                             : null
         const predictiveVisibilitySample = exportMode ? null : futureSample
         traceUpdateStep('camera-lookahead.end', {
@@ -974,6 +984,7 @@ export const updateCamera = (mode, {
             state.lastToleranceRecenterProgress = null
             state.lastNavigationRecenterAt = null
             state.lastNavigationRecenterProgress = null
+            state.navigationPredictiveViolationAt = null
             state.deterministicCameraTransition = null
             state.deterministicCameraFollowerAt = null
             state.deterministicCameraFollowerActive = false
@@ -1060,17 +1071,49 @@ export const updateCamera = (mode, {
                 : call.cameraCollisionForSample(sampleForCollision, navigationCameraSettings, updateCache)
             const currentCollision = collisionForSample(anchorSample)
             const predictedCollision = collisionForSample(predictedSample)
+            const nearPredictedSample = predictedCollision?.hard === true
+                                        && currentCollision?.hard !== true
+                ? (typeof call.cameraLookaheadSample === 'function'
+                    ? call.cameraLookaheadSample(anchorSample, {
+                        lookaheadSeconds: REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_LOOKAHEAD_SECONDS,
+                        minimumMeters: REPLAY_NAVIGATION_LOOKAHEAD_MINIMUM_METERS,
+                    })
+                    : null) ?? predictedSample
+                : null
+            const nearPredictedCollision = nearPredictedSample
+                ? collisionForSample(nearPredictedSample)
+                : null
+            const predictiveNavigationCandidate = currentCollision?.hard !== true
+                                                   && predictedCollision?.hard === true
+                                                   && nearPredictedCollision?.hard === true
+            const now = logicalNow
+            const predictiveViolationStartedAt = finiteNumber(state.navigationPredictiveViolationAt)
+            if (predictiveNavigationCandidate
+                && !forceToleranceRecenter
+                && !immediateToleranceRecenter
+                && (predictiveViolationStartedAt === null || now < predictiveViolationStartedAt)) {
+                state.navigationPredictiveViolationAt = now
+            }
+            else if (!predictiveNavigationCandidate || forceToleranceRecenter || immediateToleranceRecenter) {
+                state.navigationPredictiveViolationAt = null
+            }
+            const predictiveNavigationConfirmed = predictiveNavigationCandidate
+                                                   && finiteNumber(state.navigationPredictiveViolationAt) !== null
+                                                   && now - state.navigationPredictiveViolationAt
+                                                       >= REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_MILLIS
             traceUpdateStep('navigation.collision.end', {
                 currentHard: Boolean(currentCollision?.hard),
                 predictedHard: Boolean(predictedCollision?.hard),
+                nearPredictedHard: Boolean(nearPredictedCollision?.hard),
+                predictiveNavigationCandidate,
+                predictiveNavigationConfirmed,
             })
             const outsideNavigationZone = Boolean(
                 currentCollision?.hard
-                || predictedCollision?.hard
+                || predictiveNavigationConfirmed
                 || forceToleranceRecenter,
             )
             const currentNavigationViolation = Boolean(currentCollision?.hard || forceToleranceRecenter)
-            const now = logicalNow
             const currentProgress = finiteNumber(progress)
             const navigationRecenterLockMs = Math.max(
                 REPLAY_TOLERANCE_RECENTER_REPLACE_DELAY_MS,
@@ -1119,6 +1162,7 @@ export const updateCamera = (mode, {
                         ? call.cameraLookaheadSample(anchorSample, {
                               lookaheadSeconds: REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS
                                   * REPLAY_NAVIGATION_TARGET_LEAD_RATIO,
+                              minimumMeters: REPLAY_NAVIGATION_LOOKAHEAD_MINIMUM_METERS,
                           })
                         : null) ?? predictedSample
                     : anchorSample
@@ -1234,6 +1278,7 @@ export const updateCamera = (mode, {
                                           lookaheadSeconds: REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS
                                               * REPLAY_NAVIGATION_TARGET_LEAD_RATIO
                                               * ratio,
+                                          minimumMeters: REPLAY_NAVIGATION_LOOKAHEAD_MINIMUM_METERS,
                                       }) ?? anchorSample
                                 const collision = call.cameraCollisionForFrame({
                                     frame,

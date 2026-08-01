@@ -312,6 +312,7 @@ export const resetCameraController = (mode, {
         state.lastToleranceRecenterProgress = null
         state.lastNavigationRecenterAt = null
         state.lastNavigationRecenterProgress = null
+        state.navigationPredictiveViolationAt = null
         state.skipNextImmediateStartRecenter = false
         state.lastPlaybackUpdateProgressKey = null
         if (!preserveSavedCameraState) {

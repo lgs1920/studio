@@ -54,6 +54,16 @@ export const CAMERA_DETERMINISTIC_FOLLOW_RESPONSE_SECONDS = 2.2
 export const REPLAY_NAVIGATION_MAX_HEADING_DRIFT_DEGREES = 6
 export const REPLAY_NAVIGATION_MAX_LATERAL_DRIFT_METERS = 40
 export const REPLAY_NAVIGATION_MIN_TURN_DRIFT_DEGREES = 12
+// Navigation lookahead must stay time-based. A zero metric floor lets the
+// sampler use the route speed and the requested horizon instead of turning a
+// two-second HQ prediction into a much longer low-speed distance prediction.
+export const REPLAY_NAVIGATION_LOOKAHEAD_MINIMUM_METERS = 0
+// A predictive Navigation exit must remain stable before it becomes a camera
+// correction. Hard current exits do not use this confirmation window.
+export const REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_MILLIS = 250
+// This shorter probe distinguishes a sustained exit from a future point that
+// only crosses Z1 during a short alternating bend.
+export const REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_LOOKAHEAD_SECONDS = 0.75
 export const CAMERA_REDIRECT_MAX_TRANSITION_SECONDS = 1
 export const CAMERA_REDIRECT_LOOKAHEAD_DISTANCE_METERS = 120
 export const CAMERA_REDIRECT_TRACE_VISIBILITY_OFFSETS_METERS = Object.freeze([6, 12, 18, 24])
