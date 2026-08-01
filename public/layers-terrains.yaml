@@ -216,65 +216,65 @@ providers:
         type: base
         countries: [ FR ]
 
-      ## IGN Plan HD
-      - name: Plan HD
-        id: ign-plan-hd
-        image: ign-map-v2.png
-        usage:
-          type: free
-          doc: ''
+      ## IGN Plan HD (disabled)
+      # - name: Plan HD
+      #   id: ign-plan-hd
+      #   image: ign-map-v2.png
+      #   usage:
+      #     type: free
+      #     doc: ''
+      #
+      #   tile: wmts
+      #   url: 'https://data.geopf.fr/wmts'
+      #   layer: GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2
+      #   style: normal
+      #   format: image/png
+      #   tileMatrixSetID: PM
+      #   minimumLevel: 0
+      #   maximumLevel: 19
+      #   doc: 'https://data.geopf.fr'
+      #   type: base
+      #   countries: [ FR ]
 
-        tile: wmts
-        url: 'https://data.geopf.fr/wmts'
-        layer: GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2
-        style: normal
-        format: image/png
-        tileMatrixSetID: PM
-        minimumLevel: 0
-        maximumLevel: 19
-        doc: 'https://data.geopf.fr'
-        type: base
-        countries: [ FR ]
+      ## IGN Plan LiDAR HD - Terrain (disabled)
+      # - name: Plan LiDAR HD - Terrain
+      #   id: ign-plan-lidar-terrain
+      #   image: ign-map-v2.png
+      #   usage:
+      #     type: free
+      #     doc: ''
+      #
+      #   tile: wmts
+      #   url: 'https://data.geopf.fr/wmts'
+      #   layer: PLANIGN.LIDAR.TERRAIN
+      #   style: normal
+      #   format: image/png
+      #   tileMatrixSetID: PM_6_18
+      #   minimumLevel: 6
+      #   maximumLevel: 18
+      #   doc: 'https://data.geopf.fr'
+      #   type: base
+      #   countries: [ FR ]
 
-      ## IGN Plan LiDAR HD - Terrain
-      - name: Plan LiDAR HD - Terrain
-        id: ign-plan-lidar-terrain
-        image: ign-map-v2.png
-        usage:
-          type: free
-          doc: ''
-
-        tile: wmts
-        url: 'https://data.geopf.fr/wmts'
-        layer: PLANIGN.LIDAR.TERRAIN
-        style: normal
-        format: image/png
-        tileMatrixSetID: PM_6_18
-        minimumLevel: 6
-        maximumLevel: 18
-        doc: 'https://data.geopf.fr'
-        type: base
-        countries: [ FR ]
-
-      ## IGN Plan LiDAR HD - Sursol
-      - name: Plan LiDAR HD - Sursol
-        id: ign-plan-lidar-sursol
-        image: ign-map-v2.png
-        usage:
-          type: free
-          doc: ''
-
-        tile: wmts
-        url: 'https://data.geopf.fr/wmts'
-        layer: PLANIGN.LIDAR.SURSOL
-        style: normal
-        format: image/png
-        tileMatrixSetID: PM_6_18
-        minimumLevel: 6
-        maximumLevel: 18
-        doc: 'https://data.geopf.fr'
-        type: base
-        countries: [ FR ]
+      ## IGN Plan LiDAR HD - Sursol (disabled)
+      # - name: Plan LiDAR HD - Sursol
+      #   id: ign-plan-lidar-sursol
+      #   image: ign-map-v2.png
+      #   usage:
+      #     type: free
+      #     doc: ''
+      #
+      #   tile: wmts
+      #   url: 'https://data.geopf.fr/wmts'
+      #   layer: PLANIGN.LIDAR.SURSOL
+      #   style: normal
+      #   format: image/png
+      #   tileMatrixSetID: PM_6_18
+      #   minimumLevel: 6
+      #   maximumLevel: 18
+      #   doc: 'https://data.geopf.fr'
+      #   type: base
+      #   countries: [ FR ]
 
       ## IGN Legacy
       - name: Map IGN
