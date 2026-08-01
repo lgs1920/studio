@@ -29,7 +29,7 @@ export const SupportUIButton = () => {
             <WaTooltip for="launch-the-support"
                        placement={settings.toolBar.fromStart ? 'right' : 'left'}
                        content="">{'Open Help'}</WaTooltip>
-            <WaButton size={'small'} className="square-button" id="launch-the-support"
+            <WaButton size={'s'} className="square-button" id="launch-the-support"
                       onClick={() => supportUIStore.visible = !supportUIStore.visible}
                       variant={'brand'}
                       appearance="Filled">

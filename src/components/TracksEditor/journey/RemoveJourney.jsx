@@ -189,10 +189,10 @@ export const RemoveJourney = (props) => {
                     {'Are you sure to remove this journey ?'}
                     <div slot="footer">
                         <div className="lgs--popup-in-drawer-footer">
-                            <WaButton variant="neutral" appearance="outlined" size={'small'} onClick={hideRemoveDialog}>
+                    <WaButton variant="neutral" appearance="outlined" size={'s'} onClick={hideRemoveDialog}>
                                 <WaIcon name="xmark"/> {'No'}
                             </WaButton>
-                            <WaButton variant="danger" appearance="filled-outlined" size={'small'}
+                    <WaButton variant="danger" appearance="filled-outlined" size={'s'}
                                       onClick={removeJourney}>
                                 <WaIcon name="trash-can"/> {'Yes'}
                             </WaButton>
