@@ -45,7 +45,7 @@ export const ToggleStateIcon = memo((props) => {
               id,
               appearance,
               style,
-              size = 'medium',
+              size = 'm',
               className = '',
               tooltip,
               disabled  = false,

@@ -58,4 +58,58 @@ describe('layers-terrains configuration', () => {
             },
         })
     })
+
+    it('declares the IGN Plan HD layer with the supplied WMTS configuration', () => {
+        const config = loadLayersTerrains()
+        const layersById = indexLayersById(config)
+        const layer = layersById.get('ign-plan-hd')
+
+        expect(layer).toMatchObject({
+            provider:          'ign',
+            name:              'Plan HD',
+            type:              'base',
+            tile:              'wmts',
+            url:               'https://data.geopf.fr/wmts',
+            layer:             'GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2',
+            style:             'normal',
+            format:            'image/png',
+            tileMatrixSetID:   'PM',
+            minimumLevel:      0,
+            maximumLevel:      19,
+            countries:         [ 'FR' ],
+        })
+    })
+
+    it('declares the IGN LiDAR HD terrain and above-ground plans', () => {
+        const config = loadLayersTerrains()
+        const layersById = indexLayersById(config)
+
+        expect(layersById.get('ign-plan-lidar-terrain')).toMatchObject({
+            provider:        'ign',
+            name:            'Plan LiDAR HD - Terrain',
+            type:            'base',
+            tile:            'wmts',
+            url:             'https://data.geopf.fr/wmts',
+            layer:           'PLANIGN.LIDAR.TERRAIN',
+            style:           'normal',
+            format:          'image/png',
+            tileMatrixSetID: 'PM_6_18',
+            minimumLevel:    6,
+            maximumLevel:    18,
+        })
+
+        expect(layersById.get('ign-plan-lidar-sursol')).toMatchObject({
+            provider:        'ign',
+            name:            'Plan LiDAR HD - Sursol',
+            type:            'base',
+            tile:            'wmts',
+            url:             'https://data.geopf.fr/wmts',
+            layer:           'PLANIGN.LIDAR.SURSOL',
+            style:           'normal',
+            format:          'image/png',
+            tileMatrixSetID: 'PM_6_18',
+            minimumLevel:    6,
+            maximumLevel:    18,
+        })
+    })
 })

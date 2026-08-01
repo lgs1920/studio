@@ -1,5 +1,20 @@
 # Commit History
 
+## 2026-08-01 — [`fix: align Vite config with native loader`](https://github.com/lgs1920/studio/commit/f8eed3f75dff4d563f6885596509a078540b79d5)
+
+- Rename the Vite configuration to `.mts` so its ESM syntax is compatible with the native config loader.
+- Replace CommonJS `__dirname` usage with `import.meta.dirname` and update related documentation references.
+
+## 2026-07-28 — [`docs: require issue draft validation`](https://github.com/lgs1920/studio/commit/03ce0f44)
+
+- Require clarification of missing issue details before drafting an issue.
+- Require explicit user validation of the complete issue content before creation.
+
+## 2026-07-28 — [`docs: update project rules`](https://github.com/lgs1920/studio/commit/f8b303ce)
+
+- Require project documentation and issue content to be written in English.
+- Define `Backlog` and the latest available milestone as defaults when issue values are not specified.
+- Require every `PROJECT_RULES.md` change to use a dedicated commit, pull request, and merge into `main`.
 ## 2026-07-29 — [`chore: synchronize path aliases`](https://github.com/lgs1920/studio/commit/43756c42a7402b6fdc2bf86d9f7af131672c5315)
 
 - Synchronize TypeScript, Vite, and Vitest path aliases.
@@ -417,3 +432,9 @@
 - Added a stacked Code dependencies drawer to the Information panel.
 - Moved the dependency inventory behind the drawer and kept the Credits tab link lightweight.
 - Added coverage for the stacked drawer opening helper.
+
+## 2026-07-30 — [`docs: define site and backend issue mirroring`](https://github.com/lgs1920/studio/commit/1802ff1858927fda9b0b807632681b6fa8641b8f)
+
+- Require every open Site and Backend issue to have a corresponding Studio mirror.
+- Preserve issue types, use domain-specific title prefixes and labels, and maintain reciprocal links.
+- Prevent duplicate mirrors by checking existing open and closed Studio issues.

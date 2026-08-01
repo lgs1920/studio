@@ -68,7 +68,7 @@ export const SceneModeSelector = (props) => {
     return (
         <div className={'scene-mode-selector toolbar-action-popup-host'} ref={_selector}>
             <WaTooltip for="scene-mode-trigger" placement={placement}>{currentModeInfo.title}</WaTooltip>
-            <WaButton size={'small'}
+            <WaButton size={'s'}
                       className={'square-button'}
                       disabled={disabled}
                       id="scene-mode-trigger"

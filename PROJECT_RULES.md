@@ -59,9 +59,10 @@ This is the canonical source for the project's AI-agent and development rules.
 - **Commit history:** `COMMIT_HISTORY.md` when preparing a commit.
 - **Commit history entry:** Record every commit in `COMMIT_HISTORY.md` with its date, exact commit message, and a GitHub link in the format `https://github.com/lgs1920/studio/commit/<commit-id>`.
 
-## 6. Issue Creation Workflow
+## 6. Issue Management Workflow
 
 - **Clarification and validation:** Before creating an issue, ask the user for any missing explanations or clarifications needed to understand and scope the request. Then present the complete proposed issue content for explicit user validation. Do not create the issue until the user has validated the proposal.
+- **Solution and implementation plan:** For every issue, propose a solution and an implementation plan for explicit user validation. Do not create or implement the issue until the proposed solution and plan have been validated.
 - **Complete fields:** Every created issue must have all known and applicable fields filled in, including title, description, assignee, labels, type, priority, repository, Project status, and `Target release`. Do not invent a release, label, priority, or other value when the information is not known.
 - **Assignee:** Assign the issue to the user requesting its creation unless the user explicitly specifies another assignee.
 - **Release planning:** Use the Project-level `Target release` field as the source of truth for release planning across repositories. Use `Unplanned` when no approved release has been selected. Add a new target-release option only after the release has been approved.
@@ -70,6 +71,14 @@ This is the canonical source for the project's AI-agent and development rules.
 - **Issue body structure:** Write every issue body in the same structure: short context, requested behavior, acceptance criteria, and optional notes or questions. Keep the scope to one request per issue and prefer bullet lists for requirements.
 - **Issue templates:** Use `.github/ISSUE_TEMPLATE/bug_report.md` for bugs and `.github/ISSUE_TEMPLATE/feature_request.md` for new features or improvements. Keep the sections consistent with the issue type and use the reproduction section only for bugs.
 - **Issue type mapping:** Each issue template must include its hidden `issue-type` marker, and the automation must set the GitHub issue type accordingly (`bug` for `bug_report.md`, `feature` for `feature_request.md`).
+
+### Cross-repository issue ownership
+
+- The managed repositories are `studio`, `site`, and `backend`. Create an issue in the repository that owns the code, documentation, or operational change.
+- Never mirror a `site` or `backend` issue into `studio`. Cross-repository dependencies must be recorded with direct links in the original issue bodies, pull requests, or project fields; they must not be represented by duplicate issues.
+- During the mirror-removal migration, inventory every `studio` issue that exists only as a mirror of a `site` or `backend` issue. Before deleting a mirror, transfer any information that is not already present to the owning issue, remove every link to the mirror from the original issue and related project documentation, and verify that the owning issue remains linked to the correct pull request and Project item.
+- Delete only confirmed mirror issues. Do not delete an issue that owns work, has independent acceptance criteria, or cannot be mapped unambiguously to an owning `site` or `backend` issue. Report ambiguous cases for explicit user decision.
+- After the migration, verify that creating a `site` or `backend` issue produces no `studio` issue and that no active issue body links to a deleted mirror.
 
 ### Project workflow statuses
 
@@ -89,3 +98,12 @@ New issues start in `Triage` unless their validated scope already justifies a di
 Move an issue to `Review` when its pull request opens, to `QA` after review approval, and to `Done` only after merge. Add every implementation issue to the Project and link it to its pull request.
 
 Keep one shared Project across releases. Do not create a Project or a workflow status for each version. Preserve historical views, milestones, tags, and branches unless the user explicitly approves their removal.
+
+## 7. Release Changelog Workflow
+
+- Changelogs are stored in `public/assets/changelog/` and use the filename `YYYYMMDD-<version>.md`, where `YYYYMMDD` is the release date and `<version>` is the exact package/release version, including prerelease suffixes such as `1.0.0-beta.3`.
+- When the target changelog does not exist, create it automatically using today's date and the naming/header convention of the closest existing changelog for the same release line. Never overwrite an existing changelog merely to normalize its historical formatting.
+- Group closed issues under the repository that owns each issue: `studio`, `site`, or `backend`. Omit a repository heading when that repository has no closed issue for the release.
+- Group remaining open issues into separate bug and feature sections, again by repository. Omit both the repository heading and its entries when that repository has no issue in the category. Omit the category heading when no repository has an issue in that category.
+- Keep issue links pointing to the owning repository. Do not add links to mirror issues.
+- Do not invent issue numbers, release versions, dates, fixes, features, or known issues. Preserve the existing `Resources`, `Feature Backlog`, and `Known Issues` conventions unless the target release explicitly changes them.
