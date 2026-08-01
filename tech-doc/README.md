@@ -36,6 +36,8 @@ Proposed work, pending validation, or future implementation work lives under `to
 - [EventEmitter](specs/ASSETS-LIBS-EVENTEMITTER-README.md)
 - [Flags assets](specs/PUBLIC-FLAGS-README.md)
 - [Logo assets](specs/PUBLIC-LOGO-README.md)
+- [GitHub Project release and branch workflow](specs/TECH-GITHUB-PROJECT-RELEASE-WORKFLOW-SPEC.md)
+- [Oxlint TypeScript 7 migration](specs/CORE-OXLINT-TYPESCRIPT-7-MIGRATION.md)
 
 ## TODO
 
@@ -45,11 +47,12 @@ Proposed work, pending validation, or future implementation work lives under `to
 - [Translation notes](todo/Translate.md)
 - [Drone camera 3D path editor](todo/CORE-DRONE-CAMERA-3D-PATH-EDITOR-SPEC.md)
 - [Replay track timeline editor](todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md)
+- [Replay trace and marker glow/neon effects](todo/CORE-REPLAY-TRACE-MARKER-GLOW-NEON-SPEC.md)
 - [Cesium Ion layers](todo/CESIUM-ION-LAYERS-SPEC.md)
 - [Tracks editor](todo/TRACKSEDITOR-SPEC.md)
 - [Profile TODO](todo/PROFILE-TODO.md)
 - [Main UI TODO](todo/MAINUI-TODO.md)
+- [GitHub Actions deployment migration study](todo/CORE-GITHUB-ACTIONS-DEPLOYMENT-MIGRATION.md)
 - [Arrow widget](todo/ARROW_WIDGET_SPEC.md)
 - [Video widget](todo/VIDEO_WIDGET_SPEC.md)
-- [Oxlint TypeScript 7 migration](todo/OXLINT_TYPESCRIPT_7_MIGRATION_SPEC.md)
 - [Replay video architecture](todo/CORE-REPLAY-VIDEO-ARCHITECTURE.md)

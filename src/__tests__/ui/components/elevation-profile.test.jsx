@@ -14,9 +14,11 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {cleanup, render, screen} from '@testing-library/react'
+import {cleanup, render, screen, waitFor} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {proxy} from 'valtio'
+
+const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect
 
 const rendererMock = vi.hoisted(() => ({
     findExistingInList: vi.fn(() => null),
@@ -67,6 +69,15 @@ import {ElevationProfile} from '@Components/MainUI/ElevationProfile'
 
 describe('ElevationProfile', () => {
     beforeEach(() => {
+        HTMLElement.prototype.getBoundingClientRect = vi.fn(() => ({
+            left:   0,
+            top:    0,
+            right:  400,
+            bottom: 180,
+            width:  400,
+            height: 180,
+        }))
+
         rendererMock.findExistingInList.mockReset()
         rendererMock.findExistingInList.mockReturnValue(null)
         rendererMock.renderWidget.mockReset()
@@ -132,18 +143,22 @@ describe('ElevationProfile', () => {
 
     afterEach(() => {
         cleanup()
+        vi.restoreAllMocks()
+        HTMLElement.prototype.getBoundingClientRect = originalGetBoundingClientRect
         globalThis.__ = undefined
         globalThis.lgs = undefined
     })
 
-    it('keeps the drawer profile chart mounted while elevation processing is running', () => {
+    it('keeps the drawer profile chart mounted while elevation processing is running', async () => {
         render(<ElevationProfile
             default="file-content"
             label="Elevation Source:"
             servers={[{id: 'file-content', label: 'File', icon: 'chart'}]}
         />)
 
-        expect(screen.getByTestId('profile-chart')).not.toBeNull()
-        expect(screen.getByTestId('profile-chart').dataset.hasData).toBe('true')
+        await waitFor(() => {
+            expect(screen.getByTestId('profile-chart')).not.toBeNull()
+            expect(screen.getByTestId('profile-chart').dataset.hasData).toBe('true')
+        })
     })
 })

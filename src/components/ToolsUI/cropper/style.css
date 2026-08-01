@@ -210,6 +210,19 @@
     background-image: var(--lgs-on-map-surface-gradient, var(--lgs-brand-overlay-gradient));
 }
 
+.crop-overlay-blocker {
+    position: absolute;
+    z-index: calc(var(--crop-zindex) - 1);
+    pointer-events: auto;
+}
+
+.crop-overlay-blocker-top,
+.crop-overlay-blocker-left,
+.crop-overlay-blocker-right,
+.crop-overlay-blocker-bottom {
+    background-color: transparent;
+}
+
 .lgs-widget-container.crop-moveable-container-on-map {
     z-index: calc(var(--crop-zindex) + 1) !important;
 }

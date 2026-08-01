@@ -14,6 +14,9 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import {buildReplayFrameState} from './JourneyReplayRuntime'
+import {createJourneyReplayLogicalFrame} from './JourneyReplayLogicalFrame'
+
 export const REPLAY_EVENT_START = 'replay/start'
 export const REPLAY_EVENT_UPDATE = 'replay/update'
 export const REPLAY_EVENT_PAUSE = 'replay/pause'
@@ -331,23 +334,38 @@ export class JourneyReplayPlaybackController {
             }
         }
         catch (error) {
-            console.error('[JourneyReplayPlaybackController] Tick failed.', error)
         }
 
         this.#schedule()
     }
 
-    #eventDetail = sample => ({
-        controller: this,
-        sampler:    this.#sampler,
-        sample,
-        progress:   this.#progress,
-        duration:   this.#duration,
-        direction:  this.#direction,
-        loop:       this.#loop,
-        running:    this.#running,
-        paused:     this.#paused,
-    })
+    #eventDetail = sample => {
+        const runtimeFrame = globalThis.lgs?.stores?.replay?.dynamicFrameState ?? null
+        const logicalFrame = createJourneyReplayLogicalFrame({
+            sample,
+            progress:        this.#progress,
+            durationMillis:  runtimeFrame?.durationMillis ?? this.#duration * MILLIS,
+            frameTimeMs:     runtimeFrame?.frameTimeMs,
+            frameIntervalMs: runtimeFrame?.frameIntervalMs,
+            phase:           runtimeFrame?.phase,
+            source:          'replay-clock',
+        })
+
+        return {
+            controller:      this,
+            sampler:         this.#sampler,
+            sample,
+            progress:        this.#progress,
+            duration:        this.#duration,
+            direction:       this.#direction,
+            loop:            this.#loop,
+            running:         this.#running,
+            paused:          this.#paused,
+            frameTimeMs:     logicalFrame.frameTimeMs,
+            frameIntervalMs: logicalFrame.frameIntervalMs,
+            logicalFrame,
+        }
+    }
 
     #emit = (event, sample) => {
         const detail = this.#eventDetail(sample)
@@ -356,7 +374,6 @@ export class JourneyReplayPlaybackController {
                 callback(detail)
             }
             catch (error) {
-                console.error(`[JourneyReplayPlaybackController] Listener failed for "${event}".`, error)
             }
         })
         if (!this.#shouldEmitGlobalEvent(event)) {
@@ -367,7 +384,6 @@ export class JourneyReplayPlaybackController {
             globalThis.lgs?.events?.emit?.(event, detail)
         }
         catch (error) {
-            console.error(`[JourneyReplayPlaybackController] Global event failed for "${event}".`, error)
         }
     }
 
@@ -400,6 +416,7 @@ export class JourneyReplayPlaybackController {
             replayFrameCount - 1,
             Math.max(0, Math.round(clamp(playbackProgress, 0, 1) * (replayFrameCount - 1))),
         )
+        const frameTimeMs = replayFrameIndex * frameIntervalMillis
         const phase = {
             kind: 'replay',
             slot: 'replay',
@@ -413,22 +430,41 @@ export class JourneyReplayPlaybackController {
         store.liveSample = sample
         store.dynamicStatsTick = frameNow
         store.replayFramePhase = phase
-        store.dynamicFrameState = {
-            active:        this.#running || this.#paused,
-            playing:       this.#running && !this.#paused,
-            paused:        this.#paused,
-            progress:      this.#progress,
-            direction:     this.#direction,
+        const deferredRenderContract = store.deferredExportPlan?.renderContract
+                                      ?? store.deferredExportPlan?.runtime?.context?.renderContract
+                                      ?? null
+        const initialCameraState = globalThis.__?.ui?.replay?.savedCameraState
+                                   ?? deferredRenderContract?.initialCameraState
+                                   ?? null
+        store.dynamicFrameState = buildReplayFrameState({
+            active:          this.#running || this.#paused,
+            playing:         this.#running && !this.#paused,
+            paused:          this.#paused,
+            index:           replayFrameIndex,
+            progress:        this.#progress,
+            direction:       this.#direction,
             sample,
-            elapsedMillis: sample?.journeyElapsedMillis ?? null,
-            durationMillis: sample?.journeyDurationMillis ?? this.#sampler?.durationMillis ?? null,
-            frameId:       this.#dynamicFrameId,
+            elapsedMillis:   sample?.journeyElapsedMillis ?? null,
+            durationMillis:  sample?.journeyDurationMillis ?? this.#sampler?.durationMillis ?? null,
+            frameId:         this.#dynamicFrameId,
+            frameCount:      replayFrameCount,
+            frameTimeMs,
+            frameIntervalMs: frameIntervalMillis,
             replayFrameIndex,
             replayFrameCount,
             phase,
-            source:        'controller',
-            updatedAt:     frameNow,
-        }
+            source:          'controller',
+            updatedAt:       frameNow,
+            renderMode:      'draft',
+            trackPath:       deferredRenderContract?.trackPath ?? null,
+            initialCameraState,
+            renderSpec:      deferredRenderContract?.renderSpec
+                             ?? store.deferredExportPlan?.renderSpec
+                             ?? null,
+            visibleOverlayIds: deferredRenderContract?.visibleOverlayIds
+                               ?? store.deferredExportPlan?.runtime?.context?.visibleOverlayIds
+                               ?? [],
+        })
 
         const now = this.#now()
         if (!force && now - this.#lastStoreSync < this.#storeSyncInterval) {

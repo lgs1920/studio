@@ -101,6 +101,7 @@ export const DEFAULT_REPLAY_CAMERA = {
     // In fixed mode it is an absolute altitude; in ground-offset mode it is the offset above terrain.
     altitude:      1200,
     headingOffset: 0,
+    debug:         false,
     previewMode:    REPLAY_CAMERA_PREVIEW_MODE_TERRAIN,
     pitch:         -65,
     heading:       0,
@@ -355,6 +356,7 @@ export const normalizeJourneyReplayCamera = (camera = {}) => ({
         REPLAY_CAMERA_HEADING_OFFSET_MIN,
         REPLAY_CAMERA_HEADING_OFFSET_MAX,
     ),
+    debug:         camera?.debug === true,
     previewMode:   REPLAY_CAMERA_PREVIEW_MODE_TERRAIN,
     hysteresis:   (() => {
         const zone = normalizeJourneyReplayToleranceZone(camera?.hysteresis?.zone, DEFAULT_REPLAY_CAMERA.hysteresis.zone)

@@ -17,8 +17,7 @@
 import { normalizeTrackRenderSmoothing, smoothCoordinateSegment } from '@Utils/cesium/trackRenderSmoothing'
 import { TrackUtils }                                              from '@Utils/cesium/TrackUtils'
 import {
-    ArcType, CallbackProperty, Cartesian3, Cartographic, Color, CustomDataSource, ExtrapolationType,
-    HeightReference, JulianDate, LinearApproximation, SampledPositionProperty,
+    ArcType, CallbackProperty, Cartesian3, Cartographic, Color, CustomDataSource, HeightReference,
 }                                                                 from 'cesium'
 import {
     REPLAY_TRACE_MODE_FULL, getJourneyReplaySettings, normalizeJourneyReplayProgressionStyle, normalizeJourneyReplayTrace,
@@ -41,6 +40,7 @@ const PATH_GEOMETRY_UPDATE_INTERVAL = 120
 const DYNAMIC_POLYLINE_PROGRESS_STEP = 0.002
 const DYNAMIC_POLYLINE_PROGRESS_STEP_PLAYING = 0.00025
 const LIVE_PROGRESS_MAX_POINTS = 2048
+const GROUND_POLYLINE_GRANULARITY_METERS = 8
 const cssColor = (value, fallback) => {
     if (value instanceof Color) {
         return value
@@ -65,17 +65,6 @@ const finiteNumber = value => {
 const isUsableCartesian3 = value => Boolean(value)
     && [value.x, value.y, value.z].every(component => Number.isFinite(component))
 
-const safeCartesian3Lerp = (left, right, ratio, result = new Cartesian3()) => {
-    if (!isUsableCartesian3(left)) {
-        return isUsableCartesian3(right) ? Cartesian3.clone(right, result) : null
-    }
-    if (!isUsableCartesian3(right)) {
-        return Cartesian3.clone(left, result)
-    }
-
-    return Cartesian3.lerp(left, right, ratio, result)
-}
-
 export class JourneyReplayCesiumRenderer {
     #source = null
     #cursor = null
@@ -90,8 +79,6 @@ export class JourneyReplayCesiumRenderer {
     #sourceRaised = false
     #sourceAddPending = false
     #maskedTrackSources = new Map()
-    #smoothedPositionProperty = null
-    #smoothedPositionPropertyKey = null
     #traceGuide = null
     #traceGuideKey = null
     #traceHidden = false
@@ -233,8 +220,6 @@ export class JourneyReplayCesiumRenderer {
         this.#lastPathGeometryDistance = null
         this.#sourceRaised = false
         this.#sourceAddPending = false
-        this.#smoothedPositionProperty = null
-        this.#smoothedPositionPropertyKey = null
         this.#traceGuide = null
         this.#traceGuideKey = null
         this.#traceHidden = false
@@ -271,8 +256,6 @@ export class JourneyReplayCesiumRenderer {
         this.#lastPathGeometryDistance = null
         this.#sourceRaised = false
         this.#sourceAddPending = false
-        this.#smoothedPositionProperty = null
-        this.#smoothedPositionPropertyKey = null
         this.#traceGuide = null
         this.#traceGuideKey = null
         this.#traceHidden = false
@@ -457,7 +440,7 @@ export class JourneyReplayCesiumRenderer {
 
     #smoothedGroundPositions = () => this.#smoothedGuideEntries().map(entry => entry.position)
 
-    #traceGuideKeyForSampler = () => {
+    #traceGuideKeyForSampler = smoothing => {
         const samples = this.#sampler?.samples ?? []
         const first = samples[0]
         const last = samples[samples.length - 1]
@@ -470,35 +453,40 @@ export class JourneyReplayCesiumRenderer {
             last?.progress ?? 1,
             last?.longitude ?? 0,
             last?.latitude ?? 0,
+            smoothing.enabled ? 1 : 0,
+            smoothing.step,
         ].join(':')
     }
 
     #rawTraceGuideEntries = () => (this.#sampler?.samples ?? [])
         .map(sample => {
-            const position = this.#groundPositionFromCoordinate(sample)
+            const longitude = finiteNumber(sample?.longitude)
+            const latitude = finiteNumber(sample?.latitude)
             const progress = finiteNumber(sample?.progress)
-            if (!position || progress === null) {
+            if (longitude === null || latitude === null || progress === null) {
                 return null
             }
 
             return {
+                longitude,
+                latitude,
+                position: this.#groundPositionFromCoordinate({longitude, latitude}),
                 progress,
-                position,
             }
         })
         .filter(Boolean)
 
     #traceGuideEntries = () => {
-        const key = this.#traceGuideKeyForSampler()
+        const smoothing = normalizeTrackRenderSmoothing(
+            globalThis.lgs?.settings?.getJourney?.renderSmoothing,
+            {enabled: false, step: 1},
+        )
+        const key = this.#traceGuideKeyForSampler(smoothing)
         if (this.#traceGuide && this.#traceGuideKey === key) {
             return this.#traceGuide
         }
 
         const raw = this.#rawTraceGuideEntries()
-        const smoothing = normalizeTrackRenderSmoothing(
-            globalThis.lgs?.settings?.getJourney?.renderSmoothing,
-            {enabled: false, step: 1},
-        )
 
         if (!smoothing.enabled) {
             this.#traceGuide = raw
@@ -506,12 +494,23 @@ export class JourneyReplayCesiumRenderer {
             return raw
         }
 
-        const coordinates = raw.map(entry => [entry.position.x, entry.position.y, entry.position.z, entry.progress])
+        const coordinates = raw.map(entry => [entry.longitude, entry.latitude, entry.progress])
         const smoothedCoordinates = smoothCoordinateSegment(coordinates, smoothing.step)
-        const guide = smoothedCoordinates.map(coordinate => ({
-            progress: coordinate[3] ?? 0,
-            position: new Cartesian3(coordinate[0], coordinate[1], coordinate[2] ?? 0),
-        }))
+        const guide = smoothedCoordinates.map(coordinate => {
+            const longitude = finiteNumber(coordinate[0])
+            const latitude = finiteNumber(coordinate[1])
+            const progress = finiteNumber(coordinate[2])
+            if (longitude === null || latitude === null || progress === null) {
+                return null
+            }
+
+            return {
+                longitude,
+                latitude,
+                position: this.#groundPositionFromCoordinate({longitude, latitude}),
+                progress,
+            }
+        }).filter(Boolean)
 
         this.#traceGuide = guide
         this.#traceGuideKey = key
@@ -519,12 +518,7 @@ export class JourneyReplayCesiumRenderer {
     }
 
     #smoothedGuideEntries = () => {
-        const traceGuide = this.#traceGuideEntries()
-        if (traceGuide.length >= 2) {
-            return traceGuide
-        }
-
-        return (this.#options.smoothedGuide ?? [])
+        const providedGuide = (this.#options.smoothedGuide ?? [])
             .map(entry => {
                 const position = this.#groundPositionFromCoordinate(entry)
                 const progress = finiteNumber(entry?.progress)
@@ -533,54 +527,19 @@ export class JourneyReplayCesiumRenderer {
                 }
 
                 return {
-                    progress,
+                    longitude: Number(entry.longitude),
+                    latitude:  Number(entry.latitude),
                     position,
+                    progress,
                 }
             })
             .filter(Boolean)
-    }
 
-    #smoothedGuideKey = () => {
-        const guide = this.#smoothedGuideEntries()
-        return `${guide.length}:${guide[0]?.progress ?? 0}:${guide[guide.length - 1]?.progress ?? 1}`
-    }
-
-    #smoothedTimeForProgress = progress => JulianDate.addSeconds(
-        JulianDate.fromIso8601('2026-01-01T00:00:00Z'),
-        Math.max(0, Math.min(1, progress)) * 1000,
-        new JulianDate(),
-    )
-
-    #smoothedPositionPropertyForGuide = () => {
-        const key = this.#smoothedGuideKey()
-        if (this.#smoothedPositionProperty && this.#smoothedPositionPropertyKey === key) {
-            return this.#smoothedPositionProperty
+        if (providedGuide.length >= 2) {
+            return providedGuide
         }
 
-        const guide = this.#smoothedGuideEntries()
-        if (guide.length < 2) {
-            this.#smoothedPositionProperty = null
-            this.#smoothedPositionPropertyKey = key
-            return null
-        }
-
-        const property = new SampledPositionProperty()
-        guide.forEach(entry => {
-            property.addSample(
-                this.#smoothedTimeForProgress(entry.progress),
-                entry.position,
-            )
-        })
-        property.setInterpolationOptions({
-            interpolationDegree: 1,
-            interpolationAlgorithm: LinearApproximation,
-        })
-        property.forwardExtrapolationType = ExtrapolationType.HOLD
-        property.backwardExtrapolationType = ExtrapolationType.HOLD
-
-        this.#smoothedPositionProperty = property
-        this.#smoothedPositionPropertyKey = key
-        return property
+        return this.#traceGuideEntries()
     }
 
     #smoothedProgressCursor = (progressValue = Number(this.#sample?.progress) || 0) => {
@@ -625,24 +584,21 @@ export class JourneyReplayCesiumRenderer {
 
     #interpolatedSmoothedPosition = (progressValue = Number(this.#sample?.progress) || 0) => {
         const progress = Math.max(0, Math.min(1, Number(progressValue) || 0))
-        const property = this.#smoothedPositionPropertyForGuide()
-        if (property) {
-            return property.getValue(this.#smoothedTimeForProgress(progress))
-        }
-
         const {guide, leftIndex, rightIndex, ratio} = this.#smoothedProgressCursor(progress)
-        const left = guide[leftIndex]?.position
-        const right = guide[rightIndex]?.position
+        const left = guide[leftIndex]
+        const right = guide[rightIndex]
 
-        if (!isUsableCartesian3(left)) {
+        if (!isUsableCartesian3(left?.position)) {
             return null
         }
 
-        if (!isUsableCartesian3(right) || leftIndex === rightIndex || ratio <= 0) {
-            return left
+        if (!isUsableCartesian3(right?.position) || leftIndex === rightIndex || ratio <= 0) {
+            return left.position
         }
 
-        return safeCartesian3Lerp(left, right, ratio)
+        const longitude = left.longitude + ((right.longitude - left.longitude) * ratio)
+        const latitude = left.latitude + ((right.latitude - left.latitude) * ratio)
+        return this.#groundPositionFromCoordinate({longitude, latitude})
     }
 
     #limitTracePositions = positions => {
@@ -812,6 +768,8 @@ export class JourneyReplayCesiumRenderer {
                     outlineColor:    style.borderColor,
                     outlineWidth,
                     heightReference: HeightReference.CLAMP_TO_GROUND,
+                    // Keep depth testing enabled so terrain and 3D tiles can occlude the marker.
+                    disableDepthTestDistance: 0,
                 },
             })
             this.#setCursorVisibility(true)
@@ -824,6 +782,8 @@ export class JourneyReplayCesiumRenderer {
         this.#cursor.point.outlineColor = style.borderColor
         this.#cursor.point.outlineWidth = outlineWidth
         this.#cursor.point.heightReference = HeightReference.CLAMP_TO_GROUND
+        // Keep depth testing enabled so terrain and 3D tiles can occlude the marker.
+        this.#cursor.point.disableDepthTestDistance = 0
         this.#setCursorVisibility(true)
     }
 
@@ -877,6 +837,7 @@ export class JourneyReplayCesiumRenderer {
         }
 
         if (options.clampToGround) {
+            options.granularity = GROUND_POLYLINE_GRANULARITY_METERS
             options.zIndex = zIndex
         }
         else if (depthFailMaterial) {

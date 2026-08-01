@@ -78,6 +78,14 @@ import {
     cameraViewForSample,
 } from './JourneyReplayCameraGuide'
 import {
+    memoizeReplayCameraUpdateCache,
+    replayCameraUpdateMarkerSettingsKey,
+    replayCameraUpdateRedirectStateKey,
+    replayCameraUpdateSampleKey,
+    replayCameraUpdateViewKey,
+    replayCameraUpdateCameraSettingsKey,
+} from './JourneyReplayCameraUpdateCache'
+import {
     applyCameraView,
     liveCameraPitch,
     markerPositionForSample,
@@ -335,107 +343,125 @@ export const sampleFromVisibilityTarget =  (mode, target) => {
     })
 }
 
-export const renderedTargetVisible =  (mode, sample) => {
+export const renderedTargetVisible =  (mode, sample, cache = null) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const scene = call.cesiumScene()
-        const camera = globalThis.lgs?.viewer?.camera ?? scene?.camera
-        const target = call.markerRenderCartesianForSample(sample)
-        const windowPosition = call.windowPositionForSample(sample)
-        if (!scene || !camera || !target || !windowPosition) {
-            return null
-        }
-
-        const rect = call.viewportRectForCesiumSurface()
-        if (!rect.width || !rect.height) {
-            return null
-        }
-        if (
-            windowPosition.x < 0
-            || windowPosition.y < 0
-            || windowPosition.x > rect.width
-            || windowPosition.y > rect.height
-        ) {
-            return false
-        }
-
-        const canvasPosition = new Cartesian2(windowPosition.x, windowPosition.y)
-        let pickedPosition = null
-        if (scene.pickPositionSupported !== false && typeof scene.pickPosition === 'function') {
-            try {
-                pickedPosition = scene.pickPosition(canvasPosition)
+        const computeVisibility = () => {
+            const scene = call.cesiumScene()
+            const camera = globalThis.lgs?.viewer?.camera ?? scene?.camera
+            const target = call.markerRenderCartesianForSample(sample)
+            const windowPosition = call.windowPositionForSample(sample)
+            if (!scene || !camera || !target || !windowPosition) {
+                return null
             }
-            catch {
-                pickedPosition = null
+
+            const rect = call.viewportRectForCesiumSurface()
+            if (!rect.width || !rect.height) {
+                return null
             }
-        }
-        if (!pickedPosition) {
-            const pickRay = camera.getPickRay?.(canvasPosition)
-            pickedPosition = pickRay ? scene.globe?.pick?.(pickRay, scene) : null
-        }
-        const cameraPosition = camera.positionWC ?? camera.position
-        if (!pickedPosition || !cameraPosition) {
-            return null
-        }
-
-        const targetDistance = Cartesian3.distance(cameraPosition, target)
-        const pickedDistance = Cartesian3.distance(cameraPosition, pickedPosition)
-        return pickedDistance + CAMERA_REDIRECT_RENDERED_DEPTH_CLEARANCE_METERS >= targetDistance
-    }
-
-export const renderedTraceVisibleForSample =  (mode, sample) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-
-        const targets = call.cameraTraceVisibilityTargets(sample)
-        if (!targets.length) {
-            return null
-        }
-
-        let hasRenderedResult = false
-        for (const target of targets) {
-            const visible = call.renderedTargetVisible(call.sampleFromVisibilityTarget(target))
-            if (visible === null) {
-                continue
-            }
-            hasRenderedResult = true
-            if (!visible) {
+            if (
+                windowPosition.x < 0
+                || windowPosition.y < 0
+                || windowPosition.x > rect.width
+                || windowPosition.y > rect.height
+            ) {
                 return false
             }
+
+            const canvasPosition = new Cartesian2(windowPosition.x, windowPosition.y)
+            let pickedPosition = null
+            if (scene.pickPositionSupported !== false && typeof scene.pickPosition === 'function') {
+                try {
+                    pickedPosition = scene.pickPosition(canvasPosition)
+                }
+                catch {
+                    pickedPosition = null
+                }
+            }
+            if (!pickedPosition) {
+                const pickRay = camera.getPickRay?.(canvasPosition)
+                pickedPosition = pickRay ? scene.globe?.pick?.(pickRay, scene) : null
+            }
+            const cameraPosition = camera.positionWC ?? camera.position
+            if (!pickedPosition || !cameraPosition) {
+                return null
+            }
+
+            const targetDistance = Cartesian3.distance(cameraPosition, target)
+            const pickedDistance = Cartesian3.distance(cameraPosition, pickedPosition)
+            return pickedDistance + CAMERA_REDIRECT_RENDERED_DEPTH_CLEARANCE_METERS >= targetDistance
         }
 
-        if (!hasRenderedResult) {
-            return null
-        }
-        return true
+        const cacheKey = replayCameraUpdateSampleKey(sample)
+        return memoizeReplayCameraUpdateCache(cache, 'renderedTargetVisible', cacheKey, computeVisibility)
     }
 
-export const cameraViewHasLineOfSight = (mode, view, anchorSample = view?.sample) => {
+export const renderedTraceVisibleForSample =  (mode, sample, cache = null) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const frame = call.cameraViewFrame(view)
-        if (!frame) {
-            return false
+        const computeVisibility = () => {
+            const targets = call.cameraTraceVisibilityTargets(sample)
+            if (!targets.length) {
+                return null
+            }
+
+            let hasRenderedResult = false
+            for (const target of targets) {
+                const visible = call.renderedTargetVisible(call.sampleFromVisibilityTarget(target), cache)
+                if (visible === null) {
+                    continue
+                }
+                hasRenderedResult = true
+                if (!visible) {
+                    return false
+                }
+            }
+
+            if (!hasRenderedResult) {
+                return null
+            }
+            return true
         }
 
-        const targets = call.cameraTraceVisibilityTargets(anchorSample)
-        let hasVisibleTarget = false
-        for (const target of targets) {
-            const sample = call.sampleFromVisibilityTarget(target)
-            const visible = call.cameraLineOfSightVisibleForFrame({
-                                                                       ...frame,
-                                                                       sample,
-                                                                       targetHeight: call.markerRenderHeightForSample(sample),
-                                                                   })
-            if (!visible) {
+        const cacheKey = replayCameraUpdateSampleKey(sample)
+        return memoizeReplayCameraUpdateCache(cache, 'renderedTraceVisibleForSample', cacheKey, computeVisibility)
+    }
+
+export const cameraViewHasLineOfSight = (mode, view, anchorSample = view?.sample, cache = null) => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+
+        const computeVisibility = () => {
+            const frame = call.cameraViewFrame(view)
+            if (!frame) {
                 return false
             }
-            hasVisibleTarget = true
+
+            const targets = call.cameraTraceVisibilityTargets(anchorSample)
+            let hasVisibleTarget = false
+            for (const target of targets) {
+                const sample = call.sampleFromVisibilityTarget(target)
+                const visible = call.cameraLineOfSightVisibleForFrame({
+                                                                           ...frame,
+                                                                           sample,
+                                                                           targetHeight: call.markerRenderHeightForSample(sample),
+                                                                       })
+                if (!visible) {
+                    return false
+                }
+                hasVisibleTarget = true
+            }
+
+            return hasVisibleTarget
         }
 
-        return hasVisibleTarget
+        const cacheKey = [
+            replayCameraUpdateViewKey(view),
+            replayCameraUpdateSampleKey(anchorSample),
+        ].join('|')
+        return memoizeReplayCameraUpdateCache(cache, 'cameraViewHasLineOfSight', cacheKey, computeVisibility)
     }
 
 export const cameraViewVisibilityForSample = (mode, {
@@ -445,30 +471,44 @@ export const cameraViewVisibilityForSample = (mode, {
                                           source = null,
                                           cameraSettings,
                                           markerSettings,
+                                          cache = null,
                                       } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const currentView = call.cameraViewWithRedirectState(nominalView, redirectState)
-        if (!call.cameraViewHasLineOfSight(currentView)) {
-            return false
+        const computeVisibility = () => {
+            const currentView = call.cameraViewWithRedirectState(nominalView, redirectState)
+            if (!call.cameraViewHasLineOfSight(currentView, currentView?.sample, cache)) {
+                return false
+            }
+
+            if (!futureSample) {
+                return true
+            }
+
+            const futureNominalView = call.cameraViewForSample({
+                                                                    sample:          futureSample,
+                                                                    progress:        futureSample.progress ?? nominalView?.progress ?? 0,
+                                                                    source,
+                                                                    cameraSettings,
+                                                                    markerSettings,
+                                                                    previousHeading: nominalView?.heading,
+                                                                    previousPitch:   nominalView?.pitch,
+                                                                    cache,
+                                                                })
+            const futureView = call.cameraViewWithRedirectState(futureNominalView, redirectState)
+            return call.cameraViewHasLineOfSight(futureView, futureView?.sample, cache)
         }
 
-        if (!futureSample) {
-            return true
-        }
-
-        const futureNominalView = call.cameraViewForSample({
-                                                                sample:          futureSample,
-                                                                progress:        futureSample.progress ?? nominalView?.progress ?? 0,
-                                                                source,
-                                                                cameraSettings,
-                                                                markerSettings,
-                                                                previousHeading: nominalView?.heading,
-                                                                previousPitch:   nominalView?.pitch,
-                                                            })
-        const futureView = call.cameraViewWithRedirectState(futureNominalView, redirectState)
-        return call.cameraViewHasLineOfSight(futureView)
+        const cacheKey = [
+            replayCameraUpdateViewKey(nominalView),
+            replayCameraUpdateRedirectStateKey(redirectState),
+            futureSample ? replayCameraUpdateSampleKey(futureSample) : 'null',
+            source ?? 'null',
+            replayCameraUpdateCameraSettingsKey(cameraSettings),
+            replayCameraUpdateMarkerSettingsKey(markerSettings),
+        ].join('|')
+        return memoizeReplayCameraUpdateCache(cache, 'cameraViewVisibilityForSample', cacheKey, computeVisibility)
     }
 
 export const cameraRedirectCandidateScore =  (mode, candidate) => {
@@ -487,69 +527,85 @@ export const findCameraRedirectState = (mode, {
                                     cameraSettings,
                                     markerSettings,
                                     reuseCurrentIfVisible = true,
+                                    cache = null,
                                 } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        if (reuseCurrentIfVisible && state.cameraRedirectState) {
-            const currentVisible = call.cameraViewVisibilityForSample({
-                                                                           nominalView,
-                                                                           redirectState: state.cameraRedirectState,
-                                                                           futureSample:  null,
-                                                                           source,
-                                                                           cameraSettings,
-                                                                           markerSettings,
-                                                                       })
-            if (currentVisible) {
-                return state.cameraRedirectState
+        const computeRedirectState = () => {
+            if (reuseCurrentIfVisible && state.cameraRedirectState) {
+                const currentVisible = call.cameraViewVisibilityForSample({
+                                                                               nominalView,
+                                                                               redirectState: state.cameraRedirectState,
+                                                                               futureSample:  null,
+                                                                               source,
+                                                                               cameraSettings,
+                                                                               markerSettings,
+                                                                               cache,
+                                                                           })
+                if (currentVisible) {
+                    return state.cameraRedirectState
+                }
             }
+
+            const candidates = []
+            const pushCandidate = candidate => {
+                if (!candidate) {
+                    return
+                }
+                const headingOffset = finiteNumber(candidate.headingOffset) ?? 0
+                const pitchOffset = finiteNumber(candidate.pitchOffset) ?? 0
+                if (candidates.some(entry =>
+                                        Math.abs((finiteNumber(entry.headingOffset) ?? 0) - headingOffset) <= 1e-8
+                                        && Math.abs((finiteNumber(entry.pitchOffset) ?? 0) - pitchOffset) <= 1e-8,
+                )) {
+                    return
+                }
+                candidates.push({headingOffset, pitchOffset})
+            }
+
+            pushCandidate(state.cameraRedirectState)
+            CAMERA_REDIRECT_CANDIDATES.forEach(candidate => {
+                pushCandidate({
+                                  headingOffset: degreesToRadians(candidate.headingOffsetDeg) ?? 0,
+                                  pitchOffset:   degreesToRadians(candidate.pitchOffsetDeg) ?? 0,
+                              })
+            })
+
+            let bestCandidate = null
+            let bestScore = Number.POSITIVE_INFINITY
+            for (const candidate of candidates) {
+                const visible = call.cameraViewVisibilityForSample({
+                                                                        nominalView,
+                                                                        redirectState: candidate,
+                                                                        futureSample,
+                                                                        source,
+                                                                        cameraSettings,
+                                                                        markerSettings,
+                                                                        cache,
+                                                                    })
+                if (!visible) {
+                    continue
+                }
+
+                const score = call.cameraRedirectCandidateScore(candidate)
+                if (score < bestScore) {
+                    bestCandidate = candidate
+                    bestScore = score
+                }
+            }
+
+            return bestCandidate
         }
 
-        const candidates = []
-        const pushCandidate = candidate => {
-            if (!candidate) {
-                return
-            }
-            const headingOffset = finiteNumber(candidate.headingOffset) ?? 0
-            const pitchOffset = finiteNumber(candidate.pitchOffset) ?? 0
-            if (candidates.some(entry =>
-                                    Math.abs((finiteNumber(entry.headingOffset) ?? 0) - headingOffset) <= 1e-8
-                                    && Math.abs((finiteNumber(entry.pitchOffset) ?? 0) - pitchOffset) <= 1e-8,
-            )) {
-                return
-            }
-            candidates.push({headingOffset, pitchOffset})
-        }
-
-        pushCandidate(state.cameraRedirectState)
-        CAMERA_REDIRECT_CANDIDATES.forEach(candidate => {
-            pushCandidate({
-                              headingOffset: degreesToRadians(candidate.headingOffsetDeg) ?? 0,
-                              pitchOffset:   degreesToRadians(candidate.pitchOffsetDeg) ?? 0,
-                          })
-        })
-
-        let bestCandidate = null
-        let bestScore = Number.POSITIVE_INFINITY
-        for (const candidate of candidates) {
-            const visible = call.cameraViewVisibilityForSample({
-                                                                    nominalView,
-                                                                    redirectState: candidate,
-                                                                    futureSample,
-                                                                    source,
-                                                                    cameraSettings,
-                                                                    markerSettings,
-                                                                })
-            if (!visible) {
-                continue
-            }
-
-            const score = call.cameraRedirectCandidateScore(candidate)
-            if (score < bestScore) {
-                bestCandidate = candidate
-                bestScore = score
-            }
-        }
-
-        return bestCandidate
+        const cacheKey = [
+            replayCameraUpdateViewKey(nominalView),
+            futureSample ? replayCameraUpdateSampleKey(futureSample) : 'null',
+            source ?? 'null',
+            replayCameraUpdateCameraSettingsKey(cameraSettings),
+            replayCameraUpdateMarkerSettingsKey(markerSettings),
+            reuseCurrentIfVisible === true ? '1' : '0',
+            replayCameraUpdateRedirectStateKey(state.cameraRedirectState),
+        ].join('|')
+        return memoizeReplayCameraUpdateCache(cache, 'findCameraRedirectState', cacheKey, computeRedirectState)
     }

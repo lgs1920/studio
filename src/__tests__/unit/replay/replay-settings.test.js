@@ -17,7 +17,7 @@
 import { REPLAY_DRAWER }                                           from '@Core/constants'
 import { createJourneyReplayClipInstance }                                from '@Core/ui/replay/JourneyReplayClips'
 import {
-    replayAngularDelta, replayCameraHeadingForPositionMode, replayCameraHeadingWithHysteresis,
+    replayAngularDelta, replayCameraFrameLeadSeconds, replayCameraHeadingForPositionMode, replayCameraHeadingWithHysteresis,
     replayCameraRangeFromPitch, replayCameraRecenterDuration, replayFrameLeadSeconds, replayCameraRecenterHeight,
     replayCameraRecenterHorizontalDistance, replayHeadingEasingFactor, replayHeadingFromLocalAxisAngle,
     replayIsWindowPointOutsideToleranceZone, replayPitchLookaheadFactor, JourneyReplayMode, replayTargetSampleForClip,
@@ -262,6 +262,13 @@ describe('replay settings normalization', () => {
         expect(replayFrameLeadSeconds({fps: 15})).toBeCloseTo(1 / 15, 6)
         expect(replayFrameLeadSeconds({fps: 60})).toBeCloseTo(1 / 60, 6)
         expect(replayFrameLeadSeconds({fps: 15, frameIntervalMs: 1000 / 60})).toBeCloseTo(1 / 60, 6)
+    })
+
+    it('uses Draft and HQ cadence defaults when no output interval is available', () => {
+        expect(replayCameraFrameLeadSeconds({renderMode: 'draft'})).toBeCloseTo(1 / 15, 6)
+        expect(replayCameraFrameLeadSeconds({renderMode: 'hq'})).toBeCloseTo(1 / 60, 6)
+        expect(replayCameraFrameLeadSeconds({renderMode: 'draft', frameIntervalMs: 1000 / 60}))
+            .toBeCloseTo(1 / 60, 6)
     })
 
     it('increases look-ahead for grazing camera pitches', () => {

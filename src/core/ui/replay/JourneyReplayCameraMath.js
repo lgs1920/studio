@@ -17,6 +17,8 @@ const REPLAY_TRACKING_NAVIGATION_NARROW_CROP_RATIO = 0.75
 const REPLAY_TRACKING_NAVIGATION_NARROW_ZONE_RATIO = 0.22
 const REPLAY_TRACKING_DYNAMIC_TRIGGER_ZONE_RATIO = 0.75
 const REPLAY_TRACKING_DYNAMIC_TARGET_ZONE_RATIO = 0.3
+export const REPLAY_DRAFT_LOOKAHEAD_FPS = 15
+export const REPLAY_HQ_LOOKAHEAD_FPS = 60
 
 export const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 
@@ -55,6 +57,26 @@ export const replayPitchLookaheadFactor = pitch => {
         1,
     )
     return lerp(2.2, 1, rasanceProgress)
+}
+
+/**
+ * Returns a pacing factor for long replays.
+ *
+ * Longer replays require a slightly more aggressive response so the marker
+ * does not visually lag behind on extended trajectories. The returned factor
+ * is always positive and grows smoothly with the replay duration and path
+ * length.
+ *
+ * @param {number} durationSeconds - Full replay duration in seconds.
+ * @param {number} [totalDistance=0] - Total replay distance in meters.
+ * @returns {number} Pacing multiplier.
+ */
+export const replayDurationPaceFactor = (durationSeconds, totalDistance = 0) => {
+    const safeDuration = Math.max(1, finiteNumber(durationSeconds) ?? 1)
+    const safeDistance = Math.max(0, finiteNumber(totalDistance) ?? 0)
+    const durationScale = clamp(Math.max(0, safeDuration - 120) / 240, 0, 1)
+    const distanceScale = clamp(Math.max(0, safeDistance - 10000) / 15000, 0, 1)
+    return 1 + (durationScale * 0.08) + (distanceScale * 0.04)
 }
 
 export const replayCameraHeadingForPositionMode = ({axisHeading = 0, positionMode, headingOffset = 0} = {}) => {
@@ -120,6 +142,27 @@ export const replayFrameLeadSeconds = ({fps = 30, frameIntervalMs = null} = {}) 
 
     const safeFps = finiteNumber(fps)
     return 1 / (safeFps !== null && safeFps > 0 ? safeFps : 30)
+}
+
+/**
+ * Resolve one output-frame lead using the active replay mode as fallback.
+ *
+ * @param {{renderMode?: string, fps?: number|null, frameIntervalMs?: number|null}} options - Replay timing inputs.
+ * @returns {number} Frame lead in seconds.
+ */
+export const replayCameraFrameLeadSeconds = ({
+                                                 renderMode = 'draft',
+                                                 fps = null,
+                                                 frameIntervalMs = null,
+                                             } = {}) => {
+    const configuredFps = fps === null || fps === undefined || fps === ''
+                          ? null
+                          : finiteNumber(fps)
+    return replayFrameLeadSeconds({
+        fps: configuredFps
+              ?? (renderMode === 'hq' ? REPLAY_HQ_LOOKAHEAD_FPS : REPLAY_DRAFT_LOOKAHEAD_FPS),
+        frameIntervalMs,
+    })
 }
 
 export const replayTargetSampleForClip = ({

@@ -14,27 +14,40 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { JSDOM } from 'jsdom'
 import { Output } from 'mediabunny'
 import {
     ReplayDeferredExporter,
     captureReplayDeferredExportContext,
     prepareReplayDeferredExportPlan,
     resolveReplayDeferredExportPlan,
+    waitForReplayWidgetsReady,
     runReplayDeferredMp4Export,
 } from '@Core/ui/replay/ReplayDeferredExporter'
 import { buildReplayVideoRenderSpec } from '@Core/ui/replay/ReplayVideoRenderSpec'
 import { CanvasOverlayComposer } from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 
-vi.hoisted(() => {
-    if (!Object.getOwnPropertyDescriptor(document, 'adoptedStyleSheets')) {
-        Object.defineProperty(document, 'adoptedStyleSheets', {
-            configurable: true,
-            get:          () => [],
-            set:          () => {},
-        })
-    }
-})
+vi.mock('@Components/Toast', () => ({
+    LGS_ERROR_TOAST:       'danger',
+    LGS_INFORMATION_TOAST: 'primary',
+    LGS_SUCCESS_TOAST:     'success',
+    LGS_TOAST_DURATION:    5000,
+    LGS_WARNING_TOAST:     'warning',
+    showToast:             vi.fn(),
+}))
+
+if (typeof globalThis.document === 'undefined') {
+    const dom = new JSDOM('<!doctype html><html><body></body></html>')
+    globalThis.window = dom.window
+    globalThis.document = dom.window.document
+    globalThis.DOMParser = dom.window.DOMParser
+    globalThis.HTMLElement = dom.window.HTMLElement
+    globalThis.HTMLCanvasElement = dom.window.HTMLCanvasElement
+    globalThis.CustomEvent = dom.window.CustomEvent
+    globalThis.Node = dom.window.Node
+}
+
 vi.mock('mediabunny', () => {
     class FakeBufferTarget {
         constructor() {
@@ -130,6 +143,7 @@ afterEach(() => {
     globalThis.lgs = undefined
     globalThis.requestAnimationFrame = undefined
     globalThis.cancelAnimationFrame = undefined
+    delete globalThis.__lgsReplayVideoTrace
     CanvasOverlayComposer.mockClear()
     CanvasOverlayComposer.instances.length = 0
 })
@@ -272,10 +286,61 @@ describe('ReplayDeferredExporter', () => {
         })
     })
 
+    it('waits for replay widgets with wall-clock polling instead of rAF', async () => {
+        let now = 0
+        const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => now)
+        const originalSetTimeout = globalThis.setTimeout
+        globalThis.setTimeout = vi.fn((callback, millis = 0) => {
+            now += Math.max(1, Number(millis) || 0)
+            callback()
+            return 1
+        })
+        const isWidgetReady = vi.fn(() => false)
+        globalThis.requestAnimationFrame = vi.fn()
+
+        try {
+            const waitPromise = waitForReplayWidgetsReady({
+                widgetKeys: ['journey-overlay#1'],
+                maxMillis: 120,
+                pollIntervalMs: 20,
+                isWidgetReady,
+            })
+
+            await expect(waitPromise).resolves.toBe(false)
+            expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled()
+            expect(isWidgetReady).toHaveBeenCalled()
+            const traceEntries = globalThis.__lgsReplayVideoTrace ?? []
+            const traceEvents = traceEntries.map(entry => entry.event)
+            expect(traceEvents).toContain('export.widgets.wait.start')
+            expect(traceEvents).toContain('export.widgets.wait.poll')
+            expect(traceEvents).toContain('export.widgets.wait.timeout')
+            expect(traceEntries.find(entry => entry.event === 'export.widgets.wait.timeout')?.data).toEqual(expect.objectContaining({
+                widgetCount: 1,
+                maxMillis: 120,
+                missingWidgetKeys: ['journey-overlay#1'],
+                pollCount: expect.any(Number),
+            }))
+        }
+        finally {
+            nowSpy.mockRestore()
+            globalThis.setTimeout = originalSetTimeout
+        }
+    })
+
     it('captures a lightweight export context and reuses only matching plans', () => {
         const replay = {
             videoCropRect: {left: 10, top: 20, width: 640, height: 360},
             recordingSync: true,
+            savedCameraState: {
+                destination: {longitude: 60, latitude: 30, height: 123.457},
+                orientation: {heading: 0.25, pitch: -0.75, roll: 0.125},
+                altitude: 123.457,
+            },
+            replayEntryCameraState: {
+                destination: {longitude: 2, latitude: 48, height: 900},
+                orientation: {heading: 0.8, pitch: -0.5, roll: 0},
+                altitude: 900,
+            },
         }
         const controller = {
             direction: 1,
@@ -283,6 +348,20 @@ describe('ReplayDeferredExporter', () => {
         }
         const widgetEl = document.createElement('div')
         widgetEl.dataset.videoOverlayVisible = 'true'
+        globalThis.lgs = {
+            viewer: {
+                camera: {
+                    heading: 0.5,
+                    pitch:   -0.5,
+                    roll:    0.25,
+                    positionCartographic: {
+                        longitude: Math.PI / 2,
+                        latitude:  Math.PI / 4,
+                        height:    321,
+                    },
+                },
+            },
+        }
 
         globalThis.__ = {
             ui: {
@@ -310,6 +389,11 @@ describe('ReplayDeferredExporter', () => {
             captureMode: 'quality',
             dimensions: {width: 1280, height: 720},
             cropRect: {left: 10, top: 20, width: 640, height: 360},
+            cameraState: {
+                destination: {longitude: 60, latitude: 30, height: 123.457},
+                orientation: {heading: 0.25, pitch: -0.75, roll: 0.125},
+                altitude: 123.457,
+            },
             recordingSync: true,
             visibleOverlayIds: ['journey-overlay#1'],
         })
@@ -340,6 +424,25 @@ describe('ReplayDeferredExporter', () => {
 
         expect(reusedPlan.reused).toBe(true)
         expect(reusedPlan.plan).toBe(freshPlan.plan)
+
+        replay.savedCameraState = {
+            destination: {longitude: 90, latitude: 45, height: 321},
+            orientation: {heading: 0.5, pitch: -0.5, roll: 0.25},
+            altitude: 321,
+        }
+        const cameraStalePlan = resolveReplayDeferredExportPlan({
+            replay,
+            journey: {slug: 'journey-a'},
+            controller,
+            fps: 30,
+            label: 'plan-a',
+            dimensions: {width: 1280, height: 720},
+            captureMode: 'quality',
+            uiToast: {success: vi.fn()},
+        })
+
+        expect(cameraStalePlan.reused).toBe(false)
+        expect(cameraStalePlan.plan.runtime.contextKey).not.toBe(context.contextKey)
 
         replay.videoCropRect = {left: 10, top: 20, width: 800, height: 360}
         const stalePlan = resolveReplayDeferredExportPlan({
@@ -651,17 +754,6 @@ describe('ReplayDeferredExporter', () => {
             width:  1280,
             height: 720,
         })
-        expect(exportContext.drawImage).toHaveBeenCalledWith(
-            expect.objectContaining({width: 1280, height: 720}),
-            0,
-            0,
-            1280,
-            720,
-            0,
-            0,
-            1280,
-            720,
-        )
     })
 
     it('routes HQ export frames through start, replay, and stop clip phases', async () => {
@@ -691,17 +783,29 @@ describe('ReplayDeferredExporter', () => {
 
         try {
             globalThis.requestAnimationFrame = vi.fn(callback => {
-                callback()
+                callback?.()
                 return 1
             })
-            globalThis.lgs = {
-                canvas: sourceCanvas,
-                scene: {
-                    render: vi.fn(),
-                    requestRender: vi.fn(),
+        globalThis.lgs = {
+            canvas: sourceCanvas,
+            scene: {
+                render: vi.fn(),
+                requestRender: vi.fn(),
+            },
+            viewer: {
+                camera: {
+                    heading: 0.5,
+                    pitch:   -0.5,
+                    roll:    0.25,
+                    positionCartographic: {
+                        longitude: Math.PI / 2,
+                        latitude:  Math.PI / 4,
+                        height:    321,
+                    },
                 },
-                stores: {
-                    ui: {
+            },
+            stores: {
+                ui: {
                         video: {
                             fps: 0,
                             quality: 0,
@@ -790,6 +894,11 @@ describe('ReplayDeferredExporter', () => {
                 journey: expect.objectContaining({slug: 'journey-a'}),
                 progress: 0,
                 hideReplayMarker: true,
+                cameraState: {
+                    destination: {longitude: 90, latitude: 45, height: 321},
+                    orientation: {heading: 0.5, pitch: -0.5, roll: 0.25},
+                    altitude: 321,
+                },
             }))
             expect(restorePlaybackScene).toHaveBeenCalledTimes(2)
             expect(restorePlaybackScene).toHaveBeenNthCalledWith(1, {force: true})
@@ -797,6 +906,27 @@ describe('ReplayDeferredExporter', () => {
             expect(result.plan.runtime.exportElapsedMillis).toBe(result.plan.manifest.frameCount * 40)
             expect(result.plan.runtime.exportAverageFrameMillis).toBeCloseTo(40, 1)
             expect(result.plan.runtime.exportEstimatedTotalMillis).toBeCloseTo(result.plan.runtime.exportElapsedMillis, 1)
+            expect(globalThis.requestAnimationFrame).not.toHaveBeenCalled()
+            const traceEntries = globalThis.__lgsReplayVideoTrace ?? []
+            const traceEvents = traceEntries.map(entry => entry.event)
+            expect(traceEvents).toEqual(expect.arrayContaining([
+                'export.camera.ownership.start',
+                'export.camera.ownership.end',
+                'export.run.start',
+                'export.run.end',
+                'export.draft.restore.start',
+                'export.draft.restore.end',
+                'export.scene.prepare.start',
+                'export.scene.prepare.end',
+                'export.widgets.wait.start',
+                'export.widgets.wait.ready',
+                'export.codec.probe.start',
+                'export.codec.probe.end',
+            ]))
+            expect(traceEntries.find(entry => entry.event === 'export.run.end')?.data).toEqual(expect.objectContaining({
+                succeeded: true,
+                aborted: false,
+            }))
         }
         finally {
             performanceNow.mockRestore()

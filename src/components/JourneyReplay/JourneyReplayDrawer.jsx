@@ -45,6 +45,7 @@ import {
 }                 from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { normalizeJourneyReplayClips } from '@Core/ui/replay/JourneyReplayClips'
 import { normalizeJourneyReplayPOISettings } from '@Core/ui/replay/JourneyReplayPOISettings'
+import { isJourneyReplayCameraActive } from '@Core/ui/replay/JourneyReplayRuntime'
 import { ELEVATION_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import {
     WaBadge, WaButton, WaCard, WaColorPicker, WaDetails, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider,
@@ -538,8 +539,15 @@ export const JourneyReplayDrawer = memo(() => {
         const nextMarker = mergeMarker(lgs.settings.ui.replay.marker, {mode: event.target.value})
         lgs.settings.ui.replay.marker = nextMarker
         lgs.stores.replay.marker = nextMarker
-        refreshJourneyReplay(true)
-    }, [refreshJourneyReplay, stopRotateIfNeeded])
+        refreshJourneyReplay(isJourneyReplayCameraActive(replayState))
+    }, [
+        refreshJourneyReplay,
+        replayState.active,
+        replayState.clipSequenceActive,
+        replayState.paused,
+        replayState.playing,
+        stopRotateIfNeeded,
+    ])
 
     const updateCamera = useCallback(async (updates, {syncCamera = true} = {}) => {
         await stopRotateIfNeeded()
@@ -570,6 +578,10 @@ export const JourneyReplayDrawer = memo(() => {
             })
         }
     }, [replayState.active, replayState.paused, replayState.playing, replayState.sample, refreshJourneyReplay, stopRotateIfNeeded])
+
+    const updateDebugCamera = useCallback(event => {
+        updateCamera({debug: getChecked(event)})
+    }, [updateCamera])
 
     useEffect(() => () => {
         if (cameraUpdateSourceClearTimer.current !== null) {
@@ -1354,6 +1366,17 @@ export const JourneyReplayDrawer = memo(() => {
                                                     <span slot="summary">{'Advanced camera setup'}</span>
                                                     <div className="replay-fieldset">
                                                         <WaDivider/>
+                                                        {syncWithVideo && (
+                                                            <WaSwitch
+                                                                className="replay-debug-camera-switch half-width"
+                                                                size="xs"
+                                                                label-at-start
+                                                                checked={camera.debug === true}
+                                                                onChange={updateDebugCamera}
+                                                            >
+                                                                {'Debug camera'}
+                                                            </WaSwitch>
+                                                        )}
                                                         <WaSelect appearance="filled"
                                                             label="Camera feel"
                                                             label-at-start

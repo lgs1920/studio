@@ -14,16 +14,18 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {Cartesian3} from 'cesium'
+import {Cartesian3, Matrix3} from 'cesium'
 import {
     clamp,
     replayInnerToleranceZoneBounds,
     replayToleranceZoneBounds,
     replayWindowCollisionFromPoint,
+    replayDurationPaceFactor,
 } from './JourneyReplayCameraMath'
 
-const REPLAY_CONSTRAINED_PATH_MIN_SAMPLES = 128
-const REPLAY_CONSTRAINED_PATH_MAX_SAMPLES = 256
+const REPLAY_CONSTRAINED_PATH_MIN_SAMPLES = 256
+const REPLAY_CONSTRAINED_PATH_MAX_SAMPLES = 2048
+const REPLAY_CONSTRAINED_PATH_SAMPLES_PER_SECOND = 30
 const REPLAY_CONSTRAINED_PATH_SEARCH_STEPS = 24
 const REPLAY_CONSTRAINED_PATH_SEARCH_ITERATIONS = 12
 
@@ -170,6 +172,265 @@ export const interpolateConstrainedReplayFrame = (start, end, ratio = 0) => {
         up,
     }
 }
+
+/**
+ * Interpolate one Cartesian component with matching velocity on both sides of
+ * every compiled frame.
+ *
+ * @param {Cartesian3} previous - Previous control value.
+ * @param {Cartesian3} start - Interval start value.
+ * @param {Cartesian3} end - Interval end value.
+ * @param {Cartesian3} next - Next control value.
+ * @param {number} ratio - Interval ratio.
+ * @returns {Cartesian3} Cubic Hermite value.
+ */
+const interpolateConstrainedReplayCartesian = (
+    previous,
+    start,
+    end,
+    next,
+    ratio,
+) => {
+    const safeRatio = clamp(finiteNumber(ratio) ?? 0, 0, 1)
+    const squared = safeRatio * safeRatio
+    const cubed = squared * safeRatio
+    const startWeight = (2 * cubed) - (3 * squared) + 1
+    const startVelocityWeight = cubed - (2 * squared) + safeRatio
+    const endWeight = (-2 * cubed) + (3 * squared)
+    const endVelocityWeight = cubed - squared
+    const startVelocity = Cartesian3.multiplyByScalar(
+        Cartesian3.subtract(end, previous, new Cartesian3()),
+        0.5,
+        new Cartesian3(),
+    )
+    const endVelocity = Cartesian3.multiplyByScalar(
+        Cartesian3.subtract(next, start, new Cartesian3()),
+        0.5,
+        new Cartesian3(),
+    )
+    const result = Cartesian3.multiplyByScalar(start, startWeight, new Cartesian3())
+    Cartesian3.add(
+        result,
+        Cartesian3.multiplyByScalar(
+            startVelocity,
+            startVelocityWeight,
+            new Cartesian3(),
+        ),
+        result,
+    )
+    Cartesian3.add(
+        result,
+        Cartesian3.multiplyByScalar(end, endWeight, new Cartesian3()),
+        result,
+    )
+    Cartesian3.add(
+        result,
+        Cartesian3.multiplyByScalar(
+            endVelocity,
+            endVelocityWeight,
+            new Cartesian3(),
+        ),
+        result,
+    )
+    return result
+}
+
+/**
+ * Sample four adjacent frames with C1-continuous position and orientation.
+ *
+ * @param {object} previous - Previous camera frame.
+ * @param {object} start - Interval start frame.
+ * @param {object} end - Interval end frame.
+ * @param {object} next - Next camera frame.
+ * @param {number} ratio - Interval ratio.
+ * @returns {object|null} Interpolated camera frame.
+ */
+const interpolateConstrainedReplayPathFrame = (
+    previous,
+    start,
+    end,
+    next,
+    ratio,
+) => {
+    if (
+        !isCameraFrame(previous)
+        || !isCameraFrame(start)
+        || !isCameraFrame(end)
+        || !isCameraFrame(next)
+    ) {
+        return interpolateConstrainedReplayFrame(start, end, ratio)
+    }
+
+    const direction = normalizeCartesian(
+        interpolateConstrainedReplayCartesian(
+            previous.direction,
+            start.direction,
+            end.direction,
+            next.direction,
+            ratio,
+        ),
+        end.direction,
+    )
+    const upCandidate = normalizeCartesian(
+        interpolateConstrainedReplayCartesian(
+            previous.up,
+            start.up,
+            end.up,
+            next.up,
+            ratio,
+        ),
+        end.up,
+    )
+    const right = normalizeCartesian(
+        Cartesian3.cross(direction, upCandidate, new Cartesian3()),
+        Cartesian3.cross(end.direction, end.up, new Cartesian3()),
+    )
+    const up = normalizeCartesian(
+        Cartesian3.cross(right, direction, new Cartesian3()),
+        upCandidate,
+    )
+
+    return {
+        destination: interpolateConstrainedReplayCartesian(
+            previous.destination,
+            start.destination,
+            end.destination,
+            next.destination,
+            ratio,
+        ),
+        direction,
+        up,
+    }
+}
+
+/**
+ * Build the right-handed world rotation represented by a camera frame.
+ *
+ * @param {object} frame - Complete camera frame.
+ * @returns {Matrix3|null} Camera rotation matrix or null for invalid axes.
+ */
+const constrainedReplayFrameRotation = frame => {
+    if (!isCameraFrame(frame)) {
+        return null
+    }
+
+    const direction = normalizeCartesian(frame.direction, Cartesian3.UNIT_Z)
+    const right = normalizeCartesian(
+        Cartesian3.cross(direction, frame.up, new Cartesian3()),
+        Cartesian3.UNIT_X,
+    )
+    const up = normalizeCartesian(
+        Cartesian3.cross(right, direction, new Cartesian3()),
+        frame.up,
+    )
+    if (!direction || !right || !up) {
+        return null
+    }
+
+    const backward = Cartesian3.negate(direction, new Cartesian3())
+    return new Matrix3(
+        right.x, up.x, backward.x,
+        right.y, up.y, backward.y,
+        right.z, up.z, backward.z,
+    )
+}
+
+/**
+ * Carry an applied correction along the movement of the nominal path.
+ *
+ * When the applied frame is already nominal, the result is exactly the next
+ * nominal frame. When a screen constraint has displaced it, the same relative
+ * displacement follows the moving path instead of freezing in world space.
+ *
+ * @param {object} frame - Previously applied camera frame.
+ * @param {object} previousNominalFrame - Previous nominal camera frame.
+ * @param {object} nominalFrame - Current nominal camera frame.
+ * @returns {object|null} Camera frame advanced with the nominal path.
+ */
+const advanceConstrainedReplayFrame = (
+    frame,
+    previousNominalFrame,
+    nominalFrame,
+) => {
+    if (
+        !isCameraFrame(frame)
+        || !isCameraFrame(previousNominalFrame)
+        || !isCameraFrame(nominalFrame)
+    ) {
+        return cloneCameraFrame(nominalFrame ?? frame)
+    }
+
+    const previousNominalRotation = constrainedReplayFrameRotation(previousNominalFrame)
+    const nominalRotation = constrainedReplayFrameRotation(nominalFrame)
+    if (!previousNominalRotation || !nominalRotation) {
+        return cloneCameraFrame(nominalFrame)
+    }
+
+    const nominalRotationDelta = Matrix3.multiply(
+        nominalRotation,
+        Matrix3.transpose(previousNominalRotation, new Matrix3()),
+        new Matrix3(),
+    )
+    const positionOffset = Cartesian3.subtract(
+        frame.destination,
+        previousNominalFrame.destination,
+        new Cartesian3(),
+    )
+    const rotatedPositionOffset = Matrix3.multiplyByVector(
+        nominalRotationDelta,
+        positionOffset,
+        new Cartesian3(),
+    )
+    const direction = normalizeCartesian(
+        Matrix3.multiplyByVector(
+            nominalRotationDelta,
+            frame.direction,
+            new Cartesian3(),
+        ),
+        nominalFrame.direction,
+    )
+    const upCandidate = normalizeCartesian(
+        Matrix3.multiplyByVector(
+            nominalRotationDelta,
+            frame.up,
+            new Cartesian3(),
+        ),
+        nominalFrame.up,
+    )
+    const right = normalizeCartesian(
+        Cartesian3.cross(direction, upCandidate, new Cartesian3()),
+        Cartesian3.cross(nominalFrame.direction, nominalFrame.up, new Cartesian3()),
+    )
+    const up = normalizeCartesian(
+        Cartesian3.cross(right, direction, new Cartesian3()),
+        upCandidate,
+    )
+
+    return {
+        destination: Cartesian3.add(
+            nominalFrame.destination,
+            rotatedPositionOffset,
+            new Cartesian3(),
+        ),
+        direction,
+        up,
+    }
+}
+
+/**
+ * Check whether a corrected frame has settled back onto its nominal frame.
+ *
+ * @param {object} frame - Applied camera frame.
+ * @param {object} nominalFrame - Current nominal camera frame.
+ * @returns {boolean} True when the remaining correction is negligible.
+ */
+const constrainedReplayFrameIsNominal = (frame, nominalFrame) => (
+    isCameraFrame(frame)
+    && isCameraFrame(nominalFrame)
+    && Cartesian3.distanceSquared(frame.destination, nominalFrame.destination) <= 0.25
+    && Cartesian3.distanceSquared(frame.direction, nominalFrame.direction) <= 1e-6
+    && Cartesian3.distanceSquared(frame.up, nominalFrame.up) <= 1e-6
+)
 
 /**
  * Apply a lateral drift to a replay frame while preserving its marker target.
@@ -441,9 +702,10 @@ const firstFrameInsideZone = ({
  * Build a stable list of normalized replay progresses.
  *
  * @param {number[]} progresses - Optional source progress values.
+ * @param {number} durationSeconds - Replay duration.
  * @returns {number[]} Sorted progress values including both endpoints.
  */
-const normalizedProgresses = progresses => {
+const normalizedProgresses = (progresses, durationSeconds) => {
     const source = Array.isArray(progresses)
         ? progresses
             .map(finiteNumber)
@@ -451,9 +713,15 @@ const normalizedProgresses = progresses => {
             .map(value => clamp(value, 0, 1))
         : []
     const requestedCount = clamp(
-        source.length > 0
-            ? Math.ceil(source.length / 4)
-            : REPLAY_CONSTRAINED_PATH_MIN_SAMPLES,
+        Math.max(
+            source.length > 0
+                ? Math.ceil(source.length / 2)
+                : REPLAY_CONSTRAINED_PATH_MIN_SAMPLES,
+            Math.ceil(
+                Math.max(1, finiteNumber(durationSeconds) ?? 60)
+                * REPLAY_CONSTRAINED_PATH_SAMPLES_PER_SECOND,
+            ),
+        ),
         REPLAY_CONSTRAINED_PATH_MIN_SAMPLES,
         REPLAY_CONSTRAINED_PATH_MAX_SAMPLES,
     )
@@ -475,7 +743,19 @@ const normalizedProgresses = progresses => {
 const responseRatioForSamples = (durationSeconds, responseSeconds, sampleCount) => {
     const stepSeconds = Math.max(1 / 240, durationSeconds / Math.max(1, sampleCount - 1))
     const response = Math.max(0.05, responseSeconds)
-    return clamp(1 - Math.exp(-stepSeconds / response), 0.02, 1)
+    const pace = replayDurationPaceFactor(durationSeconds, sampleCount)
+    return clamp(1 - Math.exp(-(stepSeconds * pace) / response), 0.02, 1)
+}
+
+/**
+ * Apply smoothstep easing to a normalized replay ratio.
+ *
+ * @param {number} value - Normalized value.
+ * @returns {number} Eased value.
+ */
+const constrainedReplaySmoothstep = value => {
+    const safeValue = clamp(finiteNumber(value) ?? 0, 0, 1)
+    return safeValue * safeValue * (3 - (2 * safeValue))
 }
 
 /**
@@ -519,7 +799,15 @@ export const sampleConstrainedReplayCameraPath = (path, progress = 0) => {
     const end = frames[Math.min(frames.length - 1, startIndex + 1)]
     const span = Math.max(Number.EPSILON, end.progress - start.progress)
     const ratio = start === end ? 0 : (safeProgress - start.progress) / span
-    const interpolatedFrame = interpolateConstrainedReplayFrame(start.frame, end.frame, ratio)
+    const previous = frames[Math.max(0, startIndex - 1)]
+    const next = frames[Math.min(frames.length - 1, startIndex + 2)]
+    const interpolatedFrame = interpolateConstrainedReplayPathFrame(
+        previous.frame,
+        start.frame,
+        end.frame,
+        next.frame,
+        ratio,
+    )
     const constraints = path?.constraints
     if (
         !constraints
@@ -543,9 +831,11 @@ export const sampleConstrainedReplayCameraPath = (path, progress = 0) => {
     const target = isCartesian3Like(exactTarget)
                    ? exactTarget
                    : interpolatedTarget
-    const nominalFrame = interpolateConstrainedReplayFrame(
+    const nominalFrame = interpolateConstrainedReplayPathFrame(
+        previous.nominalFrame,
         start.nominalFrame,
         end.nominalFrame,
+        next.nominalFrame,
         ratio,
     )
     const collisionOptions = {
@@ -620,7 +910,8 @@ export const buildConstrainedReplayCameraPath = ({
         return null
     }
 
-    const sourceProgresses = normalizedProgresses(progresses)
+    const safeDurationSeconds = Math.max(1, finiteNumber(durationSeconds) ?? 60)
+    const sourceProgresses = normalizedProgresses(progresses, safeDurationSeconds)
     const entries = sourceProgresses
         .map(progress => {
             const sample = sampleAtProgress(progress)
@@ -640,7 +931,6 @@ export const buildConstrainedReplayCameraPath = ({
         return null
     }
 
-    const safeDurationSeconds = Math.max(1, finiteNumber(durationSeconds) ?? 60)
     const safeResponseSeconds = Math.max(0.05, finiteNumber(responseSeconds) ?? 1)
     const safeLookaheadSeconds = Math.max(0, finiteNumber(lookaheadSeconds) ?? safeResponseSeconds)
     const lookaheadCount = Math.max(
@@ -658,10 +948,50 @@ export const buildConstrainedReplayCameraPath = ({
     const safeMarkerRadius = Math.max(0, finiteNumber(markerRadius) ?? 0)
     const frames = []
     let currentFrame = cloneCameraFrame(entries[0].nominalFrame)
+    let previousNominalFrame = cloneCameraFrame(entries[0].nominalFrame)
     let correctionActive = false
+    let nominalReturn = null
     let constrainedSamples = 0
 
     entries.forEach((entry, index) => {
+        if (index > 0) {
+            if (nominalReturn) {
+                nominalReturn.frame = advanceConstrainedReplayFrame(
+                    nominalReturn.frame,
+                    previousNominalFrame,
+                    entry.nominalFrame,
+                )
+                const elapsedSeconds = Math.max(
+                    0,
+                    (entry.progress - nominalReturn.startProgress)
+                    * safeDurationSeconds,
+                )
+                const returnRatio = nominalReturn.durationSeconds <= Number.EPSILON
+                                    ? 1
+                                    : elapsedSeconds / nominalReturn.durationSeconds
+                const correctionWeight = 1 - constrainedReplaySmoothstep(returnRatio)
+                currentFrame = interpolateConstrainedReplayFrame(
+                    entry.nominalFrame,
+                    nominalReturn.frame,
+                    correctionWeight,
+                )
+            }
+            else {
+                currentFrame = advanceConstrainedReplayFrame(
+                    currentFrame,
+                    previousNominalFrame,
+                    entry.nominalFrame,
+                )
+            }
+            if (
+                nominalReturn
+                && constrainedReplayFrameIsNominal(currentFrame, entry.nominalFrame)
+            ) {
+                currentFrame = cloneCameraFrame(entry.nominalFrame)
+                nominalReturn = null
+            }
+        }
+
         const futureEntry = entries[Math.min(entries.length - 1, index + lookaheadCount)]
         const collisionOptions = {
             projectTarget,
@@ -681,6 +1011,7 @@ export const buildConstrainedReplayCameraPath = ({
         })
         if (!currentInsideTrigger || !futureInsideTrigger) {
             correctionActive = true
+            nominalReturn = null
         }
 
         if (correctionActive) {
@@ -726,7 +1057,36 @@ export const buildConstrainedReplayCameraPath = ({
             })
             if (currentInsideLanding && futureInsideLanding) {
                 correctionActive = false
+                nominalReturn = {
+                    frame: cloneCameraFrame(currentFrame),
+                    startProgress: entry.progress,
+                    durationSeconds: Math.min(
+                        safeResponseSeconds,
+                        Math.max(
+                            0,
+                            (1 - entry.progress) * safeDurationSeconds,
+                        ),
+                    ),
+                }
             }
+        }
+
+        const nominalFrameSafeAtEnd = index === entries.length - 1
+                                      && frameContainsTarget({
+                projectTarget,
+                zone: triggerZone,
+                viewport,
+                markerRadius: safeMarkerRadius,
+                frame: entry.nominalFrame,
+                target: entry.target,
+            })
+        if (
+            nominalFrameSafeAtEnd
+            && constrainedReplayFrameIsNominal(currentFrame, entry.nominalFrame)
+        ) {
+            currentFrame = cloneCameraFrame(entry.nominalFrame)
+            correctionActive = false
+            nominalReturn = null
         }
 
         frames.push({
@@ -735,6 +1095,7 @@ export const buildConstrainedReplayCameraPath = ({
             nominalFrame: cloneCameraFrame(entry.nominalFrame),
             target:       Cartesian3.clone(entry.target, new Cartesian3()),
         })
+        previousNominalFrame = entry.nominalFrame
     })
 
     const path = {

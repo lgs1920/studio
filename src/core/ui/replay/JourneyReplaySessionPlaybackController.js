@@ -31,6 +31,7 @@ import {
     currentJourneyReplayPoiBehavior, currentJourneyReplaySample, finiteNumber, isJourneyReplayVideoCaptureActive,
     publishReplayClipFrameState, replayStore, resetRuntimeProgress, resolveJourneyReplayRuntimeClips,
 } from './JourneyReplayRuntime'
+import {createJourneyReplayLogicalFrame} from './JourneyReplayLogicalFrame'
 import * as JourneyReplayCameraController from './JourneyReplayCameraController'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
 import * as JourneyReplayVisibilityController from './JourneyReplayVisibilityController'
@@ -111,6 +112,36 @@ import {
     resolveJourneyActivityIcon,
 } from './JourneyReplaySessionShared'
 
+/**
+ * Ensure linked replay diagnostics are visible before either Draft or HQ
+ * rendering starts.
+ *
+ * @param {object} mode - Replay mode.
+ * @returns {boolean} Whether linked replay diagnostics were enabled.
+ */
+const ensureReplayVideoDiagnosticsOverlay = mode => {
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    if (!call.isReplayVideoLinked()) {
+        return false
+    }
+
+    const replaySettings = getJourneyReplaySettings()
+    const runtimeStore = replayStore()
+    const replayCameraSettings = normalizeJourneyReplayCamera(
+        globalThis.lgs?.settings?.ui?.replay?.camera
+        ?? runtimeStore?.camera
+        ?? replaySettings.camera,
+    )
+    if (replayCameraSettings.debug !== true) {
+        call.removeToleranceZoneOverlay()
+        call.setToleranceZoneOverlayVisible(false)
+        return false
+    }
+    call.setToleranceZoneOverlayVisible(true)
+    call.updateToleranceZoneOverlay(replayCameraSettings.hysteresis)
+    return true
+}
+
 export const configure = (mode, options = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -185,33 +216,44 @@ export const configure = (mode, options = {}) => {
 export const start = (mode, options = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-        if (state.sceneRestorePromise) {
-            const restoreToken = state.clipSequenceToken
-            return state.sceneRestorePromise.then(() => {
-                if (restoreToken !== state.clipSequenceToken) {
-                    return null
-                }
-                return start(mode, options)
-            })
-        }
-        state.renderer.clear()
-        call.bindCesiumCameraBridge()
-        state.deferPlaybackCameraRestore = false
-        state.suppressPlaybackCameraSync = false
-        state.cameraStateRestoredBeforeSceneCleanup = false
-        state.replayExportClipFrameState = null
-        const sampler = call.configure(options)
-        if (!sampler?.hasSamples) {
-            return null
-        }
-        call.resetCameraInterpolationState()
+    const startStartedAt = globalThis.performance?.now?.() ?? Date.now()
+    const traceStartStep = (step, extra = {}) => {
+        replayVideoTraceDebug('draft.replay.start.stage', {
+            step,
+            elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startStartedAt,
+            ...extra,
+        })
+    }
+    if (state.sceneRestorePromise) {
+        const restoreToken = state.clipSequenceToken
+        return state.sceneRestorePromise.then(() => {
+            if (restoreToken !== state.clipSequenceToken) {
+                return null
+            }
+            return start(mode, options)
+        })
+    }
+    state.renderer.clear()
+    call.bindCesiumCameraBridge()
+    state.deferPlaybackCameraRestore = false
+    state.suppressPlaybackCameraSync = false
+    state.cameraStateRestoredBeforeSceneCleanup = false
+    state.replayExportClipFrameState = null
+    traceStartStep('configure.begin')
+    const sampler = call.configure(options)
+    traceStartStep('configure.end', {hasSampler: Boolean(sampler?.hasSamples)})
+    if (!sampler?.hasSamples) {
+        return null
+    }
+    traceStartStep('reset-camera-interpolation-state.begin')
+    call.resetCameraInterpolationState()
+    traceStartStep('reset-camera-interpolation-state.end')
 
         const shouldHideOtherJourneys = options.hideOtherJourneys
                                         ?? getJourneyReplayHideOtherJourneys()
         const videoReplayLinked = call.isReplayVideoLinked()
-        if (videoReplayLinked) {
-            void globalThis.__?.ui?.cameraManager?.stopRotate?.()
-        }
+        state.logicalCameraTrajectory = false
+        void globalThis.__?.ui?.cameraManager?.stopRotate?.()
         call.setJourneyReplayOrbitAllowed(!videoReplayLinked)
         call.restoreOtherJourneysVisibility()
         call.hideCurrentJourneyVisibility()
@@ -221,18 +263,31 @@ export const start = (mode, options = {}) => {
         const startSample = sampler.atProgress?.(options.progress ?? 0)
         const hasReplayEntryCameraState = Boolean(state.replayEntryCameraState)
         if (!hasReplayEntryCameraState) {
+            traceStartStep('capture-camera-state.begin')
             call.captureCameraState({sample: startSample})
+            state.replayEntryCameraState = state.savedCameraState
+                ? {
+                    destination: {...state.savedCameraState.destination},
+                    orientation: {...state.savedCameraState.orientation},
+                    altitude: state.savedCameraState.altitude,
+                }
+                : null
+            traceStartStep('capture-camera-state.end')
         }
         else {
-            state.savedCameraState = {
-                destination: {...state.replayEntryCameraState.destination},
-                orientation: {...state.replayEntryCameraState.orientation},
-                altitude: state.replayEntryCameraState.altitude,
-            }
-            call.restoreCameraState({clear: false})
+            traceStartStep('restore-camera-state.begin')
+            call.restoreCameraState({
+                                       clear:       false,
+                                       cameraState: state.replayEntryCameraState,
+                                   })
+            traceStartStep('restore-camera-state.end')
         }
+        traceStartStep('capture-drawer-state.begin')
         call.captureJourneyReplayDrawerStateBeforePlayback()
+        traceStartStep('capture-drawer-state.end')
+        traceStartStep('capture-playback-camera-settings.begin')
         call.capturePlaybackCameraSettings()
+        traceStartStep('capture-playback-camera-settings.end')
         const startList = call.clipListForSlot(REPLAY_CLIP_SLOT_START)
         if (!hasReplayEntryCameraState && startList.length > 0) {
             state.replayEntryCameraState = state.savedCameraState
@@ -273,9 +328,11 @@ export const start = (mode, options = {}) => {
         }
         if (videoReplayLinked) {
             call.hideMainUI()
+            ensureReplayVideoDiagnosticsOverlay(mode)
         }
 
         if (startList.length > 0) {
+            traceStartStep('start-clips.begin', {count: startList.length})
             publishReplayClipFrameState({
                 store: runtimeStore,
                 slot: REPLAY_CLIP_SLOT_START,
@@ -300,12 +357,15 @@ export const start = (mode, options = {}) => {
                     }
 
                     state.deferStartCameraRecenter = false
+                    // Do not compile the constrained camera path synchronously here.
+                    // That bulk compilation freezes Draft and HQ replay startup.
+                    traceStartStep('controller.start.begin', {phase: 'start-clips'})
                     startResult = state.controller.start({
                         progress: options.progress ?? 0,
                     })
+                    traceStartStep('controller.start.end', {phase: 'start-clips'})
                 }
                 catch (error) {
-                    console.error('[JourneyReplayMode] Failed to run replay start clips.', error)
                     state.deferStartCameraRecenter = false
                     call.stop({emit: false})
                 }
@@ -313,22 +373,18 @@ export const start = (mode, options = {}) => {
         }
         else {
             state.deferStartCameraRecenter = false
-            state.skipNextImmediateStartRecenter = hasReplayEntryCameraState
-                ? false
-                : call.placeCameraAtPlaybackStart(startSample, options.progress ?? 0) === true
-            if (!hasReplayEntryCameraState) {
-                call.captureCameraState({sample: startSample})
-                state.replayEntryCameraState = state.savedCameraState
-                    ? {
-                        destination: {...state.savedCameraState.destination},
-                        orientation: {...state.savedCameraState.orientation},
-                        altitude: state.savedCameraState.altitude,
-                    }
-                    : null
-            }
+            traceStartStep('place-camera-at-playback-start.begin')
+            state.skipNextImmediateStartRecenter = call.placeCameraAtPlaybackStart(startSample, options.progress ?? 0) === true
+            traceStartStep('place-camera-at-playback-start.end', {
+                skipNextImmediateStartRecenter: state.skipNextImmediateStartRecenter,
+            })
+            // Do not compile the constrained camera path synchronously here.
+            // That bulk compilation freezes Draft and HQ replay startup.
+            traceStartStep('controller.start.begin', {phase: 'no-start-clips'})
             startResult = state.controller.start({
                 progress: options.progress ?? 0,
             })
+            traceStartStep('controller.start.end', {phase: 'no-start-clips'})
         }
 
         return startResult ?? startSample
@@ -365,6 +421,7 @@ export const preparePlaybackSceneForExport = async (mode, {
                                                progress = mode[JOURNEY_REPLAY_INTERNAL_STATE].controller?.progress ?? 0,
                                                hideOtherJourneys = getJourneyReplayHideOtherJourneys(),
                                                hideReplayMarker = false,
+                                               cameraState = null,
                                            } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -384,32 +441,39 @@ export const preparePlaybackSceneForExport = async (mode, {
 
         void globalThis.__?.ui?.cameraManager?.stopRotate?.()
         const startClips = call.clipListForSlot(REPLAY_CLIP_SLOT_START)
+        const providedCameraState = cameraState && typeof cameraState === 'object'
+                                    ? {
+                                        destination: {
+                                            longitude: finiteNumber(cameraState?.destination?.longitude, null),
+                                            latitude:  finiteNumber(cameraState?.destination?.latitude, null),
+                                            height:    finiteNumber(cameraState?.destination?.height, null),
+                                        },
+                                        orientation: {
+                                            heading: finiteNumber(cameraState?.orientation?.heading, null),
+                                            pitch:   finiteNumber(cameraState?.orientation?.pitch, null),
+                                            roll:    finiteNumber(cameraState?.orientation?.roll, null),
+                                        },
+                                        altitude: finiteNumber(cameraState?.altitude, null),
+                                    }
+                                    : null
+        if (providedCameraState) {
+            state.savedCameraState = {
+                destination: {...providedCameraState.destination},
+                orientation: {...providedCameraState.orientation},
+                altitude:    providedCameraState.altitude,
+            }
+            state.replayEntryCameraState = {
+                destination: {...providedCameraState.destination},
+                orientation: {...providedCameraState.orientation},
+                altitude:    providedCameraState.altitude,
+            }
+        }
         const hasReplayEntryCameraState = Boolean(state.replayEntryCameraState)
         if (hasReplayEntryCameraState) {
-            state.savedCameraState = {
-                destination: {...state.replayEntryCameraState.destination},
-                orientation: {...state.replayEntryCameraState.orientation},
-                altitude: state.replayEntryCameraState.altitude,
-            }
             call.restoreCameraState({clear: false})
         }
         else {
             call.captureCameraState({sample})
-        }
-        call.captureJourneyReplayDrawerStateBeforePlayback()
-        call.capturePlaybackCameraSettings()
-
-        if (journey) {
-            journey.visible = true
-            journey.updateVisibility?.(true)
-
-            if (!hasReplayEntryCameraState && startClips.length === 0) {
-                call.placeCameraAtPlaybackStart(sample, safeProgress)
-                call.captureCameraState({sample})
-            }
-        }
-
-        if (!hasReplayEntryCameraState) {
             state.replayEntryCameraState = state.savedCameraState
                 ? {
                     destination: {...state.savedCameraState.destination},
@@ -418,6 +482,20 @@ export const preparePlaybackSceneForExport = async (mode, {
                 }
                 : null
         }
+        call.captureJourneyReplayDrawerStateBeforePlayback()
+        call.capturePlaybackCameraSettings()
+
+        if (journey) {
+            journey.visible = true
+            journey.updateVisibility?.(true)
+
+            if (startClips.length === 0) {
+                call.placeCameraAtPlaybackStart(sample, safeProgress)
+            }
+        }
+
+        // Do not compile the constrained camera path synchronously during HQ preparation.
+        // Export preparation must return control to the fixed-frame renderer immediately.
 
         call.setJourneyReplayOrbitAllowed(false)
         call.restoreOtherJourneysVisibility()
@@ -443,6 +521,7 @@ export const preparePlaybackSceneForExport = async (mode, {
             runtimeStore.clipSequenceActive = true
         }
         call.hideMainUI()
+        ensureReplayVideoDiagnosticsOverlay(mode)
         globalThis.lgs?.scene?.requestRender?.()
         return true
 
@@ -536,7 +615,15 @@ export const refreshCamera = (mode, options = {}) => {
 export const beginReplayCameraExport = (mode, ) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        replayVideoTraceDebug('camera.export-ownership.start', {
+            replayExportCameraActive: state.replayExportCameraActive === true,
+            cameraUserAdjusting: state.cameraUserAdjusting === true,
+            cameraPointerActive: state.cameraPointerActive === true,
+            cameraManualInteractionTimer: state.cameraManualInteractionTimer !== null,
+        })
         state.replayExportCameraActive = true
+        state.logicalCameraTrajectory = true
+        state.exportPathCompilationBypassTraced = false
         state.cameraUserAdjusting = false
         state.cameraPointerActive = false
         if (state.cameraManualInteractionTimer !== null) {
@@ -549,7 +636,14 @@ export const beginReplayCameraExport = (mode, ) => {
 export const endReplayCameraExport = (mode, ) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        replayVideoTraceDebug('camera.export-ownership.end', {
+            replayExportCameraActive: state.replayExportCameraActive === true,
+            cameraUserAdjusting: state.cameraUserAdjusting === true,
+            cameraPointerActive: state.cameraPointerActive === true,
+            cameraManualInteractionTimer: state.cameraManualInteractionTimer !== null,
+        })
         state.replayExportCameraActive = false
+        state.logicalCameraTrajectory = false
     }
 
 export const renderReplayExportFrame = async (mode, {phase = null, frame = null, controller = mode[JOURNEY_REPLAY_INTERNAL_STATE].controller} = {}) => {
@@ -581,6 +675,20 @@ export const renderReplayExportFrame = async (mode, {phase = null, frame = null,
                     showTrace:     true,
                 })
                 state.cameraAutoTrackingIgnoreUntil = call.now() + 180
+                const durationSeconds = finiteNumber(activeController?.duration ?? state.controller?.duration)
+                const logicalFrame = createJourneyReplayLogicalFrame({
+                    sample,
+                    progress,
+                    durationMillis:  durationSeconds === null ? null : durationSeconds * 1000,
+                    frameTimeMs:     finiteNumber(frame?.frameTimeMs)
+                                     ?? finiteNumber(phase?.frameTimeMs)
+                                     ?? 0,
+                    frameIntervalMs: finiteNumber(frame?.frameIntervalMs)
+                                     ?? finiteNumber(phase?.frameIntervalMs)
+                                     ?? null,
+                    phase,
+                    source:          'hq-export',
+                })
                 call.updateCamera({
                     sample,
                     progress,
@@ -590,7 +698,9 @@ export const renderReplayExportFrame = async (mode, {phase = null, frame = null,
                     frameIntervalMs: finiteNumber(frame?.frameIntervalMs)
                                      ?? finiteNumber(phase?.frameIntervalMs)
                                      ?? null,
-                    exportMode:  true,
+                    exportMode:   true,
+                    logicalCamera: true,
+                    logicalFrame,
                 })
             }
             return sample

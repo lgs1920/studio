@@ -19,6 +19,7 @@ import { REPLAY_EVENT_END } from '@Core/ui/replay/JourneyReplayPlaybackControlle
 import { REPLAY_EVENT_STOP_CLIPS_COMPLETE } from '@Core/ui/replay/JourneyReplayMode'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { waitFor } from '@testing-library/react'
 
 vi.hoisted(() => {
     if (!Object.getOwnPropertyDescriptor(document, 'adoptedStyleSheets')) {
@@ -72,6 +73,9 @@ const makeJourneyReplay = () => {
         stop: vi.fn(),
         setVideoSafeMode: vi.fn(),
         setPublicationCadence: vi.fn(),
+        setTerrainHeightLookupBypass: vi.fn(),
+        setTerrainHeightLookupTrace: vi.fn(),
+        restoreCameraState: vi.fn(),
         restorePlaybackScene: vi.fn(),
     }
 }
@@ -81,6 +85,7 @@ describe('JourneyReplayVideoSync', () => {
         vi.useRealTimers()
         globalThis.lgs = undefined
         globalThis.requestAnimationFrame = undefined
+        delete globalThis.__lgsReplayVideoTrace
     })
 
     it('starts the replay when the recorder starts', () => {
@@ -92,11 +97,36 @@ describe('JourneyReplayVideoSync', () => {
 
         sync.arm()
         recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
-        return new Promise(resolve => setTimeout(resolve, 0)).then(() => {
+        expect(replay.start).not.toHaveBeenCalled()
+        return waitFor(() => {
+            expect(replay.start).toHaveBeenCalledWith({progress: 0})
+            expect(replay.setTerrainHeightLookupBypass).toHaveBeenCalledWith(true)
+            expect(replay.setTerrainHeightLookupTrace).toHaveBeenCalledWith(true)
+        }).then(() => {
+            const traceEntries = globalThis.__lgsReplayVideoTrace ?? []
+            const traceEvents = traceEntries.map(entry => entry.event)
             expect(store.recordingSync).toBe(true)
             expect(globalThis.lgs.settings.ui.replay.recordingSync).toBe(true)
             expect(replay.setVideoSafeMode).toHaveBeenCalledWith(true)
-            expect(replay.start).toHaveBeenCalledWith({progress: 0})
+            expect(replay.restoreCameraState).toHaveBeenCalledWith({clear: false})
+            expect(replay.restoreCameraState.mock.invocationCallOrder[0]).toBeLessThan(replay.start.mock.invocationCallOrder[0])
+            expect(replay.setTerrainHeightLookupBypass.mock.invocationCallOrder[0]).toBeLessThan(replay.start.mock.invocationCallOrder[0])
+            expect(replay.setTerrainHeightLookupBypass).toHaveBeenLastCalledWith(false)
+            expect(replay.setTerrainHeightLookupTrace).toHaveBeenLastCalledWith(false)
+            expect(traceEvents).toEqual(expect.arrayContaining([
+                'draft.recorder.start.received',
+                'draft.replay.start.scheduled',
+                'draft.replay.terrain.lookup.bypass.start',
+                'draft.replay.camera.restore.start',
+                'draft.replay.camera.restore.end',
+                'draft.replay.start.begin',
+                'draft.replay.terrain.lookup.bypass.end',
+                'draft.replay.start.end',
+            ]))
+            expect(traceEntries.find(entry => entry.event === 'draft.replay.start.end')?.data).toEqual(expect.objectContaining({
+                succeeded: true,
+                errored: false,
+            }))
         })
     })
 
@@ -109,14 +139,15 @@ describe('JourneyReplayVideoSync', () => {
 
         sync.arm()
         recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
-        await new Promise(resolve => setTimeout(resolve, 0))
+        await waitFor(() => {
+            expect(replay.start).toHaveBeenCalledWith({progress: 0})
+        })
         recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.CANCEL))
-
-        expect(replay.start).toHaveBeenCalledWith({progress: 0})
         expect(replay.stop).toHaveBeenCalledWith({
             emit:              false,
             deferSceneRestore: false,
         })
+        expect(replay.restorePlaybackScene).toHaveBeenCalledWith({force: true})
     })
 
     it('uses a tighter publication cadence in quality capture mode', () => {
@@ -238,7 +269,9 @@ describe('JourneyReplayVideoSync', () => {
 
         sync.arm({autoStopRecording: true})
         recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
-        await new Promise(resolve => setTimeout(resolve, 0))
+        await waitFor(() => {
+            expect(replay.start).toHaveBeenCalledTimes(1)
+        })
         window.dispatchEvent(new CustomEvent(REPLAY_EVENT_STOP_CLIPS_COMPLETE, {
             detail: {clipSequenceToken: 1},
         }))
@@ -263,7 +296,9 @@ describe('JourneyReplayVideoSync', () => {
 
         sync.arm({autoStopRecording: true})
         recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
-        await new Promise(resolve => setTimeout(resolve, 0))
+        await waitFor(() => {
+            expect(replay.start).toHaveBeenCalledTimes(1)
+        })
         window.dispatchEvent(new CustomEvent(REPLAY_EVENT_STOP_CLIPS_COMPLETE, {
             detail: {clipSequenceToken: 1},
         }))
@@ -301,7 +336,9 @@ describe('JourneyReplayVideoSync', () => {
 
         sync.arm()
         recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
-        await new Promise(resolve => setTimeout(resolve, 0))
+        await waitFor(() => {
+            expect(replay.start).toHaveBeenCalledTimes(1)
+        })
         sync.disarm()
         replay.clipSequenceToken = 4
         resolveStart()

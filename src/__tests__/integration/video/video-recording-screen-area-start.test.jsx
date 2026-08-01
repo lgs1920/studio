@@ -57,7 +57,7 @@ vi.mock('@Utils/UIToast', () => ({
 
 vi.mock('@Core/ui/replay/ReplayDeferredExporter', () => ({
     prepareReplayDeferredExportPlan: vi.fn(() => ({exporter: {}, plan: {runtime: {}}})),
-    warmReplayDeferredExportPlan:    vi.fn(),
+    warmReplayDeferredExportPlan:    vi.fn(() => Promise.resolve({plan: {runtime: {status: 'ready'}}})),
 }))
 
 vi.mock('@Core/ui/replay/ReplayVideoOverlayComposer', () => ({
@@ -132,6 +132,10 @@ describe('VideoRecordingScreenArea start flow', () => {
             },
             recorder,
             ui: {
+                replay: {
+                    captureCameraState: vi.fn(),
+                    waitForSceneRestore: vi.fn(() => Promise.resolve()),
+                },
                 replayVideoSync: {
                     arm: vi.fn(),
                 },
@@ -208,6 +212,7 @@ describe('VideoRecordingScreenArea start flow', () => {
         delete globalThis.lgs
         delete globalThis.requestAnimationFrame
         delete globalThis.cancelAnimationFrame
+        delete globalThis.__lgsReplayVideoTrace
     })
 
     it('starts recording after expected video widgets are ready', async () => {
@@ -216,8 +221,54 @@ describe('VideoRecordingScreenArea start flow', () => {
         await waitFor(() => {
             expect(recorder.startVideo).toHaveBeenCalledTimes(1)
         })
+
+        const traceEntries = globalThis.__lgsReplayVideoTrace ?? []
+        const traceEvents = traceEntries.map(entry => entry.event)
+        expect(traceEvents).toEqual(expect.arrayContaining([
+            'draft.recording.initialize.start',
+            'draft.recording.ui.prepare.start',
+            'draft.recording.ui.prepare.end',
+            'draft.recording.crop.sync.start',
+            'draft.recording.crop.sync.end',
+            'draft.recording.replay-bridge.start',
+            'draft.recording.replay-bridge.end',
+            'draft.recording.scene-restore.wait.start',
+            'draft.recording.scene-restore.wait.end',
+            'draft.recording.composer.first-frame.end',
+            'draft.recording.initialize.end',
+            'draft.recorder.start.begin',
+            'draft.recorder.start.end',
+        ]))
+        expect(traceEntries.find(entry => entry.event === 'draft.recording.initialize.end')?.data).toEqual(expect.objectContaining({
+            syncRequested: false,
+        }))
+
         expect(globalThis.lgs.stores.ui.video.preRecording).toBe(false)
         expect(globalThis.lgs.stores.ui.video.recording).toBe(true)
         expect(CanvasOverlayComposer.mock.instances[0].setContinuousRendering).toHaveBeenCalledWith(false)
+    })
+
+    it('captures the draft camera before arming a linked replay recording', async () => {
+        globalThis.lgs.settings.ui.replay.recordingSync = true
+        globalThis.lgs.stores.replay.recordingSync = true
+
+        render(<VideoRecordingScreenArea/>)
+
+        await waitFor(() => {
+            expect(globalThis.__.ui.replayVideoSync.arm).toHaveBeenCalledTimes(1)
+        })
+
+        expect(globalThis.__.ui.replay.captureCameraState).toHaveBeenCalledTimes(1)
+        expect(globalThis.__.ui.replayVideoSync.arm).toHaveBeenCalledWith(expect.objectContaining({
+            recorder,
+            replay: globalThis.__.ui.replay,
+            store:  globalThis.lgs.stores.replay,
+        }))
+
+        const traceEntries = globalThis.__lgsReplayVideoTrace ?? []
+        expect(traceEntries.map(entry => entry.event)).toEqual(expect.arrayContaining([
+            'draft.recording.replay-camera.capture.start',
+            'draft.recording.replay-camera.capture.end',
+        ]))
     })
 })

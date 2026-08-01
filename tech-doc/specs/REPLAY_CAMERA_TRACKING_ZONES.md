@@ -189,6 +189,13 @@ After the recenter duration has elapsed, an additional correction is allowed
 if `outsideTargetZone` is still true. This catches cases where a steep camera
 angle lets the marker continue toward the crop edge during the transition.
 
+The future sample is used for Z1/Z2 positioning. Draft may also use it to
+prepare a heading/position visibility redirect, but its pitch offset is removed
+when the current nominal view is already visible. HQ uses the current marker
+for visibility redirects. When the nominal current view is visible again, the
+redirect is cleared and the nominal pitch is restored at the next camera
+update.
+
 ### 4.5 Predictive Z2 target point
 
 When a dynamic correction is required, the target point is selected inside Z2:
@@ -227,6 +234,11 @@ Visibility correction is separate from ordinary tracking. If terrain or 3D
 tiles hide the rendered marker, the camera may recenter for visibility when the
 marker is outside the trigger conditions. Corrections inside Z1 are suppressed
 unless visibility requires them.
+
+The replay marker itself always remains depth-tested. Its Cesium point uses
+`disableDepthTestDistance = 0`, so terrain relief and 3D tiles can mask it when
+they are between the camera and the marker. Camera visibility correction must
+not turn the marker into an overlay rendered above the relief.
 
 ## 6. Z1/Z2 diagnostic overlay
 
@@ -335,6 +347,10 @@ Consequently:
 - no free-running widget timer is required during HQ export;
 - the same marker sample, projection, collision, and recentering decisions are
   reproduced from the export timeline.
+
+The deferred HQ export also captures the saved Cesium camera/focus snapshot
+from the draft start and feeds it into playback-scene preparation. This keeps
+HQ from starting on a different visual focus than the Draft that prepared it.
 
 ## 9. Implementation references
 

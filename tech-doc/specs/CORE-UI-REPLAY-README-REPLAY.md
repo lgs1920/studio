@@ -12,16 +12,19 @@ The implementation is split into a small set of focused modules:
 - `ReplayOverlayResolver`: resolves replay-driven widget and overlay visibility for video capture.
 - `JourneyReplayCameraPath`: builds replay camera transfers and can switch to a time cadence when draft capture needs wall-clock pacing.
 - `JourneyReplayCameraState`: stores the active camera transition handle and cancels RAF, timeout, or function-based cancel tokens.
+- `JourneyReplayCameraUpdateCache`: provides the ephemeral per-update memoization buckets used by the replay camera visibility and collision helpers.
+- `JourneyReplayCameraBinding`: drives the active replay camera update path, reuses the per-update cache for repeated view and visibility checks, and emits fine-grained update-step traces around the hot branches.
 - `JourneyReplayCameraOverlay`: renders the replay diagnostics canvas used by HQ export to capture Z1/Z2 and camera timing traces.
+- `JourneyReplaySessionSceneController`: logs the replay update phases at a finer granularity so camera timing, renderer work, and POI sync can be separated in the browser console and trace buffer.
 - `ReplayVideoOverlayComposer`: builds the draft/HQ overlay list and keeps replay diagnostics canvases in the HQ composer even when they are hidden in the DOM.
 - `ReplayFrameTimeline`: generates deterministic replay frames from duration and fps.
 - `ReplayVideoRenderSession`: renders replay frames through a caller-provided pipeline.
 - `ReplayDeferredExporter`: wraps the render session and returns a master-export manifest plus rendered frames.
-- `captureReplayDeferredExportContext`: records a lightweight, non-frame export context snapshot.
+- `captureReplayDeferredExportContext`: records a lightweight, non-frame export context snapshot, including the saved draft camera/focus state used to keep Draft and HQ aligned at export start.
 - `warmReplayDeferredExportPlan`: pre-resolves the MP4 codec/config while the draft is starting.
-- `resolveReplayDeferredExportPlan`: reuses the warm plan only when the export context still matches.
+- `resolveReplayDeferredExportPlan`: reuses the warm plan only when the export context still matches, including the captured camera snapshot.
 - `exportReplayDeferredMp4`: renders the master MP4 and returns the blob without forcing a download.
-- `runReplayDeferredMp4Export`: prepares, renders, encodes, and downloads a master MP4 export.
+- `runReplayDeferredMp4Export`: prepares, renders, encodes, and downloads a master MP4 export. The initial HQ scene restore preserves the draft focus snapshot so the export starts from the same visual target.
 - The final video dialog starts the HQ export explicitly and switches its share/download actions to the HQ blob once the export completes.
 - `JourneyReplayControlsWidget` exposes the single stop action while an HQ export is running.
 - `JourneyReplayDebug`: exposes debug snapshots and diagnostic logging.

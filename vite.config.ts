@@ -14,11 +14,11 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {defineConfig} from 'vite'
+import {defineConfig, type Plugin} from 'vite'
 import react from '@vitejs/plugin-react'
 import cesium from 'vite-plugin-cesium'
 import {VitePWA} from 'vite-plugin-pwa'
-import mdPlugin from 'vite-plugin-markdown'
+import mdPlugin, {Mode} from 'vite-plugin-markdown'
 import data from './public/version.json' with {type: 'json'}
 import {execSync} from 'child_process'
 import fs from 'fs'
@@ -36,7 +36,7 @@ const DEV_PROXY_ALLOWED_TARGETS = new Set([
  * Injects current git branch name into a local JSON file for development tracking.
  * Runs only during dev server execution.
  */
-function saveBranchInLocal() {
+function saveBranchInLocal(): Plugin {
     return {
         name: 'inject-git-branch',
         apply: 'serve' as const,
@@ -61,7 +61,7 @@ function saveBranchInLocal() {
  * Dev-only fallback to ensure Cesium static assets are served at /cesium/.
  * This avoids SPA fallback returning index.html for Cesium JSON assets.
  */
-function serveCesiumDev() {
+function serveCesiumDev(): Plugin {
     return {
         name: 'serve-cesium-dev',
         apply: 'serve' as const,
@@ -114,7 +114,7 @@ function serveCesiumDev() {
  * Dev-only PHP proxy equivalent for Vite.
  * The production proxy.php is executed by PHP, while Vite only serves public files.
  */
-function serveProxyPhpDev() {
+function serveProxyPhpDev(): Plugin {
     return {
         name: 'serve-proxy-php-dev',
         apply: 'serve' as const,
@@ -218,7 +218,7 @@ export default defineConfig({
                 type: 'module'
             }
         }),
-        mdPlugin({mode: ['html', 'markdown']}),
+        mdPlugin({mode: [Mode.HTML, Mode.MARKDOWN]}),
         saveBranchInLocal()
     ],
 
@@ -230,6 +230,7 @@ export default defineConfig({
         host: 'dev.lgs1920.fr',
         port: 5173,
         /** Force WebStorm (WSL) as editor for the error overlay */
+        // @ts-expect-error Vite accepts this editor integration option at runtime.
         launchEditor: 'webstorm',
         strictPort: true,
         headers: {
@@ -288,6 +289,30 @@ export default defineConfig({
             {
                 find: '@Assets',
                 replacement: path.resolve(__dirname, 'src/assets')
+            },
+            {
+                find: '@Widgets',
+                replacement: path.resolve(__dirname, 'src/components/MainUI/widgets')
+            },
+            {
+                find: '@Settings',
+                replacement: path.resolve(__dirname, 'src/components/Settings')
+            },
+            {
+                find: '@Tests',
+                replacement: path.resolve(__dirname, 'src/__tests__')
+            },
+            {
+                find: '@Events',
+                replacement: path.resolve(__dirname, 'src/core/events')
+            },
+            {
+                find: '@UI',
+                replacement: path.resolve(__dirname, 'src/core/ui')
+            },
+            {
+                find: '@Database',
+                replacement: path.resolve(__dirname, 'src/core/db')
             }
         ]
     },

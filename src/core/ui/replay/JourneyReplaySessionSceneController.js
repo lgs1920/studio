@@ -30,6 +30,7 @@ import { REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP, normalizeJourneyReplayCl
 import {
     currentJourneyReplayPoiBehavior, currentJourneyReplaySample, finiteNumber, isJourneyReplayVideoCaptureActive,
     publishReplayClipFrameState, replayStore, resetRuntimeProgress, resolveJourneyReplayRuntimeClips,
+    updateReplayFrameRenderContract,
 } from './JourneyReplayRuntime'
 import * as JourneyReplayCameraController from './JourneyReplayCameraController'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
@@ -237,9 +238,10 @@ export const restorePlaybackScene = (mode, {force = false} = {}) => {
         }
 
         state.renderer.clear()
-        const restorePromise = call.restorePlaybackScene().then(() => true)
-        state.sceneRestorePromise = restorePromise
-        return restorePromise
+        // `restorePlaybackSceneInternal` owns the state promise and clears it
+        // after focus and camera restoration have both completed. Keep that
+        // identity intact so its finalizer cannot be skipped by this wrapper.
+        return call.restorePlaybackScene().then(() => true)
     }
 
 export const waitForSceneRestore = (mode) => {
@@ -314,6 +316,7 @@ export const resetCameraController = (mode, {
         state.lastPlaybackUpdateProgressKey = null
         if (!preserveSavedCameraState) {
             state.savedCameraState = null
+            state.replayEntryCameraState = null
             state.playbackStartCameraSettings = null
         }
         state.lastCameraHeading = null
@@ -321,9 +324,12 @@ export const resetCameraController = (mode, {
         state.lastNominalCameraHeading = null
         state.lastNominalCameraPitch = null
         state.lastAppliedCameraView = null
+        state.lastReplayLogicalFrame = null
         state.cameraRedirectState = null
         state.cameraUserAdjusting = false
         state.cameraApplyingView = false
+        state.terrainHeightLookupBypass = false
+        state.terrainHeightLookupTrace = false
         state.cameraPointerActive = false
         state.cameraAutoTrackingIgnoreUntil = 0
         state.journeyToolbarHidden = false
@@ -448,6 +454,9 @@ export const restorePlaybackSceneInternal = (mode, ) => {
             return state.sceneRestorePromise
         }
 
+        // Clear the replay renderer before focus and visibility restoration so
+        // normal completion and premature aborts cannot leave replay graphics visible.
+        state.renderer.clear()
         state.sceneRestoreDeferred = false
         call.removeToleranceZoneOverlay()
         call.restoreOtherJourneysVisibility()
@@ -460,41 +469,80 @@ export const restorePlaybackSceneInternal = (mode, ) => {
         call.restoreMainUI()
         void call.restoreNearbyPOIsAfterPlayback()
         resetRuntimeProgress(replayStore())
-        call.restoreCurrentJourneyVisibility()
+        // Keep the captured POI visibility state until the focus operation has
+        // completed. `journey.focus()` can make every entity visible again.
+        call.restoreCurrentJourneyVisibility({restorePOIs: false})
         call.resetCameraController({preserveSavedCameraState: true})
         state.suppressPlaybackCameraSync = true
+        const restoreClipSequenceToken = state.clipSequenceToken
         let restorePromise
         restorePromise = call.focusJourneyAfterPlayback({
             snapDistance: 50000,
         }).finally(() => {
             if (state.sceneRestorePromise !== restorePromise) {
+                // A cancelled restoration may finish its Cesium focus flight later.
+                // Reapply the current replay pose so stale focus cannot move the active replay.
+                const replayActive = state.controller?.running === true
+                                   || state.controller?.playing === true
+                                   || state.controller?.paused === true
+                const sample = replayActive
+                             ? currentJourneyReplaySample(state.controller)
+                             : null
+                if (restoreClipSequenceToken !== state.clipSequenceToken
+                    && replayActive
+                    && sample
+                    && typeof call.updateCamera === 'function') {
+                    call.updateCamera({
+                        sample,
+                        progress:      finiteNumber(state.controller?.progress ?? sample.progress) ?? 0,
+                        source:        'playback',
+                        logicalCamera: state.logicalCameraTrajectory === true,
+                        exportMode:    state.replayExportCameraActive === true,
+                    })
+                }
                 return
             }
             state.deferPlaybackCameraRestore = false
+            // Focus can rewrite journey and POI visibility. Reapply the
+            // visibility captured before replay after focus has settled.
+            call.restoreCurrentJourneyVisibility()
             // Restoring the journey focus above changes the live Cesium view.
             // Reapply the exact camera captured before Draft/HQ playback so a
             // subsequent export does not inherit the focus angle.
             if (!state.cameraStateRestoredBeforeSceneCleanup) {
                 call.restoreCameraState()
             }
+            else {
+                state.savedCameraState = null
+            }
             state.cameraStateRestoredBeforeSceneCleanup = false
             call.restorePlaybackCameraSettings({force: true})
+            state.replayEntryCameraState = null
             state.sceneRestorePromise = null
         })
         state.sceneRestorePromise = restorePromise
         return restorePromise
     }
 
-export const restoreCameraState = (mode, {clear = true} = {}) => {
+/**
+ * Apply a captured replay camera state without replacing the saved pre-replay focus.
+ *
+ * @param {object} mode - Replay session mode.
+ * @param {object} [options] - Camera restore options.
+ * @param {boolean} [options.clear=true] - Clear the saved pre-replay state after use.
+ * @param {object|null} [options.cameraState=null] - Explicit camera state to apply.
+ * @returns {boolean} Whether a camera state was applied.
+ */
+export const restoreCameraState = (mode, {clear = true, cameraState = null} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         const camera = globalThis.lgs?.viewer?.camera
-        const savedCameraState = state.savedCameraState
-        if (clear) {
+        const savedCameraState = cameraState ?? state.savedCameraState
+        if (clear && cameraState === null) {
             state.savedCameraState = null
         }
         if (!camera || !savedCameraState) {
-            return
+            return false
         }
 
         camera.cancelFlight?.()
@@ -507,6 +555,7 @@ export const restoreCameraState = (mode, {clear = true} = {}) => {
             ),
             orientation: savedCameraState.orientation,
         })
+        return true
     }
 
 export const setContinuousRender = (mode, enabled) => {
@@ -536,23 +585,20 @@ export const setContinuousRender = (mode, enabled) => {
 export const abortPlaybackAfterListenerError = (mode, error) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-        console.error('[JourneyReplayMode] Playback listener failed. JourneyReplay stopped.', error)
         state.clipSequenceToken++
         call.stopStopClipPOIMaskLoop()
+        call.cancelActiveCameraFlight()
         state.controller.stop({emit: false, clearProgress: false})
         call.setContinuousRender(false)
         state.renderer.clear()
-        call.restoreOtherJourneysVisibility()
-        call.restoreCurrentJourneyVisibility({restorePOIs: false})
-        call.setJourneyReplayOrbitAllowed(true)
-        state.deferStartCameraRecenter = false
-        call.resetCameraController({preserveSavedCameraState: true})
-        call.restoreJourneyToolbarVisibility()
-        call.restoreMainUI()
-        call.restorePlaybackCameraSettings({force: true})
-        resetRuntimeProgress(replayStore())
-        call.restoreCurrentJourneyVisibility()
-        call.restoreCameraState()
+        state.sceneRestoreDeferred = false
+        state.sceneRestorePromise = null
+        state.deferPlaybackCameraRestore = false
+        state.cameraStateRestoredBeforeSceneCleanup = false
+        state.replayExportCameraActive = false
+        state.renderingReplayExportFrame = false
+        state.logicalCameraTrajectory = false
+        return call.restorePlaybackScene()
     }
 
 export const scheduleProfileHoverMarker = (mode, sample) => {
@@ -648,32 +694,59 @@ export const restoreJourneyToolbarVisibility = (mode, ) => {
 export const isJourneyToolbarTemporarilyHidden = mode => mode[JOURNEY_REPLAY_INTERNAL_STATE].journeyToolbarHidden === true
 
 export const bindRenderer = (mode, ) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+        const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         state.unbind.push(
             state.controller.on(REPLAY_EVENT_START, detail => {
+                const startListenerStartedAt = globalThis.performance?.now?.() ?? Date.now()
+                let listenerError = null
+                replayVideoTraceDebug('draft.replay.start.listener.begin', {
+                    progress: detail?.progress ?? null,
+                    hasSampler: Boolean(detail?.sampler),
+                })
                 try {
-                    state.lastPlaybackUpdateProgressKey = null
-                    call.setToleranceZoneOverlayVisible(true)
-                    if (call.isReplayVideoLinked()) {
-                        call.hideJourneyToolbarVisibility()
+                    const traceStep = (step, extra = {}) => {
+                        replayVideoTraceDebug('draft.replay.start.listener.step', {
+                            step,
+                            elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startListenerStartedAt,
+                            progress: detail?.progress ?? null,
+                            hasSampler: Boolean(detail?.sampler),
+                            ...extra,
+                        })
                     }
+                    state.lastPlaybackUpdateProgressKey = null
+                    traceStep('set-tolerance-zone-visible.begin')
+                    call.setToleranceZoneOverlayVisible(true)
+                    traceStep('set-tolerance-zone-visible.end')
+                    if (call.isReplayVideoLinked()) {
+                        traceStep('hide-journey-toolbar.begin')
+                        call.hideJourneyToolbarVisibility()
+                        traceStep('hide-journey-toolbar.end')
+                    }
+                    traceStep('set-continuous-render.begin')
                     call.setContinuousRender(true)
+                    traceStep('set-continuous-render.end')
+                    traceStep('renderer.show.begin')
                     state.renderer.show({
                         sampler: detail.sampler,
                         options: {smoothedGuide: call.smoothedGuide()},
                     })
+                    traceStep('renderer.show.end')
                     const startSample = detail.sample
                                         ?? detail.sampler?.atProgress?.(detail.progress ?? 0)
                                         ?? currentJourneyReplaySample(state.controller)
 
+                    traceStep('renderer.update.begin')
                     state.renderer.update({
                         ...detail,
                         forceGeometry: true,
                         hideTrace: true,
                         showTrace: isJourneyReplayVideoCaptureActive(),
                     })
+                    traceStep('renderer.update.end')
+                    traceStep('sync-nearby-pois.begin')
                     void call.syncNearbyPOIsForSample(startSample ?? detail.sample ?? null)
+                    traceStep('sync-nearby-pois.end')
                     if (!state.deferStartCameraRecenter) {
                         if (state.skipNextImmediateStartRecenter) {
                             state.skipNextImmediateStartRecenter = false
@@ -681,26 +754,53 @@ export const bindRenderer = (mode, ) => {
                             const startCameraSettings = normalizeJourneyReplayCamera(
                                 globalThis.lgs?.stores?.replay?.camera ?? replaySettings.camera,
                             )
+                            traceStep('update-tolerance-zone-overlay.begin')
                             call.updateToleranceZoneOverlay(startCameraSettings.hysteresis)
+                            traceStep('update-tolerance-zone-overlay.end')
                         }
                         else {
+                            traceStep('update-camera.begin')
                             call.updateCamera({
                                                    ...detail,
                                                    source:                    'start',
                                                    forceToleranceRecenter:     true,
                                                    immediateToleranceRecenter: true,
+                                                   logicalCamera:             isJourneyReplayVideoCaptureActive(),
                                                })
+                            updateReplayFrameRenderContract({
+                                logicalFrame: detail?.logicalFrame,
+                            })
+                            traceStep('update-camera.end')
                         }
                         const startProgress = finiteNumber(detail?.progress ?? startSample?.progress)
                         state.lastPlaybackUpdateProgressKey = Math.round((startProgress ?? 0) / CAMERA_UPDATE_MIN_PROGRESS_DELTA)
                     }
                 }
                 catch (error) {
+                    listenerError = error
                     call.abortPlaybackAfterListenerError(error)
+                }
+                finally {
+                    replayVideoTraceDebug('draft.replay.start.listener.end', {
+                        elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startListenerStartedAt,
+                        progress: detail?.progress ?? null,
+                        hasSampler: Boolean(detail?.sampler),
+                        errored: listenerError !== null,
+                    })
                 }
             }),
             state.controller.on(REPLAY_EVENT_UPDATE, detail => {
+                const updateListenerStartedAt = globalThis.performance?.now?.() ?? Date.now()
                 try {
+                    const traceUpdateStep = (step, extra = {}) => {
+                        replayVideoTraceDebug('draft.replay.update.listener.step', {
+                            step,
+                            elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - updateListenerStartedAt,
+                            progress: detail?.progress ?? null,
+                            hasSampler: Boolean(detail?.sampler),
+                            ...extra,
+                        })
+                    }
                     // `seek()` is also used to publish each deterministic HQ
                     // frame. The export renderer applies that frame below;
                     // running the live listener here would update the camera a
@@ -708,26 +808,53 @@ export const bindRenderer = (mode, ) => {
                     if (state.renderingReplayExportFrame) {
                         return
                     }
+                    const videoCaptureActive = isJourneyReplayVideoCaptureActive()
                     const playbackProgress = finiteNumber(detail?.progress ?? detail?.sample?.progress)
                     const playbackProgressKey = Math.round((playbackProgress ?? 0) / CAMERA_UPDATE_MIN_PROGRESS_DELTA)
+                    traceUpdateStep('renderer.update.begin', {
+                        videoCaptureActive,
+                        playbackProgress,
+                        playbackProgressKey,
+                    })
                     state.renderer.update({
                         ...detail,
                         sampler: state.sampler,
-                        showTrace: isJourneyReplayVideoCaptureActive(),
+                        showTrace: videoCaptureActive,
                     })
+                    traceUpdateStep('renderer.update.end')
+                    traceUpdateStep('sync-nearby-pois.begin')
                     void call.syncNearbyPOIsForSample(detail.sample ?? null)
-                    if (state.lastPlaybackUpdateProgressKey === playbackProgressKey) {
+                    traceUpdateStep('sync-nearby-pois.end')
+                    if (!videoCaptureActive && state.lastPlaybackUpdateProgressKey === playbackProgressKey) {
+                        traceUpdateStep('update-camera.skip', {
+                            reason: 'duplicate-progress-key',
+                            playbackProgressKey,
+                        })
                         return
                     }
 
                     state.lastPlaybackUpdateProgressKey = playbackProgressKey
+                    traceUpdateStep('update-camera.begin', {
+                        playbackProgressKey,
+                    })
                     call.updateCamera({
                         ...detail,
                         source: 'playback',
                     })
+                    updateReplayFrameRenderContract({
+                        logicalFrame: detail?.logicalFrame,
+                    })
+                    traceUpdateStep('update-camera.end')
                 }
                 catch (error) {
                     call.abortPlaybackAfterListenerError(error)
+                }
+                finally {
+                    replayVideoTraceDebug('draft.replay.update.listener.end', {
+                        elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - updateListenerStartedAt,
+                        progress: detail?.progress ?? null,
+                        hasSampler: Boolean(detail?.sampler),
+                    })
                 }
             }),
             state.controller.on(REPLAY_EVENT_PAUSE, detail => {
@@ -746,6 +873,9 @@ export const bindRenderer = (mode, ) => {
                     call.setContinuousRender(true)
                     state.renderer.update({...detail, forceGeometry: true, showTrace: isJourneyReplayVideoCaptureActive()})
                     call.updateCamera(detail)
+                    updateReplayFrameRenderContract({
+                        logicalFrame: detail?.logicalFrame,
+                    })
                 }
                 catch (error) {
                     call.abortPlaybackAfterListenerError(error)
@@ -814,25 +944,17 @@ export const bindRenderer = (mode, ) => {
                         return
                     }
 
-                    const raf = globalThis.requestAnimationFrame
-                                ?? globalThis.window?.requestAnimationFrame?.bind(globalThis.window)
-                                ?? (callback => setTimeout(callback, 0))
-
-                    raf(() => {
-                        raf(() => {
-                            if (token === state.clipSequenceToken) {
-                                // The recorder captures the final Draft frame
-                                // synchronously from this notification. Keep
-                                // the completed trace rendered until that
-                                // capture has happened; clearing first makes
-                                // the trace disappear from the last frame.
-                                notifyStopClipsComplete()
-                                if (typeof afterFrame === 'function') {
-                                    afterFrame()
-                                }
-                            }
-                        })
-                    })
+                    // Without an active recorder there is no media frame to
+                    // protect with animation-frame delays. Finish immediately
+                    // so replay cleanup and journey restoration are observable
+                    // on the same exit path as Draft and HQ.
+                    if (token === state.clipSequenceToken) {
+                        notifyStopClipsComplete()
+                        if (typeof afterFrame === 'function') {
+                            afterFrame()
+                        }
+                    }
+                    return
                 }
                 const finalize = () => {
                     if (token !== state.clipSequenceToken) {

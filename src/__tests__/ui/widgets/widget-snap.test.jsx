@@ -270,6 +270,19 @@ describe('Widget snap behavior', () => {
         ]))
     })
 
+    it('keeps the cropper host transparent to pointer events during capture lock', () => {
+        installGlobals()
+        lgs.stores.ui.video.preRecording = true
+
+        const {container} = renderWidget({
+            id:       'video-crop-zone',
+            type:     LGS_VISUAL_WIDGET,
+            isCropper: true,
+        })
+
+        expect(container.querySelector('.lgs-widget-container')?.style.pointerEvents).toBe('none')
+    })
+
     it('does not snap a visual widget to widgets on another board', async () => {
         installGlobals()
         const otherBoardWidget = document.createElement('div')

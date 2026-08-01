@@ -15,8 +15,7 @@
  ******************************************************************************/
 
 import { Mobility } from '@Utils/Mobility'
-import { getTrackRenderContent, trackRenderSmoothingKey } from '@Utils/cesium/trackRenderSmoothing'
-import { Track } from '@Core/Track'
+import {logicalCoordinateSegmentsFromTrack, logicalTrackPathFromJourney} from './JourneyReplayLogicalTrackPath'
 
 const LINE_STRING = 'LineString'
 const MULTI_LINE_STRING = 'MultiLineString'
@@ -47,7 +46,6 @@ const parseTimeMillis = value => {
 const isoTime = millis => Number.isFinite(millis) ? new Date(millis).toISOString() : null
 
 const rawCoordinateSegmentsCache = new WeakMap()
-const renderedCoordinateSegmentsCache = new WeakMap()
 const timeSegmentsCache = new WeakMap()
 const metricBreakpointsCache = new WeakMap()
 
@@ -244,6 +242,21 @@ export class JourneyReplayPathSampler {
 
     get hasSamples() {
         return this.#samples.length > 0
+    }
+
+    /**
+     * Return the renderer-independent path used by the replay sampler.
+     *
+     * @returns {Array<Object>} Logical track path entries.
+     */
+    get logicalTrackPath() {
+        return logicalTrackPathFromJourney(this.#journey, {
+            scope:               this.#scope,
+            trackSlug:           this.#trackSlug,
+            includeHiddenTracks: this.#includeHiddenTracks,
+            forceRenderSmoothing: this.#forceRenderSmoothing,
+            renderSmoothing:      this.#renderSmoothing,
+        })
     }
 
     #selectedTracks = () => {
@@ -616,29 +629,7 @@ export class JourneyReplayPathSampler {
     }
 
     static coordinateSegmentsFromTrack = (track, options = {}) => {
-        const cacheKey = track?.content
-        const smoothingKey = trackRenderSmoothingKey(track, options)
-        const cacheBucket = getWeakMapBucket(renderedCoordinateSegmentsCache, cacheKey)
-        const cachedSegments = cacheBucket?.get(smoothingKey)
-        if (cachedSegments) {
-            return cachedSegments
-        }
-
-        const geometry = getTrackRenderContent(track, options)?.geometry
-        if (!geometry) {
-            return []
-        }
-
-        let segments = []
-        if (geometry.type === LINE_STRING && Array.isArray(geometry.coordinates)) {
-            segments = [geometry.coordinates]
-        }
-        else if (geometry.type === MULTI_LINE_STRING && Array.isArray(geometry.coordinates)) {
-            segments = geometry.coordinates.filter(Array.isArray)
-        }
-
-        cacheBucket?.set(smoothingKey, segments)
-        return segments
+        return logicalCoordinateSegmentsFromTrack(track, options)
     }
 
     static timeSegmentsFromTrack = (track) => {

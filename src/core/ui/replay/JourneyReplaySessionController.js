@@ -77,6 +77,29 @@ const PROFILE_HOVER_RENDER_INTERVAL = 120
 const METRIC_OVERLAY_TTL = 2000
 const REPLAY_HEADING_TRANSITION_DURATION_SECONDS = 2
 const SAFE_TOP_DOWN_PITCH = -(Math.PI / 2 - 0.0001)
+
+/**
+ * Clone a replay camera state before exposing it to another rendering path.
+ *
+ * @param {Object|null} cameraState - Camera state captured at replay entry.
+ * @returns {Object|null} An immutable-by-convention camera state snapshot.
+ */
+const cloneReplayCameraState = cameraState => {
+    if (!cameraState || typeof cameraState !== 'object') {
+        return null
+    }
+
+    return {
+        destination: {
+            ...cameraState.destination,
+        },
+        orientation: {
+            ...cameraState.orientation,
+        },
+        altitude: cameraState.altitude,
+    }
+}
+
 const CAMERA_GUIDE_MIN_STEPS = 512
 const CAMERA_GUIDE_MAX_STEPS = 4096
 const CAMERA_GUIDE_TARGET_SPACING_METERS = 12
@@ -204,6 +227,7 @@ export class JourneyReplaySessionController {
     #constrainedReplayCameraPath = null
     #cameraMode = null
     #cameraFlightActive = false
+    #logicalCameraTrajectory = false
     #replayExportClipFrameState = null
     #renderingReplayExportFrame = false
     #cameraBezierFrame = null
@@ -223,12 +247,15 @@ export class JourneyReplaySessionController {
     #cameraStateRestoredBeforeSceneCleanup = false
     #deferPlaybackCameraRestore = false
     #suppressPlaybackCameraSync = false
+    #terrainHeightLookupBypass = false
+    #terrainHeightLookupTrace = false
     #replayDrawerWasOpenBeforePlayback = false
     #lastCameraHeading = null
     #lastCameraPitch = null
     #lastNominalCameraHeading = null
     #lastNominalCameraPitch = null
     #lastAppliedCameraView = null
+    #lastReplayLogicalFrame = null
     #cameraRedirectState = null
     #cameraUserAdjusting = false
     #cameraApplyingView = false
@@ -241,6 +268,7 @@ export class JourneyReplaySessionController {
     #lastNavigationRecenterAt = null
     #lastNavigationRecenterProgress = null
     #toleranceZoneOverlayCanvas = null
+    #toleranceZoneOverlayCameraChangedRemove = null
     #lastDynamicTargetScreen = null
     #skipNextImmediateStartRecenter = false
     #toleranceZoneOverlay = null
@@ -386,6 +414,13 @@ export class JourneyReplaySessionController {
                 this.#cameraFlightActive = value
             },
         })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'logicalCameraTrajectory', {
+            configurable: true,
+            get: () => this.#logicalCameraTrajectory,
+            set: value => {
+                this.#logicalCameraTrajectory = value === true
+            },
+        })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'replayExportClipFrameState', {
             configurable: true,
             get: () => this.#replayExportClipFrameState,
@@ -512,6 +547,20 @@ export class JourneyReplaySessionController {
                 this.#suppressPlaybackCameraSync = value
             },
         })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'terrainHeightLookupBypass', {
+            configurable: true,
+            get: () => this.#terrainHeightLookupBypass,
+            set: value => {
+                this.#terrainHeightLookupBypass = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'terrainHeightLookupTrace', {
+            configurable: true,
+            get: () => this.#terrainHeightLookupTrace,
+            set: value => {
+                this.#terrainHeightLookupTrace = value
+            },
+        })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'replayDrawerWasOpenBeforePlayback', {
             configurable: true,
             get: () => this.#replayDrawerWasOpenBeforePlayback,
@@ -552,6 +601,13 @@ export class JourneyReplaySessionController {
             get: () => this.#lastAppliedCameraView,
             set: value => {
                 this.#lastAppliedCameraView = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'lastReplayLogicalFrame', {
+            configurable: true,
+            get: () => this.#lastReplayLogicalFrame,
+            set: value => {
+                this.#lastReplayLogicalFrame = value
             },
         })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'cameraRedirectState', {
@@ -657,6 +713,13 @@ export class JourneyReplaySessionController {
             get: () => this.#toleranceZoneOverlayCanvas,
             set: value => {
                 this.#toleranceZoneOverlayCanvas = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'toleranceZoneOverlayCameraChangedRemove', {
+            configurable: true,
+            get: () => this.#toleranceZoneOverlayCameraChangedRemove,
+            set: value => {
+                this.#toleranceZoneOverlayCameraChangedRemove = value
             },
         })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'toleranceZoneOverlayVisible', {
@@ -898,6 +961,8 @@ export class JourneyReplaySessionController {
             cancelPendingSceneRestore: (...args) => JourneyReplaySessionSceneController.cancelPendingSceneRestore(this, ...args),
             restoreCameraState: (...args) => JourneyReplaySessionSceneController.restoreCameraState(this, ...args),
             setContinuousRender: (...args) => JourneyReplaySessionSceneController.setContinuousRender(this, ...args),
+            setTerrainHeightLookupBypass: (...args) => JourneyReplayCameraController.setTerrainHeightLookupBypass(this, ...args),
+            setTerrainHeightLookupTrace: (...args) => JourneyReplayCameraController.setTerrainHeightLookupTrace(this, ...args),
             abortPlaybackAfterListenerError: (...args) => JourneyReplaySessionSceneController.abortPlaybackAfterListenerError(this, ...args),
             scheduleProfileHoverMarker: (...args) => JourneyReplaySessionSceneController.scheduleProfileHoverMarker(this, ...args),
             renderProfileHoverMarker: (...args) => JourneyReplaySessionSceneController.renderProfileHoverMarker(this, ...args),
@@ -981,9 +1046,9 @@ export class JourneyReplaySessionController {
             videoCropRect: (...args) => JourneyReplayCameraController.videoCropRect(this, ...args),
             viewportRectForCesiumSurface: (...args) => JourneyReplayCameraController.viewportRectForCesiumSurface(this, ...args),
             updateToleranceZoneOverlay: (...args) => JourneyReplayCameraController.updateToleranceZoneOverlay(this, ...args),
+            refreshReplayDiagnosticsOverlay: (...args) => JourneyReplayCameraController.refreshReplayDiagnosticsOverlay(this, ...args),
             constrainedReplayProjectionViewport: (...args) => JourneyReplayCameraController.constrainedReplayProjectionViewport(this, ...args),
             constrainedReplayCameraPathKey: (...args) => JourneyReplayCameraController.constrainedReplayCameraPathKey(this, ...args),
-            resolveConstrainedReplayCameraPath: (...args) => JourneyReplayCameraController.resolveConstrainedReplayCameraPath(this, ...args),
             recenterCameraToSample: (...args) => JourneyReplayCameraController.recenterCameraToSample(this, ...args),
             startCameraTransition: (...args) => JourneyReplayCameraController.startCameraTransition(this, ...args),
             bindMarkerInteractions: (...args) => JourneyReplayCameraController.bindMarkerInteractions(this, ...args),
@@ -1050,6 +1115,33 @@ export class JourneyReplaySessionController {
 
     get clipSequenceToken() {
         return this[JOURNEY_REPLAY_INTERNAL_STATE].clipSequenceToken
+    }
+
+    /**
+     * Return the camera state captured before replay entry.
+     *
+     * @returns {Object|null} The pre-replay camera snapshot used for restoration and HQ preparation.
+     */
+    get savedCameraState() {
+        return cloneReplayCameraState(this[JOURNEY_REPLAY_INTERNAL_STATE].savedCameraState)
+    }
+
+    /**
+     * Return the camera state used to initialize replay rendering.
+     *
+     * @returns {Object|null} The replay-entry camera snapshot.
+     */
+    get replayEntryCameraState() {
+        return cloneReplayCameraState(this[JOURNEY_REPLAY_INTERNAL_STATE].replayEntryCameraState)
+    }
+
+    /**
+     * Return the latest renderer-independent replay frame passed to the camera adapter.
+     *
+     * @returns {Object|null} The latest logical replay frame.
+     */
+    get lastReplayLogicalFrame() {
+        return this[JOURNEY_REPLAY_INTERNAL_STATE].lastReplayLogicalFrame
     }
 
     #samplerConfigurationKey = ({

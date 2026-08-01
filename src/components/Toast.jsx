@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-/* eslint-disable react-refresh/only-export-components */
+/* oxlint-disable react/only-export-components */
 
 import { useEffect, useRef }     from 'react'
 import { SECOND }                from '@Core/constants'

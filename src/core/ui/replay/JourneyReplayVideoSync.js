@@ -17,12 +17,12 @@
 import { REPLAY_EVENT_STOP_CLIPS_COMPLETE } from './JourneyReplayMode'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { hasJourneyReplayStopClips } from '@Core/ui/replay/ReplayOverlayResolver'
+import { replayVideoTraceDebug } from './ReplayVideoTraceDebug'
 
 const defaultJourneyReplayStore = () => globalThis.lgs?.stores?.replay ?? null
 
 const waitForAnimationFrame = () => new Promise(resolve => {
     const requestFrame = globalThis.requestAnimationFrame
-                         ?? globalThis.window?.requestAnimationFrame?.bind(globalThis.window)
                          ?? (callback => setTimeout(callback, 0))
     requestFrame(() => resolve())
 })
@@ -190,18 +190,51 @@ export class JourneyReplayVideoSync {
             }
 
             const startGeneration = this.#captureGeneration
+            const startStartedAt = globalThis.performance?.now?.() ?? Date.now()
+            const previousTerrainHeightLookupBypass = this.#replay?.terrainHeightLookupBypass === true
+            const previousTerrainHeightLookupTrace = this.#replay?.terrainHeightLookupTrace === true
             this.#cancelPendingStart()
             if (!this.#armed || startGeneration !== this.#captureGeneration) {
                 this.#setVideoSafeMode(false)
                 return
             }
-            this.#replay?.cancelPendingSceneRestore?.()
-            if (this.#resetToStart && this.#replay?.running) {
-                this.#replay.stop?.({emit: false})
-            }
-            this.#replayCaptureActive = true
-            this.#replayStartPending = true
+            replayVideoTraceDebug('draft.replay.start.begin', {
+                armed: this.#armed,
+                resetToStart: this.#resetToStart === true,
+                captureMode: this.#captureMode,
+                captureFps: this.#captureFps,
+                generation: startGeneration,
+                replayRunning: this.#replay?.running === true,
+            })
+            let startSucceeded = false
+            let startError = null
             try {
+                this.#replay?.setTerrainHeightLookupTrace?.(true)
+                this.#replay?.setTerrainHeightLookupBypass?.(true)
+                replayVideoTraceDebug('draft.replay.terrain.lookup.bypass.start', {
+                    generation: startGeneration,
+                    previousBypass: previousTerrainHeightLookupBypass,
+                    previousTrace: previousTerrainHeightLookupTrace,
+                })
+                this.#replay?.cancelPendingSceneRestore?.()
+                if (this.#resetToStart && this.#replay?.running) {
+                    this.#replay.stop?.({emit: false})
+                }
+                replayVideoTraceDebug('draft.replay.camera.restore.start', {
+                    generation: startGeneration,
+                    hasRestoreCameraState: typeof this.#replay?.restoreCameraState === 'function',
+                })
+                this.#replay?.restoreCameraState?.({clear: false})
+                await waitForAnimationFrame()
+                replayVideoTraceDebug('draft.replay.camera.restore.end', {
+                    generation: startGeneration,
+                    hasRestoreCameraState: typeof this.#replay?.restoreCameraState === 'function',
+                })
+                if (!this.#armed || startGeneration !== this.#captureGeneration) {
+                    return
+                }
+                this.#replayCaptureActive = true
+                this.#replayStartPending = true
                 const startResult = this.#replay?.start?.({progress: 0})
                 await startResult
                 if (!this.#armed || startGeneration !== this.#captureGeneration) {
@@ -210,18 +243,65 @@ export class JourneyReplayVideoSync {
                 this.#replayCaptureToken = Number.isFinite(this.#replay?.clipSequenceToken)
                                           ? this.#replay.clipSequenceToken
                                           : null
+                startSucceeded = true
             }
-            catch {
+            catch (error) {
+                startError = error
+                replayVideoTraceDebug('draft.replay.start.error', {
+                    elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startStartedAt,
+                    generation: startGeneration,
+                    message: error?.message ?? null,
+                    name: error?.name ?? null,
+                    armed: this.#armed,
+                })
                 return
             }
             finally {
+                this.#replay?.setTerrainHeightLookupBypass?.(previousTerrainHeightLookupBypass)
+                this.#replay?.setTerrainHeightLookupTrace?.(previousTerrainHeightLookupTrace)
+                replayVideoTraceDebug('draft.replay.terrain.lookup.bypass.end', {
+                    generation: startGeneration,
+                    restoredBypass: previousTerrainHeightLookupBypass,
+                    restoredTrace: previousTerrainHeightLookupTrace,
+                })
+                if (!startSucceeded) {
+                    this.#replayCaptureActive = false
+                }
                 this.#replayStartPending = false
+                replayVideoTraceDebug('draft.replay.start.end', {
+                    elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startStartedAt,
+                    generation: startGeneration,
+                    armed: this.#armed,
+                    captureMode: this.#captureMode,
+                    captureFps: this.#captureFps,
+                    succeeded: startSucceeded,
+                    errored: startError !== null,
+                    captureToken: this.#replayCaptureToken,
+                    captureActive: this.#replayCaptureActive,
+                    pendingStart: this.#replayStartPending,
+                })
             }
         }
 
         const handleRecorderStart = () => {
+            replayVideoTraceDebug('draft.recorder.start.received', {
+                armed: this.#armed,
+                captureMode: this.#captureMode,
+                captureFps: this.#captureFps,
+                resetToStart: this.#resetToStart === true,
+            })
             this.#setVideoCaptureCadence()
-            void startJourneyReplay()
+            this.#cancelPendingStart()
+            this.#replayStartPending = true
+            replayVideoTraceDebug('draft.replay.start.scheduled', {
+                captureMode: this.#captureMode,
+                captureFps: this.#captureFps,
+                generation: this.#captureGeneration,
+            })
+            this.#pendingStartTimeout = globalThis.setTimeout(() => {
+                this.#pendingStartTimeout = null
+                void startJourneyReplay()
+            }, 0)
         }
 
         const handleRecorderPause = () => {

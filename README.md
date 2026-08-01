@@ -172,6 +172,7 @@ The Skills are stored in [.aiassistant/skills/](.aiassistant/skills/) and cover:
 - [Cesium camera](.aiassistant/skills/lgs-1920-studio-cesium-camera/SKILL.md)
 - [CSS theme system](.aiassistant/skills/lgs-1920-studio-css-theme-system/SKILL.md)
 - [Documentation maintenance](.aiassistant/skills/lgs-1920-studio-documentation-maintenance/SKILL.md)
+- [GitHub issues and Project workflow](.aiassistant/skills/lgs-1920-studio-github-issues/SKILL.md)
 - [GPX journey import](.aiassistant/skills/lgs-1920-studio-gpx-journey-import/SKILL.md)
 - [Internal database](.aiassistant/skills/lgs-1920-studio-internal-database/SKILL.md)
 - [Journey statistics](.aiassistant/skills/lgs-1920-studio-journey-statistics/SKILL.md)
