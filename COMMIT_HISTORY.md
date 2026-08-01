@@ -1,5 +1,17 @@
 # Commit History
 
+## 2026-08-01 — [`fix(replay): stabilize camera tracking and depth visibility`](https://github.com/lgs1920/studio/commit/eda0a39c90d64962f03d181055ae8017db52810a)
+
+- Adapt replay tracking zones and camera transitions to short timeline budgets.
+- Keep ground-offset camera heights anchored to the rendered marker and correct terrain/depth occlusion.
+- Add camera regression coverage and update the replay camera specifications.
+
+## 2026-08-01 — [`refactor(replay): centralize Draft and HQ video timeline`](https://github.com/lgs1920/studio/commit/1647403a9f49240b5627e9857c9f5a86f23dd8de)
+
+- Share the canonical start, replay, and stop timeline between Draft playback and HQ export.
+- Publish absolute frame timing and clip phase metadata to replay rendering consumers.
+- Add unit coverage for timeline boundaries and Draft/HQ phase parity.
+
 ## 2026-08-01 — [`fix: align Vite config with native loader`](https://github.com/lgs1920/studio/commit/f8eed3f75dff4d563f6885596509a078540b79d5)
 
 - Rename the Vite configuration to `.mts` so its ESM syntax is compatible with the native config loader.
