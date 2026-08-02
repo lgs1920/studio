@@ -25,3 +25,6 @@ This directory contains proposed, pending-validation, explicitly TODO, or future
 - [Replay video architecture](CORE-REPLAY-VIDEO-ARCHITECTURE.md)
 - [Clip altitude data alignment](CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md)
 - [POI animation during replay](CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md)
+- [Layer time filtering and named temporal variants](CORE-LAYER-TIME-FILTER-SPEC.md)
+- [Copernicus Data Space Sentinel-2 WMTS integration](CORE-COPERNICUS-SENTINEL2-SPEC.md)
+- [Journey and track click selection with interactive overlay menu](CORE-JOURNEY-CLICK-OVERLAY-SELECTION-SPEC.md)
