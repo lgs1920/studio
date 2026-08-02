@@ -169,6 +169,7 @@ const REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS = 2
 // logical interval. A shorter target lead makes the live marker outrun the
 // camera before a two-second transition has finished.
 const REPLAY_NAVIGATION_TARGET_LEAD_RATIO = 1
+const REPLAY_CAMERA_NOMINAL_VISIBILITY_CONFIRMATION_MILLIS = 250
 
 /**
  * Convert an optional replay timing value without treating null as zero.
@@ -755,6 +756,7 @@ export const updateCamera = (mode, {
             state.cameraFlightActive = false
             state.navigationPredictiveViolationAt = null
             state.cameraRedirectState = null
+            state.cameraNominalVisibilitySince = null
             state.deterministicCameraFollowerAt = null
             state.deterministicCameraFollowerActive = false
             state.deterministicCameraFollowerVelocity = null
@@ -989,7 +991,10 @@ export const updateCamera = (mode, {
                                 minimumMeters: lookaheadMinimumMeters,
                             })
                             : null
-        const predictiveVisibilitySample = exportMode ? null : futureSample
+        // HQ must use the same forward visibility check as Draft. A nominal
+        // pitch can keep the current marker visible while hiding the next
+        // route sample, which would otherwise cause a premature pitch reset.
+        const predictiveVisibilitySample = futureSample
         traceUpdateStep('camera-lookahead.end', {
             hasFutureSample: Boolean(futureSample),
         })
@@ -1602,9 +1607,9 @@ export const updateCamera = (mode, {
                                                                                        cache: updateCache,
                                                                                    })
                                              : false
-            // Draft can use the future sample to prepare a heading/position
-            // redirect. HQ stays on the current marker for visibility so a
-            // predicted frame cannot accumulate a pitch correction.
+            // Both render modes use the future sample for visibility. HQ must
+            // keep a pitch redirect when it protects the next marker position
+            // even if the current marker is already visible.
             const redirectedVisible = state.cameraRedirectState
                                       ? call.cameraViewVisibilityForSample({
                                                                                 nominalView,
@@ -1623,10 +1628,23 @@ export const updateCamera = (mode, {
                 redirectedVisible,
             })
             const renderedOccluded = renderedVisible === false
-            const nominalPitchCanReturn = nominalCurrentVisible && !renderedOccluded
+            const nominalPitchCanReturn = nominalCurrentVisible
+                                          && nominalPredictedVisible
+                                          && !renderedOccluded
+            if (deterministicCamera && nominalPitchCanReturn) {
+                state.cameraNominalVisibilitySince ??= logicalNow
+            }
+            else if (!nominalPitchCanReturn) {
+                state.cameraNominalVisibilitySince = null
+            }
+            const nominalPitchCanReturnStably = nominalPitchCanReturn
+                                                   && (!deterministicCamera
+                                                       || finiteNumber(state.cameraNominalVisibilitySince) === null
+                                                       || logicalNow - state.cameraNominalVisibilitySince
+                                                           >= REPLAY_CAMERA_NOMINAL_VISIBILITY_CONFIRMATION_MILLIS)
             const canReleaseCameraRedirect = Boolean(
                 state.cameraRedirectState
-                && nominalPitchCanReturn
+                && nominalPitchCanReturnStably
                 && (!predictiveVisibilitySample || nominalPredictedVisible),
             )
             if (canReleaseCameraRedirect && deterministicCamera) {
@@ -1683,7 +1701,7 @@ export const updateCamera = (mode, {
                         state.cameraRedirectState = null
                         applyLogicalCameraPose(nominalView)
                     }
-                    else if (state.cameraRedirectState && nominalPitchCanReturn) {
+                    else if (state.cameraRedirectState && nominalPitchCanReturnStably) {
                         state.cameraRedirectState = null
                         call.recenterCameraToSample({
                                                          sample:   anchorSample,
@@ -1711,11 +1729,6 @@ export const updateCamera = (mode, {
                     hasRedirectState: Boolean(state.cameraRedirectState),
                     redirectedVisible,
                 })
-                const minimumReliefRedirectScore = renderedOccluded
-                    && state.cameraRedirectState
-                    && typeof call.cameraRedirectCandidateScore === 'function'
-                    ? call.cameraRedirectCandidateScore(state.cameraRedirectState)
-                    : null
                 let redirectView = redirectedVisible && state.cameraRedirectState
                                    ? call.cameraViewWithRedirectState(
                                        nominalView,
@@ -1801,7 +1814,14 @@ export const updateCamera = (mode, {
             }
 
             if (outsideTolerance || targetCorrectionDue || needsVisibilityCorrection || forceToleranceRecenter || immediateToleranceRecenter) {
-                const canUseNominalView = !renderedOccluded && nominalCurrentVisible
+                const minimumReliefRedirectScore = renderedOccluded
+                    && state.cameraRedirectState
+                    && typeof call.cameraRedirectCandidateScore === 'function'
+                    ? call.cameraRedirectCandidateScore(state.cameraRedirectState)
+                    : null
+                const canUseNominalView = !renderedOccluded
+                                          && nominalCurrentVisible
+                                          && nominalPredictedVisible
                 let targetView = canUseNominalView ? nominalView : null
                 let nextRedirectState = canUseNominalView ? null : state.cameraRedirectState
 

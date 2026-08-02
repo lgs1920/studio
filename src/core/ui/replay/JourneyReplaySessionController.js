@@ -257,6 +257,7 @@ export class JourneyReplaySessionController {
     #lastAppliedCameraView = null
     #lastReplayLogicalFrame = null
     #cameraRedirectState = null
+    #cameraNominalVisibilitySince = null
     #cameraUserAdjusting = false
     #cameraApplyingView = false
     #replayExportCameraActive = false
@@ -616,6 +617,13 @@ export class JourneyReplaySessionController {
             get: () => this.#cameraRedirectState,
             set: value => {
                 this.#cameraRedirectState = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'cameraNominalVisibilitySince', {
+            configurable: true,
+            get: () => this.#cameraNominalVisibilitySince,
+            set: value => {
+                this.#cameraNominalVisibilitySince = value
             },
         })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'cameraUserAdjusting', {
