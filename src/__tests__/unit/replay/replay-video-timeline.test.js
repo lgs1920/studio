@@ -1,6 +1,6 @@
 import {JourneyReplayPlaybackController} from '@Core/ui/replay/JourneyReplayPlaybackController'
 import {
-    buildReplayVideoTimeline, resolveReplayVideoFramePhase,
+    buildReplayVideoTimeline, resolveDraftReplayCameraCadence, resolveReplayVideoFramePhase,
 } from '@Core/ui/replay/ReplayVideoTimeline'
 import {describe, expect, it} from 'vitest'
 
@@ -22,6 +22,22 @@ const replayClips = {
 }
 
 describe('ReplayVideoTimeline', () => {
+    it('reduces only Draft camera calculations according to replay duration', () => {
+        expect(resolveDraftReplayCameraCadence({durationMillis: 30_000, captureFps: 30})).toEqual(expect.objectContaining({
+            captureFps:     30,
+            cameraFps:      15,
+            reductionFactor: 2,
+        }))
+        expect(resolveDraftReplayCameraCadence({durationMillis: 120_000, captureFps: 30})).toEqual(expect.objectContaining({
+            cameraFps:       12,
+            reductionFactor: 2.5,
+        }))
+        expect(resolveDraftReplayCameraCadence({durationMillis: 240_000, captureFps: 30})).toEqual(expect.objectContaining({
+            cameraFps:       10,
+            reductionFactor: 3,
+        }))
+    })
+
     it('keeps one canonical ordering and duration for start, replay, and stop', () => {
         const timeline = buildReplayVideoTimeline({
             replayDurationMillis: 4000,

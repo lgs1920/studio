@@ -390,9 +390,9 @@ describe('ReplayDeferredExporter', () => {
             dimensions: {width: 1280, height: 720},
             cropRect: {left: 10, top: 20, width: 640, height: 360},
             cameraState: {
-                destination: {longitude: 60, latitude: 30, height: 123.457},
-                orientation: {heading: 0.25, pitch: -0.75, roll: 0.125},
-                altitude: 123.457,
+                destination: {longitude: 2, latitude: 48, height: 900},
+                orientation: {heading: 0.8, pitch: -0.5, roll: 0},
+                altitude: 900,
             },
             recordingSync: true,
             visibleOverlayIds: ['journey-overlay#1'],
@@ -441,8 +441,8 @@ describe('ReplayDeferredExporter', () => {
             uiToast: {success: vi.fn()},
         })
 
-        expect(cameraStalePlan.reused).toBe(false)
-        expect(cameraStalePlan.plan.runtime.contextKey).not.toBe(context.contextKey)
+        expect(cameraStalePlan.reused).toBe(true)
+        expect(cameraStalePlan.plan.runtime.contextKey).toBe(context.contextKey)
 
         replay.videoCropRect = {left: 10, top: 20, width: 800, height: 360}
         const stalePlan = resolveReplayDeferredExportPlan({

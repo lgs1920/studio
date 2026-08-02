@@ -11,6 +11,40 @@ import {normalizeJourneyReplayClips, REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_ST
 const DEFAULT_FPS = 30
 
 /**
+ * Resolve the reduced Draft camera calculation cadence.
+ *
+ * @param {Object} options - Cadence options.
+ * @param {number} options.durationMillis - Replay duration in milliseconds.
+ * @param {number} options.captureFps - Capture frame rate.
+ * @returns {Object} Capture and camera cadence metadata.
+ */
+export const resolveDraftReplayCameraCadence = ({
+    durationMillis = 0,
+    captureFps = DEFAULT_FPS,
+} = {}) => {
+    const safeDurationMillis = Math.max(0, finiteNumber(durationMillis, 0) ?? 0)
+    const safeCaptureFps = safeFps(captureFps)
+    const durationSeconds = safeDurationMillis / 1000
+    const reductionFactor = durationSeconds >= 180
+        ? 3
+        : durationSeconds >= 60
+          ? 2.5
+          : durationSeconds >= 10
+            ? 2
+            : 1
+    const cameraFps = Math.max(1, safeCaptureFps / reductionFactor)
+    return {
+        captureFps: safeCaptureFps,
+        cameraFps,
+        reductionFactor,
+        frameIntervalMs: 1000 / cameraFps,
+        progressStep: safeDurationMillis > 0
+            ? 1000 / (cameraFps * safeDurationMillis)
+            : 1,
+    }
+}
+
+/**
  * Convert a value to a finite number.
  *
  * @param {*} value - Value to convert.

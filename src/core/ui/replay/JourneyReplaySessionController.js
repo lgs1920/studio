@@ -297,6 +297,7 @@ export class JourneyReplaySessionController {
     #lastJourneyReplayPoiDistance = null
     #lastJourneyReplayPoiCursor = 0
     #lastPlaybackUpdateProgressKey = null
+    #lastDraftCameraProgressKey = null
     #sortedNearbyPois = []
 
     constructor({
@@ -904,6 +905,13 @@ export class JourneyReplaySessionController {
             get: () => this.#lastPlaybackUpdateProgressKey,
             set: value => {
                 this.#lastPlaybackUpdateProgressKey = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'lastDraftCameraProgressKey', {
+            configurable: true,
+            get: () => this.#lastDraftCameraProgressKey,
+            set: value => {
+                this.#lastDraftCameraProgressKey = value
             },
         })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'sortedNearbyPois', {

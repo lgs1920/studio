@@ -103,13 +103,13 @@ const normalizeReplayCameraStateSnapshot = cameraState => {
 }
 
 const captureReplayCameraStateSnapshot = ({
-                                              replay = defaultReplayStore(),
+        replay = defaultReplayStore(),
                                               cameraState = null,
                                           } = {}) => {
     const savedState = normalizeReplayCameraStateSnapshot(
         cameraState
-        ?? replay?.savedCameraState
         ?? replay?.replayEntryCameraState
+        ?? replay?.savedCameraState
         ?? globalThis.__?.ui?.replay?.savedCameraState
         ?? globalThis.__?.ui?.replay?.replayEntryCameraState,
     )

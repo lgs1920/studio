@@ -47,6 +47,7 @@ import {
     REPLAY_EVENT_STOP, REPLAY_EVENT_UPDATE, JourneyReplayPlaybackController,
 }                                                                                          from './JourneyReplayPlaybackController'
 import { replayVideoTraceDebug }                                                           from './ReplayVideoTraceDebug'
+import {resolveDraftReplayCameraCadence}                                                   from './ReplayVideoTimeline'
 import {
     DEFAULT_REPLAY_POI_DISPLAY_DURATION_SECONDS, normalizeJourneyReplayPOISettings,
 }                                                                                          from './JourneyReplayPOISettings'
@@ -812,7 +813,21 @@ export const bindRenderer = (mode, ) => {
                     }
                     const videoCaptureActive = isJourneyReplayVideoCaptureActive()
                     const playbackProgress = finiteNumber(detail?.progress ?? detail?.sample?.progress)
+                    if (!videoCaptureActive || playbackProgress === 0) {
+                        state.lastDraftCameraProgressKey = null
+                    }
                     const playbackProgressKey = Math.round((playbackProgress ?? 0) / CAMERA_UPDATE_MIN_PROGRESS_DELTA)
+                    const draftCameraCadence = videoCaptureActive
+                        && !state.replayExportCameraActive
+                        && state.controller.videoTimeline
+                        ? resolveDraftReplayCameraCadence({
+                            durationMillis: (state.controller.duration ?? 0) * 1000,
+                            captureFps: globalThis.lgs?.stores?.replay?.captureFps ?? 30,
+                        })
+                        : null
+                    const draftCameraProgressKey = draftCameraCadence
+                        ? Math.round((playbackProgress ?? 0) / draftCameraCadence.progressStep)
+                        : null
                     traceUpdateStep('renderer.update.begin', {
                         videoCaptureActive,
                         playbackProgress,
@@ -836,6 +851,20 @@ export const bindRenderer = (mode, ) => {
                     }
 
                     state.lastPlaybackUpdateProgressKey = playbackProgressKey
+                    if (draftCameraProgressKey !== null
+                        && state.lastDraftCameraProgressKey === draftCameraProgressKey) {
+                        traceUpdateStep('update-camera.skip', {
+                            reason: 'draft-camera-cadence',
+                            draftCameraProgressKey,
+                            cameraFps: draftCameraCadence.cameraFps,
+                            reductionFactor: draftCameraCadence.reductionFactor,
+                        })
+                        updateReplayFrameRenderContract({
+                            logicalFrame: detail?.logicalFrame,
+                        })
+                        return
+                    }
+                    state.lastDraftCameraProgressKey = draftCameraProgressKey
                     traceUpdateStep('update-camera.begin', {
                         playbackProgressKey,
                     })
