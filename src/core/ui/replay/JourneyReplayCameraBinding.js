@@ -14,7 +14,7 @@ import {faPersonHiking} from '@fortawesome/pro-regular-svg-icons'
 import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
 import {finiteNumber, isJourneyReplayCameraActive, replayStore} from './JourneyReplayRuntime'
 import {
-    clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForPositionMode, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayCameraFrameLeadSeconds, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
+    clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForPositionMode, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayCameraFrameLeadSeconds, replayAdaptiveTrackingTiming, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
 } from './JourneyReplayCameraMath'
 import {
     REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET, REPLAY_CAMERA_POSITION_AHEAD,
@@ -53,6 +53,9 @@ import {
     CAMERA_REDIRECT_RENDERED_DEPTH_CLEARANCE_METERS,
     REPLAY_TOLERANCE_RECENTER_REPLACE_DELAY_MS,
     REPLAY_TRACKING_DYNAMIC_LOOKAHEAD_FACTOR,
+    REPLAY_NAVIGATION_LOOKAHEAD_MINIMUM_METERS,
+    REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_MILLIS,
+    REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_LOOKAHEAD_SECONDS,
     CAMERA_ANGLE_PREVIEW_AXIS_LENGTH,
     CAMERA_ANGLE_PREVIEW_OFFSET_LENGTH,
     CAMERA_ANGLE_PREVIEW_ICON_SIZE,
@@ -166,6 +169,19 @@ const REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS = 2
 // logical interval. A shorter target lead makes the live marker outrun the
 // camera before a two-second transition has finished.
 const REPLAY_NAVIGATION_TARGET_LEAD_RATIO = 1
+const REPLAY_CAMERA_NOMINAL_VISIBILITY_CONFIRMATION_MILLIS = 250
+
+/**
+ * Convert an optional replay timing value without treating null as zero.
+ *
+ * @param {*} value - Optional numeric value.
+ * @returns {number|null} Finite number or null.
+ */
+const optionalReplayTimingNumber = value => (
+    value === null || value === undefined || value === ''
+        ? null
+        : finiteNumber(value)
+)
 
 export const recenterCameraToSample = (mode, {
                                    sample,
@@ -604,8 +620,11 @@ export const updateCamera = (mode, {
                          forceToleranceRecenter = false,
                          immediateToleranceRecenter = false,
                          source = null,
+                         duration = null,
                          frameTimeMs = null,
                          frameIntervalMs = null,
+                         playbackRate = null,
+                         isFinalFrame = false,
                          logicalFrame = null,
                          logicalCamera = false,
                          exportMode = false,
@@ -653,6 +672,47 @@ export const updateCamera = (mode, {
         }
 
         const deterministicCamera = exportMode || logicalCamera === true
+        const logicalDurationMillis = optionalReplayTimingNumber(logicalFrame?.durationMillis)
+                                     ?? (duration === null || duration === undefined || duration === ''
+                                         ? null
+                                         : (optionalReplayTimingNumber(duration) ?? 0) * 1000)
+                                     ?? optionalReplayTimingNumber(sample?.journeyDurationMillis)
+        const logicalFrameTimeMillis = optionalReplayTimingNumber(logicalFrame?.frameTimeMs)
+                                      ?? optionalReplayTimingNumber(frameTimeMs)
+                                      ?? optionalReplayTimingNumber(sample?.journeyElapsedMillis)
+        const logicalFrameIntervalMillis = logicalFrame?.frameIntervalMs
+                                           ?? frameIntervalMs
+        const resolvedPlaybackRate = playbackRate
+                                     ?? logicalFrame?.playbackRate
+                                     ?? null
+        const replayDurationSeconds = logicalDurationMillis === null
+            ? null
+            : logicalDurationMillis / 1000
+        const replayElapsedSeconds = logicalFrameTimeMillis === null
+            ? null
+            : logicalFrameTimeMillis / 1000
+        const isFinalLogicalFrame = isFinalFrame === true
+                                   || (finiteNumber(progress) ?? 0) >= 1 - 0.000001
+                                   || (logicalDurationMillis !== null
+                                       && logicalFrameTimeMillis !== null
+                                       && logicalFrameTimeMillis >= logicalDurationMillis - Math.max(
+                                           1,
+                                           finiteNumber(logicalFrameIntervalMillis) ?? 0,
+                                       ))
+        const baseTrackingTransitionSeconds = marker.mode === REPLAY_MARKER_MODE_NAVIGATION
+            ? REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS
+            : replayCameraRecenterDuration(
+                normalizeJourneyReplayCamera(globalThis.lgs?.settings?.ui?.replay?.camera
+                                             ?? globalThis.lgs?.stores?.replay?.camera
+                                             ?? settings.camera).hysteresis.easing,
+            )
+        const adaptiveTrackingTiming = replayAdaptiveTrackingTiming({
+            durationSeconds: replayDurationSeconds ?? 60,
+            elapsedSeconds:  replayElapsedSeconds,
+            transitionSeconds: baseTrackingTransitionSeconds,
+            frameIntervalMs: logicalFrameIntervalMillis,
+            playbackRate:    resolvedPlaybackRate,
+        })
 
         const draftReplayTransitionActive = !deterministicCamera
                                            && source === 'playback'
@@ -694,7 +754,9 @@ export const updateCamera = (mode, {
         if (marker.mode === REPLAY_MARKER_MODE_TRACE) {
             state.cameraMode = marker.mode
             state.cameraFlightActive = false
+            state.navigationPredictiveViolationAt = null
             state.cameraRedirectState = null
+            state.cameraNominalVisibilitySince = null
             state.deterministicCameraFollowerAt = null
             state.deterministicCameraFollowerActive = false
             state.deterministicCameraFollowerVelocity = null
@@ -912,18 +974,27 @@ export const updateCamera = (mode, {
         const frameLeadSeconds = replayCameraFrameLeadSeconds({
             renderMode:      exportMode ? 'hq' : 'draft',
             fps:             globalThis.lgs?.stores?.replay?.captureFps,
-            frameIntervalMs,
+            frameIntervalMs: logicalFrameIntervalMillis,
         })
         const lookaheadSeconds = marker.mode === REPLAY_MARKER_MODE_NAVIGATION
-            ? REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS
-            : (recenterDuration * 1.25) + frameLeadSeconds
+            ? adaptiveTrackingTiming.minimumTransitionSeconds
+            : (adaptiveTrackingTiming.minimumTransitionSeconds * 1.25) + frameLeadSeconds
         traceUpdateStep('camera-lookahead.begin', {
             lookaheadSeconds,
         })
+        const lookaheadMinimumMeters = marker.mode === REPLAY_MARKER_MODE_NAVIGATION
+            ? REPLAY_NAVIGATION_LOOKAHEAD_MINIMUM_METERS
+            : CAMERA_REDIRECT_LOOKAHEAD_DISTANCE_METERS
         const futureSample = typeof call.cameraLookaheadSample === 'function'
-                            ? call.cameraLookaheadSample(anchorSample, {lookaheadSeconds})
+                            ? call.cameraLookaheadSample(anchorSample, {
+                                lookaheadSeconds,
+                                minimumMeters: lookaheadMinimumMeters,
+                            })
                             : null
-        const predictiveVisibilitySample = exportMode ? null : futureSample
+        // HQ must use the same forward visibility check as Draft. A nominal
+        // pitch can keep the current marker visible while hiding the next
+        // route sample, which would otherwise cause a premature pitch reset.
+        const predictiveVisibilitySample = futureSample
         traceUpdateStep('camera-lookahead.end', {
             hasFutureSample: Boolean(futureSample),
         })
@@ -974,6 +1045,7 @@ export const updateCamera = (mode, {
             state.lastToleranceRecenterProgress = null
             state.lastNavigationRecenterAt = null
             state.lastNavigationRecenterProgress = null
+            state.navigationPredictiveViolationAt = null
             state.deterministicCameraTransition = null
             state.deterministicCameraFollowerAt = null
             state.deterministicCameraFollowerActive = false
@@ -1036,7 +1108,13 @@ export const updateCamera = (mode, {
         }
 
         if (marker.mode === REPLAY_MARKER_MODE_NAVIGATION) {
-            const runtimeTracking = replayRuntimeTrackingSettings(globalThis.lgs?.settings?.ui?.replay?.camera ?? cameraSettings, viewportRect)
+            const runtimeTracking = replayRuntimeTrackingSettings(
+                globalThis.lgs?.settings?.ui?.replay?.camera ?? cameraSettings,
+                viewportRect,
+                adaptiveTrackingTiming,
+            )
+            const navigationTransitionSeconds = runtimeTracking.timing?.minimumTransitionSeconds
+                                                ?? REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS
             const navigationCameraSettings = normalizeJourneyReplayCamera({
                 ...cameraSettings,
                 hysteresis: {
@@ -1060,26 +1138,113 @@ export const updateCamera = (mode, {
                 : call.cameraCollisionForSample(sampleForCollision, navigationCameraSettings, updateCache)
             const currentCollision = collisionForSample(anchorSample)
             const predictedCollision = collisionForSample(predictedSample)
+            const nearPredictedSample = predictedCollision?.hard === true
+                                        && currentCollision?.hard !== true
+                ? (typeof call.cameraLookaheadSample === 'function'
+                    ? call.cameraLookaheadSample(anchorSample, {
+                        lookaheadSeconds: REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_LOOKAHEAD_SECONDS,
+                        minimumMeters: REPLAY_NAVIGATION_LOOKAHEAD_MINIMUM_METERS,
+                    })
+                    : null) ?? predictedSample
+                : null
+            const nearPredictedCollision = nearPredictedSample
+                ? collisionForSample(nearPredictedSample)
+                : null
+            const predictiveNavigationCandidate = currentCollision?.hard !== true
+                                                   && predictedCollision?.hard === true
+                                                   && nearPredictedCollision?.hard === true
+            const now = logicalNow
+            const predictiveViolationStartedAt = finiteNumber(state.navigationPredictiveViolationAt)
+            if (predictiveNavigationCandidate
+                && !forceToleranceRecenter
+                && !immediateToleranceRecenter
+                && (predictiveViolationStartedAt === null || now < predictiveViolationStartedAt)) {
+                state.navigationPredictiveViolationAt = now
+            }
+            else if (!predictiveNavigationCandidate || forceToleranceRecenter || immediateToleranceRecenter) {
+                state.navigationPredictiveViolationAt = null
+            }
+            const predictiveNavigationConfirmed = predictiveNavigationCandidate
+                                                   && finiteNumber(state.navigationPredictiveViolationAt) !== null
+                                                   && now - state.navigationPredictiveViolationAt
+                                                       >= REPLAY_NAVIGATION_PREDICTIVE_CONFIRMATION_MILLIS
             traceUpdateStep('navigation.collision.end', {
                 currentHard: Boolean(currentCollision?.hard),
                 predictedHard: Boolean(predictedCollision?.hard),
+                nearPredictedHard: Boolean(nearPredictedCollision?.hard),
+                predictiveNavigationCandidate,
+                predictiveNavigationConfirmed,
             })
             const outsideNavigationZone = Boolean(
                 currentCollision?.hard
-                || predictedCollision?.hard
+                || predictiveNavigationConfirmed
                 || forceToleranceRecenter,
             )
             const currentNavigationViolation = Boolean(currentCollision?.hard || forceToleranceRecenter)
-            const now = logicalNow
             const currentProgress = finiteNumber(progress)
             const navigationRecenterLockMs = Math.max(
                 REPLAY_TOLERANCE_RECENTER_REPLACE_DELAY_MS,
                 Math.ceil(
                     (currentNavigationViolation
-                        ? Math.min(0.24, recenterDuration)
-                        : REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS) * 1000,
+                        ? Math.min(0.24, recenterDuration, navigationTransitionSeconds)
+                        : navigationTransitionSeconds) * 1000,
                 ) + 180,
             )
+            const renderedNavigationVisible = typeof call.renderedTraceVisibleForSample === 'function'
+                ? call.renderedTraceVisibleForSample(anchorSample, updateCache)
+                : null
+            const navigationNominalVisibility = renderedNavigationVisible === null
+                && typeof call.cameraViewVisibilityForSample === 'function'
+                ? call.cameraViewVisibilityForSample({
+                    nominalView,
+                    futureSample:  null,
+                    source,
+                    cameraSettings,
+                    markerSettings,
+                    cache:         updateCache,
+                })
+                : null
+            const renderedNavigationOccluded = renderedNavigationVisible === false
+                || (renderedNavigationVisible === null && navigationNominalVisibility === false)
+            const reliefRedirectLockActive = Boolean(
+                state.cameraRedirectState
+                && state.lastNavigationRecenterAt !== null
+                && now - state.lastNavigationRecenterAt < navigationRecenterLockMs,
+            )
+            let navigationRedirectState = state.cameraRedirectState
+            if (renderedNavigationVisible === true) {
+                navigationRedirectState = null
+                state.cameraRedirectState = null
+            }
+            else if (renderedNavigationOccluded && (!state.cameraRedirectState || !reliefRedirectLockActive)) {
+                const minimumCandidateScore = state.cameraRedirectState
+                    && typeof call.cameraRedirectCandidateScore === 'function'
+                    ? call.cameraRedirectCandidateScore(state.cameraRedirectState)
+                    : null
+                navigationRedirectState = call.findCameraRedirectState({
+                    nominalView,
+                    futureSample:          null,
+                    source,
+                    cameraSettings,
+                    markerSettings,
+                    reuseCurrentIfVisible: false,
+                    minimumCandidateScore,
+                    cache:                 updateCache,
+                })
+                if (!navigationRedirectState) {
+                    navigationRedirectState = state.cameraRedirectState ?? {
+                        headingOffset: 0,
+                        pitchOffset:   degreesToRadians(-20) ?? -0.3490658503988659,
+                    }
+                }
+                state.cameraRedirectState = navigationRedirectState
+            }
+            const navigationReliefRedirectView = renderedNavigationOccluded
+                && navigationRedirectState
+                && typeof call.cameraViewWithRedirectState === 'function'
+                ? call.cameraViewWithRedirectState(nominalView, navigationRedirectState)
+                : null
+            const needsNavigationReliefCorrection = Boolean(navigationReliefRedirectView)
             // A hard collision must not cancel and recreate the same Draft
             // transition on every render tick. The transition guard validates
             // each sub-frame; the lock only prevents transition starvation.
@@ -1103,7 +1268,10 @@ export const updateCamera = (mode, {
             const navigationFollowerActive = deterministicCamera && state.deterministicCameraFollowerActive
             const predictiveNavigationSafe = currentCollision?.hard !== true
                                              && predictedCollision?.hard !== true
-            if (navigationFollowerActive && predictiveNavigationSafe && !forceToleranceRecenter) {
+            if (navigationFollowerActive
+                && predictiveNavigationSafe
+                && !forceToleranceRecenter
+                && !needsNavigationReliefCorrection) {
                 state.deterministicCameraFollowerActive = false
                 state.deterministicCameraFollowerAt = null
                 state.deterministicCameraFollowerVelocity = null
@@ -1111,14 +1279,16 @@ export const updateCamera = (mode, {
             if ((outsideNavigationZone
                 || forceToleranceRecenter
                 || immediateToleranceRecenter
+                || needsNavigationReliefCorrection
                 || (navigationFollowerActive && !predictiveNavigationSafe))
                 && !draftNavigationCorrectionLocked) {
                 const predictiveNavigationTargetSample = !immediateToleranceRecenter
                                                          && (source === 'playback' || exportMode)
                     ? (typeof call.cameraLookaheadSample === 'function'
                         ? call.cameraLookaheadSample(anchorSample, {
-                              lookaheadSeconds: REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS
+                              lookaheadSeconds: navigationTransitionSeconds
                                   * REPLAY_NAVIGATION_TARGET_LEAD_RATIO,
+                              minimumMeters: REPLAY_NAVIGATION_LOOKAHEAD_MINIMUM_METERS,
                           })
                         : null) ?? predictedSample
                     : anchorSample
@@ -1126,27 +1296,29 @@ export const updateCamera = (mode, {
                 // marker that is already outside Z1. A future-only violation
                 // is paired with the full two-second transition horizon so
                 // the marker and camera arrive at the same logical sample.
-                const navigationTargetSample = currentNavigationViolation
+                const navigationTargetSample = currentNavigationViolation || needsNavigationReliefCorrection
                     ? anchorSample
                     : predictiveNavigationTargetSample
                 traceUpdateStep('navigation.target-view.begin', {
                     immediateToleranceRecenter,
                     navigationFollowerActive,
                 })
-                const navigationTargetView = !immediateToleranceRecenter && navigationTargetSample
-                                             ? call.cameraViewForSample({
-                                                 sample:          navigationTargetSample,
-                                                 progress:        navigationTargetSample.progress ?? progress,
-                                                 source,
-                                                 cameraSettings,
-                                                 markerSettings,
-                                                 collision:       true,
-                                                 motionProfile:   replayMotionProfile,
-                                                 previousHeading: smoothHeading,
-                                                 previousPitch:   smoothPitch,
-                                                 cache:           updateCache,
-                                             })
-                                             : null
+                const navigationTargetView = needsNavigationReliefCorrection
+                    ? navigationReliefRedirectView
+                    : !immediateToleranceRecenter && navigationTargetSample
+                      ? call.cameraViewForSample({
+                          sample:          navigationTargetSample,
+                          progress:        navigationTargetSample.progress ?? progress,
+                          source,
+                          cameraSettings,
+                          markerSettings,
+                          collision:       true,
+                          motionProfile:   replayMotionProfile,
+                          previousHeading: smoothHeading,
+                          previousPitch:   smoothPitch,
+                          cache:           updateCache,
+                      })
+                      : null
                 traceUpdateStep('navigation.target-view.end', {
                     hasNavigationTargetView: Boolean(navigationTargetView),
                 })
@@ -1189,7 +1361,9 @@ export const updateCamera = (mode, {
                         if (currentCollision?.hard === true
                             || (outsideNavigationZone && !deterministicCamera)
                             || forceToleranceRecenter
-                            || candidateCollision?.hard === true) {
+                            || needsNavigationReliefCorrection
+                            || candidateCollision?.hard === true
+                            || isFinalLogicalFrame) {
                             // A hard current violation is corrected immediately.
                             // A predictive-only violation uses the deterministic
                             // follower below so HQ does not snap on every frame.
@@ -1198,6 +1372,13 @@ export const updateCamera = (mode, {
                                 direction:   frame.direction,
                                 up:          frame.correctedUp,
                             })
+                            if (needsNavigationReliefCorrection) {
+                                call.rememberCameraView?.({
+                                    anchor:  navigationTargetView.sample,
+                                    heading: navigationTargetView.heading,
+                                    pitch:   navigationTargetView.pitch,
+                                })
+                            }
                         }
                         else {
                             state.deterministicCameraFollowerActive = true
@@ -1218,11 +1399,11 @@ export const updateCamera = (mode, {
                         // correction can leave the marker outside the crop
                         // while the target transition is still running.
                         duration:       currentNavigationViolation
-                                         ? Math.min(0.24, recenterDuration)
-                                         : REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS,
+                                         ? Math.min(0.24, recenterDuration, navigationTransitionSeconds)
+                                         : navigationTransitionSeconds,
                         deterministic:  deterministicCamera,
                         logicalNow,
-                        force:          outsideNavigationZone || forceToleranceRecenter,
+                        force:          outsideNavigationZone || forceToleranceRecenter || needsNavigationReliefCorrection,
                         trackingMode:   marker.mode,
                         transitionGuard: typeof call.cameraCollisionForFrame === 'function'
                             ? ({frame, ratio}) => {
@@ -1231,9 +1412,10 @@ export const updateCamera = (mode, {
                                     : ratio >= 1
                                       ? navigationTargetSample
                                       : call.cameraLookaheadSample(anchorSample, {
-                                          lookaheadSeconds: REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS
+                                          lookaheadSeconds: navigationTransitionSeconds
                                               * REPLAY_NAVIGATION_TARGET_LEAD_RATIO
                                               * ratio,
+                                          minimumMeters: REPLAY_NAVIGATION_LOOKAHEAD_MINIMUM_METERS,
                                       }) ?? anchorSample
                                 const collision = call.cameraCollisionForFrame({
                                     frame,
@@ -1257,13 +1439,18 @@ export const updateCamera = (mode, {
                                     previousPitch: smoothPitch,
                                     cache: updateCache,
                                 })
-                                const safeFrame = safeView
+                                const guardedView = safeView && needsNavigationReliefCorrection
+                                    && navigationRedirectState
+                                    && typeof call.cameraViewWithRedirectState === 'function'
+                                    ? call.cameraViewWithRedirectState(safeView, navigationRedirectState)
+                                    : safeView
+                                const safeFrame = guardedView
                                     ? call.cameraRecenterFrame({
-                                        sample: safeView.sample,
-                                        heading: safeView.heading,
-                                        pitch: safeView.pitch,
+                                        sample: guardedView.sample,
+                                        heading: guardedView.heading,
+                                        pitch: guardedView.pitch,
                                         cameraSettings,
-                                        cameraHeight: safeView.cameraHeight,
+                                        cameraHeight: guardedView.cameraHeight,
                                     })
                                     : null
                                 return safeFrame
@@ -1294,7 +1481,13 @@ export const updateCamera = (mode, {
         }
 
         if (marker.mode === REPLAY_MARKER_MODE_HYSTERESIS) {
-            const runtimeTracking = replayRuntimeTrackingSettings(globalThis.lgs?.settings?.ui?.replay?.camera ?? cameraSettings, viewportRect)
+            const runtimeTracking = replayRuntimeTrackingSettings(
+                globalThis.lgs?.settings?.ui?.replay?.camera ?? cameraSettings,
+                viewportRect,
+                adaptiveTrackingTiming,
+            )
+            const dynamicTransitionSeconds = runtimeTracking.timing?.minimumTransitionSeconds
+                                             ?? recenterDuration
             const dynamicCameraSettings = normalizeJourneyReplayCamera({
                 ...cameraSettings,
                 hysteresis: {
@@ -1335,6 +1528,7 @@ export const updateCamera = (mode, {
             const dynamicFollowerActive = deterministicCamera
                                          && state.deterministicCameraFollowerActive
                                          && !state.cameraRedirectState
+                                         && !isFinalLogicalFrame
             if (dynamicFollowerActive) {
                 const dynamicTargetView = call.cameraViewForSample({
                     sample:         trackingSample,
@@ -1413,9 +1607,9 @@ export const updateCamera = (mode, {
                                                                                        cache: updateCache,
                                                                                    })
                                              : false
-            // Draft can use the future sample to prepare a heading/position
-            // redirect. HQ stays on the current marker for visibility so a
-            // predicted frame cannot accumulate a pitch correction.
+            // Both render modes use the future sample for visibility. HQ must
+            // keep a pitch redirect when it protects the next marker position
+            // even if the current marker is already visible.
             const redirectedVisible = state.cameraRedirectState
                                       ? call.cameraViewVisibilityForSample({
                                                                                 nominalView,
@@ -1434,10 +1628,23 @@ export const updateCamera = (mode, {
                 redirectedVisible,
             })
             const renderedOccluded = renderedVisible === false
-            const nominalPitchCanReturn = nominalCurrentVisible && !renderedOccluded
+            const nominalPitchCanReturn = nominalCurrentVisible
+                                          && nominalPredictedVisible
+                                          && !renderedOccluded
+            if (deterministicCamera && nominalPitchCanReturn) {
+                state.cameraNominalVisibilitySince ??= logicalNow
+            }
+            else if (!nominalPitchCanReturn) {
+                state.cameraNominalVisibilitySince = null
+            }
+            const nominalPitchCanReturnStably = nominalPitchCanReturn
+                                                   && (!deterministicCamera
+                                                       || finiteNumber(state.cameraNominalVisibilitySince) === null
+                                                       || logicalNow - state.cameraNominalVisibilitySince
+                                                           >= REPLAY_CAMERA_NOMINAL_VISIBILITY_CONFIRMATION_MILLIS)
             const canReleaseCameraRedirect = Boolean(
                 state.cameraRedirectState
-                && nominalPitchCanReturn
+                && nominalPitchCanReturnStably
                 && (!predictiveVisibilitySample || nominalPredictedVisible),
             )
             if (canReleaseCameraRedirect && deterministicCamera) {
@@ -1449,18 +1656,18 @@ export const updateCamera = (mode, {
                 state.lastCameraPitch = smoothPitch
                 return
             }
-            // Dynamic tracking is governed by Z1. Visibility corrections inside
-            // Z1 were causing a new flight to be issued on almost every update,
-            // especially in Draft where depth is noisier than in HQ export.
-            const needsVisibilityCorrection = outsideTolerance && (
-                renderedOccluded
-                || (renderedVisible === null && !nominalCurrentVisible)
-            )
+            // Z1 controls framing, but relief occlusion is an independent hard
+            // visibility constraint. A marker can be centered in Z1 and still
+            // be hidden behind terrain, so it must be redirected even while
+            // the framing collision is clear. The recenter lock below prevents
+            // depth noise from restarting the same correction every tick.
+            const needsVisibilityCorrection = renderedOccluded
+                                             || (renderedVisible === null && !nominalCurrentVisible)
             const now = logicalNow
             const currentProgress = finiteNumber(progress)
             const toleranceRecenterLockMs = Math.max(
                 REPLAY_TOLERANCE_RECENTER_REPLACE_DELAY_MS,
-                Math.ceil(recenterDuration * 1000) + 180,
+                Math.ceil(dynamicTransitionSeconds * 1000) + 180,
             )
             const sameProgressRecenter = currentProgress !== null
                                          && state.lastToleranceRecenterProgress !== null
@@ -1474,7 +1681,7 @@ export const updateCamera = (mode, {
             // where the marker continues to the crop edge during the flight.
             const targetCorrectionDue = outsideDynamicTargetZone
                                         && state.lastToleranceRecenterAt !== null
-                                        && now - state.lastToleranceRecenterAt >= Math.ceil(recenterDuration * 1000)
+                                        && now - state.lastToleranceRecenterAt >= Math.ceil(dynamicTransitionSeconds * 1000)
             if (
                 !forceToleranceRecenter
                 && !immediateToleranceRecenter
@@ -1490,7 +1697,11 @@ export const updateCamera = (mode, {
             if (!outsideTolerance && !targetCorrectionDue && !forceToleranceRecenter && !immediateToleranceRecenter) {
                 state.lastToleranceRecenterProgress = null
                 if (!needsVisibilityCorrection) {
-                    if (state.cameraRedirectState && nominalPitchCanReturn) {
+                    if (isFinalLogicalFrame && deterministicCamera) {
+                        state.cameraRedirectState = null
+                        applyLogicalCameraPose(nominalView)
+                    }
+                    else if (state.cameraRedirectState && nominalPitchCanReturnStably) {
                         state.cameraRedirectState = null
                         call.recenterCameraToSample({
                                                          sample:   anchorSample,
@@ -1506,7 +1717,7 @@ export const updateCamera = (mode, {
                     else if (nominalPitchNeedsRestore()) {
                         restoreNominalCameraPose()
                     }
-                    else if (deterministicCamera && !state.lastAppliedCameraView) {
+                    else if (deterministicCamera && (isFinalLogicalFrame || !state.lastAppliedCameraView)) {
                         applyLogicalCameraPose(nominalView)
                     }
                     state.lastCameraHeading = smoothHeading
@@ -1534,6 +1745,7 @@ export const updateCamera = (mode, {
                                                                                   cameraSettings,
                                                                                   markerSettings,
                                                                                   reuseCurrentIfVisible: false,
+                                                                                  minimumCandidateScore: minimumReliefRedirectScore,
                                                                                   cache: updateCache,
                                                                               }) ?? call.findCameraRedirectState({
                                                                                                                       nominalView,
@@ -1542,6 +1754,7 @@ export const updateCamera = (mode, {
                                                                                                                       cameraSettings,
                                                                                                                       markerSettings,
                                                                                                                       reuseCurrentIfVisible: false,
+                                                                                                                      minimumCandidateScore: minimumReliefRedirectScore,
                                                                                                                       cache: updateCache,
                                                                                                                   })
                     redirectView = state.cameraRedirectState
@@ -1601,7 +1814,14 @@ export const updateCamera = (mode, {
             }
 
             if (outsideTolerance || targetCorrectionDue || needsVisibilityCorrection || forceToleranceRecenter || immediateToleranceRecenter) {
-                const canUseNominalView = !renderedOccluded && nominalCurrentVisible
+                const minimumReliefRedirectScore = renderedOccluded
+                    && state.cameraRedirectState
+                    && typeof call.cameraRedirectCandidateScore === 'function'
+                    ? call.cameraRedirectCandidateScore(state.cameraRedirectState)
+                    : null
+                const canUseNominalView = !renderedOccluded
+                                          && nominalCurrentVisible
+                                          && nominalPredictedVisible
                 let targetView = canUseNominalView ? nominalView : null
                 let nextRedirectState = canUseNominalView ? null : state.cameraRedirectState
 
@@ -1622,6 +1842,7 @@ export const updateCamera = (mode, {
                                                                           cameraSettings,
                                                                           markerSettings,
                                                                           reuseCurrentIfVisible: false,
+                                                                          minimumCandidateScore: minimumReliefRedirectScore,
                                                                           cache: updateCache,
                                                                       }) ?? call.findCameraRedirectState({
                                                                                                               nominalView,
@@ -1630,8 +1851,20 @@ export const updateCamera = (mode, {
                                                                                                               cameraSettings,
                                                                                                               markerSettings,
                                                                                                               reuseCurrentIfVisible: false,
+                                                                                                              minimumCandidateScore: minimumReliefRedirectScore,
                                                                                                               cache: updateCache,
                                                                                                           })
+                    if (!nextRedirectState && needsVisibilityCorrection) {
+                        // Terrain data can report every candidate as blocked
+                        // when the camera is below a steep relief tile. Keep
+                        // the visibility contract deterministic with a
+                        // strongest bounded pitch fallback; the transition
+                        // resolver adds the physical clearance while moving.
+                        nextRedirectState = {
+                            headingOffset: 0,
+                            pitchOffset:   degreesToRadians(-20) ?? -0.3490658503988659,
+                        }
+                    }
                     if (nextRedirectState) {
                         targetView = call.cameraViewWithRedirectState(
                             nominalView,
@@ -1672,7 +1905,12 @@ export const updateCamera = (mode, {
                 const targetPitch = useRedirectTransition
                                     ? targetView.pitch
                                     : targetNominalView?.pitch ?? smoothPitch
-                if (deterministicCamera && !useRedirectTransition && !immediateToleranceRecenter) {
+                if (deterministicCamera && isFinalLogicalFrame && !immediateToleranceRecenter) {
+                    applyLogicalCameraPose(useRedirectTransition
+                        ? targetView
+                        : targetNominalView ?? targetView)
+                }
+                else if (deterministicCamera && !useRedirectTransition && !immediateToleranceRecenter) {
                     const frame = call.cameraRecenterFrame({
                         sample:         targetSample,
                         heading:        targetHeading,
@@ -1709,11 +1947,16 @@ export const updateCamera = (mode, {
                               : useRedirectTransition
                                 ? Math.min(
                                 CAMERA_REDIRECT_MAX_TRANSITION_SECONDS,
-                                replayCameraRecenterDuration(cameraSettings.hysteresis.easing),
+                                dynamicTransitionSeconds,
                             )
-                                : replayCameraRecenterDuration(cameraSettings.hysteresis.easing),
+                                : dynamicTransitionSeconds,
                     deterministic: deterministicCamera,
                     logicalNow,
+                    force: outsideTolerance
+                           || targetCorrectionDue
+                           || needsVisibilityCorrection
+                           || forceToleranceRecenter
+                           || immediateToleranceRecenter,
                     trackingMode: marker.mode,
                     })
                 }

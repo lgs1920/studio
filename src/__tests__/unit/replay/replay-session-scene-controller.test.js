@@ -124,7 +124,7 @@ describe('JourneyReplaySessionSceneController', () => {
 
         expect(renderer.update).toHaveBeenCalledTimes(2)
         expect(call.updateCamera).toHaveBeenCalledTimes(2)
-        expect(call.updateCamera.mock.calls.flat()).not.toEqual(expect.arrayContaining([
+        expect(call.updateCamera.mock.calls.flat()).toEqual(expect.arrayContaining([
             expect.objectContaining({logicalCamera: true}),
         ]))
     })

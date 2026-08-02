@@ -102,6 +102,13 @@ the source of the observed lower-right Z1 lag. A hard current violation never
 uses the future target, because correcting an already-lost frame against a
 future point compounds the lag.
 
+The `ground-offset` altitude has one reference frame: the rendered replay
+marker. Its absolute camera height is `markerHeight + configuredOffset`. A
+recenter therefore never falls back to `camera.positionCartographic.height`,
+because the live camera may be over a different relief while it is displaced
+from the marker. If terrain is unavailable, the marker sample altitude is the
+deterministic fallback for both the marker and the camera.
+
 Navigation heading uses a minimum `400 m` metric window, a `2.5 s` future chord,
 and a nine-sample PCA axis oriented by that chord. The response factor is
 clamped to `0.04..0.18`, navigation drift is filtered with a `1.5 s` response,

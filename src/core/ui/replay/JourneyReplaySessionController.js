@@ -257,6 +257,7 @@ export class JourneyReplaySessionController {
     #lastAppliedCameraView = null
     #lastReplayLogicalFrame = null
     #cameraRedirectState = null
+    #cameraNominalVisibilitySince = null
     #cameraUserAdjusting = false
     #cameraApplyingView = false
     #replayExportCameraActive = false
@@ -267,6 +268,7 @@ export class JourneyReplaySessionController {
     #lastToleranceRecenterProgress = null
     #lastNavigationRecenterAt = null
     #lastNavigationRecenterProgress = null
+    #navigationPredictiveViolationAt = null
     #toleranceZoneOverlayCanvas = null
     #toleranceZoneOverlayCameraChangedRemove = null
     #lastDynamicTargetScreen = null
@@ -617,6 +619,13 @@ export class JourneyReplaySessionController {
                 this.#cameraRedirectState = value
             },
         })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'cameraNominalVisibilitySince', {
+            configurable: true,
+            get: () => this.#cameraNominalVisibilitySince,
+            set: value => {
+                this.#cameraNominalVisibilitySince = value
+            },
+        })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'cameraUserAdjusting', {
             configurable: true,
             get: () => this.#cameraUserAdjusting,
@@ -685,6 +694,13 @@ export class JourneyReplaySessionController {
             get: () => this.#lastNavigationRecenterProgress,
             set: value => {
                 this.#lastNavigationRecenterProgress = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'navigationPredictiveViolationAt', {
+            configurable: true,
+            get: () => this.#navigationPredictiveViolationAt,
+            set: value => {
+                this.#navigationPredictiveViolationAt = value
             },
         })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'lastDynamicTargetScreen', {

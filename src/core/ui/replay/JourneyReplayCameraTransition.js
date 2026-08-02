@@ -685,7 +685,9 @@ export const cameraRecenterFrame = (mode, {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         const viewer = globalThis.lgs?.viewer
-        const targetHeight = call.markerRenderHeightForSample(sample)
+        const targetHeight = finiteNumber(call.markerRenderHeightForSample(sample))
+                            ?? finiteNumber(sample?.altitude ?? sample?.height)
+                            ?? 0
         const target = call.markerRenderCartesianForSample(sample)
         const cameraPosition = viewer?.camera?.positionWC ?? viewer?.camera?.position
         const fallbackRange = cameraPosition && target
@@ -697,12 +699,21 @@ export const cameraRecenterFrame = (mode, {
 
         const safeHeading = sanitizeOrientationRadians(heading, 0)
         const safePitch = sanitizeOrientationRadians(pitch, SAFE_TOP_DOWN_PITCH)
-        const currentHeight = cameraHeight !== null && cameraHeight !== undefined
-                              ? Math.max(targetHeight, finiteNumber(cameraHeight) ?? targetHeight)
+        const groundOffsetCameraHeight = cameraSettings?.altitudeMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET
+                                         ? finiteNumber(call.cameraAltitudeForSample(sample, cameraSettings))
+                                         : null
+        const explicitCameraHeight = cameraHeight === null || cameraHeight === undefined || cameraHeight === ''
+            ? null
+            : finiteNumber(cameraHeight)
+        // In ground-offset mode the marker-relative value is authoritative;
+        // an explicit height may belong to a previous camera transition.
+        const requestedCameraHeight = groundOffsetCameraHeight ?? explicitCameraHeight
+        const currentHeight = requestedCameraHeight !== null
+                              ? Math.max(targetHeight, requestedCameraHeight)
                               : replayCameraRecenterHeight(
-                viewer.camera?.positionCartographic?.height,
-                call.cameraAltitudeForSample(sample, cameraSettings),
-            )
+                    viewer.camera?.positionCartographic?.height,
+                    call.cameraAltitudeForSample(sample, cameraSettings),
+                )
         const horizontalDistance = replayCameraRecenterHorizontalDistance({
                                                                                   cameraHeight: currentHeight,
                                                                                   targetHeight,

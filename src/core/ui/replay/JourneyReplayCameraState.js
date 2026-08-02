@@ -153,6 +153,9 @@ export const applyCameraView = (mode, {anchor, heading, pitch, cameraSettings}) 
             terrainHeightLookupBypass: state.terrainHeightLookupBypass === true,
         })
         const anchorHeight = finiteNumber(anchor?.altitude ?? anchor?.height) ?? 0
+        const markerHeight = cameraSettings?.altitudeMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET
+            ? finiteNumber(call.markerRenderHeightForSample?.(anchor)) ?? anchorHeight
+            : anchorHeight
         const safeHeading = sanitizeOrientationRadians(heading, 0)
         const safePitch = sanitizeOrientationRadians(pitch, SAFE_TOP_DOWN_PITCH)
         if (call.cameraViewIsStable({anchor, heading: safeHeading, pitch: safePitch})) {
@@ -167,7 +170,7 @@ export const applyCameraView = (mode, {anchor, heading, pitch, cameraSettings}) 
         const cameraHeight = call.cameraAltitudeForSample(anchor, cameraSettings)
         const target = safeCartesianFromLonLat({
             ...anchor,
-            altitude: anchorHeight,
+            altitude: markerHeight,
         })
         if (!target) {
             replayVideoTraceDebug('camera.view.apply.end', {
@@ -181,7 +184,7 @@ export const applyCameraView = (mode, {anchor, heading, pitch, cameraSettings}) 
         const viewer = globalThis.lgs?.viewer
         const camera = viewer?.camera
         const transform = Transforms.eastNorthUpToFixedFrame(target)
-        const range = replayCameraRangeFromPitch(Math.max(1, cameraHeight - anchorHeight), safePitch)
+        const range = replayCameraRangeFromPitch(Math.max(1, cameraHeight - markerHeight), safePitch)
         if (!camera) {
             replayVideoTraceDebug('camera.view.apply.end', {
                 elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startedAt,
@@ -265,14 +268,18 @@ export const markerRenderHeightForSample =  (mode, sample) => {
 
         const longitude = finiteNumber(sample?.longitude)
         const latitude = finiteNumber(sample?.latitude)
+        const sampleHeight = finiteNumber(sample?.altitude ?? sample?.height) ?? 0
         if (longitude === null || latitude === null) {
-            return 0
+            return sampleHeight
+        }
+        if (state.terrainHeightLookupBypass === true) {
+            return sampleHeight
         }
 
         const terrainHeight = call.cesiumScene()?.globe?.getHeight?.(
             Cartographic.fromDegrees(longitude, latitude),
         )
-        return finiteNumber(terrainHeight) ?? 0
+        return finiteNumber(terrainHeight) ?? sampleHeight
     }
 
 export const markerRenderCartesianForSample =  (mode, sample) => {

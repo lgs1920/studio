@@ -312,6 +312,7 @@ export const resetCameraController = (mode, {
         state.lastToleranceRecenterProgress = null
         state.lastNavigationRecenterAt = null
         state.lastNavigationRecenterProgress = null
+        state.navigationPredictiveViolationAt = null
         state.skipNextImmediateStartRecenter = false
         state.lastPlaybackUpdateProgressKey = null
         if (!preserveSavedCameraState) {
@@ -598,6 +599,7 @@ export const abortPlaybackAfterListenerError = (mode, error) => {
         state.replayExportCameraActive = false
         state.renderingReplayExportFrame = false
         state.logicalCameraTrajectory = false
+        state.videoReplayClipLogicalTrajectory = false
         return call.restorePlaybackScene()
     }
 
@@ -839,7 +841,8 @@ export const bindRenderer = (mode, ) => {
                     })
                     call.updateCamera({
                         ...detail,
-                        source: 'playback',
+                        source:        'playback',
+                        logicalCamera: videoCaptureActive,
                     })
                     updateReplayFrameRenderContract({
                         logicalFrame: detail?.logicalFrame,
@@ -872,7 +875,10 @@ export const bindRenderer = (mode, ) => {
                     state.lastPlaybackUpdateProgressKey = null
                     call.setContinuousRender(true)
                     state.renderer.update({...detail, forceGeometry: true, showTrace: isJourneyReplayVideoCaptureActive()})
-                    call.updateCamera(detail)
+                    call.updateCamera({
+                        ...detail,
+                        logicalCamera: isJourneyReplayVideoCaptureActive(),
+                    })
                     updateReplayFrameRenderContract({
                         logicalFrame: detail?.logicalFrame,
                     })
@@ -894,6 +900,7 @@ export const bindRenderer = (mode, ) => {
                 call.restoreJourneyToolbarVisibility()
                 call.restoreJourneyReplayDrawerAfterPlayback()
                 call.restoreMainUI()
+                state.videoReplayClipLogicalTrajectory = false
                 void call.restoreNearbyPOIsAfterPlayback().finally(() => {
                     call.restoreCurrentJourneyVisibility()
                 })
@@ -912,11 +919,21 @@ export const bindRenderer = (mode, ) => {
                               ?? currentJourneyReplaySample(state.controller)
                 const stopList = call.clipListForSlot(REPLAY_CLIP_SLOT_STOP)
                 if (stopList.length > 0) {
+                    const videoTimeline = state.controller.videoTimeline
+                    const stopPhaseTime = videoTimeline?.replayPhase?.endMillis
+                                               ?? (state.controller.duration * 1000)
+                    const stopPhase = state.controller.videoFramePhaseAtTime?.(stopPhaseTime)
                     publishReplayClipFrameState({
                         store: replayStore(),
                         slot: REPLAY_CLIP_SLOT_STOP,
                         sample,
                         progress: 1,
+                        phase: stopPhase,
+                        frameIndex: stopPhase?.frameIndex,
+                        frameCount: videoTimeline?.frameCount,
+                        frameTimeMs: stopPhase?.frameTimeMs,
+                        frameIntervalMs: videoTimeline?.frameIntervalMs,
+                        durationMillis: videoTimeline?.durationMillis,
                     })
                 }
                 const notifyStopClipsComplete = () => {
@@ -1014,6 +1031,40 @@ export const bindRenderer = (mode, ) => {
                             await call.playJourneyReplayClips(REPLAY_CLIP_SLOT_STOP, {
                                 sample,
                                 token,
+                                onFrame: ({phase, localMillis, sample: clipSample}) => {
+                                    const videoTimeline = state.controller.videoTimeline
+                                    const phaseTime = (phase?.startMillis ?? 0) + (Number(localMillis) || 0)
+                                    const resolvedPhase = state.controller.videoFramePhaseAtTime?.(phaseTime) ?? phase
+                                    publishReplayClipFrameState({
+                                        store: replayStore(),
+                                        slot: REPLAY_CLIP_SLOT_STOP,
+                                        sample: clipSample ?? sample,
+                                        progress: resolvedPhase?.progress ?? 1,
+                                        phase: resolvedPhase,
+                                        frameIndex: resolvedPhase?.frameIndex,
+                                        frameCount: videoTimeline?.frameCount,
+                                        frameTimeMs: resolvedPhase?.frameTimeMs,
+                                        frameIntervalMs: videoTimeline?.frameIntervalMs,
+                                        durationMillis: videoTimeline?.durationMillis,
+                                    })
+                                },
+                            })
+                            const videoTimeline = state.controller.videoTimeline
+                            const finalStopPhase = state.controller.videoFramePhaseAtTime?.(
+                                videoTimeline?.durationMillis ?? 0,
+                                {isFinalSceneFrame: true},
+                            )
+                            publishReplayClipFrameState({
+                                store: replayStore(),
+                                slot: REPLAY_CLIP_SLOT_STOP,
+                                sample,
+                                progress: 1,
+                                phase: finalStopPhase,
+                                frameIndex: finalStopPhase?.frameIndex,
+                                frameCount: videoTimeline?.frameCount,
+                                frameTimeMs: finalStopPhase?.frameTimeMs,
+                                frameIntervalMs: videoTimeline?.frameIntervalMs,
+                                durationMillis: videoTimeline?.durationMillis,
                             })
                             notifyStopClipsComplete()
                             finalize()
