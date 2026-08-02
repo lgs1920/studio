@@ -761,12 +761,19 @@ export const cameraAltitudeForSample = (mode, sample, cameraSettings) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
+        const sampleHeight = finiteNumber(sample?.altitude ?? sample?.height) ?? 0
+        const configuredAltitude = finiteNumber(cameraSettings?.altitude) ?? 0
         const longitude = sample?.longitude
         const latitude = sample?.latitude
         if (finiteNumber(longitude) === null || finiteNumber(latitude) === null) {
-            return cameraSettings.altitude
+            return cameraSettings.altitudeMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET
+                ? sampleHeight + configuredAltitude
+                : cameraSettings.altitude
         }
-        const sampleHeight = finiteNumber(sample?.altitude ?? sample?.height) ?? finiteNumber(globalThis.lgs?.viewer?.camera?.positionCartographic?.height) ?? 0
+
+        // Ground offset is relative to the replay marker, never to the live
+        // camera's current terrain. The camera can be horizontally displaced
+        // over a different relief, especially during a recenter transition.
         if (state.terrainHeightLookupBypass === true) {
             if (state.terrainHeightLookupTrace === true) {
                 replayVideoTraceDebug('camera.altitude.lookup.bypass', {
@@ -777,7 +784,7 @@ export const cameraAltitudeForSample = (mode, sample, cameraSettings) => {
                 })
             }
             if (cameraSettings.altitudeMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET) {
-                return sampleHeight + cameraSettings.altitude
+                return sampleHeight + configuredAltitude
             }
             return cameraSettings.altitude
         }
@@ -785,7 +792,7 @@ export const cameraAltitudeForSample = (mode, sample, cameraSettings) => {
         const groundHeight = terrainHeight ?? sampleHeight
 
         if (cameraSettings.altitudeMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET) {
-            return groundHeight + cameraSettings.altitude
+            return groundHeight + configuredAltitude
         }
 
         return cameraSettings.altitude

@@ -16,6 +16,7 @@
 
 import {buildReplayFrameState} from './JourneyReplayRuntime'
 import {createJourneyReplayLogicalFrame} from './JourneyReplayLogicalFrame'
+import {buildReplayVideoTimeline, resolveReplayVideoFramePhase} from './ReplayVideoTimeline'
 
 export const REPLAY_EVENT_START = 'replay/start'
 export const REPLAY_EVENT_UPDATE = 'replay/update'
@@ -45,11 +46,6 @@ const safeDuration = duration => {
     return Number.isFinite(numeric) && numeric > 0 ? numeric : DEFAULT_DURATION
 }
 
-const safeFps = fps => {
-    const numeric = Number(fps)
-    return Number.isFinite(numeric) && numeric > 0 ? numeric : 30
-}
-
 export class JourneyReplayPlaybackController {
     #sampler = null
     #duration = DEFAULT_DURATION
@@ -71,6 +67,7 @@ export class JourneyReplayPlaybackController {
     #storeSyncInterval = STORE_SYNC_INTERVAL
     #globalUpdateInterval = GLOBAL_UPDATE_EVENT_INTERVAL
     #dynamicFrameId = 0
+    #videoTimeline = null
 
     constructor({
                     requestFrame = callback => globalThis.__?.requestAnimationFrame?.(callback)
@@ -96,12 +93,28 @@ export class JourneyReplayPlaybackController {
                      direction = this.#direction,
                      loop = this.#loop,
                      progress = this.#progress,
+                     clips = undefined,
+                     captureFps = undefined,
+                     videoTimeline = null,
                  } = {}) => {
         this.#sampler = sampler
         this.#duration = safeDuration(duration)
         this.#direction = Number(direction) < 0 ? -1 : 1
         this.#loop = Boolean(loop)
         this.#progress = clamp(Number(progress) || 0, 0, 1)
+        if (videoTimeline) {
+            this.#videoTimeline = videoTimeline
+        }
+        else if (clips !== undefined || captureFps !== undefined || !this.#videoTimeline) {
+            this.#videoTimeline = buildReplayVideoTimeline({
+                replayDurationMillis: this.#duration * MILLIS,
+                fps: captureFps
+                      ?? globalThis.lgs?.stores?.replay?.captureFps
+                      ?? 30,
+                direction: this.#direction,
+                clips: clips ?? null,
+            })
+        }
         this.#syncStore(this.currentSample(), {force: true})
         return this
     }
@@ -147,6 +160,25 @@ export class JourneyReplayPlaybackController {
     get direction() {
         return this.#direction
     }
+
+    get videoTimeline() {
+        return this.#videoTimeline
+    }
+
+    /**
+     * Resolve a Draft frame phase from the shared absolute video timeline.
+     *
+     * @param {number} frameTimeMs - Absolute timeline time in milliseconds.
+     * @param {Object} options - Phase resolution options.
+     * @returns {Object} Resolved timeline phase.
+     */
+    videoFramePhaseAtTime = (frameTimeMs = 0, {isFinalSceneFrame = false} = {}) => (
+        resolveReplayVideoFramePhase({
+            timeline: this.#videoTimeline,
+            frameTimeMs,
+            isFinalSceneFrame,
+        })
+    )
 
     get loop() {
         return this.#loop
@@ -409,23 +441,26 @@ export class JourneyReplayPlaybackController {
 
         const frameNow = this.#now()
         this.#dynamicFrameId += 1
-        const frameIntervalMillis = MILLIS / safeFps(store.captureFps)
-        const replayFrameCount = Math.max(1, Math.ceil((this.#duration * MILLIS) / frameIntervalMillis) + 1)
         const playbackProgress = this.#direction < 0 ? 1 - this.#progress : this.#progress
-        const replayFrameIndex = Math.min(
-            replayFrameCount - 1,
-            Math.max(0, Math.round(clamp(playbackProgress, 0, 1) * (replayFrameCount - 1))),
+        const replayPhase = this.#videoTimeline?.replayPhase ?? null
+        const replayElapsedMillis = clamp(playbackProgress, 0, 1) * this.#duration * MILLIS
+        const frameTimeMs = Math.min(
+            this.#videoTimeline?.durationMillis ?? this.#duration * MILLIS,
+            (replayPhase?.startMillis ?? 0) + replayElapsedMillis,
         )
-        const frameTimeMs = replayFrameIndex * frameIntervalMillis
-        const phase = {
-            kind: 'replay',
-            slot: 'replay',
-            progress: this.#progress,
-            localProgress: clamp(playbackProgress, 0, 1),
-            replayFrameIndex,
-            replayFrameCount,
-            isLastTwoReplayFrames: (replayFrameCount - replayFrameIndex) <= 2,
-        }
+        const phase = this.videoFramePhaseAtTime(frameTimeMs)
+        const frameIntervalMillis = this.#videoTimeline?.frameIntervalMs ?? (MILLIS / 30)
+        const replayFrameIndex = phase.replayFrameIndex
+        const replayFrameCount = phase.replayFrameCount
+        const frameIndex = phase.frameIndex ?? 0
+        const frameCount = phase.frameCount ?? 1
+        const hasClipPhases = this.#videoTimeline?.phases?.some(phaseItem => phaseItem.kind !== 'replay') === true
+        const logicalElapsedMillis = hasClipPhases
+                                     ? (phase.frameTimeMs ?? frameTimeMs)
+                                     : (sample?.journeyElapsedMillis ?? null)
+        const logicalDurationMillis = hasClipPhases
+                                      ? this.#videoTimeline.durationMillis
+                                      : (sample?.journeyDurationMillis ?? this.#sampler?.durationMillis ?? null)
         // Shared live draft tick for replay-driven widgets.
         store.liveSample = sample
         store.dynamicStatsTick = frameNow
@@ -440,15 +475,15 @@ export class JourneyReplayPlaybackController {
             active:          this.#running || this.#paused,
             playing:         this.#running && !this.#paused,
             paused:          this.#paused,
-            index:           replayFrameIndex,
+            index:           frameIndex,
             progress:        this.#progress,
             direction:       this.#direction,
             sample,
-            elapsedMillis:   sample?.journeyElapsedMillis ?? null,
-            durationMillis:  sample?.journeyDurationMillis ?? this.#sampler?.durationMillis ?? null,
+            elapsedMillis:   logicalElapsedMillis,
+            durationMillis:  logicalDurationMillis,
             frameId:         this.#dynamicFrameId,
-            frameCount:      replayFrameCount,
-            frameTimeMs,
+            frameCount,
+            frameTimeMs:      phase.frameTimeMs ?? frameTimeMs,
             frameIntervalMs: frameIntervalMillis,
             replayFrameIndex,
             replayFrameCount,

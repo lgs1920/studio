@@ -22,6 +22,9 @@ import {
     ReplayFrameTimeline,
 }                              from '@Core/ui/replay/ReplayFrameTimeline'
 import {
+    buildReplayVideoTimeline, replayClipSignature, resolveReplayVideoFramePhase,
+}                              from '@Core/ui/replay/ReplayVideoTimeline'
+import {
     buildReplayVideoComposerOverlays, isReplayVideoWidgetReady,
 }                              from '@Core/ui/replay/ReplayVideoOverlayComposer'
 import {
@@ -168,166 +171,12 @@ const normalizeReplayWidgetIds = (widgetIds = []) => (
         .sort()
 )
 
-const replayClipDurationMillis = clip => Math.max(0, finiteNumber(clip?.params?.duration, 0) ?? 0) * 1000
-
 const resolveReplayExportClips = ({replay = defaultReplayStore()} = {}) => normalizeJourneyReplayClips(
     replay?.clips
     ?? globalThis.lgs?.stores?.replay?.clips
     ?? globalThis.lgs?.settings?.ui?.replay?.clips
     ?? {},
 )
-
-const replayClipSignature = clips => JSON.stringify({
-    start: (clips?.start ?? []).map(clip => ({
-        clipId: clip.clipId,
-        params: clip.params ?? {},
-        enabled: clip.enabled !== false,
-    })),
-    stop:  (clips?.stop ?? []).map(clip => ({
-        clipId: clip.clipId,
-        params: clip.params ?? {},
-        enabled: clip.enabled !== false,
-    })),
-})
-
-const buildReplayVideoTimeline = ({
-                                      replayDurationMillis = 0,
-                                      fps = defaultReplayExportFps(),
-                                      direction = 1,
-                                      clips = null,
-                                  } = {}) => {
-    const phases = []
-    let cursor = 0
-    const pushPhase = phase => {
-        const durationMillis = Math.max(0, finiteNumber(phase.durationMillis, 0) ?? 0)
-        const next = {
-            ...phase,
-            durationMillis,
-            startMillis: cursor,
-            endMillis:   cursor + durationMillis,
-        }
-        phases.push(next)
-        cursor += durationMillis
-    }
-
-    for (const clip of clips?.start ?? []) {
-        if (clip?.enabled === false) {
-            continue
-        }
-        pushPhase({
-            kind: REPLAY_CLIP_SLOT_START,
-            slot: REPLAY_CLIP_SLOT_START,
-            clip,
-            anchorProgress: Number(direction) < 0 ? 1 : 0,
-            durationMillis: replayClipDurationMillis(clip),
-        })
-    }
-
-    const replayDuration = Math.max(0, finiteNumber(replayDurationMillis, 0) ?? 0)
-    pushPhase({
-        kind: 'replay',
-        slot: 'replay',
-        anchorProgress: Number(direction) < 0 ? 1 : 0,
-        durationMillis: replayDuration,
-    })
-
-    for (const clip of clips?.stop ?? []) {
-        if (clip?.enabled === false) {
-            continue
-        }
-        pushPhase({
-            kind: REPLAY_CLIP_SLOT_STOP,
-            slot: REPLAY_CLIP_SLOT_STOP,
-            clip,
-            anchorProgress: Number(direction) < 0 ? 0 : 1,
-            durationMillis: replayClipDurationMillis(clip),
-        })
-    }
-
-    return {
-        fps,
-        direction: Number(direction) < 0 ? -1 : 1,
-        replayDurationMillis: replayDuration,
-        durationMillis: cursor,
-        phases,
-        clipSignature: replayClipSignature(clips),
-    }
-}
-
-const resolveReplayVideoFramePhase = ({timeline = null, frame = null} = {}) => {
-    const frameIntervalMs = timeline?.fps > 0 ? (1000 / timeline.fps) : (1000 / 30)
-    const phaseFrameMetrics = ({phase = null, localMillis = 0} = {}) => {
-        if (!phase) {
-            return {
-                phaseFrameIndex: 0,
-                phaseFrameCount: 1,
-            }
-        }
-
-        const phaseIndex = timeline?.phases?.indexOf?.(phase) ?? -1
-        const isLastTimelinePhase = phaseIndex >= 0 && phaseIndex === timeline.phases.length - 1
-        const baseFrameCount = Math.max(1, Math.ceil(Math.max(0, Number(phase.durationMillis) || 0) / frameIntervalMs))
-        const phaseFrameCount = isLastTimelinePhase ? (baseFrameCount + 1) : baseFrameCount
-        const phaseFrameIndex = Math.min(
-            Math.max(0, phaseFrameCount - 1),
-            Math.max(0, Math.round(Math.max(0, Number(localMillis) || 0) / frameIntervalMs)),
-        )
-
-        return {
-            phaseFrameIndex,
-            phaseFrameCount,
-        }
-    }
-    const fallback = {
-        kind: 'replay',
-        slot: 'replay',
-        progress: clampProgress(frame?.progress),
-        localProgress: clampProgress(frame?.progress),
-        anchorProgress: Number(timeline?.direction) < 0 ? 1 : 0,
-        clip: null,
-        ...phaseFrameMetrics(),
-    }
-    if (!timeline?.phases?.length) {
-        return fallback
-    }
-
-    const timeMs = Math.max(0, finiteNumber(frame?.frameTimeMs, 0) ?? 0)
-    const isFinalSceneFrame = frame?.isLast === true
-    const phase = timeline.phases.find(item => timeMs < item.endMillis)
-                  ?? timeline.phases[timeline.phases.length - 1]
-                  ?? null
-    if (!phase) {
-        return fallback
-    }
-
-    const localMillis = Math.max(0, Math.min(phase.durationMillis, timeMs - phase.startMillis))
-    const localProgress = phase.durationMillis > 0 ? clampProgress(localMillis / phase.durationMillis) : 1
-    const replayProgress = phase.kind === 'replay'
-                           ? (timeline.direction < 0 ? 1 - localProgress : localProgress)
-                           : phase.anchorProgress
-    const metrics = phaseFrameMetrics({phase, localMillis})
-    const replayFrameIndex = phase.kind === 'replay' ? metrics.phaseFrameIndex : null
-    const replayFrameCount = phase.kind === 'replay' ? metrics.phaseFrameCount : null
-
-    return {
-        ...phase,
-        // Keep the absolute export clock available to deterministic camera
-        // transitions. `localMillis` resets at every clip/replay phase and
-        // must not be used as the camera transition clock.
-        frameTimeMs: timeMs,
-        progress: replayProgress,
-        localProgress,
-        localMillis,
-        ...metrics,
-        replayFrameIndex,
-        replayFrameCount,
-        isFinalSceneFrame,
-        isLastPhaseFrame: metrics.phaseFrameIndex >= (metrics.phaseFrameCount - 1),
-        isLastTwoReplayFrames: phase.kind === 'replay'
-                               && replayFrameCount !== null
-                               && (replayFrameCount - replayFrameIndex) <= 2,
-    }
-}
 
 /**
  * Capture the compact runtime state used to validate a deferred export plan.

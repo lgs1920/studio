@@ -21,7 +21,8 @@ import {
     replayCameraRangeFromPitch, replayCameraRecenterDuration, replayFrameLeadSeconds, replayCameraRecenterHeight,
     replayCameraRecenterHorizontalDistance, replayHeadingEasingFactor, replayHeadingFromLocalAxisAngle,
     replayIsWindowPointOutsideToleranceZone, replayPitchLookaheadFactor, JourneyReplayMode, replayTargetSampleForClip,
-    replayToleranceZoneBounds, replayCenteredZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone,
+    replayToleranceZoneBounds, replayCenteredZone, replayRuntimeTrackingSettings, replayAdaptiveTrackingTiming,
+    replayDynamicTargetPointInZone,
 }                                                                      from '@Core/ui/replay/JourneyReplayMode'
 import {
     REPLAY_SCOPE_ALL_TRACKS, REPLAY_SCOPE_CURRENT_TRACK, REPLAY_SCOPE_VISIBLE_TRACKS, JourneyReplayPathSampler,
@@ -256,6 +257,61 @@ describe('replay settings normalization', () => {
         expect(targetZone.height).toBeCloseTo(0.3, 6)
         expect(targetZone.width * 1080).toBeCloseTo(324, 6)
         expect(targetZone.height * 1920).toBeCloseTo(576, 6)
+    })
+
+    it('adapts short replay zones with explicit renderer-independent floors', () => {
+        const viewport = {width: 1920, height: 1080}
+        const longTracking = replayRuntimeTrackingSettings({}, viewport, {
+            durationSeconds: 60,
+            elapsedSeconds: 0,
+            transitionSeconds: 2,
+            frameIntervalMs: 1000 / 30,
+        })
+        const shortTracking = replayRuntimeTrackingSettings({}, viewport, {
+            durationSeconds: 1,
+            elapsedSeconds: 0,
+            transitionSeconds: 2,
+            frameIntervalMs: 1000 / 15,
+        })
+        const shortNavigationBounds = replayToleranceZoneBounds(shortTracking.navigation.triggerZone)
+        const shortDynamicBounds = replayToleranceZoneBounds(shortTracking.dynamic.triggerZone)
+        const shortTargetBounds = replayToleranceZoneBounds(shortTracking.dynamic.targetZone)
+
+        expect(longTracking.timing.adaptationRatio).toBe(0)
+        expect(shortTracking.timing.adaptationRatio).toBe(1)
+        expect(shortNavigationBounds.right - shortNavigationBounds.left).toBeCloseTo(0.05, 6)
+        expect(shortDynamicBounds.right - shortDynamicBounds.left).toBeCloseTo(0.3, 6)
+        expect(shortTargetBounds.right - shortTargetBounds.left).toBeCloseTo(0.3, 6)
+        expect(shortTargetBounds.left).toBeGreaterThanOrEqual(shortDynamicBounds.left)
+        expect(shortTargetBounds.right).toBeLessThanOrEqual(shortDynamicBounds.right)
+        expect(shortTargetBounds.top).toBeGreaterThanOrEqual(shortDynamicBounds.top)
+        expect(shortTargetBounds.bottom).toBeLessThanOrEqual(shortDynamicBounds.bottom)
+        expect(shortTracking.timing.minimumZoneRatios).toEqual({
+                                                                      navigationZ1: 0.05,
+                                                                      dynamicZ1:     0.3,
+                                                                      dynamicZ2:     0.3,
+                                                                  })
+    })
+
+    it('accounts for remaining time, output cadence and playback rate', () => {
+        const start = replayAdaptiveTrackingTiming({
+                                                        durationSeconds: 20,
+                                                        elapsedSeconds: 0,
+                                                        transitionSeconds: 2,
+                                                        frameIntervalMs: 1000 / 60,
+                                                    })
+        const late = replayAdaptiveTrackingTiming({
+                                                       durationSeconds: 20,
+                                                       elapsedSeconds: 19,
+                                                       transitionSeconds: 2,
+                                                       frameIntervalMs: 1000 / 15,
+                                                       playbackRate:    2,
+                                                   })
+
+        expect(late.adaptationRatio).toBeGreaterThan(start.adaptationRatio)
+        expect(late.minimumTransitionSeconds).toBeLessThan(start.minimumTransitionSeconds)
+        expect(late.frameLeadSeconds).toBeGreaterThan(start.frameLeadSeconds)
+        expect(late.effectiveTransitionSeconds).toBeGreaterThan(start.effectiveTransitionSeconds)
     })
 
     it('adds one frame of temporal lead according to the capture FPS', () => {

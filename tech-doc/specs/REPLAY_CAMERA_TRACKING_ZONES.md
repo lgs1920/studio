@@ -277,9 +277,12 @@ This is especially important for non-top-down camera pitches, where the marker
 can continue moving toward a crop edge while the camera is easing.
 
 Visibility correction is separate from ordinary tracking. If terrain or 3D
-tiles hide the rendered marker, the camera may recenter for visibility when the
-marker is outside the trigger conditions. Corrections inside Z1 are suppressed
-unless visibility requires them.
+tiles hide the rendered marker, the camera may recenter for visibility. Z1
+still governs ordinary framing corrections, but rendered-depth or terrain
+line-of-sight occlusion is an independent visibility constraint: a marker can
+be centered inside Z1 and still trigger a temporary pitch/heading redirect.
+The redirect is locked during its transition, escalates only when the marker
+remains hidden, and returns to the nominal pitch after visibility recovers.
 
 The replay marker itself always remains depth-tested. Its Cesium point uses
 `disableDepthTestDistance = 0`, so terrain relief and 3D tiles can mask it when

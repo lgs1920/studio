@@ -201,11 +201,13 @@ export const configure = (mode, options = {}) => {
         }
 
         state.controller.configure({
-            sampler:   state.sampler,
-            duration:  options.duration ?? replay.duration ?? store?.duration ?? DEFAULT_DURATION,
-            direction: 1,
-            loop:      options.loop ?? replay.loop ?? store?.loop ?? false,
-            progress:  options.progress ?? store?.progress ?? 0,
+            sampler:    state.sampler,
+            duration:   options.duration ?? replay.duration ?? store?.duration ?? DEFAULT_DURATION,
+            direction:  1,
+            loop:       options.loop ?? replay.loop ?? store?.loop ?? false,
+            progress:   options.progress ?? store?.progress ?? 0,
+            clips,
+            captureFps: options.captureFps ?? store?.captureFps ?? 30,
         })
 
         call.bindCesiumCameraBridge()
@@ -253,6 +255,7 @@ export const start = (mode, options = {}) => {
                                         ?? getJourneyReplayHideOtherJourneys()
         const videoReplayLinked = call.isReplayVideoLinked()
         state.logicalCameraTrajectory = false
+        state.videoReplayClipLogicalTrajectory = videoReplayLinked
         void globalThis.__?.ui?.cameraManager?.stopRotate?.()
         call.setJourneyReplayOrbitAllowed(!videoReplayLinked)
         call.restoreOtherJourneysVisibility()
@@ -333,11 +336,19 @@ export const start = (mode, options = {}) => {
 
         if (startList.length > 0) {
             traceStartStep('start-clips.begin', {count: startList.length})
+            const startPhase = state.controller.videoFramePhaseAtTime?.(0)
+            const videoTimeline = state.controller.videoTimeline
             publishReplayClipFrameState({
                 store: runtimeStore,
                 slot: REPLAY_CLIP_SLOT_START,
                 sample: startSample,
                 progress: options.progress ?? 0,
+                phase: startPhase,
+                frameIndex: startPhase?.frameIndex,
+                frameCount: videoTimeline?.frameCount,
+                frameTimeMs: startPhase?.frameTimeMs,
+                frameIntervalMs: videoTimeline?.frameIntervalMs,
+                durationMillis: videoTimeline?.durationMillis,
             })
             call.setContinuousRender(true)
             if (videoReplayLinked) {
@@ -349,6 +360,23 @@ export const start = (mode, options = {}) => {
                         await call.playJourneyReplayClips(REPLAY_CLIP_SLOT_START, {
                             sample: startSample,
                             token,
+                            onFrame: ({phase, localMillis, sample: clipSample}) => {
+                                const videoTimeline = state.controller.videoTimeline
+                                const phaseTime = (phase?.startMillis ?? 0) + (Number(localMillis) || 0)
+                                const resolvedPhase = state.controller.videoFramePhaseAtTime?.(phaseTime) ?? phase
+                                publishReplayClipFrameState({
+                                    store: runtimeStore,
+                                    slot: REPLAY_CLIP_SLOT_START,
+                                    sample: clipSample ?? startSample,
+                                    progress: resolvedPhase?.progress ?? 0,
+                                    phase: resolvedPhase,
+                                    frameIndex: resolvedPhase?.frameIndex,
+                                    frameCount: videoTimeline?.frameCount,
+                                    frameTimeMs: resolvedPhase?.frameTimeMs,
+                                    frameIntervalMs: videoTimeline?.frameIntervalMs,
+                                    durationMillis: videoTimeline?.durationMillis,
+                                })
+                            },
                         })
                     }
 
@@ -698,6 +726,9 @@ export const renderReplayExportFrame = async (mode, {phase = null, frame = null,
                     frameIntervalMs: finiteNumber(frame?.frameIntervalMs)
                                      ?? finiteNumber(phase?.frameIntervalMs)
                                      ?? null,
+                    isFinalFrame: phase?.isFinalSceneFrame === true
+                                  || phase?.isLastPhaseFrame === true
+                                  || frame?.isLast === true,
                     exportMode:   true,
                     logicalCamera: true,
                     logicalFrame,

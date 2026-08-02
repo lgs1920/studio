@@ -297,6 +297,12 @@ export const resetRuntimeProgress = store => {
  * Publishes the state of a replay clip frame for dynamic widgets and capture.
  *
  * @param {Object} options - Clip frame state.
+ * @param {Object|null} options.phase - Canonical shared timeline phase.
+ * @param {number|null} options.frameIndex - Absolute timeline frame index.
+ * @param {number|null} options.frameCount - Absolute timeline frame count.
+ * @param {number|null} options.frameTimeMs - Absolute timeline time.
+ * @param {number|null} options.frameIntervalMs - Timeline frame interval.
+ * @param {number|null} options.durationMillis - Full timeline duration.
  * @returns {Object|null} Published clip phase.
  */
 export const publishReplayClipFrameState = ({
@@ -304,12 +310,18 @@ export const publishReplayClipFrameState = ({
                                                  slot = REPLAY_CLIP_SLOT_START,
                                                  sample = null,
                                                  progress = slot === REPLAY_CLIP_SLOT_STOP ? 1 : 0,
+                                                 phase: suppliedPhase = null,
+                                                 frameIndex = null,
+                                                 frameCount = null,
+                                                 frameTimeMs = null,
+                                                 frameIntervalMs = null,
+                                                 durationMillis = null,
                                              } = {}) => {
     if (!store) {
         return null
     }
 
-    const phase = {
+    const phase = suppliedPhase ?? {
         kind: slot,
         slot,
         progress,
@@ -318,6 +330,14 @@ export const publishReplayClipFrameState = ({
         replayFrameCount: null,
         isLastTwoReplayFrames: false,
     }
+    const resolvedProgress = suppliedPhase?.progress ?? progress
+    const resolvedFrameIndex = optionalFiniteNumber(frameIndex) ?? optionalFiniteNumber(phase.frameIndex)
+    const resolvedFrameCount = optionalFiniteNumber(frameCount) ?? optionalFiniteNumber(phase.frameCount)
+    const resolvedFrameTimeMs = optionalFiniteNumber(frameTimeMs) ?? optionalFiniteNumber(phase.frameTimeMs)
+    const resolvedFrameIntervalMs = optionalFiniteNumber(frameIntervalMs)
+                                   ?? optionalFiniteNumber(phase.frameIntervalMs)
+    const resolvedDurationMillis = optionalFiniteNumber(durationMillis)
+                                   ?? optionalFiniteNumber(phase.durationMillis)
     const now = globalThis.performance?.now?.() ?? Date.now()
     store.clipSequenceActive = true
     store.replayFramePhase = phase
@@ -325,20 +345,22 @@ export const publishReplayClipFrameState = ({
         active:         true,
         playing:        false,
         paused:         false,
-        progress,
+        progress:       resolvedProgress,
         direction:      Number(store.direction) < 0 ? -1 : 1,
         sample:         sample ?? store.sample ?? store.liveSample ?? null,
-        elapsedMillis:   optionalFiniteNumber(sample?.journeyElapsedMillis)
+        elapsedMillis:   resolvedFrameTimeMs
+                         ?? optionalFiniteNumber(sample?.journeyElapsedMillis)
                          ?? optionalFiniteNumber(store.elapsedMillis),
-        durationMillis:  optionalFiniteNumber(sample?.journeyDurationMillis)
+        durationMillis:  resolvedDurationMillis
+                         ?? optionalFiniteNumber(sample?.journeyDurationMillis)
                          ?? optionalFiniteNumber(store.durationMillis),
-        index:          null,
-        frameCount:     null,
-        frameTimeMs:    null,
-        frameIntervalMs: null,
+        index:           resolvedFrameIndex,
+        frameCount:      resolvedFrameCount,
+        frameTimeMs:     resolvedFrameTimeMs,
+        frameIntervalMs: resolvedFrameIntervalMs,
         frameId:        null,
-        replayFrameIndex: null,
-        replayFrameCount: null,
+        replayFrameIndex: phase.replayFrameIndex ?? null,
+        replayFrameCount: phase.replayFrameCount ?? null,
         phase,
         source:         'clip',
         updatedAt:      now,

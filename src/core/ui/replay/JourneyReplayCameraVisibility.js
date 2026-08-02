@@ -222,7 +222,20 @@ export const cameraViewWithRedirectState = (mode, view, redirectState = null) =>
         }
     }
 
-export const cameraLookaheadSample = (mode, sample, {lookaheadSeconds = null} = {}) => {
+/**
+ * Resolve a metric lookahead sample for replay camera tracking.
+ *
+ * @param {object} mode - Replay mode.
+ * @param {object} sample - Current replay sample.
+ * @param {object} [options] - Lookahead options.
+ * @param {number|null} [options.lookaheadSeconds=null] - Time horizon.
+ * @param {number} [options.minimumMeters=120] - Metric floor for the horizon.
+ * @returns {object|null} Future replay sample or null when unavailable.
+ */
+export const cameraLookaheadSample = (mode, sample, {
+    lookaheadSeconds = null,
+    minimumMeters = CAMERA_REDIRECT_LOOKAHEAD_DISTANCE_METERS,
+} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
@@ -232,12 +245,16 @@ export const cameraLookaheadSample = (mode, sample, {lookaheadSeconds = null} = 
         }
 
         const seconds = finiteNumber(lookaheadSeconds)
+        const metricFloor = Math.max(
+            0,
+            finiteNumber(minimumMeters) ?? CAMERA_REDIRECT_LOOKAHEAD_DISTANCE_METERS,
+        )
         const next = typeof state.sampler.lookaheadAtProgress === 'function'
             ? state.sampler.lookaheadAtProgress(sample.progress, {
                 seconds: seconds ?? 1,
-                minimumMeters: CAMERA_REDIRECT_LOOKAHEAD_DISTANCE_METERS,
+                minimumMeters: metricFloor,
             })
-            : state.sampler.atDistance(currentDistance + CAMERA_REDIRECT_LOOKAHEAD_DISTANCE_METERS)
+            : state.sampler.atDistance(currentDistance + metricFloor)
         if (!next || Math.abs((finiteNumber(next?.distanceFromStart) ?? 0) - currentDistance) <= 0.0001) {
             return null
         }
@@ -522,6 +539,7 @@ export const findCameraRedirectState = (mode, {
                                     cameraSettings,
                                     markerSettings,
                                     reuseCurrentIfVisible = true,
+                                    minimumCandidateScore = null,
                                     cache = null,
                                 } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
@@ -569,6 +587,7 @@ export const findCameraRedirectState = (mode, {
 
             let bestCandidate = null
             let bestScore = Number.POSITIVE_INFINITY
+            const minimumScore = finiteNumber(minimumCandidateScore)
             for (const candidate of candidates) {
                 const visible = call.cameraViewVisibilityForSample({
                                                                         nominalView,
@@ -584,6 +603,9 @@ export const findCameraRedirectState = (mode, {
                 }
 
                 const score = call.cameraRedirectCandidateScore(candidate)
+                if (minimumScore !== null && score <= minimumScore) {
+                    continue
+                }
                 if (score < bestScore) {
                     bestCandidate = candidate
                     bestScore = score
@@ -601,6 +623,7 @@ export const findCameraRedirectState = (mode, {
             replayCameraUpdateMarkerSettingsKey(markerSettings),
             reuseCurrentIfVisible === true ? '1' : '0',
             replayCameraUpdateRedirectStateKey(state.cameraRedirectState),
+            finiteNumber(minimumCandidateScore) ?? 'null',
         ].join('|')
         return memoizeReplayCameraUpdateCache(cache, 'findCameraRedirectState', cacheKey, computeRedirectState)
     }
