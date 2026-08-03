@@ -455,4 +455,78 @@ describe('JourneyReplayCameraConstraintBinding', () => {
         expect(maximumStep).toBeLessThan(Math.PI / 30)
         expect(compiledPitches.at(-1)).toBeCloseTo(-Math.PI / 4, 6)
     })
+
+    it('honours disabled hidden-marker correction and turn drift capabilities', () => {
+        globalThis.lgs = {
+            viewer: {
+                camera: {
+                    frustum: {
+                        fovy:         Math.PI / 3,
+                        aspectRatio:  1,
+                    },
+                },
+            },
+            stores: {
+                replay: {
+                    markerRadius: 35,
+                },
+            },
+        }
+
+        const buildSpy = vi.spyOn(ConstrainedReplayCameraPath, 'buildConstrainedReplayCameraPath')
+            .mockImplementation(options => {
+                options.frameForSample({
+                    distanceFromStart: 0,
+                    progress:          0,
+                    longitude:         2,
+                    latitude:          48,
+                    altitude:          120,
+                    height:            120,
+                }, 0)
+                return {frames: []}
+            })
+
+        const {mode, call} = makeMode()
+
+        resolveConstrainedReplayCameraPath(mode, {
+            trackingMode:   'navigation',
+            cameraSettings: {
+                canDrift:           false,
+                canFixHiddenMarker: false,
+                hysteresis:         {},
+            },
+            markerSettings: {},
+            runtimeTracking: {
+                navigation: {
+                    triggerZone: {
+                        top:    0.2,
+                        left:   0.2,
+                        width:  0.6,
+                        height: 0.6,
+                    },
+                },
+                dynamic: {
+                    triggerZone: {
+                        top:    0.2,
+                        left:   0.2,
+                        width:  0.6,
+                        height: 0.6,
+                    },
+                    targetZone: {
+                        top:    0.4,
+                        left:   0.4,
+                        width:  0.2,
+                        height: 0.2,
+                    },
+                },
+            },
+            durationSeconds: 10,
+            responseSeconds: 1,
+            lookaheadSeconds: 1,
+        })
+
+        expect(buildSpy).toHaveBeenCalledOnce()
+        expect(call.findCameraRedirectState).not.toHaveBeenCalled()
+        expect(call.replayTurnDriftForGuideProgress).not.toHaveBeenCalled()
+    })
 })

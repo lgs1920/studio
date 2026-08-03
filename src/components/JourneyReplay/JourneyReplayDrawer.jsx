@@ -1391,6 +1391,35 @@ export const JourneyReplayDrawer = memo(() => {
                                                             ))}
                                                             <WaOption value={REPLAY_CAMERA_PRESET_CUSTOM}>{'Custom'}</WaOption>
                                                         </WaSelect>
+                                                        <div className="replay-camera-capability-switches">
+                                                            <WaSwitch
+                                                                className="replay-camera-capability-switch half-width"
+                                                                size="xs"
+                                                                label-at-start
+                                                                checked={camera.canDrift !== false}
+                                                                onChange={event => updateCamera({canDrift: getChecked(event)})}
+                                                            >
+                                                                {'Can drift'}
+                                                            </WaSwitch>
+                                                            <WaSwitch
+                                                                className="replay-camera-capability-switch half-width"
+                                                                size="xs"
+                                                                label-at-start
+                                                                checked={camera.canFixHiddenMarker !== false}
+                                                                onChange={event => updateCamera({canFixHiddenMarker: getChecked(event)})}
+                                                            >
+                                                                {'Can fix hidden marker'}
+                                                            </WaSwitch>
+                                                            <WaSwitch
+                                                                className="replay-camera-capability-switch half-width"
+                                                                size="xs"
+                                                                label-at-start
+                                                                checked={camera.canRoll !== false}
+                                                                onChange={event => updateCamera({canRoll: getChecked(event)})}
+                                                            >
+                                                                {'Can roll'}
+                                                            </WaSwitch>
+                                                        </div>
                                                         <JourneyReplayStyleField>
                                                             <WaNumberInput
                                                                 label="Sensitivity"

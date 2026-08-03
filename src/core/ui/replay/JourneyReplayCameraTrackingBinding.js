@@ -202,7 +202,8 @@ const replayCameraViewForTrackingSample = (mode, {
             axisHeading,
             useAxisHeadingForSystem: markerSettings?.mode === REPLAY_MARKER_MODE_NAVIGATION,
         })
-        const drift = typeof call.replayTurnDriftForProgress === 'function'
+        const drift = cameraSettings.canDrift !== false
+            && typeof call.replayTurnDriftForProgress === 'function'
             ? call.replayTurnDriftForProgress(progress, {
                 maxHeadingOffsetDeg:    REPLAY_NAVIGATION_MAX_HEADING_DRIFT_DEGREES,
                 maxLateralOffsetMeters: REPLAY_NAVIGATION_MAX_LATERAL_DRIFT_METERS,
@@ -224,7 +225,7 @@ const replayCameraViewForTrackingSample = (mode, {
         collision,
         motionProfile: {
             turnDrift: {
-                enabled:                 true,
+                enabled:                 cameraSettings.canDrift !== false,
                 maxHeadingOffsetDeg:     REPLAY_NAVIGATION_MAX_HEADING_DRIFT_DEGREES,
                 maxLateralOffsetMeters:  REPLAY_NAVIGATION_MAX_LATERAL_DRIFT_METERS,
                 minTurnAngleDeg:         REPLAY_NAVIGATION_MIN_TURN_DRIFT_DEGREES,
@@ -258,6 +259,16 @@ const replayCameraPitchVisibility = (mode, {
 } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    if (cameraSettings?.canFixHiddenMarker === false) {
+        return {
+            nominalVisible: true,
+            candidateRedirectState: null,
+            geometricVisible: true,
+            renderedVisible: null,
+            renderedTraceVisible: null,
+            obstructionDistanceMeters: null,
+        }
+    }
     const geometricVisible = typeof call.cameraViewVisibilityForSample === 'function'
         ? call.cameraViewVisibilityForSample({
             nominalView,
@@ -457,6 +468,9 @@ export const updateCamera = (mode, {
         ?? globalThis.lgs?.stores?.replay?.camera
         ?? settings.camera,
     )
+    if (cameraSettings.canFixHiddenMarker === false) {
+        resetReplayCameraPitchCorrection(mode)
+    }
     const deterministicCamera = exportMode || logicalCamera === true
     if (state.cameraApplyingView) {
         if (!deterministicCamera && source !== 'refresh') {

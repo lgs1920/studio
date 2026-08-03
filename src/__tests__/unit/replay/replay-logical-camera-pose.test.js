@@ -1,5 +1,6 @@
 import {describe, expect, it} from 'vitest'
 import {resolveJourneyReplayLogicalCameraPose} from '@Core/ui/replay/JourneyReplayLogicalCameraPose'
+import {normalizeJourneyReplayCamera} from '@Core/ui/replay/JourneyReplayProgressionStyle'
 
 describe('Journey replay logical camera pose', () => {
     it('resolves heading, pitch, and altitude from logical replay data only', () => {
@@ -53,5 +54,35 @@ describe('Journey replay logical camera pose', () => {
         })
 
         expect(pose.heading).toBeCloseTo(0.8, 6)
+    })
+
+    it('defaults the camera capabilities on and lets canRoll disable banking', () => {
+        const defaults = normalizeJourneyReplayCamera({})
+        expect(defaults.canDrift).toBe(true)
+        expect(defaults.canFixHiddenMarker).toBe(true)
+        expect(defaults.canRoll).toBe(true)
+
+        const sample = {
+            progress: 0.5,
+            distanceFromStart: 150,
+            remainingDistance: 150,
+            journeyDurationMillis: 3000,
+            longitude: 2.001,
+            latitude:  48,
+            source: {
+                startPoint: {longitude: 2, latitude: 48, journeyElapsedMillis: 0},
+                endPoint:   {longitude: 2.001, latitude: 48.001, journeyElapsedMillis: 1000},
+            },
+        }
+        const settings = {
+            ...defaults,
+            positionMode: 'ahead',
+            altitudeMode: 'constant',
+            altitude: 1000,
+            pitch: -45,
+            canRoll: false,
+        }
+        const pose = resolveJourneyReplayLogicalCameraPose({sample, cameraSettings: settings})
+        expect(pose.roll).toBe(0)
     })
 })

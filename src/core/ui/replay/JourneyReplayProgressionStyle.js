@@ -103,6 +103,9 @@ export const DEFAULT_REPLAY_CAMERA = {
     altitude:      1200,
     headingOffset: 0,
     debug:         false,
+    canDrift:      true,
+    canFixHiddenMarker: true,
+    canRoll:       true,
     previewMode:    REPLAY_CAMERA_PREVIEW_MODE_TERRAIN,
     pitch:         -65,
     heading:       0,
@@ -334,6 +337,8 @@ export const normalizeJourneyReplayMarker = (marker = {}) => ({
  * - `easing`: smoothness of the recenter flight.
  *
  * `headingOffset` is used by the Behind/Ahead camera modes to bias the nominal trace-facing heading.
+ * `canDrift`, `canFixHiddenMarker`, and `canRoll` gate the corresponding
+ * replay camera behaviours while keeping them enabled by default.
  *
  */
 export const normalizeJourneyReplayCamera = (camera = {}) => ({
@@ -361,6 +366,9 @@ export const normalizeJourneyReplayCamera = (camera = {}) => ({
         REPLAY_CAMERA_HEADING_OFFSET_MAX,
     ),
     debug:         camera?.debug === true,
+    canDrift:      camera?.canDrift !== false,
+    canFixHiddenMarker: camera?.canFixHiddenMarker !== false,
+    canRoll:       camera?.canRoll !== false,
     previewMode:   REPLAY_CAMERA_PREVIEW_MODE_TERRAIN,
     hysteresis:   (() => {
         const zone = normalizeJourneyReplayToleranceZone(camera?.hysteresis?.zone, DEFAULT_REPLAY_CAMERA.hysteresis.zone)

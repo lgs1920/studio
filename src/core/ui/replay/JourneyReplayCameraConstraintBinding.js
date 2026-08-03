@@ -294,7 +294,7 @@ export const resolveConstrainedReplayCameraPath = (mode, {
                        : null
     const markerRadius = finiteNumber(globalThis.lgs?.stores?.replay?.markerRadius) ?? 35
     const turnDriftOptions = {
-        enabled:               true,
+        enabled:               cameraSettings.canDrift !== false,
         maxHeadingOffsetDeg:    trackingMode === REPLAY_MARKER_MODE_NAVIGATION
             ? REPLAY_NAVIGATION_MAX_HEADING_DRIFT_DEGREES
             : 10,
@@ -336,6 +336,9 @@ export const resolveConstrainedReplayCameraPath = (mode, {
      * @returns {object|null} Complete camera frame.
      */
     const frameForSample = (sample, progress) => {
+        if (cameraSettings.canFixHiddenMarker === false) {
+            terrainRedirectCycle = null
+        }
         const rawView = call.cameraViewForSample({
             sample,
             progress,
@@ -404,7 +407,8 @@ export const resolveConstrainedReplayCameraPath = (mode, {
         if (nominalLineOfSightVisible) {
             terrainOcclusionHandled = false
         }
-        else if (frame && !terrainRedirectCycle && !terrainOcclusionHandled) {
+        else if (cameraSettings.canFixHiddenMarker !== false
+                 && frame && !terrainRedirectCycle && !terrainOcclusionHandled) {
             const redirectState = call.findCameraRedirectState({
                 nominalView: view,
                 futureSample: null,
@@ -467,15 +471,19 @@ export const resolveConstrainedReplayCameraPath = (mode, {
         }
 
         const target = call.markerRenderCartesianForSample(view.sample)
-        const drift = replayTurnDriftForGuideProgress(
-            cameraGuide,
-            progress,
-            turnDriftOptions,
-        )
-        const driftLimit = Math.max(
-            0,
-            finiteNumber(turnDriftOptions.maxLateralOffsetMeters) ?? 0,
-        )
+        const drift = turnDriftOptions.enabled
+            ? replayTurnDriftForGuideProgress(
+                cameraGuide,
+                progress,
+                turnDriftOptions,
+            )
+            : null
+        const driftLimit = turnDriftOptions.enabled
+            ? Math.max(
+                0,
+                finiteNumber(turnDriftOptions.maxLateralOffsetMeters) ?? 0,
+            )
+            : 0
         const rawLateralDriftMeters = clamp(
             finiteNumber(drift?.lateralOffsetMeters) ?? 0,
             -driftLimit,

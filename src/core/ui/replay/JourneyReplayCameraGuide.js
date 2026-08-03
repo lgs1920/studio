@@ -869,6 +869,9 @@ export const cameraViewForSample = (mode, {
                 progress:     clamp(Number(progress) || 0, 0, 1),
                 heading:      smoothHeading,
                 pitch:        smoothPitch,
+                roll:        cameraSettings.canRoll === false
+                            ? 0
+                            : resolveJourneyReplayLogicalCameraRoll({sample, sampler: state.sampler}),
                 cameraSettings,
                 markerSettings,
                 cameraHeight: call.cameraAltitudeForSample(anchorSample, cameraSettings),

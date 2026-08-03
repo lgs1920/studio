@@ -671,6 +671,9 @@ export const findCameraRedirectState = (mode, {
                                 } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    if (cameraSettings?.canFixHiddenMarker === false) {
+        return null
+    }
 
         const computeRedirectState = () => {
             const currentPitchOffset = finiteNumber(state.cameraRedirectState?.pitchOffset) ?? 0

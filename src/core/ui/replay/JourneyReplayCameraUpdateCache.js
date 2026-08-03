@@ -89,6 +89,9 @@ const cameraSettingsKey = cameraSettings => {
         finiteNumberKey(cameraSettings.headingOffset),
         finiteNumberKey(cameraSettings.heading),
         finiteNumberKey(cameraSettings.pitch),
+        cameraSettings.canDrift === false ? '0' : '1',
+        cameraSettings.canFixHiddenMarker === false ? '0' : '1',
+        cameraSettings.canRoll === false ? '0' : '1',
         hysteresisKey(cameraSettings.hysteresis),
     ].join(':')
 }

@@ -403,7 +403,7 @@ export const startDeterministicCameraTransition = (mode, {
         const target = call.markerRenderCartesianForSample?.(sample) ?? null
         const replayMotionProfile = {
             turnDrift: {
-                enabled:               true,
+                enabled:               cameraSettings?.canDrift !== false,
                 maxHeadingOffsetDeg:    trackingMode === REPLAY_MARKER_MODE_NAVIGATION
                     ? REPLAY_NAVIGATION_MAX_HEADING_DRIFT_DEGREES
                     : 10,
@@ -487,6 +487,10 @@ export const startDeterministicCameraTransition = (mode, {
             frameResolver: ({path, target: resolvedTarget, ratio, frame}) => {
                 const replayCameraSettings = cameraSettings ?? globalThis.lgs?.settings?.ui?.replay?.camera ?? {}
                 const replayMarkerSettings = normalizeJourneyReplayMarker(globalThis.lgs?.settings?.ui?.replay?.marker ?? {})
+                if (replayCameraSettings.canFixHiddenMarker === false) {
+                    return frame
+                }
+
                 const lineOfSightVisible = call.cameraLineOfSightVisibleForFrame({
                     destination: frame?.destination,
                     sample,
@@ -520,7 +524,9 @@ export const startDeterministicCameraTransition = (mode, {
                     cameraHeight:   view.cameraHeight,
                 })
 
-                const drift = replayTurnDriftForProgress(mode, sample?.progress ?? ratio, replayMotionProfile.turnDrift)
+                const drift = replayMotionProfile.turnDrift.enabled
+                    ? replayTurnDriftForProgress(mode, sample?.progress ?? ratio, replayMotionProfile.turnDrift)
+                    : null
                 const reliefHeight = Math.max(
                     80,
                     finiteNumber(globalThis.lgs?.settings?.camera?.pitchAdjustHeight) ?? 500,
