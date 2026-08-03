@@ -82,6 +82,7 @@ export class JourneyReplayCesiumRenderer {
     #traceGuide = null
     #traceGuideKey = null
     #traceHidden = false
+    #traceVisible = true
 
     constructor(options = {}) {
         this.#options = options
@@ -91,6 +92,8 @@ export class JourneyReplayCesiumRenderer {
         this.#sampler = sampler ?? this.#sampler
         this.#options = {...this.#options, ...options}
         this.#journeySlug = this.#sampler?.journey?.slug ?? globalThis.lgs?.theJourney?.slug ?? 'current'
+        this.#traceVisible = true
+        this.#traceHidden = false
         this.#ensureSource()
         if (this.#source) {
             this.#source.show = false
@@ -106,8 +109,8 @@ export class JourneyReplayCesiumRenderer {
                   forceGeometry = false,
                   freezeDynamic = false,
                   hideCursor = false,
-                  hideTrace = false,
-                  showTrace = true,
+                  hideTrace = null,
+                  showTrace = null,
                   hideRemainingTrace = false,
                   staticCompletedTrace = false,
                   completedTraceMode = staticCompletedTrace ? 'static' : 'dynamic',
@@ -147,15 +150,17 @@ export class JourneyReplayCesiumRenderer {
         if (freezeDynamic && !staticCompletedTrace) {
             this.#freezeDynamicLines()
         }
-        if (hideTrace || !showTrace) {
-            this.#hideLineEntities(() => true)
+        if (hideTrace === true) {
+            this.setTraceVisibility(false)
         }
-        if (this.#source) {
-            this.#source.show = !hideTrace && showTrace
+        else if (hideTrace === false) {
+            this.setTraceVisibility(showTrace !== false)
         }
-        this.#traceHidden = hideTrace || !showTrace
+        else if (typeof showTrace === 'boolean') {
+            this.setTraceVisibility(showTrace)
+        }
         this.#updateCursor(sample)
-        this.#syncCursorVisibilityWithTrace({hideCursor: hideCursor || !showTrace})
+        this.#applyTraceVisibility({hideCursor})
         if (stopCompletedTrace) {
             replayVideoTraceDebug('renderer.update.stop.end', {
                 progress: sample.progress,
@@ -228,7 +233,15 @@ export class JourneyReplayCesiumRenderer {
         this.#traceGuide = null
         this.#traceGuideKey = null
         this.#traceHidden = false
+        this.#traceVisible = true
         globalThis.lgs?.scene?.requestRender?.()
+    }
+
+    setTraceVisibility = (visible = true) => {
+        this.#traceVisible = visible === true
+        this.#applyTraceVisibility()
+        globalThis.lgs?.scene?.requestRender?.()
+        return this.#traceVisible
     }
 
     hideCursor = () => {
@@ -250,6 +263,17 @@ export class JourneyReplayCesiumRenderer {
 
     #syncCursorVisibilityWithTrace = ({hideCursor = false} = {}) => {
         this.#setCursorVisibility(!hideCursor && this.#hasVisibleTraceEntity())
+    }
+
+    #applyTraceVisibility = ({hideCursor = false} = {}) => {
+        if (!this.#traceVisible) {
+            this.#hideLineEntities(() => true)
+        }
+        if (this.#source) {
+            this.#source.show = this.#traceVisible
+        }
+        this.#traceHidden = !this.#traceVisible
+        this.#syncCursorVisibilityWithTrace({hideCursor: hideCursor || !this.#traceVisible})
     }
 
     #resetSourceEntities = () => {

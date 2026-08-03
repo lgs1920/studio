@@ -545,4 +545,29 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(replaySource(dataSources)).toBeUndefined()
     })
 
+    it('keeps an explicitly hidden trace hidden until it is explicitly shown', () => {
+        const dataSources = makeDataSources()
+        installReplayGlobals({dataSources})
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const renderer = new JourneyReplayCesiumRenderer()
+
+        renderer.show({sampler})
+        renderer.update({sample: sampler.atProgress(0.5), sampler, forceGeometry: true, showTrace: false})
+        renderer.update({sample: sampler.atProgress(0.6), sampler, forceGeometry: true})
+
+        expect(replaySource(dataSources).show).toBe(false)
+        expect(visibleTraceEntities(dataSources)).toHaveLength(0)
+
+        renderer.update({sample: sampler.atProgress(0.6), sampler, forceGeometry: true, showTrace: true})
+
+        expect(replaySource(dataSources).show).toBe(true)
+        expect(visibleTraceEntities(dataSources).length).toBeGreaterThan(0)
+    })
+
 })
