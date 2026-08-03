@@ -481,3 +481,8 @@
 - Require every open Site and Backend issue to have a corresponding Studio mirror.
 - Preserve issue types, use domain-specific title prefixes and labels, and maintain reciprocal links.
 - Prevent duplicate mirrors by checking existing open and closed Studio issues.
+
+## 2026-08-03 — [`docs: specify camera HPR orientation sphere widget`](https://github.com/lgs1920/studio/commit/7d532e6b)
+
+- Specify the proposed Three.js camera Heading, Pitch, and Roll orientation sphere widget.
+- Document its interaction contract, Cesium camera ownership, capture behavior, and future implementation boundaries.
