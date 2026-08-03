@@ -201,6 +201,8 @@ export class JourneyReplayCesiumRenderer {
     }
 
     clear = () => {
+        const source = this.#source
+
         if (this.#source) {
             try {
                 this.#source.entities.removeAll()
@@ -210,6 +212,9 @@ export class JourneyReplayCesiumRenderer {
                 // The source may already have been removed by Cesium during a journey switch.
             }
         }
+
+        this.#restoreOriginalTrackSources()
+        this.#removeSource(source)
 
         this.#cursor = null
         this.#cursorBorder = null
@@ -223,7 +228,6 @@ export class JourneyReplayCesiumRenderer {
         this.#traceGuide = null
         this.#traceGuideKey = null
         this.#traceHidden = false
-        this.#restoreOriginalTrackSources()
         globalThis.lgs?.scene?.requestRender?.()
     }
 
@@ -268,6 +272,24 @@ export class JourneyReplayCesiumRenderer {
         return Boolean(source && dataSources?.contains?.(source))
     }
 
+    #removeSource = (source = this.#source) => {
+        const dataSources = this.#dataSources()
+
+        if (source && dataSources?.contains?.(source)) {
+            try {
+                dataSources.remove?.(source, true)
+            }
+            catch {
+                // The source may already have been removed by Cesium during scene cleanup.
+            }
+        }
+
+        if (this.#source === source) {
+            this.#source = null
+        }
+        this.#sourceAddPending = false
+    }
+
     #ensureSource = () => {
         if (this.#source && (this.#sourceInCollection() || this.#sourceAddPending)) {
             return this.#source
@@ -295,15 +317,24 @@ export class JourneyReplayCesiumRenderer {
 
         if (!existing) {
             this.#sourceAddPending = true
-            dataSources.add(this.#source).then(source => {
-                if (this.#source === source && dataSources.contains?.(source)) {
-                    dataSources.raiseToTop(source)
+            const source = this.#source
+            dataSources.add(source).then(addedSource => {
+                if (this.#source !== addedSource) {
+                    if (dataSources.contains?.(addedSource)) {
+                        dataSources.remove?.(addedSource, true)
+                    }
+                    return
+                }
+                if (dataSources.contains?.(addedSource)) {
+                    dataSources.raiseToTop(addedSource)
                     this.#sourceRaised = true
                 }
                 this.#sourceAddPending = false
                 globalThis.lgs?.scene?.requestRender?.()
             }).catch(() => {
-                this.#sourceAddPending = false
+                if (this.#source === source) {
+                    this.#sourceAddPending = false
+                }
             })
         }
         return this.#source

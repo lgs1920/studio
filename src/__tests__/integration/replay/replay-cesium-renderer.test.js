@@ -55,6 +55,14 @@ const makeDataSources = () => ({
     contains(source) {
         return this.items.includes(source)
     },
+    remove(source) {
+        const index = this.items.indexOf(source)
+        if (index < 0) {
+            return false
+        }
+        this.items.splice(index, 1)
+        return true
+    },
     getByName(name) {
         return this.items.filter(source => source.name === name)
     },
@@ -512,6 +520,29 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(replayEntity(dataSources, '#completed#smoothed#border')).toBe(firstCompletedBorder)
         expect(visibleTraceEntities(dataSources)
             .some(entity => String(entity.id).includes('#remaining#'))).toBe(false)
+    })
+
+    it('removes the replay data source when the replay is cleared', () => {
+        const dataSources = makeDataSources()
+        installReplayGlobals({dataSources})
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const renderer = new JourneyReplayCesiumRenderer()
+
+        renderer.show({sampler})
+        renderer.update({sample: sampler.atProgress(0.5), sampler, forceGeometry: true})
+        const source = replaySource(dataSources)
+
+        expect(source).toBeDefined()
+        renderer.clear()
+
+        expect(dataSources.contains(source)).toBe(false)
+        expect(replaySource(dataSources)).toBeUndefined()
     })
 
 })
