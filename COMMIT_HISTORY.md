@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-08-03 — [`docs: add Three.js camera orientation preview`](https://github.com/lgs1920/studio/commit/422a46c3994f4bcadce94a1385991f4e2d5551d9)
+
+- Add the 3D Three.js camera HPR orientation sphere prototype, poster, and MP4 preview.
+- Document how to view the embedded video and serve the deterministic interactive HTML preview.
+- Keep the pinned browser Three.js modules beside the prototype assets for offline preview.
+
 ## 2026-08-03 — [`fix(replay): remove hidden trace geometry`](https://github.com/lgs1920/studio/commit/5fbb2abbb6982daf5e2a13d9cc5bac1b4c376654)
 
 - Remove the replay data source and all replay entities when trace visibility is disabled.
