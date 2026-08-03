@@ -28,3 +28,4 @@ This directory contains proposed, pending-validation, explicitly TODO, or future
 - [Layer time filtering and named temporal variants](CORE-LAYER-TIME-FILTER-SPEC.md)
 - [Copernicus Data Space Sentinel-2 WMTS integration](CORE-COPERNICUS-SENTINEL2-SPEC.md)
 - [Journey and track click selection with interactive overlay menu](CORE-JOURNEY-CLICK-OVERLAY-SELECTION-SPEC.md)
+- [Three.js camera HPR orientation sphere widget](CORE-CAMERA-HPR-THREEJS-SPHERE-WIDGET-SPEC.md)

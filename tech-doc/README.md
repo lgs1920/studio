@@ -58,3 +58,4 @@ Proposed work, pending validation, or future implementation work lives under `to
 - [Layer time filtering and named temporal variants](todo/CORE-LAYER-TIME-FILTER-SPEC.md)
 - [Copernicus Data Space Sentinel-2 WMTS integration](todo/CORE-COPERNICUS-SENTINEL2-SPEC.md)
 - [Journey and track click selection with interactive overlay menu](todo/CORE-JOURNEY-CLICK-OVERLAY-SELECTION-SPEC.md)
+- [Three.js camera HPR orientation sphere widget](todo/CORE-CAMERA-HPR-THREEJS-SPHERE-WIDGET-SPEC.md)
