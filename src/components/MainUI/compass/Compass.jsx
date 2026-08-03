@@ -18,6 +18,7 @@ import { CompassFull }  from '@Components/MainUI/compass/CompassFull'
 import { CompassLight } from '@Components/MainUI/compass/CompassLight'
 import { CompassFlat }  from '@Components/MainUI/compass/CompassFlat'
 import { CompassWindRose }                                from '@Components/MainUI/compass/CompassWindRose'
+import { resolveCompassWidgetDimensions }                 from '@Components/MainUI/compass/CompassWidgetBounds'
 import { COMPASS_FLAT, COMPASS_FULL, COMPASS_LIGHT, COMPASS_WIND_ROSE } from '@Core/constants'
 import { Math as CMath }               from 'cesium'
 import classNames                      from 'classnames'
@@ -35,6 +36,7 @@ export const Compass = ({fixed, inWidget = false, entity, syncBounds = true}) =>
     const _doubleTapTimeout = useRef(null)
     const _animationFrame = useRef(null)
     const _lastHeading = useRef(null)
+    const _lastMode = useRef(null)
 
     // Store Proxies
     const $globalCompass = lgs.settings.ui.compass
@@ -131,7 +133,12 @@ export const Compass = ({fixed, inWidget = false, entity, syncBounds = true}) =>
         return vars
     }, [activeConfig, toCompassKebab])
 
-    const syncWidgetBounds = useCallback(() => {
+    /**
+     * Synchronizes widget bounds after initial rendering or a compass mode change.
+     *
+     * @param {boolean} forceResize - Whether to measure the newly selected compass mode.
+     */
+    const syncWidgetBounds = useCallback((forceResize = false) => {
         if (!syncBounds || !inWidget || !entity || !_compass.current) {
             return
         }
@@ -161,19 +168,28 @@ export const Compass = ({fixed, inWidget = false, entity, syncBounds = true}) =>
         const centerX = Number.isFinite(previousLeft) ? previousLeft + previousWidth / 2 : null
         const centerY = Number.isFinite(previousTop) ? previousTop + previousHeight / 2 : null
 
-        widgetElement.style.width = ''
-        widgetElement.style.height = ''
+        let nextWidth = config.dimensions?.width
+        let nextHeight = config.dimensions?.height
 
-        const compassStyle = window.getComputedStyle(_compass.current)
-        const styledWidth = parseFloat(compassStyle.width || '')
-        const styledHeight = parseFloat(compassStyle.height || '')
-        const compassRect = _compass.current.getBoundingClientRect()
-        const nextWidth = Number.isFinite(styledWidth) && styledWidth > 0
-                          ? styledWidth
-                          : (_compass.current.offsetWidth || compassRect.width)
-        const nextHeight = Number.isFinite(styledHeight) && styledHeight > 0
-                           ? styledHeight
-                           : (_compass.current.offsetHeight || compassRect.height)
+        if (forceResize || !Number.isFinite(nextWidth) || nextWidth <= 0 || !Number.isFinite(nextHeight) || nextHeight <= 0) {
+            widgetElement.style.width = ''
+            widgetElement.style.height = ''
+
+            const compassStyle = window.getComputedStyle(_compass.current)
+            const styledWidth = parseFloat(compassStyle.width || '')
+            const styledHeight = parseFloat(compassStyle.height || '')
+            const compassRect = _compass.current.getBoundingClientRect()
+            const dimensions = resolveCompassWidgetDimensions({
+                config: config,
+                forceResize: true,
+                styledWidth: styledWidth,
+                styledHeight: styledHeight,
+                fallbackWidth: _compass.current.offsetWidth || compassRect.width,
+                fallbackHeight: _compass.current.offsetHeight || compassRect.height,
+            })
+            nextWidth = dimensions.width
+            nextHeight = dimensions.height
+        }
 
         if (!Number.isFinite(nextWidth) || !Number.isFinite(nextHeight) || nextWidth <= 0 || nextHeight <= 0) {
             moveable?.current?.updateRect()
@@ -182,6 +198,7 @@ export const Compass = ({fixed, inWidget = false, entity, syncBounds = true}) =>
 
         const width = Math.round(nextWidth * 100) / 100
         const height = Math.round(nextHeight * 100) / 100
+        const dimensionsChanged = Math.abs(previousWidth - width) > 0.5 || Math.abs(previousHeight - height) > 0.5
         config.dimensions = {width, height}
         widgetElement.style.width = `${width}px`
         widgetElement.style.height = `${height}px`
@@ -202,7 +219,11 @@ export const Compass = ({fixed, inWidget = false, entity, syncBounds = true}) =>
             widgetElement.style.top = `${config.position.top}px`
         }
 
-        if (config.persist && config.runtimeReady) {
+        const positionChanged = centerX !== null && centerY !== null &&
+            (Math.abs((config.position?.left ?? previousLeft) - previousLeft) > 0.5 ||
+             Math.abs((config.position?.top ?? previousTop) - previousTop) > 0.5)
+
+        if (config.persist && config.runtimeReady && (dimensionsChanged || positionChanged)) {
             void __.ui.widgetManager.saveWidgetPosition(elementId, config)
         }
 
@@ -211,6 +232,8 @@ export const Compass = ({fixed, inWidget = false, entity, syncBounds = true}) =>
 
     useEffect(() => {
         const currentModeString = currentMode?.toString()
+        const modeChanged = _lastMode.current !== null && _lastMode.current !== currentModeString
+        _lastMode.current = currentModeString
         const hasVisualMode = currentModeString === COMPASS_FULL.toString() ||
             currentModeString === COMPASS_LIGHT.toString() ||
             currentModeString === COMPASS_WIND_ROSE.toString() ||
@@ -223,7 +246,7 @@ export const Compass = ({fixed, inWidget = false, entity, syncBounds = true}) =>
         let secondFrame = null
 
         firstFrame = window.requestAnimationFrame(() => {
-            secondFrame = window.requestAnimationFrame(syncWidgetBounds)
+            secondFrame = window.requestAnimationFrame(() => syncWidgetBounds(modeChanged))
         })
 
         return () => {
