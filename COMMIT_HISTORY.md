@@ -1,5 +1,10 @@
 # Commit History
 
+## 2026-08-03 — [`docs: include site and backend issue history in changelogs`](https://github.com/lgs1920/studio/commit/5a2e8191)
+
+- Include all `site` and `backend` issues closed since the latest previous Studio release when preparing a changelog.
+- Use the previous Studio changelog date as the boundary even when those issues have no Project `Target release` or milestone.
+
 ## 2026-07-28 — [`docs: require issue draft validation`](https://github.com/lgs1920/studio/commit/03ce0f44)
 
 - Require clarification of missing issue details before drafting an issue.
