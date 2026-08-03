@@ -207,7 +207,7 @@ describe('JourneyReplayCesiumRenderer', () => {
             showTrace: false,
         })
 
-        expect(replaySource(dataSources).show).toBe(false)
+        expect(replaySource(dataSources)).toBeUndefined()
         expect(visibleTraceEntities(dataSources)).toHaveLength(0)
 
         renderer.update({
@@ -561,7 +561,7 @@ describe('JourneyReplayCesiumRenderer', () => {
         renderer.update({sample: sampler.atProgress(0.5), sampler, forceGeometry: true, showTrace: false})
         renderer.update({sample: sampler.atProgress(0.6), sampler, forceGeometry: true})
 
-        expect(replaySource(dataSources).show).toBe(false)
+        expect(replaySource(dataSources)).toBeUndefined()
         expect(visibleTraceEntities(dataSources)).toHaveLength(0)
 
         renderer.update({sample: sampler.atProgress(0.6), sampler, forceGeometry: true, showTrace: true})

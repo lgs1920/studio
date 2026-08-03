@@ -121,6 +121,23 @@ export class JourneyReplayCesiumRenderer {
 
         this.#sampler = sampler
         this.#sample = sample
+        const requestedTraceVisibility = hideTrace === true
+            ? false
+            : (typeof showTrace === 'boolean' ? showTrace : null)
+        if (requestedTraceVisibility === false) {
+            this.#traceVisible = false
+            this.#removeTraceGeometry()
+            globalThis.lgs?.scene?.requestRender?.()
+            return
+        }
+        if (requestedTraceVisibility !== true && !this.#traceVisible) {
+            this.#removeTraceGeometry()
+            globalThis.lgs?.scene?.requestRender?.()
+            return
+        }
+        if (requestedTraceVisibility === true) {
+            this.#traceVisible = true
+        }
         this.#ensureSource()
         const stopCompletedTrace = staticCompletedTrace || completedTraceMode === 'stop-dynamic'
         if (stopCompletedTrace) {
@@ -150,6 +167,7 @@ export class JourneyReplayCesiumRenderer {
         if (freezeDynamic && !staticCompletedTrace) {
             this.#freezeDynamicLines()
         }
+        this.#updateCursor(sample)
         if (hideTrace === true) {
             this.setTraceVisibility(false)
         }
@@ -159,7 +177,9 @@ export class JourneyReplayCesiumRenderer {
         else if (typeof showTrace === 'boolean') {
             this.setTraceVisibility(showTrace)
         }
-        this.#updateCursor(sample)
+        else if (!this.#traceVisible) {
+            this.#removeTraceGeometry()
+        }
         this.#applyTraceVisibility({hideCursor})
         if (stopCompletedTrace) {
             replayVideoTraceDebug('renderer.update.stop.end', {
@@ -208,18 +228,8 @@ export class JourneyReplayCesiumRenderer {
     clear = () => {
         const source = this.#source
 
-        if (this.#source) {
-            try {
-                this.#source.entities.removeAll()
-                this.#source.show = false
-            }
-            catch {
-                // The source may already have been removed by Cesium during a journey switch.
-            }
-        }
-
         this.#restoreOriginalTrackSources()
-        this.#removeSource(source)
+        this.#removeTraceGeometry(source)
 
         this.#cursor = null
         this.#cursorBorder = null
@@ -239,6 +249,9 @@ export class JourneyReplayCesiumRenderer {
 
     setTraceVisibility = (visible = true) => {
         this.#traceVisible = visible === true
+        if (!this.#traceVisible) {
+            this.#removeTraceGeometry()
+        }
         this.#applyTraceVisibility()
         globalThis.lgs?.scene?.requestRender?.()
         return this.#traceVisible
@@ -274,6 +287,27 @@ export class JourneyReplayCesiumRenderer {
         }
         this.#traceHidden = !this.#traceVisible
         this.#syncCursorVisibilityWithTrace({hideCursor: hideCursor || !this.#traceVisible})
+    }
+
+    #removeTraceGeometry = (source = this.#source) => {
+        if (source) {
+            try {
+                source.entities.removeAll()
+                source.show = false
+            }
+            catch {
+                // The source may already have been removed by Cesium during scene cleanup.
+            }
+        }
+
+        this.#removeSource(source)
+        this.#cursor = null
+        this.#cursorBorder = null
+        this.#lineEntities.clear()
+        this.#lastPathGeometryUpdate = 0
+        this.#lastPathGeometryDistance = null
+        this.#sourceRaised = false
+        this.#traceHidden = true
     }
 
     #resetSourceEntities = () => {
