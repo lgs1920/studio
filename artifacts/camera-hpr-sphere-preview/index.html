@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Camera HPR Orientation Sphere Preview</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+            background: #071019;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            background: #071019;
+        }
+
+        body {
+            display: grid;
+            place-items: center;
+        }
+
+        .stage {
+            position: relative;
+            width: 960px;
+            height: 640px;
+            overflow: hidden;
+            border: 1px solid rgba(157, 193, 210, 0.28);
+            border-radius: 28px;
+            background:
+                radial-gradient(circle at 50% 42%, rgba(30, 83, 103, 0.38), transparent 42%),
+                linear-gradient(145deg, #122532 0%, #09131c 52%, #050a10 100%);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+        }
+
+        .stage::before {
+            position: absolute;
+            inset: 0;
+            background-image: linear-gradient(rgba(146, 190, 207, 0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(146, 190, 207, 0.045) 1px, transparent 1px);
+            background-size: 32px 32px;
+            content: '';
+            mask-image: linear-gradient(to bottom, black, transparent 75%);
+            pointer-events: none;
+        }
+
+        .topbar,
+        .bottom-card,
+        .legend,
+        .readout,
+        .hint {
+            position: absolute;
+            z-index: 3;
+        }
+
+        .topbar {
+            top: 26px;
+            left: 30px;
+            right: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .eyebrow {
+            color: #89afbf;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin: 6px 0 0;
+            color: #eef9fb;
+            font-size: 24px;
+            letter-spacing: -0.03em;
+        }
+
+        .live {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 11px;
+            border: 1px solid rgba(98, 225, 182, 0.28);
+            border-radius: 999px;
+            background: rgba(47, 181, 142, 0.12);
+            color: #8cf1c8;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .live::before {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #67e2b1;
+            box-shadow: 0 0 12px #67e2b1;
+            content: '';
+        }
+
+        canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .readout {
+            top: 106px;
+            left: 50%;
+            display: flex;
+            gap: 10px;
+            transform: translateX(-50%);
+        }
+
+        .value {
+            min-width: 92px;
+            padding: 8px 12px;
+            border: 1px solid rgba(190, 222, 229, 0.17);
+            border-radius: 10px;
+            background: rgba(4, 12, 18, 0.62);
+            color: #e6f6f7;
+            font-variant-numeric: tabular-nums;
+            text-align: center;
+        }
+
+        .value strong {
+            display: block;
+            color: #84b9c7;
+            font-size: 10px;
+            letter-spacing: 0.16em;
+        }
+
+        .value span {
+            display: block;
+            margin-top: 2px;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .legend {
+            top: 168px;
+            left: 50%;
+            display: flex;
+            gap: 18px;
+            color: rgba(210, 233, 237, 0.72);
+            font-size: 11px;
+            transform: translateX(-50%);
+        }
+
+        .legend span::before {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            margin-right: 6px;
+            border-radius: 50%;
+            background: var(--dot);
+            content: '';
+        }
+
+        .legend .north { --dot: #ff806d; }
+        .legend .east { --dot: #6ad9a9; }
+        .legend .up { --dot: #70aef3; }
+
+        .bottom-card {
+            right: 30px;
+            bottom: 28px;
+            left: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            border: 1px solid rgba(180, 216, 225, 0.15);
+            border-radius: 14px;
+            background: rgba(3, 10, 15, 0.58);
+            backdrop-filter: blur(12px);
+        }
+
+        .interaction {
+            color: #d4e9ed;
+            font-size: 12px;
+        }
+
+        .interaction b {
+            color: #ffffff;
+        }
+
+        .mode {
+            color: #7ba7b3;
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .hint {
+            right: 30px;
+            top: 210px;
+            padding: 8px 11px;
+            border: 1px solid rgba(244, 177, 90, 0.3);
+            border-radius: 9px;
+            background: rgba(97, 53, 18, 0.28);
+            color: #f5c788;
+            font-size: 10px;
+            opacity: 0;
+            transform: translateY(-5px);
+            transition: opacity 180ms ease, transform 180ms ease;
+        }
+
+        .hint.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+<main class="stage" aria-label="Camera HPR orientation sphere preview">
+    <header class="topbar">
+        <div>
+            <div class="eyebrow">Three.js interaction concept</div>
+            <h1>Camera orientation</h1>
+        </div>
+        <div class="live">Live camera</div>
+    </header>
+    <div class="readout">
+        <div class="value"><strong>HEADING</strong><span id="heading">000.0°</span></div>
+        <div class="value"><strong>PITCH</strong><span id="pitch">-35.0°</span></div>
+        <div class="value"><strong>ROLL</strong><span id="roll">000.0°</span></div>
+    </div>
+    <div class="legend">
+        <span class="north">North</span>
+        <span class="east">East</span>
+        <span class="up">Up</span>
+    </div>
+    <div class="hint" id="hint">Heading and roll couple near top-down</div>
+    <div class="bottom-card">
+        <div class="interaction"><b>Drag sphere</b> heading / pitch &nbsp;·&nbsp; <b>Drag ring</b> roll &nbsp;·&nbsp; <b>Alt</b> free 3D</div>
+        <div class="mode">Control mode · HPR</div>
+    </div>
+    <canvas id="viewport"></canvas>
+</main>
+<script type="importmap">
+{
+    "imports": {
+        "three": "./three.module.js"
+    }
+}
+</script>
+<script type="module">
+import * as THREE from 'three'
+
+const canvas = document.querySelector('#viewport')
+const headingElement = document.querySelector('#heading')
+const pitchElement = document.querySelector('#pitch')
+const rollElement = document.querySelector('#roll')
+const hintElement = document.querySelector('#hint')
+const params = new URLSearchParams(window.location.search)
+const frame = Number(params.get('frame') ?? 0)
+const fps = 30
+const seconds = frame / fps
+const width = 960
+const height = 640
+
+const renderer = new THREE.WebGLRenderer({canvas, alpha: true, antialias: true})
+renderer.setPixelRatio(1)
+renderer.setSize(width, height, false)
+renderer.outputColorSpace = THREE.SRGBColorSpace
+renderer.toneMapping = THREE.ACESFilmicToneMapping
+renderer.toneMappingExposure = 1.15
+
+const scene = new THREE.Scene()
+const camera = new THREE.PerspectiveCamera(34, width / height, 0.1, 100)
+camera.position.set(0, 0.12, 6.6)
+camera.lookAt(0, 0, 0)
+
+scene.add(new THREE.HemisphereLight(0x9ed9e8, 0x061018, 2.4))
+const keyLight = new THREE.DirectionalLight(0xffffff, 3.2)
+keyLight.position.set(-3, 4, 5)
+scene.add(keyLight)
+const rimLight = new THREE.DirectionalLight(0x4aa6d7, 2.2)
+rimLight.position.set(4, 1, -4)
+scene.add(rimLight)
+
+const orientationGroup = new THREE.Group()
+orientationGroup.position.set(0, -0.18, 0)
+scene.add(orientationGroup)
+
+const sphere = new THREE.Mesh(
+    new THREE.SphereGeometry(1.46, 64, 40),
+    new THREE.MeshPhysicalMaterial({
+        color: 0x163644,
+        metalness: 0.16,
+        roughness: 0.48,
+        clearcoat: 0.55,
+        clearcoatRoughness: 0.3,
+        transparent: true,
+        opacity: 0.94,
+    }),
+)
+orientationGroup.add(sphere)
+
+const lineMaterial = new THREE.LineBasicMaterial({color: 0x76b8c8, transparent: true, opacity: 0.42})
+const strongLineMaterial = new THREE.LineBasicMaterial({color: 0xb9eced, transparent: true, opacity: 0.82})
+const northMaterial = new THREE.LineBasicMaterial({color: 0xff806d, transparent: true, opacity: 0.95})
+
+const addLatitude = (latitude, material = lineMaterial) => {
+    const radius = Math.cos(latitude)
+    const y = Math.sin(latitude)
+    const points = []
+    for (let index = 0; index <= 96; index += 1) {
+        const angle = (index / 96) * Math.PI * 2
+        points.push(new THREE.Vector3(Math.cos(angle) * radius * 1.01, y * 1.01, Math.sin(angle) * radius * 1.01))
+    }
+    orientationGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), material))
+}
+
+const addLongitude = (longitude, material = lineMaterial) => {
+    const points = []
+    for (let index = 0; index <= 96; index += 1) {
+        const latitude = -Math.PI / 2 + (index / 96) * Math.PI
+        points.push(new THREE.Vector3(Math.cos(latitude) * Math.cos(longitude) * 1.01, Math.sin(latitude) * 1.01, Math.cos(latitude) * Math.sin(longitude) * 1.01))
+    }
+    orientationGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), material))
+}
+
+for (const latitude of [-1.05, -0.7, -0.35, 0, 0.35, 0.7, 1.05]) {
+    addLatitude(latitude, latitude === 0 ? strongLineMaterial : lineMaterial)
+}
+for (let longitude = 0; longitude < Math.PI; longitude += Math.PI / 6) {
+    addLongitude(longitude, longitude === 0 ? strongLineMaterial : lineMaterial)
+}
+
+const rollRing = new THREE.Mesh(
+    new THREE.TorusGeometry(1.72, 0.025, 10, 128),
+    new THREE.MeshBasicMaterial({color: 0xf0b867, transparent: true, opacity: 0.86}),
+)
+rollRing.rotation.x = Math.PI / 2
+rollRing.position.copy(orientationGroup.position)
+scene.add(rollRing)
+
+const rollTicks = new THREE.Group()
+rollTicks.position.copy(orientationGroup.position)
+scene.add(rollTicks)
+for (let index = 0; index < 36; index += 1) {
+    const angle = (index / 36) * Math.PI * 2
+    const major = index % 9 === 0
+    const inner = 1.62
+    const outer = major ? 1.78 : 1.7
+    const points = [
+        new THREE.Vector3(Math.cos(angle) * inner, Math.sin(angle) * inner, 0),
+        new THREE.Vector3(Math.cos(angle) * outer, Math.sin(angle) * outer, 0),
+    ]
+    rollTicks.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), new THREE.LineBasicMaterial({color: major ? 0xffe0a5 : 0xa48a61, transparent: true, opacity: major ? 0.95 : 0.5})))
+}
+
+const markerGroup = new THREE.Group()
+markerGroup.position.set(0, -0.28, 1.5)
+orientationGroup.add(markerGroup)
+const markerBody = new THREE.Mesh(
+    new THREE.ConeGeometry(0.13, 0.48, 4),
+    new THREE.MeshStandardMaterial({color: 0xff806d, emissive: 0x4e180f, emissiveIntensity: 0.35, roughness: 0.32}),
+)
+markerBody.rotation.x = -Math.PI / 2
+markerBody.position.z = 0.24
+markerGroup.add(markerBody)
+const markerWing = new THREE.Mesh(
+    new THREE.BoxGeometry(0.64, 0.045, 0.08),
+    new THREE.MeshStandardMaterial({color: 0xf1f4e8, emissive: 0x53624b, emissiveIntensity: 0.25, roughness: 0.4}),
+)
+markerWing.position.set(0, 0.02, 0.13)
+markerGroup.add(markerWing)
+
+const makeTextSprite = (text, color) => {
+    const labelCanvas = document.createElement('canvas')
+    labelCanvas.width = 128
+    labelCanvas.height = 64
+    const context = labelCanvas.getContext('2d')
+    context.font = '700 30px Inter, Arial, sans-serif'
+    context.textAlign = 'center'
+    context.textBaseline = 'middle'
+    context.fillStyle = color
+    context.fillText(text, 64, 32)
+    const texture = new THREE.CanvasTexture(labelCanvas)
+    texture.colorSpace = THREE.SRGBColorSpace
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: texture, transparent: true, depthTest: false}))
+    sprite.scale.set(0.46, 0.23, 1)
+    return sprite
+}
+
+const northLabel = makeTextSprite('N', '#ff806d')
+northLabel.position.set(0, 1.63, 0)
+orientationGroup.add(northLabel)
+const eastLabel = makeTextSprite('E', '#6ad9a9')
+eastLabel.position.set(1.63, 0, 0)
+orientationGroup.add(eastLabel)
+const upLabel = makeTextSprite('U', '#70aef3')
+upLabel.position.set(0, 0, 1.63)
+orientationGroup.add(upLabel)
+
+const axisGroup = new THREE.Group()
+axisGroup.position.copy(orientationGroup.position)
+scene.add(axisGroup)
+axisGroup.add(new THREE.AxesHelper(2.08))
+
+const ease = value => value * value * (3 - 2 * value)
+const interpolate = (from, to, progress) => from + (to - from) * ease(Math.max(0, Math.min(1, progress)))
+const demoState = time => {
+    if (time < 1.2) {
+        return {heading: 24, pitch: -30, roll: 0}
+    }
+    if (time < 3.5) {
+        const progress = (time - 1.2) / 2.3
+        return {heading: interpolate(24, 142, progress), pitch: interpolate(-30, -14, progress), roll: 0}
+    }
+    if (time < 5.7) {
+        const progress = (time - 3.5) / 2.2
+        return {heading: 142, pitch: -14, roll: interpolate(0, 28, progress)}
+    }
+    if (time < 7.9) {
+        const progress = (time - 5.7) / 2.2
+        return {heading: interpolate(142, 0, progress), pitch: interpolate(-14, -35, progress), roll: interpolate(28, 0, progress)}
+    }
+    return {heading: 0, pitch: -35, roll: 0}
+}
+
+const state = demoState(seconds)
+const toRadians = value => value * Math.PI / 180
+const quaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(toRadians(state.pitch), toRadians(state.heading), toRadians(state.roll), 'YXZ'))
+orientationGroup.quaternion.copy(quaternion)
+rollRing.rotation.z = toRadians(state.roll)
+rollTicks.rotation.z = toRadians(state.roll)
+axisGroup.quaternion.copy(quaternion)
+
+headingElement.textContent = `${String(state.heading.toFixed(1)).padStart(5, '0')}°`
+pitchElement.textContent = `${state.pitch.toFixed(1)}°`
+rollElement.textContent = `${String(state.roll.toFixed(1)).padStart(5, '0')}°`
+hintElement.classList.toggle('visible', state.pitch <= -78)
+
+renderer.render(scene, camera)
+</script>
+</body>
+</html>

@@ -10,6 +10,73 @@ The implementation must be validated against the current Cesium camera lifecycle
 widget capture path, and product visual language before being scheduled for a
 release.
 
+## Visual prototype
+
+The interaction concept is accompanied by a checked-in Three.js prototype. The
+prototype is a visual reference for this specification, not a production widget
+and not a replacement for Cesium camera state.
+
+<video controls muted playsinline preload="metadata" width="960" poster="../../artifacts/camera-hpr-sphere-preview/poster.png">
+  <source src="../../artifacts/camera-hpr-sphere-preview/camera-hpr-orientation-sphere-preview.mp4" type="video/mp4">
+  <a href="../../artifacts/camera-hpr-sphere-preview/camera-hpr-orientation-sphere-preview.mp4">Download the camera HPR orientation sphere preview</a>
+</video>
+
+If the documentation renderer does not display the embedded player, use the
+[camera HPR orientation sphere preview](../../artifacts/camera-hpr-sphere-preview/camera-hpr-orientation-sphere-preview.mp4)
+directly. The video is an 8.1-second, 960 × 640 H.264 MP4 without audio.
+
+### Prototype files
+
+The complete preview is stored under
+`artifacts/camera-hpr-sphere-preview/`:
+
+- `camera-hpr-orientation-sphere-preview.mp4`: rendered demonstration video
+- `poster.png`: poster image used by the embedded player
+- `index.html`: deterministic Three.js visual prototype
+- `three.module.js` and `three.core.js`: pinned Three.js `0.180.0` browser
+  modules used by the prototype
+
+The prototype files are intentionally separate from the application source.
+The production implementation must consume Three.js through the project
+package manager and update the dependency inventory before adding a runtime
+dependency.
+
+### Viewing the interactive prototype
+
+The HTML preview must be served over HTTP because browser module imports are not
+reliably available from a `file://` URL. From the repository root, run:
+
+```bash
+python3 -m http.server 8765 --directory artifacts/camera-hpr-sphere-preview
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8765/index.html?frame=0
+```
+
+The `frame` query parameter selects a deterministic preview state. The video
+renderer samples the same prototype at 30 logical frames per second and emits
+the final MP4 at 10 frames per second.
+
+### Prototype sequence
+
+| Time | Demonstrated behavior |
+| --- | --- |
+| `0.0 s` | Initial camera attitude at `H 24°`, `P -30°`, `R 0°` |
+| `1.2–3.5 s` | Heading and pitch adjustment through the 3D orientation model |
+| `3.5–5.7 s` | Roll adjustment through the outer roll ring |
+| `5.7–7.9 s` | Return toward North, level roll, and a lower pitch |
+| `7.9–8.1 s` | Stable final orientation |
+
+The prototype communicates the intended visual language and interaction zones:
+
+- drag the sphere for heading and pitch
+- drag the outer ring for roll
+- use `Alt` for a future unconstrained 3D arcball interaction
+- read the current HPR values from the compact numeric readout
+
 ## Purpose
 
 Provide a compact, interactive 3D orientation sphere that lets a user inspect
@@ -990,4 +1057,3 @@ implementation dependencies except for the approved future Three.js package.
 - [ ] Validate capture and HQ export before enabling display mode
 - [ ] Update this document into a current implementation specification after
       the feature is released
-
