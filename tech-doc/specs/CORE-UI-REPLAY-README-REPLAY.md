@@ -13,7 +13,9 @@ The implementation is split into a small set of focused modules:
 - `JourneyReplayCameraPath`: builds replay camera transfers and can switch to a time cadence when draft capture needs wall-clock pacing.
 - `JourneyReplayCameraState`: stores the active camera transition handle and cancels RAF, timeout, or function-based cancel tokens.
 - `JourneyReplayCameraUpdateCache`: provides the ephemeral per-update memoization buckets used by the replay camera visibility and collision helpers.
-- `JourneyReplayCameraBinding`: drives the active replay camera update path, reuses the per-update cache for repeated view and visibility checks, and emits fine-grained update-step traces around the hot branches.
+- `JourneyReplayCameraTrackingBinding`: drives the active shared Navigation/Dynamic camera resolver, reuses the per-update cache, and emits fine-grained traces around visibility and tracking decisions.
+- `JourneyReplayCameraPitchController`: owns the logical-time temporary pitch lifecycle shared by Draft and HQ.
+- `JourneyReplayCameraBinding`: provides the live Cesium camera bridge and transition plumbing, and re-exports the active tracking entry points.
 - `JourneyReplayCameraOverlay`: renders the replay diagnostics canvas used by HQ export to capture Z1/Z2 and camera timing traces.
 - `JourneyReplaySessionSceneController`: logs the replay update phases at a finer granularity so camera timing, renderer work, and POI sync can be separated in the browser console and trace buffer.
 - `ReplayVideoOverlayComposer`: builds the draft/HQ overlay list and keeps replay diagnostics canvases in the HQ composer even when they are hidden in the DOM.
@@ -30,7 +32,8 @@ The implementation is split into a small set of focused modules:
 - `JourneyReplayDebug`: exposes debug snapshots and diagnostic logging.
 
 For a longer architecture walkthrough that maps the replay/video pipeline end
-to end, see [REPLAY_VIDEO_ARCHITECTURE.md](../../../../todo/CORE-REPLAY-VIDEO-ARCHITECTURE.md).
+to end, see
+[Replay / Video Architecture](../todo/CORE-REPLAY-VIDEO-ARCHITECTURE.md).
 
 ## Configuration model
 
@@ -314,11 +317,10 @@ High-level orchestration for the replay feature.
 - bind the playback controller and renderer;
 - relay `start`, `pause`, `resume`, `stop`, and `seek`;
 - keep Cesium camera behavior in sync with the runtime;
-- detect tolerance-zone exits from the current marker projected in Cesium window coordinates;
-- apply a centered dead zone so the camera can stay still while the marker remains near the middle of the frame;
-- treat non-projectable markers as outside the safe zone so the camera recenters instead of drifting away;
-- keep the visibility correction strict enough to preserve the marker and the trailing sampled trace points during grazing views;
-- avoid thrashing by replacing an active recenter only after a short delay when the marker stays outside;
+- resolve the shared logical camera pose for Draft and HQ;
+- run Navigation Z1 prediction or Dynamic Z1/Z2 look-ahead selection;
+- run the shared temporary pitch state machine when the current nominal marker view is hidden;
+- apply one complete target-locked camera frame through the Cesium adapter;
 - forward profile and debug state.
 
 ### Example
@@ -338,56 +340,81 @@ replay.start()
 
 ### Camera algorithm
 
-`JourneyReplayMode` uses a two-stage decision tree for the camera.
+`JourneyReplayCameraTrackingBinding` is the active camera authority for both
+Draft and HQ. It resolves a nominal renderer-independent pose from the current
+logical sample, then gives temporary visibility correction first priority. If
+no pitch correction owns the frame, it applies the selected tracking behavior:
 
-1. It first builds a nominal camera view from the current playback sample.
-2. It then measures whether that view is still inside the tolerance zone and whether the marker and the sampled trace remain visible.
-3. If the view is still stable, it does nothing.
-4. If the view is outside the dead zone, or if the marker/trace becomes hidden, it recenters the camera.
+- Navigation keeps an initialized camera stable while the marker remains in
+  Z1. A current hard exit is corrected directly; a predictive exit must remain
+  confirmed for 250 ms before a deterministic transition starts.
+- Dynamic selects a normal or extended future sample from the current marker's
+  Z1/Z2 classification and applies that resolved pose on every logical update.
 
-The dead zone is driven by `camera.hysteresis.marginRatio`. The zone is centered in the viewport, so the camera can drift a little before the algorithm reacts. That prevents the visible "breathing" effect when the marker only moves slightly.
-The tolerance zone overlay stays visible during playback for the non-`Trace` tracking modes, so the recenter window is easy to read while the FT runs.
-Smaller `marginRatio` values make the hysteresis less sensitive and leave a larger stable zone in the middle of the viewport.
-For `Behind` and `Ahead`, the nominal heading also includes `camera.headingOffset` in degrees, clamped between `-90` and `90`. The drawer slider is intentionally reversed: moving it to the left applies a negative offset in the camera model, and moving it to the right applies a positive one. While the slider is being edited, the runtime shows a transparent angle overlay anchored on the first replay sample. The solid axis shows the chosen `Behind` or `Ahead` side, and the dashed line shows the selected camera bias. The overlay disappears after 5 seconds without slider changes, or as soon as the user clicks elsewhere. That offset is applied before the existing heading hysteresis and visibility checks, so it behaves like a simple angular bias on top of the current trace-facing view.
+Both modes respect the selected `Behind`, `Ahead`, or `System` position. The
+`Behind` and `Ahead` headings include the configured heading offset. Turn drift
+uses the same limits in both modes; the active logical path currently applies
+its heading component only.
+
+### Temporary pitch correction
+
+Navigation and Dynamic use one logical-time state machine. Correction is based
+on the visibility of the current nominal view, not on a predictive sample. A
+hidden observation must persist for 250 ms and a geometrically valid bounded
+candidate must exist before the camera changes.
+
+The selected heading/pitch redirect blends in over 900 ms. Once the nominal
+view has remained visible for 150 ms, it blends back to the current nominal pose
+over 450 ms. Shallow nominal views above -30 degrees are limited to 8 degrees
+for the first candidate search. If that gentle envelope cannot restore
+visibility, the search expands to the common 20-degree hard limit. The selected
+correction still uses the same 900 ms attack, so this fallback cannot create an
+instantaneous pitch jump.
+
+This controller accepts only redirects with a non-zero pitch-down component.
+Heading-only candidates remain available to other camera mechanisms, but they
+cannot activate or retain temporary pitch correction. A combined heading and
+pitch redirect remains eligible when it is the smallest candidate that proves
+visibility.
+
+The correction is always recomputed as an offset from the current nominal pose.
+It is never accumulated from the previously corrected pitch. Losing visibility
+during release resumes the correction from its current weight. The final frame,
+a tracking-mode change, or a tracking reset clears the state and restores the
+exact nominal pitch.
+
+Automatic frame writes are isolated from the Cesium control synchronization
+bridge. Camera events caused by tracking or visibility correction cannot be
+stored as user pitch or heading changes; only an actual pointer interaction may
+override the nominal replay camera settings during that protection window.
 
 ### Visibility model
 
-The visibility checks use three layers:
+Geometric visibility checks the current marker and available trailing trace
+samples. The marker and near trace through 12 metres are required; more distant
+samples are advisory. Rendered visibility checks the same required marker and
+near-trace targets with `pickPosition()` and falls back to `globe.pick()` when
+necessary. An unavailable rendered result is treated as unknown rather than
+hidden. A rendered near-trace occlusion therefore activates the same debounced
+pitch correction in Navigation and Dynamic even if the marker centre is still
+detected.
 
-1. A geometric line-of-sight test against terrain heights.
-2. A rendered visibility test against the current Cesium scene.
-3. A visibility correction that looks at the marker and at the sampled trace points behind it.
+Redirect candidates first preserve the required near trace. If none succeeds
+and the rendered marker is explicitly hidden, the same bounded search retries
+against the marker alone. This fallback is shared by Navigation and Dynamic and
+still requires proven geometric marker visibility; it is not a forced
+maximum-pitch correction.
 
-The rendered check first tries `scene.pickPosition()` when it is available. That catches occlusion from 3D tiles or other rendered relief. If it cannot use the depth buffer, the code falls back to `globe.pick()` and terrain height sampling.
+### Camera ownership
 
-For the trace, the algorithm samples the current marker plus trailing points along the path. A point is only considered visible if every sampled point that can be evaluated is visible. This is stricter than the original marker-only check and is meant to keep the line from disappearing at shallow viewing angles.
+Pitch correction, a deterministic Navigation transition, and normal tracking
+are mutually exclusive frame owners. The active owner writes one complete
+target-locked camera frame. A resolved view is remembered only after that write
+succeeds. Manual user interaction temporarily suspends replay camera updates.
 
-### Redirect search
-
-When the nominal view fails, the mode tries to recover with a small set of candidate camera offsets:
-
-- a few pitch-down candidates;
-- a few heading offsets;
-- mixed heading/pitch candidates when a pure pitch change is not enough.
-
-Each candidate is scored so that the smallest useful adjustment wins. The redirect state is reused when possible, which avoids recomputing a new solution on every frame.
-
-If a redirected view is still visible in the Cesium scene, the code applies it directly with `setView()`. Otherwise it uses a short `flyTo()` transition. The transition duration is capped so the correction stays smooth but does not become a long camera move.
-
-### Hysteresis and thrash control
-
-The mode keeps a short-lived recenter timestamp and progress key. This stops the camera from restarting the same recenter on every playback update while the marker is still outside the zone.
-
-When the user interacts with the camera manually, the live sync path is isolated from the playback path. The code cancels the current animated transition before applying a user-driven recenter, then it restores the playback state cleanly when the interaction ends.
-
-### Sampling rules
-
-The path sampler is used twice:
-
-- to drive the nominal camera along the replay path;
-- to sample trailing trace points for visibility checks.
-
-The camera logic intentionally uses sampled points rather than only the current marker. That is what keeps the rendered trace from vanishing on long, low-angle views.
+The detailed zone geometry, adaptive timing, candidate limits, and ownership
+rules are specified in
+[Replay Camera Tracking and Temporary Pitch](REPLAY_CAMERA_TRACKING_ZONES.md).
 
 ## `JourneyReplayDebug.js`
 

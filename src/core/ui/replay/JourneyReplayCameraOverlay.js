@@ -131,16 +131,6 @@ import {
     rememberCameraView,
     headingEasingFactor,
 } from './JourneyReplayCameraTransition'
-import {
-    recenterCameraToSample,
-    startCameraTransition,
-    bindMarkerInteractions,
-    bindCesiumCameraBridge,
-    startCameraLiveSyncLoop,
-    stopCameraLiveSyncLoop,
-    updateCamera,
-} from './JourneyReplayCameraBinding'
-
 export const removeToleranceZoneOverlay = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
 

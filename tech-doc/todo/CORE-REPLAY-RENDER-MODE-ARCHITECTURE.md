@@ -1,6 +1,7 @@
 # Replay Render Mode Architecture — Draft vs High Quality
 
-Status: implementation in progress — #410 and #427
+Status: shared replay camera controller implemented; complete render pipeline
+parity remains in progress — #410 and #427
 
 Date: 2026-07-28
 
@@ -21,6 +22,14 @@ never the source of truth for the replay path, track geometry, camera
 interpolation, timing, or transition completion.
 
 The mode switch must change scheduling and capture strategy, not the visual contract.
+
+Product decision confirmed on 2026-08-03: the only permitted behavioral
+difference between Draft and HQ is time management. Draft obtains logical time
+from real-time playback, while HQ obtains it from the deterministic frame index
+and output FPS. Both timing adapters must call the same replay, visibility,
+camera-correction, transition, and composition resolvers. For identical inputs
+and an identical logical timestamp, they must resolve the same intermediate and
+final visual state.
 
 ## What “identical visual output” means
 
@@ -77,31 +86,44 @@ The replay may temporarily use another pitch only in these cases:
 
 - a start or stop clip explicitly requests a different camera pose;
 - the user is actively dragging, orbiting, or zooming the Cesium camera;
-- dynamic visibility or terrain collision requires a bounded redirect to keep
-  the marker visible;
+- Navigation or Dynamic visibility requires a bounded, proven redirect to keep
+  the current nominal marker view visible;
 - the camera settings or the logical replay phase explicitly changes the
   nominal target.
 
-Navigation uses Z1 only; it has no Z2 landing zone. Leaving Navigation Z1
-triggers the recenter, which may change the camera position and heading, but
-must use the current nominal pitch. Dynamic mode is the only mode with a
-separate Z2 landing zone.
+Navigation and Dynamic use the same logical-time pitch controller. The current
+nominal view is the only activation and retention observation; predictive
+samples may affect spatial tracking but do not retain pitch. A hidden condition
+must persist for 250 ms and a bounded candidate must prove line of sight before
+the correction starts. The correction attacks over 900 ms, waits for 150 ms of
+confirmed nominal visibility, and releases over 450 ms.
 
-Future prediction remains active for Z1/Z2 positioning and target selection.
-Draft may also use it to prepare a heading/position visibility redirect, but it
-must not add pitch while the current nominal view is already visible. HQ uses
-the current marker for visibility redirects. As soon as the current nominal
-view is visible again and the marker is not rendered behind relief, the
-redirect is cleared and the nominal pitch is restored. Explicit clip poses,
-user interaction, camera settings, and logical replay changes may still change
-the pitch.
+Temporary offsets are weighted against the current nominal pose on every
+logical update. They are never accumulated from the previously corrected pose.
+If visibility is lost during release, attack resumes from the current weight.
+The final logical frame and tracking resets clear the state and apply the exact
+nominal pitch.
 
-As soon as the user interaction has ended and the active collision or
-visibility correction no longer requires a redirect, the controller must clear
-the temporary offset and keep the nominal pitch for the current logical frame.
-Draft may use the shortest bounded camera transition; HQ applies the same
-logical pose at the current export timestamp. Neither mode waits for a bulk
-path compilation or a wall-clock flight callback before restoring it.
+Shallow nominal views above -30 degrees first search within 8 degrees of
+temporary pitch offset. If no candidate in that gentle envelope proves
+visibility, the search expands to the common 20-degree hard limit. Steeper
+views search directly within that hard limit. Candidate scoring favors the
+smallest proven correction and penalizes pitch more strongly than heading. For
+temporary pitch correction, heading-only candidates are excluded: the selected
+redirect must contain a non-zero pitch-down component, while combined heading
+and pitch candidates remain eligible. Draft and HQ share these limits and
+conditions. Their only difference is where logical time comes from.
+
+Candidate validation first preserves the marker and required near trace. When
+that strict search has no solution and the rendered marker is explicitly
+hidden, both modes retry the bounded search against the marker alone. Distant
+optional trace targets cannot veto a valid marker view, and an unknown rendered
+observation does not activate this fallback.
+
+The current rendered visibility observation includes the marker and required
+near trace through 12 metres. Hiding that near trace activates the shared
+debounced correction even when the marker centre is still rendered. Predictive
+or distant optional trace samples do not retain pitch.
 
 ## Mode matrix
 
@@ -128,7 +150,10 @@ The codebase already contains the main building blocks for this architecture:
 - `ReplayDeferredExporter` already performs offline HQ export
 - `ScreenMediaRecorder` already has a `captureMode` concept for live capture
 - `JourneyReplayVideoSync` already links replay playback to the draft recording lifecycle
-- `JourneyReplayPlaybackController`, `JourneyReplaySessionPlaybackController`, `JourneyReplayCameraBinding`, `JourneyReplayClipController`, and `JourneyReplayPathSampler` already consume the logical replay helpers
+- `JourneyReplayPlaybackController`, `JourneyReplaySessionPlaybackController`,
+  `JourneyReplayCameraTrackingBinding`, `JourneyReplayCameraPitchController`,
+  `JourneyReplayCameraBinding`, `JourneyReplayClipController`, and
+  `JourneyReplayPathSampler` already consume the logical replay helpers
 
 The first implementation pass now provides the strict product-level boundary
 between Draft Mode and HQ Mode, plus a single named contract that exposes the
@@ -157,10 +182,10 @@ The current implementation addresses the core correction scope:
   bypassed by the shared render path. The nominal pose is applied only at
   logical camera initialization or after a correction; stable frames do not
   recenter the marker and therefore preserve Z1/Z2 tracking behavior.
-- Automatic relief/visibility redirects may change the pitch only while the
-  current marker is hidden. A Draft future sample may prepare heading/position
-  correction, but its pitch offset is removed when the current nominal view is
-  visible. HQ clears the redirect and restores the nominal pitch directly.
+- Automatic relief/visibility redirects use the same current-nominal-view
+  observation and logical-time lifecycle in Draft and HQ. Prediction remains a
+  tracking input only. Correction attack and release are bounded, do not
+  accumulate, and return to the exact current nominal pitch.
 - No complete constrained camera path is compiled synchronously at Draft
   startup or during HQ preparation. Both modes continue from their logical
   frame pipeline without waiting for bulk path compilation.
@@ -320,6 +345,8 @@ the scheduler and capture owner differ.
 - `src/core/ui/replay/ReplayRenderModeContract.js`
 - `src/core/ui/replay/JourneyReplayPlaybackController.js`
 - `src/core/ui/replay/JourneyReplaySessionPlaybackController.js`
+- `src/core/ui/replay/JourneyReplayCameraTrackingBinding.js`
+- `src/core/ui/replay/JourneyReplayCameraPitchController.js`
 - `src/core/ui/replay/JourneyReplayCameraBinding.js`
 - `src/core/ui/replay/JourneyReplayClipController.js`
 - `src/core/ui/replay/JourneyReplayPathSampler.js`
@@ -428,8 +455,10 @@ The practical rule is:
 
 - Draft FPS is a performance ceiling
 - HQ FPS is a quality / export setting
-- Camera lookahead uses the actual output-frame interval when available; if it
-  is missing, Draft falls back to 15 FPS and HQ falls back to 60 FPS.
+- Camera lookahead uses the actual output-frame interval when available. The
+  active binding otherwise uses the configured replay capture FPS and falls
+  back to 15 FPS. The shared math helper exposes a 60 FPS fallback only for a
+  caller that explicitly selects the HQ render mode.
 
 ## Acceptance criteria
 

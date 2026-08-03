@@ -129,16 +129,6 @@ import {
     viewportRectForCesiumSurface,
     updateToleranceZoneOverlay,
 } from './JourneyReplayCameraOverlay'
-import {
-    recenterCameraToSample,
-    startCameraTransition,
-    bindMarkerInteractions,
-    bindCesiumCameraBridge,
-    startCameraLiveSyncLoop,
-    stopCameraLiveSyncLoop,
-    updateCamera,
-} from './JourneyReplayCameraBinding'
-
 export const applyCameraView = (mode, {anchor, heading, pitch, cameraSettings}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -164,7 +154,7 @@ export const applyCameraView = (mode, {anchor, heading, pitch, cameraSettings}) 
                 skipped: true,
                 reason: 'stable',
             })
-            return
+            return false
         }
 
         const cameraHeight = call.cameraAltitudeForSample(anchor, cameraSettings)
@@ -178,20 +168,20 @@ export const applyCameraView = (mode, {anchor, heading, pitch, cameraSettings}) 
                 skipped: true,
                 reason: 'no-target',
             })
-            return
+            return false
         }
 
         const viewer = globalThis.lgs?.viewer
         const camera = viewer?.camera
         const transform = Transforms.eastNorthUpToFixedFrame(target)
         const range = replayCameraRangeFromPitch(Math.max(1, cameraHeight - markerHeight), safePitch)
-        if (!camera) {
+        if (!camera || typeof camera.setView !== 'function') {
             replayVideoTraceDebug('camera.view.apply.end', {
                 elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startedAt,
                 skipped: true,
                 reason: 'no-camera',
             })
-            return
+            return false
         }
 
         state.cameraAutoTrackingIgnoreUntil = call.now() + 250
@@ -219,14 +209,15 @@ export const applyCameraView = (mode, {anchor, heading, pitch, cameraSettings}) 
             const direction = Cartesian3.normalize(Cartesian3.subtract(target, destination, new Cartesian3()), new Cartesian3())
             const right = Cartesian3.normalize(Cartesian3.cross(direction, up, new Cartesian3()), new Cartesian3())
             const correctedUp = Cartesian3.normalize(Cartesian3.cross(right, direction, new Cartesian3()), new Cartesian3())
-            camera.setView?.({
-                                 destination,
-                                 orientation: {
-                                     direction,
-                                     up: correctedUp,
-                                 },
-                             })
+            camera.setView({
+                destination,
+                orientation: {
+                    direction,
+                    up: correctedUp,
+                },
+            })
             call.rememberCameraView({anchor, heading: safeHeading, pitch: safePitch})
+            return true
         }
         finally {
             state.cameraApplyingView = false
@@ -586,7 +577,16 @@ export const updateCameraSettingsFromCesiumControls = (mode, sample, {altitudeMo
         return call.persistCameraSettings(next)
     }
 
-export const updateCameraFromCesiumControls = (mode) => {
+/**
+ * Persist a Cesium camera change only when it represents an authorized user
+ * interaction rather than feedback from an automatic replay frame.
+ *
+ * @param {object} mode - Replay session mode.
+ * @param {object} options - Synchronization options.
+ * @param {boolean} [options.userInteraction=false] - Whether a completed user interaction authorized this synchronization.
+ * @returns {void}
+ */
+export const updateCameraFromCesiumControls = (mode, {userInteraction = false} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
@@ -595,6 +595,21 @@ export const updateCameraFromCesiumControls = (mode) => {
             return
         }
         if (store?.cameraUpdateSource === 'drawer') {
+            return
+        }
+        if (state.cameraApplyingView) {
+            return
+        }
+        const authorizedUserInteraction = userInteraction
+                                          || state.cameraPointerActive === true
+                                          || state.cameraUserAdjusting === true
+        if (!authorizedUserInteraction) {
+            return
+        }
+        const logicalNow = finiteNumber(call.now?.()) ?? 0
+        if (!userInteraction
+            && !state.cameraPointerActive
+            && logicalNow < (finiteNumber(state.cameraAutoTrackingIgnoreUntil) ?? 0)) {
             return
         }
         call.markPlaybackCameraUserAdjusted()

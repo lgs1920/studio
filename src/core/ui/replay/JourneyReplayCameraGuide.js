@@ -134,15 +134,6 @@ import {
     updateToleranceZoneOverlay,
 } from './JourneyReplayCameraOverlay'
 import {
-    recenterCameraToSample,
-    startCameraTransition,
-    bindMarkerInteractions,
-    bindCesiumCameraBridge,
-    startCameraLiveSyncLoop,
-    stopCameraLiveSyncLoop,
-    updateCamera,
-} from './JourneyReplayCameraBinding'
-import {
     memoizeReplayCameraUpdateCache,
     replayCameraUpdateCameraSettingsKey,
     replayCameraUpdateMarkerSettingsKey,
@@ -818,8 +809,9 @@ export const cameraViewForSample = (mode, {
         }
 
         const computeView = () => {
+            const immediateSource = source === 'drawer' || source === 'refresh'
             const normalizedPitch = finiteNumber(cameraSettings?.pitch) ?? -65
-            const pitch = source === 'drawer'
+            const pitch = immediateSource
                           ? degreesToRadians(normalizedPitch)
                           : normalizedPitch <= -89
                             ? SAFE_TOP_DOWN_PITCH
@@ -845,7 +837,7 @@ export const cameraViewForSample = (mode, {
                                                                         headingOffset: cameraSettings.headingOffset,
                                                                     })
             }
-            const heading = source === 'drawer'
+            const heading = immediateSource
                             ? desiredHeading
                             : replayCameraHeadingWithHysteresis({
                                                                         previousHeading,
@@ -854,7 +846,7 @@ export const cameraViewForSample = (mode, {
                                                                                      ? CAMERA_HEADING_HYSTERESIS_RADIANS
                                                                                      : CAMERA_HEADING_MIN_CHANGE_RADIANS,
                                                                     })
-            const smoothHeading = source === 'drawer'
+            const smoothHeading = immediateSource
                                   ? heading
                                   : call.smoothRadians(
                     previousHeading,
@@ -864,7 +856,7 @@ export const cameraViewForSample = (mode, {
                         state.cameraSmoothingDeltaSeconds,
                     ),
                 )
-            const smoothPitch = source === 'drawer'
+            const smoothPitch = immediateSource
                                 ? pitch
                                 : call.smoothRadians(
                                     previousPitch,

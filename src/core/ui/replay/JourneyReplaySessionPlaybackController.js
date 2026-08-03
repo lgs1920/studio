@@ -608,6 +608,7 @@ export const refresh = (mode, {
                 call.updateCamera({
                                        sample,
                                        progress: state.controller.progress ?? sample.progress ?? 0,
+                                       source: 'refresh',
                                        frameTimeMs,
                                        frameIntervalMs,
                                        exportMode,

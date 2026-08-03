@@ -26,7 +26,6 @@ This directory contains technical specifications and architecture documents that
 ## Replay And Video
 
 - [Replay core](CORE-UI-REPLAY-README-REPLAY.md)
-- [JourneyReplay component notes](JOURNEYREPLAY-README-REPLAY.md)
 - [Screen media recorder](CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)
 - [Canvas overlay composer](CORE-SCREEN-MEDIA-RECORDER-COMPOSER-README.md)
 

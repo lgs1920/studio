@@ -145,16 +145,6 @@ import {
     viewportRectForCesiumSurface,
     updateToleranceZoneOverlay,
 } from './JourneyReplayCameraOverlay'
-import {
-    recenterCameraToSample,
-    startCameraTransition,
-    bindMarkerInteractions,
-    bindCesiumCameraBridge,
-    startCameraLiveSyncLoop,
-    stopCameraLiveSyncLoop,
-    updateCamera,
-} from './JourneyReplayCameraBinding'
-
 export const currentCameraFrame =  (mode, fallbackFrame) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -189,6 +179,11 @@ export const applyCameraFrame =  (mode, frame) => {
             return false
         }
 
+        const logicalNow = finiteNumber(call.now?.()) ?? 0
+        state.cameraAutoTrackingIgnoreUntil = Math.max(
+            finiteNumber(state.cameraAutoTrackingIgnoreUntil) ?? 0,
+            logicalNow + 250,
+        )
         state.cameraApplyingView = true
         try {
             camera.setView?.({
@@ -583,10 +578,15 @@ export const applyDeterministicCameraTransition =  (mode, logicalNow) => {
                 target:        transition.target,
             },
         ))
-        if (ratio >= 1) {
+        if (ratio >= 1 && applied) {
             state.deterministicCameraTransition = null
             state.lastCameraHeading = finiteNumber(transition.heading) ?? state.lastCameraHeading
             state.lastCameraPitch = finiteNumber(transition.pitch) ?? state.lastCameraPitch
+            call.rememberCameraView?.({
+                anchor: transition.sample,
+                heading: transition.heading,
+                pitch: transition.pitch,
+            })
         }
         return applied
     }

@@ -24,7 +24,6 @@ Proposed work, pending validation, or future implementation work lives under `to
 - [Panels](specs/CORE-UI-PANELS-README.md)
 - [Context menu](specs/CORE-UI-CONTEXT-MENU-README.md)
 - [Replay core](specs/CORE-UI-REPLAY-README-REPLAY.md)
-- [JourneyReplay component notes](specs/JOURNEYREPLAY-README-REPLAY.md)
 - [Screen media recorder](specs/CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)
 - [Canvas overlay composer](specs/CORE-SCREEN-MEDIA-RECORDER-COMPOSER-README.md)
 - [Widget manager](specs/CORE-WIDGET-MANAGER-README.md)

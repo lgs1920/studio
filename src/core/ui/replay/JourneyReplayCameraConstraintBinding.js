@@ -481,9 +481,7 @@ export const resolveConstrainedReplayCameraPath = (mode, {
             -driftLimit,
             driftLimit,
         )
-        const driftResponse = trackingMode === REPLAY_MARKER_MODE_NAVIGATION
-            ? REPLAY_TURN_DRIFT_RESPONSE_SECONDS
-            : REPLAY_TURN_DRIFT_RESPONSE_SECONDS * 0.85
+        const driftResponse = REPLAY_TURN_DRIFT_RESPONSE_SECONDS
         const driftFactor = hadPreviousProgress
             ? 1 - Math.exp(-deltaSeconds / driftResponse)
             : 0

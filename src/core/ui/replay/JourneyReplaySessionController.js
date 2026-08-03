@@ -257,6 +257,7 @@ export class JourneyReplaySessionController {
     #lastAppliedCameraView = null
     #lastReplayLogicalFrame = null
     #cameraRedirectState = null
+    #cameraPitchCorrectionState = null
     #cameraNominalVisibilitySince = null
     #cameraUserAdjusting = false
     #cameraApplyingView = false
@@ -268,6 +269,7 @@ export class JourneyReplaySessionController {
     #lastToleranceRecenterProgress = null
     #lastNavigationRecenterAt = null
     #lastNavigationRecenterProgress = null
+    #navigationCameraView = null
     #navigationPredictiveViolationAt = null
     #toleranceZoneOverlayCanvas = null
     #toleranceZoneOverlayCameraChangedRemove = null
@@ -297,7 +299,6 @@ export class JourneyReplaySessionController {
     #lastJourneyReplayPoiDistance = null
     #lastJourneyReplayPoiCursor = 0
     #lastPlaybackUpdateProgressKey = null
-    #lastDraftCameraProgressKey = null
     #sortedNearbyPois = []
 
     constructor({
@@ -620,6 +621,13 @@ export class JourneyReplaySessionController {
                 this.#cameraRedirectState = value
             },
         })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'cameraPitchCorrectionState', {
+            configurable: true,
+            get: () => this.#cameraPitchCorrectionState,
+            set: value => {
+                this.#cameraPitchCorrectionState = value
+            },
+        })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'cameraNominalVisibilitySince', {
             configurable: true,
             get: () => this.#cameraNominalVisibilitySince,
@@ -695,6 +703,13 @@ export class JourneyReplaySessionController {
             get: () => this.#lastNavigationRecenterProgress,
             set: value => {
                 this.#lastNavigationRecenterProgress = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'navigationCameraView', {
+            configurable: true,
+            get: () => this.#navigationCameraView,
+            set: value => {
+                this.#navigationCameraView = value
             },
         })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'navigationPredictiveViolationAt', {
@@ -907,13 +922,6 @@ export class JourneyReplaySessionController {
                 this.#lastPlaybackUpdateProgressKey = value
             },
         })
-        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'lastDraftCameraProgressKey', {
-            configurable: true,
-            get: () => this.#lastDraftCameraProgressKey,
-            set: value => {
-                this.#lastDraftCameraProgressKey = value
-            },
-        })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'sortedNearbyPois', {
             configurable: true,
             get: () => this.#sortedNearbyPois,
@@ -1009,6 +1017,7 @@ export class JourneyReplaySessionController {
             headingFromPositionProperty: (...args) => JourneyReplayCameraController.headingFromPositionProperty(this, ...args),
             cameraAltitudeForSample: (...args) => JourneyReplayCameraController.cameraAltitudeForSample(this, ...args),
             cameraViewForSample: (...args) => JourneyReplayCameraController.cameraViewForSample(this, ...args),
+            replayTurnDriftForProgress: (...args) => JourneyReplayCameraController.replayTurnDriftForProgress(this, ...args),
             rememberNominalCameraView: (...args) => JourneyReplayCameraController.rememberNominalCameraView(this, ...args),
             resetCameraInterpolationState: (...args) => JourneyReplayCameraController.resetCameraInterpolationState(this, ...args),
             cameraRedirectPitchLimits: (...args) => JourneyReplayCameraController.cameraRedirectPitchLimits(this, ...args),
@@ -1024,6 +1033,8 @@ export class JourneyReplaySessionController {
             cameraViewVisibilityForSample: (...args) => JourneyReplayCameraController.cameraViewVisibilityForSample(this, ...args),
             cameraRedirectCandidateScore: (...args) => JourneyReplayCameraController.cameraRedirectCandidateScore(this, ...args),
             findCameraRedirectState: (...args) => JourneyReplayCameraController.findCameraRedirectState(this, ...args),
+            resetReplayCameraPitchCorrection: (...args) => JourneyReplayCameraController.resetReplayCameraPitchCorrection(this, ...args),
+            resolveReplayCameraPitchCorrection: (...args) => JourneyReplayCameraController.resolveReplayCameraPitchCorrection(this, ...args),
             applyCameraView: (...args) => JourneyReplayCameraController.applyCameraView(this, ...args),
             liveCameraPitch: (...args) => JourneyReplayCameraController.liveCameraPitch(this, ...args),
             markerPositionForSample: (...args) => JourneyReplayCameraController.markerPositionForSample(this, ...args),
@@ -1057,6 +1068,7 @@ export class JourneyReplaySessionController {
             cameraViewIsStable: (...args) => JourneyReplayCameraController.cameraViewIsStable(this, ...args),
             rememberCameraView: (...args) => JourneyReplayCameraController.rememberCameraView(this, ...args),
             headingEasingFactor: (...args) => JourneyReplayCameraController.headingEasingFactor(this, ...args),
+            applyResolvedReplayCameraView: (...args) => JourneyReplayCameraController.applyResolvedReplayCameraView(this, ...args),
             removeToleranceZoneOverlay: (...args) => JourneyReplayCameraController.removeToleranceZoneOverlay(this, ...args),
             setToleranceZoneOverlayVisible: (...args) => JourneyReplayCameraController.setToleranceZoneOverlayVisible(this, ...args),
             cameraAnglePreviewEntityCollection: (...args) => JourneyReplayCameraController.cameraAnglePreviewEntityCollection(this, ...args),
