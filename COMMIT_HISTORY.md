@@ -1,5 +1,12 @@
 # Commit History
 
+## 2026-08-03 — [`fix(replay): stabilize camera tracking and pitch correction`](https://github.com/lgs1920/studio/commit/2fef3ddd521040b9423d8624e69c4bbb887b75d9)
+
+- Keep replay pitch correction transient without persisting automatic camera frames as user input.
+- Preserve Navigation recentering while visibility correction owns the camera.
+- Align Draft and HQ camera resolution and remove replay camera console diagnostics.
+- Update replay camera tests and technical documentation.
+
 ## 2026-08-01 — [`fix(replay): stabilize camera tracking and depth visibility`](https://github.com/lgs1920/studio/commit/eda0a39c90d64962f03d181055ae8017db52810a)
 
 - Adapt replay tracking zones and camera transitions to short timeline budgets.
