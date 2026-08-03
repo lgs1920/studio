@@ -17,13 +17,13 @@
 import { CompassFull }                                                from '@Components/MainUI/compass/CompassFull'
 import { CompassFlat }                                                from '@Components/MainUI/compass/CompassFlat'
 import { CompassLight }                                    from '@Components/MainUI/compass/CompassLight'
-import { CompassWindRose }                                            from '@Components/MainUI/compass/CompassWindRose'
+import { CompassModern }                                              from '@Components/MainUI/compass/CompassModern'
 import {
     COMPASS_FLAT,
     COMPASS_FULL,
     COMPASS_LIGHT,
     COMPASS_WIDGET,
-    COMPASS_WIND_ROSE,
+    COMPASS_MODERN,
     EDIT_WIDGET_ICON,
     MULTI_PURPOSE_WIDGETS,
     NO_COMPASS,
@@ -99,11 +99,11 @@ export const CompassSettings = () => {
                             </span>
                             {'Light'}
                         </WaOption>
-                        <WaOption value={COMPASS_WIND_ROSE.toString()} label="Rose">
+                        <WaOption value={COMPASS_MODERN.toString()} label="Modern">
                             <span slot="start" className="compass-select-thumbnail">
-                                <CompassWindRose width="24" height="24"/>
+                                <CompassModern width="24" height="24"/>
                             </span>
-                            {'Rose'}
+                            {'Modern'}
                         </WaOption>
                         <WaOption value={COMPASS_FLAT.toString()} label="Flat">
                             <span slot="start" className="compass-select-thumbnail">

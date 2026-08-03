@@ -395,7 +395,7 @@ export const ADD_POI_EVENT    = 'poi/add',
 export const NO_COMPASS = 0,
 COMPASS_FULL      = 1,
 COMPASS_LIGHT     = 2,
-COMPASS_WIND_ROSE  = 3,
+COMPASS_MODERN     = 3,
 COMPASS_FLAT      = 4
 
 /*******************************************************************************

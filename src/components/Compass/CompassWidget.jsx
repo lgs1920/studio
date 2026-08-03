@@ -76,7 +76,7 @@ export const CompassWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
     }
 
     return (
-        <Widget isVisible={true} config={config}>
+        <Widget isVisible={true} className="lgs-compass-widget" config={config}>
             <Compass inWidget entity={id}/>
         </Widget>
     )

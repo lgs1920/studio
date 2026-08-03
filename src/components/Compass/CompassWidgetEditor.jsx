@@ -18,11 +18,11 @@ import { LGSScrollbars }                                            from '@Compo
 import { CompassFull }                                             from '@Components/MainUI/compass/CompassFull'
 import { CompassFlat }                                             from '@Components/MainUI/compass/CompassFlat'
 import { CompassLight }                                            from '@Components/MainUI/compass/CompassLight'
-import { CompassWindRose }                                         from '@Components/MainUI/compass/CompassWindRose'
+import { CompassModern }                                           from '@Components/MainUI/compass/CompassModern'
 import {
     ColorElement,
 }                                                                   from '@Components/MainUI/widgets/editor/elements/ColorElement'
-import { COMPASS_FLAT, COMPASS_FULL, COMPASS_LIGHT, COMPASS_WIND_ROSE } from '@Core/constants'
+import { COMPASS_FLAT, COMPASS_FULL, COMPASS_LIGHT, COMPASS_MODERN } from '@Core/constants'
 import { WaButton, WaCard, WaDivider, WaIcon, WaOption, WaSelect } from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord, extend }                                             from 'colord'
 import namesPlugin                                                    from 'colord/plugins/names'
@@ -116,7 +116,9 @@ export const CompassWidgetEditor = ({entity, syncGlobalCompass = false}) => {
     const isFlatCompass = compassMode === COMPASS_FLAT.toString()
     const showsSurfaceColors = compassMode === COMPASS_FULL.toString() || isFlatCompass
     const showsOverBackgroundColor = compassMode === COMPASS_FULL.toString()
-    const showsDirectionalColors = compassMode === COMPASS_FULL.toString() || compassMode === COMPASS_WIND_ROSE.toString() || isFlatCompass
+    const showsDirectionalColors = compassMode === COMPASS_FULL.toString() || compassMode === COMPASS_MODERN.toString() || isFlatCompass
+    const showsSouthNeedleColor = compassMode === COMPASS_FULL.toString() || compassMode === COMPASS_LIGHT.toString() || compassMode === COMPASS_MODERN.toString()
+    const showsCenterColor = compassMode === COMPASS_FULL.toString() || compassMode === COMPASS_LIGHT.toString()
 
     /**
      * Pure and simple color + opacity to RGBA string conversion
@@ -286,11 +288,11 @@ export const CompassWidgetEditor = ({entity, syncGlobalCompass = false}) => {
                                 </span>
                                 {'Light'}
                             </WaOption>
-                            <WaOption value={COMPASS_WIND_ROSE.toString()} label="Rose">
+                            <WaOption value={COMPASS_MODERN.toString()} label="Modern">
                                 <span slot="start" className="compass-select-thumbnail">
-                                    <CompassWindRose width="24" height="24"/>
+                                    <CompassModern width="24" height="24"/>
                                 </span>
-                                {'Rose'}
+                                {'Modern'}
                             </WaOption>
                             <WaOption value={COMPASS_FLAT.toString()} label="Flat">
                                 <span slot="start" className="compass-select-thumbnail">
@@ -346,12 +348,16 @@ export const CompassWidgetEditor = ({entity, syncGlobalCompass = false}) => {
                     <ColorElement label={isFlatCompass ? 'Arrow' : 'Needle North'} path="needle.north" part={element.needle.north}
                                   swatches={swatches} getColor={(p) => getColor(p, 'needle.north')}
                                   updateValue={updateValue}/>
-                    {!isFlatCompass &&
+                    {showsSouthNeedleColor &&
                         <>
                             <WaDivider/>
                             <ColorElement label="Needle South" path="needle.south" part={element.needle.south}
                                           swatches={swatches} getColor={(p) => getColor(p, 'needle.south')}
                                           updateValue={updateValue}/>
+                        </>
+                    }
+                    {showsCenterColor &&
+                        <>
                             <WaDivider/>
                             <ColorElement label="Center Point" path="needle.center" part={element.needle.center}
                                           swatches={swatches} getColor={(p) => getColor(p, 'needle.center')}
