@@ -8,9 +8,9 @@ const REPLAY_CAMERA_POSITION_SYSTEM = 'system'
 const SAFE_TOP_DOWN_PITCH = -(Math.PI / 2 - 0.0001)
 const MAX_REPLAY_CAMERA_ROLL = Math.PI / 4
 const MIN_REPLAY_ROLL_SPEED_METERS_PER_SECOND = 0.5
-const REPLAY_ROLL_PROBE_SECONDS = 0.75
+const REPLAY_ROLL_PROBE_SECONDS = 1
 const REPLAY_ROLL_MIN_PROBE_METERS = 20
-const REPLAY_ROLL_MAX_PROBE_METERS = 180
+const REPLAY_ROLL_MAX_PROBE_METERS = 220
 const REPLAY_ROLL_TURN_START_RADIANS = 3 * Math.PI / 180
 const REPLAY_ROLL_TURN_FULL_RADIANS = 90 * Math.PI / 180
 const REPLAY_ROLL_MIN_CURVATURE = 0.00005
@@ -217,7 +217,7 @@ export const resolveJourneyReplayLogicalCameraRoll = ({sample = null, sampler = 
         MIN_REPLAY_ROLL_SPEED_METERS_PER_SECOND,
         averageSpeed ?? localSpeed,
     )
-    const speedFactor = clamp(localSpeed / (referenceSpeed * 3), 0, 1)
+    const speedFactor = clamp(localSpeed / (referenceSpeed * 2.5), 0, 1)
 
     return clamp(
         Math.sign(turnDelta) * MAX_REPLAY_CAMERA_ROLL * turnFactor * curvatureFactor * speedFactor,

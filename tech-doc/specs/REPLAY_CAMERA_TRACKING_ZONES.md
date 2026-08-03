@@ -62,6 +62,20 @@ constant altitude or the sample height plus the configured ground offset.
 Navigation and Dynamic use this same resolver. Neither tracking mode may force
 `Ahead` or bypass the selected `Behind`, `Ahead`, or `System` behavior.
 
+### 2.1 Camera capability flags
+
+The normalized `ui.replay.camera` settings expose three independent boolean
+capabilities. They default to `true` and are shared by Draft and HQ:
+
+| Setting | Effect when `false` |
+| --- | --- |
+| `canDrift` | disables the turn-based heading/lateral drift envelope; the nominal route pose remains active |
+| `canFixHiddenMarker` | disables temporary hidden-marker pitch correction and terrain redirect searches |
+| `canRoll` | disables speed/curvature-based banking and keeps camera roll at zero |
+
+Changing one capability must not alter the other camera settings or select a
+different resolver for Draft and HQ.
+
 ## 3. Temporary visibility correction
 
 Temporary pitch correction is independent from Navigation and Dynamic zone
@@ -273,14 +287,29 @@ Navigation and Dynamic request the same drift envelope:
 - maximum lateral offset: 40 metres;
 - minimum sustained turn angle: 12 degrees.
 
-In the active logical camera path, only `headingOffsetRadians` is currently
-added to the nominal pose. `lateralOffsetMeters` is calculated by the guide
-helper but is not consumed by the logical pose. Documentation and tests must
-not claim that the active runtime applies lateral camera displacement.
+In the active logical camera path, `headingOffsetRadians` and the
+speed-dependent roll are added to the nominal pose. `lateralOffsetMeters` is
+calculated by the guide helper but is not consumed by the logical pose.
+Documentation and tests must not claim that the active runtime applies lateral
+camera displacement. The `canDrift` capability gates this drift envelope.
 
 The constrained-path compiler also uses one shared 1.5-second drift response
 for both modes. That compiler is not the active per-frame camera authority and
 must not block Draft startup or HQ preparation.
+
+## 7.1 Speed-dependent banking
+
+When `canRoll` is enabled, the logical pose computes a signed roll from the
+local route turn and speed. It samples previous/current/next route points in a
+bounded metric probe window (currently about one second, limited to roughly
+20–220 metres), compares local speed with the journey average, eases the turn
+and speed factors, and clamps the result to ±45 degrees. Straight, stationary,
+or invalid samples resolve to zero roll.
+
+The resulting roll rotates the camera up vector around its viewing direction.
+The calculation is part of the shared logical pose, so Draft and HQ apply the
+same banking decision. `canRoll: false` bypasses the calculation and restores a
+zero-roll pose.
 
 ## 8. Camera ownership and frame application
 

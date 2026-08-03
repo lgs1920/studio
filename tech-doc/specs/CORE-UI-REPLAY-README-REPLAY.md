@@ -353,8 +353,13 @@ no pitch correction owns the frame, it applies the selected tracking behavior:
 
 Both modes respect the selected `Behind`, `Ahead`, or `System` position. The
 `Behind` and `Ahead` headings include the configured heading offset. Turn drift
-uses the same limits in both modes; the active logical path currently applies
-its heading component only.
+uses the same limits in both modes; the active logical path applies its heading
+component and speed-dependent roll (lateral displacement remains diagnostic).
+
+The camera capability flags are normalized with `true` defaults and gate their
+features independently: `canDrift` enables turn drift, `canFixHiddenMarker`
+enables temporary hidden-marker pitch/terrain correction, and `canRoll` enables
+speed/curvature banking. Draft and HQ use the same flag values.
 
 ### Temporary pitch correction
 
