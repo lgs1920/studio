@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-08-03 — [`fix(replay): centralize trace visibility`](https://github.com/lgs1920/studio/commit/cc446bd685ddc42de3fe861e41bca4228bbeba94)
+
+- Keep replay trace visibility in one renderer state shared by live playback and video replay frames.
+- Prevent an update without an explicit visibility instruction from re-enabling a hidden trace.
+- Add coverage for hide persistence and explicit reactivation.
+
 ## 2026-08-03 — [`fix(replay): remove trace data source on exit`](https://github.com/lgs1920/studio/commit/94f5f2dfc8f085a8489917a1cce9a752d0af6506)
 
 - Remove the replay `CustomDataSource` from Cesium when playback ends or is stopped, cancelled, aborted, or restored for a dialog.
