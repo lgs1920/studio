@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-08-03 — [`fix(replay): remove trace data source on exit`](https://github.com/lgs1920/studio/commit/94f5f2dfc8f085a8489917a1cce9a752d0af6506)
+
+- Remove the replay `CustomDataSource` from Cesium when playback ends or is stopped, cancelled, aborted, or restored for a dialog.
+- Prevent an asynchronous source add from resurrecting a cleared replay trace.
+- Add renderer coverage for complete data-source removal.
+
 ## 2026-08-03 — [`fix(replay): accelerate near-relief pitch correction`](https://github.com/lgs1920/studio/commit/ec6f8260dfec2d5965034a4a7cf225279bf25ff9)
 
 - Measure rendered and terrain obstructions between the camera and the marker.
