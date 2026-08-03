@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-08-03 — [`fix(replay): accelerate near-relief pitch correction`](https://github.com/lgs1920/studio/commit/ec6f8260dfec2d5965034a4a7cf225279bf25ff9)
+
+- Measure rendered and terrain obstructions between the camera and the marker.
+- Expand the proven-safe pitch envelope and accelerate the response for relief closer than one kilometer.
+- Add regression coverage for immediate and near-relief correction timing.
+
 ## 2026-08-03 — [`fix(replay): stabilize camera tracking and pitch correction`](https://github.com/lgs1920/studio/commit/2fef3ddd521040b9423d8624e69c4bbb887b75d9)
 
 - Keep replay pitch correction transient without persisting automatic camera frames as user input.
