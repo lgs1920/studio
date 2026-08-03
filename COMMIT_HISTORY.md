@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-08-03 — [`fix(replay): remove hidden trace geometry`](https://github.com/lgs1920/studio/commit/5fbb2abbb6982daf5e2a13d9cc5bac1b4c376654)
+
+- Remove the replay data source and all replay entities when trace visibility is disabled.
+- Recreate the source only after an explicit visibility request, keeping live replay and export cleanup consistent.
+- Update renderer coverage to assert total source removal.
+
 ## 2026-08-03 — [`fix(replay): centralize trace visibility`](https://github.com/lgs1920/studio/commit/cc446bd685ddc42de3fe861e41bca4228bbeba94)
 
 - Keep replay trace visibility in one renderer state shared by live playback and video replay frames.
