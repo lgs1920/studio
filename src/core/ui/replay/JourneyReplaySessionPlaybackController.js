@@ -28,7 +28,8 @@ import {
 }                                                                                          from './JourneyReplayCesiumRenderer'
 import { REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP, normalizeJourneyReplayClips } from './JourneyReplayClips'
 import {
-    currentJourneyReplayPoiBehavior, currentJourneyReplaySample, finiteNumber, isJourneyReplayVideoCaptureActive,
+    currentJourneyReplayPoiBehavior, currentJourneyReplaySample, finiteNumber, isJourneyReplayCameraActive,
+    isJourneyReplayVideoCaptureActive,
     publishReplayClipFrameState, replayStore, resetRuntimeProgress, resolveJourneyReplayRuntimeClips,
 } from './JourneyReplayRuntime'
 import {createJourneyReplayLogicalFrame} from './JourneyReplayLogicalFrame'
@@ -599,7 +600,9 @@ export const refresh = (mode, {
                 sample,
                 sampler: state.sampler,
                 forceGeometry,
-                showTrace: exportMode || isJourneyReplayVideoCaptureActive(),
+                showTrace: exportMode || (
+                    isJourneyReplayVideoCaptureActive() && isJourneyReplayCameraActive(replayStore())
+                ),
             })
             if (camera) {
                 if (suppressMoveEvents) {

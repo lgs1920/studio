@@ -306,6 +306,72 @@ describe('replay phase 1 playback controller', () => {
         }
     })
 
+    it('does not redraw the replay trace from a post-export refresh after playback ended', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[0, 0, 0], [0.001, 0, 0]],
+            }),
+        ])
+        const previousLgs = globalThis.lgs
+        const previousDoubleUnderscore = globalThis.__
+        const replaySettings = defaultJourneyReplaySettings()
+        const replayStore = proxy({
+            active:        false,
+            playing:       false,
+            paused:        false,
+            recordingSync: true,
+            progress:      0.5,
+            camera:        replaySettings.camera,
+        })
+        const renderer = {
+            clear:  vi.fn(),
+            show:   vi.fn(),
+            update: vi.fn(),
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            settings:   {ui: {replay: replaySettings}},
+            stores:     {replay: replayStore},
+            viewer:     {
+                camera: {
+                    moveStart: {addEventListener: vi.fn(), removeEventListener: vi.fn()},
+                    moveEnd:   {addEventListener: vi.fn(), removeEventListener: vi.fn()},
+                    changed:   {addEventListener: vi.fn(), removeEventListener: vi.fn()},
+                },
+            },
+            scene:      {requestRender: vi.fn()},
+        }
+        globalThis.__ = {ui: {cameraManager: {}}}
+
+        try {
+            const mode = new JourneyReplayMode({
+                controller: new JourneyReplayPlaybackController({
+                    requestFrame: () => 1,
+                    cancelFrame:  () => {},
+                    now:          () => 0,
+                }),
+                renderer,
+            })
+
+            mode.configure({journey})
+            mode.refresh({camera: false})
+
+            expect(renderer.update).toHaveBeenLastCalledWith(expect.objectContaining({showTrace: false}))
+
+            replayStore.active = true
+            mode.refresh({camera: false})
+
+            expect(renderer.update).toHaveBeenLastCalledWith(expect.objectContaining({showTrace: true}))
+        }
+        finally {
+            globalThis.__ = previousDoubleUnderscore
+            globalThis.lgs = previousLgs
+        }
+    })
+
     it('syncs serializable samples into the Valtio replay runtime store', () => {
         const journey = makeJourney([
             makeTrack({
