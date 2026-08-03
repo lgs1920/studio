@@ -8,6 +8,15 @@ import {
     JOURNEY_REPLAY_INTERNAL_CALL,
     JOURNEY_REPLAY_INTERNAL_STATE,
 } from './JourneyReplayInternal'
+import {
+    REPLAY_CAMERA_IMMEDIATE_RELIEF_ACTIVATION_MILLIS,
+    REPLAY_CAMERA_IMMEDIATE_RELIEF_ATTACK_MILLIS,
+    REPLAY_CAMERA_IMMEDIATE_RELIEF_DISTANCE_METERS,
+    REPLAY_CAMERA_NEAR_RELIEF_ACTIVATION_MILLIS,
+    REPLAY_CAMERA_NEAR_RELIEF_ATTACK_MILLIS,
+    REPLAY_CAMERA_NEAR_RELIEF_DISTANCE_METERS,
+    REPLAY_CAMERA_NEAR_RELIEF_MAX_PITCH_OFFSET_RADIANS,
+} from './JourneyReplayCameraShared'
 
 export const REPLAY_CAMERA_PITCH_PHASE_INACTIVE = 'inactive'
 export const REPLAY_CAMERA_PITCH_PHASE_PENDING = 'pending'
@@ -22,6 +31,43 @@ export const REPLAY_CAMERA_PITCH_RELEASE_MILLIS = 450
 export const REPLAY_CAMERA_SHALLOW_PITCH_THRESHOLD_RADIANS = -Math.PI / 6
 export const REPLAY_CAMERA_SHALLOW_MAX_PITCH_OFFSET_RADIANS = 8 * Math.PI / 180
 export const REPLAY_CAMERA_MAX_PITCH_OFFSET_RADIANS = 20 * Math.PI / 180
+
+/**
+ * Resolve the correction envelope from the nearest terrain obstruction.
+ *
+ * A close obstruction needs an immediate, wider pitch response so the marker
+ * can clear a steep relief before the next replay samples are rendered.
+ *
+ * @param {number|null} obstructionDistanceMeters - Distance to the nearest obstructing relief.
+ * @returns {{maximumPitchOffset: number, activationMillis: number, attackMillis: number}}
+ * Adaptive correction envelope.
+ */
+export const replayCameraPitchCorrectionEnvelope = obstructionDistanceMeters => {
+    const distance = obstructionDistanceMeters === null
+        || obstructionDistanceMeters === undefined
+        || obstructionDistanceMeters === ''
+        ? null
+        : finiteNumber(obstructionDistanceMeters)
+    if (distance !== null && distance <= REPLAY_CAMERA_IMMEDIATE_RELIEF_DISTANCE_METERS) {
+        return {
+            maximumPitchOffset: REPLAY_CAMERA_NEAR_RELIEF_MAX_PITCH_OFFSET_RADIANS,
+            activationMillis:    REPLAY_CAMERA_IMMEDIATE_RELIEF_ACTIVATION_MILLIS,
+            attackMillis:         REPLAY_CAMERA_IMMEDIATE_RELIEF_ATTACK_MILLIS,
+        }
+    }
+    if (distance !== null && distance <= REPLAY_CAMERA_NEAR_RELIEF_DISTANCE_METERS) {
+        return {
+            maximumPitchOffset: REPLAY_CAMERA_NEAR_RELIEF_MAX_PITCH_OFFSET_RADIANS,
+            activationMillis:    REPLAY_CAMERA_NEAR_RELIEF_ACTIVATION_MILLIS,
+            attackMillis:         REPLAY_CAMERA_NEAR_RELIEF_ATTACK_MILLIS,
+        }
+    }
+    return {
+        maximumPitchOffset: REPLAY_CAMERA_MAX_PITCH_OFFSET_RADIANS,
+        activationMillis:   REPLAY_CAMERA_PITCH_ACTIVATION_MILLIS,
+        attackMillis:        REPLAY_CAMERA_PITCH_ATTACK_MILLIS,
+    }
+}
 
 /**
  * Apply smoothstep easing to a normalized correction ratio.
@@ -69,18 +115,21 @@ export const replayCameraPitchCorrectionLimit = nominalPitch => (
  * Resolve the ordered pitch envelopes used by visibility candidate search.
  *
  * Grazing views first use the gentle eight-degree envelope. When no candidate
- * in that envelope can restore visibility, the search may expand to the
- * common twenty-degree hard limit. The controller still applies the selected
- * offset through its normal attack, so the wider search cannot create a jump.
+ * in that envelope can restore visibility, the search expands to the normal
+ * twenty-degree limit or to the adaptive near-relief limit. The controller
+ * still applies the selected offset through its attack envelope.
  *
  * @param {number|null} nominalPitch - Nominal pitch in radians.
+ * @param {number|null} [obstructionDistanceMeters=null] - Nearest terrain obstruction distance.
  * @returns {number[]} Ordered unique maximum pitch offsets in radians.
  */
-export const replayCameraPitchCorrectionSearchLimits = nominalPitch => {
+export const replayCameraPitchCorrectionSearchLimits = (nominalPitch, obstructionDistanceMeters = null) => {
     const preferredLimit = replayCameraPitchCorrectionLimit(nominalPitch)
+    const adaptiveLimit = replayCameraPitchCorrectionEnvelope(obstructionDistanceMeters).maximumPitchOffset
+    const maximumLimit = Math.max(REPLAY_CAMERA_MAX_PITCH_OFFSET_RADIANS, adaptiveLimit)
     return preferredLimit < REPLAY_CAMERA_MAX_PITCH_OFFSET_RADIANS
-        ? [preferredLimit, REPLAY_CAMERA_MAX_PITCH_OFFSET_RADIANS]
-        : [REPLAY_CAMERA_MAX_PITCH_OFFSET_RADIANS]
+        ? [preferredLimit, maximumLimit]
+        : [maximumLimit]
 }
 
 /**
@@ -110,6 +159,7 @@ export const weightedReplayCameraRedirectState = (redirectState, weight) => {
  * @param {number} options.logicalNow - Current logical timestamp in milliseconds.
  * @param {boolean} options.nominalVisible - Whether the current nominal marker is visible.
  * @param {object|null} options.candidateRedirectState - Smallest proven-safe redirect candidate.
+ * @param {number|null} [options.obstructionDistanceMeters=null] - Nearest terrain obstruction distance.
  * @param {boolean} [options.isFinalFrame=false] - Force exact nominal completion.
  * @param {string|null} [options.reason='current-marker-hidden'] - Activation reason.
  * @returns {{state: object, weightedRedirectState: object|null, ownsCamera: boolean, completed: boolean}}
@@ -118,11 +168,13 @@ export const resolveReplayCameraPitchCorrectionState = (previousState, {
     logicalNow,
     nominalVisible,
     candidateRedirectState,
+    obstructionDistanceMeters = null,
     isFinalFrame = false,
     reason = 'current-marker-hidden',
 } = {}) => {
     const previous = previousState ?? createReplayCameraPitchCorrectionState()
     const now = finiteNumber(logicalNow) ?? 0
+    const envelope = replayCameraPitchCorrectionEnvelope(obstructionDistanceMeters)
     const wasActive = previous.phase === REPLAY_CAMERA_PITCH_PHASE_ATTACK
                       || previous.phase === REPLAY_CAMERA_PITCH_PHASE_HOLD
                       || previous.phase === REPLAY_CAMERA_PITCH_PHASE_RELEASE
@@ -170,7 +222,7 @@ export const resolveReplayCameraPitchCorrectionState = (previousState, {
 
         const hiddenSince = finiteNumber(next.hiddenSince) ?? now
         next.hiddenSince = hiddenSince
-        if (now - hiddenSince < REPLAY_CAMERA_PITCH_ACTIVATION_MILLIS || !candidateRedirectState) {
+        if (now - hiddenSince < envelope.activationMillis || !candidateRedirectState) {
             return {
                 state: next,
                 weightedRedirectState: null,
@@ -193,7 +245,7 @@ export const resolveReplayCameraPitchCorrectionState = (previousState, {
     if (next.phase === REPLAY_CAMERA_PITCH_PHASE_ATTACK) {
         const phaseStartedAt = finiteNumber(next.phaseStartedAt) ?? now
         const startWeight = clamp(finiteNumber(next.startWeight) ?? 0, 0, 1)
-        const ratio = clamp((now - phaseStartedAt) / REPLAY_CAMERA_PITCH_ATTACK_MILLIS, 0, 1)
+        const ratio = clamp((now - phaseStartedAt) / envelope.attackMillis, 0, 1)
         next.weight = startWeight + ((1 - startWeight) * smoothstep(ratio))
         if (ratio >= 1) {
             next.phase = REPLAY_CAMERA_PITCH_PHASE_HOLD
@@ -281,6 +333,7 @@ export const resetReplayCameraPitchCorrection = mode => {
  * @param {number} options.logicalNow - Current logical timestamp.
  * @param {boolean} options.nominalVisible - Current marker visibility.
  * @param {object|null} options.candidateRedirectState - Proven-safe redirect candidate.
+ * @param {number|null} [options.obstructionDistanceMeters=null] - Nearest terrain obstruction distance.
  * @param {boolean} [options.isFinalFrame=false] - Whether this is the last replay frame.
  * @returns {object} Persisted controller result with the resolved camera view.
  */
@@ -289,6 +342,7 @@ export const resolveReplayCameraPitchCorrection = (mode, {
     logicalNow,
     nominalVisible,
     candidateRedirectState,
+    obstructionDistanceMeters = null,
     isFinalFrame = false,
 } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
@@ -299,6 +353,7 @@ export const resolveReplayCameraPitchCorrection = (mode, {
             logicalNow,
             nominalVisible,
             candidateRedirectState,
+            obstructionDistanceMeters,
             isFinalFrame,
         },
     )

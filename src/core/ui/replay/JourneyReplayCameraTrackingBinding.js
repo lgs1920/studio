@@ -246,7 +246,7 @@ const replayCameraViewForTrackingSample = (mode, {
  *
  * @param {object} mode - Replay session mode.
  * @param {object} options - Visibility inputs.
- * @returns {{nominalVisible: boolean, candidateRedirectState: object|null, geometricVisible: boolean, renderedVisible: boolean|null, renderedTraceVisible: boolean|null}}
+ * @returns {{nominalVisible: boolean, candidateRedirectState: object|null, geometricVisible: boolean, renderedVisible: boolean|null, renderedTraceVisible: boolean|null, obstructionDistanceMeters: number|null}}
  * Visibility observation and smallest proven-safe candidate.
  */
 const replayCameraPitchVisibility = (mode, {
@@ -280,6 +280,25 @@ const replayCameraPitchVisibility = (mode, {
     const nominalVisible = geometricVisible !== false
                            && renderedVisible !== false
                            && renderedTraceVisible !== false
+    const nominalFrame = !nominalVisible && typeof call.cameraViewFrame === 'function'
+        ? call.cameraViewFrame(nominalView)
+        : null
+    const renderedObstructionDistanceMeters = !nominalVisible
+        && typeof call.renderedTargetObstructionDistanceForSample === 'function'
+        ? call.renderedTargetObstructionDistanceForSample(nominalView?.sample, cache)
+        : null
+    const terrainObstructionDistanceMeters = !nominalVisible
+        && typeof call.cameraLineOfSightObstacleDistanceForFrame === 'function'
+        ? call.cameraLineOfSightObstacleDistanceForFrame({
+            ...nominalFrame,
+            sample:       nominalView?.sample,
+            targetHeight: typeof call.markerRenderHeightForSample === 'function'
+                ? call.markerRenderHeightForSample(nominalView?.sample)
+                : null,
+        })
+        : null
+    const obstructionDistanceMeters = renderedObstructionDistanceMeters
+                                    ?? terrainObstructionDistanceMeters
     if (nominalVisible || typeof call.findCameraRedirectState !== 'function') {
         return {
             nominalVisible,
@@ -287,10 +306,14 @@ const replayCameraPitchVisibility = (mode, {
             geometricVisible,
             renderedVisible,
             renderedTraceVisible,
+            obstructionDistanceMeters,
         }
     }
 
-    const pitchSearchLimits = replayCameraPitchCorrectionSearchLimits(nominalView?.pitch)
+    const pitchSearchLimits = replayCameraPitchCorrectionSearchLimits(
+        nominalView?.pitch,
+        obstructionDistanceMeters,
+    )
     /**
      * Find the first proven redirect inside the ordered pitch envelopes.
      *
@@ -326,6 +349,7 @@ const replayCameraPitchVisibility = (mode, {
         geometricVisible,
         renderedVisible,
         renderedTraceVisible,
+        obstructionDistanceMeters,
     }
 }
 
@@ -569,6 +593,7 @@ export const updateCamera = (mode, {
         logicalNow,
         nominalVisible: pitchVisibility.nominalVisible,
         candidateRedirectState: pitchVisibility.candidateRedirectState,
+        obstructionDistanceMeters: pitchVisibility.obstructionDistanceMeters,
         isFinalFrame: isFinalLogicalFrame,
     })
     traceUpdateStep('pitch.visibility.end', {

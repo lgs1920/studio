@@ -71,6 +71,13 @@ export const CAMERA_REDIRECT_REQUIRED_TRACE_OFFSET_METERS = 12
 export const CAMERA_REDIRECT_TERRAIN_LINE_SEGMENTS = 11
 export const CAMERA_REDIRECT_TERRAIN_CLEARANCE_METERS = 3
 export const CAMERA_REDIRECT_RENDERED_DEPTH_CLEARANCE_METERS = 8
+export const REPLAY_CAMERA_NEAR_RELIEF_DISTANCE_METERS = 1000
+export const REPLAY_CAMERA_IMMEDIATE_RELIEF_DISTANCE_METERS = 450
+export const REPLAY_CAMERA_NEAR_RELIEF_MAX_PITCH_OFFSET_RADIANS = CesiumMath.toRadians(36)
+export const REPLAY_CAMERA_IMMEDIATE_RELIEF_ATTACK_MILLIS = 180
+export const REPLAY_CAMERA_NEAR_RELIEF_ATTACK_MILLIS = 350
+export const REPLAY_CAMERA_IMMEDIATE_RELIEF_ACTIVATION_MILLIS = 0
+export const REPLAY_CAMERA_NEAR_RELIEF_ACTIVATION_MILLIS = 50
 export const REPLAY_TOLERANCE_RECENTER_REPLACE_DELAY_MS = 300
 export const REPLAY_TRACKING_DYNAMIC_LOOKAHEAD_FACTOR = 1.35
 export const CAMERA_ANGLE_PREVIEW_AXIS_LENGTH = 1800
@@ -96,6 +103,9 @@ export const CAMERA_REDIRECT_CANDIDATES = Object.freeze([
                                                      {headingOffsetDeg: 24, pitchOffsetDeg: -10},
                                                      {headingOffsetDeg: -24, pitchOffsetDeg: -10},
                                                      {headingOffsetDeg: 0, pitchOffsetDeg: -20},
+                                                     {headingOffsetDeg: 0, pitchOffsetDeg: -24},
+                                                     {headingOffsetDeg: 0, pitchOffsetDeg: -30},
+                                                     {headingOffsetDeg: 0, pitchOffsetDeg: -36},
                                                  ])
 
 export const isUsableCartesian3 = value => Boolean(value)

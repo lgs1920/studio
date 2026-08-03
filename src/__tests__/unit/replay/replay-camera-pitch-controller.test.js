@@ -7,6 +7,7 @@ import {
     REPLAY_CAMERA_PITCH_PHASE_PENDING,
     REPLAY_CAMERA_PITCH_PHASE_RELEASE,
     createReplayCameraPitchCorrectionState,
+    replayCameraPitchCorrectionEnvelope,
     replayCameraPitchCorrectionLimit,
     replayCameraPitchCorrectionSearchLimits,
     resolveReplayCameraPitchCorrection,
@@ -196,5 +197,39 @@ describe('Journey replay temporary pitch controller', () => {
             20 * Math.PI / 180,
         ])
         expect(weightedReplayCameraRedirectState(candidate, 0)).toBeNull()
+    })
+
+    it('widens and accelerates the correction for a nearby relief obstruction', () => {
+        expect(replayCameraPitchCorrectionEnvelope(null)).toEqual({
+            maximumPitchOffset: 20 * Math.PI / 180,
+            activationMillis:   250,
+            attackMillis:        900,
+        })
+        expect(replayCameraPitchCorrectionEnvelope(800)).toEqual({
+            maximumPitchOffset: 36 * Math.PI / 180,
+            activationMillis:   50,
+            attackMillis:        350,
+        })
+        expect(replayCameraPitchCorrectionEnvelope(300)).toEqual({
+            maximumPitchOffset: 36 * Math.PI / 180,
+            activationMillis:   0,
+            attackMillis:        180,
+        })
+
+        let result = resolveReplayCameraPitchCorrectionState(null, {
+            logicalNow: 0,
+            nominalVisible: false,
+            candidateRedirectState: candidate,
+            obstructionDistanceMeters: 300,
+        })
+        expect(result.state.phase).toBe(REPLAY_CAMERA_PITCH_PHASE_ATTACK)
+
+        result = resolveReplayCameraPitchCorrectionState(result.state, {
+            logicalNow: 90,
+            nominalVisible: false,
+            candidateRedirectState: candidate,
+            obstructionDistanceMeters: 300,
+        })
+        expect(result.state.weight).toBeGreaterThan(0)
     })
 })

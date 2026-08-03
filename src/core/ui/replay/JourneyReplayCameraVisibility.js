@@ -286,6 +286,58 @@ export const cameraLineOfSightVisibleForFrame =  (mode, frame) => {
         return true
     }
 
+/**
+ * Measure the nearest terrain obstruction along a camera-to-marker segment.
+ *
+ * @param {object} mode - Replay camera mode.
+ * @param {object|null} frame - Camera frame to inspect.
+ * @returns {number|null} Distance in meters to the nearest obstruction.
+ */
+export const cameraLineOfSightObstacleDistanceForFrame = (mode, frame) => {
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const originCartographic = safeCartographicFromCartesian(frame?.destination)
+    const targetSample = frame?.sample
+    const targetHeight = finiteNumber(frame?.targetHeight)
+        ?? finiteNumber(targetSample?.altitude ?? targetSample?.height)
+        ?? 0
+    const origin = cartographicToLonLat(originCartographic)
+    const targetLongitude = finiteNumber(targetSample?.longitude)
+    const targetLatitude = finiteNumber(targetSample?.latitude)
+    const cameraPosition = frame?.destination
+    if (!origin || targetLongitude === null || targetLatitude === null || !cameraPosition) {
+        return null
+    }
+
+    let nearestDistance = null
+    for (let index = 1; index <= CAMERA_REDIRECT_TERRAIN_LINE_SEGMENTS; index += 1) {
+        const ratio = index / (CAMERA_REDIRECT_TERRAIN_LINE_SEGMENTS + 1)
+        const longitude = lerp(origin.longitude, targetLongitude, ratio)
+        const latitude = lerp(origin.latitude, targetLatitude, ratio)
+        const lineHeight = lerp(origin.altitude, targetHeight, ratio)
+        const terrainHeight = call.terrainHeightForLonLat(longitude, latitude)
+        if (
+            terrainHeight === null
+            || terrainHeight + CAMERA_REDIRECT_TERRAIN_CLEARANCE_METERS < lineHeight
+        ) {
+            continue
+        }
+        const terrainCartesian = safeCartesianFromLonLat({
+            longitude,
+            latitude,
+            altitude: terrainHeight,
+        })
+        if (!terrainCartesian) {
+            continue
+        }
+        const distance = Cartesian3.distance(cameraPosition, terrainCartesian)
+        nearestDistance = nearestDistance === null
+            ? distance
+            : Math.min(nearestDistance, distance)
+    }
+
+    return nearestDistance
+}
+
 export const cameraViewFrame =  (mode, view) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -402,6 +454,65 @@ export const renderedTargetVisible =  (mode, sample, cache = null) => {
         const cacheKey = replayCameraUpdateSampleKey(sample)
         return memoizeReplayCameraUpdateCache(cache, 'renderedTargetVisible', cacheKey, computeVisibility)
     }
+
+/**
+ * Resolve the depth distance to a rendered obstruction hiding a marker.
+ *
+ * @param {object} mode - Replay camera mode.
+ * @param {object} sample - Marker sample to inspect.
+ * @param {object|null} [cache=null] - Per-update visibility cache.
+ * @returns {number|null} Distance from the Cesium camera to the obstruction.
+ */
+export const renderedTargetObstructionDistanceForSample = (mode, sample, cache = null) => {
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+
+    const computeDistance = () => {
+        const scene = call.cesiumScene()
+        const camera = globalThis.lgs?.viewer?.camera ?? scene?.camera
+        const target = call.markerRenderCartesianForSample(sample)
+        const windowPosition = call.windowPositionForSample(sample)
+        if (!scene || !camera || !target || !windowPosition) {
+            return null
+        }
+
+        const rect = call.viewportRectForCesiumSurface()
+        if (!rect.width || !rect.height
+            || windowPosition.x < 0
+            || windowPosition.y < 0
+            || windowPosition.x > rect.width
+            || windowPosition.y > rect.height) {
+            return null
+        }
+
+        const canvasPosition = new Cartesian2(windowPosition.x, windowPosition.y)
+        let pickedPosition = null
+        if (scene.pickPositionSupported !== false && typeof scene.pickPosition === 'function') {
+            try {
+                pickedPosition = scene.pickPosition(canvasPosition)
+            }
+            catch {
+                pickedPosition = null
+            }
+        }
+        if (!pickedPosition) {
+            const pickRay = camera.getPickRay?.(canvasPosition)
+            pickedPosition = pickRay ? scene.globe?.pick?.(pickRay, scene) : null
+        }
+        const cameraPosition = camera.positionWC ?? camera.position
+        if (!pickedPosition || !cameraPosition) {
+            return null
+        }
+
+        const targetDistance = Cartesian3.distance(cameraPosition, target)
+        const pickedDistance = Cartesian3.distance(cameraPosition, pickedPosition)
+        return pickedDistance + CAMERA_REDIRECT_RENDERED_DEPTH_CLEARANCE_METERS >= targetDistance
+            ? pickedDistance
+            : null
+    }
+
+    const cacheKey = replayCameraUpdateSampleKey(sample)
+    return memoizeReplayCameraUpdateCache(cache, 'renderedTargetObstructionDistanceForSample', cacheKey, computeDistance)
+}
 
 export const renderedTraceVisibleForSample =  (mode, sample, cache = null) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
