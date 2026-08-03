@@ -14,7 +14,7 @@ import {faPersonHiking} from '@fortawesome/pro-regular-svg-icons'
 import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
 import {finiteNumber, replayStore} from './JourneyReplayRuntime'
 import {
-    clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForPositionMode, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
+    clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, rollCameraUp, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForPositionMode, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
 } from './JourneyReplayCameraMath'
 import {
     REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET, REPLAY_CAMERA_POSITION_AHEAD,
@@ -520,6 +520,7 @@ export const startDeterministicCameraTransition = (mode, {
                     sample,
                     heading:        view.heading,
                     pitch:          view.pitch ?? pitch,
+                    roll:           view.roll,
                     cameraSettings:  replayCameraSettings,
                     cameraHeight:   view.cameraHeight,
                 })
@@ -684,6 +685,7 @@ export const cameraRecenterFrame = (mode, {
                                 sample,
                                 heading,
                                 pitch,
+                                roll = 0,
                                 cameraSettings,
                                 cameraHeight = null,
                             } = {}) => {
@@ -757,20 +759,23 @@ export const cameraRecenterFrame = (mode, {
             Cartesian3.cross(right, direction, new Cartesian3()),
             new Cartesian3(),
         )
+        const safeRoll = clamp(sanitizeOrientationRadians(roll, 0), -Math.PI / 4, Math.PI / 4)
+        const rolledUp = rollCameraUp({direction, up: correctedUp, roll: safeRoll}) ?? correctedUp
         return {
             sample,
             target,
             targetHeight,
             destination,
             direction,
-            correctedUp,
+            correctedUp: rolledUp,
+            roll: safeRoll,
             currentHeight,
             safeHeading,
             safePitch,
         }
     }
 
-export const cameraViewDelta = (mode, {anchor, heading, pitch} = {}) => {
+export const cameraViewDelta = (mode, {anchor, heading, pitch, roll = 0} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
@@ -799,14 +804,15 @@ export const cameraViewDelta = (mode, {anchor, heading, pitch} = {}) => {
             altitudeMeters:   Math.abs(currentAltitude - lastAltitude),
             headingRadians:   Math.abs(replayAngularDelta(last.heading, heading) ?? Number.POSITIVE_INFINITY),
             pitchRadians:     Math.abs(replayAngularDelta(last.pitch, pitch) ?? Number.POSITIVE_INFINITY),
+            rollRadians:      Math.abs((finiteNumber(last.roll) ?? 0) - (finiteNumber(roll) ?? 0)),
         }
     }
 
-export const cameraViewIsStable = (mode, {anchor, heading, pitch} = {}) => {
+export const cameraViewIsStable = (mode, {anchor, heading, pitch, roll = 0} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const delta = call.cameraViewDelta({anchor, heading, pitch})
+        const delta = call.cameraViewDelta({anchor, heading, pitch, roll})
         if (!delta) {
             return false
         }
@@ -815,9 +821,10 @@ export const cameraViewIsStable = (mode, {anchor, heading, pitch} = {}) => {
             && delta.altitudeMeters <= CAMERA_VIEW_POSITION_EPSILON_METERS
             && delta.headingRadians <= CAMERA_VIEW_ANGLE_EPSILON_RADIANS
             && delta.pitchRadians <= CAMERA_VIEW_ANGLE_EPSILON_RADIANS
+            && delta.rollRadians <= CAMERA_VIEW_ANGLE_EPSILON_RADIANS
     }
 
-export const rememberCameraView = (mode, {anchor, heading, pitch} = {}) => {
+export const rememberCameraView = (mode, {anchor, heading, pitch, roll = 0} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
@@ -829,6 +836,7 @@ export const rememberCameraView = (mode, {anchor, heading, pitch} = {}) => {
             },
             heading: finiteNumber(heading) ?? 0,
             pitch:   finiteNumber(pitch) ?? SAFE_TOP_DOWN_PITCH,
+            roll:    finiteNumber(roll) ?? 0,
         }
     }
 

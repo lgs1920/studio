@@ -345,6 +345,7 @@ export const cameraViewFrame =  (mode, view) => {
                                                              sample:         view?.sample,
                                                              heading:        view?.heading,
                                                              pitch:          view?.pitch,
+                                                             roll:           view?.roll,
                                                              cameraSettings: view?.cameraSettings,
                                                              cameraHeight:   view?.cameraHeight,
                                                          })

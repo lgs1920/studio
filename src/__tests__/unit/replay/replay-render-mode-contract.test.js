@@ -26,7 +26,7 @@ describe('Replay render mode contract', () => {
     it('keeps visual inputs identical while isolating Draft and HQ scheduling', () => {
         const common = {
             logicalFrame,
-            cameraPose: {heading: 0.5, pitch: -0.75, cameraHeight: 1000},
+            cameraPose: {heading: 0.5, pitch: -0.75, roll: 0.35, cameraHeight: 1000},
             trackPath: [[[2, 48, 100], [2.1, 48.1, 120]]],
             initialCameraState: {
                 destination: {longitude: 2, latitude: 48, height: 5000},
@@ -40,6 +40,7 @@ describe('Replay render mode contract', () => {
 
         expect(draft.logicalFrame).toEqual(hq.logicalFrame)
         expect(draft.cameraPose).toEqual(hq.cameraPose)
+        expect(draft.cameraPose.roll).toBeCloseTo(0.35, 8)
         expect(draft.trackPath).toEqual(hq.trackPath)
         expect(draft.renderSpec).toEqual(hq.renderSpec)
         expect(draft.initialCameraState).toEqual(hq.initialCameraState)

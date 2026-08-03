@@ -608,6 +608,68 @@ describe('Journey replay camera paths', () => {
         expect(state.deterministicCameraTransition.path.safetyProfile.zoneScale).toBeGreaterThan(1)
     })
 
+    it('banks the shared camera view more strongly for faster turns', () => {
+        const {mode} = makeMode()
+        const baseSample = {
+            progress: 0.5,
+            distanceFromStart: 5000,
+            remainingDistance:  5000,
+            journeyDurationMillis: 10000,
+            longitude: 2.01,
+            latitude:  48,
+            altitude:  120,
+            source: {
+                startPoint: {
+                    longitude: 2,
+                    latitude:  48,
+                    journeyElapsedMillis: 1000,
+                    timeMillis: 1000,
+                },
+                endPoint: {
+                    longitude: 2.01,
+                    latitude:  48.01,
+                    journeyElapsedMillis: 3000,
+                    timeMillis: 3000,
+                },
+            },
+        }
+
+        const cameraSettings = {
+            positionMode: 'system',
+            heading:      0,
+            pitch:        -45,
+            altitude:     300,
+        }
+        const slowView = cameraViewForSample(mode, {
+            sample: baseSample,
+            progress: 0.5,
+            source: 'drawer',
+            cameraSettings,
+            markerSettings: {},
+        })
+        const fastView = cameraViewForSample(mode, {
+            sample: {
+                ...baseSample,
+                source: {
+                    ...baseSample.source,
+                    endPoint: {
+                        ...baseSample.source.endPoint,
+                        journeyElapsedMillis: 1500,
+                        timeMillis:           1500,
+                    },
+                },
+            },
+            progress: 0.5,
+            source: 'drawer',
+            cameraSettings,
+            markerSettings: {},
+        })
+
+        expect(Math.abs(fastView.roll)).toBeGreaterThan(Math.abs(slowView.roll))
+        expect(Math.abs(slowView.roll)).toBeLessThanOrEqual(Math.PI / 4)
+        expect(Math.abs(fastView.roll)).toBeLessThanOrEqual(Math.PI / 4)
+    })
+
     it('keeps the nominal pitch when resolving a deterministic correction frame', () => {
         vi.stubGlobal('lgs', {
             theJourney: makeJourney(),
@@ -756,6 +818,34 @@ describe('Journey replay camera paths', () => {
         expect(Cartesian3.dot(frame.direction, frame.correctedUp)).toBeCloseTo(0, 10)
         expect(Cartesian3.magnitude(frame.correctedUp)).toBeCloseTo(1, 10)
         expect(Cartesian3.dot(frame.direction, localUp)).toBeCloseTo(Math.sin(pitch), 10)
+    })
+
+    it('applies the resolved roll to the camera up vector while preserving orthogonality', () => {
+        const target = Cartesian3.fromDegrees(2, 48, 120)
+        vi.stubGlobal('lgs', {
+            viewer: {
+                camera: {
+                    positionCartographic: {height: 1000},
+                },
+            },
+        })
+        const {mode, call} = makeMode()
+        call.markerRenderHeightForSample = vi.fn(() => 120)
+        call.markerRenderCartesianForSample = vi.fn(() => target)
+        call.cameraAltitudeForSample = vi.fn(() => 1000)
+        const options = {
+            sample: {longitude: 2, latitude: 48, altitude: 120},
+            heading: 0.4,
+            pitch: -Math.PI / 4,
+            cameraHeight: 1000,
+            cameraSettings: {altitudeMode: 'constant', altitude: 1000},
+        }
+        const levelFrame = resolveCameraRecenterFrame(mode, {...options, roll: 0})
+        const rolledFrame = resolveCameraRecenterFrame(mode, {...options, roll: Math.PI / 4})
+
+        expect(rolledFrame.roll).toBeCloseTo(Math.PI / 4, 8)
+        expect(Cartesian3.dot(rolledFrame.direction, rolledFrame.correctedUp)).toBeCloseTo(0, 10)
+        expect(Cartesian3.dot(levelFrame.correctedUp, rolledFrame.correctedUp)).toBeLessThan(1)
     })
 
     it.each([REPLAY_CAMERA_POSITION_BEHIND, REPLAY_CAMERA_POSITION_AHEAD])(

@@ -83,6 +83,39 @@ export const projectReplayTargetInCameraFrame = ({
 
 export const sanitizeOrientationRadians = (value, fallback) => finiteNumber(value) ?? fallback
 
+/**
+ * Rotate a camera up vector around its viewing direction by a bounded roll.
+ *
+ * @param {Object} options - Camera basis vectors and roll.
+ * @returns {Cartesian3|null} Rolled, normalized up vector.
+ */
+export const rollCameraUp = ({direction, up, roll = 0} = {}) => {
+    if (!direction || !up) {
+        return null
+    }
+
+    if (Cartesian3.magnitudeSquared(direction) <= Number.EPSILON
+        || Cartesian3.magnitudeSquared(up) <= Number.EPSILON) {
+        return null
+    }
+
+    const safeDirection = Cartesian3.normalize(direction, new Cartesian3())
+    const safeUp = Cartesian3.normalize(up, new Cartesian3())
+    const rightCandidate = Cartesian3.cross(safeDirection, safeUp, new Cartesian3())
+    if (Cartesian3.magnitudeSquared(rightCandidate) <= Number.EPSILON) {
+        return safeUp
+    }
+
+    const right = Cartesian3.normalize(rightCandidate, rightCandidate)
+    const safeRoll = clamp(finiteNumber(roll) ?? 0, -Math.PI / 4, Math.PI / 4)
+    const rolled = Cartesian3.add(
+        Cartesian3.multiplyByScalar(safeUp, Math.cos(safeRoll), new Cartesian3()),
+        Cartesian3.multiplyByScalar(right, Math.sin(safeRoll), new Cartesian3()),
+        new Cartesian3(),
+    )
+    return Cartesian3.normalize(rolled, rolled)
+}
+
 export const replayHeadingFromLocalAxisAngle = axisAngle => {
     const angle = finiteNumber(axisAngle)
     if (angle === null) {

@@ -85,6 +85,7 @@ export const replayExportBaseView = (mode, {sample, progress = 0, cameraSettings
         if (usesLogicalReplayClipTrajectory(state, call)) {
             return resolveJourneyReplayLogicalCameraPose({
                 sample,
+                sampler: state.sampler,
                 progress,
                 source: 'drawer',
                 cameraSettings: resolvedCameraSettings,

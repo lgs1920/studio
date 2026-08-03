@@ -26,6 +26,7 @@ export const recenterCameraToSample = (mode, {
                                    sample,
                                    heading,
                                    pitch,
+                                   roll = 0,
                                    cameraSettings,
                                    cameraHeight = null,
                                    instant = false,
@@ -44,6 +45,7 @@ export const recenterCameraToSample = (mode, {
             sample,
             heading,
             pitch,
+            roll,
             cameraSettings,
             cameraHeight,
         })
@@ -51,12 +53,12 @@ export const recenterCameraToSample = (mode, {
             return
         }
 
-        const {destination, direction, correctedUp, safeHeading, safePitch} = frame
+        const {destination, direction, correctedUp, safeHeading, safePitch, roll: safeRoll} = frame
         const finishFlight = () => {
             state.cameraFlightActive = false
         }
 
-        if (!force && !deterministic && call.cameraViewIsStable({anchor: sample, heading: safeHeading, pitch: safePitch})) {
+        if (!force && !deterministic && call.cameraViewIsStable({anchor: sample, heading: safeHeading, pitch: safePitch, roll: safeRoll})) {
             finishFlight()
             return Promise.resolve(true)
         }
@@ -85,7 +87,7 @@ export const recenterCameraToSample = (mode, {
                                         },
                                     })
             call.refreshReplayDiagnosticsOverlay?.()
-            call.rememberCameraView({anchor: sample, heading: safeHeading, pitch: safePitch})
+            call.rememberCameraView({anchor: sample, heading: safeHeading, pitch: safePitch, roll: safeRoll})
             finishFlight()
             return Promise.resolve()
         }
@@ -105,6 +107,7 @@ export const startCameraTransition = (mode, {
                                         sample,
                                         heading,
                                         pitch,
+                                        roll = 0,
                                         cameraSettings,
                                         cameraHeight = null,
                                         endFrame = null,
@@ -123,6 +126,7 @@ export const startCameraTransition = (mode, {
             sample,
             heading,
             pitch,
+            roll,
             cameraSettings,
             cameraHeight,
         })
@@ -160,6 +164,7 @@ export const startCameraTransition = (mode, {
                         anchor: sample,
                         heading: endHeading,
                         pitch: endPitch,
+                        roll: frame.roll,
                     })
                 }
                 done(result)

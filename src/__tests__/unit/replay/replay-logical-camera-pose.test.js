@@ -1,5 +1,8 @@
 import {describe, expect, it} from 'vitest'
-import {resolveJourneyReplayLogicalCameraPose} from '@Core/ui/replay/JourneyReplayLogicalCameraPose'
+import {
+    resolveJourneyReplayLogicalCameraPose,
+    resolveJourneyReplayLogicalCameraRoll,
+} from '@Core/ui/replay/JourneyReplayLogicalCameraPose'
 import {normalizeJourneyReplayCamera} from '@Core/ui/replay/JourneyReplayProgressionStyle'
 
 describe('Journey replay logical camera pose', () => {
@@ -54,6 +57,84 @@ describe('Journey replay logical camera pose', () => {
         })
 
         expect(pose.heading).toBeCloseTo(0.8, 6)
+    })
+
+    it('banks in the direction of a turn and eases back to zero on a straight path', () => {
+        const leftTurn = {
+            progress: 0.5,
+            distanceFromStart: 150,
+            remainingDistance: 150,
+            journeyDurationMillis: 3000,
+            longitude: 2.001,
+            latitude:  48,
+            source: {
+                startPoint: {longitude: 2, latitude: 48, journeyElapsedMillis: 0},
+                endPoint:   {longitude: 2.001, latitude: 48.001, journeyElapsedMillis: 1000},
+            },
+        }
+        const rightTurn = {
+            ...leftTurn,
+            longitude: 2,
+            latitude: 48.001,
+            source: {
+                startPoint: {longitude: 2, latitude: 48, journeyElapsedMillis: 0},
+                endPoint:   {longitude: 2.001, latitude: 48.001, journeyElapsedMillis: 1000},
+            },
+        }
+
+        expect(resolveJourneyReplayLogicalCameraRoll({sample: leftTurn})).toBeLessThan(0)
+        expect(resolveJourneyReplayLogicalCameraRoll({sample: rightTurn})).toBeGreaterThan(0)
+        expect(resolveJourneyReplayLogicalCameraRoll({
+            sample: {
+                ...leftTurn,
+                source: {
+                    startPoint: {longitude: 2, latitude: 48, journeyElapsedMillis: 0},
+                    endPoint:   {longitude: 2.002, latitude: 48, journeyElapsedMillis: 1000},
+                },
+                longitude: 2.001,
+            },
+        })).toBe(0)
+    })
+
+    it('increases banking with speed and never exceeds 45 degrees', () => {
+        const makeSample = endTime => ({
+            progress: 0.5,
+            distanceFromStart: 150,
+            remainingDistance: 150,
+            journeyDurationMillis: 3000,
+            longitude: 2.001,
+            latitude:  48,
+            source: {
+                startPoint: {longitude: 2, latitude: 48, journeyElapsedMillis: 0},
+                endPoint:   {longitude: 2.001, latitude: 48.001, journeyElapsedMillis: endTime},
+            },
+        })
+
+        const slowRoll = resolveJourneyReplayLogicalCameraRoll({sample: makeSample(2000)})
+        const fastRoll = resolveJourneyReplayLogicalCameraRoll({sample: makeSample(500)})
+        const clampedRoll = resolveJourneyReplayLogicalCameraRoll({sample: makeSample(100)})
+
+        expect(Math.abs(fastRoll)).toBeGreaterThan(Math.abs(slowRoll))
+        expect(Math.abs(clampedRoll)).toBeLessThanOrEqual(Math.PI / 4)
+    })
+
+    it('does not retain roll for a stationary sample', () => {
+        const roll = resolveJourneyReplayLogicalCameraRoll({
+            sample: {
+                progress: 0.5,
+                distanceFromStart: 150,
+                remainingDistance: 150,
+                journeyDurationMillis: 3000,
+                longitude: 2.001,
+                latitude:  48,
+                source: {
+                    startPoint: {longitude: 2, latitude: 48, journeyElapsedMillis: 1000},
+                    endPoint:   {longitude: 2.001, latitude: 48.001, journeyElapsedMillis: 1000},
+                },
+            },
+        })
+
+        expect(roll).toBe(0)
     })
 
     it('defaults the camera capabilities on and lets canRoll disable banking', () => {

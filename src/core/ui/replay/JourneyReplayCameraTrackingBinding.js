@@ -80,6 +80,7 @@ const standardCameraFrame = frame => frame ? {
     destination: frame.destination,
     direction:   frame.direction,
     up:          frame.correctedUp ?? frame.up,
+    roll:        frame.roll ?? 0,
 } : null
 
 /**
@@ -103,6 +104,7 @@ const applyLiveReplayCameraView = (mode, view, cameraSettings) => {
         anchor: view.sample,
         heading: view.heading,
         pitch: view.pitch,
+        roll: view.roll,
         cameraSettings: view.cameraSettings ?? cameraSettings,
     })
     if (!applied) {
@@ -139,6 +141,7 @@ export const applyResolvedReplayCameraView = (mode, {
         sample:         view.sample,
         heading:        view.heading,
         pitch:          view.pitch,
+        roll:           view.roll,
         cameraSettings: view.cameraSettings ?? cameraSettings,
         cameraHeight:   view.cameraHeight,
     })
@@ -151,6 +154,7 @@ export const applyResolvedReplayCameraView = (mode, {
         anchor:  view.sample,
         heading: recenterFrame.safeHeading ?? view.heading,
         pitch:   recenterFrame.safePitch ?? view.pitch,
+        roll:    recenterFrame.roll ?? view.roll ?? 0,
     })
     state.lastCameraHeading = recenterFrame.safeHeading ?? view.heading
     state.lastCameraPitch = recenterFrame.safePitch ?? view.pitch
@@ -195,6 +199,7 @@ const replayCameraViewForTrackingSample = (mode, {
     if (logicalCamera) {
         const pose = resolveJourneyReplayLogicalCameraPose({
             sample,
+            sampler: state.sampler,
             progress,
             source,
             cameraSettings,
@@ -791,6 +796,7 @@ export const updateCamera = (mode, {
                 sample:         targetView.sample,
                 heading:        targetView.heading,
                 pitch:          targetView.pitch,
+                roll:           targetView.roll,
                 cameraSettings,
                 cameraHeight:   targetView.cameraHeight,
             })

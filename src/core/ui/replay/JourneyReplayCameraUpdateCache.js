@@ -61,6 +61,8 @@ const sampleKey = sample => {
         finiteNumberKey(sample.latitude),
         finiteNumberKey(sample.altitude ?? sample.height),
         finiteNumberKey(sample.height ?? sample.altitude),
+        finiteNumberKey(sample.journeyElapsedMillis ?? sample.timeMillis),
+        finiteNumberKey(sample.journeyDurationMillis),
     ].join(':')
 }
 
@@ -73,6 +75,7 @@ const viewKey = view => {
         sampleKey(view.sample),
         finiteNumberKey(view.heading),
         finiteNumberKey(view.pitch),
+        finiteNumberKey(view.roll),
         finiteNumberKey(view.cameraHeight),
     ].join(':')
 }

@@ -23,6 +23,7 @@ import {
     getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker,
 } from './JourneyReplayProgressionStyle'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
+import {resolveJourneyReplayLogicalCameraRoll} from './JourneyReplayLogicalCameraPose'
 
 import {
     REPLAY_HEADING_TRANSITION_DURATION_SECONDS,

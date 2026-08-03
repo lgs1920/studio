@@ -393,6 +393,7 @@ export const resolveConstrainedReplayCameraPath = (mode, {
             sample: view.sample,
             heading: view.heading,
             pitch: view.pitch,
+            roll: view.roll,
             cameraSettings,
             cameraHeight: view.cameraHeight,
         })
@@ -453,6 +454,7 @@ export const resolveConstrainedReplayCameraPath = (mode, {
                     sample: redirectedView.sample,
                     heading: redirectedView.heading,
                     pitch: redirectedView.pitch,
+                    roll: redirectedView.roll,
                     cameraSettings,
                     cameraHeight: redirectedView.cameraHeight,
                 }) ?? frame
@@ -547,6 +549,7 @@ export const resolveConstrainedReplayCameraPath = (mode, {
             sample: futureView.sample,
             heading: futureView.heading,
             pitch: futureView.pitch,
+            roll: futureView.roll,
             cameraSettings,
             cameraHeight: futureView.cameraHeight,
         })

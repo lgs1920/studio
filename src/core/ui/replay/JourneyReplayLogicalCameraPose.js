@@ -6,6 +6,15 @@ const REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET = 'ground-offset'
 const REPLAY_CAMERA_POSITION_AHEAD = 'ahead'
 const REPLAY_CAMERA_POSITION_SYSTEM = 'system'
 const SAFE_TOP_DOWN_PITCH = -(Math.PI / 2 - 0.0001)
+const MAX_REPLAY_CAMERA_ROLL = Math.PI / 4
+const MIN_REPLAY_ROLL_SPEED_METERS_PER_SECOND = 0.5
+const REPLAY_ROLL_PROBE_SECONDS = 0.75
+const REPLAY_ROLL_MIN_PROBE_METERS = 20
+const REPLAY_ROLL_MAX_PROBE_METERS = 180
+const REPLAY_ROLL_TURN_START_RADIANS = 3 * Math.PI / 180
+const REPLAY_ROLL_TURN_FULL_RADIANS = 90 * Math.PI / 180
+const REPLAY_ROLL_MIN_CURVATURE = 0.00005
+const REPLAY_ROLL_FULL_CURVATURE = 0.003
 
 const finiteNumber = value => {
     if (value === null || value === undefined || value === '') {
@@ -17,6 +26,11 @@ const finiteNumber = value => {
 }
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
+const smoothstep = value => {
+    const t = clamp(finiteNumber(value) ?? 0, 0, 1)
+    return t * t * (3 - (2 * t))
+}
+
 const degreesToRadians = value => {
     const number = finiteNumber(value)
     return number === null ? null : number * Math.PI / 180
@@ -33,6 +47,100 @@ const normalizeLongitudeDelta = value => {
     return delta
 }
 
+const angularDelta = (from, to) => {
+    const start = finiteNumber(from)
+    const end = finiteNumber(to)
+    if (start === null || end === null) {
+        return null
+    }
+
+    const fullTurn = Math.PI * 2
+    const delta = ((end - start + Math.PI) % fullTurn + fullTurn) % fullTurn - Math.PI
+    return delta === -Math.PI ? Math.PI : delta
+}
+
+const distanceBetweenSamples = (start, end) => {
+    const startLongitude = degreesToRadians(start?.longitude)
+    const startLatitude = degreesToRadians(start?.latitude)
+    const endLongitude = degreesToRadians(end?.longitude)
+    const endLatitude = degreesToRadians(end?.latitude)
+    if ([startLongitude, startLatitude, endLongitude, endLatitude].some(value => value === null)) {
+        return null
+    }
+
+    const averageLatitude = (startLatitude + endLatitude) / 2
+    const deltaLongitude = normalizeLongitudeDelta(endLongitude - startLongitude)
+    const deltaLatitude = endLatitude - startLatitude
+    return Math.hypot(
+        deltaLongitude * Math.cos(averageLatitude),
+        deltaLatitude,
+    ) * 6371008.8
+}
+
+const headingBetweenSamples = (start, end) => {
+    const distance = distanceBetweenSamples(start, end)
+    if (distance === null || distance <= Number.EPSILON) {
+        return null
+    }
+
+    const startLongitude = degreesToRadians(start?.longitude)
+    const startLatitude = degreesToRadians(start?.latitude)
+    const endLongitude = degreesToRadians(end?.longitude)
+    const endLatitude = degreesToRadians(end?.latitude)
+    const deltaLongitude = normalizeLongitudeDelta(endLongitude - startLongitude)
+    const deltaLatitude = endLatitude - startLatitude
+    return Math.atan2(
+        deltaLongitude * Math.cos((startLatitude + endLatitude) / 2),
+        deltaLatitude,
+    )
+}
+
+const elapsedSecondsBetweenSamples = (start, end) => {
+    const startTime = finiteNumber(start?.journeyElapsedMillis ?? start?.timeMillis)
+    const endTime = finiteNumber(end?.journeyElapsedMillis ?? end?.timeMillis)
+    if (startTime === null || endTime === null) {
+        return null
+    }
+
+    return Math.abs(endTime - startTime) / 1000
+}
+
+const rollSamplesFor = ({sample, sampler}) => {
+    const currentDistance = finiteNumber(sample?.distanceFromStart)
+    if (sampler?.atDistance && currentDistance !== null) {
+        const totalDistance = finiteNumber(sampler.totalDistance)
+        const durationMillis = finiteNumber(sampler.durationMillis ?? sample?.journeyDurationMillis)
+        const averageSpeed = totalDistance !== null && durationMillis !== null && durationMillis > 0
+                            ? totalDistance / (durationMillis / 1000)
+                            : null
+        const probeDistance = clamp(
+            Math.max(REPLAY_ROLL_MIN_PROBE_METERS, (averageSpeed ?? 0) * REPLAY_ROLL_PROBE_SECONDS),
+            REPLAY_ROLL_MIN_PROBE_METERS,
+            REPLAY_ROLL_MAX_PROBE_METERS,
+        )
+        return {
+            current: sampler.atDistance(currentDistance),
+            previous: sampler.atDistance(currentDistance - probeDistance),
+            next: sampler.atDistance(currentDistance + probeDistance),
+            averageSpeed,
+        }
+    }
+
+    const totalDistance = finiteNumber(sample?.totalDistance)
+                         ?? ((finiteNumber(sample?.distanceFromStart) ?? 0)
+                             + (finiteNumber(sample?.remainingDistance) ?? 0))
+    const durationMillis = finiteNumber(sample?.journeyDurationMillis)
+    const averageSpeed = totalDistance > 0 && durationMillis > 0
+                         ? totalDistance / (durationMillis / 1000)
+                         : null
+    return {
+        current: sample,
+        previous: sample?.source?.startPoint ?? sample?.previous ?? null,
+        next: sample?.source?.endPoint ?? sample?.next ?? null,
+        averageSpeed,
+    }
+}
+
 const markerPositionForSample = (sample, markerSettings) => {
     const override = markerSettings?.position
     if (!override) {
@@ -47,27 +155,75 @@ const markerPositionForSample = (sample, markerSettings) => {
     }
 }
 
-const headingBetweenSamples = (start, end) => {
-    const startLongitude = degreesToRadians(start?.longitude)
-    const startLatitude = degreesToRadians(start?.latitude)
-    const endLongitude = degreesToRadians(end?.longitude)
-    const endLatitude = degreesToRadians(end?.latitude)
-    if ([startLongitude, startLatitude, endLongitude, endLatitude].some(value => value === null)) {
-        return 0
-    }
-
-    const deltaLongitude = normalizeLongitudeDelta(endLongitude - startLongitude)
-    const deltaLatitude = endLatitude - startLatitude
-    const east = deltaLongitude * Math.cos((startLatitude + endLatitude) / 2)
-    return Math.atan2(east, deltaLatitude)
-}
-
 const pathHeadingForSample = sample => {
     const next = sample?.source?.endPoint
                ?? sample?.endPoint
                ?? sample?.next
                ?? sample
-    return headingBetweenSamples(sample, next)
+    return headingBetweenSamples(sample, next) ?? 0
+}
+
+/**
+ * Resolve the deterministic banking response for a replay camera sample.
+ *
+ * The local turn is measured over a metric sampler window so Draft and HQ see
+ * the same curvature. Speed is compared with the journey average, stationary
+ * samples stay level, and the result is eased and clamped to 45 degrees.
+ *
+ * @param {Object} options - Roll inputs.
+ * @param {Object|null} [options.sample=null] - Current logical replay sample.
+ * @param {Object|null} [options.sampler=null] - Shared metric replay sampler.
+ * @returns {number} Roll in radians.
+ */
+export const resolveJourneyReplayLogicalCameraRoll = ({sample = null, sampler = null} = {}) => {
+    if (!sample) {
+        return 0
+    }
+
+    const {current, previous, next, averageSpeed} = rollSamplesFor({sample, sampler})
+    if (!current || !previous || !next) {
+        return 0
+    }
+
+    const incomingHeading = headingBetweenSamples(previous, current)
+    const outgoingHeading = headingBetweenSamples(current, next)
+    const turnDelta = angularDelta(incomingHeading, outgoingHeading)
+    if (turnDelta === null || Math.abs(turnDelta) <= REPLAY_ROLL_TURN_START_RADIANS) {
+        return 0
+    }
+
+    const windowDistance = distanceBetweenSamples(previous, next)
+    const elapsedSeconds = elapsedSecondsBetweenSamples(previous, next)
+    if (windowDistance === null || elapsedSeconds === null || elapsedSeconds <= 0) {
+        return 0
+    }
+
+    const localSpeed = windowDistance / elapsedSeconds
+    if (!Number.isFinite(localSpeed) || localSpeed < MIN_REPLAY_ROLL_SPEED_METERS_PER_SECOND) {
+        return 0
+    }
+
+    const turnMagnitude = Math.abs(turnDelta)
+    const curvature = turnMagnitude / Math.max(windowDistance, 1)
+    const turnFactor = smoothstep(
+        (turnMagnitude - REPLAY_ROLL_TURN_START_RADIANS)
+        / (REPLAY_ROLL_TURN_FULL_RADIANS - REPLAY_ROLL_TURN_START_RADIANS),
+    )
+    const curvatureFactor = smoothstep(
+        (curvature - REPLAY_ROLL_MIN_CURVATURE)
+        / (REPLAY_ROLL_FULL_CURVATURE - REPLAY_ROLL_MIN_CURVATURE),
+    )
+    const referenceSpeed = Math.max(
+        MIN_REPLAY_ROLL_SPEED_METERS_PER_SECOND,
+        averageSpeed ?? localSpeed,
+    )
+    const speedFactor = clamp(localSpeed / (referenceSpeed * 3), 0, 1)
+
+    return clamp(
+        Math.sign(turnDelta) * MAX_REPLAY_CAMERA_ROLL * turnFactor * curvatureFactor * speedFactor,
+        -MAX_REPLAY_CAMERA_ROLL,
+        MAX_REPLAY_CAMERA_ROLL,
+    )
 }
 
 /**
@@ -81,6 +237,7 @@ const pathHeadingForSample = sample => {
  */
 export const resolveJourneyReplayLogicalCameraPose = ({
                                                            sample = null,
+                                                           sampler = null,
                                                            progress = sample?.progress ?? 0,
                                                            cameraSettings = null,
                                                            markerSettings = null,
