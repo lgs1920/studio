@@ -486,3 +486,8 @@
 
 - Specify the proposed Three.js camera Heading, Pitch, and Roll orientation sphere widget.
 - Document its interaction contract, Cesium camera ownership, capture behavior, and future implementation boundaries.
+
+## 2026-08-03 — [`fix(replay): prevent trace redraw after playback`](https://github.com/lgs1920/studio/commit/73025a69)
+
+- Prevent post-playback refreshes from recreating the replay trace while recording synchronization remains enabled.
+- Cover inactive replay cleanup and active replay trace rendering with a regression test.
