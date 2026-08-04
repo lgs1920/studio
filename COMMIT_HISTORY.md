@@ -526,3 +526,8 @@
 - Keep the mandatory Credits and Logo widgets mounted during HQ replay export.
 - Exclude Credits tooltips from the widget canvas capture so hidden tooltip text does not appear in the generated video.
 - Add regression coverage for HQ widget mounting and capture exclusions.
+
+## 2026-08-04 — [`fix(video): simplify share dialog labels`](https://github.com/lgs1920/studio/commit/7c39cb9a)
+
+- Simplify the share button and tooltip labels in the video download and share dialog.
+- Keep the HQ and draft variants explicit in the share menu.
