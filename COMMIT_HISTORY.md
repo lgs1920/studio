@@ -501,3 +501,9 @@
 
 - Prevent post-playback refreshes from recreating the replay trace while recording synchronization remains enabled.
 - Cover inactive replay cleanup and active replay trace rendering with a regression test.
+
+## 2026-08-04 — [`fix(video): support standalone video and replay modes`](https://github.com/lgs1920/studio/commit/8e335855)
+
+- Keep video-only recording independent from Replay and omit the draft suffix outside synchronized mode.
+- Keep Replay-only playback independent from video and display its trace without video synchronization.
+- Preserve synchronized video and Replay recording with its existing Draft and HQ export flow.
