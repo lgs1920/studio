@@ -51,18 +51,22 @@ const isRecorded = (commitHash, recordedHashes) => [...recordedHashes].some(reco
 ))
 
 /**
- * Reads reachable commits in chronological order.
+ * Reads commits in chronological order from the latest recorded day onward.
  *
  * @param {string} repositoryRoot Absolute repository root path.
  * @param {string|null} sinceHash Latest recorded commit identifier.
- * @returns {Array<{hash: string, date: string, subject: string, body: string}>} Reachable commits.
+ * @returns {Array<{hash: string, date: string, subject: string, body: string}>} Candidate commits.
  */
 const getCommits = (repositoryRoot, sinceHash) => {
+    const sinceDate = sinceHash
+        ? `${runGit(['show', '-s', '--format=%cs', sinceHash], repositoryRoot)}T00:00:00`
+        : null
     const output = runGit([
         'log',
         '--reverse',
         '--format=%H%x00%cs%x00%s%x00%b%x00',
-        sinceHash ? `${sinceHash}..HEAD` : 'HEAD',
+        ...(sinceDate ? [`--since=${sinceDate}`] : []),
+        'HEAD',
     ], repositoryRoot)
 
     const fields = output.split('\0')

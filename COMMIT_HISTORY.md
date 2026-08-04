@@ -547,3 +547,63 @@
 ## 2026-08-04 — [`docs: automate commit history rule`](https://github.com/lgs1920/studio/commit/ed630d5732eddd60edf330530b6428169c155222)
 
 - Recorded automatically from Git history.
+
+## 2026-08-04 — [`docs: include site and backend issue history in changelogs`](https://github.com/lgs1920/studio/commit/faf20d7ade6838426999da0bb26c9252f3b9dae6)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`docs: record project rules changelog rule commit`](https://github.com/lgs1920/studio/commit/155ad281774ece3576ea1c985224111b486420a9)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/6feac9c83aa9738ea19ff05a03bf467f478da9c6)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-08-04 — [`docs: record standalone video and replay commit`](https://github.com/lgs1920/studio/commit/937a3deee651c94eb4653ce021d58642a3bd4d82)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`docs: record beta.4 changelog commit`](https://github.com/lgs1920/studio/commit/48b252eedc6d75b3119a00cc686a29323a52c74b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`Merge branch 'main' into 1.0.0-beta.4`](https://github.com/lgs1920/studio/commit/d1b7f42d3c3883dd40fdea40ebb233009e1b807d)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`Merge pull request #453 from lgs1920/1.0.0-beta.4`](https://github.com/lgs1920/studio/commit/c78d4aa59703e89c876107fbdeb35c762c75b9e1)
+
+- 1.0.0 beta.4
+
+## 2026-08-04 — [`docs: record studio version commit`](https://github.com/lgs1920/studio/commit/61298cc6c8f5bf27b0c9d2c28c48963fb3970a34)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`docs: record HQ replay widget fix`](https://github.com/lgs1920/studio/commit/55cc010eb431ccd7081a58bba2a5064f352324ea)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`fix(replay): tune camera motion sensitivity`](https://github.com/lgs1920/studio/commit/e762e0621ba65cf33ad5f5203cf15c6dcce8e1eb)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`refactor(replay): group camera setup controls`](https://github.com/lgs1920/studio/commit/c8b6cece86bb920ddf085b8f7c51ccc3c7680f1e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`docs: record Copernicus Sentinel-2 specification commit`](https://github.com/lgs1920/studio/commit/03ec9597e2527914e0d5a372f3b2592a204c8296)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`fix(replay): align sensitivity slider hints`](https://github.com/lgs1920/studio/commit/e6621ecb66bdbc376c7be6bd32e22c4e6a570817)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`docs: record share dialog commit`](https://github.com/lgs1920/studio/commit/a1231fa52da4400f979b2c3f8b9253fa12d49600)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`fix: restore HQ replay controls positioning`](https://github.com/lgs1920/studio/commit/f7a55fa85759f374ad97a080fd18574621484b44)
+
+- Recorded automatically from Git history.
