@@ -515,3 +515,9 @@
 ## 2026-08-04 — [`chore: update studio version to 1.0.0`](https://github.com/lgs1920/studio/commit/7ca41a768d6ea45a79a8f0530db7bb85b39586e6)
 
 - Update the Studio version from 1.0.0-beta.4 to 1.0.0.
+
+## 2026-08-04 — [`fix(video): preserve credits and logo in HQ replay`](https://github.com/lgs1920/studio/commit/4098e6cc7344918d2037ded0f84d5b9b4543db29)
+
+- Keep the mandatory Credits and Logo widgets mounted during HQ replay export.
+- Exclude Credits tooltips from the widget canvas capture so hidden tooltip text does not appear in the generated video.
+- Add regression coverage for HQ widget mounting and capture exclusions.
