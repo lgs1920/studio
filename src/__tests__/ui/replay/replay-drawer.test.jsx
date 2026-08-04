@@ -19,7 +19,7 @@ import { useState }                                        from 'react'
 import { REPLAY_DRAWER }                               from '@Core/constants'
 import {
     defaultJourneyReplaySettings, REPLAY_CAMERA_PRESET_ULTRA_SMOOTH, REPLAY_MARKER_MODE_HYSTERESIS,
-    REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
+    REPLAY_EFFECT_GLOW, REPLAY_EFFECT_NONE, REPLAY_EFFECT_NEON, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { createJourneyReplayClipInstance }                          from '@Core/ui/replay/JourneyReplayClips'
 import { JourneyReplayDrawer }                                from '@Components/JourneyReplay/JourneyReplayDrawer'
@@ -332,6 +332,46 @@ describe('JourneyReplayDrawer', () => {
         await waitFor(() => {
             expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBe(-20)
             expect(globalThis.lgs.stores.replay.camera.pitch).toBe(-20)
+        })
+    })
+
+    it('exposes the shared replay effect controls in the Style tab', async () => {
+        const view = render(<JourneyReplayDrawer/>)
+
+        fireEvent.click(view.getByText('Style'))
+
+        const effectSelect = view.getByLabelText('Effect')
+        const effectPreview = view.getByTestId('replay-effect-preview')
+
+        expect(effectPreview).toBeTruthy()
+        expect(effectPreview.dataset.previewFillWidth).toBe('2')
+        expect(effectPreview.dataset.previewBorderWidth).toBe('0.75')
+        expect(effectPreview.style.getPropertyValue('--replay-effect-preview-route-core-width')).toBe('0.24rem')
+        expect(effectPreview.style.getPropertyValue('--replay-effect-preview-marker-size')).toBe('0.94rem')
+        expect([...effectSelect.options].map(option => option.value)).toEqual([
+            REPLAY_EFFECT_NONE,
+            REPLAY_EFFECT_GLOW,
+            REPLAY_EFFECT_NEON,
+        ])
+        expect(effectSelect.value).toBe(REPLAY_EFFECT_NONE)
+
+        fireEvent.change(effectSelect, {target: {value: REPLAY_EFFECT_NEON}})
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.replay.progression.effect).toEqual({
+                mode: REPLAY_EFFECT_NEON,
+            })
+            expect(globalThis.lgs.stores.replay.progression.effect).toEqual({
+                mode: REPLAY_EFFECT_NEON,
+            })
+        })
+
+        fireEvent.change(effectSelect, {target: {value: REPLAY_EFFECT_NONE}})
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.replay.progression.effect).toEqual({
+                mode: REPLAY_EFFECT_NONE,
+            })
         })
     })
 

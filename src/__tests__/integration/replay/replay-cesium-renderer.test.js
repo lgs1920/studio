@@ -17,7 +17,8 @@
 import { JourneyReplayCesiumRenderer } from '@Core/ui/replay/JourneyReplayCesiumRenderer'
 import { JourneyReplayPathSampler }    from '@Core/ui/replay/JourneyReplayPathSampler'
 import { defaultJourneyReplaySettings, REPLAY_TRACE_MODE_FULL } from '@Core/ui/replay/JourneyReplayProgressionStyle'
-import { Cartesian3, Color }                                   from 'cesium'
+import { Cartesian3, Color, PolylineGlowMaterialProperty } from 'cesium'
+import { REPLAY_EFFECT_GLOW, REPLAY_EFFECT_NEON }               from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@Utils/cesium/TrackUtils', () => ({
@@ -249,6 +250,96 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(propertyValue(cursor?.point?.color)?.toCssColorString()).toBe(Color.fromCssColorString('#ff2525').toCssColorString())
         expect(propertyValue(cursor?.point?.outlineColor)?.toCssColorString()).toBe(Color.fromCssColorString('#ffffff').toCssColorString())
         expect(propertyValue(cursor?.point?.outlineWidth)).toBe(1.5)
+    })
+
+    it('uses fill and border opacity for the shared Glow effect', () => {
+        const dataSources = makeDataSources()
+        const replay = defaultJourneyReplaySettings()
+        replay.progression = {
+            ...replay.progression,
+            effect: {mode: REPLAY_EFFECT_GLOW},
+            fill:   {...replay.progression.fill, color: '#112233', opacity: 0.35, width: 6},
+            border: {...replay.progression.border, color: '#abcdef', opacity: 0.6, width: 1.5},
+        }
+        installReplayGlobals({dataSources, replay})
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const renderer = new JourneyReplayCesiumRenderer()
+
+        renderer.show({sampler})
+        renderer.update({sample: sampler.atProgress(0.5), sampler, forceGeometry: true})
+
+        const completedFill = replayEntity(dataSources, '#completed#smoothed#fill')
+        const completedBorder = replayEntity(dataSources, '#completed#smoothed#border')
+        const cursorEffect = replayEntity(dataSources, '#cursor-effect-outer')
+        const expectedBorderEffectColor = Color.fromCssColorString('#abcdef').withAlpha(0.6).toCssColorString()
+        const expectedFillEffectColor = Color.fromCssColorString('#112233').withAlpha(0.35).toCssColorString()
+
+        expect(completedFill?.polyline?.material).toBeInstanceOf(PolylineGlowMaterialProperty)
+        expect(propertyValue(completedFill?.polyline?.width)).toBe(8)
+        expect(propertyValue(completedBorder?.polyline?.width)).toBe(12)
+        expect(materialCss(completedFill?.polyline?.material)).toBe(expectedFillEffectColor)
+        expect(materialCss(replayEntity(dataSources, '#completed#smoothed#border')?.polyline?.material))
+            .toBe(expectedBorderEffectColor)
+        expect(propertyValue(cursorEffect?.point?.color)?.toCssColorString()).toBe(
+            Color.fromCssColorString('#abcdef').withAlpha(0.168).toCssColorString(),
+        )
+        expect(propertyValue(replayEntity(dataSources, '#cursor')?.point?.color)?.alpha).toBeCloseTo(0.85)
+    })
+
+    it('falls back to the trace color and composes Neon marker layers without a native point effect', () => {
+        const dataSources = makeDataSources()
+        const replay = defaultJourneyReplaySettings()
+        replay.progression = {
+            ...replay.progression,
+            effect: {mode: REPLAY_EFFECT_NEON},
+            fill:   {...replay.progression.fill, color: '#123456', opacity: 0.15, width: 6},
+            border: {...replay.progression.border, color: '#abcdef', opacity: 1, width: 0},
+        }
+        installReplayGlobals({dataSources, replay})
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const renderer = new JourneyReplayCesiumRenderer()
+
+        renderer.show({sampler})
+        renderer.update({sample: sampler.atProgress(0.5), sampler, forceGeometry: true})
+
+        const completedFill = replayEntity(dataSources, '#completed#smoothed#fill')
+        const cursor = replayEntity(dataSources, '#cursor')
+        const cursorEffectOuter = replayEntity(dataSources, '#cursor-effect-outer')
+        const cursorEffectCore = replayEntity(dataSources, '#cursor-effect-core')
+        const expectedEffectColor = Color.fromCssColorString('#123456').withAlpha(0.15).toCssColorString()
+
+        expect(completedFill?.polyline?.material).toBeInstanceOf(PolylineGlowMaterialProperty)
+        expect(propertyValue(completedFill?.polyline?.width)).toBe(10)
+        expect(materialCss(completedFill?.polyline?.material)).toBe(expectedEffectColor)
+        expect(propertyValue(cursor?.point?.outlineWidth)).toBe(0)
+        expect(propertyValue(cursorEffectOuter?.point?.color)?.toCssColorString()).toBe(
+            Color.fromCssColorString('#123456').withAlpha(0.0525).toCssColorString(),
+        )
+        expect(propertyValue(cursorEffectCore?.point?.color)?.toCssColorString()).toBe(expectedEffectColor)
+        expect(cursorEffectOuter?.show).toBe(true)
+        expect(cursorEffectCore?.show).toBe(true)
+
+        replay.progression.effect = {
+            mode: 'none',
+        }
+        renderer.update({sample: sampler.atProgress(0.5), sampler, forceGeometry: true})
+
+        expect(replayEntity(dataSources, '#completed#smoothed#fill')?.polyline?.material)
+            .not.toBeInstanceOf(PolylineGlowMaterialProperty)
+        expect(cursorEffectOuter?.show).toBe(false)
+        expect(cursorEffectCore?.show).toBe(false)
     })
 
     it('renders a static completed trace for stop clip frames', () => {
