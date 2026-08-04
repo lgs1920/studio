@@ -539,3 +539,7 @@
 ## 2026-08-04 — [`docs: automate commit history rule`](https://github.com/lgs1920/studio/commit/8ba13eef9efdd98c358fa06e437b32407ed1e28d)
 
 - Recorded automatically from Git history.
+
+## 2026-08-04 — [`Merge pull request #456 from lgs1920/agent/commit-history-automation`](https://github.com/lgs1920/studio/commit/6c8a7cafaec693f1cfc6a7c5c1c79336eb0efc23)
+
+- feat: automate commit history updates
