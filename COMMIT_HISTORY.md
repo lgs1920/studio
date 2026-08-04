@@ -531,3 +531,7 @@
 
 - Simplify the share button and tooltip labels in the video download and share dialog.
 - Keep the HQ and draft variants explicit in the share menu.
+
+## 2026-08-04 — [`test(video): update share dialog expectations`](https://github.com/lgs1920/studio/commit/a42a71e5)
+
+- Update the video download and share dialog test expectations for the simplified share labels.
