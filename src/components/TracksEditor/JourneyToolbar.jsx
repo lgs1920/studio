@@ -14,8 +14,6 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-/* eslint-disable react-hooks/refs */
-
 import { ToggleStateIcon }                                           from '@Components/ToggleStateIcon'
 import {
     FOCUS_ICON, ROTATION_ICON, UPDATE_JOURNEY_SILENTLY,

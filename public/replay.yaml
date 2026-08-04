@@ -35,6 +35,9 @@ replay:
     altitudeMode: constant
     altitude: 1200
     headingOffset: 0
+    canDrift: true
+    canFixHiddenMarker: true
+    canRoll: true
     pitch: -65
     heading: 0
     hysteresis:

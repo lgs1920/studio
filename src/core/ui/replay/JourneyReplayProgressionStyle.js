@@ -98,21 +98,28 @@ export const DEFAULT_REPLAY_CAMERA = {
     positionMode:  REPLAY_CAMERA_POSITION_SYSTEM,
     altitudeMode:  REPLAY_CAMERA_ALTITUDE_CONSTANT,
     // Single persisted altitude value.
-    // In fixed mode it is an absolute altitude; in ground-offset mode it is the offset above terrain.
+    // In fixed mode it is an absolute altitude; in ground-offset mode it is
+    // the offset above the rendered replay marker.
     altitude:      1200,
     headingOffset: 0,
+    debug:         false,
+    canDrift:      true,
+    canFixHiddenMarker: true,
+    canRoll:       true,
     previewMode:    REPLAY_CAMERA_PREVIEW_MODE_TERRAIN,
     pitch:         -65,
     heading:       0,
     hysteresis:    {
-        marginRatio:   0.4,
+        // Keep the beta.2 tolerance envelope: a wide inner zone prevents
+        // small route changes from starting a new camera correction.
+        marginRatio:   0.12,
         zone:        {
             top:    0,
             left:   0,
             width:  1,
             height: 1,
         },
-        easing:        0.08,
+        easing:        0.18,
     },
 }
 
@@ -321,7 +328,8 @@ export const normalizeJourneyReplayMarker = (marker = {}) => ({
  *
  * `altitudeMode` switches how the single persisted altitude is interpreted:
  * - `constant`: absolute camera altitude.
- * - `ground-offset`: altitude above local terrain.
+ * - `ground-offset`: altitude above the rendered replay marker/terrain at the
+ *   marker position, never above the terrain below the displaced camera.
  *
  * `hysteresis` drives the Dynamic mode:
  * - `marginRatio`: inner safe zone width/height margin on each side.
@@ -329,6 +337,8 @@ export const normalizeJourneyReplayMarker = (marker = {}) => ({
  * - `easing`: smoothness of the recenter flight.
  *
  * `headingOffset` is used by the Behind/Ahead camera modes to bias the nominal trace-facing heading.
+ * `canDrift`, `canFixHiddenMarker`, and `canRoll` gate the corresponding
+ * replay camera behaviours while keeping them enabled by default.
  *
  */
 export const normalizeJourneyReplayCamera = (camera = {}) => ({
@@ -355,6 +365,10 @@ export const normalizeJourneyReplayCamera = (camera = {}) => ({
         REPLAY_CAMERA_HEADING_OFFSET_MIN,
         REPLAY_CAMERA_HEADING_OFFSET_MAX,
     ),
+    debug:         camera?.debug === true,
+    canDrift:      camera?.canDrift !== false,
+    canFixHiddenMarker: camera?.canFixHiddenMarker !== false,
+    canRoll:       camera?.canRoll !== false,
     previewMode:   REPLAY_CAMERA_PREVIEW_MODE_TERRAIN,
     hysteresis:   (() => {
         const zone = normalizeJourneyReplayToleranceZone(camera?.hysteresis?.zone, DEFAULT_REPLAY_CAMERA.hysteresis.zone)

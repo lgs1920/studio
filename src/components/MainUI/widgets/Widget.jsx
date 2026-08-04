@@ -531,6 +531,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     }, [config.widgetsBoard, isTargetingBoard])
 
     const interactionLocked = previewOnly || ((video.preRecording || video.recording || video.snapshot || video.finalizing) && config.type === LGS_VISUAL_WIDGET)
+    const cropPassThrough = Boolean(config.isCropper && interactionLocked)
     const showGhostOnly = Boolean(config?.showGhostDuringRecording) && video.recording && config.type === LGS_VISUAL_WIDGET
     const canInteract = !interactionLocked && !effectiveLocked
     const canDrag = canInteract && (config?.draggable ?? true)
@@ -1490,7 +1491,14 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     }
 
     return (
-        <div className={classNames('lgs-widget-container', containerClassName)} data-widget={widgetId} style={{zIndex: activeZIndex}}>
+        <div
+            className={classNames('lgs-widget-container', containerClassName)}
+            data-widget={widgetId}
+            style={{
+                zIndex:        activeZIndex,
+                pointerEvents: cropPassThrough ? 'none' : 'auto',
+            }}
+        >
             <div
                 className={classNames(LGS_WIDGET, {
                     [className]:    !!className && !effectiveCollapsed,

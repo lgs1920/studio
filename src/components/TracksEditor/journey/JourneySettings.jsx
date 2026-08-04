@@ -803,7 +803,6 @@ export const JourneySettings = () => {
                                         <WaButton id="auto-rotate-in-settings"
                                                   size="s"
                                                   onClick={maybeRotate}
-                                                  id="auto-rotate-in-settings"
                                                   variant="brand"
                                                   appearance="plain">
                                             <WaIcon

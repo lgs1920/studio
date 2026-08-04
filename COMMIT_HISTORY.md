@@ -1,5 +1,58 @@
 # Commit History
 
+## 2026-08-03 — [`docs: add Three.js camera orientation preview`](https://github.com/lgs1920/studio/commit/422a46c3994f4bcadce94a1385991f4e2d5551d9)
+
+- Add the 3D Three.js camera HPR orientation sphere prototype, poster, and MP4 preview.
+- Document how to view the embedded video and serve the deterministic interactive HTML preview.
+- Keep the pinned browser Three.js modules beside the prototype assets for offline preview.
+
+## 2026-08-03 — [`fix(replay): remove hidden trace geometry`](https://github.com/lgs1920/studio/commit/5fbb2abbb6982daf5e2a13d9cc5bac1b4c376654)
+
+- Remove the replay data source and all replay entities when trace visibility is disabled.
+- Recreate the source only after an explicit visibility request, keeping live replay and export cleanup consistent.
+- Update renderer coverage to assert total source removal.
+
+## 2026-08-03 — [`fix(replay): centralize trace visibility`](https://github.com/lgs1920/studio/commit/cc446bd685ddc42de3fe861e41bca4228bbeba94)
+
+- Keep replay trace visibility in one renderer state shared by live playback and video replay frames.
+- Prevent an update without an explicit visibility instruction from re-enabling a hidden trace.
+- Add coverage for hide persistence and explicit reactivation.
+
+## 2026-08-03 — [`fix(replay): remove trace data source on exit`](https://github.com/lgs1920/studio/commit/94f5f2dfc8f085a8489917a1cce9a752d0af6506)
+
+- Remove the replay `CustomDataSource` from Cesium when playback ends or is stopped, cancelled, aborted, or restored for a dialog.
+- Prevent an asynchronous source add from resurrecting a cleared replay trace.
+- Add renderer coverage for complete data-source removal.
+
+## 2026-08-03 — [`fix(replay): accelerate near-relief pitch correction`](https://github.com/lgs1920/studio/commit/ec6f8260dfec2d5965034a4a7cf225279bf25ff9)
+
+- Measure rendered and terrain obstructions between the camera and the marker.
+- Expand the proven-safe pitch envelope and accelerate the response for relief closer than one kilometer.
+- Add regression coverage for immediate and near-relief correction timing.
+
+## 2026-08-03 — [`fix(replay): stabilize camera tracking and pitch correction`](https://github.com/lgs1920/studio/commit/2fef3ddd521040b9423d8624e69c4bbb887b75d9)
+
+- Keep replay pitch correction transient without persisting automatic camera frames as user input.
+- Preserve Navigation recentering while visibility correction owns the camera.
+- Align Draft and HQ camera resolution and remove replay camera console diagnostics.
+- Update replay camera tests and technical documentation.
+
+## 2026-08-01 — [`fix(replay): stabilize camera tracking and depth visibility`](https://github.com/lgs1920/studio/commit/eda0a39c90d64962f03d181055ae8017db52810a)
+
+- Adapt replay tracking zones and camera transitions to short timeline budgets.
+- Keep ground-offset camera heights anchored to the rendered marker and correct terrain/depth occlusion.
+- Add camera regression coverage and update the replay camera specifications.
+
+## 2026-08-01 — [`refactor(replay): centralize Draft and HQ video timeline`](https://github.com/lgs1920/studio/commit/1647403a9f49240b5627e9857c9f5a86f23dd8de)
+
+- Share the canonical start, replay, and stop timeline between Draft playback and HQ export.
+- Publish absolute frame timing and clip phase metadata to replay rendering consumers.
+- Add unit coverage for timeline boundaries and Draft/HQ phase parity.
+
+## 2026-08-01 — [`fix: align Vite config with native loader`](https://github.com/lgs1920/studio/commit/f8eed3f75dff4d563f6885596509a078540b79d5)
+
+- Rename the Vite configuration to `.mts` so its ESM syntax is compatible with the native config loader.
+- Replace CommonJS `__dirname` usage with `import.meta.dirname` and update related documentation references.
 ## 2026-08-03 — [`docs: include site and backend issue history in changelogs`](https://github.com/lgs1920/studio/commit/5a2e8191)
 
 - Include all `site` and `backend` issues closed since the latest previous Studio release when preparing a changelog.
@@ -15,6 +68,166 @@
 - Require project documentation and issue content to be written in English.
 - Define `Backlog` and the latest available milestone as defaults when issue values are not specified.
 - Require every `PROJECT_RULES.md` change to use a dedicated commit, pull request, and merge into `main`.
+## 2026-07-29 — [`chore: synchronize path aliases`](https://github.com/lgs1920/studio/commit/43756c42a7402b6fdc2bf86d9f7af131672c5315)
+
+- Synchronize TypeScript, Vite, and Vitest path aliases.
+- Add aliases for assets, widgets, settings, tests, events, core UI, and database modules.
+
+## 2026-07-29 — [`fix(video): prevent replay focus flash on exit`](https://github.com/lgs1920/studio/commit/e8486c589fac0404919e631232503625b6a74d51)
+
+- Pre-focus the final replay scene before opening the video dialog after completion or early exits.
+- Reuse the same focus and cleanup path for cancel, abort, and native dialog close flows.
+- Add regression coverage for deferred scene restoration and focus ordering.
+
+## 2026-07-29 — [`fix(replay): correct Draft replay timeline progress`](https://github.com/lgs1920/studio/commit/09f8515cc74077ecaf7ce6bf0528a19510bbf408)
+
+- Calculate Draft progress from the complete replay timeline, including enabled start and stop clips.
+- Prefer recorder elapsed time and the controller playback duration over sampler-only frame metadata.
+- Add regression coverage for missing frame metadata, pre-plan progress, preparation reset, and final completion.
+
+## 2026-07-29 — [`fix(replay): correct Draft replay progress percentage`](https://github.com/lgs1920/studio/commit/b0a24598a67ab327c56dd5b23bec45e78370b619)
+
+- Resolve Draft replay progress from rendered frames or elapsed timeline time, with clamped 0–100 percent output.
+- Use the complete Draft video timeline, keep updates monotonic, and preserve the final 100 percent state on stop.
+- Add unit, UI, and integration coverage for frame progress, elapsed-time fallback, and Draft recording completion.
+
+## 2026-07-28 — [`fix(replay): stop predictive pitch accumulation`](https://github.com/lgs1920/studio/commit/8d243946)
+
+- Keep Draft lookahead available for heading and position corrections without applying predictive pitch when the current view is already visible.
+- Make HQ use the current visibility state, reset deterministic follower velocity, and restore the exact nominal pitch.
+- Add camera regression coverage and document the Draft/HQ predictive pitch contract.
+
+## 2026-07-28 — [`fix(replay): depth-test the replay marker against relief`](https://github.com/lgs1920/studio/commit/fc6e7b4d)
+
+- Keep the replay marker depth-tested so terrain relief and 3D tiles can occlude it.
+- Add renderer regression coverage and document the relief-masking rule.
+
+## 2026-07-28 — [`fix(replay): restore nominal pitch after temporary camera corrections`](https://github.com/lgs1920/studio/commit/6f64303f)
+
+- Restore the logical nominal pitch after temporary navigation or Dynamic camera corrections.
+- Document the distinct Navigation Z1 and Dynamic Z1/Z2 pitch rules.
+- Add regression coverage for pitch restoration without bulk camera-path compilation.
+
+## 2026-07-28 — [`fix(replay): align render contract consumers points 5-7`](https://github.com/lgs1920/studio/commit/02f21f5d)
+
+- Make Draft and HQ consume the same logical replay render contract.
+- Route HQ widget composition through the shared replay visibility resolver.
+- Add regression coverage and document the Draft/HQ contract ownership rules.
+
+## 2026-07-28 — [`fix: align test setup and profile metrics`](https://github.com/lgs1920/studio/commit/0339f1d4624969122f7ec165b48cc5d92399f653)
+
+- Restrict Vitest discovery to actual test files and support Markdown imports and adopted style sheets in jsdom.
+- Align POI editor, track visibility, profile metrics, and elevation profile test coverage with the current implementation.
+
+## 2026-07-28 — [`fix: replay video debug overlays`](https://github.com/lgs1920/studio/commit/3c51b4035e3b8709f211796e19b999722126877f)
+
+- Add a Debug camera switch to the Advanced camera setup for video-linked replay.
+- Keep replay camera diagnostics visible on screen and in the composed video when enabled.
+
+## 2026-07-28 — [`test(replay): cover repeated camera snapshot starts`](https://github.com/lgs1920/studio/commit/d55848268357f5d64bc5d76bf212dbdc39409809)
+
+- Add integration coverage for repeated replay camera snapshot starts.
+
+## 2026-07-28 — [`fix(replay): keep draft camera updates on live timing`](https://github.com/lgs1920/studio/commit/28600a614d05d01d57cc8980af78a289da24f28e)
+
+- Keep Draft replay camera updates on live timing instead of forcing a logical camera trajectory.
+
+## 2026-07-28 — [`fix(replay): keep stable logical camera poses deterministic`](https://github.com/lgs1920/studio/commit/d5e3c30360b508d7bb7b9f750f950fc36cb1179a)
+
+- Preserve deterministic logical camera pose application while keeping normal replay playback on its live camera path.
+
+## 2026-07-28 — [`fix(replay): finalize scene restoration after abort`](https://github.com/lgs1920/studio/commit/9292096b296cad353916a4ee255dbef25949bca0)
+
+- Route aborted playback through the shared scene-restoration finalizer.
+- Keep camera, UI, visibility, and replay state cleanup consistent after listener failures.
+- Add regression coverage for the public restoration wrapper and premature abort path.
+
+## 2026-07-28 — [`fix(replay): ignore stale Cesium focus after restart`](https://github.com/lgs1920/studio/commit/355d952efeb0596330294f50fd9902873229b431)
+
+- Reapply the active replay camera pose when a cancelled Cesium focus operation settles late.
+- Add regression coverage for replay restart and stale focus completion.
+
+## 2026-07-28 — [`docs: clarify project issue and rules workflow`](https://github.com/lgs1920/studio/commit/7f91689356c7e7f1d28ac9341c40de226983e468)
+
+- Clarify the English-only rule for documentation and issue content.
+- Define validation and default backlog/milestone behavior for issue creation.
+- Require project-rules changes to remain isolated in a dedicated change set.
+
+## 2026-07-28 — [`docs: add GitHub Actions deployment migration study`](https://github.com/lgs1920/studio/commit/c7b1c7b4e638aaefe9965209a0468ad77216af66)
+
+- Analyze staged migration strategies for Studio deployment through GitHub Actions.
+- Define security, release, rollback, validation, and environment requirements.
+- Keep deployment concerns separate from the Draft/HQ replay render-mode contract.
+
+## 2026-07-28 — [`test(ui): align video download dialog assertions`](https://github.com/lgs1920/studio/commit/f948ac3a93fd983d1f9c90ad50a676d66ca7dd3b)
+
+- Wait for the HQ download action to become available before asserting the dialog state.
+- Align the draft download assertion with the current button label.
+
+## 2026-07-28 — [`fix(ui): preserve cropper pointer pass-through`](https://github.com/lgs1920/studio/commit/29c01aa6f3db62cfc896ab3664ef4cd97c379952)
+
+- Keep the cropper shell and crop overlay transparent to pointer events.
+- Block input around the crop window while leaving the crop window available to Cesium.
+- Cover the pass-through behavior and capture-lock interaction with UI tests.
+
+## 2026-07-28 — [`test(replay): cover logical render contracts`](https://github.com/lgs1920/studio/commit/b84cfb2e13a35d848e3802b00d6b60907ff4c4e7)
+
+- Add unit coverage for logical camera poses, frames, clips, and track paths.
+- Verify that Draft and HQ share visual inputs while using distinct scheduling policies.
+
+## 2026-07-28 — [`fix(replay): complete camera state and render mode fixes (#410 #427)`](https://github.com/lgs1920/studio/commit/99f724fa3b67a361c98ba3517feeb5d08c86d806)
+
+- Complete replay camera state restoration and shared Draft/HQ render-mode contracts.
+- Add replay integration and unit coverage for camera paths, scene state, export, and playback.
+- Document the replay render-mode architecture and camera tracking-zone behavior.
+
+## 2026-07-27 — [`fix(replay): remove replay and path logs`](https://github.com/lgs1920/studio/commit/263d6510b0beab739f89a538513ca3aaa051fc0f)
+
+- Remove noisy replay and camera-path logging from playback and video synchronization flows.
+- Preserve the replay camera and scene restoration lifecycle while keeping diagnostics available where needed.
+
+## 2026-07-27 — [`fix(replay): align replay sync coverage`](https://github.com/lgs1920/studio/commit/526aa16901f6e37c9068713b63ae2efc7f099079)
+
+- Align replay synchronization state, camera capture, and terrain lookup transitions across Draft recording and playback.
+- Extend integration coverage for the synchronized recording flow.
+
+## 2026-07-27 — [`Tune replay camera trajectory control`](https://github.com/lgs1920/studio/commit/57b73a6893c3df624881bc2c7a9c459fcdc70ff7)
+
+- Tune replay trajectory pacing and turn responsiveness for constrained camera paths.
+- Add duration-aware pacing support and cover the updated camera math.
+
+## 2026-07-27 — [`Add replay camera path unit coverage`](https://github.com/lgs1920/studio/commit/25441f9bccdd8daab505f96d0bea4a35a1413def)
+
+- Add unit coverage for the constrained replay camera path.
+
+## 2026-07-27 — [`docs(replay): document camera update tracing and cache`](https://github.com/lgs1920/studio/commit/5928ab4b08a8e96d730983a26d773ef5f4d1f0ba)
+
+- Document the replay camera update cache and the finer-grained update-step tracing.
+- Clarify that the hot replay camera path now reuses an ephemeral per-update cache for repeated visibility and collision checks.
+
+## 2026-07-27 — [`fix: stabilize replay Draft and HQ capture`](https://github.com/lgs1920/studio/commit/4b9d4d906297145624747b43cfb8811dec980a38)
+
+- Remove synchronous bulk camera path compilation from Draft and HQ runtime capture.
+- Start linked Draft replay outside the recorder start listener and expose preparation timing traces.
+- Stabilize deterministic HQ frame state, camera ownership, widget readiness, and overlay composition.
+- Add replay capture regression coverage and document the non-blocking runtime policy.
+
+## 2026-07-27 — [`docs(path): note terrain collision correction`](https://github.com/lgs1920/studio/commit/7f9b40eee2b572435defdfee530da466a6cc0a49)
+
+- Add a terrain collision avoidance note to the drone camera path architecture spec.
+- Clarify that terrain correction must be serialized in the path for replay, Draft, and HQ reuse.
+
+## 2026-07-27 — [`docs(replay): add glow neon spec`](https://github.com/lgs1920/studio/commit/5804643ca00fd482f268fd6b2973c6b849dab551)
+
+- Add the replay trace and marker glow/neon specification under `tech-doc/todo/`.
+- Link the new spec from the `tech-doc` documentation indexes.
+- Keep the replay architecture document and unrelated runtime changes out of this documentation commit.
+
+## 2026-07-26 — [`fix: smooth replay camera pitch and capture cadence`](https://github.com/lgs1920/studio/commit/e7e49f78f616da9733d7f8951029f24394158bde)
+
+- Keep the nominal replay pitch when corrections rebuild camera frames.
+- Bypass the small progress-key throttle while replay video capture is active so the camera follows every frame.
+- Add regression coverage for the capture-active update cadence.
 
 ## 2026-07-26 — [`fix: preserve replay camera pitch through corrections`](https://github.com/lgs1920/studio/commit/e06a6451)
 
@@ -123,21 +336,21 @@
 
 - Document the required fields, assignee, milestone, and backlog confirmation workflow for issue creation.
 
-## 2026-07-25 — [`docs: note app icon refresh in beta changelog`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
+## 2026-07-25 — [`docs: note app icon refresh in beta changelog`](https://github.com/lgs1920/studio/commit/cdcbc97ae6a077ae3e5925b97d8e5ca95338fdf5)
 
 - Add a short release-note line stating that the app icons and favicon have been updated.
 
-## 2026-07-24 — [`docs: add direct logging rule`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
+## 2026-07-24 — [`docs: add direct logging rule`](https://github.com/lgs1920/studio/commit/673ed1d60e16b8e64f0cd3b1e2fb99fe1c79dbe8)
 
 - Add a direct logging rule to `PROJECT_RULES.md` so explicit logging requests use native console methods without wrappers.
 
-## 2026-07-24 — [`fix: keep theme swatches reactive and Safari-safe`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
+## 2026-07-24 — [`fix: keep theme swatches reactive and Safari-safe`](https://github.com/lgs1920/studio/commit/96ef8cf3cf7005cf72b10ab6332fbc3c3d299069)
 
 - Add a Safari-compatible fallback for `matchMedia('(prefers-color-scheme: dark)')` listeners.
 - Replace frozen swatch memoization in color editors with reactive swatch reads.
 - Cover the listener fallback and reactive swatch behavior with tests.
 
-## 2026-07-24 — [`fix: stabilize poi snapdom rendering in firefox`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
+## 2026-07-24 — [`fix: stabilize poi snapdom rendering in firefox`](https://github.com/lgs1920/studio/commit/4b756f79e0ab3160408c03a7ebe035018816f924)
 
 - Add a regression test for the POI map card CSS.
 - Contain the POI snapshot background in a positioned stacking context.
@@ -151,7 +364,7 @@
 
 - Fix the `test:stores` script path and keep the store proxy contract test aligned with the current layout.
 
-## 2026-07-24 — [`docs: add brand and season swatch reactivity spec`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
+## 2026-07-24 — [`docs: add brand and season swatch reactivity spec`](https://github.com/lgs1920/studio/commit/a47fd1e260fdedbb32e4482cb8ebf0caef205e68)
 
 - Add the brand and season swatch reactivity technical specification.
 - Describe the `CHANGE_BRAND_COLOR` and `CHANGE_SEASON_COLOR` event contract, provenance tracking, and redraw batching rules.
@@ -195,12 +408,12 @@
 
 - Specify the Arrow widget UI, Solid icon variants, circle markers, independent colors, scaling, rotation, and handle interactions.
 
-## 2026-07-23 — [`docs: specify replay video widget`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
+## 2026-07-23 — [`docs: specify replay video widget`](https://github.com/lgs1920/studio/commit/ad4b4dd44e9eccbead02f5e62e6a55da43857a55)
 
 - Document the Arrow widget and the replay video widget architecture.
 - Define video source, replay timing, audio, trimming, end-of-video hiding, and HQ export behavior.
 
-## 2026-07-22 — [`fix: preserve replay widget opacity and UI layering`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
+## 2026-07-22 — [`fix: preserve replay widget opacity and UI layering`](https://github.com/lgs1920/studio/commit/c256f26f352e75f5cd7492fc340e2c5d2e33c1c6)
 
 - Preserve configured widget opacity during replay previews.
 - Keep widget toolbars and menus above video widgets.
@@ -209,22 +422,22 @@
 
 - Add grid snapping and widget-to-widget snapping, including center alignment during video composition.
 
-## 2026-07-22 — [`fix: improve widget snapping during video composition`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
+## 2026-07-22 — [`fix: improve widget snapping during video composition`](https://github.com/lgs1920/studio/commit/4df993376deeb3aace2a15411d7da4fc227f89d1)
 
 - Snap widgets to one another on the active video board, including center alignment when widgets do not touch.
 - Refresh snapping targets as widgets are added or removed and improve snap guideline visibility.
 
-## 2026-07-22 — [`fix: start recording after video preparation`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
+## 2026-07-22 — [`fix: start recording after video preparation`](https://github.com/lgs1920/studio/commit/39a5b57eba9d6f4333d73cb5464ceb02c9965924)
 
 - Start recording automatically when the video widgets are ready after launching Record from the tunnel.
 - Remove the duplicate Record button from the Video Recorder widget and cover the flow with integration tests.
 
-## 2026-07-22 — [`fix: remove replay trace console logs`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
+## 2026-07-22 — [`fix: remove replay trace console logs`](https://github.com/lgs1920/studio/commit/c2a6f3e857458f68d17cd2f8bcc949fd33340ddf)
 
 - Stop emitting `[LGS replay trace]` messages to the browser console while preserving internal replay diagnostics.
 - Add a regression test for camera timing diagnostics.
 
-## 2026-07-22 — [`fix: correct widget text rendering`](https://github.com/lgs1920/studio/commit/COMMIT_ID)
+## 2026-07-22 — [`fix: correct widget text rendering`](https://github.com/lgs1920/studio/commit/e9b95d5238c86b13dfe50861be3d856d77ce7b53)
 
 - Preserve text widget scale state during editing.
 - Render Journey Stats text shadows consistently and clip overflowing content.
@@ -278,3 +491,23 @@
 - Require every open Site and Backend issue to have a corresponding Studio mirror.
 - Preserve issue types, use domain-specific title prefixes and labels, and maintain reciprocal links.
 - Prevent duplicate mirrors by checking existing open and closed Studio issues.
+
+## 2026-08-03 — [`docs: specify camera HPR orientation sphere widget`](https://github.com/lgs1920/studio/commit/7d532e6b)
+
+- Specify the proposed Three.js camera Heading, Pitch, and Roll orientation sphere widget.
+- Document its interaction contract, Cesium camera ownership, capture behavior, and future implementation boundaries.
+
+## 2026-08-03 — [`fix(replay): prevent trace redraw after playback`](https://github.com/lgs1920/studio/commit/73025a69)
+
+- Prevent post-playback refreshes from recreating the replay trace while recording synchronization remains enabled.
+- Cover inactive replay cleanup and active replay trace rendering with a regression test.
+
+## 2026-08-04 — [`fix(video): support standalone video and replay modes`](https://github.com/lgs1920/studio/commit/8e335855)
+
+- Keep video-only recording independent from Replay and omit the draft suffix outside synchronized mode.
+- Keep Replay-only playback independent from video and display its trace without video synchronization.
+- Preserve synchronized video and Replay recording with its existing Draft and HQ export flow.
+
+## 2026-08-04 — [`docs: add beta.4 changelog`](https://github.com/lgs1920/studio/commit/536b4450)
+
+- Add the 1.0.0-beta.4 release changelog with Studio and Backend closed issues, resources, feature backlog, and known issues.

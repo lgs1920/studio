@@ -203,6 +203,7 @@ describe('JourneyReplayDrawer', () => {
             stores: {
                 ui: proxy({
                     drawers: proxy({open: REPLAY_DRAWER}),
+                    video: proxy({}),
                 }),
                 main: proxy({
                     theJourney: {slug: 'journey-a'},
@@ -374,6 +375,25 @@ describe('JourneyReplayDrawer', () => {
         expect(view.getByLabelText('Pitch (deg)')).toBeTruthy()
         expect(view.getByLabelText('Heading (deg)')).toBeTruthy()
         expect(view.getByLabelText('Camera feel')).toBeTruthy()
+    })
+
+    it('shows the debug camera switch only for video-linked replay and keeps it disabled by default', async () => {
+        const view = render(<JourneyReplayDrawer/>)
+
+        expect(view.queryByLabelText('Debug camera')).toBeNull()
+
+        globalThis.lgs.settings.ui.replay.recordingSync = true
+        globalThis.lgs.stores.replay.recordingSync = true
+
+        const debugSwitch = await view.findByLabelText('Debug camera')
+        expect(debugSwitch.checked).toBe(false)
+
+        fireEvent.click(debugSwitch)
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.replay.camera.debug).toBe(true)
+            expect(globalThis.lgs.stores.replay.camera.debug).toBe(true)
+        })
     })
 
     it('inverts the camera angle slider without showing the runtime preview while editing', async () => {

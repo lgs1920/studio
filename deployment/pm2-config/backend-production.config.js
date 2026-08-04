@@ -14,7 +14,6 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-// eslint-disable-next-line no-undef
 module.exports = {
     apps : [{
         name   : "backend-production",

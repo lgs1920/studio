@@ -401,7 +401,7 @@ ui:
 
   ## Compass
   compass:
-    mode: 1                # 0: none, 1: full, 2: light, 3: wind rose
+    mode: 1                # 0: none, 1: full, 2: light, 3: modern, 4: flat
 
   ## Video
   video:

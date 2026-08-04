@@ -101,6 +101,20 @@ const installFocusGlobals = journey => {
     })
 }
 
+describe('camera focus position conversion', () => {
+    it('builds a camera position using the pitch projection and requested range', () => {
+        const position = CameraUtils.cameraPositionFromTarget(
+            {longitude: 0, latitude: 0, height: 0},
+            {heading: 0, pitch: -30, range: 1000},
+        )
+        const targetCartesian = Cartesian3.fromDegrees(0, 0, 0)
+        const positionCartesian = Cartesian3.fromDegrees(position.longitude, position.latitude, position.height)
+
+        expect(Cartesian3.distance(targetCartesian, positionCartesian)).toBeCloseTo(1000, 3)
+        expect(position.height).toBeCloseTo(-500, 0)
+    })
+})
+
 describe('camera focus defaults', () => {
     beforeEach(() => {
         vi.restoreAllMocks()

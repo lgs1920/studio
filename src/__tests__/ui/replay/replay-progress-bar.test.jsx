@@ -95,6 +95,29 @@ describe('JourneyReplayProgressBar', () => {
         expect(screen.getByRole('button', {name: 'Journey Replay settings'}).disabled).toBe(true)
     })
 
+    it('uses Draft frame progress instead of distance progress', () => {
+        globalThis.lgs.stores.replay.recordingSync = true
+        globalThis.lgs.stores.replay.active = true
+        globalThis.lgs.stores.replay.playing = true
+        globalThis.lgs.stores.replay.sample = {
+            progress:          0.2,
+            distanceFromStart: 20,
+            remainingDistance: 80,
+        }
+        globalThis.lgs.stores.replay.totalDistance = 100
+        globalThis.lgs.stores.replay.dynamicFrameState = {
+            replayFrameIndex: 50,
+            replayFrameCount: 101,
+            elapsedMillis:    50000,
+            durationMillis:   100000,
+        }
+
+        render(<JourneyReplayProgressBar/>)
+
+        expect(screen.getByText('50%')).not.toBeNull()
+        expect(screen.queryByText('20%')).toBeNull()
+    })
+
     it('can show compact export progress without journey distance', () => {
         render(
             <JourneyReplayProgressBar

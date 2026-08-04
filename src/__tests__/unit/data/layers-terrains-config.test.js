@@ -58,4 +58,19 @@ describe('layers-terrains configuration', () => {
             },
         })
     })
+
+    it('keeps the IGN Plan HD layer disabled', () => {
+        const config = loadLayersTerrains()
+        const layersById = indexLayersById(config)
+
+        expect(layersById.has('ign-plan-hd')).toBe(false)
+    })
+
+    it('keeps the IGN LiDAR HD plans disabled', () => {
+        const config = loadLayersTerrains()
+        const layersById = indexLayersById(config)
+
+        expect(layersById.has('ign-plan-lidar-terrain')).toBe(false)
+        expect(layersById.has('ign-plan-lidar-sursol')).toBe(false)
+    })
 })

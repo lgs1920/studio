@@ -172,6 +172,7 @@ The Skills are stored in [.aiassistant/skills/](.aiassistant/skills/) and cover:
 - [Cesium camera](.aiassistant/skills/lgs-1920-studio-cesium-camera/SKILL.md)
 - [CSS theme system](.aiassistant/skills/lgs-1920-studio-css-theme-system/SKILL.md)
 - [Documentation maintenance](.aiassistant/skills/lgs-1920-studio-documentation-maintenance/SKILL.md)
+- [GitHub issues and Project workflow](.aiassistant/skills/lgs-1920-studio-github-issues/SKILL.md)
 - [GPX journey import](.aiassistant/skills/lgs-1920-studio-gpx-journey-import/SKILL.md)
 - [Internal database](.aiassistant/skills/lgs-1920-studio-internal-database/SKILL.md)
 - [Journey statistics](.aiassistant/skills/lgs-1920-studio-journey-statistics/SKILL.md)
@@ -224,7 +225,7 @@ Tests are organized under `src/__tests__/` by responsibility:
 - Application settings are primarily defined in `public/settings.yaml`
 - Map, overlay, and terrain providers are documented in [tech-doc/specs/HOW_TO_ADD_PROVIDERS_LAYERS.md](tech-doc/specs/HOW_TO_ADD_PROVIDERS_LAYERS.md)
 - Widget registration is defined in `public/widgets.yaml`
-- PWA behavior is configured through `vite.config.ts` and `public/service-worker-pwa.js`
+- PWA behavior is configured through `vite.config.mts` and `public/service-worker-pwa.js`
 - Static version metadata is stored in `public/version.json` and `public/build.json`
 
 ## Dependencies

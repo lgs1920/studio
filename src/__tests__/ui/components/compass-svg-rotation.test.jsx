@@ -18,8 +18,9 @@ import { cleanup, render } from '@testing-library/react'
 import { createRef } from 'react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { CompassFull } from '@Components/MainUI/compass/CompassFull'
+import { CompassFlat } from '@Components/MainUI/compass/CompassFlat'
 import { CompassLight } from '@Components/MainUI/compass/CompassLight'
-import { CompassWindRose } from '@Components/MainUI/compass/CompassWindRose'
+import { CompassModern } from '@Components/MainUI/compass/CompassModern'
 
 describe('compass SVG rotation target', () => {
     afterEach(() => {
@@ -45,13 +46,48 @@ describe('compass SVG rotation target', () => {
         expect(ref.current?.querySelector('.lgs-compass-needle-center')).not.toBeNull()
     })
 
-    it('rotates the complete wind rose compass artwork', () => {
+    it('rotates the modern compass indicators together', () => {
         const ref = createRef()
 
-        render(<CompassWindRose ref={ref}/>)
+        render(<CompassModern ref={ref}/>)
 
+        expect(ref.current?.closest('svg')?.getAttribute('viewBox')).toBe('4.5 0 122 122')
+        expect(ref.current?.querySelector('.lgs-compass-poles-arcs')).not.toBeNull()
+        expect(ref.current?.querySelector('.lgs-compass-text')).not.toBeNull()
+        expect(ref.current?.querySelector('.lgs-compass-needle-north')).not.toBeNull()
+        expect(ref.current?.querySelector('.lgs-compass-needle-south')).not.toBeNull()
+        expect(ref.current?.querySelector('.lgs-compass-needle-north')?.closest('g')).toBe(ref.current)
+        expect(ref.current?.querySelector('.lgs-compass-needle-south')?.closest('g')).toBe(ref.current)
+        expect(ref.current?.querySelector('.lgs-compass-needle-north')?.getAttribute('fill')).toBe('var(--lgs-compass-needle-north)')
+        expect(ref.current?.querySelector('.lgs-compass-needle-south')?.getAttribute('stroke')).toBe('var(--lgs-compass-needle-south)')
+        expect(ref.current?.querySelectorAll('.lgs-compass-poles-arcs path')).toHaveLength(4)
+        expect(ref.current?.querySelector('.lgs-compass-poles-arcs')?.getAttribute('stroke-width')).toBe('5')
+        expect(ref.current?.querySelector('.lgs-compass-text')?.classList.contains('lgs-compass-poles')).toBe(false)
+
+        expect(ref.current?.querySelector('.lgs-compass-needle-north')?.getAttribute('d')).toContain('M65.5,24')
+        expect(ref.current?.querySelector('.lgs-compass-needle-south')?.getAttribute('d')).toBe('M59,77.5 C62.5,81.5 68.5,81.5 72,77.5')
+
+        expect([...ref.current?.querySelectorAll('.lgs-compass-text text') ?? []].map(text => text.textContent)).toEqual([
+            'N', 'E', 'S', 'W',
+        ])
+    })
+
+    it('renders the flat compass artwork with the scaled north marker', () => {
+        const ref = createRef()
+
+        render(<CompassFlat ref={ref}/>)
+
+        expect(ref.current?.querySelector('.lgs-compass-background')).not.toBeNull()
         expect(ref.current?.querySelector('.lgs-compass-poles')).not.toBeNull()
         expect(ref.current?.querySelector('.lgs-compass-text')).not.toBeNull()
         expect(ref.current?.querySelector('.lgs-compass-needle')).not.toBeNull()
+
+        const north = ref.current?.querySelector('.lgs-compass-text text')
+        const arrow = ref.current?.querySelector('.lgs-compass-needle-north')
+
+        expect(ref.current?.querySelectorAll('.lgs-compass-text text')).toHaveLength(1)
+        expect(north?.textContent).toBe('N')
+        expect(north?.getAttribute('font-size')).toBe('66.6667px')
+        expect(arrow?.getAttribute('points')).toBe('100,42 125,75.3333 75,75.3333')
     })
 })

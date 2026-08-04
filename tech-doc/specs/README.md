@@ -26,7 +26,6 @@ This directory contains technical specifications and architecture documents that
 ## Replay And Video
 
 - [Replay core](CORE-UI-REPLAY-README-REPLAY.md)
-- [JourneyReplay component notes](JOURNEYREPLAY-README-REPLAY.md)
 - [Screen media recorder](CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)
 - [Canvas overlay composer](CORE-SCREEN-MEDIA-RECORDER-COMPOSER-README.md)
 
@@ -50,6 +49,8 @@ This directory contains technical specifications and architecture documents that
 
 ## Other specs
 
+- [GitHub Project release and branch workflow](TECH-GITHUB-PROJECT-RELEASE-WORKFLOW-SPEC.md)
+- [Oxlint TypeScript 7 migration](CORE-OXLINT-TYPESCRIPT-7-MIGRATION.md)
 - [Replay camera tracking zones](REPLAY_CAMERA_TRACKING_ZONES.md)
 - [Drone camera path architecture](CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)
 - [Journey replay/video issues](JOURNEY-REPLAY-VIDEO-ISSUES.md)

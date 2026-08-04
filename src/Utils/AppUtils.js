@@ -28,6 +28,7 @@ import * as Cesium                  from 'cesium'
 import YAML                         from 'yaml'
 import { EventEmitter }             from '../assets/libs/EventEmitter/EventEmitter'
 import { FA2SL }                    from './FA2SL'
+import { CountApi }                  from './CountApi'
 
 export class AppUtils {
     static THEME_STORAGE_KEY = 'theme'
@@ -480,6 +481,8 @@ export class AppUtils {
 
                 // Set Elevation servers
                 lgs.elevationServers = ElevationServer.SERVERS
+
+                void CountApi.sendVisit()
 
                 return {status: true}
             }

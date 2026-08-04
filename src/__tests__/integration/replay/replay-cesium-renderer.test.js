@@ -55,6 +55,14 @@ const makeDataSources = () => ({
     contains(source) {
         return this.items.includes(source)
     },
+    remove(source) {
+        const index = this.items.indexOf(source)
+        if (index < 0) {
+            return false
+        }
+        this.items.splice(index, 1)
+        return true
+    },
     getByName(name) {
         return this.items.filter(source => source.name === name)
     },
@@ -163,6 +171,7 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(visibleTraceEntities(dataSources).length).toBeGreaterThan(0)
         expect(replayEntity(dataSources, '#cursor')?.show).toBe(true)
         expect(replayEntity(dataSources, '#cursor-border')?.show).not.toBe(true)
+        expect(propertyValue(replayEntity(dataSources, '#cursor')?.point?.disableDepthTestDistance)).toBe(0)
 
         renderer.update({sample: midSample, sampler, forceGeometry: true, hideCursor: true})
 
@@ -173,6 +182,7 @@ describe('JourneyReplayCesiumRenderer', () => {
         renderer.update({sample: midSample, sampler, forceGeometry: true})
 
         expect(replayEntity(dataSources, '#cursor')?.show).toBe(true)
+        expect(propertyValue(replayEntity(dataSources, '#cursor')?.point?.disableDepthTestDistance)).toBe(0)
         expect(replayEntity(dataSources, '#cursor-border')?.show).not.toBe(true)
         expect(requestRender).toHaveBeenCalled()
     })
@@ -197,7 +207,7 @@ describe('JourneyReplayCesiumRenderer', () => {
             showTrace: false,
         })
 
-        expect(replaySource(dataSources).show).toBe(false)
+        expect(replaySource(dataSources)).toBeUndefined()
         expect(visibleTraceEntities(dataSources)).toHaveLength(0)
 
         renderer.update({
@@ -285,6 +295,79 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(completedBorder?.polyline?.depthFailMaterial).toBeUndefined()
         expect(replayEntity(dataSources, '#cursor')?.show).toBe(false)
         expect(replayEntity(dataSources, '#cursor-border')?.show).not.toBe(true)
+    })
+
+    it('smooths trace coordinates geographically before applying ground clamping', () => {
+        const dataSources = makeDataSources()
+        installReplayGlobals({dataSources})
+        globalThis.lgs.settings.getJourney = {
+            renderSmoothing: {
+                enabled: true,
+                step:    1,
+            },
+        }
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48, 140]],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({
+            journey,
+            renderSmoothing: {enabled: false, step: 1},
+        })
+        const renderer = new JourneyReplayCesiumRenderer()
+
+        renderer.show({sampler})
+        renderer.update({
+            sample: sampler.atProgress(1),
+            sampler,
+            forceGeometry: true,
+            staticCompletedTrace: true,
+        })
+
+        const completedFill = replayEntity(dataSources, '#completed#smoothed#fill')
+        const positions = propertyValue(completedFill?.polyline?.positions)
+
+        expect(positions).toHaveLength(6)
+        expect(Cartesian3.equals(positions[1], Cartesian3.fromDegrees(2.00025, 48.00025, 0))).toBe(true)
+        expect(propertyValue(completedFill?.polyline?.clampToGround)).toBe(true)
+    })
+
+    it('uses the dense replay camera guide for a smooth ground trace', () => {
+        const dataSources = makeDataSources()
+        installReplayGlobals({dataSources})
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48, 140]],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const smoothedGuide = [
+            {progress: 0,    longitude: 2,        latitude: 48},
+            {progress: 0.25, longitude: 2.00025, latitude: 48.0003},
+            {progress: 0.5,  longitude: 2.001,   latitude: 48.001},
+            {progress: 0.75, longitude: 2.00175, latitude: 48.0003},
+            {progress: 1,    longitude: 2.002,   latitude: 48},
+        ]
+        const renderer = new JourneyReplayCesiumRenderer()
+
+        renderer.show({sampler, options: {smoothedGuide}})
+        renderer.update({
+            sample: sampler.atProgress(1),
+            sampler,
+            forceGeometry: true,
+            staticCompletedTrace: true,
+        })
+
+        const completedFill = replayEntity(dataSources, '#completed#smoothed#fill')
+        const positions = propertyValue(completedFill?.polyline?.positions)
+
+        expect(positions).toHaveLength(smoothedGuide.length)
+        expect(Cartesian3.equals(positions[1], Cartesian3.fromDegrees(2.00025, 48.0003, 0))).toBe(true)
+        expect(propertyValue(completedFill?.polyline?.clampToGround)).toBe(true)
+        expect(propertyValue(completedFill?.polyline?.granularity)).toBe(8)
     })
 
     it('keeps the final point in the live replay trace', () => {
@@ -437,6 +520,54 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(replayEntity(dataSources, '#completed#smoothed#border')).toBe(firstCompletedBorder)
         expect(visibleTraceEntities(dataSources)
             .some(entity => String(entity.id).includes('#remaining#'))).toBe(false)
+    })
+
+    it('removes the replay data source when the replay is cleared', () => {
+        const dataSources = makeDataSources()
+        installReplayGlobals({dataSources})
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const renderer = new JourneyReplayCesiumRenderer()
+
+        renderer.show({sampler})
+        renderer.update({sample: sampler.atProgress(0.5), sampler, forceGeometry: true})
+        const source = replaySource(dataSources)
+
+        expect(source).toBeDefined()
+        renderer.clear()
+
+        expect(dataSources.contains(source)).toBe(false)
+        expect(replaySource(dataSources)).toBeUndefined()
+    })
+
+    it('keeps an explicitly hidden trace hidden until it is explicitly shown', () => {
+        const dataSources = makeDataSources()
+        installReplayGlobals({dataSources})
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const renderer = new JourneyReplayCesiumRenderer()
+
+        renderer.show({sampler})
+        renderer.update({sample: sampler.atProgress(0.5), sampler, forceGeometry: true, showTrace: false})
+        renderer.update({sample: sampler.atProgress(0.6), sampler, forceGeometry: true})
+
+        expect(replaySource(dataSources)).toBeUndefined()
+        expect(visibleTraceEntities(dataSources)).toHaveLength(0)
+
+        renderer.update({sample: sampler.atProgress(0.6), sampler, forceGeometry: true, showTrace: true})
+
+        expect(replaySource(dataSources).show).toBe(true)
+        expect(visibleTraceEntities(dataSources).length).toBeGreaterThan(0)
     })
 
 })

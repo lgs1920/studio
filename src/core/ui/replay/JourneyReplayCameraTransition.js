@@ -14,7 +14,7 @@ import {faPersonHiking} from '@fortawesome/pro-regular-svg-icons'
 import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
 import {finiteNumber, replayStore} from './JourneyReplayRuntime'
 import {
-    clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForPositionMode, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
+    clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, rollCameraUp, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForPositionMode, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
 } from './JourneyReplayCameraMath'
 import {
     REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET, REPLAY_CAMERA_POSITION_AHEAD,
@@ -35,11 +35,16 @@ import {
     CAMERA_HEADING_HYSTERESIS_RADIANS,
     CAMERA_HEADING_LOOKAHEAD_PROGRESS,
     CAMERA_HEADING_MIN_CHANGE_RADIANS,
+    CAMERA_HEADING_MIN_RESPONSE_FACTOR,
+    CAMERA_HEADING_MAX_RESPONSE_FACTOR,
     CAMERA_VIEW_POSITION_EPSILON_METERS,
     CAMERA_VIEW_ANGLE_EPSILON_RADIANS,
     CAMERA_TIMING_START_ANGLE_RADIANS,
     CAMERA_TIMING_SETTLE_ANGLE_RADIANS,
     CAMERA_DETERMINISTIC_FOLLOW_RESPONSE_SECONDS,
+    REPLAY_NAVIGATION_MAX_HEADING_DRIFT_DEGREES,
+    REPLAY_NAVIGATION_MAX_LATERAL_DRIFT_METERS,
+    REPLAY_NAVIGATION_MIN_TURN_DRIFT_DEGREES,
     CAMERA_REDIRECT_MAX_TRANSITION_SECONDS,
     CAMERA_REDIRECT_LOOKAHEAD_DISTANCE_METERS,
     CAMERA_REDIRECT_TRACE_VISIBILITY_OFFSETS_METERS,
@@ -140,16 +145,6 @@ import {
     viewportRectForCesiumSurface,
     updateToleranceZoneOverlay,
 } from './JourneyReplayCameraOverlay'
-import {
-    recenterCameraToSample,
-    startCameraTransition,
-    bindMarkerInteractions,
-    bindCesiumCameraBridge,
-    startCameraLiveSyncLoop,
-    stopCameraLiveSyncLoop,
-    updateCamera,
-} from './JourneyReplayCameraBinding'
-
 export const currentCameraFrame =  (mode, fallbackFrame) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -184,6 +179,11 @@ export const applyCameraFrame =  (mode, frame) => {
             return false
         }
 
+        const logicalNow = finiteNumber(call.now?.()) ?? 0
+        state.cameraAutoTrackingIgnoreUntil = Math.max(
+            finiteNumber(state.cameraAutoTrackingIgnoreUntil) ?? 0,
+            logicalNow + 250,
+        )
         state.cameraApplyingView = true
         try {
             camera.setView?.({
@@ -403,9 +403,16 @@ export const startDeterministicCameraTransition = (mode, {
         const target = call.markerRenderCartesianForSample?.(sample) ?? null
         const replayMotionProfile = {
             turnDrift: {
-                enabled:               true,
-                maxHeadingOffsetDeg:    10,
-                maxLateralOffsetMeters: 60,
+                enabled:               cameraSettings?.canDrift !== false,
+                maxHeadingOffsetDeg:    trackingMode === REPLAY_MARKER_MODE_NAVIGATION
+                    ? REPLAY_NAVIGATION_MAX_HEADING_DRIFT_DEGREES
+                    : 10,
+                maxLateralOffsetMeters: trackingMode === REPLAY_MARKER_MODE_NAVIGATION
+                    ? REPLAY_NAVIGATION_MAX_LATERAL_DRIFT_METERS
+                    : 60,
+                minTurnAngleDeg:        trackingMode === REPLAY_MARKER_MODE_NAVIGATION
+                    ? REPLAY_NAVIGATION_MIN_TURN_DRIFT_DEGREES
+                    : 8,
             },
         }
         const applyLocalFrameOffset = (frame, offsetTarget, focusTarget, {
@@ -480,6 +487,10 @@ export const startDeterministicCameraTransition = (mode, {
             frameResolver: ({path, target: resolvedTarget, ratio, frame}) => {
                 const replayCameraSettings = cameraSettings ?? globalThis.lgs?.settings?.ui?.replay?.camera ?? {}
                 const replayMarkerSettings = normalizeJourneyReplayMarker(globalThis.lgs?.settings?.ui?.replay?.marker ?? {})
+                if (replayCameraSettings.canFixHiddenMarker === false) {
+                    return frame
+                }
+
                 const lineOfSightVisible = call.cameraLineOfSightVisibleForFrame({
                     destination: frame?.destination,
                     sample,
@@ -509,11 +520,14 @@ export const startDeterministicCameraTransition = (mode, {
                     sample,
                     heading:        view.heading,
                     pitch:          view.pitch ?? pitch,
+                    roll:           view.roll,
                     cameraSettings:  replayCameraSettings,
                     cameraHeight:   view.cameraHeight,
                 })
 
-                const drift = replayTurnDriftForProgress(mode, sample?.progress ?? ratio, replayMotionProfile.turnDrift)
+                const drift = replayMotionProfile.turnDrift.enabled
+                    ? replayTurnDriftForProgress(mode, sample?.progress ?? ratio, replayMotionProfile.turnDrift)
+                    : null
                 const reliefHeight = Math.max(
                     80,
                     finiteNumber(globalThis.lgs?.settings?.camera?.pitchAdjustHeight) ?? 500,
@@ -571,10 +585,15 @@ export const applyDeterministicCameraTransition =  (mode, logicalNow) => {
                 target:        transition.target,
             },
         ))
-        if (ratio >= 1) {
+        if (ratio >= 1 && applied) {
             state.deterministicCameraTransition = null
             state.lastCameraHeading = finiteNumber(transition.heading) ?? state.lastCameraHeading
             state.lastCameraPitch = finiteNumber(transition.pitch) ?? state.lastCameraPitch
+            call.rememberCameraView?.({
+                anchor: transition.sample,
+                heading: transition.heading,
+                pitch: transition.pitch,
+            })
         }
         return applied
     }
@@ -666,6 +685,7 @@ export const cameraRecenterFrame = (mode, {
                                 sample,
                                 heading,
                                 pitch,
+                                roll = 0,
                                 cameraSettings,
                                 cameraHeight = null,
                             } = {}) => {
@@ -673,7 +693,9 @@ export const cameraRecenterFrame = (mode, {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         const viewer = globalThis.lgs?.viewer
-        const targetHeight = call.markerRenderHeightForSample(sample)
+        const targetHeight = finiteNumber(call.markerRenderHeightForSample(sample))
+                            ?? finiteNumber(sample?.altitude ?? sample?.height)
+                            ?? 0
         const target = call.markerRenderCartesianForSample(sample)
         const cameraPosition = viewer?.camera?.positionWC ?? viewer?.camera?.position
         const fallbackRange = cameraPosition && target
@@ -685,12 +707,21 @@ export const cameraRecenterFrame = (mode, {
 
         const safeHeading = sanitizeOrientationRadians(heading, 0)
         const safePitch = sanitizeOrientationRadians(pitch, SAFE_TOP_DOWN_PITCH)
-        const currentHeight = cameraHeight !== null && cameraHeight !== undefined
-                              ? Math.max(targetHeight, finiteNumber(cameraHeight) ?? targetHeight)
+        const groundOffsetCameraHeight = cameraSettings?.altitudeMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET
+                                         ? finiteNumber(call.cameraAltitudeForSample(sample, cameraSettings))
+                                         : null
+        const explicitCameraHeight = cameraHeight === null || cameraHeight === undefined || cameraHeight === ''
+            ? null
+            : finiteNumber(cameraHeight)
+        // In ground-offset mode the marker-relative value is authoritative;
+        // an explicit height may belong to a previous camera transition.
+        const requestedCameraHeight = groundOffsetCameraHeight ?? explicitCameraHeight
+        const currentHeight = requestedCameraHeight !== null
+                              ? Math.max(targetHeight, requestedCameraHeight)
                               : replayCameraRecenterHeight(
-                viewer.camera?.positionCartographic?.height,
-                call.cameraAltitudeForSample(sample, cameraSettings),
-            )
+                    viewer.camera?.positionCartographic?.height,
+                    call.cameraAltitudeForSample(sample, cameraSettings),
+                )
         const horizontalDistance = replayCameraRecenterHorizontalDistance({
                                                                                   cameraHeight: currentHeight,
                                                                                   targetHeight,
@@ -728,20 +759,23 @@ export const cameraRecenterFrame = (mode, {
             Cartesian3.cross(right, direction, new Cartesian3()),
             new Cartesian3(),
         )
+        const safeRoll = clamp(sanitizeOrientationRadians(roll, 0), -Math.PI / 4, Math.PI / 4)
+        const rolledUp = rollCameraUp({direction, up: correctedUp, roll: safeRoll}) ?? correctedUp
         return {
             sample,
             target,
             targetHeight,
             destination,
             direction,
-            correctedUp,
+            correctedUp: rolledUp,
+            roll: safeRoll,
             currentHeight,
             safeHeading,
             safePitch,
         }
     }
 
-export const cameraViewDelta = (mode, {anchor, heading, pitch} = {}) => {
+export const cameraViewDelta = (mode, {anchor, heading, pitch, roll = 0} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
@@ -770,14 +804,15 @@ export const cameraViewDelta = (mode, {anchor, heading, pitch} = {}) => {
             altitudeMeters:   Math.abs(currentAltitude - lastAltitude),
             headingRadians:   Math.abs(replayAngularDelta(last.heading, heading) ?? Number.POSITIVE_INFINITY),
             pitchRadians:     Math.abs(replayAngularDelta(last.pitch, pitch) ?? Number.POSITIVE_INFINITY),
+            rollRadians:      Math.abs((finiteNumber(last.roll) ?? 0) - (finiteNumber(roll) ?? 0)),
         }
     }
 
-export const cameraViewIsStable = (mode, {anchor, heading, pitch} = {}) => {
+export const cameraViewIsStable = (mode, {anchor, heading, pitch, roll = 0} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const delta = call.cameraViewDelta({anchor, heading, pitch})
+        const delta = call.cameraViewDelta({anchor, heading, pitch, roll})
         if (!delta) {
             return false
         }
@@ -786,9 +821,10 @@ export const cameraViewIsStable = (mode, {anchor, heading, pitch} = {}) => {
             && delta.altitudeMeters <= CAMERA_VIEW_POSITION_EPSILON_METERS
             && delta.headingRadians <= CAMERA_VIEW_ANGLE_EPSILON_RADIANS
             && delta.pitchRadians <= CAMERA_VIEW_ANGLE_EPSILON_RADIANS
+            && delta.rollRadians <= CAMERA_VIEW_ANGLE_EPSILON_RADIANS
     }
 
-export const rememberCameraView = (mode, {anchor, heading, pitch} = {}) => {
+export const rememberCameraView = (mode, {anchor, heading, pitch, roll = 0} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
@@ -800,6 +836,7 @@ export const rememberCameraView = (mode, {anchor, heading, pitch} = {}) => {
             },
             heading: finiteNumber(heading) ?? 0,
             pitch:   finiteNumber(pitch) ?? SAFE_TOP_DOWN_PITCH,
+            roll:    finiteNumber(roll) ?? 0,
         }
     }
 
@@ -810,7 +847,7 @@ export const headingEasingFactor = (mode, cameraSettings, targetHeading) => {
         previousHeading: state.lastCameraHeading,
         nextHeading:     targetHeading,
         easing:          cameraSettings?.hysteresis?.easing,
-        minFactor:       0.04,
-        maxFactor:       0.18,
+        minFactor:       CAMERA_HEADING_MIN_RESPONSE_FACTOR,
+        maxFactor:       CAMERA_HEADING_MAX_RESPONSE_FACTOR,
     })
 }

@@ -131,25 +131,16 @@ import {
     rememberCameraView,
     headingEasingFactor,
 } from './JourneyReplayCameraTransition'
-import {
-    recenterCameraToSample,
-    startCameraTransition,
-    bindMarkerInteractions,
-    bindCesiumCameraBridge,
-    startCameraLiveSyncLoop,
-    stopCameraLiveSyncLoop,
-    updateCamera,
-} from './JourneyReplayCameraBinding'
-
 export const removeToleranceZoneOverlay = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        state.toleranceZoneOverlay?.remove?.()
-        state.toleranceZoneOverlay = null
-        state.toleranceZoneOverlayCanvas?.remove?.()
-        state.toleranceZoneOverlayCanvas = null
-    }
+    state.toleranceZoneOverlayCameraChangedRemove?.()
+    state.toleranceZoneOverlayCameraChangedRemove = null
+    state.toleranceZoneOverlay?.remove?.()
+    state.toleranceZoneOverlay = null
+    state.toleranceZoneOverlayCanvas?.remove?.()
+    state.toleranceZoneOverlayCanvas = null
+}
 
 /**
  * Draw the replay diagnostic overlay canvas.
@@ -291,6 +282,109 @@ const drawReplayDiagnosticsOverlayCanvas = ({
         context.fillText(line, 12 + padding, 12 + padding + (index * lineHeight))
     })
     context.restore()
+}
+
+/**
+ * Resolve the current replay diagnostic geometry for the active viewport.
+ *
+ * @param {object} hysteresis - Replay camera hysteresis settings.
+ * @param {object} rect - Viewport rectangle in CSS pixels.
+ * @returns {object|null} Diagnostic geometry or null when it is unavailable.
+ */
+const resolveReplayDiagnosticsGeometry = (hysteresis, rect) => {
+    if (!rect?.width || !rect?.height || !hysteresis) {
+        return null
+    }
+
+    const replaySettings = getJourneyReplaySettings()
+    const marker = normalizeJourneyReplayMarker(globalThis.lgs?.settings?.ui?.replay?.marker
+                                                 ?? globalThis.lgs?.stores?.replay?.marker
+                                                 ?? replaySettings.marker)
+    const cameraSettings = normalizeJourneyReplayCamera(globalThis.lgs?.settings?.ui?.replay?.camera
+                                                        ?? globalThis.lgs?.stores?.replay?.camera
+                                                        ?? replaySettings.camera)
+    const runtimeTracking = replayRuntimeTrackingSettings(globalThis.lgs?.settings?.ui?.replay?.camera
+                                                          ?? cameraSettings, rect)
+    const outerBounds = marker.mode === REPLAY_MARKER_MODE_NAVIGATION
+                        ? replayToleranceZoneBounds(runtimeTracking.navigation.triggerZone)
+                        : marker.mode === REPLAY_MARKER_MODE_HYSTERESIS
+                          ? replayToleranceZoneBounds(runtimeTracking.dynamic.triggerZone)
+                          : replayToleranceZoneBounds(hysteresis.zone)
+    const innerBounds = marker.mode === REPLAY_MARKER_MODE_HYSTERESIS
+                        ? replayToleranceZoneBounds(runtimeTracking.dynamic.targetZone)
+                        : null
+
+    return {
+        rect,
+        outerBounds,
+        innerBounds,
+        marker,
+        debug: cameraSettings.debug === true,
+    }
+}
+
+/**
+ * Return whether the current replay is linked to video recording.
+ *
+ * @returns {boolean} Whether replay-video synchronization is enabled.
+ */
+const isReplayVideoLinked = () => globalThis.lgs?.stores?.replay?.recordingSync === true
+    || globalThis.lgs?.settings?.ui?.replay?.recordingSync === true
+
+/**
+ * Refresh the visible and capturable replay diagnostics without replacing the
+ * canvas element.
+ *
+ * @param {object} mode - Replay mode.
+ * @returns {boolean} Whether the diagnostics were refreshed.
+ */
+export const refreshReplayDiagnosticsOverlay = mode => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const viewer = globalThis.lgs?.viewer
+    const canvas = state.toleranceZoneOverlayCanvas
+    if (!state.toleranceZoneOverlayVisible || !(canvas instanceof HTMLCanvasElement) || !viewer) {
+        return false
+    }
+
+    const geometry = resolveReplayDiagnosticsGeometry(state.lastToleranceZoneHysteresis, call.viewportRectForCesiumSurface())
+    if (!geometry) {
+        return false
+    }
+    if (isReplayVideoLinked() && geometry.debug !== true) {
+        return false
+    }
+
+    canvas.hidden = false
+    canvas.style.display = ''
+    canvas.style.visibility = 'visible'
+    drawReplayDiagnosticsOverlayCanvas({
+        canvas,
+        ...geometry,
+        camera: viewer.camera ?? null,
+        scene: viewer.scene ?? globalThis.lgs?.scene ?? null,
+    })
+    return true
+}
+
+/**
+ * Keep camera diagnostics synchronized with live camera changes.
+ *
+ * @param {object} mode - Replay mode.
+ * @returns {void}
+ */
+const ensureReplayDiagnosticsCameraSync = mode => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const camera = globalThis.lgs?.viewer?.camera
+    if (state.toleranceZoneOverlayCameraChangedRemove || !camera?.changed?.addEventListener) {
+        return
+    }
+
+    const refresh = () => refreshReplayDiagnosticsOverlay(mode)
+    const remove = camera.changed.addEventListener(refresh)
+    state.toleranceZoneOverlayCameraChangedRemove = typeof remove === 'function'
+        ? remove
+        : () => camera.changed.removeEventListener?.(refresh)
 }
 
 /**
@@ -651,90 +745,76 @@ export const updateToleranceZoneOverlay =  (mode, hysteresis) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        state.lastToleranceZoneHysteresis = hysteresis
-        call.removeToleranceZoneOverlay()
-        const viewer = globalThis.lgs?.viewer
-        const container = viewer?.container ?? globalThis.document?.body ?? null
-        if (!viewer || !container || !hysteresis) {
-            return
-        }
-
-        const replaySettings = getJourneyReplaySettings()
-        // The application settings are the source of truth for the runtime-only
-        // tracking mode. The store may still contain the previous persisted mode
-        // while a Draft recording is being armed.
-        const marker = normalizeJourneyReplayMarker(globalThis.lgs?.settings?.ui?.replay?.marker
-                                                     ?? globalThis.lgs?.stores?.replay?.marker
-                                                     ?? replaySettings.marker)
-        const cameraSettings = normalizeJourneyReplayCamera(globalThis.lgs?.settings?.ui?.replay?.camera
-                                                            ?? globalThis.lgs?.stores?.replay?.camera
-                                                            ?? replaySettings.camera)
-        const rect = call.viewportRectForCesiumSurface()
-        const runtimeTracking = replayRuntimeTrackingSettings(globalThis.lgs?.settings?.ui?.replay?.camera ?? cameraSettings, rect)
-        const outerBounds = marker.mode === REPLAY_MARKER_MODE_NAVIGATION
-                            ? replayToleranceZoneBounds(runtimeTracking.navigation.triggerZone)
-                            : marker.mode === REPLAY_MARKER_MODE_HYSTERESIS
-                              ? replayToleranceZoneBounds(runtimeTracking.dynamic.triggerZone)
-                              : replayToleranceZoneBounds(hysteresis?.zone)
-        const innerBounds = marker.mode === REPLAY_MARKER_MODE_HYSTERESIS
-                            ? replayToleranceZoneBounds(runtimeTracking.dynamic.targetZone)
-                            : null
-        if (!rect.width || !rect.height) {
-            return
-        }
-
-        const overlay = globalThis.document.createElement('div')
-        overlay.className = 'replay-tolerance-zone-overlay'
-        overlay.hidden = !state.toleranceZoneOverlayVisible
-        overlay.dataset.mode = marker.mode
-        overlay.style.position = 'absolute'
-        overlay.style.pointerEvents = 'none'
-        overlay.style.display = state.toleranceZoneOverlayVisible ? '' : 'none'
-        overlay.style.visibility = 'hidden'
-        overlay.style.left = `${rect.left + (outerBounds.left * rect.width)}px`
-        overlay.style.top = `${rect.top + (outerBounds.top * rect.height)}px`
-        overlay.style.width = `${(outerBounds.right - outerBounds.left) * rect.width}px`
-        overlay.style.height = `${(outerBounds.bottom - outerBounds.top) * rect.height}px`
-        overlay.style.background = marker.mode === REPLAY_MARKER_MODE_NAVIGATION
-                                   ? 'rgba(0, 128, 255, 0.08)'
-                                   : 'rgba(255, 0, 0, 0.08)'
-
-        const outer = globalThis.document.createElement('div')
-        outer.className = 'replay-tolerance-zone-overlay-outer'
-        outer.dataset.zone = 'z1'
-        outer.style.position = 'absolute'
-        outer.style.inset = '0'
-        outer.style.border = '1px solid rgba(255, 255, 255, 0.7)'
-
-        overlay.append(outer)
-        if (innerBounds) {
-            const inner = globalThis.document.createElement('div')
-            inner.className = 'replay-tolerance-zone-overlay-inner'
-            inner.dataset.zone = 'z2'
-            inner.style.position = 'absolute'
-            inner.style.left = `${(innerBounds.left - outerBounds.left) * rect.width}px`
-            inner.style.top = `${(innerBounds.top - outerBounds.top) * rect.height}px`
-            inner.style.width = `${(innerBounds.right - innerBounds.left) * rect.width}px`
-            inner.style.height = `${(innerBounds.bottom - innerBounds.top) * rect.height}px`
-            inner.style.border = '1px dashed rgba(255, 255, 255, 0.45)'
-            overlay.append(inner)
-        }
-        container.appendChild(overlay)
-        state.toleranceZoneOverlay = overlay
-
-        const diagnosticsCanvas = call.resolveReplayDiagnosticsOverlayCanvas?.() ?? resolveReplayDiagnosticsOverlayCanvas(mode)
-        if (diagnosticsCanvas) {
-            diagnosticsCanvas.hidden = !state.toleranceZoneOverlayVisible
-            diagnosticsCanvas.style.display = state.toleranceZoneOverlayVisible ? '' : 'none'
-            diagnosticsCanvas.style.visibility = state.toleranceZoneOverlayVisible ? 'visible' : 'hidden'
-            drawReplayDiagnosticsOverlayCanvas({
-                canvas: diagnosticsCanvas,
-                rect,
-                outerBounds,
-                innerBounds,
-                marker,
-                camera: viewer?.camera ?? null,
-                scene: viewer?.scene ?? globalThis.lgs?.scene ?? null,
-            })
-        }
+    state.lastToleranceZoneHysteresis = hysteresis
+    state.toleranceZoneOverlay?.remove?.()
+    state.toleranceZoneOverlay = null
+    const viewer = globalThis.lgs?.viewer
+    const container = viewer?.container ?? globalThis.document?.body ?? null
+    if (!viewer || !container || !hysteresis) {
+        return
     }
+
+    const geometry = resolveReplayDiagnosticsGeometry(hysteresis, call.viewportRectForCesiumSurface())
+    if (!geometry) {
+        return
+    }
+    if (isReplayVideoLinked() && geometry.debug !== true) {
+        state.toleranceZoneOverlayVisible = false
+        removeToleranceZoneOverlay(mode)
+        return
+    }
+
+    const {rect, outerBounds, innerBounds, marker} = geometry
+    const overlay = globalThis.document.createElement('div')
+    overlay.className = 'replay-tolerance-zone-overlay'
+    overlay.hidden = !state.toleranceZoneOverlayVisible
+    overlay.dataset.mode = marker.mode
+    overlay.style.position = 'absolute'
+    overlay.style.pointerEvents = 'none'
+    overlay.style.display = state.toleranceZoneOverlayVisible ? '' : 'none'
+    overlay.style.visibility = 'hidden'
+    overlay.style.left = `${rect.left + (outerBounds.left * rect.width)}px`
+    overlay.style.top = `${rect.top + (outerBounds.top * rect.height)}px`
+    overlay.style.width = `${(outerBounds.right - outerBounds.left) * rect.width}px`
+    overlay.style.height = `${(outerBounds.bottom - outerBounds.top) * rect.height}px`
+    overlay.style.background = marker.mode === REPLAY_MARKER_MODE_NAVIGATION
+                               ? 'rgba(0, 128, 255, 0.08)'
+                               : 'rgba(255, 0, 0, 0.08)'
+
+    const outer = globalThis.document.createElement('div')
+    outer.className = 'replay-tolerance-zone-overlay-outer'
+    outer.dataset.zone = 'z1'
+    outer.style.position = 'absolute'
+    outer.style.inset = '0'
+    outer.style.border = '1px solid rgba(255, 255, 255, 0.7)'
+
+    overlay.append(outer)
+    if (innerBounds) {
+        const inner = globalThis.document.createElement('div')
+        inner.className = 'replay-tolerance-zone-overlay-inner'
+        inner.dataset.zone = 'z2'
+        inner.style.position = 'absolute'
+        inner.style.left = `${(innerBounds.left - outerBounds.left) * rect.width}px`
+        inner.style.top = `${(innerBounds.top - outerBounds.top) * rect.height}px`
+        inner.style.width = `${(innerBounds.right - innerBounds.left) * rect.width}px`
+        inner.style.height = `${(innerBounds.bottom - innerBounds.top) * rect.height}px`
+        inner.style.border = '1px dashed rgba(255, 255, 255, 0.45)'
+        overlay.append(inner)
+    }
+    container.appendChild(overlay)
+    state.toleranceZoneOverlay = overlay
+
+    const diagnosticsCanvas = call.resolveReplayDiagnosticsOverlayCanvas?.() ?? resolveReplayDiagnosticsOverlayCanvas(mode)
+    if (diagnosticsCanvas) {
+        diagnosticsCanvas.hidden = !state.toleranceZoneOverlayVisible
+        diagnosticsCanvas.style.display = state.toleranceZoneOverlayVisible ? '' : 'none'
+        diagnosticsCanvas.style.visibility = state.toleranceZoneOverlayVisible ? 'visible' : 'hidden'
+        drawReplayDiagnosticsOverlayCanvas({
+            canvas: diagnosticsCanvas,
+            ...geometry,
+            camera: viewer?.camera ?? null,
+            scene: viewer?.scene ?? globalThis.lgs?.scene ?? null,
+        })
+        ensureReplayDiagnosticsCameraSync(mode)
+    }
+}

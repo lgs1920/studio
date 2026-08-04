@@ -23,6 +23,7 @@ import {
     getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker,
 } from './JourneyReplayProgressionStyle'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
+import {resolveJourneyReplayLogicalCameraRoll} from './JourneyReplayLogicalCameraPose'
 
 import {
     REPLAY_HEADING_TRANSITION_DURATION_SECONDS,
@@ -35,6 +36,9 @@ import {
     CAMERA_HEADING_HYSTERESIS_RADIANS,
     CAMERA_HEADING_LOOKAHEAD_PROGRESS,
     CAMERA_HEADING_MIN_CHANGE_RADIANS,
+    CAMERA_NAVIGATION_HEADING_LOOKAHEAD_SECONDS,
+    CAMERA_NAVIGATION_HEADING_WINDOW_SECONDS,
+    CAMERA_NAVIGATION_HEADING_MIN_WINDOW_METERS,
     CAMERA_VIEW_POSITION_EPSILON_METERS,
     CAMERA_VIEW_ANGLE_EPSILON_RADIANS,
     CAMERA_TIMING_START_ANGLE_RADIANS,
@@ -131,14 +135,11 @@ import {
     updateToleranceZoneOverlay,
 } from './JourneyReplayCameraOverlay'
 import {
-    recenterCameraToSample,
-    startCameraTransition,
-    bindMarkerInteractions,
-    bindCesiumCameraBridge,
-    startCameraLiveSyncLoop,
-    stopCameraLiveSyncLoop,
-    updateCamera,
-} from './JourneyReplayCameraBinding'
+    memoizeReplayCameraUpdateCache,
+    replayCameraUpdateCameraSettingsKey,
+    replayCameraUpdateMarkerSettingsKey,
+    replayCameraUpdateSampleKey,
+} from './JourneyReplayCameraUpdateCache'
 
 export const headingBetweenPoints = (mode, start, end) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
@@ -420,27 +421,115 @@ const smoothstep = value => {
  *
  * @param {object[]} guide - Sorted replay camera guide.
  * @param {number} progress - Normalized replay progress.
- * @returns {number} Nearest guide index.
+ * @returns {number} Lower guide index.
  */
-const nearestCameraGuideIndex = (guide, progress) => {
+const lowerCameraGuideIndex = (guide, progress) => {
     let low = 0
     let high = Math.max(0, guide.length - 1)
     while (low < high) {
-        const middle = Math.floor((low + high) / 2)
+        const middle = Math.ceil((low + high) / 2)
         const middleProgress = finiteNumber(guide[middle]?.progress) ?? 0
-        if (middleProgress < progress) {
-            low = middle + 1
+        if (middleProgress <= progress) {
+            low = middle
         }
         else {
-            high = middle
+            high = middle - 1
+        }
+    }
+    return low
+}
+
+/**
+ * Resolve the turn drift stored at one guide point.
+ *
+ * @param {object[]} guide - Sorted camera guide.
+ * @param {number} index - Guide point index.
+ * @param {object} options - Drift limits.
+ * @returns {object} Drift values, using zeros when no turn is present.
+ */
+const replayTurnDriftAtGuideIndex = (guide, index, {
+    maxHeadingOffsetDeg,
+    maxLateralOffsetMeters,
+    minTurnAngleDeg,
+}) => {
+    const previous = guide[Math.max(0, index - 1)]
+    const current = guide[index]
+    const next = guide[Math.min(guide.length - 1, index + 1)]
+    if (!previous || !current || !next) {
+        return {
+            turnAngleRadians:     0,
+            headingOffsetRadians: 0,
+            lateralOffsetMeters:  0,
         }
     }
 
-    const rightIndex = low
-    const leftIndex = Math.max(0, rightIndex - 1)
-    const leftDistance = Math.abs((finiteNumber(guide[leftIndex]?.progress) ?? 0) - progress)
-    const rightDistance = Math.abs((finiteNumber(guide[rightIndex]?.progress) ?? 0) - progress)
-    return leftDistance <= rightDistance ? leftIndex : rightIndex
+    const incoming = projectToLocalMeters(previous, current)
+    const outgoing = projectToLocalMeters(current, next)
+    const incomingMagnitude = Math.hypot(incoming?.x ?? 0, incoming?.y ?? 0)
+    const outgoingMagnitude = Math.hypot(outgoing?.x ?? 0, outgoing?.y ?? 0)
+    if (
+        !incoming
+        || !outgoing
+        || incomingMagnitude <= 1e-6
+        || outgoingMagnitude <= 1e-6
+    ) {
+        return {
+            turnAngleRadians:     0,
+            headingOffsetRadians: 0,
+            lateralOffsetMeters:  0,
+        }
+    }
+
+    const dot = (incoming.x * outgoing.x) + (incoming.y * outgoing.y)
+    const cross = (incoming.x * outgoing.y) - (incoming.y * outgoing.x)
+    const turnAngleRadians = Math.atan2(cross, dot)
+    const minimumTurnRadians = CesiumMath.toRadians(
+        Math.max(0, finiteNumber(minTurnAngleDeg) ?? 4),
+    )
+    const turnStrength = smoothstep(
+        (Math.abs(turnAngleRadians) - minimumTurnRadians)
+        / Math.max(CesiumMath.toRadians(50), Number.EPSILON),
+    )
+    const cornerSharpness = smoothstep(
+        (Math.abs(turnAngleRadians) - CesiumMath.toRadians(18))
+        / Math.max(CesiumMath.toRadians(42), Number.EPSILON),
+    )
+    const turnSign = Math.sign(turnAngleRadians) || 1
+    return {
+        turnAngleRadians,
+        headingOffsetRadians: turnSign
+                              * CesiumMath.toRadians(maxHeadingOffsetDeg)
+                              * turnStrength
+                              * lerp(0.85, 1.08, cornerSharpness),
+        lateralOffsetMeters: turnSign
+                             * Math.max(0, finiteNumber(maxLateralOffsetMeters) ?? 0)
+                             * turnStrength
+                             * lerp(1, 0.3, cornerSharpness),
+    }
+}
+
+/**
+ * Interpolate scalar guide values with continuous velocity at every point.
+ *
+ * @param {number} previous - Previous control value.
+ * @param {number} start - Interval start value.
+ * @param {number} end - Interval end value.
+ * @param {number} next - Next control value.
+ * @param {number} ratio - Interval ratio.
+ * @returns {number} Cubic Hermite value.
+ */
+const interpolateTurnDriftValue = (previous, start, end, next, ratio) => {
+    const safeRatio = clamp(finiteNumber(ratio) ?? 0, 0, 1)
+    const squared = safeRatio * safeRatio
+    const cubed = squared * safeRatio
+    const startVelocity = (end - previous) * 0.5
+    const endVelocity = (next - start) * 0.5
+    return (
+        (((2 * cubed) - (3 * squared) + 1) * start)
+        + ((cubed - (2 * squared) + safeRatio) * startVelocity)
+        + (((-2 * cubed) + (3 * squared)) * end)
+        + ((cubed - squared) * endVelocity)
+    )
 }
 
 /**
@@ -451,53 +540,54 @@ const nearestCameraGuideIndex = (guide, progress) => {
  * @param {object} [options] - Drift tuning options.
  * @param {number} [options.maxHeadingOffsetDeg=10] - Maximum horizontal heading drift in degrees.
  * @param {number} [options.maxLateralOffsetMeters=60] - Maximum lateral drift in meters.
+ * @param {number} [options.minTurnAngleDeg=4] - Minimum sustained turn angle in degrees.
  * @returns {{turnAngleRadians: number, headingOffsetRadians: number, lateralOffsetMeters: number}|null} Drift envelope.
  */
 export const replayTurnDriftForGuideProgress = (guide, progress, {
     maxHeadingOffsetDeg = 10,
     maxLateralOffsetMeters = 60,
+    minTurnAngleDeg = 4,
 } = {}) => {
     if (!Array.isArray(guide) || guide.length < 3) {
         return null
     }
 
     const safeProgress = clamp(Number(progress) || 0, 0, 1)
-    const currentIndex = nearestCameraGuideIndex(guide, safeProgress)
-    const previous = guide[Math.max(0, currentIndex - 1)]
-    const current = guide[currentIndex]
-    const next = guide[Math.min(guide.length - 1, currentIndex + 1)]
-    if (!previous || !current || !next) {
-        return null
+    const startIndex = lowerCameraGuideIndex(guide, safeProgress)
+    const endIndex = Math.min(guide.length - 1, startIndex + 1)
+    const previousIndex = Math.max(0, startIndex - 1)
+    const nextIndex = Math.min(guide.length - 1, endIndex + 1)
+    const startProgress = finiteNumber(guide[startIndex]?.progress) ?? safeProgress
+    const endProgress = finiteNumber(guide[endIndex]?.progress) ?? startProgress
+    const span = Math.max(Number.EPSILON, endProgress - startProgress)
+    const ratio = startIndex === endIndex
+                  ? 0
+                  : (safeProgress - startProgress) / span
+    const options = {
+        maxHeadingOffsetDeg,
+        maxLateralOffsetMeters,
+        minTurnAngleDeg,
     }
-
-    const incoming = projectToLocalMeters(previous, current)
-    const outgoing = projectToLocalMeters(current, next)
-    if (!incoming || !outgoing) {
-        return null
-    }
-
-    const incomingMagnitude = Math.hypot(incoming.x, incoming.y)
-    const outgoingMagnitude = Math.hypot(outgoing.x, outgoing.y)
-    if (incomingMagnitude <= 1e-6 || outgoingMagnitude <= 1e-6) {
-        return null
-    }
-
-    const dot = (incoming.x * outgoing.x) + (incoming.y * outgoing.y)
-    const cross = (incoming.x * outgoing.y) - (incoming.y * outgoing.x)
-    const turnAngleRadians = Math.atan2(cross, dot)
-    const turnStrength = smoothstep(
-        (Math.abs(turnAngleRadians) - CesiumMath.toRadians(4)) / Math.max(CesiumMath.toRadians(50), Number.EPSILON),
+    const previousDrift = replayTurnDriftAtGuideIndex(guide, previousIndex, options)
+    const startDrift = replayTurnDriftAtGuideIndex(guide, startIndex, options)
+    const endDrift = replayTurnDriftAtGuideIndex(guide, endIndex, options)
+    const nextDrift = replayTurnDriftAtGuideIndex(guide, nextIndex, options)
+    const interpolate = key => interpolateTurnDriftValue(
+        previousDrift[key],
+        startDrift[key],
+        endDrift[key],
+        nextDrift[key],
+        ratio,
     )
-    if (turnStrength <= 0) {
-        return null
+    const drift = {
+        turnAngleRadians:     interpolate('turnAngleRadians'),
+        headingOffsetRadians: interpolate('headingOffsetRadians'),
+        lateralOffsetMeters:  interpolate('lateralOffsetMeters'),
     }
-
-    const turnSign = Math.sign(turnAngleRadians) || 1
-    return {
-        turnAngleRadians,
-        headingOffsetRadians: turnSign * CesiumMath.toRadians(maxHeadingOffsetDeg) * turnStrength,
-        lateralOffsetMeters:  turnSign * Math.max(0, finiteNumber(maxLateralOffsetMeters) ?? 0) * turnStrength,
-    }
+    return Math.abs(drift.headingOffsetRadians) <= 1e-9
+           && Math.abs(drift.lateralOffsetMeters) <= 1e-6
+        ? null
+        : drift
 }
 
 /**
@@ -511,16 +601,19 @@ export const replayTurnDriftForGuideProgress = (guide, progress, {
  * @param {object} [options] - Drift tuning options.
  * @param {number} [options.maxHeadingOffsetDeg=10] - Maximum horizontal heading drift in degrees.
  * @param {number} [options.maxLateralOffsetMeters=60] - Maximum lateral drift in meters.
+ * @param {number} [options.minTurnAngleDeg=4] - Minimum sustained turn angle in degrees.
  * @returns {{turnAngleRadians: number, headingOffsetRadians: number, lateralOffsetMeters: number}|null} Drift envelope.
  */
 export const replayTurnDriftForProgress = (mode, progress, {
     maxHeadingOffsetDeg = 10,
     maxLateralOffsetMeters = 60,
+    minTurnAngleDeg = 4,
 } = {}) => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
     return replayTurnDriftForGuideProgress(call.buildCameraGuide(), progress, {
         maxHeadingOffsetDeg,
         maxLateralOffsetMeters,
+        minTurnAngleDeg,
     })
 }
 
@@ -617,6 +710,13 @@ export const headingFromPositionProperty =  (mode, progress) => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         const safeProgress = clamp(Number(progress) || 0, 0, 1)
+        if (typeof state.sampler?.headingAtProgress === 'function') {
+            return state.sampler.headingAtProgress(safeProgress, {
+                lookaheadSeconds: CAMERA_NAVIGATION_HEADING_LOOKAHEAD_SECONDS,
+                windowSeconds:   CAMERA_NAVIGATION_HEADING_WINDOW_SECONDS,
+                minimumMeters:   CAMERA_NAVIGATION_HEADING_MIN_WINDOW_METERS,
+            })
+        }
         const guide = call.buildCameraGuide()
         if (!guide?.length) {
             return 0
@@ -653,16 +753,38 @@ export const cameraAltitudeForSample = (mode, sample, cameraSettings) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
+        const sampleHeight = finiteNumber(sample?.altitude ?? sample?.height) ?? 0
+        const configuredAltitude = finiteNumber(cameraSettings?.altitude) ?? 0
         const longitude = sample?.longitude
         const latitude = sample?.latitude
         if (finiteNumber(longitude) === null || finiteNumber(latitude) === null) {
+            return cameraSettings.altitudeMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET
+                ? sampleHeight + configuredAltitude
+                : cameraSettings.altitude
+        }
+
+        // Ground offset is relative to the replay marker, never to the live
+        // camera's current terrain. The camera can be horizontally displaced
+        // over a different relief, especially during a recenter transition.
+        if (state.terrainHeightLookupBypass === true) {
+            if (state.terrainHeightLookupTrace === true) {
+                replayVideoTraceDebug('camera.altitude.lookup.bypass', {
+                    longitude,
+                    latitude,
+                    sampleHeight,
+                    altitudeMode: cameraSettings.altitudeMode ?? null,
+                })
+            }
+            if (cameraSettings.altitudeMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET) {
+                return sampleHeight + configuredAltitude
+            }
             return cameraSettings.altitude
         }
         const terrainHeight = call.terrainHeightForLonLat(longitude, latitude)
-        const groundHeight = terrainHeight ?? (finiteNumber(sample?.altitude ?? sample?.height) ?? 0)
+        const groundHeight = terrainHeight ?? sampleHeight
 
         if (cameraSettings.altitudeMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET) {
-            return groundHeight + cameraSettings.altitude
+            return groundHeight + configuredAltitude
         }
 
         return cameraSettings.altitude
@@ -678,6 +800,7 @@ export const cameraViewForSample = (mode, {
                                 motionProfile = null,
                                 previousHeading = mode[JOURNEY_REPLAY_INTERNAL_STATE].lastNominalCameraHeading ?? mode[JOURNEY_REPLAY_INTERNAL_STATE].lastCameraHeading,
                                 previousPitch = mode[JOURNEY_REPLAY_INTERNAL_STATE].lastNominalCameraPitch ?? mode[JOURNEY_REPLAY_INTERNAL_STATE].lastCameraPitch,
+                                cache = null,
                             } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -686,67 +809,92 @@ export const cameraViewForSample = (mode, {
             return null
         }
 
-        const normalizedPitch = finiteNumber(cameraSettings?.pitch) ?? -65
-        const pitch = source === 'drawer'
-                      ? degreesToRadians(normalizedPitch)
-                      : normalizedPitch <= -89
-                        ? SAFE_TOP_DOWN_PITCH
-                        : degreesToRadians(normalizedPitch)
-        let desiredHeading
-        if (collision && cameraSettings.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
-            desiredHeading = call.headingFromPositionProperty(progress)
-        }
-        else if (cameraSettings.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
-            if (Number.isFinite(cameraSettings?.heading)) {
-                desiredHeading = degreesToRadians(cameraSettings.heading)
+        const computeView = () => {
+            const immediateSource = source === 'drawer' || source === 'refresh'
+            const normalizedPitch = finiteNumber(cameraSettings?.pitch) ?? -65
+            const pitch = immediateSource
+                          ? degreesToRadians(normalizedPitch)
+                          : normalizedPitch <= -89
+                            ? SAFE_TOP_DOWN_PITCH
+                            : degreesToRadians(normalizedPitch)
+            let desiredHeading
+            if (collision && cameraSettings.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
+                desiredHeading = call.headingFromPositionProperty(progress)
+            }
+            else if (cameraSettings.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
+                if (Number.isFinite(cameraSettings?.heading)) {
+                    desiredHeading = degreesToRadians(cameraSettings.heading)
+                }
+                else {
+                    desiredHeading = finiteNumber(previousHeading)
+                        ?? finiteNumber(globalThis.lgs?.viewer?.camera?.heading)
+                        ?? 0
+                }
             }
             else {
-                desiredHeading = finiteNumber(previousHeading)
-                    ?? finiteNumber(globalThis.lgs?.viewer?.camera?.heading)
-                    ?? 0
-            }
-        }
-        else {
                 desiredHeading = replayCameraHeadingForPositionMode({
                                                                         axisHeading:  call.headingFromPositionProperty(progress),
                                                                         positionMode: cameraSettings.positionMode,
                                                                         headingOffset: cameraSettings.headingOffset,
                                                                     })
+            }
+            const heading = immediateSource
+                            ? desiredHeading
+                            : replayCameraHeadingWithHysteresis({
+                                                                        previousHeading,
+                                                                        nextHeading: desiredHeading,
+                                                                        threshold:   cameraSettings.positionMode === REPLAY_CAMERA_POSITION_SYSTEM
+                                                                                     ? CAMERA_HEADING_HYSTERESIS_RADIANS
+                                                                                     : CAMERA_HEADING_MIN_CHANGE_RADIANS,
+                                                                    })
+            const smoothHeading = immediateSource
+                                  ? heading
+                                  : call.smoothRadians(
+                    previousHeading,
+                    heading,
+                    call.timeNormalizedSmoothingFactor(
+                        call.headingEasingFactor(cameraSettings, heading),
+                        state.cameraSmoothingDeltaSeconds,
+                    ),
+                )
+            const smoothPitch = immediateSource
+                                ? pitch
+                                : call.smoothRadians(
+                                    previousPitch,
+                                    pitch,
+                                    call.timeNormalizedSmoothingFactor(0.08, state.cameraSmoothingDeltaSeconds),
+                                )
+            const anchorSample = call.markerPositionForSample(sample, markerSettings)
+            return {
+                sample:       anchorSample,
+                progress:     clamp(Number(progress) || 0, 0, 1),
+                heading:      smoothHeading,
+                pitch:        smoothPitch,
+                roll:        cameraSettings.canRoll === false
+                            ? 0
+                            : resolveJourneyReplayLogicalCameraRoll({sample, sampler: state.sampler}),
+                cameraSettings,
+                markerSettings,
+                cameraHeight: call.cameraAltitudeForSample(anchorSample, cameraSettings),
+            }
         }
-        const heading = source === 'drawer'
-                        ? desiredHeading
-                        : replayCameraHeadingWithHysteresis({
-                                                                    previousHeading,
-                                                                    nextHeading: desiredHeading,
-                                                                    threshold:   cameraSettings.positionMode === REPLAY_CAMERA_POSITION_SYSTEM
-                                                                                 ? CAMERA_HEADING_HYSTERESIS_RADIANS
-                                                                                 : CAMERA_HEADING_MIN_CHANGE_RADIANS,
-                                                                })
-        const smoothHeading = source === 'drawer'
-                              ? heading
-                              : call.smoothRadians(
-                previousHeading,
-                heading,
-                call.timeNormalizedSmoothingFactor(
-                    call.headingEasingFactor(cameraSettings, heading),
-                    state.cameraSmoothingDeltaSeconds,
-                ),
-            )
-        const smoothPitch = source === 'drawer'
-                            ? pitch
-                            : call.smoothRadians(
-                                previousPitch,
-                                pitch,
-                                call.timeNormalizedSmoothingFactor(0.08, state.cameraSmoothingDeltaSeconds),
-                            )
-        const anchorSample = call.markerPositionForSample(sample, markerSettings)
-        return {
-            sample:       anchorSample,
-            progress:     clamp(Number(progress) || 0, 0, 1),
-            heading:      smoothHeading,
-            pitch:        smoothPitch,
-            cameraSettings,
-            markerSettings,
-            cameraHeight: call.cameraAltitudeForSample(anchorSample, cameraSettings),
+
+        if (cache) {
+            const cacheKey = [
+                replayCameraUpdateSampleKey({
+                    ...sample,
+                    progress,
+                }),
+                replayCameraUpdateCameraSettingsKey(cameraSettings),
+                replayCameraUpdateMarkerSettingsKey(markerSettings),
+                source ?? 'null',
+                collision === true ? '1' : '0',
+                JSON.stringify(motionProfile ?? null),
+                finiteNumber(previousHeading) ?? 'null',
+                finiteNumber(previousPitch) ?? 'null',
+            ].join('|')
+            return memoizeReplayCameraUpdateCache(cache, 'cameraViewForSample', cacheKey, computeView)
         }
+
+        return computeView()
     }

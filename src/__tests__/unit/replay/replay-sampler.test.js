@@ -256,6 +256,120 @@ describe('replay phase 1 sampler', () => {
             trackSlug: hidden.slug,
         }).samples[0].trackSlug).toBe(hidden.slug)
     })
+
+    it('uses local timed speed instead of a route-length percentage for lookahead', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#local-lookahead',
+                coordinates: [
+                    [0, 0, 0],
+                    [0.1, 0, 0],
+                    [0.2, 0, 0],
+                ],
+                times: [
+                    '2026-05-05T10:00:00.000Z',
+                    '2026-05-05T10:18:20.000Z',
+                    '2026-05-05T10:36:40.000Z',
+                ],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const anchor = sampler.atProgress(0.25)
+        const predicted = sampler.lookaheadAtProgress(0.25, {
+            seconds:       5,
+            minimumMeters: 0,
+        })
+
+        expect(predicted.distanceFromStart - anchor.distanceFromStart).toBeCloseTo(50, -1)
+        expect(predicted.distanceFromStart - anchor.distanceFromStart).toBeLessThan(sampler.totalDistance * 0.01)
+    })
+
+    it('keeps a time-based Navigation lookahead below the old metric floor', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#navigation-time-lookahead',
+                coordinates: [
+                    [0, 0, 0],
+                    [0.1, 0, 0],
+                    [0.2, 0, 0],
+                ],
+                times: [
+                    '2026-05-05T10:00:00.000Z',
+                    '2026-05-05T10:18:20.000Z',
+                    '2026-05-05T10:36:40.000Z',
+                ],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const anchor = sampler.atProgress(0.25)
+        const predicted = sampler.lookaheadAtProgress(0.25, {
+            seconds:       2,
+            minimumMeters: 0,
+        })
+        const distanceDelta = predicted.distanceFromStart - anchor.distanceFromStart
+
+        expect(distanceDelta).toBeGreaterThan(0)
+        expect(distanceDelta).toBeLessThan(32)
+    })
+
+    it('starts turning the heading before a sharp route corner', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#turn-lookahead',
+                coordinates: [
+                    [0, 0, 0],
+                    [0.001, 0, 0],
+                    [0.001, 0.001, 0],
+                ],
+                times: [
+                    '2026-05-05T10:00:00.000Z',
+                    '2026-05-05T10:00:10.000Z',
+                    '2026-05-05T10:00:20.000Z',
+                ],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const currentHeading = sampler.headingAtProgress(0.35)
+        const anticipatedHeading = sampler.headingAtProgress(0.35, {
+            lookaheadSeconds: 5,
+            windowSeconds:   2.5,
+            minimumMeters:   10,
+        })
+
+        expect(Math.abs(anticipatedHeading - currentHeading)).toBeGreaterThan(0.2)
+        expect(Math.abs(anticipatedHeading - currentHeading)).toBeLessThan(Math.PI / 2)
+    })
+
+    it('does not follow alternating small zigzags as camera heading changes', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#zigzag-heading-window',
+                coordinates: [
+                    [0, 0, 0],
+                    [0.001, 0.00008, 0],
+                    [0.002, 0, 0],
+                    [0.003, 0.00008, 0],
+                    [0.004, 0, 0],
+                    [0.005, 0.00008, 0],
+                    [0.006, 0, 0],
+                    [0.007, 0.00008, 0],
+                    [0.008, 0, 0],
+                    [0.009, 0.00008, 0],
+                    [0.01, 0, 0],
+                ],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const headings = [0.3, 0.4, 0.5, 0.6, 0.7].map(progress => sampler.headingAtProgress(progress, {
+            lookaheadSeconds: 2.5,
+            windowSeconds:   2.5,
+            minimumMeters:   400,
+        }))
+        const eastHeading = Math.PI / 2
+        const maximumDeviation = Math.max(
+            ...headings.map(heading => Math.abs(replayAngularDelta(heading, eastHeading))),
+        )
+
+        expect(maximumDeviation).toBeLessThan(0.2)
+    })
 })
-
-

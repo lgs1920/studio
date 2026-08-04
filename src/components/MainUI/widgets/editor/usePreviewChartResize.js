@@ -41,6 +41,6 @@ export const usePreviewChartResize = (chartRef, enabled, deps = []) => {
                 cancelAnimationFrame(raf2)
             }
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        // oxlint-disable-next-line react/exhaustive-deps
     }, [enabled, chartRef, ...deps])
 }

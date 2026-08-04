@@ -54,7 +54,7 @@ The project already uses Vite with `@vitejs/plugin-react`, so the Babel macro pl
 
 ## Phase 2 - Vite Integration
 
-Update `vite.config.ts`.
+Update `vite.config.mts`.
 
 Current pattern:
 

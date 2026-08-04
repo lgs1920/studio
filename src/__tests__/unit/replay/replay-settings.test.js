@@ -17,11 +17,12 @@
 import { REPLAY_DRAWER }                                           from '@Core/constants'
 import { createJourneyReplayClipInstance }                                from '@Core/ui/replay/JourneyReplayClips'
 import {
-    replayAngularDelta, replayCameraHeadingForPositionMode, replayCameraHeadingWithHysteresis,
+    replayAngularDelta, replayCameraFrameLeadSeconds, replayCameraHeadingForPositionMode, replayCameraHeadingWithHysteresis,
     replayCameraRangeFromPitch, replayCameraRecenterDuration, replayFrameLeadSeconds, replayCameraRecenterHeight,
     replayCameraRecenterHorizontalDistance, replayHeadingEasingFactor, replayHeadingFromLocalAxisAngle,
     replayIsWindowPointOutsideToleranceZone, replayPitchLookaheadFactor, JourneyReplayMode, replayTargetSampleForClip,
-    replayToleranceZoneBounds, replayCenteredZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone,
+    replayToleranceZoneBounds, replayCenteredZone, replayRuntimeTrackingSettings, replayAdaptiveTrackingTiming,
+    replayDynamicTargetPointInZone,
 }                                                                      from '@Core/ui/replay/JourneyReplayMode'
 import {
     REPLAY_SCOPE_ALL_TRACKS, REPLAY_SCOPE_CURRENT_TRACK, REPLAY_SCOPE_VISIBLE_TRACKS, JourneyReplayPathSampler,
@@ -131,8 +132,8 @@ describe('replay settings normalization', () => {
                                                    width:  1,
                                                    height: 1,
                                                })
-        expect(camera.hysteresis.marginRatio).toBeCloseTo(0.4, 6)
-        expect(camera.hysteresis.easing).toBeCloseTo(0.08, 6)
+        expect(camera.hysteresis.marginRatio).toBeCloseTo(0.12, 6)
+        expect(camera.hysteresis.easing).toBeCloseTo(0.18, 6)
         expect(getJourneyReplayCameraPresetKey(camera)).toBe(REPLAY_CAMERA_PRESET_DEFAULT)
 
         const bounds = replayToleranceZoneBounds({
@@ -258,10 +259,72 @@ describe('replay settings normalization', () => {
         expect(targetZone.height * 1920).toBeCloseTo(576, 6)
     })
 
+    it('adapts short replay zones with explicit renderer-independent floors', () => {
+        const viewport = {width: 1920, height: 1080}
+        const longTracking = replayRuntimeTrackingSettings({}, viewport, {
+            durationSeconds: 60,
+            elapsedSeconds: 0,
+            transitionSeconds: 2,
+            frameIntervalMs: 1000 / 30,
+        })
+        const shortTracking = replayRuntimeTrackingSettings({}, viewport, {
+            durationSeconds: 1,
+            elapsedSeconds: 0,
+            transitionSeconds: 2,
+            frameIntervalMs: 1000 / 15,
+        })
+        const shortNavigationBounds = replayToleranceZoneBounds(shortTracking.navigation.triggerZone)
+        const shortDynamicBounds = replayToleranceZoneBounds(shortTracking.dynamic.triggerZone)
+        const shortTargetBounds = replayToleranceZoneBounds(shortTracking.dynamic.targetZone)
+
+        expect(longTracking.timing.adaptationRatio).toBe(0)
+        expect(shortTracking.timing.adaptationRatio).toBe(1)
+        expect(shortNavigationBounds.right - shortNavigationBounds.left).toBeCloseTo(0.05, 6)
+        expect(shortDynamicBounds.right - shortDynamicBounds.left).toBeCloseTo(0.3, 6)
+        expect(shortTargetBounds.right - shortTargetBounds.left).toBeCloseTo(0.3, 6)
+        expect(shortTargetBounds.left).toBeGreaterThanOrEqual(shortDynamicBounds.left)
+        expect(shortTargetBounds.right).toBeLessThanOrEqual(shortDynamicBounds.right)
+        expect(shortTargetBounds.top).toBeGreaterThanOrEqual(shortDynamicBounds.top)
+        expect(shortTargetBounds.bottom).toBeLessThanOrEqual(shortDynamicBounds.bottom)
+        expect(shortTracking.timing.minimumZoneRatios).toEqual({
+                                                                      navigationZ1: 0.05,
+                                                                      dynamicZ1:     0.3,
+                                                                      dynamicZ2:     0.3,
+                                                                  })
+    })
+
+    it('accounts for remaining time, output cadence and playback rate', () => {
+        const start = replayAdaptiveTrackingTiming({
+                                                        durationSeconds: 20,
+                                                        elapsedSeconds: 0,
+                                                        transitionSeconds: 2,
+                                                        frameIntervalMs: 1000 / 60,
+                                                    })
+        const late = replayAdaptiveTrackingTiming({
+                                                       durationSeconds: 20,
+                                                       elapsedSeconds: 19,
+                                                       transitionSeconds: 2,
+                                                       frameIntervalMs: 1000 / 15,
+                                                       playbackRate:    2,
+                                                   })
+
+        expect(late.adaptationRatio).toBeGreaterThan(start.adaptationRatio)
+        expect(late.minimumTransitionSeconds).toBeLessThan(start.minimumTransitionSeconds)
+        expect(late.frameLeadSeconds).toBeGreaterThan(start.frameLeadSeconds)
+        expect(late.effectiveTransitionSeconds).toBeGreaterThan(start.effectiveTransitionSeconds)
+    })
+
     it('adds one frame of temporal lead according to the capture FPS', () => {
         expect(replayFrameLeadSeconds({fps: 15})).toBeCloseTo(1 / 15, 6)
         expect(replayFrameLeadSeconds({fps: 60})).toBeCloseTo(1 / 60, 6)
         expect(replayFrameLeadSeconds({fps: 15, frameIntervalMs: 1000 / 60})).toBeCloseTo(1 / 60, 6)
+    })
+
+    it('uses Draft and HQ cadence defaults when no output interval is available', () => {
+        expect(replayCameraFrameLeadSeconds({renderMode: 'draft'})).toBeCloseTo(1 / 15, 6)
+        expect(replayCameraFrameLeadSeconds({renderMode: 'hq'})).toBeCloseTo(1 / 60, 6)
+        expect(replayCameraFrameLeadSeconds({renderMode: 'draft', frameIntervalMs: 1000 / 60}))
+            .toBeCloseTo(1 / 60, 6)
     })
 
     it('increases look-ahead for grazing camera pitches', () => {

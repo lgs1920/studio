@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: vite.config.ts
+ * File: vite.config.mts
  *
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
@@ -14,11 +14,11 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {defineConfig} from 'vite'
+import {defineConfig, type Plugin} from 'vite'
 import react from '@vitejs/plugin-react'
 import cesium from 'vite-plugin-cesium'
 import {VitePWA} from 'vite-plugin-pwa'
-import mdPlugin from 'vite-plugin-markdown'
+import mdPlugin, {Mode} from 'vite-plugin-markdown'
 import data from './public/version.json' with {type: 'json'}
 import {execSync} from 'child_process'
 import fs from 'fs'
@@ -31,17 +31,18 @@ const DEV_PROXY_ALLOWED_TARGETS = new Set([
     'https://wms.pcn.minambiente.it:443',
     'http://wms.pcn.minambiente.it:80',
 ])
+const PROJECT_ROOT = import.meta.dirname
 
 /**
  * Injects current git branch name into a local JSON file for development tracking.
  * Runs only during dev server execution.
  */
-function saveBranchInLocal() {
+function saveBranchInLocal(): Plugin {
     return {
         name: 'inject-git-branch',
         apply: 'serve' as const,
         configureServer() {
-            const _branchPath = path.resolve(__dirname, 'public/branch.json')
+            const _branchPath = path.resolve(PROJECT_ROOT, 'public/branch.json')
             const _branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim()
 
             let _branchData: { branch?: string } = {}
@@ -61,13 +62,13 @@ function saveBranchInLocal() {
  * Dev-only fallback to ensure Cesium static assets are served at /cesium/.
  * This avoids SPA fallback returning index.html for Cesium JSON assets.
  */
-function serveCesiumDev() {
+function serveCesiumDev(): Plugin {
     return {
         name: 'serve-cesium-dev',
         apply: 'serve' as const,
         configureServer({middlewares}) {
-            const _engineSource = path.resolve(__dirname, 'node_modules/@cesium/engine/Source')
-            const _widgetsSource = path.resolve(__dirname, 'node_modules/@cesium/widgets/Source')
+            const _engineSource = path.resolve(PROJECT_ROOT, 'node_modules/@cesium/engine/Source')
+            const _widgetsSource = path.resolve(PROJECT_ROOT, 'node_modules/@cesium/widgets/Source')
 
             const _serveEngine = serveStatic(_engineSource, {
                 setHeaders: (res) => {
@@ -114,7 +115,7 @@ function serveCesiumDev() {
  * Dev-only PHP proxy equivalent for Vite.
  * The production proxy.php is executed by PHP, while Vite only serves public files.
  */
-function serveProxyPhpDev() {
+function serveProxyPhpDev(): Plugin {
     return {
         name: 'serve-proxy-php-dev',
         apply: 'serve' as const,
@@ -218,7 +219,7 @@ export default defineConfig({
                 type: 'module'
             }
         }),
-        mdPlugin({mode: ['html', 'markdown']}),
+        mdPlugin({mode: [Mode.HTML, Mode.MARKDOWN]}),
         saveBranchInLocal()
     ],
 
@@ -230,6 +231,7 @@ export default defineConfig({
         host: 'dev.lgs1920.fr',
         port: 5173,
         /** Force WebStorm (WSL) as editor for the error overlay */
+        // @ts-expect-error Vite accepts this editor integration option at runtime.
         launchEditor: 'webstorm',
         strictPort: true,
         headers: {
@@ -263,31 +265,55 @@ export default defineConfig({
         alias: [
             {
                 find: '@Utils',
-                replacement: path.resolve(__dirname, 'src/Utils')
+                replacement: path.resolve(PROJECT_ROOT, 'src/Utils')
             },
             {
                 find: '@Editor',
-                replacement: path.resolve(__dirname, 'src/components/TracksEditor')
+                replacement: path.resolve(PROJECT_ROOT, 'src/components/TracksEditor')
             },
             {
                 find: '@Components',
-                replacement: path.resolve(__dirname, 'src/components')
+                replacement: path.resolve(PROJECT_ROOT, 'src/components')
             },
             {
                 find: '@Stores',
-                replacement: path.resolve(__dirname, 'src/core/stores')
+                replacement: path.resolve(PROJECT_ROOT, 'src/core/stores')
             },
             {
                 find: '@Core',
-                replacement: path.resolve(__dirname, 'src/core')
+                replacement: path.resolve(PROJECT_ROOT, 'src/core')
             },
             {
                 find: '@Locales',
-                replacement: path.resolve(__dirname, 'src/locales')
+                replacement: path.resolve(PROJECT_ROOT, 'src/locales')
             },
             {
                 find: '@Assets',
-                replacement: path.resolve(__dirname, 'src/assets')
+                replacement: path.resolve(PROJECT_ROOT, 'src/assets')
+            },
+            {
+                find: '@Widgets',
+                replacement: path.resolve(PROJECT_ROOT, 'src/components/MainUI/widgets')
+            },
+            {
+                find: '@Settings',
+                replacement: path.resolve(PROJECT_ROOT, 'src/components/Settings')
+            },
+            {
+                find: '@Tests',
+                replacement: path.resolve(PROJECT_ROOT, 'src/__tests__')
+            },
+            {
+                find: '@Events',
+                replacement: path.resolve(PROJECT_ROOT, 'src/core/events')
+            },
+            {
+                find: '@UI',
+                replacement: path.resolve(PROJECT_ROOT, 'src/core/ui')
+            },
+            {
+                find: '@Database',
+                replacement: path.resolve(PROJECT_ROOT, 'src/core/db')
             }
         ]
     },

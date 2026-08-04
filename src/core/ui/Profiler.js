@@ -56,12 +56,6 @@ const pointFromCoordinate = coordinate => {
 }
 
 const trackProfilePoints = track => {
-    const metricsPoints = Array.isArray(track?.metrics?.points) ? track.metrics.points : []
-
-    if (metricsPoints.length > 0) {
-        return metricsPoints
-    }
-
     const geometry = getTrackRenderContent(track)?.geometry
 
     if (geometry?.type === 'LineString' && Array.isArray(geometry.coordinates)) {
@@ -103,7 +97,7 @@ const trackProfilePoints = track => {
             : [])
     }
 
-    return []
+    return Array.isArray(track?.metrics?.points) ? track.metrics.points : []
 }
 
 export class Profiler {

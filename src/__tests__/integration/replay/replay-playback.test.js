@@ -38,10 +38,22 @@ import {
     getJourneyReplayCameraPresetKey, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplaySettings,
 }                                                                      from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { gpx }                                                         from '@tmcw/togeojson'
+import { JSDOM }                                                       from 'jsdom'
 import { applyGpxStyleExtensionProperties, extractLgsTrackProperties } from '@Utils/JourneyGpxUtils'
 import { Cartesian3, Cartographic, Matrix4, Math as CesiumMath, Transforms } from 'cesium'
 import { proxy }                                                       from 'valtio'
 import { describe, expect, it, vi }                                    from 'vitest'
+
+if (typeof globalThis.document === 'undefined') {
+    const dom = new JSDOM('<!doctype html><html><body></body></html>')
+    globalThis.window = dom.window
+    globalThis.document = dom.window.document
+    globalThis.DOMParser = dom.window.DOMParser
+    globalThis.HTMLElement = dom.window.HTMLElement
+    globalThis.HTMLCanvasElement = dom.window.HTMLCanvasElement
+    globalThis.CustomEvent = dom.window.CustomEvent
+    globalThis.Node = dom.window.Node
+}
 
 vi.mock('@Components/Toast', () => ({
     LGS_ERROR_TOAST:       'danger',
@@ -86,6 +98,77 @@ describe('replay phase 1 playback controller', () => {
 
         expect(controller.progress).toBeCloseTo(0.5, 4)
         expect(updates.at(-1).longitude).toBeCloseTo(0.001, 5)
+    })
+
+    it('publishes the shared frame contract fields in the live dynamic frame state', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[0, 0, 0], [0.002, 0, 0]],
+                times:       ['2026-05-05T10:00:00.000Z', '2026-05-05T10:20:00.000Z'],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const previousLgs = globalThis.lgs
+        const frames = []
+
+        globalThis.lgs = {
+            events: {
+                emit: () => {},
+            },
+            scene: {
+                requestRender: () => {},
+            },
+            stores: {
+                replay: proxy({
+                    active:         false,
+                    playing:        false,
+                    paused:         false,
+                    progress:       0,
+                    elapsedMillis:   null,
+                    durationMillis:  null,
+                    sample:         null,
+                    totalDistance:  0,
+                    captureFps:     30,
+                }),
+            },
+        }
+
+        try {
+            const controller = new JourneyReplayPlaybackController({
+                requestFrame: callback => {
+                    frames.push(callback)
+                    return frames.length
+                },
+                cancelFrame: () => {},
+                now:         () => 0,
+            })
+
+            controller.configure({sampler, duration: 10})
+            controller.start()
+
+            expect(globalThis.lgs.stores.replay.dynamicFrameState).toEqual(expect.objectContaining({
+                active:          true,
+                playing:         true,
+                paused:          false,
+                index:           0,
+                frameIndex:      0,
+                frameCount:      301,
+                replayFrameIndex: 0,
+                replayFrameCount: 301,
+                frameTimeMs:     0,
+                frameIntervalMs: 1000 / 30,
+                source:          'controller',
+                renderContract: expect.objectContaining({
+                    renderMode: 'draft',
+                    logicalFrame: expect.objectContaining({progress: 0}),
+                    scheduling: {realtime: true, frameByFrame: false},
+                }),
+            }))
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
     })
 
     it('pauses and resumes without counting paused time', () => {
@@ -219,6 +302,72 @@ describe('replay phase 1 playback controller', () => {
             expect(globalThis.lgs.stores.replay.totalDistance).toBe(0)
     }
     finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('shows the replay trace during standalone playback', () => {
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[0, 0, 0], [0.001, 0, 0]],
+            }),
+        ])
+        const previousLgs = globalThis.lgs
+        const previousDoubleUnderscore = globalThis.__
+        const replaySettings = defaultJourneyReplaySettings()
+        const replayStore = proxy({
+            active:        false,
+            playing:       false,
+            paused:        false,
+            recordingSync: false,
+            progress:      0.5,
+            camera:        replaySettings.camera,
+        })
+        const renderer = {
+            clear:  vi.fn(),
+            show:   vi.fn(),
+            update: vi.fn(),
+        }
+
+        globalThis.lgs = {
+            theJourney: journey,
+            theTrack:   null,
+            settings:   {ui: {replay: replaySettings}},
+            stores:     {replay: replayStore},
+            viewer:     {
+                camera: {
+                    moveStart: {addEventListener: vi.fn(), removeEventListener: vi.fn()},
+                    moveEnd:   {addEventListener: vi.fn(), removeEventListener: vi.fn()},
+                    changed:   {addEventListener: vi.fn(), removeEventListener: vi.fn()},
+                },
+            },
+            scene:      {requestRender: vi.fn()},
+        }
+        globalThis.__ = {ui: {cameraManager: {}}}
+
+        try {
+            const mode = new JourneyReplayMode({
+                controller: new JourneyReplayPlaybackController({
+                    requestFrame: () => 1,
+                    cancelFrame:  () => {},
+                    now:          () => 0,
+                }),
+                renderer,
+            })
+
+            mode.configure({journey})
+            mode.refresh({camera: false})
+
+            expect(renderer.update).toHaveBeenLastCalledWith(expect.objectContaining({showTrace: false}))
+
+            replayStore.active = true
+            mode.refresh({camera: false})
+
+            expect(renderer.update).toHaveBeenLastCalledWith(expect.objectContaining({showTrace: true}))
+        }
+        finally {
+            globalThis.__ = previousDoubleUnderscore
             globalThis.lgs = previousLgs
         }
     })
@@ -727,6 +876,89 @@ describe('replay phase 1 playback controller', () => {
             expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(1350)
             expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBe(-62)
             expect(globalThis.lgs.stores.replay.camera.altitude).toBe(1350)
+        }
+        finally {
+            globalThis.__ = previousDoubleUnderscore
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('preserves the pre-replay camera snapshot across repeated starts', async () => {
+        const journey = makeJourney([
+                                        makeTrack({
+                                                      slug:        'track#journey#gpx#main',
+                                                      coordinates: [[2, 48, 120], [2.001, 48.001, 130]],
+                                                  }),
+                                    ])
+        const previousLgs = globalThis.lgs
+        const previousDoubleUnderscore = globalThis.__
+        const replay = defaultJourneyReplaySettings()
+        const camera = {
+            heading:              0.4,
+            pitch:                -0.7,
+            roll:                 0,
+            positionCartographic: {longitude: 0.1, latitude: 0.2, height: 2400},
+            moveStart:            {addEventListener: () => {}, removeEventListener: () => {}},
+            moveEnd:              {addEventListener: () => {}, removeEventListener: () => {}},
+            cancelFlight:         () => {},
+            lookAtTransform:      () => {},
+        }
+        camera.setView = vi.fn(({destination, orientation}) => {
+            const position = Cartographic.fromCartesian(destination)
+            camera.heading = orientation?.heading ?? camera.heading
+            camera.pitch = orientation?.pitch ?? camera.pitch
+            camera.positionCartographic = position
+        })
+
+        globalThis.lgs = {
+            theJourney: journey,
+            settings:   {ui: {replay, journeyToolbar: {show: true}}},
+            stores:     {replay: proxy({progress: 0, camera: replay.camera})},
+            viewer:     {trackedEntity: null, camera},
+            scene:      {requestRender: () => {}, globe: {getHeight: () => 120}},
+        }
+        globalThis.__ = {
+            ui: {
+                cameraManager: {stopRotate: vi.fn()},
+            },
+        }
+
+        try {
+            const mode = new JourneyReplayMode({
+                controller: new JourneyReplayPlaybackController({
+                    requestFrame: () => 1,
+                    cancelFrame:  () => {},
+                    now:          () => 0,
+                }),
+                renderer: {
+                    clear:  () => {},
+                    show:   () => {},
+                    update: () => {},
+                },
+            })
+
+            mode.start()
+
+            expect(mode.replayEntryCameraState).toEqual(expect.objectContaining({
+                destination: expect.objectContaining({height: 2400}),
+            }))
+            expect(mode.savedCameraState.destination.height).toBe(2400)
+            expect(camera.positionCartographic.height).not.toBeCloseTo(2400, 3)
+
+            const firstReplayEntryCameraState = mode.replayEntryCameraState
+            mode.stop({emit: false})
+            await mode.waitForSceneRestore()
+            mode.start()
+
+            const secondReplayEntryCameraState = mode.replayEntryCameraState
+            expect(secondReplayEntryCameraState.destination.longitude)
+                .toBeCloseTo(firstReplayEntryCameraState.destination.longitude, 9)
+            expect(secondReplayEntryCameraState.destination.latitude)
+                .toBeCloseTo(firstReplayEntryCameraState.destination.latitude, 9)
+            expect(secondReplayEntryCameraState.destination.height)
+                .toBeCloseTo(firstReplayEntryCameraState.destination.height, 6)
+            expect(secondReplayEntryCameraState.orientation)
+                .toEqual(firstReplayEntryCameraState.orientation)
         }
         finally {
             globalThis.__ = previousDoubleUnderscore
@@ -1570,13 +1802,15 @@ describe('replay phase 1 playback controller', () => {
         const focusPromise = new Promise(resolve => {
             resolveFocus = resolve
         })
+        let focusCallCount = 0
         journey.focus = vi.fn(() => {
+            focusCallCount += 1
             source.show = true
             poiRestoredEntity.show = true
             poiRestoredEntity.billboard.show = true
             poiStillHiddenEntity.show = true
             poiStillHiddenEntity.billboard.show = true
-            return focusPromise
+            return focusCallCount === 1 ? Promise.resolve() : focusPromise
         })
         const listeners = new Map()
         let sampler = null
@@ -1715,10 +1949,13 @@ describe('replay phase 1 playback controller', () => {
             expect(poiRestoredEntity.show).toBe(false)
             expect(poiStillHiddenEntity.show).toBe(false)
 
+            await vi.advanceTimersByTimeAsync(2000)
+
+            expect(journey.focus).toHaveBeenCalled()
+
             resolveFocus()
             await Promise.resolve()
 
-            await vi.advanceTimersByTimeAsync(2000)
             await Promise.resolve()
             await Promise.resolve()
 

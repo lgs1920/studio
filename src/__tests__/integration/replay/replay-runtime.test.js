@@ -1,6 +1,6 @@
 import {REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP} from '@Core/ui/replay/JourneyReplayClips'
 import {
-    finiteNumber, publishReplayClipFrameState, resetRuntimeProgress,
+    finiteNumber, isJourneyReplayCameraActive, publishReplayClipFrameState, resetRuntimeProgress,
 } from '@Core/ui/replay/JourneyReplayRuntime'
 import {describe, expect, it} from 'vitest'
 
@@ -9,6 +9,16 @@ describe('JourneyReplayRuntime', () => {
         expect(finiteNumber('12.5')).toBe(12.5)
         expect(finiteNumber(Number.NaN)).toBeNull()
         expect(finiteNumber(undefined)).toBeNull()
+    })
+
+    it('does not activate camera updates for an inactive configured replay', () => {
+        expect(isJourneyReplayCameraActive({sample: {progress: 0.5}})).toBe(false)
+    })
+
+    it('activates camera updates while replay playback or clips are active', () => {
+        expect(isJourneyReplayCameraActive({active: true})).toBe(true)
+        expect(isJourneyReplayCameraActive({paused: true})).toBe(true)
+        expect(isJourneyReplayCameraActive({clipSequenceActive: true})).toBe(true)
     })
 
     it('publishes a normalized start clip frame state', () => {
@@ -31,6 +41,40 @@ describe('JourneyReplayRuntime', () => {
         expect(phase.slot).toBe(REPLAY_CLIP_SLOT_START)
         expect(store.dynamicFrameState.phase).toBe(phase)
         expect(store.dynamicFrameState.elapsedMillis).toBe(250)
+    })
+
+    it('publishes the shared frame contract fields for clip playback', () => {
+        const store = {
+            direction: 1,
+            elapsedMillis: 100,
+            durationMillis: 1000,
+        }
+
+        const phase = publishReplayClipFrameState({
+            store,
+            slot: REPLAY_CLIP_SLOT_START,
+            progress: 0.25,
+            sample: {
+                journeyElapsedMillis: 250,
+                journeyDurationMillis: 1000,
+            },
+        })
+
+        expect(store.dynamicFrameState).toEqual(expect.objectContaining({
+            active:          true,
+            playing:         false,
+            paused:          false,
+            index:           null,
+            frameIndex:      null,
+            frameId:         null,
+            frameCount:      null,
+            frameTimeMs:     null,
+            frameIntervalMs: null,
+            replayFrameIndex: null,
+            replayFrameCount: null,
+            phase,
+            source:          'clip',
+        }))
     })
 
     it('publishes the stop phase at the end of the replay', () => {

@@ -324,6 +324,97 @@ describe('video recording relaunch regression', () => {
         expect(screen.queryByText('50%')).toBeNull()
     })
 
+    it('uses the configured replay duration and clips before the export plan is ready', async () => {
+        globalThis.lgs.stores.ui.video.preRecording = false
+        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.replay.recordingSync = true
+        globalThis.lgs.stores.replay.duration = 100
+        globalThis.lgs.stores.replay.durationMillis = 300000
+        globalThis.lgs.stores.replay.clips = {
+            start: [{params: {duration: 10}, enabled: true}],
+            stop:  [{params: {duration: 10}, enabled: true}],
+        }
+
+        render(<VideoRecorderToolbar/>)
+
+        act(() => {
+            recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.INFO, {
+                detail: {
+                    duration: 60000,
+                    size:     0,
+                },
+            }))
+        })
+
+        await waitFor(() => {
+            expect(screen.getByText('50%')).not.toBeNull()
+        })
+    })
+
+    it('starts Draft progress at zero while the recorder is preparing', () => {
+        globalThis.lgs.stores.ui.video.preRecording = true
+        globalThis.lgs.stores.replay.recordingSync = true
+        globalThis.lgs.stores.replay.active = true
+        globalThis.lgs.stores.replay.playing = true
+        globalThis.lgs.stores.replay.sample = {progress: 0.9}
+        globalThis.lgs.stores.replay.dynamicFrameState = {
+            replayFrameIndex: 90,
+            replayFrameCount: 101,
+        }
+
+        render(<VideoRecorderToolbar/>)
+
+        expect(screen.getByText('0%')).not.toBeNull()
+        expect(screen.queryByText('90%')).toBeNull()
+    })
+
+    it('keeps Draft replay progress monotonic and reaches 100 percent on stop', async () => {
+        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.replay.recordingSync = true
+        globalThis.lgs.stores.replay.deferredExportPlan = {
+            videoTimeline: {
+                durationMillis: 200000,
+            },
+        }
+
+        render(<VideoRecorderToolbar/>)
+
+        expect(screen.getByText('0%')).not.toBeNull()
+
+        act(() => {
+            recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.INFO, {
+                detail: {
+                    duration: 150000,
+                    size:     0,
+                },
+            }))
+            recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.INFO, {
+                detail: {
+                    duration: 100000,
+                    size:     0,
+                },
+            }))
+        })
+
+        await waitFor(() => {
+            expect(screen.getByText('75%')).not.toBeNull()
+        })
+        expect(screen.queryByText('50%')).toBeNull()
+
+        act(() => {
+            recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.STOP, {
+                detail: {
+                    duration: 200000,
+                    size:     0,
+                },
+            }))
+        })
+
+        await waitFor(() => {
+            expect(screen.getByText('100%')).not.toBeNull()
+        })
+    })
+
     it('shows a compact mobile replay summary without totals', () => {
         globalThis.__.device.isMobile = true
         globalThis.lgs.stores.ui.video.recording = true

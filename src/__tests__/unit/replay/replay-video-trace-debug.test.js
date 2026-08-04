@@ -1,5 +1,22 @@
 import { replayVideoTraceDebug } from '@Core/ui/replay/ReplayVideoTraceDebug'
+import {
+    beginReplayCameraExport,
+    endReplayCameraExport,
+} from '@Core/ui/replay/JourneyReplaySessionPlaybackController'
+import {
+    JOURNEY_REPLAY_INTERNAL_CALL,
+    JOURNEY_REPLAY_INTERNAL_STATE,
+} from '@Core/ui/replay/JourneyReplayInternal'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('@Components/Toast', () => ({
+    LGS_ERROR_TOAST:       'danger',
+    LGS_INFORMATION_TOAST: 'primary',
+    LGS_SUCCESS_TOAST:     'success',
+    LGS_TOAST_DURATION:    5000,
+    LGS_WARNING_TOAST:     'warning',
+    showToast:             vi.fn(),
+}))
 
 const TRACE_GLOBAL_KEY = '__lgsReplayVideoTrace'
 const TRACE_CONSOLE_FLAG = '__lgsReplayVideoTraceConsole'
@@ -21,5 +38,31 @@ describe('replay video trace diagnostics', () => {
         expect(consoleInfo).not.toHaveBeenCalled()
 
         consoleInfo.mockRestore()
+    })
+
+    it('traces camera export ownership transitions in the replay session', () => {
+        const state = {
+            replayExportCameraActive: false,
+            cameraUserAdjusting: true,
+            cameraPointerActive: true,
+            cameraManualInteractionTimer: 1,
+        }
+        const call = {
+            cancelCameraBezierTransition: vi.fn(),
+        }
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: state,
+            [JOURNEY_REPLAY_INTERNAL_CALL]:  call,
+        }
+
+        beginReplayCameraExport(mode)
+        endReplayCameraExport(mode)
+
+        const traceEntries = globalThis[TRACE_GLOBAL_KEY] ?? []
+        const traceEvents = traceEntries.map(entry => entry.event)
+        expect(traceEvents).toContain('camera.export-ownership.start')
+        expect(traceEvents).toContain('camera.export-ownership.end')
+        expect(state.replayExportCameraActive).toBe(false)
+        expect(call.cancelCameraBezierTransition).toHaveBeenCalledWith(false)
     })
 })

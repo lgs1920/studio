@@ -1,348 +1,364 @@
-# Replay Camera Tracking Zones
+# Replay Camera Tracking and Temporary Pitch
 
-This document describes the camera tracking zones used by replay video
-recording and deferred HQ export.
+Status: current implementation
 
-## 1. Purpose
+Date: 2026-08-03
 
-The replay camera follows a moving marker without continuously moving. It waits
-until the marker reaches a defined trigger zone, then recenters the camera so
-the marker remains comfortably visible.
+## Scope
 
-The same camera-tracking rules are used by Draft recording and HQ export. HQ
-does not use a different visual configuration: it evaluates the same algorithm
-at deterministic export timestamps.
+This document describes the replay camera behavior implemented for Navigation
+and Dynamic (`hysteresis`) marker modes. It is the canonical specification for:
 
-## 2. Zone definitions
+- renderer-independent nominal camera poses;
+- Navigation and Dynamic tracking zones;
+- temporary visibility pitch correction;
+- Draft and HQ camera parity;
+- camera-frame ownership during tracking and correction.
 
-Coordinates are normalized to the viewport: `(0, 0)` is the top-left and
-`(1, 1)` is the bottom-right. A centered zone of ratio `r` has:
+Trace mode is outside this contract because it does not track the replay marker
+with the camera. Start and stop clips may explicitly define other camera poses
+and are also outside the temporary visibility-correction lifecycle.
 
-```text
-left   = (1 - r) / 2
-top    = (1 - r) / 2
-width  = r
-height = r
-```
+## 1. Shared Draft and HQ contract
 
-The ratio applies independently to the viewport width and height. The zone is
-not forced to be square in pixels. For example, a `30% × 30%` zone on a
-`1080 × 1920` portrait crop is `324 × 576` pixels.
+Draft and HQ call the same camera resolver. The render mode changes only the
+source of logical time and frame scheduling:
 
-### Navigation mode
+| Concern | Draft | HQ |
+| --- | --- | --- |
+| Logical time | Live replay playback | Deterministic export frame timestamp |
+| Capture | Live recorder | Sequential offline exporter |
+| Camera resolver | `JourneyReplayCameraTrackingBinding` | `JourneyReplayCameraTrackingBinding` |
+| Nominal pose | `resolveJourneyReplayLogicalCameraPose` | `resolveJourneyReplayLogicalCameraPose` |
+| Pitch correction | Shared state machine | Shared state machine |
 
-Navigation uses one zone only:
+For identical settings, replay data, viewport, and logical timestamp, both
+modes must resolve the same camera decision. Draft is allowed to sample fewer
+timestamps because of its lower frame rate; it is not allowed to use a
+different visibility, pitch, drift, or tracking algorithm.
 
-| Zone | Ratio | Normalized bounds | Meaning |
-| --- | ---: | --- | --- |
-| Z1 | 30% × 30% | `left=35%`, `top=35%`, `right=65%`, `bottom=65%` | Trigger zone for camera recentering |
+No complete constrained camera path is compiled synchronously before replay or
+export. The active resolver works from the current logical frame and bounded
+look-ahead samples.
 
-There is no Z2 in navigation mode. When the marker leaves Z1, the camera aims
-at the predicted marker position. On a narrow crop, Z1 uses `22% × 22%`; its
-pixel dimensions therefore follow the crop aspect ratio instead of becoming a
-square.
+## 2. Nominal camera pose
 
-### Dynamic mode
+The nominal pose is recalculated from the current logical replay sample. It is
+never derived from the current Cesium camera orientation.
 
-Dynamic mode uses two nested concepts:
+The position modes behave as follows:
 
-| Zone | Ratio | Normalized bounds | Meaning |
-| --- | ---: | --- | --- |
-| Z1 | 75% × 75% | `left=12.5%`, `top=12.5%`, `right=87.5%`, `bottom=87.5%` | Outer trigger zone |
-| Z2 | 30% × 30% | `left=35%`, `top=35%`, `right=65%`, `bottom=65%` | Recenter landing zone |
+- `Behind`: route-axis heading plus the configured heading offset;
+- `Ahead`: route-axis heading plus 180 degrees and the configured heading
+  offset;
+- `System`: configured heading, except Navigation may use the route axis when
+  an axis heading is available.
 
-Z1 is deliberately large: dynamic tracking starts early, before the marker
-reaches the viewport edge. Z2 is the stable central area where the marker is
-placed after a correction.
+The configured heading offset is normalized before use. Pitch comes from the
+configured camera pitch. Values at or below -89 degrees use a safe near-top-down
+pitch to avoid a singular orientation. Camera height is either the configured
+constant altitude or the sample height plus the configured ground offset.
 
-## 3. Trigger algorithm
+Navigation and Dynamic use this same resolver. Neither tracking mode may force
+`Ahead` or bypass the selected `Behind`, `Ahead`, or `System` behavior.
 
-For each replay update, the implementation projects the current and predicted
-marker samples into Cesium window coordinates, then converts them into the
-active video-crop coordinate space. This crop-local conversion is mandatory for
-every video format, including landscape, square, and portrait 9:16 crops.
+### 2.1 Camera capability flags
 
-1. Project the marker into Cesium window coordinates.
-2. Subtract the active crop's `left` and `top` offsets when a crop is active.
-3. Convert the configured normalized zone into pixel bounds using the crop's
-   width and height.
-4. Treat a point on or beyond any bound as outside the zone.
-5. In navigation mode, leave Z1 when the current or predicted point is outside
-   the navigation zone.
-6. In dynamic mode, use the same test against dynamic Z1. Z2 is not used as
-   the initial trigger condition.
-7. If a point cannot be projected, it is treated as outside the zone so that
-   visibility is not silently lost.
+The normalized `ui.replay.camera` settings expose three independent boolean
+capabilities. They default to `true` and are shared by Draft and HQ:
 
-The current and predicted samples are both checked because Cesium projection
-can be updated asynchronously while Draft playback is running. Draft and HQ
-use the same normalized Z1/Z2 definitions and collision decisions; only their
-camera clocks differ.
+| Setting | Effect when `false` |
+| --- | --- |
+| `canDrift` | disables the turn-based heading/lateral drift envelope; the nominal route pose remains active |
+| `canFixHiddenMarker` | disables temporary hidden-marker pitch correction and terrain redirect searches |
+| `canRoll` | disables speed/curvature-based banking and keeps camera roll at zero |
 
-The look-ahead also includes one output-frame interval. Draft resolves that
-interval from `replay.captureFps`; HQ resolves it from the export timeline FPS.
-Therefore a 15 FPS capture anticipates `66.67 ms`, while a 60 FPS capture
-anticipates `16.67 ms`. This compensates for the larger position jump between
-low-FPS frames without changing the visual size of Z1 or Z2.
+Changing one capability must not alter the other camera settings or select a
+different resolver for Draft and HQ.
 
-## 4. Predictive processing
+## 3. Temporary visibility correction
 
-Predictive processing is used to compensate for camera movement, easing and
-Cesium projection latency. It does not move the replay timeline forward. It
-only selects a future path sample to decide whether the camera should start
-moving and where it should aim.
+Temporary pitch correction is independent from Navigation and Dynamic zone
+handling. Both modes use the same visibility observation, candidate search,
+state machine, limits, and camera application path.
 
-### 4.1 Anchor and normal future sample
+### 3.1 Activation observation
 
-For every camera update, the nominal camera view first produces an `anchor`
-sample: the marker position at the current replay time. The implementation then
-computes a normal future sample:
+The controller evaluates the current nominal camera view. A predictive sample
+is not used to activate or retain a pitch correction.
 
-```text
-futureSample = sample at current distance + lookahead distance
-predictedSample = futureSample or anchorSample
-```
+The nominal view is considered visible unless either of these checks proves it
+hidden:
 
-The look-ahead duration is the configured camera recenter duration. The path
-sampler converts that duration to distance. To avoid an insignificant or zero
-look-ahead, the selected distance is at least the greater of:
+1. geometric line of sight from the candidate camera frame;
+2. rendered visibility of the current marker in the Cesium scene.
 
-- the duration-derived distance;
-- `120 m`;
-- `1%` of the complete sampled path.
+The geometric line-of-sight check evaluates the current marker and trailing
+trace samples at 6, 12, 18, and 24 metres when available. The marker and the
+samples through 12 metres are required; the 18- and 24-metre samples are
+advisory and cannot reject an otherwise valid view. Rendered visibility checks
+the same required marker and near-trace targets. An unavailable rendered
+observation is treated as unknown, not hidden.
 
-The sampler clamps the requested distance at the end of the path. If no later
-sample exists, the current anchor is retained.
+This distinction is intentional: the required rendered near trace participates
+in current visibility, while predictive samples do not. Prediction may
+influence camera tracking, but it may not keep adding or retaining temporary
+pitch while the current marker and required near trace are visible.
 
-This normal future sample is used in both navigation and dynamic mode. In
-navigation mode, leaving Z1 is tested with both the current and predicted
-positions. The camera aims at the predicted position when a correction is
-needed.
+### 3.2 Candidate selection
 
-### 4.2 Extended dynamic look-ahead
+When the current nominal view is hidden, the resolver tests a bounded set of:
 
-Dynamic mode has a second, stronger prediction used only for a tight camera
-angle near the crop boundary. It is enabled only when the current projected
-marker is:
+- pitch-down offsets;
+- heading offsets;
+- combined heading and pitch offsets.
 
-- inside dynamic Z1; and
-- outside dynamic Z2.
+The current redirect is tested first and reused if it remains valid. The first
+search requires geometric visibility for the marker and required near-trace
+targets. If that strict search finds no candidate and Cesium has explicitly
+reported the current rendered marker as hidden, the resolver repeats the
+bounded search for the marker alone. This prevents a hidden trace segment from
+blocking every correction capable of restoring the marker. There is no
+fallback to an untested pitch change: the marker-only candidate must still
+prove geometric marker visibility.
 
-This is the ring between Z1 and Z2. In that ring:
+The temporary pitch controller excludes heading-only candidates, including a
+previous redirect whose pitch offset is zero. Every candidate accepted by this
+controller therefore has a non-zero pitch-down component. Combined heading and
+pitch candidates remain valid, but a successful heading-only redirect cannot
+start or retain a pitch-correction phase.
 
-```text
-extendedLookaheadSeconds = recenterDuration × 1.35
-extendedTrackingSample  = sample at extended look-ahead distance
-```
-
-The `1.35` multiplier lets the camera lead the marker far enough for a closed
-or steep pitch, where the marker can keep moving toward the crop edge while the
-camera is still easing.
-
-The multiplier is intentionally not applied in either of these cases:
-
-- the marker is already inside Z2: use the normal `predictedSample`;
-- the marker is already outside Z1: use the normal `predictedSample` and handle
-  the active correction directly.
-
-This makes the extended prediction an early-warning mechanism in the Z1–Z2
-band, rather than a permanent acceleration of dynamic tracking.
-
-### 4.3 Current and predicted screen positions
-
-The current anchor and the selected tracking sample are projected into Cesium
-window coordinates:
+Candidates are scored with:
 
 ```text
-currentScreen   = project(anchorSample)
-predictedScreen = project(trackingSample)
+score = 3 × abs(pitch offset) + abs(heading offset)
 ```
 
-The algorithm uses both positions because the current marker may still be
-inside Z1 while its predicted position is already leaving it. This is also a
-guard against asynchronous projection updates in live Draft playback.
+The lowest valid score wins among candidates that contain the required pitch
+component. This weighting still avoids an unnecessarily large pitch change and
+selects a combined redirect only when it is the smallest proven solution.
 
-If a screen position cannot be projected, it is treated as outside the relevant
-zone. The camera therefore prefers a visibility correction over silently
-allowing the marker to disappear.
+The preferred pitch envelope depends on the nominal pitch:
 
-### 4.4 Predictive collision and visibility checks
+| Nominal pitch | First search envelope | Hard limit |
+| --- | ---: | ---: |
+| Shallower than -30 degrees | 8 degrees | 20 degrees |
+| -30 degrees or steeper | 20 degrees | 20 degrees |
 
-The current and selected future samples are tested against the camera's
-configured trigger-zone collision model:
+For a grazing view, the resolver first searches within the gentle eight-degree
+envelope. If no candidate in that envelope can prove visibility, it repeats the
+search with the common twenty-degree hard limit. This prevents the controller
+from remaining indefinitely in `pending` when a small correction is
+insufficient. All candidates are clamped before they are evaluated and
+deduplicated, and the selected wider correction still uses the normal attack.
+For example, a nominal -10-degree pitch can never be corrected beyond -30
+degrees by this controller.
+
+### 3.3 State machine
+
+The controller uses logical milliseconds and the following phases:
+
+| Phase | Behavior |
+| --- | --- |
+| `inactive` | Use the exact nominal pose. |
+| `pending` | Confirm that invisibility persists before changing the camera. |
+| `attack` | Smoothly blend from nominal to the selected correction. |
+| `hold` | Keep the proven correction while the nominal view remains hidden. |
+| `release` | Smoothly blend back to the current nominal pose. |
+
+Timing constants:
+
+| Rule | Duration |
+| --- | ---: |
+| Hidden confirmation before activation | 250 ms |
+| Attack | 900 ms |
+| Visible confirmation before release | 150 ms |
+| Release to nominal | 450 ms |
+
+Attack and release use smoothstep easing. A single hidden observation that
+clears during `pending` produces no camera change. If visibility is lost again
+during `release`, the controller resumes `attack` from the current weight
+instead of restarting or stacking another correction.
+
+The weighted redirect is always applied to the newly resolved nominal pose.
+Offsets are not added to the previously corrected camera pose. This invariant
+prevents cumulative pitch drift and guarantees a return to the configured
+target.
+
+Programmatic frame application also suppresses the Cesium-to-settings bridge.
+Delayed Cesium camera events produced by a correction cannot persist the
+corrected pitch or heading as a new user setting. A real pointer interaction
+remains authoritative and may update the replay camera settings during this
+suppression window.
+
+The final replay frame clears the correction state and applies the exact
+nominal pose. Changing marker mode or resetting camera tracking also clears the
+pitch state, redirect state, and visibility-confirmation timestamps.
+
+## 4. Navigation tracking
+
+Navigation uses one centered trigger zone, Z1.
+
+Default geometry:
+
+- regular viewport: 30% width and 30% height;
+- narrow crop, where the short-to-long viewport ratio is below 0.75: 22% width
+  and 22% height;
+- adaptive minimum for a short or ending replay: 5% width and 5% height.
+
+The current camera frame is tested against:
+
+- the current nominal marker sample;
+- a predicted sample at the adaptive Navigation horizon;
+- a 0.75-second confirmation sample when only the predicted sample is outside
+  Z1.
+
+A current hard violation is corrected immediately. A predictive-only violation
+must remain confirmed for 250 ms before correction. The predictive transition
+target is sampled at the adaptive Navigation transition horizon, whose normal
+value is 2 seconds. Navigation has no minimum distance floor, so the look-ahead
+remains time-based at low route speeds.
+
+Current hard violations, forced corrections, and immediate startup corrections
+apply one complete target-locked frame directly. A confirmed predictive-only
+violation during playback starts a deterministic camera transition. If there
+is no correction, an already initialized playback camera remains stable rather
+than being recentered on every frame.
+
+## 5. Dynamic tracking
+
+Dynamic uses two centered zones:
+
+| Zone | Default | Adaptive minimum | Current role |
+| --- | ---: | ---: | --- |
+| Z1 trigger | 75% × 75% | 30% × 30% | Classifies the current marker against the outer tracking zone. |
+| Z2 target | 30% × 30% | 30% × 30% | Selects extended look-ahead while the current marker is inside Z1 but outside Z2. |
+
+The normal Dynamic look-ahead is:
 
 ```text
-currentCollision   = collision(anchorSample, Z1)
-predictedCollision = collision(trackingSample, Z1)
-outsideTolerance   = currentCollision.hard OR predictedCollision.hard
+adaptive transition horizon × 1.25 + one output-frame interval
 ```
 
-Dynamic mode separately tests the selected tracking sample against Z2. This
-second test is not the initial trigger; it validates whether the promised
-landing position was actually reached:
+It has a minimum distance of 120 metres. When the current marker is inside Z1
+but outside Z2, the time horizon is multiplied by 1.35. Otherwise the normal
+future sample is used.
 
-```text
-outsideTargetZone = collision(trackingSample, Z2).hard
-```
+During playback and export, Dynamic resolves and applies the camera pose for
+the selected future sample on every logical update. Outside playback it uses
+the current nominal sample.
 
-After the recenter duration has elapsed, an additional correction is allowed
-if `outsideTargetZone` is still true. This catches cases where a steep camera
-angle lets the marker continue toward the crop edge during the transition.
+`lastDynamicTargetScreen` is calculated from the current and predicted screen
+positions for diagnostics. The active camera resolver does not use that point
+as a landing target. Therefore Z2 currently selects the extended look-ahead;
+it is not a guarantee that the marker lands inside Z2 after a camera update.
 
-### 4.5 Predictive Z2 target point
+Dynamic does not use the former free-running follower in the active logical
+path. Each update applies one complete resolved frame and clears incompatible
+transition or follower transport state first.
 
-When a dynamic correction is required, the target point is selected inside Z2:
+## 6. Adaptive zones and look-ahead
 
-1. Compute the movement vector from the current screen point to the predicted
-   screen point.
-2. Reverse that vector so the camera moves against the marker's apparent
-   screen movement.
-3. Offset the center of Z2 by up to `35%` of Z2's width and height.
-4. Clamp the result to Z2 bounds.
-5. If there is no meaningful movement vector, use the center of Z2.
+The adaptive timing budget is renderer-independent. It includes:
 
-The offset is opposite to the marker's screen movement. For example, if the
-marker is predicted to move right, the camera target is biased left within Z2.
-This gives the marker room to continue moving after the camera correction and
-avoids immediately triggering another correction.
+- the requested transition duration;
+- one output-frame interval;
+- a fixed 180 ms calculation-lag allowance;
+- playback rate;
+- total and remaining replay duration.
 
-The target point is used for the dynamic camera target calculation. When no
-terrain/3D-tiles redirect is required, the camera flight itself uses the
-tracking sample so that the geographic camera position remains synchronized
-with the replay path. When a redirect is required for visibility, the redirect
-view takes precedence.
+As the available replay window becomes too short for the normal transition,
+zones interpolate toward their minimum ratios. Dynamic Z2 is always nested
+inside Z1. The minimum transition horizon is also limited by the remaining
+logical replay time.
 
-## 5. Camera recentering and hysteresis
+The actual logical-frame interval is used when available. Otherwise the active
+resolver uses the configured replay capture FPS and falls back to the Draft
+look-ahead default of 15 FPS. The math helper also exposes a 60 FPS HQ fallback
+for callers that explicitly select `renderMode: 'hq'`, but the active tracking
+binding normally receives the HQ frame interval directly. These timing inputs
+change temporal sampling only; the camera rules remain shared.
 
-The camera transition uses the configured replay easing and recenter duration.
-The implementation keeps the last recenter progress and timestamp to avoid
-replacing an active transition on every frame.
+## 7. Turn drift
 
-Dynamic mode also validates the Z2 landing after the nominal transition has
-completed. If the marker is still outside Z2, a corrective recenter is allowed.
-This is especially important for non-top-down camera pitches, where the marker
-can continue moving toward a crop edge while the camera is easing.
+Navigation and Dynamic request the same drift envelope:
 
-Visibility correction is separate from ordinary tracking. If terrain or 3D
-tiles hide the rendered marker, the camera may recenter for visibility when the
-marker is outside the trigger conditions. Corrections inside Z1 are suppressed
-unless visibility requires them.
+- maximum heading offset: 6 degrees;
+- maximum lateral offset: 40 metres;
+- minimum sustained turn angle: 12 degrees.
 
-## 6. Z1/Z2 diagnostic overlay
+In the active logical camera path, `headingOffsetRadians` and the
+speed-dependent roll are added to the nominal pose. `lateralOffsetMeters` is
+calculated by the guide helper but is not consumed by the logical pose.
+Documentation and tests must not claim that the active runtime applies lateral
+camera displacement. The `canDrift` capability gates this drift envelope.
 
-The replay mode draws a visual overlay for the configured tracking zones. This
-overlay is intentionally useful beyond the current UI: it can be reused later
-as a debugging surface for camera-tracking investigations.
+The constrained-path compiler also uses one shared 1.5-second drift response
+for both modes. That compiler is not the active per-frame camera authority and
+must not block Draft startup or HQ preparation.
 
-The overlay has the following structure:
+## 7.1 Speed-dependent banking
 
-```text
-.replay-tolerance-zone-overlay
-└── .replay-tolerance-zone-overlay-outer [data-zone="z1"]
-    └── .replay-tolerance-zone-overlay-inner [data-zone="z2"]
-```
+When `canRoll` is enabled, the logical pose computes a signed roll from the
+local route turn and speed. It samples previous/current/next route points in a
+bounded metric probe window (currently about one second, limited to roughly
+20–220 metres), compares local speed with the journey average, eases the turn
+and speed factors, and clamps the result to ±45 degrees. Straight, stationary,
+or invalid samples resolve to zero roll.
 
-The outer element represents the active trigger zone. The inner element is
-present only for dynamic mode and represents the target zone. The parent also
-publishes the active mode through `data-mode`.
+The resulting roll rotates the camera up vector around its viewing direction.
+The calculation is part of the shared logical pose, so Draft and HQ apply the
+same banking decision. `canRoll: false` bypasses the calculation and restores a
+zero-roll pose.
 
-The overlay is positioned from normalized zone bounds and the current Cesium
-surface rectangle, so it remains meaningful when the video crop or viewport
-changes. It has `pointer-events: none`, which means it cannot interfere with
-camera controls or replay interaction.
+## 8. Camera ownership and frame application
 
-The overlay is visible by default during replay, Draft playback, and HQ preview
-so the active crop-local Z1/Z2 decision can be inspected directly. It remains
-non-interactive and is excluded from captured output through the existing
-overlay/capture rules. It can be hidden at runtime with:
+Only one camera mechanism may own a logical replay update:
 
-```js
-globalThis.__?.ui?.replay?.setToleranceZoneOverlayVisible?.(false)
-```
+1. an active temporary pitch correction;
+2. an active deterministic Navigation transition;
+3. the current tracking-mode resolver.
 
-and shown again with the same method called with `true`.
+Temporary pitch correction has priority. While it owns the camera, it cancels
+other transition or follower transport and writes one complete target-locked
+frame containing destination, direction, and corrected up vector.
 
-For future debugging, the overlay can be extended with diagnostic attributes or
-additional layers such as:
+A camera view is remembered only after the complete frame is successfully
+applied. The controller never records a target pitch or heading that Cesium did
+not receive.
 
-- the current marker screen position;
-- the normal predicted position;
-- the extended `1.35` look-ahead position;
-- the current and predicted collision states;
-- the selected Z2 target point;
-- the reason for a recenter (`Z1 exit`, `Z2 correction`, or visibility loss).
+Live, non-playback drawer refreshes use the Cesium adapter but still apply a
+complete target-locked pose. Manual user camera interaction suspends replay
+camera updates until replay tracking regains ownership.
 
-Keeping the zone overlay separate from the camera algorithm allows these
-diagnostic additions without changing replay behavior. Existing selectors and
-`data-zone` attributes should remain stable so automated tests and debugging
-tools can continue to identify Z1 and Z2.
+## 9. Diagnostics
 
-## 7. Final Draft frame and trace lifetime
+The tolerance-zone overlay displays the current runtime zones and timing data
+for Navigation and Dynamic. It is diagnostic only and is not a second source of
+tracking decisions. HQ composition can capture the overlay canvas even when it
+is hidden in the normal DOM layout.
 
-At replay end, the completed trace must remain rendered while the recorder
-captures the final Draft frame. The final-frame sequence is:
+Fine-grained camera traces expose logical time, marker mode, visibility phase,
+correction weight, desired heading, and desired pitch. These traces should be
+used to distinguish zone tracking from temporary visibility correction.
 
-1. render the replay at progress `1` and keep the completed trace visible;
-2. wait for the final widget/render frames;
-3. notify the video synchronizer to capture the final frame;
-4. clear the replay renderer and restore the normal journey scene.
+## 10. Implementation references
 
-The notification must happen before renderer cleanup. Clearing the renderer
-first produces a last video frame without the trace, even though all preceding
-Draft frames contain it. Stop clips already follow the same ordering: the final
-frame notification is emitted before the replay scene is finalized.
-
-The video synchronizer starts `stopVideo({captureFinalFrame: true})`
-immediately after the final-frame notification. Replay cleanup is also guarded
-while the recorder reports that it is still recording. This is necessary
-because final-frame capture and video encoding are asynchronous; returning from
-the notification handler does not mean that the source canvas has already been
-read.
-
-Before the recorder submits that final frame, the video compositor is explicitly
-rendered again from the current Cesium canvas. This final recomposition is used
-for Draft and HQ. Without it, Draft can submit the previous compositor frame:
-the Cesium trace may still be visible on screen while the encoded last frame
-still contains stale composition data.
-
-This ordering applies to the visible Cesium trace; it is not replaced by a
-separate video trace overlay. Keeping the trace terrain-clamped ensures that
-the final frame has the same geometry as the preceding Draft frames.
-
-## 8. Draft and HQ execution
-
-Draft playback receives live Cesium render-loop updates. HQ export advances the
-replay to an exact logical timestamp before each encoded frame. The HQ runtime
-publishes that frame state to dynamic widgets and the renderer.
-
-`recordingSync` identifies a live Draft controlled by the replay toolbar. It
-must not select the deterministic HQ camera clock; otherwise collision
-transitions are created but never advanced by the Draft render loop.
-
-During HQ export, `controller.seek()` publishes frame state but its normal live
-update listener must not apply the camera. The export frame renderer is the
-single owner of the deterministic camera update; applying both paths on the
-same frame produces visible camera jitter.
-
-Consequently:
-
-- navigation uses Z1 = 30% × 30% normally, or 22% × 22% for a narrow crop, in
-  both Draft and HQ;
-- dynamic mode uses Z1 = 75% × 75% and Z2 = 30% × 30% in both Draft and HQ;
-- camera look-ahead includes one output-frame interval in both Draft and HQ;
-- navigation and dynamic HQ corrections use the same deterministic follower
-  with a `1.5 s` response;
-- no free-running widget timer is required during HQ export;
-- the same marker sample, projection, collision, and recentering decisions are
-  reproduced from the export timeline.
-
-## 9. Implementation references
-
-- `src/core/ui/replay/JourneyReplayMode.js`: zone defaults, normalization,
-  projection tests, target calculation, and camera tracking;
-- `src/core/ui/replay/JourneyReplayPlaybackController.js`: live replay ticks
-  and dynamic frame state;
-- `src/core/ui/replay/ReplayDeferredExporter.js`: deterministic HQ frame
-  publication;
-- `src/__tests__/replay-phase1.test.js`: zone geometry and tracking behavior
-  tests.
+- `src/core/ui/replay/JourneyReplayCameraTrackingBinding.js`: active shared
+  Navigation/Dynamic resolver and camera ownership.
+- `src/core/ui/replay/JourneyReplayCameraPitchController.js`: temporary pitch
+  state machine and limits.
+- `src/core/ui/replay/JourneyReplayLogicalCameraPose.js`: nominal
+  renderer-independent pose and Behind/Ahead/System behavior.
+- `src/core/ui/replay/JourneyReplayCameraVisibility.js`: geometric and rendered
+  visibility plus redirect candidates.
+- `src/core/ui/replay/JourneyReplayCameraMath.js`: runtime zones and adaptive
+  timing.
+- `src/core/ui/replay/JourneyReplayCameraBinding.js`: live Cesium bridge and
+  transition plumbing.
+- `src/core/ui/replay/JourneyReplayCameraConstraintBinding.js`: optional
+  constrained-path compiler.
+- `src/__tests__/unit/replay/replay-camera-path.test.js`: tracking, zones,
+  visibility, parity, and ownership regression coverage.
+- `src/__tests__/unit/replay/replay-camera-pitch-controller.test.js`: temporary
+  pitch lifecycle coverage.

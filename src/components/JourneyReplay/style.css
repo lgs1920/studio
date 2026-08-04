@@ -53,6 +53,11 @@
     gap: var(--wa-space-s, 0.75rem);
 }
 
+.replay-camera-capability-switches {
+    display: grid;
+    gap: var(--wa-space-s, 0.75rem);
+}
+
 .replay-sync-row {
     align-items: center;
     display: flex;

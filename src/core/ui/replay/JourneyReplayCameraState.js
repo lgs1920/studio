@@ -14,7 +14,7 @@ import {faPersonHiking} from '@fortawesome/pro-regular-svg-icons'
 import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
 import {finiteNumber, replayStore} from './JourneyReplayRuntime'
 import {
-    clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForPositionMode, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
+    clamp, lerp, hasFiniteLonLat, projectReplayTargetInCameraFrame, sanitizeOrientationRadians, rollCameraUp, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForPositionMode, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
 } from './JourneyReplayCameraMath'
 import {
     REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET, REPLAY_CAMERA_POSITION_AHEAD,
@@ -78,6 +78,11 @@ import {
     cameraViewForSample,
 } from './JourneyReplayCameraGuide'
 import {
+    memoizeReplayCameraUpdateCache,
+    replayCameraUpdateCameraSettingsKey,
+    replayCameraUpdateSampleKey,
+} from './JourneyReplayCameraUpdateCache'
+import {
     rememberNominalCameraView,
     resetCameraInterpolationState,
     cameraRedirectPitchLimits,
@@ -124,42 +129,61 @@ import {
     viewportRectForCesiumSurface,
     updateToleranceZoneOverlay,
 } from './JourneyReplayCameraOverlay'
-import {
-    recenterCameraToSample,
-    startCameraTransition,
-    bindMarkerInteractions,
-    bindCesiumCameraBridge,
-    startCameraLiveSyncLoop,
-    stopCameraLiveSyncLoop,
-    updateCamera,
-} from './JourneyReplayCameraBinding'
-
-export const applyCameraView = (mode, {anchor, heading, pitch, cameraSettings}) => {
+export const applyCameraView = (mode, {anchor, heading, pitch, roll = 0, cameraSettings}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
+        const startedAt = globalThis.performance?.now?.() ?? Date.now()
+        replayVideoTraceDebug('camera.view.apply.start', {
+            anchorLongitude: finiteNumber(anchor?.longitude),
+            anchorLatitude: finiteNumber(anchor?.latitude),
+            heading,
+            pitch,
+            roll,
+            altitudeMode: cameraSettings?.altitudeMode ?? null,
+            terrainHeightLookupBypass: state.terrainHeightLookupBypass === true,
+        })
         const anchorHeight = finiteNumber(anchor?.altitude ?? anchor?.height) ?? 0
+        const markerHeight = cameraSettings?.altitudeMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET
+            ? finiteNumber(call.markerRenderHeightForSample?.(anchor)) ?? anchorHeight
+            : anchorHeight
         const safeHeading = sanitizeOrientationRadians(heading, 0)
         const safePitch = sanitizeOrientationRadians(pitch, SAFE_TOP_DOWN_PITCH)
-        if (call.cameraViewIsStable({anchor, heading: safeHeading, pitch: safePitch})) {
-            return
+        const safeRoll = clamp(sanitizeOrientationRadians(roll, 0), -Math.PI / 4, Math.PI / 4)
+        if (call.cameraViewIsStable({anchor, heading: safeHeading, pitch: safePitch, roll: safeRoll})) {
+            replayVideoTraceDebug('camera.view.apply.end', {
+                elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startedAt,
+                skipped: true,
+                reason: 'stable',
+            })
+            return false
         }
 
         const cameraHeight = call.cameraAltitudeForSample(anchor, cameraSettings)
         const target = safeCartesianFromLonLat({
             ...anchor,
-            altitude: anchorHeight,
+            altitude: markerHeight,
         })
         if (!target) {
-            return
+            replayVideoTraceDebug('camera.view.apply.end', {
+                elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startedAt,
+                skipped: true,
+                reason: 'no-target',
+            })
+            return false
         }
 
         const viewer = globalThis.lgs?.viewer
         const camera = viewer?.camera
         const transform = Transforms.eastNorthUpToFixedFrame(target)
-        const range = replayCameraRangeFromPitch(Math.max(1, cameraHeight - anchorHeight), safePitch)
-        if (!camera) {
-            return
+        const range = replayCameraRangeFromPitch(Math.max(1, cameraHeight - markerHeight), safePitch)
+        if (!camera || typeof camera.setView !== 'function') {
+            replayVideoTraceDebug('camera.view.apply.end', {
+                elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startedAt,
+                skipped: true,
+                reason: 'no-camera',
+            })
+            return false
         }
 
         state.cameraAutoTrackingIgnoreUntil = call.now() + 250
@@ -187,17 +211,23 @@ export const applyCameraView = (mode, {anchor, heading, pitch, cameraSettings}) 
             const direction = Cartesian3.normalize(Cartesian3.subtract(target, destination, new Cartesian3()), new Cartesian3())
             const right = Cartesian3.normalize(Cartesian3.cross(direction, up, new Cartesian3()), new Cartesian3())
             const correctedUp = Cartesian3.normalize(Cartesian3.cross(right, direction, new Cartesian3()), new Cartesian3())
-            camera.setView?.({
-                                 destination,
-                                 orientation: {
-                                     direction,
-                                     up: correctedUp,
-                                 },
-                             })
-            call.rememberCameraView({anchor, heading: safeHeading, pitch: safePitch})
+            const rolledUp = rollCameraUp({direction, up: correctedUp, roll: safeRoll}) ?? correctedUp
+            camera.setView({
+                destination,
+                orientation: {
+                    direction,
+                    up: rolledUp,
+                },
+            })
+            call.rememberCameraView({anchor, heading: safeHeading, pitch: safePitch, roll: safeRoll})
+            return true
         }
         finally {
             state.cameraApplyingView = false
+            replayVideoTraceDebug('camera.view.apply.end', {
+                elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startedAt,
+                skipped: false,
+            })
         }
     }
 
@@ -232,14 +262,18 @@ export const markerRenderHeightForSample =  (mode, sample) => {
 
         const longitude = finiteNumber(sample?.longitude)
         const latitude = finiteNumber(sample?.latitude)
+        const sampleHeight = finiteNumber(sample?.altitude ?? sample?.height) ?? 0
         if (longitude === null || latitude === null) {
-            return 0
+            return sampleHeight
+        }
+        if (state.terrainHeightLookupBypass === true) {
+            return sampleHeight
         }
 
         const terrainHeight = call.cesiumScene()?.globe?.getHeight?.(
             Cartographic.fromDegrees(longitude, latitude),
         )
-        return finiteNumber(terrainHeight) ?? 0
+        return finiteNumber(terrainHeight) ?? sampleHeight
     }
 
 export const markerRenderCartesianForSample =  (mode, sample) => {
@@ -317,20 +351,44 @@ export const trackingWindowPositionForSample =  (mode, sample) => {
         }
     }
 
-export const cameraCollisionForSample = (mode, sample, cameraSettings) => {
+export const cameraCollisionForSample = (mode, sample, cameraSettings, cache = null) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const viewer = globalThis.lgs?.viewer
-        const scene = call.cesiumScene()
-        const windowPosition = call.trackingWindowPositionForSample(sample)
-        if (!viewer || !scene || !windowPosition) {
+        const computeCollision = () => {
+            const viewer = globalThis.lgs?.viewer
+            const scene = call.cesiumScene()
+            const windowPosition = call.trackingWindowPositionForSample(sample)
+            const rect = call.viewportRectForCesiumSurface()
             const outerBounds = replayToleranceZoneBounds(cameraSettings?.hysteresis?.zone)
             const safeBounds = replayInnerToleranceZoneBounds(
                 outerBounds,
                 finiteNumber(cameraSettings?.hysteresis?.marginRatio) ?? 0.12,
             )
-            return {
+            if (!viewer || !scene || !windowPosition || !rect
+                || (finiteNumber(rect.width) ?? 0) <= 0
+                || (finiteNumber(rect.height) ?? 0) <= 0) {
+                return {
+                    side:       null,
+                    outer:      outerBounds,
+                    inner:      safeBounds,
+                    screen:     null,
+                    error:      1,
+                    hard:       true,
+                    shouldMove: true,
+                }
+            }
+
+            const markerRadius = finiteNumber(globalThis.lgs?.stores?.replay?.markerRadius) ?? 35
+            const collision = replayWindowCollisionFromPoint({
+                point:        windowPosition,
+                width:        rect.width,
+                height:       rect.height,
+                outerBounds,
+                safeBounds,
+                markerRadius,
+            })
+            return collision ?? {
                 side:       null,
                 outer:      outerBounds,
                 inner:      safeBounds,
@@ -341,22 +399,64 @@ export const cameraCollisionForSample = (mode, sample, cameraSettings) => {
             }
         }
 
-        const rect = call.viewportRectForCesiumSurface()
-        const markerRadius = finiteNumber(globalThis.lgs?.stores?.replay?.markerRadius) ?? 35
-        const overlayBounds = replayToleranceZoneBounds(cameraSettings?.hysteresis?.zone)
-        const safeBounds = replayInnerToleranceZoneBounds(
-            overlayBounds,
-            finiteNumber(cameraSettings?.hysteresis?.marginRatio) ?? 0.12,
-        )
-        return replayWindowCollisionFromPoint({
-                                                      point:        windowPosition,
-                                                      width:        rect.width,
-                                                      height:       rect.height,
-                                                      outerBounds:  overlayBounds,
-                                                      safeBounds,
-                                                      markerRadius,
-                                                  })
+        const cacheKey = [
+            replayCameraUpdateSampleKey(sample),
+            replayCameraUpdateCameraSettingsKey(cameraSettings),
+        ].join('|')
+        return memoizeReplayCameraUpdateCache(cache, 'cameraCollisionForSample', cacheKey, computeCollision)
     }
+
+/**
+ * Evaluate a replay target against a candidate camera frame.
+ *
+ * @param {object} mode - Replay camera mode.
+ * @param {object} options - Candidate frame and collision inputs.
+ * @returns {object} Candidate-frame collision result.
+ */
+export const cameraCollisionForFrame = (mode, {
+    frame,
+    sample,
+    cameraSettings,
+    viewport = null,
+} = {}) => {
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const target = call.markerRenderCartesianForSample(sample)
+    const rect = viewport ?? call.viewportRectForCesiumSurface()
+    const frustum = globalThis.lgs?.viewer?.camera?.frustum
+    const verticalFovRadians = finiteNumber(frustum?.fovy) ?? finiteNumber(frustum?.fov) ?? (Math.PI / 3)
+    const aspectRatio = finiteNumber(frustum?.aspectRatio)
+                        ?? ((rect?.canvasWidth ?? rect?.width ?? 0) / Math.max(1, rect?.canvasHeight ?? rect?.height ?? 1))
+    const point = projectReplayTargetInCameraFrame({
+        frame,
+        target,
+        viewport: rect,
+        verticalFovRadians,
+        aspectRatio,
+    })
+    const outerBounds = replayToleranceZoneBounds(cameraSettings?.hysteresis?.zone)
+    const safeBounds = replayInnerToleranceZoneBounds(
+        outerBounds,
+        finiteNumber(cameraSettings?.hysteresis?.marginRatio) ?? 0.12,
+    )
+    const markerRadius = finiteNumber(globalThis.lgs?.stores?.replay?.markerRadius) ?? 35
+    const collision = replayWindowCollisionFromPoint({
+        point,
+        width:       rect?.width,
+        height:      rect?.height,
+        outerBounds,
+        safeBounds,
+        markerRadius,
+    })
+    return collision ?? {
+        side:       null,
+        outer:      outerBounds,
+        inner:      safeBounds,
+        screen:     null,
+        error:      1,
+        hard:       true,
+        shouldMove: true,
+    }
+}
 
 export const terrainHeightForLonLat = (mode, longitude, latitude) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
@@ -366,12 +466,57 @@ export const terrainHeightForLonLat = (mode, longitude, latitude) => {
             return null
         }
 
+        if (state.terrainHeightLookupBypass === true) {
+            if (state.terrainHeightLookupTrace === true) {
+                replayVideoTraceDebug('camera.terrain.lookup.bypass', {
+                    longitude,
+                    latitude,
+                })
+            }
+            return null
+        }
+
         const globe = call.cesiumScene()?.globe
         const height = globe?.getHeight?.(Cartographic.fromDegrees(longitude, latitude))
         if (height === null || height === undefined || height === '') {
             return null
         }
+        if (state.terrainHeightLookupTrace === true) {
+            replayVideoTraceDebug('camera.terrain.lookup.end', {
+                longitude,
+                latitude,
+                height: finiteNumber(height),
+            })
+        }
         return finiteNumber(height)
+    }
+
+/**
+ * Toggle terrain height lookup bypass for replay camera work.
+ *
+ * @param {object} mode - Replay camera mode.
+ * @param {boolean} value - True to bypass terrain lookups.
+ * @returns {boolean} Updated bypass state.
+ */
+export const setTerrainHeightLookupBypass = (mode, value) => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+
+        state.terrainHeightLookupBypass = value === true
+        return state.terrainHeightLookupBypass
+    }
+
+/**
+ * Toggle terrain height lookup tracing for replay camera work.
+ *
+ * @param {object} mode - Replay camera mode.
+ * @param {boolean} value - True to trace terrain lookups.
+ * @returns {boolean} Updated trace state.
+ */
+export const setTerrainHeightLookupTrace = (mode, value) => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+
+        state.terrainHeightLookupTrace = value === true
+        return state.terrainHeightLookupTrace
     }
 
 export const persistCameraSettings =  (mode, updates) => {
@@ -435,7 +580,16 @@ export const updateCameraSettingsFromCesiumControls = (mode, sample, {altitudeMo
         return call.persistCameraSettings(next)
     }
 
-export const updateCameraFromCesiumControls = (mode) => {
+/**
+ * Persist a Cesium camera change only when it represents an authorized user
+ * interaction rather than feedback from an automatic replay frame.
+ *
+ * @param {object} mode - Replay session mode.
+ * @param {object} options - Synchronization options.
+ * @param {boolean} [options.userInteraction=false] - Whether a completed user interaction authorized this synchronization.
+ * @returns {void}
+ */
+export const updateCameraFromCesiumControls = (mode, {userInteraction = false} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
@@ -444,6 +598,21 @@ export const updateCameraFromCesiumControls = (mode) => {
             return
         }
         if (store?.cameraUpdateSource === 'drawer') {
+            return
+        }
+        if (state.cameraApplyingView) {
+            return
+        }
+        const authorizedUserInteraction = userInteraction
+                                          || state.cameraPointerActive === true
+                                          || state.cameraUserAdjusting === true
+        if (!authorizedUserInteraction) {
+            return
+        }
+        const logicalNow = finiteNumber(call.now?.()) ?? 0
+        if (!userInteraction
+            && !state.cameraPointerActive
+            && logicalNow < (finiteNumber(state.cameraAutoTrackingIgnoreUntil) ?? 0)) {
             return
         }
         call.markPlaybackCameraUserAdjusted()

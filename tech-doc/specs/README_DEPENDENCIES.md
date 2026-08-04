@@ -23,7 +23,8 @@ to provide a readable dependency snapshot for contributors and maintainers.
 - `vite-plugin-cesium`
 - `vite-plugin-pwa`
 - Vitest
-- ESLint
+- Oxlint
+- `oxlint-tsgolint`
 - TypeScript
 
 ## Runtime Dependencies
@@ -32,7 +33,6 @@ These are the current package names declared in the `dependencies` section of `p
 
 ```text
 @awesome.me/kit-eb5c406148
-@eslint/migrate-config
 @fortawesome/duotone-light-svg-icons
 @fortawesome/duotone-regular-svg-icons
 @fortawesome/duotone-thin-svg-icons
@@ -81,8 +81,6 @@ easy-file-picker
 echarts
 echarts-for-react
 elysia
-eslint-import-resolver-alias
-eslint-plugin-import
 fflate
 fs
 fs.promises
@@ -135,22 +133,13 @@ zip-a-folder
 These are the current package names declared in the `devDependencies` section of `package.json`.
 
 ```text
-@eslint/compat
-@eslint/eslintrc
-@eslint/js
 @testing-library/react
 @types/bun
 @types/react
 @types/react-dom
-@typescript-eslint/eslint-plugin
-@typescript-eslint/parser
+@types/serve-static
 @vitejs/plugin-react
 baseline-browser-mapping
-eslint
-eslint-plugin-react
-eslint-plugin-react-hooks
-eslint-plugin-react-refresh
-globals
 jsdom
 typescript
 vite
