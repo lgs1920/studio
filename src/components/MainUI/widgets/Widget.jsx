@@ -411,8 +411,10 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     const widgetTypeId = widgetId?.split('#')[0] ?? widgetId
     const isTargetingBoard = Boolean(config.widgetsBoard && config.widgetsBoard !== SCENE_WIDGETS_BOARD)
     const sceneContainer = useMemo(() => {
-        return isTargetingBoard ? null : __.ui.widgetManager.resolveWidgetsBoardContainer(config.widgetsBoard)
-    }, [config.widgetsBoard, isTargetingBoard])
+        return isTargetingBoard
+               ? null
+               : (config.container ?? __.ui.widgetManager.resolveWidgetsBoardContainer(config.widgetsBoard))
+    }, [config.container, config.widgetsBoard, isTargetingBoard])
     const actualContainer = isTargetingBoard ? boardContainer : sceneContainer
     const widgetDefinition = useMemo(() => {
         const definition = config.group ? __.widgets.get(config.group)?.widgets?.get(widgetTypeId) : null
@@ -1308,8 +1310,10 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                 animationWhenDragging: config.animationWhenDragging ?? config.type === LGS_TOOLBAR,
                 anchorOnScale:  config.anchorOnScale ?? null,
                 attachTo:       config.attachTo ?? 'top-left',
-                container:      __.ui.widgetManager.resolveWidgetsBoardReferenceContainer(config.widgetsBoard) ?? actualContainer,
-                boundsContainer: actualContainer,
+                container:      config.container
+                                ?? __.ui.widgetManager.resolveWidgetsBoardReferenceContainer(config.widgetsBoard)
+                                ?? actualContainer,
+                boundsContainer: config.boundsContainer ?? actualContainer,
                 canLock:        config.canLock ?? true,
                 canReduce:      isVisualWidget ? false : (config.canReduce ?? true),
                 collapsed:      isVisualWidget ? false : (config.collapsed ?? false),
@@ -1335,6 +1339,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                 minScale:       config.minScale ?? null,
                 opacity: displayOpacity,
                 outsideOverlay: config.outsideOverlay ?? false,
+                positionKey:    config.positionKey,
                 persist:        config.persist ?? false,
                 ratio:          config.ratio ?? null,
                 resizeFromCenter: config.resizeFromCenter ?? false,
@@ -1568,7 +1573,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
             <Moveable
                 className={classNames('lgs-widget-control-box', moveableClassName)}
                 style={{pointerEvents: isSelected && !effectiveLocked ? 'auto' : 'none'}}
-                container={lgs.canvas}
+                container={actualContainer ?? lgs.canvas}
                 origin={false}
                 ref={_moveable}
                 target={_widget}

@@ -8,7 +8,7 @@
  * email: contact@lgs1920.fr
  *
  * Created on: 2026-07-18
- * Last modified: 2026-07-18
+ * Last modified: 2026-08-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,10 +19,12 @@ import { Widget } from '@Components/MainUI/widgets/Widget'
 import { LGS_TOOLBAR } from '@Core/constants'
 import { WaCard, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { useSnapshot } from 'valtio'
 import './style.css'
 
 const SECOND_MILLIS = 1000
+const REPLAY_CONTROLS_POSITION_KEY = 'replay-controls-window-v2'
 
 const clampProgress = value => Math.max(0, Math.min(1, Number(value) || 0))
 
@@ -132,24 +134,27 @@ export const JourneyReplayControlsWidget = memo(() => {
 
     const config = useMemo(() => ({
         id:             'replay-controls-widget',
-        top:            hqExportRunning ? '50%' : '82%',
-        left:           hqExportRunning ? '50%' : '50%',
-        attachTo:       hqExportRunning ? 'center' : 'bottom',
+        container:      typeof document !== 'undefined' ? document.documentElement : null,
+        boundsContainer: typeof document !== 'undefined' ? document.documentElement : null,
+        top:            '66.7%',
+        left:           '50%',
+        attachTo:       'center',
         icon:           'drone',
         opacity:        lgs.settings.ui.toolbars.opacity,
         type:           LGS_TOOLBAR,
         persist:        true,
+        positionKey:    REPLAY_CONTROLS_POSITION_KEY,
         showControlBox: false,
-        locked:         hqExportRunning,
+        locked:         false,
         mandatory:      true,
         contextMenu:    {
             canRemove:   false,
             canEdit:     false,
             canSnapshot: false,
-            canPosition: false,
+            canPosition: true,
         },
         zIndex:         11800,
-    }), [hqExportRunning])
+    }), [])
 
     if (!hqExportRunning && (
         replay.recordingSync === true
@@ -159,7 +164,7 @@ export const JourneyReplayControlsWidget = memo(() => {
         return null
     }
 
-    return (
+    const widget = (
         <Widget isVisible={true} config={config}>
             <WaCard className={`replay-controls lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal wa-theme-lgs1920-on-map${hqExportRunning ? ' video-recorder-widget' : ''}`}>
                 {hqExportRunning && (
@@ -201,4 +206,8 @@ export const JourneyReplayControlsWidget = memo(() => {
             </WaCard>
         </Widget>
     )
+
+    return typeof document !== 'undefined' && document.body
+           ? createPortal(widget, document.body)
+           : widget
 })

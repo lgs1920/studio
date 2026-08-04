@@ -8,7 +8,7 @@
  * email: contact@lgs1920.fr
  *
  * Created on: 2026-07-18
- * Last modified: 2026-07-18
+ * Last modified: 2026-08-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 
 vi.mock('@Components/MainUI/widgets/Widget', () => ({
-    Widget: ({children}) => <div data-testid="widget">{children}</div>,
+    Widget: ({children, config}) => <div data-config={JSON.stringify(config)}
+                                                                data-testid="widget">{children}</div>,
 }))
 
 vi.mock('@Core/ui/ReplayCropSnapshot', () => ({
@@ -83,6 +84,35 @@ describe('JourneyReplayControlsWidget', () => {
         render(<JourneyReplayControlsWidget/>)
 
         expect(screen.queryByTestId('widget')).toBeNull()
+    })
+
+    it('keeps the default position and dragging available in Draft and HQ modes', () => {
+        const draftView = render(<JourneyReplayControlsWidget/>)
+        const draftConfig = JSON.parse(screen.getByTestId('widget').dataset.config)
+
+        expect(draftConfig.top).toBe('66.7%')
+        expect(draftConfig.left).toBe('50%')
+        expect(draftConfig.attachTo).toBe('center')
+        expect(draftConfig.locked).toBe(false)
+        expect(draftConfig.contextMenu.canPosition).toBe(true)
+        expect(screen.getByTestId('widget').parentElement).toBe(document.body)
+
+        draftView.unmount()
+        globalThis.lgs.stores.replay.deferredExportPlan = {
+            runtime: {
+                status: 'exporting',
+            },
+        }
+
+        render(<JourneyReplayControlsWidget/>)
+        const hqConfig = JSON.parse(screen.getByTestId('widget').dataset.config)
+
+        expect(hqConfig.top).toBe(draftConfig.top)
+        expect(hqConfig.left).toBe(draftConfig.left)
+        expect(hqConfig.attachTo).toBe(draftConfig.attachTo)
+        expect(hqConfig.locked).toBe(false)
+        expect(hqConfig.contextMenu.canPosition).toBe(true)
+        expect(screen.getByTestId('widget').parentElement).toBe(document.body)
     })
 
     it('shows a stop button while HQ export is running', () => {
