@@ -1242,9 +1242,13 @@ export const JourneyReplayDrawer = memo(() => {
                                                          min="1"
                                                          max="100000"
                                                          step="100"
-                                                         value={replaySettings.poiDistance}
+                                                        value={replaySettings.poiDistance}
                                                         onInput={updatePOIDistance}
                                                         label-at-start/>
+                                                </div>
+                                                <section className="replay-style-subsection">
+                                                    <h4 className="replay-style-subtitle">{'Position'}</h4>
+                                                    <div className="replay-fieldset">
                                                     <WaSelect appearance="filled"
                                                         label="Camera position"
                                                         label-at-start
@@ -1277,8 +1281,12 @@ export const JourneyReplayDrawer = memo(() => {
                                                             />
                                                         </JourneyReplayStyleField>
                                                     }
-                                                </div>
-                                                <div className="replay-fieldset">
+                                                    </div>
+                                                </section>
+                                                <WaDivider/>
+                                                <section className="replay-style-subsection">
+                                                    <h4 className="replay-style-subtitle">{'Framing'}</h4>
+                                                    <div className="replay-fieldset">
                                                     <WaSelect appearance="filled"
                                                         label="Camera altitude"
                                                         label-at-start
@@ -1381,10 +1389,12 @@ export const JourneyReplayDrawer = memo(() => {
                                                             label-at-start className="half-width"/>
                                                     </div>
                                                 </div>
+                                                </section>
                                                  <WaDetails small className="lgs--details-hoverable">
                                                     <span slot="summary">{'Advanced camera setup'}</span>
                                                     <div className="replay-fieldset">
                                                         <WaDivider/>
+                                                        <h4 className="replay-style-subtitle">{'Diagnostics'}</h4>
                                                         {syncWithVideo && (
                                                             <WaSwitch
                                                                 className="replay-debug-camera-switch half-width"
@@ -1396,6 +1406,8 @@ export const JourneyReplayDrawer = memo(() => {
                                                                 {'Debug camera'}
                                                             </WaSwitch>
                                                         )}
+                                                        <WaDivider/>
+                                                        <h4 className="replay-style-subtitle">{'Motion'}</h4>
                                                         <WaSelect appearance="filled"
                                                             label="Camera feel"
                                                             label-at-start
@@ -1496,10 +1508,12 @@ export const JourneyReplayDrawer = memo(() => {
                                                                 )}
                                                             </JourneyReplayStyleField>
                                                         </div>
+                                                        <WaDivider/>
+                                                        <h4 className="replay-style-subtitle">{'Recenter'}</h4>
                                                         <JourneyReplayStyleField>
                                                             <WaNumberInput
-                                                                label="Sensitivity"
-                                                                hint="Smaller values make the camera recenter less often."
+                                                                label="Recenter tolerance"
+                                                                hint="Lower values make the camera recenter less often."
                                                                 size="s"
                                                                 appearance="filled"
                                                                 min={REPLAY_HYSTERESIS_MARGIN_RATIO_MIN}

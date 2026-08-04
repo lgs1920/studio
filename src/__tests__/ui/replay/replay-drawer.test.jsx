@@ -375,6 +375,11 @@ describe('JourneyReplayDrawer', () => {
         expect(view.getByLabelText('Pitch (deg)')).toBeTruthy()
         expect(view.getByLabelText('Heading (deg)')).toBeTruthy()
         expect(view.getByLabelText('Camera feel')).toBeTruthy()
+        expect(view.getByRole('heading', {name: 'Position', level: 4})).toBeTruthy()
+        expect(view.getByRole('heading', {name: 'Framing', level: 4})).toBeTruthy()
+        expect(view.getByRole('heading', {name: 'Motion', level: 4})).toBeTruthy()
+        expect(view.getByRole('heading', {name: 'Recenter', level: 4})).toBeTruthy()
+        expect(view.getByRole('heading', {name: 'Diagnostics', level: 4})).toBeTruthy()
     })
 
     it('shows and persists capability-specific camera sensitivities', async () => {
