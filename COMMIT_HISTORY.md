@@ -547,3 +547,7 @@
 ## 2026-08-04 — [`docs: automate commit history rule`](https://github.com/lgs1920/studio/commit/ed630d5732eddd60edf330530b6428169c155222)
 
 - Recorded automatically from Git history.
+
+## 2026-08-04 — [`fix: restore HQ replay controls positioning`](https://github.com/lgs1920/studio/commit/f7a55fa85759f374ad97a080fd18574621484b44)
+
+- Recorded automatically from Git history.
