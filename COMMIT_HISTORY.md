@@ -511,3 +511,7 @@
 ## 2026-08-04 — [`docs: add beta.4 changelog`](https://github.com/lgs1920/studio/commit/536b4450)
 
 - Add the 1.0.0-beta.4 release changelog with Studio and Backend closed issues, resources, feature backlog, and known issues.
+
+## 2026-08-04 — [`chore: update studio version to 1.0.0`](https://github.com/lgs1920/studio/commit/7ca41a768d6ea45a79a8f0530db7bb85b39586e6)
+
+- Update the Studio version from 1.0.0-beta.4 to 1.0.0.
