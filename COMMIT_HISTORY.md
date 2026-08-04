@@ -511,3 +511,31 @@
 ## 2026-08-04 — [`docs: add beta.4 changelog`](https://github.com/lgs1920/studio/commit/536b4450)
 
 - Add the 1.0.0-beta.4 release changelog with Studio and Backend closed issues, resources, feature backlog, and known issues.
+
+## 2026-08-03 — [`docs: record project rules changelog rule commit`](https://github.com/lgs1920/studio/commit/ceeb1356489eccc8cf6886380a828f0159af5570)
+
+- Recorded automatically from Git history.
+
+## 2026-08-03 — [`Merge pull request #451 from lgs1920/agent/project-rules-site-backend-changelog`](https://github.com/lgs1920/studio/commit/013dfce50c04e082275b44af2ef7b7fb33a0a51a)
+
+- docs: include site and backend issue history in changelogs
+
+## 2026-08-04 — [`docs: record beta.4 changelog commit`](https://github.com/lgs1920/studio/commit/48b252eedc6d75b3119a00cc686a29323a52c74b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`Merge branch 'main' into 1.0.0-beta.4`](https://github.com/lgs1920/studio/commit/d1b7f42d3c3883dd40fdea40ebb233009e1b807d)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`Merge pull request #453 from lgs1920/1.0.0-beta.4`](https://github.com/lgs1920/studio/commit/c78d4aa59703e89c876107fbdeb35c762c75b9e1)
+
+- 1.0.0 beta.4
+
+## 2026-08-04 — [`feat(automation): update commit history after pushes`](https://github.com/lgs1920/studio/commit/90aeedcdc8c01273248557f3c1cb1b52f630cd69)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`docs: automate commit history rule`](https://github.com/lgs1920/studio/commit/8ba13eef9efdd98c358fa06e437b32407ed1e28d)
+
+- Recorded automatically from Git history.
