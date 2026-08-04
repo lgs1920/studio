@@ -1,5 +1,10 @@
 # Commit History
 
+## 2026-08-04 — [`docs: specify Copernicus Sentinel-2 proxy and cache`](https://github.com/lgs1920/studio/commit/119ca4de76e859dae70019e3905d6d6835d04022)
+
+- Document the Sentinel-2 Catalog date selector and cloud-coverage filtering flow.
+- Define the single-account backend proxy, server-side secret boundary, shared tile cache, quota protection, and validation plan.
+
 ## 2026-08-03 — [`docs: add Three.js camera orientation preview`](https://github.com/lgs1920/studio/commit/422a46c3994f4bcadce94a1385991f4e2d5551d9)
 
 - Add the 3D Three.js camera HPR orientation sphere prototype, poster, and MP4 preview.
