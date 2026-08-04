@@ -486,12 +486,12 @@ describe('VideoDownloadAndShareDialog', () => {
         expect(document.querySelector('video.main-video')?.getAttribute('src')).toBe('blob:hq')
         expect(screen.getByLabelText('File name input').value).toBe('recording')
         expect(screen.queryByRole('button', {name: 'Create HQ video'})).toBeNull()
-        expect(screen.getByRole('button', {name: 'Share HQ'}).getAttribute('appearance')).toBe('filled')
+        expect(screen.getByRole('button', {name: 'Share'}).getAttribute('appearance')).toBe('filled')
         expect(screen.getByTestId('recording-info').getAttribute('data-dimensions')).toBe('320x180')
         expect(screen.getByTestId('recording-info').getAttribute('data-quality')).toBe('HQ')
 
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', {name: 'Share HQ'}))
+            fireEvent.click(screen.getByRole('button', {name: 'Share'}))
         })
 
         expect(globalThis.navigator.share).toHaveBeenCalledTimes(1)
@@ -500,7 +500,7 @@ describe('VideoDownloadAndShareDialog', () => {
         await expect(globalThis.navigator.share.mock.calls[0][0].files[0].text()).resolves.toBe('hq-video')
 
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', {name: 'Share draft video'}))
+            fireEvent.click(screen.getByRole('button', {name: 'Share draft'}))
         })
 
         expect(globalThis.navigator.share).toHaveBeenCalledTimes(2)
