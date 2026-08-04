@@ -413,6 +413,7 @@ export const startDeterministicCameraTransition = (mode, {
                 minTurnAngleDeg:        trackingMode === REPLAY_MARKER_MODE_NAVIGATION
                     ? REPLAY_NAVIGATION_MIN_TURN_DRIFT_DEGREES
                     : 8,
+                sensitivity:             cameraSettings?.driftSensitivity,
             },
         }
         const applyLocalFrameOffset = (frame, offsetTarget, focusTarget, {

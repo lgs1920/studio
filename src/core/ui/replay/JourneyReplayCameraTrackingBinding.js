@@ -213,6 +213,7 @@ const replayCameraViewForTrackingSample = (mode, {
                 maxHeadingOffsetDeg:    REPLAY_NAVIGATION_MAX_HEADING_DRIFT_DEGREES,
                 maxLateralOffsetMeters: REPLAY_NAVIGATION_MAX_LATERAL_DRIFT_METERS,
                 minTurnAngleDeg:        REPLAY_NAVIGATION_MIN_TURN_DRIFT_DEGREES,
+                sensitivity:             cameraSettings.driftSensitivity,
             })
             : null
         if (pose && drift) {
@@ -234,6 +235,7 @@ const replayCameraViewForTrackingSample = (mode, {
                 maxHeadingOffsetDeg:     REPLAY_NAVIGATION_MAX_HEADING_DRIFT_DEGREES,
                 maxLateralOffsetMeters:  REPLAY_NAVIGATION_MAX_LATERAL_DRIFT_METERS,
                 minTurnAngleDeg:         REPLAY_NAVIGATION_MIN_TURN_DRIFT_DEGREES,
+                sensitivity:              cameraSettings.driftSensitivity,
             },
         },
         previousHeading: source === 'refresh'
@@ -614,6 +616,7 @@ export const updateCamera = (mode, {
         candidateRedirectState: pitchVisibility.candidateRedirectState,
         obstructionDistanceMeters: pitchVisibility.obstructionDistanceMeters,
         isFinalFrame: isFinalLogicalFrame,
+        pitchSensitivity: cameraSettings.pitchCorrectionSensitivity,
     })
     traceUpdateStep('pitch.visibility.end', {
         nominalVisible: pitchVisibility.nominalVisible,

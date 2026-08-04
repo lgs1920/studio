@@ -113,9 +113,14 @@ describe('Journey replay logical camera pose', () => {
         const slowRoll = resolveJourneyReplayLogicalCameraRoll({sample: makeSample(2000)})
         const fastRoll = resolveJourneyReplayLogicalCameraRoll({sample: makeSample(500)})
         const clampedRoll = resolveJourneyReplayLogicalCameraRoll({sample: makeSample(100)})
+        const reducedRoll = resolveJourneyReplayLogicalCameraRoll({
+            sample:      makeSample(500),
+            sensitivity: 0.25,
+        })
 
         expect(Math.abs(fastRoll)).toBeGreaterThan(Math.abs(slowRoll))
         expect(Math.abs(clampedRoll)).toBeLessThanOrEqual(Math.PI / 4)
+        expect(Math.abs(reducedRoll)).toBeCloseTo(Math.abs(fastRoll) * 0.25, 6)
     })
 
     it('does not retain roll for a stationary sample', () => {

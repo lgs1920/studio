@@ -304,6 +304,7 @@ export const resolveConstrainedReplayCameraPath = (mode, {
         minTurnAngleDeg:        trackingMode === REPLAY_MARKER_MODE_NAVIGATION
             ? REPLAY_NAVIGATION_MIN_TURN_DRIFT_DEGREES
             : 8,
+        sensitivity:             cameraSettings.driftSensitivity,
     }
     const compiledDurationSeconds = Math.max(
         1,

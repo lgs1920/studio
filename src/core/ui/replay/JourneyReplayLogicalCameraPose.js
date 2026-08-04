@@ -173,9 +173,10 @@ const pathHeadingForSample = sample => {
  * @param {Object} options - Roll inputs.
  * @param {Object|null} [options.sample=null] - Current logical replay sample.
  * @param {Object|null} [options.sampler=null] - Shared metric replay sampler.
+ * @param {number} [options.sensitivity=1] - Roll response multiplier.
  * @returns {number} Roll in radians.
  */
-export const resolveJourneyReplayLogicalCameraRoll = ({sample = null, sampler = null} = {}) => {
+export const resolveJourneyReplayLogicalCameraRoll = ({sample = null, sampler = null, sensitivity = 1} = {}) => {
     if (!sample) {
         return 0
     }
@@ -219,8 +220,9 @@ export const resolveJourneyReplayLogicalCameraRoll = ({sample = null, sampler = 
     )
     const speedFactor = clamp(localSpeed / (referenceSpeed * 2.5), 0, 1)
 
+    const normalizedSensitivity = clamp(finiteNumber(sensitivity) ?? 1, 0, 1)
     return clamp(
-        Math.sign(turnDelta) * MAX_REPLAY_CAMERA_ROLL * turnFactor * curvatureFactor * speedFactor,
+        Math.sign(turnDelta) * MAX_REPLAY_CAMERA_ROLL * turnFactor * curvatureFactor * speedFactor * normalizedSensitivity,
         -MAX_REPLAY_CAMERA_ROLL,
         MAX_REPLAY_CAMERA_ROLL,
     )
@@ -274,7 +276,11 @@ export const resolveJourneyReplayLogicalCameraPose = ({
         pitch,
         roll: cameraSettings.canRoll === false
               ? 0
-              : resolveJourneyReplayLogicalCameraRoll({sample, sampler}),
+              : resolveJourneyReplayLogicalCameraRoll({
+                  sample,
+                  sampler,
+                  sensitivity: cameraSettings.rollSensitivity,
+              }),
         cameraSettings,
         markerSettings,
         cameraHeight,

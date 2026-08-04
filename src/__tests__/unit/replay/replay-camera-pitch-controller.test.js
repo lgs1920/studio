@@ -197,6 +197,10 @@ describe('Journey replay temporary pitch controller', () => {
             20 * Math.PI / 180,
         ])
         expect(weightedReplayCameraRedirectState(candidate, 0)).toBeNull()
+        expect(weightedReplayCameraRedirectState(candidate, 1, 0.25)).toEqual({
+            headingOffset: candidate.headingOffset,
+            pitchOffset:   candidate.pitchOffset * 0.25,
+        })
     })
 
     it('widens and accelerates the correction for a nearby relief obstruction', () => {

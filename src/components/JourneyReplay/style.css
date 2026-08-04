@@ -58,6 +58,10 @@
     gap: var(--wa-space-s, 0.75rem);
 }
 
+.replay-camera-sensitivity-slider {
+    width: 100%;
+}
+
 .replay-sync-row {
     align-items: center;
     display: flex;

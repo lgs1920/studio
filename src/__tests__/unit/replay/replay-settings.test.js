@@ -124,6 +124,22 @@ describe('replay settings normalization', () => {
         expect(camera.groundOffset).toBeUndefined()
     })
 
+    it('normalizes camera motion sensitivities and preserves the current default response', () => {
+        const defaults = normalizeJourneyReplayCamera({})
+        const camera = normalizeJourneyReplayCamera({
+            driftSensitivity:           -1,
+            rollSensitivity:            0.35,
+            pitchCorrectionSensitivity: 2,
+        })
+
+        expect(defaults.driftSensitivity).toBe(1)
+        expect(defaults.rollSensitivity).toBe(1)
+        expect(defaults.pitchCorrectionSensitivity).toBe(1)
+        expect(camera.driftSensitivity).toBe(0)
+        expect(camera.rollSensitivity).toBe(0.35)
+        expect(camera.pitchCorrectionSensitivity).toBe(1)
+    })
+
     it('keeps a default tolerance zone aligned to the window and clamps custom rectangles', () => {
         const camera = normalizeJourneyReplayCamera({})
         expect(camera.hysteresis.zone).toEqual({

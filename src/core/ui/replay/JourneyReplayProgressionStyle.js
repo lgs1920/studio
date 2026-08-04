@@ -54,6 +54,8 @@ export const REPLAY_HYSTERESIS_EASING_MAX = 0.5
 export const REPLAY_HYSTERESIS_LOOKAHEAD_PROGRESS = 0.025
 export const REPLAY_SMOOTHING_MIN_STEP = TRACK_RENDER_SMOOTHING_MIN_STEP
 export const REPLAY_SMOOTHING_MAX_STEP = TRACK_RENDER_SMOOTHING_MAX_STEP
+export const REPLAY_CAMERA_SENSITIVITY_MIN = 0
+export const REPLAY_CAMERA_SENSITIVITY_MAX = 1
 
 export const DEFAULT_REPLAY_PROGRESSION = {
     fill:   {
@@ -106,6 +108,9 @@ export const DEFAULT_REPLAY_CAMERA = {
     canDrift:      true,
     canFixHiddenMarker: true,
     canRoll:       true,
+    driftSensitivity:           1,
+    rollSensitivity:            1,
+    pitchCorrectionSensitivity: 1,
     previewMode:    REPLAY_CAMERA_PREVIEW_MODE_TERRAIN,
     pitch:         -65,
     heading:       0,
@@ -338,7 +343,8 @@ export const normalizeJourneyReplayMarker = (marker = {}) => ({
  *
  * `headingOffset` is used by the Behind/Ahead camera modes to bias the nominal trace-facing heading.
  * `canDrift`, `canFixHiddenMarker`, and `canRoll` gate the corresponding
- * replay camera behaviours while keeping them enabled by default.
+ * replay camera behaviours while keeping them enabled by default. Sensitivity
+ * values scale the corresponding motion without changing the default output.
  *
  */
 export const normalizeJourneyReplayCamera = (camera = {}) => ({
@@ -369,6 +375,24 @@ export const normalizeJourneyReplayCamera = (camera = {}) => ({
     canDrift:      camera?.canDrift !== false,
     canFixHiddenMarker: camera?.canFixHiddenMarker !== false,
     canRoll:       camera?.canRoll !== false,
+    driftSensitivity: clampJourneyReplayNumber(
+        camera?.driftSensitivity,
+        DEFAULT_REPLAY_CAMERA.driftSensitivity,
+        REPLAY_CAMERA_SENSITIVITY_MIN,
+        REPLAY_CAMERA_SENSITIVITY_MAX,
+    ),
+    rollSensitivity: clampJourneyReplayNumber(
+        camera?.rollSensitivity,
+        DEFAULT_REPLAY_CAMERA.rollSensitivity,
+        REPLAY_CAMERA_SENSITIVITY_MIN,
+        REPLAY_CAMERA_SENSITIVITY_MAX,
+    ),
+    pitchCorrectionSensitivity: clampJourneyReplayNumber(
+        camera?.pitchCorrectionSensitivity,
+        DEFAULT_REPLAY_CAMERA.pitchCorrectionSensitivity,
+        REPLAY_CAMERA_SENSITIVITY_MIN,
+        REPLAY_CAMERA_SENSITIVITY_MAX,
+    ),
     previewMode:   REPLAY_CAMERA_PREVIEW_MODE_TERRAIN,
     hysteresis:   (() => {
         const zone = normalizeJourneyReplayToleranceZone(camera?.hysteresis?.zone, DEFAULT_REPLAY_CAMERA.hysteresis.zone)

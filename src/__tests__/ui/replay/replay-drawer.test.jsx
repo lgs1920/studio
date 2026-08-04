@@ -82,7 +82,7 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => {
     const WaSlider = ({label, onInput, value, ...props}) => (
         <label>
             {label}
-            <input aria-label={label} value={value} onInput={onInput} {...props}/>
+            <input type="range" aria-label={label} value={value} onInput={onInput} {...props}/>
         </label>
     )
     const WaSwitch = ({children, checked, onChange, onInput, ...props}) => (
@@ -375,6 +375,31 @@ describe('JourneyReplayDrawer', () => {
         expect(view.getByLabelText('Pitch (deg)')).toBeTruthy()
         expect(view.getByLabelText('Heading (deg)')).toBeTruthy()
         expect(view.getByLabelText('Camera feel')).toBeTruthy()
+    })
+
+    it('shows and persists capability-specific camera sensitivities', async () => {
+        const view = render(<JourneyReplayDrawer/>)
+
+        expect(view.getAllByRole('slider')).toHaveLength(3)
+        expect(view.getByText('Add drift')).toBeTruthy()
+        expect(view.getByText('Add roll')).toBeTruthy()
+        expect(view.getByText('Add hidden marker correction')).toBeTruthy()
+
+        const sensitivityInputs = view.getAllByRole('slider')
+        fireEvent.input(sensitivityInputs[2], {target: {value: '0.25'}})
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.replay.camera.rollSensitivity).toBe(0.25)
+            expect(globalThis.lgs.stores.replay.camera.rollSensitivity).toBe(0.25)
+        })
+
+        fireEvent.click(view.getByLabelText('Add drift'))
+        fireEvent.click(view.getByLabelText('Add roll'))
+        fireEvent.click(view.getByLabelText('Add hidden marker correction'))
+
+        await waitFor(() => {
+            expect(view.queryAllByRole('slider')).toHaveLength(0)
+        })
     })
 
     it('shows the debug camera switch only for video-linked replay and keeps it disabled by default', async () => {

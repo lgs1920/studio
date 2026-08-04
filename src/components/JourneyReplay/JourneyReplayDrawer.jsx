@@ -39,6 +39,7 @@ import {
     REPLAY_CAMERA_PRESET_CUSTOM, REPLAY_CAMERA_PRESETS, REPLAY_HYSTERESIS_EASING_MAX,
     REPLAY_HYSTERESIS_EASING_MIN,
     REPLAY_HYSTERESIS_MARGIN_RATIO_MAX, REPLAY_HYSTERESIS_MARGIN_RATIO_MIN,
+    REPLAY_CAMERA_SENSITIVITY_MAX, REPLAY_CAMERA_SENSITIVITY_MIN,
     REPLAY_SMOOTHING_MAX_STEP, REPLAY_SMOOTHING_MIN_STEP,
     getJourneyReplayCameraPresetKey, getJourneyReplayCameraPresetUpdates, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplayProfileInfo,
     normalizeJourneyReplayProgressionStyle, normalizeJourneyReplaySmoothing, normalizeJourneyReplayTrace,
@@ -1068,6 +1069,24 @@ export const JourneyReplayDrawer = memo(() => {
                      })
     }, [camera.hysteresis.easing, updateCamera])
 
+    /**
+     * Update one replay camera sensitivity while preserving the normalized range.
+     *
+     * @param {string} field - Camera sensitivity field to update.
+     * @param {Event} event - Slider input event.
+     * @returns {void}
+     */
+    const updateCameraSensitivity = useCallback((field, event) => {
+        updateCamera({
+                         [field]: clampJourneyReplayNumber(
+                             event.target.value,
+                             camera[field],
+                             REPLAY_CAMERA_SENSITIVITY_MIN,
+                             REPLAY_CAMERA_SENSITIVITY_MAX,
+                         ),
+                     })
+    }, [camera, updateCamera])
+
     const handleRequestClose = useCallback((event) => {
         if (event.target.tagName !== 'WA-DRAWER') {
             event.preventDefault()
@@ -1392,33 +1411,90 @@ export const JourneyReplayDrawer = memo(() => {
                                                             <WaOption value={REPLAY_CAMERA_PRESET_CUSTOM}>{'Custom'}</WaOption>
                                                         </WaSelect>
                                                         <div className="replay-camera-capability-switches">
-                                                            <WaSwitch
-                                                                className="replay-camera-capability-switch half-width"
-                                                                size="xs"
-                                                                label-at-start
-                                                                checked={camera.canDrift !== false}
-                                                                onChange={event => updateCamera({canDrift: getChecked(event)})}
-                                                            >
-                                                                {'Can drift'}
-                                                            </WaSwitch>
-                                                            <WaSwitch
-                                                                className="replay-camera-capability-switch half-width"
-                                                                size="xs"
-                                                                label-at-start
-                                                                checked={camera.canFixHiddenMarker !== false}
-                                                                onChange={event => updateCamera({canFixHiddenMarker: getChecked(event)})}
-                                                            >
-                                                                {'Can fix hidden marker'}
-                                                            </WaSwitch>
-                                                            <WaSwitch
-                                                                className="replay-camera-capability-switch half-width"
-                                                                size="xs"
-                                                                label-at-start
-                                                                checked={camera.canRoll !== false}
-                                                                onChange={event => updateCamera({canRoll: getChecked(event)})}
-                                                            >
-                                                                {'Can roll'}
-                                                            </WaSwitch>
+                                                            <JourneyReplayStyleField>
+                                                                <WaSwitch
+                                                                    className="replay-camera-capability-switch"
+                                                                    size="xs"
+                                                                    label-at-start
+                                                                    checked={camera.canDrift !== false}
+                                                                    onChange={event => updateCamera({canDrift: getChecked(event)})}
+                                                                >
+                                                                    {'Add drift'}
+                                                                </WaSwitch>
+                                                                {camera.canDrift && (
+                                                                    <WaSlider
+                                                                        label="Sensitivity"
+                                                                        hint="Lower values reduce turn-based camera drift."
+                                                                        size="s"
+                                                                        min={REPLAY_CAMERA_SENSITIVITY_MIN}
+                                                                        max={REPLAY_CAMERA_SENSITIVITY_MAX}
+                                                                        step="0.05"
+                                                                        value={camera.driftSensitivity}
+                                                                        valueFormatter={formatSliderPercent}
+                                                                        withTooltip
+                                                                        placement="top"
+                                                                        onInput={event => updateCameraSensitivity('driftSensitivity', event)}
+                                                                        label-at-start
+                                                                        className="replay-camera-sensitivity-slider"
+                                                                    />
+                                                                )}
+                                                            </JourneyReplayStyleField>
+                                                            <JourneyReplayStyleField>
+                                                                <WaSwitch
+                                                                    className="replay-camera-capability-switch"
+                                                                    size="xs"
+                                                                    label-at-start
+                                                                    checked={camera.canFixHiddenMarker !== false}
+                                                                    onChange={event => updateCamera({canFixHiddenMarker: getChecked(event)})}
+                                                                >
+                                                                    {'Add hidden marker correction'}
+                                                                </WaSwitch>
+                                                                {camera.canFixHiddenMarker && (
+                                                                    <WaSlider
+                                                                        label="Sensitivity"
+                                                                        hint="Lower values reduce hidden-marker pitch corrections."
+                                                                        size="s"
+                                                                        min={REPLAY_CAMERA_SENSITIVITY_MIN}
+                                                                        max={REPLAY_CAMERA_SENSITIVITY_MAX}
+                                                                        step="0.05"
+                                                                        value={camera.pitchCorrectionSensitivity}
+                                                                        valueFormatter={formatSliderPercent}
+                                                                        withTooltip
+                                                                        placement="top"
+                                                                        onInput={event => updateCameraSensitivity('pitchCorrectionSensitivity', event)}
+                                                                        label-at-start
+                                                                        className="replay-camera-sensitivity-slider"
+                                                                    />
+                                                                )}
+                                                            </JourneyReplayStyleField>
+                                                            <JourneyReplayStyleField>
+                                                                <WaSwitch
+                                                                    className="replay-camera-capability-switch"
+                                                                    size="xs"
+                                                                    label-at-start
+                                                                    checked={camera.canRoll !== false}
+                                                                    onChange={event => updateCamera({canRoll: getChecked(event)})}
+                                                                >
+                                                                    {'Add roll'}
+                                                                </WaSwitch>
+                                                                {camera.canRoll && (
+                                                                    <WaSlider
+                                                                        label="Sensitivity"
+                                                                        hint="Lower values reduce camera banking in turns."
+                                                                        size="s"
+                                                                        min={REPLAY_CAMERA_SENSITIVITY_MIN}
+                                                                        max={REPLAY_CAMERA_SENSITIVITY_MAX}
+                                                                        step="0.05"
+                                                                        value={camera.rollSensitivity}
+                                                                        valueFormatter={formatSliderPercent}
+                                                                        withTooltip
+                                                                        placement="top"
+                                                                        onInput={event => updateCameraSensitivity('rollSensitivity', event)}
+                                                                        label-at-start
+                                                                        className="replay-camera-sensitivity-slider"
+                                                                    />
+                                                                )}
+                                                            </JourneyReplayStyleField>
                                                         </div>
                                                         <JourneyReplayStyleField>
                                                             <WaNumberInput

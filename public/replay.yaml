@@ -38,6 +38,9 @@ replay:
     canDrift: true
     canFixHiddenMarker: true
     canRoll: true
+    driftSensitivity: 1
+    rollSensitivity: 1
+    pitchCorrectionSensitivity: 1
     pitch: -65
     heading: 0
     hysteresis:

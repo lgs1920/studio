@@ -419,6 +419,15 @@ describe('Journey replay camera paths', () => {
         expect(drift).not.toBeNull()
         expect(Math.abs(drift.headingOffsetRadians)).toBeGreaterThan(0)
         expect(Math.abs(drift.lateralOffsetMeters)).toBeGreaterThan(0)
+
+        const reducedDrift = replayTurnDriftForProgress(mode, 0.5, {
+            maxHeadingOffsetDeg:    10,
+            maxLateralOffsetMeters: 60,
+            sensitivity:             0.25,
+        })
+
+        expect(reducedDrift.headingOffsetRadians).toBeCloseTo(drift.headingOffsetRadians * 0.25, 6)
+        expect(reducedDrift.lateralOffsetMeters).toBeCloseTo(drift.lateralOffsetMeters * 0.25, 6)
     })
 
     it('interpolates turn drift without a nearest-guide step', () => {

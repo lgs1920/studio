@@ -451,6 +451,7 @@ const replayTurnDriftAtGuideIndex = (guide, index, {
     maxHeadingOffsetDeg,
     maxLateralOffsetMeters,
     minTurnAngleDeg,
+    sensitivity = 1,
 }) => {
     const previous = guide[Math.max(0, index - 1)]
     const current = guide[index]
@@ -495,16 +496,19 @@ const replayTurnDriftAtGuideIndex = (guide, index, {
         / Math.max(CesiumMath.toRadians(42), Number.EPSILON),
     )
     const turnSign = Math.sign(turnAngleRadians) || 1
+    const normalizedSensitivity = clamp(finiteNumber(sensitivity) ?? 1, 0, 1)
     return {
         turnAngleRadians,
         headingOffsetRadians: turnSign
                               * CesiumMath.toRadians(maxHeadingOffsetDeg)
                               * turnStrength
-                              * lerp(0.85, 1.08, cornerSharpness),
+                              * lerp(0.85, 1.08, cornerSharpness)
+                              * normalizedSensitivity,
         lateralOffsetMeters: turnSign
                              * Math.max(0, finiteNumber(maxLateralOffsetMeters) ?? 0)
                              * turnStrength
-                             * lerp(1, 0.3, cornerSharpness),
+                             * lerp(1, 0.3, cornerSharpness)
+                             * normalizedSensitivity,
     }
 }
 
@@ -541,12 +545,14 @@ const interpolateTurnDriftValue = (previous, start, end, next, ratio) => {
  * @param {number} [options.maxHeadingOffsetDeg=10] - Maximum horizontal heading drift in degrees.
  * @param {number} [options.maxLateralOffsetMeters=60] - Maximum lateral drift in meters.
  * @param {number} [options.minTurnAngleDeg=4] - Minimum sustained turn angle in degrees.
+ * @param {number} [options.sensitivity=1] - Drift response multiplier.
  * @returns {{turnAngleRadians: number, headingOffsetRadians: number, lateralOffsetMeters: number}|null} Drift envelope.
  */
 export const replayTurnDriftForGuideProgress = (guide, progress, {
     maxHeadingOffsetDeg = 10,
     maxLateralOffsetMeters = 60,
     minTurnAngleDeg = 4,
+    sensitivity = 1,
 } = {}) => {
     if (!Array.isArray(guide) || guide.length < 3) {
         return null
@@ -567,6 +573,7 @@ export const replayTurnDriftForGuideProgress = (guide, progress, {
         maxHeadingOffsetDeg,
         maxLateralOffsetMeters,
         minTurnAngleDeg,
+        sensitivity,
     }
     const previousDrift = replayTurnDriftAtGuideIndex(guide, previousIndex, options)
     const startDrift = replayTurnDriftAtGuideIndex(guide, startIndex, options)
@@ -602,18 +609,21 @@ export const replayTurnDriftForGuideProgress = (guide, progress, {
  * @param {number} [options.maxHeadingOffsetDeg=10] - Maximum horizontal heading drift in degrees.
  * @param {number} [options.maxLateralOffsetMeters=60] - Maximum lateral drift in meters.
  * @param {number} [options.minTurnAngleDeg=4] - Minimum sustained turn angle in degrees.
+ * @param {number} [options.sensitivity=1] - Drift response multiplier.
  * @returns {{turnAngleRadians: number, headingOffsetRadians: number, lateralOffsetMeters: number}|null} Drift envelope.
  */
 export const replayTurnDriftForProgress = (mode, progress, {
     maxHeadingOffsetDeg = 10,
     maxLateralOffsetMeters = 60,
     minTurnAngleDeg = 4,
+    sensitivity = 1,
 } = {}) => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
     return replayTurnDriftForGuideProgress(call.buildCameraGuide(), progress, {
         maxHeadingOffsetDeg,
         maxLateralOffsetMeters,
         minTurnAngleDeg,
+        sensitivity,
     })
 }
 
@@ -872,7 +882,11 @@ export const cameraViewForSample = (mode, {
                 pitch:        smoothPitch,
                 roll:        cameraSettings.canRoll === false
                             ? 0
-                            : resolveJourneyReplayLogicalCameraRoll({sample, sampler: state.sampler}),
+                            : resolveJourneyReplayLogicalCameraRoll({
+                                sample,
+                                sampler: state.sampler,
+                                sensitivity: cameraSettings.rollSensitivity,
+                            }),
                 cameraSettings,
                 markerSettings,
                 cameraHeight: call.cameraAltitudeForSample(anchorSample, cameraSettings),

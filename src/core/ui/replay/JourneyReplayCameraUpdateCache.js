@@ -95,6 +95,9 @@ const cameraSettingsKey = cameraSettings => {
         cameraSettings.canDrift === false ? '0' : '1',
         cameraSettings.canFixHiddenMarker === false ? '0' : '1',
         cameraSettings.canRoll === false ? '0' : '1',
+        finiteNumberKey(cameraSettings.driftSensitivity),
+        finiteNumberKey(cameraSettings.rollSensitivity),
+        finiteNumberKey(cameraSettings.pitchCorrectionSensitivity),
         hysteresisKey(cameraSettings.hysteresis),
     ].join(':')
 }

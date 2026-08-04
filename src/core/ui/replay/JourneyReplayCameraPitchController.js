@@ -137,17 +137,19 @@ export const replayCameraPitchCorrectionSearchLimits = (nominalPitch, obstructio
  *
  * @param {object|null} redirectState - Selected proven-safe redirect.
  * @param {number} weight - Correction weight.
+ * @param {number} [pitchSensitivity=1] - Pitch correction response multiplier.
  * @returns {object|null} Weighted redirect or null at zero weight.
  */
-export const weightedReplayCameraRedirectState = (redirectState, weight) => {
+export const weightedReplayCameraRedirectState = (redirectState, weight, pitchSensitivity = 1) => {
     const safeWeight = clamp(finiteNumber(weight) ?? 0, 0, 1)
+    const safePitchSensitivity = clamp(finiteNumber(pitchSensitivity) ?? 1, 0, 1)
     if (!redirectState || safeWeight <= Number.EPSILON) {
         return null
     }
 
     return {
         headingOffset: (finiteNumber(redirectState.headingOffset) ?? 0) * safeWeight,
-        pitchOffset:   (finiteNumber(redirectState.pitchOffset) ?? 0) * safeWeight,
+        pitchOffset:   (finiteNumber(redirectState.pitchOffset) ?? 0) * safeWeight * safePitchSensitivity,
     }
 }
 
@@ -162,6 +164,7 @@ export const weightedReplayCameraRedirectState = (redirectState, weight) => {
  * @param {number|null} [options.obstructionDistanceMeters=null] - Nearest terrain obstruction distance.
  * @param {boolean} [options.isFinalFrame=false] - Force exact nominal completion.
  * @param {string|null} [options.reason='current-marker-hidden'] - Activation reason.
+ * @param {number} [options.pitchSensitivity=1] - Pitch correction response multiplier.
  * @returns {{state: object, weightedRedirectState: object|null, ownsCamera: boolean, completed: boolean}}
  */
 export const resolveReplayCameraPitchCorrectionState = (previousState, {
@@ -171,6 +174,7 @@ export const resolveReplayCameraPitchCorrectionState = (previousState, {
     obstructionDistanceMeters = null,
     isFinalFrame = false,
     reason = 'current-marker-hidden',
+    pitchSensitivity = 1,
 } = {}) => {
     const previous = previousState ?? createReplayCameraPitchCorrectionState()
     const now = finiteNumber(logicalNow) ?? 0
@@ -305,7 +309,7 @@ export const resolveReplayCameraPitchCorrectionState = (previousState, {
 
     return {
         state: next,
-        weightedRedirectState: weightedReplayCameraRedirectState(next.redirectState, next.weight),
+        weightedRedirectState: weightedReplayCameraRedirectState(next.redirectState, next.weight, pitchSensitivity),
         ownsCamera: true,
         completed: false,
     }
@@ -335,6 +339,7 @@ export const resetReplayCameraPitchCorrection = mode => {
  * @param {object|null} options.candidateRedirectState - Proven-safe redirect candidate.
  * @param {number|null} [options.obstructionDistanceMeters=null] - Nearest terrain obstruction distance.
  * @param {boolean} [options.isFinalFrame=false] - Whether this is the last replay frame.
+ * @param {number} [options.pitchSensitivity=1] - Pitch correction response multiplier.
  * @returns {object} Persisted controller result with the resolved camera view.
  */
 export const resolveReplayCameraPitchCorrection = (mode, {
@@ -344,6 +349,7 @@ export const resolveReplayCameraPitchCorrection = (mode, {
     candidateRedirectState,
     obstructionDistanceMeters = null,
     isFinalFrame = false,
+    pitchSensitivity = 1,
 } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -355,6 +361,7 @@ export const resolveReplayCameraPitchCorrection = (mode, {
             candidateRedirectState,
             obstructionDistanceMeters,
             isFinalFrame,
+            pitchSensitivity,
         },
     )
     state.cameraPitchCorrectionState = result.state
