@@ -1,0 +1,43 @@
+name: Update commit history
+
+on:
+  push:
+    branches:
+      - '**'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-commit-history-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: github.ref_type == 'branch' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the pushed branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Update commit history
+        run: bun run commit-history:update
+
+      - name: Commit and push history updates
+        run: |
+          if git diff --quiet -- COMMIT_HISTORY.md; then
+            echo "COMMIT_HISTORY.md is already up to date"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add COMMIT_HISTORY.md
+          git commit -m "docs: update commit history"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
