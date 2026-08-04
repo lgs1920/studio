@@ -607,3 +607,12 @@
 ## 2026-08-04 — [`fix: restore HQ replay controls positioning`](https://github.com/lgs1920/studio/commit/f7a55fa85759f374ad97a080fd18574621484b44)
 
 - Recorded automatically from Git history.
+
+## 2026-08-04 — [`fix: include skipped same-day commits in history`](https://github.com/lgs1920/studio/commit/dce687aba3064f13616dcec89f7ef8e6c5b81046)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/f6c481215395fba2eb41690a1634c0c865d77135)
+
+- # Conflicts:
+- #	COMMIT_HISTORY.md
