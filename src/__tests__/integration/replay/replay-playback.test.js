@@ -306,7 +306,7 @@ describe('replay phase 1 playback controller', () => {
         }
     })
 
-    it('does not redraw the replay trace from a post-export refresh after playback ended', () => {
+    it('shows the replay trace during standalone playback', () => {
         const journey = makeJourney([
             makeTrack({
                 slug:        'track#journey#gpx#main',
@@ -320,7 +320,7 @@ describe('replay phase 1 playback controller', () => {
             active:        false,
             playing:       false,
             paused:        false,
-            recordingSync: true,
+            recordingSync: false,
             progress:      0.5,
             camera:        replaySettings.camera,
         })

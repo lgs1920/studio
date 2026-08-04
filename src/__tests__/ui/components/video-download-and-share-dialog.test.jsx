@@ -431,6 +431,31 @@ describe('VideoDownloadAndShareDialog', () => {
         })
     })
 
+    it('keeps standalone videos independent from replay and HQ export', async () => {
+        globalThis.lgs.stores.replay = {}
+
+        await openDialog()
+
+        expect(screen.queryByRole('button', {name: 'Create HQ video'})).toBeNull()
+        expect(screen.getByLabelText('File name input').value).toBe('recording')
+        expect(globalThis.__.ui.replayVideoSync.stopJourneyReplay).not.toHaveBeenCalled()
+        expect(globalThis.__.ui.replay.restorePlaybackScene).not.toHaveBeenCalled()
+
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', {name: 'Share'}))
+        })
+
+        expect(globalThis.navigator.share.mock.calls[0][0].files[0].name).toBe('recording.mp4')
+
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', {name: 'Download'}))
+        })
+
+        expect(recorder.download).toHaveBeenCalledWith({
+            filename: 'recording.mp4',
+        })
+    })
+
     it('creates an HQ video from the final dialog and switches to HQ actions once ready', async () => {
         globalThis.lgs.stores.replay = {
             recordingSync: true,

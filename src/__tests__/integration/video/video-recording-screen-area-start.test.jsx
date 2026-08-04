@@ -137,7 +137,9 @@ describe('VideoRecordingScreenArea start flow', () => {
                     waitForSceneRestore: vi.fn(() => Promise.resolve()),
                 },
                 replayVideoSync: {
-                    arm: vi.fn(),
+                    arm:     vi.fn(),
+                    disarm:  vi.fn(),
+                    isArmed: vi.fn(() => false),
                 },
                 widgetCache: {
                     getAll: vi.fn(({widgetsBoard}) => (
@@ -242,6 +244,8 @@ describe('VideoRecordingScreenArea start flow', () => {
         expect(traceEntries.find(entry => entry.event === 'draft.recording.initialize.end')?.data).toEqual(expect.objectContaining({
             syncRequested: false,
         }))
+        expect(globalThis.__.ui.replayVideoSync.arm).not.toHaveBeenCalled()
+        expect(globalThis.__.ui.replayVideoSync.disarm).not.toHaveBeenCalled()
 
         expect(globalThis.lgs.stores.ui.video.preRecording).toBe(false)
         expect(globalThis.lgs.stores.ui.video.recording).toBe(true)

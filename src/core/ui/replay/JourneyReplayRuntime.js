@@ -212,6 +212,18 @@ export const isJourneyReplayVideoCaptureActive = () => {
 }
 
 /**
+ * Returns whether the replay trace should be visible in the live scene.
+ *
+ * The trace belongs to Replay playback itself and must remain visible when
+ * Replay is used without a linked video recording.
+ *
+ * @returns {boolean} Whether live Replay rendering is active.
+ */
+export const isJourneyReplayTraceActive = () => (
+    isJourneyReplayVideoCaptureActive() || isJourneyReplayCameraActive(replayStore())
+)
+
+/**
  * Resolves the clips that should be used by the current replay.
  *
  * @param {Object} options - Clip resolution options.

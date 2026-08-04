@@ -65,7 +65,11 @@ const withVideoDraftSuffix = (value, fallback = DEFAULT_VIDEO_FILENAME) => {
  *
  * @returns {Promise<void>} Promise resolved after the final view is ready to reveal
  */
-const preFocusVideoReplayScene = async () => {
+const preFocusVideoReplayScene = async ({linked = false} = {}) => {
+    if (!linked) {
+        return
+    }
+
     globalThis.__?.ui?.replayVideoSync?.stopJourneyReplay?.({deferSceneRestore: false})
     await Promise.resolve(globalThis.__?.ui?.replay?.restorePlaybackScene?.({force: true}))
 }
@@ -174,18 +178,18 @@ export const VideoDownloadAndShareDialog = () => {
     const getRecorderFilenameStem = useCallback((fallback = DEFAULT_VIDEO_FILENAME) => (
         sanitizeFilenameStem(__.recorder.filename?.({}) || fallback, fallback)
     ), [])
+    const isReplayVideoLinked = lgs.stores?.replay?.recordingSync === true
     const getDraftFilenameStem = useCallback(() => (
-        withVideoDraftSuffix(_mediaBlob.current.filename || getRecorderFilenameStem(), DEFAULT_VIDEO_FILENAME)
-    ), [getRecorderFilenameStem])
+        isReplayVideoLinked
+            ? withVideoDraftSuffix(_mediaBlob.current.filename || getRecorderFilenameStem(), DEFAULT_VIDEO_FILENAME)
+            : sanitizeFilenameStem(_mediaBlob.current.filename || getRecorderFilenameStem(), DEFAULT_VIDEO_FILENAME)
+    ), [getRecorderFilenameStem, isReplayVideoLinked])
     const getHqFilenameStem = useCallback(() => (
         stripVideoDraftSuffix(_mediaBlob.current.filename || getRecorderFilenameStem(), DEFAULT_VIDEO_FILENAME)
     ), [getRecorderFilenameStem])
     const getHqExportFilename = useCallback(() => buildMediaFilename(getHqFilenameStem(), 'mp4'), [getHqFilenameStem])
     const hasHqMedia = Boolean(hqMedia?.blob instanceof Blob)
     const isHqExporting = hqExportStatus === 'exporting'
-    const isReplayVideoLinked = lgs.stores?.replay
-                                  ? lgs.stores.replay.recordingSync !== false
-                                  : false
 
     /**
      * Prepare the final replay camera view before showing the media dialog.
@@ -200,13 +204,13 @@ export const VideoDownloadAndShareDialog = () => {
         }
 
         try {
-            await preFocusVideoReplayScene()
+            await preFocusVideoReplayScene({linked: isReplayVideoLinked})
             _replayScenePreFocused.current = true
         }
         catch (error) {
             console.error('Unable to pre-focus the replay scene:', error)
         }
-    }, [])
+    }, [isReplayVideoLinked])
 
     const downloadBlobFile = useCallback((blob, downloadFilename) => {
         if (!(blob instanceof Blob) || !downloadFilename) {
@@ -298,7 +302,7 @@ export const VideoDownloadAndShareDialog = () => {
 
             releaseMediaUrl()
             const url = URL.createObjectURL(blob)
-            const safeFilename = withVideoDraftSuffix(getRecorderFilenameStem(), DEFAULT_VIDEO_FILENAME)
+            const safeFilename = getDraftFilenameStem()
 
             _mediaBlob.current = {
                 blob,
@@ -357,7 +361,7 @@ export const VideoDownloadAndShareDialog = () => {
             releaseMediaUrl()
             void __.recorder?.releaseMedia?.()
         }
-    }, [getRecorderFilenameStem, prepareReplaySceneForDialog, releaseMediaUrl])
+    }, [getDraftFilenameStem, prepareReplaySceneForDialog, releaseMediaUrl])
 
     /**
      * Sync blurred video with main video playback.
