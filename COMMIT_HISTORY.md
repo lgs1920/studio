@@ -507,3 +507,7 @@
 - Keep video-only recording independent from Replay and omit the draft suffix outside synchronized mode.
 - Keep Replay-only playback independent from video and display its trace without video synchronization.
 - Preserve synchronized video and Replay recording with its existing Draft and HQ export flow.
+
+## 2026-08-04 — [`docs: add beta.4 changelog`](https://github.com/lgs1920/studio/commit/536b4450)
+
+- Add the 1.0.0-beta.4 release changelog with Studio and Backend closed issues, resources, feature backlog, and known issues.
