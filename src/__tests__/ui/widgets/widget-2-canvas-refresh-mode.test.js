@@ -186,6 +186,23 @@ describe('Widget2Canvas refresh modes', () => {
         expect(canvasContext.drawImage.mock.calls.some(call => call[0] === target)).toBe(true)
     })
 
+    it('passes capture exclusions to snapdom', async () => {
+        mirror = new Widget2Canvas(target, {
+            exclude:     ['[data-widget-capture="exclude"]'],
+            excludeMode: 'remove',
+        })
+
+        await mirror.init()
+
+        expect(snapdomToCanvasMock).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+                exclude:     ['[data-widget-capture="exclude"]'],
+                excludeMode: 'remove',
+            }),
+        )
+    })
+
     it('reuses static widget zones and only re-renders dirty dynamic zones', async () => {
         target?.remove?.()
         target = document.createElement('div')

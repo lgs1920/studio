@@ -17,6 +17,7 @@
 import { LogoSvg }                                     from '@Components/MainUI/LogoSvg'
 import { Widget }                                      from '@Components/MainUI/widgets/Widget'
 import { HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { shouldRenderVideoBoardWidget }                from '@Core/ui/replay/ReplayOverlayResolver'
 import { useOptionalSnapshot }                         from '@Utils/ValtioUtils'
 import { useMemo }                                     from 'react'
 import { useSnapshot }                                 from 'valtio'
@@ -39,11 +40,12 @@ export const LogoWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsB
     const replay = useSnapshot(lgs.stores.replay)
     const widgetEditor = contextState.widgetEditor
     const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
-    const isHqExporting = replay.deferredExportPlan?.runtime?.status === 'exporting'
-    const showDuringDraftRecording = widgetsBoard === VIDEO_WIDGETS_BOARD
-        && (video.preRecording || video.recording)
-        && !isHqExporting
-    const shouldRender = widgetEditor || showDuringDraftRecording
+    const shouldRender = shouldRenderVideoBoardWidget({
+        widgetsBoard,
+        widgetEditor,
+        video,
+        replay,
+    })
     const container = useMemo(
         () => __.ui.widgetManager.resolveWidgetsBoardContainer(widgetsBoard),
         [widgetsBoard],

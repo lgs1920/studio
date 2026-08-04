@@ -19,6 +19,7 @@ import {
     resolveReplayExportFrameState,
     resolveReplayVisibilityState,
     resolveVideoOverlayVisibility,
+    shouldRenderVideoBoardWidget,
     shouldShowDynamicStatsWidget,
     shouldShowJourneyStatsWidget,
     shouldShowVideoStatsWidget,
@@ -176,6 +177,23 @@ describe('replay stats widget visibility', () => {
         expect(isVideoWidgetEditorPhase()).toBe(true)
         globalThis.lgs.stores.ui.video.recording = true
         expect(isVideoWidgetEditorPhase()).toBe(false)
+    })
+
+    it('keeps mandatory video widgets mounted during HQ export', () => {
+        globalThis.lgs.stores.ui.video.editing = false
+        globalThis.lgs.stores.ui.video.preRecording = false
+        globalThis.lgs.stores.ui.video.recording = false
+        globalThis.lgs.stores.replay.deferredExportPlan = {
+            runtime: {
+                status: 'exporting',
+            },
+        }
+
+        expect(shouldRenderVideoBoardWidget({
+            widgetsBoard: VIDEO_WIDGETS_BOARD,
+            video:        globalThis.lgs.stores.ui.video,
+            replay:       globalThis.lgs.stores.replay,
+        })).toBe(true)
     })
 
     it('shows stats widgets during the video editor phase for placement', () => {

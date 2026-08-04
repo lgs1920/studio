@@ -1398,6 +1398,8 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                     if (!_w2c.current) {
                         _w2c.current = new Widget2Canvas(_widget.current.querySelector(':scope >:not(.lgs-widget-inner-overlay)'), {
                             embedFonts:      true,
+                            exclude:         config.captureExclude ?? [],
+                            excludeMode:     'remove',
                             scale:           LGS_WIDGET_SCALE_EFFECTIVE,
                             type:            fullConfig.snap,
                             outerTransforms: true,

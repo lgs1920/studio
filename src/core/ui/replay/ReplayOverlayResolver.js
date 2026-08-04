@@ -14,6 +14,8 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
+
 const VIDEO_STATS_WIDGET_MODES = Object.freeze({
     'dynamic-stats-widget': 'dynamic',
     'journey-stats-widget': 'journey',
@@ -194,6 +196,28 @@ export const isVideoWidgetEditorPhase = () => {
            && !video?.recording
            && !video?.finalizing
            && !video?.snapshot
+}
+
+/**
+ * Return whether a video-board widget must remain mounted for capture.
+ *
+ * @param {object} options - Widget render state.
+ * @param {string} [options.widgetsBoard=''] - Board hosting the widget.
+ * @param {boolean} [options.widgetEditor=false] - Whether the widget editor is active.
+ * @param {object|null} [options.video=null] - Video recording state.
+ * @param {object|null} [options.replay=null] - Replay state.
+ * @returns {boolean} True when the widget must be rendered.
+ */
+export const shouldRenderVideoBoardWidget = ({
+                                                  widgetsBoard = '',
+                                                  widgetEditor = false,
+                                                  video = null,
+                                                  replay = null,
+                                              } = {}) => {
+    const isHqExporting = replay?.deferredExportPlan?.runtime?.status === 'exporting'
+    const isVideoCaptureActive = video?.preRecording || video?.recording || isHqExporting
+
+    return Boolean(widgetEditor || (widgetsBoard === VIDEO_WIDGETS_BOARD && isVideoCaptureActive))
 }
 
 /**

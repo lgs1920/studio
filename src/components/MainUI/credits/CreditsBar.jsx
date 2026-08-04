@@ -160,7 +160,7 @@ export const CreditsBar = ({contentRef = null, widgetMode = false, showMainLogo 
                     <img src="/assets/images/Cesium_light_color.svg" alt="Cesium"/>
                 </a>
             </div>
-            <div className="credits-tooltips">
+            <div className="credits-tooltips" data-widget-capture="exclude">
                 {showMainLogo && <WaTooltip for={mainLogoLinkId} placement="top">{'LGS1920 website'}</WaTooltip>}
                 {providerCredits.map(({type, provider}) => (
                     <WaTooltip key={type} for={`${tooltipIdPrefix}-${type}`} placement="top">
