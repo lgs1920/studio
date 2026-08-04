@@ -62,6 +62,24 @@
     width: 100%;
 }
 
+/* Extend label-at-start hints across both columns of replay sensitivity controls. */
+.replay-camera-sensitivity-slider[label-at-start] {
+    row-gap: 0;
+}
+
+.replay-camera-sensitivity-slider[label-at-start]::part(slider) {
+    display: contents;
+}
+
+.replay-camera-sensitivity-slider[label-at-start]::part(hint) {
+    grid-column: 1 / -1;
+}
+
+.replay-camera-sensitivity-slider[label-at-start]::part(track) {
+    min-width: 0;
+    width: 100%;
+}
+
 .replay-sync-row {
     align-items: center;
     display: flex;
