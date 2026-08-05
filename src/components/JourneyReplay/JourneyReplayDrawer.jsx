@@ -258,15 +258,17 @@ const toPreviewRem = value => `${Math.max(0.04, Number(value).toFixed(2))}rem`
  *
  * @param {number} fillWidth - Replay trace and marker width in meters.
  * @param {number} borderWidth - Replay border width in meters.
- * @returns {{routeCoreWidth: string, routeBorderWidth: string, markerSize: string, markerBorderWidth: string}}
+ * @returns {{routeCoreWidth: string, routeBorderWidth: string, routeInnerWidth: string, markerSize: string, markerBorderWidth: string}}
  */
 const resolveReplayEffectPreviewSizing = (fillWidth, borderWidth) => {
     const routeCoreWidth = Math.max(0.1, fillWidth * 0.12)
     const routeBorderWidth = routeCoreWidth + Math.max(0.08, borderWidth * 0.12)
+    const routeInnerWidth = routeCoreWidth + Math.max(0.12, borderWidth * 0.16)
 
     return {
         routeCoreWidth:   toPreviewRem(routeCoreWidth),
         routeBorderWidth: toPreviewRem(routeBorderWidth),
+        routeInnerWidth:  toPreviewRem(routeInnerWidth),
         markerSize:       toPreviewRem(0.58 + (fillWidth * 0.18)),
         markerBorderWidth: borderWidth > 0 ? toPreviewRem(borderWidth * 0.1) : '0rem',
     }
@@ -289,15 +291,33 @@ const JourneyReplayEffectPreview = ({mode, fillColor, borderColor, backgroundIma
                 '--replay-effect-preview-background':       backgroundImage ? `url(${backgroundImage})` : 'none',
                 '--replay-effect-preview-route-core-width': sizing.routeCoreWidth,
                 '--replay-effect-preview-route-border-width': sizing.routeBorderWidth,
+                '--replay-effect-preview-route-inner-width': sizing.routeInnerWidth,
                 '--replay-effect-preview-marker-size':      sizing.markerSize,
                 '--replay-effect-preview-marker-border-width': sizing.markerBorderWidth,
             }}
         >
             <div className="replay-effect-preview-map" aria-hidden="true">
-                <span className="replay-effect-preview-route">
-                    <span className="replay-effect-preview-route-core"/>
-                </span>
+                <svg
+                    className="replay-effect-preview-route"
+                    viewBox="0 0 160 80"
+                    preserveAspectRatio="none"
+                >
+                    <path
+                        className="replay-effect-preview-route-border"
+                        d="M -10 40 H 170"
+                    />
+                    <path
+                        className="replay-effect-preview-route-inner"
+                        d="M -10 40 H 170"
+                    />
+                    <path
+                        className="replay-effect-preview-route-core"
+                        d="M -10 40 H 170"
+                    />
+                </svg>
                 <span className="replay-effect-preview-marker">
+                    <span className="replay-effect-preview-marker-outer"/>
+                    <span className="replay-effect-preview-marker-inner"/>
                     <span className="replay-effect-preview-marker-core"/>
                 </span>
             </div>

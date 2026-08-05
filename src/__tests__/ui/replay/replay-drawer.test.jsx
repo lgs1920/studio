@@ -347,7 +347,14 @@ describe('JourneyReplayDrawer', () => {
         expect(effectPreview.dataset.previewFillWidth).toBe('2')
         expect(effectPreview.dataset.previewBorderWidth).toBe('0.75')
         expect(effectPreview.style.getPropertyValue('--replay-effect-preview-route-core-width')).toBe('0.24rem')
+        expect(effectPreview.style.getPropertyValue('--replay-effect-preview-route-inner-width')).toBe('0.36rem')
         expect(effectPreview.style.getPropertyValue('--replay-effect-preview-marker-size')).toBe('0.94rem')
+        expect(effectPreview.querySelector('.replay-effect-preview-route-border')).toBeTruthy()
+        expect(effectPreview.querySelector('.replay-effect-preview-route-inner')).toBeTruthy()
+        expect(effectPreview.querySelector('.replay-effect-preview-route-core')).toBeTruthy()
+        expect(effectPreview.querySelector('.replay-effect-preview-route-core').getAttribute('d')).toBe('M -10 40 H 170')
+        expect(effectPreview.querySelector('.replay-effect-preview-marker-outer')).toBeTruthy()
+        expect(effectPreview.querySelector('.replay-effect-preview-marker-inner')).toBeTruthy()
         expect([...effectSelect.options].map(option => option.value)).toEqual([
             REPLAY_EFFECT_NONE,
             REPLAY_EFFECT_GLOW,

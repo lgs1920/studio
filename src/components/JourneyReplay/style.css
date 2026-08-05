@@ -224,6 +224,8 @@
     --replay-effect-preview-route-core-width: 0.24rem;
     /* Scaled Cesium trace border width. */
     --replay-effect-preview-route-border-width: 0.33rem;
+    /* Scaled Cesium inner glow width. */
+    --replay-effect-preview-route-inner-width: 0.36rem;
     /* Scaled Cesium marker diameter. */
     --replay-effect-preview-marker-size: 0.94rem;
     /* Scaled Cesium marker border width. */
@@ -251,68 +253,152 @@
     }
 
     & .replay-effect-preview-route {
-        border-top: var(--replay-effect-preview-route-border-width) solid color-mix(in srgb, var(--replay-effect-preview-border) var(--replay-effect-preview-border-opacity), transparent);
-        left: 0;
+        height: 100%;
+        inset: 0;
         position: absolute;
-        top: 50%;
-        transform: translate(-20%, -50%);
-        width: 140%;
-    }
-
-    & .replay-effect-preview-route-core {
-        border-top: var(--replay-effect-preview-route-core-width) solid color-mix(in srgb, var(--replay-effect-preview-fill) var(--replay-effect-preview-fill-opacity), transparent);
-        border-radius: 50%;
-        display: block;
-        left: 0;
-        position: absolute;
-        top: calc(var(--replay-effect-preview-route-core-width) * -1);
         width: 100%;
     }
 
+    & .replay-effect-preview-route-border,
+    & .replay-effect-preview-route-inner,
+    & .replay-effect-preview-route-core {
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        vector-effect: non-scaling-stroke;
+    }
+
+    & .replay-effect-preview-route-border {
+        stroke: color-mix(in srgb, var(--replay-effect-preview-border) var(--replay-effect-preview-border-opacity), transparent);
+        stroke-width: var(--replay-effect-preview-route-border-width);
+    }
+
+    & .replay-effect-preview-route-inner {
+        display: none;
+        stroke: color-mix(in srgb, var(--replay-effect-preview-border) 75%, var(--replay-effect-preview-fill));
+        stroke-width: var(--replay-effect-preview-route-inner-width);
+    }
+
+    & .replay-effect-preview-route-core {
+        stroke: color-mix(in srgb, var(--replay-effect-preview-fill) var(--replay-effect-preview-fill-opacity), transparent);
+        stroke-width: var(--replay-effect-preview-route-core-width);
+    }
+
     & .replay-effect-preview-marker {
-        background: color-mix(in srgb, var(--replay-effect-preview-fill) var(--replay-effect-preview-fill-opacity), transparent);
-        border: var(--replay-effect-preview-marker-border-width) solid color-mix(in srgb, var(--replay-effect-preview-border) var(--replay-effect-preview-border-opacity), transparent);
-        box-sizing: border-box;
-        border-radius: 50%;
         height: var(--replay-effect-preview-marker-size);
         left: 50%;
         position: absolute;
         top: 50%;
         transform: translate(-50%, -50%);
         width: var(--replay-effect-preview-marker-size);
+        z-index: 1;
+    }
+
+    & .replay-effect-preview-marker-outer,
+    & .replay-effect-preview-marker-inner,
+    & .replay-effect-preview-marker-core {
+        box-sizing: border-box;
+        border-radius: 50%;
+        left: 50%;
+        position: absolute;
+        top: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+    & .replay-effect-preview-marker-outer,
+    & .replay-effect-preview-marker-inner {
+        display: none;
+    }
+
+    & .replay-effect-preview-marker-outer {
+        background: color-mix(in srgb, white 20%, var(--replay-effect-preview-border));
+        height: max(calc(var(--replay-effect-preview-marker-size) * 1.5), calc(var(--replay-effect-preview-marker-size) + 0.25rem));
+        width: max(calc(var(--replay-effect-preview-marker-size) * 1.5), calc(var(--replay-effect-preview-marker-size) + 0.25rem));
+    }
+
+    & .replay-effect-preview-marker-inner {
+        background: color-mix(in srgb, white 20%, color-mix(in srgb, var(--replay-effect-preview-border) 75%, var(--replay-effect-preview-fill)));
+        height: calc(var(--replay-effect-preview-marker-size) + 0.125rem);
+        width: calc(var(--replay-effect-preview-marker-size) + 0.125rem);
     }
 
     & .replay-effect-preview-marker-core {
         background: color-mix(in srgb, var(--replay-effect-preview-fill) var(--replay-effect-preview-fill-opacity), transparent);
-        border-radius: 50%;
-        display: block;
-        height: 100%;
-        width: 100%;
+        border: var(--replay-effect-preview-marker-border-width) solid color-mix(in srgb, var(--replay-effect-preview-border) var(--replay-effect-preview-border-opacity), transparent);
+        height: var(--replay-effect-preview-marker-size);
+        width: var(--replay-effect-preview-marker-size);
     }
 
     &.replay-effect-preview-glow .replay-effect-preview-route {
-        box-shadow: 0 0 0.25rem color-mix(in srgb, var(--replay-effect-preview-border) var(--replay-effect-preview-border-opacity), transparent), 0 0 0.7rem color-mix(in srgb, var(--replay-effect-preview-border) var(--replay-effect-preview-border-opacity), transparent);
+        filter: drop-shadow(0 0 0.25rem color-mix(in srgb, var(--replay-effect-preview-border) 75%, transparent)) drop-shadow(0 0 0.7rem color-mix(in srgb, var(--replay-effect-preview-border) 55%, transparent));
+    }
+
+    &.replay-effect-preview-glow .replay-effect-preview-route-border {
+        opacity: calc(var(--replay-effect-preview-border-opacity) * 0.55);
+        stroke-width: calc(var(--replay-effect-preview-route-border-width) + 0.18rem);
+    }
+
+    &.replay-effect-preview-glow .replay-effect-preview-route-inner {
+        display: block;
+        opacity: calc(var(--replay-effect-preview-fill-opacity) * 0.55);
     }
 
     &.replay-effect-preview-glow .replay-effect-preview-route-core {
-        box-shadow: 0 0 0.2rem color-mix(in srgb, var(--replay-effect-preview-fill) var(--replay-effect-preview-fill-opacity), transparent), 0 0 0.45rem color-mix(in srgb, var(--replay-effect-preview-fill) var(--replay-effect-preview-fill-opacity), transparent);
+        filter: drop-shadow(0 0 0.2rem color-mix(in srgb, var(--replay-effect-preview-fill) 90%, transparent)) drop-shadow(0 0 0.45rem color-mix(in srgb, var(--replay-effect-preview-fill) 65%, transparent));
     }
 
     &.replay-effect-preview-glow .replay-effect-preview-marker {
-        box-shadow: 0 0 0.35rem color-mix(in srgb, var(--replay-effect-preview-border) var(--replay-effect-preview-border-opacity), transparent), 0 0 0.9rem color-mix(in srgb, var(--replay-effect-preview-border) var(--replay-effect-preview-border-opacity), transparent);
+        filter: drop-shadow(0 0 0.35rem color-mix(in srgb, var(--replay-effect-preview-border) 70%, transparent)) drop-shadow(0 0 0.9rem color-mix(in srgb, var(--replay-effect-preview-border) 50%, transparent));
+    }
+
+    &.replay-effect-preview-glow .replay-effect-preview-marker-outer,
+    &.replay-effect-preview-glow .replay-effect-preview-marker-inner {
+        display: block;
+        opacity: 0.55;
+    }
+
+    &.replay-effect-preview-glow .replay-effect-preview-marker-core,
+    &.replay-effect-preview-neon .replay-effect-preview-marker-core {
+        border: 0;
     }
 
     &.replay-effect-preview-neon .replay-effect-preview-route {
-        box-shadow: 0 0 0.28rem color-mix(in srgb, var(--replay-effect-preview-border) var(--replay-effect-preview-border-opacity), transparent), 0 0 0.75rem color-mix(in srgb, var(--replay-effect-preview-border) var(--replay-effect-preview-border-opacity), transparent), 0 0 1.7rem color-mix(in srgb, var(--replay-effect-preview-border) var(--replay-effect-preview-border-opacity), transparent);
-        filter: saturate(1.45);
+        filter: saturate(1.45) drop-shadow(0 0 0.28rem color-mix(in srgb, var(--replay-effect-preview-border) 75%, transparent)) drop-shadow(0 0 0.75rem color-mix(in srgb, var(--replay-effect-preview-border) 55%, transparent)) drop-shadow(0 0 1.7rem color-mix(in srgb, var(--replay-effect-preview-border) 40%, transparent));
+    }
+
+    &.replay-effect-preview-neon .replay-effect-preview-route-border {
+        opacity: calc(var(--replay-effect-preview-border-opacity) * 0.42);
+        stroke-width: calc(var(--replay-effect-preview-route-border-width) + 0.28rem);
+    }
+
+    &.replay-effect-preview-neon .replay-effect-preview-route-inner {
+        display: block;
+        opacity: calc(var(--replay-effect-preview-fill-opacity) * 0.45);
     }
 
     &.replay-effect-preview-neon .replay-effect-preview-route-core {
-        box-shadow: 0 0 0.24rem color-mix(in srgb, var(--replay-effect-preview-fill) var(--replay-effect-preview-fill-opacity), transparent), 0 0 0.55rem color-mix(in srgb, var(--replay-effect-preview-fill) var(--replay-effect-preview-fill-opacity), transparent), 0 0 1.1rem color-mix(in srgb, var(--replay-effect-preview-fill) var(--replay-effect-preview-fill-opacity), transparent);
+        filter: drop-shadow(0 0 0.24rem color-mix(in srgb, var(--replay-effect-preview-fill) 90%, transparent)) drop-shadow(0 0 0.55rem color-mix(in srgb, var(--replay-effect-preview-fill) 70%, transparent)) drop-shadow(0 0 1.1rem color-mix(in srgb, var(--replay-effect-preview-fill) 50%, transparent));
     }
 
     &.replay-effect-preview-neon .replay-effect-preview-marker {
-        box-shadow: 0 0 0.2rem color-mix(in srgb, var(--replay-effect-preview-border) var(--replay-effect-preview-border-opacity), transparent), 0 0 0.45rem color-mix(in srgb, var(--replay-effect-preview-border) var(--replay-effect-preview-border-opacity), transparent), 0 0 1rem color-mix(in srgb, var(--replay-effect-preview-border) var(--replay-effect-preview-border-opacity), transparent);
+        filter: saturate(1.45) drop-shadow(0 0 0.2rem color-mix(in srgb, var(--replay-effect-preview-border) 75%, transparent)) drop-shadow(0 0 0.45rem color-mix(in srgb, var(--replay-effect-preview-border) 55%, transparent)) drop-shadow(0 0 1rem color-mix(in srgb, var(--replay-effect-preview-border) 40%, transparent));
+    }
+
+    &.replay-effect-preview-neon .replay-effect-preview-marker-outer,
+    &.replay-effect-preview-neon .replay-effect-preview-marker-inner {
+        display: block;
+    }
+
+    &.replay-effect-preview-neon .replay-effect-preview-marker-outer {
+        height: max(calc(var(--replay-effect-preview-marker-size) * 1.65), calc(var(--replay-effect-preview-marker-size) + 0.25rem));
+        opacity: 0.65;
+        width: max(calc(var(--replay-effect-preview-marker-size) * 1.65), calc(var(--replay-effect-preview-marker-size) + 0.25rem));
+    }
+
+    &.replay-effect-preview-neon .replay-effect-preview-marker-inner {
+        height: calc(var(--replay-effect-preview-marker-size) + 0.1875rem);
+        opacity: 0.45;
+        width: calc(var(--replay-effect-preview-marker-size) + 0.1875rem);
     }
 }
 
