@@ -56,8 +56,18 @@ export const REPLAY_SMOOTHING_MIN_STEP = TRACK_RENDER_SMOOTHING_MIN_STEP
 export const REPLAY_SMOOTHING_MAX_STEP = TRACK_RENDER_SMOOTHING_MAX_STEP
 export const REPLAY_CAMERA_SENSITIVITY_MIN = 0
 export const REPLAY_CAMERA_SENSITIVITY_MAX = 1
+export const REPLAY_EFFECT_NONE = 'none'
+export const REPLAY_EFFECT_GLOW = 'glow'
+export const REPLAY_EFFECT_NEON = 'neon'
+
+export const REPLAY_EFFECT_MODES = Object.freeze([
+    {key: REPLAY_EFFECT_NONE, label: 'No effect'},
+    {key: REPLAY_EFFECT_GLOW, label: 'Glow'},
+    {key: REPLAY_EFFECT_NEON, label: 'Neon'},
+])
 
 export const DEFAULT_REPLAY_PROGRESSION = {
+    effect: {mode: REPLAY_EFFECT_NONE},
     fill:   {
         color:   '#ff6a00',
         opacity: 1,
@@ -140,6 +150,7 @@ const REPLAY_CAMERA_PRESET_HYSTERESIS = {
 }
 
 export const defaultJourneyReplayProgressionStyle = () => ({
+    effect: {...DEFAULT_REPLAY_PROGRESSION.effect},
     fill:   {...DEFAULT_REPLAY_PROGRESSION.fill},
     border: {...DEFAULT_REPLAY_PROGRESSION.border},
 })
@@ -239,10 +250,16 @@ const normalizeJourneyReplayHysteresisMarginRatio = (zone, value, fallback = DEF
 }
 
 export const normalizeJourneyReplayProgressionStyle = (progression = {}) => {
+    const effect = progression?.effect ?? {}
     const fill = progression?.fill ?? {}
     const border = progression?.border ?? {}
 
     return {
+        effect: {
+            mode: effect.mode === REPLAY_EFFECT_GLOW || effect.mode === REPLAY_EFFECT_NEON
+                  ? effect.mode
+                  : REPLAY_EFFECT_NONE,
+        },
         fill:   {
             color:   fill.color ?? DEFAULT_REPLAY_PROGRESSION.fill.color,
             opacity: clampJourneyReplayNumber(fill.opacity, DEFAULT_REPLAY_PROGRESSION.fill.opacity, 0, 1),

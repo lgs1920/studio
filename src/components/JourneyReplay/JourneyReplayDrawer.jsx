@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: contact@lgs1920.fr
  *
- * Created on: 2026-07-03
- * Last modified: 2026-07-03
+ * Created on: 2026-08-04
+ * Last modified: 2026-08-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -40,6 +40,7 @@ import {
     REPLAY_HYSTERESIS_EASING_MIN,
     REPLAY_HYSTERESIS_MARGIN_RATIO_MAX, REPLAY_HYSTERESIS_MARGIN_RATIO_MIN,
     REPLAY_CAMERA_SENSITIVITY_MAX, REPLAY_CAMERA_SENSITIVITY_MIN,
+    REPLAY_EFFECT_GLOW, REPLAY_EFFECT_NEON, REPLAY_EFFECT_NONE,
     REPLAY_SMOOTHING_MAX_STEP, REPLAY_SMOOTHING_MIN_STEP,
     getJourneyReplayCameraPresetKey, getJourneyReplayCameraPresetUpdates, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplayProfileInfo,
     normalizeJourneyReplayProgressionStyle, normalizeJourneyReplaySmoothing, normalizeJourneyReplayTrace,
@@ -86,6 +87,37 @@ const toOpaqueColorValue = value => {
     return color.isValid() ? color.alpha(1).toHex() : '#ffffff'
 }
 
+/**
+ * Captures the current Cesium canvas for the effect preview background.
+ *
+ * @returns {string|null} A compact data URL, or null when the scene is unavailable.
+ */
+const buildReplayPreviewBackground = () => {
+    try {
+        const source = lgs.canvas
+        if (!source?.width || !source?.height) {
+            return null
+        }
+
+        lgs.scene?.render?.()
+        const width = Math.min(source.width, 1024)
+        const height = Math.max(1, Math.round(width * source.height / source.width))
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const context = canvas.getContext('2d')
+        if (!context) {
+            return null
+        }
+
+        context.drawImage(source, 0, 0, source.width, source.height, 0, 0, width, height)
+        return canvas.toDataURL('image/webp', 0.8)
+    }
+    catch {
+        return null
+    }
+}
+
 const finiteNumber = value => {
     const number = Number(value)
     return Number.isFinite(number) ? number : null
@@ -107,6 +139,10 @@ const JourneyReplayStyleField = ({children}) => (
 const mergeProgressionStyle = (current, updates) => normalizeJourneyReplayProgressionStyle({
                                                                                             ...current,
                                                                                             ...updates,
+                                                                                            effect: {
+                                                                                                ...(current?.effect ?? {}),
+                                                                                                ...(updates?.effect ?? {}),
+                                                                                            },
                                                                                             fill:   {
                                                                                                 ...(current?.fill ?? {}),
                                                                                                 ...(updates?.fill ?? {}),
@@ -209,6 +245,66 @@ const JourneyReplayWidthField = ({label, unit = 'm', value, min, max, step, onIn
     </JourneyReplayStyleField>
 )
 
+/**
+ * Renders a compact map-like preview of the selected replay effect.
+ *
+ * @param {object} props - Preview mode, opacity, and replay colors.
+ * @returns {JSX.Element} The visual effect preview.
+ */
+const toPreviewRem = value => `${Math.max(0.04, Number(value).toFixed(2))}rem`
+
+/**
+ * Converts Cesium replay dimensions into compact preview dimensions while preserving their ratios.
+ *
+ * @param {number} fillWidth - Replay trace and marker width in meters.
+ * @param {number} borderWidth - Replay border width in meters.
+ * @returns {{routeCoreWidth: string, routeBorderWidth: string, markerSize: string, markerBorderWidth: string}}
+ */
+const resolveReplayEffectPreviewSizing = (fillWidth, borderWidth) => {
+    const routeCoreWidth = Math.max(0.1, fillWidth * 0.12)
+    const routeBorderWidth = routeCoreWidth + Math.max(0.08, borderWidth * 0.12)
+
+    return {
+        routeCoreWidth:   toPreviewRem(routeCoreWidth),
+        routeBorderWidth: toPreviewRem(routeBorderWidth),
+        markerSize:       toPreviewRem(0.58 + (fillWidth * 0.18)),
+        markerBorderWidth: borderWidth > 0 ? toPreviewRem(borderWidth * 0.1) : '0rem',
+    }
+}
+
+const JourneyReplayEffectPreview = ({mode, fillColor, borderColor, backgroundImage, fillWidth, borderWidth, fillOpacity, borderOpacity}) => {
+    const sizing = resolveReplayEffectPreviewSizing(fillWidth, borderWidth)
+
+    return (
+        <div
+            className={`replay-effect-preview replay-effect-preview-${mode}`}
+            data-testid="replay-effect-preview"
+            data-preview-fill-width={fillWidth}
+            data-preview-border-width={borderWidth}
+            style={{
+                '--replay-effect-preview-fill':             fillColor,
+                '--replay-effect-preview-border':           borderColor,
+                '--replay-effect-preview-fill-opacity':     `${fillOpacity * 100}%`,
+                '--replay-effect-preview-border-opacity':   `${borderOpacity * 100}%`,
+                '--replay-effect-preview-background':       backgroundImage ? `url(${backgroundImage})` : 'none',
+                '--replay-effect-preview-route-core-width': sizing.routeCoreWidth,
+                '--replay-effect-preview-route-border-width': sizing.routeBorderWidth,
+                '--replay-effect-preview-marker-size':      sizing.markerSize,
+                '--replay-effect-preview-marker-border-width': sizing.markerBorderWidth,
+            }}
+        >
+            <div className="replay-effect-preview-map" aria-hidden="true">
+                <span className="replay-effect-preview-route">
+                    <span className="replay-effect-preview-route-core"/>
+                </span>
+                <span className="replay-effect-preview-marker">
+                    <span className="replay-effect-preview-marker-core"/>
+                </span>
+            </div>
+        </div>
+    )
+}
+
 const JourneyReplayTabLabelWithBadge = ({icon, label, count, ariaLabel}) => (
     <span className="lgs-tab-with-badge">
         <span className="lgs-tab-with-badge-label">
@@ -272,6 +368,7 @@ const REPLAY_POI_HIDDEN_FIELDS = [
     {key: 'coordinates', label: 'Hide coordinates'},
 ]
 const REPLAY_TAB_RUNNER = 'runner'
+const REPLAY_TAB_STYLE = 'style'
 const REPLAY_TAB_POIS = 'pois'
 
 export const JourneyReplayDrawer = memo(() => {
@@ -291,6 +388,7 @@ export const JourneyReplayDrawer = memo(() => {
     const previousJourneySlug = useRef(journeySlug)
     const drawerRef = useRef(null)
     const progression = normalizeJourneyReplayProgressionStyle(replaySettings.progression)
+    const effectMode = progression.effect.mode
     const fillColor = toOpaqueColorValue(progression.fill.color)
     const borderColor = toOpaqueColorValue(progression.border.color)
     const fillOpacity = progression.fill.opacity
@@ -316,6 +414,7 @@ export const JourneyReplayDrawer = memo(() => {
     const remainingColor = toOpaqueColorValue(trace.remaining.color)
     const camera = normalizeJourneyReplayCamera(replaySettings.camera)
     const [activeTab, setActiveTab] = useState(REPLAY_TAB_RUNNER)
+    const [effectPreviewBackground, setEffectPreviewBackground] = useState(null)
     const nearbyPOIs = useMemo(() => {
         if (activeTab !== REPLAY_TAB_POIS) {
             return []
@@ -441,6 +540,18 @@ export const JourneyReplayDrawer = memo(() => {
             setActiveTab(REPLAY_TAB_RUNNER)
         }
     }, [drawerOpen, journeySlug])
+
+    useEffect(() => {
+        if (drawerOpen !== REPLAY_DRAWER || activeTab !== REPLAY_TAB_STYLE) {
+            return
+        }
+
+        const frame = requestAnimationFrame(() => {
+            setEffectPreviewBackground(buildReplayPreviewBackground())
+        })
+
+        return () => cancelAnimationFrame(frame)
+    }, [activeTab, drawerOpen, journeySlug])
 
     useEffect(() => {
         if (drawerOpen === REPLAY_DRAWER) {
@@ -944,6 +1055,10 @@ export const JourneyReplayDrawer = memo(() => {
                           })
     }, [progression.border.profileMarker, updateProgression])
 
+    const updateEffectMode = useCallback((event) => {
+        updateProgression({effect: {mode: event.target.value}})
+    }, [updateProgression])
+
     const updateTraceMode = useCallback((event) => {
         updateTrace({mode: event.target.value})
     }, [updateTrace])
@@ -1198,9 +1313,9 @@ export const JourneyReplayDrawer = memo(() => {
                                     <WaTab slot="nav" panel="runner" onClick={setReplayTab(REPLAY_TAB_RUNNER)}>
                                         <JourneyReplayTabLabelWithBadge icon="clock" label="Playback" count={0}/>
                                     </WaTab>
-                                    <WaTab slot="nav" panel="edit" onClick={setReplayTab('edit')}>
+                                     <WaTab slot="nav" panel={REPLAY_TAB_STYLE} onClick={setReplayTab(REPLAY_TAB_STYLE)}>
                                         <WaIcon name="paintbrush-pencil" variant="regular"/>
-                                        {'Edit'}
+                                        {'Style'}
                                     </WaTab>
                                     <WaTab slot="nav" panel="clips" onClick={setReplayTab('clips')}>
                                         <JourneyReplayTabLabelWithBadge
@@ -1446,7 +1561,7 @@ export const JourneyReplayDrawer = memo(() => {
                                                                         withTooltip
                                                                         placement="top"
                                                                         onInput={event => updateCameraSensitivity('driftSensitivity', event)}
-                                                                        label-at-start
+                                                                        label-at-start  half-width
                                                                         className="replay-camera-sensitivity-slider"
                                                                     />
                                                                 )}
@@ -1474,7 +1589,7 @@ export const JourneyReplayDrawer = memo(() => {
                                                                         withTooltip
                                                                         placement="top"
                                                                         onInput={event => updateCameraSensitivity('pitchCorrectionSensitivity', event)}
-                                                                        label-at-start
+                                                                        label-at-start half-width
                                                                         className="replay-camera-sensitivity-slider"
                                                                     />
                                                                 )}
@@ -1502,7 +1617,7 @@ export const JourneyReplayDrawer = memo(() => {
                                                                         withTooltip
                                                                         placement="top"
                                                                         onInput={event => updateCameraSensitivity('rollSensitivity', event)}
-                                                                        label-at-start
+                                                                        label-at-start half-width
                                                                         className="replay-camera-sensitivity-slider"
                                                                     />
                                                                 )}
@@ -1542,7 +1657,7 @@ export const JourneyReplayDrawer = memo(() => {
                                          </LGSScrollbars>
                                      </WaTabPanel>
 
-                                     <WaTabPanel name="edit">
+                                     <WaTabPanel name={REPLAY_TAB_STYLE}>
                                          <LGSScrollbars>
                                              <div className="replay-tab-panel">
                                                  <>
@@ -1624,6 +1739,29 @@ export const JourneyReplayDrawer = memo(() => {
                                                              onColorInput={updateBorderColor}
                                                              onOpacityInput={updateBorderOpacity}
                                                              onWidthInput={updateBorderWidth}
+                                                         />
+                                                         <WaSelect
+                                                             appearance="filled"
+                                                             className="replay-effect-select half-width"
+                                                             label="Effect"
+                                                             label-at-start
+                                                             size="s"
+                                                             value={effectMode}
+                                                             onChange={updateEffectMode}
+                                                         >
+                                                             <WaOption value={REPLAY_EFFECT_NONE}>{'No effect'}</WaOption>
+                                                             <WaOption value={REPLAY_EFFECT_GLOW}>{'Glow'}</WaOption>
+                                                             <WaOption value={REPLAY_EFFECT_NEON}>{'Neon'}</WaOption>
+                                                         </WaSelect>
+                                                         <JourneyReplayEffectPreview
+                                                             mode={effectMode}
+                                                             fillColor={fillColor}
+                                                             borderColor={borderColor}
+                                                             fillOpacity={fillOpacity}
+                                                             borderOpacity={borderOpacity}
+                                                             backgroundImage={effectPreviewBackground}
+                                                             fillWidth={fillWidth}
+                                                             borderWidth={borderWidth}
                                                          />
                                                      </section>
                                                      <WaDivider/>

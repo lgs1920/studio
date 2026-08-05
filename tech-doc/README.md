@@ -55,6 +55,8 @@ Proposed work, pending validation, or future implementation work lives under `to
 - [Arrow widget](todo/ARROW_WIDGET_SPEC.md)
 - [Video widget](todo/VIDEO_WIDGET_SPEC.md)
 - [Replay video architecture](todo/CORE-REPLAY-VIDEO-ARCHITECTURE.md)
+- [Replay start camera editor and start clip synchronization](todo/CORE-REPLAY-START-CAMERA-EDITOR-SPEC.md)
+- [Replay HQ recording camera and monitoring](todo/CORE-REPLAY-HQ-RECORDING-MONITOR-SPEC.md)
 - [Layer time filtering and named temporal variants](todo/CORE-LAYER-TIME-FILTER-SPEC.md)
 - [Copernicus Data Space Sentinel-2 WMTS integration](todo/CORE-COPERNICUS-SENTINEL2-SPEC.md)
 - [Journey and track click selection with interactive overlay menu](todo/CORE-JOURNEY-CLICK-OVERLAY-SELECTION-SPEC.md)

@@ -40,6 +40,7 @@ import {
     formatSliderPercent,
 }                                                                   from '@Components/MainUI/widgets/editor/elements/sliderUtils'
 import {
+    DEFAULT_JOURNEY_STATS_DATE_TIME_STACK,
     isJourneyStatsSummaryTextItem,
     isJourneyStatsTextItemEnabled,
     normalizeJourneyStatsSummaryBreaks,
@@ -511,8 +512,23 @@ export const JourneyStatsWidgetEditor = ({
         updateValue('summaryBreaks', normalizeJourneyStatsSummaryBreaks(nextSummaryBreaks))
     }
 
+    const toggleDateTimeStack = event => {
+        event.preventDefault()
+        event.stopPropagation()
+
+        const currentValue = element.dateTimeStack ?? DEFAULT_JOURNEY_STATS_DATE_TIME_STACK
+        updateValue('dateTimeStack', !currentValue)
+    }
+
     const renderTextOrderRow = item => {
         const summaryLockState = getSummaryLockState(item.id)
+        const dateTimeLockState = item.id === 'date'
+                                  ? {
+                                      isOpen: element.dateTimeStack ?? DEFAULT_JOURNEY_STATS_DATE_TIME_STACK,
+                                      visible: true,
+                                  }
+                                  : null
+        const lockState = dateTimeLockState ?? summaryLockState
 
         return (
             <WaCard
@@ -524,17 +540,21 @@ export const JourneyStatsWidgetEditor = ({
                 <WaIcon name="grip-dots-vertical" variant="solid" className="icon-widget"/>
                 <WaIcon name={item.icon} variant="regular" className="icon-widget"/>
                 <div className="sortable-widget-info">{item.label}</div>
-                {summaryLockState.visible && (
+                {lockState.visible && (
                     <WaButton
                         appearance="plain"
                         variant="brand"
                         size="s"
                         className="journey-stats-text-order-lock-button"
-                        title={summaryLockState.isOpen ? 'Align summary metrics' : 'Force line break'}
-                        onClick={event => toggleSummaryLineBreak(item.id, event)}
+                        title={dateTimeLockState
+                            ? (lockState.isOpen ? 'Combine date and time' : 'Separate date and time')
+                            : (lockState.isOpen ? 'Align summary metrics' : 'Force line break')}
+                        onClick={event => dateTimeLockState
+                            ? toggleDateTimeStack(event)
+                            : toggleSummaryLineBreak(item.id, event)}
                         onPointerDown={event => event.stopPropagation()}
                     >
-                        <WaIcon name={summaryLockState.isOpen ? 'lock-open' : 'lock'} variant="regular"/>
+                        <WaIcon name={lockState.isOpen ? 'lock-open' : 'lock'} variant="regular"/>
                     </WaButton>
                 )}
             </WaCard>
@@ -571,11 +591,11 @@ export const JourneyStatsWidgetEditor = ({
                 return (
                     <>
                         <WaSwitch label-at-start size="xs" checked={element.date ?? false}
-                                  onInput={(e) => updateValue('date', e.target.checked)}><span>Date</span></WaSwitch>
+                                  onInput={(e) => updateValue('date', e.target.checked)}><span>Date-Time</span></WaSwitch>
                         {element.date && renderReadOnlyDataValue(
                             <DateTimeDisplay
                                 items={journeyDate.items}
-                                forceStack
+                                stackDateTime={element.dateTimeStack ?? DEFAULT_JOURNEY_STATS_DATE_TIME_STACK}
                                 leading={<WaIcon name="clock" variant="regular"/>}
                             />,
                         )}
