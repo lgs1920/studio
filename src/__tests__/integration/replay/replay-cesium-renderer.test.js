@@ -17,7 +17,7 @@
 import { JourneyReplayCesiumRenderer } from '@Core/ui/replay/JourneyReplayCesiumRenderer'
 import { JourneyReplayPathSampler }    from '@Core/ui/replay/JourneyReplayPathSampler'
 import { defaultJourneyReplaySettings, REPLAY_TRACE_MODE_FULL } from '@Core/ui/replay/JourneyReplayProgressionStyle'
-import { Cartesian3, Color, PolylineGlowMaterialProperty } from 'cesium'
+import { Cartesian3, Color, ColorMaterialProperty, PolylineGlowMaterialProperty } from 'cesium'
 import { REPLAY_EFFECT_GLOW, REPLAY_EFFECT_NEON }               from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -275,19 +275,53 @@ describe('JourneyReplayCesiumRenderer', () => {
         renderer.update({sample: sampler.atProgress(0.5), sampler, forceGeometry: true})
 
         const completedFill = replayEntity(dataSources, '#completed#smoothed#fill')
+        const completedInnerGlow = replayEntity(dataSources, '#completed#smoothed#inner-glow')
         const completedBorder = replayEntity(dataSources, '#completed#smoothed#border')
         const cursorEffect = replayEntity(dataSources, '#cursor-effect-outer')
-        const expectedBorderEffectColor = Color.fromCssColorString('#abcdef').withAlpha(0.6).toCssColorString()
+        const cursorEffectInner = replayEntity(dataSources, '#cursor-effect-inner')
+        const expectedBorderGlowColor = Color.fromCssColorString('#abcdef')
+            .brighten(0.2, new Color())
+            .withAlpha(0.33)
+            .toCssColorString()
         const expectedFillEffectColor = Color.fromCssColorString('#112233').withAlpha(0.35).toCssColorString()
+        const expectedInnerGlowColor = Color.lerp(
+            Color.fromCssColorString('#112233').withAlpha(0.35),
+            Color.fromCssColorString('#abcdef').withAlpha(0.6),
+            0.75,
+            new Color(),
+        )
+            .withAlpha(0.35)
+            .brighten(0.2, new Color())
+            .withAlpha(0.1925)
+            .toCssColorString()
 
-        expect(completedFill?.polyline?.material).toBeInstanceOf(PolylineGlowMaterialProperty)
-        expect(propertyValue(completedFill?.polyline?.width)).toBe(8)
-        expect(propertyValue(completedBorder?.polyline?.width)).toBe(12)
+        expect(completedFill?.polyline?.material).toBeInstanceOf(ColorMaterialProperty)
+        expect(propertyValue(completedFill?.polyline?.width)).toBe(6)
+        expect(propertyValue(completedBorder?.polyline?.width)).toBe(15)
         expect(materialCss(completedFill?.polyline?.material)).toBe(expectedFillEffectColor)
-        expect(materialCss(replayEntity(dataSources, '#completed#smoothed#border')?.polyline?.material))
-            .toBe(expectedBorderEffectColor)
+        expect(completedInnerGlow?.polyline?.material).toBeInstanceOf(PolylineGlowMaterialProperty)
+        expect(propertyValue(completedInnerGlow?.polyline?.width)).toBe(8)
+        expect(materialCss(completedInnerGlow?.polyline?.material)).toBe(expectedInnerGlowColor)
+        expect(completedBorder?.polyline?.material).toBeInstanceOf(PolylineGlowMaterialProperty)
+        expect(materialCss(completedBorder?.polyline?.material)).toBe(expectedBorderGlowColor)
+        expect(propertyValue(completedBorder?.polyline?.material?.glowPower)).toBe(0.18)
         expect(propertyValue(cursorEffect?.point?.color)?.toCssColorString()).toBe(
-            Color.fromCssColorString('#abcdef').withAlpha(0.168).toCssColorString(),
+            Color.fromCssColorString('#abcdef')
+                .brighten(0.2, new Color())
+                .withAlpha(0.33)
+                .toCssColorString(),
+        )
+        expect(propertyValue(cursorEffectInner?.point?.color)?.toCssColorString()).toBe(
+            Color.lerp(
+                Color.fromCssColorString('#112233').withAlpha(0.35),
+                Color.fromCssColorString('#abcdef').withAlpha(0.6),
+                0.75,
+                new Color(),
+            )
+                .withAlpha(0.35)
+                .brighten(0.2, new Color())
+                .withAlpha(0.1925)
+                .toCssColorString(),
         )
         expect(propertyValue(replayEntity(dataSources, '#cursor')?.point?.color)?.alpha).toBeCloseTo(0.85)
     })
@@ -315,19 +349,49 @@ describe('JourneyReplayCesiumRenderer', () => {
         renderer.update({sample: sampler.atProgress(0.5), sampler, forceGeometry: true})
 
         const completedFill = replayEntity(dataSources, '#completed#smoothed#fill')
+        const completedInnerGlow = replayEntity(dataSources, '#completed#smoothed#inner-glow')
         const cursor = replayEntity(dataSources, '#cursor')
         const cursorEffectOuter = replayEntity(dataSources, '#cursor-effect-outer')
+        const cursorEffectInner = replayEntity(dataSources, '#cursor-effect-inner')
         const cursorEffectCore = replayEntity(dataSources, '#cursor-effect-core')
         const expectedEffectColor = Color.fromCssColorString('#123456').withAlpha(0.15).toCssColorString()
+        const expectedGlowColor = Color.fromCssColorString('#123456')
+            .brighten(0.35, new Color())
+            .withAlpha(0.063)
+            .toCssColorString()
 
-        expect(completedFill?.polyline?.material).toBeInstanceOf(PolylineGlowMaterialProperty)
-        expect(propertyValue(completedFill?.polyline?.width)).toBe(10)
+        expect(completedFill?.polyline?.material).toBeInstanceOf(ColorMaterialProperty)
+        expect(propertyValue(completedFill?.polyline?.width)).toBe(6)
         expect(materialCss(completedFill?.polyline?.material)).toBe(expectedEffectColor)
+        expect(completedInnerGlow?.polyline?.material).toBeInstanceOf(PolylineGlowMaterialProperty)
+        expect(propertyValue(completedInnerGlow?.polyline?.width)).toBe(9)
+        expect(materialCss(completedInnerGlow?.polyline?.material)).toBe(
+            Color.fromCssColorString('#123456')
+                .brighten(0.35, new Color())
+                .withAlpha(0.0675)
+                .toCssColorString(),
+        )
+        expect(replayEntity(dataSources, '#completed#smoothed#border')?.polyline?.material)
+            .toBeInstanceOf(PolylineGlowMaterialProperty)
+        expect(propertyValue(replayEntity(dataSources, '#completed#smoothed#border')?.polyline?.width)).toBe(16)
+        expect(materialCss(replayEntity(dataSources, '#completed#smoothed#border')?.polyline?.material))
+            .toBe(expectedGlowColor)
+        expect(propertyValue(replayEntity(dataSources, '#completed#smoothed#border')?.polyline?.material?.glowPower))
+            .toBe(0.28)
         expect(propertyValue(cursor?.point?.outlineWidth)).toBe(0)
         expect(propertyValue(cursorEffectOuter?.point?.color)?.toCssColorString()).toBe(
-            Color.fromCssColorString('#123456').withAlpha(0.0525).toCssColorString(),
+            Color.fromCssColorString('#123456')
+                .brighten(0.35, new Color())
+                .withAlpha(0.0975)
+                .toCssColorString(),
         )
         expect(propertyValue(cursorEffectCore?.point?.color)?.toCssColorString()).toBe(expectedEffectColor)
+        expect(propertyValue(cursorEffectInner?.point?.color)?.toCssColorString()).toBe(
+            Color.fromCssColorString('#123456')
+                .brighten(0.35, new Color())
+                .withAlpha(0.0675)
+                .toCssColorString(),
+        )
         expect(cursorEffectOuter?.show).toBe(true)
         expect(cursorEffectCore?.show).toBe(true)
 
@@ -339,7 +403,39 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(replayEntity(dataSources, '#completed#smoothed#fill')?.polyline?.material)
             .not.toBeInstanceOf(PolylineGlowMaterialProperty)
         expect(cursorEffectOuter?.show).toBe(false)
+        expect(cursorEffectInner?.show).toBe(false)
         expect(cursorEffectCore?.show).toBe(false)
+    })
+
+    it('updates dynamic effect materials when the replay style changes during playback', () => {
+        const dataSources = makeDataSources()
+        const replay = defaultJourneyReplaySettings()
+        replay.progression = {
+            ...replay.progression,
+            effect: {mode: REPLAY_EFFECT_GLOW},
+        }
+        installReplayGlobals({dataSources, replay})
+        globalThis.lgs.stores.replay.playing = true
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const renderer = new JourneyReplayCesiumRenderer()
+        const sample = sampler.atProgress(0.5)
+
+        renderer.show({sampler})
+        renderer.update({sample, sampler, forceGeometry: true})
+
+        const completedBorder = replayEntity(dataSources, '#completed#smoothed#border')
+        expect(propertyValue(completedBorder?.polyline?.material?.glowPower)).toBe(0.18)
+
+        replay.progression.effect = {mode: REPLAY_EFFECT_NEON}
+        renderer.update({sample, sampler})
+
+        expect(propertyValue(completedBorder?.polyline?.material?.glowPower)).toBe(0.28)
     })
 
     it('renders a static completed trace for stop clip frames', () => {

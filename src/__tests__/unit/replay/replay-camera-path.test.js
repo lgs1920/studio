@@ -88,6 +88,7 @@ import {
     REPLAY_MARKER_MODE_HYSTERESIS,
     REPLAY_CAMERA_POSITION_AHEAD,
     REPLAY_CAMERA_POSITION_BEHIND,
+    REPLAY_EFFECT_GLOW,
     REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {
@@ -1650,6 +1651,60 @@ describe('Journey replay camera paths', () => {
             }))
         },
     )
+
+    it('does not let replay effect depth trigger a camera pitch correction', () => {
+        vi.stubGlobal('lgs', {
+            settings: {
+                ui: {
+                    replay: {
+                        progression: {effect: {mode: REPLAY_EFFECT_GLOW}},
+                        camera: {
+                            positionMode: 'system',
+                            heading:      0,
+                            pitch:        -65,
+                            altitude:     1200,
+                        },
+                        marker: {mode: REPLAY_MARKER_MODE_HYSTERESIS},
+                    },
+                },
+            },
+            stores: {
+                replay: {
+                    camera: {positionMode: 'system', heading: 0, pitch: -65, altitude: 1200},
+                    captureFps: 30,
+                },
+            },
+            viewer: {camera: {}},
+        })
+
+        const {mode, call} = makeMode()
+        const sample = {
+            progress:          0.5,
+            distanceFromStart: 100,
+            longitude:         1,
+            latitude:          2,
+            altitude:          120,
+        }
+        call.cameraViewForSample = vi.fn(() => ({
+            sample,
+            heading:      0,
+            pitch:        -65 * Math.PI / 180,
+            cameraHeight: 1200,
+        }))
+        call.cameraLookaheadSample = vi.fn(() => sample)
+        call.renderedTraceVisibleForSample = vi.fn(() => false)
+
+        updateCamera(mode, {
+            sample,
+            progress: sample.progress,
+            source:   'playback',
+        })
+
+        expect(call.renderedTraceVisibleForSample).not.toHaveBeenCalled()
+        expect(call.cameraRecenterFrame).toHaveBeenCalledWith(expect.objectContaining({
+            pitch: expect.closeTo(-65 * Math.PI / 180),
+        }))
+    })
 
     it('applies the logical camera pose without asking Cesium to build a path', () => {
         vi.stubGlobal('lgs', {

@@ -15,6 +15,7 @@ import {
     REPLAY_MARKER_MODE_HYSTERESIS,
     REPLAY_MARKER_MODE_NAVIGATION,
     REPLAY_MARKER_MODE_TRACE,
+    REPLAY_EFFECT_NONE,
     getJourneyReplaySettings,
     normalizeJourneyReplayCamera,
     normalizeJourneyReplayMarker,
@@ -44,6 +45,18 @@ import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
 
 const REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS = 2
 const REPLAY_NAVIGATION_TARGET_LEAD_RATIO = 1
+
+/**
+ * Replay effect polylines and marker layers can be returned by Cesium depth
+ * picking. They are visual layers, not terrain obstructions for the camera.
+ *
+ * @returns {boolean} Whether replay effects are currently active.
+ */
+const replayEffectDepthPickingActive = () => {
+    const settingsMode = getJourneyReplaySettings()?.progression?.effect?.mode
+    const storeMode = globalThis.lgs?.stores?.replay?.progression?.effect?.mode
+    return [settingsMode, storeMode].some(mode => mode && mode !== REPLAY_EFFECT_NONE)
+}
 
 /**
  * Convert an optional replay timing value without treating null as zero.
@@ -287,6 +300,7 @@ const replayCameraPitchVisibility = (mode, {
         })
         : true
     const renderedObservationAllowed = !state.deterministicCameraTransition
+                                      && !replayEffectDepthPickingActive()
     const renderedVisible = renderedObservationAllowed
                             && typeof call.renderedTargetVisible === 'function'
         ? call.renderedTargetVisible(nominalView?.sample, cache)
