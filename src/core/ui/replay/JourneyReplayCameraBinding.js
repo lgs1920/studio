@@ -176,7 +176,7 @@ export const startCameraTransition = (mode, {
                 ? Cartesian3.distance(cameraWorldPosition, endPosition)
                 : null
             const transferMode = selectCameraTransferMode(transferDistance, transferThresholdKm)
-            const transferPath = cameraWorldPosition
+            const transferPath = cameraWorldPosition && transferMode !== 'direct'
                 ? buildCameraTransferPath({
                     start:       cameraWorldPosition,
                     end:         endPosition,
@@ -311,11 +311,8 @@ export const bindMarkerInteractions = (mode) => {
             if (state.cameraFlightActive) {
                 call.cancelCameraBezierTransition(false)
             }
-            if (pointer && state.cameraFlightActive) {
-                call.cancelCameraBezierTransition(false)
-            }
             // Allow pointer interactions to start even if a programmatic camera view was just applied.
-            if (!pointer && (state.cameraApplyingView || call.now() < state.cameraAutoTrackingIgnoreUntil)) {
+            if (!pointer && state.cameraApplyingView) {
                 return
             }
             if (state.cameraManualInteractionTimer !== null) {
@@ -338,7 +335,7 @@ export const bindMarkerInteractions = (mode) => {
                 call.stopCameraLiveSyncLoop()
                 return
             }
-            if (!state.cameraPointerActive && (state.cameraApplyingView || call.now() < state.cameraAutoTrackingIgnoreUntil)) {
+            if (!state.cameraPointerActive && state.cameraApplyingView) {
                 state.cameraPointerActive = false
                 state.cameraUserAdjusting = false
                 return
@@ -369,6 +366,15 @@ export const bindMarkerInteractions = (mode) => {
         const moveEnd = () => {
             if (state.cameraPointerActive) {
                 return
+            }
+            const replay = replayStore()
+            const replayCameraActive = isJourneyReplayCameraActive(replay) || state.sampler
+            if (!state.suppressPlaybackCameraSync
+                && replayCameraActive
+                && !state.cameraUserAdjusting
+                && !state.cameraApplyingView
+                && call.now() >= state.cameraAutoTrackingIgnoreUntil) {
+                state.cameraUserAdjusting = true
             }
             manualEnd({immediate: true})
         }

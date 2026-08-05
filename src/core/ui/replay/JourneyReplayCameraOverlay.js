@@ -306,7 +306,11 @@ const resolveReplayDiagnosticsGeometry = (hysteresis, rect) => {
     const runtimeTracking = replayRuntimeTrackingSettings(globalThis.lgs?.settings?.ui?.replay?.camera
                                                           ?? cameraSettings, rect)
     const outerBounds = marker.mode === REPLAY_MARKER_MODE_NAVIGATION
-                        ? replayToleranceZoneBounds(runtimeTracking.navigation.triggerZone)
+                        ? replayToleranceZoneBounds(replayCenteredSquareZone(
+                            runtimeTracking.navigation.triggerZone.width,
+                            rect.width,
+                            rect.height,
+                        ))
                         : marker.mode === REPLAY_MARKER_MODE_HYSTERESIS
                           ? replayToleranceZoneBounds(runtimeTracking.dynamic.triggerZone)
                           : replayToleranceZoneBounds(hysteresis.zone)
@@ -758,7 +762,7 @@ export const updateToleranceZoneOverlay =  (mode, hysteresis) => {
     if (!geometry) {
         return
     }
-    if (isReplayVideoLinked() && geometry.debug !== true) {
+    if (isReplayVideoLinked() && geometry.debug !== true && globalThis.lgs?.viewer?.container) {
         state.toleranceZoneOverlayVisible = false
         removeToleranceZoneOverlay(mode)
         return

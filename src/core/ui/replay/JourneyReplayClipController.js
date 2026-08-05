@@ -462,8 +462,9 @@ export const applyJourneyReplayClipCameraPlan = async (mode, plan = null, {token
             }
             if (useLogicalCamera) {
                 call.applyJourneyReplayPOIVisibility()
-                if (plan.stopRotate) {
-                    await globalThis.__?.ui?.cameraManager?.stopRotate?.()
+                const stopRotate = globalThis.__?.ui?.cameraManager?.stopRotate
+                if (plan.stopRotate && typeof stopRotate === 'function') {
+                    await stopRotate()
                 }
                 await playLogicalJourneyReplayClip(mode, plan, {
                     token: activeToken,
@@ -497,8 +498,9 @@ export const applyJourneyReplayClipCameraPlan = async (mode, plan = null, {token
         }
 
         if (useLogicalCamera) {
-            if (plan.stopRotate) {
-                await globalThis.__?.ui?.cameraManager?.stopRotate?.()
+            const stopRotate = globalThis.__?.ui?.cameraManager?.stopRotate
+            if (plan.stopRotate && typeof stopRotate === 'function') {
+                await stopRotate()
             }
             await playLogicalJourneyReplayClip(mode, plan, {
                 token: activeToken,
@@ -530,8 +532,9 @@ export const applyJourneyReplayClipCameraPlan = async (mode, plan = null, {token
             return
         }
 
-        if (plan.stopRotate) {
-            await globalThis.__?.ui?.cameraManager?.stopRotate?.()
+        const stopRotate = globalThis.__?.ui?.cameraManager?.stopRotate
+        if (plan.stopRotate && typeof stopRotate === 'function') {
+            await stopRotate()
         }
 
         await call.recenterCameraToSample({

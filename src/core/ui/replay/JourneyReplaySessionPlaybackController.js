@@ -227,13 +227,7 @@ export const start = (mode, options = {}) => {
         })
     }
     if (state.sceneRestorePromise) {
-        const restoreToken = state.clipSequenceToken
-        return state.sceneRestorePromise.then(() => {
-            if (restoreToken !== state.clipSequenceToken) {
-                return null
-            }
-            return start(mode, options)
-        })
+        call.cancelPendingSceneRestore()
     }
     state.renderer.clear()
     call.bindCesiumCameraBridge()
@@ -257,7 +251,7 @@ export const start = (mode, options = {}) => {
         state.logicalCameraTrajectory = false
         state.videoReplayClipLogicalTrajectory = videoReplayLinked
         void globalThis.__?.ui?.cameraManager?.stopRotate?.()
-        call.setJourneyReplayOrbitAllowed(!videoReplayLinked)
+        call.setJourneyReplayOrbitAllowed(false)
         call.restoreOtherJourneysVisibility()
         call.hideCurrentJourneyVisibility()
         if (shouldHideOtherJourneys) {
@@ -406,7 +400,10 @@ export const start = (mode, options = {}) => {
         else {
             state.deferStartCameraRecenter = false
             traceStartStep('place-camera-at-playback-start.begin')
-            state.skipNextImmediateStartRecenter = call.placeCameraAtPlaybackStart(startSample, options.progress ?? 0) === true
+            const hasLandingStopClip = call.clipListForSlot(REPLAY_CLIP_SLOT_STOP)
+                .some(clip => clip?.clipId === 'landing')
+            state.skipNextImmediateStartRecenter = hasLandingStopClip
+                || call.placeCameraAtPlaybackStart(startSample, options.progress ?? 0) === true
             traceStartStep('place-camera-at-playback-start.end', {
                 skipNextImmediateStartRecenter: state.skipNextImmediateStartRecenter,
             })
@@ -516,10 +513,12 @@ export const preparePlaybackSceneForExport = async (mode, {
                 }
                 : null
         }
-        state.clipCameraContinuity = call.currentReplayClipCameraState({
-            initial: true,
-            sample,
-        })
+        state.clipCameraContinuity = typeof call.currentReplayClipCameraState === 'function'
+            ? call.currentReplayClipCameraState({
+                initial: true,
+                sample,
+            })
+            : null
         call.captureJourneyReplayDrawerStateBeforePlayback()
         call.capturePlaybackCameraSettings()
 
