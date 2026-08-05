@@ -552,3 +552,27 @@
 ## 2026-08-04 — [`Merge pull request #456 from lgs1920/agent/commit-history-automation`](https://github.com/lgs1920/studio/commit/6c8a7cafaec693f1cfc6a7c5c1c79336eb0efc23)
 
 - feat: automate commit history updates
+
+## 2026-08-04 — [`docs: record studio version commit`](https://github.com/lgs1920/studio/commit/61298cc6c8f5bf27b0c9d2c28c48963fb3970a34)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`docs: record HQ replay widget fix`](https://github.com/lgs1920/studio/commit/55cc010eb431ccd7081a58bba2a5064f352324ea)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`fix(replay): tune camera motion sensitivity`](https://github.com/lgs1920/studio/commit/e762e0621ba65cf33ad5f5203cf15c6dcce8e1eb)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`chore: add CesiumJS agent skills`](https://github.com/lgs1920/studio/commit/3bff34a9e27e97f22b24c527259385d8acd7522f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`Merge branch 'chore/cesiumjs-agent-skills'`](https://github.com/lgs1920/studio/commit/b32bc09e8e0df8a67f2e5121ffe41fa3b9d53161)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`Merge remote-tracking branch 'origin/main'`](https://github.com/lgs1920/studio/commit/61a3c6130f03b802970a378c9e0587e42c5d4524)
+
+- Recorded automatically from Git history.
