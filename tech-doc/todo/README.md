@@ -23,6 +23,8 @@ This directory contains proposed, pending-validation, explicitly TODO, or future
 - [Arrow widget](ARROW_WIDGET_SPEC.md)
 - [Video widget](VIDEO_WIDGET_SPEC.md)
 - [Replay video architecture](CORE-REPLAY-VIDEO-ARCHITECTURE.md)
+- [Replay start camera editor and start clip synchronization](CORE-REPLAY-START-CAMERA-EDITOR-SPEC.md)
+- [Replay HQ recording camera and monitoring](CORE-REPLAY-HQ-RECORDING-MONITOR-SPEC.md)
 - [Clip altitude data alignment](CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md)
 - [POI animation during replay](CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md)
 - [Layer time filtering and named temporal variants](CORE-LAYER-TIME-FILTER-SPEC.md)
