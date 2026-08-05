@@ -120,9 +120,30 @@ const applyLiveReplayCameraView = (mode, view, cameraSettings) => {
         roll: view.roll,
         cameraSettings: view.cameraSettings ?? cameraSettings,
     })
-    if (!applied) {
+    if (applied) {
+        state.lastCameraHeading = view.heading
+        state.lastCameraPitch = view.pitch
+        return true
+    }
+
+    const camera = globalThis.lgs?.viewer?.camera
+    if (typeof camera?.setView === 'function'
+        || (!camera?.position && !camera?.positionWC)
+        || typeof call.recenterCameraToSample !== 'function') {
         return false
     }
+
+    void call.recenterCameraToSample({
+        sample:         view.sample,
+        heading:        view.heading,
+        pitch:          view.pitch,
+        roll:           view.roll,
+        cameraSettings: view.cameraSettings ?? cameraSettings,
+        cameraHeight:   view.cameraHeight,
+        instant:        false,
+        duration:       Math.min(1, replayCameraRecenterDuration(cameraSettings?.hysteresis?.easing)),
+        force:          true,
+    })
     state.lastCameraHeading = view.heading
     state.lastCameraPitch = view.pitch
     return true

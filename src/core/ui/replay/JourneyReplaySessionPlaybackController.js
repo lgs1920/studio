@@ -322,6 +322,10 @@ export const start = (mode, options = {}) => {
                                        : null
         const token = ++state.clipSequenceToken
         let startResult = startSample
+        state.clipCameraContinuity = call.currentReplayClipCameraState({
+            initial: true,
+            sample: startSample,
+        })
         void call.prepareNearbyPOIsForPlayback(startSample)
         const runtimeStore = replayStore()
         if (runtimeStore) {
@@ -351,15 +355,14 @@ export const start = (mode, options = {}) => {
                 durationMillis: videoTimeline?.durationMillis,
             })
             call.setContinuousRender(true)
-            if (videoReplayLinked) {
-                call.hideJourneyToolbarVisibility()
-            }
+            call.hideJourneyToolbarVisibility()
             void (async () => {
                 try {
                     if (startSample) {
                         await call.playJourneyReplayClips(REPLAY_CLIP_SLOT_START, {
                             sample: startSample,
                             token,
+                            startCamera: state.clipCameraContinuity,
                             onFrame: ({phase, localMillis, sample: clipSample}) => {
                                 const videoTimeline = state.controller.videoTimeline
                                 const phaseTime = (phase?.startMillis ?? 0) + (Number(localMillis) || 0)
@@ -385,6 +388,7 @@ export const start = (mode, options = {}) => {
                     }
 
                     state.deferStartCameraRecenter = false
+                    state.skipNextImmediateStartRecenter = true
                     // Do not compile the constrained camera path synchronously here.
                     // That bulk compilation freezes Draft and HQ replay startup.
                     traceStartStep('controller.start.begin', {phase: 'start-clips'})
@@ -456,6 +460,8 @@ export const preparePlaybackSceneForExport = async (mode, {
         call.bindCesiumCameraBridge()
         state.deferPlaybackCameraRestore = false
         state.suppressPlaybackCameraSync = false
+        state.replayExportClipFrameState = null
+        state.clipCameraContinuity = null
 
         const safeProgress = Math.max(0, Math.min(1, Number(progress) || 0))
         const sampler = call.configure({
@@ -510,6 +516,10 @@ export const preparePlaybackSceneForExport = async (mode, {
                 }
                 : null
         }
+        state.clipCameraContinuity = call.currentReplayClipCameraState({
+            initial: true,
+            sample,
+        })
         call.captureJourneyReplayDrawerStateBeforePlayback()
         call.capturePlaybackCameraSettings()
 

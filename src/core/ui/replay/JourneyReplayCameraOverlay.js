@@ -351,7 +351,7 @@ export const refreshReplayDiagnosticsOverlay = mode => {
     if (!geometry) {
         return false
     }
-    if (isReplayVideoLinked() && geometry.debug !== true) {
+    if (isReplayVideoLinked() && geometry.debug !== true && globalThis.lgs?.viewer?.container) {
         return false
     }
 

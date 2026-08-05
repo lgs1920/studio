@@ -205,7 +205,6 @@ export const stop = (mode, options = {}) => {
             ...options,
             clearProgress: options.clearProgress ?? true,
         })
-        state.renderer.clear()
         call.setJourneyReplayOrbitAllowed(true)
         call.setContinuousRender(false)
         call.removeToleranceZoneOverlay()
@@ -302,6 +301,7 @@ export const resetCameraController = (mode, {
         state.cameraGuideSourceKey = null
         state.cameraGuidePositionProperty = null
         state.cameraGuidePositionPropertyKey = null
+        state.clipCameraContinuity = null
         if (!preserveConstrainedPath) {
             state.constrainedReplayCameraPath = null
         }
@@ -721,12 +721,17 @@ export const bindRenderer = (mode, ) => {
                     state.lastPlaybackUpdateProgressKey = null
                     traceStep('set-tolerance-zone-visible.begin')
                     call.setToleranceZoneOverlayVisible(true)
+                    const replaySettings = getJourneyReplaySettings()
+                    const startCameraSettings = normalizeJourneyReplayCamera(
+                        globalThis.lgs?.stores?.replay?.camera
+                        ?? globalThis.lgs?.settings?.ui?.replay?.camera
+                        ?? replaySettings.camera,
+                    )
+                    call.updateToleranceZoneOverlay(startCameraSettings.hysteresis)
                     traceStep('set-tolerance-zone-visible.end')
-                    if (call.isReplayVideoLinked()) {
-                        traceStep('hide-journey-toolbar.begin')
-                        call.hideJourneyToolbarVisibility()
-                        traceStep('hide-journey-toolbar.end')
-                    }
+                    traceStep('hide-journey-toolbar.begin')
+                    call.hideJourneyToolbarVisibility()
+                    traceStep('hide-journey-toolbar.end')
                     traceStep('set-continuous-render.begin')
                     call.setContinuousRender(true)
                     traceStep('set-continuous-render.end')
@@ -919,6 +924,9 @@ export const bindRenderer = (mode, ) => {
                 const sample = detail.sampler?.atProgress?.(1)
                               ?? detail.sample
                               ?? currentJourneyReplaySample(state.controller)
+                state.clipCameraContinuity = call.currentReplayClipCameraState({
+                    sample,
+                })
                 const stopList = call.clipListForSlot(REPLAY_CLIP_SLOT_STOP)
                 if (stopList.length > 0) {
                     const videoTimeline = state.controller.videoTimeline
@@ -993,7 +1001,6 @@ export const bindRenderer = (mode, ) => {
                         return
                     }
 
-                    state.renderer.clear()
                     call.setJourneyReplayOrbitAllowed(true)
                     resetRuntimeProgress(replayStore())
                     state.sceneRestorePromise = call.restorePlaybackScene()
@@ -1004,7 +1011,7 @@ export const bindRenderer = (mode, ) => {
                         ...detail,
                         sampler:               state.sampler,
                         forceGeometry:         true,
-                        freezeDynamic:         false,
+                        freezeDynamic:         true,
                         hideCursor:            true,
                         hideRemainingTrace:    true,
                         staticCompletedTrace:  true,
@@ -1033,6 +1040,7 @@ export const bindRenderer = (mode, ) => {
                             await call.playJourneyReplayClips(REPLAY_CLIP_SLOT_STOP, {
                                 sample,
                                 token,
+                                startCamera: state.clipCameraContinuity,
                                 onFrame: ({phase, localMillis, sample: clipSample}) => {
                                     const videoTimeline = state.controller.videoTimeline
                                     const phaseTime = (phase?.startMillis ?? 0) + (Number(localMillis) || 0)

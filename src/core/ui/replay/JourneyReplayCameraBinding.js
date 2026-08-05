@@ -216,6 +216,26 @@ export const startCameraTransition = (mode, {
                 }
             }
 
+            if (typeof viewer.camera.flyTo === 'function') {
+                try {
+                    const currentHeight = finiteNumber(viewer.camera.positionCartographic?.height)
+                    viewer.camera.flyTo({
+                        destination: endPosition,
+                        orientation: {
+                            direction: endDirection,
+                            up:        endUp,
+                        },
+                        duration: Math.max(0, Number(duration) || 0),
+                        ...(currentHeight === null ? {} : {maximumHeight: currentHeight}),
+                        complete: () => settle(true),
+                        cancel:   () => settle(false),
+                    })
+                    return
+                }
+                catch {
+                }
+            }
+
             if (typeof viewer.camera.setView === 'function') {
                 try {
                     viewer.camera.setView({
@@ -271,7 +291,8 @@ export const bindMarkerInteractions = (mode) => {
             call.updateCameraFromCesiumControls()
         }
         const refreshToleranceCameraAfterManualMove = () => {
-            if (!isJourneyReplayCameraActive(replayStore())) {
+            const replay = replayStore()
+            if (!isJourneyReplayCameraActive(replay) && !state.sampler) {
                 return
             }
             const settings = getJourneyReplaySettings()
@@ -287,8 +308,8 @@ export const bindMarkerInteractions = (mode) => {
                 }
                 state.suppressPlaybackCameraSync = false
             }
-            if (state.cameraFlightActive && !pointer) {
-                return
+            if (state.cameraFlightActive) {
+                call.cancelCameraBezierTransition(false)
             }
             if (pointer && state.cameraFlightActive) {
                 call.cancelCameraBezierTransition(false)
