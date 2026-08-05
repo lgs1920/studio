@@ -293,6 +293,7 @@ widgets:
           padding: 0
 
         date: false
+        dateTimeStack: true
         location: false
         distance: true
         elevation: true
