@@ -123,6 +123,7 @@ import {
 } from './JourneyReplayCameraState'
 import {
     buildCameraTransferPath,
+    normalizeCameraTransferMode,
     selectCameraTransferMode,
     cameraTransferFrameAt,
 } from './JourneyReplayCameraPath'
@@ -376,6 +377,8 @@ export const startDeterministicCameraTransition = (mode, {
                                                pitch,
                                                startFrame: providedStartFrame = null,
                                                endFrame,
+                                               pathMode = null,
+                                               preserveCameraPath = false,
                                                duration = 0,
                                                logicalNow = 0,
                                                trackingMode = REPLAY_MARKER_MODE_NAVIGATION,
@@ -475,7 +478,8 @@ export const startDeterministicCameraTransition = (mode, {
             clearanceMeters: Math.max(100, finiteNumber(globalThis.lgs?.settings?.camera?.pitchAdjustHeight) ?? 500),
         })
         const transferScale = Math.max(0.75, finiteNumber(transferSafetyProfile?.zoneScale) ?? 1)
-        const transferMode = selectCameraTransferMode(transferDistance, transferThresholdKm / transferScale)
+        const transferMode = normalizeCameraTransferMode(pathMode)
+                            ?? selectCameraTransferMode(transferDistance, transferThresholdKm / transferScale)
         const startHeight = finiteNumber(Cartographic.fromCartesian(startFrame.destination).height)
         const configuredLift = finiteNumber(globalThis.lgs?.settings?.camera?.pitchAdjustHeight) ?? 500
         const transferLift = Math.max(
@@ -492,9 +496,16 @@ export const startDeterministicCameraTransition = (mode, {
                          ? 24
                          : Math.round((transferMode === 'elevate-then-move' ? 64 : 80) * transferScale),
             liftMeters:  transferLift,
-            antiCollisionBounds: transferSafetyProfile,
+            // Take-off and launch must preserve their explicit ground-to-camera
+            // altitude endpoints instead of lifting the ground endpoint to the
+            // generic replay collision clearance.
+            antiCollisionBounds: preserveCameraPath ? null : transferSafetyProfile,
             safetyProfile:       transferSafetyProfile,
             frameResolver: ({path, target: resolvedTarget, ratio, frame}) => {
+                if (preserveCameraPath) {
+                    return frame
+                }
+
                 const replayCameraSettings = cameraSettings ?? globalThis.lgs?.settings?.ui?.replay?.camera ?? {}
                 const replayMarkerSettings = normalizeJourneyReplayMarker(globalThis.lgs?.settings?.ui?.replay?.marker ?? {})
                 if (replayCameraSettings.canFixHiddenMarker === false) {

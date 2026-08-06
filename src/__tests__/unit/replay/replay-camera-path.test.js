@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {Cartesian3, Matrix4, Transforms} from 'cesium'
+import {Cartesian3, Cartographic, Matrix4, Transforms} from 'cesium'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@Utils/UIToast', () => ({
@@ -54,6 +54,7 @@ import {
 } from '@Core/ui/replay/JourneyReplayCameraMath'
 import {
     buildCameraTransferPath,
+    normalizeCameraTransferMode,
     selectCameraTransferMode,
 } from '@Core/ui/replay/JourneyReplayCameraPath'
 import * as CameraPath from '@Core/ui/replay/JourneyReplayCameraPath'
@@ -281,6 +282,20 @@ describe('Journey replay camera paths', () => {
         expect(selectCameraTransferMode(120_000, 50)).toBe('elevate-then-move')
         expect(selectCameraTransferMode(250_000, 50)).toBe('spiral-conical')
         expect(selectCameraTransferMode(600_000, 50)).toBe('blur-jump-refocus')
+    })
+
+    it('normalizes explicit clip path choices and keeps curved endpoints exact', () => {
+        expect(normalizeCameraTransferMode('auto')).toBeNull()
+        expect(normalizeCameraTransferMode('spiral-horizontal')).toBe('spiral-horizontal')
+        expect(normalizeCameraTransferMode('unsupported')).toBeNull()
+
+        const start = new Cartesian3(0, 0, 100)
+        const end = new Cartesian3(1000, 500, 300)
+        for (const mode of ['spiral-horizontal', 'spiral-conical', 'spiral-vertical']) {
+            const path = buildCameraTransferPath({start, end, mode})
+            expect(path.sampleAt(0)).toEqual(start)
+            expect(path.sampleAt(1)).toEqual(end)
+        }
     })
 
     it('raises long transfers enough to preserve a higher clip endpoint', () => {
@@ -618,14 +633,13 @@ describe('Journey replay camera paths', () => {
             heading:   0,
             pitch:     0,
             endFrame,
+            pathMode:  'spiral-horizontal',
             duration:  1,
             logicalNow: 10,
         })
 
         expect(call.currentCameraFrame).toHaveBeenCalledTimes(1)
-        expect(['elevate-then-move', 'spiral-conical', 'blur-jump-refocus']).toContain(
-            state.deterministicCameraTransition.path.mode,
-        )
+        expect(state.deterministicCameraTransition.path.mode).toBe('spiral-horizontal')
         expect(state.deterministicCameraTransition.path.samples).toHaveLength(state.deterministicCameraTransition.path.sampleCount)
         expect(state.deterministicCameraTransition.path.antiCollisionBounds).toEqual(expect.objectContaining({
             west: expect.any(Number),
@@ -633,6 +647,50 @@ describe('Journey replay camera paths', () => {
             east: expect.any(Number),
             north: expect.any(Number),
         }))
+    })
+
+    it('keeps take-off endpoints on the explicit ground-to-camera altitude path', () => {
+        vi.stubGlobal('lgs', {
+            theJourney: makeJourney(),
+            settings: {
+                camera: {
+                    transferDistanceThresholdKm: 50,
+                    pitchAdjustHeight:           600,
+                },
+            },
+        })
+
+        const {mode, state} = makeMode()
+        const start = Cartesian3.fromDegrees(0.1, 0.1, 0)
+        const end = Cartesian3.fromDegrees(0.1, 0.1, 380)
+        const startFrame = {
+            destination: start,
+            direction:   new Cartesian3(0, 1, 0),
+            up:          new Cartesian3(0, 0, 1),
+        }
+        const endFrame = {
+            destination:  end,
+            direction:    new Cartesian3(0, 1, 0),
+            correctedUp:  new Cartesian3(0, 0, 1),
+            currentHeight: 380,
+        }
+
+        startDeterministicCameraTransition(mode, {
+            sample:          {longitude: 0.1, latitude: 0.1, altitude: 0},
+            heading:         0,
+            pitch:           -1,
+            startFrame,
+            endFrame,
+            pathMode:        'direct',
+            preserveCameraPath: true,
+            duration:        1,
+            logicalNow:      0,
+        })
+
+        const path = state.deterministicCameraTransition.path
+        expect(Cartographic.fromCartesian(path.sampleAt(0)).height).toBeCloseTo(0, 3)
+        expect(Cartographic.fromCartesian(path.sampleAt(0.5)).height).toBeGreaterThan(0)
+        expect(Cartographic.fromCartesian(path.sampleAt(1)).height).toBeCloseTo(380, 3)
     })
 
     it('propagates the tracking mode into deterministic replay path safety', () => {

@@ -11,8 +11,11 @@ vi.mock('@Components/Toast', () => ({
 
 import {
     applyJourneyReplayClipCameraPlan,
+    focusTargetSampleForReplayExport,
     playJourneyReplayClips,
+    replayElementBoundaryOwner,
     resolveJourneyReplayClipCameraPlan,
+    targetSampleForClip,
 } from '@Core/ui/replay/JourneyReplayClipController'
 import {REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP} from '@Core/ui/replay/JourneyReplayClips'
 import {
@@ -74,6 +77,16 @@ describe('logical replay clip camera path', () => {
             duration:      0,
             logicalNow:    0,
         }))
+    })
+
+    it('uses the last replay point when focus is configured for the last point', async () => {
+        const sample = {longitude: 2.4, latitude: 48.4, altitude: 140}
+        const getJourneyCentroid = vi.fn()
+        vi.stubGlobal('__', {ui: {sceneManager: {getJourneyCentroid}}})
+        vi.stubGlobal('lgs', {theJourney: {}})
+
+        await expect(focusTargetSampleForReplayExport({}, sample, 'last-point')).resolves.toBe(sample)
+        expect(getJourneyCentroid).not.toHaveBeenCalled()
     })
 
     it.each([
@@ -181,9 +194,228 @@ describe('logical replay clip camera path', () => {
         expect(plan.startView).toEqual(expect.objectContaining(replayEndCamera))
         expect(plan.endView).toEqual(expect.objectContaining({
             sample: landingSample,
-            height: 80,
+            height: 100,
         }))
         expect(plan.instant).toBe(false)
+    })
+
+    it('falls back to ellipsoid ground instead of the track altitude for landing', () => {
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                logicalCameraTrajectory: true,
+            },
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {
+                markerRenderHeightForSample: vi.fn((_sample, options) => options?.fallback),
+            },
+        }
+        const sample = {longitude: 2, latitude: 48, altitude: 10}
+
+        expect(targetSampleForClip(mode, sample, 'landing')).toEqual({
+            ...sample,
+            altitude: 0,
+        })
+        expect(mode[JOURNEY_REPLAY_INTERNAL_CALL].markerRenderHeightForSample)
+            .toHaveBeenCalledWith(sample, {fallback: 0})
+    })
+
+    it('uses replay ground-offset altitude for take-off while keeping its start on ground', () => {
+        const sample = {longitude: 2, latitude: 48, altitude: 120}
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                logicalCameraTrajectory: false,
+            },
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {
+                cameraSettingsForClip: vi.fn(() => ({
+                    altitude:     300,
+                    altitudeMode: 'ground-offset',
+                    pitch:        -35,
+                })),
+                replayExportBaseView: vi.fn(() => ({
+                    sample,
+                    heading:      0.2,
+                    pitch:        -1,
+                    cameraHeight: 1320,
+                })),
+                clipReplayHeadingForProgress: vi.fn(() => 0.4),
+                targetSampleForClip: vi.fn(() => sample),
+                cameraAltitudeForSample: vi.fn(() => 380),
+                markerRenderHeightForSample: vi.fn(() => 80),
+            },
+        }
+        vi.stubGlobal('lgs', {
+            settings: {
+                ui: {
+                    replay: {
+                        camera: {
+                            positionMode: 'system',
+                            altitudeMode: 'ground-offset',
+                            altitude: 1200,
+                            pitch: -65,
+                        },
+                    },
+                },
+            },
+        })
+
+        const plan = resolveJourneyReplayClipCameraPlan(mode, {
+            clip:        {clipId: 'take-off', params: {duration: 2, altitude: 300, pitch: -35}},
+            slot:        REPLAY_CLIP_SLOT_START,
+            sample,
+            startCamera: {sample, heading: 0.1, pitch: -0.8, height: 2000},
+        })
+
+        expect(plan.startView).toEqual(expect.objectContaining({
+            height: 80,
+        }))
+        expect(plan.startView.cameraSettings).toEqual(expect.objectContaining({
+            altitudeMode: 'constant',
+        }))
+        expect(plan.endView).toEqual(expect.objectContaining({
+            height: 380,
+        }))
+        expect(plan.endView.cameraSettings).toEqual(expect.objectContaining({
+            altitudeMode: 'constant',
+            altitude:     300,
+        }))
+    })
+
+    it('keeps a legacy launch moving upward from ground to the configured camera height', () => {
+        const sample = {longitude: 2, latitude: 48, altitude: 120}
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                logicalCameraTrajectory: false,
+            },
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {
+                cameraSettingsForClip: vi.fn(() => ({
+                    altitude:     380,
+                    altitudeMode: 'ground-offset',
+                    pitch:        -35,
+                })),
+                replayExportBaseView: vi.fn(() => ({
+                    sample,
+                    heading:      0.2,
+                    pitch:        -1,
+                    cameraHeight: 1320,
+                })),
+                clipReplayHeadingForProgress: vi.fn(() => 0.4),
+                targetSampleForClip: vi.fn(() => sample),
+                cameraAltitudeForSample: vi.fn(() => 460),
+                markerRenderHeightForSample: vi.fn(() => 80),
+            },
+        }
+        vi.stubGlobal('lgs', {
+            settings: {ui: {replay: {camera: {positionMode: 'system'}}}},
+        })
+
+        const plan = resolveJourneyReplayClipCameraPlan(mode, {
+            clip:        {clipId: 'launch', params: {duration: 2, altitude: 380, pitch: -35}},
+            slot:        REPLAY_CLIP_SLOT_START,
+            sample,
+            startCamera: {sample, heading: 0.1, pitch: -0.8, height: 2000},
+        })
+
+        expect(plan.startView.height).toBe(80)
+        expect(plan.endView.height).toBe(460)
+        expect(plan.endView.height).toBeGreaterThan(plan.startView.height)
+    })
+
+    it('synchronizes a zoom-in endpoint with the ground pose of a following launch', async () => {
+        const replaySample = {longitude: 2, latitude: 48, altitude: 120}
+        const launchSample = {longitude: 2.001, latitude: 48.001, altitude: 125}
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                logicalCameraTrajectory: false,
+            },
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {
+                cameraSettingsForClip: vi.fn(() => ({altitude: 900, pitch: -35})),
+                replayExportBaseView: vi.fn(() => ({
+                    sample:       replaySample,
+                    heading:      0.2,
+                    pitch:        -1,
+                    cameraHeight: 1200,
+                })),
+                clipReplayHeadingForProgress: vi.fn(() => 0.4),
+                targetSampleForClip: vi.fn(() => launchSample),
+                cameraAltitudeForSample: vi.fn((_target, cameraSettings) => cameraSettings?.altitude ?? 1200),
+                markerRenderHeightForSample: vi.fn(() => 80),
+            },
+        }
+        vi.stubGlobal('lgs', {
+            settings: {ui: {replay: {camera: {positionMode: 'system'}}}},
+        })
+
+        const plan = await resolveJourneyReplayClipCameraPlan(mode, {
+            clip: {
+                clipId: 'zoom-in',
+                params: {duration: 2, altitude: 900, pitch: -35},
+            },
+            slot: REPLAY_CLIP_SLOT_START,
+            sample: replaySample,
+            startCamera: {sample: replaySample, heading: 0.1, pitch: -0.8, height: 2000},
+            nextClip: {clipId: 'take-off', params: {duration: 2, altitude: 900, pitch: -35}},
+        })
+
+        expect(plan.endView).toEqual(expect.objectContaining({
+            sample: launchSample,
+            height: 80,
+            pitch: -0.8,
+        }))
+        expect(plan.endView.cameraSettings).toEqual(expect.objectContaining({altitudeMode: 'constant'}))
+    })
+
+    it('assigns replay and take-off boundaries to the element that defines their entry pose', () => {
+        expect(replayElementBoundaryOwner({
+            previous: {type: 'clip', clipId: 'zoom-out'},
+            next:     {type: 'replay'},
+        })).toBe('next')
+        expect(replayElementBoundaryOwner({
+            previous: {type: 'clip', clipId: 'zoom-in'},
+            next:     {type: 'take-off'},
+        })).toBe('next')
+        expect(replayElementBoundaryOwner({
+            previous: {type: 'replay'},
+            next:     {type: 'landing'},
+        })).toBe('previous')
+    })
+
+    it('ends the final start clip on the exact replay entry pose', async () => {
+        const replaySample = {longitude: 2, latitude: 48, altitude: 120}
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                logicalCameraTrajectory: false,
+            },
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {
+                cameraSettingsForClip: vi.fn(() => ({altitude: 900, pitch: -35})),
+                replayExportBaseView: vi.fn(() => ({
+                    sample:       replaySample,
+                    heading:      0.6,
+                    pitch:        -1.1,
+                    cameraHeight: 1400,
+                })),
+                clipReplayHeadingForProgress: vi.fn(() => 0.6),
+                targetSampleForClip: vi.fn(() => replaySample),
+                cameraAltitudeForSample: vi.fn(() => 1400),
+                markerRenderHeightForSample: vi.fn(() => 80),
+            },
+        }
+        vi.stubGlobal('lgs', {
+            settings: {ui: {replay: {camera: {positionMode: 'system', pitch: -63}}}},
+        })
+
+        const plan = await resolveJourneyReplayClipCameraPlan(mode, {
+            clip:        {clipId: 'zoom-out', params: {duration: 2}},
+            slot:        REPLAY_CLIP_SLOT_START,
+            sample:      replaySample,
+            startCamera: {sample: replaySample, heading: 0.1, pitch: -0.8, height: 2500},
+            nextElement: {type: 'replay'},
+        })
+
+        expect(plan.endView).toEqual(expect.objectContaining({
+            sample:  replaySample,
+            heading: 0.6,
+            height:  1400,
+        }))
+        expect(plan.endView.pitch).toBeCloseTo(-1.099557, 5)
     })
 
     it('uses the shared path for a live focus clip', async () => {
@@ -248,7 +480,7 @@ describe('logical replay clip camera path', () => {
         ['launch', {sample: {longitude: 2.1, latitude: 48.1, altitude: 110}, height: 5000}],
         ['zoom-out', {sample: {longitude: 2.2, latitude: 48.2, altitude: 120}, height: 5000}],
         ['focus', {sample: {longitude: 2.3, latitude: 48.3, altitude: 130}, height: 5000}],
-        ['landing', {sample: {longitude: 2.4, latitude: 48.4, altitude: 30}, height: 30}],
+        ['landing', {sample: {longitude: 2.4, latitude: 48.4, altitude: 30}, height: 50}],
     ])('keeps camera continuity through the %s clip boundary', (clipId, expectedEnd) => {
         const entryCamera = {
             sample:  {longitude: 2, latitude: 48, altitude: 100},
@@ -318,6 +550,11 @@ describe('logical replay clip camera path', () => {
                 sample: targetSamples[clipId],
                 height: 30,
             }
+            : clipId === 'zoom-in'
+                ? {
+                    sample: targetSamples[clipId],
+                    height: 5000,
+                }
             : entryCamera
         expect(plan.startView).toEqual(expect.objectContaining(expectedStart))
         expect(plan.endView).toEqual(expect.objectContaining({

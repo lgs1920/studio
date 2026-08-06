@@ -348,6 +348,7 @@ export const start = (mode, options = {}) => {
                 frameIntervalMs: videoTimeline?.frameIntervalMs,
                 durationMillis: videoTimeline?.durationMillis,
             })
+            call.refreshReplayDiagnosticsOverlay?.()
             call.setContinuousRender(true)
             call.hideJourneyToolbarVisibility()
             void (async () => {
@@ -373,6 +374,7 @@ export const start = (mode, options = {}) => {
                                     frameIntervalMs: videoTimeline?.frameIntervalMs,
                                     durationMillis: videoTimeline?.durationMillis,
                                 })
+                                call.refreshReplayDiagnosticsOverlay?.()
                             },
                         })
                     }
@@ -743,6 +745,11 @@ export const renderReplayExportFrame = async (mode, {phase = null, frame = null,
                     logicalCamera: true,
                     logicalFrame,
                 })
+                if (typeof call.currentReplayClipCameraState === 'function') {
+                    state.clipCameraContinuity = call.currentReplayClipCameraState({
+                        sample,
+                    })
+                }
             }
             return sample
         }

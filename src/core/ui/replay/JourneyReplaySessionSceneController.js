@@ -945,6 +945,7 @@ export const bindRenderer = (mode, ) => {
                         frameIntervalMs: videoTimeline?.frameIntervalMs,
                         durationMillis: videoTimeline?.durationMillis,
                     })
+                    call.refreshReplayDiagnosticsOverlay?.()
                 }
                 const notifyStopClipsComplete = () => {
                     globalThis.window?.dispatchEvent?.(new CustomEvent(REPLAY_EVENT_STOP_CLIPS_COMPLETE, {
@@ -1057,6 +1058,7 @@ export const bindRenderer = (mode, ) => {
                                         frameIntervalMs: videoTimeline?.frameIntervalMs,
                                         durationMillis: videoTimeline?.durationMillis,
                                     })
+                                    call.refreshReplayDiagnosticsOverlay?.()
                                 },
                             })
                             const videoTimeline = state.controller.videoTimeline
@@ -1076,6 +1078,7 @@ export const bindRenderer = (mode, ) => {
                                 frameIntervalMs: videoTimeline?.frameIntervalMs,
                                 durationMillis: videoTimeline?.durationMillis,
                             })
+                            call.refreshReplayDiagnosticsOverlay?.()
                             notifyStopClipsComplete()
                             finalize()
                         }

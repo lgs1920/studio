@@ -252,12 +252,19 @@ const drawReplayDiagnosticsOverlayCanvas = ({
     }
     context.restore()
 
+    const phase = replayStore()?.dynamicFrameState?.phase
+                   ?? replayStore()?.replayFramePhase
+                   ?? null
+    const phaseLabel = phase?.kind === 'replay' || !phase?.clip
+        ? 'Replay'
+        : `Clip: ${phase.clip.clipId ?? phase.clip.id ?? 'inconnu'}`
     const heading = finiteNumber(camera?.heading)
     const pitch = finiteNumber(camera?.pitch)
     const roll = finiteNumber(camera?.roll)
     const heightMeters = finiteNumber(camera?.positionCartographic?.height)
     const zoom = cameraViewToSlippyLevel(camera, scene, {fallbackHeight: heightMeters})
     const lines = [
+        `Phase  ${phaseLabel}`,
         `Angle  H ${heading !== null ? `${Math.round(CesiumMath.toDegrees(heading))}°` : '—'}  P ${pitch !== null ? `${Math.round(CesiumMath.toDegrees(pitch))}°` : '—'}  R ${roll !== null ? `${Math.round(CesiumMath.toDegrees(roll))}°` : '—'}`,
         `Cam    ${heightMeters !== null ? `${Math.round(heightMeters)} m` : '—'}`,
         `Zoom   ${zoom !== null && zoom !== undefined ? `L${Math.round(zoom)}` : '—'}`,

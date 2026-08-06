@@ -20,6 +20,15 @@ const CAMERA_TRANSFER_THRESHOLD_FALLBACK_KM = 50
 const CAMERA_TRANSFER_ELEVATE_RATIO = 3
 const CAMERA_TRANSFER_SPIRAL_RATIO = 8
 const CAMERA_TRANSFER_MIN_SAMPLES = 16
+const CAMERA_TRANSFER_PATH_MODES = [
+    'direct',
+    'bezier-3d',
+    'elevate-then-move',
+    'blur-jump-refocus',
+    'spiral-horizontal',
+    'spiral-conical',
+    'spiral-vertical',
+]
 
 const finiteNumber = value => {
     if (value === null || value === undefined || value === '') {
@@ -144,6 +153,7 @@ const pathPositionAt = (mode, start, end, ratio, options = {}) => {
     const spiralTurns = Math.max(0.5, finiteNumber(options.spiralTurns) ?? 1)
     const angle = 2 * Math.PI * spiralTurns * t
     const circleRadius = Math.max(40, (finiteNumber(options.radiusMeters) ?? distance * 0.08) * effectiveScale)
+    const endpointEnvelope = Math.sin(Math.PI * t)
     const conicalRadius = lerpCartesian3(
         new Cartesian3(circleRadius * 0.75, 0, 0),
         new Cartesian3(circleRadius * 0.1, 0, 0),
@@ -229,39 +239,54 @@ const pathPositionAt = (mode, start, end, ratio, options = {}) => {
                 Cartesian3.add(end, Cartesian3.multiplyByScalar(basis.worldUp, 1, new Cartesian3()), new Cartesian3()),
             )
             const horizontalOffset = Cartesian3.add(
-                Cartesian3.multiplyByScalar(horizontalBasis.side, Math.cos(angle) * circleRadius, new Cartesian3()),
-                Cartesian3.multiplyByScalar(horizontalBasis.lift, Math.sin(angle) * circleRadius, new Cartesian3()),
+                Cartesian3.multiplyByScalar(horizontalBasis.side, Math.cos(angle) * circleRadius * endpointEnvelope, new Cartesian3()),
+                Cartesian3.multiplyByScalar(horizontalBasis.lift, Math.sin(angle) * circleRadius * endpointEnvelope, new Cartesian3()),
                 new Cartesian3(),
             )
             position = liftOutsideAntiCollisionBounds(Cartesian3.add(basePoint, horizontalOffset, new Cartesian3()), antiCollisionBounds, circleRadius)
             break
         }
         case 'spiral-conical': {
-            const radius = Math.max(20, conicalRadius)
+            const radius = Math.max(20, conicalRadius) * endpointEnvelope
             const offset = Cartesian3.add(
                 Cartesian3.multiplyByScalar(basis.side, Math.cos(angle) * radius, new Cartesian3()),
                 Cartesian3.multiplyByScalar(basis.lift, Math.sin(angle) * radius, new Cartesian3()),
                 new Cartesian3(),
             )
-            const climb = Cartesian3.multiplyByScalar(basis.worldUp, liftMeters * (1 - Math.abs(0.5 - t) * 1.6), new Cartesian3())
+            const climb = Cartesian3.multiplyByScalar(basis.worldUp, liftMeters * endpointEnvelope, new Cartesian3())
             position = liftOutsideAntiCollisionBounds(Cartesian3.add(Cartesian3.add(basePoint, offset, new Cartesian3()), climb, new Cartesian3()), antiCollisionBounds, radius)
             break
         }
         case 'spiral-vertical':
         default: {
-            const radius = Math.max(20, circleRadius)
+            const radius = Math.max(20, circleRadius) * endpointEnvelope
             const offset = Cartesian3.add(
                 Cartesian3.multiplyByScalar(basis.side, Math.cos(angle) * radius, new Cartesian3()),
                 Cartesian3.multiplyByScalar(basis.lift, Math.sin(angle) * radius, new Cartesian3()),
                 new Cartesian3(),
             )
-            const climb = Cartesian3.multiplyByScalar(basis.worldUp, liftMeters * t, new Cartesian3())
+            const climb = Cartesian3.multiplyByScalar(basis.worldUp, liftMeters * endpointEnvelope, new Cartesian3())
             position = liftOutsideAntiCollisionBounds(Cartesian3.add(Cartesian3.add(basePoint, offset, new Cartesian3()), climb, new Cartesian3()), antiCollisionBounds, radius)
             break
         }
     }
 
     return position
+}
+
+/**
+ * Normalize a requested camera transfer path mode.
+ *
+ * @param {string|null} mode - Requested path mode or the automatic sentinel.
+ * @returns {string|null} A supported path mode, or null for automatic selection.
+ */
+export const normalizeCameraTransferMode = mode => {
+    const normalized = `${mode ?? ''}`.trim().toLowerCase()
+    if (!normalized || normalized === 'auto') {
+        return null
+    }
+
+    return CAMERA_TRANSFER_PATH_MODES.includes(normalized) ? normalized : null
 }
 
 /**
