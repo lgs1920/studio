@@ -616,3 +616,39 @@
 
 - # Conflicts:
 - #	COMMIT_HISTORY.md
+
+## 2026-08-04 — [`feat(replay): add Glow and Neon trace effects`](https://github.com/lgs1920/studio/commit/f5511a6b4f6b78361f17ccdd5c31c0f007624090)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`chore: add CesiumJS agent skills`](https://github.com/lgs1920/studio/commit/1b5ad1e5ac1fad84799b61041fed0f7246eb2025)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`feat(replay): refine Glow and Neon rendering`](https://github.com/lgs1920/studio/commit/c2f6d2d7174536f2a29ec1ec4ad3fac61e047ea9)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`fix(replay): hide trace after playback completion`](https://github.com/lgs1920/studio/commit/fbc91238eea239fd42add7bb13b74c1ad557e046)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`feat: configure journey stats date-time layout`](https://github.com/lgs1920/studio/commit/47cd284b760eafc05ac3946e60089777e6b651d0)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`docs: specify replay start camera editor`](https://github.com/lgs1920/studio/commit/3d77ba658383582df892d262348d37334905aafa)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`docs: specify replay HQ recording monitoring`](https://github.com/lgs1920/studio/commit/2964a0ddbf641d3067d776c28b45917ab7399039)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`docs: index replay proposals`](https://github.com/lgs1920/studio/commit/c6a3e0bc0b5b659f0b47f12ff39348583ca1c31c)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`Merge branch 'tmp/replay-glow-neon' into 1.0.0`](https://github.com/lgs1920/studio/commit/3fc9f4d8fa2730428b6aad0675f6164da5a83161)
+
+- Recorded automatically from Git history.
