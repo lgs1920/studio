@@ -1,5 +1,31 @@
 import {describe, expect, test} from 'vitest'
-import {createBackendEnvironmentPaths, createBackendPm2Command} from '../DeploymentCommands.js'
+import {
+    createBackendEnvironmentContent,
+    createBackendEnvironmentPaths,
+    createBackendPm2Command,
+    generateContactCsrfSecret,
+} from '../DeploymentCommands.js'
+
+describe('backend environment secret rotation', () => {
+    test('generates a cryptographically sized secret', () => {
+        const secret = generateContactCsrfSecret()
+
+        expect(secret).toMatch(/^[a-f0-9]{64}$/)
+    })
+
+    test('replaces an existing secret in the transferred environment', () => {
+        const content = 'LGS1920_SMTP_HOST=smtp.webmo.fr\nLGS1920_CONTACT_CSRF_SECRET=old-secret\n'
+        const updatedContent = createBackendEnvironmentContent(content, 'new-secret')
+
+        expect(updatedContent).toBe('LGS1920_SMTP_HOST=smtp.webmo.fr\nLGS1920_CONTACT_CSRF_SECRET=new-secret\n')
+        expect(updatedContent).not.toContain('old-secret')
+    })
+
+    test('adds the secret when the environment does not define it', () => {
+        expect(createBackendEnvironmentContent('LGS1920_SMTP_HOST=smtp.webmo.fr', 'new-secret'))
+            .toBe('LGS1920_SMTP_HOST=smtp.webmo.fr\nLGS1920_CONTACT_CSRF_SECRET=new-secret\n')
+    })
+})
 
 describe('backend PM2 deployment command', () => {
     test('loads the backend-only environment and updates PM2', () => {

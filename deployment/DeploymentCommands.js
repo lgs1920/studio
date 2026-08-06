@@ -1,4 +1,36 @@
 import path from 'node:path'
+import {randomBytes} from 'node:crypto'
+
+const CONTACT_CSRF_SECRET_NAME = 'LGS1920_CONTACT_CSRF_SECRET'
+
+/**
+ * Generate a cryptographically secure contact CSRF secret.
+ *
+ * @returns {string} A 256-bit hexadecimal secret.
+ */
+export const generateContactCsrfSecret = () => randomBytes(32).toString('hex')
+
+/**
+ * Set the contact CSRF secret in backend environment content.
+ *
+ * @param {string} content Backend environment file content.
+ * @param {string} [secret=generateContactCsrfSecret()] Contact CSRF secret.
+ * @returns {string} Environment content with the rotated secret.
+ * @throws {TypeError} If the environment content or secret is invalid.
+ */
+export const createBackendEnvironmentContent = (content, secret = generateContactCsrfSecret()) => {
+    if (typeof content !== 'string' || typeof secret !== 'string' || !secret) {
+        throw new TypeError('Backend environment content or CSRF secret is invalid')
+    }
+
+    const secretLine = `${CONTACT_CSRF_SECRET_NAME}=${secret}`
+    const secretPattern = new RegExp(`^(?:export\\s+)?${CONTACT_CSRF_SECRET_NAME}=.*$`, 'gm')
+    const contentWithSecret = secretPattern.test(content)
+        ? content.replace(secretPattern, secretLine)
+        : `${content}${content && !content.endsWith('\n') ? '\n' : ''}${secretLine}\n`
+
+    return contentWithSecret
+}
 
 /**
  * Quote one value for use as a POSIX shell argument.

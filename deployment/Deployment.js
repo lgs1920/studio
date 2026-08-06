@@ -24,6 +24,7 @@ import { Client as SSH2 }        from 'ssh2'
 import { parse as parseYaml }    from 'yaml'
 import { zip }                   from 'zip-a-folder'
 import {
+    createBackendEnvironmentContent,
     createBackendEnvironmentPaths,
     createBackendPm2Command,
     quoteShellArgument,
@@ -273,6 +274,7 @@ export class Deployment {
         }
 
         const {localPath, remotePath} = this.backendEnvironmentPaths
+        const environmentContent = createBackendEnvironmentContent(fs.readFileSync(localPath, 'utf8'))
         const remoteDirectory = path.posix.dirname(remotePath)
         await this.executeRemoteCommand(
             connection,
@@ -287,13 +289,10 @@ export class Deployment {
                     return
                 }
 
-                sftp.fastPut(localPath, remotePath, error => {
-                    if (error) {
-                        reject(new Error('Backend environment transfer failed', {cause: error}))
-                        return
-                    }
-                    resolve()
-                })
+                const stream = sftp.createWriteStream(remotePath, {flags: 'w', mode: 0o600})
+                stream.on('error', error => reject(new Error('Backend environment transfer failed', {cause: error})))
+                stream.on('close', resolve)
+                stream.end(environmentContent, 'utf8')
             })
         })
 

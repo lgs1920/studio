@@ -21,8 +21,9 @@ management to track deployments. The scripts are part of the `LGS1920/backend` p
   remote repository on successful deployment, and deletes it if the deployment fails.
 - **PM2 Integration**: Restarts the `backend` application using PM2 with platform-specific configurations.
 - **Backend environment loading**: Uploads the local `../backend/.env` to the platform backend shared directory,
-  enforces directory mode `700` and file mode `600`, then loads it before starting PM2 with `--update-env`. SMTP
-  variables are never added to Studio builds or release archives.
+  regenerates `LGS1920_CONTACT_CSRF_SECRET` in the transferred content, enforces directory mode `700` and file mode
+  `600`, then loads it before starting PM2 with `--update-env`. SMTP variables are never added to Studio builds or
+  release archives.
 - **Error Handling**: Logs errors with color-coded console output (red for errors, green for success, yellow for
   emphasis) and ensures cleanup of Git tags on failure.
 
@@ -176,9 +177,9 @@ The script follows these steps:
    `/home/www/lgs1920/<platform>/<product>/releases`) using SCP.
 5. **Unzip**: Unzips the file on the remote server via SSH to `<platform>/<product>/releases/<version>`.
 6. **Link**: Creates a symbolic link from `<platform>/<product>/current` to the new release and removes the zip file.
-7. **Backend environment transfer**: For `backend`, creates the remote shared directory with mode `700`, uploads the
-   local `../backend/.env` to the configured environment path, and applies mode `600`. The file stays outside the
-   release tree.
+7. **Backend environment transfer**: For `backend`, creates the remote shared directory with mode `700`, regenerates
+   `LGS1920_CONTACT_CSRF_SECRET`, uploads the resulting environment content to the configured environment path, and
+   applies mode `600`. The file stays outside the release tree.
 8. **Post-Deployment**: For `backend`, sources the shared environment file and starts or restarts the application
    using PM2 with `--update-env` and the platform-specific config (e.g., `backend-production.config.js`). Studio
    deployments do not execute the backend PM2 command.
