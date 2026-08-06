@@ -20,6 +20,9 @@ management to track deployments. The scripts are part of the `LGS1920/backend` p
 - **Git Tag Management**: Creates a Git tag locally (format: `<platform>-<version>-<branch>-<date>`), pushes it to the
   remote repository on successful deployment, and deletes it if the deployment fails.
 - **PM2 Integration**: Restarts the `backend` application using PM2 with platform-specific configurations.
+- **Backend environment loading**: Uploads the local `../backend/.env` to the platform backend shared directory,
+  enforces directory mode `700` and file mode `600`, then loads it before starting PM2 with `--update-env`. SMTP
+  variables are never added to Studio builds or release archives.
 - **Error Handling**: Logs errors with color-coded console output (red for errors, green for success, yellow for
   emphasis) and ensures cleanup of Git tags on failure.
 
@@ -45,6 +48,8 @@ Before running the script, ensure the following are installed and configured:
       authentication to the respective platform (user: `p5077` on `p5077.webmo.fr`).
     - `LGS1920_GITHUB_TOKEN`: GitHub token for Git authentication.
     - `LGS1920_GITHUB_USER`: GitHub username for Git operations.
+- **Backend local environment**: A readable `../backend/.env` file is required for a backend deployment. It is
+  transferred through the authenticated SSH/SFTP connection to `shared/backend.env`; its contents are never logged.
 - **Configuration File**: A `deploy.yml` file in the `deployment/` directory, specifying remote server details, paths,
   and PM2 settings.
 - **PM2**: Required on the remote server (`/home/.bun/bin/pm2`) for `backend` deployments.
@@ -64,6 +69,8 @@ The script relies on a `deploy.yml` file located in the `deployment/` directory.
     - Domain (e.g., `api.lgs1920.fr`).
     - Port (e.g., 3333 for `production`, 3334 for `staging`, 3335 for `test`).
     - PM2 configuration (e.g., `backend-production.config.js`).
+    - Backend-only environment file relative to the platform backend directory (for example,
+      `shared/backend.env`).
 - **Studio**: Settings for each platform:
     - Domain (e.g., `studio.lgs1920.fr` for `production`, `staging.lgs1920.fr` for `staging`).
     - Proxy settings (e.g., `/proxy.php?csurl=`).
@@ -115,15 +122,18 @@ determines the `product`.
 2. **Deploy the `backend` product to the `production` platform**:
    ```bash
    cd /home/christian/devs/assets/lgs1920/backend
+   chmod 600 .env
    bun run deploy -p
    ```
    Builds the `backend` application (with minification), zips it, transfers it to
    `p5077.webmo.fr:/home/www/lgs1920/production/backend/releases`, deploys it, restarts the application with PM2 using
-   `backend-production.config.js` on port 3333, and pushes a Git tag on success.
+   `backend-production.config.js` on port 3333, and pushes a Git tag on success. Before PM2 starts, the local `.env`
+   is uploaded to `/home/www/lgs1920/production/backend/shared/backend.env` with restrictive permissions.
 
 3. **Deploy the `backend` product to the `test` platform**:
    ```bash
    cd /home/christian/devs/assets/lgs1920/backend
+   chmod 600 .env
    bun run deploy -t
    ```
    Similar to the production example, but targets the test server with port 3335 and `backend-test.config.js`.
@@ -166,10 +176,14 @@ The script follows these steps:
    `/home/www/lgs1920/<platform>/<product>/releases`) using SCP.
 5. **Unzip**: Unzips the file on the remote server via SSH to `<platform>/<product>/releases/<version>`.
 6. **Link**: Creates a symbolic link from `<platform>/<product>/current` to the new release and removes the zip file.
-7. **Post-Deployment**: For `backend`, restarts the application using PM2 with the platform-specific config (e.g.,
-   `backend-production.config.js`).
-8. **Tag Push**: Pushes the Git tag and branch to the remote repository (`origin`) if all steps succeed.
-9. **Error Handling**: Deletes the Git tag locally and remotely if any step fails, logging errors with color-coded
+7. **Backend environment transfer**: For `backend`, creates the remote shared directory with mode `700`, uploads the
+   local `../backend/.env` to the configured environment path, and applies mode `600`. The file stays outside the
+   release tree.
+8. **Post-Deployment**: For `backend`, sources the shared environment file and starts or restarts the application
+   using PM2 with `--update-env` and the platform-specific config (e.g., `backend-production.config.js`). Studio
+   deployments do not execute the backend PM2 command.
+9. **Tag Push**: Pushes the Git tag and branch to the remote repository (`origin`) if all steps succeed.
+10. **Error Handling**: Deletes the Git tag locally and remotely if any step fails, logging errors with color-coded
    output (red for errors, green for success, yellow for emphasis).
 
 ## Troubleshooting
@@ -201,6 +215,10 @@ The script follows these steps:
 - **Error: PM2 restart failed**:
   Ensure PM2 is installed on the remote server at `/home/.bun/bin/pm2` and the config file (e.g.,
   `backend-staging.config.js`) exists in `deployment/pm2-config/`.
+
+- **Error: Backend environment file missing or unreadable**:
+  Create `../backend/.env` locally, keep it outside Git, and run `chmod 600 ../backend/.env` before the backend
+  deployment. The deployment refuses to start PM2 without a readable environment file.
 
 - **Error: manifest.webmanifest not found**:
   For `studio` deployments, ensure `manifest.webmanifest` exists in the build output (`dist/<version>`).
