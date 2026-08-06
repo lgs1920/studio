@@ -241,7 +241,7 @@ Contributions are welcome under the same AGPL terms as the repository.
 
 - Contribution terms: [CONTRIBUTOR_LICENSE_AGREEMENT.md](CONTRIBUTOR_LICENSE_AGREEMENT.md)
 
-For contribution questions: `contact@lgs1920.fr`
+For contribution questions: `studio@lgs1920.fr`
 
 ## License
 

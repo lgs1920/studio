@@ -9,7 +9,7 @@ propagation control, and user-defined data. Event names and modifiers are case-i
 `ctrl#click`).
 
 This project is developed by the LGS1920 Team. For inquiries, contact us
-at [contact@lgs1920.fr](mailto:contact@lgs1920.fr).
+at [studio@lgs1920.fr](mailto:studio@lgs1920.fr).
 
 ## Installation
 
@@ -197,4 +197,4 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## Contact
 
-For support or inquiries, reach out to the LGS1920 Team at [contact@lgs1920.fr](mailto:contact@lgs1920.fr).
+For support or inquiries, reach out to the LGS1920 Team at [studio@lgs1920.fr](mailto:studio@lgs1920.fr).

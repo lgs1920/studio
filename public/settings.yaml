@@ -372,7 +372,7 @@ ui:
     search: search
     reverse: reverse
     limit: 7 # results per query
-    email: contact@lgs1920.fr
+    email: studio@lgs1920.fr
     minQuery: 3 # characters
 
   ## Toolbars

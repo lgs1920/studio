@@ -5,7 +5,7 @@
  * File: MapLayer.jsx
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-03-06
  * Last modified: 2026-03-06

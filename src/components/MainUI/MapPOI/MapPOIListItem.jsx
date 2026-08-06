@@ -5,7 +5,7 @@
  * File: MapPOIListItem.jsx
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-09
  * Last modified: 2026-05-09

@@ -5,7 +5,7 @@
  * File: padding-element-realignment.test.jsx
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
  * Last modified on: 2026-07-03

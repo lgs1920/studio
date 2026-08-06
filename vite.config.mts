@@ -5,7 +5,7 @@
  * File: vite.config.mts
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-23
  * Last modified: 2026-06-23
@@ -25,7 +25,7 @@ import fs from 'fs'
 import path from 'path'
 import serveStatic from 'serve-static'
 
-const DEV_PROXY_USER_AGENT = 'LGS1920 Studio Dev Proxy (contact@lgs1920.fr)'
+const DEV_PROXY_USER_AGENT = 'LGS1920 Studio Dev Proxy (studio@lgs1920.fr)'
 const DEV_PROXY_ALLOWED_TARGETS = new Set([
     'https://nominatim.openstreetmap.org:443',
     'https://wms.pcn.minambiente.it:443',

@@ -363,7 +363,7 @@ function create_curl_handle(string $targetUrl, array $requestHeaders, array &$re
         CURLOPT_NOSIGNAL => true,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 30,
-        CURLOPT_USERAGENT => 'LGS1920 Studio (contact@lgs1920.fr)',
+        CURLOPT_USERAGENT => 'LGS1920 Studio (studio@lgs1920.fr)',
     ]);
 
     set_curl_protocols($ch);

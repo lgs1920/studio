@@ -5,7 +5,7 @@
  * File: date-time-display.test.jsx
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Copyright © 2026 LGS1920
  *******************************************************************************/

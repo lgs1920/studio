@@ -5,7 +5,7 @@
  * File: Export.js
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-06
  * Last modified: 2026-04-06

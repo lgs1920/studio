@@ -5,7 +5,7 @@
  * File: ion-layer-utils-cache.test.js
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-30
  * Last modified: 2026-06-30
