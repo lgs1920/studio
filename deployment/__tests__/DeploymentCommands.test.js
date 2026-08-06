@@ -4,6 +4,7 @@ import {
     createBackendEnvironmentPaths,
     createBackendPm2Command,
     generateContactCsrfSecret,
+    validateBackendEnvironmentContent,
 } from '../DeploymentCommands.js'
 
 describe('backend environment secret rotation', () => {
@@ -24,6 +25,16 @@ describe('backend environment secret rotation', () => {
     test('adds the secret when the environment does not define it', () => {
         expect(createBackendEnvironmentContent('LGS1920_SMTP_HOST=smtp.webmo.fr', 'new-secret'))
             .toBe('LGS1920_SMTP_HOST=smtp.webmo.fr\nLGS1920_CONTACT_CSRF_SECRET=new-secret\n')
+    })
+
+    test('rejects shell metacharacters in unquoted environment values', () => {
+        expect(() => validateBackendEnvironmentContent('LGS1920_SMTP_PASSWORD=secret&value'))
+            .toThrow('Backend environment line 1 for LGS1920_SMTP_PASSWORD must quote shell characters')
+    })
+
+    test('accepts quoted shell metacharacters in environment values', () => {
+        expect(() => validateBackendEnvironmentContent('LGS1920_SMTP_PASSWORD=\'secret&value\''))
+            .not.toThrow()
     })
 })
 

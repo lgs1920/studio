@@ -51,6 +51,7 @@ Before running the script, ensure the following are installed and configured:
     - `LGS1920_GITHUB_USER`: GitHub username for Git operations.
 - **Backend local environment**: A readable `../backend/.env` file is required for a backend deployment. It is
   transferred through the authenticated SSH/SFTP connection to `shared/backend.env`; its contents are never logged.
+  Values containing shell metacharacters must be quoted; invalid assignments are rejected before transfer.
 - **Configuration File**: A `deploy.yml` file in the `deployment/` directory, specifying remote server details, paths,
   and PM2 settings.
 - **PM2**: Required on the remote server (`/home/.bun/bin/pm2`) for `backend` deployments.

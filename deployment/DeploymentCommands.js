@@ -2,6 +2,10 @@ import path from 'node:path'
 import {randomBytes} from 'node:crypto'
 
 const CONTACT_CSRF_SECRET_NAME = 'LGS1920_CONTACT_CSRF_SECRET'
+const ENV_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/
+const SAFE_UNQUOTED_ENV_VALUE_PATTERN = /^[A-Za-z0-9_./:@%+,\-]*$/
+const SINGLE_QUOTED_ENV_VALUE_PATTERN = /^'(?:[^']*)'$/
+const DOUBLE_QUOTED_ENV_VALUE_PATTERN = /^"(?:[^"\\]|\\.)*"$/
 
 /**
  * Generate a cryptographically secure contact CSRF secret.
@@ -9,6 +13,41 @@ const CONTACT_CSRF_SECRET_NAME = 'LGS1920_CONTACT_CSRF_SECRET'
  * @returns {string} A 256-bit hexadecimal secret.
  */
 export const generateContactCsrfSecret = () => randomBytes(32).toString('hex')
+
+/**
+ * Validate environment content before it is transferred and sourced by POSIX shell.
+ *
+ * @param {string} content Backend environment file content.
+ * @returns {void}
+ * @throws {TypeError} If a line is not a safe environment assignment.
+ */
+export const validateBackendEnvironmentContent = (content) => {
+    if (typeof content !== 'string') {
+        throw new TypeError('Backend environment content is invalid')
+    }
+
+    content.split(/\r?\n/).forEach((line, index) => {
+        const trimmedLine = line.trim()
+        if (!trimmedLine || trimmedLine.startsWith('#')) {
+            return
+        }
+
+        const assignment = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/)
+        if (!assignment || !ENV_NAME_PATTERN.test(assignment[1])) {
+            throw new TypeError(`Backend environment line ${index + 1} is not a valid assignment or comment`)
+        }
+
+        const value = assignment[2]
+        const isSafeValue = !value
+            || SAFE_UNQUOTED_ENV_VALUE_PATTERN.test(value)
+            || SINGLE_QUOTED_ENV_VALUE_PATTERN.test(value)
+            || DOUBLE_QUOTED_ENV_VALUE_PATTERN.test(value)
+
+        if (!isSafeValue) {
+            throw new TypeError(`Backend environment line ${index + 1} for ${assignment[1]} must quote shell characters`)
+        }
+    })
+}
 
 /**
  * Set the contact CSRF secret in backend environment content.
@@ -22,6 +61,8 @@ export const createBackendEnvironmentContent = (content, secret = generateContac
     if (typeof content !== 'string' || typeof secret !== 'string' || !secret) {
         throw new TypeError('Backend environment content or CSRF secret is invalid')
     }
+
+    validateBackendEnvironmentContent(content)
 
     const secretLine = `${CONTACT_CSRF_SECRET_NAME}=${secret}`
     const secretPattern = new RegExp(`^(?:export\\s+)?${CONTACT_CSRF_SECRET_NAME}=.*$`, 'gm')
