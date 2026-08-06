@@ -247,7 +247,7 @@ describe('JourneyReplayMode HQ export frames', () => {
         }))
     })
 
-    it('keeps HQ landing clips fixed like the draft landing behavior', async () => {
+    it('descends progressively during HQ landing clips', async () => {
         const journey = makeJourney([
             makeTrack({
                 slug:        'track#journey#gpx#main',
@@ -297,7 +297,7 @@ describe('JourneyReplayMode HQ export frames', () => {
         expect(Cartesian3.distance(
             setView.mock.calls[0][0].destination,
             setView.mock.calls[1][0].destination,
-        )).toBeLessThan(1e-6)
+        )).toBeGreaterThan(1)
     })
 
     it('uses the replay camera heading for HQ zoom clip frames instead of snapping to north', async () => {

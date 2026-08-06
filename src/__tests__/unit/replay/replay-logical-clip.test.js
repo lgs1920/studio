@@ -183,6 +183,146 @@ describe('logical replay clip camera path', () => {
             sample: landingSample,
             height: 80,
         }))
-        expect(plan.instant).toBe(true)
+        expect(plan.instant).toBe(false)
+    })
+
+    it('uses the shared path for a live focus clip', async () => {
+        const focus = vi.fn()
+        const cameraRecenterFrame = vi.fn(() => ({destination: {}, direction: {}, correctedUp: {}}))
+        const startDeterministicCameraTransition = vi.fn(() => true)
+        const applyDeterministicCameraTransition = vi.fn()
+        const endSample = {longitude: 2.3, latitude: 48.3, altitude: 130}
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                logicalCameraTrajectory: false,
+                clipSequenceToken:      1,
+            },
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {
+                setContinuousRender: vi.fn(),
+                isReplayVideoLinked: vi.fn(() => false),
+                applyJourneyReplayPOIVisibility: vi.fn(),
+                interpolateReplayExportSample: vi.fn((start, end, ratio) => ratio < 1 ? start : end),
+                cameraRecenterFrame,
+                startDeterministicCameraTransition,
+                applyDeterministicCameraTransition,
+            },
+        }
+        vi.stubGlobal('lgs', {
+            theJourney: {focus},
+            scene:      {requestRender: vi.fn()},
+        })
+
+        const result = await applyJourneyReplayClipCameraPlan(mode, {
+            kind: 'focus',
+            duration: 0,
+            rpm:  4,
+            startView: {
+                sample:  {longitude: 2, latitude: 48, altitude: 100},
+                heading: 0.1,
+                pitch:   -1,
+                height:  2000,
+            },
+            endView: {
+                sample:  endSample,
+                heading: 0.2,
+                pitch:   -0.8,
+                height:  5000,
+                cameraSettings: {altitude: 5000},
+            },
+        }, {token: 1})
+
+        expect(focus).not.toHaveBeenCalled()
+        expect(startDeterministicCameraTransition).toHaveBeenCalledWith(expect.objectContaining({
+            sample:        endSample,
+            duration:     0,
+            logicalNow:    0,
+        }))
+        expect(applyDeterministicCameraTransition).toHaveBeenCalledWith(0)
+        expect(result.endView.sample).toEqual(endSample)
+        expect(result.endView.cameraSettings).toEqual({altitude: 5000})
+    })
+
+    it.each([
+        ['zoom-in', {sample: {longitude: 2, latitude: 48, altitude: 100}, height: 1200}],
+        ['take-off', {sample: {longitude: 2.1, latitude: 48.1, altitude: 110}, height: 5000}],
+        ['launch', {sample: {longitude: 2.1, latitude: 48.1, altitude: 110}, height: 5000}],
+        ['zoom-out', {sample: {longitude: 2.2, latitude: 48.2, altitude: 120}, height: 5000}],
+        ['focus', {sample: {longitude: 2.3, latitude: 48.3, altitude: 130}, height: 5000}],
+        ['landing', {sample: {longitude: 2.4, latitude: 48.4, altitude: 30}, height: 30}],
+    ])('keeps camera continuity through the %s clip boundary', (clipId, expectedEnd) => {
+        const entryCamera = {
+            sample:  {longitude: 2, latitude: 48, altitude: 100},
+            heading: 0.1,
+            pitch:   -1,
+            height:  2000,
+        }
+        const targetSamples = {
+            'zoom-in': {longitude: 2, latitude: 48, altitude: 100},
+            'take-off': {longitude: 2.1, latitude: 48.1, altitude: 110},
+            launch:     {longitude: 2.1, latitude: 48.1, altitude: 110},
+            'zoom-out': {longitude: 2.2, latitude: 48.2, altitude: 120},
+            focus:      {longitude: 2.3, latitude: 48.3, altitude: 130},
+            landing:    {longitude: 2.4, latitude: 48.4, altitude: 30},
+        }
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                logicalCameraTrajectory: false,
+            },
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {
+                cameraSettingsForClip: vi.fn(() => ({altitude: 5000, pitch: -45})),
+                replayExportBaseView: vi.fn(() => ({
+                    sample:       entryCamera.sample,
+                    heading:      0.2,
+                    pitch:        -1,
+                    cameraHeight: 1200,
+                })),
+                clipReplayHeadingForProgress: vi.fn(() => 0.4),
+                targetSampleForClip: vi.fn(() => targetSamples[clipId]),
+                cameraAltitudeForSample: vi.fn((_target, cameraSettings) => cameraSettings?.altitude ?? 1200),
+                markerRenderHeightForSample: vi.fn(() => 30),
+                focusTargetSampleForReplayExport: vi.fn(() => targetSamples.focus),
+            },
+        }
+        vi.stubGlobal('lgs', {
+            settings: {
+                ui: {
+                    replay: {
+                        camera: {
+                            positionMode: 'system',
+                            altitudeMode: 'constant',
+                            altitude: 1200,
+                            pitch: -65,
+                            heading: 0,
+                        },
+                    },
+                },
+            },
+        })
+
+        const plan = resolveJourneyReplayClipCameraPlan(mode, {
+            clip: {
+                clipId,
+                params: {
+                    duration: 2,
+                    altitude: 5000,
+                    pitch: -45,
+                },
+            },
+            slot:  REPLAY_CLIP_SLOT_STOP,
+            sample: entryCamera.sample,
+            startCamera: entryCamera,
+        })
+
+        const expectedStart = clipId === 'take-off' || clipId === 'launch'
+            ? {
+                sample: targetSamples[clipId],
+                height: 30,
+            }
+            : entryCamera
+        expect(plan.startView).toEqual(expect.objectContaining(expectedStart))
+        expect(plan.endView).toEqual(expect.objectContaining({
+            sample: expectedEnd.sample,
+            height: expectedEnd.height,
+        }))
     })
 })

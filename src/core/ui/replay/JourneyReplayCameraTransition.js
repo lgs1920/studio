@@ -374,6 +374,7 @@ export const startDeterministicCameraTransition = (mode, {
                                                sample,
                                                heading,
                                                pitch,
+                                               startFrame: providedStartFrame = null,
                                                endFrame,
                                                duration = 0,
                                                logicalNow = 0,
@@ -384,7 +385,7 @@ export const startDeterministicCameraTransition = (mode, {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const startFrame = call.currentCameraFrame(endFrame)
+        const startFrame = providedStartFrame ?? call.currentCameraFrame(endFrame)
         if (!startFrame || !endFrame) {
             return false
         }
@@ -475,6 +476,14 @@ export const startDeterministicCameraTransition = (mode, {
         })
         const transferScale = Math.max(0.75, finiteNumber(transferSafetyProfile?.zoneScale) ?? 1)
         const transferMode = selectCameraTransferMode(transferDistance, transferThresholdKm / transferScale)
+        const startHeight = finiteNumber(Cartographic.fromCartesian(startFrame.destination).height)
+        const configuredLift = finiteNumber(globalThis.lgs?.settings?.camera?.pitchAdjustHeight) ?? 500
+        const transferLift = Math.max(
+            120,
+            configuredLift,
+            transferDistance * 0.18,
+            Math.max(0, (finiteNumber(endFrame.currentHeight) ?? 0) - (startHeight ?? 0)),
+        )
         const transferPath = buildCameraTransferPath({
             start:       startFrame.destination,
             end:         end.destination,
@@ -482,7 +491,7 @@ export const startDeterministicCameraTransition = (mode, {
             sampleCount: transferMode === 'direct'
                          ? 24
                          : Math.round((transferMode === 'elevate-then-move' ? 64 : 80) * transferScale),
-            liftMeters:  Math.max(120, finiteNumber(globalThis.lgs?.settings?.camera?.pitchAdjustHeight) ?? 500),
+            liftMeters:  transferLift,
             antiCollisionBounds: transferSafetyProfile,
             safetyProfile:       transferSafetyProfile,
             frameResolver: ({path, target: resolvedTarget, ratio, frame}) => {

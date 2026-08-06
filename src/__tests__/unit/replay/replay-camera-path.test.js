@@ -34,6 +34,8 @@ import {
     buildReplayTransferSafetyProfile,
 } from '@Core/ui/replay/JourneyReplayCameraCollision'
 import {
+    resolveCameraTransferLiftMeters,
+    startCameraTransition,
     updateCamera,
 } from '@Core/ui/replay/JourneyReplayCameraBinding'
 import {
@@ -279,6 +281,72 @@ describe('Journey replay camera paths', () => {
         expect(selectCameraTransferMode(120_000, 50)).toBe('elevate-then-move')
         expect(selectCameraTransferMode(250_000, 50)).toBe('spiral-conical')
         expect(selectCameraTransferMode(600_000, 50)).toBe('blur-jump-refocus')
+    })
+
+    it('raises long transfers enough to preserve a higher clip endpoint', () => {
+        expect(resolveCameraTransferLiftMeters({
+            distanceMeters: 100_000,
+            startHeight:    1_200,
+            endHeight:      10_000,
+            configuredLift: 500,
+        })).toBe(18_000)
+
+        expect(resolveCameraTransferLiftMeters({
+            distanceMeters: 1_000,
+            startHeight:    1_200,
+            endHeight:      10_000,
+            configuredLift: 500,
+        })).toBe(8_800)
+    })
+
+    it('does not cap a direct flight below a higher clip endpoint', async () => {
+        const flyTo = vi.fn(({complete}) => complete?.())
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                cameraBezierFrame:  null,
+                cameraBezierResolve: null,
+                cameraFlightActive:  false,
+                cameraApplyingView: false,
+                introHeadingTransition: null,
+            },
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {
+                now: vi.fn(() => 0),
+                rememberCameraView: vi.fn(),
+                cancelCameraBezierTransition: vi.fn(),
+            },
+        }
+        vi.stubGlobal('lgs', {
+            settings: {
+                camera: {
+                    transferDistanceThresholdKm: 50,
+                },
+            },
+            viewer: {
+                camera: {
+                    positionWC: new Cartesian3(0, 0, 1_200),
+                    positionCartographic: {height: 1_200},
+                    flyTo,
+                    cancelFlight: vi.fn(),
+                },
+            },
+        })
+
+        await startCameraTransition(mode, {
+            sample:     {longitude: 2, latitude: 48, altitude: 100},
+            endFrame: {
+                destination: new Cartesian3(1_000, 2_000, 3_000),
+                direction:   new Cartesian3(0, 1, 0),
+                correctedUp: new Cartesian3(0, 0, 1),
+                safeHeading: 0,
+                safePitch:   -1,
+                currentHeight: 10_000,
+            },
+            duration: 1,
+        })
+
+        expect(flyTo).toHaveBeenCalledWith(expect.objectContaining({
+            maximumHeight: 10_000,
+        }))
     })
 
     it('builds a 3D Bezier path that bends through the provided control points', () => {

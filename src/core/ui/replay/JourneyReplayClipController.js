@@ -162,7 +162,6 @@ export const resolveJourneyReplayClipCameraPlan = (mode, {
                                                sample = null,
                                                startCamera = null,
                                            } = {}) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         if (!clip || !sample) {
@@ -173,7 +172,6 @@ export const resolveJourneyReplayClipCameraPlan = (mode, {
         const replayCamera = normalizeJourneyReplayCamera(globalThis.lgs?.stores?.replay?.camera ?? settings.camera)
         const clipCamera = call.cameraSettingsForClip(clip)
         const duration = Math.max(0, Number(clip?.params?.duration ?? clipCamera?.duration ?? 0))
-        const useLogicalCamera = usesLogicalReplayClipTrajectory(state, call)
         const anchorProgress = slot === REPLAY_CLIP_SLOT_STOP ? 1 : 0
         const baseView = call.replayExportBaseView({
             sample,
@@ -197,6 +195,12 @@ export const resolveJourneyReplayClipCameraPlan = (mode, {
         const clipPitch = degreesToRadians(finiteNumber(clip?.params?.pitch ?? clipCamera.pitch) ?? clipCamera.pitch)
                           ?? baseView.pitch
         const clipHeight = finiteNumber(clipCamera.altitude) ?? baseView.cameraHeight
+        const clipCameraHeightForSample = target => finiteNumber(
+            call.cameraAltitudeForSample?.(target, clipCamera),
+        ) ?? clipHeight
+        const replayCameraHeightForSample = target => finiteNumber(
+            call.cameraAltitudeForSample?.(target, replayCamera),
+        ) ?? baseView.cameraHeight
         const baseStartView = {
             sample: baseView.sample,
             heading: baseView.heading,
@@ -237,10 +241,6 @@ export const resolveJourneyReplayClipCameraPlan = (mode, {
         switch (clip.clipId) {
             case 'zoom-in': {
                 return withTarget(call.targetSampleForClip(sample, clip.clipId), target => {
-                    const startAltitude = finiteNumber(clip?.params?.altitude ?? clipCamera.altitude) ?? clipHeight
-                    const endAltitude = useLogicalCamera
-                                       ? finiteNumber(replayCamera.altitude) ?? baseView.cameraHeight
-                                       : call.cameraAltitudeForSample(target, replayCamera)
                     plan.initialView = continuityStartView
                     plan.startView = continuityStartView
                     plan.endView = {
@@ -248,7 +248,7 @@ export const resolveJourneyReplayClipCameraPlan = (mode, {
                         sample: target,
                         heading: replayHeading,
                         pitch:   degreesToRadians(replayCamera.pitch) ?? baseView.pitch,
-                        height:  Math.min(startAltitude, endAltitude),
+                        height:  replayCameraHeightForSample(target),
                         cameraSettings: replayCamera,
                     }
                     return plan
@@ -257,16 +257,21 @@ export const resolveJourneyReplayClipCameraPlan = (mode, {
             case 'take-off':
             case 'launch': {
                 return withTarget(call.targetSampleForClip(sample, clip.clipId), target => {
+                    const groundHeight = finiteNumber(call.markerRenderHeightForSample?.(target))
+                                     ?? finiteNumber(target?.altitude ?? target?.height)
+                                     ?? continuityStartView.height
                     plan.setupDestination = null
                     plan.startView = {
                         ...continuityStartView,
+                        sample: target,
+                        height: groundHeight,
                     }
                     plan.endView = {
                         ...baseStartView,
                         sample: target,
                         heading: replayHeading,
                         pitch:   clipPitch,
-                        height:  clipHeight,
+                        height:  clipCameraHeightForSample(target),
                         cameraSettings: clipCamera,
                     }
                     return plan
@@ -279,7 +284,6 @@ export const resolveJourneyReplayClipCameraPlan = (mode, {
                         altitude: call.markerRenderHeightForSample(sample),
                     }
                     plan.stopRotate = true
-                    plan.instant = true
                     plan.startView = {
                         ...continuityStartView,
                     }
@@ -304,7 +308,7 @@ export const resolveJourneyReplayClipCameraPlan = (mode, {
                         sample: target,
                         heading: replayHeading,
                         pitch:   clipPitch,
-                        height:  clipHeight,
+                        height:  clipCameraHeightForSample(target),
                         cameraSettings: clipCamera,
                     }
                     return plan
@@ -320,7 +324,7 @@ export const resolveJourneyReplayClipCameraPlan = (mode, {
                         sample: target,
                         heading: baseView.heading,
                         pitch:   clipPitch,
-                        height:  clipHeight,
+                        height:  clipCameraHeightForSample(target),
                         cameraSettings: clipCamera,
                     }
                     return plan
@@ -356,6 +360,20 @@ export const sampleJourneyReplayClipCameraPlan = (mode, plan = null, {localProgr
         }
     }
 
+const replayClipEndView = (mode, plan) => {
+    const durationMillis = Math.max(0, (finiteNumber(plan?.duration) ?? 0) * 1000)
+    const frameView = sampleJourneyReplayClipCameraPlan(mode, plan, {
+        localProgress: 1,
+        localMillis:  durationMillis,
+    })
+    return cloneReplayClipCameraView({
+        ...plan?.endView,
+        ...frameView,
+        sample:         plan?.endView?.sample,
+        cameraSettings: plan?.endView?.cameraSettings,
+    })
+}
+
 const requestLogicalCameraFrame = callback => {
     if (typeof globalThis.requestAnimationFrame === 'function') {
         return globalThis.requestAnimationFrame(callback)
@@ -375,14 +393,41 @@ const cancelLogicalCameraFrame = handle => {
 }
 
 /**
- * Play a clip from its logical camera plan.
+ * Play a clip from its deterministic camera path.
  *
  * Cesium receives each resolved pose as an output operation. It does not
  * provide the clock, interpolation, flight callback, or completion signal.
  */
-const playLogicalJourneyReplayClip = (mode, plan, {token, state, call, onFrame = null} = {}) => {
+const playJourneyReplayClipPath = (mode, plan, {token, state, call, onFrame = null} = {}) => {
     const durationMillis = Math.max(0, (finiteNumber(plan?.duration) ?? 0) * 1000)
     const startedAt = globalThis.performance?.now?.() ?? Date.now()
+    const deterministicPathAvailable = typeof call.startDeterministicCameraTransition === 'function'
+                                      && typeof call.applyDeterministicCameraTransition === 'function'
+                                      && typeof call.cameraRecenterFrame === 'function'
+    let deterministicPathStarted = false
+
+    const finalView = sampleJourneyReplayClipCameraPlan(mode, plan, {
+        localProgress: 1,
+        localMillis:  durationMillis,
+    })
+    const endFrame = deterministicPathAvailable
+        ? call.cameraRecenterFrame({
+            sample:         plan.endView?.sample,
+            heading:        finalView?.heading,
+            pitch:          finalView?.pitch,
+            cameraSettings: finalView?.cameraSettings,
+            cameraHeight:   finalView?.height,
+        })
+        : null
+    const startFrame = deterministicPathAvailable
+        ? call.cameraRecenterFrame({
+            sample:         plan.startView?.sample,
+            heading:        plan.startView?.heading,
+            pitch:          plan.startView?.pitch,
+            cameraSettings: plan.startView?.cameraSettings,
+            cameraHeight:   plan.startView?.height,
+        })
+        : null
 
     return new Promise(resolve => {
         let frameHandle = null
@@ -412,18 +457,43 @@ const playLogicalJourneyReplayClip = (mode, plan, {token, state, call, onFrame =
             })
 
             if (frameView?.sample) {
-                call.recenterCameraToSample({
-                                             sample:         frameView.sample,
-                                             heading:        frameView.heading,
-                                             pitch:          frameView.pitch,
-                                             cameraSettings: frameView.cameraSettings,
-                                             cameraHeight:   frameView.height,
-                                             instant:        true,
-                                             duration:       0,
-                                             deterministic:  true,
-                                             logicalNow:     localMillis,
-                                             force:          true,
-                                         })
+                if (startFrame && endFrame && !deterministicPathStarted) {
+                    try {
+                        const started = call.startDeterministicCameraTransition({
+                            sample:         plan.endView.sample,
+                            heading:        finalView.heading,
+                            pitch:          finalView.pitch,
+                            startFrame,
+                            endFrame,
+                            duration:       plan.instant === true ? 0 : durationMillis / 1000,
+                            logicalNow:     plan.instant === true ? 0 : localMillis,
+                            cameraSettings: finalView.cameraSettings,
+                            viewport:       call.viewportRectForCesiumSurface?.() ?? null,
+                        })
+                        deterministicPathStarted = started !== false
+                    }
+                    catch {
+                        deterministicPathStarted = false
+                    }
+                }
+
+                if (deterministicPathStarted) {
+                    call.applyDeterministicCameraTransition(localMillis)
+                }
+                else {
+                    call.recenterCameraToSample({
+                                                 sample:         frameView.sample,
+                                                 heading:        frameView.heading,
+                                                 pitch:          frameView.pitch,
+                                                 cameraSettings: frameView.cameraSettings,
+                                                 cameraHeight:   frameView.height,
+                                                 instant:        true,
+                                                 duration:       0,
+                                                 deterministic:  true,
+                                                 logicalNow:     localMillis,
+                                                 force:          true,
+                                             })
+                }
                 globalThis.lgs?.scene?.requestRender?.()
             }
             onFrame?.({
@@ -449,105 +519,32 @@ export const applyJourneyReplayClipCameraPlan = async (mode, plan = null, {token
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
     const activeToken = token ?? state.clipSequenceToken
 
-        if (!plan) {
-            return
-        }
-
-        const useLogicalCamera = usesLogicalReplayClipTrajectory(state, call)
-
-        if (plan.kind === 'focus') {
-            call.setContinuousRender(true)
-            if (call.isReplayVideoLinked()) {
-                call.hideJourneyToolbarVisibility()
-            }
-            if (useLogicalCamera) {
-                call.applyJourneyReplayPOIVisibility()
-                const stopRotate = globalThis.__?.ui?.cameraManager?.stopRotate
-                if (plan.stopRotate && typeof stopRotate === 'function') {
-                    await stopRotate()
-                }
-                await playLogicalJourneyReplayClip(mode, plan, {
-                    token: activeToken,
-                    state,
-                    call,
-                    onFrame,
-                })
-                return {endView: cloneReplayClipCameraView(plan.endView)}
-            }
-
-            const journey = globalThis.lgs?.theJourney
-            const focusResult = typeof journey?.focus === 'function'
-                                ? journey.focus({
-                                    resetCamera: true,
-                                    rotate:      true,
-                                    rpm:         plan.rpm === 0 ? undefined : plan.rpm,
-                                    snapDistance: 25000,
-                                })
-                                : globalThis.__?.ui?.sceneManager?.focusOnJourney?.({
-                                    journey,
-                                    target:      journey,
-                                    resetCamera: true,
-                                    rotate:      true,
-                                    rpm:         plan.rpm === 0 ? undefined : plan.rpm,
-                                    snapDistance: 25000,
-                                })
-            call.applyJourneyReplayPOIVisibility()
-            await Promise.resolve(focusResult)
-            await call.runClipDelay(plan.duration)
-            return {endView: cloneReplayClipCameraView(plan.endView)}
-        }
-
-        if (useLogicalCamera) {
-            const stopRotate = globalThis.__?.ui?.cameraManager?.stopRotate
-            if (plan.stopRotate && typeof stopRotate === 'function') {
-                await stopRotate()
-            }
-            await playLogicalJourneyReplayClip(mode, plan, {
-                token: activeToken,
-                state,
-                call,
-                onFrame,
-            })
-            return {endView: cloneReplayClipCameraView(plan.endView)}
-        }
-
-        if (plan.setupDestination) {
-            globalThis.lgs?.viewer?.camera?.setView?.({
-                destination: plan.setupDestination,
-            })
-        }
-
-        if (plan.initialView) {
-            call.recenterCameraToSample({
-                sample:         plan.initialView.sample,
-                heading:        plan.initialView.heading,
-                pitch:          plan.initialView.pitch,
-                cameraSettings: plan.initialView.cameraSettings,
-                cameraHeight:   plan.initialView.height,
-                instant:        true,
-            })
-        }
-
-        if (activeToken !== state.clipSequenceToken) {
-            return
-        }
-
-        const stopRotate = globalThis.__?.ui?.cameraManager?.stopRotate
-        if (plan.stopRotate && typeof stopRotate === 'function') {
-            await stopRotate()
-        }
-
-        await call.recenterCameraToSample({
-            sample:         plan.endView.sample,
-            heading:        plan.endView.heading,
-            pitch:          plan.endView.pitch,
-            cameraSettings: plan.endView.cameraSettings,
-            cameraHeight:   plan.endView.height,
-            instant:        plan.instant,
-            duration:       plan.duration,
-        })
-        return {endView: cloneReplayClipCameraView(plan.endView)}
+    if (!plan) {
+        return
     }
+
+    // Every clip is evaluated by the same deterministic path runner.
+    call.setContinuousRender?.(true)
+    if (call.isReplayVideoLinked?.()) {
+        call.hideJourneyToolbarVisibility?.()
+    }
+    if (plan.kind === 'focus') {
+        call.applyJourneyReplayPOIVisibility?.()
+    }
+
+    const stopRotate = globalThis.__?.ui?.cameraManager?.stopRotate
+    if (plan.stopRotate && typeof stopRotate === 'function') {
+        await stopRotate()
+    }
+
+    await playJourneyReplayClipPath(mode, plan, {
+        token: activeToken,
+        state,
+        call,
+        onFrame,
+    })
+    return {endView: replayClipEndView(mode, plan)}
+}
 
 export const isReplayVideoLinked = () => {
     const replay = globalThis.lgs?.stores?.replay
@@ -608,7 +605,7 @@ export const renderReplayExportClipFrame = async (mode, {
 
         if (localProgress >= 1) {
             state.clipCameraContinuity = {
-                ...cloneReplayClipCameraView(frameView),
+                ...replayClipEndView(mode, plan),
             }
         }
 
@@ -764,7 +761,6 @@ export const cameraClipFlight = async (mode, {
     startCamera = null,
     onFrame = null,
 } = {}) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         if (!globalThis.lgs?.viewer?.camera || !sample) {

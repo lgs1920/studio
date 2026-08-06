@@ -22,6 +22,42 @@ import {
     buildReplayAntiCollisionBounds,
 } from './JourneyReplayCameraCollision'
 
+const CAMERA_TRANSFER_MIN_LIFT_METERS = 120
+const CAMERA_TRANSFER_DISTANCE_LIFT_RATIO = 0.18
+
+/**
+ * Resolve the vertical clearance used by a long camera transfer.
+ *
+ * The clearance must account for both the travelled distance and an endpoint
+ * that is higher than the current camera. A fixed lift leaves zoom-out clips
+ * near the ground and makes the horizontal transfer look like a jump.
+ *
+ * @param {object} options - Transfer geometry inputs.
+ * @param {number|null} [options.distanceMeters=null] - Camera travel distance.
+ * @param {number|null} [options.startHeight=null] - Current camera height.
+ * @param {number|null} [options.endHeight=null] - Requested endpoint height.
+ * @param {number|null} [options.configuredLift=null] - Camera safety lift.
+ * @returns {number} The resolved lift in meters.
+ */
+export const resolveCameraTransferLiftMeters = ({
+    distanceMeters = null,
+    startHeight = null,
+    endHeight = null,
+    configuredLift = null,
+} = {}) => {
+    const distanceLift = Math.max(0, finiteNumber(distanceMeters) ?? 0) * CAMERA_TRANSFER_DISTANCE_LIFT_RATIO
+    const altitudeLift = Math.max(
+        0,
+        (finiteNumber(endHeight) ?? 0) - (finiteNumber(startHeight) ?? 0),
+    )
+    return Math.max(
+        CAMERA_TRANSFER_MIN_LIFT_METERS,
+        finiteNumber(configuredLift) ?? 0,
+        distanceLift,
+        altitudeLift,
+    )
+}
+
 export const recenterCameraToSample = (mode, {
                                    sample,
                                    heading,
@@ -141,6 +177,7 @@ export const startCameraTransition = (mode, {
         const endPosition = frame.destination
         const endDirection = frame.direction
         const endUp = frame.correctedUp
+        const currentHeight = finiteNumber(viewer.camera.positionCartographic?.height)
         state.cameraFlightActive = true
         state.cameraApplyingView = true
         state.cameraAutoTrackingIgnoreUntil = call.now() + Math.max(180, Math.max(0, Number(duration) * 1000) + 180)
@@ -182,7 +219,12 @@ export const startCameraTransition = (mode, {
                     end:         endPosition,
                     mode:        transferMode,
                     sampleCount: transferMode === 'blur-jump-refocus' ? 64 : 48,
-                    liftMeters:  Math.max(120, finiteNumber(globalThis.lgs?.settings?.camera?.pitchAdjustHeight) ?? 500),
+                    liftMeters:  resolveCameraTransferLiftMeters({
+                        distanceMeters: transferDistance,
+                        startHeight:    currentHeight,
+                        endHeight:      frame.currentHeight,
+                        configuredLift: finiteNumber(globalThis.lgs?.settings?.camera?.pitchAdjustHeight) ?? 500,
+                    }),
                     antiCollisionBounds: buildReplayAntiCollisionBounds(globalThis.lgs?.theJourney, {
                         trackingMode:        getJourneyReplaySettings().marker.mode,
                         cameraSettings,
@@ -218,7 +260,6 @@ export const startCameraTransition = (mode, {
 
             if (typeof viewer.camera.flyTo === 'function') {
                 try {
-                    const currentHeight = finiteNumber(viewer.camera.positionCartographic?.height)
                     viewer.camera.flyTo({
                         destination: endPosition,
                         orientation: {
@@ -226,7 +267,9 @@ export const startCameraTransition = (mode, {
                             up:        endUp,
                         },
                         duration: Math.max(0, Number(duration) || 0),
-                        ...(currentHeight === null ? {} : {maximumHeight: currentHeight}),
+                        ...(currentHeight === null
+                            ? {}
+                            : {maximumHeight: Math.max(currentHeight, finiteNumber(frame.currentHeight) ?? currentHeight)}),
                         complete: () => settle(true),
                         cancel:   () => settle(false),
                     })

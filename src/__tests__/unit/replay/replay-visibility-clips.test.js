@@ -914,7 +914,6 @@ describe('replay visibility and clips', () => {
         const listeners = new Map()
         const poiA = {id: 'poi-a', expanded: true}
         const poiList = new Map([[poiA.id, poiA]])
-        const focusClipPOIStates = []
         const sampler = {
             hasSamples: true,
             totalDistance: 100,
@@ -961,13 +960,7 @@ describe('replay visibility and clips', () => {
             return poi
         })
 
-        journey.focus = vi.fn((options = {}) => {
-            if (options.rotate === true) {
-                focusClipPOIStates.push(poiA.expanded)
-            }
-            options.callback?.()
-            return Promise.resolve()
-        })
+        journey.focus = vi.fn()
 
         globalThis.__ = {
             ui: {
@@ -1071,7 +1064,7 @@ describe('replay visibility and clips', () => {
             })
             await new Promise(resolve => setTimeout(resolve, 0))
 
-            expect(focusClipPOIStates).toEqual([false])
+            expect(journey.focus).toHaveBeenCalledWith(expect.objectContaining({rotate: false}))
 
             await new Promise(resolve => setTimeout(resolve, 0))
 
@@ -1102,7 +1095,7 @@ describe('replay visibility and clips', () => {
             slots:        ['start'],
             maxInstances: 1,
             defaults:     {
-                duration: 0.1,
+                duration: 0,
                 altitude: 300,
                 pitch:    -35,
             },
@@ -1110,7 +1103,7 @@ describe('replay visibility and clips', () => {
         }
         const takeOff = createJourneyReplayClipInstance(takeOffDefinition, 'start', {
             params: {
-                duration: 0.1,
+                duration: 0,
                 altitude: 300,
                 pitch:    -35,
             },
@@ -1228,8 +1221,8 @@ describe('replay visibility and clips', () => {
             await Promise.resolve()
             expect(controllerStartSpy).not.toHaveBeenCalled()
 
-            expect(flyToCalls).toHaveLength(1)
-            flyToCalls[0].complete?.()
+            expect(setViewCalls).toHaveLength(1)
+            await new Promise(resolve => setTimeout(resolve, 1000))
             await new Promise(resolve => setTimeout(resolve, 0))
 
             expect(controllerStartSpy).toHaveBeenCalledTimes(1)
@@ -1249,13 +1242,14 @@ describe('replay visibility and clips', () => {
         const previousLgs = globalThis.lgs
         const replay = defaultJourneyReplaySettings()
         const flyToCalls = []
+        const setViewCalls = []
         const zoomInDefinition = {
             id:           'zoom-in',
             label:        'Zoom in',
             slots:        ['start'],
             maxInstances: 1,
             defaults:     {
-                duration: 0.1,
+                duration: 0,
                 altitude: 300,
                 pitch:    -35,
             },
@@ -1263,7 +1257,7 @@ describe('replay visibility and clips', () => {
         }
         const zoomIn = createJourneyReplayClipInstance(zoomInDefinition, 'start', {
             params: {
-                duration: 0.1,
+                duration: 0,
                 altitude: 300,
                 pitch:    -35,
             },
@@ -1343,8 +1337,7 @@ describe('replay visibility and clips', () => {
                     cancelFlight:         () => {
                     },
                     flyTo:                options => flyToCalls.push(options),
-                    setView:              () => {
-                    },
+                    setView:              options => setViewCalls.push(options),
                     lookAtTransform:      () => {
                     },
                 },
@@ -1378,9 +1371,8 @@ describe('replay visibility and clips', () => {
             mode.start({duration: 1})
             await Promise.resolve()
             expect(controllerStartSpy).not.toHaveBeenCalled()
-            expect(flyToCalls).toHaveLength(1)
-
-            flyToCalls[0].complete?.()
+            expect(setViewCalls).toHaveLength(1)
+            await new Promise(resolve => setTimeout(resolve, 250))
             await new Promise(resolve => setTimeout(resolve, 0))
 
             expect(controllerStartSpy).toHaveBeenCalledTimes(1)
@@ -1591,16 +1583,17 @@ describe('replay visibility and clips', () => {
                 altitude:  120,
             }
             const targetCartesian = Cartesian3.fromDegrees(target.longitude, target.latitude, target.altitude)
-            const targetTransform = Transforms.eastNorthUpToFixedFrame(targetCartesian)
-            const east = Matrix4.getColumn(targetTransform, 0, new Cartesian3())
-            const north = Matrix4.getColumn(targetTransform, 1, new Cartesian3())
-            const delta = Cartesian3.subtract(flyToCalls[0].destination, targetCartesian, new Cartesian3())
+            const firstDestination = setViewCalls[0].destination
+            const lastDestination = setViewCalls.at(-1).destination
+            const firstHeight = Cartographic.fromCartesian(firstDestination).height
+            const lastHeight = Cartographic.fromCartesian(lastDestination).height
 
-            expect(flyToCalls).toHaveLength(1)
-            expect(setViewCalls).toHaveLength(1)
-            expect(flyToCalls[0].maximumHeight).toBe(1800)
-            expect(Cartesian3.dot(delta, east)).toBeCloseTo(0, 6)
-            expect(Cartesian3.dot(delta, north)).toBeLessThan(0)
+            expect(flyToCalls).toHaveLength(0)
+            expect(setViewCalls.length).toBeGreaterThan(1)
+            expect(firstHeight).toBeGreaterThan(lastHeight)
+            expect(Cartesian3.distance(lastDestination, targetCartesian)).toBeLessThan(
+                Cartesian3.distance(firstDestination, targetCartesian),
+            )
         }
         finally {
             vi.useRealTimers()
