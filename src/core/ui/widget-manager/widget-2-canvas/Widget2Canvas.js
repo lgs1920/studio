@@ -560,7 +560,7 @@ export class Widget2Canvas {
                 this.#syncPartRegistry()
             }
 
-            if (!this.#partOrder.length) {
+            if (this.#options.captureWholeWidget || !this.#partOrder.length) {
                 const fullCanvas = await this.#renderPart(this.#original)
                 this.#updateCanvas(fullCanvas)
                 return

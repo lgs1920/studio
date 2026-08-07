@@ -1405,6 +1405,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                             embedFonts:      true,
                             exclude:         config.captureExclude ?? [],
                             excludeMode:     'remove',
+                            captureWholeWidget: config.captureWholeWidget ?? false,
                             scale:           LGS_WIDGET_SCALE_EFFECTIVE,
                             type:            fullConfig.snap,
                             outerTransforms: true,

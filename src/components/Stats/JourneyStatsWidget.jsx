@@ -99,11 +99,12 @@ export const JourneyStatsWidget = ({
             mandatory:       false,
             stopPropagation: false,
             snap:            false,
+            captureWholeWidget: true,
             refreshMode:     mode === 'dynamic' ? 'both' : undefined,
             widgetsBoard:    widgetsBoard,
             zIndex: zIndex,
         }
-    }, [container, widgetsBoard, id, zIndex])
+    }, [container, widgetsBoard, id, mode, zIndex])
 
     const isVisible = useMemo(() => {
         if (!widgetsBoard) {
