@@ -652,3 +652,47 @@
 ## 2026-08-05 — [`Merge branch 'tmp/replay-glow-neon' into 1.0.0`](https://github.com/lgs1920/studio/commit/3fc9f4d8fa2730428b6aad0675f6164da5a83161)
 
 - Recorded automatically from Git history.
+
+## 2026-08-05 — [`fix: align replay effect preview`](https://github.com/lgs1920/studio/commit/4d14864152ad2d584c6b74272d4c8f0dbfe510da)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`fix replay camera continuity across clips`](https://github.com/lgs1920/studio/commit/f4884bcc6dfb4c7f8ada7d7f655c52194a9dd01f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`fix replay camera continuity and live recentering`](https://github.com/lgs1920/studio/commit/bcc58f1110e5c5fcf2105fe041ab04d1397a04b2)
+
+- Recorded automatically from Git history.
+
+## 2026-08-06 — [`fix(replay): preserve camera height across clip transitions`](https://github.com/lgs1920/studio/commit/8901d04d4434493110472136d3143f26904ccef9)
+
+- Recorded automatically from Git history.
+
+## 2026-08-06 — [`fix: update contact email address`](https://github.com/lgs1920/studio/commit/9bcfa84f421797b2b757827556ccc12d1af44af6)
+
+- Recorded automatically from Git history.
+
+## 2026-08-06 — [`feat: add secure email sending skill`](https://github.com/lgs1920/studio/commit/453aaccf6b34f08dd4a000289b638c674bb4e9ac)
+
+- Recorded automatically from Git history.
+
+## 2026-08-06 — [`fix(replay): preserve clip camera paths and landing height`](https://github.com/lgs1920/studio/commit/4068d608cc255b0728717b14fca9ed849742627b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-06 — [`fix(deployment): load backend environment securely`](https://github.com/lgs1920/studio/commit/5c3d9766fca0fca839efce46d2fdc434a9c4934b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-06 — [`docs(skill): document secure backend deployment boundary`](https://github.com/lgs1920/studio/commit/4af3904c41fc62030752722e5b1f6a38111375f5)
+
+- Recorded automatically from Git history.
+
+## 2026-08-06 — [`docs: describe backend environment deployment`](https://github.com/lgs1920/studio/commit/20030be9a103e6f5059d22bd41e00d565f53f9f1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-06 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/88ff20618772c8c52b388dbf50b7cff1e6fd39fb)
+
+- Recorded automatically from Git history.
