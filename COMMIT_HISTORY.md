@@ -696,3 +696,39 @@
 ## 2026-08-06 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/88ff20618772c8c52b388dbf50b7cff1e6fd39fb)
 
 - Recorded automatically from Git history.
+
+## 2026-08-06 — [`fix: rotate contact CSRF secret on deployment`](https://github.com/lgs1920/studio/commit/4e5609b9aef69b7be0ba8a11c458db4e07166fca)
+
+- Recorded automatically from Git history.
+
+## 2026-08-06 — [`fix: validate backend environment before transfer`](https://github.com/lgs1920/studio/commit/086362cf84e0642a7de019a41f8206dde6e8cb7e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-07 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/d1dafc14db4f5b2e01183b6d525d43b42d304976)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-08-07 — [`fix: improve journey stats SnapDOM rendering`](https://github.com/lgs1920/studio/commit/2bf3c3c7cdbf9c44b5c9924350c84cfffa3f9f7c)
+
+- Recorded automatically from Git history.
+
+## 2026-08-07 — [`fix: allow configured origins for backend startup`](https://github.com/lgs1920/studio/commit/b2b72a2183d2eb4c2b7690e5d9bf608a08242aac)
+
+- Recorded automatically from Git history.
+
+## 2026-08-07 — [`fix: add backend support contact link`](https://github.com/lgs1920/studio/commit/9e6fdf59d303bae2dc0f4d82db681374cef6e31d)
+
+- Recorded automatically from Git history.
+
+## 2026-08-08 — [`feat: add logo PNG generation tool`](https://github.com/lgs1920/studio/commit/e5892c88752c72edcfe97b6f3f6e9c36a9020d2f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-08 — [`feat: update logo assets and PNG exports`](https://github.com/lgs1920/studio/commit/ce4d80d535700bd82771abf7db2d0773aa7df87e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-08 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/26aa483c2aa714c94263d478b11b40bcf037f64b)
+
+- Recorded automatically from Git history.
