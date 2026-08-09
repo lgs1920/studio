@@ -764,3 +764,11 @@
 ## 2026-08-09 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/e96ec5b4d9fff2c92deeac9c009b63f0ff8481ec)
 
 - Recorded automatically from Git history.
+
+## 2026-08-09 — [`fix: allow origin header in proxy`](https://github.com/lgs1920/studio/commit/d51c156f4b5f076028253caf50d14303ca9f40b4)
+
+- Recorded automatically from Git history.
+
+## 2026-08-09 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/484ee166a5361b0d5badbd8c739160488ea13980)
+
+- Recorded automatically from Git history.
