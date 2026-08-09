@@ -756,3 +756,11 @@
 ## 2026-08-09 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/5f6292fadca8651b56ea63ba704c0abae7c0fc0b)
 
 - Recorded automatically from Git history.
+
+## 2026-08-09 — [`docs: add photo credits to Studio`](https://github.com/lgs1920/studio/commit/60b72316887f2036765ae8e727b9a0cc48d3dd4a)
+
+- Recorded automatically from Git history.
+
+## 2026-08-09 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/e96ec5b4d9fff2c92deeac9c009b63f0ff8481ec)
+
+- Recorded automatically from Git history.
