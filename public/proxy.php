@@ -650,6 +650,7 @@ function is_allowed_origin(string $origin, array $config): bool
 {
     $allowed = [
         origin_from_config($config['studio'] ?? []),
+        origin_from_config($config['site'] ?? []),
     ];
 
     if (($config['platform'] ?? '') === 'development') {
