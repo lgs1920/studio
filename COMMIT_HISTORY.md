@@ -732,3 +732,19 @@
 ## 2026-08-08 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/26aa483c2aa714c94263d478b11b40bcf037f64b)
 
 - Recorded automatically from Git history.
+
+## 2026-08-08 — [`docs: clarify changelog workflow`](https://github.com/lgs1920/studio/commit/c811037d6337578c02b7ca1414c69cdc0db21bed)
+
+- Recorded automatically from Git history.
+
+## 2026-08-08 — [`docs: link remaining changelog items`](https://github.com/lgs1920/studio/commit/4cf696c3a5f0325e171e08e7f7414438019ec24e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-08 — [`docs: add 1.0.0 changelog draft`](https://github.com/lgs1920/studio/commit/edfe9ca9f6688a2e40e58696b7b39a919b5364a4)
+
+- Recorded automatically from Git history.
+
+## 2026-08-08 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/0e93da97d8e714354f9b30a4279707406c43b97a)
+
+- Recorded automatically from Git history.
