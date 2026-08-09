@@ -16,6 +16,7 @@ const REQUEST_HEADER_ALLOWLIST = [
     'Accept',
     'Accept-Language',
     'Content-Type',
+    'Origin',
     'X-Conversion-Id',
     'X-Request-Progress',
     'X-Progress-Interval',
