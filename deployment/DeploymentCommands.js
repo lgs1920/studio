@@ -133,3 +133,25 @@ export const createBackendEnvironmentPaths = ({localRoot, remoteBackendRoot, env
         remotePath: path.posix.join(remoteBackendRoot, environmentFile),
     }
 }
+
+/**
+ * Resolve the persistent launch-registration file for a deployed backend.
+ *
+ * @param {object} options Registration storage path options.
+ * @param {string} options.remoteBackendRoot Remote backend root directory.
+ * @param {string} [options.registrationFile='shared/launch-registrations.json'] Relative or absolute registration file path.
+ * @returns {string} Absolute registration file path on the remote server.
+ * @throws {TypeError} If a required path option is missing.
+ */
+export const resolveBackendRegistrationFile = ({
+    remoteBackendRoot,
+    registrationFile = 'shared/launch-registrations.json',
+} = {}) => {
+    if (!remoteBackendRoot || !registrationFile) {
+        throw new TypeError('Backend registration storage options are incomplete')
+    }
+
+    return path.isAbsolute(registrationFile)
+        ? path.normalize(registrationFile)
+        : path.posix.join(remoteBackendRoot, registrationFile)
+}

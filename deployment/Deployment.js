@@ -28,6 +28,7 @@ import {
     createBackendEnvironmentPaths,
     createBackendPm2Command,
     quoteShellArgument,
+    resolveBackendRegistrationFile,
 } from './DeploymentCommands.js'
 
 const STUDIO_APP_NAME = 'LGS1920 Studio Development'
@@ -691,9 +692,9 @@ export class Deployment {
                 console.log(`    > ${this.green}Backend files prepared${this.reset}`)
             }
         }
+        const backendRoot = path.join(this.configuration.remote[this.platform].path, this.platform, 'backend')
         if (this.product === this.products.backend) {
             // Load the shared backend-only environment remotely so SMTP credentials never enter Studio releases.
-            const backendRoot = path.join(this.configuration.remote[this.platform].path, this.platform, 'backend')
             const where = path.join(backendRoot, this.current)
             const environmentFile = path.join(backendRoot, this.pm2.environmentFile)
             this.configuration.backend[this.platform].pm2.command = createBackendPm2Command({
@@ -702,7 +703,11 @@ export class Deployment {
                 pm2Bin:           this.pm2.bin,
             })
         }
-        // Configure server home paths
+        // Configure server paths. Registration data lives outside versioned releases.
+        this.configuration.backend[this.platform].registrationFile = resolveBackendRegistrationFile({
+            remoteBackendRoot: backendRoot,
+            registrationFile:   this.configuration.backend[this.platform].registrationFile,
+        })
         this.configuration.backend[this.platform].home = path.join(
             this.configuration.remote[this.platforms.production].path,
             this.platform,

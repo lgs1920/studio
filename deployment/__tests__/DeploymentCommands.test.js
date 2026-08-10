@@ -4,6 +4,7 @@ import {
     createBackendEnvironmentPaths,
     createBackendPm2Command,
     generateContactCsrfSecret,
+    resolveBackendRegistrationFile,
     validateBackendEnvironmentContent,
 } from '../DeploymentCommands.js'
 
@@ -67,5 +68,12 @@ describe('backend PM2 deployment command', () => {
             localPath:  '/workspace/lgs1920/backend/.env',
             remotePath: '/home/www/lgs1920/production/backend/shared/backend.env',
         })
+    })
+
+    test('resolves launch registrations outside the versioned release', () => {
+        expect(resolveBackendRegistrationFile({
+            remoteBackendRoot: '/home/www/lgs1920/production/backend',
+            registrationFile:   'shared/launch-registrations.json',
+        })).toBe('/home/www/lgs1920/production/backend/shared/launch-registrations.json')
     })
 })
