@@ -37,6 +37,7 @@ Proposed work, pending validation, or future implementation work lives under `to
 - [Logo assets](specs/PUBLIC-LOGO-README.md)
 - [GitHub Project release and branch workflow](specs/TECH-GITHUB-PROJECT-RELEASE-WORKFLOW-SPEC.md)
 - [Oxlint TypeScript 7 migration](specs/CORE-OXLINT-TYPESCRIPT-7-MIGRATION.md)
+- [Bun command reference](specs/HOW_TO_BUN_COMMANDS.md)
 
 ## TODO
 

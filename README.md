@@ -158,6 +158,7 @@ points include:
 - [Deployment and backend environment handling](tech-doc/specs/DEPLOYMENT-README.md)
 - [Tracks editor spec](tech-doc/todo/TRACKSEDITOR-SPEC.md)
 - [All technical docs](tech-doc/README.md)
+- [Bun command reference](tech-doc/specs/HOW_TO_BUN_COMMANDS.md)
 
 ## Internal Skills
 
