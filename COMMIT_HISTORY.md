@@ -772,3 +772,19 @@
 ## 2026-08-09 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/484ee166a5361b0d5badbd8c739160488ea13980)
 
 - Recorded automatically from Git history.
+
+## 2026-08-12 — [`docs: document available Bun commands`](https://github.com/lgs1920/studio/commit/d0abe71e1ab3b21c2e5570475dbbc7567132d9cb)
+
+- Recorded automatically from Git history.
+
+## 2026-08-12 — [`fix: configure persistent launch registration storage`](https://github.com/lgs1920/studio/commit/bda87418a02ea20bfe457376aca533170562bca1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-12 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/bf87263beff5e02d813a524c908a15773f6f2760)
+
+- Recorded automatically from Git history.
+
+## 2026-08-12 — [`docs: add Three.js open source credit`](https://github.com/lgs1920/studio/commit/433df065e1b475551e04f219fa2d70ec6571d44d)
+
+- Recorded automatically from Git history.
