@@ -100,6 +100,17 @@ export const WelcomeHero = ({
                     </video>
                 )}
             </div>
+            {backgroundMedia.credit?.label && backgroundMedia.credit?.url && (
+                <div className="welcome-hero-media-credit">
+                    <a
+                        href={backgroundMedia.credit.url}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                    >
+                        {backgroundMedia.credit.label}
+                    </a>
+                </div>
+            )}
             <WelcomeHeroRoute/>
             <div className="welcome-hero-scrim" aria-hidden="true"/>
             <WelcomeHeroControls/>

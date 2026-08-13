@@ -95,6 +95,7 @@ describe('WelcomeHero', () => {
                     fallbackColor: '#123456',
                     imageSources: [{src: '/fallback.webp', type: 'image/webp'}],
                     videoSources: [{src: '/welcome.mp4', type: 'video/mp4'}],
+                    credit: {label: 'Vidéo : Pexels', url: 'https://www.pexels.com/video/10548975/'},
                 }}
             />
         )
@@ -105,6 +106,8 @@ describe('WelcomeHero', () => {
         expect(video?.querySelector('source')?.getAttribute('src')).toBe('/welcome.mp4')
         expect(video?.playbackRate).toBe(0.75)
         expect(image?.getAttribute('src')).toBe('/fallback.webp')
+        expect(document.querySelector('.welcome-hero-media-credit a')?.textContent).toBe('Vidéo : Pexels')
+        expect(document.querySelector('.welcome-hero-media-credit a')?.getAttribute('href')).toBe('https://www.pexels.com/video/10548975/')
 
         fireEvent.error(video)
         fireEvent.load(image)
