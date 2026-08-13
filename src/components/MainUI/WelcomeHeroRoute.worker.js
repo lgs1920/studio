@@ -24,7 +24,7 @@ const ROUTE_LINE_WIDTH = 2.4
 const NEON_OUTER_RADIUS = 0.09
 const NEON_MIDDLE_RADIUS = 0.046
 const NEON_CORE_RADIUS = 0.018
-const ROUTE_HEAD_FADE_END = 0.14
+const ROUTE_EDGE_FADE_LENGTH = 0.14
 const ROUTE_HEAD_MIN_OPACITY = 0.24
 const ROUTE_SHAPE_STRETCH = 0.16
 const ROUTE_SHAPE_SQUEEZE = 0.09
@@ -214,9 +214,11 @@ const createRoute = (routeColor, glowColor) => {
         shader.fragmentShader = shader.fragmentShader.replace(
             'float alpha = opacity;',
             `float routeProgress = clamp(vLineDistance / max(uRouteLength, 0.0001), 0.0, 1.0);
-            float routeHeadFade = smoothstep(0.0, ${ROUTE_HEAD_FADE_END}, routeProgress);
-            float headOpacity = mix(${ROUTE_HEAD_MIN_OPACITY}, 1.0, routeHeadFade);
-            float alpha = opacity * headOpacity;`,
+            float routeStartFade = smoothstep(0.0, ${ROUTE_EDGE_FADE_LENGTH}, routeProgress);
+            float routeEndFade = smoothstep(0.0, ${ROUTE_EDGE_FADE_LENGTH}, 1.0 - routeProgress);
+            float routeEdgeFade = min(routeStartFade, routeEndFade);
+            float edgeOpacity = mix(${ROUTE_HEAD_MIN_OPACITY}, 1.0, routeEdgeFade);
+            float alpha = opacity * edgeOpacity;`,
         )
     }
     routeMaterial.resolution.set(1, 1)
