@@ -658,3 +658,7 @@
 ## 2026-08-13 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/537a9a75922824b7d9efd69648e8e662e747f685)
 
 - Recorded automatically from Git history.
+
+## 2026-08-13 — [`fix: align welcome hero halo with site`](https://github.com/lgs1920/studio/commit/f4b414079624c7ecd7329fc1a587bc0fdb8c2a80)
+
+- Recorded automatically from Git history.
