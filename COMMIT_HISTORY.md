@@ -592,3 +592,61 @@
 ## 2026-08-12 — [`docs: add Three.js open source credit`](https://github.com/lgs1920/studio/commit/433df065e1b475551e04f219fa2d70ec6571d44d)
 
 - Recorded automatically from Git history.
+
+## 2026-08-12 — [`docs: regroup media and asset credits`](https://github.com/lgs1920/studio/commit/17c677e732f921d81b9dfec862c1f679977a97eb)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`fix: crop generated logo PNGs to visible bounds`](https://github.com/lgs1920/studio/commit/e36abcc6d24c720bda8ef2525906e247cbb16061)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`feat: add persistent Studio welcome hero`](https://github.com/lgs1920/studio/commit/72ed1b0587bd4539108133a2a27e4021a78dc5b2)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`merge: persistent Studio welcome hero`](https://github.com/lgs1920/studio/commit/0b7d377c1e5099bf5cefb5819939eab4ae0a6b65)
+
+- # Conflicts:
+- #	COMMIT_HISTORY.md
+- #	scripts/update-commit-history.mjs
+
+## 2026-08-13 — [`merge: sync main with origin`](https://github.com/lgs1920/studio/commit/93807769aa81fa23ae8ca96c6216cb99b8aa2afb)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`feat: add shared welcome media catalog`](https://github.com/lgs1920/studio/commit/6fef4b20c59c0613325271fc7cb3dac48686e24e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`feat: add welcome hero route and animation fixes`](https://github.com/lgs1920/studio/commit/f53eaabac4f90d0a529fb6249674c5f46f8d7f47)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`chore: keep only current changelog draft`](https://github.com/lgs1920/studio/commit/89536eca148e8af911b31cedefa3a4e8d738fff3)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`fix: include error details in support email`](https://github.com/lgs1920/studio/commit/da8973744380b1f3d0031f549c8a4ed874d7acd4)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`docs: update media credits`](https://github.com/lgs1920/studio/commit/55043474ad2c458daab64e3fbe6abb7956f0a0b3)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`feat: show welcome media credit`](https://github.com/lgs1920/studio/commit/32a7c1a4493ef12f4e1aca1eb029e362c3d34cb5)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`fix: hide welcome language selector`](https://github.com/lgs1920/studio/commit/65bae0373ec854bf7e6b528520836b65e2265dd1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`fix: fade welcome route edges`](https://github.com/lgs1920/studio/commit/cd84107e306edd34cb974e7961bf0821ceeb0ff8)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/8ecd3821a5ed81af5bdb8d811322c5eb32bcf582)
+
+- Recorded automatically from Git history.
