@@ -650,3 +650,11 @@
 ## 2026-08-13 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/8ecd3821a5ed81af5bdb8d811322c5eb32bcf582)
 
 - Recorded automatically from Git history.
+
+## 2026-08-13 — [`feat: show welcome build info`](https://github.com/lgs1920/studio/commit/c0ae51f2e9fc909ccc55df348acfc3aabe2ba553)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/537a9a75922824b7d9efd69648e8e662e747f685)
+
+- Recorded automatically from Git history.
