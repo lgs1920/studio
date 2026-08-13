@@ -9,6 +9,7 @@
 
 const MOBILE_VIEWPORT_QUERY = '(max-width: 700px)'
 const DEFAULT_FALLBACK_COLOR = '#050807'
+export const WELCOME_BACKGROUND_PLAYBACK_RATE = 0.75
 
 /**
  * Lists the welcome media shared with the LGS1920 public site banner catalog.
@@ -281,6 +282,7 @@ export const applyWelcomeBackgroundToVideo = (videoElement, selection) => {
         return sourceElement
     }))
     videoElement.hidden = videoSources.length === 0
+    videoElement.playbackRate = WELCOME_BACKGROUND_PLAYBACK_RATE
 
     if (videoSources.length > 0) {
         try {

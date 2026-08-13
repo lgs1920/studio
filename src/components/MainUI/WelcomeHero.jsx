@@ -12,9 +12,13 @@
 
 import { SloganSvg }                                         from '@Components/MainUI/SloganSvg'
 import { WelcomeHeroControls }                               from '@Components/MainUI/WelcomeHeroControls'
-import { getWelcomeBackgroundMedia }                         from '@Assets/media/welcome-background-media'
+import { WelcomeHeroRoute }                                  from '@Components/MainUI/WelcomeHeroRoute'
+import {
+    getWelcomeBackgroundMedia,
+    WELCOME_BACKGROUND_PLAYBACK_RATE,
+}                                                               from '@Assets/media/welcome-background-media'
 import { WaButton, WaIcon }                                  from '@web.awesome.me/webawesome-pro/dist/react'
-import { useCallback, useState }                             from 'react'
+import { useCallback, useEffect, useRef, useState }            from 'react'
 
 const WELCOME_BACKGROUND_MEDIA = getWelcomeBackgroundMedia()
 
@@ -30,6 +34,7 @@ export const WelcomeHero = ({
                              onEnter,
                              backgroundMedia = WELCOME_BACKGROUND_MEDIA,
                          }) => {
+    const _welcomeVideo = useRef(null)
     const [videoState, setVideoState] = useState(
         backgroundMedia.videoSources.length > 0 ? 'loading' : 'unavailable'
     )
@@ -39,6 +44,13 @@ export const WelcomeHero = ({
     const readyToEnter = initComplete && appReady
     const videoReady = videoState === 'ready'
     const imageVisible = !videoReady && imageState === 'ready'
+
+    useEffect(() => {
+        if (_welcomeVideo.current) {
+            _welcomeVideo.current.playbackRate = WELCOME_BACKGROUND_PLAYBACK_RATE
+        }
+    }, [])
+
     const websiteConfiguration = lgs.configuration?.website ?? {domain: 'lgs1920.fr', protocol: 'https'}
     const websiteUrl = globalThis.__?.app?.buildUrl?.(websiteConfiguration)
         ?? `${websiteConfiguration.protocol ?? 'https'}://${websiteConfiguration.domain}`
@@ -70,6 +82,7 @@ export const WelcomeHero = ({
                 )}
                 {backgroundMedia.videoSources.length > 0 && (
                     <video
+                        ref={_welcomeVideo}
                         className="welcome-hero-video"
                         autoPlay
                         muted
@@ -87,6 +100,7 @@ export const WelcomeHero = ({
                     </video>
                 )}
             </div>
+            <WelcomeHeroRoute/>
             <div className="welcome-hero-scrim" aria-hidden="true"/>
             <WelcomeHeroControls/>
 

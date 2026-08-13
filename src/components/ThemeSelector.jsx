@@ -57,9 +57,10 @@ const getSystemThemeIcon = (device) => {
 /**
  * Theme Selector component.
  *
- * @returns {JSX.Element}
+ * @param {{paletteOnly?: boolean}} props - Whether to render only brand and season choices.
+ * @returns {JSX.Element} Theme controls.
  */
-export const ThemeSelector = () => {
+export const ThemeSelector = ({paletteOnly = false}) => {
     const device = useSnapshot(lgs.stores.ui.device)
     const [theme, setTheme] = useState(localStorage.getItem(AppUtils.THEME_STORAGE_KEY) || 'system')
     const [brandColor, setBrandColor] = useState(AppUtils.resolveBrandColor())
@@ -115,7 +116,7 @@ export const ThemeSelector = () => {
     return (
         <div className="lgs--theme-controls">
             <WaDropdown onWaSelect={handleBrandSelect} className="lgs--theme-selector">
-                <WaButton slot={'trigger'} appearance="plain" variant={'neutral'}>
+                <WaButton slot={'trigger'} appearance="plain" variant={'neutral'} size="s">
                     <span className="lgs--theme-trigger-swatches">
                         <span className="lgs-brand-color-swatch" style={{'--swatch-color': currentBrand.swatch}}/>
                         <span className="lgs-theme-color-swatch" style={{'--swatch-color': currentOnMapTheme.swatch}}/>
@@ -141,17 +142,19 @@ export const ThemeSelector = () => {
                 ))}
             </WaDropdown>
 
-            <WaDropdown onWaSelect={handleSelect} className="lgs--theme-selector">
-                <WaButton slot={'trigger'} appearance="plain" variant={'neutral'}>
-                    <WaIcon name={currentThemeIcon} variant="regular"/>
-                </WaButton>
+            {!paletteOnly && (
+                <WaDropdown onWaSelect={handleSelect} className="lgs--theme-selector">
+                    <WaButton slot={'trigger'} appearance="plain" variant={'neutral'} size="s">
+                        <WaIcon name={currentThemeIcon} variant="regular"/>
+                    </WaButton>
 
-                {THEME_OPTIONS.map(option => (
-                    <WaDropdownItem value={option.value} key={option.value}>
-                        <WaIcon slot="icon" name={option.icon} variant="regular"/>{` ${option.label} `}
-                    </WaDropdownItem>
-                ))}
-            </WaDropdown>
+                    {THEME_OPTIONS.map(option => (
+                        <WaDropdownItem value={option.value} key={option.value}>
+                            <WaIcon slot="icon" name={option.icon} variant="regular"/>{` ${option.label} `}
+                        </WaDropdownItem>
+                    ))}
+                </WaDropdown>
+            )}
         </div>
     )
 }

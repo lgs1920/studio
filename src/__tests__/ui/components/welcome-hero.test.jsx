@@ -52,6 +52,7 @@ describe('WelcomeHero', () => {
         expect(screen.queryByText('Shape your next journey')).toBeNull()
         expect(document.querySelector('.welcome-logo img')?.getAttribute('src')).toBe('/assets/logo/logo-horizontal.png')
         expect(document.querySelector('.welcome-logo source')?.getAttribute('srcset')).toBe('/assets/logo/logo-vertical.png')
+        expect(document.querySelector('.welcome-hero-route-canvas')).toBeTruthy()
         const siteButton = screen.getByRole('link', {name: /Visit Our Site/})
         const enterButton = screen.getByRole('button', {name: /Enter Studio/})
 
@@ -102,6 +103,7 @@ describe('WelcomeHero', () => {
         const image = document.querySelector('.welcome-hero-image')
 
         expect(video?.querySelector('source')?.getAttribute('src')).toBe('/welcome.mp4')
+        expect(video?.playbackRate).toBe(0.75)
         expect(image?.getAttribute('src')).toBe('/fallback.webp')
 
         fireEvent.error(video)

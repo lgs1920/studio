@@ -182,6 +182,8 @@ export class AppUtils {
         const resolvedOnMapTheme = AppUtils.applyOnMapTheme(onMapTheme)
 
         AppUtils.normalizeDocumentThemeClasses(root)
+        root.dataset.brandColor = resolvedBrandColor
+        root.dataset.seasonTheme = resolvedOnMapTheme
         root.classList.add(AppUtils.ROOT_THEME_CLASS, `wa-brand-${resolvedBrandColor}`)
         root.classList.toggle('wa-dark', isDark)
         root.classList.toggle('wa-light', !isDark)

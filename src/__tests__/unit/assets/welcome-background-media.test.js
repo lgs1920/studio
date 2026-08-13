@@ -16,6 +16,7 @@ import {
     preloadWelcomeBackgroundMedia,
     resolveWelcomeBackgroundMedia,
     selectBannerMedia,
+    WELCOME_BACKGROUND_PLAYBACK_RATE,
 } from '@Assets/media/welcome-background-media'
 import {afterEach, describe, expect, it, vi} from 'vitest'
 
@@ -112,6 +113,7 @@ describe('welcome background media catalog', () => {
                 selectedId: '20260812-15404528',
             }).videoSources,
         })).toBe(true)
+        expect(videoElement.playbackRate).toBe(WELCOME_BACKGROUND_PLAYBACK_RATE)
         expect(videoElement.querySelector('source')?.src).toContain('/assets/media/20260812-15404528-3840x2160.mp4')
         expect(videoElement.hidden).toBe(false)
     })

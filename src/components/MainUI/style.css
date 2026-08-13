@@ -820,10 +820,14 @@ body.mobile .orbit-widget-body {
     overflow: hidden;
     color: var(--lgs-text-on-color);
     background-color: transparent;
+    --hero-route-path-color: var(--wa-color-brand-60);
+    --hero-route-glow-color: var(--wa-color-brand);
+    --hero-route-poi-color: rgb(103, 165, 13);
     inset: 0;
 }
 
 .welcome-hero-media,
+.welcome-hero-route,
 .welcome-hero-scrim,
 .welcome-hero-shell {
     position: absolute;
@@ -863,6 +867,106 @@ body.mobile .orbit-widget-body {
     opacity: 1;
 }
 
+.welcome-hero-route {
+    z-index: 2;
+    pointer-events: none;
+}
+
+.welcome-hero-route-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.welcome-hero-route-annotations {
+    position: absolute;
+    z-index: 4;
+    pointer-events: none;
+    inset: 0;
+}
+
+.welcome-hero-poi {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    visibility: hidden;
+    opacity: 0;
+    transform: translate3d(-50%, -100%, 0);
+    transition: opacity 450ms ease, visibility 450ms ease;
+}
+
+.welcome-hero-poi[data-route-poi-index='0'] {
+    left: 52%;
+    top: 51%;
+}
+
+.welcome-hero-poi[data-route-poi-index='1'] {
+    left: 62%;
+    top: 39%;
+}
+
+.welcome-hero-poi[data-route-poi-index='2'] {
+    left: 78%;
+    top: 31%;
+}
+
+.welcome-hero-poi.is-revealed.is-positioned,
+.welcome-hero-route:not([data-render-mode='worker']) .welcome-hero-poi {
+    visibility: visible;
+    opacity: 1;
+}
+
+.welcome-hero-poi wa-icon {
+    display: block;
+    color: var(--hero-route-poi-color);
+    font-size: clamp(1.7rem, 4vw, 2.55rem);
+    filter: drop-shadow(0 0 .32rem color-mix(in oklab, var(--hero-route-poi-color) 82%, transparent)) drop-shadow(0 0 .72rem color-mix(in oklab, var(--hero-route-poi-color) 88%, transparent));
+    transform-origin: center bottom;
+}
+
+.welcome-hero-poi.is-revealed wa-icon {
+    animation: welcome-hero-poi-beat 3.4s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes welcome-hero-poi-beat {
+    0% {
+        opacity: 0;
+        transform: scale(.72) translateY(.35rem);
+    }
+
+    55% {
+        opacity: 1;
+        transform: scale(1.08) translateY(-.08rem);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.welcome-hero-route[data-route-error='true'] {
+    display: none;
+}
+
+:root[data-season-theme='spring'] #welcome-hero {
+    --hero-route-path-color: rgb(62, 109, 77);
+    --hero-route-glow-color: rgb(175, 218, 188);
+    --hero-route-poi-color: rgb(175, 218, 188);
+}
+
+:root[data-season-theme='fall'] #welcome-hero {
+    --hero-route-path-color: rgb(113, 63, 18);
+    --hero-route-glow-color: rgb(197, 110, 18);
+    --hero-route-poi-color: rgb(197, 110, 18);
+}
+
+:root[data-season-theme='winter'] #welcome-hero {
+    --hero-route-path-color: rgb(49, 90, 130);
+    --hero-route-glow-color: rgb(219, 234, 254);
+    --hero-route-poi-color: rgb(219, 234, 254);
+}
+
 .welcome-hero-scrim {
     z-index: 1;
     background:
@@ -874,7 +978,7 @@ body.mobile .orbit-widget-body {
 
 .welcome-hero-controls {
     position: absolute;
-    z-index: 4;
+    z-index: 5;
     top: max(var(--top), var(--lgs-gutter-s));
     right: max(var(--right), var(--lgs-gutter-s));
     display: inline-flex;
@@ -920,7 +1024,7 @@ body.mobile .orbit-widget-body {
 }
 
 .welcome-hero-shell {
-    z-index: 3;
+    z-index: 4;
     display: grid;
     place-items: center;
     width: min(1240px, calc(100vw - 2rem));
