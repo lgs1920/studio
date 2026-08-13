@@ -13,6 +13,7 @@ Use this skill when preparing a release changelog, commit, or commit history upd
 - Use the exact filename `YYYYMMDD-<version>.md`. `YYYYMMDD` is the release date and `<version>` is the exact version, including prerelease identifiers. If the target file is absent, create it automatically with today's date; do not wait for a separate file-creation request.
 - Before creating a file, inspect the nearest existing changelog in the same release line. Preserve its heading level, title style, section spelling, and blank-line conventions. Existing historical files may use either `#` or `##`; new files must follow the closest applicable pattern rather than retroactively changing old files.
 - The first heading must identify the release and its user-facing theme. Use the established repository pattern, for example `## Replay, HQ Video Export, Widgets, and Map Providers`, followed by the release content. Do not add a generated date line unless the established pattern for the selected release line includes one.
+- Keep only the current draft for each release line. After creating a newer draft, delete the previous draft changelog. Never delete a published release changelog.
 - Never overwrite an existing target changelog. Update it only when the user explicitly asks for a revision.
 
 ## Issue source and ownership
