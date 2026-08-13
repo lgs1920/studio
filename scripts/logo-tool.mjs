@@ -244,8 +244,6 @@ const prepareSvgForPng = (svgText, inputPath) => {
         document.documentElement.insertBefore(styleNode, document.documentElement.firstChild)
     }
 
-    addPngPadding(document)
-
     return document.documentElement.outerHTML
         .replaceAll('var(--lgs--logo-primary, #f3bb35)', '#f3bb35')
         .replaceAll('var(--lgs--logo-secondary, #000000)', '#000000')
@@ -256,27 +254,37 @@ const prepareSvgForPng = (svgText, inputPath) => {
 }
 
 /**
- * Adds transparent space around the SVG view box for exported PNG files.
+ * Expands a rendered bounding box by the configured PNG safety margin.
  *
- * @param {Document} document - SVG document to update.
- * @returns {void}
+ * @param {import('@resvg/resvg-js').BBox} bbox - Visible SVG bounds.
+ * @returns {import('@resvg/resvg-js').BBox} Padded bounds.
  */
-const addPngPadding = (document) => {
-    const root = document.documentElement
-    const viewBox = root.getAttribute('viewBox')?.trim().split(/\s+/).map(Number)
-
-    if (!viewBox || viewBox.length !== 4 || viewBox.some(value => !Number.isFinite(value))) {
-        throw new Error('The SVG must define a numeric viewBox to generate a padded PNG')
-    }
-
-    const [x, y, width, height] = viewBox
-    root.setAttribute('viewBox', `${x - PNG_PADDING} ${y - PNG_PADDING} ${width + PNG_PADDING * 2} ${height + PNG_PADDING * 2}`)
-    root.setAttribute('width', `${width + PNG_PADDING * 2}`)
-    root.setAttribute('height', `${height + PNG_PADDING * 2}`)
+const paddedBBox = bbox => {
+    bbox.x -= PNG_PADDING
+    bbox.y -= PNG_PADDING
+    bbox.width += PNG_PADDING * 2
+    bbox.height += PNG_PADDING * 2
+    return bbox
 }
 
 /**
- * Renders one SVG logo to a transparent PNG file.
+ * Returns the visible SVG bounds required to crop a PNG while preserving a safety margin.
+ *
+ * @param {Resvg} renderer - SVG renderer used to calculate visible bounds.
+ * @returns {import('@resvg/resvg-js').BBox} Padded visible bounds.
+ */
+const getPngCropBBox = renderer => {
+    const bbox = renderer.getBBox()
+
+    if (!bbox || bbox.width <= 0 || bbox.height <= 0) {
+        throw new Error('The SVG must contain visible geometry to generate a cropped PNG')
+    }
+
+    return paddedBBox(bbox)
+}
+
+/**
+ * Renders an SVG and crops the PNG to its visible geometry plus a safety margin.
  *
  * @param {string} inputPath - Source SVG path.
  * @param {string} outputPath - Destination PNG path.
@@ -289,6 +297,7 @@ const renderPng = (inputPath, outputPath) => {
         background: 'rgba(0, 0, 0, 0)',
     })
 
+    renderer.cropByBBox(getPngCropBBox(renderer))
     writeBinaryFile(outputPath, renderer.render().asPng())
 }
 
