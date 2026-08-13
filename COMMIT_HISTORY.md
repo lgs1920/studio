@@ -576,3 +576,250 @@
 ## 2026-08-05 — [`Merge remote-tracking branch 'origin/main'`](https://github.com/lgs1920/studio/commit/61a3c6130f03b802970a378c9e0587e42c5d4524)
 
 - Recorded automatically from Git history.
+
+## 2026-08-04 — [`refactor(replay): group camera setup controls`](https://github.com/lgs1920/studio/commit/c8b6cece86bb920ddf085b8f7c51ccc3c7680f1e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`docs: specify Copernicus Sentinel-2 proxy and cache`](https://github.com/lgs1920/studio/commit/119ca4de76e859dae70019e3905d6d6835d04022)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`docs: record Copernicus Sentinel-2 specification commit`](https://github.com/lgs1920/studio/commit/03ec9597e2527914e0d5a372f3b2592a204c8296)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`fix(replay): align sensitivity slider hints`](https://github.com/lgs1920/studio/commit/e6621ecb66bdbc376c7be6bd32e22c4e6a570817)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`fix(video): simplify share dialog labels`](https://github.com/lgs1920/studio/commit/7c39cb9aa2727d58c1508e9f0b2eaa4b9ebf05b4)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`docs: record share dialog commit`](https://github.com/lgs1920/studio/commit/a1231fa52da4400f979b2c3f8b9253fa12d49600)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`test(video): update share dialog expectations`](https://github.com/lgs1920/studio/commit/a42a71e534e052cc8991fa65a9f9367f62dfef10)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`docs: record share dialog test commit`](https://github.com/lgs1920/studio/commit/de9f1ea539a5ec2fdb6fd5abbef63544b41599fb)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`feat(automation): update commit history after pushes`](https://github.com/lgs1920/studio/commit/00598e7765311124ebd02488b876644b851898fe)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`docs: automate commit history rule`](https://github.com/lgs1920/studio/commit/ed630d5732eddd60edf330530b6428169c155222)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`fix: restore HQ replay controls positioning`](https://github.com/lgs1920/studio/commit/f7a55fa85759f374ad97a080fd18574621484b44)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`fix: include skipped same-day commits in history`](https://github.com/lgs1920/studio/commit/dce687aba3064f13616dcec89f7ef8e6c5b81046)
+
+- Recorded automatically from Git history.
+
+## 2026-08-04 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/f6c481215395fba2eb41690a1634c0c865d77135)
+
+- # Conflicts:
+- #	COMMIT_HISTORY.md
+
+## 2026-08-04 — [`feat(replay): add Glow and Neon trace effects`](https://github.com/lgs1920/studio/commit/f5511a6b4f6b78361f17ccdd5c31c0f007624090)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`chore: add CesiumJS agent skills`](https://github.com/lgs1920/studio/commit/1b5ad1e5ac1fad84799b61041fed0f7246eb2025)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`feat(replay): refine Glow and Neon rendering`](https://github.com/lgs1920/studio/commit/c2f6d2d7174536f2a29ec1ec4ad3fac61e047ea9)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`fix(replay): hide trace after playback completion`](https://github.com/lgs1920/studio/commit/fbc91238eea239fd42add7bb13b74c1ad557e046)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`feat: configure journey stats date-time layout`](https://github.com/lgs1920/studio/commit/47cd284b760eafc05ac3946e60089777e6b651d0)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`docs: specify replay start camera editor`](https://github.com/lgs1920/studio/commit/3d77ba658383582df892d262348d37334905aafa)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`docs: specify replay HQ recording monitoring`](https://github.com/lgs1920/studio/commit/2964a0ddbf641d3067d776c28b45917ab7399039)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`docs: index replay proposals`](https://github.com/lgs1920/studio/commit/c6a3e0bc0b5b659f0b47f12ff39348583ca1c31c)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`Merge branch 'tmp/replay-glow-neon' into 1.0.0`](https://github.com/lgs1920/studio/commit/3fc9f4d8fa2730428b6aad0675f6164da5a83161)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`fix: align replay effect preview`](https://github.com/lgs1920/studio/commit/4d14864152ad2d584c6b74272d4c8f0dbfe510da)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`fix replay camera continuity across clips`](https://github.com/lgs1920/studio/commit/f4884bcc6dfb4c7f8ada7d7f655c52194a9dd01f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-05 — [`fix replay camera continuity and live recentering`](https://github.com/lgs1920/studio/commit/bcc58f1110e5c5fcf2105fe041ab04d1397a04b2)
+
+- Recorded automatically from Git history.
+
+## 2026-08-06 — [`fix(replay): preserve camera height across clip transitions`](https://github.com/lgs1920/studio/commit/8901d04d4434493110472136d3143f26904ccef9)
+
+- Recorded automatically from Git history.
+
+## 2026-08-06 — [`fix: update contact email address`](https://github.com/lgs1920/studio/commit/9bcfa84f421797b2b757827556ccc12d1af44af6)
+
+- Recorded automatically from Git history.
+
+## 2026-08-06 — [`feat: add secure email sending skill`](https://github.com/lgs1920/studio/commit/453aaccf6b34f08dd4a000289b638c674bb4e9ac)
+
+- Recorded automatically from Git history.
+
+## 2026-08-06 — [`fix(replay): preserve clip camera paths and landing height`](https://github.com/lgs1920/studio/commit/4068d608cc255b0728717b14fca9ed849742627b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-06 — [`fix(deployment): load backend environment securely`](https://github.com/lgs1920/studio/commit/5c3d9766fca0fca839efce46d2fdc434a9c4934b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-06 — [`docs(skill): document secure backend deployment boundary`](https://github.com/lgs1920/studio/commit/4af3904c41fc62030752722e5b1f6a38111375f5)
+
+- Recorded automatically from Git history.
+
+## 2026-08-06 — [`docs: describe backend environment deployment`](https://github.com/lgs1920/studio/commit/20030be9a103e6f5059d22bd41e00d565f53f9f1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-06 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/88ff20618772c8c52b388dbf50b7cff1e6fd39fb)
+
+- Recorded automatically from Git history.
+
+## 2026-08-06 — [`fix: rotate contact CSRF secret on deployment`](https://github.com/lgs1920/studio/commit/4e5609b9aef69b7be0ba8a11c458db4e07166fca)
+
+- Recorded automatically from Git history.
+
+## 2026-08-06 — [`fix: validate backend environment before transfer`](https://github.com/lgs1920/studio/commit/086362cf84e0642a7de019a41f8206dde6e8cb7e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-07 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/d1dafc14db4f5b2e01183b6d525d43b42d304976)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-08-07 — [`fix: improve journey stats SnapDOM rendering`](https://github.com/lgs1920/studio/commit/2bf3c3c7cdbf9c44b5c9924350c84cfffa3f9f7c)
+
+- Recorded automatically from Git history.
+
+## 2026-08-07 — [`fix: allow configured origins for backend startup`](https://github.com/lgs1920/studio/commit/b2b72a2183d2eb4c2b7690e5d9bf608a08242aac)
+
+- Recorded automatically from Git history.
+
+## 2026-08-07 — [`fix: add backend support contact link`](https://github.com/lgs1920/studio/commit/9e6fdf59d303bae2dc0f4d82db681374cef6e31d)
+
+- Recorded automatically from Git history.
+
+## 2026-08-08 — [`feat: add logo PNG generation tool`](https://github.com/lgs1920/studio/commit/e5892c88752c72edcfe97b6f3f6e9c36a9020d2f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-08 — [`feat: update logo assets and PNG exports`](https://github.com/lgs1920/studio/commit/ce4d80d535700bd82771abf7db2d0773aa7df87e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-08 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/26aa483c2aa714c94263d478b11b40bcf037f64b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-08 — [`docs: clarify changelog workflow`](https://github.com/lgs1920/studio/commit/c811037d6337578c02b7ca1414c69cdc0db21bed)
+
+- Recorded automatically from Git history.
+
+## 2026-08-08 — [`docs: link remaining changelog items`](https://github.com/lgs1920/studio/commit/4cf696c3a5f0325e171e08e7f7414438019ec24e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-08 — [`docs: add 1.0.0 changelog draft`](https://github.com/lgs1920/studio/commit/edfe9ca9f6688a2e40e58696b7b39a919b5364a4)
+
+- Recorded automatically from Git history.
+
+## 2026-08-08 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/0e93da97d8e714354f9b30a4279707406c43b97a)
+
+- Recorded automatically from Git history.
+
+## 2026-08-09 — [`fix: allow site origin in proxy`](https://github.com/lgs1920/studio/commit/f5630d060ba23159c7ea22ae2b67348617f50a65)
+
+- Recorded automatically from Git history.
+
+## 2026-08-09 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/5f6292fadca8651b56ea63ba704c0abae7c0fc0b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-09 — [`docs: add photo credits to Studio`](https://github.com/lgs1920/studio/commit/60b72316887f2036765ae8e727b9a0cc48d3dd4a)
+
+- Recorded automatically from Git history.
+
+## 2026-08-09 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/e96ec5b4d9fff2c92deeac9c009b63f0ff8481ec)
+
+- Recorded automatically from Git history.
+
+## 2026-08-09 — [`fix: allow origin header in proxy`](https://github.com/lgs1920/studio/commit/d51c156f4b5f076028253caf50d14303ca9f40b4)
+
+- Recorded automatically from Git history.
+
+## 2026-08-09 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/484ee166a5361b0d5badbd8c739160488ea13980)
+
+- Recorded automatically from Git history.
+
+## 2026-08-12 — [`docs: document available Bun commands`](https://github.com/lgs1920/studio/commit/d0abe71e1ab3b21c2e5570475dbbc7567132d9cb)
+
+- Recorded automatically from Git history.
+
+## 2026-08-12 — [`fix: configure persistent launch registration storage`](https://github.com/lgs1920/studio/commit/bda87418a02ea20bfe457376aca533170562bca1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-12 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/bf87263beff5e02d813a524c908a15773f6f2760)
+
+- Recorded automatically from Git history.
+
+## 2026-08-12 — [`docs: add Three.js open source credit`](https://github.com/lgs1920/studio/commit/433df065e1b475551e04f219fa2d70ec6571d44d)
+
+- Recorded automatically from Git history.
+
+## 2026-08-12 — [`docs: regroup media and asset credits`](https://github.com/lgs1920/studio/commit/17c677e732f921d81b9dfec862c1f679977a97eb)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`fix: crop generated logo PNGs to visible bounds`](https://github.com/lgs1920/studio/commit/e36abcc6d24c720bda8ef2525906e247cbb16061)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`feat: add persistent Studio welcome hero`](https://github.com/lgs1920/studio/commit/72ed1b0587bd4539108133a2a27e4021a78dc5b2)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`merge: persistent Studio welcome hero`](https://github.com/lgs1920/studio/commit/0b7d377c1e5099bf5cefb5819939eab4ae0a6b65)
+
+- # Conflicts:
+- #	COMMIT_HISTORY.md
+- #	scripts/update-commit-history.mjs
+
+## 2026-08-13 — [`merge: sync main with origin`](https://github.com/lgs1920/studio/commit/93807769aa81fa23ae8ca96c6216cb99b8aa2afb)
+
+- Recorded automatically from Git history.
