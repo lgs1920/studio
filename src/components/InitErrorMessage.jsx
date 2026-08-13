@@ -20,7 +20,8 @@ import {
 }                        from '@web.awesome.me/webawesome-pro/dist/react'
 import { useState }      from 'react'
 
-const BACKEND_SUPPORT_MAILTO = 'mailto:studio@lgs1920.fr?subject=%5BStudio%5D%20Backend%20stopped'
+const BACKEND_SUPPORT_EMAIL = 'studio@lgs1920.fr'
+const BACKEND_SUPPORT_SUBJECT = '[Studio] Backend stopped'
 
 /**
  * Component to display a modal when the application fails to initialize
@@ -36,6 +37,12 @@ export const InitErrorMessage = ({error}) => {
     const errorMessage = String(error?.message ?? error?.cause?.message ?? error ?? 'Unknown initialization error')
     const errorStack = String(error?.stack ?? '')
     const studioName = lgs?.servers?.studio?.name ?? 'LGS1920'
+    const backendSupportBody = [
+        errorType && `Type: ${errorType}`,
+        `Error: ${errorMessage}`,
+        errorStack && `Details:\n${errorStack}`,
+    ].filter(Boolean).join('\n\n')
+    const backendSupportMailto = `mailto:${BACKEND_SUPPORT_EMAIL}?subject=${encodeURIComponent(BACKEND_SUPPORT_SUBJECT)}&body=${encodeURIComponent(backendSupportBody)}`
 
     return (
         <WaDialog label={`${studioName} stopped!`}
@@ -81,7 +88,7 @@ export const InitErrorMessage = ({error}) => {
             </div>
 
             <div slot="footer" className="buttons-bar">
-                <WaButton variant="neutral" appearance="plain" href={BACKEND_SUPPORT_MAILTO}>
+                <WaButton variant="neutral" appearance="plain" href={backendSupportMailto}>
                     <WaIcon name="envelope" variant="regular"/>{'Contact Support'}
                 </WaButton>
                 <WaButton variant="brand" onClick={() => window.location.reload()}>

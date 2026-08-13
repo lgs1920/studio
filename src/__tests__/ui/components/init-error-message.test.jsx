@@ -31,10 +31,13 @@ describe('InitErrorMessage', () => {
             },
         }
 
-        render(<InitErrorMessage error={new Error('Backend server is unreachable')}/>)
+        render(<InitErrorMessage error={{
+            message: 'Backend server is unreachable',
+            stack: 'Backend stack trace',
+        }}/>)
 
         expect(screen.getByRole('link', {name: 'Contact Support'}).getAttribute('href')).toBe(
-            'mailto:studio@lgs1920.fr?subject=%5BStudio%5D%20Backend%20stopped',
+            `mailto:studio@lgs1920.fr?subject=${encodeURIComponent('[Studio] Backend stopped')}&body=${encodeURIComponent('Error: Backend server is unreachable\n\nDetails:\nBackend stack trace')}`,
         )
     })
 })
