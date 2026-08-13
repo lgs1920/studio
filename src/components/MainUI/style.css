@@ -921,6 +921,8 @@ body.mobile .orbit-widget-body {
 
 .welcome-hero-route-canvas {
     display: block;
+    opacity: .86;
+    transition: opacity 650ms ease;
     width: 100%;
     height: 100%;
 }
@@ -1162,6 +1164,12 @@ body.mobile .orbit-widget-body {
 
     .welcome-hero-content .welcome-slogan {
         max-width: min(24rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
+    }
+}
+
+@media (max-width: 720px) {
+    .welcome-hero-route-canvas {
+        opacity: .86;
     }
 }
 #waiting-loading {

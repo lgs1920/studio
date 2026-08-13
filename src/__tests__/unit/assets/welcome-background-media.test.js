@@ -25,6 +25,10 @@ describe('welcome background media catalog', () => {
         vi.restoreAllMocks()
     })
 
+    it('uses the same restrained slow-motion rate as the public site hero', () => {
+        expect(WELCOME_BACKGROUND_PLAYBACK_RATE).toBe(0.75)
+    })
+
     it('uses all videos from the shared outdoor catalog', () => {
         const choices = getBannerMediaChoices(bannerMediaCatalog, 'outdoor')
         const ids = choices.map(choice => choice.id)
