@@ -342,12 +342,6 @@ ui:
         app: true           # Rotate after entrance focus
         journey: true       # Rotate after journey focus
 
-  ## Welcome Modal
-  welcome:
-    showIntro: true
-    autoClose: true
-    displayTime: 6   #seconds
-
   ## Menus
   menu:
     toolBar:

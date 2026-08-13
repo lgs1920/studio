@@ -231,9 +231,6 @@ export const EVENTS = {
 
 export const APP_EVENT = {
     INITIAL_FOCUS: 'app/initial-focus',
-    WELCOME:       {
-        HIDE: 'app/welcome/hide',
-    },
 }
 
 

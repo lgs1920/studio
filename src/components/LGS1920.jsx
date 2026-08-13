@@ -47,8 +47,8 @@ import {
     ToolsUI,
 }                       from '@Components/MainUI/ToolsUI'
 import {
-    WelcomeModal,
-}                       from '@Components/MainUI/WelcomeModal'
+    WelcomeHero,
+}                       from '@Components/MainUI/WelcomeHero'
 import { IonTokenPrompt } from '@Components/MainUI/IonTokenPrompt'
 import {
     APP_EVENT, BASE_ENTITY, CURRENT_JOURNEY, OVERLAY_ENTITY, POI_STARTER_TYPE,
@@ -172,7 +172,6 @@ export const LGS1920 = () => {
     // State to track initialization status and errors
     const [initStatus, setInitStatus] = useState(null)
     const [initError, setInitError] = useState(null)
-    const [settingsReady, setSettingsReady] = useState(false)
     const [appVisible, setAppVisible] = useState(false)
     const [initialFocusReady, setInitialFocusReady] = useState(false)
     const [appSurfaceReady, setAppSurfaceReady] = useState(false)
@@ -352,8 +351,6 @@ export const LGS1920 = () => {
                                   })
                     return
                 }
-                setSettingsReady(true)
-
                 // Initialize managers and layers
                 await initializeManagersAndLayers(lgs)
 
@@ -426,10 +423,9 @@ export const LGS1920 = () => {
             {initStatus === true && <AppSurface onReady={markAppSurfaceReady}/>}
 
             {!initError && !appVisible && (
-                <WelcomeModal
+                <WelcomeHero
                     initComplete={initStatus === true}
                     appReady={initStatus === true && initialFocusReady && appSurfaceReady}
-                    settingsReady={settingsReady}
                     onEnter={revealApp}
                 />
             )}

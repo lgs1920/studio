@@ -76,11 +76,6 @@ export const ui = {
         },
     },
 
-    welcome: {
-        modal: false,
-        flag:  false,
-    },
-
     informationPanel: {
         tab: null,
     },
