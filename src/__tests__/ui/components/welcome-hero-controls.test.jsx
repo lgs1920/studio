@@ -32,12 +32,12 @@ describe('WelcomeHeroControls', () => {
         document.documentElement.lang = ''
     })
 
-    it('persists the selected language and exposes the brand-season palette', () => {
+    it('hides the language selector and exposes the brand-season palette', () => {
         globalThis.lgs = {lang: 'en'}
 
         render(<WelcomeHeroControls/>)
 
-        expect(screen.getByRole('button', {name: 'Choose language'})).toBeTruthy()
+        expect(document.querySelector('.welcome-language-selector')?.hasAttribute('hidden')).toBe(true)
         expect(document.querySelector('[data-palette-only="true"]')).toBeTruthy()
         expect(document.querySelector('.welcome-hero-controls').firstElementChild.dataset.paletteOnly).toBe('true')
         expect(document.querySelector('.welcome-hero-controls').lastElementChild.className).toBe('welcome-language-selector')

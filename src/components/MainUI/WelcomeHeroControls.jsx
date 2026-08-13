@@ -66,6 +66,7 @@ export const WelcomeHeroControls = () => {
 
             <WaDropdown
                 className="welcome-language-selector"
+                hidden
                 placement="bottom-end"
                 onWaSelect={handleLanguageSelect}
             >
