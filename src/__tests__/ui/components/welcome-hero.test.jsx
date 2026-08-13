@@ -18,6 +18,10 @@ vi.mock('@Components/MainUI/SloganSvg', () => ({
     SloganSvg: () => <div aria-label="Slogan"/>,
 }))
 
+vi.mock('@Components/MainUI/WelcomeHeroControls', () => ({
+    WelcomeHeroControls: () => <div aria-label="Welcome hero controls"/>,
+}))
+
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaButton: ({children, href, ...props}) => href
         ? <a href={href} {...props}>{children}</a>
@@ -46,6 +50,8 @@ describe('WelcomeHero', () => {
         render(<WelcomeHero initComplete appReady onEnter={onEnter}/>)
 
         expect(screen.queryByText('Shape your next journey')).toBeNull()
+        expect(document.querySelector('.welcome-logo img')?.getAttribute('src')).toBe('/assets/logo/logo-horizontal.png')
+        expect(document.querySelector('.welcome-logo source')?.getAttribute('srcset')).toBe('/assets/logo/logo-vertical.png')
         const siteButton = screen.getByRole('link', {name: /Visit Our Site/})
         const enterButton = screen.getByRole('button', {name: /Enter Studio/})
 
@@ -75,5 +81,33 @@ describe('WelcomeHero', () => {
         fireEvent.click(button)
 
         expect(onEnter).not.toHaveBeenCalled()
+    })
+
+    it('renders the resolved video and falls back to the resolved image', () => {
+        globalThis.lgs = {
+            configuration: {website: {domain: 'lgs1920.fr', protocol: 'https'}},
+        }
+
+        render(
+            <WelcomeHero
+                backgroundMedia={{
+                    fallbackColor: '#123456',
+                    imageSources: [{src: '/fallback.webp', type: 'image/webp'}],
+                    videoSources: [{src: '/welcome.mp4', type: 'video/mp4'}],
+                }}
+            />
+        )
+
+        const video = document.querySelector('.welcome-hero-video')
+        const image = document.querySelector('.welcome-hero-image')
+
+        expect(video?.querySelector('source')?.getAttribute('src')).toBe('/welcome.mp4')
+        expect(image?.getAttribute('src')).toBe('/fallback.webp')
+
+        fireEvent.error(video)
+        fireEvent.load(image)
+
+        expect(document.querySelector('#welcome-hero')?.classList.contains('welcome-hero-image-visible')).toBe(true)
+        expect(document.querySelector('.welcome-hero-media')?.getAttribute('style')).toContain('background-color: rgb(18, 52, 86)')
     })
 })

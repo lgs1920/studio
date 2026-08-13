@@ -107,17 +107,18 @@
         #lgs-boot-splash video {
             width: 100%;
             height: 100%;
-            transform: scale(1.015);
-            filter: blur(4.5px) brightness(.92) saturate(.82);
+            filter: sepia(0.2) saturate(0.8);
             object-fit: cover;
-            object-position: center;
+            object-position: center bottom;
         }
 
         #lgs-boot-splash::after {
             position: absolute;
             content: "";
-            background: linear-gradient(180deg, rgba(7, 54, 9, .5) 0%, rgba(7, 54, 9, .24) 44%, rgba(7, 54, 9, .76) 100%),
-            radial-gradient(circle at 50% 45%, transparent 0%, rgba(7, 54, 9, .38) 62%, rgba(7, 54, 9, .92) 100%);
+            background:
+                linear-gradient(135deg, rgba(20, 35, 28, 0.18), transparent 58%),
+                linear-gradient(90deg, rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.24) 46%, rgba(0, 0, 0, 0.04) 100%),
+                linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.14) 48%, rgba(0, 0, 0, 0.54));
             inset: 0;
         }
 
@@ -142,9 +143,7 @@
 <body class="lgs-app-booting">
 <div id="cesium-viewer"></div>
 <div id="lgs-boot-splash" aria-hidden="true">
-    <video autoplay muted loop playsinline preload="auto">
-        <source src="/assets/media/trekking-hero-mobile.mp4" media="(max-width: 700px)" type="video/mp4">
-        <source src="/assets/media/trekking-hero-desktop.mp4" type="video/mp4">
+    <video data-welcome-background-media autoplay muted loop playsinline preload="auto">
     </video>
 </div>
 <div id="lgs1920-container"></div>

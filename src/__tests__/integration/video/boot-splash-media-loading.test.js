@@ -36,16 +36,15 @@ const registerBootSplashMediaLoadingTests = () => {
             'link[rel~="preload"][as="audio"], link[rel~="preload"][as="video"]'
         )
         const splashVideo = indexDocument.querySelector('#lgs-boot-splash video')
-        const mobileSource = splashVideo?.querySelector('source[media="(max-width: 700px)"]')
-        const desktopSource = splashVideo?.querySelector('source:not([media])')
 
         expect(unsupportedMediaPreloadLinks).toHaveLength(0)
         expect(splashVideo).not.toBeNull()
+        expect(splashVideo?.hasAttribute('data-welcome-background-media')).toBe(true)
         expect(splashVideo?.getAttribute('preload')).toBe('auto')
-        expect(mobileSource?.getAttribute('src')).toBe('/assets/media/trekking-hero-mobile.mp4')
-        expect(mobileSource?.getAttribute('type')).toBe('video/mp4')
-        expect(desktopSource?.getAttribute('src')).toBe('/assets/media/trekking-hero-desktop.mp4')
-        expect(desktopSource?.getAttribute('type')).toBe('video/mp4')
+
+        const splashStyle = indexDocument.querySelector('style')?.textContent ?? ''
+        expect(splashStyle).toContain('filter: sepia(0.2) saturate(0.8)')
+        expect(splashStyle).not.toContain('blur(')
     }
 
     it('uses the video element preload mechanism supported by browsers', verifySupportedMediaPreloading)

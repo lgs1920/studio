@@ -11,22 +11,34 @@
  ******************************************************************************/
 
 import { SloganSvg }                                         from '@Components/MainUI/SloganSvg'
+import { WelcomeHeroControls }                               from '@Components/MainUI/WelcomeHeroControls'
+import { getWelcomeBackgroundMedia }                         from '@Assets/media/welcome-background-media'
 import { WaButton, WaIcon }                                  from '@web.awesome.me/webawesome-pro/dist/react'
 import { useCallback, useState }                             from 'react'
-import { LogoSvg }                                           from './LogoSvg'
 
-const WELCOME_VIDEO_DESKTOP = '/assets/media/trekking-hero-desktop.mp4'
-const WELCOME_VIDEO_MOBILE = '/assets/media/trekking-hero-mobile.mp4'
+const WELCOME_BACKGROUND_MEDIA = getWelcomeBackgroundMedia()
 
 /**
  * Renders the persistent Studio welcome hero.
  *
- * @param {{initComplete?: boolean, appReady?: boolean, onEnter?: () => void}} props - Hero state and entry callback.
+ * @param {{initComplete?: boolean, appReady?: boolean, onEnter?: () => void, backgroundMedia?: object}} props - Hero state, entry callback, and resolved background media.
  * @returns {JSX.Element} Persistent welcome hero.
  */
-export const WelcomeHero = ({initComplete = false, appReady = false, onEnter}) => {
-    const [videoReady, setVideoReady] = useState(false)
+export const WelcomeHero = ({
+                             initComplete = false,
+                             appReady = false,
+                             onEnter,
+                             backgroundMedia = WELCOME_BACKGROUND_MEDIA,
+                         }) => {
+    const [videoState, setVideoState] = useState(
+        backgroundMedia.videoSources.length > 0 ? 'loading' : 'unavailable'
+    )
+    const [imageState, setImageState] = useState(
+        backgroundMedia.imageSources.length > 0 ? 'loading' : 'unavailable'
+    )
     const readyToEnter = initComplete && appReady
+    const videoReady = videoState === 'ready'
+    const imageVisible = !videoReady && imageState === 'ready'
     const websiteConfiguration = lgs.configuration?.website ?? {domain: 'lgs1920.fr', protocol: 'https'}
     const websiteUrl = globalThis.__?.app?.buildUrl?.(websiteConfiguration)
         ?? `${websiteConfiguration.protocol ?? 'https'}://${websiteConfiguration.domain}`
@@ -42,40 +54,48 @@ export const WelcomeHero = ({initComplete = false, appReady = false, onEnter}) =
 
     return (
         <div id="welcome-hero"
-             className={`lgs-theme${videoReady ? ' welcome-hero-video-ready' : ''}`}
+             className={`lgs-theme${videoReady ? ' welcome-hero-video-ready' : ''}${imageVisible ? ' welcome-hero-image-visible' : ''}`}
              aria-busy={!readyToEnter}>
-            <div className="welcome-hero-media" aria-hidden="true">
-                <video
-                    className="welcome-hero-video"
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    preload="auto"
-                    onLoadedData={() => setVideoReady(true)}
-                    onCanPlay={() => setVideoReady(true)}
-                    onPlaying={() => setVideoReady(true)}
-                >
-                    <source src={WELCOME_VIDEO_MOBILE} media="(max-width: 700px)" type="video/mp4"/>
-                    <source src={WELCOME_VIDEO_DESKTOP} type="video/mp4"/>
-                </video>
+            <div className="welcome-hero-media"
+                 style={{backgroundColor: backgroundMedia.fallbackColor}}
+                 aria-hidden="true">
+                {backgroundMedia.imageSources[0] && (
+                    <img
+                        className="welcome-hero-image"
+                        src={backgroundMedia.imageSources[0].src}
+                        alt=""
+                        onLoad={() => setImageState('ready')}
+                        onError={() => setImageState('unavailable')}
+                    />
+                )}
+                {backgroundMedia.videoSources.length > 0 && (
+                    <video
+                        className="welcome-hero-video"
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload="auto"
+                        onLoadedData={() => setVideoState('ready')}
+                        onCanPlay={() => setVideoState('ready')}
+                        onPlaying={() => setVideoState('ready')}
+                        onError={() => setVideoState('failed')}
+                    >
+                        {backgroundMedia.videoSources.map(source => (
+                            <source key={`${source.type}:${source.src}`} src={source.src} type={source.type}/>
+                        ))}
+                    </video>
+                )}
             </div>
-            <div className="welcome-hero-fog" aria-hidden="true"/>
             <div className="welcome-hero-scrim" aria-hidden="true"/>
+            <WelcomeHeroControls/>
 
             <div className="welcome-hero-shell">
                 <section className="welcome-hero-content" aria-label="LGS1920 Studio launch">
-                    <LogoSvg
-                        src="/assets/logo/logo-vertical.svg"
-                        primaryColor="#ffffff"
-                        secondaryColor="#ffffff"
-                        secondaryOpacity={0}
-                        textPrimaryColor="#ffffff"
-                        textSecondaryColor="#ffffff"
-                        width="100%"
-                        className="welcome-logo"
-                        title="LGS1920 Studio logo"
-                    />
+                    <picture className="welcome-logo">
+                        <source media="(max-width: 700px)" srcSet="/assets/logo/logo-vertical.png"/>
+                        <img src="/assets/logo/logo-horizontal.png" alt="LGS1920 Studio logo"/>
+                    </picture>
                     <SloganSvg className="welcome-slogan"/>
 
                     <div className="welcome-enter-call-for-action">

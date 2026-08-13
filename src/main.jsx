@@ -22,6 +22,11 @@ import './assets/css/themes/wa-lgs1920.css'
 import './assets/css/animations.css'
 import { UIUtils } from '@Utils/UIUtils'
 import { AppUtils } from '@Utils/AppUtils'
+import {
+    applyWelcomeBackgroundToVideo,
+    getWelcomeBackgroundMedia,
+    preloadWelcomeBackgroundMedia,
+}                                                               from '@Assets/media/welcome-background-media'
 
 
 /**
@@ -39,6 +44,12 @@ ResizeObserver.prototype.unobserve = function (target) {
  * Load Google Fonts once at startup
  */
 const bootstrap = () => {
+    const welcomeBackgroundMedia = getWelcomeBackgroundMedia()
+    preloadWelcomeBackgroundMedia(welcomeBackgroundMedia)
+    applyWelcomeBackgroundToVideo(
+        document.querySelector('#lgs-boot-splash video'),
+        welcomeBackgroundMedia,
+    )
     document.body.classList.add('lgs-app-booting')
     AppUtils.setTheme(localStorage.getItem('theme') || 'system')
 

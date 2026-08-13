@@ -824,7 +824,6 @@ body.mobile .orbit-widget-body {
 }
 
 .welcome-hero-media,
-.welcome-hero-fog,
 .welcome-hero-scrim,
 .welcome-hero-shell {
     position: absolute;
@@ -832,38 +831,92 @@ body.mobile .orbit-widget-body {
 }
 
 .welcome-hero-media {
-    background: transparent;
+    background: #050608;
+}
+
+.welcome-hero-image {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    transition: opacity 350ms ease;
+    opacity: 0;
+    object-fit: cover;
+    object-position: center bottom;
+    filter: sepia(0.2) saturate(0.8);
+}
+
+#welcome-hero.welcome-hero-image-visible .welcome-hero-image {
+    opacity: 1;
 }
 
 .welcome-hero-video {
     width: 100%;
     height: 100%;
-    transform: scale(1.015);
     transition: opacity 350ms ease;
     opacity: 0;
-    filter: blur(4.5px) brightness(.92) saturate(.82);
+    filter: sepia(0.2) saturate(0.8);
     object-fit: cover;
-    object-position: center;
+    object-position: center bottom;
 }
 
 #welcome-hero.welcome-hero-video-ready .welcome-hero-video {
     opacity: 1;
 }
 
-.welcome-hero-fog {
+.welcome-hero-scrim {
     z-index: 1;
-    opacity: .64;
-    background: radial-gradient(circle at 50% 60%, rgba(255, 255, 255, .26) 0%, rgba(255, 255, 255, .1) 36%, transparent 72%),
-    linear-gradient(180deg, rgba(255, 255, 255, .32) 0%, rgba(255, 255, 255, .12) 45%, transparent 100%);
-    backdrop-filter: blur(4.5px) saturate(.84);
+    background:
+        linear-gradient(135deg, rgba(20, 35, 28, 0.18), transparent 58%),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.24) 46%, rgba(0, 0, 0, 0.04) 100%),
+        linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.14) 48%, rgba(0, 0, 0, 0.54));
+    pointer-events: none;
 }
 
-.welcome-hero-scrim {
-    z-index: 2;
-    opacity: .68;
-    background: linear-gradient(180deg, var(--lgs-dark-color-50) 0%, var(--lgs-dark-color-25) 44%, var(--lgs-dark-color-75) 100%),
-    radial-gradient(circle at 50% 45%, transparent 0%, var(--lgs-dark-color-40) 62%, var(--lgs-dark-color-90) 100%);
-    backdrop-filter: blur(1px);
+.welcome-hero-controls {
+    position: absolute;
+    z-index: 4;
+    top: max(var(--top), var(--lgs-gutter-s));
+    right: max(var(--right), var(--lgs-gutter-s));
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
+}
+
+.welcome-hero-controls .lgs--theme-controls {
+    gap: var(--lgs-gutter-xs);
+}
+
+.welcome-hero-controls .lgs--theme-selector > wa-button::part(base),
+.welcome-language-trigger::part(base) {
+    min-width: 2rem;
+    min-height: 2rem;
+    padding: var(--lgs-gutter-xs);
+    color: var(--lgs-text-on-color);
+    border-color: transparent;
+    background: transparent;
+}
+
+.welcome-hero-controls .lgs--theme-selector > wa-button:hover::part(base),
+.welcome-language-trigger:hover::part(base) {
+    color: var(--lgs-text-on-color);
+    border-color: color-mix(in oklab, var(--lgs-text-on-color) 22%, transparent);
+    background: color-mix(in oklab, var(--lgs-text-on-color) 12%, transparent);
+}
+
+.welcome-language-flag {
+    display: block;
+    width: auto;
+    height: .88rem;
+    aspect-ratio: 3 / 2;
+    border-radius: 0;
+    object-fit: cover;
+    box-shadow: none;
+}
+
+.welcome-language-option {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
 }
 
 .welcome-hero-shell {
@@ -890,7 +943,7 @@ body.mobile .orbit-widget-body {
     margin-inline: auto;
 }
 
-.welcome-hero-content .welcome-logo svg {
+.welcome-hero-content .welcome-logo img {
     display: block;
     width: 100%;
     height: auto;
@@ -923,7 +976,6 @@ body.mobile .orbit-widget-body {
 }
 
 .welcome-enter-call-for-action wa-button::part(base) {
-    box-shadow: var(--lgs-overlay-floating-shadow, var(--sl-shadow-large));
     backdrop-filter: blur(var(--lgs-blur));
 }
 
