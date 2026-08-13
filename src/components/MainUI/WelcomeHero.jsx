@@ -17,7 +17,8 @@ import {
     getWelcomeBackgroundMedia,
     WELCOME_BACKGROUND_PLAYBACK_RATE,
 }                                                               from '@Assets/media/welcome-background-media'
-import { WaButton, WaIcon }                                  from '@web.awesome.me/webawesome-pro/dist/react'
+import { formatBuildInfo }                                    from '@Utils/BuildInfoUtils'
+import { WaButton, WaFormatDate, WaIcon }                    from '@web.awesome.me/webawesome-pro/dist/react'
 import { useCallback, useEffect, useRef, useState }            from 'react'
 
 const WELCOME_BACKGROUND_MEDIA = getWelcomeBackgroundMedia()
@@ -44,6 +45,9 @@ export const WelcomeHero = ({
     const readyToEnter = initComplete && appReady
     const videoReady = videoState === 'ready'
     const imageVisible = !videoReady && imageState === 'ready'
+    const studioVersion = lgs.versions?.studio ?? 'Unknown version'
+    const buildDate = lgs.build?.date ?? lgs.build?.buildTime
+    const buildInfo = formatBuildInfo(lgs.build)
 
     useEffect(() => {
         if (_welcomeVideo.current) {
@@ -111,6 +115,25 @@ export const WelcomeHero = ({
                     </a>
                 </div>
             )}
+            <div
+                className="welcome-hero-build-info"
+                aria-label={`Studio version ${studioVersion}, build ${buildInfo}`}
+            >
+                <WaIcon name="code-branch" variant="regular" aria-hidden="true"/>
+                <span>{studioVersion}</span>
+                <span aria-hidden="true">·</span>
+                <WaIcon name="calendar-days" variant="regular" aria-hidden="true"/>
+                {buildDate ? (
+                    <WaFormatDate
+                        date={buildDate}
+                        year="numeric"
+                        month="short"
+                        day="numeric"
+                    />
+                ) : (
+                    <span>{buildInfo}</span>
+                )}
+            </div>
             <WelcomeHeroRoute/>
             <div className="welcome-hero-scrim" aria-hidden="true"/>
             <WelcomeHeroControls/>

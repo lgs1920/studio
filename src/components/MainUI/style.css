@@ -838,9 +838,9 @@ body.mobile .orbit-widget-body {
     background: #050608;
 }
 
-.welcome-hero-media-credit {
+.welcome-hero-media-credit,
+.welcome-hero-build-info {
     position: absolute;
-    right: .55rem;
     bottom: .42rem;
     z-index: 5;
     max-width: min(42%, 24rem);
@@ -850,6 +850,23 @@ body.mobile .orbit-widget-body {
     line-height: 1.2;
     text-align: right;
     text-shadow: 0 1px .35rem rgba(0, 0, 0, .68);
+}
+
+.welcome-hero-media-credit {
+    right: .55rem;
+}
+
+.welcome-hero-build-info {
+    left: .55rem;
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    pointer-events: none;
+    text-align: left;
+}
+
+.welcome-hero-build-info wa-icon {
+    font-size: .7rem;
 }
 
 .welcome-hero-media-credit a {

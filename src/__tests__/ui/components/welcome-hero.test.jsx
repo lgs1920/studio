@@ -26,6 +26,7 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaButton: ({children, href, ...props}) => href
         ? <a href={href} {...props}>{children}</a>
         : <button {...props}>{children}</button>,
+    WaFormatDate: ({date, ...props}) => <time {...props}>{date}</time>,
     WaIcon: () => null,
 }))
 
@@ -53,6 +54,8 @@ describe('WelcomeHero', () => {
         expect(document.querySelector('.welcome-logo img')?.getAttribute('src')).toBe('/assets/logo/logo-horizontal.png')
         expect(document.querySelector('.welcome-logo source')?.getAttribute('srcset')).toBe('/assets/logo/logo-vertical.png')
         expect(document.querySelector('.welcome-hero-route-canvas')).toBeTruthy()
+        expect(document.querySelector('.welcome-hero-build-info')?.textContent).toContain('1.0.0')
+        expect(document.querySelector('.welcome-hero-build-info')?.textContent).toContain('build-42')
         const siteButton = screen.getByRole('link', {name: /Visit Our Site/})
         const enterButton = screen.getByRole('button', {name: /Enter Studio/})
 
@@ -63,6 +66,19 @@ describe('WelcomeHero', () => {
         fireEvent.click(enterButton)
 
         expect(onEnter).toHaveBeenCalledTimes(1)
+    })
+
+    it('renders the build date with Web Awesome', () => {
+        globalThis.lgs = {
+            versions: {studio: '1.0.0'},
+            build: {date: '2026-08-13T12:34:56.000Z'},
+            configuration: {website: {domain: 'lgs1920.fr', protocol: 'https'}},
+        }
+
+        render(<WelcomeHero/>)
+
+        expect(document.querySelector('.welcome-hero-build-info')?.textContent).toContain('1.0.0')
+        expect(document.querySelector('.welcome-hero-build-info time')?.textContent).toBe('2026-08-13T12:34:56.000Z')
     })
 
     it('does not allow entering Studio before the application is ready', () => {
