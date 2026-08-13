@@ -70,7 +70,7 @@ export const MAP_ICON_DEFS = {
 }
 export const STUDIO_NAME = 'LGS1920 Studio'
 export const STUDIO_URL = 'https://www.lgs1920.fr'
-export const STUDIO_CONTACT = 'contact@lgs1920.fr'
+export const STUDIO_CONTACT = 'studio@lgs1920.fr'
 export const STUDIO_SIGNATURE = `Proudly made with ${STUDIO_NAME}`
 export const STUDIO_LOGO_URL = '/assets/images/logo-lgs1920-studio-s.png'
 export const STUDIO_LOGO_RATIO = 300 / 103

@@ -5,7 +5,7 @@
  * File: journey-stats-realign.test.jsx
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
  * Last modified on: 2026-07-03
@@ -24,7 +24,13 @@ vi.mock('@Components/DataDisplay/NameValueUnit', () => ({
 }))
 
 vi.mock('@Components/DateTimeDisplay', () => ({
-    DateTimeDisplay: () => <div />,
+    DateTimeDisplay: ({stackItems, stackDateTime}) => (
+        <div
+            data-date-time-display="true"
+            data-stack-items={stackItems === undefined ? 'default' : String(stackItems)}
+            data-stack-date-time={String(stackDateTime)}
+        />
+    ),
 }))
 
 vi.mock('@Components/MainUI/widgets/useWidgetScaleCorrection', () => ({
@@ -205,6 +211,37 @@ describe('JourneyStats', () => {
             expect(target.style.left).toBe('-10px')
             expect(target.style.top).toBe('0px')
         })
+    })
+
+    it('passes date-time layout settings while keeping date-range stacking automatic', () => {
+        const configuration = globalThis.lgs.settings.widgets['journey-stats-widget'].configuration.default
+        configuration.date = true
+        configuration.dateTimeStack = false
+        configuration.textOrder = ['date']
+
+        const {container} = render(
+            <JourneyStats
+                id="journey-stats-widget#1"
+                metrics={{
+                    distance: 120,
+                    positive: {elevation: 87},
+                    duration: 4,
+                }}
+                units={{
+                    elevation: 'm',
+                    distance:  'm',
+                    pace:     'min/km',
+                    speed:    'km/h',
+                }}
+                mode="journey"
+                widgetKey="journey-stats-widget"
+            />,
+        )
+
+        const dateDisplay = container.querySelector('[data-date-time-display="true"]')
+
+        expect(dateDisplay.dataset.stackItems).toBe('default')
+        expect(dateDisplay.dataset.stackDateTime).toBe('false')
     })
 
     it('keeps journey stats values on the video board before the recording starts', async () => {

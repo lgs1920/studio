@@ -82,6 +82,7 @@
 }
 
 .lgs-date-time-display[data-date-time-stacked="true"] .lgs-date-time-display-range {
+    flex-direction: column;
     gap: var(--lgs-gutter-xs);
 }
 

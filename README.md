@@ -155,8 +155,10 @@ points include:
 - [Widget manager](tech-doc/specs/CORE-WIDGET-MANAGER-README.md)
 - [Screen media recorder](tech-doc/specs/CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)
 - [Canvas overlay composer](tech-doc/specs/CORE-SCREEN-MEDIA-RECORDER-COMPOSER-README.md)
+- [Deployment and backend environment handling](tech-doc/specs/DEPLOYMENT-README.md)
 - [Tracks editor spec](tech-doc/todo/TRACKSEDITOR-SPEC.md)
 - [All technical docs](tech-doc/README.md)
+- [Bun command reference](tech-doc/specs/HOW_TO_BUN_COMMANDS.md)
 
 ## Internal Skills
 
@@ -227,6 +229,9 @@ Tests are organized under `src/__tests__/` by responsibility:
 - Widget registration is defined in `public/widgets.yaml`
 - PWA behavior is configured through `vite.config.mts` and `public/service-worker-pwa.js`
 - Static version metadata is stored in `public/version.json` and `public/build.json`
+- Backend deployments read the local `../backend/.env`, upload it to the remote shared backend environment with
+  restrictive permissions, and load it through PM2. SMTP credentials and recipient mappings never belong in Studio
+  source, builds, or release archives.
 
 ## Dependencies
 
@@ -241,7 +246,7 @@ Contributions are welcome under the same AGPL terms as the repository.
 
 - Contribution terms: [CONTRIBUTOR_LICENSE_AGREEMENT.md](CONTRIBUTOR_LICENSE_AGREEMENT.md)
 
-For contribution questions: `contact@lgs1920.fr`
+For contribution questions: `studio@lgs1920.fr`
 
 ## License
 

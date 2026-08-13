@@ -5,7 +5,7 @@
  * File: replay-phase1.test.js
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-01
  * Last modified: 2026-07-01
@@ -35,6 +35,7 @@ import {
     defaultJourneyReplaySettings, REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
     REPLAY_CAMERA_HEADING_OFFSET_MAX, REPLAY_CAMERA_POSITION_AHEAD, REPLAY_CAMERA_POSITION_BEHIND, REPLAY_CAMERA_POSITION_SYSTEM,
     REPLAY_CAMERA_PRESET_DEFAULT, REPLAY_CAMERA_PRESET_ULTRA_SMOOTH,
+    REPLAY_EFFECT_GLOW, REPLAY_EFFECT_NEON, REPLAY_EFFECT_NONE,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
     getJourneyReplayCameraPresetKey, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplaySettings,
 }                                                                      from '@Core/ui/replay/JourneyReplayProgressionStyle'
@@ -57,6 +58,45 @@ vi.mock('@Components/Toast', () => ({
 import {makeJourney, makeTrack} from './replay-phase1-fixtures'
 
 describe('replay settings normalization', () => {
+    it('normalizes the shared replay effect mode without a separate effect opacity', () => {
+        expect(defaultJourneyReplaySettings().progression.effect).toEqual({
+            mode: REPLAY_EFFECT_NONE,
+        })
+
+        expect(normalizeJourneyReplaySettings({
+            progression: {
+                effect: {
+                    mode: REPLAY_EFFECT_GLOW,
+                    opacity: 2,
+                },
+            },
+        }).progression.effect).toEqual({
+                                           mode: REPLAY_EFFECT_GLOW,
+                                       })
+
+        expect(normalizeJourneyReplaySettings({
+            progression: {
+                effect: {
+                    mode:    REPLAY_EFFECT_NEON,
+                    opacity: -1,
+                },
+            },
+        }).progression.effect).toEqual({
+                                           mode: REPLAY_EFFECT_NEON,
+                                       })
+
+        expect(normalizeJourneyReplaySettings({
+            progression: {
+                effect: {
+                    mode:    'invalid',
+                    opacity: 0.4,
+                },
+            },
+        }).progression.effect).toEqual({
+                                           mode: REPLAY_EFFECT_NONE,
+                                       })
+    })
+
     it('maps the legacy centered marker mode to hysteresis', () => {
         expect(normalizeJourneyReplayMarker({mode: 'centered'}).mode).toBe(REPLAY_MARKER_MODE_HYSTERESIS)
     })

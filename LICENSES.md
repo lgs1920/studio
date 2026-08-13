@@ -11,4 +11,4 @@ This repository is distributed under a single public license:
 
 ## Contact
 
-For license questions: `contact@lgs1920.fr`
+For license questions: `studio@lgs1920.fr`

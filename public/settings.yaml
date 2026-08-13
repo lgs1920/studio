@@ -342,12 +342,6 @@ ui:
         app: true           # Rotate after entrance focus
         journey: true       # Rotate after journey focus
 
-  ## Welcome Modal
-  welcome:
-    showIntro: true
-    autoClose: true
-    displayTime: 6   #seconds
-
   ## Menus
   menu:
     toolBar:
@@ -372,7 +366,7 @@ ui:
     search: search
     reverse: reverse
     limit: 7 # results per query
-    email: contact@lgs1920.fr
+    email: studio@lgs1920.fr
     minQuery: 3 # characters
 
   ## Toolbars

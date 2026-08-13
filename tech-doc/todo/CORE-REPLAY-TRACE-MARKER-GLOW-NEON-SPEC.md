@@ -10,7 +10,7 @@ Tracking issue: [#424](https://github.com/lgs1920/studio/issues/424).
 
 Replay trace and marker styling currently comes from `JourneyReplayProgressionStyle.js` and is rendered in `JourneyReplayCesiumRenderer.js`.
 
-The requested feature adds a shared visual effect system for the replay trace and the replay marker. The user-facing behavior is simple: one effect selector, one opacity slider, and one runtime rendering contract.
+The requested feature adds a shared visual effect system for the replay trace and the replay marker. The user-facing behavior is simple: one effect selector, existing fill/border opacity controls, and one runtime rendering contract.
 
 This work must remain consistent with [CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md](../specs/CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md): Cesium is a runtime adapter and renderer concern, not part of the path engine or the replay timing model.
 
@@ -18,8 +18,9 @@ This work must remain consistent with [CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md](.
 
 - Add two replay effects: Glow and Neon.
 - Apply the selected effect to both the replay trace and the replay marker.
-- Base the effect color on the visible border when a border exists.
-- Fall back to the trace or marker base color when no visible border exists.
+- Base the outer effect layer on the visible border when a border exists.
+- Base the inner effect layer on the trace or marker fill color.
+- Fall back to the fill color for both layers when no visible border exists.
 - Keep the effect opacity independent from the base color opacity.
 - Keep the current replay visuals unchanged when no effect is selected.
 - Keep the implementation compatible with Cesium-backed playback, live replay, and export.
@@ -50,24 +51,20 @@ The default mode is `No effect`.
 
 ### Effect opacity
 
-The effect has its own opacity value.
-
-- The opacity slider is disabled when `No effect` is selected.
-- The opacity value is preserved even when the effect is disabled.
-- Changing the effect mode must not reset the opacity value.
+The effect has no independent opacity value. Its inner layer uses the fill opacity and its outer layer uses the border opacity. When no visible border exists, the outer layer uses the fill opacity.
 
 ### Border-aware base color
 
-The effect color must be derived from the visible border when one exists.
+The effect uses separate outer and inner color layers.
 
-| Target | Visible border or outline? | Base color used for the effect |
-| --- | --- | --- |
-| Trace | Yes | Trace border color |
-| Trace | No | Trace base color |
-| Marker | Yes | Marker outline color |
-| Marker | No | Marker base color |
+| Target | Visible border or outline? | Outer layer color | Inner layer color |
+| --- | --- | --- | --- |
+| Trace | Yes | Trace border color | Trace fill color |
+| Trace | No | Trace fill color | Trace fill color |
+| Marker | Yes | Marker outline color | Marker fill color |
+| Marker | No | Marker fill color | Marker fill color |
 
-The alpha channel of the base color must be ignored. The effect uses its own opacity as the final alpha.
+The alpha channels of the source colors are preserved independently for the inner and outer layers.
 
 ## Data model
 
@@ -108,9 +105,9 @@ This conclusion is an implementation constraint, not a separate product surface.
 
 The renderer must:
 
-- resolve the effect mode and opacity from the replay settings on each update;
-- resolve a border-aware base color for the trace and for the marker independently;
-- discard the base alpha and apply the effect opacity as the final alpha;
+- resolve the effect mode plus fill and border opacity from the replay settings on each update;
+- resolve separate border and fill colors for the trace and marker;
+- apply fill opacity to the inner effect layer and border opacity to the outer effect layer;
 - keep the existing trace/marker entity identity and visibility lifecycle stable;
 - refresh the Cesium material or layered primitive when the effect mode changes;
 - preserve the current z-order and border/fill composition when `No effect` is selected.
@@ -124,12 +121,9 @@ The Replay drawer must rename the `Edit` tab to `Style`.
 The `Style` tab must contain:
 
 - one effect selector with `No effect`, `Glow`, and `Neon`
-- one opacity slider
 
 Behavior rules:
 
-- the slider is disabled when `No effect` is selected
-- the slider becomes enabled immediately when `Glow` or `Neon` is selected
 - the effect controls do not replace the existing trace, border, and marker size controls
 - the tab label and the internal panel key should use the same semantic name unless the drawer framework requires a migration alias
 
@@ -152,15 +146,13 @@ This feature must ship with focused tests.
 
 - default effect state is `none`
 - invalid effect modes fall back to `none`
-- opacity values are clamped to the valid range
-- disabling the effect keeps the persisted opacity value
+- fill and border opacity values remain the source of effect opacity
 
 ### UI tests
 
 - the Replay drawer tab label changes from `Edit` to `Style`
 - the effect selector exposes the three expected values
-- the opacity slider is disabled for `No effect`
-- the opacity slider becomes enabled for `Glow` and `Neon`
+- the effect preview is placed with the Trace and Marker controls
 
 ### Renderer tests
 
@@ -168,7 +160,7 @@ This feature must ship with focused tests.
 - trace rendering falls back to the trace base color when no border is visible
 - marker rendering uses the outline color when a visible outline exists
 - marker rendering falls back to the marker base color when no outline is visible
-- the effect opacity is independent from the base color opacity
+- the inner and outer effect layers use fill and border opacity respectively
 - `No effect` preserves the current trace and marker appearance
 
 ### Cesium compatibility tests
@@ -190,7 +182,7 @@ If not, the marker effect must use a renderer-owned layered or custom fallback w
 - The replay drawer exposes a single Style tab with the effect controls.
 - The effect color follows the visible border when one exists.
 - The effect color falls back to the base trace or marker color when no border exists.
-- Base color opacity does not drive effect opacity.
+- Fill and border opacity drive the corresponding effect layers.
 - No effect leaves the existing replay visuals unchanged.
 - The implementation remains compatible with Cesium-backed replay playback.
 - The feature is covered by settings, UI, renderer, and Cesium compatibility tests.

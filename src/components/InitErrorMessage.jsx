@@ -5,7 +5,7 @@
  * File: InitErrorMessage.jsx
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-15
  * Last modified: 2026-04-15
@@ -19,6 +19,8 @@ import {
     WaButton, WaCallout, WaCopyButton, WaDetails, WaDialog, WaIcon,
 }                        from '@web.awesome.me/webawesome-pro/dist/react'
 import { useState }      from 'react'
+
+const BACKEND_SUPPORT_MAILTO = 'mailto:studio@lgs1920.fr?subject=%5BStudio%5D%20Backend%20stopped'
 
 /**
  * Component to display a modal when the application fails to initialize
@@ -79,6 +81,9 @@ export const InitErrorMessage = ({error}) => {
             </div>
 
             <div slot="footer" className="buttons-bar">
+                <WaButton variant="neutral" appearance="plain" href={BACKEND_SUPPORT_MAILTO}>
+                    <WaIcon name="envelope" variant="regular"/>{'Contact Support'}
+                </WaButton>
                 <WaButton variant="brand" onClick={() => window.location.reload()}>
                     <WaIcon name="arrows-rotate" variant="regular"/>{'Retry'}
                 </WaButton>

@@ -208,7 +208,19 @@ export const isJourneyReplayCameraActive = replay => Boolean(
 export const isJourneyReplayVideoCaptureActive = () => {
     const store = replayStore()
     const settings = globalThis.lgs?.settings?.ui?.replay
-    return store?.recordingSync === true || settings?.recordingSync === true
+    const video = globalThis.lgs?.stores?.ui?.video
+    const recorder = globalThis.__?.recorder
+    // recordingSync only describes the replay/video link. It can remain armed
+    // after playback, so it must be combined with an active capture phase.
+    const replayVideoLinked = store?.recordingSync === true || settings?.recordingSync === true
+    const videoCaptureActive = video?.preRecording === true
+                                || video?.recording === true
+                                || video?.snapshot === true
+                                || video?.finalizing === true
+                                || recorder?.isRecording?.() === true
+    const captureStateKnown = Boolean(video) || typeof recorder?.isRecording === 'function'
+
+    return replayVideoLinked && (videoCaptureActive || !captureStateKnown)
 }
 
 /**

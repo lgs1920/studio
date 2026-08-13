@@ -5,7 +5,7 @@
  * File: Style.jsx
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-30
  * Last modified: 2026-04-30
@@ -22,7 +22,6 @@ import { SETTINGS_EDITOR_DRAWER }  from '@Core/constants'
 import { WaDetails } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useEffect, useRef } from 'react'
 import { useSnapshot }             from 'valtio'
-import { WelcomeModal }      from './WelcomeModal'
 
 const OPEN_COMPASS_SETTINGS_ACTION = 'open-compass-settings'
 
@@ -56,14 +55,6 @@ export const Style = memo(() => {
     return (
 
         <div ref={styleSettings} id="style-settings" className="lgs--details-list">
-            <WaDetails id="ui-welcome-modal-settings"
-                       small
-                       name="style-settings"
-                       className="lgs--details-hoverable"
-            >
-                <WelcomeModal/>
-            </WaDetails>
-
             <WaDetails id="ui-menu-settings"
                        small
                        name="style-settings"

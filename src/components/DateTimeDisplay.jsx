@@ -5,7 +5,7 @@
  * File: DateTimeDisplay.jsx
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-03
  * Last modified: 2026-05-03
@@ -76,6 +76,7 @@ export const DateTimeDisplay = ({
                                     separator = '-',
                                     forceStack = false,
                                     stackItems = null,
+                                    stackDateTime = null,
                                     leading = null,
                                 }) => {
     const rootRef = useRef(null)
@@ -91,7 +92,7 @@ export const DateTimeDisplay = ({
     const sameDateRange = isSameDateRange(normalizedItems)
     const hasLeading = Boolean(leading)
     const shouldStackItems = !sameDateRange && (forceStack || (stackItems ?? normalizedItems.length > 1))
-    const shouldStackDateTime = forceStack || autoStack
+    const shouldStackDateTime = forceStack || (stackDateTime ?? autoStack)
 
     useLayoutEffect(() => {
         if (forceStack || normalizedItems.length === 0) {
@@ -122,7 +123,7 @@ export const DateTimeDisplay = ({
         resizeObserver.observe(rootRef.current)
 
         return () => resizeObserver.disconnect()
-    }, [forceStack, normalizedItems])
+    }, [forceStack, normalizedItems, stackDateTime])
 
     if (normalizedItems.length === 0) {
         return null

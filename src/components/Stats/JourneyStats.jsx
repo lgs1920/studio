@@ -5,7 +5,7 @@
  * File: JourneyStats.jsx
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-30
  * Last modified: 2026-04-30
@@ -21,6 +21,7 @@ import { VIDEO_WIDGETS_BOARD }                          from '@Core/constants'
 import { resolveReplayVideoStatsWidgetVisibility }      from '@Core/ui/replay/ReplayOverlayResolver'
 import { Widget2Canvas }                                from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
 import {
+    DEFAULT_JOURNEY_STATS_DATE_TIME_STACK,
     JOURNEY_STATS_TEXT_ITEM_MAP,
     isJourneyStatsSummaryTextItem,
     isJourneyStatsTextItemEnabled,
@@ -307,6 +308,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                          : (journey?.hasAltitude ?? false)
     const date = journey ? __.ui.ui.formatJourneyDurationDates(journey.getDate()) : {}
     const hasDateRange = Boolean(date?.prefix && date?.sufix)
+    const dateTimeStack = element?.dateTimeStack ?? DEFAULT_JOURNEY_STATS_DATE_TIME_STACK
     const journeyLocation = (journeyLocationState.slug === journeySlug ? journeyLocationState.value : '') || journey?.location || ''
     const showDate = hasDuration && element?.date && hasDateRange
     const showLocation = Boolean(element?.location && journeyLocation)
@@ -503,6 +505,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
         journeySlug,
         journeyLocation,
         element?.date,
+        element?.dateTimeStack,
         element?.location,
         element?.altitude,
         element?.performance,
@@ -573,7 +576,12 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
         switch (itemId) {
             case 'date':
                 return (
-                    <DateTimeDisplay className="journey-stats-date" items={date.items} forceStack key="date"/>
+                    <DateTimeDisplay
+                        className="journey-stats-date"
+                        items={date.items}
+                        stackDateTime={dateTimeStack}
+                        key="date"
+                    />
                 )
             case 'location':
                 return (

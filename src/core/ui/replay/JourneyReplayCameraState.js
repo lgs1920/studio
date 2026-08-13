@@ -256,24 +256,25 @@ export const markerPositionForSample = (mode, sample, markerSettings) => {
         }
     }
 
-export const markerRenderHeightForSample =  (mode, sample) => {
+export const markerRenderHeightForSample =  (mode, sample, {fallback = undefined} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         const longitude = finiteNumber(sample?.longitude)
         const latitude = finiteNumber(sample?.latitude)
         const sampleHeight = finiteNumber(sample?.altitude ?? sample?.height) ?? 0
+        const fallbackHeight = fallback === undefined ? sampleHeight : finiteNumber(fallback) ?? 0
         if (longitude === null || latitude === null) {
-            return sampleHeight
+            return fallbackHeight
         }
         if (state.terrainHeightLookupBypass === true) {
-            return sampleHeight
+            return fallbackHeight
         }
 
         const terrainHeight = call.cesiumScene()?.globe?.getHeight?.(
             Cartographic.fromDegrees(longitude, latitude),
         )
-        return finiteNumber(terrainHeight) ?? sampleHeight
+        return finiteNumber(terrainHeight) ?? fallbackHeight
     }
 
 export const markerRenderCartesianForSample =  (mode, sample) => {

@@ -143,14 +143,14 @@ function is_same_origin_xhr(array $config): bool
         return false;
     }
 
-    $expected = origin_from_config($config['studio'] ?? []);
-    if ($expected === '') {
+    $allowedOrigins = allowed_origins($config);
+    if (count($allowedOrigins) === 0) {
         return false;
     }
 
     $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
     if (is_string($origin) && $origin !== '') {
-        return rtrim(strtolower($origin), '/') === $expected;
+        return in_array(rtrim(strtolower($origin), '/'), $allowedOrigins, true);
     }
 
     $referer = $_SERVER['HTTP_REFERER'] ?? '';
@@ -162,7 +162,7 @@ function is_same_origin_xhr(array $config): bool
 
         $port = isset($parts['port']) ? ':' . (int)$parts['port'] : '';
         $refererOrigin = strtolower((string)$parts['scheme']) . '://' . normalize_host((string)$parts['host']) . $port;
-        return $refererOrigin === $expected;
+        return in_array($refererOrigin, $allowedOrigins, true);
     }
 
     return false;
@@ -181,8 +181,7 @@ function apply_cors_headers(array $config): void
         return;
     }
 
-    $expected = origin_from_config($config['studio'] ?? []);
-    if (rtrim(strtolower($origin), '/') !== $expected) {
+    if (!in_array(rtrim(strtolower($origin), '/'), allowed_origins($config), true)) {
         return;
     }
 
@@ -192,6 +191,20 @@ function apply_cors_headers(array $config): void
     header('Access-Control-Allow-Headers: Accept, Content-Type, X-Requested-With');
     header('Cache-Control: no-store');
     header('Vary: Origin', false);
+}
+
+/**
+ * Resolve the exact browser origins allowed to request a backend restart.
+ *
+ * @param array $config Runtime server configuration.
+ * @return array Normalized allowed origins.
+ */
+function allowed_origins(array $config): array
+{
+    return array_values(array_filter(array_unique([
+        origin_from_config($config['studio'] ?? []),
+        origin_from_config($config['site'] ?? []),
+    ])));
 }
 
 function origin_from_config(array $server): string

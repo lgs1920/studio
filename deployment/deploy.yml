@@ -10,8 +10,12 @@ backend:
     port: 3333
 
     pm2:
-      bin: /home/.bun/bin/pm2
-      config: backend-production.config.js
+      bin:             /home/.bun/bin/pm2
+      config:          backend-production.config.js
+      # Backend-only environment file; keep it outside versioned releases and Git.
+      environmentFile: shared/backend.env
+    # Launch registrations must survive versioned release switches.
+    registrationFile: shared/launch-registrations.json
 
   staging:
     name: LGS1920 Staging Backend server
@@ -21,8 +25,12 @@ backend:
     port: 3334
 
     pm2:
-      bin: /home/.bun/bin/pm2
-      config: backend-staging.config.js
+      bin:             /home/.bun/bin/pm2
+      config:          backend-staging.config.js
+      # Backend-only environment file; keep it outside versioned releases and Git.
+      environmentFile: shared/backend.env
+    # Launch registrations must survive versioned release switches.
+    registrationFile: shared/launch-registrations.json
 
   test:
     name: LGS1920 Staging Backend server
@@ -32,8 +40,12 @@ backend:
     port: 3335
 
     pm2:
-      bin: /home/.bun/bin/pm2
-      config: backend-test.config.js
+      bin:             /home/.bun/bin/pm2
+      config:          backend-test.config.js
+      # Backend-only environment file; keep it outside versioned releases and Git.
+      environmentFile: shared/backend.env
+    # Launch registrations must survive versioned release switches.
+    registrationFile: shared/launch-registrations.json
 
 studio:
   #
@@ -104,5 +116,3 @@ remote:
     user: p5077
     host: p5077.phpnet.org
     path: /home/www/lgs1920
-
-

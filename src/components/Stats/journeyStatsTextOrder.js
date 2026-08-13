@@ -5,7 +5,7 @@
  * File: journeyStatsTextOrder.js
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-03
  * Last modified: 2026-05-03
@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 export const JOURNEY_STATS_TEXT_ITEMS = [
-    {id: 'date', label: 'Date', icon: 'calendar-days', group: 'meta'},
+    {id: 'date', label: 'Date-Time', icon: 'calendar-days', group: 'meta'},
     {id: 'location', label: 'Location', icon: 'location-dot', group: 'meta'},
     {id: 'distance', label: 'Distance', icon: 'route', group: 'summary'},
     {id: 'elevation', label: 'Elevation', icon: 'mountain', group: 'summary'},
@@ -28,6 +28,8 @@ export const JOURNEY_STATS_TEXT_ITEMS = [
 export const JOURNEY_STATS_SUMMARY_TEXT_IDS = ['distance', 'elevation', 'duration']
 
 export const JOURNEY_STATS_SUMMARY_TEXT_ID_SET = new Set(JOURNEY_STATS_SUMMARY_TEXT_IDS)
+
+export const DEFAULT_JOURNEY_STATS_DATE_TIME_STACK = true
 
 export const DEFAULT_JOURNEY_STATS_TEXT_ORDER = JOURNEY_STATS_TEXT_ITEMS.map(item => item.id)
 

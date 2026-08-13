@@ -5,7 +5,7 @@
  * File: Widget2Canvas.js
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-01
  * Last modified: 2026-02-01
@@ -560,7 +560,7 @@ export class Widget2Canvas {
                 this.#syncPartRegistry()
             }
 
-            if (!this.#partOrder.length) {
+            if (this.#options.captureWholeWidget || !this.#partOrder.length) {
                 const fullCanvas = await this.#renderPart(this.#original)
                 this.#updateCanvas(fullCanvas)
                 return

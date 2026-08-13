@@ -5,7 +5,7 @@
  * File: replay-clips-tab.test.jsx
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-06
  * Last modified: 2026-06-06
@@ -159,6 +159,74 @@ describe('JourneyReplayClipsTab', () => {
 
         const durationInput = await view.findByLabelText('Duration (s)')
         expect(durationInput.getAttribute('step')).toBe('1')
+    })
+
+    it('opens and persists select fields on a clip', async () => {
+        const replay = globalThis.lgs.settings.ui.replay
+        const zoomIn = createJourneyReplayClipInstance(replay.clips.catalog['zoom-in'], 'start', {
+            params: {
+                duration: 2,
+                altitude: 300,
+                pitch: -35,
+                pathMode: 'auto',
+            },
+        })
+
+        globalThis.lgs.theJourney.replay.start = [zoomIn]
+        globalThis.lgs.theJourney.replay.stop = []
+        globalThis.lgs.stores.replay.clips.start = [zoomIn]
+
+        const view = render(
+            <JourneyReplayClipsTab
+                settings={replay}
+                state={globalThis.lgs.stores.replay}
+            />,
+        )
+
+        const pathSelect = view.getByLabelText('Path')
+        expect(globalThis.__replaySortableInstances[0].options.preventOnFilter).toBe(false)
+        fireEvent.pointerDown(pathSelect)
+        fireEvent.change(pathSelect, {target: {value: 'spiral-conical'}})
+
+        await waitFor(() => {
+            expect(globalThis.lgs.theJourney.replay.start[0].params.pathMode).toBe('spiral-conical')
+            expect(globalThis.lgs.stores.replay.clips.start[0].params.pathMode).toBe('spiral-conical')
+        })
+    })
+
+    it('labels altitude as ground offset and derives its minimum from the replay and previous clip', async () => {
+        const replay = globalThis.lgs.settings.ui.replay
+        replay.camera.altitudeMode = 'ground-offset'
+        replay.camera.altitude = 1200
+        const takeOff = createJourneyReplayClipInstance(replay.clips.catalog['take-off'], 'start', {
+            params: {
+                duration: 2,
+                altitude: 1800,
+                pitch: -35,
+            },
+        })
+        const zoomIn = createJourneyReplayClipInstance(replay.clips.catalog['zoom-in'], 'start', {
+            params: {
+                duration: 2,
+                altitude: 1500,
+                pitch: -35,
+            },
+        })
+
+        globalThis.lgs.theJourney.replay.start = [takeOff, zoomIn]
+        globalThis.lgs.theJourney.replay.stop = []
+        globalThis.lgs.stores.replay.clips.start = [takeOff, zoomIn]
+
+        const view = render(
+            <JourneyReplayClipsTab
+                settings={replay}
+                state={globalThis.lgs.stores.replay}
+            />,
+        )
+
+        const offsets = view.getAllByLabelText('Ground offset (m)')
+        expect(offsets).toHaveLength(2)
+        expect(offsets[1].getAttribute('min')).toBe('1800')
     })
 
     it('edits a clip in place without duplicating it', async () => {

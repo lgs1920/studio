@@ -5,7 +5,7 @@
  * File: settingsExclusions.js
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-07
  * Last modified: 2026-06-07
@@ -22,7 +22,7 @@ export const SETTING_EXCLUSIONS = [
         'app', 'scene', 'starter', 'coordinateSystem', 'unitSystem', 'poi.filter',
         'ion.usageSeconds', 'ion.introSeen',
         'journey.activity',
-        'ui.camera', 'ui.welcome', 'swatches.current',
+        'ui.camera', 'swatches.current',
         'ui.menu', 'ui.poi.rotate', 'ui.poi.focusOnEdit', 'ui.journeyToolbar',
         'ui.compass.mode', 'ui.video.fps', 'ui.video.quality', 'ui.video.ratio', 'ui.pwa',
         'ui.widgets.grid',

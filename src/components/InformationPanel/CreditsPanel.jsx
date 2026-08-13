@@ -5,7 +5,7 @@
  * File: CreditsPanel.jsx
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-03-18
  * Last modified: 2026-03-18
@@ -20,6 +20,7 @@ import React                        from 'react'
 import { default as ReactMarkdown } from 'react-markdown'
 import { markdown as engine }    from '../../../src/assets/credits/credits-engine.md'
 import { markdown as geocoding } from '../../../src/assets/credits/credits-geocoding.md'
+import { markdown as mediaAssets } from '../../../src/assets/credits/credits-media-assets.md'
 import { markdown as providers } from '../../../src/assets/credits/credits-map-providers.md'
 import { markdown as code }      from '../../../src/assets/credits/credits-open-source-code.md'
 import { openCodeDependenciesDrawer } from './openCodeDependenciesDrawer'
@@ -38,6 +39,7 @@ export const CreditsPanel = () => {
                 <ReactMarkdown children={engine}/>
                 <ReactMarkdown children={providers}/>
                 <ReactMarkdown children={geocoding}/>
+                <ReactMarkdown children={mediaAssets}/>
                 <ReactMarkdown children={code}/>
                 <WaButton className="lgs--credits-dependencies-button"
                           size="s"

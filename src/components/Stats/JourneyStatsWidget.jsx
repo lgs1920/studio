@@ -5,7 +5,7 @@
  * File: JourneyStatsWidget.jsx
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-10
  * Last modified: 2026-05-10
@@ -99,11 +99,12 @@ export const JourneyStatsWidget = ({
             mandatory:       false,
             stopPropagation: false,
             snap:            false,
+            captureWholeWidget: true,
             refreshMode:     mode === 'dynamic' ? 'both' : undefined,
             widgetsBoard:    widgetsBoard,
             zIndex: zIndex,
         }
-    }, [container, widgetsBoard, id, zIndex])
+    }, [container, widgetsBoard, id, mode, zIndex])
 
     const isVisible = useMemo(() => {
         if (!widgetsBoard) {

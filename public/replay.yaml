@@ -80,6 +80,26 @@ replay:
             max: -5
             step: 1
             unit: deg
+          - key: pathMode
+            label: Path
+            type: select
+            options:
+              - value: auto
+                label: Automatic
+              - value: direct
+                label: Direct
+              - value: elevate-then-move
+                label: Elevate then move
+              - value: spiral-horizontal
+                label: Horizontal spiral
+              - value: spiral-conical
+                label: Conical spiral
+              - value: spiral-vertical
+                label: Vertical spiral
+              - value: bezier-3d
+                label: 3D Bezier
+              - value: blur-jump-refocus
+                label: Blur, jump and refocus
       zoom-out:
         id: zoom-out
         label: ZoomOut
@@ -112,6 +132,26 @@ replay:
             max: -5
             step: 1
             unit: deg
+          - key: pathMode
+            label: Path
+            type: select
+            options:
+              - value: auto
+                label: Automatic
+              - value: direct
+                label: Direct
+              - value: elevate-then-move
+                label: Elevate then move
+              - value: spiral-horizontal
+                label: Horizontal spiral
+              - value: spiral-conical
+                label: Conical spiral
+              - value: spiral-vertical
+                label: Vertical spiral
+              - value: bezier-3d
+                label: 3D Bezier
+              - value: blur-jump-refocus
+                label: Blur, jump and refocus
       focus:
         id: focus
         label: Focus
@@ -122,6 +162,7 @@ replay:
         defaults:
           duration: 3
           rpm: 3
+          focusTarget: centroid
           altitude: 1200
           pitch: -45
         fields:
@@ -137,6 +178,14 @@ replay:
             min: 0
             max: 30
             step: 0.5
+          - key: focusTarget
+            label: Target
+            type: select
+            options:
+              - value: centroid
+                label: Centroid
+              - value: last-point
+                label: Last point
           - key: altitude
             label: Altitude
             type: number

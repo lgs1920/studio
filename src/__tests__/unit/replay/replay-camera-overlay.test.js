@@ -83,7 +83,12 @@ describe('replay camera diagnostics overlay', () => {
         }
         globalThis.lgs = {
             settings: {ui: {replay: settings}},
-            stores:   {replay: {recordingSync: true}},
+            stores:   {
+                replay: {
+                    recordingSync:     true,
+                    dynamicFrameState: {phase: {kind: 'start', clip: {clipId: 'zoom-in'}}},
+                },
+            },
             viewer:   {
                 camera,
                 container,
@@ -103,10 +108,16 @@ describe('replay camera diagnostics overlay', () => {
         expect(canvas.style.visibility).toBe('visible')
         expect(cameraChanged.addEventListener).toHaveBeenCalledOnce()
         expect(drawingContext.clearRect).toHaveBeenCalledTimes(2)
+        expect(drawingContext.fillText.mock.calls.map(([label]) => label)).toContain('Phase  Clip: zoom-in')
+
+        globalThis.lgs.stores.replay.dynamicFrameState.phase = {kind: 'replay', clip: null}
+        updateToleranceZoneOverlay(mode, settings.camera.hysteresis)
+
+        expect(drawingContext.fillText.mock.calls.map(([label]) => label)).toContain('Phase  Replay')
 
         cameraChanged.addEventListener.mock.calls[0][0]()
 
-        expect(drawingContext.clearRect).toHaveBeenCalledTimes(3)
+        expect(drawingContext.clearRect).toHaveBeenCalledTimes(4)
 
         getContext.mockRestore()
     })

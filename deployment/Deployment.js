@@ -5,7 +5,7 @@
  * File: Deployment.js
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-03-07
  * Last modified: 2026-03-07
@@ -23,6 +23,13 @@ import { simpleGit }             from 'simple-git'
 import { Client as SSH2 }        from 'ssh2'
 import { parse as parseYaml }    from 'yaml'
 import { zip }                   from 'zip-a-folder'
+import {
+    createBackendEnvironmentContent,
+    createBackendEnvironmentPaths,
+    createBackendPm2Command,
+    quoteShellArgument,
+    resolveBackendRegistrationFile,
+} from './DeploymentCommands.js'
 
 const STUDIO_APP_NAME = 'LGS1920 Studio Development'
 const STUDIO_HTACCESS_CONTENT = `<IfModule mod_headers.c>
@@ -126,6 +133,24 @@ export class Deployment {
 
         // Load PM2 configuration for backend deployments
         this.pm2 = this.configuration.backend[this.platform].pm2
+        if (this.product === this.products.backend) {
+            this.backendEnvironmentPaths = createBackendEnvironmentPaths({
+                localRoot:         this.local,
+                remoteBackendRoot: this.remotePath,
+                environmentFile:   this.pm2.environmentFile,
+            })
+            if (!fs.existsSync(this.backendEnvironmentPaths.localPath)) {
+                throw new Error(`Backend environment file is missing: ${this.backendEnvironmentPaths.localPath}`)
+            }
+            fs.accessSync(this.backendEnvironmentPaths.localPath, fs.constants.R_OK)
+            const environmentStats = fs.lstatSync(this.backendEnvironmentPaths.localPath)
+            if (!environmentStats.isFile()) {
+                throw new Error(`Backend environment path is not a regular file: ${this.backendEnvironmentPaths.localPath}`)
+            }
+            if ((environmentStats.mode & 0o077) !== 0) {
+                fs.chmodSync(this.backendEnvironmentPaths.localPath, 0o600)
+            }
+        }
 
         // Generate timestamp for tag naming (format: YYYYMMDDHHMMSS)
         this.date = new Date().toISOString()
@@ -203,6 +228,84 @@ export class Deployment {
     }
 
     /**
+     * Run one remote command and reject when it exits unsuccessfully.
+     *
+     * @param {SSH2} connection Active SSH connection.
+     * @param {string} command Remote shell command.
+     * @param {string} failureMessage Public-safe failure description.
+     * @returns {Promise<void>} Resolves when the command succeeds.
+     * @private
+     */
+    executeRemoteCommand = async (connection, command, failureMessage) => new Promise((resolve, reject) => {
+        connection.exec(command, (err, stream) => {
+            if (err) {
+                reject(new Error(failureMessage, {cause: err}))
+                return
+            }
+
+            let stderr = ''
+            stream.on('data', () => {})
+            stream.stderr.on('data', data => {
+                stderr += data.toString()
+            })
+            stream.on('close', code => {
+                if (code === 0) {
+                    resolve()
+                    return
+                }
+
+                reject(new Error(`${failureMessage}${stderr ? `: ${stderr.trim()}` : ''}`))
+            })
+        })
+    })
+
+    /**
+     * Upload the local backend environment to protected shared server storage.
+     *
+     * The transfer uses the active SSH connection and never places the
+     * environment file in the versioned release archive.
+     *
+     * @param {SSH2} connection Active SSH connection.
+     * @returns {Promise<void>} Resolves when the environment is uploaded and protected.
+     * @private
+     */
+    uploadBackendEnvironment = async (connection) => {
+        if (this.product !== this.products.backend) {
+            return
+        }
+
+        const {localPath, remotePath} = this.backendEnvironmentPaths
+        const environmentContent = createBackendEnvironmentContent(fs.readFileSync(localPath, 'utf8'))
+        const remoteDirectory = path.posix.dirname(remotePath)
+        await this.executeRemoteCommand(
+            connection,
+            `install -d -m 700 ${quoteShellArgument(remoteDirectory)}`,
+            'Backend environment directory preparation failed',
+        )
+
+        await new Promise((resolve, reject) => {
+            connection.sftp((err, sftp) => {
+                if (err) {
+                    reject(new Error('Backend environment transfer initialization failed', {cause: err}))
+                    return
+                }
+
+                const stream = sftp.createWriteStream(remotePath, {flags: 'w', mode: 0o600})
+                stream.on('error', error => reject(new Error('Backend environment transfer failed', {cause: error})))
+                stream.on('close', resolve)
+                stream.end(environmentContent, 'utf8')
+            })
+        })
+
+        await this.executeRemoteCommand(
+            connection,
+            `chmod 600 ${quoteShellArgument(remotePath)}`,
+            'Backend environment permissions update failed',
+        )
+        console.log('    > Backend environment uploaded securely')
+    }
+
+    /**
      * Unzips the release package on the remote server after removing the destination directory if it exists.
      *
      * @param {SSH2} connection - The SSH2 connection object.
@@ -246,6 +349,7 @@ export class Deployment {
         if (this.product !== this.products.backend) {
             return
         }
+        console.log('    > Loading backend environment')
         return new Promise((resolve, reject) => {
             // Restart backend using PM2 with platform-specific command
             connection.exec(this.configuration.backend[this.platform].pm2.command, (err, stream) => {
@@ -503,6 +607,7 @@ export class Deployment {
 
                 try {
                     await this.unzip(connection)
+                    await this.uploadBackendEnvironment(connection)
                     console.log('    > Deploying release...')
                     await this.link(connection)
                     await this.postDeployment(connection)
@@ -587,10 +692,22 @@ export class Deployment {
                 console.log(`    > ${this.green}Backend files prepared${this.reset}`)
             }
         }
-        // Build PM2 command for backend
-        const where = path.join(this.configuration.remote[this.platform].path, this.platform, 'backend', this.current)
-        this.configuration.backend[this.platform].pm2.command = `cd ${where} && ${this.pm2.bin} start --cwd ${where} ecosystem.config.js && ${this.pm2.bin} save`
-        // Configure server home paths
+        const backendRoot = path.join(this.configuration.remote[this.platform].path, this.platform, 'backend')
+        if (this.product === this.products.backend) {
+            // Load the shared backend-only environment remotely so SMTP credentials never enter Studio releases.
+            const where = path.join(backendRoot, this.current)
+            const environmentFile = path.join(backendRoot, this.pm2.environmentFile)
+            this.configuration.backend[this.platform].pm2.command = createBackendPm2Command({
+                backendPath:     where,
+                environmentFile,
+                pm2Bin:           this.pm2.bin,
+            })
+        }
+        // Configure server paths. Registration data lives outside versioned releases.
+        this.configuration.backend[this.platform].registrationFile = resolveBackendRegistrationFile({
+            remoteBackendRoot: backendRoot,
+            registrationFile:   this.configuration.backend[this.platform].registrationFile,
+        })
         this.configuration.backend[this.platform].home = path.join(
             this.configuration.remote[this.platforms.production].path,
             this.platform,

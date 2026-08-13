@@ -5,7 +5,7 @@
  * File: StudioLogo.jsx
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-10
  * Last modified: 2026-05-10
@@ -47,8 +47,6 @@ export const StudioLogo = (props) => {
                 <div className={'version-info'}>{lgs.versions.studio} - {'build'}: {date}</div>
             }
             {props.slogan && <span className={'the-slogan'}>{SLOGAN}</span>}
-            {props.timer > 0 && lgs.settings.ui.welcome.autoClose &&
-                <span className={'welcome-modal-timer'}>{props.timer} s</span>}
             {props.buttons}
         </div>
     )

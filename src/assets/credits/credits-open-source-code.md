@@ -4,6 +4,7 @@ The application, including studio, backend,APIs,site is based on :
 
 ### Map and 3D:
 * [cesiumjs](https://cesium.com/)  - The Map engine
+* [Three.js](https://threejs.org/) - 3D graphics library
 
 ### Code and devs:
 * [Bun](https://bun.sh/) - javascript runtime

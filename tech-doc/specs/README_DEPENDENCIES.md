@@ -133,6 +133,7 @@ zip-a-folder
 These are the current package names declared in the `devDependencies` section of `package.json`.
 
 ```text
+@resvg/resvg-js
 @testing-library/react
 @types/bun
 @types/react

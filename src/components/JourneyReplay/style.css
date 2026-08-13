@@ -5,7 +5,7 @@
  * File: style.css
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-11
  * Last modified: 2026-06-11
@@ -59,6 +59,24 @@
 }
 
 .replay-camera-sensitivity-slider {
+    width: 100%;
+}
+
+/* Extend label-at-start hints across both columns of replay sensitivity controls. */
+.replay-camera-sensitivity-slider[label-at-start] {
+    row-gap: 0;
+}
+
+.replay-camera-sensitivity-slider[label-at-start]::part(slider) {
+    display: contents;
+}
+
+.replay-camera-sensitivity-slider[label-at-start]::part(hint) {
+    grid-column: 1 / -1;
+}
+
+.replay-camera-sensitivity-slider[label-at-start]::part(track) {
+    min-width: 0;
     width: 100%;
 }
 
@@ -189,6 +207,199 @@
     grid-template-columns: auto minmax(8rem, 10rem);
     max-width: calc(100% - 2.25rem - var(--wa-space-s, 0.75rem));
     width: auto;
+}
+
+.replay-effect-preview {
+    /* Replay fill color used by the inner route and marker layers. */
+    --replay-effect-preview-fill: #ff6a00;
+    /* Replay border color used by the outer route and marker layers. */
+    --replay-effect-preview-border: #ffffff;
+    /* Trace fill opacity controls the inner preview layer. */
+    --replay-effect-preview-fill-opacity: 100%;
+    /* Border opacity controls the outer preview layer. */
+    --replay-effect-preview-border-opacity: 100%;
+    /* Current Cesium scene snapshot used as the preview map background. */
+    --replay-effect-preview-background: none;
+    /* Scaled Cesium trace core width. */
+    --replay-effect-preview-route-core-width: 0.24rem;
+    /* Scaled Cesium trace border width. */
+    --replay-effect-preview-route-border-width: 0.33rem;
+    /* Scaled Cesium inner glow width. */
+    --replay-effect-preview-route-inner-width: 0.36rem;
+    /* Scaled Cesium marker diameter. */
+    --replay-effect-preview-marker-size: 0.94rem;
+    /* Scaled Cesium marker border width. */
+    --replay-effect-preview-marker-border-width: 0.08rem;
+    min-height: 0;
+    position: relative;
+    border: 1px solid color-mix(in srgb, var(--wa-color-surface-border) 72%, transparent);
+    border-radius: var(--wa-border-radius-m, 0.5rem);
+    overflow: hidden;
+    width: 100%;
+
+    & .replay-effect-preview-map {
+        background-color: color-mix(in srgb, var(--wa-color-neutral-300, #b8c2c9) 34%, var(--wa-color-surface-50, #f7f8f9));
+        background-image:
+            linear-gradient(135deg, color-mix(in srgb, black 34%, transparent), transparent 52%),
+            var(--replay-effect-preview-background),
+            linear-gradient(28deg, transparent 46%, color-mix(in srgb, white 56%, transparent) 47%, transparent 49%),
+            linear-gradient(112deg, transparent 46%, color-mix(in srgb, white 48%, transparent) 47%, transparent 49%),
+            linear-gradient(90deg, color-mix(in srgb, var(--wa-color-neutral-500, #72808a) 22%, transparent) 1px, transparent 1px);
+        background-position: center;
+        background-size: cover, cover, auto, auto, 2.25rem 2.25rem;
+        height: 5rem;
+        overflow: hidden;
+        position: relative;
+    }
+
+    & .replay-effect-preview-route {
+        height: 100%;
+        inset: 0;
+        position: absolute;
+        width: 100%;
+    }
+
+    & .replay-effect-preview-route-border,
+    & .replay-effect-preview-route-inner,
+    & .replay-effect-preview-route-core {
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        vector-effect: non-scaling-stroke;
+    }
+
+    & .replay-effect-preview-route-border {
+        stroke: color-mix(in srgb, var(--replay-effect-preview-border) var(--replay-effect-preview-border-opacity), transparent);
+        stroke-width: var(--replay-effect-preview-route-border-width);
+    }
+
+    & .replay-effect-preview-route-inner {
+        display: none;
+        stroke: color-mix(in srgb, var(--replay-effect-preview-border) 75%, var(--replay-effect-preview-fill));
+        stroke-width: var(--replay-effect-preview-route-inner-width);
+    }
+
+    & .replay-effect-preview-route-core {
+        stroke: color-mix(in srgb, var(--replay-effect-preview-fill) var(--replay-effect-preview-fill-opacity), transparent);
+        stroke-width: var(--replay-effect-preview-route-core-width);
+    }
+
+    & .replay-effect-preview-marker {
+        height: var(--replay-effect-preview-marker-size);
+        left: 50%;
+        position: absolute;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: var(--replay-effect-preview-marker-size);
+        z-index: 1;
+    }
+
+    & .replay-effect-preview-marker-outer,
+    & .replay-effect-preview-marker-inner,
+    & .replay-effect-preview-marker-core {
+        box-sizing: border-box;
+        border-radius: 50%;
+        left: 50%;
+        position: absolute;
+        top: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+    & .replay-effect-preview-marker-outer,
+    & .replay-effect-preview-marker-inner {
+        display: none;
+    }
+
+    & .replay-effect-preview-marker-outer {
+        background: color-mix(in srgb, white 20%, var(--replay-effect-preview-border));
+        height: max(calc(var(--replay-effect-preview-marker-size) * 1.5), calc(var(--replay-effect-preview-marker-size) + 0.25rem));
+        width: max(calc(var(--replay-effect-preview-marker-size) * 1.5), calc(var(--replay-effect-preview-marker-size) + 0.25rem));
+    }
+
+    & .replay-effect-preview-marker-inner {
+        background: color-mix(in srgb, white 20%, color-mix(in srgb, var(--replay-effect-preview-border) 75%, var(--replay-effect-preview-fill)));
+        height: calc(var(--replay-effect-preview-marker-size) + 0.125rem);
+        width: calc(var(--replay-effect-preview-marker-size) + 0.125rem);
+    }
+
+    & .replay-effect-preview-marker-core {
+        background: color-mix(in srgb, var(--replay-effect-preview-fill) var(--replay-effect-preview-fill-opacity), transparent);
+        border: var(--replay-effect-preview-marker-border-width) solid color-mix(in srgb, var(--replay-effect-preview-border) var(--replay-effect-preview-border-opacity), transparent);
+        height: var(--replay-effect-preview-marker-size);
+        width: var(--replay-effect-preview-marker-size);
+    }
+
+    &.replay-effect-preview-glow .replay-effect-preview-route {
+        filter: drop-shadow(0 0 0.25rem color-mix(in srgb, var(--replay-effect-preview-border) 75%, transparent)) drop-shadow(0 0 0.7rem color-mix(in srgb, var(--replay-effect-preview-border) 55%, transparent));
+    }
+
+    &.replay-effect-preview-glow .replay-effect-preview-route-border {
+        opacity: calc(var(--replay-effect-preview-border-opacity) * 0.55);
+        stroke-width: calc(var(--replay-effect-preview-route-border-width) + 0.18rem);
+    }
+
+    &.replay-effect-preview-glow .replay-effect-preview-route-inner {
+        display: block;
+        opacity: calc(var(--replay-effect-preview-fill-opacity) * 0.55);
+    }
+
+    &.replay-effect-preview-glow .replay-effect-preview-route-core {
+        filter: drop-shadow(0 0 0.2rem color-mix(in srgb, var(--replay-effect-preview-fill) 90%, transparent)) drop-shadow(0 0 0.45rem color-mix(in srgb, var(--replay-effect-preview-fill) 65%, transparent));
+    }
+
+    &.replay-effect-preview-glow .replay-effect-preview-marker {
+        filter: drop-shadow(0 0 0.35rem color-mix(in srgb, var(--replay-effect-preview-border) 70%, transparent)) drop-shadow(0 0 0.9rem color-mix(in srgb, var(--replay-effect-preview-border) 50%, transparent));
+    }
+
+    &.replay-effect-preview-glow .replay-effect-preview-marker-outer,
+    &.replay-effect-preview-glow .replay-effect-preview-marker-inner {
+        display: block;
+        opacity: 0.55;
+    }
+
+    &.replay-effect-preview-glow .replay-effect-preview-marker-core,
+    &.replay-effect-preview-neon .replay-effect-preview-marker-core {
+        border: 0;
+    }
+
+    &.replay-effect-preview-neon .replay-effect-preview-route {
+        filter: saturate(1.45) drop-shadow(0 0 0.28rem color-mix(in srgb, var(--replay-effect-preview-border) 75%, transparent)) drop-shadow(0 0 0.75rem color-mix(in srgb, var(--replay-effect-preview-border) 55%, transparent)) drop-shadow(0 0 1.7rem color-mix(in srgb, var(--replay-effect-preview-border) 40%, transparent));
+    }
+
+    &.replay-effect-preview-neon .replay-effect-preview-route-border {
+        opacity: calc(var(--replay-effect-preview-border-opacity) * 0.42);
+        stroke-width: calc(var(--replay-effect-preview-route-border-width) + 0.28rem);
+    }
+
+    &.replay-effect-preview-neon .replay-effect-preview-route-inner {
+        display: block;
+        opacity: calc(var(--replay-effect-preview-fill-opacity) * 0.45);
+    }
+
+    &.replay-effect-preview-neon .replay-effect-preview-route-core {
+        filter: drop-shadow(0 0 0.24rem color-mix(in srgb, var(--replay-effect-preview-fill) 90%, transparent)) drop-shadow(0 0 0.55rem color-mix(in srgb, var(--replay-effect-preview-fill) 70%, transparent)) drop-shadow(0 0 1.1rem color-mix(in srgb, var(--replay-effect-preview-fill) 50%, transparent));
+    }
+
+    &.replay-effect-preview-neon .replay-effect-preview-marker {
+        filter: saturate(1.45) drop-shadow(0 0 0.2rem color-mix(in srgb, var(--replay-effect-preview-border) 75%, transparent)) drop-shadow(0 0 0.45rem color-mix(in srgb, var(--replay-effect-preview-border) 55%, transparent)) drop-shadow(0 0 1rem color-mix(in srgb, var(--replay-effect-preview-border) 40%, transparent));
+    }
+
+    &.replay-effect-preview-neon .replay-effect-preview-marker-outer,
+    &.replay-effect-preview-neon .replay-effect-preview-marker-inner {
+        display: block;
+    }
+
+    &.replay-effect-preview-neon .replay-effect-preview-marker-outer {
+        height: max(calc(var(--replay-effect-preview-marker-size) * 1.65), calc(var(--replay-effect-preview-marker-size) + 0.25rem));
+        opacity: 0.65;
+        width: max(calc(var(--replay-effect-preview-marker-size) * 1.65), calc(var(--replay-effect-preview-marker-size) + 0.25rem));
+    }
+
+    &.replay-effect-preview-neon .replay-effect-preview-marker-inner {
+        height: calc(var(--replay-effect-preview-marker-size) + 0.1875rem);
+        opacity: 0.45;
+        width: calc(var(--replay-effect-preview-marker-size) + 0.1875rem);
+    }
 }
 
 .replay-style-field-grid {

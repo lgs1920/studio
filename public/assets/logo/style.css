@@ -5,7 +5,7 @@
  * File: style.css
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-09
  * Last modified: 2026-07-09
@@ -36,20 +36,20 @@
   --lgs--logo-primary: #f3bb35;
   --lgs--logo-secondary: #000000;
   --lgs--logo-text-primary: var(--lgs--logo-primary);
-  --lgs--logo-text-secondary: var(--lgs--logo-secondary);
+  --lgs--logo-text-secondary: var(--lgs--logo-primary);
   --lgs--logo-wordmark-gap: 20px;
 
   --lgs--logo-secondary-opacity: 1;
-  --lgs--logo-gap-horizontal: 50px;
+  --lgs--logo-gap-horizontal: 100px;
   --lgs--logo-horizontal-wordmark-offset-y: 50px;
   --lgs--logo-play-arrow-border-width: 30px;
 
-  --lgs--logo-gap-vertical: 20px;
+  --lgs--logo-gap-vertical: 60px;
   --lgs--logo-wordmark-font-family: "Noto Sans", sans-serif;
   --lgs--logo-wordmark-font-size: 150px;
   --lgs--logo-wordmark-main-weight: 700;
 
-  --lgs--logo-wordmark-year-weight: 400;
+  --lgs--logo-wordmark-year-weight: var(--lgs--logo-wordmark-main-weight);
 }
 
 .lgs--logo-only,

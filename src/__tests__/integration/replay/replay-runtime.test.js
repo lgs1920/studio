@@ -1,6 +1,7 @@
 import {REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP} from '@Core/ui/replay/JourneyReplayClips'
 import {
-    finiteNumber, isJourneyReplayCameraActive, publishReplayClipFrameState, resetRuntimeProgress,
+    finiteNumber, isJourneyReplayCameraActive, isJourneyReplayTraceActive, isJourneyReplayVideoCaptureActive,
+    publishReplayClipFrameState, resetRuntimeProgress,
 } from '@Core/ui/replay/JourneyReplayRuntime'
 import {describe, expect, it} from 'vitest'
 
@@ -19,6 +20,52 @@ describe('JourneyReplayRuntime', () => {
         expect(isJourneyReplayCameraActive({active: true})).toBe(true)
         expect(isJourneyReplayCameraActive({paused: true})).toBe(true)
         expect(isJourneyReplayCameraActive({clipSequenceActive: true})).toBe(true)
+    })
+
+    it('does not keep the replay trace visible from a completed linked recording', () => {
+        const previousLgs = globalThis.lgs
+        try {
+            globalThis.lgs = {
+                settings: {ui: {replay: {recordingSync: true}}},
+                stores: {
+                    replay: {recordingSync: true},
+                    ui: {
+                        video: {
+                            editing:      true,
+                            preRecording: false,
+                            recording:    false,
+                            snapshot:     false,
+                            finalizing:   false,
+                        },
+                    },
+                },
+            }
+
+            expect(isJourneyReplayVideoCaptureActive()).toBe(false)
+            expect(isJourneyReplayTraceActive()).toBe(false)
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('keeps the replay trace visible during an active linked recording', () => {
+        const previousLgs = globalThis.lgs
+        try {
+            globalThis.lgs = {
+                settings: {ui: {replay: {recordingSync: true}}},
+                stores: {
+                    replay: {recordingSync: true},
+                    ui: {video: {recording: true}},
+                },
+            }
+
+            expect(isJourneyReplayVideoCaptureActive()).toBe(true)
+            expect(isJourneyReplayTraceActive()).toBe(true)
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
     })
 
     it('publishes a normalized start clip frame state', () => {

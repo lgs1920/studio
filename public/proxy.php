@@ -16,6 +16,7 @@ const REQUEST_HEADER_ALLOWLIST = [
     'Accept',
     'Accept-Language',
     'Content-Type',
+    'Origin',
     'X-Conversion-Id',
     'X-Request-Progress',
     'X-Progress-Interval',
@@ -363,7 +364,7 @@ function create_curl_handle(string $targetUrl, array $requestHeaders, array &$re
         CURLOPT_NOSIGNAL => true,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 30,
-        CURLOPT_USERAGENT => 'LGS1920 Studio (contact@lgs1920.fr)',
+        CURLOPT_USERAGENT => 'LGS1920 Studio (studio@lgs1920.fr)',
     ]);
 
     set_curl_protocols($ch);
@@ -650,6 +651,7 @@ function is_allowed_origin(string $origin, array $config): bool
 {
     $allowed = [
         origin_from_config($config['studio'] ?? []),
+        origin_from_config($config['site'] ?? []),
     ];
 
     if (($config['platform'] ?? '') === 'development') {

@@ -5,7 +5,7 @@
  * File: JourneyReplayMode.js
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-17
  * Last modified: 2026-07-17
@@ -229,6 +229,7 @@ export class JourneyReplaySessionController {
     #cameraFlightActive = false
     #logicalCameraTrajectory = false
     #replayExportClipFrameState = null
+    #clipCameraContinuity = null
     #renderingReplayExportFrame = false
     #cameraBezierFrame = null
     #cameraBezierResolve = null
@@ -430,6 +431,13 @@ export class JourneyReplaySessionController {
             get: () => this.#replayExportClipFrameState,
             set: value => {
                 this.#replayExportClipFrameState = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'clipCameraContinuity', {
+            configurable: true,
+            get: () => this.#clipCameraContinuity,
+            set: value => {
+                this.#clipCameraContinuity = value
             },
         })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'renderingReplayExportFrame', {

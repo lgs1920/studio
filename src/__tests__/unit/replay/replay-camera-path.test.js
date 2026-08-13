@@ -5,7 +5,7 @@
  * File: replay-camera-path.test.js
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-26
  * Last modified: 2026-07-26
@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {Cartesian3, Matrix4, Transforms} from 'cesium'
+import {Cartesian3, Cartographic, Matrix4, Transforms} from 'cesium'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@Utils/UIToast', () => ({
@@ -34,6 +34,8 @@ import {
     buildReplayTransferSafetyProfile,
 } from '@Core/ui/replay/JourneyReplayCameraCollision'
 import {
+    resolveCameraTransferLiftMeters,
+    startCameraTransition,
     updateCamera,
 } from '@Core/ui/replay/JourneyReplayCameraBinding'
 import {
@@ -52,6 +54,7 @@ import {
 } from '@Core/ui/replay/JourneyReplayCameraMath'
 import {
     buildCameraTransferPath,
+    normalizeCameraTransferMode,
     selectCameraTransferMode,
 } from '@Core/ui/replay/JourneyReplayCameraPath'
 import * as CameraPath from '@Core/ui/replay/JourneyReplayCameraPath'
@@ -88,6 +91,7 @@ import {
     REPLAY_MARKER_MODE_HYSTERESIS,
     REPLAY_CAMERA_POSITION_AHEAD,
     REPLAY_CAMERA_POSITION_BEHIND,
+    REPLAY_EFFECT_GLOW,
     REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {
@@ -278,6 +282,86 @@ describe('Journey replay camera paths', () => {
         expect(selectCameraTransferMode(120_000, 50)).toBe('elevate-then-move')
         expect(selectCameraTransferMode(250_000, 50)).toBe('spiral-conical')
         expect(selectCameraTransferMode(600_000, 50)).toBe('blur-jump-refocus')
+    })
+
+    it('normalizes explicit clip path choices and keeps curved endpoints exact', () => {
+        expect(normalizeCameraTransferMode('auto')).toBeNull()
+        expect(normalizeCameraTransferMode('spiral-horizontal')).toBe('spiral-horizontal')
+        expect(normalizeCameraTransferMode('unsupported')).toBeNull()
+
+        const start = new Cartesian3(0, 0, 100)
+        const end = new Cartesian3(1000, 500, 300)
+        for (const mode of ['spiral-horizontal', 'spiral-conical', 'spiral-vertical']) {
+            const path = buildCameraTransferPath({start, end, mode})
+            expect(path.sampleAt(0)).toEqual(start)
+            expect(path.sampleAt(1)).toEqual(end)
+        }
+    })
+
+    it('raises long transfers enough to preserve a higher clip endpoint', () => {
+        expect(resolveCameraTransferLiftMeters({
+            distanceMeters: 100_000,
+            startHeight:    1_200,
+            endHeight:      10_000,
+            configuredLift: 500,
+        })).toBe(18_000)
+
+        expect(resolveCameraTransferLiftMeters({
+            distanceMeters: 1_000,
+            startHeight:    1_200,
+            endHeight:      10_000,
+            configuredLift: 500,
+        })).toBe(8_800)
+    })
+
+    it('does not cap a direct flight below a higher clip endpoint', async () => {
+        const flyTo = vi.fn(({complete}) => complete?.())
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                cameraBezierFrame:  null,
+                cameraBezierResolve: null,
+                cameraFlightActive:  false,
+                cameraApplyingView: false,
+                introHeadingTransition: null,
+            },
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {
+                now: vi.fn(() => 0),
+                rememberCameraView: vi.fn(),
+                cancelCameraBezierTransition: vi.fn(),
+            },
+        }
+        vi.stubGlobal('lgs', {
+            settings: {
+                camera: {
+                    transferDistanceThresholdKm: 50,
+                },
+            },
+            viewer: {
+                camera: {
+                    positionWC: new Cartesian3(0, 0, 1_200),
+                    positionCartographic: {height: 1_200},
+                    flyTo,
+                    cancelFlight: vi.fn(),
+                },
+            },
+        })
+
+        await startCameraTransition(mode, {
+            sample:     {longitude: 2, latitude: 48, altitude: 100},
+            endFrame: {
+                destination: new Cartesian3(1_000, 2_000, 3_000),
+                direction:   new Cartesian3(0, 1, 0),
+                correctedUp: new Cartesian3(0, 0, 1),
+                safeHeading: 0,
+                safePitch:   -1,
+                currentHeight: 10_000,
+            },
+            duration: 1,
+        })
+
+        expect(flyTo).toHaveBeenCalledWith(expect.objectContaining({
+            maximumHeight: 10_000,
+        }))
     })
 
     it('builds a 3D Bezier path that bends through the provided control points', () => {
@@ -549,14 +633,13 @@ describe('Journey replay camera paths', () => {
             heading:   0,
             pitch:     0,
             endFrame,
+            pathMode:  'spiral-horizontal',
             duration:  1,
             logicalNow: 10,
         })
 
         expect(call.currentCameraFrame).toHaveBeenCalledTimes(1)
-        expect(['elevate-then-move', 'spiral-conical', 'blur-jump-refocus']).toContain(
-            state.deterministicCameraTransition.path.mode,
-        )
+        expect(state.deterministicCameraTransition.path.mode).toBe('spiral-horizontal')
         expect(state.deterministicCameraTransition.path.samples).toHaveLength(state.deterministicCameraTransition.path.sampleCount)
         expect(state.deterministicCameraTransition.path.antiCollisionBounds).toEqual(expect.objectContaining({
             west: expect.any(Number),
@@ -564,6 +647,50 @@ describe('Journey replay camera paths', () => {
             east: expect.any(Number),
             north: expect.any(Number),
         }))
+    })
+
+    it('keeps take-off endpoints on the explicit ground-to-camera altitude path', () => {
+        vi.stubGlobal('lgs', {
+            theJourney: makeJourney(),
+            settings: {
+                camera: {
+                    transferDistanceThresholdKm: 50,
+                    pitchAdjustHeight:           600,
+                },
+            },
+        })
+
+        const {mode, state} = makeMode()
+        const start = Cartesian3.fromDegrees(0.1, 0.1, 0)
+        const end = Cartesian3.fromDegrees(0.1, 0.1, 380)
+        const startFrame = {
+            destination: start,
+            direction:   new Cartesian3(0, 1, 0),
+            up:          new Cartesian3(0, 0, 1),
+        }
+        const endFrame = {
+            destination:  end,
+            direction:    new Cartesian3(0, 1, 0),
+            correctedUp:  new Cartesian3(0, 0, 1),
+            currentHeight: 380,
+        }
+
+        startDeterministicCameraTransition(mode, {
+            sample:          {longitude: 0.1, latitude: 0.1, altitude: 0},
+            heading:         0,
+            pitch:           -1,
+            startFrame,
+            endFrame,
+            pathMode:        'direct',
+            preserveCameraPath: true,
+            duration:        1,
+            logicalNow:      0,
+        })
+
+        const path = state.deterministicCameraTransition.path
+        expect(Cartographic.fromCartesian(path.sampleAt(0)).height).toBeCloseTo(0, 3)
+        expect(Cartographic.fromCartesian(path.sampleAt(0.5)).height).toBeGreaterThan(0)
+        expect(Cartographic.fromCartesian(path.sampleAt(1)).height).toBeCloseTo(380, 3)
     })
 
     it('propagates the tracking mode into deterministic replay path safety', () => {
@@ -1650,6 +1777,60 @@ describe('Journey replay camera paths', () => {
             }))
         },
     )
+
+    it('does not let replay effect depth trigger a camera pitch correction', () => {
+        vi.stubGlobal('lgs', {
+            settings: {
+                ui: {
+                    replay: {
+                        progression: {effect: {mode: REPLAY_EFFECT_GLOW}},
+                        camera: {
+                            positionMode: 'system',
+                            heading:      0,
+                            pitch:        -65,
+                            altitude:     1200,
+                        },
+                        marker: {mode: REPLAY_MARKER_MODE_HYSTERESIS},
+                    },
+                },
+            },
+            stores: {
+                replay: {
+                    camera: {positionMode: 'system', heading: 0, pitch: -65, altitude: 1200},
+                    captureFps: 30,
+                },
+            },
+            viewer: {camera: {}},
+        })
+
+        const {mode, call} = makeMode()
+        const sample = {
+            progress:          0.5,
+            distanceFromStart: 100,
+            longitude:         1,
+            latitude:          2,
+            altitude:          120,
+        }
+        call.cameraViewForSample = vi.fn(() => ({
+            sample,
+            heading:      0,
+            pitch:        -65 * Math.PI / 180,
+            cameraHeight: 1200,
+        }))
+        call.cameraLookaheadSample = vi.fn(() => sample)
+        call.renderedTraceVisibleForSample = vi.fn(() => false)
+
+        updateCamera(mode, {
+            sample,
+            progress: sample.progress,
+            source:   'playback',
+        })
+
+        expect(call.renderedTraceVisibleForSample).not.toHaveBeenCalled()
+        expect(call.cameraRecenterFrame).toHaveBeenCalledWith(expect.objectContaining({
+            pitch: expect.closeTo(-65 * Math.PI / 180),
+        }))
+    })
 
     it('applies the logical camera pose without asking Cesium to build a path', () => {
         vi.stubGlobal('lgs', {

@@ -5,7 +5,7 @@
  * File: widget-2-canvas-refresh-mode.test.js
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-09
  * Last modified: 2026-06-09
@@ -241,6 +241,29 @@ describe('Widget2Canvas refresh modes', () => {
 
         expect(snapdomToCanvasMock).toHaveBeenCalledTimes(3)
         expect(snapdomToCanvasMock.mock.calls[2][0]).toBe(dynamicValue)
+    })
+
+    it('captures the whole widget when visual effects must stay aligned', async () => {
+        target?.remove?.()
+        target = document.createElement('div')
+        target.className = 'static-widget-part'
+        Object.defineProperties(target, {
+            offsetWidth:  {configurable: true, value: 120},
+            offsetHeight: {configurable: true, value: 40},
+        })
+        target.getBoundingClientRect = () => ({left: 0, top: 0, width: 120, height: 40})
+
+        const dynamicValue = document.createElement('div')
+        dynamicValue.className = 'dynamic-widget-part'
+        dynamicValue.textContent = '42'
+        target.appendChild(dynamicValue)
+        document.body.appendChild(target)
+
+        mirror = new Widget2Canvas(target, {captureWholeWidget: true, scale: 1})
+        await mirror.init()
+
+        expect(snapdomToCanvasMock).toHaveBeenCalledTimes(1)
+        expect(snapdomToCanvasMock).toHaveBeenCalledWith(target, expect.anything())
     })
 
     it('queues a fresh refresh while a refresh is already pending', async () => {

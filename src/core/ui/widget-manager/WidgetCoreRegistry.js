@@ -5,7 +5,7 @@
  * File: WidgetCoreRegistry.js
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-23
  * Last modified: 2026-04-23
@@ -495,6 +495,7 @@ export class WidgetCoreRegistry {
                 minCropSize:            initialConfig.minCropSize ?? {width: 100, height: 100},
                 observer:               null,
                 outsideOverlay:         initialConfig.outsideOverlay,
+                positionKey:            initialConfig.positionKey,
                 persist:                initialConfig.persist ?? null,
                 position:               {left: 0, top: 0},
                 previousCropDimensions: null,
@@ -564,6 +565,9 @@ export class WidgetCoreRegistry {
             if (initialConfig.widgetsBoard !== undefined) {
                 config.widgetsBoard = initialConfig.widgetsBoard
             }
+            if (initialConfig.positionKey !== undefined) {
+                config.positionKey = initialConfig.positionKey
+            }
         }
 
         config.fromDB = false
@@ -590,7 +594,10 @@ export class WidgetCoreRegistry {
         if (config.persist && !canReuseRuntimeConfig) {
             const savedWidget = await __.ui.widgetManager.getWidgetPosition(elementId)
 
-            if (savedWidget && savedWidget.leftRatio !== undefined) {
+            const savedPositionMatchesKey = !initialConfig.positionKey
+                || savedWidget?.positionKey === initialConfig.positionKey
+
+            if (savedWidget && savedWidget.leftRatio !== undefined && savedPositionMatchesKey) {
                 config.fromDB = true
                 const referenceRect = config.container?.getBoundingClientRect()
                 const boundsRect = config.boundsContainer?.getBoundingClientRect?.() ?? referenceRect
@@ -837,6 +844,7 @@ export class WidgetCoreRegistry {
             expandedDimensions: expandedDimensions,
             expandedInlineDimensions: expandedInlineDimensions,
             icon:               config.icon ?? null,
+            positionKey:        config.positionKey ?? null,
         }
     }
 

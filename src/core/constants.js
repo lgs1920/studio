@@ -5,7 +5,7 @@
  * File: constants.js
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-10
  * Last modified: 2026-05-10
@@ -231,9 +231,6 @@ export const EVENTS = {
 
 export const APP_EVENT = {
     INITIAL_FOCUS: 'app/initial-focus',
-    WELCOME:       {
-        HIDE: 'app/welcome/hide',
-    },
 }
 
 

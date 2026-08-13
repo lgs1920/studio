@@ -5,7 +5,7 @@
  * File: editorSettings.js
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-01-06
  * Last modified: 2026-01-06
@@ -36,11 +36,6 @@ export const editorSettings = {
             widgets: false,
         },
         test:  true,
-    },
-
-    welcome: {
-        autoClose: null,
-        showIntro: null,
     },
 
     camera: {

@@ -5,7 +5,7 @@
  * File: style.css
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-30
  * Last modified: 2026-04-30
@@ -43,7 +43,7 @@
     color: var(--track-widget-text-color);
     border: var(--track-widget-border) solid var(--track-widget-border);
     gap: var(--lgs-gutter-s);
-    overflow: hidden;
+    overflow: visible;
 }
 
 .journey-stats-widget wa-divider {
@@ -70,7 +70,7 @@
 }
 
 .journey-stats-summary-item {
-    line-height: 1;
+    line-height: 1.1;
     display: flex;
     flex-direction: column;
     text-align: center;
@@ -98,7 +98,7 @@
 .journey-stats-date,
 .journey-stats-location {
     font-family: var(--track-widget-font);
-    line-height: 1;
+    line-height: 1.1;
     display: flex;
     flex: 0 0 calc((100% - var(--data)) / 4);
     text-transform: uppercase;

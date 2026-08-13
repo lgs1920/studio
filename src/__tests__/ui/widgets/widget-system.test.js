@@ -5,7 +5,7 @@
  * File: widget-system.test.js
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-30
  * Last modified: 2026-04-30
@@ -248,6 +248,43 @@ describe('Widget registry ratio resolution', () => {
         expect(config.dimensions.height).toBe(200)
         expect(config.position.left).toBeCloseTo(322.2222222222)
         expect(config.position.top).toBe(400)
+    })
+
+    it('ignores persisted positions from an older position key', async () => {
+        const registry = new WidgetCoreRegistry()
+        const container = {
+            getBoundingClientRect: vi.fn(() => ({
+                left:   0,
+                top:    0,
+                right:  1000,
+                bottom: 800,
+                width:  1000,
+                height: 800,
+            })),
+        }
+
+        __.ui.widgetManager.getWidgetPosition = vi.fn(async () => ({
+            leftRatio:   10,
+            topRatio:    10,
+            width:       200,
+            height:      100,
+            positionKey: 'replay-controls-window-v1',
+        }))
+
+        const config = await registry.retrieveConfig(document.createElement('div'), {
+            id:              'replay-controls-widget',
+            attachTo:        'center',
+            container,
+            boundsContainer: container,
+            left:            '50%',
+            persist:         true,
+            positionKey:     'replay-controls-window-v2',
+            top:             '66.7%',
+            type:            'toolbar',
+        })
+
+        expect(config.fromDB).toBe(false)
+        expect(config.position).toEqual({left: 0, top: 0})
     })
 
     it('migrates an active runtime config from the global ratio to the explicit widget ratio', async () => {

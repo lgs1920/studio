@@ -5,7 +5,7 @@
  * File: style.css
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-13
  * Last modified: 2026-07-13
@@ -810,108 +810,93 @@ body.mobile .orbit-widget-body {
 }
 
 /***************************************
- * Welcome modal
+ * Persistent welcome hero
  *
  * https://hype4.academy/tools/glassmorphism-generator
  */
-#welcome-modal {
+#welcome-hero {
     position: fixed;
     z-index: calc(var(--lgs-toast-zindex) - 2);
     overflow: hidden;
-    transition: background-color var(--welcome-exit-duration, 3000ms) ease;
     color: var(--lgs-text-on-color);
     background-color: transparent;
     inset: 0;
-    --welcome-overlay-transition-duration: 600ms;
 }
 
-#welcome-modal.welcome-modal-exiting {
-    pointer-events: none;
-    background-color: transparent;
-    --welcome-overlay-transition-duration: var(--welcome-exit-duration, 3000ms);
-}
-
-.welcome-modal-media,
-.welcome-modal-fog,
-.welcome-modal-scrim,
-.welcome-modal-content {
+.welcome-hero-media,
+.welcome-hero-fog,
+.welcome-hero-scrim,
+.welcome-hero-shell {
     position: absolute;
     inset: 0;
 }
 
-.welcome-modal-media {
-    transition: opacity var(--welcome-exit-duration, 3000ms) ease;
+.welcome-hero-media {
     background: transparent;
 }
 
-.welcome-modal-video {
+.welcome-hero-video {
     width: 100%;
     height: 100%;
     transform: scale(1.015);
     transition: opacity 350ms ease;
     opacity: 0;
-    filter: blur(var(--welcome-video-blur, 7px)) brightness(var(--welcome-video-brightness, .84)) saturate(var(--welcome-video-saturation, .72));
+    filter: blur(4.5px) brightness(.92) saturate(.82);
     object-fit: cover;
     object-position: center;
 }
 
-#welcome-modal.welcome-modal-video-ready .welcome-modal-video {
+#welcome-hero.welcome-hero-video-ready .welcome-hero-video {
     opacity: 1;
 }
 
-.welcome-modal-fog {
+.welcome-hero-fog {
     z-index: 1;
-    transition: opacity var(--welcome-overlay-transition-duration, 600ms) ease;
-    opacity: var(--welcome-fog-opacity, .64);
+    opacity: .64;
     background: radial-gradient(circle at 50% 60%, rgba(255, 255, 255, .26) 0%, rgba(255, 255, 255, .1) 36%, transparent 72%),
     linear-gradient(180deg, rgba(255, 255, 255, .32) 0%, rgba(255, 255, 255, .12) 45%, transparent 100%);
     backdrop-filter: blur(4.5px) saturate(.84);
 }
 
-.welcome-modal-scrim {
+.welcome-hero-scrim {
     z-index: 2;
-    transition: opacity var(--welcome-overlay-transition-duration, 600ms) ease;
-    opacity: var(--welcome-scrim-opacity, .68);
+    opacity: .68;
     background: linear-gradient(180deg, var(--lgs-dark-color-50) 0%, var(--lgs-dark-color-25) 44%, var(--lgs-dark-color-75) 100%),
     radial-gradient(circle at 50% 45%, transparent 0%, var(--lgs-dark-color-40) 62%, var(--lgs-dark-color-90) 100%);
     backdrop-filter: blur(1px);
 }
 
-.welcome-modal-content {
+.welcome-hero-shell {
     z-index: 3;
+    display: grid;
+    place-items: center;
+    width: min(1240px, calc(100vw - 2rem));
+    margin-inline: auto;
+    padding: max(var(--top), var(--lgs-gutter)) 0 max(var(--bottom), var(--lgs-gutter));
+}
+
+.welcome-hero-content {
     display: flex;
     align-items: center;
     flex-direction: column;
     justify-content: center;
-    padding: max(var(--top), var(--lgs-gutter)) max(var(--right), var(--lgs-gutter)) max(var(--bottom), var(--lgs-gutter));
-    transition: opacity var(--welcome-exit-duration, 3000ms) ease;
     gap: var(--lgs-gutter);
 }
 
-#welcome-modal.welcome-modal-exiting .welcome-modal-media,
-#welcome-modal.welcome-modal-exiting .welcome-modal-fog,
-#welcome-modal.welcome-modal-exiting .welcome-modal-scrim,
-#welcome-modal.welcome-modal-exiting .welcome-modal-content,
-#welcome-modal.welcome-modal-exiting #welcome-links,
-#welcome-modal.welcome-modal-exiting #welcome-build-info,
-#welcome-modal.welcome-modal-exiting > .welcome-modal-timer {
-    opacity: 0;
-}
-
-#welcome-modal .welcome-logo {
+.welcome-hero-content .welcome-logo {
     position: relative;
     display: block;
-    width: min(200px, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter))) !important;
+    width: min(220px, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter))) !important;
     margin-inline: auto;
 }
 
-#welcome-modal .welcome-logo svg {
+.welcome-hero-content .welcome-logo svg {
     display: block;
     width: 100%;
     height: auto;
 }
 
-#welcome-modal .welcome-slogan {
+.welcome-hero-content .welcome-slogan {
     display: block;
     width: 100%;
     height: auto;
@@ -921,105 +906,12 @@ body.mobile .orbit-widget-body {
     filter: drop-shadow(0 2px 14px var(--lgs-dark-color-90));
 }
 
-#welcome-modal .welcome-slogan text {
+.welcome-hero-content .welcome-slogan text {
     font-size: clamp(3.5rem, calc(2.25 * var(--lgs-gutter)), 5rem);
 }
 
-#welcome-modal .welcome-slogan-stroke {
+.welcome-hero-content .welcome-slogan-stroke {
     opacity: 1;
-}
-
-#welcome-modal > .welcome-modal-timer {
-    font-size: var(--lgs-font-size-s);
-    line-height: 1;
-    position: absolute;
-    z-index: 4;
-    top: var(--lgs-gutter-s);
-    right: var(--lgs-gutter-s);
-    transition: opacity var(--welcome-exit-duration, 3000ms) ease;
-    color: white;
-    text-shadow: 0 2px 14px var(--lgs-dark-color-90);
-}
-
-#welcome-links {
-    position: absolute;
-    z-index: 4;
-    bottom: var(--lgs-gutter-s);
-    left: var(--lgs-gutter-s);
-    display: flex;
-    align-items: center;
-    width: auto;
-    transition: opacity var(--welcome-exit-duration, 3000ms) ease;
-    gap: var(--lgs-gutter-s);
-}
-
-#welcome-links > :last-child {
-    margin-left: 0;
-}
-
-#welcome-links wa-button::part(base) {
-    font-weight: normal;
-    color: white;
-    text-shadow: 0 2px 12px var(--lgs-dark-color-90);
-}
-
-#welcome-links-do-not-show {
-    display: flex;
-    align-items: center;
-    gap: var(--lgs-gutter-s);
-}
-
-#welcome-build-info {
-    position: absolute;
-    z-index: 4;
-    right: var(--lgs-gutter-s);
-    bottom: var(--lgs-gutter-s);
-    display: flex;
-    transition: opacity var(--welcome-exit-duration, 3000ms) ease;
-}
-
-#welcome-build-info-button::part(base) {
-    font-size: var(--lgs-font-size);
-    color: white;
-    border: 0;
-    background: transparent;
-    text-shadow: 0 2px 12px var(--lgs-dark-color-90);
-}
-
-#welcome-build-info-button:hover::part(base) {
-    color: white;
-    background: color-mix(in oklab, white 14%, transparent);
-}
-
-.welcome-build-info-popup {
-    font-size: var(--lgs-font-size-s);
-    line-height: 1.35;
-    display: grid;
-    min-width: 12rem;
-    padding: var(--lgs-gutter-s);
-    color: white;
-    border: 1px solid color-mix(in oklab, white 18%, transparent);
-    border-radius: var(--lgs-border-radius-s);
-    background: color-mix(in oklab, var(--lgs-dark-color-95) 86%, transparent);
-    box-shadow: var(--lgs-overlay-floating-shadow, var(--sl-shadow-large));
-    text-shadow: 0 2px 12px var(--lgs-dark-color-90);
-    backdrop-filter: blur(var(--lgs-blur));
-    gap: var(--lgs-gutter-xs);
-}
-
-.welcome-build-info-popup > div {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--lgs-gutter);
-}
-
-.welcome-build-info-popup span {
-    opacity: .72;
-}
-
-.welcome-build-info-popup strong {
-    font-weight: var(--lgs-font-weight-bold);
-    text-align: right;
 }
 
 .welcome-enter-call-for-action {
@@ -1027,7 +919,7 @@ body.mobile .orbit-widget-body {
     flex-wrap: wrap;
     justify-content: center;
     width: min(28rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
-    gap: var(--lgs-gutter);
+    gap: var(--lgs-gutter-s);
 }
 
 .welcome-enter-call-for-action wa-button::part(base) {
@@ -1035,51 +927,39 @@ body.mobile .orbit-widget-body {
     backdrop-filter: blur(var(--lgs-blur));
 }
 
-.welcome-loading-indicator {
-    font-weight: var(--lgs-font-weight-bold);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: auto;
-    min-height: 2.5rem;
-    color: white;
-    text-shadow: 0 2px 14px var(--lgs-dark-color-90);
-    gap: var(--lgs-gutter-xs);
+.welcome-site-button::part(base) {
+    color: var(--lgs-text-on-color);
+    border-color: color-mix(in oklab, var(--lgs-text-on-color) 58%, transparent);
+    background-color: color-mix(in oklab, var(--lgs-dark-color-95) 42%, transparent);
 }
 
-.welcome-loading-indicator wa-spinner {
-    font-size: 1.25rem;
-    --track-width: 3px;
-}
-
-.welcome-enter-call-for-action .welcome-site-button::part(base) {
-    color: var(--wa-color-brand-on-quiet);
-    border-color: var(--wa-color-brand-border-quiet);
-    background-color: color-mix(in oklab, var(--wa-color-brand-fill-quiet) 42%, transparent) !important;
-}
-
-.welcome-enter-call-for-action .welcome-site-button:hover::part(base) {
-    color: var(--wa-color-brand-on-normal);
-    border-color: var(--wa-color-brand-border-normal);
-    background-color: var(--wa-color-brand-fill-quiet) !important;
-}
-
-.welcome-enter-call-for-action .welcome-explore-button::part(base) {
-    color: var(--wa-color-brand-on-loud);
-    border-color: var(--wa-color-brand-border-loud);
-    background-color: var(--wa-color-brand-fill-loud) !important;
-}
-
-.welcome-enter-call-for-action .welcome-explore-button:hover::part(base) {
-    color: var(--wa-color-brand-on-loud);
-    border-color: var(--wa-color-brand-border-loud);
-    background-color: var(--wa-color-brand-70) !important;
+.welcome-enter-button::part(base) {
+    min-width: 8rem;
 }
 
 .welcome-enter-call-for-action wa-button::part(label) {
     display: inline-flex;
     align-items: center;
     gap: var(--lgs-gutter-xs);
+}
+
+@media (max-width: 700px) {
+    .welcome-hero-shell {
+        overflow-y: auto;
+        padding-block: max(var(--top), var(--lgs-gutter-s)) max(var(--bottom), var(--lgs-gutter-s));
+    }
+
+    .welcome-hero-content {
+        gap: var(--lgs-gutter-s);
+    }
+
+    .welcome-hero-content .welcome-logo {
+        width: min(150px, 42vw) !important;
+    }
+
+    .welcome-hero-content .welcome-slogan {
+        max-width: min(24rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
+    }
 }
 #waiting-loading {
     display: flex;

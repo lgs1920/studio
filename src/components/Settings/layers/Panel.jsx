@@ -5,7 +5,7 @@
  * File: Panel.jsx
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-08
  * Last modified: 2026-04-08

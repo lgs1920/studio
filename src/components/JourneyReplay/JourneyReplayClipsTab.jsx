@@ -5,7 +5,7 @@
  * File: JourneyReplayClipsTab.jsx
  *
  * Author : LGS1920 Team
- * email: contact@lgs1920.fr
+ * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-12
  * Last modified: 2026-06-09
@@ -107,21 +107,41 @@ const readCurrentClips = (settings, journey) => {
     return {
         ...normalized,
         catalog: settingsClips.catalog,
-        start,
-        stop,
+        start: normalized.start,
+        stop:  normalized.stop,
     }
 }
 
-const ClipField = ({field, value, onChange, unitSystem = 0}) => {
+const finiteNumber = value => {
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+}
+
+const altitudeFieldLabel = altitudeMode => altitudeMode === 'ground-offset'
+    ? 'Ground offset'
+    : 'Altitude'
+
+const minimumAltitudeForClip = ({field, replayCamera = null, previousClip = null} = {}) => {
+    const values = [
+        finiteNumber(field?.min),
+        finiteNumber(replayCamera?.altitude),
+        finiteNumber(previousClip?.params?.altitude),
+    ].filter(value => value !== null)
+
+    return values.length > 0 ? Math.max(...values) : null
+}
+
+const ClipField = ({field, value, onChange, unitSystem = 0, minimum = null}) => {
     const elevationUnit = ELEVATION_UNITS[unitSystem] ?? ELEVATION_UNITS[0]
     const usesElevationUnit = field.unit === 'm'
     const displayUnit = usesElevationUnit ? elevationUnit : field.unit
     const displayValue = usesElevationUnit
                          ? Math.round(UnitUtils.convert(value ?? 0).to(displayUnit))
                          : value
-    const displayMin = usesElevationUnit && field.min !== null && field.min !== undefined
-                       ? Math.round(UnitUtils.convert(field.min).to(displayUnit))
-                       : field.min
+    const configuredMinimum = minimum ?? field.min
+    const displayMin = usesElevationUnit && configuredMinimum !== null && configuredMinimum !== undefined
+                       ? Math.round(UnitUtils.convert(configuredMinimum).to(displayUnit))
+                       : configuredMinimum
     const displayMax = usesElevationUnit && field.max !== null && field.max !== undefined
                        ? Math.round(UnitUtils.convert(field.max).to(displayUnit))
                        : field.max
@@ -156,7 +176,13 @@ const ClipField = ({field, value, onChange, unitSystem = 0}) => {
 
     if (field.type === 'select') {
         return (
-            <div className="replay-clips-editor-field">
+            <div
+                className="replay-clips-editor-field"
+                onClick={stopFieldEventPropagation}
+                onFocus={stopFieldEventPropagation}
+                onMouseDown={stopFieldEventPropagation}
+                onPointerDown={stopFieldEventPropagation}
+            >
                 <WaSelect
                     {...commonProps}
                     appearance="filled"
@@ -175,7 +201,13 @@ const ClipField = ({field, value, onChange, unitSystem = 0}) => {
     }
 
     return (
-        <div className="replay-clips-editor-field">
+        <div
+            className="replay-clips-editor-field"
+            onClick={stopFieldEventPropagation}
+            onFocus={stopFieldEventPropagation}
+            onMouseDown={stopFieldEventPropagation}
+            onPointerDown={stopFieldEventPropagation}
+        >
             <WaNumberInput
                 {...commonProps}
                 appearance="filled"
@@ -228,7 +260,7 @@ const ClipTitle = ({definition, fallback = '', className = ''}) => {
     )
 }
 
-const stopEventPropagation = event => {
+const stopFieldEventPropagation = event => {
     event.stopPropagation()
 }
 
@@ -321,6 +353,7 @@ const ClipDetails = ({
                          clip,
                          definition,
                          index,
+                         previousClip,
                          slot,
                          onRemove,
                          onMove,
@@ -371,25 +404,36 @@ const ClipDetails = ({
             <div className="replay-clip-body">
                 <div
                     className="replay-clips-editor-fields"
-                    onClickCapture={stopEventPropagation}
-                    onFocusCapture={stopEventPropagation}
-                    onMouseDownCapture={stopEventPropagation}
-                    onPointerDownCapture={stopEventPropagation}
                 >
-                    {definition?.fields?.map(field => (
-                        <ClipField
-                            key={field.key}
-                            field={field}
-                            value={clip.params?.[field.key] ?? definition.defaults?.[field.key] ?? ''}
-                            unitSystem={unitSystem}
-                            onChange={value => onUpdate(slot, index, {
-                                params: {
-                                    ...(clip.params ?? {}),
-                                    [field.key]: value,
-                                },
-                            })}
-                        />
-                    ))}
+                    {definition?.fields?.map(field => {
+                        const isAltitudeField = field.key === 'altitude'
+                        const altitudeMode = globalThis.lgs?.settings?.ui?.replay?.camera?.altitudeMode
+                        const displayField = isAltitudeField
+                            ? {...field, label: altitudeFieldLabel(altitudeMode)}
+                            : field
+                        const minimum = isAltitudeField
+                            ? minimumAltitudeForClip({
+                                field,
+                                replayCamera: globalThis.lgs?.settings?.ui?.replay?.camera,
+                                previousClip,
+                            })
+                            : null
+                        return (
+                            <ClipField
+                                key={field.key}
+                                field={displayField}
+                                value={clip.params?.[field.key] ?? definition.defaults?.[field.key] ?? ''}
+                                unitSystem={unitSystem}
+                                minimum={minimum}
+                                onChange={value => onUpdate(slot, index, {
+                                    params: {
+                                        ...(clip.params ?? {}),
+                                        [field.key]: value,
+                                    },
+                                })}
+                            />
+                        )
+                    })}
                 </div>
             </div>
         </WaDetails>
@@ -427,6 +471,7 @@ const ClipList = ({
             handle:        '.replay-clip-summary',
             dataIdAttr:    'data-id',
             filter:        '.replay-clip-summary-actions, .replay-clips-field-control, wa-button, wa-number-input, wa-select',
+            preventOnFilter: false,
             dragClass:     'widget-row-drag',
             ghostClass:    'widget-row-ghost',
             chosenClass:   'widget-row-chosen',
@@ -475,6 +520,7 @@ const ClipList = ({
                             clip={clip}
                             definition={definition}
                             index={index}
+                            previousClip={index > 0 ? list[index - 1] : null}
                             slot={slot}
                             onRemove={onRemove}
                             onMove={onMove}

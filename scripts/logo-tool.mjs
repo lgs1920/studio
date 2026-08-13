@@ -2,13 +2,20 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import { Resvg } from '@resvg/resvg-js'
 import { JSDOM } from 'jsdom'
 
 const ROOT = process.cwd()
 const DEFAULT_LOGO_DIR = path.join(ROOT, 'public', 'assets', 'logo')
+const DEFAULT_LOGO_FILES = ['logo.svg', 'logo-horizontal.svg', 'logo-vertical.svg']
+const PNG_PADDING = 40
 
 const readFile = (filePath) => fs.readFileSync(filePath, 'utf8')
 const writeFile = (filePath, content) => {
+    fs.mkdirSync(path.dirname(filePath), {recursive: true})
+    fs.writeFileSync(filePath, content)
+}
+const writeBinaryFile = (filePath, content) => {
     fs.mkdirSync(path.dirname(filePath), {recursive: true})
     fs.writeFileSync(filePath, content)
 }
@@ -17,10 +24,12 @@ const usage = () => {
     console.log(`Usage:
   bun scripts/logo-tool.mjs export [input] [output]
   bun scripts/logo-tool.mjs import [input] [output]
+  bun scripts/logo-tool.mjs png [input] [output]
 
 Defaults:
   export: ${path.join(DEFAULT_LOGO_DIR, 'logo.svg')} -> ${path.join(DEFAULT_LOGO_DIR, 'logo-editable.svg')}
   import: ${path.join(DEFAULT_LOGO_DIR, 'logo-editable.svg')} -> ${path.join(DEFAULT_LOGO_DIR, 'logo.svg')}
+  png: all canonical SVG logos -> matching PNG files
 `)
 }
 
@@ -181,6 +190,131 @@ const importEditable = (inputPath, outputPath) => {
     writeFile(path.join(path.dirname(outputPath), 'style.css'), readFile(path.join(DEFAULT_LOGO_DIR, 'style.css')).trimEnd() + '\n')
 }
 
+/**
+ * Embeds the shared stylesheet so the standalone renderer can render the logo
+ * without relying on an XML stylesheet processing instruction.
+ *
+ * @param {string} svgText - SVG markup to prepare for rasterization.
+ * @param {string} inputPath - Path used to resolve the adjacent stylesheet.
+ * @returns {string} SVG markup with the shared stylesheet embedded.
+ */
+const prepareSvgForPng = (svgText, inputPath) => {
+    const normalizedSvg = normalizeSvgMarkup(svgText)
+    const dom = new JSDOM(normalizedSvg, {contentType: 'image/svg+xml'})
+    const {document} = dom.window
+    const stylesheetPath = path.join(path.dirname(inputPath), 'style.css')
+    const importedLogo = document.querySelector('image[href="logo.svg"]')
+    const wordmarkPosition = document.querySelector('#wordmark-position')
+
+    wordmarkPosition?.classList.remove('lgs--logo-gap-horizontal', 'lgs--logo-gap-vertical')
+
+    if (importedLogo) {
+        const standaloneSvg = normalizeSvgMarkup(readFile(path.join(DEFAULT_LOGO_DIR, 'logo.svg')))
+        const standaloneDom = new JSDOM(standaloneSvg, {contentType: 'image/svg+xml'})
+        const standaloneRoot = standaloneDom.window.document.documentElement
+        const inlineLogo = createSvgElement(document, 'g')
+        const x = importedLogo.getAttribute('x') ?? '0'
+        const y = importedLogo.getAttribute('y') ?? '0'
+
+        inlineLogo.setAttribute('transform', `translate(${x} ${y})`)
+        for (const child of [...standaloneRoot.children]) {
+            inlineLogo.appendChild(document.importNode(child, true))
+        }
+        importedLogo.replaceWith(inlineLogo)
+    }
+
+    if (fs.existsSync(stylesheetPath)) {
+        const stylesheet = readFile(stylesheetPath)
+            .replace(/@import\s+url\([^)]*\)\s*;?/gi, '')
+            .replaceAll('var(--lgs--logo-primary)', '#f3bb35')
+            .replaceAll('var(--lgs--logo-secondary)', '#000000')
+            .replaceAll('var(--lgs--logo-text-primary)', '#f3bb35')
+            .replaceAll('var(--lgs--logo-text-secondary)', '#f3bb35')
+            .replaceAll('var(--lgs--logo-secondary-opacity)', '1')
+            .replaceAll('var(--lgs--logo-gap-horizontal)', '100px')
+            .replaceAll('var(--lgs--logo-horizontal-wordmark-offset-y)', '50px')
+            .replaceAll('var(--lgs--logo-gap-vertical)', '60px')
+            .replaceAll('var(--lgs--logo-play-arrow-border-width)', '30px')
+            .replaceAll('var(--lgs--logo-wordmark-font-family)', 'Noto Sans, sans-serif')
+            .replaceAll('var(--lgs--logo-wordmark-font-size)', '150px')
+            .replaceAll('var(--lgs--logo-wordmark-main-weight)', '700')
+            .replaceAll('var(--lgs--logo-wordmark-year-weight)', '700')
+        const styleNode = document.createElementNS(svgNamespace, 'style')
+        styleNode.textContent = stylesheet
+        document.documentElement.insertBefore(styleNode, document.documentElement.firstChild)
+    }
+
+    return document.documentElement.outerHTML
+        .replaceAll('var(--lgs--logo-primary, #f3bb35)', '#f3bb35')
+        .replaceAll('var(--lgs--logo-secondary, #000000)', '#000000')
+        .replaceAll('var(--lgs--logo-text-primary, var(--lgs--logo-primary, #0d426d))', '#f3bb35')
+        .replaceAll('var(--lgs--logo-text-primary, var(--lgs--logo-primary, #f3bb35))', '#f3bb35')
+        .replaceAll('var(--lgs--logo-text-primary, #f3bb35)', '#f3bb35')
+        .replaceAll('var(--lgs--logo-text-secondary, var(--lgs--logo-secondary, #bfa062))', '#f3bb35')
+}
+
+/**
+ * Expands a rendered bounding box by the configured PNG safety margin.
+ *
+ * @param {import('@resvg/resvg-js').BBox} bbox - Visible SVG bounds.
+ * @returns {import('@resvg/resvg-js').BBox} Padded bounds.
+ */
+const paddedBBox = bbox => {
+    bbox.x -= PNG_PADDING
+    bbox.y -= PNG_PADDING
+    bbox.width += PNG_PADDING * 2
+    bbox.height += PNG_PADDING * 2
+    return bbox
+}
+
+/**
+ * Returns the visible SVG bounds required to crop a PNG while preserving a safety margin.
+ *
+ * @param {Resvg} renderer - SVG renderer used to calculate visible bounds.
+ * @returns {import('@resvg/resvg-js').BBox} Padded visible bounds.
+ */
+const getPngCropBBox = renderer => {
+    const bbox = renderer.getBBox()
+
+    if (!bbox || bbox.width <= 0 || bbox.height <= 0) {
+        throw new Error('The SVG must contain visible geometry to generate a cropped PNG')
+    }
+
+    return paddedBBox(bbox)
+}
+
+/**
+ * Renders an SVG and crops the PNG to its visible geometry plus a safety margin.
+ *
+ * @param {string} inputPath - Source SVG path.
+ * @param {string} outputPath - Destination PNG path.
+ * @returns {void}
+ */
+const renderPng = (inputPath, outputPath) => {
+    const svgText = prepareSvgForPng(readFile(inputPath), inputPath)
+    const renderer = new Resvg(svgText, {
+        resourcesDir: path.dirname(inputPath),
+        background: 'rgba(0, 0, 0, 0)',
+    })
+
+    renderer.cropByBBox(getPngCropBBox(renderer))
+    writeBinaryFile(outputPath, renderer.render().asPng())
+}
+
+/**
+ * Renders all canonical logo variants to matching PNG files.
+ *
+ * @returns {void}
+ */
+const renderCanonicalPngs = () => {
+    for (const fileName of DEFAULT_LOGO_FILES) {
+        const inputPath = path.join(DEFAULT_LOGO_DIR, fileName)
+        const outputPath = inputPath.replace(/\.svg$/i, '.png')
+        renderPng(inputPath, outputPath)
+        console.log(`${fileName} -> ${path.basename(outputPath)}`)
+    }
+}
+
 const args = process.argv.slice(2)
 const command = args[0]
 
@@ -195,8 +329,17 @@ const outputPath = path.resolve(args[2] ?? path.join(DEFAULT_LOGO_DIR, command =
 try {
     if (command === 'export') {
         exportEditable(inputPath, outputPath)
+        renderCanonicalPngs()
     } else if (command === 'import') {
         importEditable(inputPath, outputPath)
+        renderCanonicalPngs()
+    } else if (command === 'png') {
+        if (args[1]) {
+            renderPng(inputPath, args[2] ? outputPath : inputPath.replace(/\.svg$/i, '.png'))
+            console.log(`${path.basename(inputPath)} -> ${path.basename(args[2] ? outputPath : inputPath.replace(/\.svg$/i, '.png'))}`)
+        } else {
+            renderCanonicalPngs()
+        }
     } else {
         usage()
         process.exit(1)
