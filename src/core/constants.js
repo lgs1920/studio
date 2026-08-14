@@ -17,7 +17,7 @@
 import { CESIUM_EVENTS as $CESIUM_EVENTS } from '@Core/events/cesiumEvents'
 
 
-export const SLOGAN = 'Replay the World Outdoors!'
+export const SLOGAN = 'Replay Your World Outdoors.'
 /*******************************************************************************
  * Time and duration constants in seconds
  */
