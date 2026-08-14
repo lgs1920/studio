@@ -7,7 +7,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {cleanup, fireEvent, render, screen} from '@testing-library/react'
+import {act, cleanup, fireEvent, render, screen} from '@testing-library/react'
 import {afterEach, describe, expect, it, vi} from 'vitest'
 
 vi.mock('@Components/MainUI/LogoSvg', () => ({
@@ -35,6 +35,7 @@ import { WelcomeHero } from '@Components/MainUI/WelcomeHero'
 describe('WelcomeHero', () => {
     afterEach(() => {
         cleanup()
+        vi.useRealTimers()
         globalThis.lgs = undefined
         globalThis.__ = undefined
     })
@@ -130,5 +131,50 @@ describe('WelcomeHero', () => {
 
         expect(document.querySelector('#welcome-hero')?.classList.contains('welcome-hero-image-visible')).toBe(true)
         expect(document.querySelector('.welcome-hero-media')?.getAttribute('style')).toContain('background-color: rgb(18, 52, 86)')
+    })
+
+    it('promotes the incoming video element without replaying it', () => {
+        vi.useFakeTimers()
+        const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
+        vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => {})
+        globalThis.lgs = {
+            configuration: {website: {domain: 'lgs1920.fr', protocol: 'https'}},
+        }
+
+        render(
+            <WelcomeHero
+                backgroundMedia={{
+                    id: '20260812-10548975',
+                    fallbackColor: '#123456',
+                    imageSources: [{src: '/fallback.webp', type: 'image/webp'}],
+                    videoSources: [{src: '/assets/media/20260812-10548975-hd-3840x2160.mp4', type: 'video/mp4'}],
+                    credit: null,
+                }}
+            />
+        )
+
+        const videos = document.querySelectorAll('.welcome-hero-video')
+        const activeVideo = videos[0]
+        const incomingVideo = videos[1]
+        Object.defineProperty(activeVideo, 'duration', {configurable: true, value: 10})
+        Object.defineProperty(activeVideo, 'currentTime', {configurable: true, writable: true, value: 8.6})
+        act(() => {
+            fireEvent.timeUpdate(activeVideo)
+        })
+        expect(incomingVideo.querySelector('source')?.getAttribute('src')).toBe('/assets/media/20260812-15404528-3840x2160.mp4')
+
+        fireEvent.canPlay(incomingVideo)
+        fireEvent.loadedData(incomingVideo)
+        expect(play).toHaveBeenCalledOnce()
+        expect(document.querySelector('#welcome-hero')?.classList.contains('welcome-hero-video-transitioning')).toBe(true)
+        expect(document.querySelector('#welcome-hero')?.classList.contains('welcome-hero-video-crossfade-ready')).toBe(true)
+
+        act(() => {
+            vi.advanceTimersByTime(2300)
+        })
+
+        expect(document.querySelector('.welcome-hero-video-active')).toBe(incomingVideo)
+        expect(play).toHaveBeenCalledOnce()
+        expect(document.querySelector('#welcome-hero')?.classList.contains('welcome-hero-video-transitioning')).toBe(false)
     })
 })
