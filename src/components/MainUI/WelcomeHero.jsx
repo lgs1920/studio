@@ -14,7 +14,9 @@ import { SloganSvg }                                         from '@Components/M
 import { WelcomeHeroControls }                               from '@Components/MainUI/WelcomeHeroControls'
 import { WelcomeHeroRoute }                                  from '@Components/MainUI/WelcomeHeroRoute'
 import {
+    bannerMediaCatalog,
     getWelcomeBackgroundMedia,
+    getBannerMediaSource,
     WELCOME_BACKGROUND_PLAYBACK_RATE,
 }                                                               from '@Assets/media/welcome-background-media'
 import { formatBuildInfo }                                    from '@Utils/BuildInfoUtils'
@@ -22,6 +24,8 @@ import { WaButton, WaFormatDate, WaIcon }                    from '@web.awesome.
 import { useCallback, useEffect, useRef, useState }            from 'react'
 
 const WELCOME_BACKGROUND_MEDIA = getWelcomeBackgroundMedia()
+const WELCOME_VIDEO_CROSSFADE_DURATION = 3000
+const WELCOME_VIDEO_CROSSFADE_LEAD = 1500
 
 /**
  * Renders the persistent Studio welcome hero.
@@ -36,6 +40,13 @@ export const WelcomeHero = ({
                              backgroundMedia = WELCOME_BACKGROUND_MEDIA,
                          }) => {
     const _welcomeVideo = useRef(null)
+    const _incomingWelcomeVideo = useRef(null)
+    const [videoChoice, setVideoChoice] = useState(() => backgroundMedia.id
+        ? bannerMediaCatalog.outdoor.find(choice => choice.id === backgroundMedia.id)
+        : null)
+    const [videoTransitioning, setVideoTransitioning] = useState(false)
+    const [incomingVideoChoice, setIncomingVideoChoice] = useState(null)
+    const [incomingVideoReady, setIncomingVideoReady] = useState(false)
     const [videoState, setVideoState] = useState(
         backgroundMedia.videoSources.length > 0 ? 'loading' : 'unavailable'
     )
@@ -48,6 +59,55 @@ export const WelcomeHero = ({
     const studioVersion = lgs.versions?.studio ?? 'Unknown version'
     const buildDate = lgs.build?.date ?? lgs.build?.buildTime
     const buildInfo = formatBuildInfo(lgs.build)
+    const videoChoices = bannerMediaCatalog.outdoor.filter(choice => choice.type === 'video')
+    const currentVideoSource = videoChoice
+        ? getBannerMediaSource(videoChoice)
+        : backgroundMedia.videoSources[0]?.src
+    const canChangeVideo = videoChoices.length > 1 && Boolean(videoChoice)
+
+    const changeWelcomeVideo = useCallback(() => {
+        if (!canChangeVideo || incomingVideoChoice) {
+            _welcomeVideo.current?.play()
+            return
+        }
+
+        const currentIndex = videoChoices.findIndex(choice => choice.id === videoChoice.id)
+        const nextChoice = videoChoices[(currentIndex + 1) % videoChoices.length]
+        setIncomingVideoChoice(nextChoice)
+        setIncomingVideoReady(false)
+    }, [canChangeVideo, incomingVideoChoice, videoChoice, videoChoices])
+
+    const handleWelcomeVideoTimeUpdate = useCallback(event => {
+        const videoElement = event.currentTarget
+        const remainingDuration = videoElement.duration - videoElement.currentTime
+        if (Number.isFinite(videoElement.duration)
+            && videoElement.duration > WELCOME_VIDEO_CROSSFADE_LEAD
+            && remainingDuration > 0
+            && remainingDuration <= WELCOME_VIDEO_CROSSFADE_LEAD) {
+            changeWelcomeVideo()
+        }
+    }, [changeWelcomeVideo])
+
+    useEffect(() => {
+        if (!incomingVideoChoice || !_incomingWelcomeVideo.current) {
+            return undefined
+        }
+
+        _incomingWelcomeVideo.current.playbackRate = WELCOME_BACKGROUND_PLAYBACK_RATE
+        _incomingWelcomeVideo.current.play().catch(() => {})
+        return undefined
+    }, [incomingVideoChoice])
+
+    const startWelcomeVideoCrossfade = useCallback(() => {
+        setIncomingVideoReady(true)
+        setVideoTransitioning(true)
+        window.setTimeout(() => {
+            setVideoChoice(incomingVideoChoice)
+            setIncomingVideoChoice(null)
+            setIncomingVideoReady(false)
+            setVideoTransitioning(false)
+        }, WELCOME_VIDEO_CROSSFADE_DURATION)
+    }, [incomingVideoChoice])
 
     useEffect(() => {
         if (_welcomeVideo.current) {
@@ -70,7 +130,7 @@ export const WelcomeHero = ({
 
     return (
         <div id="welcome-hero"
-             className={`lgs-theme${videoReady ? ' welcome-hero-video-ready' : ''}${imageVisible ? ' welcome-hero-image-visible' : ''}`}
+             className={`lgs-theme${videoReady ? ' welcome-hero-video-ready' : ''}${imageVisible ? ' welcome-hero-image-visible' : ''}${videoTransitioning ? ' welcome-hero-video-transitioning' : ''}${incomingVideoReady ? ' welcome-hero-video-crossfade-ready' : ''}`}
              aria-busy={!readyToEnter}>
             <div className="welcome-hero-media"
                  style={{backgroundColor: backgroundMedia.fallbackColor}}
@@ -86,21 +146,37 @@ export const WelcomeHero = ({
                 )}
                 {backgroundMedia.videoSources.length > 0 && (
                     <video
+                        key={`active:${currentVideoSource}`}
                         ref={_welcomeVideo}
-                        className="welcome-hero-video"
+                        className="welcome-hero-video welcome-hero-video-active"
                         autoPlay
                         muted
-                        loop
+                        loop={!canChangeVideo}
                         playsInline
                         preload="auto"
+                        onEnded={changeWelcomeVideo}
+                        onTimeUpdate={handleWelcomeVideoTimeUpdate}
                         onLoadedData={() => setVideoState('ready')}
                         onCanPlay={() => setVideoState('ready')}
-                        onPlaying={() => setVideoState('ready')}
+                        onPlaying={() => {
+                            setVideoState('ready')
+                        }}
                         onError={() => setVideoState('failed')}
                     >
-                        {backgroundMedia.videoSources.map(source => (
-                            <source key={`${source.type}:${source.src}`} src={source.src} type={source.type}/>
-                        ))}
+                        {currentVideoSource && <source src={currentVideoSource} type="video/mp4"/>}
+                    </video>
+                )}
+                {incomingVideoChoice && (
+                    <video
+                        key={`incoming:${getBannerMediaSource(incomingVideoChoice)}`}
+                        ref={_incomingWelcomeVideo}
+                        className="welcome-hero-video welcome-hero-video-incoming"
+                        muted
+                        playsInline
+                        preload="auto"
+                        onCanPlay={startWelcomeVideoCrossfade}
+                    >
+                        <source src={getBannerMediaSource(incomingVideoChoice)} type="video/mp4"/>
                     </video>
                 )}
             </div>
