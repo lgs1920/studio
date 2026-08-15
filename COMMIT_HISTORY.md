@@ -686,3 +686,15 @@
 ## 2026-08-14 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/db20ccb8e51f93c3aae824f51db30a88cc5cf970)
 
 - Recorded automatically from Git history.
+
+## 2026-08-14 — [`style: make IGN logo white`](https://github.com/lgs1920/studio/commit/fc503f43163b375a387467b157bbdfc0aa790a0e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-15 — [`docs: update 1.0.0 changelog draft`](https://github.com/lgs1920/studio/commit/b52e1c6b4a06aaed0269f1f71738debe5b34a534)
+
+- Recorded automatically from Git history.
+
+## 2026-08-15 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/c41f9cf9107944d6fd9d2009fd7c687bfc6dfcc5)
+
+- Recorded automatically from Git history.
