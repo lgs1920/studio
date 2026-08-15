@@ -662,3 +662,27 @@
 ## 2026-08-13 — [`fix: align welcome hero halo with site`](https://github.com/lgs1920/studio/commit/f4b414079624c7ecd7329fc1a587bc0fdb8c2a80)
 
 - Recorded automatically from Git history.
+
+## 2026-08-14 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/35bc3436b10bc7ed5812bbceeccf3c68b86f477e)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-08-14 — [`feat: update Studio slogan`](https://github.com/lgs1920/studio/commit/681165af469e6fbfad966171b6814fe05bb68739)
+
+- Recorded automatically from Git history.
+
+## 2026-08-14 — [`feat: crossfade welcome hero videos`](https://github.com/lgs1920/studio/commit/83969121587aa0bb3e0012844637dc27a236263a)
+
+- Recorded automatically from Git history.
+
+## 2026-08-14 — [`fix: smooth welcome hero video transitions`](https://github.com/lgs1920/studio/commit/f8cd9d167bf4e655c37d2e3e7f747fbd9899a848)
+
+- Recorded automatically from Git history.
+
+## 2026-08-14 — [`fix: remove initial welcome hero video fade`](https://github.com/lgs1920/studio/commit/0c46716dfdcb4de2ba9fb768c1fe9a6e11afaf49)
+
+- Recorded automatically from Git history.
+
+## 2026-08-14 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/db20ccb8e51f93c3aae824f51db30a88cc5cf970)
+
+- Recorded automatically from Git history.
