@@ -37,6 +37,9 @@ import {
     replayVideoTraceDebug,
 }                              from '@Core/ui/replay/ReplayVideoTraceDebug'
 import {
+    prepareReplaySceneTilesForCapture,
+}                              from '@Core/ui/replay/ReplaySceneTileReadiness'
+import {
     buildReplayFrameState,
 }                              from '@Core/ui/replay/JourneyReplayRuntime'
 import {
@@ -57,6 +60,7 @@ import {
 }                              from 'mediabunny'
 
 const VIDEO_CODEC_PROBE_TIMEOUT_MS = 2500
+export const DEFAULT_REPLAY_SCENE_TILE_READINESS_TIMEOUT_MS = 15000
 const EXPORT_PROGRESS_UPDATE_FRAME_STEP = 1
 const EXPORT_PROGRESS_FRAME_SAMPLE_WINDOW = 30
 
@@ -1401,6 +1405,7 @@ export const runReplayDeferredMp4Export = async ({
                                                      abortController = null,
                                                      buildCanvas = null,
                                                      replayMode = defaultReplayMode(),
+                                                     tileReadinessTimeoutMs = DEFAULT_REPLAY_SCENE_TILE_READINESS_TIMEOUT_MS,
                                                      uiToast = UIToast,
                                                      download = downloadBlob,
                                                  } = {}) => {
@@ -1632,6 +1637,14 @@ export const runReplayDeferredMp4Export = async ({
                                ?? plan.runtime?.context?.renderContract?.trackPath
                                ?? controller?.sampler?.logicalTrackPath
                                ?? null,
+                })
+                await prepareReplaySceneTilesForCapture({
+                    scene: replayMode?.cesiumScene?.()
+                           ?? globalThis.lgs?.scene
+                           ?? globalThis.lgs?.viewer?.scene
+                           ?? null,
+                    maxMillis: tileReadinessTimeoutMs,
+                    signal,
                 })
                 const frameSource = sourceCanvas ?? defaultReplaySourceCanvas()
                 if (frameSource instanceof HTMLCanvasElement) {
