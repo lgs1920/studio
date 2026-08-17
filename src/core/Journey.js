@@ -154,7 +154,7 @@ export class Journey extends MapElement {
     initializeJourney = async (options) => {
         try {
             // Transform content to GeoJson
-            this.getGeoJson(options.content ?? '')
+            this.getGeoJson(options.content ?? '', options)
 
             // Get all tracks
             this.getTracksFromGeoJson()
@@ -364,10 +364,12 @@ export class Journey extends MapElement {
      * Get the theJourney data and set the GeoJson Structure
      *
      * @param content content of the theJourney file
+     * @param {Object} options initialization options
+     * @param {Function} options.onError callback invoked with parsing errors
      *
      * @exception {any} in case of ay error, we return undefined
      */
-    getGeoJson = (content) => {
+    getGeoJson = (content, {onError} = {}) => {
         // We translate kml and gpx to GeoJson format in order to manipulate json
         // instead of XML
         try {
@@ -394,6 +396,7 @@ export class Journey extends MapElement {
         }
         catch (error) {
             console.error(error)
+            onError?.(error)
             const filename = `<strong>${this.title}<strong>`
             UIToast.error({
                               caption: IMPORT_LOADING_ERROR.caption,
