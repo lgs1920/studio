@@ -11,6 +11,26 @@
  ******************************************************************************/
 
 const DEFAULT_POLL_INTERVAL_MS = 32
+export const DEFAULT_REPLAY_GLOBE_TILE_CACHE_SIZE = 512
+
+/**
+ * Request a render and synchronously flush it when Cesium is in request-render mode.
+ *
+ * @param {object|null} scene - Cesium scene.
+ * @returns {void}
+ */
+const requestReplaySceneRender = scene => {
+    if (scene?.requestRenderMode === true && typeof scene.render === 'function') {
+        try {
+            scene.render()
+            return
+        }
+        catch {
+        }
+    }
+
+    scene?.requestRender?.()
+}
 
 /**
  * Create the standard cancellation error used by replay export waits.
@@ -195,6 +215,33 @@ const restoreReplayTilesetSettings = settings => {
 }
 
 /**
+ * Keep more 2D globe tiles resident for the duration of an HQ export.
+ *
+ * Cesium owns the actual tile cache. We only increase its retention window
+ * while frames are traversed and restore the user's setting afterwards.
+ *
+ * @param {object|null} scene - Cesium scene.
+ * @param {number} minimumTileCacheSize - Minimum number of terrain tiles to retain.
+ * @returns {Function|null} Cleanup callback.
+ */
+export const prepareReplaySceneTileCache = (
+    scene,
+    minimumTileCacheSize = DEFAULT_REPLAY_GLOBE_TILE_CACHE_SIZE,
+) => {
+    const globe = scene?.globe
+    const previousTileCacheSize = Number(globe?.tileCacheSize)
+    const requestedTileCacheSize = Math.max(0, Math.trunc(Number(minimumTileCacheSize) || 0))
+    if (!globe || !Number.isFinite(previousTileCacheSize) || requestedTileCacheSize <= previousTileCacheSize) {
+        return null
+    }
+
+    globe.tileCacheSize = requestedTileCacheSize
+    return () => {
+        globe.tileCacheSize = previousTileCacheSize
+    }
+}
+
+/**
  * Wait for one Cesium post-render event or a short polling interval.
  *
  * @param {object|null} scene - Cesium scene.
@@ -243,7 +290,7 @@ const waitForReplayPostRender = async (scene, timeoutMs, signal) => {
         }
 
         timeoutId = setTimeout(resolveOnce, safeTimeoutMs)
-        scene.requestRender?.()
+        requestReplaySceneRender(scene)
     })
 }
 
@@ -313,7 +360,7 @@ const waitForReplayTileSignal = async (scene, tilesets, imageryLayers, timeoutMs
         }
 
         timeoutId = setTimeout(resolveOnce, Math.min(DEFAULT_POLL_INTERVAL_MS, safeTimeoutMs))
-        scene?.requestRender?.()
+        requestReplaySceneRender(scene)
     })
 }
 

@@ -12,6 +12,7 @@
 
 import {
     areReplaySceneTilesReady,
+    prepareReplaySceneTileCache,
     prepareReplaySceneTilesForCapture,
     waitForReplaySceneTilesReady,
 } from '@Core/ui/replay/ReplaySceneTileReadiness'
@@ -45,6 +46,20 @@ const createCollection = values => ({
 })
 
 describe('ReplaySceneTileReadiness', () => {
+    it('retains the globe tile cache during HQ capture and restores it afterwards', () => {
+        const scene = {
+            globe: {
+                tileCacheSize: 100,
+            },
+        }
+
+        const restore = prepareReplaySceneTileCache(scene, 512)
+
+        expect(scene.globe.tileCacheSize).toBe(512)
+        restore?.()
+        expect(scene.globe.tileCacheSize).toBe(100)
+    })
+
     it('prepares the current view without changing the camera', async () => {
         const postRender = createEvent()
         const tileset = {
@@ -85,6 +100,22 @@ describe('ReplaySceneTileReadiness', () => {
         expect(tileset.foveatedScreenSpaceError).toBe(true)
         expect(tileset.foveatedTimeDelay).toBe(0.2)
         expect(scene.requestRender).toHaveBeenCalled()
+    })
+
+    it('flushes a ready request-render-mode scene immediately', async () => {
+        const postRender = createEvent()
+        const scene = {
+            globe: {tilesLoaded: true},
+            postRender,
+            primitives: createCollection([]),
+            requestRenderMode: true,
+            render: vi.fn(() => postRender.emit(scene)),
+            requestRender: vi.fn(),
+        }
+
+        await expect(waitForReplaySceneTilesReady({scene, maxMillis: 200})).resolves.toBe(true)
+        expect(scene.render).toHaveBeenCalledOnce()
+        expect(scene.requestRender).not.toHaveBeenCalled()
     })
 
     it('waits for 2D imagery readiness and a rendered frame', async () => {

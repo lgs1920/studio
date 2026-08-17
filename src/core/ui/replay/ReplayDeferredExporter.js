@@ -37,6 +37,7 @@ import {
     replayVideoTraceDebug,
 }                              from '@Core/ui/replay/ReplayVideoTraceDebug'
 import {
+    prepareReplaySceneTileCache,
     prepareReplaySceneTilesForCapture,
 }                              from '@Core/ui/replay/ReplaySceneTileReadiness'
 import {
@@ -60,7 +61,7 @@ import {
 }                              from 'mediabunny'
 
 const VIDEO_CODEC_PROBE_TIMEOUT_MS = 2500
-export const DEFAULT_REPLAY_SCENE_TILE_READINESS_TIMEOUT_MS = 15000
+export const DEFAULT_REPLAY_SCENE_TILE_READINESS_TIMEOUT_MS = 5000
 const EXPORT_PROGRESS_UPDATE_FRAME_STEP = 1
 const EXPORT_PROGRESS_FRAME_SAMPLE_WINDOW = 30
 
@@ -1481,6 +1482,7 @@ export const runReplayDeferredMp4Export = async ({
     let exportSucceeded = false
     let replayComposer = null
     let replayComposerFallback = false
+    let restoreReplaySceneTileCache = null
     const exportStartedAt = runtimeNow()
     const exportRuntimeStatus = () => {
         if (signal?.aborted) {
@@ -1554,6 +1556,12 @@ export const runReplayDeferredMp4Export = async ({
                     cameraState: plan.runtime?.context?.cameraState ?? null,
                 }) === true
             }
+            restoreReplaySceneTileCache = prepareReplaySceneTileCache(
+                replayMode?.cesiumScene?.()
+                ?? globalThis.lgs?.scene
+                ?? globalThis.lgs?.viewer?.scene
+                ?? null,
+            )
             await delay(0)
             scenePrepared = true
         }
@@ -1791,6 +1799,8 @@ export const runReplayDeferredMp4Export = async ({
             Object.assign(replay, originalReplayState)
         }
         globalThis.__?.ui?.replay?.refresh?.({camera: true, suppressMoveEvents: true})
+        restoreReplaySceneTileCache?.()
+        restoreReplaySceneTileCache = null
         replayComposer?.dispose?.()
         globalThis.lgs?.scene?.requestRender?.()
     }
