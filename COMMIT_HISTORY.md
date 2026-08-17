@@ -698,3 +698,15 @@
 ## 2026-08-15 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/c41f9cf9107944d6fd9d2009fd7c687bfc6dfcc5)
 
 - Recorded automatically from Git history.
+
+## 2026-08-17 — [`perf(capture): improve SnapDOM font precaching`](https://github.com/lgs1920/studio/commit/49ca3b0da906b82e2a42ad02a0c805f7ba02dae0)
+
+- Recorded automatically from Git history.
+
+## 2026-08-17 — [`fix(ui): update welcome hero loading state`](https://github.com/lgs1920/studio/commit/f6e7e7d6fc5c51d9734e0aa71a77b69efca96ecc)
+
+- Recorded automatically from Git history.
+
+## 2026-08-17 — [`docs: document Bun migration study`](https://github.com/lgs1920/studio/commit/b3d201d7f24a6ce66c7253d659f2489f7e53e23b)
+
+- Recorded automatically from Git history.
