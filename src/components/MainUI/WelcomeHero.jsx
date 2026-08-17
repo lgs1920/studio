@@ -286,7 +286,13 @@ export const WelcomeHero = ({
                             disabled={!readyToEnter}
                             onClick={enterStudio}
                         >
-                            <WaIcon slot="start" name="mountains" variant="regular"/>
+                            <WaIcon
+                                slot="start"
+                                name={readyToEnter ? 'clapperboard-play' : 'gear'}
+                                variant="regular"
+                                animation={readyToEnter ? '' : 'spin'}
+                                aria-hidden="true"
+                            />
                             {'Enter Studio'}
                         </WaButton>
                     </div>
