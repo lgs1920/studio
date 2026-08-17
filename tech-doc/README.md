@@ -41,6 +41,8 @@ Proposed work, pending validation, or future implementation work lives under `to
 
 ## TODO
 
+- [Bun build and test migration study](todo/CORE-BUN-BUILD-TEST-MIGRATION.md)
+
 - [Cloud sync](todo/CLOUD-SYNC-TODO.md)
 - [HQ video resolution profiles](todo/HQ_4K_VIDEO_EXPORT_SPEC.md)
 - [Journey import formats](todo/JOURNEY_IMPORT_FORMATS_SPEC.md)
