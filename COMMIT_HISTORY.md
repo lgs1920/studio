@@ -770,3 +770,23 @@
 ## 2026-08-18 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/d6ce39a5c477d651028130652a4cb6b9581674be)
 
 - Recorded automatically from Git history.
+
+## 2026-08-18 — [`style: refine credits bar spacing`](https://github.com/lgs1920/studio/commit/97c235b9e79f1c5f68ff8305d37fc87fd7368895)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: prevent stale Esri credit with Google 3D`](https://github.com/lgs1920/studio/commit/4e33456a5f637ab1cbff28d697f4a393a57b754c)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`style: refine widget credit spacing`](https://github.com/lgs1920/studio/commit/555b06fcc91fd53222dbf2a748eff3cd54d8d43a)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`docs: document PWA installation and updates`](https://github.com/lgs1920/studio/commit/c9d6838c2a79b4381fde5684813c21b191a3982e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/375464835bc8f601e16205d3e725c2a50e369dad)
+
+- Recorded automatically from Git history.
