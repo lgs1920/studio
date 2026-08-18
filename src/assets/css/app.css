@@ -83,10 +83,12 @@ body {
     background: var(--lgs-dark-color-95);
 }
 
-body.lgs-app-booting #cesium-viewer {
-    visibility: hidden;
-    pointer-events: none;
-    opacity: 0;
+@media (display-mode: standalone) {
+    body.lgs-app-booting #cesium-viewer {
+        visibility: hidden;
+        pointer-events: none;
+        opacity: 0;
+    }
 }
 
 /** Hide the main toolbar */

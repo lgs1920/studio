@@ -40,9 +40,6 @@
 
 
     <!-- Android and browser icons -->
-    <link href="/assets/icons/app-icons/android/android-launchericon-192-192.png" rel="icon" sizes="192x192">
-    <link href="/assets/icons/app-icons/android/android-launchericon-512-512.png" rel="icon" sizes="512x512">
-
     <!-- Windows PWA -->
     <meta content="/assets/icons/app-icons/windows11/Square150x150Logo.scale-400.png" name="msapplication-TileImage">
     <meta content="#000000" name="msapplication-TileColor">
@@ -102,14 +99,57 @@
             pointer-events: none;
             background: #050807;
             inset: 0;
+            visibility: hidden;
+            opacity: 0;
+        }
+
+        @media (display-mode: standalone) {
+            body.lgs-app-booting #lgs-boot-splash {
+                visibility: visible;
+                opacity: 1;
+            }
+        }
+
+        #lgs-boot-splash .lgs-boot-splash-background {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transition: opacity 250ms ease;
+            object-fit: cover;
+            object-position: center bottom;
+        }
+
+        #lgs-boot-splash .lgs-boot-splash-background-image {
+            z-index: 0;
         }
 
         #lgs-boot-splash video {
+            z-index: 1;
+            opacity: 0;
             width: 100%;
             height: 100%;
             filter: sepia(0.2) saturate(0.8);
             object-fit: cover;
             object-position: center bottom;
+        }
+
+        #lgs-boot-splash.lgs-boot-splash-video-ready video {
+            opacity: 1;
+        }
+
+        #lgs-boot-splash.lgs-boot-splash-video-ready .lgs-boot-splash-background-image {
+            opacity: 0;
+        }
+
+        #lgs-boot-splash-logo {
+            position: absolute;
+            z-index: 3;
+            top: 12vh;
+            left: 50%;
+            width: min(72vw, 520px);
+            height: auto;
+            transform: translateX(-50%);
+            filter: drop-shadow(0 0 18px rgba(0, 0, 0, 0.55));
         }
 
         #lgs-boot-splash::after {
@@ -122,10 +162,12 @@
             inset: 0;
         }
 
-        body.lgs-app-booting #cesium-viewer {
-            visibility: hidden;
-            pointer-events: none;
-            opacity: 0;
+        @media (display-mode: standalone) {
+            body.lgs-app-booting #cesium-viewer {
+                visibility: hidden;
+                pointer-events: none;
+                opacity: 0;
+            }
         }
 
         body:not(.lgs-app-booting) #lgs-boot-splash {
@@ -135,7 +177,11 @@
     </style>
 
     <!-- Favicon for browsers -->
-    <link href="/assets/images/favicon.png" rel="icon"/>
+    <link href="/assets/icons/app-icons/windows11/Square44x44Logo.targetsize-16.png" rel="icon" sizes="16x16" type="image/png">
+    <link href="/assets/icons/app-icons/windows11/Square44x44Logo.targetsize-32.png" rel="icon" sizes="32x32" type="image/png">
+    <link href="/assets/icons/app-icons/android/android-launchericon-192-192.png" rel="icon" sizes="192x192" type="image/png">
+    <link href="/assets/icons/app-icons/android/android-launchericon-512-512.png" rel="icon" sizes="512x512" type="image/png">
+    <link href="/assets/images/favicon.png" rel="icon" sizes="200x200" type="image/png"/>
 
     <!-- Page title -->
     <title>LGS1920 Studio</title>
@@ -143,11 +189,19 @@
 <body class="lgs-app-booting">
 <div id="cesium-viewer"></div>
 <div id="lgs-boot-splash" aria-hidden="true">
-    <video data-welcome-background-media autoplay muted loop playsinline preload="auto">
+    <img class="lgs-boot-splash-background lgs-boot-splash-background-image"
+         data-welcome-background-fallback
+         alt=""
+         decoding="async">
+    <video class="lgs-boot-splash-background"
+           data-welcome-background-media
+           autoplay muted loop playsinline preload="auto">
     </video>
+    <img id="lgs-boot-splash-logo" src="/assets/logo/logo-horizontal.png" alt="LGS1920 Studio" decoding="async">
 </div>
 <div id="lgs1920-container"></div>
 
+<script src="/src/assets/media/welcome-startup-background.js" type="module"></script>
 <script src="/src/main.jsx" type="module"></script>
 </body>
 </html>

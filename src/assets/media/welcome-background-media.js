@@ -297,6 +297,30 @@ export const applyWelcomeBackgroundToVideo = (videoElement, selection) => {
 }
 
 /**
+ * Applies the resolved fallback image to the boot splash element.
+ *
+ * @param {HTMLImageElement|null} imageElement - Boot splash fallback image element.
+ * @param {{imageSources?: Array<object>}} selection - Resolved media selection.
+ * @returns {boolean} Whether an image source was applied.
+ */
+export const applyWelcomeBackgroundToImage = (imageElement, selection) => {
+    if (!imageElement) {
+        return false
+    }
+
+    const imageSource = (selection?.imageSources ?? []).find(asset => asset?.src)
+    if (!imageSource) {
+        imageElement.removeAttribute('src')
+        imageElement.hidden = true
+        return false
+    }
+
+    imageElement.src = imageSource.src
+    imageElement.hidden = false
+    return true
+}
+
+/**
  * Describes the fields shared with the public site's banner catalog.
  *
  * @returns {Array<string>} Supported catalog fields.

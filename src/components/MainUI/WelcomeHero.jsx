@@ -53,7 +53,7 @@ export const WelcomeHero = ({
         backgroundMedia.videoSources.length > 0 ? 'loading' : 'unavailable'
     )
     const [imageState, setImageState] = useState(
-        backgroundMedia.imageSources.length > 0 ? 'loading' : 'unavailable'
+        backgroundMedia.imageSources.length > 0 ? 'ready' : 'unavailable'
     )
     const readyToEnter = initComplete && appReady
     const videoReady = videoState === 'ready'
