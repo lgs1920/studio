@@ -12,8 +12,11 @@
 
 import {
     areReplaySceneTilesReady,
+    createReplaySceneTileReadinessCoordinator,
+    normalizeReplaySceneTileReadinessOptions,
     prepareReplaySceneTileCache,
     prepareReplaySceneTilesForCapture,
+    resolveReplayTileSpeedLevel,
     waitForReplaySceneTilesReady,
 } from '@Core/ui/replay/ReplaySceneTileReadiness'
 import { describe, expect, it, vi } from 'vitest'
@@ -46,6 +49,47 @@ const createCollection = values => ({
 })
 
 describe('ReplaySceneTileReadiness', () => {
+    it('normalizes readiness runtime options and keeps the policy bounded', () => {
+        expect(normalizeReplaySceneTileReadinessOptions({
+                                                            enabled: false,
+                                                            policy: 'invalid',
+                                                            movingTimeoutMs: 99999,
+                                                        })).toMatchObject({
+                                                                                 enabled: false,
+                                                                                 policy: 'adaptive',
+                                                                                 movingTimeoutMs: 5000,
+                                                                             })
+    })
+
+    it('resolves deterministic camera motion levels from replay progress', () => {
+        const previousFrame = {frameTimeMs: 0, progress: 0}
+        expect(resolveReplayTileSpeedLevel({
+                                               previousFrame,
+                                               frame: {frameTimeMs: 1000, progress: 0.01},
+                                           })).toBe('slow')
+        expect(resolveReplayTileSpeedLevel({
+                                               previousFrame,
+                                               frame: {frameTimeMs: 1000, progress: 0.1},
+                                           })).toBe('fast')
+        expect(resolveReplayTileSpeedLevel({
+                                               previousFrame,
+                                               frame: {frameTimeMs: 1000, progress: 0.2},
+                                           })).toBe('jump')
+    })
+
+    it('bypasses the tile wait when readiness is disabled', async () => {
+        const scene = {
+            globe: {tilesLoaded: false},
+            primitives: createCollection([]),
+            requestRender: vi.fn(),
+        }
+        const coordinator = createReplaySceneTileReadinessCoordinator(scene, {enabled: false})
+
+        await expect(coordinator.prepareForCapture({maxMillis: 1})).resolves.toBe(true)
+        expect(scene.requestRender).not.toHaveBeenCalled()
+        coordinator.dispose()
+    })
+
     it('retains the globe tile cache during HQ capture and restores it afterwards', () => {
         const scene = {
             globe: {
@@ -102,20 +146,20 @@ describe('ReplaySceneTileReadiness', () => {
         expect(scene.requestRender).toHaveBeenCalled()
     })
 
-    it('flushes a ready request-render-mode scene immediately', async () => {
+    it('uses the asynchronous request-render path for a ready scene', async () => {
         const postRender = createEvent()
         const scene = {
             globe: {tilesLoaded: true},
             postRender,
             primitives: createCollection([]),
             requestRenderMode: true,
-            render: vi.fn(() => postRender.emit(scene)),
-            requestRender: vi.fn(),
+            render: vi.fn(),
+            requestRender: vi.fn(() => postRender.emit(scene)),
         }
 
         await expect(waitForReplaySceneTilesReady({scene, maxMillis: 200})).resolves.toBe(true)
-        expect(scene.render).toHaveBeenCalledOnce()
-        expect(scene.requestRender).not.toHaveBeenCalled()
+        expect(scene.render).not.toHaveBeenCalled()
+        expect(scene.requestRender).toHaveBeenCalledOnce()
     })
 
     it('waits for 2D imagery readiness and a rendered frame', async () => {
@@ -221,5 +265,36 @@ describe('ReplaySceneTileReadiness', () => {
         }
 
         await expect(waitForReplaySceneTilesReady({scene, maxMillis: 10})).resolves.toBe(false)
+    })
+
+    it('reuses a ready camera footprint until Cesium reports new tile work', async () => {
+        const postRender = createEvent()
+        const tileLoadProgressEvent = createEvent()
+        const scene = {
+            globe: {
+                tilesLoaded: true,
+                tileLoadProgressEvent,
+            },
+            mode: 3,
+            camera: {
+                positionWC: {x: 1000, y: 2000, z: 3000},
+                directionWC: {x: 0, y: 0, z: -1},
+                upWC: {x: 0, y: 1, z: 0},
+                frustum: {fov: 1, near: 1, far: 100000},
+            },
+            postRender,
+            primitives: createCollection([]),
+            requestRender: vi.fn(() => postRender.emit(scene)),
+        }
+        const coordinator = createReplaySceneTileReadinessCoordinator(scene)
+
+        await expect(coordinator.prepareForCapture({maxMillis: 200})).resolves.toBe(true)
+        await expect(coordinator.prepareForCapture({maxMillis: 200})).resolves.toBe(true)
+        expect(scene.requestRender).toHaveBeenCalledTimes(2)
+
+        scene.globe.tilesLoaded = false
+        tileLoadProgressEvent.emit(2)
+        await expect(coordinator.prepareForCapture({maxMillis: 10})).resolves.toBe(false)
+        coordinator.dispose()
     })
 })
