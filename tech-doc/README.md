@@ -11,6 +11,7 @@ Proposed work, pending validation, or future implementation work lives under `to
 - [Providers](specs/HOW_TO_ADD_PROVIDERS_LAYERS.md)
 - [Settings sync guide](specs/SETTINGS_SYNC_GUIDE.md)
 - [Journey settings readme](specs/JOURNEY_SETTINGS_README.md)
+- [Cesium cloud management and reusable cloud resources](todo/CORE-CESIUM-CLOUD-MANAGEMENT-RESEARCH.md)
 - [Deployment](specs/DEPLOYMENT-README.md)
 - [Internal database architecture](specs/CORE-INTERNAL-DATABASE-ARCHITECTURE.md)
 - [Journey replay/video issues](specs/JOURNEY-REPLAY-VIDEO-ISSUES.md)
