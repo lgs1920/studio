@@ -8,6 +8,7 @@
  ******************************************************************************/
 
 import {
+    applyWelcomeBackgroundToImage,
     getWelcomeBackgroundMedia,
     preloadWelcomeBackgroundMedia,
 } from '@Assets/media/welcome-background-media'
@@ -24,8 +25,10 @@ const applyStartupBackground = () => {
 
     const backgroundMedia = getWelcomeBackgroundMedia()
     const backgroundImage = backgroundMedia.imageSources[0]?.src
+    const splashImage = document.querySelector('#lgs-boot-splash .lgs-boot-splash-background-image')
 
     preloadWelcomeBackgroundMedia(backgroundMedia)
+    applyWelcomeBackgroundToImage(splashImage, backgroundMedia)
 
     if (!backgroundImage) {
         return

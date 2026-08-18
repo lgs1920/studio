@@ -47,6 +47,7 @@ const registerBootSplashMediaLoadingTests = () => {
         expect(splashLogo?.getAttribute('src')).toBe('/assets/logo/logo-horizontal.png')
 
         const splashStyle = indexDocument.querySelector('style')?.textContent ?? ''
+        expect(splashStyle).toContain('#lgs-boot-splash .lgs-boot-splash-background')
         expect(splashStyle).toContain('filter: sepia(0.2) saturate(0.8)')
         expect(splashStyle).not.toContain('blur(')
     }
