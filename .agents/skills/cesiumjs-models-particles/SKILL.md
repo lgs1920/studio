@@ -4,6 +4,11 @@ description: "CesiumJS models, glTF, and particle effects - Model, KHR_meshopt_c
 ---
 # CesiumJS Models, glTF & Particle Effects
 
+## User intent discipline
+
+Never extrapolate beyond the user's request. If a decision is not explicit, ask the user before acting. User directive: “JE N'EXTRAPOLE JAMAIS LA DEMANDE, JE DEMANDE AU MONSIEUR.”
+
+
 Version baseline: CesiumJS v1.143.
 
 ## Quick Reference

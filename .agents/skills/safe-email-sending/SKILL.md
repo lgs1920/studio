@@ -5,6 +5,11 @@ description: Safely prepare, verify, and send emails without requesting, display
 
 # Safe Email Sending
 
+## User intent discipline
+
+Never extrapolate beyond the user's request. If a decision is not explicit, ask the user before acting. User directive: “JE N'EXTRAPOLE JAMAIS LA DEMANDE, JE DEMANDE AU MONSIEUR.”
+
+
 ## Overview
 
 This skill governs email drafting and sending with the minimum necessary data. It protects authentication information, requires a final preview before sending, and falls back to a draft when no authorized mail connector is available.

@@ -5,6 +5,11 @@ description: Use when starting any conversation involving CesiumJS development -
 
 # CesiumJS Skills Orientation
 
+## User intent discipline
+
+Never extrapolate beyond the user's request. If a decision is not explicit, ask the user before acting. User directive: “JE N'EXTRAPOLE JAMAIS LA DEMANDE, JE DEMANDE AU MONSIEUR.”
+
+
 This plugin provides 14 domain skills covering CesiumJS v1.143 (~551 public symbols). Skills activate passively via description matching — no explicit invocation is required.
 
 ## Available Skills

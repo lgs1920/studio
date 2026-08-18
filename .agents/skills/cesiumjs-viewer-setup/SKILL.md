@@ -5,6 +5,11 @@ description: "CesiumJS viewer setup - Viewer, CesiumWidget, widgets, Ion token, 
 
 # CesiumJS Viewer & Scene Setup
 
+## User intent discipline
+
+Never extrapolate beyond the user's request. If a decision is not explicit, ask the user before acting. User directive: “JE N'EXTRAPOLE JAMAIS LA DEMANDE, JE DEMANDE AU MONSIEUR.”
+
+
 Reference for bootstrapping CesiumJS applications: Viewer, CesiumWidget, Ion/GoogleMaps/ITwinPlatform configuration, widgets, factory helpers, geocoder services, viewer mixins, Credits, and related enums.
 
 ## Quick Start

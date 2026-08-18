@@ -4,6 +4,11 @@ description: "CesiumJS imagery layers - ImageryProvider, ImageryLayer, ImageryLa
 ---
 # CesiumJS Imagery Layers
 
+## User intent discipline
+
+Never extrapolate beyond the user's request. If a decision is not explicit, ask the user before acting. User directive: “JE N'EXTRAPOLE JAMAIS LA DEMANDE, JE DEMANDE AU MONSIEUR.”
+
+
 > CesiumJS v1.143 -- Imagery providers supply raster tile data rendered on the Globe
 > or draped over a Cesium3DTileset. The three core abstractions are **ImageryProvider**
 > (fetches tiles), **ImageryLayer** (display settings), and
