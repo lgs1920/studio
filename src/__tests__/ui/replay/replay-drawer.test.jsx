@@ -422,11 +422,82 @@ describe('JourneyReplayDrawer', () => {
         expect(view.getByLabelText('Pitch (deg)')).toBeTruthy()
         expect(view.getByLabelText('Heading (deg)')).toBeTruthy()
         expect(view.getByLabelText('Camera feel')).toBeTruthy()
+        expect(view.getByLabelText('Wait for visible tiles')).toBeTruthy()
+        expect(view.getByLabelText('Readiness policy')).toBeTruthy()
+        expect(view.getByLabelText('Camera tile preloading')).toBeTruthy()
         expect(view.getByRole('heading', {name: 'Position', level: 4})).toBeTruthy()
         expect(view.getByRole('heading', {name: 'Framing', level: 4})).toBeTruthy()
         expect(view.getByRole('heading', {name: 'Motion', level: 4})).toBeTruthy()
         expect(view.getByRole('heading', {name: 'Recenter', level: 4})).toBeTruthy()
         expect(view.getByRole('heading', {name: 'Diagnostics', level: 4})).toBeTruthy()
+    })
+
+    it('persists readiness and camera preloading controls', async () => {
+        const view = render(<JourneyReplayDrawer/>)
+        const readinessSwitch = view.getByLabelText('Wait for visible tiles')
+        expect(view.getByLabelText('Readiness policy')).toBeTruthy()
+        expect(view.getByLabelText('Camera tile preloading')).toBeTruthy()
+
+        fireEvent.click(readinessSwitch)
+        await waitFor(() => {
+            expect(view.queryByLabelText('Readiness policy')).toBeNull()
+            expect(view.queryByLabelText('Camera tile preloading')).toBeNull()
+        })
+
+        fireEvent.click(readinessSwitch)
+        await waitFor(() => {
+            expect(view.getByLabelText('Readiness policy')).toBeTruthy()
+            expect(view.getByLabelText('Camera tile preloading')).toBeTruthy()
+        })
+        fireEvent.change(view.getByLabelText('Readiness policy'), {target: {value: 'strict'}})
+        fireEvent.change(view.getByLabelText('Camera tile preloading'), {target: {value: '2000'}})
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.replay.readiness.enabled).toBe(true)
+            expect(globalThis.lgs.settings.ui.replay.readiness.policy).toBe('strict')
+            expect(globalThis.lgs.stores.replay.readiness.policy).toBe('strict')
+            expect(globalThis.lgs.settings.ui.replay.camera.playback.tilePreloadHorizonMs).toBe(2000)
+            expect(globalThis.lgs.stores.replay.camera.playback.tilePreloadHorizonMs).toBe(2000)
+        })
+    })
+
+    it('styles custom readiness wait fields with hints', async () => {
+        const view = render(<JourneyReplayDrawer/>)
+
+        fireEvent.change(view.getByLabelText('Readiness policy'), {target: {value: 'custom'}})
+
+        await waitFor(() => {
+            const movingWait = view.getByLabelText('Moving wait (ms)')
+            const settledWait = view.getByLabelText('Settled wait (ms)')
+            const waitFields = movingWait.closest('.replay-style-field-grid')
+
+            expect(movingWait.className).toContain('half-width')
+            expect(movingWait.getAttribute('hint')).toBe('Maximum tile wait while the camera is moving.')
+            expect(settledWait.className).toContain('half-width')
+            expect(settledWait.getAttribute('hint')).toBe('Maximum tile wait after the camera settles.')
+            expect(waitFields.className).toContain('is-single')
+        })
+    })
+
+    it('turns the master switch off when both tile features are off and restores defaults when re-enabled', async () => {
+        const view = render(<JourneyReplayDrawer/>)
+        const readinessSwitch = view.getByLabelText('Wait for visible tiles')
+
+        fireEvent.change(view.getByLabelText('Readiness policy'), {target: {value: 'off'}})
+        fireEvent.change(view.getByLabelText('Camera tile preloading'), {target: {value: '0'}})
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.replay.readiness.enabled).toBe(false)
+            expect(readinessSwitch.checked).toBe(false)
+        })
+
+        fireEvent.click(readinessSwitch)
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.replay.readiness.enabled).toBe(true)
+            expect(globalThis.lgs.settings.ui.replay.readiness.policy).toBe('adaptive')
+            expect(globalThis.lgs.settings.ui.replay.camera.playback.tilePreloadHorizonMs).toBe(1000)
+        })
     })
 
     it('shows and persists capability-specific camera sensitivities', async () => {
