@@ -420,6 +420,24 @@ replay sync is enabled, preparation may cache lightweight render metadata, but
 it must not synchronously compile a complete camera path or block replay
 startup, HQ scene preparation, or the first exported frame.
 
+Cesium tile pre-warming is a separate concern from codec and render-plan
+warm-up. If implemented, it must use a bounded rolling queue of representative
+future camera footprints, preserve the Cesium terrain and 3D Tiles caches for
+the export lifetime, and never block Draft startup. The active Cesium scene has
+one camera, so future views must be scheduled sequentially while Cesium's
+resource requests remain internally parallel. A second logical HQ camera is
+recommended for ownership and state isolation, but a detached `Cesium.Camera`
+does not load tiles until its pose is applied to the active scene.
+
+The detailed readiness, cache, timeout, and pre-warming contract is documented
+in [Replay / Video Architecture](CORE-REPLAY-VIDEO-ARCHITECTURE.md#7-hq-cesium-tile-readiness-and-pre-warming).
+
+Replay playback exposes the readiness policy through the Replay drawer. The
+default is `adaptive`, with an explicit `off` switch for diagnostics and
+`strict` or `custom` policies for exports that require longer tile budgets.
+The camera playback setting `camera.playback.tilePreloadHorizonMs` controls the
+bounded lookahead used to pre-warm future camera footprints.
+
 ### Parity target
 
 Parity should be evaluated on the composed frame before encoding.

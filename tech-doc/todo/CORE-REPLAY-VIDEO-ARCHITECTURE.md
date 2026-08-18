@@ -223,9 +223,12 @@ Important:
 - it does not store frames as persistent assets;
 - it stores only a compact export context and runtime plan;
 - it can be reused from both the live draft and the final dialog.
-- it renders Cesium frames synchronously when `scene.render()` is available,
-  avoiding a fixed double-`requestAnimationFrame` delay on every exported
-  frame;
+- it must advance Cesium through `requestRender()` and an asynchronous render
+  boundary. A direct `scene.render()` call must not be used as the retry signal
+  of the tile-readiness loop, because it can starve network callbacks and
+  produce a timeout on every frame. A controlled synchronous render is only
+  acceptable as a final, non-retrying render boundary when the scene API
+  explicitly supports it;
 - it publishes `runtime.frameState` before each encoded frame so dynamic
   replay widgets read the same journey sample;
 - it waits for widget publication before compositing, then uses the same
@@ -532,14 +535,499 @@ Instead, it keeps:
 
 Performance rule:
 
-- prefer synchronous scene rendering for the map/background;
+- prefer Cesium's `requestRender()` and the normal render loop for map and tile
+  progression;
+- never use synchronous `scene.render()` as a busy retry loop while tiles are
+  pending;
+- wait for a `postRender` boundary only after the current frame is ready;
 - wait for the widget publication frame during HQ export so DOM-to-canvas
   mirrors have time to refresh before encoding the frame.
 
 This is enough for the current product goals without turning the draft flow
 into a memory-heavy offline pipeline.
 
-## 7. What still belongs to future work
+## 7. HQ Cesium tile readiness and pre-warming
+
+HQ export has a separate readiness problem from codec warm-up. The exporter
+must not encode a frame while visible Cesium terrain, imagery, or 3D Tiles are
+still being refined, but it must also avoid paying a full tile timeout for
+every frame.
+
+This section records the Cesium-specific analysis and the target architecture.
+It is intentionally kept in the replay/video architecture document because
+tile readiness affects camera ownership, frame scheduling, cache retention,
+and capture correctness at the same time.
+
+### 7.1 Current HQ readiness flow
+
+The current HQ path is:
+
+1. `ReplayDeferredExporter` resolves one deterministic replay frame;
+2. `renderReplayExportFrame()` applies the replay sample, trace, marker, and
+   camera pose;
+3. `prepareReplaySceneTilesForCapture()` inspects the active Cesium scene;
+4. the readiness helper checks the globe and every visible 3D tileset;
+5. the exporter composes the source canvas and the overlays;
+6. the encoded frame is submitted to the MP4 output.
+
+The relevant implementation files are:
+
+- [`ReplayDeferredExporter.js`](../../src/core/ui/replay/ReplayDeferredExporter.js)
+- [`ReplaySceneTileReadiness.js`](../../src/core/ui/replay/ReplaySceneTileReadiness.js)
+- [`JourneyReplaySessionPlaybackController.js`](../../src/core/ui/replay/JourneyReplaySessionPlaybackController.js)
+- [`Viewer.jsx`](../../src/components/cesium/Viewer.jsx)
+- [`IonLayerUtils.js`](../../src/Utils/cesium/IonLayerUtils.js)
+
+The current helper returns `false` after its timeout and the exporter
+continues. This is important for resilience, but a non-fatal timeout is not a
+performance solution. If the helper spends five seconds on most frames, the
+export remains unusably slow even though it eventually completes.
+
+### 7.2 Cesium readiness semantics
+
+Cesium exposes view-based readiness signals. They must not be interpreted as
+permanent cache flags.
+
+`Globe.tilesLoaded` means that the globe's terrain and imagery load queues are
+empty for the current Cesium view. It covers the complete viewport, not the
+video crop rectangle. A tile outside the crop or near the viewport edge can
+keep this value `false`.
+
+`Cesium3DTileset.tilesLoaded` means that the tileset has loaded the content
+needed to meet the current screen-space-error target for the current view. A
+camera move can make it `false` again even when previously visible tile
+content remains resident in the tileset cache.
+
+Neither property means:
+
+- that all tiles along the replay path are loaded;
+- that all previously displayed tiles are still resident;
+- that a tile will never be refined or requested again;
+- that the final crop has been independently checked.
+
+Both properties are read-only runtime observations. The application must not
+set `tilesLoaded` manually to bypass a wait. It may maintain its own
+per-export residency and readiness state, but Cesium must remain the authority
+on whether the current view has completed its requests.
+
+The relevant Cesium events are:
+
+- `globe.tileLoadProgressEvent` for terrain and imagery queue changes;
+- `tileset.loadProgress` for pending and processing 3D tile counts;
+- `tileset.tileVisible` for content selected for rendering;
+- `tileset.tileUnload` for cache eviction;
+- `tileset.tileFailed` for content failures;
+- `tileset.allTilesLoaded` for completion of the current 3D tileset view.
+
+### 7.3 Critical readiness failure: synchronous `scene.render()`
+
+The Cesium viewer is configured with `scene.requestRenderMode = true`. In this
+mode, `scene.requestRender()` asks the normal Cesium render loop to process one
+render opportunity. The browser remains free to process network responses,
+decoding callbacks, and timers.
+
+The readiness helper currently contains a direct `scene.render()` path. When
+the current view is not ready, the sequence can become:
+
+```text
+wait for readiness
+  -> scene.render()
+  -> postRender resolves the wait immediately
+  -> tilesLoaded is still false
+  -> scene.render() again
+  -> postRender resolves immediately
+  -> repeat until timeout
+```
+
+This creates a microtask-heavy loop. Network callbacks and Cesium's normal
+render scheduling do not get a reliable opportunity to progress. The result
+is a timeout on every frame even when the missing tile requests could have
+completed normally.
+
+There is a second problem: `scene.render()` is not a guaranteed forced render
+in request-render mode. If Cesium has not marked a render as requested, it can
+return without producing a `postRender` event. The helper then waits through
+polling intervals without necessarily advancing the tile queues.
+
+This direct render path can also re-enter Cesium while the camera or scene mode
+is still changing. That increases the risk of camera/frustum errors such as
+`A PerspectiveFrustum or OrthographicFrustum is required in 3D and Columbus
+view`.
+
+The required rule is therefore:
+
+- use `scene.requestRender()` to advance an asynchronous readiness wait;
+- use `postRender` as the proof that the requested frame reached Cesium's
+  render boundary;
+- do not call `scene.render()` repeatedly while a tile queue is pending;
+- if a forced synchronous render is ever required, use it once at a controlled
+  boundary, never as the retry mechanism.
+
+### 7.4 The current readiness scope is wider than the crop
+
+The current readiness check is conservative but expensive:
+
+- it checks the complete globe viewport rather than the crop footprint;
+- it checks every visible tileset found in the scene primitive collection;
+- it can include a visible 3D tileset that is not materially present in the
+  final crop;
+- it repeats the check for every exported frame;
+- it waits for a post-render boundary even when the view has not changed in a
+  meaningful way.
+
+Cesium does not expose a stable public API for the exact visible imagery tile
+IDs of a crop. Reaching into private globe surface queues would be brittle and
+would couple the application to Cesium internals. The first implementation
+should therefore avoid pretending to have exact crop-level imagery readiness.
+It should reduce unnecessary waits through cache retention, camera-footprint
+reuse, event-based invalidation, and bounded time budgets.
+
+### 7.5 Cache layers and retention policy
+
+There are three different cache layers:
+
+1. **Cesium terrain and imagery cache**
+   - controlled in part by `globe.tileCacheSize`;
+   - retains Cesium globe tile records and their associated imagery state;
+   - should be enlarged for the lifetime of an HQ export and restored after
+     cleanup;
+   - does not make every future view ready automatically.
+
+2. **Cesium 3D Tiles cache**
+   - controlled by `tileset.cacheBytes` and
+     `tileset.maximumCacheOverflowBytes`;
+   - retains decoded 3D tile content until memory pressure or cache policy
+     causes eviction;
+   - should use a bounded export-specific increase only when memory usage is
+     monitored and the device budget allows it;
+   - is separate from the globe's `tileCacheSize`.
+
+3. **Browser and PWA HTTP cache**
+   - may avoid downloading the same URL again;
+   - does not guarantee that Cesium will avoid parsing, decoding, uploading,
+     or refining the tile again;
+   - does not replace Cesium's in-memory and GPU-side retention policy.
+
+Restoring `tileCacheSize` after export must not be treated as deleting all
+loaded tiles. It restores the future eviction policy. Existing data may remain
+until Cesium trims it, while the browser/PWA cache follows its own policy.
+
+The export must never remove, destroy, or recreate a tileset merely because a
+frame is being captured. A tile that is already resident should be reused by
+Cesium. A tile can legitimately be requested again after eviction, a layer
+replacement, a tileset destruction, a provider error, or a change in the
+required screen-space-error level.
+
+### 7.6 Dedicated HQ camera ownership
+
+HQ should have a dedicated logical camera state, even though the application
+continues to use one active Cesium camera in the main scene.
+
+The logical HQ camera owns:
+
+- the deterministic camera trajectory;
+- the target pose for each export frame;
+- the sampled future poses used for pre-warming;
+- the camera-footprint key used by readiness reuse;
+- the saved user camera state that must be restored after export.
+
+A second `Cesium.Camera` object by itself is not enough. Cesium only evaluates
+tile visibility and request priorities for the camera attached to the active
+scene. A detached camera does not populate the scene's tile cache.
+
+The recommended first architecture is:
+
+```text
+user camera state  -> restored before and after export
+HQ logical camera  -> deterministic replay trajectory
+active Scene.camera -> temporarily applies the HQ pose for Cesium loading
+```
+
+This separates ownership and timing without immediately creating a second
+WebGL context.
+
+A separate hidden Cesium scene would isolate visual camera movement, but it
+would also duplicate scene setup, tileset decoding, GPU memory, and cache
+management. The browser may also impose WebGL context limits. It should only
+be considered if the single-scene approach cannot prevent visible camera
+changes during warm-up.
+
+### 7.7 Bounded pre-warming of future replay views
+
+Pre-warming must not mean loading every video frame. At 30 fps, that would
+create thousands of view changes and make the cache and request scheduler
+compete with the actual capture.
+
+The target is a rolling look-ahead window:
+
+```text
+current frame: 100
+capture now:   100
+pre-warm:      representative views 101 -> 160
+
+current frame: 101
+capture now:   101
+pre-warm:      representative views 161 -> 220
+```
+
+The pre-warm scheduler should:
+
+- sample a camera pose every 250–500 ms of replay time;
+- add samples when heading, pitch, altitude, or visible footprint changes
+  materially;
+- keep an initial look-ahead of roughly 1 second;
+- expand up to 3 seconds only when the request queues remain healthy;
+- keep only 4–8 pending representative views;
+- deduplicate equivalent camera-footprint keys;
+- stop or reduce pre-warming when the current capture is waiting on new tiles;
+- never block the first frame or the live Draft path.
+
+The camera moves between pre-warm samples sequentially because one Cesium
+scene has one active camera. The network work remains parallel inside Cesium:
+each selected view can schedule multiple 2D and 3D resource requests through
+Cesium's request scheduler.
+
+Pre-warming must not compete with the current capture. If the current frame
+has pending requests or its readiness budget is being consumed, the pre-warm
+queue must pause until the current frame is submitted.
+
+### Adaptive 3D detail during camera movement
+
+Waiting for the maximum 3D Tiles detail at every video frame is too expensive
+when the camera is continuously moving. `Cesium3DTileset.tilesLoaded` is tied
+to the tileset's current screen-space-error target, so a camera move can
+trigger a new refinement cycle even when an acceptable parent tile is already
+visible.
+
+The future HQ policy should distinguish between two states:
+
+- **moving view**: keep the currently usable content and allow Cesium to refine
+  asynchronously while the export continues;
+- **settled or key view**: wait for the configured final screen-space-error
+  target before capture when the frame is important enough to justify it.
+
+The implementation may temporarily use a more permissive
+`maximumScreenSpaceError` or keep Cesium's foveated and movement culling
+optimizations enabled while the camera is moving. Any temporary quality change
+must be restored before the next settled/key capture and after the export.
+
+This policy must not mark a tileset as loaded manually. It only changes how
+much work is requested while the camera is moving and keeps Cesium's own
+`tilesLoaded` and tile events authoritative.
+
+Running several camera mutations in parallel is explicitly forbidden. The
+last camera mutation would win, request priorities would become unstable, and
+the readiness result would no longer identify the view that is being captured.
+
+For 3D Tiles, pre-warming must be driven by Cesium's tileset selection and
+events. Manually fetching guessed `.b3dm` URLs is insufficient because the
+tileset hierarchy, implicit tiling, refinement rules, culling, and screen-space
+error determine which content is needed. Manual HTTP prefetch may populate the
+browser cache but does not guarantee Cesium cache or GPU readiness.
+
+For 2D imagery and terrain, pre-warming through the active Cesium scene is
+also preferable to a raw URL fetch because Cesium must select the correct
+levels and attach the imagery to the terrain tile records used for rendering.
+
+### 7.8 Per-export residency and readiness cache
+
+The exporter should own a short-lived readiness coordinator for one HQ pass.
+It should not cache `tilesLoaded = true` forever. Instead, it should cache the
+fact that a camera footprint has already been observed as ready and invalidate
+that fact when the scene can no longer rely on it.
+
+A readiness entry should contain at least:
+
+```js
+{
+    footprintKey,
+    sceneMode,
+    cameraHeight,
+    visibleTilesetKeys,
+    readyAt,
+    lastPostRenderFrame,
+}
+```
+
+The entry must be invalidated when:
+
+- the camera footprint changes beyond the configured tolerance;
+- a visible tileset is added, removed, hidden, or shown;
+- `tileUnload` reports eviction of tracked 3D content;
+- `tileFailed` reports a failure;
+- a globe tile progress event indicates new work for the current footprint;
+- imagery or terrain providers change;
+- the scene mode or render resolution changes;
+- the export cache is restored or the export is cancelled.
+
+For 3D Tiles, `tileVisible` and `tileUnload` can provide useful application
+level residency observations. For 2D imagery, the public Cesium API is less
+granular, so the coordinator must combine the camera footprint, the globe
+queue progress event, and the enlarged globe cache rather than use private
+tile IDs.
+
+The capture decision becomes:
+
+```text
+known ready footprint + no invalidation
+    -> request one render boundary and capture
+
+new or invalidated footprint
+    -> request Cesium rendering
+    -> wait for progress/events up to a short budget
+    -> capture the best available frame and continue if the budget expires
+```
+
+This removes the current five-second full-scene wait from every frame while
+preserving a readiness check when the camera actually enters new content.
+
+### 7.9 Atomic marker and trace capture
+
+Tile readiness and replay geometry readiness are separate concerns, but they
+must be completed before the same capture boundary.
+
+For every HQ frame:
+
+1. resolve the logical replay sample and camera pose;
+2. update the marker and trace from that same sample;
+3. apply the HQ camera pose;
+4. request Cesium rendering asynchronously;
+5. wait for the required tile readiness budget;
+6. wait for the `postRender` boundary associated with that pose;
+7. compose and encode the canvas.
+
+The marker must never be rendered for sample `N + 1` while the trace still
+represents sample `N`. The trace must also not be destroyed and recreated on
+every frame merely to update its endpoint. Dynamic geometry should be updated
+in place or reused, and the readiness coordinator must not trigger an
+additional scene replacement pass.
+
+### 7.10 Failure and timeout policy
+
+A tile timeout is a frame-level degradation signal, not a reason to abort the
+whole replay export.
+
+When a bounded wait expires:
+
+- record the frame index, camera footprint, globe queue state, and tileset
+  progress state;
+- keep the current Cesium cache and tileset instances alive;
+- encode the current rendered frame or the last stable frame according to the
+  selected export policy;
+- continue with the next replay frame;
+- keep testing later frames when their footprint or tile state changes;
+- do not permanently disable readiness checks after one timeout.
+
+Repeated timeouts must be visible in diagnostics, but they must not create a
+new five-second delay for every subsequent frame without evidence that the
+camera entered new content.
+
+The recommended readiness budgets are:
+
+- known, valid camera footprint: 0–250 ms for the post-render boundary;
+- new camera footprint: 500–1000 ms for tile progress;
+- settled/key frame: the configured final-quality budget when the export policy
+  explicitly requests maximum detail;
+- timed-out frame: continue immediately with the best stable content available.
+
+These are budgets, not sleeps. A readiness event or a completed `postRender`
+must release the frame as soon as the required state is available.
+
+### 7.11 Runtime readiness controls
+
+Replay settings expose a controlled readiness contract instead of forcing one
+fixed HQ policy on every export. The normalized configuration is:
+
+```js
+{
+    enabled: true,
+    policy: 'adaptive',
+    knownFootprintTimeoutMs: 250,
+    movingTimeoutMs: 1000,
+    settledTimeoutMs: 5000,
+    prewarmEnabled: true,
+}
+```
+
+The supported policies are:
+
+- `off`: do not block frame capture on tile readiness; camera pre-warming can
+  still remain enabled independently;
+- `adaptive`: use shorter budgets while the camera moves and the settled
+  budget for key frames;
+- `strict`: use the complete frame budget for every new footprint;
+- `custom`: use the configured moving and settled budgets directly.
+
+The setting is intentionally split into two concepts. `enabled` controls
+whether the readiness gate is used. The coordinator's internal invalidation
+state remains active so tile unloads, failures, source changes, and new Cesium
+work can invalidate a previously ready footprint when readiness is enabled
+again.
+
+The Replay drawer also exposes the camera playback setting
+`camera.playback.tilePreloadHorizonMs`. It controls how far ahead the HQ
+camera path is sampled for bounded tile pre-warming. A value of zero disables
+pre-warming without disabling readiness for the current frame.
+The current implementation applies this lookahead to the initial export prefix;
+it does not walk the complete replay before encoding starts.
+
+The drawer's `Wait for visible tiles` switch is the master switch for both
+features. While it is enabled, readiness policy and camera pre-warming can be
+disabled independently. When the policy is `off` and the preload horizon is
+zero, the drawer automatically turns the master switch off. Re-enabling the
+master switch restores the safe defaults (`adaptive` readiness and a 1-second
+preload horizon), so the switch cannot appear enabled while both mechanisms
+are inactive.
+
+Adaptive budgets use deterministic replay progress rather than wall-clock
+export time. The coordinator classifies camera movement as `slow`, `normal`,
+`fast`, or `jump` and scales only the non-settled moving budget. The default
+configuration remains readiness-enabled and adaptive, so existing exports keep
+their quality gate while avoiding a full wait for every unchanged footprint.
+
+### 7.12 Required diagnostics
+
+The readiness coordinator should publish per-frame timing data for at least:
+
+- time spent before readiness;
+- time spent waiting for a tile event;
+- time spent waiting for `postRender`;
+- initial and final `globe.tilesLoaded` values;
+- globe tile queue progress when available;
+- each visible tileset's `tilesLoaded` value;
+- each visible tileset's pending and processing counts from `loadProgress`;
+- whether the footprint was reused or invalidated;
+- whether the frame timed out;
+- whether a tile failure or unload caused invalidation.
+
+This separates four different performance problems that must not be confused:
+
+1. network download latency;
+2. Cesium tile processing and GPU upload;
+3. readiness scheduling or event-loop starvation;
+4. overlay composition and canvas encoding.
+
+### 7.13 Target acceptance criteria
+
+The future implementation is acceptable only when:
+
+- 2D and 3D tiles use the same readiness contract;
+- the readiness loop never calls synchronous `scene.render()` repeatedly;
+- a pending network request gets normal browser and Cesium scheduling time;
+- a tile already resident in Cesium is not intentionally removed or recreated
+  between frames;
+- readiness is reused for an unchanged camera footprint;
+- readiness is invalidated after relevant tile unloads, layer changes, or
+  camera-footprint changes;
+- one timeout does not abort the export or disable all later checks;
+- the marker and trace come from the same logical replay sample;
+- the HQ camera is independent from user camera state;
+- pre-warming is bounded and never blocks Draft startup or the first HQ frame;
+- memory usage remains bounded for both 2D and 3D caches;
+- diagnostics identify whether a delay came from network, processing,
+  scheduling, or composition.
+
+## 8. What still belongs to future work
 
 The current architecture prepares the ground for later work such as:
 
@@ -551,7 +1039,7 @@ The current architecture prepares the ground for later work such as:
 Those are valid next steps, but they are deliberately outside the current
 scope.
 
-## 8. Practical editing rules
+## 9. Practical editing rules
 
 When changing this area, prefer these rules:
 
@@ -574,3 +1062,16 @@ When changing this area, prefer these rules:
   abort from the same visual context they started from.
 - distinguish a user dialog close from a programmatic HQ hide; only the user
   close path should release the live blob and restore the replay scene.
+- keep Cesium tile readiness in a short-lived HQ coordinator rather than in the
+  generic recorder;
+- use `requestRender()` for asynchronous tile progression and keep synchronous
+  forced rendering outside readiness retry loops;
+- treat 2D globe cache, 3D tileset cache, and browser/PWA HTTP cache as
+  separate layers;
+- pre-warm representative future camera footprints through a bounded rolling
+  queue, never every video frame;
+- keep the logical HQ camera separate from user camera state, while using the
+  active Cesium scene camera to populate Cesium's view-dependent caches;
+- never set Cesium's read-only `tilesLoaded` property manually;
+- keep tile timeout handling frame-local and non-fatal, with later readiness
+  checks still enabled after a timeout.
