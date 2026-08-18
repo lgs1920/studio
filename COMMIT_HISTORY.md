@@ -710,3 +710,7 @@
 ## 2026-08-17 — [`docs: document Bun migration study`](https://github.com/lgs1920/studio/commit/b3d201d7f24a6ce66c7253d659f2489f7e53e23b)
 
 - Recorded automatically from Git history.
+
+## 2026-08-17 — [`fix: handle local file reading errors`](https://github.com/lgs1920/studio/commit/67dce8bf4cf3bdcf744027ac7fe5431a31b91463)
+
+- Recorded automatically from Git history.
