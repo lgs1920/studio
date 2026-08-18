@@ -139,4 +139,24 @@ describe('IonLayerUtils Cesium cache', () => {
         })
         expect(provider).toEqual({id: 'google-imagery'})
     })
+
+    it('creates Google Photorealistic 3D Tiles with the layer visibility', async () => {
+        const {createGooglePhotorealistic3DTileset} = await import('cesium')
+        createGooglePhotorealistic3DTileset.mockResolvedValue({id: 'google-3d'})
+
+        const tileset = await IonLayerUtils.createTileset({
+            id:        'google-photorealistic-3d',
+            type:      'base3d',
+            show:      true,
+            sceneKind: 'google-photorealistic',
+        })
+
+        expect(createGooglePhotorealistic3DTileset).toHaveBeenCalledWith(
+            {onlyUsingWithGoogleGeocoder: true},
+            {
+                show: true,
+            },
+        )
+        expect(tileset).toEqual({id: 'google-3d'})
+    })
 })

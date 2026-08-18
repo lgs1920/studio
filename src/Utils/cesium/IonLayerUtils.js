@@ -103,9 +103,12 @@ export class IonLayerUtils {
             || kind === 'google-photorealistic-3d'
             || kind === 'google-photorealistic-tiles'
             || `${layer?.id ?? ''}`.includes('photorealistic')) {
-            return createGooglePhotorealistic3DTileset({}, {
-                show: layer?.show ?? true,
-            })
+            return createGooglePhotorealistic3DTileset(
+                {onlyUsingWithGoogleGeocoder: true},
+                {
+                    show: layer?.show ?? true,
+                },
+            )
         }
 
         if (kind === 'url' || tilesetUrl) {

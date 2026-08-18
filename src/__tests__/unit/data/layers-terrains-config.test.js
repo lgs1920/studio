@@ -87,4 +87,16 @@ describe('layers-terrains configuration', () => {
         expect(layersById.get('google-maps-2d-satellite')).toMatchObject(expectedCredit)
         expect(layersById.get('google-maps-2d-satellite-labels')).toMatchObject(expectedCredit)
     })
+
+    it('declares a Google Maps credit for Google Photorealistic 3D Tiles', () => {
+        const config = loadLayersTerrains()
+        const layersById = indexLayersById(config)
+
+        expect(layersById.get('google-photorealistic-3d')).toMatchObject({
+            credits:  'Google Maps',
+            logo:     '/assets/images/layers/logos/google-maps.png',
+            logoText: 'Google Maps',
+            url:      'https://www.google.com/maps',
+        })
+    })
 })
