@@ -155,8 +155,6 @@
         flex: 0 0 1px;
         width: 1px;
         height: calc(0.6 * var(--lgs-credits-bar-height));
-        margin-right: calc(-0.5 * var(--lgs-credits-item-gap));
-        margin-left: calc(-0.5 * var(--lgs-credits-item-gap));
         background-color: rgb(255 255 255 / 50%);
     }
 
@@ -215,7 +213,7 @@
 }
 
 .credits-bar .provider-credits:not(:empty) ~ .cesium-credits {
-    margin-right: calc(-1 * var(--lgs-gutter-xs));
+    margin-right: calc(-0.75 * var(--lgs-gutter-xs));
 }
 
 .provider-credits .credits {
