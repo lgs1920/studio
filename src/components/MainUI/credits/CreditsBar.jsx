@@ -23,7 +23,7 @@ import {
     resolveLayerCredit,
 }                                                       from '@Core/ui/layerCredits'
 import { WaTooltip }                                   from '@web.awesome.me/webawesome-pro/dist/react'
-import { memo, useEffect, useId }                      from 'react'
+import { Fragment, memo, useEffect, useId }            from 'react'
 import { proxy, useSnapshot }                          from 'valtio'
 import { subscribeKey }                                from 'valtio/utils'
 import './style.css'
@@ -179,11 +179,13 @@ export const CreditsBar = ({contentRef = null, widgetMode = false, showMainLogo 
             )}
             <div className="provider-credits lgs-credits">
                 {providerCredits.map(({type, provider}) => (
-                    <CreditLink
-                        key={type}
-                        id={`${tooltipIdPrefix}-${type}`}
-                        credit={provider}
-                    />
+                    <Fragment key={type}>
+                        <span className="provider-credit-separator" aria-hidden="true"/>
+                        <CreditLink
+                            id={`${tooltipIdPrefix}-${type}`}
+                            credit={provider}
+                        />
+                    </Fragment>
                 ))}
             </div>
             <div className="cesium-credits lgs-credits  ">

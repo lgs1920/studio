@@ -19,7 +19,7 @@
  */
 
 :root {
-    --lgs-credits-bar-height: calc(0.65 * var(--lgs-line-dimension));
+    --lgs-credits-bar-height: calc(0.6 * var(--lgs-line-dimension));
 }
 
 .credits-bar {
@@ -102,7 +102,7 @@
 .credits-bar .main-logo {
     overflow: visible;
     align-self: flex-end;
-    width: 104px;
+    width: calc(1.5 * var(--lgs-credits-logo-height));
     height: var(--lgs-credits-logo-height);
     max-height: var(--lgs-credits-logo-height);
     margin: 0;
@@ -151,6 +151,15 @@
 }
 
 .credits-bar .provider-credits {
+    & .provider-credit-separator {
+        flex: 0 0 1px;
+        width: 1px;
+        height: calc(0.6 * var(--lgs-credits-bar-height));
+        margin-right: calc(-0.5 * var(--lgs-credits-item-gap));
+        margin-left: calc(-0.5 * var(--lgs-credits-item-gap));
+        background-color: rgb(255 255 255 / 50%);
+    }
+
     & .credit-logo-composite {
         display: inline-flex;
         align-items: center;
@@ -199,6 +208,14 @@
     max-height: var(--lgs-credits-bar-height);
     border-radius: 0 !important;
     object-fit: contain;
+}
+
+.credits-bar .cesium-credits > a {
+    padding: 0;
+}
+
+.credits-bar .provider-credits:not(:empty) ~ .cesium-credits {
+    margin-right: calc(-1 * var(--lgs-gutter-xs));
 }
 
 .provider-credits .credits {
