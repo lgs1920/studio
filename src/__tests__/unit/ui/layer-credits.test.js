@@ -87,7 +87,7 @@ describe('layer credits', () => {
         }
         globalThis.__ = {
             layersAndTerrainManager: {
-                getEntityProxyByType: entityId => entityId === googleLayer.id ? googleLayer : null,
+                getEntityProxy: entityId => entityId === googleLayer.id ? googleLayer : null,
                 getProviderProxyByEntity: entityId => entityId === googleLayer.id ? {id: 'cesium'} : null,
             },
         }
@@ -101,5 +101,37 @@ describe('layer credits', () => {
             url:   'https://www.google.com/maps',
         })
         expect(googleCredit.html).toContain('/assets/images/layers/logos/google-maps.png')
+    })
+
+    it('does not use the default Esri base credit when Google 3D is active', () => {
+        const googleLayer = {
+            id:      'google-photorealistic-3d',
+            credits: 'Google Maps',
+            url:     'https://www.google.com/maps',
+            type:    'base3d',
+        }
+
+        globalThis.lgs = {
+            settings: {
+                layers: {
+                    base:   '',
+                    base3d: googleLayer.id,
+                },
+            },
+        }
+        globalThis.__ = {
+            layersAndTerrainManager: {
+                getEntityProxy: entityId => entityId === googleLayer.id ? googleLayer : null,
+                getProviderProxyByEntity: entityId => entityId === googleLayer.id ? {id: 'cesium'} : null,
+            },
+        }
+
+        const credits = getReportCredits()
+
+        expect(credits.some(credit => credit.text === 'Esri')).toBe(false)
+        expect(credits).toContainEqual(expect.objectContaining({
+            label: 'Base 3D',
+            text:  'Google Maps',
+        }))
     })
 })

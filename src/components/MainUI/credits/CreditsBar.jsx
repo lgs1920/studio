@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY } from '@Core/constants'
+import { BASE3D_ENTITY, BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY } from '@Core/constants'
 import { LogoSvg }                                     from '@Components/MainUI/LogoSvg'
 import { LayersAndTerrainManager }                     from '@Core/ui/LayerAndTerrainManager'
 import {
@@ -32,14 +32,16 @@ import './style.css'
  * Proxy state to manage layer providers.
  */
 const $providers = proxy({
+                             [BASE3D_ENTITY]:  null,
                              [BASE_ENTITY]:    null,
                              [OVERLAY_ENTITY]: null,
                              [TERRAIN_ENTITY]: null,
                          })
 
 /** List of available layer types */
-const LAYERS_TYPE = [BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY]
+const LAYERS_TYPE = [BASE3D_ENTITY, BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY]
 const CREDIT_TYPE_LABELS = {
+    [BASE3D_ENTITY]:  'Base 3D',
     [BASE_ENTITY]:    'Base',
     [OVERLAY_ENTITY]: 'Overlay',
     [TERRAIN_ENTITY]: 'Terrain',
@@ -101,8 +103,8 @@ export const CreditsBar = ({contentRef = null, widgetMode = false, showMainLogo 
         const manager = new LayersAndTerrainManager()
         const getCredit = entityType => {
             const entityId = lgs.settings.layers[entityType]
-            const entity = manager.getEntityProxyByType(entityId, entityType)
-            const provider = manager.getProviderProxyByEntity(entityId, entityType)
+            const entity = entityId ? manager.getEntityProxy(entityId) : null
+            const provider = entity ? manager.getProviderProxyByEntity(entityId, entityType) : null
             return resolveLayerCredit(entity, provider)
         }
         const tmp = LAYERS_TYPE.reduce((credits, entityType) => {
@@ -111,8 +113,8 @@ export const CreditsBar = ({contentRef = null, widgetMode = false, showMainLogo 
         }, {})
 
         if (layer) {
-            const entity = manager.getEntityProxyByType(layer, type)
-            const provider = manager.getProviderProxyByEntity(layer, type)
+            const entity = manager.getEntityProxy(layer)
+            const provider = entity ? manager.getProviderProxyByEntity(layer, type) : null
             tmp[type] = resolveLayerCredit(entity, provider)
         }
 

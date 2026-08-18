@@ -7,6 +7,7 @@
  ******************************************************************************/
 
 import {
+    BASE3D_ENTITY,
     BASE_ENTITY,
     OVERLAY_ENTITY,
     TERRAIN_ENTITY,
@@ -25,7 +26,7 @@ import {
     oneLineText,
 } from './format'
 
-const OVERLAY_CREDIT_LABELS = ['Terrain', 'Overlay', 'Base map', 'Map data']
+const OVERLAY_CREDIT_LABELS = ['Terrain', 'Overlay', 'Base map', 'Base 3D', 'Map data']
 const HIDDEN_CREDIT_LABELS = ['Geocoding', 'Provider data credits']
 const OBJECT_TEXT_PATTERN = /^\s*\[?\s*object\s+object\s*\]?\s*$/i
 const OBJECT_TEXT_PATTERN_FR = /^\s*\[?\s*objet\s+objet\s*\]?\s*$/i
@@ -205,13 +206,15 @@ export const activeProviderCredits = used => {
     }
 
     return [
+        {key: BASE3D_ENTITY, label: 'Base 3D'},
         {key: TERRAIN_ENTITY, label: 'Terrain'},
         {key: OVERLAY_ENTITY, label: 'Layer'},
         {key: BASE_ENTITY, label: 'Base Map'},
     ]
         .map(({key, label}) => {
-            const layer = manager.getEntityProxyByType?.(settings[key], key)
-            const provider = manager.getProviderProxyByEntity?.(settings[key], key)
+            const layerId = settings[key]
+            const layer = layerId ? manager.getEntityProxy?.(layerId) : null
+            const provider = layer ? manager.getProviderProxyByEntity?.(layerId, key) : null
             if (!provider || (provider.id === 'cesium' && !hasLayerSpecificCredit(layer))) {
                 return null
             }
