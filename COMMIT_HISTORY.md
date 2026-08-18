@@ -762,3 +762,11 @@
 ## 2026-08-18 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/2a1edda379e2864f05499f70905aa758f14ffa2d)
 
 - Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: add Google Maps attribution to photorealistic 3D tiles`](https://github.com/lgs1920/studio/commit/7879f068dbb40f41990896001cb319dc24ad9346)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/d6ce39a5c477d651028130652a4cb6b9581674be)
+
+- Recorded automatically from Git history.
