@@ -120,4 +120,23 @@ describe('IonLayerUtils Cesium cache', () => {
         )
         expect(tileset).toEqual({id: 'tileset'})
     })
+
+    it('creates a Google 2D imagery provider for dedicated Google Maps layers', async () => {
+        const {Google2DImageryProvider} = await import('cesium')
+        Google2DImageryProvider.fromIonAssetId.mockResolvedValue({id: 'google-imagery'})
+
+        const provider = await IonLayerUtils.imageryProviderFromLayer({
+            assetId:     3830182,
+            imageryKind: 'google2d',
+            mapType:     'satellite',
+        }, {accessToken: 'google-token'})
+
+        expect(Google2DImageryProvider.fromIonAssetId).toHaveBeenCalledWith({
+            assetId:          3830182,
+            accessToken:      'google-token',
+            mapType:          'satellite',
+            overlayLayerType: undefined,
+        })
+        expect(provider).toEqual({id: 'google-imagery'})
+    })
 })
