@@ -790,3 +790,43 @@
 ## 2026-08-18 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/375464835bc8f601e16205d3e725c2a50e369dad)
 
 - Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: align boot splash image with welcome video`](https://github.com/lgs1920/studio/commit/a6b69145d431c9424dfd1b2dfff2122a748d6ba9)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix global label-at-start hint layout`](https://github.com/lgs1920/studio/commit/86957a0e7a327cefddf16ee6408074382f3e9240)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`feat replay tile readiness settings`](https://github.com/lgs1920/studio/commit/bf66876d4d65c2a90812aa0516a84bd78c1a6f51)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`feat coordinate replay scene tile readiness`](https://github.com/lgs1920/studio/commit/907f6a5a5aaf2baa7ae2de20737457a274a2fba9)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`feat prepare replay tiles before HQ capture`](https://github.com/lgs1920/studio/commit/1a611a0d92cd3a0e4fbaabf705cb4d4907e6868c)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`feat expose replay tile readiness controls`](https://github.com/lgs1920/studio/commit/01ff65ad1ad8508a5212ecce71abd8f06ab2167a)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`docs document replay tile readiness`](https://github.com/lgs1920/studio/commit/11eb13a6a558164712f23ff6941fbac81803b4d7)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`docs research Cesium cloud resources`](https://github.com/lgs1920/studio/commit/c01e63b3ee9afec8bf76753f8d01c677998033ba)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`docs specify journey Cesium lighting`](https://github.com/lgs1920/studio/commit/ced92860cbbac3abbce9ab127a9cc1e7d914b65a)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/9e27496dae4f49b7b2c4971dd9d60b4c4e3ad0c3)
+
+- Recorded automatically from Git history.
