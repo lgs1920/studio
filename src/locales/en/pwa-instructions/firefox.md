@@ -9,3 +9,6 @@ Studio** to your device:
     - On desktop: Create a shortcut by dragging the address bar URL to your desktop.
 
 For the best experience, we recommend using **Chrome** or **Edge**, which support automatic PWA installation.
+
+Firefox does not provide the same automatic installation and update flow. If Studio is installed through a supported
+browser, updates are reported in the Studio dialog and the application restarts after an update is complete.

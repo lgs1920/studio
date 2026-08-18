@@ -8,6 +8,7 @@ This directory contains technical specifications and architecture documents that
 - [Providers](HOW_TO_ADD_PROVIDERS_LAYERS.md)
 - [Settings sync guide](SETTINGS_SYNC_GUIDE.md)
 - [Journey settings readme](JOURNEY_SETTINGS_README.md)
+- [Progressive Web App](PWA-README.md)
 
 ## Deployment
 
