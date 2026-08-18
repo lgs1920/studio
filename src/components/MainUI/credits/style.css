@@ -150,6 +150,46 @@
     object-fit: contain;
 }
 
+.credits-bar .provider-credits {
+    & .credit-logo-composite {
+        display: inline-flex;
+        align-items: center;
+        gap: calc(0.25 * var(--lgs-credits-bar-height));
+        height: var(--lgs-credits-bar-height);
+        color: #ffffff;
+        white-space: nowrap;
+    }
+
+    & .credit-logo-icon {
+        position: relative;
+        display: block;
+        flex: 0 0 calc(0.9 * var(--lgs-credits-bar-height));
+        width: calc(0.9 * var(--lgs-credits-bar-height));
+        height: var(--lgs-credits-bar-height);
+        overflow: hidden;
+    }
+
+    & .credit-logo-icon img {
+        position: absolute;
+        top: calc(-1 * var(--lgs-credits-bar-height));
+        left: 0;
+        width: calc(5 * var(--lgs-credits-bar-height));
+        max-width: none;
+        height: calc(2.81 * var(--lgs-credits-bar-height));
+        max-height: none;
+        object-fit: fill;
+    }
+
+    & .credit-logo-text {
+        display: inline-flex;
+        align-items: center;
+        height: var(--lgs-credits-bar-height);
+        color: #ffffff;
+        font-weight: var(--lgs-font-weight-bold);
+        line-height: 1;
+    }
+}
+
 .credits-bar .cesium-credits img {
     display: block;
     flex: 0 0 auto;

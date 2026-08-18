@@ -17,6 +17,11 @@
 import { BASE_ENTITY, OVERLAY_ENTITY, TERRAIN_ENTITY } from '@Core/constants'
 import { LogoSvg }                                     from '@Components/MainUI/LogoSvg'
 import { LayersAndTerrainManager }                     from '@Core/ui/LayerAndTerrainManager'
+import {
+    layerCreditKey,
+    layerCreditText,
+    resolveLayerCredit,
+}                                                       from '@Core/ui/layerCredits'
 import { WaTooltip }                                   from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useEffect, useId }                      from 'react'
 import { proxy, useSnapshot }                          from 'valtio'
@@ -40,13 +45,28 @@ const CREDIT_TYPE_LABELS = {
     [TERRAIN_ENTITY]: 'Terrain',
 }
 
-const CreditLink = memo(({id, provider}) => {
-    const title = provider.fullname ?? provider.name
+/**
+ * Renders a link for one resolved layer or provider attribution.
+ *
+ * @param {Object} properties - Component properties.
+ * @param {string} properties.id - DOM id used by the tooltip.
+ * @param {Object} properties.credit - Resolved attribution data.
+ * @returns {JSX.Element} Attribution link.
+ */
+const CreditLink = memo(({id, credit}) => {
+    const title = layerCreditText(credit) || credit.fullname || credit.name
     return (
-        <a id={id} href={provider.url} target="_blank" rel="noreferrer" aria-label={title}>
-            {provider.logo
-             ? <img src={provider.logo} alt={title}/>
-             : <span className={'credits'}>{provider.name}</span>
+        <a id={id} href={credit.url} target="_blank" rel="noreferrer" aria-label={title}>
+            {credit.logo
+             ? credit.logoText
+                 ? <span className="credit-logo-composite" aria-label={credit.logoText}>
+                     <span className="credit-logo-icon" aria-hidden="true">
+                         <img src={credit.logo} alt=""/>
+                     </span>
+                     <span className="credit-logo-text">{credit.logoText}</span>
+                 </span>
+                 : <img src={credit.logo} alt={title}/>
+             : <span className={'credits'}>{title}</span>
             }
         </a>
     )
@@ -68,7 +88,7 @@ export const CreditsBar = ({contentRef = null, widgetMode = false, showMainLogo 
     const providerCredits = LAYERS_TYPE
         .map((type) => ({type, provider: providers[type]}))
         .filter(({provider}) => provider)
-    const providerTooltip = (type, provider) => `${CREDIT_TYPE_LABELS[type]}: ${provider.name ?? provider.fullname}`
+    const providerTooltip = (type, credit) => `${CREDIT_TYPE_LABELS[type]}: ${layerCreditText(credit)}`
 
     /**
      * Retrieves and updates provider data dynamically.
@@ -77,24 +97,35 @@ export const CreditsBar = ({contentRef = null, widgetMode = false, showMainLogo 
      * @param {string} type The entity type.
      * @param {Object} layer The specific layer entity (optional).
      */
-    const getProviders = (type, layer = undefined) => {
+    const getProviders = (type, layer) => {
         const manager = new LayersAndTerrainManager()
-        const tmp = {
-            [BASE_ENTITY]: manager.getProviderProxyByEntity(lgs.settings.layers.base, BASE_ENTITY),
-            [OVERLAY_ENTITY]: manager.getProviderProxyByEntity(lgs.settings.layers.overlay, OVERLAY_ENTITY),
-            [TERRAIN_ENTITY]: manager.getProviderProxyByEntity(lgs.settings.layers.terrain, TERRAIN_ENTITY),
+        const getCredit = entityType => {
+            const entityId = lgs.settings.layers[entityType]
+            const entity = manager.getEntityProxyByType(entityId, entityType)
+            const provider = manager.getProviderProxyByEntity(entityId, entityType)
+            return resolveLayerCredit(entity, provider)
         }
+        const tmp = LAYERS_TYPE.reduce((credits, entityType) => {
+            credits[entityType] = getCredit(entityType)
+            return credits
+        }, {})
 
         if (layer) {
-            tmp[type] = manager.getProviderProxyByEntity(layer, type)
+            const entity = manager.getEntityProxyByType(layer, type)
+            const provider = manager.getProviderProxyByEntity(layer, type)
+            tmp[type] = resolveLayerCredit(entity, provider)
         }
 
-        // Remove duplicate providers
+        // Remove duplicate attributions and hide the generic Cesium provider attribution.
         const used = new Set()
         Object.keys(tmp).forEach((key) => {
-            if (tmp[key] && tmp[key].id !== 'cesium' && !used.has(tmp[key].name)) {
-                used.add(tmp[key].name)
-                $providers[key] = tmp[key]
+            const credit = tmp[key]
+            const keyValue = layerCreditKey(credit)
+            if (credit
+                && (credit.providerId !== 'cesium' || credit.isLayerSpecific)
+                && !used.has(keyValue)) {
+                used.add(keyValue)
+                $providers[key] = credit
             }
             else {
                 $providers[key] = undefined
@@ -151,7 +182,7 @@ export const CreditsBar = ({contentRef = null, widgetMode = false, showMainLogo 
                     <CreditLink
                         key={type}
                         id={`${tooltipIdPrefix}-${type}`}
-                        provider={provider}
+                        credit={provider}
                     />
                 ))}
             </div>

@@ -16,6 +16,11 @@ import {
     STUDIO_URL,
 } from './constants'
 import {
+    hasLayerSpecificCredit,
+    layerCreditText,
+    resolveLayerCredit,
+} from '@Core/ui/layerCredits'
+import {
     escapeHtml,
     oneLineText,
 } from './format'
@@ -158,12 +163,9 @@ export const addUniqueCredit = (credits, credit, used) => {
     })
 }
 
-export const providerDisplayName = provider => creditTextSource(provider?.name)
-                                               || creditTextSource(provider?.credits)
-                                               || creditTextSource(provider?.label)
-                                               || creditTextSource(provider?.id)
+export const providerDisplayName = provider => layerCreditText(provider)
 
-export const providerCreditText = provider => creditTextSource(provider?.credits) || providerDisplayName(provider)
+export const providerCreditText = provider => creditTextSource(layerCreditText(provider)) || providerDisplayName(provider)
 
 export const providerCreditHTML = provider => provider?.logo
                                              ? `<a href="${escapeHtml(provider.url ?? '')}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(provider.logo)}" alt="${escapeHtml(providerDisplayName(provider))}"></a>`
@@ -208,16 +210,19 @@ export const activeProviderCredits = used => {
         {key: BASE_ENTITY, label: 'Base Map'},
     ]
         .map(({key, label}) => {
-            const provider = manager.getProviderProxyByEntity?.(settings[key])
-            if (!provider || provider.id === 'cesium') {
+            const layer = manager.getEntityProxyByType?.(settings[key], key)
+            const provider = manager.getProviderProxyByEntity?.(settings[key], key)
+            if (!provider || (provider.id === 'cesium' && !hasLayerSpecificCredit(layer))) {
                 return null
             }
 
+            const credit = resolveLayerCredit(layer, provider)
+
             return {
                 label,
-                text: providerCreditText(provider),
-                url:  provider.url,
-                html: providerCreditHTML(provider),
+                text: providerCreditText(credit),
+                url:  credit?.url,
+                html: providerCreditHTML(credit),
             }
         })
         .filter(Boolean)
