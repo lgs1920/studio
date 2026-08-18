@@ -46,5 +46,6 @@ export const replay = {
     recordingSync:  false,
     deferredExportPlan: null,
     videoCropRect:  null,
+    readiness:      {...defaults.readiness},
     orbitAllowed:   true,
 }

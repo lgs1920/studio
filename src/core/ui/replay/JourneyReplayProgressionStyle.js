@@ -56,6 +56,12 @@ export const REPLAY_SMOOTHING_MIN_STEP = TRACK_RENDER_SMOOTHING_MIN_STEP
 export const REPLAY_SMOOTHING_MAX_STEP = TRACK_RENDER_SMOOTHING_MAX_STEP
 export const REPLAY_CAMERA_SENSITIVITY_MIN = 0
 export const REPLAY_CAMERA_SENSITIVITY_MAX = 1
+export const REPLAY_CAMERA_TILE_PRELOAD_HORIZON_MIN_MS = 0
+export const REPLAY_CAMERA_TILE_PRELOAD_HORIZON_MAX_MS = 3000
+export const REPLAY_READINESS_POLICY_OFF = 'off'
+export const REPLAY_READINESS_POLICY_ADAPTIVE = 'adaptive'
+export const REPLAY_READINESS_POLICY_STRICT = 'strict'
+export const REPLAY_READINESS_POLICY_CUSTOM = 'custom'
 export const REPLAY_EFFECT_NONE = 'none'
 export const REPLAY_EFFECT_GLOW = 'glow'
 export const REPLAY_EFFECT_NEON = 'neon'
@@ -122,6 +128,9 @@ export const DEFAULT_REPLAY_CAMERA = {
     rollSensitivity:            1,
     pitchCorrectionSensitivity: 1,
     previewMode:    REPLAY_CAMERA_PREVIEW_MODE_TERRAIN,
+    playback:       {
+        tilePreloadHorizonMs: 1000,
+    },
     pitch:         -65,
     heading:       0,
     hysteresis:    {
@@ -136,6 +145,15 @@ export const DEFAULT_REPLAY_CAMERA = {
         },
         easing:        0.18,
     },
+}
+
+export const DEFAULT_REPLAY_READINESS = {
+    enabled: true,
+    policy: REPLAY_READINESS_POLICY_ADAPTIVE,
+    knownFootprintTimeoutMs: 250,
+    movingTimeoutMs:         1000,
+    settledTimeoutMs:        5000,
+    prewarmEnabled:          true,
 }
 
 const REPLAY_CAMERA_PRESET_HYSTERESIS = {
@@ -163,6 +181,7 @@ export const defaultJourneyReplayTraceStyle = () => ({
 export const defaultJourneyReplaySmoothing = () => ({...DEFAULT_REPLAY_SMOOTHING})
 export const defaultJourneyReplayMarkerStyle = () => ({...DEFAULT_REPLAY_MARKER})
 export const defaultJourneyReplayCameraStyle = () => ({...DEFAULT_REPLAY_CAMERA})
+export const defaultJourneyReplayReadiness = () => ({...DEFAULT_REPLAY_READINESS})
 
 export const REPLAY_CAMERA_PRESETS = Object.freeze([
     {
@@ -198,6 +217,7 @@ export const defaultJourneyReplaySettings = () => ({
     smoothing:   defaultJourneyReplaySmoothing(),
     marker:      defaultJourneyReplayMarkerStyle(),
     camera:      defaultJourneyReplayCameraStyle(),
+    readiness:   defaultJourneyReplayReadiness(),
     clips:       (() => {
         const clips = defaultJourneyReplayClips()
         return {
@@ -411,6 +431,15 @@ export const normalizeJourneyReplayCamera = (camera = {}) => ({
         REPLAY_CAMERA_SENSITIVITY_MAX,
     ),
     previewMode:   REPLAY_CAMERA_PREVIEW_MODE_TERRAIN,
+    playback:      {
+        tilePreloadHorizonMs: clampJourneyReplayNumber(
+            camera?.playback?.tilePreloadHorizonMs,
+            DEFAULT_REPLAY_CAMERA.playback.tilePreloadHorizonMs,
+            REPLAY_CAMERA_TILE_PRELOAD_HORIZON_MIN_MS,
+            REPLAY_CAMERA_TILE_PRELOAD_HORIZON_MAX_MS,
+            true,
+        ),
+    },
     hysteresis:   (() => {
         const zone = normalizeJourneyReplayToleranceZone(camera?.hysteresis?.zone, DEFAULT_REPLAY_CAMERA.hysteresis.zone)
         return {
@@ -435,6 +464,44 @@ export const normalizeJourneyReplayCamera = (camera = {}) => ({
     })(),
 })
 
+export const normalizeJourneyReplayReadiness = (readiness = {}) => {
+    const policy = [
+        REPLAY_READINESS_POLICY_OFF,
+        REPLAY_READINESS_POLICY_ADAPTIVE,
+        REPLAY_READINESS_POLICY_STRICT,
+        REPLAY_READINESS_POLICY_CUSTOM,
+    ].includes(readiness?.policy)
+        ? readiness.policy
+        : DEFAULT_REPLAY_READINESS.policy
+
+    return {
+        enabled: readiness?.enabled !== false,
+        policy,
+        knownFootprintTimeoutMs: clampJourneyReplayNumber(
+            readiness?.knownFootprintTimeoutMs,
+            DEFAULT_REPLAY_READINESS.knownFootprintTimeoutMs,
+            0,
+            1000,
+            true,
+        ),
+        movingTimeoutMs: clampJourneyReplayNumber(
+            readiness?.movingTimeoutMs,
+            DEFAULT_REPLAY_READINESS.movingTimeoutMs,
+            0,
+            5000,
+            true,
+        ),
+        settledTimeoutMs: clampJourneyReplayNumber(
+            readiness?.settledTimeoutMs,
+            DEFAULT_REPLAY_READINESS.settledTimeoutMs,
+            0,
+            10000,
+            true,
+        ),
+        prewarmEnabled: readiness?.prewarmEnabled !== false,
+    }
+}
+
 export const normalizeJourneyReplaySettings = (settings = {}) => {
     const duration = finiteNumber(settings?.duration) ?? DEFAULT_REPLAY_DURATION
     const clips = normalizeJourneyReplayClips(settings?.clips)
@@ -458,6 +525,7 @@ export const normalizeJourneyReplaySettings = (settings = {}) => {
         hideAllPoisDuringJourneyReplay: settings?.hideAllPoisDuringJourneyReplay === true,
         animateAllPoisDuringJourneyReplay: settings?.animateAllPoisDuringJourneyReplay === true,
         recordingSync: settings?.recordingSync === true,
+        readiness:   normalizeJourneyReplayReadiness(settings?.readiness),
         progression: normalizeJourneyReplayProgressionStyle(settings?.progression),
         profileInfo: normalizeJourneyReplayProfileInfo(settings?.profileInfo),
         trace:       normalizeJourneyReplayTrace(settings?.trace),
