@@ -714,3 +714,15 @@
 ## 2026-08-17 — [`fix: handle local file reading errors`](https://github.com/lgs1920/studio/commit/67dce8bf4cf3bdcf744027ac7fe5431a31b91463)
 
 - Recorded automatically from Git history.
+
+## 2026-08-17 — [`fix(replay): continue HQ export after tile timeout`](https://github.com/lgs1920/studio/commit/bb12a862b7ff0d7f93092d89e7f27b9fcd443092)
+
+- Recorded automatically from Git history.
+
+## 2026-08-17 — [`perf(replay): retain Cesium tiles during HQ export`](https://github.com/lgs1920/studio/commit/ea4426a9e852cd77929b4938a7e353650ba2d730)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/37dee8ed2234902a90a300ce595e6ddbcba9d72b)
+
+- Recorded automatically from Git history.
