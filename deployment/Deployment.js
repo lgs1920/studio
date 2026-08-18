@@ -206,7 +206,12 @@ export class Deployment {
     link = async (connection) => {
         return new Promise((resolve, reject) => {
             console.log('    > Creating symbolic link...')
-            connection.exec(`ln -sfn ${this.remoteReleasePath}/${this.version} ${this.remotePath}/${this.current} && rm ${this.remoteReleasePath}/${this.version}.zip`, (err, stream) => {
+            const releasePath = quoteShellArgument(`${this.remoteReleasePath}/${this.version}`)
+            const currentPath = quoteShellArgument(`${this.remotePath}/${this.current}`)
+            const temporaryCurrentPath = quoteShellArgument(`${this.remotePath}/.${this.current}-${this.version}-${this.date}`)
+            const archivePath = quoteShellArgument(`${this.remoteReleasePath}/${this.version}.zip`)
+            const command = `ln -sfn ${releasePath} ${temporaryCurrentPath} && mv -Tf ${temporaryCurrentPath} ${currentPath} && rm ${archivePath}`
+            connection.exec(command, (err, stream) => {
                 if (err) {
                     console.error(`${this.red}Link creation failed: ${err}${this.reset}`)
                     reject(err)
@@ -395,7 +400,10 @@ export class Deployment {
                     break
                 }
             }
-            exec(buildCommand, (error) => {
+            const buildEnvironment = this.product === this.products.studio
+                ? {...process.env, LGS_DEPLOYMENT_TAG: this.tagName}
+                : process.env
+            exec(buildCommand, {env: buildEnvironment}, (error) => {
                 if (error) {
                     console.error(`${this.red}Build error: ${error.message}${this.reset}`)
                     reject(`${this.red}Build error: ${error.message}${this.reset}`)
@@ -632,7 +640,7 @@ export class Deployment {
     }
 
     /**
-     * Prepares files and creates a Git tag before deployment.
+     * Prepares files after the deployment Git tag has been created.
      * For 'studio', updates service-worker-pwa.js and manifest.webmanifest.
      * For 'backend', copies PM2 configuration and renames files.
      *
@@ -641,8 +649,6 @@ export class Deployment {
      */
     preDeployment = async () => {
         console.log('--- Pre-deployment tasks')
-        // Create Git tag locally
-        await this.gitTag()
         console.log('    > Preparing files')
         switch (this.product) {
             case 'studio': {
@@ -661,10 +667,14 @@ export class Deployment {
                     let serviceWorkerContent = fs.readFileSync(serviceWorkerPath, 'utf8')
                     serviceWorkerContent = replaceServiceWorkerPlaceholder(serviceWorkerContent, '__BUILD_TIME__', this.date)
                     serviceWorkerContent = replaceServiceWorkerPlaceholder(serviceWorkerContent, '__VERSION__', this.version)
+                    serviceWorkerContent = replaceServiceWorkerPlaceholder(serviceWorkerContent, '__TAG__', this.tagName)
                     serviceWorkerContent = replaceServiceWorkerPlaceholder(serviceWorkerContent, '__BRANCH__', this.branch)
 
                     fs.writeFileSync(serviceWorkerPath, serviceWorkerContent, 'utf8')
                     console.log(`    > Service Worker configured`)
+                }
+                else {
+                    throw new Error(`Service Worker missing from build output: ${serviceWorkerPath}`)
                 }
 
                 // Update manifest.webmanifest for studio
@@ -746,6 +756,8 @@ export class Deployment {
      */
     launch = async () => {
         try {
+            // Create the deployment tag before building so it is included in the service worker fingerprint.
+            await this.gitTag()
             await this.build()
             await this.preDeployment()
             console.log(`\n--- Starting deployment of ${this.yellow}${this.localDistPath}.zip${this.reset} to ${this.yellow}${this.remoteReleasePath}${this.reset}`)

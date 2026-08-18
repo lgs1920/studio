@@ -182,8 +182,29 @@ function serveProxyPhpDev(): Plugin {
 }
 
 const version = data.studio
+const gitTag = (() => {
+    if (process.env.LGS_DEPLOYMENT_TAG) {
+        return process.env.LGS_DEPLOYMENT_TAG
+    }
+
+    const _refTag = process.env.GITHUB_REF_TYPE === 'tag' ? process.env.GITHUB_REF_NAME : null
+    if (_refTag) {
+        return _refTag
+    }
+
+    try {
+        return execSync('git describe --tags --exact-match HEAD', {encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore']}).trim()
+    }
+    catch {
+        return execSync('git rev-parse --short HEAD', {encoding: 'utf-8'}).trim()
+    }
+})()
 
 export default defineConfig({
+    define: {
+        __LGS_SERVICE_WORKER_VERSION__: JSON.stringify(version),
+        __LGS_SERVICE_WORKER_TAG__:     JSON.stringify(gitTag),
+    },
     plugins: [
         cesium(),
         serveCesiumDev(),

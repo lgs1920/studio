@@ -38,7 +38,12 @@ const FRESHNESS_CRITICAL_PATHS = new Set([
                                          ])
 const HASHED_BUILD_ASSET_PATTERN = /^\/assets\/.+-[a-z0-9_-]{8,}\.[a-z0-9]+$/i
 const DEPLOYMENT_BUILD_TIME = '__BUILD_TIME__'
-const DEPLOYMENT_VERSION = '__VERSION__'
+const DEPLOYMENT_VERSION = typeof __LGS_SERVICE_WORKER_VERSION__ === 'string'
+                           ? __LGS_SERVICE_WORKER_VERSION__
+                           : '__VERSION__'
+const DEPLOYMENT_TAG = typeof __LGS_SERVICE_WORKER_TAG__ === 'string'
+                       ? __LGS_SERVICE_WORKER_TAG__
+                       : '__TAG__'
 const DEPLOYMENT_BRANCH = '__BRANCH__'
 
 const getDeploymentValue = value => {
@@ -49,6 +54,7 @@ const getDeploymentValue = value => {
 const DEFAULT_BUILD_META = Object.freeze({
                                              buildTime: getDeploymentValue(DEPLOYMENT_BUILD_TIME) ?? 'unknown',
                                              version:   getDeploymentValue(DEPLOYMENT_VERSION) ?? '0.0.0',
+                                             tag:       getDeploymentValue(DEPLOYMENT_TAG) ?? 'untagged',
                                              branch:    getDeploymentValue(DEPLOYMENT_BRANCH) ?? 'main',
                                          })
 const RUNTIME_STATE = {
@@ -106,6 +112,7 @@ const getBuildMetadata = async () => {
         return {
             buildTime: b.date || b.buildTime || DEFAULT_BUILD_META.buildTime,
             version:   v.studio || v.version || DEFAULT_BUILD_META.version,
+            tag:       DEFAULT_BUILD_META.tag,
             branch:    br.branch || DEFAULT_BUILD_META.branch,
         }
     }
@@ -141,7 +148,7 @@ async function resolveRuntime(forceRefresh = false) {
 
     RUNTIME_STATE.promise = (async () => {
         const [platform, metadata] = await Promise.all([getPlatformName(), getBuildMetadata()])
-        const cacheName = `${APP_CACHE_PREFIX}${toCacheSegment(platform)}-${toCacheSegment(metadata.version)}-${toCacheSegment(metadata.buildTime)}`
+        const cacheName = `${APP_CACHE_PREFIX}${toCacheSegment(platform)}-${toCacheSegment(metadata.version)}-${toCacheSegment(metadata.tag)}-${toCacheSegment(metadata.buildTime)}`
         RUNTIME_STATE.cacheName = cacheName
         RUNTIME_STATE.metadata = metadata
         return {cacheName, metadata}
