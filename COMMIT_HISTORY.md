@@ -726,3 +726,39 @@
 ## 2026-08-18 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/37dee8ed2234902a90a300ce595e6ddbcba9d72b)
 
 - Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: stabilize PWA update flow`](https://github.com/lgs1920/studio/commit/7a47d113ce53194663fa431564f40bd655d929b1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: fingerprint PWA releases reliably`](https://github.com/lgs1920/studio/commit/c5a4777abb396ec8a2c5b507b05c1be072d4f763)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: hide boot splash in webapp`](https://github.com/lgs1920/studio/commit/1d80dbdbf3198bfb3a3cb8d08936c09a6312cbac)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`feat: support layer-specific map credits`](https://github.com/lgs1920/studio/commit/8678f3217417d444da3e1b66cbaef7ca6ae343d4)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`feat: add internal Google Maps attribution`](https://github.com/lgs1920/studio/commit/8eed89e343e2996600ef601a0ae42b4d2e61498e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: remove webapp startup flash`](https://github.com/lgs1920/studio/commit/b8d2f62398d7012b8d3d22a6b955059c8bd1409f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: improve PWA icon masks`](https://github.com/lgs1920/studio/commit/f1c3875ba51052396ac5010839a49295a84d9e68)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`docs: enforce explicit user intent`](https://github.com/lgs1920/studio/commit/6325b0170728ce9d4ff31750bacba38d6c80f26b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/2a1edda379e2864f05499f70905aa758f14ffa2d)
+
+- Recorded automatically from Git history.
