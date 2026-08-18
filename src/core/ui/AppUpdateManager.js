@@ -15,6 +15,8 @@
  ******************************************************************************/
 
 export class AppUpdateManager {
+    static automaticUpdateTimeout = 10_000
+    static initialUpdateCheckTimeout = 5000
     static #instance = null
     static beforeInstallPromptEvent = 'beforeinstallprompt'
     static messageEvent = 'message'
@@ -30,6 +32,8 @@ export class AppUpdateManager {
     #registration = null
     #reloadAfterControllerChange = false
     #hasReloadedForUpdate = false
+    #automaticUpdateInProgress = false
+    #automaticUpdateTimeoutId = null
     #lastUpdateCheck = 0
 
     constructor() {
@@ -53,6 +57,9 @@ export class AppUpdateManager {
             return
         }
         this.#store = lgs.stores.ui.appUpdate
+        this.#store.isUpdateCheckPending = !lgs.pwa
+        this.#store.isUpdateApplying = false
+        this.#store.updateApplyError = null
         this.#store.promptInstall = this.promptInstall
         this.#store.applyUpdate = this.applyUpdate
         this.#store.applyUpdateWithCacheReset = this.applyUpdateWithCacheReset
@@ -87,6 +94,109 @@ export class AppUpdateManager {
 
     setUpdateCallback = callback => {
         this.#updateCallback = callback
+    }
+
+    /**
+     * Handles a newly installed service worker according to the current app surface.
+     *
+     * Installed PWAs keep the explicit update dialog, while the browser webapp
+     * activates and reloads the new worker automatically.
+     *
+     * @param {string} tag - Service worker update identifier.
+     * @returns {void}
+     */
+    #handleUpdateAvailable = tag => {
+        if (lgs.pwa) {
+            this.#updateCallback?.({isAvailable: true, tag})
+            return
+        }
+
+        if (this.#store) {
+            this.#store.isAutomaticUpdateInProgress = true
+            this.#store.automaticUpdateError = null
+        }
+        void this.#applyAutomaticUpdate()
+    }
+
+    /**
+     * Applies a webapp service worker update without displaying PWA controls.
+     *
+     * @returns {Promise<void>}
+     */
+    #applyAutomaticUpdate = async () => {
+        if (this.#automaticUpdateInProgress) {
+            return
+        }
+
+        this.#automaticUpdateInProgress = true
+        try {
+            await this.applyUpdate()
+        }
+        catch (error) {
+            this.#clearUpdateActivationTimeout()
+            if (this.#store) {
+                this.#store.isAutomaticUpdateInProgress = false
+                this.#store.automaticUpdateError = error.message
+            }
+            this.#automaticUpdateInProgress = false
+        }
+    }
+
+    /**
+     * Marks the initial webapp service worker check as complete.
+     *
+     * @returns {void}
+     */
+    #completeInitialUpdateCheck = () => {
+        if (this.#store) {
+            this.#store.isUpdateCheckPending = false
+        }
+    }
+
+    /**
+     * Clears the fallback timer used while waiting for controllerchange.
+     *
+     * @returns {void}
+     */
+    #clearUpdateActivationTimeout = () => {
+        if (this.#automaticUpdateTimeoutId !== null) {
+            window.clearTimeout(this.#automaticUpdateTimeoutId)
+            this.#automaticUpdateTimeoutId = null
+        }
+    }
+
+    /**
+     * Prevents a controllerchange stall from blocking the app indefinitely.
+     *
+     * @returns {void}
+     */
+    #scheduleUpdateActivationTimeout = () => {
+        this.#clearUpdateActivationTimeout()
+        this.#automaticUpdateTimeoutId = window.setTimeout(() => {
+            this.#automaticUpdateTimeoutId = null
+            if (!this.#reloadAfterControllerChange) {
+                return
+            }
+
+            const registration = this.#registration
+            if (registration?.waiting == null
+                && registration?.active?.state === 'activated'
+                && navigator.serviceWorker.controller) {
+                this.#reloadPageForUpdate()
+                return
+            }
+
+            this.#automaticUpdateInProgress = false
+            this.#reloadAfterControllerChange = false
+            if (this.#store) {
+                this.#store.isUpdateApplying = false
+                this.#store.updateApplyError = 'The update could not be activated automatically. Please reload Studio.'
+                this.#store.isAutomaticUpdateInProgress = false
+                if (!globalThis.lgs?.pwa) {
+                    this.#store.automaticUpdateError = this.#store.updateApplyError
+                }
+            }
+        }, AppUpdateManager.automaticUpdateTimeout)
     }
 
     #setupInstallPromptListener = () => {
@@ -132,15 +242,13 @@ export class AppUpdateManager {
 
     #setupSWUpdateListener = () => {
         if (!('serviceWorker' in navigator) || !navigator.serviceWorker.addEventListener) {
+            this.#completeInitialUpdateCheck()
             return
         }
 
         navigator.serviceWorker.addEventListener(AppUpdateManager.messageEvent, event => {
             if (event.data?.[AppUpdateManager.typeKey] === AppUpdateManager.newVersionMessage) {
-                this.#updateCallback?.({
-                                           isAvailable: true,
-                                           tag: event.data[AppUpdateManager.tagKey] || 'unknown',
-                })
+                this.#handleUpdateAvailable(event.data[AppUpdateManager.tagKey] || 'unknown')
             }
         }, {passive: true})
 
@@ -162,26 +270,44 @@ export class AppUpdateManager {
             }
         }, {passive: true})
 
-        navigator.serviceWorker.register('/service-worker-pwa.js', {updateViaCache: 'none'})
+        const registrationPromise = navigator.serviceWorker.register('/service-worker-pwa.js', {updateViaCache: 'none'})
+            .catch(() => null)
+        let timeoutId
+        const timeoutPromise = new Promise(resolve => {
+            timeoutId = window.setTimeout(() => resolve(null), AppUpdateManager.initialUpdateCheckTimeout)
+        })
+
+        Promise.race([registrationPromise, timeoutPromise])
             .then(registration => {
+                window.clearTimeout(timeoutId)
+                if (!registration) {
+                    this.#completeInitialUpdateCheck()
+                    return
+                }
+
                 this.#registration = registration
                 this.#watchRegistration(registration)
-                this.#checkForUpdates({force: true})
-            })
-            .catch(() => {
+                const checkTimeoutId = window.setTimeout(
+                    this.#completeInitialUpdateCheck,
+                    AppUpdateManager.initialUpdateCheckTimeout,
+                )
+                void this.#checkForUpdates({force: true}).finally(() => {
+                    window.clearTimeout(checkTimeoutId)
+                    this.#completeInitialUpdateCheck()
+                })
             })
     }
 
     #watchRegistration = registration => {
         if (registration.waiting && navigator.serviceWorker.controller) {
-            this.#updateCallback?.({isAvailable: true, tag: 'new-version-ready'})
+            this.#handleUpdateAvailable('new-version-ready')
         }
 
         registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing
             newWorker?.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    this.#updateCallback?.({isAvailable: true, tag: 'new-version-ready'})
+                    this.#handleUpdateAvailable('new-version-ready')
                 }
             }, {passive: true})
         }, {passive: true})
@@ -208,6 +334,14 @@ export class AppUpdateManager {
         }
 
         this.#hasReloadedForUpdate = true
+        this.#clearUpdateActivationTimeout()
+        this.#automaticUpdateInProgress = false
+        if (this.#store) {
+            this.#store.isUpdateApplying = false
+            this.#store.updateApplyError = null
+            this.#store.isAutomaticUpdateInProgress = false
+            this.#store.automaticUpdateError = null
+        }
         this.#updateCallback?.({isAvailable: false})
         window.location.reload()
     }
@@ -221,20 +355,34 @@ export class AppUpdateManager {
     }
 
     applyUpdate = async () => {
-        if (!('serviceWorker' in navigator)) {
-            return
+        if (this.#store) {
+            this.#store.isUpdateApplying = true
+            this.#store.updateApplyError = null
         }
-
         try {
+            if (!('serviceWorker' in navigator)) {
+                throw new Error('Service workers are not available in this browser')
+            }
+
             const reg = this.#registration || await navigator.serviceWorker.getRegistration()
             await reg?.update()
-            if (reg?.waiting?.postMessage) {
-                this.#reloadAfterControllerChange = true
-                reg.waiting.postMessage({[AppUpdateManager.typeKey]: AppUpdateManager.skipWaitingMessage})
-                this.#updateCallback?.({isAvailable: false})
+            if (!reg?.waiting?.postMessage) {
+                throw new Error('The new service worker is not ready yet')
             }
+
+            this.#reloadAfterControllerChange = true
+            reg.waiting.postMessage({[AppUpdateManager.typeKey]: AppUpdateManager.skipWaitingMessage})
+            this.#scheduleUpdateActivationTimeout()
         }
         catch (error) {
+            this.#clearUpdateActivationTimeout()
+            this.#reloadAfterControllerChange = false
+            const updateError = error instanceof Error ? error : new Error('Failed to apply the PWA update')
+            if (this.#store) {
+                this.#store.isUpdateApplying = false
+                this.#store.updateApplyError = updateError.message
+            }
+            throw updateError
         }
     }
 

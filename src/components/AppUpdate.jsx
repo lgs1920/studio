@@ -17,7 +17,7 @@
 // **File: AppUpdate.jsx**
 
 import {
-    APP_STUDIO, BANNER_HIDE_DELAY, BANNER_HIDE_DELAY_INSTALL, BANNER_SHOW_DELAY, NAVIGATOR, OS_ICONS, SECOND,
+    APP_STUDIO, BANNER_HIDE_DELAY_INSTALL, NAVIGATOR, OS_ICONS, SECOND,
 }                              from '@Core/constants'
 import androidInstructions     from '@Locales/en/pwa-instructions/android.md?raw'
 import chromeEdgeInstructions  from '@Locales/en/pwa-instructions/chrome-edge.md?raw'
@@ -25,36 +25,50 @@ import firefoxInstructions     from '@Locales/en/pwa-instructions/firefox.md?raw
 import iosInstructions         from '@Locales/en/pwa-instructions/ios.md?raw'
 import otherInstructions       from '@Locales/en/pwa-instructions/other.md?raw'
 import safariMacOSInstructions from '@Locales/en/pwa-instructions/safari-macos.md?raw'
-import { WaButton, WaDialog, WaIcon, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
-import classNames                                from 'classnames'
+import { WaButton, WaCallout, WaDialog, WaIcon, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useEffect, useState } from 'react'
 import ReactMarkdown           from 'react-markdown'
 import { proxy, useSnapshot }  from 'valtio'
 
-// Define the custom event name for consistency
-const CUSTOM_UPDATE_EVENT = 'lgs-update-available'
+const fallbackPwaStore = proxy({canInstall: false})
+const INSTALL_PROMPT_DISMISSED_KEY = 'lgs-install-prompt-dismissed'
+
+/**
+ * Checks whether the user dismissed the installation dialog.
+ *
+ * @returns {boolean} Whether the installation dialog was dismissed.
+ */
+const isInstallPromptDismissed = () => {
+    try {
+        return globalThis.localStorage?.getItem(INSTALL_PROMPT_DISMISSED_KEY) === 'true'
+    }
+    catch {
+        return false
+    }
+}
 
 /**
  * Maps browser and OS details to the appropriate PWA installation instructions.
+ * @param {object} device - Browser and operating system details.
  * @returns {string} Markdown content for the detected browser/OS
  */
-const getInstallInstructions = () => {
+const getInstallInstructions = (device = globalThis.__?.device ?? {}) => {
     // Prioritize mobile OS instructions
-    if (__.device.isIOS) {
+    if (device.isIOS) {
         return iosInstructions
     }
-    if (__.device.isAndroid) {
+    if (device.isAndroid) {
         return androidInstructions
     }
 
     // Handle common desktop browsers
-    if (__.device.browser === NAVIGATOR.chrome || __.device.browser === NAVIGATOR.edge) {
+    if (device.browser === NAVIGATOR.chrome || device.browser === NAVIGATOR.edge) {
         return chromeEdgeInstructions
     }
-    if (__.device.browser === NAVIGATOR.firefox) {
+    if (device.browser === NAVIGATOR.firefox) {
         return firefoxInstructions
     }
-    if (__.device.browser === NAVIGATOR.safari) {
+    if (device.browser === NAVIGATOR.safari) {
         return safariMacOSInstructions
     }
 
@@ -70,40 +84,55 @@ const getInstallInstructions = () => {
  */
 export const AppUpdate = ({mode = 'banner'}) => {
     // Snapshot of the updater store for reactive access
-    const $updaterStore = __.updater.store
+    const $updaterStore = globalThis.__?.updater?.store
+        ?? globalThis.lgs?.stores?.ui?.appUpdate
     const updaterStore = useSnapshot($updaterStore)
+    const appContext = globalThis.lgs ?? {}
+    const device = globalThis.__?.device ?? {}
 
-    // Snapshot of the settings store
-    let $pwa = lgs.settings.ui.pwa
+    // Snapshot of the settings store. AppUpdate is mounted during bootstrap,
+    // so the asynchronous application settings may not exist on first render.
+    const pwaSettings = globalThis.lgs?.settings?.ui
+    let $pwa = pwaSettings?.pwa ?? fallbackPwaStore
     // We need to force pwa during update
-    if (!$pwa) {
-        lgs.settings.ui.pwa = proxy({canInstall: true})
+    if (pwaSettings && !pwaSettings.pwa) {
+        pwaSettings.pwa = proxy({canInstall: true})
+        $pwa = pwaSettings.pwa
     }
     const pwa = useSnapshot($pwa)
 
     // Local states for UI management (dialogs and temporary errors)
     const [showInstructionsDialog, setShowInstructionsDialog] = useState(false)
     const [showInstallingDialog, setShowInstallingDialog] = useState(false)
-    const [showUnifiedBanner, setShowUnifiedBanner] = useState(false)
+    const [showInstallDialog, setShowInstallDialog] = useState(false)
+    const [showUpdateDialog, setShowUpdateDialog] = useState(false)
     const [installError, setInstallError] = useState(null)
     const [updateError, setUpdateError] = useState(null)
-    const [browserInstructions] = useState(getInstallInstructions())
+    const [dismissedUpdateTag, setDismissedUpdateTag] = useState(null)
+    const [isApplyingUpdate, setIsApplyingUpdate] = useState(false)
+    const browserInstructions = getInstallInstructions(device)
 
     // Determine conditions for displaying an action (install or update)
     // IMPORTANT: isInstallRequired now only applies to the automatic 'banner' flow
-    const isInstallRequired = !lgs.pwa && pwa.canInstall && !(__.device.browser === NAVIGATOR.firefox && __.device.isDesktop)
-    const isUpdateAvailable = lgs.pwa && updaterStore.isUpdateAvailable
+    const isInstallRequired = !appContext.pwa
+        && pwa.canInstall
+        && !isInstallPromptDismissed()
+        && !(device.browser === NAVIGATOR.firefox && device.isDesktop)
+    const isUpdateAvailable = appContext.pwa && updaterStore.isUpdateAvailable
+    const isUpdateApplying = !updaterStore.updateApplyError
+        && (isApplyingUpdate || Boolean(updaterStore.isUpdateApplying))
 
-    // The banner only needs to show if either action is required
-    const shouldRenderBanner = isInstallRequired || isUpdateAvailable
+    const updateTag = updaterStore.tag || 'unknown'
+    const updateMessage = updateError
+        || updaterStore.updateApplyError
+        || `You are using ${APP_STUDIO} version ${appContext.versions?.studio}. A new version ${updaterStore.buildTime ? `(${updaterStore.buildTime})` : ''} is ready to be installed.`
 
     /**
      * Handles PWA installation: triggers prompt if available, otherwise shows instructions dialog.
      * @async
      */
     const handleInstall = async () => {
-        // Hide the banner immediately upon interaction
-        setShowUnifiedBanner(false)
+        setShowInstallDialog(false)
 
         if (updaterStore.isInstallPromptAvailable) {
             setShowInstallingDialog(true)
@@ -142,162 +171,186 @@ export const AppUpdate = ({mode = 'banner'}) => {
      */
     const handleApplyUpdate = async () => {
         setUpdateError(null)
+        setIsApplyingUpdate(true)
         try {
             // Trigger service worker update; AppUpdateManager reloads on controllerchange.
             await $updaterStore.applyUpdate()
         }
         catch (error) {
             // Display error if update fails
+            setIsApplyingUpdate(false)
             setUpdateError(error.message || 'Failed to apply update')
         }
     }
 
     /**
-     * Permanently dismisses the install banner by updating the global settings.
+     * Closes the update dialog until a different service worker update is reported.
      */
-    const handleDismiss = () => {
-        setShowUnifiedBanner(false)
-        // Persist dismissal state in global store
-        $pwa.canInstall = false
+    const handleDismissUpdate = () => {
+        setShowUpdateDialog(false)
+        setDismissedUpdateTag(updateTag)
     }
 
     /**
-     * Manages PWA status and auto-show/hide timers for the unified banner (only in 'banner' mode).
+     * Dismisses the installation dialog until the user re-enables installation.
      */
-    useEffect(() => {
-        let timers = []
-
-        /**
-         * Sets up timers to automatically show and then hide the unified banner.
-         */
-        const setupBannerTimers = () => {
-            timers.forEach(clearTimeout)
-            timers = []
-
-            // Show banner after a short delay
-            timers.push(
-                setTimeout(() => setShowUnifiedBanner(true), BANNER_SHOW_DELAY * SECOND),
-            )
-            // Automatically hide the banner after its display duration
-            timers.push(
-                setTimeout(
-                    () => setShowUnifiedBanner(false),
-                    (BANNER_SHOW_DELAY + BANNER_HIDE_DELAY) * SECOND,
-                ),
-            )
+    const handleDismissInstall = () => {
+        setShowInstallDialog(false)
+        $pwa.canInstall = false
+        try {
+            globalThis.localStorage?.setItem(INSTALL_PROMPT_DISMISSED_KEY, 'true')
         }
-
-        // Only set timers if in banner mode and an action is required
-        if (mode === 'banner' && shouldRenderBanner) {
-            setupBannerTimers()
+        catch {
+            // Ignore storage restrictions and keep the dismissal for this session.
         }
-
-        // Custom event handler for immediate update availability notification
-        const handleCustomUpdate = (event) => {
-            // Re-trigger timers if PWA is installed and a new update is detected
-            if (mode === 'banner' && event.detail.isAvailable && lgs.pwa) {
-                setupBannerTimers()
-            }
-        }
-        window.addEventListener(CUSTOM_UPDATE_EVENT, handleCustomUpdate)
-
-        // Cleanup timers and event listener
-        return () => {
-            timers.forEach(clearTimeout)
-            window.removeEventListener(CUSTOM_UPDATE_EVENT, handleCustomUpdate)
-        }
-    }, [isInstallRequired, isUpdateAvailable, mode])
+    }
 
     /**
-     * Renders the Unified PWA Action Banner (Install or Update).
-     * @returns {JSX.Element | null} The Unified Banner JSX
+     * Reloads Studio after an automatic update could not be completed.
      */
-    const renderUnifiedBanner = () => {
-        // Determine if we are rendering in the standard banner flow
-        const isStandardBannerFlow = mode === 'banner'
+    const handleRelaunchStudio = () => {
+        window.location.reload()
+    }
 
-        // Determine if this banner relates to an update
-        const isUpdate = isUpdateAvailable
-
-        // --- Conditional Rendering Logic ---
-        if (isStandardBannerFlow) {
-            // In standard banner mode, use internal state and action flags
-            if (!showUnifiedBanner || !shouldRenderBanner) {
-                return null
-            }
+    /**
+     * Opens the installation dialog for the automatic webapp flow.
+     */
+    useEffect(() => {
+        if (mode === 'banner' && isInstallRequired) {
+            setShowInstallDialog(true)
         }
-        else {
-            // In non-banner mode (forced display):
-            // 1. If PWA is installed, return null (nothing to do manually).
-            if (lgs.pwa) {
-                return null
-            }
-            // 2. If PWA is not installed, we display the install message forcefully,
-            //    regardless of the pwa.canInstall setting (which was set by 'Dismiss').
-            //    The only action is to install/show instructions, which is available.
+    }, [isInstallRequired, mode])
+
+    useEffect(() => {
+        if (!isUpdateAvailable) {
+            setShowUpdateDialog(false)
+            setDismissedUpdateTag(null)
+            setUpdateError(null)
+            setIsApplyingUpdate(false)
+            return
         }
 
-        // --- Content Determination ---
-        const contentText = isUpdate
-                            ? updateError || `You are using ${APP_STUDIO} version ${lgs?.versions?.studio}. A new version ${updaterStore.buildTime ? `(${updaterStore.buildTime})` : ''} is ready to be installed.`
-                            : `Install ${APP_STUDIO} version ${lgs?.versions?.studio} as an application for a better experience`
+        if (dismissedUpdateTag !== updateTag) {
+            setShowUpdateDialog(true)
+            setUpdateError(null)
+            setIsApplyingUpdate(false)
+        }
+    }, [dismissedUpdateTag, isUpdateAvailable, updateTag])
 
-        const primaryActionText = isUpdate
-                                  ? 'Update'
-                                  : (updaterStore.isInstallPromptAvailable ? 'Install' : 'How to Install')
-
-        const handlePrimaryAction = isUpdate
-                                    ? handleApplyUpdate
-                                    : handleInstall
+    /**
+     * Renders the persistent service worker update dialog.
+     *
+     * @returns {JSX.Element|null} The update dialog when an update is available.
+     */
+    const renderUpdateDialog = () => {
+        if (!isUpdateAvailable) {
+            return null
+        }
 
         return (
-            <div className={classNames('lgs-install-banner',
-                                       // Apply card styles only for standard banner mode
-                                       {'lgs-card wa-theme-lgs1920-on-map lgs-slide-in-from-top': isStandardBannerFlow},
-            )}>
-                <div className="lgs-install-banner-content">
-                    <WaIcon name="mobile-arrow-down" variant="regular"/>
-                    <span>{contentText}</span>
-                    <div className="buttons-bar">
-                        {/* Dismiss Button (Install only, in standard banner flow) */}
-                        {!isUpdate && isStandardBannerFlow && (
-                            <WaButton
-                                size="s"
-                                variant="default"
-                                outline
-                                onClick={handleDismiss} // Permanent dismissal for install
-                            >
-                                <WaIcon slot="start" name="xmark" variant="regular"/>
-                                {'Dismiss'}
-                            </WaButton>
-                        )}
-
-                        {/* Later/Close Button (only in standard banner flow) */}
-                        {isStandardBannerFlow && (
-                            <WaButton
-                                size="s"
-                                variant="default"
-                                onClick={() => setShowUnifiedBanner(false)}
-                            >
-                                <WaIcon slot="start" name={isUpdate ? 'xmark' : 'hourglass-half'} variant="regular"/>
-                                {updateError ? 'Close' : 'Later'}
-                            </WaButton>
-                        )}
-
-                        {/* Primary Action Button (Install or Update) */}
-                        {!(isUpdate && updateError) && ( // Don't show update button if there's an update error
-                            <WaButton
-                                size="s"
-                                onClick={handlePrimaryAction}
-                                variant="brand"
-                            >
-                                <WaIcon slot="start" name="mobile-arrow-down" variant="regular"/>
-                                {primaryActionText}
-                            </WaButton>
-                        )}
+            <WaDialog
+                open={showUpdateDialog}
+                label={`${APP_STUDIO} update available`}
+                className="lgs-theme app-update-dialog"
+                onWaRequestClose={handleDismissUpdate}
+            >
+                <p>{isUpdateApplying ? 'The update is being installed. Please wait.' : updateMessage}</p>
+                <p>{'The application will restart once the update is complete.'}</p>
+                {isUpdateApplying ? (
+                    <div className="app-update-progress" role="status">
+                        <WaSpinner/>
+                        <span>{'Installing update...'}</span>
                     </div>
+                ) : (
+                    <>
+                        <WaButton slot="footer" variant="brand" outline onClick={handleDismissUpdate}>
+                            <WaIcon slot="start" name="hourglass-half" variant="regular"/>
+                            {'Later'}
+                        </WaButton>
+                        <WaButton slot="footer" variant="brand" onClick={handleApplyUpdate}>
+                            <WaIcon slot="start" name="arrows-rotate" variant="regular"/>
+                            {'Update'}
+                        </WaButton>
+                    </>
+                )}
+            </WaDialog>
+        )
+    }
+
+    /**
+     * Renders the installation dialog without using a persistent banner.
+     *
+     * @returns {JSX.Element|null} The installation dialog when requested.
+     */
+    const renderInstallDialog = () => {
+        if (appContext.pwa || !showInstallDialog) {
+            return null
+        }
+
+        const primaryActionText = updaterStore.isInstallPromptAvailable ? 'Install' : 'How to Install'
+
+        return (
+            <WaDialog
+                open
+                label={`Install ${APP_STUDIO}`}
+                className="lgs-theme app-install-dialog"
+                onWaRequestClose={handleDismissInstall}
+            >
+                <p>{`Install ${APP_STUDIO} as an application for a better experience.`}</p>
+                <p>{'You can close this dialog and install it later from your browser address bar or menu.'}</p>
+                <WaButton slot="footer" variant="brand" outline onClick={handleDismissInstall}>
+                    <WaIcon slot="start" name="hourglass-half" variant="regular"/>
+                    {'Later'}
+                </WaButton>
+                <WaButton slot="footer" variant="brand" onClick={handleInstall}>
+                    <WaIcon slot="start" name="mobile-arrow-down" variant="regular"/>
+                    {primaryActionText}
+                </WaButton>
+            </WaDialog>
+        )
+    }
+
+    /**
+     * Renders the webapp update status while the service worker is checked or replaced.
+     *
+     * @returns {JSX.Element|null} The webapp update status callout when relevant.
+     */
+    const renderWebAppUpdateStatus = () => {
+        const isWebApp = !appContext.pwa
+        const isChecking = Boolean(updaterStore.isUpdateCheckPending)
+        const isUpdating = Boolean(updaterStore.isAutomaticUpdateInProgress)
+        const automaticUpdateError = updaterStore.automaticUpdateError
+
+        if (!isWebApp || (!isChecking && !isUpdating && !automaticUpdateError)) {
+            return null
+        }
+
+        const message = automaticUpdateError
+            ? `The latest version could not be installed automatically. ${automaticUpdateError}`
+            : isUpdating
+                ? 'A new version is being installed. The application will restart once the update is complete.'
+                : 'Checking for a newer version before opening Studio.'
+
+        return (
+            <WaCallout
+                className="lgs-webapp-update-callout"
+                open
+                variant={automaticUpdateError ? 'warning' : 'info'}
+                appearance="filled-outlined"
+                role="status"
+                aria-live="polite"
+            >
+                <WaIcon slot="icon" name={automaticUpdateError ? 'triangle-exclamation' : 'arrows-rotate'} variant="regular"/>
+                <div className="lgs-webapp-update-callout-content">
+                    <span>{message}</span>
+                    {automaticUpdateError && (
+                        <WaButton size="s" variant="brand" onClick={handleRelaunchStudio}>
+                            <WaIcon slot="start" name="arrows-rotate" variant="regular"/>
+                            {'Relaunch Studio'}
+                        </WaButton>
+                    )}
                 </div>
-            </div>
+            </WaCallout>
         )
     }
 
@@ -329,7 +382,7 @@ export const AppUpdate = ({mode = 'banner'}) => {
                      // Display spinner during installation
                      <>
                          <WaSpinner style={{fontSize: '2em', '--track-width': '5px'}}/>
-                         <span>{`Installing ${APP_STUDIO} version ${lgs?.versions?.studio}... Please wait`}</span>
+        <span>{`Installing ${APP_STUDIO} version ${appContext.versions?.studio}... Please wait`}</span>
                      </>
                  )}
             </div>
@@ -345,7 +398,7 @@ export const AppUpdate = ({mode = 'banner'}) => {
             onSlAfterHide={() => setShowInstructionsDialog(false)}
         >
             <div slot="label">
-                <WaIcon name={OS_ICONS[__.device.os][0]} family={OS_ICONS[__.device.os][1]} variant="regular"/>
+                <WaIcon name={(OS_ICONS[device.os] ?? OS_ICONS.unknown)[0]} family={(OS_ICONS[device.os] ?? OS_ICONS.unknown)[1]} variant="regular"/>
                 <span>{`How to Install ${APP_STUDIO}`}</span>
             </div>
             <ReactMarkdown>{browserInstructions}</ReactMarkdown>
@@ -362,7 +415,15 @@ export const AppUpdate = ({mode = 'banner'}) => {
     // Render the unified action banner and dialogs
     return (
         <>
-            {renderUnifiedBanner()}
+            {renderWebAppUpdateStatus()}
+            {mode === 'settings' && !appContext.pwa && (
+                <WaButton variant="brand" onClick={() => setShowInstallDialog(true)}>
+                    <WaIcon slot="start" name="mobile-arrow-down" variant="regular"/>
+                    {'Open installation dialog'}
+                </WaButton>
+            )}
+            {renderInstallDialog()}
+            {renderUpdateDialog()}
             {renderInstructionsDialog()}
             {renderInstallingDialog()}
         </>

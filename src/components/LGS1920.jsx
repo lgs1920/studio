@@ -73,6 +73,7 @@ import {
 import {
     useCallback, useEffect, useRef, useState,
 }                       from 'react'
+import { useSnapshot } from 'valtio'
 
 const APP_SURFACE_READY_TIMEOUT = 1500
 const INITIAL_FOCUS_READY_TIMEOUT = 2500
@@ -154,7 +155,6 @@ const AppSurface = ({onReady}) => {
             <ToolsUI/>
             <MainUI/>
             <ResponsiveDevice/>
-            <AppUpdate/>
             <IonTokenPrompt/>
             <MapLayer type={BASE_ENTITY}/>
             <MapLayer type={OVERLAY_ENTITY}/>
@@ -176,6 +176,9 @@ export const LGS1920 = () => {
     const [initialFocusReady, setInitialFocusReady] = useState(false)
     const [appSurfaceReady, setAppSurfaceReady] = useState(false)
     const deferredJourneyDataStarted = useRef(false)
+    const appUpdateStore = globalThis.__?.updater?.store
+        ?? globalThis.lgs?.stores?.ui?.appUpdate
+    const appUpdate = useSnapshot(appUpdateStore)
 
     const revealApp = useCallback(() => {
         document.body.classList.remove('lgs-app-booting')
@@ -420,12 +423,18 @@ export const LGS1920 = () => {
         <>
             {!initStatus && initError && <InitErrorMessage error={initError}/>}
 
+            <AppUpdate/>
+
             {initStatus === true && <AppSurface onReady={markAppSurfaceReady}/>}
 
             {!initError && !appVisible && (
                 <WelcomeHero
                     initComplete={initStatus === true}
-                    appReady={initStatus === true && initialFocusReady && appSurfaceReady}
+                    appReady={initStatus === true
+                        && initialFocusReady
+                        && appSurfaceReady
+                        && !appUpdate.isUpdateCheckPending
+                        && !appUpdate.isAutomaticUpdateInProgress}
                     onEnter={revealApp}
                 />
             )}

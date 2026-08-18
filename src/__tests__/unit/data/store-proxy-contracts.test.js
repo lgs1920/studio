@@ -193,7 +193,7 @@ describe('Valtio static guardrails', () => {
             'src/core/settings/SettingsSection.js':               3,
             'src/core/stores/StoresManager.js':                   6,
             'src/Utils/ValtioUtils.js':                           2,
-            'src/components/AppUpdate.jsx':                       1,
+            'src/components/AppUpdate.jsx':                       2,
             'src/components/MainUI/CameraTarget.jsx':             1,
             'src/components/MainUI/MapPOI/MapPOIContent.jsx': 1,
             'src/components/cesium/MapPOI.jsx':               1,
