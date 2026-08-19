@@ -41,6 +41,25 @@ vi.mock('@Components/MainUI/LGSScrollbars', () => ({
     LGSScrollbars: ({children}) => <div>{children}</div>,
 }))
 
+vi.mock('@Components/PopupAnchor', () => ({
+    PopupAnchor: ({id}) => <hr id={id}/>,
+}))
+
+vi.mock('@Components/PopupDrawer', () => ({
+    PopupDrawer: ({active, anchor, children, header, headerActions, className, popupProps}) => active ? (
+        <div
+            data-testid="replay-advanced-camera-popup"
+            data-anchor={anchor}
+            data-placement={popupProps?.placement}
+            className={className}
+        >
+            {header}
+            {headerActions}
+            {children}
+        </div>
+    ) : null,
+}))
+
 vi.mock('@Components/PanelsActions', () => ({
     default: ({stackedPanel, onBack, children}) => (
         <div
@@ -65,7 +84,7 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => {
     const WaCard = ({children, ...props}) => <div {...props}>{children}</div>
     const WaColorPicker = props => <input data-testid={props['aria-label'] ?? 'color'} {...props} />
     const WaDivider = () => <hr/>
-    const WaIcon = () => <span/>
+    const WaIcon = props => <span {...props}/>
     const WaDetails = ({children, ...props}) => <div {...props}>{children}</div>
     const WaNumberInput = ({label, onInput, value, ...props}) => (
         <label>
@@ -413,8 +432,15 @@ describe('JourneyReplayDrawer', () => {
         globalThis.lgs.settings.ui.replay.camera.headingOffset = 15
 
         const view = render(<JourneyReplayDrawer/>)
+        fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
 
-        expect(view.getByText('Advanced camera setup')).toBeTruthy()
+        expect(view.getByTestId('replay-advanced-camera-popup').getAttribute('data-anchor')).toBe(
+            'replay-advanced-camera-popup-anchor',
+        )
+        expect(view.getByTestId('replay-advanced-camera-popup').getAttribute('data-placement')).toBe('bottom')
+        const setupButton = view.getByTestId('panel-actions').querySelector('button')
+        expect(setupButton).toBeTruthy()
+        expect(setupButton.querySelector('[src^="data:image/svg+xml,"]')).toBeTruthy()
         expect(view.getByLabelText('Camera position')).toBeTruthy()
         expect(view.getByLabelText('Camera angle')).toBeTruthy()
         expect(view.getByLabelText('Camera angle').value).toBe('-15')
@@ -431,10 +457,14 @@ describe('JourneyReplayDrawer', () => {
         expect(view.getByRole('heading', {name: 'Motion', level: 4})).toBeTruthy()
         expect(view.getByRole('heading', {name: 'Recenter', level: 4})).toBeTruthy()
         expect(view.getByRole('heading', {name: 'Diagnostics', level: 4})).toBeTruthy()
+
+        fireEvent.click(view.getByTestId('panel-actions').querySelector('button'))
+        expect(view.queryByTestId('replay-advanced-camera-popup')).toBeNull()
     })
 
     it('persists readiness and camera preloading controls', async () => {
         const view = render(<JourneyReplayDrawer/>)
+        fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
         const readinessSwitch = view.getByLabelText('Wait for visible tiles')
         const readinessPolicy = view.getByLabelText('Readiness policy')
         const tilePreloading = view.getByLabelText('Camera tile preloading')
@@ -468,6 +498,7 @@ describe('JourneyReplayDrawer', () => {
 
     it('styles custom readiness wait fields with hints', async () => {
         const view = render(<JourneyReplayDrawer/>)
+        fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
 
         fireEvent.change(view.getByLabelText('Readiness policy'), {target: {value: 'custom'}})
 
@@ -486,6 +517,7 @@ describe('JourneyReplayDrawer', () => {
 
     it('turns the master switch off when both tile features are off and restores defaults when re-enabled', async () => {
         const view = render(<JourneyReplayDrawer/>)
+        fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
         const readinessSwitch = view.getByLabelText('Wait for visible tiles')
 
         fireEvent.change(view.getByLabelText('Readiness policy'), {target: {value: 'off'}})
@@ -511,6 +543,7 @@ describe('JourneyReplayDrawer', () => {
 
     it('shows and persists capability-specific camera sensitivities', async () => {
         const view = render(<JourneyReplayDrawer/>)
+        fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
 
         expect(view.getAllByRole('slider')).toHaveLength(3)
         expect(view.getByText('Add drift')).toBeTruthy()
@@ -536,6 +569,7 @@ describe('JourneyReplayDrawer', () => {
 
     it('shows the debug camera switch only for video-linked replay and keeps it disabled by default', async () => {
         const view = render(<JourneyReplayDrawer/>)
+        fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
 
         expect(view.queryByLabelText('Debug camera')).toBeNull()
 
@@ -831,6 +865,7 @@ describe('JourneyReplayDrawer', () => {
         globalThis.lgs.settings.ui.replay.marker.mode = REPLAY_MARKER_MODE_HYSTERESIS
 
         const view = render(<JourneyReplayDrawer/>)
+        fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
         const presetSelect = view.getByLabelText('Camera feel')
 
         fireEvent.change(presetSelect, {target: {value: REPLAY_CAMERA_PRESET_ULTRA_SMOOTH}})

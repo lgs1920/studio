@@ -22,6 +22,8 @@ import { openPOIEditor }                  from '@Components/MainUI/MapPOI/openPO
 import { VideoButton } from '@Components/MainUI/video/VideoButton'
 import { formatSliderPercent } from '@Components/MainUI/widgets/editor/elements/sliderUtils'
 import PanelActions from '@Components/PanelsActions'
+import { PopupAnchor } from '@Components/PopupAnchor'
+import { PopupDrawer } from '@Components/PopupDrawer'
 import WaDrawer     from '@Components/WaDrawerNonModal'
 import { REPLAY_DRAWER } from '@Core/constants'
 import classNames from 'classnames'
@@ -52,6 +54,7 @@ import {
 import { normalizeJourneyReplayClips } from '@Core/ui/replay/JourneyReplayClips'
 import { normalizeJourneyReplayPOISettings } from '@Core/ui/replay/JourneyReplayPOISettings'
 import { isJourneyReplayCameraActive } from '@Core/ui/replay/JourneyReplayRuntime'
+import { FA_CAMERA_SLIDERS_SRC } from '@Utils/FA2WA'
 import { ELEVATION_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import {
     WaBadge, WaButton, WaCard, WaColorPicker, WaDetails, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider,
@@ -66,7 +69,6 @@ import { createPortal }      from 'react-dom'
 import { useSnapshot }       from 'valtio'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import './style.css'
-
 
 const clampDuration = value => {
     const duration = Number(value)
@@ -398,6 +400,8 @@ const REPLAY_POI_HIDDEN_FIELDS = [
 const REPLAY_TAB_RUNNER = 'runner'
 const REPLAY_TAB_STYLE = 'style'
 const REPLAY_TAB_POIS = 'pois'
+const REPLAY_ADVANCED_CAMERA_POPUP_ANCHOR_ID = 'replay-advanced-camera-popup-anchor'
+const REPLAY_ADVANCED_CAMERA_SETUP_BUTTON_ID = 'replay-advanced-camera-setup-button'
 
 export const JourneyReplayDrawer = memo(() => {
     const {drawers: {open: drawerOpen}} = useSnapshot(lgs.stores.ui)
@@ -443,6 +447,8 @@ export const JourneyReplayDrawer = memo(() => {
     const camera = normalizeJourneyReplayCamera(replaySettings.camera)
     const readiness = normalizeJourneyReplayReadiness(replaySettings.readiness)
     const [activeTab, setActiveTab] = useState(REPLAY_TAB_RUNNER)
+    const [advancedCameraPopupOpen, setAdvancedCameraPopupOpen] = useState(false)
+    const advancedCameraSetupLabel = advancedCameraPopupOpen ? 'Close advanced camera setup' : 'Advanced camera setup'
     const [effectPreviewBackground, setEffectPreviewBackground] = useState(null)
     const nearbyPOIs = useMemo(() => {
         if (activeTab !== REPLAY_TAB_POIS) {
@@ -571,6 +577,12 @@ export const JourneyReplayDrawer = memo(() => {
             setActiveTab(REPLAY_TAB_RUNNER)
         }
     }, [drawerOpen, journeySlug])
+
+    useEffect(() => {
+        if (drawerOpen !== REPLAY_DRAWER || activeTab !== REPLAY_TAB_RUNNER) {
+            setAdvancedCameraPopupOpen(false)
+        }
+    }, [activeTab, drawerOpen])
 
     useEffect(() => {
         if (drawerOpen !== REPLAY_DRAWER || activeTab !== REPLAY_TAB_STYLE) {
@@ -1320,9 +1332,29 @@ export const JourneyReplayDrawer = memo(() => {
                         <WaIcon name="drone" variant="regular"/>
                         {REPLAY_LABEL}
                     </span>
-                    <PanelActions stackedPanel={isStacked} onBack={isStacked ? closeDrawerWithManager : null}/>
+                    <PanelActions stackedPanel={isStacked} onBack={isStacked ? closeDrawerWithManager : null}>
+                        {hasJourney && (
+                            <>
+                                <WaTooltip for={REPLAY_ADVANCED_CAMERA_SETUP_BUTTON_ID} placement="bottom">
+                                    {advancedCameraSetupLabel}
+                                </WaTooltip>
+                                <WaButton
+                                    id={REPLAY_ADVANCED_CAMERA_SETUP_BUTTON_ID}
+                                    className="replay-advanced-camera-button"
+                                    size="l"
+                                    appearance="plain"
+                                    variant="brand"
+                                    aria-label={advancedCameraSetupLabel}
+                                    onClick={() => setAdvancedCameraPopupOpen(!advancedCameraPopupOpen)}
+                                >
+                                    <WaIcon size="l" src={FA_CAMERA_SLIDERS_SRC}/>
+                                </WaButton>
+                            </>
+                        )}
+                    </PanelActions>
 
                     <div className="replay-drawer-content">
+                        <PopupAnchor id={REPLAY_ADVANCED_CAMERA_POPUP_ANCHOR_ID}/>
                         {!hasJourney ? (
                             <p className="replay-empty-state">{`Import or select a journey to use ${REPLAY_LABEL}.`}</p>
                         ) : (
@@ -1587,9 +1619,42 @@ export const JourneyReplayDrawer = memo(() => {
                                                     </div>
                                                 </div>
                                                 </section>
-                                                 <WaDetails small className="lgs--details-hoverable">
-                                                    <span slot="summary">{'Advanced camera setup'}</span>
-                                                    <div className="replay-fieldset">
+                                                 {advancedCameraPopupOpen && (
+                                                     <PopupDrawer
+                                                         active={advancedCameraPopupOpen}
+                                                         anchor={REPLAY_ADVANCED_CAMERA_POPUP_ANCHOR_ID}
+                                                         onRequestClose={() => setAdvancedCameraPopupOpen(false)}
+                                                         popupProps={{
+                                                             placement:       'bottom',
+                                                             distance:        0,
+                                                             flip:            false,
+                                                             shift:           false,
+                                                             boundary:        'scroll',
+                                                             autoSize:        'vertical',
+                                                             autoSizePadding: 0,
+                                                         }}
+                                                         header={(
+                                                             <>
+                                                                 <WaIcon name="sliders" variant="regular"/>
+                                                                 <span>{'Advanced camera setup'}</span>
+                                                             </>
+                                                         )}
+                                                         headerActions={(
+                                                             <WaButton
+                                                                 appearance="plain"
+                                                                 aria-label="Close advanced camera setup"
+                                                                 slot="header-actions"
+                                                                 onClick={() => setAdvancedCameraPopupOpen(false)}
+                                                             >
+                                                                 <WaIcon size="s" name="xmark" variant="regular"/>
+                                                             </WaButton>
+                                                         )}
+                                                         appearance="filled"
+                                                         className="replay-advanced-camera-popup"
+                                                     >
+                                                         <div className="replay-advanced-camera-scrollbars">
+                                                             <LGSScrollbars autoHide={false}>
+                                                                 <div className="replay-fieldset">
                                                         <WaDivider/>
                                                         <h4 className="replay-style-subtitle">{'Diagnostics'}</h4>
                                                         {syncWithVideo && (
@@ -1809,8 +1874,11 @@ export const JourneyReplayDrawer = memo(() => {
                                                                 onInput={updateHysteresisEasing}
                                                                 label-at-start className="half-width"/>
                                                         </JourneyReplayStyleField>
-                                                    </div>
-                                                </WaDetails>
+                                                                 </div>
+                                                             </LGSScrollbars>
+                                                         </div>
+                                                     </PopupDrawer>
+                                                 )}
                                              </div>
                                          </LGSScrollbars>
                                      </WaTabPanel>
