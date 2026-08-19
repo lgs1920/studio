@@ -40,6 +40,7 @@ export const LGSPopup = forwardRef(function LGSPopup(props, ref) {
               anchor,
               closeOnOutsidePointerDown = true,
               closeOnEscape             = true,
+              outsideAnchors            = [],
               onRequestClose,
               flip                      = true,
               shift                     = true,
@@ -67,10 +68,19 @@ export const LGSPopup = forwardRef(function LGSPopup(props, ref) {
                 return
             }
 
-            const path = event.composedPath?.() ?? []
+            const composedPath = event.composedPath?.() ?? []
+            const path = composedPath.length > 0 ? composedPath : [event.target]
             const anchorElement = resolveAnchorElement(anchor)
+            const outsideAnchorElements = outsideAnchors
+                .map(resolveAnchorElement)
+                .filter(Boolean)
 
-            if (path.includes(popup) || path.includes(popup.popup) || (anchorElement && path.includes(anchorElement))) {
+            if (
+                path.includes(popup)
+                || path.includes(popup.popup)
+                || (anchorElement && path.includes(anchorElement))
+                || outsideAnchorElements.some(element => path.includes(element))
+            ) {
                 return
             }
 
@@ -100,7 +110,7 @@ export const LGSPopup = forwardRef(function LGSPopup(props, ref) {
                 window.removeEventListener('keydown', handleKeyDown, true)
             }
         }
-    }, [active, anchor, closeOnEscape, closeOnOutsidePointerDown, onRequestClose, requestClose])
+    }, [active, anchor, closeOnEscape, closeOnOutsidePointerDown, onRequestClose, outsideAnchors, requestClose])
 
     return <WaPopupBase ref={innerRef} active={active} anchor={anchor} flip={flip} shift={shift} {...restProps} />
 })

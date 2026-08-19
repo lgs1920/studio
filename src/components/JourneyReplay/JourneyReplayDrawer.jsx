@@ -1623,6 +1623,7 @@ export const JourneyReplayDrawer = memo(() => {
                                                      <PopupDrawer
                                                          active={advancedCameraPopupOpen}
                                                          anchor={REPLAY_ADVANCED_CAMERA_POPUP_ANCHOR_ID}
+                                                         outsideAnchors={[REPLAY_ADVANCED_CAMERA_SETUP_BUTTON_ID]}
                                                          onRequestClose={() => setAdvancedCameraPopupOpen(false)}
                                                          popupProps={{
                                                              placement:       'bottom',
