@@ -846,3 +846,11 @@
 ## 2026-08-19 — [`fix: add diagnostic details to error dialogs (#472)`](https://github.com/lgs1920/studio/commit/46dbbdb292d1cb28641288192e25c8e6117eaf20)
 
 - Recorded automatically from Git history.
+
+## 2026-08-19 — [`fix: keep replay popup toggle anchored`](https://github.com/lgs1920/studio/commit/38885c30701a27ac90b2a63d1733194876b55cf0)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/df073f0901ebbb101bc59d1bc7eb211c4780c6c1)
+
+- Recorded automatically from Git history.
