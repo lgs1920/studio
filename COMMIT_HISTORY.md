@@ -830,3 +830,19 @@
 ## 2026-08-18 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/9e27496dae4f49b7b2c4971dd9d60b4c4e3ad0c3)
 
 - Recorded automatically from Git history.
+
+## 2026-08-19 — [`fix: stabilize replay select values`](https://github.com/lgs1920/studio/commit/5c58fe64d28023f0dbe41cd3e360e3dbce47f2fa)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`fix: keep crop zone centered during viewport resize (#470)`](https://github.com/lgs1920/studio/commit/c30793bf2d3b418cb0b26a8fd8c258aec080128a)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`fix: render replay setup icon from fontawesome kit`](https://github.com/lgs1920/studio/commit/bd71d48d0df15d54449eb438587d7c800439bf79)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`fix: add diagnostic details to error dialogs (#472)`](https://github.com/lgs1920/studio/commit/46dbbdb292d1cb28641288192e25c8e6117eaf20)
+
+- Recorded automatically from Git history.
