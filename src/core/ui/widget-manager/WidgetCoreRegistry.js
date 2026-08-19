@@ -214,6 +214,10 @@ export class WidgetCoreRegistry {
             window.removeEventListener('resize', config.windowResizeHandler)
             config.windowResizeHandler = null
         }
+        if (config.cropResizeCommitTimer) {
+            clearTimeout(config.cropResizeCommitTimer)
+            config.cropResizeCommitTimer = null
+        }
         this.#widgets.delete(elementId)
         this.#moveables.delete(elementId)
         const timer = this.#controlBoxTimers.get(elementId)
@@ -285,6 +289,10 @@ export class WidgetCoreRegistry {
         if (config.windowResizeHandler) {
             window.removeEventListener('resize', config.windowResizeHandler)
             config.windowResizeHandler = null
+        }
+        if (config.cropResizeCommitTimer) {
+            clearTimeout(config.cropResizeCommitTimer)
+            config.cropResizeCommitTimer = null
         }
         config.element = null
         config.observedTargets = []

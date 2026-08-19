@@ -698,3 +698,159 @@
 ## 2026-08-15 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/c41f9cf9107944d6fd9d2009fd7c687bfc6dfcc5)
 
 - Recorded automatically from Git history.
+
+## 2026-08-17 — [`perf(capture): improve SnapDOM font precaching`](https://github.com/lgs1920/studio/commit/49ca3b0da906b82e2a42ad02a0c805f7ba02dae0)
+
+- Recorded automatically from Git history.
+
+## 2026-08-17 — [`fix(ui): update welcome hero loading state`](https://github.com/lgs1920/studio/commit/f6e7e7d6fc5c51d9734e0aa71a77b69efca96ecc)
+
+- Recorded automatically from Git history.
+
+## 2026-08-17 — [`docs: document Bun migration study`](https://github.com/lgs1920/studio/commit/b3d201d7f24a6ce66c7253d659f2489f7e53e23b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-17 — [`fix: handle local file reading errors`](https://github.com/lgs1920/studio/commit/67dce8bf4cf3bdcf744027ac7fe5431a31b91463)
+
+- Recorded automatically from Git history.
+
+## 2026-08-17 — [`fix(replay): continue HQ export after tile timeout`](https://github.com/lgs1920/studio/commit/bb12a862b7ff0d7f93092d89e7f27b9fcd443092)
+
+- Recorded automatically from Git history.
+
+## 2026-08-17 — [`perf(replay): retain Cesium tiles during HQ export`](https://github.com/lgs1920/studio/commit/ea4426a9e852cd77929b4938a7e353650ba2d730)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/37dee8ed2234902a90a300ce595e6ddbcba9d72b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: stabilize PWA update flow`](https://github.com/lgs1920/studio/commit/7a47d113ce53194663fa431564f40bd655d929b1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: fingerprint PWA releases reliably`](https://github.com/lgs1920/studio/commit/c5a4777abb396ec8a2c5b507b05c1be072d4f763)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: hide boot splash in webapp`](https://github.com/lgs1920/studio/commit/1d80dbdbf3198bfb3a3cb8d08936c09a6312cbac)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`feat: support layer-specific map credits`](https://github.com/lgs1920/studio/commit/8678f3217417d444da3e1b66cbaef7ca6ae343d4)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`feat: add internal Google Maps attribution`](https://github.com/lgs1920/studio/commit/8eed89e343e2996600ef601a0ae42b4d2e61498e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: remove webapp startup flash`](https://github.com/lgs1920/studio/commit/b8d2f62398d7012b8d3d22a6b955059c8bd1409f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: improve PWA icon masks`](https://github.com/lgs1920/studio/commit/f1c3875ba51052396ac5010839a49295a84d9e68)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`docs: enforce explicit user intent`](https://github.com/lgs1920/studio/commit/6325b0170728ce9d4ff31750bacba38d6c80f26b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/2a1edda379e2864f05499f70905aa758f14ffa2d)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: add Google Maps attribution to photorealistic 3D tiles`](https://github.com/lgs1920/studio/commit/7879f068dbb40f41990896001cb319dc24ad9346)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/d6ce39a5c477d651028130652a4cb6b9581674be)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`style: refine credits bar spacing`](https://github.com/lgs1920/studio/commit/97c235b9e79f1c5f68ff8305d37fc87fd7368895)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: prevent stale Esri credit with Google 3D`](https://github.com/lgs1920/studio/commit/4e33456a5f637ab1cbff28d697f4a393a57b754c)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`style: refine widget credit spacing`](https://github.com/lgs1920/studio/commit/555b06fcc91fd53222dbf2a748eff3cd54d8d43a)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`docs: document PWA installation and updates`](https://github.com/lgs1920/studio/commit/c9d6838c2a79b4381fde5684813c21b191a3982e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/375464835bc8f601e16205d3e725c2a50e369dad)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: align boot splash image with welcome video`](https://github.com/lgs1920/studio/commit/a6b69145d431c9424dfd1b2dfff2122a748d6ba9)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix global label-at-start hint layout`](https://github.com/lgs1920/studio/commit/86957a0e7a327cefddf16ee6408074382f3e9240)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`feat replay tile readiness settings`](https://github.com/lgs1920/studio/commit/bf66876d4d65c2a90812aa0516a84bd78c1a6f51)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`feat coordinate replay scene tile readiness`](https://github.com/lgs1920/studio/commit/907f6a5a5aaf2baa7ae2de20737457a274a2fba9)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`feat prepare replay tiles before HQ capture`](https://github.com/lgs1920/studio/commit/1a611a0d92cd3a0e4fbaabf705cb4d4907e6868c)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`feat expose replay tile readiness controls`](https://github.com/lgs1920/studio/commit/01ff65ad1ad8508a5212ecce71abd8f06ab2167a)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`docs document replay tile readiness`](https://github.com/lgs1920/studio/commit/11eb13a6a558164712f23ff6941fbac81803b4d7)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`docs research Cesium cloud resources`](https://github.com/lgs1920/studio/commit/c01e63b3ee9afec8bf76753f8d01c677998033ba)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`docs specify journey Cesium lighting`](https://github.com/lgs1920/studio/commit/ced92860cbbac3abbce9ab127a9cc1e7d914b65a)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/9e27496dae4f49b7b2c4971dd9d60b4c4e3ad0c3)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`fix: stabilize replay select values`](https://github.com/lgs1920/studio/commit/5c58fe64d28023f0dbe41cd3e360e3dbce47f2fa)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`fix: keep crop zone centered during viewport resize (#470)`](https://github.com/lgs1920/studio/commit/c30793bf2d3b418cb0b26a8fd8c258aec080128a)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`fix: render replay setup icon from fontawesome kit`](https://github.com/lgs1920/studio/commit/bd71d48d0df15d54449eb438587d7c800439bf79)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`fix: add diagnostic details to error dialogs (#472)`](https://github.com/lgs1920/studio/commit/46dbbdb292d1cb28641288192e25c8e6117eaf20)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`fix: keep replay popup toggle anchored`](https://github.com/lgs1920/studio/commit/38885c30701a27ac90b2a63d1733194876b55cf0)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/df073f0901ebbb101bc59d1bc7eb211c4780c6c1)
+
+- Recorded automatically from Git history.

@@ -60,6 +60,13 @@ vi.mock('@Utils/cesium/TrackUtils', () => ({
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaButton: ({children, loading, variant, size, ...props}) => <button type={props.type ?? 'button'} {...props}>{children}</button>,
+    WaCopyButton: ({from, ...props}) => <button data-copy-from={from} {...props}>{'Copy error'}</button>,
+    WaDetails: ({children, open, summary, onWaShow, onWaHide, ...props}) => (
+        <div {...props}>
+            <button type="button" onClick={() => open ? onWaHide?.() : onWaShow?.()}>{summary}</button>
+            {open ? children : null}
+        </div>
+    ),
     WaDialog: ({children, open, onWaRequestClose, ...props}) => open ? <div role="dialog" {...props}>{children}</div> : null,
     WaDivider: () => <hr/>,
     WaIcon: ({name, ...props}) => <span data-icon={name} {...props}/>,
@@ -85,6 +92,12 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
             </select>
         </label>
     ),
+    WaTextarea: ({label, value, ...props}) => (
+        <label>
+            {label}
+            <textarea aria-label={label} value={value} readOnly {...props}/>
+        </label>
+    ),
     WaTooltip: ({children}) => <span>{children}</span>,
 }))
 
@@ -106,6 +119,9 @@ const createLgs = ({loaded = []} = {}) => {
         axios: {
             get: vi.fn(async () => ({data: '<gpx />'})),
         },
+        versions: {studio: '1.0.0-test'},
+        platform: 'test',
+        build: {date: '2026-08-17'},
         journeys,
         settings: proxy({
             samples: {
@@ -228,7 +244,7 @@ describe('journey sample catalog', () => {
                 name:      'SampleTwo',
                 extension: 'gpx',
                 content:   '<gpx />',
-            })
+            }, {onError: expect.any(Function)})
         })
         await waitFor(() => expect(screen.getByLabelText('Load a Sample')).toBeTruthy())
     })
@@ -244,4 +260,65 @@ describe('journey sample catalog', () => {
         expect(within(select).getByRole('option', {name: 'Sample one'}).querySelector('[data-icon="xmark"]')).not.toBeNull()
         expect(within(select).getByRole('option', {name: 'Sample two'}).querySelector('[data-icon="xmark"]')).not.toBeNull()
     })
+
+    it('shows the original import error in a copyable dialog', async () => {
+        const importError = new Error('Unexpected GPX parser error')
+        mocks.loadJourneyFromFile.mockImplementationOnce(async (_journey, options) => {
+            options.onError(importError)
+            return 0
+        })
+        globalThis.lgs = createLgs()
+
+        render(<JourneyLoaderUI multiple/>)
+
+        const file = new File(['<gpx>'], 'downloaded-track.gpx', {type: 'application/gpx+xml'})
+        fireEvent.change(document.querySelector('input[type="file"]'), {target: {files: [file]}})
+
+        await waitFor(() => {
+            expect(screen.getByText('The file "downloaded-track.gpx" could not be imported.')).toBeTruthy()
+            expect(screen.queryByRole('button', {name: 'Copy error'})).toBeNull()
+            fireEvent.click(screen.getByText('Complete diagnostic report'))
+            expect(screen.getByText(/Unexpected GPX parser error/)).not.toBeNull()
+            expect(screen.getByRole('button', {name: 'Copy error'}).getAttribute('data-copy-from')).toBe('journey-import-error-details')
+        })
+    })
+
+    it('shows format validation errors in the diagnostic dialog', async () => {
+        globalThis.lgs = createLgs()
+
+        render(<JourneyLoaderUI multiple/>)
+
+        const file = new File(['<gpx>'], 'downloaded-track.gpx.xml', {type: 'application/gpx+xml'})
+        fireEvent.change(document.querySelector('input[type="file"]'), {target: {files: [file]}})
+
+        await waitFor(() => {
+            expect(screen.getByText('The file "downloaded-track.gpx.xml" could not be imported.')).toBeTruthy()
+        })
+
+        fireEvent.click(screen.getByText('Complete diagnostic report'))
+        expect(screen.getByText(/Format not supported/)).not.toBeNull()
+    })
+
+    it('keeps the multi-file picker on Android browsers', () => {
+        const originalUserAgent = navigator.userAgent
+
+        Object.defineProperty(navigator, 'userAgent', {
+            configurable: true,
+            value:        'Mozilla/5.0 (Linux; Android 10; Mobile)',
+        })
+
+        try {
+            globalThis.lgs = createLgs()
+            render(<JourneyLoaderUI multiple/>)
+
+            expect(document.querySelector('input[type="file"]').multiple).toBe(true)
+        }
+        finally {
+            Object.defineProperty(navigator, 'userAgent', {
+                configurable: true,
+                value:        originalUserAgent,
+            })
+        }
+    })
+
 })

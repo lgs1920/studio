@@ -28,6 +28,11 @@
     }
 }
 
+.widget-mount-error-dialog {
+    /* Shoelace's default dialog layer is below the on-map widget layers. */
+    --sl-z-index-dialog: var(--lgs-error-dialog-zindex);
+}
+
 .video-recording-settings-toolbar {
     font-size: var(--lgs-font-size-s);
     position: relative;

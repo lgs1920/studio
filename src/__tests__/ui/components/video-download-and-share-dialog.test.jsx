@@ -36,6 +36,7 @@ vi.mock('@Components/MainUI/video/RecordingInfo', () => ({
             data-testid="recording-info"
             data-dimensions={`${mediaData?.dimensions?.width ?? 0}x${mediaData?.dimensions?.height ?? 0}`}
             data-quality={mediaData?.quality?.name ?? ''}
+            data-metadata-status={mediaData?.metadata?.status ?? ''}
         />
     ),
 }))
@@ -213,6 +214,21 @@ class FakeRecorder extends EventTarget {
             },
             quality: {name: 'HD'},
             ratio:   {label: '16:9'},
+            metadata: {
+                status: 'draft',
+                artist: 'LGS1920',
+                album:  'Your Adventures',
+                genre:  'Adventures Replay',
+                publisher: 'LGS1920 Studio',
+                encodedBy: 'Mediabunny',
+                comment: 'Journey title\nRecorded on 2026-08-19',
+                title: 'Journey title (draft version)',
+                description: 'Journey title',
+                raw: {
+                    '©pub': 'LGS1920 Studio',
+                    '©too': 'Mediabunny',
+                },
+            },
         }
         this.filename = vi.fn(() => 'recording')
         this.isVideo = vi.fn(() => true)
@@ -469,6 +485,7 @@ describe('VideoDownloadAndShareDialog', () => {
 
         expect(screen.getByTestId('recording-info').getAttribute('data-dimensions')).toBe('640x360')
         expect(screen.getByTestId('recording-info').getAttribute('data-quality')).toBe('HD')
+        expect(screen.getByTestId('recording-info').getAttribute('data-metadata-status')).toBe('draft')
         expect(screen.getByRole('button', {name: 'Create HQ video'}).closest('.video-preview-create-hq-action')).not.toBeNull()
 
         await act(async () => {
@@ -482,6 +499,20 @@ describe('VideoDownloadAndShareDialog', () => {
         expect(exportReplayDeferredMp4.mock.calls[0]?.[0]).toMatchObject({
             dimensions: {width: 320, height: 180},
             filename:   'recording.mp4',
+            mediaMetadata: {
+                status:      'draft',
+                album:       'Your Adventures',
+                genre:       'Adventures Replay',
+                publisher:   'LGS1920 Studio',
+                encodedBy:   'Mediabunny',
+                comment:     'Journey title\nRecorded on 2026-08-19',
+                title:       'Journey title (draft version)',
+                description: 'Journey title',
+                raw: {
+                    '©pub': 'LGS1920 Studio',
+                    '©too': 'Mediabunny',
+                },
+            },
         })
         expect(document.querySelector('video.main-video')?.getAttribute('src')).toBe('blob:hq')
         expect(screen.getByLabelText('File name input').value).toBe('recording')
@@ -489,6 +520,7 @@ describe('VideoDownloadAndShareDialog', () => {
         expect(screen.getByRole('button', {name: 'Share'}).getAttribute('appearance')).toBe('filled')
         expect(screen.getByTestId('recording-info').getAttribute('data-dimensions')).toBe('320x180')
         expect(screen.getByTestId('recording-info').getAttribute('data-quality')).toBe('HQ')
+        expect(screen.getByTestId('recording-info').getAttribute('data-metadata-status')).toBe('draft')
 
         await act(async () => {
             fireEvent.click(screen.getByRole('button', {name: 'Share'}))
@@ -507,6 +539,17 @@ describe('VideoDownloadAndShareDialog', () => {
         expect(globalThis.navigator.share.mock.calls[1][0].files[0]).toBeInstanceOf(File)
         expect(globalThis.navigator.share.mock.calls[1][0].files[0].name).toBe('recording-draft.mp4')
         await expect(globalThis.navigator.share.mock.calls[1][0].files[0].text()).resolves.toBe('video')
+    })
+
+    it('preserves non-draft video metadata in the recording information', async () => {
+        recorder.mediaData.metadata = {
+            status: 'published',
+            artist: 'LGS1920',
+        }
+
+        await openDialog()
+
+        expect(screen.getByTestId('recording-info').getAttribute('data-metadata-status')).toBe('published')
     })
 
     it('recomputes HQ dimensions from the current crop before exporting', async () => {

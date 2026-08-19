@@ -73,4 +73,30 @@ describe('layers-terrains configuration', () => {
         expect(layersById.has('ign-plan-lidar-terrain')).toBe(false)
         expect(layersById.has('ign-plan-lidar-sursol')).toBe(false)
     })
+
+    it('declares dedicated Google Maps credits for both Google 2D imagery layers', () => {
+        const config = loadLayersTerrains()
+        const layersById = indexLayersById(config)
+        const expectedCredit = {
+            credits:  'Google Maps',
+            logo:     '/assets/images/layers/logos/google-maps.png',
+            logoText: 'Google Maps',
+            url:      'https://www.google.com/maps',
+        }
+
+        expect(layersById.get('google-maps-2d-satellite')).toMatchObject(expectedCredit)
+        expect(layersById.get('google-maps-2d-satellite-labels')).toMatchObject(expectedCredit)
+    })
+
+    it('declares a Google Maps credit for Google Photorealistic 3D Tiles', () => {
+        const config = loadLayersTerrains()
+        const layersById = indexLayersById(config)
+
+        expect(layersById.get('google-photorealistic-3d')).toMatchObject({
+            credits:  'Google Maps',
+            logo:     '/assets/images/layers/logos/google-maps.png',
+            logoText: 'Google Maps',
+            url:      'https://www.google.com/maps',
+        })
+    })
 })

@@ -89,6 +89,8 @@ export class LGS1920Context {
 
         // Progressive web app ?
         this.pwa = window.matchMedia('(display-mode: standalone)').matches
+        // Expose the context before managers resolve the global application state.
+        window.lgs = this
 
         // lang
         this.#lang = 'en'

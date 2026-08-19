@@ -83,10 +83,12 @@ body {
     background: var(--lgs-dark-color-95);
 }
 
-body.lgs-app-booting #cesium-viewer {
-    visibility: hidden;
-    pointer-events: none;
-    opacity: 0;
+@media (display-mode: standalone) {
+    body.lgs-app-booting #cesium-viewer {
+        visibility: hidden;
+        pointer-events: none;
+        opacity: 0;
+    }
 }
 
 /** Hide the main toolbar */
@@ -518,6 +520,36 @@ body.lgs-app-booting #cesium-viewer {
 .lgs-install-banner-content, .lgs-install-banner-content > * {
     display: flex;
     align-items: center;
+}
+
+.lgs-webapp-update-callout {
+    position: fixed;
+    z-index: calc(var(--lgs-ui-layer-zindex) + 30);
+    top: var(--lgs-gutter);
+    right: var(--lgs-gutter);
+    left: var(--lgs-gutter);
+    max-width: 42rem;
+    margin: 0 auto;
+    pointer-events: auto;
+}
+
+.lgs-webapp-update-callout-content {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+    flex-wrap: wrap;
+}
+
+.app-update-progress {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+    font-size: var(--lgs-font-size);
+}
+
+.app-update-progress > wa-spinner {
+    flex: 0 0 auto;
+    font-size: var(--lgs-font-size-l);
 }
 
 /*******************************************************************************

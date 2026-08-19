@@ -97,6 +97,10 @@ providers:
         id: google-photorealistic-3d
         image: cesium-world.png
         assetId: 2275207
+        credits: 'Google Maps'
+        logo: '/assets/images/layers/logos/google-maps.png'
+        logoText: 'Google Maps'
+        url: 'https://www.google.com/maps'
         usage:
           type: personal
           doc: ''
@@ -126,6 +130,10 @@ providers:
         id: google-maps-2d-satellite
         image: cesium-world.png
         assetId: 3830182
+        credits: 'Google Maps'
+        logo: '/assets/images/layers/logos/google-maps.png'
+        logoText: 'Google Maps'
+        url: 'https://www.google.com/maps'
         usage:
           type: personal
           doc: ''
@@ -140,6 +148,10 @@ providers:
         id: google-maps-2d-satellite-labels
         image: cesium-world.png
         assetId: 3830183
+        credits: 'Google Maps'
+        logo: '/assets/images/layers/logos/google-maps.png'
+        logoText: 'Google Maps'
+        url: 'https://www.google.com/maps'
         usage:
           type: personal
           doc: ''

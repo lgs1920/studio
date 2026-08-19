@@ -12,6 +12,7 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaDetails: ({children}) => <div>{children}</div>,
     WaDialog: ({children}) => <div role="dialog">{children}</div>,
     WaIcon: () => null,
+    WaTextarea: () => null,
 }))
 
 import { InitErrorMessage } from '@Components/InitErrorMessage'
@@ -39,5 +40,12 @@ describe('InitErrorMessage', () => {
         expect(screen.getByRole('link', {name: 'Contact Support'}).getAttribute('href')).toBe(
             `mailto:studio@lgs1920.fr?subject=${encodeURIComponent('[Studio] Backend stopped')}&body=${encodeURIComponent('Error: Backend server is unreachable\n\nDetails:\nBackend stack trace')}`,
         )
+    })
+
+    it('renders safe HTML in the error callout', () => {
+        const {container} = render(<InitErrorMessage error={{message: '<strong>Backend failed</strong><script>alert(1)</script>'}}/>)
+
+        expect(container.querySelector('strong')?.textContent).toBe('Backend failed')
+        expect(container.querySelector('script')).toBeNull()
     })
 })

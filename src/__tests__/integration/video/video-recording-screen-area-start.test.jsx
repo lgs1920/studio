@@ -132,6 +132,12 @@ describe('VideoRecordingScreenArea start flow', () => {
             },
             recorder,
             ui: {
+                ui: {
+                    formatJourneyDurationDates: vi.fn(() => ({
+                        prefix: 'June 1, 2026',
+                        sufix:  '10:00 AM - 11:00 AM',
+                    })),
+                },
                 replay: {
                     captureCameraState: vi.fn(),
                     waitForSceneRestore: vi.fn(() => Promise.resolve()),
@@ -163,6 +169,11 @@ describe('VideoRecordingScreenArea start flow', () => {
 
         globalThis.lgs = {
             canvas: document.createElement('canvas'),
+            theJourney: {
+                title:    'Journey title',
+                location: 'Annecy - Aoste',
+                getDate:  vi.fn(() => ({start: '2026-06-01T10:00:00.000Z', stop: '2026-06-01T11:00:00.000Z'})),
+            },
             scene:  {
                 render: vi.fn(),
             },
@@ -250,6 +261,12 @@ describe('VideoRecordingScreenArea start flow', () => {
         expect(globalThis.lgs.stores.ui.video.preRecording).toBe(false)
         expect(globalThis.lgs.stores.ui.video.recording).toBe(true)
         expect(CanvasOverlayComposer.mock.instances[0].setContinuousRendering).toHaveBeenCalledWith(false)
+        expect(recorder.initialize).toHaveBeenCalledWith(expect.objectContaining({
+            metadata: expect.objectContaining({
+                title:   'Journey title (draft version)',
+                comment: expect.stringMatching(/^Journey title\nJune 1, 2026 10:00 AM - 11:00 AM\nAnnecy - Aoste\n\nRecorded on \d{4}-\d{2}-\d{2}$/),
+            }),
+        }))
     })
 
     it('captures the draft camera before arming a linked replay recording', async () => {

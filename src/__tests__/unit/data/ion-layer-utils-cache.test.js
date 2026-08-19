@@ -120,4 +120,43 @@ describe('IonLayerUtils Cesium cache', () => {
         )
         expect(tileset).toEqual({id: 'tileset'})
     })
+
+    it('creates a Google 2D imagery provider for dedicated Google Maps layers', async () => {
+        const {Google2DImageryProvider} = await import('cesium')
+        Google2DImageryProvider.fromIonAssetId.mockResolvedValue({id: 'google-imagery'})
+
+        const provider = await IonLayerUtils.imageryProviderFromLayer({
+            assetId:     3830182,
+            imageryKind: 'google2d',
+            mapType:     'satellite',
+        }, {accessToken: 'google-token'})
+
+        expect(Google2DImageryProvider.fromIonAssetId).toHaveBeenCalledWith({
+            assetId:          3830182,
+            accessToken:      'google-token',
+            mapType:          'satellite',
+            overlayLayerType: undefined,
+        })
+        expect(provider).toEqual({id: 'google-imagery'})
+    })
+
+    it('creates Google Photorealistic 3D Tiles with the layer visibility', async () => {
+        const {createGooglePhotorealistic3DTileset} = await import('cesium')
+        createGooglePhotorealistic3DTileset.mockResolvedValue({id: 'google-3d'})
+
+        const tileset = await IonLayerUtils.createTileset({
+            id:        'google-photorealistic-3d',
+            type:      'base3d',
+            show:      true,
+            sceneKind: 'google-photorealistic',
+        })
+
+        expect(createGooglePhotorealistic3DTileset).toHaveBeenCalledWith(
+            {onlyUsingWithGoogleGeocoder: true},
+            {
+                show: true,
+            },
+        )
+        expect(tileset).toEqual({id: 'google-3d'})
+    })
 })

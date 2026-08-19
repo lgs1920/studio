@@ -25,7 +25,8 @@
     margin: 0;
     background: transparent;
     box-shadow: none;
-    contain: layout size paint;
+    overflow: visible;
+    contain: layout size;
 }
 
 .lgs-logo-widget {

@@ -55,7 +55,7 @@ import {
     REPLAY_CAMERA_HEADING_OFFSET_MAX, REPLAY_CAMERA_HEADING_OFFSET_MIN, REPLAY_CAMERA_POSITION_SYSTEM,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION,
     REPLAY_MARKER_MODE_TRACE, getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker,
-    normalizeJourneyReplayProgressionStyle, normalizeJourneyReplaySmoothing, normalizeJourneyReplayTrace,
+    normalizeJourneyReplayProgressionStyle, normalizeJourneyReplayReadiness, normalizeJourneyReplaySmoothing, normalizeJourneyReplayTrace,
 }                                                                                          from './JourneyReplayProgressionStyle'
 
 
@@ -161,6 +161,7 @@ export const configure = (mode, options = {}) => {
         const smoothing = normalizeJourneyReplaySmoothing(options.smoothing ?? replay.smoothing)
         const marker = options.marker ?? replay.marker
         const camera = options.camera ?? replay.camera
+        const readiness = normalizeJourneyReplayReadiness(options.readiness ?? replay.readiness)
         const samplerConfigKey = call.samplerConfigurationKey({
             journey,
             scope,
@@ -197,6 +198,7 @@ export const configure = (mode, options = {}) => {
             store.smoothing = smoothing
             store.marker = normalizeJourneyReplayMarker(marker)
             store.camera = normalizeJourneyReplayCamera(camera)
+            store.readiness = readiness
             store.clips = clips
         }
 
@@ -711,6 +713,7 @@ export const renderReplayExportFrame = async (mode, {phase = null, frame = null,
                     sample,
                     sampler:       state.sampler,
                     forceGeometry: false,
+                    syncCursorToTrace: true,
                     hideTrace:     phase?.slot === REPLAY_CLIP_SLOT_START,
                     showTrace:     true,
                 })

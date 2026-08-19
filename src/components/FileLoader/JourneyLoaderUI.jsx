@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { JourneyFilesList }                                   from '@Components/FileLoader/JourneyFilesList'
+import { ErrorDiagnosticDetails }                              from '@Components/Modals/ErrorDiagnosticDetails'
 import {
     journeySampleUrl,
     normalizeJourneySamplesCatalog,
@@ -24,8 +25,11 @@ import {
     JOURNEY_WAITING, TrackUtils,
 }                                                             from '@Utils/cesium/TrackUtils'
 import { FileUtils }                                          from '@Utils/FileUtils'
+import { collectErrorDiagnostic, formatErrorDiagnostic }      from '@Utils/ErrorDiagnosticUtils'
 import { UIToast }                                            from '@Utils/UIToast'
-import { WaButton, WaDialog, WaDivider, WaIcon, WaInput, WaOption, WaSelect, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import {
+    WaButton, WaDialog, WaDivider, WaIcon, WaInput, WaOption, WaSelect, WaTooltip,
+}                                                             from '@web.awesome.me/webawesome-pro/dist/react'
 import { useId, useMemo, useRef, useState }                  from 'react'
 import { v4 as uuid }                                         from 'uuid'
 import { useSnapshot }                                        from 'valtio'
@@ -53,6 +57,64 @@ const CLOUD_ERROR_CODES = {
     REMOTE_TIMEOUT:       'remote_timeout',
     REMOTE_TOO_LARGE:     'remote_file_too_large',
     UNSUPPORTED_FORMAT:   'unsupported_format',
+}
+
+/**
+ * Converts an import failure into copyable diagnostic text.
+ * @param {unknown} error
+ * @returns {string}
+ */
+const formatImportError = error => {
+    if (typeof error === 'string') {
+        return error
+    }
+
+    const errorDetails = error?.stack
+        ? String(error.stack)
+        : error?.message
+            ? String(error.message)
+            : ''
+
+    if (errorDetails) {
+        const attempts = Array.isArray(error?.readAttempts)
+            ? error.readAttempts.map(attempt => {
+                const code = attempt.code === 'Unknown' ? '' : ` (${attempt.code})`
+                return `- ${attempt.strategy}: ${attempt.name}${code}: ${attempt.message}`
+            })
+            : []
+
+        return attempts.length > 0
+            ? `${errorDetails}\n\nRead attempts:\n${attempts.join('\n')}`
+            : errorDetails
+    }
+
+    try {
+        return JSON.stringify(error, null, 2) || 'Unknown import error.'
+    }
+    catch {
+        return error === undefined || error === null
+            ? 'Unknown import error.'
+            : Object.prototype.toString.call(error)
+    }
+}
+
+/**
+ * Provides a user-facing correction for a known import failure.
+ * @param {unknown} error
+ * @returns {string}
+ */
+const getImportErrorRecommendation = error => {
+    const details = formatImportError(error)
+
+    if (/NotFoundError|requested file or directory could not be found/i.test(details)) {
+        return 'Due to privacy restrictions enforced by your device, this browser cannot read this file from the Downloads location. Please move or copy it to another location, such as Documents, then select it again.\n\nOther workarounds would require exposing your file over the network. As a privacy-first application, we deliberately prohibit ourselves from using such solutions.'
+    }
+
+    if (/unsupported|format/i.test(details)) {
+        return 'Rename the file so it ends with .gpx, .kml, .geojson, or .json, then import it again.'
+    }
+
+    return 'Download the file again, save it locally on the device, and retry the import.'
 }
 
 const getSupportedExtension = (fileName = '') => {
@@ -208,12 +270,15 @@ export const JourneyLoaderUI = (props) => {
     const [sampleLoadingSlug, setSampleLoadingSlug] = useState('')
     const [sampleSelection, setSampleSelection] = useState('')
     const [sampleCatalogRevision, setSampleCatalogRevision] = useState(0)
+    const [importError, setImportError] = useState(null)
 
     const {fileList} = useSnapshot(lgs.stores.main.components.fileLoader)
     const samplesSettings = useSnapshot(lgs.settings.samples)
 
     const _dialog = useRef(null)
     const _filesDropper = useRef(null)
+    const _activeImportError = useRef(null)
+    const _importErrorQueue = useRef([])
 
     const _attemptCounter = useRef(0)
 
@@ -230,6 +295,54 @@ export const JourneyLoaderUI = (props) => {
     )
     const sampleLoading = Boolean(sampleLoadingSlug)
     const showSampleSelector = journeySamples.length > 0
+
+    /**
+     * Stores an import failure for display in the diagnostic dialog.
+     * @param {string} fileName
+     * @param {unknown} error
+     * @param {File|Object} fileMetadata
+     */
+    const showImportError = (fileName, error, fileMetadata = {}) => {
+        const recommendation = getImportErrorRecommendation(error)
+        const diagnostic = collectErrorDiagnostic({
+            error,
+            file:          fileMetadata,
+            fileName,
+            suggestedFix:  recommendation,
+        })
+
+        const nextImportError = {
+            fileName:       diagnostic.fileName,
+            details:        formatErrorDiagnostic(diagnostic),
+            recommendation,
+        }
+
+        if (_activeImportError.current) {
+            _importErrorQueue.current.push(nextImportError)
+            return
+        }
+
+        _activeImportError.current = nextImportError
+        setImportError(nextImportError)
+    }
+
+    /**
+     * Closes the current diagnostic and displays the next queued error.
+     */
+    const clearImportError = () => {
+        const nextImportError = _importErrorQueue.current.shift() ?? null
+        _activeImportError.current = nextImportError
+        setImportError(nextImportError)
+    }
+
+    /**
+     * Clears the active diagnostic and every queued diagnostic.
+     */
+    const clearAllImportErrors = () => {
+        _importErrorQueue.current = []
+        _activeImportError.current = null
+        setImportError(null)
+    }
 
     /**
      * Updates file status in the Valtio store
@@ -290,6 +403,7 @@ export const JourneyLoaderUI = (props) => {
 
         if (!validation.validated) {
             updateFileStatus(currentId, JOURNEY_KO, 'Format not supported')
+            showImportError(file.name, new Error('Format not supported'), file)
             UIToast.error({
                               caption: IMPORT_NOT_SUPPORTED.caption,
                               text:    `<strong>${file.name}</strong> ${IMPORT_NOT_SUPPORTED.text}`,
@@ -303,6 +417,8 @@ export const JourneyLoaderUI = (props) => {
                                                                     name:      validation.file.name,
                                                                     extension: validation.file.extension,
                                                                     content:   content,
+                                                                }, {
+                                                                    onError: error => showImportError(file.name, error, file),
                                                                 })
 
             if (status === JOURNEY_OK) {
@@ -324,7 +440,7 @@ export const JourneyLoaderUI = (props) => {
         }
         catch (error) {
             updateFileStatus(currentId, JOURNEY_KO, 'Error during upload')
-            triggerFailureEvent(file.name, error)
+            triggerFailureEvent(file.name, error, IMPORT_FAILED.text, {fileMetadata: file})
         }
     }
 
@@ -433,6 +549,8 @@ export const JourneyLoaderUI = (props) => {
                                                                     name:      fileInfo.name,
                                                                     extension: fileInfo.extension,
                                                                     content:   remote.content,
+                                                                }, {
+                                                                    onError: error => showImportError(fileInfo.fullName, error),
                                                                 })
 
             if (status === JOURNEY_OK) {
@@ -486,10 +604,15 @@ export const JourneyLoaderUI = (props) => {
     /**
      * Handles a list of selected or dropped files.
      * @param {File[]} files
+     * @returns {Promise<void>}
      */
-    const processFiles = (files) => {
-        files.forEach(file => processLocalFile(file))
-        clearSelectedFiles()
+    const processFiles = async (files) => {
+        try {
+            await Promise.all(files.map(file => processLocalFile(file)))
+        }
+        finally {
+            clearSelectedFiles()
+        }
     }
 
     /**
@@ -497,7 +620,7 @@ export const JourneyLoaderUI = (props) => {
      */
     const handleFilesChange = (event) => {
         const currentFiles = Array.from(event.target.files || [])
-        processFiles(currentFiles)
+        void processFiles(currentFiles)
     }
 
     /**
@@ -668,7 +791,7 @@ export const JourneyLoaderUI = (props) => {
         const droppedFiles = await getDroppedFiles(event.nativeEvent)
 
         if (droppedFiles.length > 0) {
-            processFiles(droppedFiles)
+            await processFiles(droppedFiles)
         }
     }
 
@@ -717,6 +840,8 @@ export const JourneyLoaderUI = (props) => {
                                                                     name:      sampleFileInfo.name,
                                                                     extension: sampleFileInfo.extension,
                                                                     content:   content,
+                                                                }, {
+                                                                    onError: error => showImportError(sample.filename, error),
                                                                 })
 
             if (status === JOURNEY_OK) {
@@ -744,7 +869,7 @@ export const JourneyLoaderUI = (props) => {
 
         const sample = journeySamples.find(item => item.slug === slug)
         if (sample) {
-            loadSample(sample)
+            void loadSample(sample)
         }
     }
 
@@ -756,6 +881,7 @@ export const JourneyLoaderUI = (props) => {
         const includeName = options.includeName ?? true
         const text = includeName && fileName ? `<strong>${fileName}</strong> ${message}` : message
 
+        showImportError(fileName, error ?? new Error(message), options.fileMetadata)
         console.error(`[JourneyLoader] Error: ${fileName}`, error)
         UIToast.error({
                           caption,
@@ -807,13 +933,15 @@ export const JourneyLoaderUI = (props) => {
     const close = () => {
         _attemptCounter.current = 0
         clearSelectedFiles()
+        clearAllImportErrors()
         lgs.stores.main.components.fileLoader.fileList.clear()
         closeJourneyLoader()
     }
 
 
     return (
-        <WaDialog
+        <>
+            <WaDialog
             open={journeyLoader.visible}
             id={'file-loader-modal'}
             label={'Import Journeys'}
@@ -840,7 +968,7 @@ export const JourneyLoaderUI = (props) => {
                         className="standard-file-input"
                         type="file"
                         multiple={props.multiple ?? true}
-                        accept={SUPPORTED_EXTENSIONS.join(',')}
+                        accept={'.gpx,.geojson,.json,.kml,application/gpx+xml,application/xml,text/xml,application/geo+json,application/json'}
                         onChange={handleFilesChange}
                     />
 
@@ -951,6 +1079,28 @@ export const JourneyLoaderUI = (props) => {
                     </WaButton>
                 </div>
             </div>
+            </WaDialog>
+
+            <WaDialog
+            open={Boolean(importError)}
+            id={'journey-import-error-modal'}
+            label={'Journey import error'}
+            onWaRequestClose={clearImportError}
+            className={'lgs-theme lgs-error-dialog'}
+        >
+            <div className="journey-import-error">
+                <p>
+                    {`The file "${importError?.fileName ?? 'Unknown file'}" could not be imported.`}
+                </p>
+                <p>
+                    {importError?.recommendation ?? 'Download the file again and retry the import.'}
+                </p>
+                <ErrorDiagnosticDetails
+                    diagnostic={importError}
+                    id="journey-import-error-details"
+                />
+            </div>
         </WaDialog>
+        </>
     )
 }

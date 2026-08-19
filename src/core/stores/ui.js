@@ -146,6 +146,12 @@ export const ui = {
     appUpdate: {
         isInstallPromptAvailable: false,
         isUpdateAvailable:        false,
+        isUpdateApplying:         false,
+        updateApplyError:         null,
+        isAutomaticUpdateInProgress: false,
+        isUpdateCheckPending:     false,
+        automaticUpdateError:     null,
+        tag:                      null,
         version:                  null,
         build:                    null,
         installOutcome:           null,

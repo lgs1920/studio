@@ -2,6 +2,8 @@
 
 This directory contains proposed, pending-validation, explicitly TODO, or future implementation specifications.
 
+- [Bun build and test migration study](CORE-BUN-BUILD-TEST-MIGRATION.md)
+
 - [Cloud sync](CLOUD-SYNC-TODO.md)
 - [Weekly count API](WEEKLY-COUNT-API-SPEC.md)
 - [Weekly count API — backend issue](WEEKLY-COUNT-API-SERVER-ISSUE.md)
@@ -30,4 +32,6 @@ This directory contains proposed, pending-validation, explicitly TODO, or future
 - [Layer time filtering and named temporal variants](CORE-LAYER-TIME-FILTER-SPEC.md)
 - [Copernicus Data Space Sentinel-2 WMTS integration](CORE-COPERNICUS-SENTINEL2-SPEC.md)
 - [Journey and track click selection with interactive overlay menu](CORE-JOURNEY-CLICK-OVERLAY-SELECTION-SPEC.md)
+- [Journey-driven Cesium time, sunlight, moonlight, darkness and shadows](CORE-JOURNEY-CESIUM-TIME-LIGHTING-SPEC.md)
+- [Cesium cloud management and reusable cloud resources](CORE-CESIUM-CLOUD-MANAGEMENT-RESEARCH.md)
 - [Three.js camera HPR orientation sphere widget](CORE-CAMERA-HPR-THREEJS-SPHERE-WIDGET-SPEC.md)

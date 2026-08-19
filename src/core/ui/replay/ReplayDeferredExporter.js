@@ -37,8 +37,17 @@ import {
     replayVideoTraceDebug,
 }                              from '@Core/ui/replay/ReplayVideoTraceDebug'
 import {
+    createReplaySceneTileReadinessCoordinator,
+    prepareReplaySceneTileCache,
+    prepareReplaySceneTilesForCapture,
+    resolveReplayTileSpeedLevel,
+}                              from '@Core/ui/replay/ReplaySceneTileReadiness'
+import {
     buildReplayFrameState,
 }                              from '@Core/ui/replay/JourneyReplayRuntime'
+import {
+    normalizeJourneyReplayCamera, normalizeJourneyReplayReadiness,
+}                              from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {
     REPLAY_RENDER_MODE_HQ, createReplayRenderContext, createReplayRenderModeContract,
 }                              from '@Core/ui/replay/ReplayRenderModeContract'
@@ -49,6 +58,9 @@ import {
     ScreenMediaRecorder,
 }                              from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import {
+    normalizeMediabunnyMetadataTags,
+}                              from '@Core/ui/screen-media-recorder/recorder/MediaMetadata'
+import {
     UIToast,
 }                              from '@Utils/UIToast'
 import {
@@ -57,6 +69,10 @@ import {
 }                              from 'mediabunny'
 
 const VIDEO_CODEC_PROBE_TIMEOUT_MS = 2500
+export const DEFAULT_REPLAY_SCENE_TILE_READINESS_TIMEOUT_MS = 5000
+const REPLAY_TILE_PREWARM_LOOKAHEAD_MS = 1000
+const REPLAY_TILE_PREWARM_STEP_MS = 333
+const REPLAY_TILE_PREWARM_MAX_SAMPLES = 3
 const EXPORT_PROGRESS_UPDATE_FRAME_STEP = 1
 const EXPORT_PROGRESS_FRAME_SAMPLE_WINDOW = 30
 
@@ -76,6 +92,119 @@ const defaultReplayExportFps = () => {
     const configured = globalThis.lgs?.stores?.ui?.video?.fps
     return ScreenMediaRecorder.FPS?.[configured] ?? configured ?? 30
 }
+
+/**
+ * Pre-warm a small rolling prefix of the HQ camera path through Cesium.
+ *
+ * The active scene camera is moved sequentially because Cesium can only
+ * calculate view-dependent tile requests for one active camera. The initial
+ * replay pose is restored before the first encoded frame, so pre-warming never
+ * changes the exported timeline or the user camera state.
+ *
+ * @param {object} options - Pre-warm options.
+ * @param {object|null} options.plan - Deferred export plan.
+ * @param {object|null} options.replay - Replay store.
+ * @param {object|null} options.controller - Replay controller.
+ * @param {object|null} options.replayMode - Replay mode facade.
+ * @param {object|null} options.coordinator - Tile readiness coordinator.
+ * @param {number} options.lookaheadMs - Camera tile preloading horizon.
+ * @param {AbortSignal|null} options.signal - Optional cancellation signal.
+ * @returns {Promise<void>} Promise resolved when pre-warming is complete.
+ */
+const prewarmReplayScenePrefix = async ({
+                                           plan = null,
+                                           replay = null,
+                                           controller = null,
+                                           replayMode = null,
+                                           coordinator = null,
+                                           lookaheadMs = REPLAY_TILE_PREWARM_LOOKAHEAD_MS,
+                                           signal = null,
+                                       } = {}) => {
+    const scene = replayMode?.cesiumScene?.()
+                  ?? globalThis.lgs?.scene
+                  ?? globalThis.lgs?.viewer?.scene
+                  ?? null
+    if (!scene?.camera
+        || !coordinator
+        || typeof replayMode?.renderReplayExportFrame !== 'function'
+        || !plan?.videoTimeline
+        || Number(lookaheadMs) <= 0
+        || Number(plan.videoTimeline.durationMillis) <= 0) {
+        return
+    }
+
+    const timeline = new ReplayFrameTimeline({
+        durationMillis: plan.videoTimeline.durationMillis,
+        fps: plan.videoTimeline.fps,
+        direction: 1,
+    })
+    const firstFrame = timeline.frameAtIndex(0)
+    const firstPhase = resolveReplayVideoFramePhase({
+        timeline: plan.videoTimeline,
+        frame: firstFrame,
+    })
+    const safeLookaheadMs = Math.max(0, Number(lookaheadMs) || 0)
+    const sampleCount = Math.min(
+        REPLAY_TILE_PREWARM_MAX_SAMPLES,
+        Math.max(1, Math.ceil(safeLookaheadMs / REPLAY_TILE_PREWARM_STEP_MS)),
+    )
+    const sampleStepMs = safeLookaheadMs / sampleCount
+    let prewarmed = 0
+
+    replayVideoTraceDebug('export.tile-prewarm.start', {
+        lookaheadMs,
+        stepMs: sampleStepMs,
+        sampleCount,
+    })
+    try {
+        for (let sampleIndex = 1; sampleIndex <= sampleCount; sampleIndex += 1) {
+            if (signal?.aborted) {
+                throw new DOMException('The HQ tile pre-warm was aborted.', 'AbortError')
+            }
+
+            const futureFrame = timeline.frameAtTimeMs(sampleIndex * sampleStepMs)
+            const futurePhase = resolveReplayVideoFramePhase({
+                timeline: plan.videoTimeline,
+                frame: futureFrame,
+            })
+            await replayMode.renderReplayExportFrame({
+                phase: futurePhase,
+                frame: futureFrame,
+                plan,
+                replay,
+                controller,
+            })
+            await coordinator.prepareForCapture({
+                maxMillis: 100,
+                signal,
+            })
+            prewarmed += 1
+        }
+    }
+    catch (error) {
+        if (signal?.aborted) {
+            throw error
+        }
+
+        replayVideoTraceDebug('export.tile-prewarm.error', {
+            message: error?.message ?? String(error),
+            prewarmed,
+        })
+    }
+    finally {
+        await replayMode.renderReplayExportFrame({
+            phase: firstPhase,
+            frame: firstFrame,
+            plan,
+            replay,
+            controller,
+        })
+        replayVideoTraceDebug('export.tile-prewarm.end', {
+            prewarmed,
+        })
+    }
+}
+
 const defaultReplaySourceCanvas = () => globalThis.lgs?.canvas ?? null
 const roundFocusValue = value => {
     const numeric = finiteNumber(value, null)
@@ -990,7 +1119,7 @@ export class ReplayDeferredExporter {
             format: outputConfig.format,
             target,
         })
-        await output.setMetadataTags(metadata ?? {})
+        await output.setMetadataTags(normalizeMediabunnyMetadataTags(metadata))
 
         let encodedPacketBytes = 0
         let lastPublishedFileSize = -1
@@ -1401,6 +1530,7 @@ export const runReplayDeferredMp4Export = async ({
                                                      abortController = null,
                                                      buildCanvas = null,
                                                      replayMode = defaultReplayMode(),
+                                                     tileReadinessTimeoutMs = DEFAULT_REPLAY_SCENE_TILE_READINESS_TIMEOUT_MS,
                                                      uiToast = UIToast,
                                                      download = downloadBlob,
                                                  } = {}) => {
@@ -1476,6 +1606,11 @@ export const runReplayDeferredMp4Export = async ({
     let exportSucceeded = false
     let replayComposer = null
     let replayComposerFallback = false
+    let restoreReplaySceneTileCache = null
+    let replaySceneTileReadinessCoordinator = null
+    let replaySceneTileReadinessOptions = null
+    let previousReplayExportFrame = null
+    let previousReplayExportSample = null
     const exportStartedAt = runtimeNow()
     const exportRuntimeStatus = () => {
         if (signal?.aborted) {
@@ -1549,6 +1684,31 @@ export const runReplayDeferredMp4Export = async ({
                     cameraState: plan.runtime?.context?.cameraState ?? null,
                 }) === true
             }
+            const replayScene = replayMode?.cesiumScene?.()
+                ?? globalThis.lgs?.scene
+                ?? globalThis.lgs?.viewer?.scene
+                ?? null
+            const replayReadiness = normalizeJourneyReplayReadiness(
+                replay?.readiness
+                ?? globalThis.lgs?.settings?.ui?.replay?.readiness,
+            )
+            const replayCamera = normalizeJourneyReplayCamera(
+                replay?.camera
+                ?? globalThis.lgs?.settings?.ui?.replay?.camera,
+            )
+            restoreReplaySceneTileCache = prepareReplaySceneTileCache(replayScene)
+            replaySceneTileReadinessCoordinator = createReplaySceneTileReadinessCoordinator(replayScene, {
+                enabled:                    replayReadiness.enabled,
+                policy:                     replayReadiness.policy,
+                knownFootprintTimeoutMs:    replayReadiness.knownFootprintTimeoutMs,
+                movingTimeoutMs:             replayReadiness.movingTimeoutMs,
+                settledTimeoutMs:            replayReadiness.settledTimeoutMs,
+                prewarmEnabled:              replayReadiness.prewarmEnabled,
+            })
+            replaySceneTileReadinessOptions = {
+                readiness: replayReadiness,
+                camera:    replayCamera,
+            }
             await delay(0)
             scenePrepared = true
         }
@@ -1569,6 +1729,19 @@ export const runReplayDeferredMp4Export = async ({
 
         const widgetKeys = [...(globalThis.__?.ui?.widgetCache?.getAll?.({widgetsBoard: VIDEO_WIDGETS_BOARD})?.keys?.() ?? [])]
         await waitForReplayWidgetsReady({widgetKeys})
+        await prewarmReplayScenePrefix({
+            plan,
+            replay,
+            controller,
+            replayMode,
+            coordinator: replaySceneTileReadinessCoordinator,
+            lookaheadMs: replaySceneTileReadinessOptions?.readiness?.enabled !== false
+                         && replaySceneTileReadinessOptions?.readiness?.prewarmEnabled !== false
+                         ? replaySceneTileReadinessOptions?.camera?.playback?.tilePreloadHorizonMs
+                           ?? REPLAY_TILE_PREWARM_LOOKAHEAD_MS
+                         : 0,
+            signal,
+        })
 
         const result = await exporter.exportMp4({
             signal,
@@ -1617,6 +1790,14 @@ export const runReplayDeferredMp4Export = async ({
                     }
                     globalThis.__?.ui?.replay?.refresh?.({camera: true, suppressMoveEvents: true})
                 }
+                const speedLevel = resolveReplayTileSpeedLevel({
+                    frame,
+                    previousFrame: previousReplayExportFrame,
+                    sample: frameSample,
+                    previousSample: previousReplayExportSample,
+                })
+                previousReplayExportFrame = frame
+                previousReplayExportSample = frameSample
                 publishReplayExportFrameState({
                     plan,
                     replay,
@@ -1633,6 +1814,30 @@ export const runReplayDeferredMp4Export = async ({
                                ?? controller?.sampler?.logicalTrackPath
                                ?? null,
                 })
+                if (replaySceneTileReadinessCoordinator) {
+                    await replaySceneTileReadinessCoordinator.prepareForCapture({
+                        maxMillis: tileReadinessTimeoutMs,
+                        signal,
+                        speedLevel,
+                        settled: Boolean(
+                            frame?.isFirst
+                            || frame?.isLast
+                            || phase?.isFinalSceneFrame
+                            || phase?.isLastPhaseFrame
+                            || phase?.clip,
+                        ),
+                    })
+                }
+                else {
+                    await prepareReplaySceneTilesForCapture({
+                        scene: replayMode?.cesiumScene?.()
+                               ?? globalThis.lgs?.scene
+                               ?? globalThis.lgs?.viewer?.scene
+                               ?? null,
+                        maxMillis: tileReadinessTimeoutMs,
+                        signal,
+                    })
+                }
                 const frameSource = sourceCanvas ?? defaultReplaySourceCanvas()
                 if (frameSource instanceof HTMLCanvasElement) {
                     const cropRect = outputRenderSpec?.cropRect
@@ -1654,7 +1859,6 @@ export const runReplayDeferredMp4Export = async ({
                                 height: composerHeight,
                                 fps: 0,
                                 outputDpr: composerOutputDpr,
-                                flushWebGLBuffer: () => globalThis.lgs?.scene?.render?.(),
                             })
                         }
                         catch {
@@ -1771,6 +1975,8 @@ export const runReplayDeferredMp4Export = async ({
             plan.runtime.exportPausedAt = null
         }
         clearReplayExportFrameState(plan)
+        replaySceneTileReadinessCoordinator?.dispose?.()
+        replaySceneTileReadinessCoordinator = null
         if (typeof replayMode?.restorePlaybackScene === 'function') {
             await replayMode.restorePlaybackScene({force: true})
         }
@@ -1778,6 +1984,8 @@ export const runReplayDeferredMp4Export = async ({
             Object.assign(replay, originalReplayState)
         }
         globalThis.__?.ui?.replay?.refresh?.({camera: true, suppressMoveEvents: true})
+        restoreReplaySceneTileCache?.()
+        restoreReplaySceneTileCache = null
         replayComposer?.dispose?.()
         globalThis.lgs?.scene?.requestRender?.()
     }

@@ -21,6 +21,7 @@
  ******************************************************************************/
 import { APP_KEY, NAVIGATOR, SECOND } from '@Core/constants'
 import { DateTime }                   from 'luxon'
+import { normalizeMediabunnyMetadataTags } from './MediaMetadata'
 import {
     BufferTarget, canEncodeVideo, CanvasSource, getEncodableVideoCodecs, Mp4OutputFormat, Output, QUALITY_HIGH,
     QUALITY_MEDIUM, QUALITY_VERY_HIGH,
@@ -693,7 +694,7 @@ export class ScreenMediaRecorder extends EventTarget {
                                           format,
                                           target: new BufferTarget(),
                                       })
-            await this.#output.setMetadataTags(this.#metadata)
+            await this.#output.setMetadataTags(normalizeMediabunnyMetadataTags(this.#metadata))
             this.#videoSource = new CanvasSource(this.#canvas, this.#getCanvasSourceConfig(outputConfig, safe))
 
             const maximumPacketCount = Number.isFinite(this.#maxDuration)

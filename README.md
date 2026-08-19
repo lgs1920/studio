@@ -46,6 +46,7 @@ The repository already contains the main product surface used by the studio:
 - Privacy-first local workspace for imported journeys and generated media
 - PWA support and offline-friendly caching
 - Boot splash video loading uses browser-supported video element preloading
+- Webapp updates are checked before Studio entry, while installed PWAs use an explicit update dialog and restart after activation
 
 ## Main Features
 
@@ -99,6 +100,7 @@ The repository already contains the main product surface used by the studio:
 - Settings and widget configuration from YAML files in `public/`
 - Shared shortcut catalog displayed in the information drawer, with PDF export
 - PWA service worker and version-aware caching
+- PWA installation and update behavior: [PWA technical documentation](tech-doc/specs/PWA-README.md)
 
 ## Roadmap
 

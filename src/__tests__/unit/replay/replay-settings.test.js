@@ -35,9 +35,10 @@ import {
     defaultJourneyReplaySettings, REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
     REPLAY_CAMERA_HEADING_OFFSET_MAX, REPLAY_CAMERA_POSITION_AHEAD, REPLAY_CAMERA_POSITION_BEHIND, REPLAY_CAMERA_POSITION_SYSTEM,
     REPLAY_CAMERA_PRESET_DEFAULT, REPLAY_CAMERA_PRESET_ULTRA_SMOOTH,
+    REPLAY_READINESS_POLICY_ADAPTIVE, REPLAY_READINESS_POLICY_OFF,
     REPLAY_EFFECT_GLOW, REPLAY_EFFECT_NEON, REPLAY_EFFECT_NONE,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
-    getJourneyReplayCameraPresetKey, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplaySettings,
+    getJourneyReplayCameraPresetKey, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplayReadiness, normalizeJourneyReplaySettings,
 }                                                                      from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { gpx }                                                         from '@tmcw/togeojson'
 import { applyGpxStyleExtensionProperties, extractLgsTrackProperties } from '@Utils/JourneyGpxUtils'
@@ -178,6 +179,30 @@ describe('replay settings normalization', () => {
         expect(camera.driftSensitivity).toBe(0)
         expect(camera.rollSensitivity).toBe(0.35)
         expect(camera.pitchCorrectionSensitivity).toBe(1)
+    })
+
+    it('normalizes tile readiness policy and camera preloading settings', () => {
+        expect(defaultJourneyReplaySettings().readiness).toMatchObject({
+                                                                       enabled: true,
+                                                                       policy: REPLAY_READINESS_POLICY_ADAPTIVE,
+                                                                       prewarmEnabled: true,
+                                                                   })
+        expect(normalizeJourneyReplayReadiness({
+                                                   enabled: false,
+                                                   policy: 'invalid',
+                                                   movingTimeoutMs: 99999,
+                                               })).toMatchObject({
+                                                                        enabled: false,
+                                                                        policy: REPLAY_READINESS_POLICY_ADAPTIVE,
+                                                                        movingTimeoutMs: 5000,
+                                                                    })
+        expect(normalizeJourneyReplayReadiness({policy: REPLAY_READINESS_POLICY_OFF}).policy)
+            .toBe(REPLAY_READINESS_POLICY_OFF)
+        expect(normalizeJourneyReplayCamera({
+                                               playback: {
+                                                   tilePreloadHorizonMs: 99999,
+                                               },
+                                           }).playback.tilePreloadHorizonMs).toBe(3000)
     })
 
     it('keeps a default tolerance zone aligned to the window and clamps custom rectangles', () => {

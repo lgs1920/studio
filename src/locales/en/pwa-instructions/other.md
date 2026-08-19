@@ -7,3 +7,6 @@ To use **LGS1920 Studio**:
     - Click the **bookmark** or **star** icon in your browser's address bar.
     - Save the bookmark to your favorites or home screen.
 3. On mobile devices, check if your browser offers an **Add to Home Screen** option in its menu.
+
+When Studio is installed as a PWA, it checks for new releases automatically. Confirm the update when the Studio dialog
+appears; the application restarts after the update is complete.

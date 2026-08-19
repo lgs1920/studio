@@ -36,13 +36,18 @@ const registerBootSplashMediaLoadingTests = () => {
             'link[rel~="preload"][as="audio"], link[rel~="preload"][as="video"]'
         )
         const splashVideo = indexDocument.querySelector('#lgs-boot-splash video')
+        const splashImage = indexDocument.querySelector('#lgs-boot-splash [data-welcome-background-fallback]')
+        const splashLogo = indexDocument.querySelector('#lgs-boot-splash-logo')
 
         expect(unsupportedMediaPreloadLinks).toHaveLength(0)
         expect(splashVideo).not.toBeNull()
         expect(splashVideo?.hasAttribute('data-welcome-background-media')).toBe(true)
         expect(splashVideo?.getAttribute('preload')).toBe('auto')
+        expect(splashImage).not.toBeNull()
+        expect(splashLogo?.getAttribute('src')).toBe('/assets/logo/logo-horizontal.png')
 
         const splashStyle = indexDocument.querySelector('style')?.textContent ?? ''
+        expect(splashStyle).toContain('#lgs-boot-splash .lgs-boot-splash-background')
         expect(splashStyle).toContain('filter: sepia(0.2) saturate(0.8)')
         expect(splashStyle).not.toContain('blur(')
     }

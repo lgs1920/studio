@@ -5,3 +5,6 @@ To install **LGS1920 Studio** as an application using **Safari** on macOS:
 3. Select **Add to Dock** or **Add to Home Screen** (depending on your device).
 4. Confirm the app name and click **Add** to place the icon in your Dock or home screen.
 5. The app will be accessible like a native application.
+
+After installation, Studio checks for new releases automatically. When an update is ready, confirm the update in the
+Studio dialog; the application restarts after the update is complete.

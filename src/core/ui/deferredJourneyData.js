@@ -17,20 +17,20 @@
 import { TrackUtils } from '@Utils/cesium/TrackUtils'
 import { UIToast }    from '@Utils/UIToast'
 import { preCache }   from '@zumer/snapdom'
-import { WIDGET_GOOGLE_FONTS } from '@Core/constants'
 
+/**
+ * Pre-caches SnapDOM resources and embedded fonts before capture begins.
+ *
+ * @param {object} options - Pre-cache options.
+ * @param {Element|Document} options.root - Document subtree scanned for capture resources.
+ * @returns {Promise<void>} Resolves when SnapDOM finishes pre-caching resources.
+ */
 export const precacheSnapdomAssets = ({
                                           root = document.body,
-                                          widgetGoogleFonts = WIDGET_GOOGLE_FONTS,
-                                      } = {}) => preCache({
-                                                              root,
-                                                              embedFonts: true,
-                                                              localFonts: widgetGoogleFonts.map(family => ({
-                                                                  family,
-                                                                  src:    `https://fonts.googleapis.com/css2?family=${family.replace(/\s+/g, '+')}:wght@400;700&display=swap`,
-                                                                  weight: 400,
-                                                              })),
-                                                          })
+                                      } = {}) => preCache(root, {
+                                          embedFonts: true,
+                                          fontStylesheetDomains: ['fonts.googleapis.com'],
+                                      })
 
 export const runDeferredJourneyDataLoad = async ({
                                                      trackUtils = TrackUtils,

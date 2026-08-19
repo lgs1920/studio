@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { render } from '@testing-library/react'
+import { fireEvent, render } from '@testing-library/react'
 import { LGSPopup } from '@Components/LGSPopup'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -22,12 +22,16 @@ const {waPopupMock} = vi.hoisted(() => ({
     waPopupMock: vi.fn(),
 }))
 
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
-    WaPopup: props => {
+vi.mock('@web.awesome.me/webawesome-pro/dist/react', async () => {
+    const { forwardRef } = await vi.importActual('react')
+
+    return {
+        WaPopup: forwardRef((props, ref) => {
         waPopupMock(props)
-        return <div data-testid="wa-popup">{props.children}</div>
-    },
-}))
+        return <div ref={ref} data-testid="wa-popup">{props.children}</div>
+        }),
+    }
+})
 
 describe('LGSPopup', () => {
     it('enables flip and shift by default', () => {
@@ -44,5 +48,29 @@ describe('LGSPopup', () => {
             flip:   true,
             shift:  true,
         }))
+    })
+
+    it('does not close on pointer down from an additional outside anchor', () => {
+        const onRequestClose = vi.fn()
+        const view = render(
+            <>
+                <button id="popup-anchor" type="button">{'Popup anchor'}</button>
+                <button id="popup-toggle" type="button">{'Popup toggle'}</button>
+                <LGSPopup
+                    active
+                    anchor="popup-anchor"
+                    outsideAnchors={['popup-toggle']}
+                    onRequestClose={onRequestClose}
+                >
+                    <div>Popup content</div>
+                </LGSPopup>
+            </>,
+        )
+
+        fireEvent.pointerDown(view.getByRole('button', {name: 'Popup toggle'}))
+        expect(onRequestClose).not.toHaveBeenCalled()
+
+        fireEvent.pointerDown(document.body)
+        expect(onRequestClose).toHaveBeenCalledTimes(1)
     })
 })

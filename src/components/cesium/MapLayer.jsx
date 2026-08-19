@@ -226,6 +226,7 @@ export const MapLayer = (props) => {
 
     const isBase = props.type === BASE_ENTITY
     const isLayerType = [BASE_ENTITY, OVERLAY_ENTITY].includes(props.type)
+    const isBase3DActive = Boolean(layers.base3d)
     const manager = __.layersAndTerrainManager
     const snapLayer = isBase ? layers.base : layers.overlay
     const theLayer = isLayerType && snapLayer ? manager.getEntityProxy(snapLayer) : null
@@ -253,7 +254,7 @@ export const MapLayer = (props) => {
     const minLevel = readLevelOption(layerMinimumLevel)
     const maxLevel = readLevelOption(layerMaximumLevel)
     const imageryProvider = useMemo(() => {
-        if (!isLayerType || !layerType || !layerTile) {
+        if (!isLayerType || !layerType || !layerTile || (isBase && isBase3DActive)) {
             return null
         }
 
@@ -380,6 +381,8 @@ export const MapLayer = (props) => {
         return null
     }, [
         isLayerType,
+        isBase,
+        isBase3DActive,
         props.type,
         layerType,
         layerTile,
@@ -404,7 +407,7 @@ export const MapLayer = (props) => {
     ])
 
     const ionImageryProvider = useMemo(() => {
-        if (!theLayer || layerTile || !theLayer?.ionAssetId) {
+        if (!theLayer || layerTile || !theLayer?.ionAssetId || (isBase && isBase3DActive)) {
             return null
         }
 
@@ -413,7 +416,7 @@ export const MapLayer = (props) => {
         }
 
         return IonLayerUtils.imageryProviderFromLayer(theLayer)
-    }, [ion.source, layerTile, theLayer])
+    }, [ion.source, isBase, isBase3DActive, layerTile, theLayer])
 
     const shouldDrapeOnBase3D = !isBase && layers.base3d && lgs.base3dTileset?.imageryLayers
     const targetCollectionKey = shouldDrapeOnBase3D ? 'base3d' : 'globe'

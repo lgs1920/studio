@@ -1,0 +1,53 @@
+.lgs-error-dialog::part(body) {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+}
+
+.error-diagnostic-details[open] {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+}
+
+.error-diagnostic-details[open]::part(details),
+.error-diagnostic-details[open]::part(content) {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+}
+
+.error-diagnostic-details[open]::part(details) {
+    height: 100%;
+}
+
+.error-diagnostic-details[open]::part(content) {
+    flex: 1 1 auto;
+    overflow: hidden;
+}
+
+.error-diagnostic-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: var(--lgs-gutter-s);
+}
+
+.error-diagnostic-report {
+    display: flex;
+    min-height: 12rem;
+    height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.error-diagnostic-report pre {
+    display: block;
+    min-height: 100%;
+    margin: 0;
+    overflow: visible;
+    white-space: pre-wrap;
+}

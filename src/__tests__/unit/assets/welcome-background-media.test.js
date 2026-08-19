@@ -8,6 +8,7 @@
  ******************************************************************************/
 
 import {
+    applyWelcomeBackgroundToImage,
     applyWelcomeBackgroundToVideo,
     bannerMediaCatalog,
     getWelcomeBackgroundMedia,
@@ -120,6 +121,23 @@ describe('welcome background media catalog', () => {
         expect(videoElement.playbackRate).toBe(WELCOME_BACKGROUND_PLAYBACK_RATE)
         expect(videoElement.querySelector('source')?.src).toContain('/assets/media/20260812-15404528-3840x2160.mp4')
         expect(videoElement.hidden).toBe(false)
+    })
+
+    it('applies the resolved fallback image to the boot splash', () => {
+        const imageElement = document.createElement('img')
+
+        expect(applyWelcomeBackgroundToImage(imageElement, {
+            imageSources: [{src: '/assets/media/fallback.webp', type: 'image/webp'}],
+        })).toBe(true)
+        expect(imageElement.src).toContain('/assets/media/fallback.webp')
+        expect(imageElement.hidden).toBe(false)
+    })
+
+    it('hides the fallback image when the selection has no image source', () => {
+        const imageElement = document.createElement('img')
+
+        expect(applyWelcomeBackgroundToImage(imageElement, {imageSources: []})).toBe(false)
+        expect(imageElement.hidden).toBe(true)
     })
 
     it('exposes the supported catalog dimensions for future additions', () => {
