@@ -14,11 +14,13 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
+import { ErrorDiagnosticDetails } from '@Components/Modals/ErrorDiagnosticDetails'
 import {
-    WaButton, WaCallout, WaCopyButton, WaDetails, WaDialog, WaIcon,
+    collectErrorDiagnostic, formatErrorDiagnostic, sanitizeErrorHtml,
+} from '@Utils/ErrorDiagnosticUtils'
+import {
+    WaButton, WaCallout, WaDialog, WaIcon,
 }                        from '@web.awesome.me/webawesome-pro/dist/react'
-import { useState }      from 'react'
 
 const BACKEND_SUPPORT_EMAIL = 'studio@lgs1920.fr'
 const BACKEND_SUPPORT_SUBJECT = '[Studio] Backend stopped'
@@ -30,13 +32,18 @@ const BACKEND_SUPPORT_SUBJECT = '[Studio] Backend stopped'
  * @returns {JSX.Element}
  */
 export const InitErrorMessage = ({error}) => {
-    const [isOpen, setIsOpen] = useState(false)
     const text = 'We\'re sorry for the interruption.'
     const remark = 'Something didn\'t go quite as planned on our end.'
     const errorType = error?.type ? `[${String(error.type)}]` : ''
     const errorMessage = String(error?.message ?? error?.cause?.message ?? error ?? 'Unknown initialization error')
+    const errorMessageHtml = sanitizeErrorHtml(errorMessage)
     const errorStack = String(error?.stack ?? '')
     const studioName = lgs?.servers?.studio?.name ?? 'LGS1920'
+    const diagnostic = collectErrorDiagnostic({
+        error,
+        suggestedFix: 'Reload Studio. If the problem persists, contact Studio support.',
+    })
+    diagnostic.details = formatErrorDiagnostic(diagnostic)
     const backendSupportBody = [
         errorType && `Type: ${errorType}`,
         `Error: ${errorMessage}`,
@@ -48,13 +55,15 @@ export const InitErrorMessage = ({error}) => {
         <WaDialog label={`${studioName} stopped!`}
                   open={true}
                   withFooter
+                  className="lgs-theme lgs-error-dialog"
                   id={'init-error-modal'}
         >
             <div className="lgs--init-error-message">
 
                 <WaCallout variant="danger" open>
                     <WaIcon slot="icon" name="triangle-exclamation" variant="regular"/>
-                    {errorType} {errorMessage}<br/><br/>
+                    {errorType}{' '}
+                    <span dangerouslySetInnerHTML={{__html: errorMessageHtml}}/><br/><br/>
 
                     <div>
                         <span>{text}</span><br/>
@@ -62,29 +71,10 @@ export const InitErrorMessage = ({error}) => {
                     </div>
                 </WaCallout>
 
-                <WaDetails
-                    icon-placement="start"
-                    onWaShow={() => setIsOpen(true)}
-                    onWaHide={() => setIsOpen(false)}
-                >
-                    <span slot="summary">
-                        {'More Information'}
-                        <WaCopyButton
-                            style={{visibility: isOpen ? 'visible' : 'hidden'}}
-                            feedback-duration="1000"
-                            from="lgs--init-error-stack"
-                            success-label={'Error copied to clipboard!'}
-                            error-label={'Whoops, your browser doesn\'t support this!'}
-                        ></WaCopyButton>
-                    </span>
-                    <WaIcon slot="expand-icon" name="square-plus" variant="regular"/>
-                    <WaIcon slot="collapse-icon" name="square-minus" variant="regular" rotate="90"/>
-                    <pre id="lgs--init-error-stack">
-                        <LGSScrollbars>
-                            {errorStack}
-                        </LGSScrollbars>
-                    </pre>
-                </WaDetails>
+                <ErrorDiagnosticDetails
+                    diagnostic={diagnostic}
+                    id="lgs--init-error-details"
+                />
             </div>
 
             <div slot="footer" className="buttons-bar">

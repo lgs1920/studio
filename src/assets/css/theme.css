@@ -108,6 +108,8 @@ html {
     --lgs-context-menu-zindex: calc(var(--lgs-ui-layer-zindex) + 9000);
     --lgs-video-recording-settings-toolbar-zindex: calc(var(--lgs-context-menu-zindex) - 2);
     --lgs-video-recorder-toolbar-zindex: calc(var(--lgs-context-menu-zindex) + 1);
+    /* Error dialogs must remain above widgets, crop controls, and recorder toolbars. */
+    --lgs-error-dialog-zindex: calc(var(--lgs-video-recorder-toolbar-zindex) + 100);
 
     /* Brand button tokens for filled, hover, outlined and plain states. */
     --lgs-button-border-color: color-mix(in oklab, var(--wa-color-brand) 85%, black 12%);

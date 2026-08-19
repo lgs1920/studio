@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { JourneyFilesList }                                   from '@Components/FileLoader/JourneyFilesList'
+import { ErrorDiagnosticDetails }                              from '@Components/Modals/ErrorDiagnosticDetails'
 import {
     journeySampleUrl,
     normalizeJourneySamplesCatalog,
@@ -23,11 +24,11 @@ import {
     ALREADY_IMPORTED, IMPORT_FAILED, IMPORT_NOT_SUPPORTED, IMPORT_SUCCESS, JOURNEY_EXISTS, JOURNEY_KO, JOURNEY_OK,
     JOURNEY_WAITING, TrackUtils,
 }                                                             from '@Utils/cesium/TrackUtils'
-import { formatBuildInfo }                                  from '@Utils/BuildInfoUtils'
 import { FileUtils }                                          from '@Utils/FileUtils'
+import { collectErrorDiagnostic, formatErrorDiagnostic }      from '@Utils/ErrorDiagnosticUtils'
 import { UIToast }                                            from '@Utils/UIToast'
 import {
-    WaButton, WaCopyButton, WaDetails, WaDialog, WaDivider, WaIcon, WaInput, WaOption, WaSelect, WaTextarea, WaTooltip,
+    WaButton, WaDialog, WaDivider, WaIcon, WaInput, WaOption, WaSelect, WaTooltip,
 }                                                             from '@web.awesome.me/webawesome-pro/dist/react'
 import { useId, useMemo, useRef, useState }                  from 'react'
 import { v4 as uuid }                                         from 'uuid'
@@ -115,30 +116,6 @@ const getImportErrorRecommendation = error => {
 
     return 'Download the file again, save it locally on the device, and retry the import.'
 }
-
-/**
- * Builds a complete diagnostic report for a failed journey import.
- * @param {Object} data import diagnostic data
- * @returns {string}
- */
-const formatImportDiagnostic = data => [
-    `Studio version: ${data.version}`,
-    `Studio build: ${data.build}`,
-    `Platform: ${data.platform}`,
-    `Browser: ${data.browser}`,
-    `File name: ${data.fileName}`,
-    `File type: ${data.fileType}`,
-    `File size: ${data.fileSize}`,
-    `File modified: ${data.fileModified}`,
-    `Read strategy: ${data.readStrategy}`,
-    `Error name: ${data.errorName}`,
-    `Error code: ${data.errorCode}`,
-    '',
-    `Suggested fix: ${data.recommendation}`,
-    '',
-    'Original error:',
-    data.error,
-].join('\n')
 
 const getSupportedExtension = (fileName = '') => {
     const extension = FileUtils.getExtension(fileName).toLowerCase()
@@ -294,7 +271,6 @@ export const JourneyLoaderUI = (props) => {
     const [sampleSelection, setSampleSelection] = useState('')
     const [sampleCatalogRevision, setSampleCatalogRevision] = useState(0)
     const [importError, setImportError] = useState(null)
-    const [reportOpen, setReportOpen] = useState(false)
 
     const {fileList} = useSnapshot(lgs.stores.main.components.fileLoader)
     const samplesSettings = useSnapshot(lgs.settings.samples)
@@ -327,45 +303,18 @@ export const JourneyLoaderUI = (props) => {
      * @param {File|Object} fileMetadata
      */
     const showImportError = (fileName, error, fileMetadata = {}) => {
-        const errorDetails = formatImportError(error)
-        const browser = typeof navigator === 'undefined' ? 'Unknown browser' : navigator.userAgent
         const recommendation = getImportErrorRecommendation(error)
-        const fileSize = Number.isFinite(fileMetadata.size) ? `${fileMetadata.size} bytes` : 'Unknown'
-        const fileModified = fileMetadata.lastModified
-            ? new Date(fileMetadata.lastModified).toISOString()
-            : 'Unknown'
-        const diagnostic = {
-            version:        lgs?.versions?.studio ?? 'Unknown version',
-            build:          formatBuildInfo(lgs?.build),
-            platform:       lgs?.platform ?? 'Unknown platform',
-            browser,
-            fileName:       fileName || fileMetadata.name || 'Unknown file',
-            fileType:       fileMetadata.type || 'Unknown',
-            fileSize,
-            fileModified,
-            readStrategy:   Array.isArray(error?.readAttempts)
-                ? error.readAttempts.map(attempt => attempt.strategy).join(', ')
-                : 'file.text, FileReader.readAsText, file.arrayBuffer, FileReader.readAsArrayBuffer',
-            errorName:      error?.name ?? 'Unknown',
-            errorCode:      error?.code ?? 'Unknown',
-            recommendation,
-            error:          errorDetails,
-        }
+        const diagnostic = collectErrorDiagnostic({
+            error,
+            file:          fileMetadata,
+            fileName,
+            suggestedFix:  recommendation,
+        })
 
         const nextImportError = {
             fileName:       diagnostic.fileName,
-            details:        formatImportDiagnostic(diagnostic),
+            details:        formatErrorDiagnostic(diagnostic),
             recommendation,
-            version:        diagnostic.version,
-            build:          diagnostic.build,
-            platform:       diagnostic.platform,
-            browser:        diagnostic.browser,
-            fileType:       diagnostic.fileType,
-            fileSize,
-            fileModified,
-            readStrategy:   diagnostic.readStrategy,
-            errorName:      diagnostic.errorName,
-            errorCode:      diagnostic.errorCode,
         }
 
         if (_activeImportError.current) {
@@ -374,7 +323,6 @@ export const JourneyLoaderUI = (props) => {
         }
 
         _activeImportError.current = nextImportError
-        setReportOpen(false)
         setImportError(nextImportError)
     }
 
@@ -384,7 +332,6 @@ export const JourneyLoaderUI = (props) => {
     const clearImportError = () => {
         const nextImportError = _importErrorQueue.current.shift() ?? null
         _activeImportError.current = nextImportError
-        setReportOpen(false)
         setImportError(nextImportError)
     }
 
@@ -394,7 +341,6 @@ export const JourneyLoaderUI = (props) => {
     const clearAllImportErrors = () => {
         _importErrorQueue.current = []
         _activeImportError.current = null
-        setReportOpen(false)
         setImportError(null)
     }
 
@@ -1140,7 +1086,7 @@ export const JourneyLoaderUI = (props) => {
             id={'journey-import-error-modal'}
             label={'Journey import error'}
             onWaRequestClose={clearImportError}
-            className={'lgs-theme'}
+            className={'lgs-theme lgs-error-dialog'}
         >
             <div className="journey-import-error">
                 <p>
@@ -1149,31 +1095,10 @@ export const JourneyLoaderUI = (props) => {
                 <p>
                     {importError?.recommendation ?? 'Download the file again and retry the import.'}
                 </p>
-                {reportOpen && (
-                    <div className="journey-import-error__copy">
-                        <WaCopyButton
-                            from="journey-import-error-details.value"
-                            copy-label="Copy error details"
-                            success-label="Error details copied"
-                            error-label="Unable to copy error details"
-                        />
-                    </div>
-                )}
-                <WaDetails
-                    open={reportOpen}
-                    summary="Technical report"
-                    onWaShow={() => setReportOpen(true)}
-                    onWaHide={() => setReportOpen(false)}
-                >
-                    <WaTextarea
-                        id="journey-import-error-details"
-                        label="Complete diagnostic report"
-                        value={importError?.details ?? ''}
-                        rows={14}
-                        resize="none"
-                        readOnly
-                    />
-                </WaDetails>
+                <ErrorDiagnosticDetails
+                    diagnostic={importError}
+                    id="journey-import-error-details"
+                />
             </div>
         </WaDialog>
         </>

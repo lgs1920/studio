@@ -19,6 +19,7 @@
 import {
     APP_STUDIO, BANNER_HIDE_DELAY_INSTALL, NAVIGATOR, OS_ICONS, SECOND,
 }                              from '@Core/constants'
+import { ErrorDiagnosticDetails } from '@Components/Modals/ErrorDiagnosticDetails'
 import androidInstructions     from '@Locales/en/pwa-instructions/android.md?raw'
 import chromeEdgeInstructions  from '@Locales/en/pwa-instructions/chrome-edge.md?raw'
 import firefoxInstructions     from '@Locales/en/pwa-instructions/firefox.md?raw'
@@ -26,6 +27,9 @@ import iosInstructions         from '@Locales/en/pwa-instructions/ios.md?raw'
 import otherInstructions       from '@Locales/en/pwa-instructions/other.md?raw'
 import safariMacOSInstructions from '@Locales/en/pwa-instructions/safari-macos.md?raw'
 import { WaButton, WaCallout, WaDialog, WaIcon, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
+import {
+    collectErrorDiagnostic, formatErrorDiagnostic, sanitizeErrorHtml,
+} from '@Utils/ErrorDiagnosticUtils'
 import { useEffect, useState } from 'react'
 import ReactMarkdown           from 'react-markdown'
 import { proxy, useSnapshot }  from 'valtio'
@@ -126,6 +130,25 @@ export const AppUpdate = ({mode = 'banner'}) => {
     const updateMessage = updateError
         || updaterStore.updateApplyError
         || `You are using ${APP_STUDIO} version ${appContext.versions?.studio}. A new version ${updaterStore.buildTime ? `(${updaterStore.buildTime})` : ''} is ready to be installed.`
+    const updateDiagnostic = updateError || updaterStore.updateApplyError
+        ? collectErrorDiagnostic({
+            error:        new Error(updateError || updaterStore.updateApplyError),
+            suggestedFix: 'Retry the update. If the problem persists, reload Studio and try again.',
+        })
+        : null
+    const installDiagnostic = installError && !installError.includes('successful') && !installError.includes('cancelled')
+        ? collectErrorDiagnostic({
+            error:        new Error(installError),
+            suggestedFix: 'Retry the installation. If the problem persists, install Studio from the browser menu.',
+        })
+        : null
+
+    if (updateDiagnostic) {
+        updateDiagnostic.details = formatErrorDiagnostic(updateDiagnostic)
+    }
+    if (installDiagnostic) {
+        installDiagnostic.details = formatErrorDiagnostic(installDiagnostic)
+    }
 
     /**
      * Handles PWA installation: triggers prompt if available, otherwise shows instructions dialog.
@@ -251,11 +274,17 @@ export const AppUpdate = ({mode = 'banner'}) => {
             <WaDialog
                 open={showUpdateDialog}
                 label={`${APP_STUDIO} update available`}
-                className="lgs-theme app-update-dialog"
+                className="lgs-theme lgs-error-dialog app-update-dialog"
                 onWaRequestClose={handleDismissUpdate}
             >
                 <p>{isUpdateApplying ? 'The update is being installed. Please wait.' : updateMessage}</p>
                 <p>{'The application will restart once the update is complete.'}</p>
+                {updateDiagnostic && !isUpdateApplying && (
+                    <ErrorDiagnosticDetails
+                        diagnostic={updateDiagnostic}
+                        id="app-update-error-details"
+                    />
+                )}
                 {isUpdateApplying ? (
                     <div className="app-update-progress" role="status">
                         <WaSpinner/>
@@ -342,7 +371,7 @@ export const AppUpdate = ({mode = 'banner'}) => {
             >
                 <WaIcon slot="icon" name={automaticUpdateError ? 'triangle-exclamation' : 'arrows-rotate'} variant="regular"/>
                 <div className="lgs-webapp-update-callout-content">
-                    <span>{message}</span>
+                    <span dangerouslySetInnerHTML={{__html: sanitizeErrorHtml(message)}}/>
                     {automaticUpdateError && (
                         <WaButton size="s" variant="brand" onClick={handleRelaunchStudio}>
                             <WaIcon slot="start" name="arrows-rotate" variant="regular"/>
@@ -361,7 +390,7 @@ export const AppUpdate = ({mode = 'banner'}) => {
         <WaDialog
             open={showInstallingDialog}
             label="Installing LGS1920 Studio"
-            noHeader className="app-installing-dialog"
+            noHeader className="lgs-error-dialog app-installing-dialog"
         >
             <div className="installing-dialog signage-style" style={{textAlign: 'center'}}>
                 {installError ? (
@@ -377,6 +406,12 @@ export const AppUpdate = ({mode = 'banner'}) => {
                             color:     installError.includes('successful') ? 'green' : 'red',
                             marginTop: '10px',
                         }}>{installError}</p>
+                        {installDiagnostic && (
+                            <ErrorDiagnosticDetails
+                                diagnostic={installDiagnostic}
+                                id="app-install-error-details"
+                            />
+                        )}
                     </>
                 ) : (
                      // Display spinner during installation

@@ -15,8 +15,15 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
     WaCallout: ({children, ...props}) => <div {...props}>{children}</div>,
     WaDialog: ({children, open}) => open ? <div role="dialog">{children}</div> : null,
+    WaCopyButton: () => null,
+    WaDetails: ({children}) => <div>{children}</div>,
     WaIcon: () => null,
     WaSpinner: () => null,
+    WaTextarea: () => null,
+}))
+
+vi.mock('@Components/MainUI/LGSScrollbars', () => ({
+    LGSScrollbars: ({children}) => <>{children}</>,
 }))
 
 import {AppUpdate} from '@Components/AppUpdate'

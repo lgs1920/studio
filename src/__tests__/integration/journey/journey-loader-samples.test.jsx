@@ -277,9 +277,9 @@ describe('journey sample catalog', () => {
         await waitFor(() => {
             expect(screen.getByText('The file "downloaded-track.gpx" could not be imported.')).toBeTruthy()
             expect(screen.queryByRole('button', {name: 'Copy error'})).toBeNull()
-            fireEvent.click(screen.getByText('Technical report'))
-            expect(screen.getByLabelText('Complete diagnostic report').value).toContain('Unexpected GPX parser error')
-            expect(screen.getByRole('button', {name: 'Copy error'}).getAttribute('data-copy-from')).toBe('journey-import-error-details.value')
+            fireEvent.click(screen.getByText('Complete diagnostic report'))
+            expect(screen.getByText(/Unexpected GPX parser error/)).not.toBeNull()
+            expect(screen.getByRole('button', {name: 'Copy error'}).getAttribute('data-copy-from')).toBe('journey-import-error-details')
         })
     })
 
@@ -295,8 +295,8 @@ describe('journey sample catalog', () => {
             expect(screen.getByText('The file "downloaded-track.gpx.xml" could not be imported.')).toBeTruthy()
         })
 
-        fireEvent.click(screen.getByText('Technical report'))
-        expect(screen.getByLabelText('Complete diagnostic report').value).toContain('Format not supported')
+        fireEvent.click(screen.getByText('Complete diagnostic report'))
+        expect(screen.getByText(/Format not supported/)).not.toBeNull()
     })
 
     it('keeps the multi-file picker on Android browsers', () => {
