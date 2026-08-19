@@ -27,7 +27,7 @@ import {
     REPLAY_JOURNEY_TOOLBAR_VISIBILITY_EVENT,
 }                                                                 from '@Core/ui/replay/JourneyReplayMode'
 import {
-    WaButton, WaCard, WaIcon, WaSpinner, WaTooltip,
+    WaButton, WaCard, WaIcon, WaTooltip,
 } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useEffect, useRef, useState } from 'react'
 import { useSnapshot }                                               from 'valtio'
@@ -56,7 +56,6 @@ export const JourneyToolbar = (props) => {
     const $editorStore = lgs.theJourneyEditorProxy
     const editorStore = useSnapshot($editorStore)
 
-    const autoRotate = useSnapshot(lgs.settings.ui.camera.start.rotate)
     const replayState = useSnapshot(lgs.stores.replay)
     const replayActive = replayState.active || replayState.playing || replayState.paused
     const rotationAllowedByJourneyReplay = !replayActive && replayState.orbitAllowed !== false
@@ -64,7 +63,6 @@ export const JourneyToolbar = (props) => {
     const [journeyToolbarTemporarilyHidden, setJourneyToolbarTemporarilyHidden] = useState(
         __.ui.replay?.isJourneyToolbarTemporarilyHidden?.() === true,
     )
-    const rotationAllowed = useRef(false)
     const manualRotate = useRef(null)
     const journeyOrbitActive = rotate.running
 
@@ -130,7 +128,6 @@ export const JourneyToolbar = (props) => {
      */
     const forceRotate = async () => {
         if ($rotate.running) {
-            rotationAllowed.current = false
             await stopRotate()
             return
         }
@@ -138,8 +135,7 @@ export const JourneyToolbar = (props) => {
         if (!rotationAllowedByJourneyReplay) {
             return
         }
-        rotationAllowed.current = !rotationAllowed.current
-        await focusOnJourney()
+        await focusOnJourney({rotate: true})
     }
 
     /**
@@ -149,30 +145,25 @@ export const JourneyToolbar = (props) => {
     const maybeRotate = async (event) => {
         event.stopPropagation()
         if (rotate.running) {
-            rotationAllowed.current = false
             await stopRotate()
-            return
-        }
-        if (!rotationAllowedByJourneyReplay) {
             await focusOnJourney({rotate: false})
             return
         }
-        rotationAllowed.current = autoRotate.journey
-        await focusOnJourney()
+        await focusOnJourney({rotate: false})
     }
 
     /**
      * Focuses the camera on the current journey, optionally resetting the camera and enabling rotation.
      */
-    const focusOnJourney = async ({rotate: shouldRotate = rotationAllowed.current || autoRotate.journey} = {}) => {
+    const focusOnJourney = async ({rotate: shouldRotate = false} = {}) => {
         if ($rotate.running) {
             await __.ui.cameraManager.stopRotate()
         }
         await setJourneyVisibility(true)
-        lgs.theJourney.focus({
-                                 resetCamera: true,
-                                 rotate: shouldRotate,
-                             })
+        await lgs.theJourney.focus({
+                                      resetCamera: true,
+                                      rotate: shouldRotate,
+                                  })
     }
 
     useEffect(() => {}, [replayRuntime.active, replayRuntime.playing, replayRuntime.paused])
@@ -244,48 +235,38 @@ export const JourneyToolbar = (props) => {
                     <>
                         {editorStore.journey?.visible &&
                             <>
-                                {!autoRotate.journey &&
-                                    <>
-                                        <WaTooltip for="rotate-journey-toolbar">
-                                            {
-                                                journeyOrbitActive
-                                                ? 'Stop orbit'
-                                                : 'Start orbit'
-                                            }
-                                        </WaTooltip>
-
-                                        <WaButton
-                                            variant="brand"
-                                            appearance="plain"
-                                            id="rotate-journey-toolbar"
-                                            ref={manualRotate}
-                                            onClick={forceRotate}
-                                            disabled={!rotationAllowedByJourneyReplay && !rotate.running}
-                                            size="s"
-                                        >
-                                            {journeyOrbitActive
-                                             ? (<WaSpinner size="s"/>)
-                                             : (<WaIcon name={FOCUS_ICON} variant="regular"/>)
-                                            }
-                                        </WaButton>
-                                    </>
-                                }
-                                    <WaTooltip for="focus-journey-toolbar">{
+                                <WaTooltip for="rotate-journey-toolbar">
+                                    {
                                         journeyOrbitActive
                                         ? 'Stop orbit'
-                                        : 'Focus on journey'
+                                        : 'Start orbit'
                                     }
-                                    </WaTooltip>
+                                </WaTooltip>
+
+                                <WaButton
+                                    variant="brand"
+                                    appearance="plain"
+                                    id="rotate-journey-toolbar"
+                                    ref={manualRotate}
+                                    onClick={forceRotate}
+                                    disabled={!rotationAllowedByJourneyReplay && !rotate.running}
+                                    size="s"
+                                >
+                                    <WaIcon
+                                        name={ROTATION_ICON}
+                                        variant="regular"
+                                        animation={journeyOrbitActive ? 'spin' : 'none'}
+                                    />
+                                </WaButton>
+
+                                <WaTooltip for="focus-journey-toolbar">{'Focus on journey'}</WaTooltip>
                                     <WaButton
                                         id="focus-journey-toolbar"
                                         variant="brand"
                                         appearance="plain"
                                         onClick={maybeRotate}
                                     >
-                                        {journeyOrbitActive
-                                        ? (<WaIcon name={ROTATION_ICON} variant="regular" animation="spin"/>)
-                                        : (<WaIcon name={FOCUS_ICON} variant="regular"/>)
-                                        }
+                                        <WaIcon name={FOCUS_ICON} variant="regular"/>
                                     </WaButton>
                             </>
                         }

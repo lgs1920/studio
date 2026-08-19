@@ -37,8 +37,7 @@ vi.mock('@Editor/Utils', () => ({
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaButton: ({children, ...props}) => <button type="button" {...props}>{children}</button>,
     WaCard: ({children, ...props}) => <div {...props}>{children}</div>,
-    WaIcon: ({name}) => <span data-icon={name}/>,
-    WaSpinner: () => <span data-testid="spinner"/>,
+    WaIcon: ({name, animation}) => <span data-animation={animation} data-icon={name}/>,
     WaTooltip: () => null,
 }))
 
@@ -116,14 +115,18 @@ describe('JourneyToolbar orbit toggle', () => {
         globalThis.lgs = undefined
     })
 
-    it('stops the running orbit without relaunching it', async () => {
+    it('stops the running orbit and focuses the journey', async () => {
         const {container} = render(<JourneyToolbar/>)
 
-        expect(container.querySelector('[data-testid="spinner"]')).toBeTruthy()
+        expect(container.querySelector('[data-icon="arrows-rotate"][data-animation="spin"]')).toBeTruthy()
+        expect(container.querySelector('#focus-journey-toolbar [data-icon="crosshairs-simple"]')).toBeTruthy()
         fireEvent.click(container.querySelector('#focus-journey-toolbar'))
 
         await waitFor(() => expect(globalThis.__.ui.cameraManager.stopRotate).toHaveBeenCalled())
-        expect(globalThis.lgs.theJourney.focus).not.toHaveBeenCalled()
+        await waitFor(() => expect(globalThis.lgs.theJourney.focus).toHaveBeenCalledWith({
+            resetCamera: true,
+            rotate:      false,
+        }))
     })
 
     it('stops the running orbit from the focus button without relaunching it', async () => {
@@ -133,5 +136,27 @@ describe('JourneyToolbar orbit toggle', () => {
 
         await waitFor(() => expect(globalThis.__.ui.cameraManager.stopRotate).toHaveBeenCalled())
         expect(globalThis.lgs.theJourney.focus).not.toHaveBeenCalled()
+    })
+
+    it('keeps both rotation and focus controls visible with automatic rotation enabled', () => {
+        globalThis.lgs.settings.ui.camera.start.rotate.journey = true
+        globalThis.lgs.stores.ui.mainUI.rotate.running = false
+        const {container} = render(<JourneyToolbar/>)
+
+        expect(container.querySelector('#rotate-journey-toolbar')).toBeTruthy()
+        expect(container.querySelector('#rotate-journey-toolbar [data-icon="arrows-rotate"][data-animation="none"]')).toBeTruthy()
+        expect(container.querySelector('#focus-journey-toolbar')).toBeTruthy()
+    })
+
+    it('focuses without starting an orbit when the focus control is clicked while idle', async () => {
+        globalThis.lgs.stores.ui.mainUI.rotate.running = false
+        const {container} = render(<JourneyToolbar/>)
+
+        fireEvent.click(container.querySelector('#focus-journey-toolbar'))
+
+        await waitFor(() => expect(globalThis.lgs.theJourney.focus).toHaveBeenCalledWith({
+            resetCamera: true,
+            rotate:      false,
+        }))
     })
 })
