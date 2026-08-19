@@ -321,10 +321,34 @@ export const VideoRecordingScreenArea = memo(() => {
                 return false
             }
 
+            const recordingDate = new Date()
+            const recordingDateLabel = recordingDate.toLocaleDateString('sv-SE')
+            const journeyTitle = lgs.theJourney?.title?.trim() || ''
+            const journeyDate = lgs.theJourney?.getDate?.()
+            const formattedJourneyDate = __.ui?.ui?.formatJourneyDurationDates?.(journeyDate) ?? {}
+            const journeyDateTime = [formattedJourneyDate.prefix, formattedJourneyDate.sufix]
+                .filter(Boolean)
+                .join(' ')
+            const journeyLocation = lgs.theJourney?.location?.trim() || ''
+            const recordingComment = [journeyTitle, journeyDateTime, journeyLocation]
+                .filter(Boolean)
+                .concat('', `Recorded on ${recordingDateLabel}`)
+                .join('\n')
             const recordingMetadata = {
+                status: 'draft',
                 artist: lgs.servers.studio.name,
-                date: new Date(),
-                album: LGS_PROJECT,
+                date: recordingDate,
+                album: 'Your Adventures',
+                genre: 'Adventures Replay',
+                publisher: 'LGS1920 Studio',
+                encodedBy: 'Mediabunny',
+                comment: recordingComment,
+                raw: {
+                    '©pub': 'LGS1920 Studio',
+                    '©too': 'Mediabunny',
+                },
+                ...(journeyTitle ? {title: `${journeyTitle} (draft version)`} : {}),
+                ...(lgs.theJourney?.title ? {description: lgs.theJourney.title} : {}),
             }
             if (isJourneyReplaySyncRequested()) {
                 // Prepare the deferred master export as soon as the draft starts.
