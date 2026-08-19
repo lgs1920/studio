@@ -854,3 +854,23 @@
 ## 2026-08-19 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/df073f0901ebbb101bc59d1bc7eb211c4780c6c1)
 
 - Recorded automatically from Git history.
+
+## 2026-08-19 — [`fix: add separate journey focus control (#445)`](https://github.com/lgs1920/studio/commit/c309e4480742709fd62088515089e2d0c9744289)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/b224453fa98179dfbcca38be7b4f2ab7c3061532)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`fix: add journey metadata to recordings`](https://github.com/lgs1920/studio/commit/bf8794cda390c856d68236105c54b90358a7fc79)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`fix: preserve metadata in HQ exports`](https://github.com/lgs1920/studio/commit/59ae000967eadd7a537a1f2fb46a402010c56a33)
+
+- Fixes #467
+
+## 2026-08-19 — [`Merge branch 'fix/replay-video-stats-overlay' into 1.0.0`](https://github.com/lgs1920/studio/commit/6afb4f6c3d0ba043bc59f8a1052b20fd49f03212)
+
+- Recorded automatically from Git history.
