@@ -854,3 +854,11 @@
 ## 2026-08-19 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/df073f0901ebbb101bc59d1bc7eb211c4780c6c1)
 
 - Recorded automatically from Git history.
+
+## 2026-08-19 — [`fix: add separate journey focus control (#445)`](https://github.com/lgs1920/studio/commit/c309e4480742709fd62088515089e2d0c9744289)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/b224453fa98179dfbcca38be7b4f2ab7c3061532)
+
+- Recorded automatically from Git history.
