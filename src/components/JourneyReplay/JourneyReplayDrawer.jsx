@@ -1622,7 +1622,7 @@ export const JourneyReplayDrawer = memo(() => {
                                                                     hint="Adaptive uses shorter budgets while the camera is moving."
                                                                     label-at-start
                                                                     size="s"
-                                                                    value={readiness.policy}
+                                                                    value={String(readiness.policy)}
                                                                     onChange={event => updateReadiness({policy: event.target.value})}
                                                                     className="half-width"
                                                                 >
@@ -1667,15 +1667,15 @@ export const JourneyReplayDrawer = memo(() => {
                                                                     hint="Preload initial camera views before HQ export starts."
                                                                     label-at-start
                                                                     size="s"
-                                                                    value={camera.playback.tilePreloadHorizonMs}
+                                                                    value={String(camera.playback.tilePreloadHorizonMs)}
                                                                     onChange={updateCameraTilePreloadHorizon}
                                                                     className="half-width"
                                                                 >
-                                                                    <WaOption value={REPLAY_CAMERA_TILE_PRELOAD_HORIZON_MIN_MS}>{'Off'}</WaOption>
+                                                                    <WaOption value={String(REPLAY_CAMERA_TILE_PRELOAD_HORIZON_MIN_MS)}>{'Off'}</WaOption>
                                                                     <WaOption value="500">{'500 ms'}</WaOption>
                                                                     <WaOption value="1000">{'1 s'}</WaOption>
                                                                     <WaOption value="2000">{'2 s'}</WaOption>
-                                                                    <WaOption value={REPLAY_CAMERA_TILE_PRELOAD_HORIZON_MAX_MS}>{'3 s'}</WaOption>
+                                                                    <WaOption value={String(REPLAY_CAMERA_TILE_PRELOAD_HORIZON_MAX_MS)}>{'3 s'}</WaOption>
                                                                 </WaSelect>
                                                             </>
                                                         )}

@@ -19,7 +19,8 @@ import { useState }                                        from 'react'
 import { REPLAY_DRAWER }                               from '@Core/constants'
 import {
     defaultJourneyReplaySettings, REPLAY_CAMERA_PRESET_ULTRA_SMOOTH, REPLAY_MARKER_MODE_HYSTERESIS,
-    REPLAY_EFFECT_GLOW, REPLAY_EFFECT_NONE, REPLAY_EFFECT_NEON, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
+    REPLAY_EFFECT_GLOW, REPLAY_EFFECT_NONE, REPLAY_EFFECT_NEON,
+    REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE, REPLAY_READINESS_POLICY_ADAPTIVE,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { createJourneyReplayClipInstance }                          from '@Core/ui/replay/JourneyReplayClips'
 import { JourneyReplayDrawer }                                from '@Components/JourneyReplay/JourneyReplayDrawer'
@@ -435,8 +436,10 @@ describe('JourneyReplayDrawer', () => {
     it('persists readiness and camera preloading controls', async () => {
         const view = render(<JourneyReplayDrawer/>)
         const readinessSwitch = view.getByLabelText('Wait for visible tiles')
-        expect(view.getByLabelText('Readiness policy')).toBeTruthy()
-        expect(view.getByLabelText('Camera tile preloading')).toBeTruthy()
+        const readinessPolicy = view.getByLabelText('Readiness policy')
+        const tilePreloading = view.getByLabelText('Camera tile preloading')
+        expect(readinessPolicy.value).toBe(REPLAY_READINESS_POLICY_ADAPTIVE)
+        expect(tilePreloading.value).toBe(String(defaultJourneyReplaySettings().camera.playback.tilePreloadHorizonMs))
 
         fireEvent.click(readinessSwitch)
         await waitFor(() => {
@@ -458,6 +461,8 @@ describe('JourneyReplayDrawer', () => {
             expect(globalThis.lgs.stores.replay.readiness.policy).toBe('strict')
             expect(globalThis.lgs.settings.ui.replay.camera.playback.tilePreloadHorizonMs).toBe(2000)
             expect(globalThis.lgs.stores.replay.camera.playback.tilePreloadHorizonMs).toBe(2000)
+            expect(view.getByLabelText('Readiness policy').value).toBe('strict')
+            expect(view.getByLabelText('Camera tile preloading').value).toBe('2000')
         })
     })
 
@@ -495,8 +500,12 @@ describe('JourneyReplayDrawer', () => {
 
         await waitFor(() => {
             expect(globalThis.lgs.settings.ui.replay.readiness.enabled).toBe(true)
-            expect(globalThis.lgs.settings.ui.replay.readiness.policy).toBe('adaptive')
+            expect(globalThis.lgs.settings.ui.replay.readiness.policy).toBe(REPLAY_READINESS_POLICY_ADAPTIVE)
             expect(globalThis.lgs.settings.ui.replay.camera.playback.tilePreloadHorizonMs).toBe(1000)
+            expect(view.getByLabelText('Readiness policy').value).toBe(REPLAY_READINESS_POLICY_ADAPTIVE)
+            expect(view.getByLabelText('Camera tile preloading').value).toBe(String(
+                defaultJourneyReplaySettings().camera.playback.tilePreloadHorizonMs,
+            ))
         })
     })
 
