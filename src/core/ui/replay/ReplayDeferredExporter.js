@@ -58,6 +58,9 @@ import {
     ScreenMediaRecorder,
 }                              from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import {
+    normalizeMediabunnyMetadataTags,
+}                              from '@Core/ui/screen-media-recorder/recorder/MediaMetadata'
+import {
     UIToast,
 }                              from '@Utils/UIToast'
 import {
@@ -1116,7 +1119,7 @@ export class ReplayDeferredExporter {
             format: outputConfig.format,
             target,
         })
-        await output.setMetadataTags(metadata ?? {})
+        await output.setMetadataTags(normalizeMediabunnyMetadataTags(metadata))
 
         let encodedPacketBytes = 0
         let lastPublishedFileSize = -1

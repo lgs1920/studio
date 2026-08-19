@@ -245,6 +245,7 @@ export const VideoDownloadAndShareDialog = () => {
             dimensions: {width: 0, height: 0},
             quality:    {name: 'Unknown'},
             ratio:      {label: 'Unknown'},
+            metadata:   {},
         }
 
         try {
@@ -268,6 +269,7 @@ export const VideoDownloadAndShareDialog = () => {
                     },
                     quality:    data.quality || {name: 'Unknown'},
                     ratio:      data.ratio || {label: 'Unknown'},
+                    metadata:   data.metadata || {},
                 }
             }
             else {
@@ -511,6 +513,9 @@ export const VideoDownloadAndShareDialog = () => {
             await waitForAnimationFrame()
             releaseHqMediaUrl()
             setHqMedia(null)
+            const hqMediaMetadata = lgs.stores.replay?.deferredExportPlan?.mediaMetadata
+                                      ?? __.recorder?.mediaData?.metadata
+                                      ?? null
             const result = await exportReplayDeferredMp4({
                 replay: lgs.stores.replay,
                 journey: lgs.theJourney,
@@ -521,9 +526,14 @@ export const VideoDownloadAndShareDialog = () => {
                 filename: exportFilename,
                 signal: controller.signal,
                 abortController: controller,
+                mediaMetadata: hqMediaMetadata,
             })
 
             const draftMediaData = getMediaData()
+            const hqMetadata = result.plan?.mediaMetadata
+                              ?? hqMediaMetadata
+                              ?? draftMediaData.metadata
+                              ?? {}
             const hqDuration = Number(result.plan?.videoTimeline?.durationMillis)
                                || Number(result.plan?.manifest?.metadata?.replayDurationMillis)
                                || Number(draftMediaData.duration)
@@ -556,6 +566,7 @@ export const VideoDownloadAndShareDialog = () => {
                     },
                     quality:    {name: 'HQ'},
                     ratio:      draftMediaData.ratio || {label: 'Unknown'},
+                    metadata:   hqMetadata,
                 },
                 isDeferred: true,
             }
