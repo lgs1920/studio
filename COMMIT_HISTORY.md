@@ -898,3 +898,11 @@
 ## 2026-08-20 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/742fe379dd406e8fda3d4d7c53fcd5ce7517bb4c)
 
 - Recorded automatically from Git history.
+
+## 2026-08-20 — [`docs: synchronize branch documentation`](https://github.com/lgs1920/studio/commit/73acf296785a7b0910815347589b850b1ef9b135)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/2b4679ca5a6817f5967527297599a5e58aef825c)
+
+- Recorded automatically from Git history.
