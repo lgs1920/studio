@@ -874,3 +874,27 @@
 ## 2026-08-19 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/951a2c19b52e5909b7d8f536f2ebf510922cb914)
 
 - Recorded automatically from Git history.
+
+## 2026-08-20 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/5b5217d70904c363e3ce2142e65938fbb91f7bd1)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-08-20 — [`feat(video): consolidate recording HUD settings`](https://github.com/lgs1920/studio/commit/bd13f5db6a5bb1ea16e7635d88505c2f604b594f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`fix(widgets): normalize on-map bounds and margins`](https://github.com/lgs1920/studio/commit/869f65105f6abc0eb6030901b94663d3a3b67fb3)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`feat(video): refine recording HUD controls`](https://github.com/lgs1920/studio/commit/cb5117915d63bb2658961f4601805d4f4fe23d40)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`fix(video): adapt recording HUD for mobile`](https://github.com/lgs1920/studio/commit/7e787344b7256adb4ec74e275c49aaa279e7b6af)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/742fe379dd406e8fda3d4d7c53fcd5ce7517bb4c)
+
+- Recorded automatically from Git history.
