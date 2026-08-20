@@ -64,7 +64,7 @@ export const CompassWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
             min:          {width: 50},
             max:          {width: 300},
             snap:         'svg',
-            margin:       0,
+            margin:       lgs.gutter?.xs ?? 5,
             widgetsBoard: widgetsBoard,
             zIndex:       zIndex,
         }

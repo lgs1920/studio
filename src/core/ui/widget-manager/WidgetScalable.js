@@ -231,6 +231,7 @@ export class WidgetScalable {
         config.scale = this.clampScale(transforms.scale, config)
         this.#widgetTransform.setScale(event.target, config.scale.x, config.scale.y)
         config.runtimeReady = true
+        this.#widgetManager.constrainSceneWidgetToBounds?.(config, event.target)
 
         // Position was already updated by commitTranslateToPosition
         // Just make sure config.position is in sync

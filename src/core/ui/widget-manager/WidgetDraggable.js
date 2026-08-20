@@ -149,6 +149,7 @@ export class WidgetDraggable {
 
         config.element = event.target
         config.runtimeReady = true
+        this.#widgetManager.constrainSceneWidgetToBounds?.(config, event.target)
         // Use the updated position from config after commitTranslateToPosition
         const left = config.position.left
         const top = config.position.top

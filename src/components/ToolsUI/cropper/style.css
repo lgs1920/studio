@@ -45,6 +45,10 @@
     margin: 0 !important;
 }
 
+.lgs-widget.video-crop-zone-widget {
+    margin: 0 !important;
+}
+
 .crop-zone {
     position: absolute;
     z-index: calc(var(--crop-zindex) + 1);

@@ -52,6 +52,7 @@ export const getOrbitWidgetConfig = (id, fromStart) => {
         id,
         icon:            id === 'orbit-widget' ? 'arrows-rotate' : 'panorama',
         left:            `${Math.round(horizontalAnchor)}px`,
+        margin:          lgs.gutter?.s ?? 8,
         mandatory:       false,
         opacity:         1,
         persist:         true,

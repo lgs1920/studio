@@ -118,7 +118,7 @@ export const CropZoneWidget = memo(({
         <Widget
             isVisible={true}
             config={config}
-            className={className}
+            className={['video-crop-zone-widget', className].filter(Boolean).join(' ')}
             moveableClassName={moveableClassName}
             containerClassName={containerClassName}
         >

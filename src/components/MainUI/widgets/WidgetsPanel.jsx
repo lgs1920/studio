@@ -52,7 +52,7 @@ export const WidgetsPanel = ({id, context, groups}) => {
             transient:   true,
             dynamic:     true,
             ttl:         HOUR,
-            margin:      0,
+            margin:      lgs.gutter?.xs ?? 5,
         }
     }, [])
 

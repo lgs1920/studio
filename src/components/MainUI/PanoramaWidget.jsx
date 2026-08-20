@@ -258,7 +258,7 @@ export const PanoramaWidget = memo(() => {
       group: SCENE_WIDGETS,
       id: PANORAMA_ADJUSTMENT_WIDGET,
       left: "50%",
-      margin: 0,
+      margin: lgs.gutter.s,
       opacity: 1,
       persist: false,
       resizable: false,

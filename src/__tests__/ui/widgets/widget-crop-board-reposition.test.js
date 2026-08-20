@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { LGS_VISUAL_WIDGET, LGS_WIDGET, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { LGS_VISUAL_WIDGET, LGS_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { WidgetCoreControls } from '@Core/ui/widget-manager/WidgetCoreControls'
 import { WidgetCoreRegistry } from '@Core/ui/widget-manager/WidgetCoreRegistry'
+import { WidgetPosition } from '@Core/ui/widget-manager/WidgetPosition'
 
 describe('crop board widget repositioning', () => {
     let registry
@@ -121,6 +122,71 @@ describe('crop board widget repositioning', () => {
 
         expect(changed).toBe(0)
         expect(manager.saveWidgetPosition).not.toHaveBeenCalled()
+    })
+
+    it('clamps persisted scene widgets inside the scene bounds on initialization', () => {
+        const config = {
+            id:             'menu#scene-offscreen',
+            type:           LGS_WIDGET,
+            widgetsBoard:   SCENE_WIDGETS_BOARD,
+            container:      board,
+            boundsContainer: board,
+            fromDB:         true,
+            position:       {left: -120, top: -80},
+            dimensions:     {width: 200, height: 100},
+            scale:          {x: 1, y: 1},
+            margin:         5,
+        }
+
+        const position = controls.computeInitialPosition(config, widget)
+
+        expect(position).toEqual({left: 5, top: 5})
+    })
+
+    it('keeps the same margin when clamping scene widgets from the right or bottom', () => {
+        widget.style.margin = '5px'
+        const config = {
+            id:             'menu#scene-bottom-right',
+            type:           LGS_WIDGET,
+            widgetsBoard:   SCENE_WIDGETS_BOARD,
+            container:      board,
+            boundsContainer: board,
+            fromDB:         true,
+            position:       {left: 580, top: 390},
+            dimensions:     {width: 200, height: 100},
+            scale:          {x: 1, y: 1},
+            margin:         5,
+        }
+
+        const position = controls.computeInitialPosition(config, widget)
+
+        expect(position).toEqual({left: 385, top: 285})
+    })
+
+    it('keeps anchor-based bottom-right positioning inside the same margin', () => {
+        widget.style.margin = '5px'
+        const config = {
+            id:             'menu#scene-anchor-bottom-right',
+            type:           LGS_WIDGET,
+            container:      board,
+            boundsContainer: board,
+            element:        widget,
+            dimensions:     {width: 200, height: 100},
+            scale:          {x: 1, y: 1},
+            margin:         5,
+            position:       {left: 0, top: 0},
+        }
+        const positionManager = new WidgetPosition({
+            getIdFromElement: vi.fn(() => config.id),
+            getWidgetConfig: vi.fn(() => config),
+            getMoveable: vi.fn(() => null),
+            refreshEditorPreviewSnapshot: vi.fn(),
+            saveWidgetPosition: vi.fn(),
+        })
+
+        const position = positionManager.toBottomRight(widget, 5)
+
+        expect(position).toEqual({left: 385, top: 285})
     })
 
     it('converts local crop coordinates to the screen board only once', () => {

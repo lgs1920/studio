@@ -1065,6 +1065,15 @@ export class WidgetManager {
     adaptPositionToContainer = (config, container) => this.#controls.adaptPositionToContainer(config, container)
 
     /**
+     * Keeps a scene widget inside its resolved bounds after an interaction.
+     * @param {Object} config - Widget configuration.
+     * @param {HTMLElement} [element=config.element] - Rendered widget element.
+     * @returns {{positionChanged: boolean, scaleChanged: boolean}} Applied changes.
+     */
+    constrainSceneWidgetToBounds = (config, element = config?.element) =>
+        this.#controls.constrainSceneWidgetToBounds(config, element)
+
+    /**
      * Adapts widget size to container size. It provides a new scale value.
      *
      * @param container{width,height} - Container dimensions

@@ -54,6 +54,12 @@ export class WidgetPosition {
         const boundsContainer = (config.boundsContainer ?? config.container).getBoundingClientRect()
         const referenceContainer = config.container.getBoundingClientRect()
         const widget = element.getBoundingClientRect()
+        const style = typeof getComputedStyle === 'function' ? getComputedStyle(element) : null
+        const readMargin = value => Math.max(0, Number.parseFloat(value) || 0)
+        const elementMarginLeft = readMargin(style?.marginLeft)
+        const elementMarginTop = readMargin(style?.marginTop)
+        const elementMarginRight = readMargin(style?.marginRight)
+        const elementMarginBottom = readMargin(style?.marginBottom)
         const scaleX = config.scale?.x ?? 1
         const scaleY = config.scale?.y ?? 1
         const widgetWidth = widget.width > 0 ? widget.width : 0
@@ -126,9 +132,9 @@ export class WidgetPosition {
 
         // Constrain visual bounds by clamping the center point
         const minCenterX = boundsContainer.left + margin + (rotatedWidth / 2)
-        const maxCenterX = boundsContainer.right - margin - (rotatedWidth / 2)
+        const maxCenterX = boundsContainer.right - margin - elementMarginLeft - elementMarginRight - (rotatedWidth / 2)
         const minCenterY = boundsContainer.top + margin + (rotatedHeight / 2)
-        const maxCenterY = boundsContainer.bottom - margin - (rotatedHeight / 2)
+        const maxCenterY = boundsContainer.bottom - margin - elementMarginTop - elementMarginBottom - (rotatedHeight / 2)
         const clampedCenterX = Math.min(Math.max(centerX, minCenterX), maxCenterX)
         const clampedCenterY = Math.min(Math.max(centerY, minCenterY), maxCenterY)
         config.position = {

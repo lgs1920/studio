@@ -51,7 +51,7 @@ export const LogoWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsB
         [widgetsBoard],
     )
     const siteUrl = __.app.buildUrl(lgs?.configuration?.website || 'https://lgs1920.fr')
-    const logoWidgetMargin = lgs.gutter?.s ?? 8
+    const logoWidgetMargin = lgs.gutter?.xs ?? 5
 
     const config = useMemo(() => {
         return {
