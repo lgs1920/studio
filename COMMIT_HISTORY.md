@@ -906,3 +906,11 @@
 ## 2026-08-20 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/2b4679ca5a6817f5967527297599a5e58aef825c)
 
 - Recorded automatically from Git history.
+
+## 2026-08-20 — [`fix(launch): enhance transition in webapp splash screen`](https://github.com/lgs1920/studio/commit/aa90dadbbbd884337e1694bb11676488bc7a7572)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/6023ccb64539a5356e74a7d91ec107e9169262b9)
+
+- Recorded automatically from Git history.
