@@ -14,9 +14,14 @@ import {describe, expect, it} from 'vitest'
 const styleSource = readFileSync(resolve('src/components/MainUI/style.css'), 'utf8')
 
 describe('welcome hero video transitions', () => {
-    it('does not fade in the first video but keeps the crossfade for later videos', () => {
+    it('crossfades from the image to the first video and keeps the later crossfade', () => {
         expect(styleSource).toContain('.welcome-hero-video {\n    position: absolute;')
-        expect(styleSource).toContain('    transition: none;\n    opacity: 0;')
+        expect(styleSource).toContain('    transition: opacity 900ms ease;\n    opacity: 0;')
         expect(styleSource).toContain('#welcome-hero.welcome-hero-video-transitioning .welcome-hero-video {\n    transition: opacity 2.3s ease;')
+    })
+
+    it('does not apply the removed green overlay to the welcome hero', () => {
+        expect(styleSource).not.toContain('rgba(20, 35, 28, 0.18)')
+        expect(styleSource).toContain('linear-gradient(90deg, rgba(0, 0, 0, 0.48)')
     })
 })

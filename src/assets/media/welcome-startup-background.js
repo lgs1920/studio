@@ -25,9 +25,11 @@ const applyStartupBackground = () => {
 
     const backgroundMedia = getWelcomeBackgroundMedia()
     const backgroundImage = backgroundMedia.imageSources[0]?.src
+    const startupImage = document.querySelector('#lgs-startup-background [data-welcome-background-startup]')
     const splashImage = document.querySelector('#lgs-boot-splash .lgs-boot-splash-background-image')
 
     preloadWelcomeBackgroundMedia(backgroundMedia)
+    applyWelcomeBackgroundToImage(startupImage, backgroundMedia)
     applyWelcomeBackgroundToImage(splashImage, backgroundMedia)
 
     if (!backgroundImage) {
@@ -41,10 +43,6 @@ const applyStartupBackground = () => {
     document.head.append(preloadLink)
 
     document.body.style.backgroundColor = backgroundMedia.fallbackColor
-    document.body.style.backgroundImage = `url("${backgroundImage}")`
-    document.body.style.backgroundPosition = 'center'
-    document.body.style.backgroundRepeat = 'no-repeat'
-    document.body.style.backgroundSize = 'cover'
 }
 
 applyStartupBackground()

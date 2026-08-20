@@ -46,6 +46,8 @@ describe('welcome hero route edge fade', () => {
 
         expect(styleSource).toContain('.welcome-hero-route-canvas {\n    display: block;\n    opacity: .86;')
         expect(styleSource).toContain('@media (max-width: 720px) {\n    .welcome-hero-route-canvas {\n        opacity: .86;')
+        expect(styleSource).toContain(".welcome-hero-route[data-render-mode='fallback'] .welcome-hero-poi")
+        expect(styleSource).not.toContain(".welcome-hero-route:not([data-render-mode='worker']) .welcome-hero-poi")
         expect(styleSource.match(/filter: sepia\(0\.2\) saturate\(0\.8\)/g)).toHaveLength(2)
     })
 })

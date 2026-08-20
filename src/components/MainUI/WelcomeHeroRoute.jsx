@@ -680,6 +680,7 @@ export const WelcomeHeroRoute = () => {
 
                 if (!disposed) {
                     cleanup = setupRouteAnimation(layer, canvas, modules)
+                    layer.dataset.renderMode = 'fallback'
                 }
             }
             catch (error) {
@@ -697,7 +698,7 @@ export const WelcomeHeroRoute = () => {
     }, [])
 
     return (
-        <div className="welcome-hero-route">
+        <div className="welcome-hero-route" data-render-mode="initializing">
             <canvas ref={_canvas} className="welcome-hero-route-canvas" aria-hidden="true"/>
             <div className="welcome-hero-route-annotations" aria-label="Route points">
                 {ROUTE_POIS.map(({index, label, point}) => (
