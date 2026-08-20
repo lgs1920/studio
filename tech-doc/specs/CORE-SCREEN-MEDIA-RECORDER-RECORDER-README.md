@@ -13,6 +13,8 @@ Main files involved in recording:
 - `src/core/ui/screen-media-recorder/recorder/ScreenMediaRecorder.js`
 - `src/core/ui/screen-media-recorder/composer/CanvasOverlayComposer.js`
 - `src/components/MainUI/video/VideoRecordingScreenArea.jsx`
+- `src/components/MainUI/video/toolbox/VideoRecordingSettingsToolbar.jsx`
+- `src/components/MainUI/video/toolbox/VideoPresetToolbar.jsx`
 - `src/components/MainUI/video/VideoDownloadAndShareDialog.jsx`
 - `src/components/MainUI/video/RecordingInfo.jsx`
 
@@ -68,6 +70,27 @@ The recorder now accepts an internal `captureMode` flag:
 - `quality` waits for the next ready frame before snapshotting and keeps the replay publication cadence aligned with the selected FPS.
 
 This mode is intentionally kept out of the visible UI for now. It is wired through the recorder and replay sync path so it can be re-enabled later without changing the capture contract again.
+
+## Video setup HUD
+
+While video editing is active, `VideoRecordingSettingsToolbar` exposes the
+capture setup in one horizontal HUD:
+
+- **Ratio** opens the embedded crop-ratio editor;
+- **Quality** displays the selected quality preset and FPS, and opens the
+  preset, FPS, and custom-quality controls;
+- **Record** synchronizes the current crop dimensions before entering the
+  capture state; and
+- **Cancel** synchronizes the crop before leaving the editor.
+
+The quality and FPS values are normalized against the recorder's supported
+lists and persisted in the video settings. When Replay recording is linked,
+the HUD also exposes the action that opens the Journey Replay settings.
+
+The popups use fixed positioning and update their caret direction when the
+popup flips to another side of the viewport. On narrow screens, the `Ratio:`
+and `Quality:` prefixes are hidden so the controls remain usable within the
+available width.
 
 ## Recorder behavior
 
@@ -254,6 +277,25 @@ The info popup now uses:
 - average FPS for video
 
 The final dialog should never present the target FPS as if it were the recorded FPS.
+
+## Embedded media metadata
+
+The recording pipeline carries application metadata from the active journey
+into both Draft and HQ video outputs. Draft recording passes the metadata to
+`ScreenMediaRecorder.initialize()`. The recorder keeps a copy of that data,
+filters it through `MediaMetadata.js`, and writes the supported tags with
+Mediabunny before the MP4 output starts.
+
+When a linked Replay video is promoted to HQ, the final dialog reuses the same
+metadata and passes it to `ReplayDeferredExporter`. The HQ export therefore
+preserves the metadata that was associated with the Draft recording instead of
+creating a metadata-free replacement file.
+
+Only metadata keys accepted by Mediabunny are written to the media output:
+`title`, `description`, `artist`, `album`, `albumArtist`, `trackNumber`,
+`tracksTotal`, `discNumber`, `discsTotal`, `genre`, `date`, `lyrics`,
+`comment`, `images`, and `raw`. Application-specific fields may remain in the
+runtime metadata object without being emitted as container tags.
 
 ## Logs and diagnostics
 

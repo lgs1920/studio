@@ -486,7 +486,31 @@ Relevant settings path:
 - `ui.replay.trace`
 - `ui.replay.marker`
 - `ui.replay.camera`
+- `ui.replay.camera.playback.tilePreloadHorizonMs`
+- `ui.replay.readiness`
 - `ui.replay.clips.catalog`
+
+### Tile readiness and camera preloading
+
+HQ Replay export can wait for visible terrain, imagery, and 3D Tiles before
+encoding a frame. The Replay drawer exposes this behavior under **Tile
+readiness**:
+
+- **Wait for visible tiles** enables or disables the readiness gate;
+- **Readiness policy** selects `adaptive`, `strict`, `custom`, or `off`;
+- custom readiness exposes separate maximum waits while the camera is moving
+  and after it settles; and
+- **Camera tile preloading** selects a bounded initial look-ahead of `off`,
+  `500 ms`, `1 s`, `2 s`, or `3 s` before HQ capture starts.
+
+The normalized defaults keep readiness enabled with the `adaptive` policy, a
+1-second moving wait, a 5-second settled wait, and a 1-second camera preload
+horizon. A tile timeout is non-fatal: the exporter continues with the best
+available scene content and later frames can perform new readiness checks.
+
+The detailed Cesium cache, invalidation, timeout, and pre-warming contract is
+documented in
+[Replay / Video Architecture](../todo/CORE-REPLAY-VIDEO-ARCHITECTURE.md#7-hq-cesium-tile-readiness-and-pre-warming).
 
 ### Remaining trace behavior
 

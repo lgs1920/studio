@@ -49,6 +49,7 @@ These are the current package names declared in the `dependencies` section of `p
 @renoun/screenshot
 @shoelace-style/shoelace
 @tmcw/togeojson
+@turf/along
 @turf/bbox
 @turf/bbox-polygon
 @turf/bearing
@@ -59,6 +60,7 @@ These are the current package names declared in the `dependencies` section of `p
 @turf/flatten
 @turf/helpers
 @turf/invariant
+@turf/length
 @turf/meta
 @turf/nearest-point
 @turf/nearest-point-on-line
@@ -80,6 +82,7 @@ dotenv
 easy-file-picker
 echarts
 echarts-for-react
+three
 elysia
 fflate
 fs
@@ -142,6 +145,8 @@ These are the current package names declared in the `devDependencies` section of
 @vitejs/plugin-react
 baseline-browser-mapping
 jsdom
+oxlint
+oxlint-tsgolint
 typescript
 vite
 vite-plugin-markdown
