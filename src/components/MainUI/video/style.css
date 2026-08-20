@@ -639,6 +639,14 @@
 }
 
 @media (max-width: 640px) {
+    .video-recording-settings-ratio-prefix {
+        display: none;
+    }
+
+    .video-recording-settings-quality-prefix {
+        display: none;
+    }
+
     #video-preview-dialog #video-preview-dialog-footer .buttons-bar {
         flex-wrap: wrap;
     }

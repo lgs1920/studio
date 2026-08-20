@@ -246,7 +246,10 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                     onClick={() => togglePopup(RATIO_POPUP)}
                 >
                     <WaIcon name="crop-simple" label=""/>
-                    <span>{`Ratio: ${currentRatio?.label ?? video.ratio}`}</span>
+                    <span>
+                        <span className="video-recording-settings-ratio-prefix">{'Ratio:'}</span>
+                        {` ${currentRatio?.label ?? video.ratio}`}
+                    </span>
                     <WaIcon slot="end" name={getCaretIcon(popupDirections.ratio)} variant="solid" label=""/>
                 </WaButton>
 
@@ -270,7 +273,10 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                     onClick={() => togglePopup(VIDEO_PRESET_POPUP)}
                 >
                     <WaIcon name="sliders" label=""/>
-                    <span>{`Quality: ${currentQuality} · ${currentFPS} FPS`}</span>
+                    <span>
+                        <span className="video-recording-settings-quality-prefix">{'Quality:'}</span>
+                        {` ${currentQuality} · ${currentFPS} FPS`}
+                    </span>
                     <WaIcon slot="end" name={getCaretIcon(popupDirections.preset)} variant="solid" label=""/>
                 </WaButton>
 
