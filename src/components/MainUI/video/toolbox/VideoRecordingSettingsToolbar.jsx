@@ -38,6 +38,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
     const replay = useSnapshot(lgs.stores.replay)
     const video = useSnapshot($video)
     const [openPopup, setOpenPopup] = useState(null)
+    const [popupDirections, setPopupDirections] = useState({ratio: 'top', preset: 'top'})
     const _cropSyncPromise = useRef(null)
     const shouldShowToolbar = video.editing === true
                               && !video.preRecording
@@ -91,6 +92,26 @@ export const VideoRecordingSettingsToolbar = memo(() => {
     const togglePopup = useCallback((popup) => {
         setOpenPopup(current => current === popup ? null : popup)
     }, [])
+
+    /**
+     * Keeps the trigger caret aligned with the popup's actual placement after a flip.
+     * @param {'ratio'|'preset'} popup - Popup identifier.
+     * @param {CustomEvent} event - Popup reposition event.
+     */
+    const handlePopupReposition = useCallback((popup, event) => {
+        const side = event.currentTarget?.getAttribute('data-current-placement')?.split('-')[0]
+        if (!side) {
+            return
+        }
+        setPopupDirections(current => current[popup] === side ? current : {...current, [popup]: side})
+    }, [])
+
+    const getCaretIcon = side => ({
+        top:    'chevron-up',
+        bottom: 'chevron-down',
+        left:   'chevron-left',
+        right:  'chevron-right',
+    }[side] ?? 'chevron-up')
 
     /**
      * Persists the crop and cancels video setup.
@@ -223,10 +244,10 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                     size="s"
                     appearance={openPopup === RATIO_POPUP ? 'outlined' : 'plain'}
                     onClick={() => togglePopup(RATIO_POPUP)}
-                    withCaret
                 >
                     <WaIcon name="crop-simple" label=""/>
                     <span>{`Ratio: ${currentRatio?.label ?? video.ratio}`}</span>
+                    <WaIcon slot="end" name={getCaretIcon(popupDirections.ratio)} variant="solid" label=""/>
                 </WaButton>
 
                 <LGSPopup
@@ -237,6 +258,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                     placement="top-start"
                     distance={4}
                     strategy="fixed"
+                    onWaReposition={event => handlePopupReposition('ratio', event)}
                 >
                     <CropRatioEditorToolbar context={$cropper} cropzoneId={VIDEO_CROP_ZONE} embedded/>
                 </LGSPopup>
@@ -246,10 +268,10 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                     size="s"
                     appearance={openPopup === VIDEO_PRESET_POPUP ? 'outlined' : 'plain'}
                     onClick={() => togglePopup(VIDEO_PRESET_POPUP)}
-                    withCaret
                 >
                     <WaIcon name="sliders" label=""/>
                     <span>{`Quality: ${currentQuality} · ${currentFPS} FPS`}</span>
+                    <WaIcon slot="end" name={getCaretIcon(popupDirections.preset)} variant="solid" label=""/>
                 </WaButton>
 
                 <LGSPopup
@@ -260,6 +282,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                     placement="top-start"
                     distance={4}
                     strategy="fixed"
+                    onWaReposition={event => handlePopupReposition('preset', event)}
                 >
                     <div className="video-recording-settings-popup lgs-card wa-theme-lgs1920-on-map">
                         <VideoPresetToolbar embedded/>

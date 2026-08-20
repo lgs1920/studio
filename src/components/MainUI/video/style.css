@@ -48,6 +48,11 @@
     opacity: 1;
 }
 
+.lgs-widget.video-recorder-widget-shell,
+.lgs-widget.video-recording-settings-widget-shell {
+    margin: 0;
+}
+
 .video-recording-settings-menu {
     display: flex;
     align-items: center;
@@ -68,6 +73,11 @@
 .video-recording-settings-menu #video-ratio-settings-trigger wa-icon,
 .video-recording-settings-menu #video-quality-fps-settings-trigger wa-icon {
     font-size: var(--lgs-font-size-m);
+}
+
+.video-recording-settings-menu #video-ratio-settings-trigger > wa-icon[slot='end'],
+.video-recording-settings-menu #video-quality-fps-settings-trigger > wa-icon[slot='end'] {
+    font-size: 0.875em;
 }
 
 .video-recording-settings-menu .video-recorder-start-recording wa-icon,
@@ -95,6 +105,7 @@
 
 .video-recording-settings-cancel-separator {
     align-self: stretch;
+    margin-inline: var(--lgs-gutter-xs);
     border-inline-start: 1px solid var(--lgs-card-on-map-border-color);
 }
 
@@ -128,6 +139,10 @@
 
 .video-preset-toolbar-embedded .video-choice-button::part(base) {
     justify-content: space-between;
+}
+
+.video-choice-buttons wa-button.video-choice-button > wa-icon[slot='end'] {
+    font-size: 0.875em;
 }
 
 .video-recorder-widget .duration,

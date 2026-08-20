@@ -88,9 +88,9 @@ export const VideoRecordingSettingsWidget = ({id}) => {
     const config = useMemo(() => {
         return {
             left: '50%',
-            top: '100%',
+            top: '90%',
             attachTo: 'bottom',
-            margin: lgs.gutter?.xs ?? 4,
+            margin: lgs.gutter?.s ?? 8,
             canLock: false,
             canReduce: false,
             opacity:  lgs.settings.ui.toolbars.opacity,
@@ -104,7 +104,7 @@ export const VideoRecordingSettingsWidget = ({id}) => {
     }, [id])
 
     return (
-        <Widget isVisible={true} config={config}>
+        <Widget isVisible={true} className="video-recording-settings-widget-shell" config={config}>
             <VideoRecordingSettingsToolbar/>
         </Widget>
     )

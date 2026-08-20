@@ -28,6 +28,7 @@ import {
 import { LGSPopup }                                                        from '@Components/LGSPopup'
 import {
     WaButton,
+    WaIcon,
 }                                                                          from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                                                          from 'classnames'
 import { Fragment, memo, useCallback, useEffect, useRef, useState }        from 'react'
@@ -42,6 +43,7 @@ export const VideoPresetToolbar = memo(({embedded = false}) => {
 
     const [preset, setPreset] = useState(null)
     const [open, setOpen] = useState(false)
+    const [popupDirection, setPopupDirection] = useState('top')
     const _toolbarRef = useRef(null)
 
     /**
@@ -119,6 +121,20 @@ export const VideoPresetToolbar = memo(({embedded = false}) => {
         }
     }, [$video, $videoSettings])
 
+    const handlePopupReposition = useCallback(event => {
+        const side = event.currentTarget?.getAttribute('data-current-placement')?.split('-')[0]
+        if (side) {
+            setPopupDirection(current => current === side ? current : side)
+        }
+    }, [])
+
+    const getCaretIcon = side => ({
+        top:    'chevron-up',
+        bottom: 'chevron-down',
+        left:   'chevron-left',
+        right:  'chevron-right',
+    }[side] ?? 'chevron-up')
+
     const presetButtons = Array.from(ScreenMediaRecorder.VIDEO_PRESETS).map(([key, value]) => (
         <Fragment key={key}>
             <WaButton
@@ -128,9 +144,11 @@ export const VideoPresetToolbar = memo(({embedded = false}) => {
                 appearance={key === preset ? 'outlined' : 'plain'}
                 id={`video-preset-${key}`}
                 onClick={event => handleChangePreset(key, event)}
-                withCaret={value.submenu}
             >
                 {value.name}
+                {value.submenu && (
+                    <WaIcon slot="end" name={getCaretIcon(popupDirection)} variant="solid" label=""/>
+                )}
             </WaButton>
 
             {value.submenu && (
@@ -141,6 +159,7 @@ export const VideoPresetToolbar = memo(({embedded = false}) => {
                     placement="top-end"
                     strategy="fixed"
                     distance={4}
+                    onWaReposition={handlePopupReposition}
                 >
                     <div className="video-preset-custom lgs-card wa-theme-lgs1920-on-map"
                          style={{opacity: toolbars.opacity}}>
