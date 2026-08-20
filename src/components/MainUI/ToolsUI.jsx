@@ -14,7 +14,6 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 import { CameraAndTargetPanel }     from '@Components/cesium/CameraAndTargetPanel/CameraAndTargetPanel'
-import { VideoPresetWidget } from '@Components/MainUI/video/toolbox/VideoPresetWidget'
 import { VideoRecordingSettingsWidget } from '@Components/MainUI/video/toolbox/VideoRecordingSettingsWidget'
 import { VideoSettingsInfo }    from '@Components/MainUI/video/VideoSettingsInfo'
 import { SceneWidgetsRenderer } from '@Components/MainUI/widgets/SceneWidgetsRenderer'
@@ -58,8 +57,8 @@ export const ToolsUI = () => {
                 <>
                     <Cropper overlay source={lgs.canvas}
                              context={$cropper} className="video-cropper"
+                             renderRatioWidget={false}
                              options={{infoComponent: <VideoSettingsInfo/>}}/>
-                    <VideoPresetWidget id="video-preset-widget"/>
                     <VideoRecordingSettingsWidget id="video-recording-settings-widget"/>
                     <WidgetContextMenu/>
                 </>

@@ -26,8 +26,12 @@ import '../style.css'
  * CropRatioEditorToolbar renders a draggable toolbar for selecting crop ratios
  * with a popup menu for selection.
  * @component
+ * @param {Object} props - Component properties.
+ * @param {Object} props.context - Cropper state proxy.
+ * @param {string} props.cropzoneId - Crop zone widget identifier.
+ * @param {boolean} [props.embedded=false] - Render only the choices for an external popup.
  */
-export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
+export const CropRatioEditorToolbar = memo(({context, cropzoneId, embedded = false}) => {
     // Use proxy from global state and props
     const $cropper = context
     const $video = lgs.stores.ui.video
@@ -80,7 +84,7 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
         lgs.settings.ui.video.ratio = preset.value
 
         const [w, h] = preset.value.split('x').map(Number)
-        const numericRatio = w / h
+        const numericRatio = w > 0 && h > 0 ? w / h : Number.NaN
 
         // Update external widget manager
         __.ui.widgetManager.updateCropRatio(cropzoneId, preset.value, numericRatio, preset.locked)
@@ -143,11 +147,40 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId}) => {
     // Find current active preset for label display
     const currentPreset = lgs.configuration.videoFormats.find(p => p.value === video.ratio)
 
+    if (embedded) {
+        return (
+            <div className="crop-ratio-popup-menu video-ratio-popup-menu lgs-card wa-theme-lgs1920-on-map">
+                <ul>
+                    {lgs.configuration.videoFormats.map(preset => (
+                        isPresetVisible(preset) && (
+                            <Fragment key={`embedded-crop-ratio-${preset.value}`}>
+                                <WaTooltip for={`embedded-btn-ratio-${preset.value}`} placement="right">
+                                    {`${preset.label}: ${preset.description}`}
+                                </WaTooltip>
+
+                                <li
+                                    id={`embedded-btn-ratio-${preset.value}`}
+                                    role="button"
+                                    tabIndex={0}
+                                    className={classNames('crop-ratio-choice-button', {'is-selected': video.ratio === preset.value})}
+                                    onClick={() => handleChangeRatio(preset)}
+                                    onKeyDown={(event) => handlePresetKeyDown(event, preset)}
+                                >
+                                    <span>{preset.label}</span>
+                                </li>
+                            </Fragment>
+                        )
+                    ))}
+                </ul>
+            </div>
+        )
+    }
+
     return (
         <>
             {cropper.ratioEditor && (
                 <div ref={_widget} className="crop-ratio-widget lgs-card wa-theme-lgs1920-on-map">
-                    <span>{'Format:'}</span>
+                    <span>{'Ratio:'}</span>
 
                     <WaButton
                         id="current-crop-ratio"

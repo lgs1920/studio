@@ -34,7 +34,7 @@ import { Fragment, memo, useCallback, useEffect, useRef, useState }        from 
 import { useSnapshot }                                                     from 'valtio'
 import '../style.css'
 
-export const VideoPresetToolbar = memo(() => {
+export const VideoPresetToolbar = memo(({embedded = false}) => {
     const $video = lgs.stores.ui.video
     const $videoSettings = lgs.settings.ui.video
     const video = useSnapshot($video)
@@ -119,42 +119,56 @@ export const VideoPresetToolbar = memo(() => {
         }
     }, [$video, $videoSettings])
 
+    const presetButtons = Array.from(ScreenMediaRecorder.VIDEO_PRESETS).map(([key, value]) => (
+        <Fragment key={key}>
+            <WaButton
+                className={classNames('video-choice-button', {'is-selected': key === preset})}
+                size="s"
+                variant="neutral"
+                appearance={key === preset ? 'outlined' : 'plain'}
+                id={`video-preset-${key}`}
+                onClick={event => handleChangePreset(key, event)}
+                withCaret={value.submenu}
+            >
+                {value.name}
+            </WaButton>
+
+            {value.submenu && (
+                <LGSPopup
+                    anchor={`video-preset-${key}`}
+                    active={open}
+                    onRequestClose={() => setOpen(false)}
+                    placement="top-end"
+                    strategy="fixed"
+                    distance={4}
+                >
+                    <div className="video-preset-custom lgs-card wa-theme-lgs1920-on-map"
+                         style={{opacity: toolbars.opacity}}>
+                        <VideoFPSToolbar choicesOnMap/>
+                        <VideoQualityToolbar choicesOnMap/>
+                    </div>
+                </LGSPopup>
+            )}
+        </Fragment>
+    ))
+
+    if (embedded) {
+        return (
+            <div className="video-preset-toolbar-embedded">
+                <div className="video-preset-widget">
+                    <div className="buttons-bar-on-map video-choice-buttons video-choice-buttons-on-map">
+                        {presetButtons}
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div ref={_toolbarRef} className="video-preset-widget-wrapper lgs-card wa-theme-lgs1920-on-map">
             <div className="video-preset-widget">
                 <div className="buttons-bar-on-map video-choice-buttons video-choice-buttons-on-map">
-                    {Array.from(ScreenMediaRecorder.VIDEO_PRESETS).map(([key, value]) => (
-                        <Fragment key={key}>
-                            <WaButton
-                                className={classNames('video-choice-button', {'is-selected': key === preset})}
-                                size="s"
-                                variant="neutral"
-                                appearance={key === preset ? 'outlined' : 'plain'}
-                                id={`video-preset-${key}`}
-                                onClick={event => handleChangePreset(key, event)}
-                                withCaret={value.submenu}
-                            >
-                                {value.name}
-                            </WaButton>
-
-                            {value.submenu && (
-                                <LGSPopup
-                                    anchor={`video-preset-${key}`}
-                                    active={open}
-                                    onRequestClose={() => setOpen(false)}
-                                    placement="bottom-end"
-                                    strategy="fixed"
-                                    distance={4}
-                                >
-                                    <div className="video-preset-custom lgs-card wa-theme-lgs1920-on-map"
-                                         style={{opacity: toolbars.opacity}}>
-                                        <VideoFPSToolbar choicesOnMap/>
-                                        <VideoQualityToolbar choicesOnMap/>
-                                    </div>
-                                </LGSPopup>
-                            )}
-                        </Fragment>
-                    ))}
+                    {presetButtons}
                 </div>
             </div>
         </div>

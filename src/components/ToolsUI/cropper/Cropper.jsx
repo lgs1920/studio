@@ -28,6 +28,7 @@ import { CropRatioEditorWidget } from '@Components/ToolsUI/cropper/widgets/CropR
  * @param {Object} props.store - Valtio store for cropper state
  * @param {Object} [props.options={}] - Configuration options for CropperHandler
  * @param {JSX.Element|string} [props.children] - Additional UI elements (e.g., CTA buttons)
+ * @param {boolean} [props.renderRatioWidget=true] - Whether to render the standalone ratio widget.
  * @returns {JSX.Element|null} Cropper UI or null if source is not loaded
  */
 import { DefinedCropZone }                                                                  from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
@@ -97,7 +98,7 @@ const buildCropOverlayBlockers = crop => {
     ]
 }
 
-export const Cropper = memo(({overlay = false, className = '', context, options = {}, children}) => {
+export const Cropper = memo(({overlay = false, className = '', context, options = {}, children, renderRatioWidget = true}) => {
 
     const _cropperContainer = useRef(null)
     const _overlay = useRef(null)
@@ -148,7 +149,7 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
 
     return (
         <>
-            {overlayElement && cropper.ratioEditor &&
+            {overlayElement && cropper.ratioEditor && renderRatioWidget &&
                 <CropRatioEditorWidget context={context} id="crop-ratio-editor"/>
             }
 

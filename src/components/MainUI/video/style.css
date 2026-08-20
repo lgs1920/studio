@@ -48,10 +48,86 @@
     opacity: 1;
 }
 
-.video-recording-settings-toolbar .lgs-tunnel-container,
-.video-recording-settings-toolbar .lgs-tunnel-bar {
+.video-recording-settings-menu {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xxs);
     width: max-content;
     max-width: max-content;
+}
+
+.video-recording-settings-menu wa-button::part(base) {
+    gap: var(--lgs-gutter-xxs);
+    white-space: nowrap;
+}
+
+.video-recording-settings-menu wa-icon {
+    font-size: var(--lgs-font-size-s);
+}
+
+.video-recording-settings-menu #video-ratio-settings-trigger wa-icon,
+.video-recording-settings-menu #video-quality-fps-settings-trigger wa-icon {
+    font-size: var(--lgs-font-size-m);
+}
+
+.video-recording-settings-menu .video-recorder-start-recording wa-icon,
+.video-recording-settings-menu .video-recording-settings-replay wa-icon {
+    font-size: var(--lgs-font-size-m);
+}
+
+.video-recording-settings-menu .video-recorder-start-recording > span {
+    display: none;
+}
+
+.video-recording-settings-menu #video-cancel-editing > span {
+    display: none;
+}
+
+.video-recording-settings-menu .video-recorder-start-recording::part(base) {
+    padding: 0;
+}
+
+.video-recording-settings-menu .video-recording-settings-cancel::part(base) {
+    justify-content: center;
+    padding-block: 0;
+    padding-inline: var(--lgs-gutter-xs);
+}
+
+.video-recording-settings-cancel-separator {
+    align-self: stretch;
+    border-inline-start: 1px solid var(--lgs-card-on-map-border-color);
+}
+
+.video-recording-settings-popup {
+    display: flex;
+    flex-direction: column;
+    min-width: max-content;
+    padding: var(--lgs-on-map-padding, var(--lgs-gutter-xs));
+    gap: var(--lgs-gutter-xs);
+    box-shadow: var(--lgs-on-map-floating-shadow, var(--sl-shadow-large));
+}
+
+.video-recording-settings-popup .video-fps-widget,
+.video-recording-settings-popup .video-quality-widget {
+    padding: var(--lgs-gutter-xxs);
+}
+
+.video-preset-toolbar-embedded {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
+}
+
+.video-preset-toolbar-embedded .video-preset-widget,
+.video-preset-toolbar-embedded .video-choice-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--lgs-gutter-xxs);
+}
+
+.video-preset-toolbar-embedded .video-choice-button::part(base) {
+    justify-content: space-between;
 }
 
 .video-recorder-widget .duration,
