@@ -156,6 +156,7 @@ describe('JourneyReplayControlsWidget', () => {
 
         const view = render(<JourneyReplayControlsWidget/>)
 
+        expect(document.querySelector('.replay-controls.video-recorder-widget-recording')).not.toBeNull()
         expect(screen.queryByText('Recording...')).toBeNull()
         expect(document.querySelector('[data-icon="circle"][data-family="duotone"]')).not.toBeNull()
         expect(document.querySelector('[data-icon="circle"]').className).toContain('video-recorder-indicator')

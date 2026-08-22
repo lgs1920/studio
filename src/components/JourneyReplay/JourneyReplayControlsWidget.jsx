@@ -166,7 +166,7 @@ export const JourneyReplayControlsWidget = memo(() => {
 
     const widget = (
         <Widget isVisible={true} config={config}>
-            <WaCard className={`replay-controls lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal wa-theme-lgs1920-on-map${hqExportRunning ? ' video-recorder-widget' : ''}`}>
+            <WaCard className={`replay-controls lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal wa-theme-lgs1920-on-map${hqExportRunning ? ' video-recorder-widget video-recorder-widget-recording' : ''}`}>
                 {hqExportRunning && (
                     <div className="replay-controls-hq-row">
                         <WaIcon
