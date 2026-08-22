@@ -65,6 +65,7 @@ describe('JourneyReplayControlsWidget', () => {
                     video: proxy({
                         preRecording: false,
                         recording: false,
+                        recordingHQ: false,
                         snapshot: false,
                         finalizing: false,
                     }),
@@ -80,6 +81,22 @@ describe('JourneyReplayControlsWidget', () => {
 
     it('hides the floating replay toolbar while the sync link is active', () => {
         globalThis.lgs.stores.replay.recordingSync = true
+
+        render(<JourneyReplayControlsWidget/>)
+
+        expect(screen.queryByTestId('widget')).toBeNull()
+    })
+
+    it('hides the floating replay toolbar during HQ recording', () => {
+        globalThis.lgs.stores.ui.video.recordingHQ = true
+
+        render(<JourneyReplayControlsWidget/>)
+
+        expect(screen.queryByTestId('widget')).toBeNull()
+    })
+
+    it('hides the floating replay toolbar while the video editor is open', () => {
+        globalThis.lgs.stores.ui.video.editing = true
 
         render(<JourneyReplayControlsWidget/>)
 

@@ -295,6 +295,7 @@ describe('VideoDownloadAndShareDialog', () => {
                     video: {
                         preRecording: false,
                         recording:    false,
+                        recordingHQ:  false,
                         paused:       false,
                         finalizing:   true,
                     },
@@ -708,6 +709,7 @@ describe('VideoDownloadAndShareDialog', () => {
         })
 
         expect(globalThis.lgs.stores.ui.video.editing).toBe(true)
+        expect(globalThis.lgs.stores.ui.video.recordingHQ).toBe(true)
         expect(globalThis.lgs.stores.ui.video.finalizing).toBe(true)
         expect(screen.queryByTestId('video-preview-dialog')).toBeNull()
 
@@ -722,6 +724,7 @@ describe('VideoDownloadAndShareDialog', () => {
         })
 
         expect(globalThis.lgs.stores.ui.video.editing).toBe(false)
+        expect(globalThis.lgs.stores.ui.video.recordingHQ).toBe(false)
         expect(globalThis.lgs.stores.ui.video.finalizing).toBe(false)
         expect(screen.queryByTestId('video-preview-dialog')).not.toBeNull()
     })

@@ -24,6 +24,7 @@ import { useSnapshot } from 'valtio'
 export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     const list = useSnapshot(lgs.stores.ui.widget.list)
     const video = useSnapshot(lgs.stores.ui.video)
+    const replay = useSnapshot(lgs.stores.replay)
     // The editor can stay open while the video widgets are shown in preview.
     // Rehydration and invalidation must only run while an actual capture phase
     // is active, otherwise the portal loops during normal editor use.
@@ -32,6 +33,8 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
                               || video.snapshot === true
                               || video.finalizing === true
     const previewOnly = video.editing === true && video.cropper?.widgetEditor === false
+    const synchronizedRecording = (video.recording === true || video.recordingHQ === true)
+                                  && replay.recordingSync === true
     const _rehydrateKey = useRef('')
     const widgetEntries = Array.from(list.entries())
         .filter(([, props]) => props?.widgetsBoard === VIDEO_WIDGETS_BOARD)
@@ -140,7 +143,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     return createPortal(
         <WidgetPreviewContext.Provider value={previewOnly}>
             <div
-            className={`video-scene-widgets-portal${previewOnly ? ' video-scene-widgets-portal-preview' : ''}`}
+            className={`video-scene-widgets-portal${previewOnly ? ' video-scene-widgets-portal-preview' : ''}${videoCaptureActive ? ' video-scene-widgets-portal-capture' : ''}${synchronizedRecording ? ' video-scene-widgets-portal-input-blocked' : ''}`}
             data-widgets-board={VIDEO_WIDGETS_BOARD}
             style={{
                 position: 'fixed',
@@ -150,7 +153,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
             }}
         >
             {widgetEntries.map(([key, props]) => (
-                <div key={key} style={{pointerEvents: 'auto'}}>
+                <div key={key} style={{pointerEvents: synchronizedRecording ? 'none' : 'auto'}}>
                     <DynamicWidget
                         id={key}
                         props={props}

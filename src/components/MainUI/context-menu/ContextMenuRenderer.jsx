@@ -32,6 +32,17 @@ export const ContextMenuRenderer = () => {
 
     const $contextMenu = lgs.stores.ui.contextMenu
     const contextMenu = useSnapshot($contextMenu)
+    const video = useSnapshot(lgs.stores.ui.video)
+    const replay = useSnapshot(lgs.stores.replay)
+    const videoPreparationActive = video.editing === true || video.preRecording === true
+    const synchronizedRecording = (video.recording === true || video.recordingHQ === true)
+                                  && replay.recordingSync === true
+
+    useEffect(() => {
+        if (synchronizedRecording && contextMenu.visible) {
+            __.ui.contextMenu.hide()
+        }
+    }, [contextMenu.visible, synchronizedRecording])
 
     // Initialize and Show/Hide logic
     useEffect(() => {
@@ -47,7 +58,7 @@ export const ContextMenuRenderer = () => {
     }, [contextMenu.visible, contextMenu.position, contextMenu.position?.x, contextMenu.position?.y])
 
     // Do not render anything when the menu is hidden
-    if (!contextMenu.visible || !contextMenu.type) {
+    if (!contextMenu.visible || !contextMenu.type || synchronizedRecording) {
         return null
     }
 
@@ -58,7 +69,10 @@ export const ContextMenuRenderer = () => {
         case 'poi':
             return <MapPOIContextMenu targetId={contextMenu.targetId} menuRef={_menu}/>
         case 'map-point':
-            return <MapPointContextMenu target={contextMenu.targetId} menuRef={_menu}/>
+            return <MapPointContextMenu
+                target={contextMenu.targetId}
+                menuRef={_menu}
+                hideVideoActions={videoPreparationActive}/>
         default:
             return null
     }

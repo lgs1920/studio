@@ -158,7 +158,7 @@ export const JourneyReplayControlsWidget = memo(() => {
 
     if (!hqExportRunning && (
         replay.recordingSync === true
-        || (video.preRecording || video.recording || video.snapshot || video.finalizing)
+        || (video.editing || video.preRecording || video.recording || video.recordingHQ || video.snapshot || video.finalizing)
         || (!replay.toolbarVisible && !replay.active && !replay.paused)
     )) {
         return null

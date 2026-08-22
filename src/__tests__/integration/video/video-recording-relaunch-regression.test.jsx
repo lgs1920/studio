@@ -215,8 +215,38 @@ describe('video recording relaunch regression', () => {
         render(<VideoSceneWidgetsPortal context={lgs.stores.ui.video.cropper}/>)
 
         expect(screen.getByTestId('dynamic-widget')).not.toBeNull()
+        const portal = document.querySelector('.video-scene-widgets-portal')
+        const widgetLayer = portal?.firstElementChild
+
+        expect(portal?.style.pointerEvents).toBe('none')
+        expect(portal?.classList.contains('video-scene-widgets-portal-capture')).toBe(true)
+        expect(portal?.classList.contains('video-scene-widgets-portal-input-blocked')).toBe(false)
+        expect(widgetLayer?.style.pointerEvents).toBe('auto')
         await waitFor(() => {
             expect(widgetManager.rehydrateWidgetsByBoard).toHaveBeenCalledWith(VIDEO_WIDGETS_BOARD)
+        })
+    })
+
+    it('blocks video widget input only during synchronized recording', async () => {
+        globalThis.lgs.stores.ui.video.editing = false
+        globalThis.lgs.stores.ui.video.preRecording = false
+        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.replay.recordingSync = true
+
+        const view = render(<VideoSceneWidgetsPortal context={lgs.stores.ui.video.cropper}/>)
+        let portal = document.querySelector('.video-scene-widgets-portal')
+
+        expect(portal?.classList.contains('video-scene-widgets-portal-input-blocked')).toBe(true)
+        expect(portal?.firstElementChild?.style.pointerEvents).toBe('none')
+
+        act(() => {
+            globalThis.lgs.stores.replay.recordingSync = false
+        })
+        view.rerender(<VideoSceneWidgetsPortal context={lgs.stores.ui.video.cropper}/>)
+        await waitFor(() => {
+            portal = document.querySelector('.video-scene-widgets-portal')
+            expect(portal?.classList.contains('video-scene-widgets-portal-input-blocked')).toBe(false)
+            expect(portal?.firstElementChild?.style.pointerEvents).toBe('auto')
         })
     })
 
@@ -291,6 +321,7 @@ describe('video recording relaunch regression', () => {
 
         render(<VideoRecorderToolbar/>)
 
+        expect(document.querySelector('.video-recorder-widget-recording')).not.toBeNull()
         expect(screen.getByText('00:01 / 00:02')).not.toBeNull()
         expect(screen.getByText('50.0 / 100.0 km')).not.toBeNull()
         expect(screen.getByText('50%')).not.toBeNull()

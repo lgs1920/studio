@@ -495,15 +495,16 @@ export const VideoDownloadAndShareDialog = () => {
             return
         }
 
+        Object.assign(lgs.stores.ui.video, {
+            editing:    true,
+            recordingHQ: true,
+            finalizing: true,
+        })
         prepareVideoCaptureUi()
         const hqRenderSpec = await resolveHqExportRenderSpec()
         const exportFilename = getHqExportFilename()
         const controller = new AbortController()
         _hqExportAbortController.current = controller
-        Object.assign(lgs.stores.ui.video, {
-            editing:    true,
-            finalizing: true,
-        })
         setHqExportStatus('exporting')
         _dialogHiddenForHqExport.current = true
         _suppressNextDialogHideCleanup.current = true
@@ -578,6 +579,7 @@ export const VideoDownloadAndShareDialog = () => {
             void CountApi.sendHqVideo()
             Object.assign(lgs.stores.ui.video, {
                 editing:    false,
+                recordingHQ: false,
                 finalizing: false,
             })
             _dialogHiddenForHqExport.current = false
@@ -599,6 +601,7 @@ export const VideoDownloadAndShareDialog = () => {
             }
             Object.assign(lgs.stores.ui.video, {
                 editing:    false,
+                recordingHQ: false,
                 finalizing: false,
             })
             _dialogHiddenForHqExport.current = false
@@ -771,6 +774,7 @@ export const VideoDownloadAndShareDialog = () => {
         Object.assign(lgs.stores.ui.video, {
             preRecording:     false,
             recording:        false,
+            recordingHQ:      false,
             paused:           false,
             size:             0,
             recordedDuration: 0,
