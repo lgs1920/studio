@@ -2370,6 +2370,11 @@ hr {
     pointer-events: none;
 }
 
+.lgs-widget.crop-pass-through,
+.lgs-widget.crop-pass-through * {
+    pointer-events: none !important;
+}
+
 /*******************************************************************************
  * Cesium Selection indicator
  ******************************************************************************/
