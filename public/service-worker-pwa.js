@@ -138,6 +138,18 @@ async function notifyClients(eventName, payload = {}) {
     })
 }
 
+/**
+ * Notifies controlled and uncontrolled windows after this worker activates.
+ *
+ * @returns {Promise<void>}
+ */
+async function notifyUpdateActivated() {
+    const clients = await self.clients.matchAll({type: 'window', includeUncontrolled: true})
+    clients.forEach(client => {
+        client.postMessage({type: 'UPDATE_ACTIVATED'})
+    })
+}
+
 async function resolveRuntime(forceRefresh = false) {
     if (!forceRefresh && RUNTIME_STATE.cacheName && RUNTIME_STATE.metadata) {
         return {cacheName: RUNTIME_STATE.cacheName, metadata: RUNTIME_STATE.metadata}
@@ -185,6 +197,7 @@ self.addEventListener('activate', event => {
                 headers: {'content-type': 'application/json'},
             }))
             await notifyClients('lgs:cache-ready', {cacheName: activeCacheName, metadata})
+            await notifyUpdateActivated()
         })()
     )
 })
