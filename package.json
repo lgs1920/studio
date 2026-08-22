@@ -8,6 +8,7 @@
     "dev": "bunx --bun vite --mode development",
     "build": "bun run test:stores && bunx --bun vite build",
     "commit-history:update": "bun scripts/update-commit-history.mjs",
+    "cesium:skills:check": "bun scripts/check-cesium-skills.mjs",
     "deploy": "bun deploy.js",
     "lint": "oxlint . --type-aware --report-unused-disable-directives-severity error",
     "logo:export": "bun scripts/logo-tool.mjs export",

@@ -1,6 +1,6 @@
 ---
 name: cesiumjs-camera
-description: "CesiumJS camera control - Camera, flyTo, lookAt, setView, ScreenSpaceCameraController, CameraEventAggregator, flight animation. Use when positioning the camera, creating flyTo animations, constraining user navigation, tracking entities, or converting between screen and world coordinates."
+description: "CesiumJS camera control - Camera, flyTo, lookAt, setView, ScreenSpaceCameraController, Controller, ControllerHost, CameraEventAggregator, and flight animation. Use when positioning the camera, creating flyTo animations, constraining navigation, tracking entities, or implementing custom camera controllers."
 ---
 # CesiumJS Camera & Navigation
 
@@ -9,7 +9,20 @@ description: "CesiumJS camera control - Camera, flyTo, lookAt, setView, ScreenSp
 Never extrapolate beyond the user's request. If a decision is not explicit, ask the user before acting. User directive: “JE N'EXTRAPOLE JAMAIS LA DEMANDE, JE DEMANDE AU MONSIEUR.”
 
 
-> **Baseline:** CesiumJS v1.143 -- ES module imports (`import { ... } from "cesium";`)
+> **Baseline:** CesiumJS v1.144.0 -- ES module imports (`import { ... } from "cesium";`). Verify camera APIs against the latest official reference documentation: <https://cesium.com/learn/cesiumjs/ref-doc/>.
+
+## Controller Framework (CesiumJS 1.144+)
+
+CesiumJS 1.144 introduces a more configurable and composable `Controller` framework for custom camera controls, including asset inspection and underground-model use cases. Before implementing custom navigation, consult the official references for [`Controller`](https://cesium.com/learn/cesiumjs/ref-doc/Controller.html), [`ControllerHost`](https://cesium.com/learn/ion-sdk/ref-doc/ControllerHost.html), and [`Viewer.addController`](https://cesium.com/learn/cesiumjs/ref-doc/Viewer.html).
+
+Use the built-in `ScreenSpaceCameraController` for the default globe navigation. For specialized or composable controls, disable the default input handling as required and register a dedicated controller with `viewer.addController(controller)`. Do not assume that `ScreenSpaceCameraController` is the only camera-control extension point.
+
+```js
+viewer.scene.screenSpaceCameraController.enableInputs = false
+
+const controller = new Cesium.ScreenSpaceTiltOrbitCameraController()
+viewer.addController(controller)
+```
 
 ## Camera Fundamentals
 

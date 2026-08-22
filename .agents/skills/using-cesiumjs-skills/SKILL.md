@@ -10,7 +10,9 @@ description: Use when starting any conversation involving CesiumJS development -
 Never extrapolate beyond the user's request. If a decision is not explicit, ask the user before acting. User directive: “JE N'EXTRAPOLE JAMAIS LA DEMANDE, JE DEMANDE AU MONSIEUR.”
 
 
-This plugin provides 14 domain skills covering CesiumJS v1.143 (~551 public symbols). Skills activate passively via description matching — no explicit invocation is required.
+This plugin provides 14 domain skills covering CesiumJS v1.144 (~551 public symbols). Skills activate passively via description matching — no explicit invocation is required.
+
+For every CesiumJS task, verify APIs against the latest official reference documentation before implementation: <https://cesium.com/learn/cesiumjs/ref-doc/>. The current project baseline is CesiumJS 1.144.0. The 1.144 camera-controller change is documented in the [official release notes](https://github.com/CesiumGS/cesium/releases/tag/1.144).
 
 ## Available Skills
 
