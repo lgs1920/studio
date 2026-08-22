@@ -914,3 +914,31 @@
 ## 2026-08-20 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/6023ccb64539a5356e74a7d91ec107e9169262b9)
 
 - Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: gate Cesium input during synchronized recording`](https://github.com/lgs1920/studio/commit/77321b5671b797affd742751f047e8bce8e8a198)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: align video HUD and recording controls`](https://github.com/lgs1920/studio/commit/a2887899df0a576c66c9dc6331e3721127acc672)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: route crop interactions to Cesium`](https://github.com/lgs1920/studio/commit/39a95b9f11860ce5b0b5e98c6891da0ccdc7b238)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: stabilize replay widget composition`](https://github.com/lgs1920/studio/commit/45040f34fc75cb2d6c01ca922d4a7f554434f7a5)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: keep crop pass-through outside Cesium widgets`](https://github.com/lgs1920/studio/commit/29bdc97750b035faf49a4c4124b0dff00fe0ae9b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: enlarge HQ replay HUD actions`](https://github.com/lgs1920/studio/commit/fc02e1f6f2b400a49005b6047c63317a7899dfdb)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/c0e6d55779c01c2c982fb491a82caae7a3fbe542)
+
+- Recorded automatically from Git history.
