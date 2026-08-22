@@ -36,6 +36,7 @@ vi.mock('../../../components/ToolsUI/cropper/widgets/CropZoneInfoPopup.jsx', () 
 }))
 
 import { Cropper } from '@Components/ToolsUI/cropper/Cropper'
+import { CropOverlay } from '@Components/ToolsUI/cropper/CropOverlay'
 
 describe('Cropper pointer pass-through', () => {
     beforeEach(() => {
@@ -94,10 +95,37 @@ describe('Cropper pointer pass-through', () => {
         expect(cropperContainer.style.pointerEvents).toBe('none')
         expect(cropOverlay).not.toBeNull()
         expect(cropOverlay.style.pointerEvents).toBe('none')
+        expect(cropOverlay.children).toHaveLength(0)
+        expect(container.querySelector('.crop-overlay-blockers')).not.toBeNull()
         expect(blockers).toHaveLength(4)
         expect(blockers[0].style.height).toBe('30px')
         expect(blockers[1].style.width).toBe('20px')
         expect(blockers[2].style.left).toBe('660px')
         expect(blockers[3].style.top).toBe('390px')
     })
+
+    it('keeps preparation overlay blockers outside the clipped visual overlay', () => {
+        const {container} = render(
+            <CropOverlay
+                crop={{left: 20, top: 30, width: 640, height: 360}}
+                style={{clipPath: 'inset(0 0 0 0)'}}/>,
+        )
+        const cropOverlay = container.querySelector('.crop-overlay')
+        const blockers = container.querySelector('.crop-overlay-blockers')
+
+        expect(cropOverlay?.style.pointerEvents).toBe('none')
+        expect(cropOverlay?.contains(blockers)).toBe(false)
+        expect(blockers?.querySelectorAll('.crop-overlay-blocker')).toHaveLength(4)
+    })
+
+    it('does not create hit-test blockers when Cesium input is allowed', () => {
+        const {container} = render(
+            <CropOverlay
+                crop={{left: 20, top: 30, width: 640, height: 360}}
+                blockOutsideCrop={false}/>,
+        )
+
+        expect(container.querySelector('.crop-overlay-blockers')).toBeNull()
+    })
+
 })

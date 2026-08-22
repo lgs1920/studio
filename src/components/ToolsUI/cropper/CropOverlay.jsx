@@ -18,11 +18,27 @@
  * CropOverlay component for the dark overlay around the crop area
  * @component
  * @param {Object} props - Component props
+ * @param {Object} props.crop - Crop dimensions relative to the overlay container
  * @param {Object} props.style - Inline styles for the overlay
+ * @param {boolean} [props.blockOutsideCrop=true] - Whether to block pointer input outside the crop window.
  * @returns {JSX.Element} The crop overlay element
  */
+import { buildCropOverlayBlockers } from '@Components/ToolsUI/cropper/cropOverlayBlockers'
 import { memo } from 'react'
 
-export const CropOverlay = memo(({ style }) => {
-    return <div className="crop-overlay" style={style}/>
+export const CropOverlay = memo(({ crop, style, blockOutsideCrop = true }) => {
+    const blockers = blockOutsideCrop ? buildCropOverlayBlockers(crop) : []
+
+    return (
+        <>
+            <div className="crop-overlay" style={{...style, pointerEvents: 'none'}}/>
+            {blockers.length > 0 && (
+                <div className="crop-overlay-blockers" aria-hidden="true">
+                    {blockers.map(blocker => (
+                        <div key={blocker.className} className={blocker.className} style={blocker.style}/>
+                    ))}
+                </div>
+            )}
+        </>
+    )
 })

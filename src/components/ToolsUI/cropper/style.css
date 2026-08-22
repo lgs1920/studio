@@ -208,6 +208,13 @@
     backdrop-filter: blur(var(--lgs-blur));
 }
 
+.crop-overlay-blockers {
+    position: absolute;
+    z-index: calc(var(--crop-zindex) - 1);
+    inset: 0;
+    pointer-events: none;
+}
+
 .crop-overlay.wa-theme-lgs1920-on-map {
     opacity: 0.82;
     background-color: color-mix(in oklab, var(--lgs-dark-color-80) 52%, transparent);

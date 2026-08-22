@@ -55,14 +55,21 @@ body {
     left: var(--left);
 }
 
+/* Keep Cesium input active while crop overlays control hit testing selectively. */
+#lgs1920-container.lgs-video-crop-input-mode #cesium-viewer,
+#lgs1920-container.lgs-video-crop-input-mode #cesium-viewer .cesium-widget,
+#lgs1920-container.lgs-video-crop-input-mode #cesium-viewer .cesium-widget canvas {
+    pointer-events: auto;
+    touch-action: none;
+}
+
 #lgs-tools-ui {
     position: absolute;
-    /*z-index: var(--lgs-tools-ui-zindex);*/
     top: calc(-1 * var(--top));
     right: calc(-1 * var(--right));
     bottom: calc(-1 * var(--bottom));
     left: calc(-1 * var(--left));
-    /*pointer-events: none;*/
+    pointer-events: none;
 }
 
 #cesium-viewer {
@@ -356,6 +363,11 @@ body {
 .video-scene-widgets-portal-preview .lgs-widget-preview-forbidden:hover,
 .video-scene-widgets-portal-preview .lgs-widget-preview-only:hover .lgs-widget-preview-forbidden {
     opacity: 1;
+}
+
+.video-scene-widgets-portal-input-blocked .lgs-widget-container,
+.video-scene-widgets-portal-input-blocked .lgs-widget-container * {
+    pointer-events: none !important;
 }
 
 .lgs-widget-control-box * {

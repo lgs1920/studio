@@ -24,7 +24,11 @@ import {
     VIDEO_TOOLS_WIDGETS, WIDGET_MOUNT_TIMEOUT, VIDEO_WIDGETS_BOARD,
 } from '@Core/constants'
 import { prepareReplayDeferredExportPlan, warmReplayDeferredExportPlan } from '@Core/ui/replay/ReplayDeferredExporter'
-import { buildReplayVideoComposerOverlays, isReplayVideoWidgetReady } from '@Core/ui/replay/ReplayVideoOverlayComposer'
+import {
+    buildReplayVideoComposerOverlays,
+    flushReplayVideoOverlayCanvases,
+    isReplayVideoWidgetReady,
+}                                                                  from '@Core/ui/replay/ReplayVideoOverlayComposer'
 import { buildReplayVideoRenderSpec } from '@Core/ui/replay/ReplayVideoRenderSpec'
 import { replayVideoTraceDebug } from '@Core/ui/replay/ReplayVideoTraceDebug'
 import { CanvasOverlayComposer } from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
@@ -206,6 +210,10 @@ export const VideoRecordingScreenArea = memo(() => {
             metricsCache: _metricsCache.current,
         })
     }, [])
+
+    const flushComposerOverlays = useCallback((widgetKeys = null) => (
+        flushReplayVideoOverlayCanvases({widgetKeys})
+    ), [])
 
     const isWidgetReadyForRecording = useCallback((widgetId) => {
         return isReplayVideoWidgetReady(widgetId)
@@ -445,13 +453,16 @@ export const VideoRecordingScreenArea = memo(() => {
             // callback, Draft can submit the previous compositor frame even when
             // the replay trace is still visible on the source canvas.
             __.recorder.setFrameCaptureReady(() => {
-                buildFinalComposerOverlays(composer, renderSpec.cropRect, renderSpec.outputDpr)
-                // The replay runtime has already rendered the final Cesium frame.
-                // Waiting for another rAF makes Draft duration depend on browser
-                // throttling when the replay UI is hidden.
-                return composer.renderFrame({waitForNextFrame: false})
+                return flushComposerOverlays().then(() => {
+                    buildFinalComposerOverlays(composer, renderSpec.cropRect, renderSpec.outputDpr)
+                    // The replay runtime has already rendered the final Cesium frame.
+                    // Waiting for another rAF makes Draft duration depend on browser
+                    // throttling when the replay UI is hidden.
+                    return composer.renderFrame({waitForNextFrame: false})
+                })
             })
 
+            await flushComposerOverlays()
             buildComposerOverlays(composer, renderSpec.cropRect)
             const firstComposerFrameStartedAt = globalThis.performance?.now?.() ?? Date.now()
             await composer.renderFrame({waitForNextFrame: true})
@@ -475,7 +486,7 @@ export const VideoRecordingScreenArea = memo(() => {
                 syncRequested: isJourneyReplaySyncRequested(),
             })
         }
-    }, [maxDuration, maxSize, disposeComposer, stopOverlaysRefresh, buildComposerOverlays, buildFinalComposerOverlays, syncVideoCropFrame, prepareJourneyReplayForRecording, isJourneyReplaySyncRequested, $video])
+    }, [maxDuration, maxSize, disposeComposer, stopOverlaysRefresh, buildComposerOverlays, buildFinalComposerOverlays, flushComposerOverlays, syncVideoCropFrame, prepareJourneyReplayForRecording, isJourneyReplaySyncRequested, $video])
 
     const markRecordingStarted = useCallback(() => {
         if (!$video.preRecording && $video.recording) {
@@ -558,6 +569,7 @@ export const VideoRecordingScreenArea = memo(() => {
                 fps: selectedFps,
                 flushWebGLBuffer: () => lgs.scene.render(),
             })
+            await flushComposerOverlays()
             buildComposerOverlays(composer, videoFrame.cropDimensions)
             await composer.renderFrame({waitForNextFrame: true})
             __.recorder.initialize({
@@ -584,7 +596,7 @@ export const VideoRecordingScreenArea = memo(() => {
         finally {
             composer?.dispose()
         }
-    }, [$video, maxSize, maxDuration, buildComposerOverlays, syncVideoCropFrame])
+    }, [$video, maxSize, maxDuration, buildComposerOverlays, flushComposerOverlays, syncVideoCropFrame])
 
     const waitingForAllWidgets = useCallback((widgets, onReady) => {
         if (!widgets?.length) {
@@ -748,9 +760,14 @@ export const VideoRecordingScreenArea = memo(() => {
         return null
     }
 
+    const synchronizedRecording = video.recording
+                                  && lgs.stores.replay.recordingSync === true
+
     return (
         <>
             <CropOverlay
+                crop={crop}
+                blockOutsideCrop={synchronizedRecording}
                 style={{clipPath: `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% ${crop.top}px, ${crop.left}px ${crop.top}px, ${crop.left}px ${crop.top + crop.height}px, ${crop.left + crop.width}px ${crop.top + crop.height}px, ${crop.left + crop.width}px ${crop.top}px, 0% ${crop.top}px)`}}/>
             {(video.preRecording || video.recording) && (
                 <VideoRecorderWidget

@@ -62,6 +62,7 @@ vi.mock('@Core/ui/replay/ReplayDeferredExporter', () => ({
 
 vi.mock('@Core/ui/replay/ReplayVideoOverlayComposer', () => ({
     buildReplayVideoComposerOverlays: vi.fn(),
+    flushReplayVideoOverlayCanvases: vi.fn(async () => undefined),
     isReplayVideoWidgetReady:         vi.fn(() => true),
 }))
 

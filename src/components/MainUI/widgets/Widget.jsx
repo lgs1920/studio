@@ -400,7 +400,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
 
-    const throttleRotate = 1
+    const throttleRotate = 0
     const [widgetId] = useState(() => {
         const id = config.id
         return id && id.includes('#') ? id : __.ui.widgetManager.defineElementId(config.group, id)
@@ -532,8 +532,17 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
         }
     }, [config.widgetsBoard, isTargetingBoard])
 
-    const interactionLocked = previewOnly || ((video.preRecording || video.recording || video.snapshot || video.finalizing) && config.type === LGS_VISUAL_WIDGET)
-    const cropPassThrough = Boolean(config.isCropper && interactionLocked)
+    const synchronizedRecording = (video.recording === true || video.recordingHQ === true)
+                                  && globalThis.lgs?.stores?.replay?.recordingSync === true
+    const interactionLocked = previewOnly
+                              || ((video.preRecording || video.recording || video.snapshot || video.finalizing)
+                                  && config.type === LGS_VISUAL_WIDGET)
+    const inputBlocked = previewOnly
+                         || ((synchronizedRecording || video.snapshot || video.finalizing)
+                             && config.type === LGS_VISUAL_WIDGET)
+    // The crop surface is visual only. Moveable renders its handles in a
+    // separate sibling control box, so the empty crop area can reach Cesium.
+    const cropPassThrough = Boolean(config.isCropper)
     const showGhostOnly = Boolean(config?.showGhostDuringRecording) && video.recording && config.type === LGS_VISUAL_WIDGET
     const canInteract = !interactionLocked && !effectiveLocked
     const canDrag = canInteract && (config?.draggable ?? true)
@@ -1134,7 +1143,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
         }
         _children.current?.onRotate?.(event)
         __.ui.widgetManager.onRotate(event, {_prevRotate})
-        lgs.stores.ui.widget.current.rotate = Math.ceil(event.rotate)
+        lgs.stores.ui.widget.current.rotate = event.rotate
     }, [canRotate])
 
     const handleRotateEnd = useCallback((event) => {
@@ -1400,8 +1409,9 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                 lgs.stores.ui.widget.current.rotate = resolved.rotate
 
                 if (interactionLocked) {
+                    let mirror = _w2c.current
                     if (!_w2c.current) {
-                        _w2c.current = new Widget2Canvas(_widget.current.querySelector(':scope >:not(.lgs-widget-inner-overlay)'), {
+                        mirror = new Widget2Canvas(_widget.current.querySelector(':scope >:not(.lgs-widget-inner-overlay)'), {
                             embedFonts:      true,
                             exclude:         config.captureExclude ?? [],
                             excludeMode:     'remove',
@@ -1414,9 +1424,24 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                             debugTiming: false,//config.refreshMode === 'both',
                             refreshMode:     config.refreshMode ?? (interactionLocked ? 'live' : 'mutation'),
                         })
-                        await _w2c.current.init()
+                        _w2c.current = mirror
+                        try {
+                            await mirror.init()
+                        }
+                        catch {
+                            mirror.destroy()
+                            if (_w2c.current === mirror) {
+                                _w2c.current = null
+                            }
+                            _widget.current.style.visibility = 'visible'
+                            return
+                        }
                     }
-                    const canvas = _w2c.current.getCanvas?.()
+                    if (cancelled || _w2c.current !== mirror) {
+                        mirror.destroy()
+                        return
+                    }
+                    const canvas = mirror.getCanvas?.()
                     if (canvas) {
                         canvas.style.visibility = showGhostOnly ? 'visible' : 'hidden'
                     }
@@ -1520,7 +1545,8 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                     'lgs-widget-lock-hint-active': showLockedOverlay,
                     'lgs-one-line-card': effectiveCollapsed,
                     'wa-theme-lgs1920-on-map': effectiveCollapsed,
-                    'recording-locked': interactionLocked,
+                    'crop-pass-through': cropPassThrough,
+                    'recording-locked': inputBlocked,
                     'lgs-widget-preview-only': previewOnly,
                 })}
                 ref={(el) => {

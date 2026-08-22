@@ -51,6 +51,22 @@ export const ToolsUI = () => {
         }
     }, [replay.active, replay.paused, replay.playing, replay.recordingSync, video.editing])
 
+    useEffect(() => {
+        const appContainer = document.getElementById('lgs1920-container')
+        if (!appContainer) {
+            return undefined
+        }
+
+        const cropInputMode = video.editing
+            || video.preRecording
+            || video.recording
+            || video.snapshot
+            || video.finalizing
+        appContainer.classList.toggle('lgs-video-crop-input-mode', cropInputMode)
+
+        return () => appContainer.classList.remove('lgs-video-crop-input-mode')
+    }, [video.editing, video.preRecording, video.recording, video.snapshot, video.finalizing])
+
     return (
         <div id="lgs-tools-ui">
             {video.editing ? (
