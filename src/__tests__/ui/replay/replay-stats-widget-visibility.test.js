@@ -87,6 +87,13 @@ describe('replay stats widget visibility', () => {
         expect(shouldShowDynamicStatsWidget(globalThis.lgs.stores.replay)).toBe(true)
     })
 
+    it('uses the replay setting when the runtime store has not synced yet', () => {
+        globalThis.lgs.stores.replay.recordingSync = false
+        globalThis.lgs.settings.ui.replay.recordingSync = true
+
+        expect(shouldShowDynamicStatsWidget(globalThis.lgs.stores.replay)).toBe(true)
+    })
+
     it('hides the dynamic stats widget on the last two replay frames', () => {
         globalThis.lgs.stores.replay.replayFramePhase = {
             kind: 'replay',

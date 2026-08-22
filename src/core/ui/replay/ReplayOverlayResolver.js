@@ -178,6 +178,7 @@ const videoOverlayModeForWidgetId = (widgetId = '') => {
 }
 
 export const isJourneyReplayLinked = () => globalThis.lgs?.stores?.replay?.recordingSync === true
+    || globalThis.lgs?.settings?.ui?.replay?.recordingSync === true
 
 /**
  * Return true when the journey has stop clips configured.

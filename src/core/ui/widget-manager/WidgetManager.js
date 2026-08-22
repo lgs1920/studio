@@ -996,6 +996,10 @@ export class WidgetManager {
                 this.#cropper.applyCropToOverlay(config)
             }
 
+            // Rehydration invalidates the runtime cache before restoring the
+            // element. Keep the already-rendered widget eligible for capture.
+            __.ui.widgetCache?.mount?.(widgetId)
+
             lgs.stores.ui.widget.list.set(widgetId, {
                 ...entry,
                 ...saved,

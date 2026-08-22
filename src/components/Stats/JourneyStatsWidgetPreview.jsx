@@ -18,17 +18,15 @@ import { JourneyStats }                                             from '@Compo
 import { getPreviewChartSize }                                      from '@Components/MainUI/widgets/editor/previewUtils'
 import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS } from '@Utils/UnitUtils'
 import { useOptionalSnapshot }                                      from '@Utils/ValtioUtils'
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                              from 'valtio'
 
 /**
  * Preview component for Journey Stats.
- * Syncs initial rotation with widgetManager via async call and handles live updates.
+ * Renders the stats content while the editor preview stage owns widget rotation.
  */
 export const JourneyStatsWidgetPreview = ({entity, widgetKey = 'journey-stats-widget', mode = 'journey'}) => {
     const MAX_PREVIEW_SCALE = 0.9
-    const $widget = lgs.stores.ui.widget
-    const widget = useSnapshot($widget)
     const main = useSnapshot(lgs.stores.main)
     const journey = lgs.theJourney
     const journeySlug = main.theJourney?.slug ?? null
@@ -48,7 +46,6 @@ export const JourneyStatsWidgetPreview = ({entity, widgetKey = 'journey-stats-wi
     const $metrics = journey?.metrics ?? lgs.stores.main.components.journeyStats
     const metrics = useSnapshot($metrics)
 
-    const [initialRotation, setInitialRotation] = useState(0)
     const [previewBox, setPreviewBox] = useState({width: 0, height: 0})
     const [contentBox, setContentBox] = useState({width: 0, height: 0})
     const surfaceRef = useRef(null)
@@ -57,25 +54,6 @@ export const JourneyStatsWidgetPreview = ({entity, widgetKey = 'journey-stats-wi
     const element = useMemo(() => {
         return configuration.elements?.[entity] ?? configuration.user ?? configuration.default
     }, [configuration, entity])
-
-    /**
-     * Fetch initial position from manager on mount
-     */
-    useEffect(() => {
-        let isMounted = true
-
-        const fetchPosition = async () => {
-            const position = await __.ui.widgetManager.getWidgetPosition(entity)
-            if (isMounted && position) {
-                setInitialRotation(Number(position.rotate) || 0)
-            }
-        }
-
-        fetchPosition()
-        return () => {
-            isMounted = false
-        }
-    }, [entity])
 
     const journeyMetrics = useMemo(() => {
         if (!journeySlug || !journey || !metrics) {
@@ -205,14 +183,6 @@ export const JourneyStatsWidgetPreview = ({entity, widgetKey = 'journey-stats-wi
         return Math.min(MAX_PREVIEW_SCALE, fitScale)
     }, [contentBox.height, contentBox.width, previewBox.height, previewBox.width])
 
-    /**
-     * Priority to live Valtio store if selected, otherwise use fetched initial rotation
-     */
-    const isSelected = widget.current?.id === entity
-    const activeRotation = isSelected && widget.current?.rotate !== undefined
-                           ? Number(widget.current.rotate)
-                           : initialRotation
-
     if (!journeySlug || !journey || !journeyMetrics) {
         return null
     }
@@ -244,7 +214,7 @@ export const JourneyStatsWidgetPreview = ({entity, widgetKey = 'journey-stats-wi
                 </div>
                 <div
                     className="journey-stats-widget-preview-stage"
-                    style={{transform: `scale(${previewScale}) rotate(${activeRotation}deg)`}}
+                    style={{transform: `scale(${previewScale})`}}
                 >
                     <JourneyStats
                         metrics={journeyMetrics.metrics}

@@ -463,6 +463,7 @@ describe('JourneyReplayMode HQ export frames', () => {
         expect(exportController.seek).toHaveBeenCalledWith(0.75)
         expect(renderer.update).toHaveBeenCalledWith(expect.objectContaining({
             sample: exportSample,
+            syncCursorToTrace: true,
         }))
     })
 

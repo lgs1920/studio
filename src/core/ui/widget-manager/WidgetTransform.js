@@ -19,6 +19,7 @@
  * Centralizes transform operations to prevent conflicts between drag, scale, and other transforms.
  */
 import { applyWidgetScaleVariables } from '@Core/ui/widget-manager/widgetScaleUtils'
+import { syncWidgetPreviewRotation } from '@Core/ui/widget-manager/WidgetPreviewRotation'
 
 export class WidgetTransform {
     // Singleton instance
@@ -199,6 +200,7 @@ export class WidgetTransform {
         const newTransform = this.buildTransform(currentTransform)
         element.style.transform = newTransform
         config.transform = newTransform
+        syncWidgetPreviewRotation(elementId, degrees)
     }
 
     /**
@@ -244,6 +246,7 @@ export class WidgetTransform {
         config.scale = {x: 1, y: 1}
         config.rotate = 0
         this.applyScaleVariables(element, config.scale)
+        syncWidgetPreviewRotation(elementId, 0)
     }
 
     /**
@@ -445,6 +448,9 @@ export class WidgetTransform {
         element.style.transform = newTransformString
         config.transform = newTransformString
         this.applyScaleVariables(element, currentTransform.scale)
+        if (transforms.rotate !== undefined) {
+            syncWidgetPreviewRotation(elementId, transforms.rotate)
+        }
     }
 
     applyScaleVariables = (element, scale = {x: 1, y: 1}) => {

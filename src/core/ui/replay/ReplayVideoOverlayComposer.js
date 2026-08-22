@@ -17,8 +17,10 @@ import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { resolveVideoOverlayVisibility } from '@Core/ui/replay/ReplayOverlayResolver'
 import { normalizeReplayVideoCropRect } from '@Core/ui/replay/ReplayVideoRenderSpec'
 import { replayVideoTraceDebug } from '@Core/ui/replay/ReplayVideoTraceDebug'
+import { Widget2Canvas } from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
 
 const DEFAULT_METRICS_CACHE_TTL_MS = 750
+const OVERLAY_FLUSH_TIMEOUT_MS = 1000
 
 const getComputedStyleSafe = element => globalThis.getComputedStyle?.(element) ?? globalThis.window?.getComputedStyle?.(element) ?? null
 
@@ -116,6 +118,32 @@ const getSortedVideoWidgetKeys = ({widgetKeys = null, widgetsBoard = VIDEO_WIDGE
     return [...(globalThis.__?.ui?.widgetCache?.getAll?.({widgetsBoard})?.entries?.() ?? [])]
         .sort((a, b) => (a[1].zIndex || 0) - (b[1].zIndex || 0))
         .map(entry => entry[0])
+}
+
+/**
+ * Flush every mounted DOM mirror used by the video compositor.
+ *
+ * @param {object} options - Flush options.
+ * @param {string[]|null} [options.widgetKeys=null] - Optional widget IDs to flush.
+ * @param {string} [options.widgetsBoard='video'] - Board containing the overlays.
+ * @param {number} [options.timeoutMs=1000] - Maximum wait per overlay mirror.
+ * @returns {Promise<void>} Resolves after all available mirrors are idle.
+ */
+export const flushReplayVideoOverlayCanvases = async ({
+                                                         widgetKeys = null,
+                                                         widgetsBoard = VIDEO_WIDGETS_BOARD,
+                                                         timeoutMs = OVERLAY_FLUSH_TIMEOUT_MS,
+                                                     } = {}) => {
+    const keys = getSortedVideoWidgetKeys({widgetKeys, widgetsBoard})
+    await Promise.all(keys.map(widgetId => {
+        let timeoutId = null
+        const flush = Promise.resolve(Widget2Canvas.flush(widgetId)).catch(() => false)
+        const timeout = new Promise(resolve => {
+            timeoutId = setTimeout(() => resolve(false), timeoutMs)
+        })
+
+        return Promise.race([flush, timeout]).finally(() => clearTimeout(timeoutId))
+    }))
 }
 
 const resolveMetrics = ({widgetId, widgetEl, metricsCache = null, metricsCacheTtlMs = DEFAULT_METRICS_CACHE_TTL_MS} = {}) => {
@@ -281,11 +309,6 @@ export const isReplayVideoWidgetReady = widgetId => {
                       : Boolean(element)
     if (!element || !isMounted) {
         return false
-    }
-
-    const baseId = `${widgetId}`.split('#')[0]
-    if (baseId === 'text-widget') {
-        return true
     }
 
     return Boolean(element.querySelector?.('.lgs-widget-canvas'))

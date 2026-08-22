@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 import { WaButton, WaIcon, WaNumberInput, WaSlider } from '@web.awesome.me/webawesome-pro/dist/react'
-import { useCallback, useEffect, useMemo, useRef }   from 'react'
+import { useCallback, useMemo }                       from 'react'
 
 /**
  * Reusable rotation control element for widget editors.
@@ -33,9 +33,7 @@ export const RotationElement = ({
                                     min = -90,
                                     max = 90,
                                     step = 1,
-                                }) => {
-    const sliderRef = useRef(null)
-
+}) => {
     const sanitizeRotationValue = useCallback((rawValue) => {
         const numericValue = Number(rawValue)
 
@@ -51,17 +49,6 @@ export const RotationElement = ({
     const handleRotationInput = useCallback((rawValue) => {
         applyRotation(-sanitizeRotationValue(rawValue))
     }, [applyRotation, sanitizeRotationValue])
-
-    useEffect(() => {
-        const slider = sliderRef.current
-        const nextValue = sanitizeRotationValue(displayValue)
-
-        if (!slider || Number(slider.value) === nextValue) {
-            return
-        }
-
-        slider.value = nextValue
-    }, [displayValue, sanitizeRotationValue])
 
     return (
         <>
@@ -90,12 +77,11 @@ export const RotationElement = ({
             <WaSlider
                 label-at-start
                 half-width
-                ref={sliderRef}
                 size="s"
                 min={min}
                 max={max}
                 step={step}
-                defaultValue={displayValue}
+                value={displayValue}
                 placement="bottom"
                 withTooltip
                 style={{'--track-active-offset': '50%'}}

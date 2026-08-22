@@ -585,6 +585,41 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(Cartesian3.equals(renderedEnd, Cartesian3.fromDegrees(guideEnd.longitude, guideEnd.latitude, 0))).toBe(true)
     })
 
+    it('can align the HQ marker with the trace without forcing a geometry rebuild', () => {
+        const dataSources = makeDataSources()
+        installReplayGlobals({dataSources})
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const renderer = new JourneyReplayCesiumRenderer()
+        const smoothedGuide = [
+            {longitude: 2, latitude: 48, progress: 0},
+            {longitude: 2.01, latitude: 48.01, progress: 1},
+        ]
+
+        renderer.show({sampler, options: {smoothedGuide}})
+        renderer.update({sample: sampler.atProgress(0.4), sampler, forceGeometry: true, showTrace: true})
+        const completedFill = replayEntity(dataSources, '#completed#smoothed#fill')
+        const positionsProperty = completedFill?.polyline?.positions
+        const initialTraceEnd = propertyValue(positionsProperty).at(-1)
+
+        renderer.update({sample: sampler.atProgress(0.5), sampler, syncCursorToTrace: true})
+
+        const cursorBeforeTraceRender = propertyValue(replayEntity(dataSources, '#cursor')?.position)
+        const traceEnd = propertyValue(completedFill?.polyline?.positions).at(-1)
+        const cursorAfterTraceRender = propertyValue(replayEntity(dataSources, '#cursor')?.position)
+        const cursorSize = propertyValue(replayEntity(dataSources, '#cursor')?.point?.pixelSize)
+
+        expect(completedFill?.polyline?.positions).toBe(positionsProperty)
+        expect(Cartesian3.equals(cursorBeforeTraceRender, initialTraceEnd)).toBe(true)
+        expect(Cartesian3.equals(cursorAfterTraceRender, traceEnd)).toBe(true)
+        expect(Number.isFinite(cursorSize)).toBe(true)
+    })
+
     it('keeps the complete point set for the Draft trace', () => {
         const dataSources = makeDataSources()
         const replay = defaultJourneyReplaySettings()

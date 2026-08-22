@@ -95,6 +95,8 @@ export class JourneyReplayCesiumRenderer {
     #cursorEffectInner = null
     #cursorEffectCore = null
     #cursorEffectsEnabled = false
+    #cursorTraceFallbackPosition = null
+    #cursorTracePositionProperty = null
     #lineEntities = new Map()
     #sampler = null
     #journeySlug = null
@@ -135,6 +137,7 @@ export class JourneyReplayCesiumRenderer {
                   sampler = this.#sampler,
                   forceGeometry = false,
                   freezeDynamic = false,
+                  syncCursorToTrace = false,
                   hideCursor = false,
                   hideTrace = null,
                   showTrace = null,
@@ -198,7 +201,7 @@ export class JourneyReplayCesiumRenderer {
         if (freezeDynamic && !staticCompletedTrace) {
             this.#freezeDynamicLines()
         }
-        this.#updateCursor(sample)
+        this.#updateCursor(sample, {syncToTrace: syncCursorToTrace === true})
         if (hideTrace === true) {
             this.setTraceVisibility(false)
         }
@@ -1011,15 +1014,47 @@ export class JourneyReplayCesiumRenderer {
         return TrackUtils.getTrackRenderStyle(track)
     }
 
-    #updateCursor = (sample) => {
+    #lastRenderedTracePosition = fallbackPosition => {
+        const completedRecords = Array.from(this.#lineEntities.entries())
+            .filter(([key, record]) => !key.startsWith(REMAINING_KEY_PREFIX)
+                                       && record?.geometryKey === 'dynamic'
+                                       && Array.isArray(record.lastPositions)
+                                       && record.lastPositions.length >= 2)
+            .sort(([, left], [, right]) => (right.lastRenderedProgress ?? 0) - (left.lastRenderedProgress ?? 0))
+        return completedRecords[0]?.[1]?.lastPositions?.at(-1) ?? fallbackPosition
+    }
+
+    #cursorPositionFromRenderedTrace = fallbackPosition => {
+        this.#cursorTraceFallbackPosition = fallbackPosition
+        if (!this.#cursorTracePositionProperty) {
+            this.#cursorTracePositionProperty = new CallbackProperty((_time, result) => {
+                const position = this.#lastRenderedTracePosition(this.#cursorTraceFallbackPosition)
+                return Cartesian3.clone(position, result)
+            }, false)
+        }
+        return this.#cursorTracePositionProperty
+    }
+
+    #updateCursor = (sample, {syncToTrace = false} = {}) => {
         const source = this.#ensureSource()
         if (!source) {
             return
         }
 
         const style = this.#style()
-        const cursorPosition = Cartesian3.fromDegrees(sample.longitude, sample.latitude, 0)
-        const pointSize = this.#metersToPixels(style.cursorDiameter * 2, cursorPosition, 80) * 2
+        const longitude = finiteNumber(sample.longitude)
+        const latitude = finiteNumber(sample.latitude)
+        if (longitude === null || latitude === null) {
+            this.#setCursorVisibility(false)
+            return
+        }
+
+        const rawCursorPosition = Cartesian3.fromDegrees(longitude, latitude, 0)
+        const tracePosition = this.#interpolatedSmoothedPosition(sample.progress) ?? rawCursorPosition
+        const cursorPosition = syncToTrace
+            ? this.#cursorPositionFromRenderedTrace(tracePosition)
+            : rawCursorPosition
+        const pointSize = this.#metersToPixels(style.cursorDiameter * 2, tracePosition, 80) * 2
         const outlineWidth = Math.max(0, Number(style.cursorBorder) || 0)
         if (this.#cursorBorder) {
             this.#cursorBorder.show = false
@@ -1166,15 +1201,23 @@ export class JourneyReplayCesiumRenderer {
     #metersToPixels = (meters, position, maxPixels = 24) => {
         const viewer = globalThis.lgs?.viewer
         const camera = viewer?.camera
-        const canvasHeight = viewer?.scene?.canvas?.height ?? globalThis.lgs?.scene?.canvas?.height ?? 0
+        const canvasHeight = finiteNumber(viewer?.scene?.canvas?.height
+                                          ?? globalThis.lgs?.scene?.canvas?.height) ?? 0
         const cameraPosition = camera?.positionWC ?? camera?.position
-        const distance = Math.max(1, Cartesian3.distance(cameraPosition ?? position, position))
-        const fovy = camera?.frustum?.fovy ?? (Math.PI / 3)
-        const pixelsPerMeter = canvasHeight > 0
-                              ? canvasHeight / (2 * distance * Math.tan(fovy / 2))
-                              : 1
+        const hasPosition = isUsableCartesian3(position)
+        const hasCameraPosition = isUsableCartesian3(cameraPosition)
+        const distance = hasPosition && hasCameraPosition
+            ? Math.max(1, Cartesian3.distance(cameraPosition, position))
+            : 1
+        const fovy = finiteNumber(camera?.frustum?.fovy) ?? (Math.PI / 3)
+        const tangent = Math.tan(fovy / 2)
+        const pixelsPerMeter = canvasHeight > 0 && Number.isFinite(tangent) && tangent > 0
+            ? canvasHeight / (2 * distance * tangent)
+            : 1
+        const safePixelsPerMeter = Number.isFinite(pixelsPerMeter) && pixelsPerMeter > 0 ? pixelsPerMeter : 1
+        const safeMeters = finiteNumber(meters) ?? 1
 
-        return Math.max(4, Math.min(maxPixels, Math.round(Math.max(1, meters) * pixelsPerMeter)))
+        return Math.max(4, Math.min(maxPixels, Math.round(Math.max(1, safeMeters) * safePixelsPerMeter)))
     }
 
     #polylineGeometryKey = positions => {
@@ -1427,6 +1470,7 @@ export class JourneyReplayCesiumRenderer {
 
             const positions = dynamicRecord.positionsFactory()
             dynamicRecord.lastProgressKey = progressKey
+            dynamicRecord.lastRenderedProgress = progress
             dynamicRecord.lastPositions = Array.isArray(positions) && positions.length >= 2 ? positions : []
             return dynamicRecord.lastPositions
         }, false)

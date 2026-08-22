@@ -135,7 +135,7 @@ describe('JourneyStatsWidgetPreview', () => {
             const stage = container.querySelector('.journey-stats-widget-preview-stage')
             expect(stage).toBeTruthy()
             expect(stage.style.transform).toContain('scale(0.9)')
-            expect(stage.style.transform).toContain('rotate(0deg)')
+            expect(stage.style.transform).not.toContain('rotate(')
         })
     })
 })

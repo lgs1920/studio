@@ -110,6 +110,7 @@ export const WidgetEditorPanel = () => {
     const syncGlobalCompass = drawers.action === 'edit-global-compass'
     const drawerPlacement = menuSettings.drawer
     const currentSnapshotImage = widget.currentSnapshot?.entity === drawers.entity ? widget.currentSnapshot.image : null
+    const previewRotation = Number.isFinite(Number(widgetPosition?.rotate)) ? Number(widgetPosition.rotate) : 0
     const previewBg = widgetType === 'profile'
                       ? null
                       : (currentSnapshotImage ||
@@ -312,20 +313,27 @@ export const WidgetEditorPanel = () => {
                                 data-widget-preview-entity={drawers.entity}
                                 style={{'--lgs-widget-preview-bg': previewBg ? `url(${previewBg})` : 'none'}}
                             >
-                                <Suspense fallback={PreviewLoadingFallback}>
-                                    {PreviewComponent ? (
-                                        <PreviewComponent
-                                            key={`preview:${widgetPresetKey}`}
-                                            entity={drawers.entity}
-                                            data={data}
-                                            syncGlobalCompass={syncGlobalCompass}
-                                        />
-                                    ) : (
-                                         <div className="default-preview">
-                                             <WaIcon library="fa" name={data.icon}/>
-                                         </div>
-                                     )}
-                                </Suspense>
+                                <div
+                                    className="lgs-widget-preview-rotation-stage"
+                                    data-widget-preview-rotation-stage
+                                    data-widget-preview-rotation={previewRotation}
+                                    style={{transform: `rotate(${previewRotation}deg)`}}
+                                >
+                                    <Suspense fallback={PreviewLoadingFallback}>
+                                        {PreviewComponent ? (
+                                            <PreviewComponent
+                                                key={`preview:${widgetPresetKey}`}
+                                                entity={drawers.entity}
+                                                data={data}
+                                                syncGlobalCompass={syncGlobalCompass}
+                                            />
+                                        ) : (
+                                             <div className="default-preview">
+                                                 <WaIcon library="fa" name={data.icon}/>
+                                             </div>
+                                         )}
+                                    </Suspense>
+                                </div>
                             </section>
                         </WaTabPanel>
                         {hasBoardWidgets &&
