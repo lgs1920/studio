@@ -850,30 +850,30 @@ export const JourneySettings = () => {
                                 >
                                     <div className="journey-export-choice-content">
                                         <WaTooltip placement="bottom"
-                                                   for="export-journey-file-choice">{'Export as File'}</WaTooltip>
+                                                   for="export-journey-file-choice">{'Export as Route'}</WaTooltip>
                                         <WaButton
                                             id="export-journey-file-choice"
                                             className="journey-export-choice-button"
                                             variant="brand"
                                             appearance="plain"
-                                            aria-label="Export as File"
+                                            aria-label="Export as Route"
                                             onClick={openExportFileDialog}
                                         >
                                             <WaIcon slot="start" name="route" variant="regular"/>
-                                            <span>Export as File</span>
+                                            <span>Export as Route</span>
                                         </WaButton>
                                         <WaTooltip placement="bottom"
-                                                   for="export-journey-report-choice">{'Export a Report'}</WaTooltip>
+                                                   for="export-journey-report-choice">{'Create report'}</WaTooltip>
                                         <WaButton
                                             id="export-journey-report-choice"
                                             className="journey-export-choice-button"
                                             variant="brand"
                                             appearance="plain"
-                                            aria-label="Export a Report"
+                                            aria-label="Create report"
                                             onClick={openExportReportDialog}
                                         >
                                             <WaIcon slot="start" name="file-lines" variant="regular"/>
-                                            <span>Export a Report</span>
+                                            <span>Create report</span>
                                         </WaButton>
                                     </div>
                                 </LGSPopup>

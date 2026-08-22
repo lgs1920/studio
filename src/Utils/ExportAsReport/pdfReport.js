@@ -22,12 +22,11 @@ import {
 } from './constants'
 import * as ReportCredits from './credits'
 import {
-    cssColor,
     formatDateTimeParts,
     formatDuration,
     formatMetric,
     getExportTheme,
-    parseCssColor,
+    getPDFReportColors,
     plainText,
     reportSubtitle,
     setColor,
@@ -83,13 +82,6 @@ const PDF_2D_MAP_IMAGE_WIDTH = 1200
 const PDF_2D_MAP_IMAGE_HEIGHT = 760
 const PDF_2D_MAP_IMAGE_QUALITY = 0.9
 
-const PDF_2D_MAP_THEME = {
-    surface: cssColor(PDF_COLORS.mapFill),
-    line:    cssColor(PDF_COLORS.line),
-    brand:   cssColor(PDF_COLORS.text),
-    text:    cssColor(PDF_COLORS.text),
-}
-
 export const svgToDataUrl = svg => svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}` : ''
 
 export const normalizeImageForPDF = async (image, options = {}) => {
@@ -136,7 +128,8 @@ export const createPDF2DMapImages = async ({
     trackDrawings,
     pois,
     endpointMarkers,
-    theme = PDF_2D_MAP_THEME,
+    theme = getExportTheme(),
+    traceColor = theme.text,
 } = {}) => {
     const mapImages = []
 
@@ -147,6 +140,7 @@ export const createPDF2DMapImages = async ({
             pois,
             endpointMarkers,
             theme,
+            traceColor,
         })
 
         if (!svg) {
@@ -176,39 +170,80 @@ export const createPDF2DMapImages = async ({
     return mapImages
 }
 
-export const addFooter = (doc) => {
+/**
+ * Flattens the transparent logo onto the PDF background to avoid dark alpha halos.
+ *
+ * @param {object|null} logo - Loaded studio logo.
+ * @param {string} background - PDF page background color.
+ * @returns {Promise<object|null>} Logo with its original colors and a stable background.
+ */
+export const prepareStudioLogoForPDF = async (logo, background = '#ffffff') => {
+    if (!logo?.dataUrl || typeof document === 'undefined') {
+        return logo
+    }
+
+    const source = await loadDataUrlImage(logo.dataUrl)
+    if (!source?.width || !source?.height) {
+        return logo
+    }
+
+    const canvas = document.createElement('canvas')
+    canvas.width = source.width
+    canvas.height = source.height
+    const context = canvas.getContext?.('2d')
+    if (!context) {
+        return logo
+    }
+
+    context.fillStyle = background
+    context.fillRect(0, 0, canvas.width, canvas.height)
+    context.drawImage(source, 0, 0)
+    const dataUrl = await canvasToDataUrl(canvas, 'image/png')
+
+    return dataUrl ? {...logo, dataUrl} : logo
+}
+
+export const fillPDFPage = (doc, colors = PDF_COLORS) => {
+    const width = doc.internal.pageSize.getWidth()
+    const height = doc.internal.pageSize.getHeight()
+    setColor(doc, 'setFillColor', colors.background ?? PDF_COLORS.white)
+    doc.rect(0, 0, width, height, 'F')
+}
+
+export const addFooter = (doc, colors = PDF_COLORS) => {
     const width = doc.internal.pageSize.getWidth()
     const height = doc.internal.pageSize.getHeight()
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(7)
-    setColor(doc, 'setTextColor', PDF_COLORS.muted)
+    setColor(doc, 'setTextColor', colors.text)
     doc.text(
         `Created on ${DateTime.now().toLocaleString(DateTime.DATETIME_MED)} | Page ${doc.getCurrentPageInfo().pageNumber}`,
         PAGE_MARGIN,
         height - 6,
     )
     drawInlineLinks(doc, [
-        {text: STUDIO_SIGNATURE, url: STUDIO_URL},
-        {text: STUDIO_URL, url: STUDIO_URL},
-        {text: STUDIO_CONTACT, url: `mailto:${STUDIO_CONTACT}`},
-    ], width - PAGE_MARGIN, height - 6)
+        {text: STUDIO_SIGNATURE, url: STUDIO_URL, color: colors.text},
+        {text: STUDIO_URL, url: STUDIO_URL, color: colors.text},
+        {text: STUDIO_CONTACT, url: `mailto:${STUDIO_CONTACT}`, color: colors.text},
+    ], width - PAGE_MARGIN, height - 6, {separatorColor: colors.text})
 }
 
-export const createTextWriter = (doc, studioLogo, icons = {}) => {
+export const createTextWriter = (doc, studioLogo, icons = {}, colors = PDF_COLORS) => {
     const width = doc.internal.pageSize.getWidth()
     const height = doc.internal.pageSize.getHeight()
-    const brandColor = PDF_COLORS.text
-    const textColor = PDF_COLORS.text
-    const lineColor = PDF_COLORS.line
-    const headerFillColor = PDF_COLORS.headerFill
+    const brandColor = colors.brand
+    const textColor = colors.text
+    const lineColor = colors.line
+    const headerFillColor = colors.headerFill
     let y = PAGE_MARGIN
 
     const ensureSpace = needed => {
         if (y + needed <= height - PAGE_MARGIN) {
             return
         }
-        addFooter(doc)
+        addFooter(doc, colors)
         doc.addPage()
+        fillPDFPage(doc, colors)
         y = PAGE_MARGIN
     }
 
@@ -246,9 +281,10 @@ export const createTextWriter = (doc, studioLogo, icons = {}) => {
 
         doc.setFont('helvetica', 'normal')
         doc.setFontSize(9)
-        setColor(doc, 'setTextColor', PDF_COLORS.muted)
+        setColor(doc, 'setTextColor', textColor)
         const prefix = 'Proudly made with '
         doc.text(prefix, PAGE_MARGIN, y)
+        setColor(doc, 'setTextColor', textColor)
         drawTextLink(doc, STUDIO_NAME, PAGE_MARGIN + doc.getTextWidth(prefix), y, STUDIO_URL)
         y += 8
     }
@@ -279,18 +315,19 @@ export const createTextWriter = (doc, studioLogo, icons = {}) => {
         y += lines.length * TEXT_LINE_HEIGHT + 2
     }
 
-    const row = (label, value, {url = null} = {}) => {
+    const row = (label, value, {url = null, labelColor = brandColor, valueColor = textColor, linkColor = colors.link} = {}) => {
         if (value === undefined || value === null || value === '') {
             return
         }
         ensureSpace(TEXT_LINE_HEIGHT + 1)
         doc.setFontSize(9.4)
         doc.setFont('helvetica', 'bold')
-        setColor(doc, 'setTextColor', brandColor)
+        setColor(doc, 'setTextColor', labelColor)
         doc.text(`${label}:`, PAGE_MARGIN, y)
         doc.setFont('helvetica', 'normal')
-        setColor(doc, 'setTextColor', textColor)
+        setColor(doc, 'setTextColor', valueColor)
         if (url) {
+            setColor(doc, 'setTextColor', linkColor)
             drawTextLink(doc, `${value}`, PAGE_MARGIN + 42, y, url)
         }
         else {
@@ -316,9 +353,13 @@ export const createTextWriter = (doc, studioLogo, icons = {}) => {
 
         data.forEach((item, index) => {
             const rowY = y + index * rowHeight
+            const valueX = PAGE_MARGIN + Math.min(42, leftWidth * 0.39)
+            setColor(doc, 'setFillColor', headerFillColor)
+            doc.rect(PAGE_MARGIN, rowY, valueX - PAGE_MARGIN, rowHeight, 'F')
             setColor(doc, 'setDrawColor', lineColor)
             doc.setLineWidth(0.2)
             doc.rect(PAGE_MARGIN, rowY, leftWidth, rowHeight)
+            doc.line(valueX, rowY, valueX, rowY + rowHeight)
 
             const iconX = PAGE_MARGIN + 2.1
             const iconSize = 4.5
@@ -326,13 +367,12 @@ export const createTextWriter = (doc, studioLogo, icons = {}) => {
             const labelX = drawPDFIcon(doc, icons, item.icon, iconX, iconY, iconSize) ? iconX + 6.2 : iconX
             doc.setFont('helvetica', 'bold')
             doc.setFontSize(9.6)
-            setColor(doc, 'setTextColor', textColor)
+            setColor(doc, 'setTextColor', brandColor)
             doc.text(`${item.label}:`, labelX, rowY + rowHeight / 2, {baseline: 'middle'})
 
             doc.setFont('helvetica', 'normal')
             doc.setFontSize(9.6)
             setColor(doc, 'setTextColor', textColor)
-            const valueX = PAGE_MARGIN + Math.min(42, leftWidth * 0.39)
             const lines = doc.splitTextToSize(`${item.value}`, leftWidth - (valueX - PAGE_MARGIN) - 3)
             doc.text(lines.slice(0, 2), valueX, rowY + rowHeight / 2, {baseline: 'middle'})
         })
@@ -368,6 +408,8 @@ export const createTextWriter = (doc, studioLogo, icons = {}) => {
             ensureSpace(rowHeight)
             data.slice(index, index + columns).forEach((cell, columnIndex) => {
                 const x = PAGE_MARGIN + columnIndex * columnWidth
+                setColor(doc, 'setFillColor', headerFillColor)
+                doc.rect(x, y, labelWidth, rowHeight, 'F')
                 setColor(doc, 'setDrawColor', lineColor)
                 doc.setLineWidth(0.2)
                 doc.rect(x, y, columnWidth, rowHeight)
@@ -400,8 +442,9 @@ export const createTextWriter = (doc, studioLogo, icons = {}) => {
             if (y + needed <= height - PAGE_MARGIN) {
                 return false
             }
-            addFooter(doc)
+            addFooter(doc, colors)
             doc.addPage()
+            fillPDFPage(doc, colors)
             y = PAGE_MARGIN
             return true
         }
@@ -482,13 +525,14 @@ export const createTextWriter = (doc, studioLogo, icons = {}) => {
         y += size
     }
 
-    return {heading, reportHeader, subheading, paragraph, row, summaryRows, table, dataTable, gap, footer: () => addFooter(doc)}
+    return {heading, reportHeader, subheading, paragraph, row, summaryRows, table, dataTable, gap, footer: () => addFooter(doc, colors)}
 }
 
-export const drawOverviewPage = (doc, journey, mapImages, studioLogo, {addPage = false} = {}) => {
+export const drawOverviewPage = (doc, journey, mapImages, studioLogo, {addPage = false, colors = PDF_COLORS} = {}) => {
     if (addPage) {
         doc.addPage()
     }
+    fillPDFPage(doc, colors)
 
     const width = doc.internal.pageSize.getWidth()
     const height = doc.internal.pageSize.getHeight()
@@ -497,12 +541,12 @@ export const drawOverviewPage = (doc, journey, mapImages, studioLogo, {addPage =
 
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(15)
-    setColor(doc, 'setTextColor', PDF_COLORS.text)
+    setColor(doc, 'setTextColor', colors.text)
     doc.text(title, PAGE_MARGIN, 13)
 
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(9)
-    setColor(doc, 'setTextColor', PDF_COLORS.text)
+    setColor(doc, 'setTextColor', colors.text)
     doc.text('2D', PAGE_MARGIN, 18)
 
     drawStudioLogo(doc, studioLogo, {
@@ -528,7 +572,7 @@ export const drawOverviewPage = (doc, journey, mapImages, studioLogo, {addPage =
         const mapImage = imageByLabel.get(view.label) ?? mapImages?.[index]
 
         if (!mapImage?.dataUrl) {
-            drawMapBorder(doc, box)
+            drawMapBorder(doc, box, colors)
             return
         }
 
@@ -545,10 +589,10 @@ export const drawOverviewPage = (doc, journey, mapImages, studioLogo, {addPage =
         )
     })
 
-    addFooter(doc)
+    addFooter(doc, colors)
 }
 
-export const draw3DMapPage = (doc, journey, mapSnapshot, studioLogo, {addPage = true, icons = {}, brandColor = PDF_COLORS.text} = {}) => {
+export const draw3DMapPage = (doc, journey, mapSnapshot, studioLogo, {addPage = true, icons = {}, brandColor = PDF_COLORS.text, colors = PDF_COLORS} = {}) => {
     if (!mapSnapshot?.dataUrl) {
         return
     }
@@ -556,6 +600,7 @@ export const draw3DMapPage = (doc, journey, mapSnapshot, studioLogo, {addPage = 
     if (addPage) {
         doc.addPage()
     }
+    fillPDFPage(doc, colors)
     const width = doc.internal.pageSize.getWidth()
     const height = doc.internal.pageSize.getHeight()
     const title = journey?.title || 'Journey'
@@ -564,12 +609,12 @@ export const draw3DMapPage = (doc, journey, mapSnapshot, studioLogo, {addPage = 
 
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(15)
-    setColor(doc, 'setTextColor', PDF_COLORS.text)
+    setColor(doc, 'setTextColor', colors.text)
     doc.text(title, PAGE_MARGIN, 13)
 
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(9)
-    setColor(doc, 'setTextColor', PDF_COLORS.text)
+    setColor(doc, 'setTextColor', colors.text)
     doc.text(viewTitle, PAGE_MARGIN, 18)
     drawStudioLogo(doc, studioLogo, {
         x:     width - PAGE_MARGIN - 34,
@@ -590,7 +635,7 @@ export const draw3DMapPage = (doc, journey, mapSnapshot, studioLogo, {addPage = 
         height: box.height - 4,
     })
     doc.addImage(mapSnapshot.dataUrl, mapSnapshot.pdfFormat ?? 'PNG', imageBox.x, imageBox.y, imageBox.width, imageBox.height)
-    drawMapBorder(doc, box)
+    drawMapBorder(doc, box, colors)
     drawNorthArrow(doc, {
         box,
         rotation: view?.heading ?? 0,
@@ -604,19 +649,20 @@ export const draw3DMapPage = (doc, journey, mapSnapshot, studioLogo, {addPage = 
         icons,
         iconKey:   'progressBrand',
     })
-    addFooter(doc)
+    addFooter(doc, colors)
 }
 
-export const addJourneyDetails = (doc, journey, pois, studioLogo, {profileImage = null, icons = {}, addPage = true} = {}) => {
+export const addJourneyDetails = (doc, journey, pois, studioLogo, {profileImage = null, icons = {}, addPage = true, colors = PDF_COLORS} = {}) => {
     if (addPage) {
         doc.addPage()
     }
+    fillPDFPage(doc, colors)
     drawStudioLogo(doc, studioLogo, {
         x:     doc.internal.pageSize.getWidth() - PAGE_MARGIN - 30,
         y:     8,
         width: 30,
     })
-    const writer = createTextWriter(doc, studioLogo, icons)
+    const writer = createTextWriter(doc, studioLogo, icons, colors)
     const {metrics} = journey.getMetrics()
     const dateTime = formatDateTimeParts(journey.getDate())
 
@@ -695,18 +741,24 @@ export const addJourneyDetails = (doc, journey, pois, studioLogo, {profileImage 
     writer.footer()
 }
 
-export const addReportCredits = (doc, studioLogo, {credits = []} = {}) => {
+export const addReportCredits = (doc, studioLogo, {credits = [], colors = PDF_COLORS} = {}) => {
     doc.addPage()
+    fillPDFPage(doc, colors)
     drawStudioLogo(doc, studioLogo, {
         x:     doc.internal.pageSize.getWidth() - PAGE_MARGIN - 30,
         y:     8,
         width: 30,
     })
 
-    const writer = createTextWriter(doc, studioLogo)
+    const writer = createTextWriter(doc, studioLogo, {}, colors)
     writer.heading('Credits')
     credits.filter(ReportCredits.isReportCreditVisible).forEach(credit => {
-        writer.row(credit.label, ReportCredits.creditTextSource(credit.text), {url: credit.url})
+        writer.row(credit.label, ReportCredits.creditTextSource(credit.text), {
+            url:        credit.url,
+            labelColor: colors.text,
+            valueColor: colors.text,
+            linkColor:  colors.text,
+        })
     })
     writer.footer()
 }
@@ -738,12 +790,14 @@ export const exportJourneyToPDF = async (journey, {
     }
 
     const theme = getExportTheme()
-    const brandColor = parseCssColor(theme.brand, PDF_COLORS.text)
+    const colors = getPDFReportColors(theme)
     const studioLogoPromise = loadStudioLogo()
+        .then(logo => prepareStudioLogoForPDF(logo, '#ffffff'))
     const pdfIconsPromise = loadPDFIcons(theme, {
+        iconColor: colors.brand,
         trackColors: [
             ...trackDrawings.map(({color}) => color),
-            PDF_COLORS.trace,
+            colors.trace,
         ],
     })
     const {result: {profileImage, mapSnapshots}, restore} = await withReportJourneyVisibility(journey, async () => {
@@ -776,14 +830,16 @@ export const exportJourneyToPDF = async (journey, {
         ])
         const reportCredits = ReportCredits.getReportCredits()
         const [pdfProfileImage, pdfMapSnapshots] = await Promise.all([
-                                                                         normalizeImageForPDF(profileImage, {maxWidth: 1400, maxHeight: 800}),
-                                                                         Promise.all(mapSnapshots.map(snapshot => normalizeImageForPDF(snapshot))),
+                                                                         normalizeImageForPDF(profileImage, {maxWidth: 1400, maxHeight: 800, background: theme.background}),
+                                                                         Promise.all(mapSnapshots.map(snapshot => normalizeImageForPDF(snapshot, {background: theme.background}))),
                                                                      ])
         const exportableMapSnapshots = pdfMapSnapshots.filter(Boolean)
         const pdf2DMapImages = await createPDF2DMapImages({
             trackDrawings,
             pois: exportablePois,
             endpointMarkers,
+            theme,
+            traceColor: theme.text,
         })
 
         await yieldToUI()
@@ -793,10 +849,11 @@ export const exportJourneyToPDF = async (journey, {
                                   format:      'a4',
                               })
 
-        addJourneyDetails(doc, journey, listedPois, studioLogo, {profileImage: pdfProfileImage, icons: pdfIcons, addPage: false})
+        addJourneyDetails(doc, journey, listedPois, studioLogo, {profileImage: pdfProfileImage, icons: pdfIcons, addPage: false, colors})
         await yieldToUI()
         drawOverviewPage(doc, journey, pdf2DMapImages, studioLogo, {
             addPage: true,
+            colors,
         })
         await yieldToUI()
         if (exportableMapSnapshots.length > 0) {
@@ -804,12 +861,13 @@ export const exportJourneyToPDF = async (journey, {
                 draw3DMapPage(doc, journey, mapSnapshot, studioLogo, {
                     addPage: true,
                     icons:   pdfIcons,
-                    brandColor,
+                    brandColor: colors.brand,
+                    colors,
                 })
                 await yieldToUI()
             }
         }
-        addReportCredits(doc, studioLogo, {credits: reportCredits})
+        addReportCredits(doc, studioLogo, {credits: reportCredits, colors})
         await yieldToUI()
         doc.save(fileName)
 

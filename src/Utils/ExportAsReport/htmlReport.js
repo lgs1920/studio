@@ -13,6 +13,7 @@ import {
     MAP_ICON_DEFS,
     PDF_ICON_DEFS,
     STUDIO_CONTACT,
+    STUDIO_LOGO_REPORT_PATH,
     STUDIO_NAME,
     STUDIO_URL,
 } from './constants'
@@ -63,7 +64,6 @@ import {
 import { build2DMapSVG } from './mapRender'
 import {
     captureJourneyProfileImage,
-    colorLuminance,
 } from './profile'
 import {
     captureJourney3DMapSnapshots,
@@ -73,6 +73,18 @@ import {
 } from './snapshots'
 
 export const renderHTMLIcon = key => fontAwesomeSVG(PDF_ICON_DEFS[key], {className: 'table-icon'})
+
+export const htmlReportAssetPath = path => path ? `./${path.replace(/^\.\//, '')}` : ''
+
+/**
+ * Renders the report logo with a local link to the packaged image.
+ *
+ * @param {string} logoPath - Relative path to the packaged logo.
+ * @returns {string} HTML markup for the linked logo.
+ */
+export const renderHTMLLogo = logoPath => logoPath
+    ? `<a class="logo-link" href="${escapeHtml(logoPath)}"><img src="${escapeHtml(logoPath)}" alt="${STUDIO_NAME}"></a>`
+    : ''
 
 export const zipFiles = (files, options = {}) => new Promise((resolve, reject) => {
     zip(files, options, (error, data) => {
@@ -147,13 +159,17 @@ export const renderPOIBadgeHTML = poi => {
     return `<span class="poi-badge" style="--badge-color: ${cssColor(getPOIBadgeColor(poi))}">${escapeHtml(badge)}</span>`
 }
 
-export const renderCreditsRows = credits => credits
+export const renderCreditsRows = (credits, {studioLink = null} = {}) => credits
     .filter(credit => typeof ReportCredits.isReportCreditVisible === 'function' ? ReportCredits.isReportCreditVisible(credit) : true)
-    .map(credit => `<tr><th>${escapeHtml(credit.label)}</th><td>${
-        credit.url
-        ? `<a href="${escapeHtml(credit.url)}" target="_blank" rel="noopener noreferrer">${htmlText(ReportCredits.creditTextSource?.(credit.text) ?? credit.text)}</a>`
+    .map(credit => {
+        const link = credit.url === STUDIO_URL && studioLink ? studioLink : credit.url
+
+        return `<tr><th>${escapeHtml(credit.label)}</th><td>${
+        link
+        ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">${htmlText(ReportCredits.creditTextSource?.(credit.text) ?? credit.text)}</a>`
         : htmlText(ReportCredits.creditTextSource?.(credit.text) ?? credit.text)
-    }</td></tr>`)
+    }</td></tr>`
+    })
     .join('')
 
 export const journeyStatsRows = journey => {
@@ -284,14 +300,11 @@ export const buildJourneyHTML = ({journey, pois, twoDMapAssets, threeDMapAssets,
     ]))
     const twoDMapCards = renderMapCards(twoDMapAssets, theme)
     const threeDMapCards = renderMapCards(threeDMapAssets, theme)
-    const creditsRows = renderCreditsRows(credits)
-    const logo = logoPath
-                 ? `<a class="logo-link" href="${STUDIO_URL}"><img src="${escapeHtml(logoPath)}" alt="${STUDIO_NAME}"></a>`
-                 : ''
+    const creditsRows = renderCreditsRows(credits, {studioLink: logoPath})
+    const logo = renderHTMLLogo(logoPath)
     const profile = profileImagePath
                     ? `<figure class="profile-card"><img src="${escapeHtml(profileImagePath)}" alt="Elevation profile"></figure>`
                     : ''
-    const logoFilter = colorLuminance(theme.background) < 0.5 ? 'brightness(0) invert(1)' : 'none'
 
     return `<!doctype html>
 <html lang="en">
@@ -352,7 +365,6 @@ export const buildJourneyHTML = ({journey, pois, twoDMapAssets, threeDMapAssets,
             display: block;
             width: 150px;
             height: auto;
-            filter: ${logoFilter};
         }
         .signature {
             margin: 8px 0 0;
@@ -557,7 +569,7 @@ export const buildJourneyHTML = ({journey, pois, twoDMapAssets, threeDMapAssets,
             <div>
                 <h1>${escapeHtml(title)}</h1>
                 ${subtitle ? `<p class="report-subtitle">${escapeHtml(subtitle)}</p>` : ''}
-                <p class="signature">Proudly made with <a href="${STUDIO_URL}" target="_blank" rel="noopener noreferrer">${STUDIO_NAME}</a></p>
+                <p class="signature">Proudly made with <a href="${escapeHtml(logoPath || STUDIO_URL)}" target="_blank" rel="noopener noreferrer">${STUDIO_NAME}</a></p>
             </div>
             ${logo}
         </header>
@@ -611,7 +623,7 @@ export const buildJourneyHTML = ({journey, pois, twoDMapAssets, threeDMapAssets,
         <footer>
             <span>Created on ${DateTime.now().toLocaleString(DateTime.DATETIME_MED)}</span>
             <nav>
-                <a class="footer-icon-link" href="${STUDIO_URL}" aria-label="${escapeHtml(STUDIO_URL)}" title="${escapeHtml(STUDIO_URL)}">${fontAwesomeSVG(PDF_ICON_DEFS.site)}</a>
+                <a class="footer-icon-link" href="${escapeHtml(logoPath || STUDIO_URL)}" aria-label="${escapeHtml(STUDIO_NAME)}" title="${escapeHtml(STUDIO_NAME)}">${fontAwesomeSVG(PDF_ICON_DEFS.site)}</a>
                 <a class="footer-icon-link" href="mailto:${STUDIO_CONTACT}" aria-label="${escapeHtml(STUDIO_CONTACT)}" title="${escapeHtml(STUDIO_CONTACT)}">${fontAwesomeSVG(PDF_ICON_DEFS.mail)}</a>
             </nav>
         </footer>
@@ -687,7 +699,7 @@ export const exportJourneyToHTMLZip = async (journey, {
                                                     traceColor: '#000000',
                                                 }))
             return {
-                path,
+                path: htmlReportAssetPath(path),
                 title: view.label,
             }
         })
@@ -695,7 +707,7 @@ export const exportJourneyToHTMLZip = async (journey, {
             const path = `images/map-3d-${slugPart(snapshot.view?.label)}.png`
             files[path] = dataUrlToBytes(snapshot.dataUrl)
             return {
-                path,
+                path: htmlReportAssetPath(path),
                 title: snapshot.view?.label ?? '3D',
                 northRotation: snapshot.view?.heading ?? 0,
                 width: snapshot.width,
@@ -705,13 +717,15 @@ export const exportJourneyToHTMLZip = async (journey, {
                 progressColor: theme.text,
             }
         })
-        const logoPath = studioLogo?.dataUrl ? 'images/logo-lgs1920-studio.png' : ''
-        if (logoPath) {
-            files[logoPath] = dataUrlToBytes(studioLogo.dataUrl)
+        const logoFilePath = studioLogo?.dataUrl ? STUDIO_LOGO_REPORT_PATH : ''
+        const logoPath = htmlReportAssetPath(logoFilePath)
+        if (logoFilePath) {
+            files[logoFilePath] = dataUrlToBytes(studioLogo.dataUrl)
         }
-        const profileImagePath = profileImage?.dataUrl ? 'images/elevation-profile.png' : ''
-        if (profileImagePath) {
-            files[profileImagePath] = dataUrlToBytes(profileImage.dataUrl)
+        const profileFilePath = profileImage?.dataUrl ? 'images/elevation-profile.png' : ''
+        const profileImagePath = htmlReportAssetPath(profileFilePath)
+        if (profileFilePath) {
+            files[profileFilePath] = dataUrlToBytes(profileImage.dataUrl)
         }
 
         await yieldToUI()

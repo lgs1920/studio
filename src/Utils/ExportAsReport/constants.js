@@ -46,12 +46,16 @@ export const CESIUM_SCENE_3D_MODE = 3
 export const THREE_D_SNAPSHOT_PITCH = -45
 export const MAP_SNAPSHOT_TIMEOUT = 3500
 export const PDF_COLORS = {
-    text:       [0, 0, 0],
-    muted:      [82, 82, 82],
+    background:  [255, 255, 255],
+    surface:     [249, 249, 249],
+    brand:       [0, 0, 0],
+    text:       [32, 32, 32],
+    muted:      [68, 68, 68],
     line:       [185, 185, 185],
     trace:      [68, 68, 68],
     headerFill: [238, 238, 238],
     mapFill:    [249, 249, 249],
+    link:       [0, 0, 0],
     white:      [255, 255, 255],
 }
 export const PDF_ICON_DEFS = {
@@ -72,5 +76,6 @@ export const STUDIO_NAME = 'LGS1920 Studio'
 export const STUDIO_URL = 'https://www.lgs1920.fr'
 export const STUDIO_CONTACT = 'studio@lgs1920.fr'
 export const STUDIO_SIGNATURE = `Proudly made with ${STUDIO_NAME}`
-export const STUDIO_LOGO_URL = '/assets/images/logo-lgs1920-studio-s.png'
-export const STUDIO_LOGO_RATIO = 300 / 103
+export const STUDIO_LOGO_URL = '/assets/logo/logo-horizontal.png'
+export const STUDIO_LOGO_RATIO = 1220 / 485
+export const STUDIO_LOGO_REPORT_PATH = 'images/logo-horizontal.png'

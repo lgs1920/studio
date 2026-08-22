@@ -7,6 +7,7 @@
  ******************************************************************************/
 
 import { MILLIS } from '@Core/constants'
+import { PDF_COLORS } from './constants'
 import {
     UnitUtils,
 } from '@Utils/UnitUtils'
@@ -268,5 +269,30 @@ export const getExportTheme = () => {
         text:    runtimeCSSColor('var(--wa-color-neutral-on-normal, #18202c)', '#18202c'),
         muted:   runtimeCSSColor('var(--wa-color-neutral-on-quiet, #747c8c)', '#747c8c'),
         link:    runtimeCSSColor('var(--wa-color-text-link, var(--wa-color-brand, #255f91))', brand),
+    }
+}
+
+/**
+ * Converts the HTML export theme into the RGB palette consumed by jsPDF.
+ *
+ * @param {object} theme - CSS color values used by the HTML report.
+ * @returns {object} The RGB colors used by the PDF report.
+ */
+export const getPDFReportColors = (theme = getExportTheme()) => {
+    const [red, green, blue] = parseCssColor(theme.background, PDF_COLORS.white)
+    const luminance = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255
+
+    return {
+        background:  parseCssColor(theme.background, PDF_COLORS.white),
+        surface:     parseCssColor(theme.surface, PDF_COLORS.mapFill),
+        headerFill:  parseCssColor(theme.headerSurface, PDF_COLORS.headerFill),
+        text:        luminance < 0.5 ? parseCssColor(theme.text, PDF_COLORS.text) : PDF_COLORS.text,
+        muted:       luminance < 0.5 ? parseCssColor(theme.text, PDF_COLORS.trace) : PDF_COLORS.muted,
+        line:        parseCssColor(theme.line, PDF_COLORS.line),
+        brand:       parseCssColor(theme.brand, PDF_COLORS.text),
+        brandOn:     parseCssColor(theme.brandOn, PDF_COLORS.white),
+        link:        parseCssColor(theme.link, PDF_COLORS.text),
+        trace:       luminance < 0.5 ? parseCssColor(theme.text, PDF_COLORS.trace) : PDF_COLORS.trace,
+        white:       PDF_COLORS.white,
     }
 }

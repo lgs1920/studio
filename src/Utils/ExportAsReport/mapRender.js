@@ -65,15 +65,15 @@ export const drawBadge = (doc, {x, y, label, color, radius = POI_BADGE_RADIUS}) 
     doc.text(label, x, y, {align: 'center', baseline: 'middle'})
 }
 
-export const drawMapFrame = (doc, box) => {
-    setColor(doc, 'setDrawColor', PDF_COLORS.line)
-    setColor(doc, 'setFillColor', PDF_COLORS.mapFill)
+export const drawMapFrame = (doc, box, colors = PDF_COLORS) => {
+    setColor(doc, 'setDrawColor', colors.line)
+    setColor(doc, 'setFillColor', colors.surface ?? colors.mapFill)
     doc.setLineWidth(0.25)
     doc.roundedRect(box.x, box.y, box.width, box.height, 1.4, 1.4, 'FD')
 }
 
-export const drawMapBorder = (doc, box) => {
-    setColor(doc, 'setDrawColor', PDF_COLORS.line)
+export const drawMapBorder = (doc, box, colors = PDF_COLORS) => {
+    setColor(doc, 'setDrawColor', colors.line)
     doc.setLineWidth(0.25)
     doc.roundedRect(box.x, box.y, box.width, box.height, 1.4, 1.4, 'S')
 }
@@ -147,13 +147,13 @@ export const drawCreditsOverlay = (doc, {imageBox, overlayImage}) => {
     }
 }
 
-export const drawMapPanel = async (doc, {box, view, bounds, trackDrawings, pois, endpointMarkers, referencePoints, icons}) => {
-    drawMapFrame(doc, box)
+export const drawMapPanel = async (doc, {box, view, bounds, trackDrawings, pois, endpointMarkers, referencePoints, icons, colors = PDF_COLORS}) => {
+    drawMapFrame(doc, box, colors)
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(8)
-    setColor(doc, 'setTextColor', PDF_COLORS.text)
+    setColor(doc, 'setTextColor', colors.text)
     doc.text(view.label, box.x + 4, box.y + 6)
-    drawNorthArrow(doc, {box, rotation: view.rotation, icons, iconKey: 'northBlack', color: PDF_COLORS.text})
+    drawNorthArrow(doc, {box, rotation: view.rotation, icons, iconKey: 'northBlack', color: colors.text})
 
     const innerBox = {
         x:      box.x + 7,
@@ -167,7 +167,7 @@ export const drawMapPanel = async (doc, {box, view, bounds, trackDrawings, pois,
                                          box:    innerBox,
                                          rotation: view.rotation,
                                      })
-    const traceColor = PDF_COLORS.trace
+    const traceColor = colors.trace ?? PDF_COLORS.trace
     const traceTrackDrawings = normalizeReportTraceTrackDrawings(trackDrawings)
     const traceTrackInfo = normalizeReportTraceTrackInfo(getProjectedTrackInfo(trackDrawings, project))
 
