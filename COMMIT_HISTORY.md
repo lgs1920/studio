@@ -942,3 +942,19 @@
 ## 2026-08-22 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/c0e6d55779c01c2c982fb491a82caae7a3fbe542)
 
 - Recorded automatically from Git history.
+
+## 2026-08-22 — [`chore: keep Cesium skills up to date`](https://github.com/lgs1920/studio/commit/28b254a2e54c451763a9baa0561d87931bccabe9)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: reload after service worker activation`](https://github.com/lgs1920/studio/commit/02a3efbb60610495c80ebea6ff7a6156f0f9b59b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/d992910585aed21ab6f291fd82993b2162efc003)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-08-22 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/71e2cc5fa656a3fd6efb2d082599081396d207fa)
+
+- Recorded automatically from Git history.
