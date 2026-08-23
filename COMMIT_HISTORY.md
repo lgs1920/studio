@@ -958,3 +958,15 @@
 ## 2026-08-22 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/71e2cc5fa656a3fd6efb2d082599081396d207fa)
 
 - Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: improve journey report exports`](https://github.com/lgs1920/studio/commit/622116c9a0e7e147a9d12baf15f0196c32f9db57)
+
+- Recorded automatically from Git history.
+
+## 2026-08-23 — [`docs: add replay quality audit`](https://github.com/lgs1920/studio/commit/ba67ead883b07ce7f729d874ca7578b5e3fb87c9)
+
+- Recorded automatically from Git history.
+
+## 2026-08-23 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/07a8d5e066d33796529d76ddabcfd79ed1b5d846)
+
+- Recorded automatically from Git history.
