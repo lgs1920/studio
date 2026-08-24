@@ -20,6 +20,7 @@ import { useSnapshot }              from 'valtio'
 import { MapPointContextMenu } from '@Components/MainUI/context-menu/MapPointContextMenu'
 import { MapPOIContextMenu } from '@Components/MainUI/MapPOI/MapPOIContextMenu'
 import { WidgetContextMenu } from '@Components/MainUI/widgets/WidgetContextMenu'
+import {REPLAY_RECORDING_MONITOR_WIDGET_ID} from '@Core/constants'
 
 /**
  * Global context menu renderer.
@@ -37,12 +38,15 @@ export const ContextMenuRenderer = () => {
     const videoPreparationActive = video.editing === true || video.preRecording === true
     const synchronizedRecording = (video.recording === true || video.recordingHQ === true)
                                   && replay.recordingSync === true
+    const monitorContextMenu = contextMenu.type === 'widget'
+                               && contextMenu.targetId === REPLAY_RECORDING_MONITOR_WIDGET_ID
+    const suppressContextMenu = (synchronizedRecording || replay.mainUiHidden === true) && !monitorContextMenu
 
     useEffect(() => {
-        if (synchronizedRecording && contextMenu.visible) {
+        if (suppressContextMenu && contextMenu.visible) {
             __.ui.contextMenu.hide()
         }
-    }, [contextMenu.visible, synchronizedRecording])
+    }, [contextMenu.visible, suppressContextMenu])
 
     // Initialize and Show/Hide logic
     useEffect(() => {
@@ -58,7 +62,7 @@ export const ContextMenuRenderer = () => {
     }, [contextMenu.visible, contextMenu.position, contextMenu.position?.x, contextMenu.position?.y])
 
     // Do not render anything when the menu is hidden
-    if (!contextMenu.visible || !contextMenu.type || synchronizedRecording) {
+    if (!contextMenu.visible || !contextMenu.type || suppressContextMenu) {
         return null
     }
 

@@ -716,6 +716,8 @@ export class WidgetManager {
         }
 
         const element = this.getElementById(widgetId)
+        const config = this.getWidgetConfig(widgetId)
+        const onRemove = config?.onRemove
         const type = widgetId.split('#')[0]
 
         WidgetDynamicRenderer.instance.destroyWidget(widgetId)
@@ -752,6 +754,8 @@ export class WidgetManager {
         if (lgs.stores?.ui?.contextMenu?.targetId === widgetId) {
             __.ui.contextMenu?.hide?.()
         }
+
+        onRemove?.()
 
         return true
     }

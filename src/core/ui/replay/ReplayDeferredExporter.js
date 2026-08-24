@@ -46,6 +46,12 @@ import {
     replayVideoTraceDebug,
 }                              from '@Core/ui/replay/ReplayVideoTraceDebug'
 import {
+    publishReplayRecordingMonitorFrame,
+    startReplayRecordingMonitor,
+    stopReplayRecordingMonitor,
+    updateReplayRecordingMonitor,
+}                              from '@Core/ui/replay/ReplayRecordingMonitor'
+import {
     createReplaySceneTileReadinessCoordinator,
     prepareReplaySceneTileCache,
     prepareReplaySceneTilesForCapture,
@@ -99,6 +105,25 @@ const finiteNumber = (value, fallback = null) => {
 }
 
 const clampProgress = value => Math.max(0, Math.min(1, Number(value) || 0))
+
+/**
+ * Resolve export progress from encoded frame order rather than replay direction.
+ *
+ * @param {Object} options - Frame metadata.
+ * @param {Object|null} options.frame - Current encoder frame.
+ * @param {number|null} options.frameCount - Total encoder frame count.
+ * @returns {number|null} Monotonic export progress.
+ */
+const monitorProgressForFrame = ({frame = null, frameCount = null} = {}) => {
+    const count = finiteNumber(frameCount, null)
+    const index = finiteNumber(frame?.index, null)
+    if (count !== null && count > 0 && index !== null) {
+        return clampProgress((index + 1) / count)
+    }
+
+    return finiteNumber(frame?.progress, null)
+}
+
 const runtimeNow = () => globalThis.performance?.now?.() ?? Date.now()
 const defaultTimestamp = () => new Date().toISOString()
 const defaultReplayStore = () => globalThis.lgs?.stores?.replay ?? null
@@ -1877,6 +1902,14 @@ export const runReplayDeferredMp4Export = async ({
         plan.runtime.status = 'exporting'
         plan.runtime.abortController = abortController ?? null
     }
+    startReplayRecordingMonitor({
+        mode: 'hq',
+        frameCount: plan.manifest?.frameCount ?? null,
+        videoDurationMillis: plan.videoTimeline?.durationMillis
+                             ?? plan.manifest?.durationMillis
+                             ?? plan.manifest?.metadata?.replayDurationMillis
+                             ?? null,
+    })
     initializeReplayExportCreationProgress({plan})
     installReplayExportRuntimeControls({plan, abortController})
 
@@ -2066,6 +2099,10 @@ export const runReplayDeferredMp4Export = async ({
             buildCanvas,
             onFileSize: bytes => {
                 updateReplayExportFileSize({plan, bytes})
+                updateReplayRecordingMonitor({
+                    mode: 'hq',
+                    size: bytes,
+                })
             },
             renderFrame: async ({canvas, context, frame}) => {
                 await waitForReplayExportResume({plan, signal})
@@ -2225,9 +2262,35 @@ export const runReplayDeferredMp4Export = async ({
                         context.drawImage(frameSource, 0, 0, frameSource.width, frameSource.height, 0, 0, canvas.width, canvas.height)
                     }
                 }
+                publishReplayRecordingMonitorFrame({
+                    canvas,
+                    mode: 'hq',
+                    phase: phase?.kind ?? 'rendering',
+                    progress: monitorProgressForFrame({
+                        frame,
+                        frameCount: frame?.frameCount ?? plan.manifest?.frameCount,
+                    }),
+                    frameIndex: frame?.index,
+                    frameCount: frame?.frameCount ?? plan.manifest?.frameCount,
+                    processedFrames: (Number(frame?.index) || 0) + 1,
+                })
             },
             onFrame: async frame => {
-                updateReplayExportCreationProgress({plan, frame})
+                const exportRuntime = updateReplayExportCreationProgress({plan, frame})
+                updateReplayRecordingMonitor({
+                    mode: 'hq',
+                    phase: 'encoding',
+                    progress: monitorProgressForFrame({
+                        frame,
+                        frameCount: frame?.frameCount ?? plan.manifest?.frameCount,
+                    }) ?? exportRuntime?.exportProgress,
+                    frameIndex: frame?.index,
+                    frameCount: frame?.frameCount ?? plan.manifest?.frameCount,
+                    processedFrames: (Number(frame?.index) || 0) + 1,
+                    elapsedMillis: exportRuntime?.exportElapsedMillis,
+                    estimatedRemainingMillis: exportRuntime?.exportEstimatedRemainingMillis,
+                    size: exportRuntime?.exportFileSize,
+                })
             },
         })
 
@@ -2241,6 +2304,11 @@ export const runReplayDeferredMp4Export = async ({
                 frameCount: finiteNumber(plan.manifest?.frameCount, null),
             },
             force: true,
+        })
+        updateReplayRecordingMonitor({
+            mode:     'hq',
+            phase:    'finalizing',
+            progress: 1,
         })
 
         const exportFilename = filename ?? `${plan.label}.mp4`
@@ -2259,6 +2327,7 @@ export const runReplayDeferredMp4Export = async ({
         }
     }
     finally {
+        stopReplayRecordingMonitor()
         replayVideoTraceDebug('export.camera.ownership.end', {
             hasEndReplayCameraExport: typeof replayMode?.endReplayCameraExport === 'function',
         })

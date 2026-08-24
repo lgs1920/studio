@@ -18,6 +18,7 @@ import { usePointerInteractions } from '@Components/MainUI/context-menu/usePoint
 import {
     LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_TOOLBAR, LGS_VISUAL_WIDGET, LGS_WIDGET,
     LGS_WIDGET_SCALE_EFFECTIVE,
+    REPLAY_RECORDING_MONITOR_WIDGET_ID,
     SCENE_WIDGETS_BOARD,
     WIDGET_EDITOR_PRE_RENDER_EVENT,
     WIDGETS_CAPABILITIES, WIDGETS_EDITOR_DRAWER,
@@ -351,9 +352,19 @@ const createWidgetSnapshot = (sourceCanvas, canvasRect, widgetRect, previewerRec
  * @param {React.ReactNode} props.children          - Widget visual content
  * @param {Object} props.config                     - Complete widget configuration object
  * @param {React.RefObject} [props.childRef]        - Optional forwarded ref to inner content
+ * @param {number|string|null} [props.expandRequestKey=null] - Changes request host-managed expansion
  * @returns {JSX.Element|null}
  */
-export const Widget = ({isVisible, className = '', moveableClassName = '', containerClassName = '', children, config, childRef}) => {
+export const Widget = ({
+    isVisible,
+    className = '',
+    moveableClassName = '',
+    containerClassName = '',
+    children,
+    config,
+    childRef,
+    expandRequestKey = null,
+}) => {
     // Core DOM references
     const _widget = useRef(null)
     const _moveable = useRef(null)
@@ -409,6 +420,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     const isSelected = selectedId === widgetId
     const keyboardUpdate = widget.current?.keyboardUpdate ?? 0
     const widgetTypeId = widgetId?.split('#')[0] ?? widgetId
+    const isReplayRecordingMonitor = widgetId === REPLAY_RECORDING_MONITOR_WIDGET_ID
     const isTargetingBoard = Boolean(config.widgetsBoard && config.widgetsBoard !== SCENE_WIDGETS_BOARD)
     const sceneContainer = useMemo(() => {
         return isTargetingBoard
@@ -544,7 +556,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     // separate sibling control box, so the empty crop area can reach Cesium.
     const cropPassThrough = Boolean(config.isCropper)
     const showGhostOnly = Boolean(config?.showGhostDuringRecording) && video.recording && config.type === LGS_VISUAL_WIDGET
-    const canInteract = !interactionLocked && !effectiveLocked
+    const canInteract = !effectiveLocked && (!interactionLocked || isReplayRecordingMonitor)
     const canDrag = canInteract && (config?.draggable ?? true)
     const canResize = canInteract && !effectiveCollapsed && (config?.resizable ?? false)
     const canScale = canInteract && !effectiveCollapsed && (config?.scalable ?? false)
@@ -810,6 +822,15 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     }, [canReduce, config.type, effectiveCollapsed, effectiveLocked, interactionLocked, persistInteractionState, widgetId])
 
     useEffect(() => {
+        if (expandRequestKey === null || expandRequestKey === undefined || !effectiveCollapsed) {
+            return
+        }
+
+        const frameId = requestAnimationFrame(toggleCollapsed)
+        return () => cancelAnimationFrame(frameId)
+    }, [effectiveCollapsed, expandRequestKey, toggleCollapsed])
+
+    useEffect(() => {
         if (effectiveCollapsed || config.type !== LGS_TOOLBAR || !_initialized.current || !_widget.current) {
             return
         }
@@ -1059,7 +1080,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
         event?.stopPropagation?.()
         event?.nativeEvent?.stopImmediatePropagation?.()
         event?.stopImmediatePropagation?.()
-        if (interactionLocked) {
+        if (interactionLocked && !isReplayRecordingMonitor) {
             return
         }
         const clientX = event.clientX ?? event.touches?.[0]?.clientX ?? 0
@@ -1068,7 +1089,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
         lgs.stores.ui.contextMenu.type = 'widget'
         lgs.stores.ui.contextMenu.targetId = widgetId
         lgs.stores.ui.contextMenu.position = {x: clientX, y: clientY}
-    }, [interactionLocked, widgetId])
+    }, [interactionLocked, isReplayRecordingMonitor, widgetId])
 
     const pointerInteractionsRef = usePointerInteractions({
                                                               onDoubleTap:           handleDoubleClick,
@@ -1109,6 +1130,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
             return
         }
         __.ui.widgetManager.onResize(event, {widget: _widget, child: _children}, setPosition)
+        requestAnimationFrame(() => _moveable.current?.updateRect())
     }, [canResize])
 
     const handleResizeStart = useCallback((event) => {
@@ -1363,6 +1385,8 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                 transient:      config.transient ?? false,
                 ttl:            config.ttl ?? null,
                 type:           config.type ?? LGS_WIDGET,
+                onRemove:       config.onRemove ?? null,
+                preserveChildrenWhenCollapsed: config.preserveChildrenWhenCollapsed ?? false,
                 widgetsBoard:   config.widgetsBoard || null,
                 width:          config.width,
                 zIndex:         activeZIndex, // Inject the reactive value immediately
@@ -1562,26 +1586,32 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
             >
-                {effectiveCollapsed
+                {effectiveCollapsed && (
+                    <div
+                        className="lgs-widget-collapsed-icon"
+                        data-collapsed-icon={renderedCollapsedIcon}
+                        data-widget-type={config.type}
+                        title={effectiveLocked ? 'Locked widget' : 'Collapsed widget'}
+                    >
+                        <WaIcon
+                            key={renderedCollapsedIcon}
+                            name={renderedCollapsedIcon}
+                            variant="regular"
+                            label={showLockedOverlay ? '' : (effectiveLocked ? 'Locked widget' : 'Collapsed widget')}
+                            onWaError={handleCollapsedIconError}
+                            aria-hidden={showLockedOverlay}
+                        />
+                    </div>
+                )}
+                {config.preserveChildrenWhenCollapsed
                  ? (
-                     <div
-                         className="lgs-widget-collapsed-icon"
-                         data-collapsed-icon={renderedCollapsedIcon}
-                         data-widget-type={config.type}
-                         title={effectiveLocked ? 'Locked widget' : 'Collapsed widget'}
-                     >
-                         <WaIcon
-                             key={renderedCollapsedIcon}
-                             name={renderedCollapsedIcon}
-                             variant="regular"
-                             label={showLockedOverlay ? '' : (effectiveLocked ? 'Locked widget' : 'Collapsed widget')}
-                             onWaError={handleCollapsedIconError}
-                             aria-hidden={showLockedOverlay}
-                         />
+                     <div className={classNames('lgs-widget-preserved-content', {
+                         'lgs-widget-collapsed-preserved-content': effectiveCollapsed,
+                     })}>
+                         {children}
                      </div>
                  )
-                 : children
-                }
+                 : (!effectiveCollapsed ? children : null)}
                 {effectiveLocked && !suppressLockedOverlay && (
                     <div className={classNames('lgs-widget-lock-overlay', {'is-visible': showLockedOverlay})}
                          aria-hidden={!showLockedOverlay}>

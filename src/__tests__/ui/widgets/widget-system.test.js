@@ -268,17 +268,17 @@ describe('Widget registry ratio resolution', () => {
             topRatio:    10,
             width:       200,
             height:      100,
-            positionKey: 'replay-controls-window-v1',
+            positionKey: 'test-toolbar-window-v1',
         }))
 
         const config = await registry.retrieveConfig(document.createElement('div'), {
-            id:              'replay-controls-widget',
+            id:              'test-toolbar-widget',
             attachTo:        'center',
             container,
             boundsContainer: container,
             left:            '50%',
             persist:         true,
-            positionKey:     'replay-controls-window-v2',
+            positionKey:     'test-toolbar-window-v2',
             top:             '66.7%',
             type:            'toolbar',
         })

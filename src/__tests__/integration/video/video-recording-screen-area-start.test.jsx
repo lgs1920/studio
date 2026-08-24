@@ -46,6 +46,7 @@ vi.mock('@Components/MainUI/video/WidgetMountErrorDialog', () => ({
 
 vi.mock('@Components/MainUI/video/videoEditingCleanup', () => ({
     prepareVideoCaptureUi: vi.fn(),
+    restoreVideoCaptureUi: vi.fn(),
 }))
 
 vi.mock('@Utils/UIToast', () => ({
@@ -101,6 +102,7 @@ vi.mock('@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder', () => ({
             PAUSE:    'pause',
             RESUME:   'resume',
             START:    'start',
+            INFO:     'info',
         },
     },
 }))

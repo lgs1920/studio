@@ -48,6 +48,9 @@ vi.mock('@Components/MainUI/video/VideoButton', () => ({
 vi.mock('@Components/MainUI/video/VideoDownloadAndShareDialog', () => ({
     VideoDownloadAndShareDialog: () => <div data-testid="video-share-dialog"/>,
 }))
+vi.mock('@Components/MainUI/video/ReplayRecordingMonitorWidget', () => ({
+    ReplayRecordingMonitorWidget: () => <div data-testid="replay-controls"/>,
+}))
 vi.mock('@Components/MainUI/SyncLinkBadge', () => ({
     SyncLinkBadge: () => <div data-testid="sync-link-badge"/>,
 }))
@@ -62,9 +65,6 @@ vi.mock('@Editor/groups/JourneyGroupsDrawer', () => ({
 }))
 vi.mock('@Components/JourneyReplay/JourneyReplayButton', () => ({
     JourneyReplayButton: () => <div data-testid="replay-launch-button"/>,
-}))
-vi.mock('@Components/JourneyReplay/JourneyReplayControlsWidget', () => ({
-    JourneyReplayControlsWidget: () => <div data-testid="replay-controls"/>,
 }))
 vi.mock('@Components/JourneyReplay/JourneyReplayDrawer', () => ({
     JourneyReplayDrawer: () => <div data-testid="replay-drawer"/>,

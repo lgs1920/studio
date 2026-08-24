@@ -19,7 +19,9 @@ import { CompassLight } from '@Components/MainUI/compass/CompassLight'
 import { CompassFlat }  from '@Components/MainUI/compass/CompassFlat'
 import { CompassModern }                            from '@Components/MainUI/compass/CompassModern'
 import { resolveCompassWidgetDimensions }            from '@Components/MainUI/compass/CompassWidgetBounds'
+import { resolveCompassCameraHeading }               from '@Components/MainUI/compass/CompassCameraHeading'
 import { COMPASS_FLAT, COMPASS_FULL, COMPASS_LIGHT, COMPASS_MODERN } from '@Core/constants'
+import { resolvePublishedReplayExportFrame }         from '@Core/ui/replay/ReplayFramePublisher'
 import { Math as CMath }               from 'cesium'
 import classNames                      from 'classnames'
 import { colord }                                  from 'colord'
@@ -93,7 +95,17 @@ export const Compass = ({fixed, inWidget = false, entity, syncBounds = true}) =>
             return
         }
 
-        const headingDegrees = ((-CMath.toDegrees(lgs.camera.heading) % 360) + 360) % 360
+        const isHqRecording = lgs.stores.ui.video?.recordingHQ === true
+        const hqFrame = isHqRecording ? resolvePublishedReplayExportFrame() : null
+        const heading = resolveCompassCameraHeading({
+            hqFrame,
+            fallbackHeading: isHqRecording ? null : lgs.camera?.heading,
+        })
+        if (heading === null) {
+            return
+        }
+
+        const headingDegrees = ((-CMath.toDegrees(heading) % 360) + 360) % 360
         if (_lastHeading.current === headingDegrees) {
             return
         }

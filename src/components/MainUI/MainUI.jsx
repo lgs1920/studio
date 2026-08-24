@@ -27,12 +27,12 @@ import { OrbitButton }       from '@Components/MainUI/OrbitButton'
 import { EditorPanelButton } from '@Editor/EditorPanelButton'
 import { VideoButton }       from '@Components/MainUI/video/VideoButton'
 import { VideoDownloadAndShareDialog } from '@Components/MainUI/video/VideoDownloadAndShareDialog'
+import { ReplayRecordingMonitorWidget } from '@Components/MainUI/video/ReplayRecordingMonitorWidget'
 import { SyncLinkBadge }     from '@Components/MainUI/SyncLinkBadge'
 import { TextButton }        from '@Components/Text/TextButton'
 import { TracksEditor }                         from '@Components/TracksEditor/TracksEditor'
 import { JourneyGroupsDrawer }                  from '@Editor/groups/JourneyGroupsDrawer'
 import { JourneyReplayButton }         from '@Components/JourneyReplay/JourneyReplayButton'
-import { JourneyReplayControlsWidget } from '@Components/JourneyReplay/JourneyReplayControlsWidget'
 import { JourneyReplayDrawer }         from '@Components/JourneyReplay/JourneyReplayDrawer'
 import {
     BOTTOM, END, EVENTS, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END, MENU_END_START, MENU_START_END,
@@ -228,7 +228,6 @@ export const MainUI = memo(() => {
     return (
         <>
             <MapPointContextMenuTrigger/>
-            <JourneyReplayControlsWidget/>
             <MapPOIMonitor/>
             {!isJourneyReplayUiHidden && (
                 <>
@@ -311,12 +310,12 @@ export const MainUI = memo(() => {
                     </div>
                     <SupportUI/>
                     <JourneyLoaderUI multiple/>
-                    <ContextMenuRenderer/>
-
                     {mainUI.callForActions.active && <CallForActions/>}
                 </>
             )}
+            <ContextMenuRenderer/>
             <VideoDownloadAndShareDialog/>
+            <ReplayRecordingMonitorWidget/>
 
         </>
     )

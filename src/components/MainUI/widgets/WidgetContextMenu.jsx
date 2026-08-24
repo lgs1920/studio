@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 import {
-    EDIT_WIDGET_ICON, WIDGETS_CAPABILITIES, WIDGETS_EDITOR_DRAWER,
+    EDIT_WIDGET_ICON, REPLAY_RECORDING_MONITOR_WIDGET_ID, WIDGETS_CAPABILITIES, WIDGETS_EDITOR_DRAWER,
 } from '@Core/constants'
 import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useMemo } from 'react'
@@ -62,6 +62,7 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
     // Core widget data
     const element = __.ui.widgetManager.getElementById(targetId)
     const config = __.ui.widgetManager.getWidgetConfig(targetId)
+    const isReplayRecordingMonitor = targetId === REPLAY_RECORDING_MONITOR_WIDGET_ID
     const canLock = config?.canLock ?? true
     const isLocked = canLock && Boolean(config?.locked)
 
@@ -214,7 +215,7 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                                    for="shrink-widget-context">{`Shrink -${PERCENTAGE * 100}%`}</WaTooltip>
                         <WidgetContextIconButton
                             id="shrink-widget-context"
-                            icon="arrow-down-left-and-arrow-up-right-to-center"
+                            icon={isReplayRecordingMonitor ? 'monitor-waveform' : 'arrow-down-left-and-arrow-up-right-to-center'}
                             label={`Shrink -${PERCENTAGE * 100}%`}
                             onClick={() => resetSize(-PERCENTAGE)}
                         />

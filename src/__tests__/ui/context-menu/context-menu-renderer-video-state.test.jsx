@@ -19,6 +19,7 @@ vi.mock('@Components/MainUI/widgets/WidgetContextMenu', () => ({
 }))
 
 import { ContextMenuRenderer } from '@Components/MainUI/context-menu/ContextMenuRenderer'
+import { REPLAY_RECORDING_MONITOR_WIDGET_ID } from '@Core/constants'
 
 describe('ContextMenuRenderer video state', () => {
     let hideContextMenu
@@ -95,6 +96,29 @@ describe('ContextMenuRenderer video state', () => {
         render(<ContextMenuRenderer/>)
 
         expect(screen.getByTestId('map-point-context-menu').dataset.hideVideoActions).toBe('false')
+        expect(hideContextMenu).not.toHaveBeenCalled()
+    })
+
+    it('keeps the replay monitor context menu available during synchronized recording', () => {
+        globalThis.lgs.stores.ui.video.recordingHQ = true
+        globalThis.lgs.stores.replay.recordingSync = true
+        globalThis.lgs.stores.ui.contextMenu.type = 'widget'
+        globalThis.lgs.stores.ui.contextMenu.targetId = REPLAY_RECORDING_MONITOR_WIDGET_ID
+
+        render(<ContextMenuRenderer/>)
+
+        expect(screen.getByTestId('widget-context-menu')).not.toBeNull()
+        expect(hideContextMenu).not.toHaveBeenCalled()
+    })
+
+    it('keeps the replay monitor context menu available when the Main UI is hidden', () => {
+        globalThis.lgs.stores.replay.mainUiHidden = true
+        globalThis.lgs.stores.ui.contextMenu.type = 'widget'
+        globalThis.lgs.stores.ui.contextMenu.targetId = REPLAY_RECORDING_MONITOR_WIDGET_ID
+
+        render(<ContextMenuRenderer/>)
+
+        expect(screen.getByTestId('widget-context-menu')).not.toBeNull()
         expect(hideContextMenu).not.toHaveBeenCalled()
     })
 })
