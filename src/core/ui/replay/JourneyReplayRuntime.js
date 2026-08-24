@@ -3,6 +3,7 @@
  */
 
 import {REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP, normalizeJourneyReplayClips} from './JourneyReplayClips'
+import {isResolvedReplayFrameIntent} from './ReplayFrameIntent'
 import {attachReplayFrameIntent, publishReplayFrameState} from './ReplayFramePublisher'
 import {createReplayRenderModeContract} from './ReplayRenderModeContract'
 import {getJourneyReplaySettings} from './JourneyReplayProgressionStyle'
@@ -74,6 +75,7 @@ export const buildReplayFrameState = ({
     visibleOverlayIds = [],
     outputProfile = null,
     qualityRequirements = null,
+    frameIntent = null,
 } = {}) => {
     const safeIndex = optionalFiniteNumber(index)
     const safeFrameId = optionalFiniteNumber(frameId)
@@ -128,6 +130,14 @@ export const buildReplayFrameState = ({
         source,
         updatedAt:       optionalFiniteNumber(updatedAt) ?? globalThis.performance?.now?.() ?? Date.now(),
         renderContract,
+    }
+
+    if (frameIntent) {
+        return Object.assign({}, frameState, {
+            intent: frameIntent,
+            intentId: frameIntent.id ?? null,
+            intentResolved: isResolvedReplayFrameIntent(frameIntent),
+        })
     }
 
     return attachReplayFrameIntent(frameState, {

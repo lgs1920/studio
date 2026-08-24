@@ -744,9 +744,12 @@ Do not rewrite the replay stack in one branch. Introduce contracts at existing s
 
 ### Implementation status on `refactor/replay-architecture`
 
-The first Phase 1 seam is now present in the current branch:
+The first two Phase 1 seams are now present in the current branch:
 
+- versioned `ReplayDefinition` and lazy `ReplayRenderPlan` contracts containing clock metadata but no materialized frame array;
 - versioned `ReplayFrameIntent` and `ReplayFrameResult` plain-data contracts;
+- a shared `ReplayFrameResolver` that resolves exactly one requested timestamp for Draft, HQ, or scrub;
+- lightweight track-path descriptors that invalidate plans from segment identity and revisions without serializing or cloning every coordinate;
 - a `ReplayFramePublisher` that distinguishes pending Draft state from the last completely resolved frame;
 - Draft camera application completes and publishes the canonical frame instead of exposing a partially patched frame to captured dynamic widgets;
 - HQ export publishes the same canonical intent shape after applying its effective camera pose;
@@ -754,7 +757,7 @@ The first Phase 1 seam is now present in the current branch:
 - the normal replay controls expose a real-time slider backed by a coalesced, latest-request-wins scrub scheduler; synchronized recording keeps it disabled;
 - unit, integration, exporter, widget-composition, and store-contract tests cover the compatibility seam.
 
-This is a foundation, not the isolated HQ camera implementation. `ReplayDefinition`, `ReplayRenderPlan`, the lazy frame resolver, scene-qualified settled scrubbing, camera qualification, and isolated render host remain subsequent slices below. The current slider already avoids input floods and exposes cancellation to its adapter, but it still delegates the actual scene application to the compatibility `seek()` path.
+This is a foundation, not the isolated HQ camera implementation. Scene-qualified settled scrubbing, camera qualification, and the isolated render host remain subsequent slices below. The current slider avoids input floods, resolves only the latest requested timestamp through the canonical resolver, and exposes cancellation to its adapter, but scene application still passes through the compatibility `seek()` path.
 
 ### Phase 0 — Establish evidence and split missing work
 

@@ -42,6 +42,8 @@ describe('Replay render mode contract', () => {
         expect(draft.cameraPose).toEqual(hq.cameraPose)
         expect(draft.cameraPose.roll).toBeCloseTo(0.35, 8)
         expect(draft.trackPath).toEqual(hq.trackPath)
+        expect(draft.trackPath).toBe(common.trackPath)
+        expect(hq.trackPath).toBe(common.trackPath)
         expect(draft.renderSpec).toEqual(hq.renderSpec)
         expect(draft.initialCameraState).toEqual(hq.initialCameraState)
         expect(draft.scheduling).toEqual({realtime: true, frameByFrame: false})

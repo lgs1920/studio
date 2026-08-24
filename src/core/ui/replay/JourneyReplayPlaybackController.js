@@ -16,6 +16,10 @@
 
 import {buildReplayFrameState} from './JourneyReplayRuntime'
 import {createJourneyReplayLogicalFrame} from './JourneyReplayLogicalFrame'
+import {ReplayFrameResolver} from './ReplayFrameResolver'
+import {createReplayDefinition} from './ReplayDefinition'
+import {createReplayRenderPlan} from './ReplayRenderPlan'
+import {createReplayTrackPathDescriptor} from './ReplayTrackPathDescriptor'
 import {buildReplayVideoTimeline, resolveReplayVideoFramePhase} from './ReplayVideoTimeline'
 
 export const REPLAY_EVENT_START = 'replay/start'
@@ -68,6 +72,9 @@ export class JourneyReplayPlaybackController {
     #globalUpdateInterval = GLOBAL_UPDATE_EVENT_INTERVAL
     #dynamicFrameId = 0
     #videoTimeline = null
+    #replayDefinition = null
+    #renderPlan = null
+    #frameResolver = null
 
     constructor({
                     requestFrame = callback => globalThis.__?.requestAnimationFrame?.(callback)
@@ -115,6 +122,28 @@ export class JourneyReplayPlaybackController {
                 clips: clips ?? null,
             })
         }
+        const trackPath = this.#sampler?.logicalTrackPath ?? null
+        const trackPathDescriptor = createReplayTrackPathDescriptor(trackPath)
+        this.#replayDefinition = createReplayDefinition({
+            journeyId: this.#sampler?.journey?.slug ?? null,
+            direction: this.#direction,
+            timeline: this.#videoTimeline,
+            cameraDefinition: globalThis.lgs?.stores?.replay?.camera ?? null,
+            renderSpec: globalThis.lgs?.stores?.replay?.deferredExportPlan?.renderSpec ?? null,
+            visibleOverlayIds: globalThis.lgs?.stores?.replay?.deferredExportPlan?.runtime?.context?.visibleOverlayIds ?? [],
+            trackPathDescriptor,
+            qualityPolicy: globalThis.lgs?.stores?.replay?.readiness ?? null,
+            source: 'draft',
+        })
+        this.#renderPlan = createReplayRenderPlan({
+            definition: this.#replayDefinition,
+            trackPath,
+            trackPathDescriptor,
+        })
+        this.#frameResolver = new ReplayFrameResolver({
+            plan: this.#renderPlan,
+            resolveSample: ({progress: requestedProgress}) => this.#sampler?.atProgress?.(requestedProgress) ?? null,
+        })
         this.#syncStore(this.currentSample(), {force: true})
         return this
     }
@@ -164,6 +193,45 @@ export class JourneyReplayPlaybackController {
     get videoTimeline() {
         return this.#videoTimeline
     }
+
+    /**
+     * Return the current plain replay definition.
+     *
+     * @returns {Object|null} Replay definition.
+     */
+    get replayDefinition() {
+        return this.#replayDefinition
+    }
+
+    /**
+     * Return the current lazy replay render plan.
+     *
+     * @returns {Object|null} Replay render plan.
+     */
+    get renderPlan() {
+        return this.#renderPlan
+    }
+
+    /**
+     * Return the current shared frame resolver.
+     *
+     * @returns {ReplayFrameResolver|null} Replay frame resolver.
+     */
+    get frameResolver() {
+        return this.#frameResolver
+    }
+
+    /**
+     * Resolve one replay position without enumerating intermediate frames.
+     *
+     * @param {number} progress - Requested replay progress.
+     * @param {Object} options - Canonical intent overrides.
+     * @returns {Object|null} Canonical frame intent.
+     */
+    resolveFrameAtProgress = (progress, options = {}) => this.#frameResolver?.resolveAtProgressSync(
+        progress,
+        options,
+    ) ?? null
 
     /**
      * Resolve a Draft frame phase from the shared absolute video timeline.
@@ -461,13 +529,35 @@ export class JourneyReplayPlaybackController {
         const logicalDurationMillis = hasClipPhases
                                       ? this.#videoTimeline.durationMillis
                                       : (sample?.journeyDurationMillis ?? this.#sampler?.durationMillis ?? null)
+        const deferredRenderContract = store.deferredExportPlan?.renderContract
+                                      ?? store.deferredExportPlan?.runtime?.context?.renderContract
+                                      ?? null
+        const frameIntent = this.#frameResolver?.resolveFrameSync({
+            frame: {
+                index: frameIndex,
+                frameCount,
+                frameTimeMs: phase.frameTimeMs ?? frameTimeMs,
+                frameIntervalMs: frameIntervalMillis,
+                progress: this.#progress,
+                isFirst: frameIndex === 0,
+                isLast: frameIndex === frameCount - 1,
+            },
+            phase,
+            sample,
+            renderMode: 'draft',
+            source: 'controller',
+            resolved: false,
+            renderSpec: deferredRenderContract?.renderSpec
+                        ?? store.deferredExportPlan?.renderSpec
+                        ?? undefined,
+            visibleOverlayIds: deferredRenderContract?.visibleOverlayIds
+                               ?? store.deferredExportPlan?.runtime?.context?.visibleOverlayIds
+                               ?? undefined,
+        }) ?? null
         // Shared live draft tick for replay-driven widgets.
         store.liveSample = sample
         store.dynamicStatsTick = frameNow
         store.replayFramePhase = phase
-        const deferredRenderContract = store.deferredExportPlan?.renderContract
-                                      ?? store.deferredExportPlan?.runtime?.context?.renderContract
-                                      ?? null
         const initialCameraState = globalThis.__?.ui?.replay?.savedCameraState
                                    ?? deferredRenderContract?.initialCameraState
                                    ?? null
@@ -499,6 +589,7 @@ export class JourneyReplayPlaybackController {
             visibleOverlayIds: deferredRenderContract?.visibleOverlayIds
                                ?? store.deferredExportPlan?.runtime?.context?.visibleOverlayIds
                                ?? [],
+            frameIntent,
         })
 
         const now = this.#now()

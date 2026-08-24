@@ -21,6 +21,10 @@ import {
 import {
     ReplayFrameTimeline,
 }                              from '@Core/ui/replay/ReplayFrameTimeline'
+import {ReplayFrameResolver}   from '@Core/ui/replay/ReplayFrameResolver'
+import {createReplayDefinition} from '@Core/ui/replay/ReplayDefinition'
+import {createReplayRenderPlan} from '@Core/ui/replay/ReplayRenderPlan'
+import {createReplayTrackPathDescriptor} from '@Core/ui/replay/ReplayTrackPathDescriptor'
 import {
     publishReplayFrameState, REPLAY_FRAME_PUBLICATION_TARGET_HQ,
 }                              from '@Core/ui/replay/ReplayFramePublisher'
@@ -356,7 +360,7 @@ export const captureReplayDeferredExportContext = ({
 
     const initialCameraState = captureReplayCameraStateSnapshot({replay, cameraState})
     const trackPath = controller?.sampler?.logicalTrackPath ?? null
-    const trackPathSignature = trackPath ? JSON.stringify(trackPath) : null
+    const trackPathSignature = createReplayTrackPathDescriptor(trackPath).signature
     const visibleOverlayIds = normalizeReplayWidgetIds(
         overlays
             .filter(({visible}) => visible)
@@ -708,7 +712,7 @@ const publishReplayExportFrameState = ({
         source:          'exporter',
         updatedAt:       globalThis.performance?.now?.() ?? Date.now(),
         renderMode:      'hq',
-        planId:          plan.runtime?.contextKey ?? null,
+        planId:          plan.renderPlan?.id ?? plan.runtime?.contextKey ?? null,
         intentResolved:  true,
         cameraPose:      cameraPose
                          ?? logicalFrame?.cameraPose
@@ -731,7 +735,7 @@ const publishReplayExportFrameState = ({
         target: REPLAY_FRAME_PUBLICATION_TARGET_HQ,
         frameState,
         intentOptions: {
-            planId: plan.runtime?.contextKey ?? null,
+            planId: plan.renderPlan?.id ?? plan.runtime?.contextKey ?? null,
             resolved: true,
             logicalFrame,
         },
@@ -992,6 +996,9 @@ export class ReplayDeferredExporter {
                     initialCameraState = null,
                     visibleOverlayIds = [],
                     trackPath = null,
+                    definition = null,
+                    renderPlan = null,
+                    frameResolver = null,
                 } = {}) {
         this.#timeline = timeline instanceof ReplayFrameTimeline
                          ? timeline
@@ -1011,6 +1018,9 @@ export class ReplayDeferredExporter {
                             initialCameraState,
                             visibleOverlayIds,
                             trackPath,
+                            definition,
+                            renderPlan,
+                            frameResolver,
                         })
         this.#buildArtifact = typeof buildArtifact === 'function'
                               ? buildArtifact
@@ -1413,6 +1423,31 @@ export const prepareReplayDeferredExportPlan = ({
         replayDurationMillis,
         sourceCanvas,
     })
+    const trackPath = controller?.sampler?.logicalTrackPath ?? null
+    const trackPathDescriptor = createReplayTrackPathDescriptor(trackPath)
+    const definition = createReplayDefinition({
+        journeyId: journey?.slug ?? replay?.journeySlug ?? null,
+        direction,
+        timeline: videoTimeline,
+        cameraDefinition: replayContext.context?.cameraState ?? null,
+        renderSpec: effectiveRenderSpec,
+        crop: replayContext.context?.cropRect ?? null,
+        visibleOverlayIds: replayContext.context?.visibleOverlayIds ?? [],
+        trackPathDescriptor,
+        qualityPolicy: replay?.readiness ?? null,
+        source: 'hq',
+    })
+    const renderPlan = createReplayRenderPlan({
+        definition,
+        trackPath,
+        trackPathDescriptor,
+    })
+    const frameResolver = new ReplayFrameResolver({
+        plan: renderPlan,
+        resolveSample: ({progress}) => controller?.sampler?.atProgress?.(progress)
+                                         ?? controller?.currentSample?.()
+                                         ?? null,
+    })
     const exporter = new ReplayDeferredExporter({
         controller,
         timeline: {
@@ -1434,6 +1469,10 @@ export const prepareReplayDeferredExportPlan = ({
         renderSpec: effectiveRenderSpec,
         initialCameraState: replayContext.context?.cameraState ?? null,
         visibleOverlayIds: replayContext.context?.visibleOverlayIds ?? [],
+        trackPath,
+        definition,
+        renderPlan,
+        frameResolver,
     })
 
     const plan = {
@@ -1444,6 +1483,8 @@ export const prepareReplayDeferredExportPlan = ({
         renderSpec: effectiveRenderSpec,
         captureMode,
         mediaMetadata,
+        definition,
+        renderPlan,
         renderContract: replayContext.context?.renderContract
                          ?? createReplayRenderModeContract({
                              renderMode: REPLAY_RENDER_MODE_HQ,

@@ -15,7 +15,13 @@
  ******************************************************************************/
 
 import { ReplayFrameTimeline } from '@Core/ui/replay/ReplayFrameTimeline'
-import {createReplayRenderModeContract} from '@Core/ui/replay/ReplayRenderModeContract'
+import {
+    ReplayFrameResolver,
+    replayFrameIntentToLogicalFrame,
+} from '@Core/ui/replay/ReplayFrameResolver'
+import {createReplayDefinition} from '@Core/ui/replay/ReplayDefinition'
+import {createReplayRenderPlan} from '@Core/ui/replay/ReplayRenderPlan'
+import {createReplayTrackPathDescriptor} from '@Core/ui/replay/ReplayTrackPathDescriptor'
 
 export class ReplayVideoRenderSession {
     #controller = null
@@ -26,10 +32,9 @@ export class ReplayVideoRenderSession {
     #afterFrame = null
     #resolveSample = null
     #renderMode = 'hq'
-    #renderSpec = null
-    #initialCameraState = null
-    #visibleOverlayIds = []
-    #trackPath = null
+    #definition = null
+    #renderPlan = null
+    #frameResolver = null
 
     constructor({
                     controller = null,
@@ -44,6 +49,9 @@ export class ReplayVideoRenderSession {
                     initialCameraState = null,
                     visibleOverlayIds = [],
                     trackPath = null,
+                    definition = null,
+                    renderPlan = null,
+                    frameResolver = null,
                 } = {}) {
         this.#controller = controller
         this.#timeline = timeline instanceof ReplayFrameTimeline
@@ -61,10 +69,36 @@ export class ReplayVideoRenderSession {
                                   ?? this.#controller?.currentSample?.()
                                   ?? null)
         this.#renderMode = renderMode
-        this.#renderSpec = renderSpec
-        this.#initialCameraState = initialCameraState
-        this.#visibleOverlayIds = visibleOverlayIds
-        this.#trackPath = trackPath
+        const timelineDescriptor = {
+            durationMillis: this.#timeline.durationMillis,
+            fps: this.#timeline.fps,
+            direction: this.#timeline.direction,
+            frameIntervalMs: this.#timeline.frameIntervalMs,
+            frameCount: this.#timeline.frameCount,
+            phases: [],
+            replayPhase: null,
+        }
+        const trackPathDescriptor = createReplayTrackPathDescriptor(trackPath)
+        this.#definition = definition ?? createReplayDefinition({
+            direction: this.#timeline.direction,
+            timeline: timelineDescriptor,
+            cameraDefinition: initialCameraState,
+            renderSpec,
+            visibleOverlayIds,
+            trackPathDescriptor,
+            source: renderMode,
+        })
+        this.#renderPlan = renderPlan ?? createReplayRenderPlan({
+            definition: this.#definition,
+            trackPath,
+            trackPathDescriptor,
+        })
+        this.#frameResolver = frameResolver instanceof ReplayFrameResolver
+                              ? frameResolver
+                              : new ReplayFrameResolver({
+                                  plan: this.#renderPlan,
+                                  resolveSample: ({frame}) => this.#resolveSample(frame),
+                              })
     }
 
     get timeline() {
@@ -73,6 +107,24 @@ export class ReplayVideoRenderSession {
 
     get controller() {
         return this.#controller
+    }
+
+    /**
+     * Return the lazy render plan used by this session.
+     *
+     * @returns {Object} Replay render plan.
+     */
+    get renderPlan() {
+        return this.#renderPlan
+    }
+
+    /**
+     * Return the shared on-demand frame resolver.
+     *
+     * @returns {ReplayFrameResolver} Replay frame resolver.
+     */
+    get frameResolver() {
+        return this.#frameResolver
     }
 
     /**
@@ -88,30 +140,24 @@ export class ReplayVideoRenderSession {
     renderFrame = async (frameIndex = 0, options = {}) => {
         const frame = this.#timeline.frameAtIndex(frameIndex)
         await this.#seek?.(frame.progress, frame, options)
-        const nextSample = await this.#resolveSample(frame)
-        const logicalFrame = {
-            sample:          nextSample,
-            progress:        frame.progress,
-            elapsedMillis:   frame.frameTimeMs,
-            durationMillis:  frame.durationMillis,
-            frameTimeMs:     frame.frameTimeMs,
-            frameIntervalMs: frame.frameIntervalMs,
-            phase:           options.phase ?? null,
-            source:          this.#renderMode,
-        }
-        const renderContract = createReplayRenderModeContract({
+        const intent = await this.#frameResolver.resolveFrame({
+            frame,
+            phase: options.phase,
+            signal: options.signal,
             renderMode: this.#renderMode,
-            logicalFrame,
-            cameraPose: options.cameraPose ?? null,
-            trackPath: this.#trackPath,
-            initialCameraState: this.#initialCameraState,
-            renderSpec: this.#renderSpec,
-            visibleOverlayIds: this.#visibleOverlayIds,
+            source: this.#renderMode,
+            cameraPose: options.cameraPose,
+            cameraFrame: options.cameraFrame,
+            resolved: options.intentResolved,
         })
+        const nextSample = intent.replay?.sample ?? null
+        const logicalFrame = replayFrameIntentToLogicalFrame(intent)
+        const renderContract = this.#frameResolver.renderContractForIntent(intent)
 
         await this.#beforeFrame({
             frame,
             sample: nextSample,
+            intent,
             logicalFrame,
             renderContract,
             options,
@@ -120,6 +166,7 @@ export class ReplayVideoRenderSession {
         const renderResult = await this.#render({
             frame,
             sample: nextSample,
+            intent,
             logicalFrame,
             renderContract,
             options,
@@ -128,6 +175,7 @@ export class ReplayVideoRenderSession {
         await this.#afterFrame({
             frame,
             sample: nextSample,
+            intent,
             options,
             renderResult,
         })
@@ -135,6 +183,7 @@ export class ReplayVideoRenderSession {
         return {
             ...frame,
             sample: nextSample,
+            intent,
             logicalFrame,
             renderContract,
             renderResult,
