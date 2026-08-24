@@ -16,6 +16,8 @@
 
 import {buildReplayFrameState} from './JourneyReplayRuntime'
 import {createJourneyReplayLogicalFrame} from './JourneyReplayLogicalFrame'
+import {createReplayCameraDefinition} from './ReplayCameraDefinition'
+import {createReplayCameraPoseResolver} from './ReplayCameraEvaluator'
 import {ReplayFrameResolver} from './ReplayFrameResolver'
 import {createReplayDefinition} from './ReplayDefinition'
 import {createReplayRenderPlan} from './ReplayRenderPlan'
@@ -124,15 +126,22 @@ export class JourneyReplayPlaybackController {
         }
         const trackPath = this.#sampler?.logicalTrackPath ?? null
         const trackPathDescriptor = createReplayTrackPathDescriptor(trackPath)
+        const replayState = globalThis.lgs?.stores?.replay ?? null
+        const startProgress = this.#direction < 0 ? 1 : 0
+        const cameraDefinition = createReplayCameraDefinition({
+            cameraSettings: replayState?.camera,
+            markerSettings: replayState?.marker,
+            startAnchor: this.#sampler?.atProgress?.(startProgress) ?? null,
+        })
         this.#replayDefinition = createReplayDefinition({
             journeyId: this.#sampler?.journey?.slug ?? null,
             direction: this.#direction,
             timeline: this.#videoTimeline,
-            cameraDefinition: globalThis.lgs?.stores?.replay?.camera ?? null,
-            renderSpec: globalThis.lgs?.stores?.replay?.deferredExportPlan?.renderSpec ?? null,
-            visibleOverlayIds: globalThis.lgs?.stores?.replay?.deferredExportPlan?.runtime?.context?.visibleOverlayIds ?? [],
+            cameraDefinition,
+            renderSpec: replayState?.deferredExportPlan?.renderSpec ?? null,
+            visibleOverlayIds: replayState?.deferredExportPlan?.runtime?.context?.visibleOverlayIds ?? [],
             trackPathDescriptor,
-            qualityPolicy: globalThis.lgs?.stores?.replay?.readiness ?? null,
+            qualityPolicy: replayState?.readiness ?? null,
             source: 'draft',
         })
         this.#renderPlan = createReplayRenderPlan({
@@ -143,6 +152,10 @@ export class JourneyReplayPlaybackController {
         this.#frameResolver = new ReplayFrameResolver({
             plan: this.#renderPlan,
             resolveSample: ({progress: requestedProgress}) => this.#sampler?.atProgress?.(requestedProgress) ?? null,
+            resolveCameraPose: createReplayCameraPoseResolver({
+                definition: this.#replayDefinition.cameraDefinition,
+                sampler: this.#sampler,
+            }),
         })
         this.#syncStore(this.currentSample(), {force: true})
         return this

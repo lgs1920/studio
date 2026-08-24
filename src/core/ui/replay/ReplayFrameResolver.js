@@ -189,7 +189,9 @@ export class ReplayFrameResolver {
 
         return createReplayFrameIntent({
             planId: this.#plan.id,
-            resolved: values.resolved ?? Boolean(cameraPose || cameraFrame),
+            // A logical camera pose is still only an intent. Scene adapters
+            // explicitly mark the frame resolved after applying and qualifying it.
+            resolved: values.resolved ?? false,
             renderMode: values.renderMode ?? REPLAY_RENDER_MODE_DRAFT,
             source: values.source ?? definition.source ?? 'replay',
             frameId: values.frameId ?? frame?.index ?? null,
@@ -232,7 +234,7 @@ export class ReplayFrameResolver {
      */
     resolveFrameSync = (options = {}) => {
         const context = this.#baseContext(options)
-        const contributionContext = Object.assign({}, context, {settled: options.settled === true})
+        const baseContributionContext = Object.assign({}, context, {settled: options.settled === true})
 
         /**
          * Resolve one synchronous contribution or preserve its caller override.
@@ -244,17 +246,32 @@ export class ReplayFrameResolver {
          */
         const resolve = (callback, name, override) => override !== undefined
             ? override
+            : this.#synchronousContribution(callback(baseContributionContext), name)
+
+        const sample = resolve(this.#resolveSample, 'resolveSample', options.sample)
+        const contributionContext = Object.assign({}, baseContributionContext, {sample})
+
+        /**
+         * Resolve one contribution that can depend on the logical sample.
+         *
+         * @param {Function} callback - Contribution resolver.
+         * @param {string} name - Contribution name used in diagnostics.
+         * @param {*} override - Explicit caller override.
+         * @returns {*} Resolved synchronous contribution.
+         */
+        const resolveAfterSample = (callback, name, override) => override !== undefined
+            ? override
             : this.#synchronousContribution(callback(contributionContext), name)
 
         return this.#buildIntent(context, Object.assign({}, options, {
-            sample: resolve(this.#resolveSample, 'resolveSample', options.sample),
-            cameraPose: resolve(this.#resolveCameraPose, 'resolveCameraPose', options.cameraPose),
-            cameraFrame: resolve(this.#resolveCameraFrame, 'resolveCameraFrame', options.cameraFrame),
-            markerState: resolve(this.#resolveMarkerState, 'resolveMarkerState', options.markerState),
-            traceState: resolve(this.#resolveTraceState, 'resolveTraceState', options.traceState),
-            poiStates: resolve(this.#resolvePoiStates, 'resolvePoiStates', options.poiStates),
-            widgetStates: resolve(this.#resolveWidgetStates, 'resolveWidgetStates', options.widgetStates),
-            mediaStates: resolve(this.#resolveMediaStates, 'resolveMediaStates', options.mediaStates),
+            sample,
+            cameraPose: resolveAfterSample(this.#resolveCameraPose, 'resolveCameraPose', options.cameraPose),
+            cameraFrame: resolveAfterSample(this.#resolveCameraFrame, 'resolveCameraFrame', options.cameraFrame),
+            markerState: resolveAfterSample(this.#resolveMarkerState, 'resolveMarkerState', options.markerState),
+            traceState: resolveAfterSample(this.#resolveTraceState, 'resolveTraceState', options.traceState),
+            poiStates: resolveAfterSample(this.#resolvePoiStates, 'resolvePoiStates', options.poiStates),
+            widgetStates: resolveAfterSample(this.#resolveWidgetStates, 'resolveWidgetStates', options.widgetStates),
+            mediaStates: resolveAfterSample(this.#resolveMediaStates, 'resolveMediaStates', options.mediaStates),
         }))
     }
 
@@ -266,7 +283,7 @@ export class ReplayFrameResolver {
      */
     resolveFrame = async (options = {}) => {
         const context = this.#baseContext(options)
-        const contributionContext = Object.assign({}, context, {settled: options.settled === true})
+        const baseContributionContext = Object.assign({}, context, {settled: options.settled === true})
 
         /**
          * Resolve one optional asynchronous frame contribution.
@@ -277,17 +294,31 @@ export class ReplayFrameResolver {
          */
         const resolve = async (callback, override) => override !== undefined
             ? override
+            : callback(baseContributionContext)
+
+        const sample = await resolve(this.#resolveSample, options.sample)
+        throwIfReplayResolutionAborted(options.signal)
+        const contributionContext = Object.assign({}, baseContributionContext, {sample})
+
+        /**
+         * Resolve one asynchronous contribution that can depend on the sample.
+         *
+         * @param {Function} callback - Contribution resolver.
+         * @param {*} override - Explicit caller override.
+         * @returns {Promise<*>} Resolved contribution.
+         */
+        const resolveAfterSample = async (callback, override) => override !== undefined
+            ? override
             : callback(contributionContext)
 
-        const [sample, cameraPose, cameraFrame, markerState, traceState, poiStates, widgetStates, mediaStates] = await Promise.all([
-            resolve(this.#resolveSample, options.sample),
-            resolve(this.#resolveCameraPose, options.cameraPose),
-            resolve(this.#resolveCameraFrame, options.cameraFrame),
-            resolve(this.#resolveMarkerState, options.markerState),
-            resolve(this.#resolveTraceState, options.traceState),
-            resolve(this.#resolvePoiStates, options.poiStates),
-            resolve(this.#resolveWidgetStates, options.widgetStates),
-            resolve(this.#resolveMediaStates, options.mediaStates),
+        const [cameraPose, cameraFrame, markerState, traceState, poiStates, widgetStates, mediaStates] = await Promise.all([
+            resolveAfterSample(this.#resolveCameraPose, options.cameraPose),
+            resolveAfterSample(this.#resolveCameraFrame, options.cameraFrame),
+            resolveAfterSample(this.#resolveMarkerState, options.markerState),
+            resolveAfterSample(this.#resolveTraceState, options.traceState),
+            resolveAfterSample(this.#resolvePoiStates, options.poiStates),
+            resolveAfterSample(this.#resolveWidgetStates, options.widgetStates),
+            resolveAfterSample(this.#resolveMediaStates, options.mediaStates),
         ])
         throwIfReplayResolutionAborted(options.signal)
 
@@ -337,7 +368,7 @@ export class ReplayFrameResolver {
         logicalFrame: replayFrameIntentToLogicalFrame(intent),
         cameraPose: intent?.scene?.cameraPose,
         trackPath: this.#plan.trackPath,
-        initialCameraState: this.#plan.definition?.cameraDefinition,
+        initialCameraState: this.#plan.definition?.initialCameraState,
         renderSpec: intent?.composition?.renderSpec,
         visibleOverlayIds: intent?.composition?.visibleOverlayIds,
         outputProfile: intent?.composition?.outputProfile,

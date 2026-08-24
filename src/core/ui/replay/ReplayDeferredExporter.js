@@ -21,6 +21,8 @@ import {
 import {
     ReplayFrameTimeline,
 }                              from '@Core/ui/replay/ReplayFrameTimeline'
+import {createReplayCameraDefinition} from '@Core/ui/replay/ReplayCameraDefinition'
+import {createReplayCameraPoseResolver} from '@Core/ui/replay/ReplayCameraEvaluator'
 import {ReplayFrameResolver}   from '@Core/ui/replay/ReplayFrameResolver'
 import {createReplayDefinition} from '@Core/ui/replay/ReplayDefinition'
 import {createReplayRenderPlan} from '@Core/ui/replay/ReplayRenderPlan'
@@ -1425,11 +1427,18 @@ export const prepareReplayDeferredExportPlan = ({
     })
     const trackPath = controller?.sampler?.logicalTrackPath ?? null
     const trackPathDescriptor = createReplayTrackPathDescriptor(trackPath)
+    const startProgress = Number(direction) < 0 ? 1 : 0
+    const cameraDefinition = createReplayCameraDefinition({
+        cameraSettings: replay?.camera,
+        markerSettings: replay?.marker,
+        startAnchor: controller?.sampler?.atProgress?.(startProgress) ?? null,
+    })
     const definition = createReplayDefinition({
         journeyId: journey?.slug ?? replay?.journeySlug ?? null,
         direction,
         timeline: videoTimeline,
-        cameraDefinition: replayContext.context?.cameraState ?? null,
+        cameraDefinition,
+        initialCameraState: replayContext.context?.cameraState ?? null,
         renderSpec: effectiveRenderSpec,
         crop: replayContext.context?.cropRect ?? null,
         visibleOverlayIds: replayContext.context?.visibleOverlayIds ?? [],
@@ -1447,6 +1456,10 @@ export const prepareReplayDeferredExportPlan = ({
         resolveSample: ({progress}) => controller?.sampler?.atProgress?.(progress)
                                          ?? controller?.currentSample?.()
                                          ?? null,
+        resolveCameraPose: createReplayCameraPoseResolver({
+            definition: renderPlan.definition.cameraDefinition,
+            sampler: controller?.sampler ?? null,
+        }),
     })
     const exporter = new ReplayDeferredExporter({
         controller,

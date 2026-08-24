@@ -82,7 +82,7 @@ export class ReplayVideoRenderSession {
         this.#definition = definition ?? createReplayDefinition({
             direction: this.#timeline.direction,
             timeline: timelineDescriptor,
-            cameraDefinition: initialCameraState,
+            initialCameraState,
             renderSpec,
             visibleOverlayIds,
             trackPathDescriptor,

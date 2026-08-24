@@ -422,6 +422,12 @@ describe('ReplayDeferredExporter', () => {
         })
 
         expect(freshPlan.plan.runtime.contextKey).toBe(context.contextKey)
+        expect(freshPlan.plan.definition.cameraDefinition).toEqual(expect.objectContaining({
+            version: 1,
+            position: expect.objectContaining({altitudeMeters: 1200}),
+            orientation: expect.objectContaining({pitchRadians: expect.any(Number)}),
+        }))
+        expect(freshPlan.plan.definition.initialCameraState).toEqual(context.context.cameraState)
 
         const reusedPlan = resolveReplayDeferredExportPlan({
             replay,
