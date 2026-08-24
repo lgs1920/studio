@@ -3,6 +3,7 @@
  */
 
 import {createReplayFrameIntent} from './ReplayFrameIntent'
+import {createReplayCameraCommand} from './ReplayCameraCommand'
 import {ReplayFrameTimeline} from './ReplayFrameTimeline'
 import {isReplayRenderPlan} from './ReplayRenderPlan'
 import {createReplayRenderModeContract, REPLAY_RENDER_MODE_DRAFT} from './ReplayRenderModeContract'
@@ -41,6 +42,7 @@ export const replayFrameIntentToLogicalFrame = intent => intent ? {
     frameTimeMs: intent.frame?.timeMs ?? 0,
     frameIntervalMs: intent.frame?.intervalMillis ?? null,
     cameraPose: intent.scene?.cameraPose ?? null,
+    cameraCommand: intent.scene?.cameraCommand ?? null,
     cameraFrame: intent.scene?.cameraFrame ?? null,
     phase: intent.timeline?.phase ?? null,
     source: intent.source ?? 'replay',
@@ -184,6 +186,12 @@ export class ReplayFrameResolver {
         const frame = context.frame
         const phase = context.phase
         const cameraPose = values.cameraPose ?? null
+        const cameraCommand = values.cameraCommand !== undefined
+                              ? values.cameraCommand
+                              : createReplayCameraCommand({
+                                  pose: cameraPose,
+                                  source: values.source ?? definition.source ?? 'replay',
+                              })
         const cameraFrame = values.cameraFrame ?? null
         this.#resolutionCount += 1
 
@@ -208,6 +216,7 @@ export class ReplayFrameResolver {
             direction: this.#plan.timeline?.direction ?? definition.direction,
             sample: values.sample,
             cameraPose,
+            cameraCommand,
             cameraFrame,
             trackPath: this.#plan.trackPath,
             markerState: values.markerState,

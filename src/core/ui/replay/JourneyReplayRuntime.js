@@ -3,6 +3,7 @@
  */
 
 import {REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP, normalizeJourneyReplayClips} from './JourneyReplayClips'
+import {createReplayCameraCommand} from './ReplayCameraCommand'
 import {isResolvedReplayFrameIntent} from './ReplayFrameIntent'
 import {attachReplayFrameIntent, publishReplayFrameState} from './ReplayFramePublisher'
 import {createReplayRenderModeContract} from './ReplayRenderModeContract'
@@ -63,6 +64,7 @@ export const buildReplayFrameState = ({
     planId = null,
     intentResolved = false,
     cameraPose = null,
+    cameraCommand = null,
     cameraFrame = null,
     trackPath = null,
     markerState = null,
@@ -84,6 +86,10 @@ export const buildReplayFrameState = ({
     const safeReplayFrameCount = optionalFiniteNumber(replayFrameCount)
     const resolvedIndex = safeIndex ?? safeReplayFrameIndex ?? safeFrameId ?? null
     const resolvedFrameCount = safeFrameCount ?? safeReplayFrameCount ?? null
+    const resolvedCameraCommand = cameraCommand ?? createReplayCameraCommand({
+        pose: cameraPose,
+        source: source ?? 'replay',
+    })
 
     const renderContract = renderMode
                            ? createReplayRenderModeContract({
@@ -96,6 +102,7 @@ export const buildReplayFrameState = ({
                                    frameTimeMs:     optionalFiniteNumber(frameTimeMs),
                                    frameIntervalMs: optionalFiniteNumber(frameIntervalMs),
                                    cameraPose,
+                                   cameraCommand: resolvedCameraCommand,
                                    cameraFrame,
                                    phase,
                                    source,
@@ -130,6 +137,7 @@ export const buildReplayFrameState = ({
         source,
         updatedAt:       optionalFiniteNumber(updatedAt) ?? globalThis.performance?.now?.() ?? Date.now(),
         renderContract,
+        cameraCommand: resolvedCameraCommand,
     }
 
     if (frameIntent) {
@@ -371,6 +379,7 @@ export const resetRuntimeProgress = store => {
  * @param {number|null} options.frameTimeMs - Absolute timeline time.
  * @param {number|null} options.frameIntervalMs - Timeline frame interval.
  * @param {number|null} options.durationMillis - Full timeline duration.
+ * @param {Object|null} options.cameraCommand - Canonical clip camera command.
  * @returns {Object|null} Published clip phase.
  */
 export const publishReplayClipFrameState = ({
@@ -385,6 +394,7 @@ export const publishReplayClipFrameState = ({
                                                  frameIntervalMs = null,
                                                  durationMillis = null,
                                                  cameraPose = null,
+                                                 cameraCommand = null,
                                                  cameraFrame = null,
                                                  intentResolved = false,
                                              } = {}) => {
@@ -440,6 +450,7 @@ export const publishReplayClipFrameState = ({
             renderMode:      'draft',
             intentResolved,
             cameraPose,
+            cameraCommand,
             cameraFrame,
         }),
         intentOptions: {

@@ -120,6 +120,11 @@ describe('canonical replay camera definition', () => {
         expect(resolveCameraPose).toHaveBeenCalledTimes(2)
         expect(resolveCameraPose.mock.calls[0][0].sample).toBe(sample)
         expect(draft.scene.cameraPose).toEqual(hq.scene.cameraPose)
+        expect(draft.scene.cameraCommand).toEqual(hq.scene.cameraCommand)
+        expect(draft.scene.cameraCommand).toEqual(expect.objectContaining({
+            type: 'set-target-view',
+            rangeMeters: expect.any(Number),
+        }))
         expect(draft.resolved).toBe(false)
         expect(hq.resolved).toBe(false)
     })

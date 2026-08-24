@@ -752,6 +752,8 @@ The first two Phase 1 seams are now present in the current branch:
 - lightweight track-path descriptors that invalidate plans from segment identity and revisions without serializing or cloning every coordinate;
 - a versioned renderer-independent `ReplayCameraDefinition` with a compact start anchor, radian orientation, explicit metric units, and a compatibility projection for the existing persisted settings;
 - a shared `ReplayCameraEvaluator` that resolves the Draft, HQ, and scrub camera pose only after the logical route sample has been resolved;
+- a versioned `ReplayCameraCommand` generated from each canonical pose and published in the shared frame intent;
+- a deterministic Cesium camera adapter that converts target, heading, pitch, roll, and metric range into world-space direction/up vectors, releases any previous look-at transform, and applies one instantaneous `setView`;
 - a `ReplayFramePublisher` that distinguishes pending Draft state from the last completely resolved frame;
 - Draft camera application completes and publishes the canonical frame instead of exposing a partially patched frame to captured dynamic widgets;
 - HQ export publishes the same canonical intent shape after applying its effective camera pose;
@@ -759,7 +761,7 @@ The first two Phase 1 seams are now present in the current branch:
 - the normal replay controls expose a real-time slider backed by a coalesced, latest-request-wins scrub scheduler; synchronized recording keeps it disabled;
 - unit, integration, exporter, widget-composition, and store-contract tests cover the compatibility seam.
 
-This is a foundation, not the isolated HQ camera implementation. The canonical camera definition and nominal evaluator now exist, while scene-qualified settled scrubbing, terrain and 3D Tiles camera qualification, camera-command application, and the isolated render host remain subsequent slices below. The current slider avoids input floods, resolves only the latest requested timestamp through the canonical resolver, and exposes cancellation to its adapter, but scene application still passes through the compatibility `seek()` path and the existing Cesium transition stack.
+This is a foundation, not the isolated HQ camera implementation. The canonical camera definition, nominal evaluator, command, and instantaneous Cesium adapter now exist, while scene-qualified settled scrubbing, terrain and 3D Tiles camera qualification, migration of the transition and redirection policies, and the isolated render host remain subsequent slices below. The current slider avoids input floods, resolves only the latest requested timestamp through the canonical resolver, and exposes cancellation to its adapter, but scene application still passes through the compatibility `seek()` path and most of the existing Cesium transition stack.
 
 ### Phase 0 — Establish evidence and split missing work
 

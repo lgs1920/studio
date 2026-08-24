@@ -3,7 +3,7 @@
  */
 
 
-import {ArcType, Cartesian2, Cartesian3, Cartographic, CatmullRomSpline, Color, ExtrapolationType, JulianDate, EasingFunction, HeightReference, HorizontalOrigin, LinearApproximation, Matrix4, PolylineDashMaterialProperty, SampledPositionProperty, SceneTransforms, Transforms, VerticalOrigin, Math as CesiumMath} from 'cesium'
+import {ArcType, Cartesian2, Cartographic, CatmullRomSpline, Color, ExtrapolationType, JulianDate, EasingFunction, HeightReference, HorizontalOrigin, LinearApproximation, PolylineDashMaterialProperty, SampledPositionProperty, SceneTransforms, VerticalOrigin, Math as CesiumMath} from 'cesium'
 import {REPLAY_DRAWER} from '@Core/constants'
 import {Journey} from '@Core/Journey'
 import {CameraUtils} from '@Utils/cesium/CameraUtils'
@@ -12,9 +12,11 @@ import {TrackUtils} from '@Utils/cesium/TrackUtils'
 import {faCamera} from '@fortawesome/pro-solid-svg-icons'
 import {faPersonHiking} from '@fortawesome/pro-regular-svg-icons'
 import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
+import {createReplayCameraCommand} from './ReplayCameraCommand'
+import {applyReplayCesiumCameraCommand} from './ReplayCesiumCameraAdapter'
 import {finiteNumber, replayStore} from './JourneyReplayRuntime'
 import {
-    clamp, lerp, hasFiniteLonLat, projectReplayTargetInCameraFrame, sanitizeOrientationRadians, rollCameraUp, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForPositionMode, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
+    clamp, lerp, hasFiniteLonLat, projectReplayTargetInCameraFrame, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForPositionMode, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
 } from './JourneyReplayCameraMath'
 import {
     REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET, REPLAY_CAMERA_POSITION_AHEAD,
@@ -160,11 +162,22 @@ export const applyCameraView = (mode, {anchor, heading, pitch, roll = 0, cameraS
         }
 
         const cameraHeight = call.cameraAltitudeForSample(anchor, cameraSettings)
-        const target = safeCartesianFromLonLat({
-            ...anchor,
-            altitude: markerHeight,
+        const range = replayCameraRangeFromPitch(Math.max(1, cameraHeight - markerHeight), safePitch)
+        const command = createReplayCameraCommand({
+            pose: {
+                target: {
+                    longitude: anchor?.longitude,
+                    latitude: anchor?.latitude,
+                    altitude: markerHeight,
+                },
+                heading: safeHeading,
+                pitch: safePitch,
+                roll: safeRoll,
+                rangeMeters: range,
+            },
+            source: 'live-replay',
         })
-        if (!target) {
+        if (!command) {
             replayVideoTraceDebug('camera.view.apply.end', {
                 elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startedAt,
                 skipped: true,
@@ -175,8 +188,6 @@ export const applyCameraView = (mode, {anchor, heading, pitch, roll = 0, cameraS
 
         const viewer = globalThis.lgs?.viewer
         const camera = viewer?.camera
-        const transform = Transforms.eastNorthUpToFixedFrame(target)
-        const range = replayCameraRangeFromPitch(Math.max(1, cameraHeight - markerHeight), safePitch)
         if (!camera || typeof camera.setView !== 'function') {
             replayVideoTraceDebug('camera.view.apply.end', {
                 elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startedAt,
@@ -189,36 +200,10 @@ export const applyCameraView = (mode, {anchor, heading, pitch, roll = 0, cameraS
         state.cameraAutoTrackingIgnoreUntil = call.now() + 250
         state.cameraApplyingView = true
         try {
-            camera.lookAtTransform?.(Matrix4.IDENTITY)
-            const east = Matrix4.getColumn(transform, 0, new Cartesian3())
-            const north = Matrix4.getColumn(transform, 1, new Cartesian3())
-            const up = Matrix4.getColumn(transform, 2, new Cartesian3())
-            const forward = Cartesian3.normalize(
-                Cartesian3.add(
-                    Cartesian3.multiplyByScalar(east, Math.sin(safeHeading), new Cartesian3()),
-                    Cartesian3.multiplyByScalar(north, Math.cos(safeHeading), new Cartesian3()),
-                    new Cartesian3(),
-                ),
-                new Cartesian3(),
-            )
-            const horizontalDistance = range * Math.cos(safePitch)
-            const verticalDistance = range * Math.sin(-safePitch)
-            const destination = Cartesian3.add(
-                Cartesian3.subtract(target, Cartesian3.multiplyByScalar(forward, horizontalDistance, new Cartesian3()), new Cartesian3()),
-                Cartesian3.multiplyByScalar(up, verticalDistance, new Cartesian3()),
-                new Cartesian3(),
-            )
-            const direction = Cartesian3.normalize(Cartesian3.subtract(target, destination, new Cartesian3()), new Cartesian3())
-            const right = Cartesian3.normalize(Cartesian3.cross(direction, up, new Cartesian3()), new Cartesian3())
-            const correctedUp = Cartesian3.normalize(Cartesian3.cross(right, direction, new Cartesian3()), new Cartesian3())
-            const rolledUp = rollCameraUp({direction, up: correctedUp, roll: safeRoll}) ?? correctedUp
-            camera.setView({
-                destination,
-                orientation: {
-                    direction,
-                    up: rolledUp,
-                },
-            })
+            const appliedFrame = applyReplayCesiumCameraCommand({camera, command})
+            if (!appliedFrame) {
+                return false
+            }
             call.rememberCameraView({anchor, heading: safeHeading, pitch: safePitch, roll: safeRoll})
             return true
         }

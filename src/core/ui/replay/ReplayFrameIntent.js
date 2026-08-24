@@ -105,6 +105,7 @@ export const createReplayFrameIntent = ({
                                              direction = 1,
                                              sample = null,
                                              cameraPose = null,
+                                             cameraCommand = null,
                                              cameraFrame = null,
                                              trackPath = null,
                                              markerState = null,
@@ -157,6 +158,7 @@ export const createReplayFrameIntent = ({
         },
         scene: {
             cameraPose:  cloneReplayFrameValue(cameraPose),
+            cameraCommand: cloneReplayFrameValue(cameraCommand),
             cameraFrame: cloneReplayFrameValue(cameraFrame),
             // Track geometry is immutable plan-owned data and may contain
             // thousands of positions. Retain that shared reference instead of
@@ -222,6 +224,7 @@ export const createReplayFrameIntentFromState = (frameState, {
         direction: frameState.direction,
         sample: frameState.sample ?? contractLogicalFrame?.sample,
         cameraPose: contractLogicalFrame?.cameraPose ?? renderContract?.cameraPose,
+        cameraCommand: frameState.cameraCommand ?? contractLogicalFrame?.cameraCommand,
         cameraFrame: contractLogicalFrame?.cameraFrame,
         trackPath: renderContract?.trackPath,
         markerState,
