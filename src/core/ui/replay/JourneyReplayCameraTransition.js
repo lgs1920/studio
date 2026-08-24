@@ -23,6 +23,10 @@ import {
     getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker,
 } from './JourneyReplayProgressionStyle'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
+import {
+    applyReplayCesiumCameraCommand,
+    replayCameraCommandForCesiumFrame,
+} from './ReplayCesiumCameraAdapter'
 
 import {
     REPLAY_HEADING_TRANSITION_DURATION_SECONDS,
@@ -150,7 +154,7 @@ export const currentCameraFrame =  (mode, fallbackFrame) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const camera = globalThis.lgs?.viewer?.camera
+        const camera = (call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera
         const destination = [camera?.positionWC, camera?.position, fallbackFrame?.destination]
             .find(isUsableCartesian3)
         const direction = [camera?.directionWC, camera?.direction, fallbackFrame?.direction]
@@ -172,7 +176,7 @@ export const applyCameraFrame =  (mode, frame) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const camera = globalThis.lgs?.viewer?.camera
+        const camera = (call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera
         if (!camera
             || !isUsableCartesian3(frame?.destination)
             || !isUsableCartesian3(frame?.direction)
@@ -200,6 +204,42 @@ export const applyCameraFrame =  (mode, frame) => {
             state.cameraApplyingView = false
         }
     }
+
+/**
+ * Apply one collision-qualified transition frame through the canonical camera
+ * command boundary.
+ *
+ * @param {Object} mode - Replay session mode.
+ * @param {Object|null} frame - Qualified Cesium transfer frame.
+ * @param {Object|null} target - Cesium target position.
+ * @returns {boolean} Whether the canonical command was applied.
+ */
+export const applyReplayCameraTransitionFrame = (mode, frame, target) => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const command = replayCameraCommandForCesiumFrame({
+        frame,
+        target,
+        source: 'replay-transition',
+    })
+    const camera = (call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera
+    if (!command || !camera) {
+        return false
+    }
+
+    const logicalNow = finiteNumber(call.now?.()) ?? 0
+    state.cameraAutoTrackingIgnoreUntil = Math.max(
+        finiteNumber(state.cameraAutoTrackingIgnoreUntil) ?? 0,
+        logicalNow + 250,
+    )
+    state.cameraApplyingView = true
+    try {
+        return Boolean(applyReplayCesiumCameraCommand({camera, command}))
+    }
+    finally {
+        state.cameraApplyingView = false
+    }
+}
 
 export const interpolateCameraFrame = (mode, 
         start,
@@ -594,7 +634,7 @@ export const applyDeterministicCameraTransition =  (mode, logicalNow) => {
         const now = finiteNumber(logicalNow) ?? transition.endAt
         const span = Math.max(1, transition.endAt - transition.startAt)
         const ratio = clamp((now - transition.startAt) / span, 0, 1)
-        const applied = call.applyCameraFrame(call.interpolateCameraFrame(
+        const frame = call.interpolateCameraFrame(
             transition.start,
             transition.end,
             ratio,
@@ -605,7 +645,9 @@ export const applyDeterministicCameraTransition =  (mode, logicalNow) => {
                 path:          transition.path,
                 target:        transition.target,
             },
-        ))
+        )
+        const applied = call.applyReplayCameraTransitionFrame?.(frame, transition.target)
+                     || call.applyCameraFrame(frame)
         if (ratio >= 1 && applied) {
             state.deterministicCameraTransition = null
             state.lastCameraHeading = finiteNumber(transition.heading) ?? state.lastCameraHeading
@@ -713,7 +755,7 @@ export const cameraRecenterFrame = (mode, {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const viewer = globalThis.lgs?.viewer
+        const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
         const targetHeight = finiteNumber(call.markerRenderHeightForSample(sample))
                             ?? finiteNumber(sample?.altitude ?? sample?.height)
                             ?? 0

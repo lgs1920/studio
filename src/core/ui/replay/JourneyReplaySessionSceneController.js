@@ -47,6 +47,13 @@ import {
     REPLAY_EVENT_STOP, REPLAY_EVENT_UPDATE, JourneyReplayPlaybackController,
 }                                                                                          from './JourneyReplayPlaybackController'
 import { replayVideoTraceDebug }                                                           from './ReplayVideoTraceDebug'
+import {disposeReplaySceneFrameQualifier} from './ReplaySceneFrameQualifier'
+import {
+    currentReplaySessionOwnership,
+    invalidateReplaySessionOwnership,
+    ownsReplaySession,
+    releaseReplaySessionOwnership,
+} from './ReplaySessionOwnership'
 import {
     DEFAULT_REPLAY_POI_DISPLAY_DURATION_SECONDS, normalizeJourneyReplayPOISettings,
 }                                                                                          from './JourneyReplayPOISettings'
@@ -194,6 +201,7 @@ export const hideCameraAnglePreview = (mode, ) => {
 export const stop = (mode, options = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        disposeReplaySceneFrameQualifier(mode)
         state.clipSequenceToken++
         state.skipNextImmediateStartRecenter = false
         call.stopStopClipPOIMaskLoop()
@@ -271,7 +279,10 @@ export const cancelPendingSceneRestore = (mode) => {
 export const dispose = (mode, ) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        disposeReplaySceneFrameQualifier(mode)
+        mode.clearRenderTarget?.()
         call.stop({emit: false})
+        invalidateReplaySessionOwnership(mode)
         state.replayEntryCameraState = null
         if (state.profileHoverTimeout !== null) {
             clearTimeout(state.profileHoverTimeout)
@@ -478,11 +489,14 @@ export const restorePlaybackSceneInternal = (mode, ) => {
         call.resetCameraController({preserveSavedCameraState: true})
         state.suppressPlaybackCameraSync = true
         const restoreClipSequenceToken = state.clipSequenceToken
+        const replaySessionLease = currentReplaySessionOwnership(mode)
         let restorePromise
         restorePromise = call.focusJourneyAfterPlayback({
             snapDistance: 50000,
         }).finally(() => {
-            if (state.sceneRestorePromise !== restorePromise) {
+            const staleReplaySession = replaySessionLease
+                                       && !ownsReplaySession(mode, replaySessionLease)
+            if (state.sceneRestorePromise !== restorePromise || staleReplaySession) {
                 // A cancelled restoration may finish its Cesium focus flight later.
                 // Reapply the current replay pose so stale focus cannot move the active replay.
                 const replayActive = state.controller?.running === true
@@ -491,7 +505,7 @@ export const restorePlaybackSceneInternal = (mode, ) => {
                 const sample = replayActive
                              ? currentJourneyReplaySample(state.controller)
                              : null
-                if (restoreClipSequenceToken !== state.clipSequenceToken
+                if ((restoreClipSequenceToken !== state.clipSequenceToken || staleReplaySession)
                     && replayActive
                     && sample
                     && typeof call.updateCamera === 'function') {
@@ -502,6 +516,9 @@ export const restorePlaybackSceneInternal = (mode, ) => {
                         logicalCamera: state.logicalCameraTrajectory === true,
                         exportMode:    state.replayExportCameraActive === true,
                     })
+                }
+                if (staleReplaySession && state.sceneRestorePromise === restorePromise) {
+                    state.sceneRestorePromise = null
                 }
                 return
             }
@@ -522,6 +539,7 @@ export const restorePlaybackSceneInternal = (mode, ) => {
             call.restorePlaybackCameraSettings({force: true})
             state.replayEntryCameraState = null
             state.sceneRestorePromise = null
+            releaseReplaySessionOwnership(mode, replaySessionLease)
         })
         state.sceneRestorePromise = restorePromise
         return restorePromise

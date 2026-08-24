@@ -76,7 +76,7 @@ export const recenterCameraToSample = (mode, {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const viewer = globalThis.lgs?.viewer
+        const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
         const frame = call.cameraRecenterFrame({
             sample,
             heading,
@@ -153,7 +153,7 @@ export const startCameraTransition = (mode, {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const viewer = globalThis.lgs?.viewer
+        const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
         if (!viewer?.camera) {
             return Promise.resolve(false)
         }
@@ -309,11 +309,12 @@ export const bindMarkerInteractions = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const camera = globalThis.lgs?.viewer?.camera
+        const viewer = globalThis.lgs?.viewer
+        const camera = viewer?.camera
         const interactionTargets = [
-            globalThis.lgs?.viewer?.canvas,
-            globalThis.lgs?.viewer?.scene?.canvas,
-            call.cesiumScene()?.canvas,
+            viewer?.canvas,
+            viewer?.scene?.canvas,
+            call.cesiumScene?.()?.canvas,
             globalThis.lgs?.canvas,
         ].filter((target, index, targets) => target && targets.indexOf(target) === index)
         if (!camera) {

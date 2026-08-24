@@ -188,7 +188,7 @@ export const JourneyReplayProgressBar = memo(({
     const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
     const {drawers: {open: openDrawer}} = useSnapshot(lgs.stores.ui)
     const idPrefix = useMemo(() => `replay-progress-${uuid()}`, [])
-    const scrubSchedulerRef = useRef(null)
+    const _scrubScheduler = useRef(null)
     const isUiHidden = replay.mainUiHidden === true
     const isClipSequenceActive = replay.clipSequenceActive === true
     const hasPlaybackSample = Boolean((replay.active || replay.playing || replay.paused) && replay.sample)
@@ -273,32 +273,39 @@ export const JourneyReplayProgressBar = memo(({
                      && replay.recordingSync !== true
                      && !isClipSequenceActive
 
-    const applyScrubRequest = useCallback(({progress: requestedProgress}) => {
+    const applyScrubRequest = useCallback(({progress: requestedProgress, settled, signal, requestId}) => {
+        const seekOptions = {
+            qualifyScene: true,
+            settled,
+            signal,
+            requestId,
+            source: 'scrub',
+        }
         if (typeof onSeek === 'function') {
-            return onSeek(requestedProgress)
+            return onSeek(requestedProgress, seekOptions)
         }
 
-        return __.ui.replay?.seek?.(requestedProgress)
+        return __.ui.replay?.seek?.(requestedProgress, seekOptions)
     }, [onSeek])
 
     useEffect(() => {
         const scheduler = createReplayScrubScheduler({apply: applyScrubRequest})
-        scrubSchedulerRef.current = scheduler
+        _scrubScheduler.current = scheduler
 
         return () => {
             scheduler.dispose()
-            if (scrubSchedulerRef.current === scheduler) {
-                scrubSchedulerRef.current = null
+            if (_scrubScheduler.current === scheduler) {
+                _scrubScheduler.current = null
             }
         }
     }, [applyScrubRequest])
 
     const scrubReplay = useCallback(event => {
-        scrubSchedulerRef.current?.request(Number(event.target.value) / 1000)
+        _scrubScheduler.current?.request(Number(event.target.value) / 1000)
     }, [])
 
     const settleReplayScrub = useCallback(event => {
-        void scrubSchedulerRef.current?.settle(Number(event.target.value) / 1000)
+        void _scrubScheduler.current?.settle(Number(event.target.value) / 1000)
     }, [])
 
     const playOrResume = useCallback(() => {

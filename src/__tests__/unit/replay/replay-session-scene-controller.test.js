@@ -11,6 +11,7 @@ vi.mock('@Components/Toast', () => ({
 
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from '@Core/ui/replay/JourneyReplayInternal'
 import {REPLAY_EVENT_UPDATE} from '@Core/ui/replay/JourneyReplayPlaybackController'
+import {beginReplaySessionOwnership} from '@Core/ui/replay/ReplaySessionOwnership'
 import {
     abortPlaybackAfterListenerError, bindRenderer, restoreCameraState, restorePlaybackScene, restorePlaybackSceneInternal,
 } from '@Core/ui/replay/JourneyReplaySessionSceneController'
@@ -329,9 +330,9 @@ describe('JourneyReplaySessionSceneController', () => {
             },
         }
 
+        beginReplaySessionOwnership(mode)
         const restorePromise = restorePlaybackSceneInternal(mode)
-        state.sceneRestorePromise = null
-        state.clipSequenceToken++
+        beginReplaySessionOwnership(mode)
         resolveFocus()
         await restorePromise
 
@@ -341,6 +342,7 @@ describe('JourneyReplaySessionSceneController', () => {
             exportMode:    true,
         }))
         expect(call.restoreCameraState).not.toHaveBeenCalled()
+        expect(state.sceneRestorePromise).toBeNull()
     })
 
     it('restores focus and replay visibility after a premature listener failure', async () => {

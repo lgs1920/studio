@@ -24,6 +24,7 @@ import {
     resolveReplayDeferredExportPlan,
     waitForReplayWidgetsReady,
     runReplayDeferredMp4Export,
+    isReplayExportFrameSettled,
 } from '@Core/ui/replay/ReplayDeferredExporter'
 import { buildReplayVideoRenderSpec } from '@Core/ui/replay/ReplayVideoRenderSpec'
 import { CanvasOverlayComposer } from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
@@ -32,6 +33,22 @@ const mediabunnyMocks = vi.hoisted(() => ({
     failNextCanvasAdd: false,
     canvasAddCount:     0,
 }))
+
+describe('isReplayExportFrameSettled', () => {
+    it('keeps moving clip frames on the bounded moving budget', () => {
+        expect(isReplayExportFrameSettled({
+            frame: {isFirst: false, isLast: false},
+            phase: {kind: 'start', localProgress: 0.5, clip: {clipId: 'zoom-in', params: {}}},
+        })).toBe(false)
+        expect(isReplayExportFrameSettled({
+            frame: {isFirst: false, isLast: false},
+            phase: {kind: 'start', localProgress: 0, clip: {clipId: 'zoom-in', params: {}}},
+        })).toBe(true)
+        expect(isReplayExportFrameSettled({
+            phase: {kind: 'hold', localProgress: 0.5},
+        })).toBe(true)
+    })
+})
 
 vi.mock('@Components/Toast', () => ({
     LGS_ERROR_TOAST:       'danger',
@@ -854,6 +871,34 @@ describe('ReplayDeferredExporter', () => {
         })
         const preparePlaybackSceneForExport = vi.fn(() => true)
         const restorePlaybackScene = vi.fn()
+        const isolatedCanvas = document.createElement('canvas')
+        isolatedCanvas.width = 320
+        isolatedCanvas.height = 180
+        const isolatedTarget = {
+            viewer: {camera: {setView: vi.fn()}},
+            scene: {camera: {setView: vi.fn()}, requestRender: vi.fn()},
+            canvas: isolatedCanvas,
+        }
+        const isolatedRenderHost = {
+            initialize: vi.fn(() => Promise.resolve()),
+            renderTarget: vi.fn(() => isolatedTarget),
+            canvas: vi.fn(() => isolatedCanvas),
+            prepareForCapture: vi.fn(() => Promise.resolve(true)),
+            destroy: vi.fn(),
+        }
+        const isolatedRenderHostFactory = vi.fn(() => isolatedRenderHost)
+        const setRenderTarget = vi.fn()
+        const clearRenderTarget = vi.fn()
+        const interactiveCamera = {
+            heading: 0.5,
+            pitch:   -0.5,
+            roll:    0.25,
+            positionCartographic: {
+                longitude: Math.PI / 2,
+                latitude:  Math.PI / 4,
+                height:    321,
+            },
+        }
 
         try {
             globalThis.requestAnimationFrame = vi.fn(callback => {
@@ -867,16 +912,15 @@ describe('ReplayDeferredExporter', () => {
                 requestRender: vi.fn(),
             },
             viewer: {
-                camera: {
-                    heading: 0.5,
-                    pitch:   -0.5,
-                    roll:    0.25,
-                    positionCartographic: {
-                        longitude: Math.PI / 2,
-                        latitude:  Math.PI / 4,
-                        height:    321,
-                    },
+                terrainProvider: {id: 'terrain'},
+                imageryLayers: {length: 0, get: vi.fn()},
+                scene: {
+                    mode: 3,
+                    camera: interactiveCamera,
+                    globe: {},
+                    fog: {},
                 },
+                camera: interactiveCamera,
             },
             stores: {
                 ui: {
@@ -899,6 +943,8 @@ describe('ReplayDeferredExporter', () => {
                         renderReplayExportFrame,
                         preparePlaybackSceneForExport,
                         restorePlaybackScene,
+                        setRenderTarget,
+                        clearRenderTarget,
                     },
                     widgetCache: {
                         getAll: vi.fn(() => new Map()),
@@ -950,6 +996,7 @@ describe('ReplayDeferredExporter', () => {
                     getContext: () => exportContext,
                 }),
                 download: vi.fn(),
+                isolatedRenderHostFactory,
             })
 
             const phases = renderReplayExportFrame.mock.calls.map(([args]) => args.phase.kind)
@@ -977,6 +1024,14 @@ describe('ReplayDeferredExporter', () => {
             expect(restorePlaybackScene).toHaveBeenCalledTimes(2)
             expect(restorePlaybackScene).toHaveBeenNthCalledWith(1, {force: true})
             expect(restorePlaybackScene).toHaveBeenNthCalledWith(2, {force: true})
+            expect(isolatedRenderHostFactory).toHaveBeenCalledWith(expect.objectContaining({
+                dimensions: {width: 320, height: 180},
+                viewportDimensions: {width: 320, height: 180},
+            }))
+            expect(setRenderTarget).toHaveBeenCalledWith(isolatedTarget)
+            expect(clearRenderTarget).toHaveBeenCalledWith(isolatedTarget)
+            expect(isolatedRenderHost.prepareForCapture).toHaveBeenCalled()
+            expect(isolatedRenderHost.destroy).toHaveBeenCalledOnce()
             expect(result.plan.runtime.exportElapsedMillis).toBe(result.plan.manifest.frameCount * 40)
             expect(result.plan.runtime.exportAverageFrameMillis).toBeCloseTo(40, 1)
             expect(result.plan.runtime.exportEstimatedTotalMillis).toBeCloseTo(result.plan.runtime.exportElapsedMillis, 1)

@@ -146,7 +146,11 @@ describe('JourneyReplayProgressBar', () => {
             target: {value: '625'},
         })
 
-        expect(globalThis.__.ui.replay.seek).toHaveBeenCalledWith(0.625)
+        expect(globalThis.__.ui.replay.seek).toHaveBeenCalledWith(0.625, expect.objectContaining({
+            qualifyScene: true,
+            settled: true,
+            source: 'scrub',
+        }))
     })
 
     it('does not expose scrubbing during synchronized recording', () => {

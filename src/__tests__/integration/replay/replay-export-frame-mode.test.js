@@ -463,6 +463,7 @@ describe('JourneyReplayMode HQ export frames', () => {
         expect(exportController.seek).toHaveBeenCalledWith(0.75)
         expect(renderer.update).toHaveBeenCalledWith(expect.objectContaining({
             sample: exportSample,
+            forceGeometry: true,
             syncCursorToTrace: true,
         }))
     })
@@ -528,7 +529,20 @@ describe('JourneyReplayMode HQ export frames', () => {
             },
         })).resolves.toBeTruthy()
 
-        expect(globalThis.lgs.viewer.camera.setView).toHaveBeenCalledWith(expect.objectContaining({
+        await expect(mode.renderReplayExportFrame({
+            frame: {
+                frameTimeMs: 750,
+            },
+            phase: {
+                kind:        'replay',
+                slot:        'replay',
+                progress:    0.75,
+                localMillis: 750,
+            },
+        })).resolves.toBeTruthy()
+
+        expect(globalThis.lgs.viewer.camera.setView).toHaveBeenCalledTimes(2)
+        expect(globalThis.lgs.viewer.camera.setView).toHaveBeenLastCalledWith(expect.objectContaining({
             orientation: expect.objectContaining({
                 up: expect.objectContaining({
                     x: expect.any(Number),

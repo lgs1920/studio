@@ -58,6 +58,12 @@ import {
     normalizeJourneyReplayCamera, normalizeJourneyReplayReadiness,
 }                              from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {
+    IsolatedHqReplayRenderHost,
+}                              from '@Core/ui/replay/IsolatedHqReplayRenderHost'
+import {
+    captureReplaySceneDescriptor,
+}                              from '@Core/ui/replay/ReplaySceneDescriptor'
+import {
     REPLAY_RENDER_MODE_HQ, createReplayRenderContext, createReplayRenderModeContract,
 }                              from '@Core/ui/replay/ReplayRenderModeContract'
 import {
@@ -103,6 +109,47 @@ const defaultReplayExportFps = () => {
     const configured = globalThis.lgs?.stores?.ui?.video?.fps
     return ScreenMediaRecorder.FPS?.[configured] ?? configured ?? 30
 }
+
+/**
+ * Classify frames that may use the settled scene-readiness budget.
+ *
+ * Moving clip frames deliberately stay on the bounded moving budget. Only
+ * export boundaries and explicit holds may consume the longer settled wait.
+ *
+ * @param {Object} options - Export frame and resolved phase.
+ * @returns {boolean} Whether the frame is a settled boundary or hold.
+ */
+export const isReplayExportFrameSettled = ({frame = null, phase = null} = {}) => {
+    if (frame?.isFirst === true
+        || frame?.isLast === true
+        || phase?.isFinalSceneFrame === true
+        || phase?.isLastPhaseFrame === true) {
+        return true
+    }
+
+    if (phase?.kind === 'hold'
+        || phase?.hold === true
+        || phase?.clip?.params?.hold === true
+        || phase?.clip?.params?.motion === 'hold') {
+        return true
+    }
+
+    if (!phase?.clip) {
+        return false
+    }
+
+    const localProgress = finiteNumber(phase.localProgress, null)
+    return localProgress !== null
+           && (localProgress <= 0.000001 || localProgress >= 0.999999)
+}
+
+/**
+ * Create the default isolated HQ replay render host.
+ *
+ * @param {Object} options - Host construction options.
+ * @returns {IsolatedHqReplayRenderHost} New isolated host.
+ */
+const defaultIsolatedReplayRenderHostFactory = options => new IsolatedHqReplayRenderHost(options)
 
 /**
  * Pre-warm a small rolling prefix of the HQ camera path through Cesium.
@@ -1716,6 +1763,8 @@ export const runReplayDeferredMp4Export = async ({
                                                      abortController = null,
                                                      buildCanvas = null,
                                                      replayMode = defaultReplayMode(),
+                                                     renderHostMode = 'isolated',
+                                                     isolatedRenderHostFactory = defaultIsolatedReplayRenderHostFactory,
                                                      tileReadinessTimeoutMs = DEFAULT_REPLAY_SCENE_TILE_READINESS_TIMEOUT_MS,
                                                      uiToast = UIToast,
                                                      download = downloadBlob,
@@ -1796,6 +1845,9 @@ export const runReplayDeferredMp4Export = async ({
     let restoreReplaySceneTileCache = null
     let replaySceneTileReadinessCoordinator = null
     let replaySceneTileReadinessOptions = null
+    let isolatedRenderHost = null
+    let isolatedRenderTarget = null
+    let isolatedViewportDimensions = null
     let previousReplayExportFrame = null
     let previousReplayExportSample = null
     const exportStartedAt = runtimeNow()
@@ -1852,6 +1904,78 @@ export const runReplayDeferredMp4Export = async ({
             })
         }
 
+
+        const isolatedHostSupported = renderHostMode === 'isolated'
+                                      && typeof replayMode?.setRenderTarget === 'function'
+                                      && typeof replayMode?.clearRenderTarget === 'function'
+                                      && typeof isolatedRenderHostFactory === 'function'
+        if (isolatedHostSupported) {
+            const descriptor = captureReplaySceneDescriptor()
+            if (descriptor) {
+                const cropRect = outputRenderSpec?.cropRect
+                                 ?? normalizeReplayVideoCropRect(plan.runtime?.context?.cropRect ?? replay?.videoCropRect ?? null)
+                try {
+                    const outputDpr = cropRect
+                        ? Math.max(1, Math.min(
+                            outputDimensions.width / Math.max(1, cropRect.width),
+                            outputDimensions.height / Math.max(1, cropRect.height),
+                        ))
+                        : 1
+                    isolatedViewportDimensions = {
+                        width: outputDimensions.width / outputDpr,
+                        height: outputDimensions.height / outputDpr,
+                    }
+                    isolatedRenderHost = isolatedRenderHostFactory({
+                        dimensions: outputDimensions,
+                        viewportDimensions: isolatedViewportDimensions,
+                        descriptor,
+                        readiness: normalizeJourneyReplayReadiness(
+                            replay?.readiness
+                            ?? globalThis.lgs?.settings?.ui?.replay?.readiness,
+                        ),
+                    })
+                    await isolatedRenderHost.initialize()
+                    isolatedRenderTarget = isolatedRenderHost.renderTarget?.() ?? null
+                    if (!isolatedRenderTarget) {
+                        throw new Error('The isolated HQ render host did not expose a render target')
+                    }
+                    replayMode.setRenderTarget(isolatedRenderTarget)
+                    replayVideoTraceDebug('export.render-host.isolated.ready', {
+                        outputWidth: outputDimensions.width,
+                        outputHeight: outputDimensions.height,
+                        viewportWidth: isolatedViewportDimensions.width,
+                        viewportHeight: isolatedViewportDimensions.height,
+                    })
+                }
+                catch (error) {
+                    if (isolatedRenderTarget) {
+                        try {
+                            replayMode.clearRenderTarget(isolatedRenderTarget)
+                        }
+                        catch {
+                            // Continue with host teardown and the visible fallback.
+                        }
+                    }
+                    try {
+                        isolatedRenderHost?.destroy?.()
+                    }
+                    catch {
+                        // The visible fallback must remain available after teardown failure.
+                    }
+                    isolatedRenderHost = null
+                    isolatedRenderTarget = null
+                    isolatedViewportDimensions = null
+                    replayVideoTraceDebug('export.render-host.isolated.fallback', {
+                        message: error?.message ?? String(error),
+                    })
+                    uiToast?.warning?.({
+                        caption: 'HQ Video',
+                        text:    'Isolated HQ rendering is unavailable. The visible map will be used.',
+                    })
+                }
+            }
+        }
+
         const scenePrepareStartedAt = runtimeNow()
         let scenePrepared = false
         const firstTimelinePhase = plan.videoTimeline?.phases?.[0] ?? null
@@ -1884,14 +2008,18 @@ export const runReplayDeferredMp4Export = async ({
                 ?? globalThis.lgs?.settings?.ui?.replay?.camera,
             )
             restoreReplaySceneTileCache = prepareReplaySceneTileCache(replayScene)
-            replaySceneTileReadinessCoordinator = createReplaySceneTileReadinessCoordinator(replayScene, {
-                enabled:                    replayReadiness.enabled,
-                policy:                     replayReadiness.policy,
-                knownFootprintTimeoutMs:    replayReadiness.knownFootprintTimeoutMs,
-                movingTimeoutMs:             replayReadiness.movingTimeoutMs,
-                settledTimeoutMs:            replayReadiness.settledTimeoutMs,
-                prewarmEnabled:              replayReadiness.prewarmEnabled,
-            })
+            replaySceneTileReadinessCoordinator = isolatedRenderHost
+                ? {
+                    prepareForCapture: options => isolatedRenderHost.prepareForCapture(options),
+                }
+                : createReplaySceneTileReadinessCoordinator(replayScene, {
+                    enabled:                    replayReadiness.enabled,
+                    policy:                     replayReadiness.policy,
+                    knownFootprintTimeoutMs:    replayReadiness.knownFootprintTimeoutMs,
+                    movingTimeoutMs:             replayReadiness.movingTimeoutMs,
+                    settledTimeoutMs:            replayReadiness.settledTimeoutMs,
+                    prewarmEnabled:              replayReadiness.prewarmEnabled,
+                })
             replaySceneTileReadinessOptions = {
                 readiness: replayReadiness,
                 camera:    replayCamera,
@@ -2006,13 +2134,7 @@ export const runReplayDeferredMp4Export = async ({
                         maxMillis: tileReadinessTimeoutMs,
                         signal,
                         speedLevel,
-                        settled: Boolean(
-                            frame?.isFirst
-                            || frame?.isLast
-                            || phase?.isFinalSceneFrame
-                            || phase?.isLastPhaseFrame
-                            || phase?.clip,
-                        ),
+                        settled: isReplayExportFrameSettled({frame, phase}),
                     })
                 }
                 else {
@@ -2025,12 +2147,21 @@ export const runReplayDeferredMp4Export = async ({
                         signal,
                     })
                 }
-                const frameSource = sourceCanvas ?? defaultReplaySourceCanvas()
+                const frameSource = isolatedRenderHost?.canvas?.()
+                                    ?? sourceCanvas
+                                    ?? defaultReplaySourceCanvas()
                 if (frameSource instanceof HTMLCanvasElement) {
                     const cropRect = outputRenderSpec?.cropRect
                                      ?? normalizeReplayVideoCropRect(plan.runtime?.context?.cropRect ?? replay?.videoCropRect ?? null)
-                    const composerClip = outputRenderSpec?.composerClip
-                                         ?? replayVideoComposerClipFromCropRect(cropRect)
+                    const composerClip = isolatedRenderHost && isolatedViewportDimensions
+                        ? {
+                            x: 0,
+                            y: 0,
+                            width: isolatedViewportDimensions.width,
+                            height: isolatedViewportDimensions.height,
+                        }
+                        : outputRenderSpec?.composerClip
+                          ?? replayVideoComposerClipFromCropRect(cropRect)
                     const composerOutputDpr = outputRenderSpec?.outputDpr
                                               ?? Math.max(1, Math.min(
                                                   canvas.width / Math.max(1, cropRect?.width ?? canvas.width),
@@ -2072,6 +2203,12 @@ export const runReplayDeferredMp4Export = async ({
                         buildReplayVideoComposerOverlays({
                             composer:      replayComposer,
                             cropRect:      cropRect ?? {left: 0, top: 0, width: canvas.width, height: canvas.height},
+                            coordinateScale: isolatedRenderHost && cropRect && isolatedViewportDimensions
+                                ? {
+                                    x: isolatedViewportDimensions.width / Math.max(1, cropRect.width),
+                                    y: isolatedViewportDimensions.height / Math.max(1, cropRect.height),
+                                }
+                                : null,
                             replay,
                             controller,
                         })
@@ -2164,6 +2301,26 @@ export const runReplayDeferredMp4Export = async ({
         clearReplayExportFrameState(plan)
         replaySceneTileReadinessCoordinator?.dispose?.()
         replaySceneTileReadinessCoordinator = null
+        if (isolatedRenderTarget) {
+            try {
+                replayMode?.clearRenderTarget?.(isolatedRenderTarget)
+            }
+            catch (error) {
+                replayVideoTraceDebug('export.render-host.isolated.clear.error', {
+                    message: error?.message ?? String(error),
+                })
+            }
+            isolatedRenderTarget = null
+        }
+        try {
+            isolatedRenderHost?.destroy?.()
+        }
+        catch (error) {
+            replayVideoTraceDebug('export.render-host.isolated.destroy.error', {
+                message: error?.message ?? String(error),
+            })
+        }
+        isolatedRenderHost = null
         if (typeof replayMode?.restorePlaybackScene === 'function') {
             await replayMode.restorePlaybackScene({force: true})
         }

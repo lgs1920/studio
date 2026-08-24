@@ -70,13 +70,13 @@ export const createReplayCameraCommand = ({
     const heading = finiteReplayCameraCommandNumber(pose?.heading)
     const pitch = finiteReplayCameraCommandNumber(pose?.pitch)
     const roll = finiteReplayCameraCommandNumber(pose?.roll) ?? 0
-    const cameraHeight = finiteReplayCameraCommandNumber(pose?.cameraHeight)
+    const cameraHeight = finiteReplayCameraCommandNumber(pose?.cameraHeight ?? pose?.height)
     const explicitRangeMeters = finiteReplayCameraCommandNumber(pose?.rangeMeters)
     const rangeMeters = explicitRangeMeters
                         ?? (cameraHeight === null || !target
                             ? null
                             : resolveReplayCameraMetricRange(
-                                Math.max(0, cameraHeight - target?.altitude),
+                                Math.max(1, cameraHeight - target?.altitude),
                                 pitch,
                             ))
     if (!target || heading === null || pitch === null || rangeMeters === null || rangeMeters <= 0) {

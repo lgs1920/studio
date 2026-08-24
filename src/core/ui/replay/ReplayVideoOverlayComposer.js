@@ -167,10 +167,12 @@ const resolveMetrics = ({widgetId, widgetEl, metricsCache = null, metricsCacheTt
  *
  * @param {object} options - Overlay build options.
  * @param {boolean} [options.skipVisibilityChecks=false] - Include mounted widgets without replay visibility filtering.
+ * @param {{x:number,y:number}|null} [options.coordinateScale=null] - Optional crop-to-host coordinate scale.
  */
 export const buildReplayVideoComposerOverlays = ({
                                                      composer,
                                                      cropRect,
+                                                     coordinateScale = null,
                                                      sceneOverlays = [],
                                                      widgetKeys = null,
                                                      replay = globalThis.lgs?.stores?.replay ?? null,
@@ -185,6 +187,9 @@ export const buildReplayVideoComposerOverlays = ({
     }
 
     const normalizedCrop = normalizeReplayVideoCropRect(cropRect) ?? {left: 0, top: 0, width: 0, height: 0}
+    const scaleX = Math.max(0.000001, Number(coordinateScale?.x) || 1)
+    const scaleY = Math.max(0.000001, Number(coordinateScale?.y) || 1)
+    const effectScale = Math.sqrt(scaleX * scaleY)
     composer.beginUpdate()
 
     const replayOverlayCandidates = Array.from(
@@ -241,10 +246,10 @@ export const buildReplayVideoComposerOverlays = ({
         composer.addOverlay(element, {
             x:             0,
             y:             0,
-            w:             normalizedCrop.width,
-            h:             normalizedCrop.height,
-            contentWidth:  normalizedCrop.width,
-            contentHeight: normalizedCrop.height,
+            w:             normalizedCrop.width * scaleX,
+            h:             normalizedCrop.height * scaleY,
+            contentWidth:  normalizedCrop.width * scaleX,
+            contentHeight: normalizedCrop.height * scaleY,
             scale:         1,
             ...(overlay.options ?? {}),
         })
@@ -285,18 +290,23 @@ export const buildReplayVideoComposerOverlays = ({
         const height = Number.isFinite(parsedHeight) && parsedHeight > 0 ? parsedHeight : Number(canvasEl.height) || 0
 
         composer.addOverlay(canvasEl, {
-            x:             (Number(position.left) || 0) - normalizedCrop.left - margins.left,
-            y:             (Number(position.top) || 0) - normalizedCrop.top - margins.top,
-            w:             width,
-            h:             height,
-            contentWidth:  Math.max(0, width - (margins.left + margins.right)),
-            contentHeight: Math.max(0, height - (margins.top + margins.bottom)),
-            blur,
-            radius,
-            border,
+            x:             ((Number(position.left) || 0) - normalizedCrop.left - margins.left) * scaleX,
+            y:             ((Number(position.top) || 0) - normalizedCrop.top - margins.top) * scaleY,
+            w:             width * scaleX,
+            h:             height * scaleY,
+            contentWidth:  Math.max(0, width - (margins.left + margins.right)) * scaleX,
+            contentHeight: Math.max(0, height - (margins.top + margins.bottom)) * scaleY,
+            blur:          blur * effectScale,
+            radius:        radius * effectScale,
+            border:        border * effectScale,
             rotate:        config.rotate || 0,
             scale:         resolveReplayVideoWidgetScale(widgetEl, config.scale),
-            shadowMargins: margins,
+            shadowMargins: {
+                top: margins.top * scaleY,
+                right: margins.right * scaleX,
+                bottom: margins.bottom * scaleY,
+                left: margins.left * scaleX,
+            },
         })
     }
     composer.endUpdate()

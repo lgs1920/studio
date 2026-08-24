@@ -2,9 +2,9 @@
  * Cesium adapter for deterministic replay camera commands.
  */
 
-import {Cartesian3, Matrix4, Transforms} from 'cesium'
+import {Cartesian3, Cartographic, Math as CesiumMath, Matrix4, Transforms} from 'cesium'
 
-import {isReplayCameraCommand} from './ReplayCameraCommand'
+import {createReplayCameraCommand, isReplayCameraCommand} from './ReplayCameraCommand'
 
 /**
  * Apply a bounded roll to one camera up vector.
@@ -91,6 +91,82 @@ export const replayCesiumCameraFrameForCommand = command => {
         direction,
         up: rolledUp,
     }
+}
+
+/**
+ * Convert one target-looking Cesium frame back into a canonical camera command.
+ *
+ * This adapter lets existing collision-qualified transfer paths cross the new
+ * command seam without persisting Cesium vectors in replay definitions.
+ *
+ * @param {Object} options - Cesium frame, geographic target, and metadata.
+ * @returns {Object|null} Canonical camera command.
+ */
+export const replayCameraCommandForCesiumFrame = ({
+    frame = null,
+    target = null,
+    source = 'cesium-frame',
+} = {}) => {
+    const destination = frame?.destination
+    if (!destination || !target) {
+        return null
+    }
+
+    const rangeMeters = Cartesian3.distance(destination, target)
+    if (!Number.isFinite(rangeMeters) || rangeMeters <= Number.EPSILON) {
+        return null
+    }
+
+    const targetCartographic = Cartographic.fromCartesian(target)
+    if (!targetCartographic) {
+        return null
+    }
+
+    const transform = Transforms.eastNorthUpToFixedFrame(target)
+    const east = Matrix4.getColumn(transform, 0, new Cartesian3())
+    const north = Matrix4.getColumn(transform, 1, new Cartesian3())
+    const localUp = Matrix4.getColumn(transform, 2, new Cartesian3())
+    const direction = Cartesian3.normalize(
+        Cartesian3.subtract(target, destination, new Cartesian3()),
+        new Cartesian3(),
+    )
+    const heading = Math.atan2(
+        Cartesian3.dot(direction, east),
+        Cartesian3.dot(direction, north),
+    )
+    const pitch = Math.asin(CesiumMath.clamp(Cartesian3.dot(direction, localUp), -1, 1))
+    const rightCandidate = Cartesian3.cross(direction, localUp, new Cartesian3())
+    const hasRight = Cartesian3.magnitudeSquared(rightCandidate) > Number.EPSILON
+    const right = hasRight
+        ? Cartesian3.normalize(rightCandidate, rightCandidate)
+        : east
+    const correctedUp = Cartesian3.normalize(
+        Cartesian3.cross(right, direction, new Cartesian3()),
+        new Cartesian3(),
+    )
+    const frameUp = frame?.up ?? frame?.correctedUp
+    const normalizedFrameUp = frameUp && Cartesian3.magnitudeSquared(frameUp) > Number.EPSILON
+        ? Cartesian3.normalize(frameUp, new Cartesian3())
+        : correctedUp
+    const roll = Math.atan2(
+        Cartesian3.dot(normalizedFrameUp, right),
+        Cartesian3.dot(normalizedFrameUp, correctedUp),
+    )
+
+    return createReplayCameraCommand({
+        pose: {
+            target: {
+                longitude: CesiumMath.toDegrees(targetCartographic.longitude),
+                latitude: CesiumMath.toDegrees(targetCartographic.latitude),
+                altitude: targetCartographic.height,
+            },
+            heading,
+            pitch,
+            roll,
+            rangeMeters,
+        },
+        source,
+    })
 }
 
 /**

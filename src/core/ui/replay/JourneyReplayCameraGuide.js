@@ -837,7 +837,7 @@ export const cameraViewForSample = (mode, {
                 }
                 else {
                     desiredHeading = finiteNumber(previousHeading)
-                        ?? finiteNumber(globalThis.lgs?.viewer?.camera?.heading)
+                        ?? finiteNumber((call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera?.heading)
                         ?? 0
                 }
             }

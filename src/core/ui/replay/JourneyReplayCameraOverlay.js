@@ -24,6 +24,7 @@ import {
     getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker,
 } from './JourneyReplayProgressionStyle'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
+import {replayRenderTargetFor} from './ReplayRenderTarget'
 
 import {
     REPLAY_HEADING_TRANSITION_DURATION_SECONDS,
@@ -352,7 +353,7 @@ const isReplayVideoLinked = () => globalThis.lgs?.stores?.replay?.recordingSync 
 export const refreshReplayDiagnosticsOverlay = mode => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-    const viewer = globalThis.lgs?.viewer
+    const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
     const canvas = state.toleranceZoneOverlayCanvas
     if (!state.toleranceZoneOverlayVisible || !(canvas instanceof HTMLCanvasElement) || !viewer) {
         return false
@@ -373,7 +374,7 @@ export const refreshReplayDiagnosticsOverlay = mode => {
         canvas,
         ...geometry,
         camera: viewer.camera ?? null,
-        scene: viewer.scene ?? globalThis.lgs?.scene ?? null,
+        scene: viewer?.scene ?? call.cesiumScene?.() ?? globalThis.lgs?.scene ?? null,
     })
     return true
 }
@@ -386,7 +387,8 @@ export const refreshReplayDiagnosticsOverlay = mode => {
  */
 const ensureReplayDiagnosticsCameraSync = mode => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const camera = globalThis.lgs?.viewer?.camera
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const camera = (call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera
     if (state.toleranceZoneOverlayCameraChangedRemove || !camera?.changed?.addEventListener) {
         return
     }
@@ -570,7 +572,7 @@ export const showCameraAnglePreviewOverlay = (mode, {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         call.removeCameraAnglePreviewOverlay()
-        const viewer = globalThis.lgs?.viewer
+        const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
         const sampler = state.sampler
         const entities = viewer?.entities ?? null
         if (!viewer || !entities || positionMode === REPLAY_CAMERA_POSITION_SYSTEM || !sampler?.hasSamples) {
@@ -727,13 +729,35 @@ export const viewportRectForCesiumSurface = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
+        const target = replayRenderTargetFor(mode)
+        const targetCanvas = target?.canvas ?? target?.scene?.canvas ?? target?.viewer?.canvas ?? null
+        if (targetCanvas) {
+            const targetRect = targetCanvas.getBoundingClientRect?.()
+            const width = finiteNumber(targetRect?.width)
+                          ?? finiteNumber(targetCanvas.clientWidth)
+                          ?? finiteNumber(targetCanvas.width)
+                          ?? 0
+            const height = finiteNumber(targetRect?.height)
+                           ?? finiteNumber(targetCanvas.clientHeight)
+                           ?? finiteNumber(targetCanvas.height)
+                           ?? 0
+            return {
+                left: 0,
+                top: 0,
+                width,
+                height,
+                canvasWidth: finiteNumber(targetCanvas.width) ?? width,
+                canvasHeight: finiteNumber(targetCanvas.height) ?? height,
+            }
+        }
+
         const cropRect = call.videoCropRect()
         if (cropRect) {
             return cropRect
         }
 
-        const viewer = globalThis.lgs?.viewer
-        const scene = call.cesiumScene()
+        const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
+        const scene = call.cesiumScene?.() ?? globalThis.lgs?.scene ?? viewer?.scene
         const canvas = viewer?.canvas ?? scene?.canvas ?? globalThis.lgs?.canvas
         const rect = canvas?.getBoundingClientRect?.()
         return {
@@ -759,8 +783,8 @@ export const updateToleranceZoneOverlay =  (mode, hysteresis) => {
     state.lastToleranceZoneHysteresis = hysteresis
     state.toleranceZoneOverlay?.remove?.()
     state.toleranceZoneOverlay = null
-    const viewer = globalThis.lgs?.viewer
-    const container = viewer?.container ?? globalThis.document?.body ?? null
+    const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
+    const container = globalThis.lgs?.viewer?.container ?? globalThis.document?.body ?? null
     if (!viewer || !container || !hysteresis) {
         return
     }
@@ -824,7 +848,7 @@ export const updateToleranceZoneOverlay =  (mode, hysteresis) => {
             canvas: diagnosticsCanvas,
             ...geometry,
             camera: viewer?.camera ?? null,
-            scene: viewer?.scene ?? globalThis.lgs?.scene ?? null,
+            scene: viewer?.scene ?? call.cesiumScene?.() ?? globalThis.lgs?.scene ?? null,
         })
         ensureReplayDiagnosticsCameraSync(mode)
     }

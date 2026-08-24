@@ -25,6 +25,7 @@ import {
     getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker,
 } from './JourneyReplayProgressionStyle'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
+import {replaySceneFor, replayViewerFor} from './ReplayRenderTarget'
 
 import {
     REPLAY_HEADING_TRANSITION_DURATION_SECONDS,
@@ -186,7 +187,7 @@ export const applyCameraView = (mode, {anchor, heading, pitch, roll = 0, cameraS
             return false
         }
 
-        const viewer = globalThis.lgs?.viewer
+        const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
         const camera = viewer?.camera
         if (!camera || typeof camera.setView !== 'function') {
             replayVideoTraceDebug('camera.view.apply.end', {
@@ -220,7 +221,7 @@ export const liveCameraPitch =  (mode, fallback) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const cameraPitch = finiteNumber(globalThis.lgs?.viewer?.camera?.pitch)
+        const cameraPitch = finiteNumber((call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera?.pitch)
         return cameraPitch ?? fallback
     }
 
@@ -256,7 +257,7 @@ export const markerRenderHeightForSample =  (mode, sample, {fallback = undefined
             return fallbackHeight
         }
 
-        const terrainHeight = call.cesiumScene()?.globe?.getHeight?.(
+        const terrainHeight = (call.cesiumScene?.() ?? globalThis.lgs?.scene ?? globalThis.lgs?.viewer?.scene)?.globe?.getHeight?.(
             Cartographic.fromDegrees(longitude, latitude),
         )
         return finiteNumber(terrainHeight) ?? fallbackHeight
@@ -275,8 +276,8 @@ export const windowPositionForSample =  (mode, sample) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const viewer = globalThis.lgs?.viewer
-        const scene = call.cesiumScene()
+        const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
+        const scene = call.cesiumScene?.() ?? globalThis.lgs?.scene ?? globalThis.lgs?.viewer?.scene
         const position = call.markerRenderCartesianForSample(sample)
         if (!viewer || !scene || !position) {
             return null
@@ -342,8 +343,8 @@ export const cameraCollisionForSample = (mode, sample, cameraSettings, cache = n
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         const computeCollision = () => {
-            const viewer = globalThis.lgs?.viewer
-            const scene = call.cesiumScene()
+            const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
+            const scene = call.cesiumScene?.() ?? globalThis.lgs?.scene ?? globalThis.lgs?.viewer?.scene
             const windowPosition = call.trackingWindowPositionForSample(sample)
             const rect = call.viewportRectForCesiumSurface()
             const outerBounds = replayToleranceZoneBounds(cameraSettings?.hysteresis?.zone)
@@ -408,7 +409,7 @@ export const cameraCollisionForFrame = (mode, {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
     const target = call.markerRenderCartesianForSample(sample)
     const rect = viewport ?? call.viewportRectForCesiumSurface()
-    const frustum = globalThis.lgs?.viewer?.camera?.frustum
+    const frustum = (call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera?.frustum
     const verticalFovRadians = finiteNumber(frustum?.fovy) ?? finiteNumber(frustum?.fov) ?? (Math.PI / 3)
     const aspectRatio = finiteNumber(frustum?.aspectRatio)
                         ?? ((rect?.canvasWidth ?? rect?.width ?? 0) / Math.max(1, rect?.canvasHeight ?? rect?.height ?? 1))
@@ -462,7 +463,7 @@ export const terrainHeightForLonLat = (mode, longitude, latitude) => {
             return null
         }
 
-        const globe = call.cesiumScene()?.globe
+        const globe = (call.cesiumScene?.() ?? globalThis.lgs?.scene ?? globalThis.lgs?.viewer?.scene)?.globe
         const height = globe?.getHeight?.(Cartographic.fromDegrees(longitude, latitude))
         if (height === null || height === undefined || height === '') {
             return null
@@ -533,7 +534,7 @@ export const updateCameraSettingsFromCesiumControls = (mode, sample, {altitudeMo
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const camera = globalThis.lgs?.viewer?.camera
+        const camera = (call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera
         if (!camera || !sample) {
             return null
         }
@@ -625,10 +626,16 @@ export const now = (mode) => {
 }
 
 export const cesiumScene = (mode) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-    return globalThis.lgs?.scene ?? globalThis.lgs?.viewer?.scene
+    return replaySceneFor(mode)
 }
+
+/**
+ * Resolve the active Cesium viewer for this replay session.
+ *
+ * @param {Object} mode - Replay session mode.
+ * @returns {Object|null} Explicit HQ target or Studio viewer.
+ */
+export const cesiumViewer = mode => replayViewerFor(mode)
 
 export const smoothRadians = (mode, previous, next, factor = 0.12) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
@@ -697,7 +704,7 @@ export const traceCameraChangeTiming = (mode, {logicalNow, exportMode, source, m
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const camera = globalThis.lgs?.viewer?.camera
+        const camera = (call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera
         const currentHeading = finiteNumber(camera?.heading)
         const currentPitch = finiteNumber(camera?.pitch)
         const headingError = currentHeading === null || finiteNumber(desiredHeading) === null
@@ -767,7 +774,8 @@ export const cancelCameraBezierTransition = (mode, resolveValue = false) => {
             state.cameraBezierFrame = null
         }
         if (hadActiveTransition) {
-            globalThis.lgs?.viewer?.camera?.cancelFlight?.()
+            const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
+            viewer?.camera?.cancelFlight?.()
         }
         if (state.cameraBezierResolve !== null) {
             const resolve = state.cameraBezierResolve

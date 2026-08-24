@@ -7,6 +7,7 @@ import {
 } from '@Core/ui/replay/ReplayCameraCommand'
 import {
     applyReplayCesiumCameraCommand,
+    replayCameraCommandForCesiumFrame,
     replayCesiumCameraFrameForCommand,
 } from '@Core/ui/replay/ReplayCesiumCameraAdapter'
 
@@ -50,6 +51,36 @@ describe('replay camera command', () => {
         expect(Cartesian3.dot(frame.direction, frame.up)).toBeCloseTo(0, 8)
     })
 
+    it('round-trips a qualified Cesium transition frame through the canonical command', () => {
+        const originalCommand = createCommandFixture({
+            heading: 1.2,
+            pitch: -0.65,
+            roll: 0.18,
+        })
+        const originalFrame = replayCesiumCameraFrameForCommand(originalCommand)
+        const roundTripCommand = replayCameraCommandForCesiumFrame({
+            frame: originalFrame,
+            target: originalFrame.target,
+            source: 'replay-transition',
+        })
+        const roundTripFrame = replayCesiumCameraFrameForCommand(roundTripCommand)
+
+        expect(roundTripCommand.orientation.headingRadians).toBeCloseTo(
+            originalCommand.orientation.headingRadians,
+            8,
+        )
+        expect(roundTripCommand.orientation.pitchRadians).toBeCloseTo(
+            originalCommand.orientation.pitchRadians,
+            8,
+        )
+        expect(roundTripCommand.orientation.rollRadians).toBeCloseTo(
+            originalCommand.orientation.rollRadians,
+            8,
+        )
+        expect(Cartesian3.distance(roundTripFrame.destination, originalFrame.destination)).toBeLessThan(0.001)
+        expect(Cartesian3.angleBetween(roundTripFrame.up, originalFrame.up)).toBeLessThan(0.000001)
+    })
+
     it('derives a clip command range from camera height when no range is supplied', () => {
         const command = createReplayCameraCommand({
             pose: {
@@ -64,6 +95,22 @@ describe('replay camera command', () => {
 
         expect(command.rangeMeters).toBeCloseTo(1000, 6)
         expect(command.source).toBe('clip')
+    })
+
+    it('accepts the legacy clip height field and keeps ground poses valid', () => {
+        const command = createReplayCameraCommand({
+            pose: {
+                sample: {longitude: 2, latitude: 48, altitude: 120},
+                heading: 0.4,
+                pitch: -0.8,
+                roll: 0,
+                height: 120,
+            },
+            source: 'replay-clip',
+        })
+
+        expect(command).not.toBeNull()
+        expect(command.rangeMeters).toBeGreaterThan(0)
     })
 
     it('releases a previous look-at transform before applying setView', () => {
