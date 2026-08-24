@@ -958,3 +958,55 @@
 ## 2026-08-22 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/71e2cc5fa656a3fd6efb2d082599081396d207fa)
 
 - Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: improve journey report exports`](https://github.com/lgs1920/studio/commit/622116c9a0e7e147a9d12baf15f0196c32f9db57)
+
+- Recorded automatically from Git history.
+
+## 2026-08-23 — [`docs: add replay quality audit`](https://github.com/lgs1920/studio/commit/ba67ead883b07ce7f729d874ca7578b5e3fb87c9)
+
+- Recorded automatically from Git history.
+
+## 2026-08-23 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/07a8d5e066d33796529d76ddabcfd79ed1b5d846)
+
+- Recorded automatically from Git history.
+
+## 2026-08-24 — [`refactor: establish canonical replay frame pipeline`](https://github.com/lgs1920/studio/commit/29a3c0dcf99b4cbd7a0dcf2b2ec7b662a66ec6e9)
+
+- Recorded automatically from Git history.
+
+## 2026-08-24 — [`refactor: resolve replay frames lazily`](https://github.com/lgs1920/studio/commit/99833b8d5c37cfa991f26e8b672a926c427e3739)
+
+- Recorded automatically from Git history.
+
+## 2026-08-24 — [`refactor: canonicalize replay camera intent`](https://github.com/lgs1920/studio/commit/bad9c27c60f3020697af1e29ad26ab00be95fcf1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-24 — [`refactor: apply canonical replay camera commands`](https://github.com/lgs1920/studio/commit/1081e7359aa44706913403fe47d62efa61c3e976)
+
+- Recorded automatically from Git history.
+
+## 2026-08-24 — [`docs: update dependency inventory path`](https://github.com/lgs1920/studio/commit/3765661395de797d028ef3a73b5c5eb037f0660f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-24 — [`docs: reorganize technical documentation`](https://github.com/lgs1920/studio/commit/b58295c4518e70850ab7322b9749dfffe4085213)
+
+- Recorded automatically from Git history.
+
+## 2026-08-24 — [`fix: update information pane dependency source`](https://github.com/lgs1920/studio/commit/dcf9fbfeb5d26fb29fb1e896b62c5b4f37c5aa96)
+
+- Recorded automatically from Git history.
+
+## 2026-08-24 — [`refactor: isolate replay HQ rendering`](https://github.com/lgs1920/studio/commit/e1f7e1b90efcfb01d3f78599fedd4d3c77314143)
+
+- Recorded automatically from Git history.
+
+## 2026-08-24 — [`feat: complete replay recording integration`](https://github.com/lgs1920/studio/commit/498541d16ffb2b7b04d3e46bc02856a29f69a1c6)
+
+- Recorded automatically from Git history.
+
+## 2026-08-24 — [`docs: update replay architecture and status`](https://github.com/lgs1920/studio/commit/00b629a17095637db6f8efe0049aa82df54e0bf2)
+
+- Recorded automatically from Git history.
