@@ -1,8 +1,8 @@
 # Replay quality and performance audit
 
-Date: 2026-08-23
+Date: 2026-08-24
 
-Status: diagnostic of the current workspace state
+Status: current-code diagnostic, target architecture, and implementation plan
 
 ## Scope and evidence
 
@@ -14,10 +14,67 @@ The audit is based on:
 - The current replay configuration in `public/replay.yaml` and `JourneyReplayProgressionStyle.js`.
 - The current replay unit and integration tests.
 - Static control-flow analysis of Draft playback, Cesium rendering, HQ rendering, camera correction, tile readiness, overlays, and encoding.
+- Open Studio issues in the LGS1920 organization project whose project-level `Target release` is `1.0.0` or `1.1.0`.
 
 No browser capture or visual A/B capture was performed during this audit. Therefore, statements marked as `Confirmed by code` are directly observable in the current implementation. Statements marked as `Likely cause` are strong technical inferences that still need a reproducible capture and trace to be promoted to a measured fact.
 
 The interrupted replay test run is not treated as a passing or failing result. The store contract test did pass: 9 tests passed. This is not evidence that the replay quality is correct.
+
+## Open issue inventory
+
+This issue inventory is a snapshot taken on 2026-08-24 from the private [LGS1920 organization project](https://github.com/orgs/lgs1920/projects/2). It uses the project-level `Target release` field, not the GitHub milestone or a release name found in an issue body. Within the camera/replay scope, only open Studio issues with project status `Backlog` are treated as remaining work.
+
+### Target 1.0.0
+
+| Issue | Architectural responsibility | Dependency reading |
+| --- | --- | --- |
+| [#457 — Anchor replay start camera and synchronize start clips](https://github.com/lgs1920/studio/issues/457) | Canonical persisted camera model, replay-start anchor, one camera update command, start-clip endpoint, Draft/HQ pose parity | Foundation for #458 and the camera side of #459 |
+| [#458 — Isolate Replay HQ recording camera from interactive preview](https://github.com/lgs1920/studio/issues/458) | Independent HQ render host and recording-camera ownership | Depends on #457; foundation for #479 and HQ monitoring in #459 |
+| [#459 — Add Replay recording monitor widget with live frame progress](https://github.com/lgs1920/studio/issues/459) | Read-only monitoring of the final composed frame and export state | Depends on the canonical camera contract and HQ render host; must never become a render authority |
+| [#471 — Journey focus always returns to the journey focus point](https://github.com/lgs1920/studio/issues/471) | Replay lifecycle containment and camera-state cleanup | Must be fixed while introducing explicit camera/session ownership, not as another focus exception |
+| [#479 — Make Replay HQ tile readiness crop-aware](https://github.com/lgs1920/studio/issues/479) | Crop-sized Cesium viewport/frustum and view-specific 2D/3D readiness | Depends on the independent HQ render host from #458 |
+
+These five issues are not independent features. The critical dependency chain is:
+
+```text
+#457 canonical camera and start contract
+  -> #458 independent HQ render host
+       -> #479 crop-aware readiness
+       -> #459 HQ frame monitoring
+
+#471 lifecycle containment applies across every stage above
+```
+
+### Target 1.1.0
+
+| Issue | Architectural responsibility | Dependency reading |
+| --- | --- | --- |
+| [#395 — POI animation during replay](https://github.com/lgs1920/studio/issues/395) | Replay-clock POI track, deterministic pause ownership, cleanup | Must consume the canonical timeline and frame state |
+| [#396 — Add explicit 4K UHD mode to HQ video export](https://github.com/lgs1920/studio/issues/396) | Explicit physical output profile and capability probing | Must reuse the HQ render host; it is not a new render mode |
+| [#398 — Implement the replay-synchronized Video visual widget](https://github.com/lgs1920/studio/issues/398) | Time-indexed media track and deterministic decoded-frame composition | Depends on normalized timeline and shared frame publication |
+| [#402 — Align clip altitude data across replay sequences](https://github.com/lgs1920/studio/issues/402) | Compile-time clip continuity validation | Belongs in timeline validation, before runtime camera evaluation |
+| [#403 — Implement the 3D drone camera path editor](https://github.com/lgs1920/studio/issues/403) | Authoring adapter for serializable camera-path definitions | Must use the runtime camera evaluator and must not introduce another playback engine |
+| [#404 — Replace Replay clips UI with a synchronized track timeline editor](https://github.com/lgs1920/studio/issues/404) | Normalized timeline model and authoring UI | Foundation for clip, POI, widget, wait, and media tracks |
+| [#438 — Keep the replay marker inside the video crop](https://github.com/lgs1920/studio/issues/438) | Camera containment constraint for Navigation and Dynamic modes | Must be resolved by the shared camera plan for identical Draft/HQ decisions |
+| [#450 — Synchronize dynamic widgets on replay](https://github.com/lgs1920/studio/issues/450) | Shared logical-frame publication for dynamic widgets | The issue's proposed recorder timestamp source must be replaced by the canonical replay frame source |
+
+Two additional open 1.1.0 issues touch the boundary without defining the replay architecture:
+
+- [#397 — Implement the repeatable Arrow visual widget](https://github.com/lgs1920/studio/issues/397) is a deterministic composition consumer. It validates the widget host and capture contract but should not change replay timing.
+- [#406 — Clean up obsolete Main UI camera settings and geocoding dependency](https://github.com/lgs1920/studio/issues/406) should follow the canonical camera command migration, when obsolete settings and consumers can be proved unused.
+
+### Coverage gaps in the current backlog
+
+The open issues do not fully cover the root causes confirmed below. Before implementation begins, focused issues should be created for these missing deliverables:
+
+1. Define one immutable replay frame intent and make Draft, HQ, widgets, POIs, and overlays consume it.
+2. Replace capture-time camera improvisation with an incrementally compiled and qualified camera trajectory.
+3. Replace the current per-frame readiness behavior with an explicit bounded quality policy, including the five-second clip-frame classification and readiness-cache identity.
+4. Compile the replay trace into a stable capture representation instead of reevaluating several dynamic clamped entity polylines.
+5. Add visual continuity, Draft/HQ parity, tile-quality, and export-performance acceptance tests.
+6. Quarantine and then retire `JourneyReplayRunner` as a second replay authority.
+
+#457 contains part of the first two items and #479 contains the crop portion of the third, but neither issue owns the complete recovery. Treating those issues as complete substitutes would leave the current failure modes in place.
 
 ## Executive conclusion
 
@@ -260,7 +317,20 @@ Every renderer must consume that state. No renderer should derive a different ti
 
 ### P0: camera corrections must be compiled, not improvised during capture
 
-The camera should be compiled into one continuous trajectory before rendering. Collision and visibility policy should modify the trajectory during compilation, with bounded continuity constraints. The capture loop should sample that trajectory. It should not run depth picks, terrain probes, candidate searches, and transition ownership decisions as part of every output frame unless a deliberate fallback is explicitly recorded.
+The camera should be represented by one continuous trajectory before rendering. Here, "compiled" means a versioned, lazy sampler plus a bounded set of correction keyframes. It explicitly does not mean eagerly materializing every camera sample for the complete journey. Collision and visibility policy should modify the trajectory through incremental qualification, with bounded continuity constraints. The capture loop should sample that trajectory. It should not run depth picks, terrain probes, candidate searches, and transition ownership decisions as part of every output frame unless a deliberate fallback is explicitly recorded.
+
+### P0: full-route synchronous compilation is forbidden
+
+A previous attempt to compile the complete trajectory blocked the application long enough that it had to be abandoned. The replacement architecture must therefore make UI responsiveness a contract, not an optimization:
+
+- `sampleAt(timeMs)` must remain immediately available from the nominal mathematical trajectory;
+- scene-dependent qualification operates on a bounded rolling window around the requested time;
+- long work is chunked, yields to the browser, and is cancellable by plan revision or session disposal;
+- seeking invalidates stale queued work and prioritizes the new window;
+- no start, slider, pause, or export action may synchronously enumerate the full route;
+- HQ may prepare bounded future key views, but it cannot require all route samples to exist in memory before frame zero.
+
+The useful compiled artifacts are sparse keyframes, segment coefficients, interval indexes, resource manifests, and diagnostics. A per-output-frame camera array is neither required nor allowed as the primary runtime representation.
 
 ### P0: tile readiness must be a bounded quality policy
 
@@ -283,6 +353,542 @@ Draft may interpolate between compiled samples for responsiveness. HQ must sampl
 ### P2: remove or quarantine the legacy runner
 
 `JourneyReplayRunner` should either be removed from the active replay path or isolated as a compatibility adapter. It must not remain a second possible owner of marker, profiler, and replay progression state.
+
+## Target functional architecture
+
+### Product objective
+
+Replay must behave like a small deterministic film renderer, not like an interactive camera session being screen-recorded. The user authors one replay definition, validates one preview, and receives a Draft or HQ rendering of the same visual decisions. Draft and HQ may take different amounts of real time to produce a frame, but a logical timestamp must mean the same camera, trace, marker, clip, POI, widget, and media state in both modes.
+
+The functional boundary is:
+
+```text
+Journey + replay settings + timeline + crop + output profile
+                         |
+                         v
+                Validate and compile
+                         |
+                         v
+                 Replay render plan
+                  /              \
+                 v                v
+       real-time Draft       deterministic HQ
+                 \                /
+                  v              v
+             same logical frame contract
+                         |
+                         v
+                scene + overlays + media
+                         |
+                         v
+               composed frame and report
+```
+
+### Functional invariants
+
+The target system must enforce the following invariants:
+
+1. **One logical timeline.** Start clips, waits, the main replay, stop clips, POI pauses, widget intervals, and media intervals are segments or tracks on the same absolute timeline.
+2. **One pixel intent per logical time.** Every visible subsystem consumes one immutable frame intent. It cannot derive a second time from `performance.now()`, a DOM timer, `__.recorder`, Cesium flight completion, or a throttled store update.
+3. **One camera pose contract.** A frame contains the effective recording pose. Cesium applies it; Cesium does not decide it during capture.
+4. **Draft/HQ visual parity.** The scheduler may differ, but the frame resolver, camera sampler, track evaluators, visibility rules, and composition geometry are shared.
+5. **Explicit recording-camera ownership.** Linked HQ defaults to an isolated recording render host. Main-map interaction cannot affect the export. Visible recording is an explicit mode selected before the session and fixed until it ends.
+6. **Quality waiting never changes story time.** Tile or media readiness may delay production of a frame, but it does not advance or rewrite its logical timestamp or camera pose.
+7. **No invisible degradation.** A frame is reported as ready, degraded, failed, or cancelled. Timeout is not silently treated as success.
+8. **Authoring data is serializable.** Persisted camera paths, clips, tracks, and output settings contain no Cesium, Three.js, canvas, DOM, or encoder objects.
+9. **A replay session owns its side effects.** Camera overrides, listeners, timers, render hosts, media decoders, object URLs, streams, and store projections are released on success, failure, cancellation, and scene replacement.
+
+### User-facing capabilities
+
+| Capability | Functional contract |
+| --- | --- |
+| Camera authoring | Edit a replay anchor, heading, pitch, range, trace-relative angle, and camera path without moving the geographic target accidentally. Committed map and drawer edits update the same model. |
+| Timeline authoring | Arrange start, replay, wait, stop, POI, widget, and media behavior on one time axis, with continuity and overlap validation before playback. |
+| Scrubbing and preview | Resolve any logical timestamp without starting timers or mutating persisted settings. A slider can drive this resolver in real time. Intermediate pointer events may be coalesced, stale scene work is cancelled, and the latest requested logical time always wins. Scrubbing shows the same logical frame that Draft and HQ will consume. |
+| Draft playback | Use wall time only to select the current logical timestamp. Frames may be skipped to remain interactive, but their content is resolved from the same render plan. |
+| HQ export | Iterate every required output frame, prepare resources, render, compose, and encode sequentially from an isolated recording scene. |
+| Quality policy | Let the user select a named quality policy. Report readiness outcomes and degraded frames instead of hiding timeouts. |
+| Monitoring | Display the latest composed frame and progress as a read-only surface outside the captured widget board. |
+| Diagnostics | Produce a session summary that explains camera corrections, readiness waits, degraded resources, phase timings, and cleanup failures. |
+
+### Authoring and execution workflow
+
+#### 1. Capture an immutable definition
+
+When playback or export is requested, the application snapshots the current journey revision, normalized timeline, camera settings, crop, visible layer configuration, widget configuration, and output profile. Later editor changes invalidate the plan but do not mutate a running session.
+
+#### 2. Validate and compile a render plan
+
+Compilation performs pure validation first:
+
+- normalize the timeline and all absolute durations;
+- validate clip order, altitude continuity, overlaps, mandatory replay track, and media ranges;
+- compile journey samples and trace progress;
+- compile the nominal camera trajectory and start/stop continuity;
+- compile POI, widget, and media visibility tracks;
+- calculate output geometry independently from browser DPR.
+
+Camera preparation then runs as a cancellable, incremental qualification pass over bounded time windows. Scene-dependent containment, terrain, and 3D visibility observations may produce deterministic correction keyframes, but they must not be recomputed as hidden decisions inside the final capture loop. This pass must yield regularly and must not synchronously freeze Draft startup or enumerate the complete route. An interactive editing preview may display a clearly marked nominal or last-qualified plan while qualification continues. A recording session locks one plan id and qualification level before its first frame; linked Draft and later HQ parity comparisons must reuse that same camera track unless the user explicitly recompiles and accepts a new plan.
+
+#### 3. Resolve an immutable frame intent
+
+For any absolute timeline time, the resolver returns all data needed to produce pixels:
+
+```js
+{
+  planId,
+  frameIndex,
+  timeMs,
+  phase,
+  replaySample,
+  cameraPose,
+  markerState,
+  traceState,
+  poiStates,
+  widgetStates,
+  mediaStates,
+  outputGeometry,
+  qualityRequirements
+}
+```
+
+This is the visual authority. Readiness and encoder metadata belong to a separate frame result so that execution cannot mutate the intent after it was resolved.
+
+#### 4. Apply the frame to a render host
+
+Draft applies the intent to the interactive scene. HQ applies it to the isolated recording scene. Both use the same scene adapter and overlay evaluators. The HQ host renders at the physical target dimensions, and its viewport or off-center frustum maps exactly to the exported crop rather than asking Cesium to prepare a larger unrelated visible view.
+
+#### 5. Prepare resources without changing logical state
+
+The readiness coordinator observes the recording host for the exact camera, frustum, dimensions, layers, and output profile. It waits according to a bounded policy and returns a result. It cannot modify the camera or advance the timeline. Media widgets similarly seek and decode the frame for `timeMs`; a deadline miss produces a declared fallback result.
+
+#### 6. Publish, compose, and encode
+
+Before composition, the immutable frame intent is published to dynamic consumers and the session waits for their bounded render acknowledgement. The scene canvas, static widget layers, dynamic widget layers, and media frames are then composed in deterministic z-order at physical output resolution. The same final canvas is sent to the encoder and to the optional monitor. After composition, a separate read-only frame result is published for progress, monitoring, and diagnostics.
+
+#### 7. Finalize and restore
+
+The session finalizes the encoder, publishes the artifact and diagnostics, destroys the isolated host, releases media and monitor resources, clears transient store projections, and restores preview ownership. Every terminal path uses the same idempotent cleanup routine.
+
+### Camera functional model
+
+The camera model has three separate concepts:
+
+- **Authored pose or path:** persisted user intent, including anchor, position mode, heading offset, pitch, range, roll generated by clips, path points, targets, easing, and duration.
+- **Qualified recording trajectory:** deterministic samples after clip continuity, crop containment, and permitted terrain/visibility corrections have been applied.
+- **Interactive override:** runtime-only preview ownership while the user edits or navigates. It does not modify the recording trajectory until the user commits an edit.
+
+The first replay sample is the geographic start anchor. Ordered start clips must end on the effective first replay pose. Stop clips start from the last replay pose. Wait clips hold an already resolved pose; they do not ask the camera system to resolve the pose repeatedly for every held frame.
+
+For #438, containment is an output-space constraint evaluated while qualifying the trajectory. If a pose cannot keep the marker inside the crop without violating configured camera limits, the plan must carry an explicit validation error or degraded decision. The final capture loop must not start a late recenter transition whose outcome depends on previous rendered frames.
+
+### Timeline functional model
+
+The normalized timeline contains one mandatory replay-main track and optional typed tracks:
+
+| Track | Examples | Evaluation result |
+| --- | --- | --- |
+| Main replay | start clips, replay segment, waits, stop clips | phase, local time, replay progress, clip state |
+| Camera | anchor, takeoff, path, orbit, landing | effective camera pose |
+| POI | endpoint animation, pause owner, field mask | POI visibility and presentation |
+| Widget | Stats, Profile, Arrow, other visual widgets | visibility and logical data state |
+| Media | synchronized video assets | source time and decoded-frame request |
+| Diagnostics | warnings and plan annotations | non-captured session metadata |
+
+The 1.0.0 implementation does not need the complete 1.1.0 timeline editor. It does need the normalized runtime model behind an adapter from the existing start/replay/stop settings. #404 can then replace the authoring surface without replacing the runtime clock.
+
+## Target software architecture
+
+### Architectural layers
+
+```text
+React editors / drawer / map interaction
+                |
+                v
+       Replay application commands
+                |
+                v
+  Domain definitions and normalized timeline
+                |
+                v
+        Replay plan compilation
+                |
+                v
+       Immutable ReplayRenderPlan
+                |
+                v
+  DraftScheduler or HqFrameScheduler
+                |
+                v
+       ReplayFrameResolver (pure)
+                |
+        +-------+--------+
+        |                |
+        v                v
+ Cesium render host   overlay/media evaluators
+        |                |
+        +-------+--------+
+                v
+          frame compositor
+                |
+        +-------+--------+
+        |                |
+        v                v
+      encoder        monitor/events
+                |
+                v
+      artifact + diagnostics + cleanup
+```
+
+The dependency direction points downward. Domain and planning code never imports React, Valtio, Cesium scene objects, DOM nodes, Mediabunny, or widget hosts.
+
+### Core contracts
+
+#### `ReplayDefinition`
+
+Serializable input snapshot containing journey revision, authoring timeline, camera definition, crop, layer references, widgets, media references, and output profile. It is versioned and hashable so a prepared plan can be invalidated correctly.
+
+#### `ReplayRenderPlan`
+
+Immutable compiled result containing:
+
+- normalized absolute timeline;
+- replay and trace sample tracks;
+- qualified camera track;
+- POI, widget, and media tracks;
+- scene/layer descriptor;
+- output geometry and profile;
+- quality policy and resource manifest;
+- warnings, degraded decisions, compiler version, and source hash.
+
+It contains plain data and pure samplers. It contains no active scene, camera, canvas, DOM node, stream, timer, or encoder.
+
+#### `ReplayFrameIntent`
+
+Immutable result of `ReplayFrameResolver.resolve(plan, timeMs)`. It replaces the current pattern where Draft publishes a partial `dynamicFrameState`, the Cesium adapter computes a camera later, and HQ reconstructs related state through another path.
+
+#### `ReplayFrameResult`
+
+Execution report containing readiness status, wait duration, rendered frame identity, overlay/media fallback status, composition duration, encoder submission status, and diagnostics. It points back to exactly one frame intent.
+
+#### `ReplaySession`
+
+Explicit state machine and resource owner:
+
+```text
+idle -> preparing -> ready -> rendering -> encoding -> finalizing -> completed
+                    |           |           |
+                    +-----------+-----------+-> cancelled / failed -> disposed
+```
+
+Pause is a scheduler state, not a second timeline. Cleanup is idempotent and always reaches `disposed`.
+
+### Proposed module ownership
+
+The current flat replay directory should be migrated incrementally behind existing exports. A target layout is:
+
+```text
+src/core/ui/replay/
+  domain/
+    ReplayDefinition.js
+    ReplayTimeline.js
+    ReplayCameraDefinition.js
+    ReplayOutputProfile.js
+  planning/
+    ReplayPlanCompiler.js
+    ReplayTimelineCompiler.js
+    ReplayCameraTrajectoryPlanner.js
+    ReplayCameraQualification.js
+    ReplayTraceCompiler.js
+    ReplayTrackCompiler.js
+  runtime/
+    ReplaySession.js
+    ReplayFrameResolver.js
+    DraftReplayScheduler.js
+    HqReplayScheduler.js
+    ReplayFramePublisher.js
+  render/
+    ReplayRenderHost.js
+    InteractiveReplayRenderHost.js
+    IsolatedHqReplayRenderHost.js
+    ReplayCesiumSceneAdapter.js
+    ReplaySceneReadinessCoordinator.js
+    ReplayTraceRenderer.js
+  composition/
+    ReplayOverlayRenderer.js
+    ReplayMediaFrameResolver.js
+    ReplayFrameComposer.js
+  export/
+    ReplayExportController.js
+    ReplayVideoEncoder.js
+    ReplayRecordingMonitorController.js
+  adapters/
+    ReplayStoreProjection.js
+    LegacyJourneyReplayAdapter.js
+  diagnostics/
+    ReplayDiagnostics.js
+    ReplayQualityReport.js
+```
+
+This is an ownership map, not a requirement for one large file move. Each extraction should leave a compatibility export until consumers and tests have migrated.
+
+### Current-to-target component map
+
+| Current component | Target responsibility | Required change |
+| --- | --- | --- |
+| `ReplayVideoTimeline` and `ReplayFrameTimeline` | `ReplayTimelineCompiler` and deterministic HQ frame enumeration | Keep the useful phase math, add all typed tracks, and make Draft select time from the same normalized timeline. |
+| `JourneyReplayPlaybackController` | `DraftReplayScheduler` | Keep wall-clock pacing and controls; stop deriving visual state or publishing partial frames before camera resolution. |
+| `JourneyReplayRuntime.buildReplayFrameState` and `ReplayRenderModeContract` | `ReplayFrameIntent` plus `ReplayFramePublisher` | Expand the contract into the complete immutable pixel intent; make stores and recorder events projections of it. |
+| `JourneyReplayCamera*` modules | Camera definition, trajectory planner, qualifier, sampler, and Cesium application adapter | Separate pure path decisions from scene observation and from `camera.setView()`. Preserve focused math modules; remove capture-time ownership competition. |
+| `JourneyReplayClipController` | Timeline clip compiler and camera-track compiler | Resolve clip endpoints and holds once per plan; do not run asynchronous camera authority inside each output frame. |
+| `JourneyReplaySession*` controllers | `ReplaySession` plus scene/lifecycle adapters | Replace shared mutable flags and delayed cleanup paths with one explicit owner and idempotent teardown. |
+| `JourneyReplayCesiumRenderer` | `ReplayCesiumSceneAdapter` and `ReplayTraceRenderer` | Apply complete frame intents. Compile trace buffers once and avoid dynamic `CallbackProperty` evaluation during HQ capture. |
+| `ReplaySceneTileReadiness` | `ReplaySceneReadinessCoordinator` owned by the HQ render host | Key readiness by exact recording view and layer revision; return declared quality outcomes; never move the preview camera. |
+| `ReplayOverlayResolver`, `ReplayVideoOverlayComposer`, and `CanvasOverlayComposer` | Overlay track evaluator and final frame compositor | Preserve stable widget DOM and geometry, but resolve dynamic content only from frame intent time. |
+| `ReplayDeferredExporter` | Export controller, HQ scheduler, render host, composer, and encoder adapter | Split orchestration from Cesium readiness and Mediabunny liveness. The encoder must not invent product timeline frames. |
+| Valtio replay store and `__.recorder` events | `ReplayStoreProjection` and `ReplayFramePublisher` consumers | Publish canonical state outward. Neither may be read back as the visual clock. |
+| `JourneyReplayRunner` | `LegacyJourneyReplayAdapter` | Isolate old profiler/editor consumers, then remove it when all consumers use the canonical publisher. |
+
+### Scheduling model
+
+There are two schedulers but only one timeline:
+
+- `DraftReplayScheduler` maps monotonic wall time to timeline time. It may skip intermediate render opportunities under load. It may interpolate between qualified camera samples, but it may not create a new camera decision.
+- `HqReplayScheduler` enumerates every required output timestamp from frame index and FPS. It waits for each frame result before advancing. Tile waits increase export wall time only.
+
+Both call the same `ReplayFrameResolver`. A parity test should resolve both modes at an identical list of timestamps and compare the resulting frame intents before rendering.
+
+Scrubbing is a third scheduling policy over the same resolver, not a third replay engine. `ReplayScrubScheduler` accepts absolute timeline requests from the slider, coalesces pointer events to at most one scene application per animation frame, cancels obsolete readiness or qualification work, and applies only the newest completed intent. On pointer release it requests one settled-quality frame for the exact selected time. It never starts the playback clock, mutates persisted camera settings, or compiles the complete trajectory.
+
+### Recording render hosts
+
+Use one interface with three ownership modes:
+
+```js
+ReplayRenderHost {
+  prepare(sceneDescriptor, outputGeometry, signal)
+  apply(frameIntent)
+  waitUntilReady(qualityPolicy, signal)
+  render()
+  captureSource()
+  dispose()
+}
+```
+
+- `InteractiveReplayRenderHost` wraps the existing visible Cesium scene for normal replay and linked Draft recording.
+- `IsolatedHqReplayRenderHost` owns a second hidden Cesium viewer or equivalent scene/render target for default linked HQ export.
+- A visible HQ host may wrap the main scene only when the user explicitly selects visible recording before export.
+
+The isolated host is the correct target for #458 because Cesium evaluates visibility for the camera attached to a scene. A detached `Camera` object cannot provide independent rendering or tile selection. The host must be built from the same canonical scene/layer configuration as the preview, but it owns separate Cesium objects and GPU resources. Browser HTTP caches may be reused; GPU and Cesium runtime caches must not be assumed to be shared.
+
+Before committing to the full implementation, a capability spike must measure context creation, terrain and 3D Tiles duplication, memory pressure, context-loss behavior, exact-resolution rendering, and teardown on the supported browser matrix. Failure to allocate the isolated host must produce an explicit capability error or an announced visible-mode fallback. It must never silently export the interactive camera.
+
+This decision supersedes the single-scene recommendation still present in `tech-doc/todo/CORE-REPLAY-VIDEO-ARCHITECTURE.md`. That recommendation cannot satisfy #458 while the user moves the preview camera during export.
+
+### Camera planning and qualification
+
+Camera work is split into four stages:
+
+1. `ReplayCameraDefinition` normalizes persisted start settings, position mode, range, heading offset, pitch, roll, and optional authored path.
+2. `ReplayCameraTrajectoryPlanner` produces a continuous nominal trajectory with clip endpoints and continuity constraints. It is renderer-independent.
+3. `ReplayCameraQualification` evaluates crop containment and scene-dependent terrain/visibility constraints incrementally against the intended render geometry. It emits deterministic correction segments and diagnostics.
+4. `ReplayCesiumSceneAdapter` samples the qualified trajectory and applies the resulting pose. It does not run candidate search, easing ownership, or transition selection.
+
+Qualification must be cancellable and versioned. Its cache identity includes at least plan revision, journey path, camera definition, timeline, crop, output dimensions, terrain/layer revision, and relevant tileset quality settings. A coarse camera-position bucket is not sufficient to establish visual equivalence.
+
+Qualification storage is sparse and windowed. A default implementation should retain segment coefficients and correction keyframes, evaluate nominal poses in constant or logarithmic time, and keep only a small look-behind/look-ahead working set for scene observations. Work is scheduled in short tasks with an `AbortSignal`; a new seek, definition revision, render-host replacement, or session disposal aborts stale tasks. Performance tests must prove bounded main-thread slices and bounded memory on the long reference journey before this path replaces the current camera runtime.
+
+An emergency runtime observation may detect that the qualified result is no longer valid because a provider or scene changed. Its allowed action is to mark the frame degraded, abort under strict policy, or invalidate and requalify the plan. It must not silently create a different recording trajectory.
+
+### Scene readiness and quality policy
+
+The readiness coordinator belongs to the render host and evaluates only the actual recording view. The HQ render surface should use the physical output dimensions, with a viewport or off-center frustum derived from the canonical crop projection. Cesium's view-based globe and 3D Tiles readiness then observes the crop view instead of the complete interactive viewport.
+
+The coordinator must:
+
+- listen to public globe and 3D Tiles readiness/progress events;
+- request asynchronous renders and wait for a verified render boundary;
+- use separate preparation, moving-frame, and settled-segment budgets;
+- classify only actual segment boundaries or held poses as settled, not every frame whose phase happens to be a clip;
+- include camera pose, frustum, output dimensions, layer revision, tileset settings, and render host identity in readiness reuse;
+- invalidate reuse on tile unload, layer/provider replacement, quality-setting change, context loss, or host recreation;
+- return `ready`, `degraded`, `failed`, or `cancelled` with metrics;
+- never lower 3D Tiles quality silently to solve waiting time.
+
+Prewarming, when enabled, runs only on the isolated HQ host. It samples bounded future key views from the compiled camera trajectory and cannot move the interactive scene or publish replay frames.
+
+### Trace, widgets, POIs, and media
+
+The journey trace is compiled once into immutable route positions and progress ranges. The render adapter should update a draw range, segment visibility, or equivalent stable geometry state. The exact Cesium primitive implementation should be selected through a benchmark, but HQ must not depend on per-frame `CallbackProperty` geometry rebuilding.
+
+Widgets remain mounted through preparation, rendering, finalization, and cleanup. Static and dynamic layers are separated. Dynamic widgets, including Stats and Profile, receive the current `ReplayFrameIntent` through `ReplayFramePublisher`; they do not subscribe to independent timers. This changes the proposed implementation direction in #450: `__.recorder` may relay frame publications for compatibility, but recorder timestamps are not the source of truth.
+
+POI animation and pauses become timeline tracks, satisfying #395 without wall-clock collapse timers. The synchronized video widget in #398 resolves media source time from frame intent time, waits for a decoded frame under a declared deadline, and reports whether it used the requested or retained frame. The recording monitor from #459 reads the final composed canvas and session progress outside the captured board; it cannot affect composition or session pacing.
+
+### Output profiles and encoding
+
+Render mode and output profile remain orthogonal:
+
+- render mode selects Draft real-time or HQ deterministic scheduling;
+- output profile selects dimensions, FPS, codec preferences, bitrate policy, and quality policy.
+
+The 4K profile from #396 supplies exact even physical dimensions through the complete plan, render host, compositor, and encoder. Capability checks happen before rendering starts. DPR is not a substitute for target resolution.
+
+Mediabunny receives exactly one product frame for each HQ timeline frame. Codec keep-alive or backpressure workarounds may exist inside the encoder adapter, but they must not add microscopic product timestamps or change the declared video timeline. Any workaround must be verified against actual output duration, frame count, cancellation, browser playback, and memory behavior.
+
+## Implementation plan
+
+### Delivery rule
+
+Do not rewrite the replay stack in one branch. Introduce contracts at existing seams, migrate one owner at a time, and keep old entry points as adapters until their consumers are proved migrated. Every phase must leave Draft playback, HQ cancellation, and scene restoration testable.
+
+### Implementation status on `refactor/replay-architecture`
+
+The first Phase 1 seam is now present in the current branch:
+
+- versioned `ReplayFrameIntent` and `ReplayFrameResult` plain-data contracts;
+- a `ReplayFramePublisher` that distinguishes pending Draft state from the last completely resolved frame;
+- Draft camera application completes and publishes the canonical frame instead of exposing a partially patched frame to captured dynamic widgets;
+- HQ export publishes the same canonical intent shape after applying its effective camera pose;
+- overlay resolution and captured Stats data prefer the canonical resolved publication;
+- the normal replay controls expose a real-time slider backed by a coalesced, latest-request-wins scrub scheduler; synchronized recording keeps it disabled;
+- unit, integration, exporter, widget-composition, and store-contract tests cover the compatibility seam.
+
+This is a foundation, not the isolated HQ camera implementation. `ReplayDefinition`, `ReplayRenderPlan`, the lazy frame resolver, scene-qualified settled scrubbing, camera qualification, and isolated render host remain subsequent slices below. The current slider already avoids input floods and exposes cancellation to its adapter, but it still delegates the actual scene application to the compatibility `seek()` path.
+
+### Phase 0 — Establish evidence and split missing work
+
+1. Create the six focused backlog items listed in the coverage-gap section and link them to #457, #458, #479, #404, #438, and #450 as appropriate.
+2. Add three fixed reference journeys: simple imagery, terrain, and terrain plus 3D Tiles. Include no clips, start/wait/stop clips, narrow crop, and long replay variants.
+3. Extend `ReplayVideoTraceDebug` into a structured per-session report using the instrumentation fields below.
+4. Record Draft and HQ baseline videos and metrics from the current code before changing camera or readiness behavior.
+5. Define product-owned continuity and performance thresholds from that baseline. Do not declare success from unit tests alone.
+
+Exit gate: failures are reproducible, artifacts are retained, and every following phase can be compared with the same inputs.
+
+### Phase 1 — Introduce the canonical frame seam for 1.0.0
+
+1. Add versioned `ReplayDefinition`, `ReplayRenderPlan`, `ReplayFrameIntent`, and `ReplayFrameResult` contracts using plain data.
+2. Adapt the existing `ReplayVideoTimeline`, `ReplayFrameTimeline`, logical frame, camera pose, track path, and overlay contract into one `ReplayFrameResolver` without changing UI behavior.
+3. Publish a frame only after camera, marker, trace, and dynamic overlay states have been resolved. Remove the current Draft pattern that publishes a partial frame and patches its render contract later.
+4. Make Valtio, Profile, Stats, POI, and recorder events consumers of `ReplayFramePublisher`.
+5. Add Draft/HQ parity tests that compare frame intents at identical logical timestamps.
+6. Add the timer-free scrub request API and latest-request-wins scheduler against the canonical resolver; keep scene qualification asynchronous and windowed.
+
+Exit gate: one logical timestamp produces one complete frame intent, and no dynamic replay consumer needs its own timer.
+
+### Phase 2 — Canonical camera and lifecycle for 1.0.0
+
+Issues: #457 and #471.
+
+1. Implement one persisted camera definition with start anchor, position mode, heading offset, pitch, metric range, and roll.
+2. Route drawer edits, committed map edits, start planning, playback, and export through one canonical camera command/evaluator.
+3. Compile start clips so their final pose exactly equals the first replay pose; compile holds as fixed poses.
+4. Separate interactive override state from committed camera state and automatic replay ownership.
+5. Introduce explicit `ReplaySession` ownership and gate restoration on that session, fixing replay focus leakage outside playback.
+6. Add boundary tests for no clips, each start clip, wait clips, stop clips, pause, cancellation, failure, and scene replacement.
+
+Exit gate: no unrelated pre-replay camera defines frame zero, no automatic update overwrites persisted manual settings, and cleanup cannot move the camera after the replay session has ended.
+
+### Phase 3 — Isolated HQ render host for 1.0.0
+
+Issue: #458.
+
+1. Prototype `IsolatedHqReplayRenderHost` with the project's real imagery, terrain, 3D Tiles, lighting, trace, and marker configuration.
+2. Measure memory, context loss, initialization, exact output dimensions, and teardown on supported browsers and representative hardware.
+3. Build a canonical scene descriptor/factory so preview and HQ hosts receive equivalent layers without copying global scene objects.
+4. Apply frame intents to the HQ host while leaving the interactive camera untouched.
+5. Add fixed recording-mode selection, capability errors, explicit visible fallback, cancellation, completion, failure, and resource cleanup.
+
+Exit gate: moving the visible map throughout an HQ export produces no change in frame intents or encoded camera poses, and every terminal path destroys HQ resources.
+
+### Phase 4 — Bounded crop-aware readiness for 1.0.0
+
+Issue: #479 plus the missing readiness-policy issue.
+
+1. Render the isolated HQ host at the final physical dimensions and derive its viewport or off-center frustum from the canonical crop projection.
+2. Replace phase-wide clip settlement with boundary/hold classification so ordinary moving clip frames cannot receive the full settled timeout.
+3. Replace coarse footprint success with an exact view/layer/profile readiness identity and event-based invalidation.
+4. Introduce named `strict`, `quality`, and `fast` outcomes without changing logical time.
+5. Move prewarm to the isolated host and sample only bounded compiled key views.
+6. Verify marker, trace, terrain, imagery, and 3D Tiles in the same post-readiness render.
+
+Exit gate: tiles outside the recording viewport do not block export, no clip causes repeated maximum waits, and every non-ready encoded frame is declared in the session report.
+
+### Phase 5 — Monitoring and the 1.0.0 release gate
+
+Issue: #459.
+
+1. Publish session phase, frame counts, elapsed export time, encoded bytes, errors, and the latest final composed canvas.
+2. Implement Picture-in-Picture only behind explicit user activation and provide the transient fallback surface.
+3. Keep both surfaces outside the video widget board and make closure independent from recording cancellation unless the user selects stop.
+4. Release streams, tracks, canvas references, listeners, and transient state through session cleanup.
+
+The 1.0.0 replay gate should require:
+
+- fixed reference videos reviewed against the baseline;
+- exact Draft/HQ frame-intent parity at sampled timestamps;
+- no unexplained camera discontinuity at phase boundaries;
+- deterministic first and last camera poses;
+- no replay camera restoration outside session lifecycle;
+- independent HQ output while the preview camera moves;
+- bounded and reported readiness behavior;
+- successful cancellation and cleanup at every export phase;
+- an export timing report separated into planning, readiness, scene render, composition, and encoding.
+
+### Phase 6 — Normalized authoring timeline for 1.1.0
+
+Issues: #404 and #402.
+
+1. Introduce the normalized runtime timeline and migration from existing start/replay/stop configuration before replacing the UI.
+2. Add absolute clip altitude continuity and sequence validation to the compiler.
+3. Build the synchronized timeline editor against the same model, including accessible overlap and continuity feedback.
+4. Keep a temporary legacy serialization adapter until migrated journeys round-trip without data loss.
+
+Exit gate: existing journeys migrate and round-trip, and Draft/HQ consume the same normalized timeline without a compatibility-only runtime clock.
+
+### Phase 7 — Replay-synchronized tracks for 1.1.0
+
+Issues: #395, #398, and #450.
+
+1. Move POI animations, pause ownership, widget visibility, Stats/Profile data, and media intervals onto typed tracks.
+2. Make every dynamic consumer resolve from `ReplayFrameIntent.timeMs`.
+3. Add deterministic video seeking/decoded-frame readiness and explicit retained-frame diagnostics.
+4. Verify stable widget mounting, capture exclusion of controls, scene replacement, and cleanup.
+
+Exit gate: pause, seek, reverse direction where supported, Draft, and HQ show the same POI/widget/media state for the same logical timestamp.
+
+### Phase 8 — Camera trajectory completion and 3D authoring for 1.1.0
+
+Issues: #438 and #403.
+
+1. Move Navigation and Dynamic crop containment into camera trajectory qualification and remove late recenter ownership from capture.
+2. Validate current, predicted, final-frame, narrow-crop, and active-transition cases through deterministic trajectory tests.
+3. Stabilize a pure serializable camera-path evaluator before building the Three.js editor.
+4. Implement the 3D editor as an authoring adapter using local ENU coordinates and persisted WGS84 definitions.
+5. Reuse the runtime evaluator for editor scrubbing; do not create a Three.js playback engine.
+
+Exit gate: the marker remains inside the crop under the defined policy, Draft/HQ camera samples match, and saved paths contain no renderer objects.
+
+### Phase 9 — Output and composition extensions for 1.1.0
+
+Issues: #396, #397, and #406.
+
+1. Add the 4K output profile only after isolated-host capability and exact-size rendering are proven.
+2. Add deterministic visual widgets through the existing host and frame compositor without changing replay timing.
+3. Remove obsolete CameraManager settings after all camera consumers have migrated to the canonical command and persistence model.
+4. Complete the stable trace renderer and compare entity/primitive alternatives on the reference journeys before selecting the implementation.
+
+Exit gate: 4K is either produced at the declared physical dimensions or rejected/fallen back explicitly, visual widgets remain deterministic in capture, obsolete camera settings have no consumers, and trace rendering meets the agreed continuity/performance budgets.
+
+### Final cleanup
+
+After both release trains have migrated their consumers:
+
+1. Remove `JourneyReplayRunner` from replay ownership and retain only a temporary compatibility publisher if an unmigrated profiler consumer remains.
+2. Remove compatibility serialization and duplicated camera constants only after migration tests prove they are unused.
+3. Split the current large exporter and session controllers along the ownership boundaries above.
+4. Update or retire the older replay architecture documents that conflict with the accepted render-host and frame-authority decisions.
 
 ## Required instrumentation before implementation changes
 

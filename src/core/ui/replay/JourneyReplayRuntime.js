@@ -3,6 +3,7 @@
  */
 
 import {REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP, normalizeJourneyReplayClips} from './JourneyReplayClips'
+import {attachReplayFrameIntent, publishReplayFrameState} from './ReplayFramePublisher'
 import {createReplayRenderModeContract} from './ReplayRenderModeContract'
 import {getJourneyReplaySettings} from './JourneyReplayProgressionStyle'
 
@@ -58,12 +59,21 @@ export const buildReplayFrameState = ({
     source = null,
     updatedAt = null,
     renderMode = null,
+    planId = null,
+    intentResolved = false,
     cameraPose = null,
+    cameraFrame = null,
     trackPath = null,
+    markerState = null,
+    traceState = null,
+    poiStates = null,
+    widgetStates = null,
+    mediaStates = null,
     initialCameraState = null,
     renderSpec = null,
     visibleOverlayIds = [],
     outputProfile = null,
+    qualityRequirements = null,
 } = {}) => {
     const safeIndex = optionalFiniteNumber(index)
     const safeFrameId = optionalFiniteNumber(frameId)
@@ -83,6 +93,8 @@ export const buildReplayFrameState = ({
                                    durationMillis:  optionalFiniteNumber(durationMillis),
                                    frameTimeMs:     optionalFiniteNumber(frameTimeMs),
                                    frameIntervalMs: optionalFiniteNumber(frameIntervalMs),
+                                   cameraPose,
+                                   cameraFrame,
                                    phase,
                                    source,
                                },
@@ -95,7 +107,7 @@ export const buildReplayFrameState = ({
                            })
                            : null
 
-    return {
+    const frameState = {
         active:          Boolean(active),
         playing:         Boolean(playing),
         paused:          Boolean(paused),
@@ -117,6 +129,19 @@ export const buildReplayFrameState = ({
         updatedAt:       optionalFiniteNumber(updatedAt) ?? globalThis.performance?.now?.() ?? Date.now(),
         renderContract,
     }
+
+    return attachReplayFrameIntent(frameState, {
+        planId,
+        resolved: intentResolved,
+        logicalFrame: renderContract?.logicalFrame ?? null,
+        renderContract,
+        markerState,
+        traceState,
+        poiStates,
+        widgetStates,
+        mediaStates,
+        qualityRequirements,
+    })
 }
 
 /**
@@ -170,10 +195,18 @@ export const updateReplayFrameRenderContract = ({
                            : outputProfile,
     })
 
-    store.dynamicFrameState = {
-        ...frameState,
-        renderContract,
-    }
+    publishReplayFrameState({
+        replay: store,
+        frameState: {
+            ...frameState,
+            renderContract,
+        },
+        intentOptions: {
+            resolved: true,
+            logicalFrame: nextLogicalFrame,
+            renderContract,
+        },
+    })
     return renderContract
 }
 
@@ -307,6 +340,7 @@ export const resetRuntimeProgress = store => {
     store.hoverSample = null
     store.replayFramePhase = null
     store.dynamicFrameState = null
+    store.resolvedFrameState = null
     store.metricOverlay = {
         ...store.metricOverlay,
         visible:   false,
@@ -340,6 +374,9 @@ export const publishReplayClipFrameState = ({
                                                  frameTimeMs = null,
                                                  frameIntervalMs = null,
                                                  durationMillis = null,
+                                                 cameraPose = null,
+                                                 cameraFrame = null,
+                                                 intentResolved = false,
                                              } = {}) => {
     if (!store) {
         return null
@@ -365,29 +402,39 @@ export const publishReplayClipFrameState = ({
     const now = globalThis.performance?.now?.() ?? Date.now()
     store.clipSequenceActive = true
     store.replayFramePhase = phase
-    store.dynamicFrameState = buildReplayFrameState({
-        active:         true,
-        playing:        false,
-        paused:         false,
-        progress:       resolvedProgress,
-        direction:      Number(store.direction) < 0 ? -1 : 1,
-        sample:         sample ?? store.sample ?? store.liveSample ?? null,
-        elapsedMillis:   resolvedFrameTimeMs
-                         ?? optionalFiniteNumber(sample?.journeyElapsedMillis)
-                         ?? optionalFiniteNumber(store.elapsedMillis),
-        durationMillis:  resolvedDurationMillis
-                         ?? optionalFiniteNumber(sample?.journeyDurationMillis)
-                         ?? optionalFiniteNumber(store.durationMillis),
-        index:           resolvedFrameIndex,
-        frameCount:      resolvedFrameCount,
-        frameTimeMs:     resolvedFrameTimeMs,
-        frameIntervalMs: resolvedFrameIntervalMs,
-        frameId:        null,
-        replayFrameIndex: phase.replayFrameIndex ?? null,
-        replayFrameCount: phase.replayFrameCount ?? null,
-        phase,
-        source:         'clip',
-        updatedAt:      now,
+    publishReplayFrameState({
+        replay: store,
+        frameState: buildReplayFrameState({
+            active:         true,
+            playing:        false,
+            paused:         false,
+            progress:       resolvedProgress,
+            direction:      Number(store.direction) < 0 ? -1 : 1,
+            sample:         sample ?? store.sample ?? store.liveSample ?? null,
+            elapsedMillis:   resolvedFrameTimeMs
+                             ?? optionalFiniteNumber(sample?.journeyElapsedMillis)
+                             ?? optionalFiniteNumber(store.elapsedMillis),
+            durationMillis:  resolvedDurationMillis
+                             ?? optionalFiniteNumber(sample?.journeyDurationMillis)
+                             ?? optionalFiniteNumber(store.durationMillis),
+            index:           resolvedFrameIndex,
+            frameCount:      resolvedFrameCount,
+            frameTimeMs:     resolvedFrameTimeMs,
+            frameIntervalMs: resolvedFrameIntervalMs,
+            frameId:         null,
+            replayFrameIndex: phase.replayFrameIndex ?? null,
+            replayFrameCount: phase.replayFrameCount ?? null,
+            phase,
+            source:          'clip',
+            updatedAt:       now,
+            renderMode:      'draft',
+            intentResolved,
+            cameraPose,
+            cameraFrame,
+        }),
+        intentOptions: {
+            resolved: intentResolved,
+        },
     })
     return phase
 }

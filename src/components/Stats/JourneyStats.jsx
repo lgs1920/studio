@@ -18,7 +18,10 @@ import { NameValueUnit }                                from '@Components/DataDi
 import { DateTimeDisplay }                              from '@Components/DateTimeDisplay'
 import { useWidgetScaleCorrection } from '@Components/MainUI/widgets/useWidgetScaleCorrection'
 import { VIDEO_WIDGETS_BOARD }                          from '@Core/constants'
-import { resolveReplayVideoStatsWidgetVisibility }      from '@Core/ui/replay/ReplayOverlayResolver'
+import {
+    resolveReplayDynamicFrameState,
+    resolveReplayVideoStatsWidgetVisibility,
+}                                                       from '@Core/ui/replay/ReplayOverlayResolver'
 import { Widget2Canvas }                                from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
 import {
     DEFAULT_JOURNEY_STATS_DATE_TIME_STACK,
@@ -201,19 +204,18 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
     }, [id, configuration])
 
     const replayController = __.ui?.replay?.controller ?? null
-    const replayFrameState = replay?.deferredExportPlan?.runtime?.frameState
-                             ?? replay?.dynamicFrameState
-                             ?? null
+    const replayFrameState = resolveReplayDynamicFrameState(replay)
 
     const dynamicReplaySample = useMemo(() => {
         if (!isDynamicMode) {
             return null
         }
 
-        return resolveDynamicJourneyReplayStatsSample({
-            replay,
-            controller: replayController,
-        })
+        return replayFrameState?.sample
+               ?? resolveDynamicJourneyReplayStatsSample({
+                   replay,
+                   controller: replayController,
+               })
     }, [isDynamicMode, replay, replayController, replayFrameState])
 
     /**

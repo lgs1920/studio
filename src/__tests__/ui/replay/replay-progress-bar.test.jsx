@@ -1,10 +1,20 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaButton: ({children, ...props}) => <button type="button" {...props}>{children}</button>,
     WaIcon: ({name}) => <span data-icon={name}/>,
+    WaSlider: ({label, onInput, onChange, value, ...props}) => (
+        <input
+            type="range"
+            aria-label={label}
+            value={value}
+            onInput={onInput}
+            onChange={onChange}
+            {...props}
+        />
+    ),
     WaTooltip: ({children}) => <span>{children}</span>,
 }))
 
@@ -17,6 +27,9 @@ describe('JourneyReplayProgressBar', () => {
                 drawerManager: {
                     close: vi.fn(),
                     open: vi.fn(),
+                },
+                replay: {
+                    seek: vi.fn(),
                 },
             },
         }
@@ -116,6 +129,35 @@ describe('JourneyReplayProgressBar', () => {
 
         expect(screen.getByText('50%')).not.toBeNull()
         expect(screen.queryByText('20%')).toBeNull()
+    })
+
+    it('settles the replay slider through the shared seek controller', () => {
+        globalThis.lgs.stores.replay.active = true
+        globalThis.lgs.stores.replay.paused = true
+        globalThis.lgs.stores.replay.progress = 0.2
+        globalThis.lgs.stores.replay.sample = {
+            progress: 0.2,
+            distanceFromStart: 20,
+            remainingDistance: 80,
+        }
+
+        render(<JourneyReplayProgressBar/>)
+        fireEvent.change(screen.getByRole('slider', {name: 'Replay position'}), {
+            target: {value: '625'},
+        })
+
+        expect(globalThis.__.ui.replay.seek).toHaveBeenCalledWith(0.625)
+    })
+
+    it('does not expose scrubbing during synchronized recording', () => {
+        globalThis.lgs.stores.replay.active = true
+        globalThis.lgs.stores.replay.playing = true
+        globalThis.lgs.stores.replay.recordingSync = true
+        globalThis.lgs.stores.replay.sample = {progress: 0.2}
+
+        render(<JourneyReplayProgressBar/>)
+
+        expect(screen.queryByRole('slider', {name: 'Replay position'})).toBeNull()
     })
 
     it('can show compact export progress without journey distance', () => {

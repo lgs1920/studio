@@ -776,11 +776,11 @@ export const bindRenderer = (mode, ) => {
                                                    immediateToleranceRecenter: true,
                                                    logicalCamera:             isJourneyReplayVideoCaptureActive(),
                                                })
-                            updateReplayFrameRenderContract({
-                                logicalFrame: detail?.logicalFrame,
-                            })
                             traceStep('update-camera.end')
                         }
+                        updateReplayFrameRenderContract({
+                            logicalFrame: detail?.logicalFrame,
+                        })
                         const startProgress = finiteNumber(detail?.progress ?? startSample?.progress)
                         state.lastPlaybackUpdateProgressKey = Math.round((startProgress ?? 0) / CAMERA_UPDATE_MIN_PROGRESS_DELTA)
                     }
@@ -835,6 +835,9 @@ export const bindRenderer = (mode, ) => {
                     void call.syncNearbyPOIsForSample(detail.sample ?? null)
                     traceUpdateStep('sync-nearby-pois.end')
                     if (!videoCaptureActive && state.lastPlaybackUpdateProgressKey === playbackProgressKey) {
+                        updateReplayFrameRenderContract({
+                            logicalFrame: detail?.logicalFrame,
+                        })
                         traceUpdateStep('update-camera.skip', {
                             reason: 'duplicate-progress-key',
                             playbackProgressKey,
@@ -872,6 +875,9 @@ export const bindRenderer = (mode, ) => {
                 call.setContinuousRender(false)
                 try {
                     state.renderer.update({...detail, freezeDynamic: true, showTrace: isJourneyReplayTraceActive()})
+                    updateReplayFrameRenderContract({
+                        logicalFrame: detail?.logicalFrame,
+                    })
                 }
                 catch (error) {
                     call.abortPlaybackAfterListenerError(error)
@@ -944,6 +950,8 @@ export const bindRenderer = (mode, ) => {
                         frameTimeMs: stopPhase?.frameTimeMs,
                         frameIntervalMs: videoTimeline?.frameIntervalMs,
                         durationMillis: videoTimeline?.durationMillis,
+                        cameraPose: state.clipCameraContinuity,
+                        intentResolved: true,
                     })
                     call.refreshReplayDiagnosticsOverlay?.()
                 }
@@ -1057,6 +1065,10 @@ export const bindRenderer = (mode, ) => {
                                         frameTimeMs: resolvedPhase?.frameTimeMs,
                                         frameIntervalMs: videoTimeline?.frameIntervalMs,
                                         durationMillis: videoTimeline?.durationMillis,
+                                        cameraPose: call.currentReplayClipCameraState({
+                                            sample: clipSample ?? sample,
+                                        }),
+                                        intentResolved: true,
                                     })
                                     call.refreshReplayDiagnosticsOverlay?.()
                                 },
@@ -1077,6 +1089,8 @@ export const bindRenderer = (mode, ) => {
                                 frameTimeMs: finalStopPhase?.frameTimeMs,
                                 frameIntervalMs: videoTimeline?.frameIntervalMs,
                                 durationMillis: videoTimeline?.durationMillis,
+                                cameraPose: call.currentReplayClipCameraState({sample}),
+                                intentResolved: true,
                             })
                             call.refreshReplayDiagnosticsOverlay?.()
                             notifyStopClipsComplete()

@@ -84,9 +84,11 @@ const clearVideoReplayRuntimeState = () => {
     }
 
     replayStore.dynamicFrameState = null
+    replayStore.resolvedFrameState = null
     replayStore.replayFramePhase = null
     if (replayStore.deferredExportPlan?.runtime) {
         replayStore.deferredExportPlan.runtime.frameState = null
+        replayStore.deferredExportPlan.runtime.resolvedFrameState = null
     }
 }
 

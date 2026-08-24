@@ -349,6 +349,8 @@ export const start = (mode, options = {}) => {
                 frameTimeMs: startPhase?.frameTimeMs,
                 frameIntervalMs: videoTimeline?.frameIntervalMs,
                 durationMillis: videoTimeline?.durationMillis,
+                cameraPose: state.clipCameraContinuity,
+                intentResolved: true,
             })
             call.refreshReplayDiagnosticsOverlay?.()
             call.setContinuousRender(true)
@@ -375,6 +377,10 @@ export const start = (mode, options = {}) => {
                                     frameTimeMs: resolvedPhase?.frameTimeMs,
                                     frameIntervalMs: videoTimeline?.frameIntervalMs,
                                     durationMillis: videoTimeline?.durationMillis,
+                                    cameraPose: call.currentReplayClipCameraState({
+                                        sample: clipSample ?? startSample,
+                                    }),
+                                    intentResolved: true,
                                 })
                                 call.refreshReplayDiagnosticsOverlay?.()
                             },

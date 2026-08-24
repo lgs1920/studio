@@ -22,6 +22,9 @@ import {
     ReplayFrameTimeline,
 }                              from '@Core/ui/replay/ReplayFrameTimeline'
 import {
+    publishReplayFrameState, REPLAY_FRAME_PUBLICATION_TARGET_HQ,
+}                              from '@Core/ui/replay/ReplayFramePublisher'
+import {
     buildReplayVideoTimeline, replayClipSignature, resolveReplayVideoFramePhase,
 }                              from '@Core/ui/replay/ReplayVideoTimeline'
 import {
@@ -73,6 +76,8 @@ export const DEFAULT_REPLAY_SCENE_TILE_READINESS_TIMEOUT_MS = 5000
 const REPLAY_TILE_PREWARM_LOOKAHEAD_MS = 1000
 const REPLAY_TILE_PREWARM_STEP_MS = 333
 const REPLAY_TILE_PREWARM_MAX_SAMPLES = 3
+const REPLAY_EXPORT_CODEC_KEEPALIVE_INTERVAL_MS = 5000
+const REPLAY_EXPORT_CODEC_KEEPALIVE_TIMESTAMP_STEP_SECONDS = 0.000001
 const EXPORT_PROGRESS_UPDATE_FRAME_STEP = 1
 const EXPORT_PROGRESS_FRAME_SAMPLE_WINDOW = 30
 
@@ -407,6 +412,7 @@ const getReplayExportQuality = () => {
     return [QUALITY_MEDIUM, QUALITY_HIGH, QUALITY_VERY_HIGH][qualityIndex] ?? QUALITY_MEDIUM
 }
 
+// Keep the browser's fastest supported encoder as the default for HQ exports.
 const getReplayExportHardwareAcceleration = () => 'no-preference'
 
 const withTimeout = async (promise, timeoutMs, message) => {
@@ -702,11 +708,14 @@ const publishReplayExportFrameState = ({
         source:          'exporter',
         updatedAt:       globalThis.performance?.now?.() ?? Date.now(),
         renderMode:      'hq',
+        planId:          plan.runtime?.contextKey ?? null,
+        intentResolved:  true,
         cameraPose:      cameraPose
                          ?? logicalFrame?.cameraPose
                          ?? plan.renderContract?.cameraPose
                          ?? plan.runtime?.context?.renderContract?.cameraPose
                          ?? null,
+        cameraFrame:     logicalFrame?.cameraFrame ?? null,
         trackPath:       trackPath
                         ?? plan.renderContract?.trackPath
                         ?? plan.runtime?.context?.renderContract?.trackPath
@@ -716,13 +725,23 @@ const publishReplayExportFrameState = ({
         visibleOverlayIds: plan.runtime?.context?.visibleOverlayIds ?? [],
     })
 
-    plan.runtime.frameState = frameState
-    return frameState
+    return publishReplayFrameState({
+        replay,
+        plan,
+        target: REPLAY_FRAME_PUBLICATION_TARGET_HQ,
+        frameState,
+        intentOptions: {
+            planId: plan.runtime?.contextKey ?? null,
+            resolved: true,
+            logicalFrame,
+        },
+    })
 }
 
 const clearReplayExportFrameState = (plan = null) => {
     if (plan?.runtime) {
         plan.runtime.frameState = null
+        plan.runtime.resolvedFrameState = null
     }
 }
 
@@ -1142,7 +1161,23 @@ export class ReplayDeferredExporter {
             })
         }
 
-        const source = new CanvasSource(canvas, {
+        let encoderCanvas = canvas
+        let encoderContext = null
+        if (typeof HTMLCanvasElement !== 'undefined'
+            && canvas instanceof HTMLCanvasElement
+            && typeof document !== 'undefined'
+            && typeof document.createElement === 'function') {
+            const stableCanvas = document.createElement('canvas')
+            stableCanvas.width = outputDimensions.width
+            stableCanvas.height = outputDimensions.height
+            const stableContext = stableCanvas.getContext('2d', {alpha: false, desynchronized: true})
+            if (stableContext?.drawImage && stableContext?.clearRect) {
+                encoderCanvas = stableCanvas
+                encoderContext = stableContext
+            }
+        }
+
+        const source = new CanvasSource(encoderCanvas, {
             codec:                outputConfig.codec,
             bitrate:              outputConfig.bitrate,
             alpha:                'discard',
@@ -1169,63 +1204,160 @@ export class ReplayDeferredExporter {
             },
         })
 
-        const maximumPacketCount = Number.isFinite(this.#timeline.frameCount)
-                                   ? this.#timeline.frameCount + this.#timeline.fps
-                                   : undefined
         output.addVideoTrack(source, {
             frameRate: this.#timeline.fps,
-            ...(maximumPacketCount ? {maximumPacketCount} : {}),
         })
 
-        await output.start()
-        publishFileSize({force: true})
+        let outputStarted = false
+        let outputFinalized = false
+        let sourceOperation = Promise.resolve()
+        let sourceOperationError = null
+        let lastEncodedTimestamp = null
+        let nextFrameTimestamp = null
+        let keepAliveTimer = null
+        let keepAliveStopped = false
 
-        const renderedFrames = []
-        const frames = await this.#session.renderAll({
-            signal,
-            onFrame: async rendered => {
-                const renderResult = await renderFrame({
-                    canvas,
-                    context: ctx,
-                    frame: rendered,
-                    manifest,
-                    metadata,
-                })
-                renderedFrames.push(renderResult ?? rendered)
-                await source.add(
-                    rendered.frameTimeMs / 1000,
-                    rendered.frameIntervalMs / 1000,
-                    rendered.isFirst ? {keyFrame: true} : undefined,
-                )
-                publishFileSize()
-                if (typeof onFrame === 'function') {
-                    await onFrame(rendered, manifest)
+        /**
+         * Serialize frame submissions so keep-alive frames cannot race normal frames.
+         *
+         * @param {object} options - Frame submission options.
+         * @param {number} options.timestamp - Timestamp in seconds.
+         * @param {number} options.duration - Duration in seconds.
+         * @param {object|undefined} [options.encodeOptions] - Mediabunny encode options.
+         * @param {boolean} [options.keepAlive=false] - Whether this is a codec keep-alive.
+         * @returns {Promise<void>} Promise resolved after the frame is submitted.
+         */
+        const enqueueSourceAdd = ({timestamp, duration, encodeOptions, keepAlive = false}) => {
+            const operation = sourceOperation.then(async () => {
+                if (sourceOperationError) {
+                    throw sourceOperationError
                 }
-            },
-        })
+                if (keepAlive && keepAliveStopped) {
+                    return
+                }
 
-        await source.close()
-        await output.finalize()
+                let safeTimestamp = timestamp
+                if (keepAlive) {
+                    if (lastEncodedTimestamp === null || nextFrameTimestamp === null) {
+                        return
+                    }
 
-        const blob = new Blob([output.target.buffer], {type: outputConfig.mimeType})
-        publishFileSize({force: true})
-        if (typeof onFileSize === 'function') {
-            onFileSize(blob.size, {
-                encodedPacketBytes,
-                targetBytes: blob.size,
-                finalized: true,
+                    safeTimestamp = Math.min(
+                        nextFrameTimestamp - REPLAY_EXPORT_CODEC_KEEPALIVE_TIMESTAMP_STEP_SECONDS,
+                        lastEncodedTimestamp + REPLAY_EXPORT_CODEC_KEEPALIVE_TIMESTAMP_STEP_SECONDS,
+                    )
+                    if (safeTimestamp <= lastEncodedTimestamp) {
+                        return
+                    }
+                }
+
+                await source.add(safeTimestamp, duration, encodeOptions)
+                lastEncodedTimestamp = safeTimestamp
+                publishFileSize()
+            })
+            sourceOperation = operation.catch(error => {
+                sourceOperationError = error
+            })
+            return operation
+        }
+
+        /**
+         * Schedule a tiny duplicate frame while Cesium is taking longer than usual.
+         * The timestamp step is deliberately microscopic so the keep-alive does not
+         * change the visible duration of the exported replay.
+         */
+        const scheduleCodecKeepAlive = () => {
+            if (keepAliveStopped || keepAliveTimer !== null) {
+                return
+            }
+
+            keepAliveTimer = setTimeout(() => {
+                keepAliveTimer = null
+                void enqueueSourceAdd({
+                    timestamp: 0,
+                    duration: REPLAY_EXPORT_CODEC_KEEPALIVE_TIMESTAMP_STEP_SECONDS,
+                    keepAlive: true,
+                })
+                    .catch(() => undefined)
+                    .finally(scheduleCodecKeepAlive)
+            }, REPLAY_EXPORT_CODEC_KEEPALIVE_INTERVAL_MS)
+        }
+
+        try {
+            outputStarted = true
+            await output.start()
+            publishFileSize({force: true})
+
+            const renderedFrames = []
+            const frames = await this.#session.renderAll({
+                signal,
+                onFrame: async rendered => {
+                    nextFrameTimestamp = rendered.frameTimeMs / 1000
+                    const renderResult = await renderFrame({
+                        canvas,
+                        context: ctx,
+                        frame: rendered,
+                        manifest,
+                        metadata,
+                    })
+                    renderedFrames.push(renderResult ?? rendered)
+                    if (encoderContext) {
+                        encoderContext.clearRect(0, 0, outputDimensions.width, outputDimensions.height)
+                        encoderContext.drawImage(
+                            canvas,
+                            0,
+                            0,
+                            outputDimensions.width,
+                            outputDimensions.height,
+                        )
+                    }
+                    await enqueueSourceAdd({
+                        timestamp: rendered.frameTimeMs / 1000,
+                        duration: rendered.frameIntervalMs / 1000,
+                        encodeOptions: rendered.isFirst ? {keyFrame: true} : undefined,
+                    })
+                    scheduleCodecKeepAlive()
+                    if (typeof onFrame === 'function') {
+                        await onFrame(rendered, manifest)
+                    }
+                },
+            })
+
+            await source.close()
+            await output.finalize()
+            outputFinalized = true
+
+            const blob = new Blob([output.target.buffer], {type: outputConfig.mimeType})
+            publishFileSize({force: true})
+            if (typeof onFileSize === 'function') {
+                onFileSize(blob.size, {
+                    encodedPacketBytes,
+                    targetBytes: blob.size,
+                    finalized: true,
+                })
+            }
+            return this.#buildArtifact({
+                blob,
+                manifest,
+                frames,
+                renderedFrames,
+                frameCount: finiteNumber(frames?.length, 0) ?? 0,
+                mimeType: outputConfig.mimeType,
+                extension: outputConfig.extension,
+                label,
             })
         }
-        return this.#buildArtifact({
-            blob,
-            manifest,
-            frames,
-            renderedFrames,
-            frameCount: finiteNumber(frames?.length, 0) ?? 0,
-            mimeType: outputConfig.mimeType,
-            extension: outputConfig.extension,
-            label,
-        })
+        finally {
+            keepAliveStopped = true
+            if (keepAliveTimer !== null) {
+                clearTimeout(keepAliveTimer)
+                keepAliveTimer = null
+            }
+            await sourceOperation.catch(() => undefined)
+            if (outputStarted && !outputFinalized && typeof output.cancel === 'function') {
+                await output.cancel().catch(() => undefined)
+            }
+        }
     }
 }
 
@@ -1597,6 +1729,7 @@ export const runReplayDeferredMp4Export = async ({
                                     elapsedMillis: replay.elapsedMillis,
                                     durationMillis: replay.durationMillis,
                                     dynamicFrameState: replay.dynamicFrameState,
+                                    resolvedFrameState: replay.resolvedFrameState,
                                     replayFramePhase: replay.replayFramePhase,
                                     clipSequenceActive: replay.clipSequenceActive,
                                     toolbarVisible: replay.toolbarVisible,

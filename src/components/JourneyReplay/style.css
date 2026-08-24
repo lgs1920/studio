@@ -938,6 +938,29 @@ wa-select[label-at-start].half-width::part(base) {
     gap: 0;
 }
 
+.replay-progress-scrubber {
+    flex: 1 1 10rem;
+    min-width: 7rem;
+    width: clamp(7rem, 18vw, 13rem);
+}
+
+.replay-progress-scrubber wa-slider {
+    --thumb-height: 0.9rem;
+    --thumb-width: 0.9rem;
+    --track-size: 0.3rem;
+    width: 100%;
+}
+
+.replay-progress-scrubber wa-slider::part(label) {
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
+}
+
 .replay-progress-settings {
     margin-left: 0;
 }
@@ -1005,5 +1028,11 @@ wa-select[label-at-start].half-width::part(base) {
     .replay-progress-bar-in-drawer {
         flex-wrap: wrap;
         row-gap: var(--lgs-gutter-xs, 0.25rem);
+    }
+
+    .replay-progress-bar-in-drawer .replay-progress-scrubber {
+        flex-basis: 100%;
+        order: -1;
+        width: 100%;
     }
 }

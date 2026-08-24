@@ -105,5 +105,8 @@ describe('Replay render mode contract', () => {
         }))
         expect(contract.logicalFrame).toEqual(expect.objectContaining(logicalFrame))
         expect(store.dynamicFrameState.renderContract).toEqual(contract)
+        expect(store.dynamicFrameState.intentResolved).toBe(true)
+        expect(store.resolvedFrameState).toBe(store.dynamicFrameState)
+        expect(store.resolvedFrameState.intent.scene.cameraPose).toEqual(logicalFrame.cameraPose)
     })
 })

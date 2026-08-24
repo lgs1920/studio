@@ -20,9 +20,10 @@ import {
     clampReplayProgress,
     resolveReplayTimelineProgress,
 }                           from '@Core/ui/replay/ReplayProgress'
+import { createReplayScrubScheduler } from '@Core/ui/replay/ReplayScrubScheduler'
 import { captureReplayCropSnapshot } from '@Core/ui/ReplayCropSnapshot'
 import { DISTANCE_UNITS, km, UnitUtils } from '@Utils/UnitUtils'
-import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon, WaSlider, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useSnapshot } from 'valtio'
 import { v4 as uuid } from 'uuid'
@@ -63,6 +64,14 @@ const formatElapsedHoursMinutes = (elapsedMillis, totalMillis) => {
 }
 
 const formatDistance = (value, unit) => (UnitUtils.convert(value ?? 0).to(unit) ?? 0).toFixed(1)
+
+/**
+ * Format the zero-to-one replay slider value as a percentage.
+ *
+ * @param {number} value - Slider value in thousandths.
+ * @returns {string} Human-readable replay percentage.
+ */
+const formatReplayScrubPercent = value => `${(Number(value) / 10).toFixed(1)}%`
 
 const playbackProgressFromSample = ({sample, totalDistance, direction, fallback}) => {
     const sampleProgress = finiteNumber(sample?.progress)
@@ -172,11 +181,14 @@ export const JourneyReplayProgressBar = memo(({
                                                  stopIcon = 'stop',
                                                  stopVariant = 'brand',
                                                  onSnapshot = null,
+                                                 showScrubber = true,
+                                                 onSeek = null,
                                              }) => {
     const replay = useSnapshot(lgs.stores.replay)
     const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
     const {drawers: {open: openDrawer}} = useSnapshot(lgs.stores.ui)
     const idPrefix = useMemo(() => `replay-progress-${uuid()}`, [])
+    const scrubSchedulerRef = useRef(null)
     const isUiHidden = replay.mainUiHidden === true
     const isClipSequenceActive = replay.clipSequenceActive === true
     const hasPlaybackSample = Boolean((replay.active || replay.playing || replay.paused) && replay.sample)
@@ -255,6 +267,39 @@ export const JourneyReplayProgressBar = memo(({
     const stopLabel = stopLabelOverride ?? `Stop ${REPLAY_LABEL}`
     const snapshotLabel = snapshotLabelOverride
     const settingsLabel = `${REPLAY_LABEL} settings`
+    const canScrub = showScrubber
+                     && hasPlaybackSample
+                     && progressOverride === null
+                     && replay.recordingSync !== true
+                     && !isClipSequenceActive
+
+    const applyScrubRequest = useCallback(({progress: requestedProgress}) => {
+        if (typeof onSeek === 'function') {
+            return onSeek(requestedProgress)
+        }
+
+        return __.ui.replay?.seek?.(requestedProgress)
+    }, [onSeek])
+
+    useEffect(() => {
+        const scheduler = createReplayScrubScheduler({apply: applyScrubRequest})
+        scrubSchedulerRef.current = scheduler
+
+        return () => {
+            scheduler.dispose()
+            if (scrubSchedulerRef.current === scheduler) {
+                scrubSchedulerRef.current = null
+            }
+        }
+    }, [applyScrubRequest])
+
+    const scrubReplay = useCallback(event => {
+        scrubSchedulerRef.current?.request(Number(event.target.value) / 1000)
+    }, [])
+
+    const settleReplayScrub = useCallback(event => {
+        void scrubSchedulerRef.current?.settle(Number(event.target.value) / 1000)
+    }, [])
 
     const playOrResume = useCallback(() => {
         if (typeof onPlay === 'function') {
@@ -308,6 +353,22 @@ export const JourneyReplayProgressBar = memo(({
                 <span className="replay-progress-segment replay-progress-time">{timeLabel}</span>}
             {distanceLabel &&
                 <span className="replay-progress-segment replay-progress-distance">{distanceLabel}</span>}
+            {canScrub &&
+                <span className="replay-progress-segment replay-progress-scrubber">
+                    <WaSlider
+                        label="Replay position"
+                        size="xs"
+                        min={0}
+                        max={1000}
+                        step={1}
+                        value={Math.round(displayProgress * 1000)}
+                        valueFormatter={formatReplayScrubPercent}
+                        withTooltip
+                        onInput={scrubReplay}
+                        onChange={settleReplayScrub}
+                        disabled={disabled}
+                    />
+                </span>}
             <span className="replay-progress-segment replay-progress-percent">{percentLabel}</span>
             {showActions &&
                 <span className="replay-progress-segment replay-progress-actions">

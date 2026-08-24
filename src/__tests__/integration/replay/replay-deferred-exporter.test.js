@@ -28,6 +28,11 @@ import {
 import { buildReplayVideoRenderSpec } from '@Core/ui/replay/ReplayVideoRenderSpec'
 import { CanvasOverlayComposer } from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 
+const mediabunnyMocks = vi.hoisted(() => ({
+    failNextCanvasAdd: false,
+    canvasAddCount:     0,
+}))
+
 vi.mock('@Components/Toast', () => ({
     LGS_ERROR_TOAST:       'danger',
     LGS_INFORMATION_TOAST: 'primary',
@@ -63,6 +68,11 @@ vi.mock('mediabunny', () => {
             this.config = config
             this.target = null
             this.add = vi.fn(() => {
+                mediabunnyMocks.canvasAddCount += 1
+                if (mediabunnyMocks.failNextCanvasAdd) {
+                    mediabunnyMocks.failNextCanvasAdd = false
+                    return Promise.reject(new Error('Codec reclaimed due to inactivity.'))
+                }
                 if (this.target) {
                     this.target._maxPos += 256
                 }
@@ -146,6 +156,8 @@ afterEach(() => {
     delete globalThis.__lgsReplayVideoTrace
     CanvasOverlayComposer.mockClear()
     CanvasOverlayComposer.instances.length = 0
+    mediabunnyMocks.failNextCanvasAdd = false
+    mediabunnyMocks.canvasAddCount = 0
 })
 
 describe('ReplayDeferredExporter', () => {
@@ -498,6 +510,62 @@ describe('ReplayDeferredExporter', () => {
         expect(frames[0]).toBe(0)
         expect(frames).toContain('on:0')
         expect(Output.instances.at(-1).setMetadataTags).toHaveBeenCalledWith(mediaMetadata)
+    })
+
+    it('cancels the output when the codec fails during frame encoding', async () => {
+        mediabunnyMocks.failNextCanvasAdd = true
+        const exporter = new ReplayDeferredExporter({
+            timeline: {durationMillis: 1000, fps: 10},
+        })
+
+        await expect(exporter.exportMp4({
+            dimensions: {width: 640, height: 360},
+            buildCanvas: () => ({
+                width: 0,
+                height: 0,
+                getContext: () => ({}),
+            }),
+            renderFrame: async () => null,
+        })).rejects.toThrow('Codec reclaimed due to inactivity.')
+
+        expect(Output.instances.at(-1).cancel).toHaveBeenCalledTimes(1)
+    })
+
+    it('submits a keep-alive frame while a replay frame is rendering', async () => {
+        vi.useFakeTimers()
+        try {
+            let resolveSlowFrame
+            const slowFrameStarted = new Promise(resolve => {
+                resolveSlowFrame = resolve
+            })
+            const exporter = new ReplayDeferredExporter({
+                timeline: {durationMillis: 1000, fps: 2},
+            })
+            const exportPromise = exporter.exportMp4({
+                dimensions: {width: 640, height: 360},
+                buildCanvas: () => ({
+                    width: 0,
+                    height: 0,
+                    getContext: () => ({}),
+                }),
+                renderFrame: async ({frame}) => {
+                    if (frame.index === 1) {
+                        resolveSlowFrame()
+                        await new Promise(resolve => setTimeout(resolve, 6000))
+                    }
+                },
+            })
+
+            await slowFrameStarted
+            await vi.advanceTimersByTimeAsync(5001)
+            await vi.advanceTimersByTimeAsync(999)
+            await exportPromise
+
+            expect(mediabunnyMocks.canvasAddCount).toBeGreaterThan(3)
+        }
+        finally {
+            vi.useRealTimers()
+        }
     })
 
     it('runs the deferred mp4 export and downloads the file', async () => {
