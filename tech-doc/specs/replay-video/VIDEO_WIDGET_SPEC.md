@@ -1,5 +1,12 @@
 # Video Widget Technical Specification
 
+Status: **TODO**
+
+Target release: `1.1.0`
+
+Generic video-board composition support exists, but the repeatable synchronized
+`VideoWidget` component is not implemented.
+
 ## Purpose
 
 The Video widget is a repeatable, editable visual widget that displays a video overlay during Journey Replay. It is intended for sponsor content, route introductions, picture-in-picture footage, educational material, and other media that must remain synchronized with the replay timeline.

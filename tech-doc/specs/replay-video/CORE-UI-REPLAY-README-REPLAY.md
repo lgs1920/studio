@@ -33,7 +33,7 @@ The implementation is split into a small set of focused modules:
 
 For a longer architecture walkthrough that maps the replay/video pipeline end
 to end, see
-[Replay / Video Architecture](../todo/CORE-REPLAY-VIDEO-ARCHITECTURE.md).
+[Replay Architecture](CORE-REPLAY-ARCHITECTURE.md).
 
 ## Configuration model
 
@@ -510,7 +510,7 @@ available scene content and later frames can perform new readiness checks.
 
 The detailed Cesium cache, invalidation, timeout, and pre-warming contract is
 documented in
-[Replay / Video Architecture](../todo/CORE-REPLAY-VIDEO-ARCHITECTURE.md#7-hq-cesium-tile-readiness-and-pre-warming).
+[Replay Architecture](CORE-REPLAY-ARCHITECTURE.md#scene-qualification-and-readiness).
 
 ### Remaining trace behavior
 

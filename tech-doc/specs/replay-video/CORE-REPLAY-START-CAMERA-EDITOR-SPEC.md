@@ -1,10 +1,13 @@
 # Replay Start Camera Editor and Start Clip Synchronization
 
-Status: proposal
+Status: **PARTIAL / TODO**
+
+Target release: `1.0.0`
+
+The canonical camera command and clip continuity are implemented. The complete
+synchronized Replay drawer and map editor remains TODO.
 
 Date: 2026-08-05
-
-Target release: 1.0.0
 
 ## 1. Purpose
 

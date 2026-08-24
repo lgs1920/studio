@@ -1,5 +1,9 @@
 # Replay / Video / Widgets — Reanalysis and Refactoring Proposal
 
+Status: historical analysis, superseded by
+[`REPLAY-AUDIT.md`](REPLAY-AUDIT.md) and the current
+[`CORE-REPLAY-ARCHITECTURE.md`](CORE-REPLAY-ARCHITECTURE.md)
+
 > Date: 2026-07-14
 > Working branch: `fix-replay`
 > Comparison baseline:

@@ -1,5 +1,11 @@
 # Issue — Studio Count API Calls
 
+Status: implemented and superseded by
+[`WEEKLY-COUNT-API-SPEC.md`](WEEKLY-COUNT-API-SPEC.md)
+
+This historical issue is retained as the delivery plan for Studio
+instrumentation. `CountApi` now owns the implemented best-effort event calls.
+
 ## Context
 
 This issue implements the studio-side instrumentation for the weekly count API described in [WEEKLY-COUNT-API-SPEC.md](WEEKLY-COUNT-API-SPEC.md).

@@ -100,7 +100,7 @@ The repository already contains the main product surface used by the studio:
 - Settings and widget configuration from YAML files in `public/`
 - Shared shortcut catalog displayed in the information drawer, with PDF export
 - PWA service worker and version-aware caching
-- PWA installation and update behavior: [PWA technical documentation](tech-doc/specs/PWA-README.md)
+- PWA installation and update behavior: [PWA technical documentation](tech-doc/specs/platform/PWA-README.md)
 
 ## Roadmap
 
@@ -127,7 +127,7 @@ Replace the current separate Replay `start` / `replay` / `stop` clip UI with a t
 drawer. The timeline will combine start clips, one locked journey replay, stop clips, and widget clips across up to 20
 widget tracks. The same timeline state will drive Draft recording and HQ export deterministically.
 
-Technical spec: [Replay track timeline editor evolution](tech-doc/todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md).
+Technical spec: [Replay track timeline editor evolution](tech-doc/specs/replay-video/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md).
 
 ### 1.3 — 3D Camera Path Editor
 
@@ -137,7 +137,7 @@ with a dedicated visual preview/editor, while keeping the path engine determinis
 Journey Replay. The engine will be testable without a live Cesium scene, while Cesium remains the runtime adapter that
 applies the final camera pose.
 
-Technical spec: [Camera 3D path editor](tech-doc/todo/CORE-DRONE-CAMERA-3D-PATH-EDITOR-SPEC.md).
+Technical spec: [Camera 3D path editor](tech-doc/specs/replay-video/CORE-DRONE-CAMERA-3D-PATH-EDITOR-SPEC.md).
 
 ## Technical Documentation
 
@@ -146,21 +146,23 @@ points include:
 
 - [Specs technical documentation](tech-doc/specs/)
 - [Implementation work to do](tech-doc/todo/)
-- [Internal database architecture](tech-doc/specs/CORE-INTERNAL-DATABASE-ARCHITECTURE.md)
-- [Replay video architecture](tech-doc/todo/CORE-REPLAY-VIDEO-ARCHITECTURE.md)
-- [Journey replay/video issues](tech-doc/specs/JOURNEY-REPLAY-VIDEO-ISSUES.md)
-- [Replay track timeline editor evolution](tech-doc/todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md)
-- [Drone camera path architecture](tech-doc/specs/CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)
+- [Internal database architecture](tech-doc/specs/data/CORE-INTERNAL-DATABASE-ARCHITECTURE.md)
+- [Replay architecture](tech-doc/specs/replay-video/CORE-REPLAY-ARCHITECTURE.md)
+- [Replay implementation status](tech-doc/specs/replay-video/CORE-REPLAY-IMPLEMENTATION-STATUS.md)
+- [Replay quality validation](tech-doc/specs/replay-video/CORE-REPLAY-QUALITY-VALIDATION.md)
+- [Replay audit](tech-doc/specs/replay-video/REPLAY-AUDIT.md)
+- [Replay track timeline editor evolution](tech-doc/specs/replay-video/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md)
+- [Drone camera path architecture](tech-doc/specs/replay-video/CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)
 - [Brand and season swatch reactivity](tech-doc/todo/BRAND_SEASON_SWATCH_REACTIVITY_SPEC.md)
-- [Clip altitude data alignment](tech-doc/todo/CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md)
-- [POI animation during replay](tech-doc/todo/CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md)
-- [Widget manager](tech-doc/specs/CORE-WIDGET-MANAGER-README.md)
-- [Screen media recorder](tech-doc/specs/CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)
-- [Canvas overlay composer](tech-doc/specs/CORE-SCREEN-MEDIA-RECORDER-COMPOSER-README.md)
-- [Deployment and backend environment handling](tech-doc/specs/DEPLOYMENT-README.md)
+- [Clip altitude data alignment](tech-doc/specs/replay-video/CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md)
+- [POI animation during replay](tech-doc/specs/replay-video/CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md)
+- [Widget manager](tech-doc/specs/ui-widgets/CORE-WIDGET-MANAGER-README.md)
+- [Screen media recorder](tech-doc/specs/replay-video/CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)
+- [Canvas overlay composer](tech-doc/specs/replay-video/CORE-SCREEN-MEDIA-RECORDER-COMPOSER-README.md)
+- [Deployment and backend environment handling](tech-doc/specs/delivery/DEPLOYMENT-README.md)
 - [Tracks editor spec](tech-doc/todo/TRACKSEDITOR-SPEC.md)
 - [All technical docs](tech-doc/README.md)
-- [Bun command reference](tech-doc/specs/HOW_TO_BUN_COMMANDS.md)
+- [Bun command reference](tech-doc/specs/delivery/HOW_TO_BUN_COMMANDS.md)
 
 ## Internal Skills
 
@@ -227,7 +229,7 @@ Tests are organized under `src/__tests__/` by responsibility:
 ## Configuration Notes
 
 - Application settings are primarily defined in `public/settings.yaml`
-- Map, overlay, and terrain providers are documented in [tech-doc/specs/HOW_TO_ADD_PROVIDERS_LAYERS.md](tech-doc/specs/HOW_TO_ADD_PROVIDERS_LAYERS.md)
+- Map, overlay, and terrain providers are documented in [tech-doc/specs/HOW_TO_ADD_PROVIDERS_LAYERS.md](tech-doc/specs/cesium/HOW_TO_ADD_PROVIDERS_LAYERS.md)
 - Widget registration is defined in `public/widgets.yaml`
 - PWA behavior is configured through `vite.config.mts` and `public/service-worker-pwa.js`
 - Static version metadata is stored in `public/version.json` and `public/build.json`
@@ -239,7 +241,7 @@ Tests are organized under `src/__tests__/` by responsibility:
 
 The root dependency documentation has been synchronized with the current `package.json`:
 
-- Full package inventory: [tech-doc/specs/README_DEPENDENCIES.md](tech-doc/specs/README_DEPENDENCIES.md)
+- Full package inventory: [tech-doc/specs/delivery/README_DEPENDENCIES.md](tech-doc/specs/delivery/README_DEPENDENCIES.md)
 - Build and runtime commands: [package.json](package.json)
 
 ## Contributing

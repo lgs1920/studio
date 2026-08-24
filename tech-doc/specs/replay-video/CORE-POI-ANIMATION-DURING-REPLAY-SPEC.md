@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed specification for milestone `1.1.0`.
+**TODO** for target release `1.1.0`.
 
 The existing tracking item is [GitHub issue #395](https://github.com/lgs1920/studio/issues/395).
 

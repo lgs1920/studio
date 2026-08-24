@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed future implementation. This document defines the interaction contract
+**TODO**, target release `Unplanned`. This document defines the interaction contract
 for a real 3D Three.js widget. It does not authorize implementation in the
 current release.
 
@@ -16,13 +16,13 @@ The interaction concept is accompanied by a checked-in Three.js prototype. The
 prototype is a visual reference for this specification, not a production widget
 and not a replacement for Cesium camera state.
 
-<video controls muted playsinline preload="metadata" width="960" poster="../../artifacts/camera-hpr-sphere-preview/poster.png">
-  <source src="../../artifacts/camera-hpr-sphere-preview/camera-hpr-orientation-sphere-preview.mp4" type="video/mp4">
-  <a href="../../artifacts/camera-hpr-sphere-preview/camera-hpr-orientation-sphere-preview.mp4">Download the camera HPR orientation sphere preview</a>
+<video controls muted playsinline preload="metadata" width="960" poster="../../../artifacts/camera-hpr-sphere-preview/poster.png">
+  <source src="../../../artifacts/camera-hpr-sphere-preview/camera-hpr-orientation-sphere-preview.mp4" type="video/mp4">
+  <a href="../../../artifacts/camera-hpr-sphere-preview/camera-hpr-orientation-sphere-preview.mp4">Download the camera HPR orientation sphere preview</a>
 </video>
 
 If the documentation renderer does not display the embedded player, use the
-[camera HPR orientation sphere preview](../../artifacts/camera-hpr-sphere-preview/camera-hpr-orientation-sphere-preview.mp4)
+[camera HPR orientation sphere preview](../../../artifacts/camera-hpr-sphere-preview/camera-hpr-orientation-sphere-preview.mp4)
 directly. The video is an 8.1-second, 960 × 640 H.264 MP4 without audio.
 
 ### Prototype files

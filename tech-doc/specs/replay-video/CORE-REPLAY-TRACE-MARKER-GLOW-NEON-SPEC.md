@@ -2,7 +2,9 @@
 
 ## Status
 
-Proposed specification for milestone `1.1.0`.
+Implemented in the current workspace. Visual acceptance evidence is documented
+in
+[`CORE-REPLAY-TRACE-MARKER-GLOW-NEON-VALIDATION.md`](CORE-REPLAY-TRACE-MARKER-GLOW-NEON-VALIDATION.md).
 
 Tracking issue: [#424](https://github.com/lgs1920/studio/issues/424).
 
@@ -12,7 +14,7 @@ Replay trace and marker styling currently comes from `JourneyReplayProgressionSt
 
 The requested feature adds a shared visual effect system for the replay trace and the replay marker. The user-facing behavior is simple: one effect selector, existing fill/border opacity controls, and one runtime rendering contract.
 
-This work must remain consistent with [CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md](../specs/CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md): Cesium is a runtime adapter and renderer concern, not part of the path engine or the replay timing model.
+This work must remain consistent with [CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md](CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md): Cesium is a runtime adapter and renderer concern, not part of the path engine or the replay timing model.
 
 ## Goals
 

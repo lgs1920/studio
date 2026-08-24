@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed specification for milestone `1.1.0`.
+**TODO** for target release `1.1.0`.
 
 ## Context
 

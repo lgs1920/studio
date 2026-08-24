@@ -1,5 +1,12 @@
 # Issue — Backend Weekly Count API
 
+Status: implemented and superseded by
+[`WEEKLY-COUNT-API-SPEC.md`](WEEKLY-COUNT-API-SPEC.md)
+
+This historical issue describes the initial flat seven-day proposal. Backend
+now implements a broader time-zone-aware aggregate API with daily, weekly,
+monthly, yearly, and lifetime reads.
+
 ## Context
 
 This issue implements the backend side of the weekly count API described in [WEEKLY-COUNT-API-SPEC.md](WEEKLY-COUNT-API-SPEC.md).

@@ -1,8 +1,13 @@
-# Replay quality and performance audit
+# Replay Quality and Performance Audit
 
 Date: 2026-08-24
 
-Status: current-code diagnostic, target architecture, and implementation plan
+Status: historical diagnostic, architectural rationale, and implementation plan
+
+Current implementation documentation is maintained in
+[`CORE-REPLAY-ARCHITECTURE.md`](CORE-REPLAY-ARCHITECTURE.md).
+Delivery state is tracked in
+[`CORE-REPLAY-IMPLEMENTATION-STATUS.md`](CORE-REPLAY-IMPLEMENTATION-STATUS.md).
 
 ## Scope and evidence
 
@@ -761,7 +766,16 @@ The first two Phase 1 seams are now present in the current branch:
 - the normal replay controls expose a real-time slider backed by a coalesced, latest-request-wins scrub scheduler; synchronized recording keeps it disabled;
 - unit, integration, exporter, widget-composition, and store-contract tests cover the compatibility seam.
 
-This is a foundation, not the isolated HQ camera implementation. The canonical camera definition, nominal evaluator, command, and instantaneous Cesium adapter now exist, while scene-qualified settled scrubbing, terrain and 3D Tiles camera qualification, migration of the transition and redirection policies, and the isolated render host remain subsequent slices below. The current slider avoids input floods, resolves only the latest requested timestamp through the canonical resolver, and exposes cancellation to its adapter, but scene application still passes through the compatibility `seek()` path and most of the existing Cesium transition stack.
+The branch now also contains the next four implementation slices:
+
+- settled slider requests pass through an asynchronous, cancellable, latest-request-wins scene qualifier; transient drag requests remain immediate, while settled requests use the bounded terrain, imagery, and visible 3D Tiles readiness coordinator;
+- replay lifecycle ownership is explicit and monotonic, so an obsolete asynchronous focus or restoration finalizer cannot move the camera after another replay session has taken ownership;
+- collision-qualified transition frames and logical clip poses cross the same canonical camera-command boundary, including exact start-clip to replay-entry command continuity;
+- `IsolatedHqReplayRenderHost` captures a runtime scene descriptor, creates a separate no-loop `CesiumWidget`, reproduces imagery layers, terrain, the active 3D Tiles layer, lighting, fog, trace, and marker state, renders at the requested physical dimensions over the logical crop viewport, and is now selected by the HQ exporter when the replay facade supports explicit render targets.
+
+The isolated target is owner-scoped rather than installed through temporary global replacement. Camera, constraint, visibility, clip, trace, tile prewarm, and final frame readiness writes therefore target the HQ widget while Studio keeps its interactive camera. Every exporter terminal path clears the target and destroys its Cesium resources. Initialization failure produces an explicit visible-map fallback instead of silently returning an empty export.
+
+This is still not the 1.0.0 release gate. Real-browser measurements for WebGL memory, context loss, initialization time, exact canvas sizing, terrain plus 3D Tiles behavior, cancellation under load, and representative encoded output have not yet been recorded. Moving clips now use the bounded moving readiness budget while boundaries and explicit holds may settle, but readiness identity is still coarse and the capture trace still uses dynamic entity geometry. Those items remain in Phases 3, 4, and 5 below and must not be inferred complete from unit or mocked integration tests.
 
 ### Phase 0 — Establish evidence and split missing work
 

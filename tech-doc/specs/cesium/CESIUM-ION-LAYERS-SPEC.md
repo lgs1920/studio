@@ -1,5 +1,10 @@
 # Technical Specification - Cesium Ion Layers
 
+Status: current implementation
+
+The imagery, terrain, 3D Tiles, and cache foundations described by this document
+are implemented in the current workspace.
+
 ## Purpose
 
 This document describes how to add Cesium Ion layers to LGS1920 Studio beyond the terrain already supported:
@@ -11,8 +16,8 @@ This document describes how to add Cesium Ion layers to LGS1920 Studio beyond th
 
 It complements the existing documents:
 
-- [CESIUM-ION-TOKEN-MANAGEMENT.md](../specs/CESIUM-ION-TOKEN-MANAGEMENT.md)
-- [README-CESIUM](README-CESIUM)
+- [CESIUM-ION-TOKEN-MANAGEMENT.md](CESIUM-ION-TOKEN-MANAGEMENT.md)
+- [Provider and layer integration](HOW_TO_ADD_PROVIDERS_LAYERS.md)
 
 ## Current State
 

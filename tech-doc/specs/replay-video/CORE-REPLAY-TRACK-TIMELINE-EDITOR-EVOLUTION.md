@@ -1,6 +1,8 @@
 # Replay Track Timeline Editor Evolution
 
-Status: proposal
+Status: **TODO**
+
+Target release: `1.1.0`
 
 Date: 2026-07-16
 

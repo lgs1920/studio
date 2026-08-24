@@ -7,8 +7,8 @@ The implementation is local-first. There is no database route in Elysia, no HTTP
 Related references:
 
 - [LocalDB API reference](CORE-LOCALDB-API-REFERENCE.md)
-- [Local synchronization user guide](../SYNC-GUIDE.md)
-- [Future cloud synchronization work](../todo/CLOUD-SYNC-TODO.md)
+- [Settings synchronization guide](SETTINGS_SYNC_GUIDE.md)
+- [Future cloud synchronization work](../../todo/CLOUD-SYNC-TODO.md)
 
 ## Contents
 

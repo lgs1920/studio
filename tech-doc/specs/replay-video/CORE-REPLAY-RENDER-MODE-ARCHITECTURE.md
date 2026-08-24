@@ -1,7 +1,12 @@
 # Replay Render Mode Architecture — Draft vs High Quality
 
-Status: shared replay camera controller implemented; complete render pipeline
-parity remains in progress — #410 and #427
+Status: superseded by the current replay architecture and status documents
+
+This document is retained as historical design context. Use
+[`CORE-REPLAY-ARCHITECTURE.md`](CORE-REPLAY-ARCHITECTURE.md) for the
+current Draft, HQ, and scrub architecture and
+[`CORE-REPLAY-IMPLEMENTATION-STATUS.md`](CORE-REPLAY-IMPLEMENTATION-STATUS.md)
+for remaining work.
 
 Date: 2026-07-28
 
@@ -501,8 +506,8 @@ The practical rule is:
 ## Reference docs
 
 - [Replay / Video Architecture](CORE-REPLAY-VIDEO-ARCHITECTURE.md)
-- [Journey replay / video issues](../specs/JOURNEY-REPLAY-VIDEO-ISSUES.md)
+- [Journey replay / video issues](JOURNEY-REPLAY-VIDEO-ISSUES.md)
 - [HQ video resolution profiles](HQ_4K_VIDEO_EXPORT_SPEC.md)
-- [Screen media recorder](../specs/CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)
-- [Canvas overlay composer](../specs/CORE-SCREEN-MEDIA-RECORDER-COMPOSER-README.md)
-- [Replay camera tracking zones](../specs/REPLAY_CAMERA_TRACKING_ZONES.md)
+- [Screen media recorder](CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)
+- [Canvas overlay composer](CORE-SCREEN-MEDIA-RECORDER-COMPOSER-README.md)
+- [Replay camera tracking zones](REPLAY_CAMERA_TRACKING_ZONES.md)

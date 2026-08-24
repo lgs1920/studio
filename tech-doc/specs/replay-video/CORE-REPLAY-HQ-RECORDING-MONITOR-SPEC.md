@@ -1,12 +1,16 @@
 # Replay HQ Recording Camera and Monitoring
 
-Status: proposal
+Status: **PARTIAL / TODO**
+
+The isolated HQ render host and independent camera ownership are implemented.
+The live recording monitor remains TODO.
 
 Date: 2026-08-05
 
 Target release: 1.0.0
 
-Related issue: #457
+Tracking issue: #459. Depends on the canonical camera work from #457 and the
+isolated HQ render host from #458.
 
 ## 1. Purpose
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposal pending validation before implementation.
+**TODO** for target release `1.1.0`.
 
 This specification covers the final video produced by the replay HQ export. It does not concern any individual widget.
 The supported explicit output profiles are `720p`, `1080p`, and `4K`.

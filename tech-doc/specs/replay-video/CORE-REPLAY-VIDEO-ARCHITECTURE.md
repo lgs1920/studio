@@ -1,5 +1,12 @@
 # Replay / Video Architecture
 
+Status: superseded
+
+This document is retained as historical design context. The current runtime
+architecture is documented in
+[`CORE-REPLAY-ARCHITECTURE.md`](CORE-REPLAY-ARCHITECTURE.md). Do not use
+the single-scene recommendations below for new HQ replay work.
+
 This document explains the current replay/video architecture in English and
 maps the modified files to their responsibilities.
 
@@ -572,11 +579,11 @@ The current HQ path is:
 
 The relevant implementation files are:
 
-- [`ReplayDeferredExporter.js`](../../src/core/ui/replay/ReplayDeferredExporter.js)
-- [`ReplaySceneTileReadiness.js`](../../src/core/ui/replay/ReplaySceneTileReadiness.js)
-- [`JourneyReplaySessionPlaybackController.js`](../../src/core/ui/replay/JourneyReplaySessionPlaybackController.js)
-- [`Viewer.jsx`](../../src/components/cesium/Viewer.jsx)
-- [`IonLayerUtils.js`](../../src/Utils/cesium/IonLayerUtils.js)
+- [`ReplayDeferredExporter.js`](../../../src/core/ui/replay/ReplayDeferredExporter.js)
+- [`ReplaySceneTileReadiness.js`](../../../src/core/ui/replay/ReplaySceneTileReadiness.js)
+- [`JourneyReplaySessionPlaybackController.js`](../../../src/core/ui/replay/JourneyReplaySessionPlaybackController.js)
+- [`Viewer.jsx`](../../../src/components/cesium/Viewer.jsx)
+- [`IonLayerUtils.js`](../../../src/Utils/cesium/IonLayerUtils.js)
 
 The current helper returns `false` after its timeout and the exporter
 continues. This is important for resilience, but a non-fatal timeout is not a
