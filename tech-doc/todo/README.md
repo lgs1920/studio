@@ -18,6 +18,10 @@ implementation documents. Implemented and historical documents belong under
 - [Cloud synchronization](CLOUD-SYNC-TODO.md)
 - [Journey and track map selection](CORE-JOURNEY-CLICK-OVERLAY-SELECTION-SPEC.md)
 
+## Replay and Video
+
+- [Parallel HQ workspace execution analysis](REPLAY-PARALLEL-WORKSPACE-EXECUTION-ANALYSIS.md)
+
 ## User Interface, Widgets, and Branding
 
 - [Arrow widget](ARROW_WIDGET_SPEC.md)
