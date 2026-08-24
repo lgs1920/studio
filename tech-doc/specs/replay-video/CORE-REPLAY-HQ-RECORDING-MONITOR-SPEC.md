@@ -1,9 +1,16 @@
 # Replay HQ Recording Camera and Monitoring
 
-Status: **PARTIAL / TODO**
+Status: **IMPLEMENTED**
 
-The isolated HQ render host and independent camera ownership are implemented.
-The live recording monitor remains TODO.
+The isolated HQ render host, independent camera ownership, and transient live
+recording monitor are implemented. The monitor displays the composed frame
+submitted to the encoder for both Draft and linked Replay HQ export. It offers
+an inline fallback surface and Picture-in-Picture when the browser permits it.
+The same transient surface now owns ordinary Replay transport and replaces the
+former duplicated floating Replay/HQ controls HUD.
+
+The remaining limitation is that the monitor is not a replacement for the
+finalized video preview dialog.
 
 Date: 2026-08-05
 
@@ -60,20 +67,44 @@ widget itself does not require another viewer.
 
 ## 4. Monitoring widget
 
-The monitoring widget is a transient UI widget, not a video-board composition
-widget. It must remain outside the captured widget board so that it cannot
-capture itself in Draft or HQ output.
+The monitoring widget is a transient generic `Widget`, not a video-board
+composition widget. It must remain outside the captured widget board so that it
+cannot capture itself in Draft or HQ output. Its position, reduction, and
+locking are managed by the widget manager; the monitor context menu does not
+offer removal. The monitor does not render its own minimize control. Its child
+content remains mounted while reduced so that an active Picture-in-Picture
+stream is not destroyed.
 
 The widget displays:
 
 - the latest rendered output frame;
-- the active mode (`Draft` or `Replay HQ`);
-- the current phase (`preparing`, `rendering`, `encoding`, `finalizing`,
-  `completed`, `cancelled`, or `failed`);
-- processed frame count and total frame count when available;
-- percentage and elapsed time;
-- encoded size when available;
-- pause, cancel, and close actions according to the existing export lifecycle.
+- the recording title (`Recording`, `Preparing`, or `Finalizing`) aligned left
+  beside the current phase indicator. Preparation and finalization use the
+  blinking orange warning treatment;
+- the remaining time on the right of the status row;
+- the recording percentage through the progress slider tooltip and accessible
+  label;
+- processed frame count and total frame count on the left when available,
+  generated video duration and total duration in the center, and size on the
+  right;
+- the blinking recording indicator in place of the title icon, with Cancel in
+  the header's top-right corner;
+- icon-only Snapshot on the lower left, pause and stop actions in the center,
+  and Picture-in-Picture on the lower right. Every action exposes an accessible
+  label and tooltip. The Picture-in-Picture action is rendered only when the
+  document reports PiP support and the video element exposes the request API;
+- a resizable host-managed widget. Position, bounds, reduction, locking, and
+  persistence remain owned by the generic widget manager.
+
+The monitor owns the recording lifecycle controls. The former
+`VideoRecorderWidget` recording HUD is not mounted during capture; recorder
+events still update the shared video state and finalize the output dialog.
+
+Outside recording, the same surface displays the ordinary Replay progress,
+real-time scrub slider, playback, snapshot, stop, and settings actions. When a
+Draft or HQ recording starts, those controls are replaced by the recording
+preview and icon-only lifecycle actions. This UI projection does not become a
+replay or camera authority.
 
 The widget does not read an unfinished MP4 file. It displays the same final
 canvas that is passed to the encoder:
@@ -84,6 +115,12 @@ canvas that is passed to the encoder:
 
 This keeps the monitoring image visually aligned with the encoded content and
 avoids a second decode pipeline.
+
+For Draft, the total duration is resolved from the prepared video timeline,
+then from replay duration plus enabled start and stop clips. The recorder's
+configured maximum duration is only the fallback for recordings without a
+usable replay timeline. Draft progress and remaining time are derived from the
+recorder's elapsed duration, not from the replay progress projection.
 
 ## 5. Mediabunny boundary
 
@@ -145,3 +182,9 @@ implementation issue.
 - The existing final preview dialog remains the playback surface for the
   finalized video.
 - Cancellation, completion, and failure clean up the monitor state.
+- Cancellation and every terminal stop path exit Picture-in-Picture.
+- Returning to the Studio tab while Picture-in-Picture is active requests the
+  widget manager to expand the monitor if it was reduced.
+- One transient surface owns Replay transport and recording monitoring; no
+  second Replay/HQ controls HUD is mounted.
+- Icon-only actions expose accessible labels and tooltips.

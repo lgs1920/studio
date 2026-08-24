@@ -473,13 +473,21 @@ Responsibilities:
 
 The drawer no longer launches HQ export directly.
 
-### `JourneyReplayControlsWidget.jsx`
+### `ReplayRecordingMonitorWidget.jsx`
 
 Responsibilities:
 
-- expose replay progress while replay mode is active;
-- provide the single stop action for an in-flight HQ creation pass;
-- keep the widget surface minimal during export.
+- host ordinary replay progress, scrubbing, playback, snapshot, stop, and
+  settings controls inside the generic Widget manager;
+- switch to the final composed Draft/HQ frame and recording metrics during
+  capture;
+- provide icon-only pause, resume, cancel, and Picture-in-Picture actions
+  without joining the captured widget board;
+- close Picture-in-Picture on cancel and terminal recording cleanup, and request
+  widget expansion when returning from Picture-in-Picture;
+- leave position, reduction, and removal controls to the Widget manager;
+- remain a projection of replay and export state rather than an execution
+  authority.
 
 ## 4. Context invalidation
 

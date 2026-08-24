@@ -28,7 +28,11 @@ The implementation is split into a small set of focused modules:
 - `exportReplayDeferredMp4`: renders the master MP4 and returns the blob without forcing a download.
 - `runReplayDeferredMp4Export`: prepares, renders, encodes, and downloads a master MP4 export. The initial HQ scene restore preserves the draft focus snapshot so the export starts from the same visual target.
 - The final video dialog starts the HQ export explicitly and switches its share/download actions to the HQ blob once the export completes.
-- `JourneyReplayControlsWidget` exposes the single stop action while an HQ export is running.
+- `ReplayRecordingMonitorWidget` is the single transient transport surface hosted by
+  the generic Widget manager: it hosts ordinary replay controls, then switches
+  to the final composed Draft/HQ frame, recording metrics, and icon-only
+  lifecycle actions during capture. Widget position, reduction, and removal
+  remain manager-owned, and terminal recording cleanup exits Picture-in-Picture.
 - `JourneyReplayDebug`: exposes debug snapshots and diagnostic logging.
 
 For a longer architecture walkthrough that maps the replay/video pipeline end

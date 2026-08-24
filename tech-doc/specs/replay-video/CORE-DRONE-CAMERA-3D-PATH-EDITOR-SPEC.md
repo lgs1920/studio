@@ -165,7 +165,7 @@ The export boundary must:
 ```text
 src/core/ui/camera/DroneCameraBezier3DPath.js
 src/core/ui/camera/DroneCameraPathThreePreview.js
-tech-doc/todo/CORE-DRONE-CAMERA-3D-PATH-EDITOR-SPEC.md
+tech-doc/specs/replay-video/CORE-DRONE-CAMERA-3D-PATH-EDITOR-SPEC.md
 src/__tests__/drone-camera-bezier-3d-path.test.js
 ```
 

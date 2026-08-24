@@ -28,7 +28,6 @@ below by engineering domain rather than storage directory.
 ### Planned
 
 - [Replay start camera editor and clip synchronization](specs/replay-video/CORE-REPLAY-START-CAMERA-EDITOR-SPEC.md)
-- [Replay HQ recording camera and monitor](specs/replay-video/CORE-REPLAY-HQ-RECORDING-MONITOR-SPEC.md)
 - [Replay track timeline editor](specs/replay-video/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md)
 - [POI animation during replay](specs/replay-video/CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md)
 - [Clip altitude alignment](specs/replay-video/CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md)

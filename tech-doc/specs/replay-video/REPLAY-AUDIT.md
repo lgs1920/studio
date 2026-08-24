@@ -688,7 +688,7 @@ The isolated host is the correct target for #458 because Cesium evaluates visibi
 
 Before committing to the full implementation, a capability spike must measure context creation, terrain and 3D Tiles duplication, memory pressure, context-loss behavior, exact-resolution rendering, and teardown on the supported browser matrix. Failure to allocate the isolated host must produce an explicit capability error or an announced visible-mode fallback. It must never silently export the interactive camera.
 
-This decision supersedes the single-scene recommendation still present in `tech-doc/todo/CORE-REPLAY-VIDEO-ARCHITECTURE.md`. That recommendation cannot satisfy #458 while the user moves the preview camera during export.
+This decision supersedes the single-scene recommendation formerly present in `tech-doc/specs/replay-video/CORE-REPLAY-VIDEO-ARCHITECTURE.md`. That recommendation cannot satisfy #458 while the user moves the preview camera during export.
 
 ### Camera planning and qualification
 

@@ -110,6 +110,22 @@ readiness, overlay composition, encoding, cancellation, and cleanup.
 physical output surface. Mediabunny encodes the product frame timeline and must
 not become a replay clock.
 
+### Replay transport and recording monitor
+
+`ReplayRecordingMonitorWidget` is the single transient Replay surface outside the
+captured widget board and is hosted by the generic `Widget` component. During
+ordinary Replay it hosts the canonical transport, real-time scrub slider,
+snapshot action, and settings action. During Draft or HQ recording it switches
+to the latest final composed frame, recording progress, runtime metrics, and
+icon-only lifecycle actions.
+
+The surface is a read-only projection of replay and recording authorities. It
+does not resolve frames, drive the replay clock, move either camera, qualify the
+scene, or participate in composition. Widget reduction, positioning, and
+removal belong to the widget manager; the monitor has no private close or
+minimize controls. Explicit cancellation stops recording and exits
+Picture-in-Picture before terminal cleanup.
+
 ## Required invariants
 
 - One logical timestamp resolves one complete visual frame.
@@ -121,6 +137,10 @@ not become a replay clock.
 - Cancellation and every terminal exporter path release the target and destroy
   isolated Cesium resources.
 - Dynamic widgets consume the published logical frame instead of private timers.
+- The video-board compass consumes the published HQ camera pose while HQ is
+  active; it never reads the interactive Studio camera for HQ composition.
+- Replay transport and recording progress are not duplicated across independent
+  floating HUDs.
 
 ## TODO architecture extensions
 

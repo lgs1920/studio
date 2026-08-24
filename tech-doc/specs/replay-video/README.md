@@ -4,6 +4,7 @@
 
 - [Replay architecture](CORE-REPLAY-ARCHITECTURE.md)
 - [Replay implementation status](CORE-REPLAY-IMPLEMENTATION-STATUS.md)
+- [Replay HQ recording camera and monitor](CORE-REPLAY-HQ-RECORDING-MONITOR-SPEC.md)
 - [Replay core implementation](CORE-UI-REPLAY-README-REPLAY.md)
 - [Replay camera tracking zones](REPLAY_CAMERA_TRACKING_ZONES.md)
 - [Drone camera path architecture](CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)
@@ -30,7 +31,6 @@ The status document is the authoritative roadmap. These files preserve the
 detailed functional and technical requirements for unfinished work.
 
 - [Start camera editor and clip synchronization](CORE-REPLAY-START-CAMERA-EDITOR-SPEC.md) — PARTIAL / TODO, 1.0.0
-- [HQ recording monitor](CORE-REPLAY-HQ-RECORDING-MONITOR-SPEC.md) — PARTIAL / TODO, 1.0.0
 - [Replay track timeline editor](CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) — TODO, 1.1.0
 - [POI animation during replay](CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md) — TODO, 1.1.0
 - [Clip altitude alignment](CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md) — TODO, 1.1.0

@@ -24,6 +24,13 @@ and issue analysis remain in [`REPLAY-AUDIT.md`](REPLAY-AUDIT.md).
 - Explicit owner-scoped viewer, scene, and canvas render targets.
 - Isolated no-loop HQ `CesiumWidget` with scene descriptor replication and
   announced visible-scene fallback.
+- Dedicated HQ camera selection (`Dedicated camera` or `Visible map camera`)
+  fixed for the duration of an export.
+- Unified transient Replay transport and Draft/HQ recording monitor hosted by
+  the generic Widget manager. It retains normal replay scrubbing, playback,
+  snapshot, and settings controls, then switches to the exact composed encoder
+  frame, progress, dynamic duration/remaining-time metrics, icon-only lifecycle
+  actions, inline fallback, and Picture-in-Picture cleanup.
 - Logical crop viewport and physical output scaling for HQ capture and widgets.
 - Frame-accurate HQ trace updates and deterministic Navigation camera updates.
 - Moving clip readiness separated from settled waits.
@@ -50,7 +57,6 @@ subject to the validation gates below.
 | Status | Target | Work item | Detailed specification |
 | --- | --- | --- | --- |
 | PARTIAL / TODO | 1.0.0 | Complete synchronized replay-start camera editing while preserving the implemented canonical camera and clip continuity | [Start camera editor](CORE-REPLAY-START-CAMERA-EDITOR-SPEC.md) |
-| PARTIAL / TODO | 1.0.0 | Add the read-only HQ recording monitor on top of the implemented isolated render host | [HQ recording monitor](CORE-REPLAY-HQ-RECORDING-MONITOR-SPEC.md) |
 | TODO | 1.0.0 | Validate isolated HQ on fixed imagery, terrain, and 3D Tiles journeys; prove camera parity, resource teardown, crop-aware readiness, and visual quality | [Replay quality validation](CORE-REPLAY-QUALITY-VALIDATION.md) |
 | TODO | 1.1.0 | Replace separated clip controls with the normalized multi-track replay timeline | [Track timeline editor](CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) |
 | TODO | 1.1.0 | Drive POI animation and displayed fields from canonical replay time | [POI animation](CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md) |
