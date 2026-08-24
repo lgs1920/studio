@@ -56,7 +56,7 @@ This is the canonical source for the project's AI-agent and development rules.
 - **Commit Messages:** Must follow the key-based format: `feat`, `fix`, `refactor`, `docs`, `style`, `test`, `chore`.
 - **Commit Logic:** Never create commits automatically. Only create a commit when the user explicitly requests it. Do not stage or commit proactively on your own initiative.
 - **Project rules changes:** Every modification to `PROJECT_RULES.md` must be isolated in a dedicated commit, submitted through a dedicated pull request, and merged into `main`.
-- **Dependency inventory:** When a commit changes `package.json` dependencies or dependency-related credits, update `tech-doc/specs/README_DEPENDENCIES.md` in the same change set if the inventory is still meant to mirror the current package list.
+- **Dependency inventory:** When a commit changes `package.json` dependencies or dependency-related credits, update `tech-doc/specs/delivery/README_DEPENDENCIES.md` in the same change set if the inventory is still meant to mirror the current package list.
 - **Commit history:** `COMMIT_HISTORY.md` is updated automatically by the `Update commit history` GitHub workflow after pushes to branches.
 - **Commit history entry:** The workflow records every previously undocumented commit with its date, exact commit message, and a GitHub link in the format `https://github.com/lgs1920/studio/commit/<commit-id>`. The generated `docs: update commit history` commit is excluded from its own history update.
 
