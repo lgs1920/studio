@@ -30,6 +30,7 @@ export const replay = {
     elapsedMillis:  null,
     durationMillis: null,
     sample:         null,
+    resolvedFrameState: null,
     hoverSample:    null,
     metricOverlay:  {
         visible:   false,

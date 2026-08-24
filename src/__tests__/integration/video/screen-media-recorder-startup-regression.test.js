@@ -227,6 +227,21 @@ describe('ScreenMediaRecorder startup', () => {
         expect(errorHandler).not.toHaveBeenCalled()
     })
 
+    it('prepares the first encoded frame after the recording state is dispatched', async () => {
+        const frameCaptureReady = vi.fn(async () => undefined)
+        const started = vi.fn(() => {
+            recorder.setFrameCaptureReady(frameCaptureReady)
+        })
+        recorder.addEventListener(ScreenMediaRecorder.events.START, started)
+
+        await recorder.startVideo()
+
+        expect(started).toHaveBeenCalledOnce()
+        expect(frameCaptureReady).toHaveBeenCalledOnce()
+
+        recorder.removeEventListener(ScreenMediaRecorder.events.START, started)
+    })
+
     it('exposes the 15 fps medium-quality preset', () => {
         expect(ScreenMediaRecorder.FPS).toContain(15)
         expect(ScreenMediaRecorder.VIDEO_PRESETS.get('15-medium')).toMatchObject({

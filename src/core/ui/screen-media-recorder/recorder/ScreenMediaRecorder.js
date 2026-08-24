@@ -723,13 +723,21 @@ export class ScreenMediaRecorder extends EventTarget {
             this.#nextFrameDueMs = 0
             document.body.classList.add(ScreenMediaRecorder.CLASSES.RECORDING)
 
+            this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
+
             await this.#waitForStartFrameReady()
 
             if (isStartCancelled()) {
                 return
             }
 
-            this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
+            // Allow the application to commit its recording-state layout before
+            // the first encoded frame is submitted. This keeps the initial frame
+            // aligned with the same DOM state used by subsequent frames.
+            if (!await this.#prepareFrameCapture()) {
+                return
+            }
+
             this.#startTime = performance.now()
             this.#emitInfo(0)
             this.#startMonitoring()

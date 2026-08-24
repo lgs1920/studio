@@ -21,6 +21,7 @@ export class AppUpdateManager {
     static beforeInstallPromptEvent = 'beforeinstallprompt'
     static messageEvent = 'message'
     static newVersionMessage = 'NEW_VERSION'
+    static updateActivatedMessage = 'UPDATE_ACTIVATED'
     static skipWaitingMessage = 'SKIP_WAITING'
     static typeKey = 'type'
     static tagKey = 'tag'
@@ -166,6 +167,24 @@ export class AppUpdateManager {
     }
 
     /**
+     * Reloads when the worker that received SKIP_WAITING reaches the activated state.
+     *
+     * @param {ServiceWorker|null} worker - The worker being promoted.
+     * @returns {void}
+     */
+    #watchUpdateWorker = worker => {
+        if (!worker?.addEventListener) {
+            return
+        }
+
+        worker.addEventListener('statechange', () => {
+            if (worker.state === 'activated') {
+                this.#reloadPageForUpdate()
+            }
+        }, {passive: true})
+    }
+
+    /**
      * Prevents a controllerchange stall from blocking the app indefinitely.
      *
      * @returns {void}
@@ -179,9 +198,7 @@ export class AppUpdateManager {
             }
 
             const registration = this.#registration
-            if (registration?.waiting == null
-                && registration?.active?.state === 'activated'
-                && navigator.serviceWorker.controller) {
+            if (registration?.waiting == null && registration?.active?.state === 'activated') {
                 this.#reloadPageForUpdate()
                 return
             }
@@ -249,6 +266,11 @@ export class AppUpdateManager {
         navigator.serviceWorker.addEventListener(AppUpdateManager.messageEvent, event => {
             if (event.data?.[AppUpdateManager.typeKey] === AppUpdateManager.newVersionMessage) {
                 this.#handleUpdateAvailable(event.data[AppUpdateManager.tagKey] || 'unknown')
+            }
+
+            if (event.data?.[AppUpdateManager.typeKey] === AppUpdateManager.updateActivatedMessage
+                && this.#reloadAfterControllerChange) {
+                this.#reloadPageForUpdate()
             }
         }, {passive: true})
 
@@ -370,8 +392,10 @@ export class AppUpdateManager {
                 throw new Error('The new service worker is not ready yet')
             }
 
+            const waitingWorker = reg.waiting
             this.#reloadAfterControllerChange = true
-            reg.waiting.postMessage({[AppUpdateManager.typeKey]: AppUpdateManager.skipWaitingMessage})
+            this.#watchUpdateWorker(waitingWorker)
+            waitingWorker.postMessage({[AppUpdateManager.typeKey]: AppUpdateManager.skipWaitingMessage})
             this.#scheduleUpdateActivationTimeout()
         }
         catch (error) {

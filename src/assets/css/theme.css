@@ -2151,6 +2151,16 @@ hr {
     height: 40px;
     min-height: 40px;
     cursor: grab;
+
+    & > .lgs-widget-collapsed-preserved-content {
+        position: absolute;
+        overflow: hidden;
+        width: 1px;
+        height: 1px;
+        pointer-events: none;
+        opacity: 0;
+        clip-path: inset(50%);
+    }
 }
 
 .lgs-widget.lgs-widget-collapsed.lgs-widget-locked {
@@ -2368,6 +2378,11 @@ hr {
 .lgs-widget.recording-locked {
     user-select: none;
     pointer-events: none;
+}
+
+.lgs-widget.crop-pass-through,
+.lgs-widget.crop-pass-through * {
+    pointer-events: none !important;
 }
 
 /*******************************************************************************

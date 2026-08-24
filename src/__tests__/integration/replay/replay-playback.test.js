@@ -159,6 +159,11 @@ describe('replay phase 1 playback controller', () => {
                 frameTimeMs:     0,
                 frameIntervalMs: 1000 / 30,
                 source:          'controller',
+                intentResolved:  false,
+                intent: expect.objectContaining({
+                    resolved: false,
+                    renderMode: 'draft',
+                }),
                 renderContract: expect.objectContaining({
                     renderMode: 'draft',
                     logicalFrame: expect.objectContaining({progress: 0}),

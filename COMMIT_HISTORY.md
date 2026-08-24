@@ -873,4 +873,90 @@
 
 ## 2026-08-19 — [`Merge branch 'fix/replay-video-stats-overlay' into 1.0.0`](https://github.com/lgs1920/studio/commit/6afb4f6c3d0ba043bc59f8a1052b20fd49f03212)
 
+## 2026-08-19 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/951a2c19b52e5909b7d8f536f2ebf510922cb914)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/5b5217d70904c363e3ce2142e65938fbb91f7bd1)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-08-20 — [`feat(video): consolidate recording HUD settings`](https://github.com/lgs1920/studio/commit/bd13f5db6a5bb1ea16e7635d88505c2f604b594f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`fix(widgets): normalize on-map bounds and margins`](https://github.com/lgs1920/studio/commit/869f65105f6abc0eb6030901b94663d3a3b67fb3)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`feat(video): refine recording HUD controls`](https://github.com/lgs1920/studio/commit/cb5117915d63bb2658961f4601805d4f4fe23d40)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`fix(video): adapt recording HUD for mobile`](https://github.com/lgs1920/studio/commit/7e787344b7256adb4ec74e275c49aaa279e7b6af)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/742fe379dd406e8fda3d4d7c53fcd5ce7517bb4c)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`docs: synchronize branch documentation`](https://github.com/lgs1920/studio/commit/73acf296785a7b0910815347589b850b1ef9b135)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/2b4679ca5a6817f5967527297599a5e58aef825c)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`fix(launch): enhance transition in webapp splash screen`](https://github.com/lgs1920/studio/commit/aa90dadbbbd884337e1694bb11676488bc7a7572)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/6023ccb64539a5356e74a7d91ec107e9169262b9)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: gate Cesium input during synchronized recording`](https://github.com/lgs1920/studio/commit/77321b5671b797affd742751f047e8bce8e8a198)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: align video HUD and recording controls`](https://github.com/lgs1920/studio/commit/a2887899df0a576c66c9dc6331e3721127acc672)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: route crop interactions to Cesium`](https://github.com/lgs1920/studio/commit/39a95b9f11860ce5b0b5e98c6891da0ccdc7b238)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: stabilize replay widget composition`](https://github.com/lgs1920/studio/commit/45040f34fc75cb2d6c01ca922d4a7f554434f7a5)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: keep crop pass-through outside Cesium widgets`](https://github.com/lgs1920/studio/commit/29bdc97750b035faf49a4c4124b0dff00fe0ae9b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: enlarge HQ replay HUD actions`](https://github.com/lgs1920/studio/commit/fc02e1f6f2b400a49005b6047c63317a7899dfdb)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/c0e6d55779c01c2c982fb491a82caae7a3fbe542)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`chore: keep Cesium skills up to date`](https://github.com/lgs1920/studio/commit/28b254a2e54c451763a9baa0561d87931bccabe9)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: reload after service worker activation`](https://github.com/lgs1920/studio/commit/02a3efbb60610495c80ebea6ff7a6156f0f9b59b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/d992910585aed21ab6f291fd82993b2162efc003)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-08-22 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/71e2cc5fa656a3fd6efb2d082599081396d207fa)
+
 - Recorded automatically from Git history.

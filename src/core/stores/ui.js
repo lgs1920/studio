@@ -88,6 +88,7 @@ export const ui = {
         url:     null,
         editing:         false,
         recording:       false,
+        recordingHQ:     false,
         preRecording: false,
         snapshot: false,
         paused:          false,

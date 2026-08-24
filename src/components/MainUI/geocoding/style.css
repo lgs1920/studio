@@ -34,7 +34,7 @@
     max-width: var(--geocoding-dialog-width) !important;
     height: auto !important;
     min-height: auto !important;
-    margin: 0 !important;
+    margin: var(--lgs-gutter-xs) !important;
     padding: 0 !important;
     border: 0 !important;
     background: transparent !important;

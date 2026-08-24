@@ -15,6 +15,10 @@
  ******************************************************************************/
 
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import {
+    resolvePublishedReplayExportFrame,
+    resolvePublishedReplayFrame,
+} from '@Core/ui/replay/ReplayFramePublisher'
 
 const VIDEO_STATS_WIDGET_MODES = Object.freeze({
     'dynamic-stats-widget': 'dynamic',
@@ -142,9 +146,8 @@ const resolveReplayFrameWindow = replayState => {
  * position.
  */
 export const resolveReplayExportFrameState = (replay = defaultReplayStore()) => {
-    const runtime = replay?.deferredExportPlan?.runtime ?? null
-    const frameState = runtime?.frameState ?? null
-    if (runtime?.status !== 'exporting' || frameState?.active !== true) {
+    const frameState = resolvePublishedReplayExportFrame(replay)
+    if (frameState?.active !== true) {
         return null
     }
 
@@ -159,7 +162,7 @@ export const resolveReplayExportFrameState = (replay = defaultReplayStore()) => 
  */
 export const resolveReplayDynamicFrameState = (replay = defaultReplayStore()) => (
     resolveReplayExportFrameState(replay)
-    ?? replay?.dynamicFrameState
+    ?? resolvePublishedReplayFrame(replay)
     ?? null
 )
 
@@ -178,6 +181,7 @@ const videoOverlayModeForWidgetId = (widgetId = '') => {
 }
 
 export const isJourneyReplayLinked = () => globalThis.lgs?.stores?.replay?.recordingSync === true
+    || globalThis.lgs?.settings?.ui?.replay?.recordingSync === true
 
 /**
  * Return true when the journey has stop clips configured.

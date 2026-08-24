@@ -17,8 +17,10 @@ import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { resolveVideoOverlayVisibility } from '@Core/ui/replay/ReplayOverlayResolver'
 import { normalizeReplayVideoCropRect } from '@Core/ui/replay/ReplayVideoRenderSpec'
 import { replayVideoTraceDebug } from '@Core/ui/replay/ReplayVideoTraceDebug'
+import { Widget2Canvas } from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
 
 const DEFAULT_METRICS_CACHE_TTL_MS = 750
+const OVERLAY_FLUSH_TIMEOUT_MS = 1000
 
 const getComputedStyleSafe = element => globalThis.getComputedStyle?.(element) ?? globalThis.window?.getComputedStyle?.(element) ?? null
 
@@ -118,6 +120,32 @@ const getSortedVideoWidgetKeys = ({widgetKeys = null, widgetsBoard = VIDEO_WIDGE
         .map(entry => entry[0])
 }
 
+/**
+ * Flush every mounted DOM mirror used by the video compositor.
+ *
+ * @param {object} options - Flush options.
+ * @param {string[]|null} [options.widgetKeys=null] - Optional widget IDs to flush.
+ * @param {string} [options.widgetsBoard='video'] - Board containing the overlays.
+ * @param {number} [options.timeoutMs=1000] - Maximum wait per overlay mirror.
+ * @returns {Promise<void>} Resolves after all available mirrors are idle.
+ */
+export const flushReplayVideoOverlayCanvases = async ({
+                                                         widgetKeys = null,
+                                                         widgetsBoard = VIDEO_WIDGETS_BOARD,
+                                                         timeoutMs = OVERLAY_FLUSH_TIMEOUT_MS,
+                                                     } = {}) => {
+    const keys = getSortedVideoWidgetKeys({widgetKeys, widgetsBoard})
+    await Promise.all(keys.map(widgetId => {
+        let timeoutId = null
+        const flush = Promise.resolve(Widget2Canvas.flush(widgetId)).catch(() => false)
+        const timeout = new Promise(resolve => {
+            timeoutId = setTimeout(() => resolve(false), timeoutMs)
+        })
+
+        return Promise.race([flush, timeout]).finally(() => clearTimeout(timeoutId))
+    }))
+}
+
 const resolveMetrics = ({widgetId, widgetEl, metricsCache = null, metricsCacheTtlMs = DEFAULT_METRICS_CACHE_TTL_MS} = {}) => {
     if (!metricsCache?.get || !metricsCache?.set) {
         return getReplayVideoOverlayMetrics(widgetEl)
@@ -139,10 +167,12 @@ const resolveMetrics = ({widgetId, widgetEl, metricsCache = null, metricsCacheTt
  *
  * @param {object} options - Overlay build options.
  * @param {boolean} [options.skipVisibilityChecks=false] - Include mounted widgets without replay visibility filtering.
+ * @param {{x:number,y:number}|null} [options.coordinateScale=null] - Optional crop-to-host coordinate scale.
  */
 export const buildReplayVideoComposerOverlays = ({
                                                      composer,
                                                      cropRect,
+                                                     coordinateScale = null,
                                                      sceneOverlays = [],
                                                      widgetKeys = null,
                                                      replay = globalThis.lgs?.stores?.replay ?? null,
@@ -157,6 +187,9 @@ export const buildReplayVideoComposerOverlays = ({
     }
 
     const normalizedCrop = normalizeReplayVideoCropRect(cropRect) ?? {left: 0, top: 0, width: 0, height: 0}
+    const scaleX = Math.max(0.000001, Number(coordinateScale?.x) || 1)
+    const scaleY = Math.max(0.000001, Number(coordinateScale?.y) || 1)
+    const effectScale = Math.sqrt(scaleX * scaleY)
     composer.beginUpdate()
 
     const replayOverlayCandidates = Array.from(
@@ -213,10 +246,10 @@ export const buildReplayVideoComposerOverlays = ({
         composer.addOverlay(element, {
             x:             0,
             y:             0,
-            w:             normalizedCrop.width,
-            h:             normalizedCrop.height,
-            contentWidth:  normalizedCrop.width,
-            contentHeight: normalizedCrop.height,
+            w:             normalizedCrop.width * scaleX,
+            h:             normalizedCrop.height * scaleY,
+            contentWidth:  normalizedCrop.width * scaleX,
+            contentHeight: normalizedCrop.height * scaleY,
             scale:         1,
             ...(overlay.options ?? {}),
         })
@@ -257,18 +290,23 @@ export const buildReplayVideoComposerOverlays = ({
         const height = Number.isFinite(parsedHeight) && parsedHeight > 0 ? parsedHeight : Number(canvasEl.height) || 0
 
         composer.addOverlay(canvasEl, {
-            x:             (Number(position.left) || 0) - normalizedCrop.left - margins.left,
-            y:             (Number(position.top) || 0) - normalizedCrop.top - margins.top,
-            w:             width,
-            h:             height,
-            contentWidth:  Math.max(0, width - (margins.left + margins.right)),
-            contentHeight: Math.max(0, height - (margins.top + margins.bottom)),
-            blur,
-            radius,
-            border,
+            x:             ((Number(position.left) || 0) - normalizedCrop.left - margins.left) * scaleX,
+            y:             ((Number(position.top) || 0) - normalizedCrop.top - margins.top) * scaleY,
+            w:             width * scaleX,
+            h:             height * scaleY,
+            contentWidth:  Math.max(0, width - (margins.left + margins.right)) * scaleX,
+            contentHeight: Math.max(0, height - (margins.top + margins.bottom)) * scaleY,
+            blur:          blur * effectScale,
+            radius:        radius * effectScale,
+            border:        border * effectScale,
             rotate:        config.rotate || 0,
             scale:         resolveReplayVideoWidgetScale(widgetEl, config.scale),
-            shadowMargins: margins,
+            shadowMargins: {
+                top: margins.top * scaleY,
+                right: margins.right * scaleX,
+                bottom: margins.bottom * scaleY,
+                left: margins.left * scaleX,
+            },
         })
     }
     composer.endUpdate()
@@ -281,11 +319,6 @@ export const isReplayVideoWidgetReady = widgetId => {
                       : Boolean(element)
     if (!element || !isMounted) {
         return false
-    }
-
-    const baseId = `${widgetId}`.split('#')[0]
-    if (baseId === 'text-widget') {
-        return true
     }
 
     return Boolean(element.querySelector?.('.lgs-widget-canvas'))

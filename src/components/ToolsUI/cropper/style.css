@@ -45,6 +45,10 @@
     margin: 0 !important;
 }
 
+.lgs-widget.video-crop-zone-widget {
+    margin: 0 !important;
+}
+
 .crop-zone {
     position: absolute;
     z-index: calc(var(--crop-zindex) + 1);
@@ -202,6 +206,13 @@
     clip-rule: evenodd;
 
     backdrop-filter: blur(var(--lgs-blur));
+}
+
+.crop-overlay-blockers {
+    position: absolute;
+    z-index: calc(var(--crop-zindex) - 1);
+    inset: 0;
+    pointer-events: none;
 }
 
 .crop-overlay.wa-theme-lgs1920-on-map {

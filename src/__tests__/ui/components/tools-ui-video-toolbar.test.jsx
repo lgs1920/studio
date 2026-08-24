@@ -54,6 +54,10 @@ vi.mock('@Editor/JourneyToolbarWidget', () => ({
 
 describe('ToolsUI linked replay video editing', () => {
     beforeEach(() => {
+        const appContainer = document.createElement('div')
+        appContainer.id = 'lgs1920-container'
+        document.body.append(appContainer)
+
         globalThis.__ = {
             ui: {
                 replay: {
@@ -89,6 +93,7 @@ describe('ToolsUI linked replay video editing', () => {
 
     afterEach(() => {
         cleanup()
+        document.getElementById('lgs1920-container')?.remove()
         globalThis.__ = undefined
         globalThis.lgs = undefined
     })
@@ -102,5 +107,12 @@ describe('ToolsUI linked replay video editing', () => {
         globalThis.lgs.stores.ui.video.editing = false
         await waitFor(() => expect(globalThis.__.ui.replay.restoreJourneyToolbarVisibility).toHaveBeenCalledTimes(1))
         expect(globalThis.lgs.settings.ui.journeyToolbar.show).toBe(true)
+    })
+
+    it('lets the crop input layer expose Cesium while preserving child widget targets', async () => {
+        globalThis.lgs.stores.ui.video.editing = true
+        render(<ToolsUI/>)
+
+        await waitFor(() => expect(document.getElementById('lgs1920-container')?.classList.contains('lgs-video-crop-input-mode')).toBe(true))
     })
 })

@@ -30,7 +30,7 @@ import { cancelVideoEditing, prepareVideoCaptureUi } from '@Components/MainUI/vi
 import { VIDEO_CROP_ZONE } from '@Core/constants'
 import { CountApi } from '@Utils/CountApi'
 import {
-    WaButton, WaButtonGroup, WaDialog, WaDropdown, WaDropdownItem, WaIcon, WaInput, WaTooltip,
+    WaButton, WaButtonGroup, WaDialog, WaDropdown, WaDropdownItem, WaIcon, WaInput, WaOption, WaSelect, WaTooltip,
 }                        from '@web.awesome.me/webawesome-pro/dist/react'
 import {
     UIToast,
@@ -84,9 +84,11 @@ const clearVideoReplayRuntimeState = () => {
     }
 
     replayStore.dynamicFrameState = null
+    replayStore.resolvedFrameState = null
     replayStore.replayFramePhase = null
     if (replayStore.deferredExportPlan?.runtime) {
         replayStore.deferredExportPlan.runtime.frameState = null
+        replayStore.deferredExportPlan.runtime.resolvedFrameState = null
     }
 }
 
@@ -147,6 +149,7 @@ export const VideoDownloadAndShareDialog = () => {
     const [mediaUrl, setMediaUrl] = useState(null)
     const [hqMedia, setHqMedia] = useState(null)
     const [hqExportStatus, setHqExportStatus] = useState('idle')
+    const [hqRenderHostMode, setHqRenderHostMode] = useState('isolated')
     const _mainVideo = useRef(null)
     const _blurredVideo = useRef(null)
     const _recordingInfoButton = useRef(null)
@@ -495,15 +498,16 @@ export const VideoDownloadAndShareDialog = () => {
             return
         }
 
+        Object.assign(lgs.stores.ui.video, {
+            editing:    true,
+            recordingHQ: true,
+            finalizing: true,
+        })
         prepareVideoCaptureUi()
         const hqRenderSpec = await resolveHqExportRenderSpec()
         const exportFilename = getHqExportFilename()
         const controller = new AbortController()
         _hqExportAbortController.current = controller
-        Object.assign(lgs.stores.ui.video, {
-            editing:    true,
-            finalizing: true,
-        })
         setHqExportStatus('exporting')
         _dialogHiddenForHqExport.current = true
         _suppressNextDialogHideCleanup.current = true
@@ -527,6 +531,7 @@ export const VideoDownloadAndShareDialog = () => {
                 signal: controller.signal,
                 abortController: controller,
                 mediaMetadata: hqMediaMetadata,
+                renderHostMode: hqRenderHostMode,
             })
 
             const draftMediaData = getMediaData()
@@ -578,6 +583,7 @@ export const VideoDownloadAndShareDialog = () => {
             void CountApi.sendHqVideo()
             Object.assign(lgs.stores.ui.video, {
                 editing:    false,
+                recordingHQ: false,
                 finalizing: false,
             })
             _dialogHiddenForHqExport.current = false
@@ -599,6 +605,7 @@ export const VideoDownloadAndShareDialog = () => {
             }
             Object.assign(lgs.stores.ui.video, {
                 editing:    false,
+                recordingHQ: false,
                 finalizing: false,
             })
             _dialogHiddenForHqExport.current = false
@@ -609,7 +616,7 @@ export const VideoDownloadAndShareDialog = () => {
         finally {
             _hqExportAbortController.current = null
         }
-    }, [__.recorder, getHqExportFilename, getHqFilenameStem, getMediaData, getVideoExtension, getVideoMimeType, isHqExporting, isReplayVideoLinked, prepareReplaySceneForDialog, releaseHqMediaUrl, waitForAnimationFrame])
+    }, [__.recorder, getHqExportFilename, getHqFilenameStem, getMediaData, getVideoExtension, getVideoMimeType, hqRenderHostMode, isHqExporting, isReplayVideoLinked, prepareReplaySceneForDialog, releaseHqMediaUrl, waitForAnimationFrame])
 
     /**
      * Handle share action with Web Share API fallback.
@@ -771,6 +778,7 @@ export const VideoDownloadAndShareDialog = () => {
         Object.assign(lgs.stores.ui.video, {
             preRecording:     false,
             recording:        false,
+            recordingHQ:      false,
             paused:           false,
             size:             0,
             recordedDuration: 0,
@@ -1030,6 +1038,17 @@ export const VideoDownloadAndShareDialog = () => {
                     )}
                     {!hasHqMedia && isReplayVideoLinked && (
                         <div className="video-preview-create-hq-action">
+                            <WaSelect
+                                label="HQ camera"
+                                label-at-start
+                                size="s"
+                                value={hqRenderHostMode}
+                                disabled={isHqExporting}
+                                onChange={event => setHqRenderHostMode(event.target.value)}
+                            >
+                                <WaOption value="isolated">{'Dedicated camera'}</WaOption>
+                                <WaOption value="visible">{'Visible map camera'}</WaOption>
+                            </WaSelect>
                             <WaTooltip for="video-preview-create-hq">{isHqExporting ? 'Creating HQ video' : 'Create an HQ version'}</WaTooltip>
                             <WaButton
                                 id="video-preview-create-hq"

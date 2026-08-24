@@ -407,8 +407,8 @@ export const renderedTargetVisible =  (mode, sample, cache = null) => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         const computeVisibility = () => {
-            const scene = call.cesiumScene()
-            const camera = globalThis.lgs?.viewer?.camera ?? scene?.camera
+            const scene = call.cesiumScene?.() ?? globalThis.lgs?.scene ?? globalThis.lgs?.viewer?.scene
+            const camera = (call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera ?? scene?.camera
             const target = call.markerRenderCartesianForSample(sample)
             const windowPosition = call.windowPositionForSample(sample)
             if (!scene || !camera || !target || !windowPosition) {
@@ -468,8 +468,8 @@ export const renderedTargetObstructionDistanceForSample = (mode, sample, cache =
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
     const computeDistance = () => {
-        const scene = call.cesiumScene()
-        const camera = globalThis.lgs?.viewer?.camera ?? scene?.camera
+        const scene = call.cesiumScene?.() ?? globalThis.lgs?.scene ?? globalThis.lgs?.viewer?.scene
+        const camera = (call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera ?? scene?.camera
         const target = call.markerRenderCartesianForSample(sample)
         const windowPosition = call.windowPositionForSample(sample)
         if (!scene || !camera || !target || !windowPosition) {

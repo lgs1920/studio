@@ -353,7 +353,7 @@ export const VideoRecorderToolbar = ({toolbar}) => {
     return (
         <WaCard
             ref={_toolbar}
-            className="video-recorder-widget lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal wa-theme-lgs1920-on-map"
+            className={`video-recorder-widget lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal wa-theme-lgs1920-on-map${video.recording ? ' video-recorder-widget-recording' : ''}`}
         >
             <WaIcon
                 name="circle"

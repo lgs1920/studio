@@ -845,59 +845,6 @@ wa-select[label-at-start].half-width::part(base) {
     min-width: 0;
 }
 
-.replay-controls.video-recorder-widget {
-    z-index: var(--lgs-video-recorder-toolbar-zindex);
-}
-
-.replay-controls .video-recorder-indicator {
-    font-size: var(--lgs-font-size);
-    margin: 0 var(--lgs-gutter) 0 var(--lgs-gutter-s);
-    --primary-color: white;
-    --primary-opacity: 1;
-    --secondary-color: var(--lgs-video-recorder-color, var(--lgs-error-color));
-    --secondary-opacity: 1;
-}
-
-.replay-controls-hq-row {
-    align-items: center;
-    display: inline-flex;
-    gap: var(--lgs-gutter-s);
-    justify-content: center;
-    min-width: 0;
-    white-space: nowrap;
-}
-
-.replay-controls-hq-file,
-.replay-controls-hq-time {
-    display: inline-flex;
-    align-items: center;
-    color: var(--replay-progress-text-color);
-    min-width: 0;
-    gap: var(--lgs-gutter-xs);
-}
-
-.replay-controls-hq-file {
-    border-right: 1px solid var(--lgs-card-on-map-border-color);
-    font-size: var(--lgs-font-size-s);
-    font-variant-numeric: tabular-nums;
-    margin-right: var(--lgs-gutter-s);
-    padding-inline-end: var(--lgs-gutter-s);
-}
-
-.replay-controls-hq-file wa-icon,
-.replay-controls-hq-time wa-icon {
-    flex: 0 0 auto;
-    font-size: var(--lgs-font-size);
-}
-
-.replay-controls-hq-progress {
-    min-width: 0;
-}
-
-.replay-controls-action {
-    flex: 0 0 auto;
-}
-
 .replay-progress-bar {
     align-items: center;
     display: inline-flex;
@@ -938,6 +885,29 @@ wa-select[label-at-start].half-width::part(base) {
     gap: 0;
 }
 
+.replay-progress-scrubber {
+    flex: 1 1 10rem;
+    min-width: 7rem;
+    width: clamp(7rem, 18vw, 13rem);
+}
+
+.replay-progress-scrubber wa-slider {
+    --thumb-height: 0.9rem;
+    --thumb-width: 0.9rem;
+    --track-size: 0.3rem;
+    width: 100%;
+}
+
+.replay-progress-scrubber wa-slider::part(label) {
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    height: 1px;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
+}
+
 .replay-progress-settings {
     margin-left: 0;
 }
@@ -975,22 +945,8 @@ wa-select[label-at-start].half-width::part(base) {
 }
 
 @media (max-width: 640px) {
-    .replay-controls-hq-row {
-        gap: 0;
-        max-width: 100%;
-    }
-
-    .replay-controls-hq-label {
-        display: none;
-    }
-
-    .replay-controls-hq-file,
     .replay-controls .replay-progress-distance {
         display: none;
-    }
-
-    .replay-controls-hq-progress {
-        flex: 0 1 auto;
     }
 
     .replay-controls .replay-progress-segment {
@@ -1005,5 +961,11 @@ wa-select[label-at-start].half-width::part(base) {
     .replay-progress-bar-in-drawer {
         flex-wrap: wrap;
         row-gap: var(--lgs-gutter-xs, 0.25rem);
+    }
+
+    .replay-progress-bar-in-drawer .replay-progress-scrubber {
+        flex-basis: 100%;
+        order: -1;
+        width: 100%;
     }
 }

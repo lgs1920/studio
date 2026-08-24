@@ -502,9 +502,11 @@ export class WidgetCoreRegistry {
                 minScale:               initialConfig.minScale ?? null,
                 minCropSize:            initialConfig.minCropSize ?? {width: 100, height: 100},
                 observer:               null,
+                onRemove:               initialConfig.onRemove ?? null,
                 outsideOverlay:         initialConfig.outsideOverlay,
                 positionKey:            initialConfig.positionKey,
                 persist:                initialConfig.persist ?? null,
+                preserveChildrenWhenCollapsed: initialConfig.preserveChildrenWhenCollapsed ?? false,
                 position:               {left: 0, top: 0},
                 previousCropDimensions: null,
                 ratio:                  ratio,
@@ -575,6 +577,12 @@ export class WidgetCoreRegistry {
             }
             if (initialConfig.positionKey !== undefined) {
                 config.positionKey = initialConfig.positionKey
+            }
+            if (initialConfig.onRemove !== undefined) {
+                config.onRemove = initialConfig.onRemove
+            }
+            if (initialConfig.preserveChildrenWhenCollapsed !== undefined) {
+                config.preserveChildrenWhenCollapsed = initialConfig.preserveChildrenWhenCollapsed
             }
         }
 

@@ -32,6 +32,11 @@ import {
     publishReplayClipFrameState, replayStore, resetRuntimeProgress, resolveJourneyReplayRuntimeClips,
 } from './JourneyReplayRuntime'
 import {createJourneyReplayLogicalFrame} from './JourneyReplayLogicalFrame'
+import {replaySceneFrameQualifierFor} from './ReplaySceneFrameQualifier'
+import {
+    beginReplaySessionOwnership,
+    releaseReplaySessionOwnership,
+} from './ReplaySessionOwnership'
 import * as JourneyReplayCameraController from './JourneyReplayCameraController'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
 import * as JourneyReplayVisibilityController from './JourneyReplayVisibilityController'
@@ -231,6 +236,7 @@ export const start = (mode, options = {}) => {
     if (state.sceneRestorePromise) {
         call.cancelPendingSceneRestore()
     }
+    const replaySessionLease = beginReplaySessionOwnership(mode, {source: 'draft'})
     state.renderer.clear()
     call.bindCesiumCameraBridge()
     state.deferPlaybackCameraRestore = false
@@ -241,6 +247,7 @@ export const start = (mode, options = {}) => {
     const sampler = call.configure(options)
     traceStartStep('configure.end', {hasSampler: Boolean(sampler?.hasSamples)})
     if (!sampler?.hasSamples) {
+        releaseReplaySessionOwnership(mode, replaySessionLease)
         return null
     }
     traceStartStep('reset-camera-interpolation-state.begin')
@@ -349,6 +356,8 @@ export const start = (mode, options = {}) => {
                 frameTimeMs: startPhase?.frameTimeMs,
                 frameIntervalMs: videoTimeline?.frameIntervalMs,
                 durationMillis: videoTimeline?.durationMillis,
+                cameraPose: state.clipCameraContinuity,
+                intentResolved: true,
             })
             call.refreshReplayDiagnosticsOverlay?.()
             call.setContinuousRender(true)
@@ -375,6 +384,10 @@ export const start = (mode, options = {}) => {
                                     frameTimeMs: resolvedPhase?.frameTimeMs,
                                     frameIntervalMs: videoTimeline?.frameIntervalMs,
                                     durationMillis: videoTimeline?.durationMillis,
+                                    cameraPose: call.currentReplayClipCameraState({
+                                        sample: clipSample ?? startSample,
+                                    }),
+                                    intentResolved: true,
                                 })
                                 call.refreshReplayDiagnosticsOverlay?.()
                             },
@@ -563,7 +576,8 @@ export const preparePlaybackSceneForExport = async (mode, {
         }
         call.hideMainUI()
         ensureReplayVideoDiagnosticsOverlay(mode)
-        globalThis.lgs?.scene?.requestRender?.()
+        const renderScene = call.cesiumScene?.() ?? globalThis.lgs?.scene ?? globalThis.lgs?.viewer?.scene
+        renderScene?.requestRender?.()
         return true
 
     }
@@ -582,7 +596,53 @@ export const toggle = (mode, ) => {
         return call.start()
     }
 
-export const seek = (mode, progress) => mode[JOURNEY_REPLAY_INTERNAL_STATE].controller.seek(progress)
+/**
+ * Seek the live replay and optionally qualify the resulting canonical frame.
+ *
+ * Existing synchronous callers keep receiving the sample directly. Interactive
+ * scrubbing opts into scene qualification and receives an asynchronous result.
+ *
+ * @param {Object} mode - Replay session mode.
+ * @param {number} progress - Requested replay progress.
+ * @param {Object} options - Optional scene qualification request.
+ * @returns {Object|Promise<Object>} Sample or qualified scrub result.
+ */
+export const seek = (mode, progress, options = {}) => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const sample = state.controller.seek(progress)
+    if (options.qualifyScene !== true) {
+        return sample
+    }
+
+    const store = replayStore()
+    const publishedIntent = store?.resolvedFrameState?.intent ?? null
+    const intent = publishedIntent
+                ?? state.controller.resolveFrameAtProgress?.(progress, {
+                    source: 'scrub',
+                    renderMode: 'draft',
+                    resolved: true,
+                })
+                ?? null
+    const scene = globalThis.lgs?.viewer?.scene
+               ?? globalThis.lgs?.scene
+               ?? null
+    const readiness = normalizeJourneyReplayReadiness(
+        store?.readiness
+        ?? globalThis.lgs?.settings?.ui?.replay?.readiness,
+    )
+    const qualifier = replaySceneFrameQualifierFor(mode, {scene, readiness})
+    if (!qualifier) {
+        return Promise.resolve({sample, intent, qualification: null})
+    }
+
+    return qualifier.qualify({
+        intent,
+        settled: options.settled === true,
+        signal: options.signal ?? null,
+        maxMillis: readiness.settledTimeoutMs,
+        speedLevel: options.settled === true ? 'jump' : 'fast',
+    }).then(qualification => ({sample, intent, qualification}))
+}
 
 export const refresh = (mode, {
                    camera = true,
@@ -712,7 +772,9 @@ export const renderReplayExportFrame = async (mode, {phase = null, frame = null,
                 state.renderer.update({
                     sample,
                     sampler:       state.sampler,
-                    forceGeometry: false,
+                    // HQ frames are produced faster than wall-clock playback. Bypass the
+                    // interactive renderer throttle so every encoded frame owns its trace.
+                    forceGeometry: true,
                     syncCursorToTrace: true,
                     hideTrace:     phase?.slot === REPLAY_CLIP_SLOT_START,
                     showTrace:     true,
@@ -822,6 +884,7 @@ export const renderReplayExportFrame = async (mode, {phase = null, frame = null,
                 cameraPitch: globalThis.lgs?.viewer?.camera?.pitch ?? null,
             })
         }
-        globalThis.lgs?.scene?.requestRender?.()
+        const renderScene = call.cesiumScene?.() ?? globalThis.lgs?.scene ?? globalThis.lgs?.viewer?.scene
+        renderScene?.requestRender?.()
         return frameSample ?? sample
     }

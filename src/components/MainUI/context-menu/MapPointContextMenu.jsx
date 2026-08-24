@@ -32,7 +32,7 @@ import { useSnapshot }                                                          
 
 const DEFAULT_POI_TITLE = 'Point Of Interest'
 
-export const MapPointContextMenu = ({target, menuRef}) => {
+export const MapPointContextMenu = ({target, menuRef, hideVideoActions = false}) => {
     const toolbars = useSnapshot(lgs.settings.ui.toolbars)
     const rotateState = useSnapshot(lgs.stores.ui.mainUI.rotate)
     const panoramaState = useSnapshot(lgs.stores.ui.mainUI.panorama)
@@ -231,26 +231,30 @@ export const MapPointContextMenu = ({target, menuRef}) => {
                 <li onClick={copyCoordinates}>
                     <WaIcon name="copy" variant="regular"/>{'Copy Coords'}
                 </li>
-                <li onClick={createPOI}>
-                    <WaIcon name="location-dot" variant="regular"/>{'Create POI'}
-                </li>
-                {isPointRotating || isPointPanoramic ? (
-                    <li onClick={stopOrbit}>
-                        <WaIcon name={ROTATION_ICON} animation="spin" variant="regular"/>
-                        {isPointPanoramic ? 'Stop Panorama' : 'Stop Orbit'}
-                    </li>
-                ) : (
-                     <>
-                         <li onClick={rotateAroundPoint}>
-                             <WaIcon name={ROTATION_ICON} variant="regular"/>{'Orbit'}
-                         </li>
-                         {panoramaAllowed && (
-                             <li onClick={startPanoramic}>
-                                 <WaIcon name="panorama" variant="regular"/>{'Panoramic'}
-                             </li>
+                {!hideVideoActions && (
+                    <>
+                        <li onClick={createPOI}>
+                            <WaIcon name="location-dot" variant="regular"/>{'Create POI'}
+                        </li>
+                        {isPointRotating || isPointPanoramic ? (
+                            <li onClick={stopOrbit}>
+                                <WaIcon name={ROTATION_ICON} animation="spin" variant="regular"/>
+                                {isPointPanoramic ? 'Stop Panorama' : 'Stop Orbit'}
+                            </li>
+                        ) : (
+                             <>
+                                 <li onClick={rotateAroundPoint}>
+                                     <WaIcon name={ROTATION_ICON} variant="regular"/>{'Orbit'}
+                                 </li>
+                                 {panoramaAllowed && (
+                                     <li onClick={startPanoramic}>
+                                         <WaIcon name="panorama" variant="regular"/>{'Panoramic'}
+                                     </li>
+                                 )}
+                             </>
                          )}
-                     </>
-                 )}
+                    </>
+                )}
                 {canManageSceneWidgets && (
                     <>
                         <li className="widget-no-hover">

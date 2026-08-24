@@ -28,76 +28,19 @@ import { CropRatioEditorWidget } from '@Components/ToolsUI/cropper/widgets/CropR
  * @param {Object} props.store - Valtio store for cropper state
  * @param {Object} [props.options={}] - Configuration options for CropperHandler
  * @param {JSX.Element|string} [props.children] - Additional UI elements (e.g., CTA buttons)
+ * @param {boolean} [props.renderRatioWidget=true] - Whether to render the standalone ratio widget.
  * @returns {JSX.Element|null} Cropper UI or null if source is not loaded
  */
 import { DefinedCropZone }                                                                  from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
 import { JOURNEY_WIDGETS, MULTI_PURPOSE_WIDGETS } from '@Core/constants'
 import { memo, useEffect, useRef, useState } from 'react'
 import { useSnapshot } from 'valtio'
+import { buildCropOverlayBlockers } from './cropOverlayBlockers'
 import { CropZoneWidget }        from './widgets/CropZoneWidget'
 import { CropZoneInfoPopup }     from './widgets/CropZoneInfoPopup'
 import './style.css'
 
-/**
- * Builds the four blockers surrounding the crop window.
- *
- * These blockers keep Cesium input disabled outside the visible crop area
- * while leaving the crop window itself transparent to pointer events.
- *
- * @param {Object} crop - Crop dimensions.
- * @returns {Array<{className: string, style: Object}>} Blocker descriptors.
- */
-const buildCropOverlayBlockers = crop => {
-    const left = Number.isFinite(crop?.left) ? Math.max(0, Math.round(crop.left)) : 0
-    const top = Number.isFinite(crop?.top) ? Math.max(0, Math.round(crop.top)) : 0
-    const width = Number.isFinite(crop?.width) ? Math.max(0, Math.round(crop.width)) : 0
-    const height = Number.isFinite(crop?.height) ? Math.max(0, Math.round(crop.height)) : 0
-
-    if (width <= 0 || height <= 0) {
-        return []
-    }
-
-    return [
-        {
-            className: 'crop-overlay-blocker crop-overlay-blocker-top',
-            style: {
-                left:   0,
-                top:    0,
-                right:  0,
-                height: `${top}px`,
-            },
-        },
-        {
-            className: 'crop-overlay-blocker crop-overlay-blocker-left',
-            style: {
-                left:   0,
-                top:    `${top}px`,
-                width:  `${left}px`,
-                height: `${height}px`,
-            },
-        },
-        {
-            className: 'crop-overlay-blocker crop-overlay-blocker-right',
-            style: {
-                left:   `${left + width}px`,
-                top:    `${top}px`,
-                right:  0,
-                height: `${height}px`,
-            },
-        },
-        {
-            className: 'crop-overlay-blocker crop-overlay-blocker-bottom',
-            style: {
-                left:   0,
-                top:    `${top + height}px`,
-                right:  0,
-                bottom: 0,
-            },
-        },
-    ]
-}
-
-export const Cropper = memo(({overlay = false, className = '', context, options = {}, children}) => {
+export const Cropper = memo(({overlay = false, className = '', context, options = {}, children, renderRatioWidget = true}) => {
 
     const _cropperContainer = useRef(null)
     const _overlay = useRef(null)
@@ -148,7 +91,7 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
 
     return (
         <>
-            {overlayElement && cropper.ratioEditor &&
+            {overlayElement && cropper.ratioEditor && renderRatioWidget &&
                 <CropRatioEditorWidget context={context} id="crop-ratio-editor"/>
             }
 
@@ -188,13 +131,12 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                             // The overlay remains visual only. Transparent blockers handle hit-testing outside the crop.
                             pointerEvents: 'none',
                         }}
-                    >
+                    />
+                )}
+                {overlay && cropOverlayBlockers.length > 0 && (
+                    <div className="crop-overlay-blockers" aria-hidden="true">
                         {cropOverlayBlockers.map(blocker => (
-                            <div
-                                key={blocker.className}
-                                className={blocker.className}
-                                style={blocker.style}
-                            />
+                            <div key={blocker.className} className={blocker.className} style={blocker.style}/>
                         ))}
                     </div>
                 )}

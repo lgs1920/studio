@@ -7,7 +7,7 @@ description: Manage LGS1920 GitHub issues and Project planning, including triage
 
 Use this skill to keep issue metadata, the organization Project, branches, pull
 requests, and releases aligned with the [GitHub Project release and branch
-workflow specification](../../../tech-doc/specs/TECH-GITHUB-PROJECT-RELEASE-WORKFLOW-SPEC.md).
+workflow specification](../../../tech-doc/specs/delivery/TECH-GITHUB-PROJECT-RELEASE-WORKFLOW-SPEC.md).
 
 ## Scope and source of truth
 

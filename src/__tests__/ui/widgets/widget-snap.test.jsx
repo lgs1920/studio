@@ -8,6 +8,11 @@ const moveableState = vi.hoisted(() => ({
     props: [],
 }))
 
+const widgetCanvasState = vi.hoisted(() => ({
+    init:      () => Promise.resolve(),
+    instances: [],
+}))
+
 vi.mock('react-moveable', () => ({
     default: vi.fn((props) => {
         moveableState.props.push(props)
@@ -24,9 +29,25 @@ vi.mock('@Components/MainUI/context-menu/usePointerInteractions', () => ({
     usePointerInteractions: () => () => {},
 }))
 
-vi.mock('@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas', () => ({
-    Widget2Canvas: vi.fn(),
-}))
+vi.mock('@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas', () => {
+    class Widget2CanvasMock {
+        /**
+         * Creates a controllable widget canvas mirror for lifecycle tests.
+         */
+        constructor() {
+            const canvas = document.createElement('canvas')
+            const instance = {
+                destroy:   vi.fn(),
+                getCanvas: vi.fn(() => canvas),
+                init:      vi.fn(() => widgetCanvasState.init()),
+            }
+            widgetCanvasState.instances.push(instance)
+            return instance
+        }
+    }
+
+    return {Widget2Canvas: vi.fn(Widget2CanvasMock)}
+})
 
 vi.mock('@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder', () => ({
     ScreenMediaRecorder: {
@@ -75,6 +96,7 @@ const installGlobals = ({grid = {enabled: false, size: 30, snap: true}} = {}) =>
             },
         },
         stores: {
+            replay: proxy({recordingSync: false}),
             ui: proxy({
                 contextMenu: {
                     visible:  false,
@@ -126,6 +148,7 @@ const installGlobals = ({grid = {enabled: false, size: 30, snap: true}} = {}) =>
                     ratio: {locked: false},
                 })),
                 manageControlBox: vi.fn(),
+                onRotate: vi.fn(),
                 refreshEditorPreviewSnapshot: vi.fn(),
                 resolveWidgetsBoardContainer: vi.fn(() => canvas),
                 resolveWidgetsBoardReferenceContainer: vi.fn(() => canvas),
@@ -158,6 +181,8 @@ const latestMoveableProps = () => moveableState.props.at(-1)
 describe('Widget snap behavior', () => {
     beforeEach(() => {
         moveableState.props = []
+        widgetCanvasState.init = () => Promise.resolve()
+        widgetCanvasState.instances = []
     })
 
     afterEach(() => {
@@ -185,6 +210,20 @@ describe('Widget snap behavior', () => {
         })
         await waitFor(() => expect(__.ui.widgetManager.retrieveConfig).toHaveBeenCalled())
         expect(__.ui.widgetManager.retrieveConfig.mock.calls[0][1].snappable).toBe(false)
+    })
+
+    it('keeps rotation updates continuous for every widget preview', async () => {
+        installGlobals()
+
+        renderWidget({type: LGS_VISUAL_WIDGET, rotatable: true})
+
+        await waitFor(() => expect(__.ui.widgetManager.retrieveConfig).toHaveBeenCalled())
+
+        expect(latestMoveableProps().throttleRotate).toBe(0)
+
+        latestMoveableProps().onRotate({rotate: 12.345})
+
+        expect(lgs.stores.ui.widget.current.rotate).toBe(12.345)
     })
 
     it('keeps center snap enabled for visual widgets when grid snap is disabled', async () => {
@@ -281,6 +320,114 @@ describe('Widget snap behavior', () => {
         })
 
         expect(container.querySelector('.lgs-widget-container')?.style.pointerEvents).toBe('none')
+        expect(container.querySelector('.lgs-widget')?.classList.contains('crop-pass-through')).toBe(true)
+    })
+
+    it('keeps an unselected cropper transparent while editing the video frame', () => {
+        installGlobals()
+
+        const {container} = renderWidget({
+            id:        'video-crop-zone',
+            type:      LGS_VISUAL_WIDGET,
+            isCropper: true,
+        })
+
+        expect(container.querySelector('.lgs-widget-container')?.style.pointerEvents).toBe('none')
+        expect(container.querySelector('.lgs-widget')?.classList.contains('crop-pass-through')).toBe(true)
+        expect(latestMoveableProps().style).toEqual({pointerEvents: 'none'})
+    })
+
+    it('locks visual widget input only during synchronized recording', () => {
+        installGlobals()
+        lgs.stores.ui.video.preRecording = true
+
+        const view = renderWidget({type: LGS_VISUAL_WIDGET})
+
+        expect(view.container.querySelector('.lgs-widget')?.classList.contains('recording-locked')).toBe(false)
+
+        lgs.stores.ui.video.preRecording = false
+        lgs.stores.ui.video.recording = true
+        view.rerender(
+            <Widget isVisible={true} config={{
+                id:             'snap-widget',
+                group:          'test-widgets',
+                showControlBox: true,
+                type:           LGS_VISUAL_WIDGET,
+            }}>
+                <div>content</div>
+            </Widget>,
+        )
+        expect(view.container.querySelector('.lgs-widget')?.classList.contains('recording-locked')).toBe(false)
+
+        lgs.stores.replay.recordingSync = true
+        view.rerender(
+            <Widget isVisible={true} config={{
+                id:             'snap-widget',
+                group:          'test-widgets',
+                showControlBox: true,
+                type:           LGS_VISUAL_WIDGET,
+            }}>
+                <div>content</div>
+            </Widget>,
+        )
+        expect(view.container.querySelector('.lgs-widget')?.classList.contains('recording-locked')).toBe(true)
+    })
+
+    it('keeps the selected cropper content transparent while preserving its moveable handles', () => {
+        installGlobals()
+        lgs.stores.ui.widget.current = {id: 'video-crop-zone#test', rotate: 0}
+
+        const {container} = renderWidget({
+            id:        'video-crop-zone',
+            type:      LGS_VISUAL_WIDGET,
+            isCropper: true,
+        })
+
+        expect(container.querySelector('.lgs-widget-container')?.style.pointerEvents).toBe('none')
+        expect(container.querySelector('.lgs-widget')?.classList.contains('crop-pass-through')).toBe(true)
+        expect(latestMoveableProps().style).toEqual({pointerEvents: 'auto'})
+    })
+
+    it('cancels an in-flight canvas mirror initialization when the widget unmounts', async () => {
+        installGlobals()
+        lgs.stores.ui.video.preRecording = true
+
+        let resolveInitialization = null
+        widgetCanvasState.init = () => new Promise(resolve => {
+            resolveInitialization = resolve
+        })
+
+        const {unmount} = renderWidget({
+            type:         LGS_VISUAL_WIDGET,
+            widgetsBoard: 'video-crop-zone',
+        })
+
+        await waitFor(() => expect(widgetCanvasState.instances).toHaveLength(1))
+        const mirror = widgetCanvasState.instances[0]
+
+        unmount()
+        expect(mirror.destroy).toHaveBeenCalledTimes(1)
+
+        resolveInitialization()
+        await waitFor(() => expect(mirror.destroy).toHaveBeenCalledTimes(2))
+        expect(mirror.getCanvas).not.toHaveBeenCalled()
+    })
+
+    it('cleans up a canvas mirror whose asynchronous initialization is aborted', async () => {
+        installGlobals()
+        lgs.stores.ui.video.preRecording = true
+        widgetCanvasState.init = () => Promise.reject(new DOMException('Capture aborted', 'AbortError'))
+
+        renderWidget({
+            type:         LGS_VISUAL_WIDGET,
+            widgetsBoard: 'video-crop-zone',
+        })
+
+        await waitFor(() => expect(widgetCanvasState.instances).toHaveLength(1))
+        const mirror = widgetCanvasState.instances[0]
+        await waitFor(() => expect(mirror.destroy).toHaveBeenCalledTimes(1))
+
+        expect(mirror.getCanvas).not.toHaveBeenCalled()
     })
 
     it('does not snap a visual widget to widgets on another board', async () => {

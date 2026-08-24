@@ -65,7 +65,7 @@ export const GeocodingWidget = () => {
             top:             `${Math.round(top)}px`,
             left:            `${Math.round(left)}px`,
             attachTo: centerOnMobile ? 'top' : (openToRight ? 'top-left' : 'top-right'),
-            margin:          0,
+            margin:          lgs.gutter?.xs ?? 5,
             type:            LGS_WIDGET,
             group:           SCENE_WIDGETS,
             id:              'geocoding-widget',

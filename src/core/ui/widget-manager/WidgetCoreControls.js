@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { CREDITS_WIDGET, LGS_VISUAL_WIDGET, LOGO_WIDGET, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { CREDITS_WIDGET, LGS_VISUAL_WIDGET, LOGO_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { v4 as uuid }        from 'uuid'
 
 /**
@@ -31,6 +31,21 @@ export class WidgetCoreControls {
     }
 
     #getBoundsTarget = (config) => config.boundsContainer ?? config.container
+
+    #getElementMargins = element => {
+        if (!element || typeof getComputedStyle !== 'function') {
+            return {left: 0, right: 0, top: 0, bottom: 0}
+        }
+
+        const style = getComputedStyle(element)
+        const readMargin = value => Math.max(0, Number.parseFloat(value) || 0)
+        return {
+            left:   readMargin(style.marginLeft),
+            right:  readMargin(style.marginRight),
+            top:    readMargin(style.marginTop),
+            bottom: readMargin(style.marginBottom),
+        }
+    }
 
     /**
      * Keeps video widgets inside the crop using edge percentages.
@@ -390,16 +405,25 @@ export class WidgetCoreControls {
         const scaledWidth = defaultWidth * scaleX
         const scaledHeight = defaultHeight * scaleY
 
-        if (!config.fromDB && !config.fromRuntime) {
+        const isVideoBoardWidget = config.widgetsBoard === VIDEO_WIDGETS_BOARD
+        const shouldConstrainPosition = !config.isCropper && !isVideoBoardWidget
+        if (shouldConstrainPosition || (!config.fromDB && !config.fromRuntime)) {
+            const safeMargin = Math.max(0, Number.isFinite(config.margin) ? config.margin : 0)
+            const elementMargins = this.#getElementMargins(element)
+            const minimumLeft = container.left + safeMargin
+            const minimumTop = container.top + safeMargin
+            const maximumLeft = Math.max(
+                minimumLeft,
+                container.right - scaledWidth - safeMargin - elementMargins.left - elementMargins.right,
+            )
+            const maximumTop = Math.max(
+                minimumTop,
+                container.bottom - scaledHeight - safeMargin - elementMargins.top - elementMargins.bottom,
+            )
+
             config.position = {
-                left: Math.max(
-                    container.left,
-                    Math.min(left, container.right - scaledWidth),
-                ),
-                top:  Math.max(
-                    container.top,
-                    Math.min(top, container.bottom - scaledHeight),
-                ),
+                left: Math.min(Math.max(left, minimumLeft), maximumLeft),
+                top:  Math.min(Math.max(top, minimumTop), maximumTop),
             }
         }
 
@@ -677,7 +701,9 @@ export class WidgetCoreControls {
 
             const referenceRect = config.container.getBoundingClientRect()
             const boundsRect = this.#getBoundsTarget(config).getBoundingClientRect()
-            const allowAutoAdapt = this.#registry.windowResizing
+            const isSceneWidget = !config.isCropper &&
+                (!config.widgetsBoard || config.widgetsBoard === SCENE_WIDGETS_BOARD)
+            const allowAutoAdapt = this.#registry.windowResizing || isSceneWidget
 
             if (config.isCropper) {
                 if (allowAutoAdapt) {
@@ -740,7 +766,7 @@ export class WidgetCoreControls {
                 return
             }
 
-            const skipInitialAutoAdapt = first && (config.fromDB || config.fromRuntime)
+            const skipInitialAutoAdapt = first && (config.fromDB || config.fromRuntime) && !isSceneWidget
 
             // Video-board widgets are repositioned from the crop board's
             // coordinate system by repositionWidgetsForBoard. Applying the
@@ -775,7 +801,7 @@ export class WidgetCoreControls {
 
             let positionWasAdapted = false
             if (allowAutoAdapt && !skipInitialAutoAdapt && !config.isCropper && !isVideoBoardWidget) {
-                const adaptedPosition = this.adaptPositionToContainer(config, boundsRect)
+                const adaptedPosition = this.adaptPositionToContainer(config, boundsRect, element)
                 if (adaptedPosition.left !== config.position.left || adaptedPosition.top !== config.position.top) {
                     config.position = adaptedPosition
                     positionWasAdapted = true
@@ -844,7 +870,10 @@ export class WidgetCoreControls {
      * @param config - Widget configuration
      * @return {{left: number, top: number}} - new position
      */
-    adaptPositionToContainer = (config, container) => {
+    adaptPositionToContainer = (config, container, element = config?.element) => {
+        const margin = Math.max(0, Number.isFinite(config.margin) ? config.margin : 0)
+        const elementMargins = this.#getElementMargins(element)
+
         if (config.type === LGS_VISUAL_WIDGET) {
             const scaleX = config.scale?.x ?? 1
             const scaleY = config.scale?.y ?? 1
@@ -862,8 +891,8 @@ export class WidgetCoreControls {
             const rotatedHeight = (scaledWidth * absSin) + (scaledHeight * absCos)
             const halfRotatedWidth = rotatedWidth / 2
             const halfRotatedHeight = rotatedHeight / 2
-            const centerX = config.position.left + (width / 2)
-            const centerY = config.position.top + (height / 2)
+            const centerX = config.position.left + elementMargins.left + (width / 2)
+            const centerY = config.position.top + elementMargins.top + (height / 2)
             const clamp = (value, min, max) => {
                 if (min > max) {
                     return (min + max) / 2
@@ -871,25 +900,85 @@ export class WidgetCoreControls {
                 return Math.max(min, Math.min(value, max))
             }
 
-            const clampedCenterX = clamp(centerX, container.left + halfRotatedWidth, container.right - halfRotatedWidth)
-            const clampedCenterY = clamp(centerY, container.top + halfRotatedHeight, container.bottom - halfRotatedHeight)
+            const clampedCenterX = clamp(
+                centerX,
+                container.left + margin + elementMargins.left + halfRotatedWidth,
+                container.right - margin - elementMargins.right - halfRotatedWidth,
+            )
+            const clampedCenterY = clamp(
+                centerY,
+                container.top + margin + elementMargins.top + halfRotatedHeight,
+                container.bottom - margin - elementMargins.bottom - halfRotatedHeight,
+            )
 
             return {
-                left: clampedCenterX - (width / 2),
-                top:  clampedCenterY - (height / 2),
+                left: clampedCenterX - elementMargins.left - (width / 2),
+                top:  clampedCenterY - elementMargins.top - (height / 2),
             }
         }
 
         return {
             left: Math.max(
-                container.left,
-                Math.min(config.position.left, container.right - config.dimensions.width * config.scale.x),
+                container.left + margin,
+                Math.min(
+                    config.position.left,
+                    Math.max(
+                        container.left + margin,
+                        container.right - config.dimensions.width * config.scale.x - margin - elementMargins.left - elementMargins.right,
+                    ),
+                ),
             ),
             top:  Math.max(
-                container.top,
-                Math.min(config.position.top, container.bottom - config.dimensions.height * config.scale.y),
+                container.top + margin,
+                Math.min(
+                    config.position.top,
+                    Math.max(
+                        container.top + margin,
+                        container.bottom - config.dimensions.height * config.scale.y - margin - elementMargins.top - elementMargins.bottom,
+                    ),
+                ),
             ),
         }
+    }
+
+    /**
+     * Keeps a scene widget inside its resolved bounds after an interaction.
+     * @param {Object} config - Widget configuration.
+     * @param {HTMLElement} [element=config.element] - Rendered widget element.
+     * @returns {{positionChanged: boolean, scaleChanged: boolean}} Applied changes.
+     */
+    constrainSceneWidgetToBounds = (config, element = config?.element) => {
+        const isSceneWidget = config && !config.isCropper &&
+            (!config.widgetsBoard || config.widgetsBoard === SCENE_WIDGETS_BOARD)
+        const boundsTarget = config?.boundsContainer ?? config?.container
+        const bounds = boundsTarget?.getBoundingClientRect?.()
+
+        if (!isSceneWidget || !bounds || bounds.width <= 0 || bounds.height <= 0) {
+            return {positionChanged: false, scaleChanged: false}
+        }
+
+        config.scale = config.scale ?? {x: 1, y: 1}
+        const previousScale = {...(config.scale ?? {x: 1, y: 1})}
+        if (config.type === LGS_VISUAL_WIDGET) {
+            config.scale = this.adaptScaleToContainer(config, bounds)
+            if (element && (config.scale.x !== previousScale.x || config.scale.y !== previousScale.y)) {
+                __.ui.widgetManager.transform.setScale(element, config.scale.x, config.scale.y)
+            }
+        }
+
+        const previousPosition = {...(config.position ?? {left: 0, top: 0})}
+        const nextPosition = this.adaptPositionToContainer(config, bounds, element)
+        const positionChanged = nextPosition.left !== previousPosition.left || nextPosition.top !== previousPosition.top
+        const scaleChanged = config.scale.x !== previousScale.x || config.scale.y !== previousScale.y
+
+        if (element && positionChanged) {
+            element.style.left = `${nextPosition.left}px`
+            element.style.top = `${nextPosition.top}px`
+        }
+        config.position = nextPosition
+        config.runtimeReady = true
+
+        return {positionChanged, scaleChanged}
     }
 
     /**
@@ -917,9 +1006,19 @@ export class WidgetCoreControls {
         const absSin = Math.abs(Math.sin(angle))
         const rotatedWidth = (width * absCos) + (height * absSin)
         const rotatedHeight = (width * absSin) + (height * absCos)
+        const safeMargin = Math.max(0, Number.isFinite(config.margin) ? config.margin : 0)
+        const elementMargins = this.#getElementMargins(config.element)
+        const availableWidth = Math.max(
+            1,
+            container.width - (2 * safeMargin) - elementMargins.left - elementMargins.right,
+        )
+        const availableHeight = Math.max(
+            1,
+            container.height - (2 * safeMargin) - elementMargins.top - elementMargins.bottom,
+        )
 
-        const limitX = rotatedWidth > 0 ? container.width / rotatedWidth : 1
-        const limitY = rotatedHeight > 0 ? container.height / rotatedHeight : 1
+        const limitX = rotatedWidth > 0 ? availableWidth / rotatedWidth : 1
+        const limitY = rotatedHeight > 0 ? availableHeight / rotatedHeight : 1
         const minScale = Number(config.minScale)
         const maxScale = Number(config.maxScale)
         const explicitMinScale = Number.isFinite(minScale) && minScale > 0 ? minScale : MIN_SCALE

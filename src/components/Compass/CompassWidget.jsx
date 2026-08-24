@@ -37,7 +37,7 @@ export const CompassWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
     const widgetEditor = contextState.widgetEditor
     const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
     const showDuringVideoCapture = widgetsBoard === VIDEO_WIDGETS_BOARD
-        && (video.preRecording || video.recording || video.finalizing)
+        && (video.preRecording || video.recording || video.recordingHQ || video.finalizing)
     const container = useMemo(() => __.ui.widgetManager.resolveWidgetsBoardContainer(widgetsBoard), [widgetsBoard])
 
     // Memoize widget configuration
@@ -64,7 +64,7 @@ export const CompassWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
             min:          {width: 50},
             max:          {width: 300},
             snap:         'svg',
-            margin:       0,
+            margin:       lgs.gutter?.xs ?? 5,
             widgetsBoard: widgetsBoard,
             zIndex:       zIndex,
         }

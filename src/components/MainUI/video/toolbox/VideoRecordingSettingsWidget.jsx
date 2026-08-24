@@ -23,15 +23,14 @@ import { useSnapshot } from 'valtio'
 const VIDEO_RECORDING_SETTINGS_TOOLBAR_ZINDEX = 'var(--lgs-video-recording-settings-toolbar-zindex)'
 
 /**
- * Component for selecting video quality with draggable toolbar
+ * Component for the video recording setup HUD widget.
  * @component
- * @returns {JSX.Element} Draggable video quality selector UI
+ * @returns {JSX.Element} Video recording setup HUD
  */
 export const VideoRecordingSettingsWidget = ({id}) => {
     const video = useSnapshot(lgs.stores.ui.video)
 
     useEffect(() => {
-        lgs.stores.ui.drawers.open = null
         const previous = lgs.stores.ui.widget.list.get(id) ?? {}
         lgs.stores.ui.widget.list.set(id, {
             ...previous,
@@ -89,22 +88,23 @@ export const VideoRecordingSettingsWidget = ({id}) => {
     const config = useMemo(() => {
         return {
             left: '50%',
-            top: __.device.isMobile && __.device.isPortrait ? '90%' : '80%',
+            top: '90%',
             attachTo: 'bottom',
+            margin: lgs.gutter?.s ?? 8,
             canLock: false,
             canReduce: false,
             opacity:  lgs.settings.ui.toolbars.opacity,
             type:   LGS_TOOLBAR,
             zIndex:         VIDEO_RECORDING_SETTINGS_TOOLBAR_ZINDEX,
             id:             id,
-            persist: true,
+            persist: false,
             showControlBox: false,
             group: VIDEO_TOOLS_WIDGETS,
         }
     }, [id])
 
     return (
-        <Widget isVisible={true} config={config}>
+        <Widget isVisible={true} className="video-recording-settings-widget-shell" config={config}>
             <VideoRecordingSettingsToolbar/>
         </Widget>
     )

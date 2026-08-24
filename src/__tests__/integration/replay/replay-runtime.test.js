@@ -148,6 +148,7 @@ describe('JourneyReplayRuntime', () => {
         expect(store.playing).toBe(false)
         expect(store.progress).toBe(0)
         expect(store.dynamicFrameState).toBeNull()
+        expect(store.resolvedFrameState).toBeNull()
         expect(store.metricOverlay.visible).toBe(false)
     })
 })

@@ -15,6 +15,7 @@ describe('WidgetManager video widget rehydration', () => {
     let board
     let widget
     let config
+    let widgetCache
 
     beforeEach(() => {
         board = document.createElement('div')
@@ -54,7 +55,8 @@ describe('WidgetManager video widget rehydration', () => {
                 },
             },
         }
-
+        widgetCache = {mount: vi.fn()}
+        globalThis.__ = {ui: {widgetCache}}
         manager = new WidgetManager()
         manager.resolveWidgetsBoardReferenceContainer = vi.fn(() => board)
         manager.getWidgetConfig = vi.fn(() => config)
@@ -80,5 +82,6 @@ describe('WidgetManager video widget rehydration', () => {
         expect(widget.style.width).toBe('200px')
         expect(widget.style.height).toBe('100px')
         expect(manager.setScale).toHaveBeenCalledWith(widget, 1.65, 1.65)
+        expect(widgetCache.mount).toHaveBeenCalledWith(config.id)
     })
 })

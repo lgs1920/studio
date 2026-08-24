@@ -278,7 +278,7 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
       group: SCENE_WIDGETS,
       id: CAMERA_ADJUSTMENT_WIDGET,
       left: "50%",
-      margin: 0,
+      margin: lgs.gutter.s,
       opacity: 1,
       persist: false,
       resizable: false,

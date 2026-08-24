@@ -83,7 +83,7 @@ export const TextWidgetEditor = ({entity}) => {
                                          ? Number(position.rotate)
                                          : null
                 const angle = liveRotation ?? positionRotation ?? persistedRotation
-                setLocalRotation(Math.ceil(angle))
+                setLocalRotation(angle)
 
                 if (currentWidgetId !== entity || currentWidgetRotate === undefined) {
                     $widget.current = {
@@ -180,7 +180,7 @@ export const TextWidgetEditor = ({entity}) => {
         }
 
         const angle = Number(widget.current.rotate)
-        return Math.ceil(Number.isFinite(angle) ? angle : 0)
+        return Number.isFinite(angle) ? angle : 0
     }, [entity, localRotation, widget])
 
     const getColor = useCallback((item, alpha = false) => __.ui.ui.resolveItemColor(item, alpha), [])

@@ -80,6 +80,8 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', async () => {
     return {
     WaButton: ({children, ...props}) => <button type="button" {...props}>{children}</button>,
     WaButtonGroup: ({children, ...props}) => <div role="group" {...props}>{children}</div>,
+    WaOption: ({children, ...props}) => <option {...props}>{children}</option>,
+    WaSelect: ({children, value, onChange, ...props}) => <select value={value} onChange={onChange} {...props}>{children}</select>,
     WaDialog: ({children, open, onWaHide, lightDismiss, ...props}) => {
         const wasOpen = React.useRef(open)
         const manualHideDispatched = React.useRef(false)
@@ -295,6 +297,7 @@ describe('VideoDownloadAndShareDialog', () => {
                     video: {
                         preRecording: false,
                         recording:    false,
+                        recordingHQ:  false,
                         paused:       false,
                         finalizing:   true,
                     },
@@ -708,6 +711,7 @@ describe('VideoDownloadAndShareDialog', () => {
         })
 
         expect(globalThis.lgs.stores.ui.video.editing).toBe(true)
+        expect(globalThis.lgs.stores.ui.video.recordingHQ).toBe(true)
         expect(globalThis.lgs.stores.ui.video.finalizing).toBe(true)
         expect(screen.queryByTestId('video-preview-dialog')).toBeNull()
 
@@ -722,6 +726,7 @@ describe('VideoDownloadAndShareDialog', () => {
         })
 
         expect(globalThis.lgs.stores.ui.video.editing).toBe(false)
+        expect(globalThis.lgs.stores.ui.video.recordingHQ).toBe(false)
         expect(globalThis.lgs.stores.ui.video.finalizing).toBe(false)
         expect(screen.queryByTestId('video-preview-dialog')).not.toBeNull()
     })

@@ -199,7 +199,7 @@ Only after the test and build gates pass:
 
 1. switch `dev`, `build`, and `preview` scripts to the approved Bun commands
 2. remove Vite-only configuration and dependencies
-3. update the dependency inventory in `tech-doc/specs/README_DEPENDENCIES.md`
+3. update the dependency inventory in `tech-doc/specs/delivery/README_DEPENDENCIES.md`
 4. update CI and deployment documentation
 5. run the complete validation suite and inspect the generated application manually
 

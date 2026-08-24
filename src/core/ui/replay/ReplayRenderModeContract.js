@@ -122,7 +122,9 @@ export const createReplayRenderModeContract = ({
         renderMode: mode,
         logicalFrame: cloneValue(logicalFrame),
         cameraPose: cloneValue(cameraPose ?? logicalFrame?.cameraPose),
-        trackPath: cloneValue(trackPath),
+        // Track geometry is immutable plan-owned data. Retain its reference so
+        // frame publication never clones an entire journey on the UI thread.
+        trackPath: trackPath ?? null,
         initialCameraState: cloneCameraState(initialCameraState),
         renderSpec: normalizeRenderSpec(renderSpec),
         visibleOverlayIds: normalizeOverlayIds(visibleOverlayIds),

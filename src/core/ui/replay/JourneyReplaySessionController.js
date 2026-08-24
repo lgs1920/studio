@@ -71,6 +71,9 @@ import {
     REPLAY_MARKER_MODE_TRACE, getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker,
     normalizeJourneyReplayProgressionStyle, normalizeJourneyReplaySmoothing, normalizeJourneyReplayTrace,
 }                                                                                          from './JourneyReplayProgressionStyle'
+import {
+    clearReplayRenderTarget, replayRenderTargetFor, setReplayRenderTarget,
+}                                                                                          from './ReplayRenderTarget'
 
 const DEFAULT_DURATION = 60
 const PROFILE_HOVER_RENDER_INTERVAL = 120
@@ -1060,6 +1063,7 @@ export class JourneyReplaySessionController {
             updateCameraFromCesiumControls: (...args) => JourneyReplayCameraController.updateCameraFromCesiumControls(this, ...args),
             syncCameraDrawerFromSettings: (...args) => JourneyReplayCameraController.syncCameraDrawerFromSettings(this, ...args),
             now: (...args) => JourneyReplayCameraController.now(this, ...args),
+            cesiumViewer: (...args) => JourneyReplayCameraController.cesiumViewer(this, ...args),
             cesiumScene: (...args) => JourneyReplayCameraController.cesiumScene(this, ...args),
             smoothRadians: (...args) => JourneyReplayCameraController.smoothRadians(this, ...args),
             timeNormalizedSmoothingFactor: (...args) => JourneyReplayCameraController.timeNormalizedSmoothingFactor(this, ...args),
@@ -1068,6 +1072,7 @@ export class JourneyReplaySessionController {
             cancelCameraBezierTransition: (...args) => JourneyReplayCameraController.cancelCameraBezierTransition(this, ...args),
             currentCameraFrame: (...args) => JourneyReplayCameraController.currentCameraFrame(this, ...args),
             applyCameraFrame: (...args) => JourneyReplayCameraController.applyCameraFrame(this, ...args),
+            applyReplayCameraTransitionFrame: (...args) => JourneyReplayCameraController.applyReplayCameraTransitionFrame(this, ...args),
             interpolateCameraFrame: (...args) => JourneyReplayCameraController.interpolateCameraFrame(this, ...args),
             cameraTransitionVelocity: (...args) => JourneyReplayCameraController.cameraTransitionVelocity(this, ...args),
             startDeterministicCameraTransition: (...args) => JourneyReplayCameraController.startDeterministicCameraTransition(this, ...args),
@@ -1191,6 +1196,32 @@ export class JourneyReplaySessionController {
         return this[JOURNEY_REPLAY_INTERNAL_STATE].lastReplayLogicalFrame
     }
 
+    /**
+     * Route replay camera and scene writes to an explicit render target.
+     *
+     * @param {Object|null} target - Viewer, scene, and canvas target.
+     * @returns {Object|null} Installed target.
+     */
+    setRenderTarget = (target = null) => {
+        this[JOURNEY_REPLAY_INTERNAL_STATE].renderer?.setRenderTarget?.(target)
+        return setReplayRenderTarget(this, target)
+    }
+
+    /**
+     * Restore replay rendering to Studio's interactive Cesium viewer.
+     *
+     * @param {Object|null} expectedTarget - Optional target identity guard.
+     * @returns {boolean} Whether the target was cleared.
+     */
+    clearRenderTarget = (expectedTarget = null) => {
+        const activeTarget = replayRenderTargetFor(this)
+        const cleared = clearReplayRenderTarget(this, expectedTarget)
+        if (cleared && activeTarget) {
+            this[JOURNEY_REPLAY_INTERNAL_STATE].renderer?.setRenderTarget?.(null)
+        }
+        return cleared
+    }
+
     #samplerConfigurationKey = ({
                                     journey = null,
                                     scope = REPLAY_SCOPE_ALL_TRACKS,
@@ -1221,6 +1252,8 @@ export class JourneyReplaySessionController {
     beginReplayCameraExport = (...args) => JourneyReplaySessionPlaybackController.beginReplayCameraExport(this, ...args)
     endReplayCameraExport = (...args) => JourneyReplaySessionPlaybackController.endReplayCameraExport(this, ...args)
     renderReplayExportFrame = (...args) => JourneyReplaySessionPlaybackController.renderReplayExportFrame(this, ...args)
+    cesiumViewer = (...args) => JourneyReplayCameraController.cesiumViewer(this, ...args)
+    cesiumScene = (...args) => JourneyReplayCameraController.cesiumScene(this, ...args)
     syncCameraFromCesiumControls = (...args) => JourneyReplaySessionSceneController.syncCameraFromCesiumControls(this, ...args)
     handleProfileHover = (...args) => JourneyReplaySessionSceneController.handleProfileHover(this, ...args)
     handleProfileLeave = (...args) => JourneyReplaySessionSceneController.handleProfileLeave(this, ...args)

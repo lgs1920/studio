@@ -905,7 +905,7 @@ body.mobile .orbit-widget-body {
     inset: 0;
     width: 100%;
     height: 100%;
-    transition: none;
+    transition: opacity 900ms ease;
     opacity: 0;
     filter: sepia(0.2) saturate(0.8);
     object-fit: cover;
@@ -990,7 +990,7 @@ body.mobile .orbit-widget-body {
 }
 
 .welcome-hero-poi.is-revealed.is-positioned,
-.welcome-hero-route:not([data-render-mode='worker']) .welcome-hero-poi {
+.welcome-hero-route[data-render-mode='fallback'] .welcome-hero-poi {
     visibility: visible;
     opacity: 1;
 }
@@ -1049,7 +1049,6 @@ body.mobile .orbit-widget-body {
 .welcome-hero-scrim {
     z-index: 1;
     background:
-        linear-gradient(135deg, rgba(20, 35, 28, 0.18), transparent 58%),
         linear-gradient(90deg, rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.24) 46%, rgba(0, 0, 0, 0.04) 100%),
         linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.14) 48%, rgba(0, 0, 0, 0.54));
     pointer-events: none;

@@ -99,7 +99,7 @@ export const CreditsWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
             left:            '0px',
             type:            LGS_VISUAL_WIDGET,
             group:           MULTI_PURPOSE_WIDGETS,
-            margin:          5,
+            margin:          lgs.gutter?.xs ?? 5,
             attachTo:        'bottom-left',
             anchorOnScale:   'bottom-left',
             draggable:       false,

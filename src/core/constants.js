@@ -470,6 +470,7 @@ export const LGS_WIDGET_SCALE_FACTOR = LGS_WIDGET_SCALE_EFFECTIVE
 export const WIDGET_MOUNT_TIMEOUT = 15000
 
 export const VIDEO_CROP_ZONE = 'video-crop-zone'
+export const REPLAY_RECORDING_MONITOR_WIDGET_ID = 'replay-recording-monitor-widget'
 export const VIDEO_TOOLS_WIDGETS   = 'video-tools-widgets',
              CROP_TOOLS_WIDGETS    = 'crop-tools-widgets',
              MULTI_PURPOSE_WIDGETS = 'multi-purpose-widgets',

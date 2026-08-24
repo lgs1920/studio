@@ -75,7 +75,7 @@ export const TextWidget = ({id, context, zIndex}) => {
             left:            '50%',
             type:            LGS_VISUAL_WIDGET,
             group:           widgetsBoard === SCENE_WIDGETS_BOARD ? SCENE_WIDGETS : JOURNEY_WIDGETS,
-            margin:          5,
+            margin:          lgs.gutter?.xs ?? 5,
             attachTo: 'center',
             scalable:        true,
             rotatable:       true,

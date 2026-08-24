@@ -18,7 +18,10 @@ import { NameValueUnit }                                from '@Components/DataDi
 import { DateTimeDisplay }                              from '@Components/DateTimeDisplay'
 import { useWidgetScaleCorrection } from '@Components/MainUI/widgets/useWidgetScaleCorrection'
 import { VIDEO_WIDGETS_BOARD }                          from '@Core/constants'
-import { resolveReplayVideoStatsWidgetVisibility }      from '@Core/ui/replay/ReplayOverlayResolver'
+import {
+    resolveReplayDynamicFrameState,
+    resolveReplayVideoStatsWidgetVisibility,
+}                                                       from '@Core/ui/replay/ReplayOverlayResolver'
 import { Widget2Canvas }                                from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
 import {
     DEFAULT_JOURNEY_STATS_DATE_TIME_STACK,
@@ -201,19 +204,18 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
     }, [id, configuration])
 
     const replayController = __.ui?.replay?.controller ?? null
-    const replayFrameState = replay?.deferredExportPlan?.runtime?.frameState
-                             ?? replay?.dynamicFrameState
-                             ?? null
+    const replayFrameState = resolveReplayDynamicFrameState(replay)
 
     const dynamicReplaySample = useMemo(() => {
         if (!isDynamicMode) {
             return null
         }
 
-        return resolveDynamicJourneyReplayStatsSample({
-            replay,
-            controller: replayController,
-        })
+        return replayFrameState?.sample
+               ?? resolveDynamicJourneyReplayStatsSample({
+                   replay,
+                   controller: replayController,
+               })
     }, [isDynamicMode, replay, replayController, replayFrameState])
 
     /**
@@ -577,7 +579,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
             case 'date':
                 return (
                     <DateTimeDisplay
-                        className="journey-stats-date"
+                        className="journey-stats-date static-widget-part"
                         items={date.items}
                         stackDateTime={dateTimeStack}
                         key="date"
@@ -585,7 +587,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                 )
             case 'location':
                 return (
-                    <div className="journey-stats-date journey-stats-location" key="location">
+                    <div className="journey-stats-date journey-stats-location static-widget-part" key="location">
                         <span>{journeyLocation}</span>
                     </div>
                 )
@@ -597,7 +599,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                              ? placeholder
                              : <NameValueUnit value={displayMetrics.distance} units={DISTANCE_UNITS} noUnit/>}
                         </div>
-                        <div className="journey-stats-label-bold">{`Distance (${units.distance})`}</div>
+                        <div className="journey-stats-label-bold static-widget-part">{`Distance (${units.distance})`}</div>
                     </div>
                 )
             case 'elevation':
@@ -609,7 +611,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                              : <NameValueUnit value={displayMetrics.positive.elevation} units={ELEVATION_UNITS} noUnit
                                               precision="0"/>}
                         </div>
-                        <div className="journey-stats-label-bold">{`Elevation (${units.elevation})`}</div>
+                        <div className="journey-stats-label-bold static-widget-part">{`Elevation (${units.elevation})`}</div>
                     </div>
                 )
             case 'duration':
@@ -618,13 +620,13 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                         <div className="journey-stats-val-huge dynamic-widget-part">
                             {useVideoStatsPlaceholder ? durationPlaceholder : formattedDuration}
                         </div>
-                        <div className="journey-stats-label-bold">{'DURATION'}</div>
+                        <div className="journey-stats-label-bold static-widget-part">{'DURATION'}</div>
                     </div>
                 )
             case 'altitude':
                 return (
                     <div className="journey-stats-row" key="altitude">
-                        <div className="journey-stats-label">{'Altitude'}<span>{`(${units.elevation})`}</span></div>
+                        <div className="journey-stats-label static-widget-part">{'Altitude'}<span>{`(${units.elevation})`}</span></div>
                         <div className="journey-stats-value dynamic-widget-part">
                             {useVideoStatsPlaceholder
                              ? placeholder
@@ -652,7 +654,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
             case 'speed':
                 return (
                     <div className="journey-stats-row" key="speed">
-                        <div className="journey-stats-label">{'Speed'}<span>{`(${units.speed})`}</span></div>
+                        <div className="journey-stats-label static-widget-part">{'Speed'}<span>{`(${units.speed})`}</span></div>
                         <div className="journey-stats-value dynamic-widget-part">
                             {useVideoStatsPlaceholder
                              ? placeholder
@@ -675,7 +677,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
             case 'pace':
                 return (
                     <div className="journey-stats-row" key="pace">
-                        <div className="journey-stats-label">{'Pace'}<span>{`(${units.pace})`}</span></div>
+                        <div className="journey-stats-label static-widget-part">{'Pace'}<span>{`(${units.pace})`}</span></div>
                         <div className="journey-stats-value dynamic-widget-part">
                             {useVideoStatsPlaceholder ? placeholder : paceValues.average && paceValues.average}
                         </div>
@@ -747,7 +749,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
     return (
         <div
             ref={widgetRef}
-            className="journey-stats-widget static-widget-part"
+            className="journey-stats-widget"
             style={widgetStyle}
             aria-hidden={!isVisible}
             data-video-overlay-mode={isVideoBoard ? mode : undefined}
@@ -755,7 +757,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
         >
             {visibleTextGroups.map((group, index) => (
                 <Fragment key={`${group.group}-${group.items.join('-')}`}>
-                    {index > 0 && <SlDivider style={separatorStyle}/>}
+                    {index > 0 && <SlDivider className="static-widget-part" style={separatorStyle}/>}
                     {renderTextGroup(group)}
                 </Fragment>
             ))}

@@ -24,7 +24,7 @@ import { createPortal } from 'react-dom'
 import { useCallback, useEffect, useRef } from 'react'
 import { default as ReactMarkdown } from 'react-markdown'
 import { useSnapshot } from 'valtio'
-import { markdown as dependencies } from '../../../tech-doc/specs/README_DEPENDENCIES.md'
+import { markdown as dependencies } from '../../../tech-doc/specs/delivery/README_DEPENDENCIES.md'
 
 /**
  * Renders the code dependencies drawer.

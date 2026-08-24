@@ -14,8 +14,17 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { describe, expect, it, vi } from 'vitest'
-import { runDeferredJourneyDataLoad } from '@Core/ui/deferredJourneyData'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const {preCacheMock} = vi.hoisted(() => ({
+    preCacheMock: vi.fn(async () => undefined),
+}))
+
+vi.mock('@zumer/snapdom', () => ({
+    preCache: preCacheMock,
+}))
+
+import { precacheSnapdomAssets, runDeferredJourneyDataLoad } from '@Core/ui/deferredJourneyData'
 
 vi.hoisted(() => {
     if (!Object.getOwnPropertyDescriptor(document, 'adoptedStyleSheets')) {
@@ -46,6 +55,21 @@ const dependencies = ({journeys = []} = {}) => ({
 })
 
 describe('deferred journey data loading', () => {
+    beforeEach(() => {
+        preCacheMock.mockClear()
+    })
+
+    it('pre-caches SnapDOM fonts against the requested document root', async () => {
+        const root = document.createElement('main')
+
+        await precacheSnapdomAssets({root})
+
+        expect(preCacheMock).toHaveBeenCalledWith(root, {
+            embedFonts: true,
+            fontStylesheetDomains: ['fonts.googleapis.com'],
+        })
+    })
+
     it('loads remaining journeys, refreshes groups and POI indexes', async () => {
         const deps = dependencies({journeys: [{slug: 'journey-a'}, {slug: 'journey-b'}]})
 

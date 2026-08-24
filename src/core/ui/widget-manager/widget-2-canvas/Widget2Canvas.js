@@ -661,7 +661,9 @@ export class Widget2Canvas {
             return img
         }
 
-        const canvas = await snapdom.toCanvas(el, options)
+        const canvas = typeof snapdom === 'function'
+                       ? await (await snapdom(el, options)).toCanvas()
+                       : await snapdom.toCanvas(el, options)
         if (startedAt) {
             this.#logTiming(`snapdom:${el?.tagName?.toLowerCase?.() ?? 'node'}`, startedAt)
         }
@@ -699,9 +701,15 @@ export class Widget2Canvas {
      * @param {HTMLCanvasElement|HTMLImageElement} source
      */
     #updateCanvas = (source) => {
-        const scale = this.#options.scale
-        const logicalW = this.#original?.offsetWidth ?? (source.width / scale)
-        const logicalH = this.#original?.offsetHeight ?? (source.height / scale)
+        const scale = Number(this.#options.scale) > 0 ? Number(this.#options.scale) : 1
+        const sourceWidth = Number(source?.width) || 0
+        const sourceHeight = Number(source?.height) || 0
+        const logicalW = sourceWidth > 0
+                         ? sourceWidth / scale
+                         : (this.#original?.offsetWidth ?? 0)
+        const logicalH = sourceHeight > 0
+                         ? sourceHeight / scale
+                         : (this.#original?.offsetHeight ?? 0)
 
         // 1. If the canvas doesn't exist, create it once
         if (!this.#canvas) {
@@ -723,9 +731,13 @@ export class Widget2Canvas {
         if (this.#canvas.width !== source.width || this.#canvas.height !== source.height) {
             this.#canvas.width = source.width
             this.#canvas.height = source.height
-            this.#canvas.style.width = `${logicalW}px`
-            this.#canvas.style.height = `${logicalH}px`
         }
+
+        // The bitmap is authoritative after a layout-changing update. Always
+        // synchronize its CSS box, even when the physical bitmap dimensions
+        // happen to remain unchanged after rounding.
+        this.#canvas.style.width = `${logicalW}px`
+        this.#canvas.style.height = `${logicalH}px`
 
         // 3. Draw onto the PERMANENT canvas instance
         const ctx = this.#canvas.getContext('2d')

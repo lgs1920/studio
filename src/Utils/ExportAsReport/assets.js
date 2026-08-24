@@ -215,10 +215,10 @@ export const uniqueIconColors = colors => Array.from(
         .map(color => [pdfIconColorKey('color', color), normalizeColor(color, [0, 0, 0])])).values(),
 )
 
-export const loadPDFIcons = async (theme = getExportTheme(), {trackColors = []} = {}) => {
-    const brandColor = cssColor(parseCssColor(theme.brand, [34, 91, 155]))
+export const loadPDFIcons = async (theme = getExportTheme(), {trackColors = [], iconColor = null} = {}) => {
+    const brandColor = cssColor(iconColor ?? parseCssColor(theme.brand, [34, 91, 155]))
     const iconEntries = [
-        ...Object.entries(PDF_ICON_DEFS).map(([key, iconDefinition]) => [key, iconDefinition, '#000000']),
+        ...Object.entries(PDF_ICON_DEFS).map(([key, iconDefinition]) => [key, iconDefinition, brandColor]),
         ['northBlack', MAP_ICON_DEFS.north, '#000000'],
         ['northBrand', MAP_ICON_DEFS.north, brandColor],
         ['progressBlack', MAP_ICON_DEFS.progress, '#000000'],
@@ -296,7 +296,7 @@ export const drawTextLink = (doc, text, x, y, url, options = {}) => {
     }
 }
 
-export const drawInlineLinks = (doc, items, rightX, y) => {
+export const drawInlineLinks = (doc, items, rightX, y, {separatorColor = PDF_COLORS.muted} = {}) => {
     const separator = ' | '
     const separatorWidth = doc.getTextWidth(separator)
     const totalWidth = items.reduce((width, item, index) => (
@@ -306,7 +306,7 @@ export const drawInlineLinks = (doc, items, rightX, y) => {
 
     items.forEach((item, index) => {
         if (index > 0) {
-            setColor(doc, 'setTextColor', PDF_COLORS.muted)
+            setColor(doc, 'setTextColor', separatorColor)
             doc.text(separator, x, y)
             x += separatorWidth
         }

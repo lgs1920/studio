@@ -48,10 +48,101 @@
     opacity: 1;
 }
 
-.video-recording-settings-toolbar .lgs-tunnel-container,
-.video-recording-settings-toolbar .lgs-tunnel-bar {
+.lgs-widget.video-recorder-widget-shell,
+.lgs-widget.video-recording-settings-widget-shell {
+    margin: 0;
+}
+
+.video-recording-settings-menu {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xxs);
     width: max-content;
     max-width: max-content;
+}
+
+.video-recording-settings-menu wa-button::part(base) {
+    gap: var(--lgs-gutter-xxs);
+    white-space: nowrap;
+}
+
+.video-recording-settings-menu wa-icon {
+    font-size: var(--lgs-font-size-s);
+}
+
+.video-recording-settings-menu #video-ratio-settings-trigger wa-icon,
+.video-recording-settings-menu #video-quality-fps-settings-trigger wa-icon {
+    font-size: var(--lgs-font-size-m);
+}
+
+.video-recording-settings-menu #video-ratio-settings-trigger > wa-icon[slot='end'],
+.video-recording-settings-menu #video-quality-fps-settings-trigger > wa-icon[slot='end'] {
+    font-size: 0.875em;
+}
+
+.video-recording-settings-menu .video-recorder-start-recording wa-icon,
+.video-recording-settings-menu .video-recording-settings-replay wa-icon {
+    font-size: var(--lgs-font-size-m);
+}
+
+.video-recording-settings-menu .video-recorder-start-recording > span {
+    display: none;
+}
+
+.video-recording-settings-menu #video-cancel-editing > span {
+    display: none;
+}
+
+.video-recording-settings-menu .video-recorder-start-recording::part(base) {
+    padding: 0;
+}
+
+.video-recording-settings-menu .video-recording-settings-cancel::part(base) {
+    justify-content: center;
+    padding-block: 0;
+    padding-inline: var(--lgs-gutter-xs);
+}
+
+.video-recording-settings-cancel-separator {
+    align-self: stretch;
+    margin-inline: var(--lgs-gutter-xs);
+    border-inline-start: 1px solid var(--lgs-card-on-map-border-color);
+}
+
+.video-recording-settings-popup {
+    display: flex;
+    flex-direction: column;
+    min-width: max-content;
+    padding: var(--lgs-on-map-padding, var(--lgs-gutter-xs));
+    gap: var(--lgs-gutter-xs);
+    box-shadow: var(--lgs-on-map-floating-shadow, var(--sl-shadow-large));
+}
+
+.video-recording-settings-popup .video-fps-widget,
+.video-recording-settings-popup .video-quality-widget {
+    padding: var(--lgs-gutter-xxs);
+}
+
+.video-preset-toolbar-embedded {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
+}
+
+.video-preset-toolbar-embedded .video-preset-widget,
+.video-preset-toolbar-embedded .video-choice-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--lgs-gutter-xxs);
+}
+
+.video-preset-toolbar-embedded .video-choice-button::part(base) {
+    justify-content: space-between;
+}
+
+.video-choice-buttons wa-button.video-choice-button > wa-icon[slot='end'] {
+    font-size: 0.875em;
 }
 
 .video-recorder-widget .duration,
@@ -97,7 +188,34 @@
     padding: 0;
 }
 
+.video-recorder-widget.video-recorder-widget-recording .video-recorder-action::part(base) {
+    min-width: var(--lgs-dimension);
+    min-height: var(--lgs-dimension);
+}
+
+.video-recorder-widget.video-recorder-widget-recording .video-recorder-replay-progress .replay-progress-action::part(base) {
+    min-width: var(--lgs-dimension);
+    min-height: var(--lgs-dimension);
+}
+
 .video-recorder-widget .video-recorder-action wa-icon {
+    font-size: var(--lgs-font-size);
+}
+
+.video-recorder-widget.video-recorder-widget-recording .video-recorder-action wa-icon {
+    font-size: var(--lgs-font-size-m);
+}
+
+.video-recorder-widget.video-recorder-widget-recording .video-recorder-replay-progress .replay-progress-action wa-icon {
+    font-size: var(--lgs-font-size-m);
+}
+
+.video-recorder-widget.video-recorder-widget-recording .lgs-cancel-recording::part(base) {
+    min-width: calc(var(--lgs-dimension-s) - 2 * var(--lgs-gutter-xxs));
+    min-height: calc(var(--lgs-dimension-s) - 2 * var(--lgs-gutter-xxs));
+}
+
+.video-recorder-widget.video-recorder-widget-recording .lgs-cancel-recording wa-icon {
     font-size: var(--lgs-font-size);
 }
 
@@ -548,6 +666,14 @@
 }
 
 @media (max-width: 640px) {
+    .video-recording-settings-ratio-prefix {
+        display: none;
+    }
+
+    .video-recording-settings-quality-prefix {
+        display: none;
+    }
+
     #video-preview-dialog #video-preview-dialog-footer .buttons-bar {
         flex-wrap: wrap;
     }

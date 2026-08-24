@@ -14,7 +14,6 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 import { CameraAndTargetPanel }     from '@Components/cesium/CameraAndTargetPanel/CameraAndTargetPanel'
-import { VideoPresetWidget } from '@Components/MainUI/video/toolbox/VideoPresetWidget'
 import { VideoRecordingSettingsWidget } from '@Components/MainUI/video/toolbox/VideoRecordingSettingsWidget'
 import { VideoSettingsInfo }    from '@Components/MainUI/video/VideoSettingsInfo'
 import { SceneWidgetsRenderer } from '@Components/MainUI/widgets/SceneWidgetsRenderer'
@@ -52,14 +51,30 @@ export const ToolsUI = () => {
         }
     }, [replay.active, replay.paused, replay.playing, replay.recordingSync, video.editing])
 
+    useEffect(() => {
+        const appContainer = document.getElementById('lgs1920-container')
+        if (!appContainer) {
+            return undefined
+        }
+
+        const cropInputMode = video.editing
+            || video.preRecording
+            || video.recording
+            || video.snapshot
+            || video.finalizing
+        appContainer.classList.toggle('lgs-video-crop-input-mode', cropInputMode)
+
+        return () => appContainer.classList.remove('lgs-video-crop-input-mode')
+    }, [video.editing, video.preRecording, video.recording, video.snapshot, video.finalizing])
+
     return (
         <div id="lgs-tools-ui">
             {video.editing ? (
                 <>
                     <Cropper overlay source={lgs.canvas}
                              context={$cropper} className="video-cropper"
+                             renderRatioWidget={false}
                              options={{infoComponent: <VideoSettingsInfo/>}}/>
-                    <VideoPresetWidget id="video-preset-widget"/>
                     <VideoRecordingSettingsWidget id="video-recording-settings-widget"/>
                     <WidgetContextMenu/>
                 </>

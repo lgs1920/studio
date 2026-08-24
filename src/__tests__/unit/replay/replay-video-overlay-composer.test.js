@@ -141,6 +141,47 @@ describe('getReplayVideoOverlayMetrics', () => {
         )
     })
 
+    it('maps crop-relative widget geometry into an isolated host viewport', () => {
+        const widgetEl = document.createElement('div')
+        const widgetCanvas = document.createElement('canvas')
+        widgetCanvas.className = 'lgs-widget-canvas'
+        widgetCanvas.style.width = '100px'
+        widgetCanvas.style.height = '40px'
+        widgetEl.appendChild(widgetCanvas)
+        const composer = {
+            addOverlay: vi.fn(),
+            beginUpdate: vi.fn(),
+            endUpdate: vi.fn(),
+        }
+        globalThis.lgs = {viewer: {container: document.createElement('div')}}
+        globalThis.__ = {
+            ui: {
+                widgetManager: {
+                    getElementById: vi.fn(() => widgetEl),
+                    getWidgetConfig: vi.fn(() => ({position: {left: 30, top: 50}})),
+                },
+            },
+        }
+
+        buildReplayVideoComposerOverlays({
+            composer,
+            cropRect: {left: 10, top: 20, width: 320, height: 180},
+            coordinateScale: {x: 2, y: 0.5},
+            widgetKeys: ['scaled-widget'],
+            skipVisibilityChecks: true,
+        })
+
+        expect(composer.addOverlay).toHaveBeenCalledWith(
+            widgetCanvas,
+            expect.objectContaining({
+                x: 40,
+                y: 15,
+                w: 200,
+                h: 20,
+            }),
+        )
+    })
+
     it('uses the shared visibility resolver unless an explicit bypass is requested', () => {
         const widgetEl = document.createElement('div')
         widgetEl.dataset.videoOverlayVisible = 'false'

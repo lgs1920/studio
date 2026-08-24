@@ -1,37 +1,32 @@
-# Implementation TODO documentation
+# Proposed and Pending Implementation
 
-This directory contains proposed, pending-validation, explicitly TODO, or future implementation specifications.
+This directory contains only proposed, pending-validation, research, or future
+implementation documents. Implemented and historical documents belong under
+[`../specs/`](../specs/).
+
+## Cesium, Mapping, and Environment
+
+- [Cesium cloud resources research](CORE-CESIUM-CLOUD-MANAGEMENT-RESEARCH.md)
+- [Copernicus Sentinel-2 integration](CORE-COPERNICUS-SENTINEL2-SPEC.md)
+- [Journey time and Cesium lighting](CORE-JOURNEY-CESIUM-TIME-LIGHTING-SPEC.md)
+- [Layer time filtering](CORE-LAYER-TIME-FILTER-SPEC.md)
+
+## Journeys, Tracks, and Data
+
+- [Journey import formats](JOURNEY_IMPORT_FORMATS_SPEC.md)
+- [Tracks editor](TRACKSEDITOR-SPEC.md)
+- [Cloud synchronization](CLOUD-SYNC-TODO.md)
+- [Journey and track map selection](CORE-JOURNEY-CLICK-OVERLAY-SELECTION-SPEC.md)
+
+## User Interface, Widgets, and Branding
+
+- [Arrow widget](ARROW_WIDGET_SPEC.md)
+- [Brand and season swatch reactivity](BRAND_SEASON_SWATCH_REACTIVITY_SPEC.md)
+- [Main UI work](MAINUI-TODO.md)
+- [Profile work](PROFILE-TODO.md)
+- [Translation notes](Translate.md)
+
+## Build and Delivery
 
 - [Bun build and test migration study](CORE-BUN-BUILD-TEST-MIGRATION.md)
-
-- [Cloud sync](CLOUD-SYNC-TODO.md)
-- [Weekly count API](WEEKLY-COUNT-API-SPEC.md)
-- [Weekly count API — backend issue](WEEKLY-COUNT-API-SERVER-ISSUE.md)
-- [Weekly count API — studio issue](WEEKLY-COUNT-API-STUDIO-ISSUE.md)
-- [HQ video resolution profiles](HQ_4K_VIDEO_EXPORT_SPEC.md)
-- [Journey import formats](JOURNEY_IMPORT_FORMATS_SPEC.md)
-- [Translation notes](Translate.md)
-- [Drone camera path architecture](../specs/CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)
-- [Drone camera 3D path editor](CORE-DRONE-CAMERA-3D-PATH-EDITOR-SPEC.md)
-- [Replay track timeline editor](CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md)
-- [Replay trace and marker glow/neon effects](CORE-REPLAY-TRACE-MARKER-GLOW-NEON-SPEC.md)
-- [Cesium Ion layers](CESIUM-ION-LAYERS-SPEC.md)
-- [Tracks editor](TRACKSEDITOR-SPEC.md)
-- [Profile TODO](PROFILE-TODO.md)
-- [Main UI TODO](MAINUI-TODO.md)
-- [Replay render mode architecture](CORE-REPLAY-RENDER-MODE-ARCHITECTURE.md)
-- [GitHub Actions deployment migration study](CORE-GITHUB-ACTIONS-DEPLOYMENT-MIGRATION.md)
-- [Brand and season swatch reactivity](BRAND_SEASON_SWATCH_REACTIVITY_SPEC.md)
-- [Arrow widget](ARROW_WIDGET_SPEC.md)
-- [Video widget](VIDEO_WIDGET_SPEC.md)
-- [Replay video architecture](CORE-REPLAY-VIDEO-ARCHITECTURE.md)
-- [Replay start camera editor and start clip synchronization](CORE-REPLAY-START-CAMERA-EDITOR-SPEC.md)
-- [Replay HQ recording camera and monitoring](CORE-REPLAY-HQ-RECORDING-MONITOR-SPEC.md)
-- [Clip altitude data alignment](CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md)
-- [POI animation during replay](CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md)
-- [Layer time filtering and named temporal variants](CORE-LAYER-TIME-FILTER-SPEC.md)
-- [Copernicus Data Space Sentinel-2 WMTS integration](CORE-COPERNICUS-SENTINEL2-SPEC.md)
-- [Journey and track click selection with interactive overlay menu](CORE-JOURNEY-CLICK-OVERLAY-SELECTION-SPEC.md)
-- [Journey-driven Cesium time, sunlight, moonlight, darkness and shadows](CORE-JOURNEY-CESIUM-TIME-LIGHTING-SPEC.md)
-- [Cesium cloud management and reusable cloud resources](CORE-CESIUM-CLOUD-MANAGEMENT-RESEARCH.md)
-- [Three.js camera HPR orientation sphere widget](CORE-CAMERA-HPR-THREEJS-SPHERE-WIDGET-SPEC.md)
+- [GitHub Actions deployment migration](CORE-GITHUB-ACTIONS-DEPLOYMENT-MIGRATION.md)

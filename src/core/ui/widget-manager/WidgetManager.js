@@ -716,6 +716,8 @@ export class WidgetManager {
         }
 
         const element = this.getElementById(widgetId)
+        const config = this.getWidgetConfig(widgetId)
+        const onRemove = config?.onRemove
         const type = widgetId.split('#')[0]
 
         WidgetDynamicRenderer.instance.destroyWidget(widgetId)
@@ -752,6 +754,8 @@ export class WidgetManager {
         if (lgs.stores?.ui?.contextMenu?.targetId === widgetId) {
             __.ui.contextMenu?.hide?.()
         }
+
+        onRemove?.()
 
         return true
     }
@@ -996,6 +1000,10 @@ export class WidgetManager {
                 this.#cropper.applyCropToOverlay(config)
             }
 
+            // Rehydration invalidates the runtime cache before restoring the
+            // element. Keep the already-rendered widget eligible for capture.
+            __.ui.widgetCache?.mount?.(widgetId)
+
             lgs.stores.ui.widget.list.set(widgetId, {
                 ...entry,
                 ...saved,
@@ -1063,6 +1071,15 @@ export class WidgetManager {
      * @return {{left: *, top: *}}
      */
     adaptPositionToContainer = (config, container) => this.#controls.adaptPositionToContainer(config, container)
+
+    /**
+     * Keeps a scene widget inside its resolved bounds after an interaction.
+     * @param {Object} config - Widget configuration.
+     * @param {HTMLElement} [element=config.element] - Rendered widget element.
+     * @returns {{positionChanged: boolean, scaleChanged: boolean}} Applied changes.
+     */
+    constrainSceneWidgetToBounds = (config, element = config?.element) =>
+        this.#controls.constrainSceneWidgetToBounds(config, element)
 
     /**
      * Adapts widget size to container size. It provides a new scale value.
