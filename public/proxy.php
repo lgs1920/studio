@@ -17,9 +17,6 @@ const REQUEST_HEADER_ALLOWLIST = [
     'Accept-Language',
     'Content-Type',
     'Origin',
-    'X-Conversion-Id',
-    'X-Request-Progress',
-    'X-Progress-Interval',
     'X-Requested-With',
 ];
 
@@ -33,7 +30,6 @@ const RESPONSE_HEADER_ALLOWLIST = [
     'Last-Modified',
     'Location',
     'X-Accel-Buffering',
-    'X-Conversion-Id',
 ];
 
 const HOP_BY_HOP_HEADERS = [
@@ -642,8 +638,8 @@ function apply_cors_headers(array $config): void
     header('Access-Control-Allow-Origin: ' . $origin);
     header('Access-Control-Allow-Credentials: true');
     header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type, Accept, X-Conversion-Id, X-Request-Progress, X-Progress-Interval, X-Requested-With');
-    header('Access-Control-Expose-Headers: Content-Disposition, X-Conversion-Id');
+    header('Access-Control-Allow-Headers: Content-Type, Accept, X-Requested-With');
+    header('Access-Control-Expose-Headers: Content-Disposition');
     header('Vary: Origin', false);
 }
 

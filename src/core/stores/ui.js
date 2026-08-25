@@ -108,25 +108,6 @@ export const ui = {
             forceEven: true,
             id:        'video-crop-zone',
         },
-        conversion: {
-            videoUrl:          null,
-            convertedVideoUrl: null,
-            isDialogOpen:      false,
-            metadata:          null,
-            finalFilename:     '',
-            duration:          0,
-            convertedTime:     0,
-            doConversion:      false,
-            isConverting:      false,
-            isConverted:       false,
-            inputFormat:       null,
-            progress:          {
-                percentage: 0,
-                time:       0,
-
-            },
-            errorMessage:      null,
-        },
     },
 
     widget: {

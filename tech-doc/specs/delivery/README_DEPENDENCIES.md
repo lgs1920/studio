@@ -76,7 +76,6 @@ cesium
 classnames
 color
 colord
-convert
 deep-object-diff
 dotenv
 easy-file-picker
