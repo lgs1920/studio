@@ -124,6 +124,7 @@ export const createBackendPm2Command = ({
     const quotedEcosystemFile = quoteShellArgument(ecosystemFile)
     const quotedSharedLogDirectory = quoteShellArgument(sharedLogDirectory)
     const quotedPm2Bin = quoteShellArgument(pm2Bin)
+    const quotedPm2Directory = quoteShellArgument(path.posix.dirname(pm2Bin))
     const quotedLogrotateModule = quoteShellArgument('pm2-logrotate')
     const quotedBunBin = quoteShellArgument(bunBin)
     const quotedPm2App = quoteShellArgument(pm2App)
@@ -146,6 +147,7 @@ export const createBackendPm2Command = ({
 
     return [
         `cd ${quotedBackendPath}`,
+        `export PATH=${quotedPm2Directory}:$PATH`,
         `install -d -m 750 ${quotedSharedLogDirectory}`,
         `test -r ${quotedEnvironmentFile}`,
         'set -a',

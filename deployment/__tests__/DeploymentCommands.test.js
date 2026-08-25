@@ -54,6 +54,7 @@ describe('backend PM2 deployment command', () => {
         expect(command).toContain(". '/home/www/lgs1920/staging/backend/shared/backend.env'")
         expect(command).toContain("install -d -m 750 '/home/www/lgs1920/staging/backend/shared/logs'")
         expect(command).toContain("'/home/.bun/bin/pm2' install 'pm2-logrotate'")
+        expect(command).toContain("export PATH='/home/.bun/bin':$PATH")
         expect(command).toContain("'/home/.bun/bin/pm2' set pm2-logrotate:max_size 10M")
         expect(command).toContain("'/home/.bun/bin/pm2' set pm2-logrotate:retain 14")
         expect(command).toContain("'/home/.bun/bin/pm2' set pm2-logrotate:compress true")
