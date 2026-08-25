@@ -16,23 +16,16 @@
 
 import { DATABASE_SYNC_STATUS }                                           from '@Core/db/DatabaseSyncManager'
 import {
-    LGSScrollbars,
-}                                                                         from '@Components/MainUI/LGSScrollbars'
-import {
     UIToast,
 }                                                                         from '@Utils/UIToast'
 import {
-    WaBadge, WaButton, WaCallout, WaDialog, WaDetails, WaDivider, WaIcon, WaInput, WaTooltip,
+    WaButton, WaCallout, WaDetails, WaDivider, WaIcon, WaInput,
 }                                                                         from '@web.awesome.me/webawesome-pro/dist/react'
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useRef, useState, useSyncExternalStore } from 'react'
 import { useSnapshot }                                                    from 'valtio'
-import ReactMarkdown                                                      from 'react-markdown'
 import {
     useConfirm,
 }                                                                         from '../../../Modals/ConfirmUI'
-import {
-    markdown as ionTokenHelp,
-}                                                                         from '../../../../assets/ion-token-help.md'
 
 const EMPTY_SYNC_STATE = {}
 const subscribeEmptySyncStatus = () => () => undefined
@@ -62,58 +55,9 @@ const ResolveSyncConflictMessage = () => (
     </WaCallout>
 )
 
-const formatUsage = (seconds) => {
-    const total = Number(seconds)
-    if (!Number.isFinite(total) || total < 0) {
-        return '00:00'
-    }
-
-    const minutes = Math.floor(total / 60)
-    const rest = Math.floor(total % 60)
-    return `${String(minutes).padStart(2, '0')}:${String(rest).padStart(2, '0')}`
-}
-
-const getUsageVariant = (remainingSeconds, totalSeconds) => {
-    const total = Number(totalSeconds)
-    if (!Number.isFinite(total) || total <= 0) {
-        return 'warning'
-    }
-
-    const ratio = Number(remainingSeconds) / total
-    if (ratio > 0.6) {
-        return 'success'
-    }
-
-    if (ratio < 0.2) {
-        return 'danger'
-    }
-
-    return 'warning'
-}
-
-const useLiveTick = (enabled) => {
-    const [tick, setTick] = useState(0)
-
-    useEffect(() => {
-        if (!enabled) {
-            return undefined
-        }
-
-        const timer = window.setInterval(() => {
-            setTick(value => value + 1)
-        }, 1000)
-
-        return () => window.clearInterval(timer)
-    }, [enabled])
-
-    return tick
-}
-
-const IonTokenEditor = ({activeMode, initialToken, promptDelaySeconds, remainingSeconds}) => {
+const IonTokenEditor = ({activeMode, initialToken}) => {
     const inputRef = useRef(null)
     const [canSave, setCanSave] = useState(() => initialToken.trim() !== '')
-    const [helpOpen, setHelpOpen] = useState(false)
-    const remainingLabel = formatUsage(remainingSeconds)
 
     const handleSave = async () => {
         try {
@@ -162,17 +106,13 @@ const IonTokenEditor = ({activeMode, initialToken, promptDelaySeconds, remaining
 
     return (
         <div className="manage-profile-ui ion-token-settings">
-            <WaCallout open variant={activeMode === 'personal' ? 'success' : 'warning'} appearance="filled-outlined">
-                <WaIcon slot="icon" name={activeMode === 'personal' ? 'circle-check' : 'warning'}
+            <WaCallout open variant={activeMode === 'personal' ? 'success' : 'neutral'} appearance="filled-outlined">
+                <WaIcon slot="icon" name={activeMode === 'personal' ? 'circle-check' : 'circle-info'}
                         variant="regular"/>
                 {activeMode === 'personal' ? (
-                    'Your personal Cesium Ion token is active.'
+                    'A provider-level Cesium Ion token is available for Ion layers.'
                 ) : (
-                    <>
-                        {'The shared Cesium Ion token is active.'}
-                        <br/>
-                        {`Remaining allowance: ${remainingLabel} / ${formatUsage(promptDelaySeconds)}.`}
-                    </>
+                    'Cesium Ion is optional. Add a personal token when you select an Ion layer.'
                 )}
             </WaCallout>
 
@@ -187,16 +127,6 @@ const IonTokenEditor = ({activeMode, initialToken, promptDelaySeconds, remaining
                     <WaIcon slot="start" name="arrow-up-right-from-square" variant="regular"/>
                     {'Open Cesium Ion'}
                 </WaButton>
-                <WaButton
-                    id="ion-token-help-button"
-                    appearance="plain"
-                    variant="brand"
-                    aria-label="Cesium Ion help"
-                    onClick={() => setHelpOpen(true)}
-                >
-                    <WaIcon name="circle-info" variant="regular"/>
-                </WaButton>
-                <WaTooltip for="ion-token-help-button" placement="top">{'More information'}</WaTooltip>
             </div>
 
             <WaInput
@@ -222,67 +152,30 @@ const IonTokenEditor = ({activeMode, initialToken, promptDelaySeconds, remaining
                 <WaButton variant="neutral" appearance="outlined" onClick={handleClear}
                           disabled={activeMode !== 'personal'}>
                     <WaIcon slot="start" name="trash" variant="regular"/>
-                    {'Use default'}
+                    {'Remove token'}
                 </WaButton>
             </div>
-
-            <WaDialog
-                open={helpOpen}
-                label="Cesium Ion help"
-                className="lgs-theme"
-                onWaAfterHide={() => setHelpOpen(false)}
-                onWaHide={() => setHelpOpen(false)}
-            >
-                <div className="ion-token-help-scroll">
-                    <LGSScrollbars>
-                        <div className="ion-token-help-content wa-prose">
-                            <ReactMarkdown>{ionTokenHelp}</ReactMarkdown>
-                        </div>
-                    </LGSScrollbars>
-                </div>
-                <WaButton slot="footer" appearance="outlined" variant="brand" onClick={() => setHelpOpen(false)}>
-                    <WaIcon slot="start" name="xmark" variant="regular"/>
-                    {'Close'}
-                </WaButton>
-            </WaDialog>
         </div>
     )
 }
 
 const IonTokenPanel = () => {
     const ion = useSnapshot(lgs.stores.ion)
-    const liveTick = useLiveTick(ion.source !== 'user')
-    const promptDelaySeconds = Number.isFinite(Number(lgs.configuration?.ion?.promptDelaySeconds))
-                               ? Number(lgs.configuration.ion.promptDelaySeconds)
-                               : 480
     const activeMode = ion.source === 'user' ? 'personal' : 'standard'
-    const remainingSeconds = Math.max(promptDelaySeconds - Number(ion.accumulatedSeconds ?? 0), 0)
-    const badgeVariant = getUsageVariant(remainingSeconds, promptDelaySeconds)
-    const remainingLabel = formatUsage(remainingSeconds)
-    const initialToken = ion.source === 'user' ? ion.token ?? '' : ''
-    const showUsageBadge = ion.source !== 'user'
+    const initialToken = ''
 
     return (
-        <WaDetails small className="lgs--details-hoverable" name="profile-tools" data-live-tick={liveTick}>
+        <WaDetails small className="lgs--details-hoverable" name="profile-tools">
             <span slot="summary" className="ion-token-summary">
                 <span className="ion-token-summary-title">
                     <WaIcon name="cloud" variant="regular"/>
                     {'Cesium Ion'}
                 </span>
-                <span className="ion-token-summary-meta">
-                    {showUsageBadge && (
-                        <WaBadge variant={badgeVariant} appearance="filled">
-                            {`${remainingLabel} left`}
-                        </WaBadge>
-                    )}
-                </span>
             </span>
             <IonTokenEditor
-                key={`${ion.source}:${initialToken}`}
+                key={ion.source}
                 activeMode={activeMode}
                 initialToken={initialToken}
-                promptDelaySeconds={promptDelaySeconds}
-                remainingSeconds={remainingSeconds}
             />
         </WaDetails>
     )

@@ -121,6 +121,22 @@ describe('IonLayerUtils Cesium cache', () => {
         expect(tileset).toEqual({id: 'tileset'})
     })
 
+    it('passes the provider token explicitly to Ion resources', async () => {
+        const {IonResource} = await import('cesium')
+
+        await IonLayerUtils.ionResourceFromAssetId(1, 'provider-token')
+
+        expect(IonResource.fromAssetId).toHaveBeenCalledWith(1, {accessToken: 'provider-token'})
+    })
+
+    it('rejects Ion resources when no provider token is available', async () => {
+        const {IonResource} = await import('cesium')
+        globalThis.lgs.stores.ion.token = ''
+
+        await expect(IonLayerUtils.ionResourceFromAssetId(1)).rejects.toThrow('A Cesium Ion token is required')
+        expect(IonResource.fromAssetId).not.toHaveBeenCalled()
+    })
+
     it('creates a Google 2D imagery provider for dedicated Google Maps layers', async () => {
         const {Google2DImageryProvider} = await import('cesium')
         Google2DImageryProvider.fromIonAssetId.mockResolvedValue({id: 'google-imagery'})
@@ -149,7 +165,7 @@ describe('IonLayerUtils Cesium cache', () => {
             type:      'base3d',
             show:      true,
             sceneKind: 'google-photorealistic',
-        })
+        }, {accessToken: 'google-token'})
 
         expect(createGooglePhotorealistic3DTileset).toHaveBeenCalledWith(
             {onlyUsingWithGoogleGeocoder: true},

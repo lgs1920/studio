@@ -16,6 +16,7 @@
 
 import { BASE3D_ENTITY, BASE_ENTITY, PERSONAL_ACCESS, TERRAIN_ENTITY, TILES3D_ENTITY, VAULT_STORE } from '@Core/constants'
 import { UIToast }                                                                    from '@Utils/UIToast'
+import { IonLayerUtils }                                                               from '@Utils/cesium/IonLayerUtils'
 import { WaBadge, WaButton, WaDialog, WaIcon, WaInput }                               from '@web.awesome.me/webawesome-pro/dist/react'
 import parse                                                                          from 'html-react-parser'
 import { useEffect, useState }                                                         from 'react'
@@ -37,7 +38,7 @@ export const TokenLayerModal = () => {
             return
         }
 
-        if (tmpEntity.usage.type === PERSONAL_ACCESS) {
+        if (IonLayerUtils.isIonDependentLayer(tmpEntity)) {
             window.queueMicrotask(() => {
                 setTokenValue('')
                 setCanSave(false)
@@ -77,7 +78,7 @@ export const TokenLayerModal = () => {
         }
 
         try {
-            if (proxy.usage.type === PERSONAL_ACCESS) {
+            if (IonLayerUtils.isIonDependentLayer(proxy)) {
                 await __.ui.ionTokenManager.save(token)
             }
             else {

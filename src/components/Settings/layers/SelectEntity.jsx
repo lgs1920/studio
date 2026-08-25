@@ -29,6 +29,7 @@ import { Fragment, useRef, useLayoutEffect } from 'react'
 
 import { useSnapshot }                   from 'valtio'
 import { LayersUtils }                   from '@Utils/cesium/LayersUtils'
+import { IonLayerUtils }                 from '@Utils/cesium/IonLayerUtils'
 import { applyLayerSelection }           from './layerSelection'
 
 /**
@@ -84,7 +85,7 @@ export const SelectEntity = (props) => {
                 case 'remove': {
                     const confirmation = await confirmRemoveToken()
                     if (confirmation) {
-                        if (entity.usage.type === PERSONAL_ACCESS) {
+                        if (IonLayerUtils.isIonDependentLayer(entity)) {
                             await __.ui.ionTokenManager.clear()
                         }
                         else {
@@ -145,9 +146,9 @@ export const SelectEntity = (props) => {
             return null
         }
         const accountType = $entity.usage.type
+        const ionLayer = IonLayerUtils.isIonDependentLayer($entity)
         const accountUnlocked = $entity.usage.type === FREE_ANONYMOUS_ACCESS
-            || $entity.usage.type === PERSONAL_ACCESS && ion.source === 'user'
-            || ($entity.usage.unlocked ?? false)
+            || (ionLayer ? ion.source === 'user' : ($entity.usage.unlocked ?? false))
         const type = accountUnlocked ? UNLOCKED_ACCESS : accountType
 
         let selected = false
@@ -234,7 +235,9 @@ export const SelectEntity = (props) => {
             return
         }
 
-        const requiresPersonalToken = $entity.usage.type === PERSONAL_ACCESS
+        const requiresIonToken = IonLayerUtils.isIonDependentLayer($entity)
+        const requiresPersonalToken = !requiresIonToken && $entity.usage.type === PERSONAL_ACCESS
+        const hasRequiredToken = requiresIonToken && ion.source === 'user'
         const selectUnlockedEntity = () => {
             applyLayerSelection({
                                     entity:         $entity,
@@ -245,15 +248,16 @@ export const SelectEntity = (props) => {
                                 })
         }
 
-        if ($entity.usage.type === FREE_ANONYMOUS_ACCESS || (requiresPersonalToken && ion.source === 'user')) {
+        if ($entity.usage.type === FREE_ANONYMOUS_ACCESS || hasRequiredToken) {
             selectUnlockedEntity()
-            if (requiresPersonalToken) {
+            if (requiresIonToken || requiresPersonalToken) {
                 $editor.layer.tokenDialog = false
             }
         }
         else {
             const theProxy = __.layersAndTerrainManager.getEntityProxy(id)
-            if (theProxy.usage.unlocked || (requiresPersonalToken && ion.source === 'user')) {
+            const entityUnlocked = requiresIonToken ? hasRequiredToken : theProxy.usage.unlocked
+            if (entityUnlocked) {
                 selectUnlockedEntity()
                 $editor.layer.tokenDialog = false
             }
@@ -272,7 +276,7 @@ export const SelectEntity = (props) => {
             LayersUtils.applySettings($layers.colorSettings[$entity.id] ?? DEFAULT_LAYERS_COLOR_SETTINGS, $entity.type, true)
         }
 
-        if ($entity.type === TERRAIN_ENTITY && ($entity.usage.type === FREE_ANONYMOUS_ACCESS || $entity.usage.unlocked || ($entity.usage.type === PERSONAL_ACCESS && ion.source === 'user'))) {
+        if ($entity.type === TERRAIN_ENTITY && ($entity.usage.type === FREE_ANONYMOUS_ACCESS || (ionLayer ? hasRequiredToken : $entity.usage.unlocked))) {
             __.layersAndTerrainManager.changeTerrain($entity)
         }
 

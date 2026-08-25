@@ -56,7 +56,6 @@ vi.mock('@Core/settings/SettingsSection', () => ({
 vi.mock('@Core/ui/IonTokenManager', () => ({
     ionTokenManager: {
         load:         vi.fn(async () => undefined),
-        sharedToken:  'shared-token',
     },
 }))
 

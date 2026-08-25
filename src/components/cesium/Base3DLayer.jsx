@@ -61,7 +61,7 @@ export const Base3DLayer = () => {
     }
 
     useEffect(() => {
-        if (!lgs.viewer || lgs.viewer.isDestroyed() || !layer || layer.type !== BASE3D_ENTITY || (IonLayerUtils.isPersonalLayer(layer) && ion.source !== 'user')) {
+        if (!lgs.viewer || lgs.viewer.isDestroyed() || !layer || layer.type !== BASE3D_ENTITY || (IonLayerUtils.isIonDependentLayer(layer) && ion.source !== 'user')) {
             if (lgs.base3dTileset && lgs.viewer?.scene?.primitives?.contains?.(lgs.base3dTileset)) {
                 lgs.viewer.scene.primitives.remove(lgs.base3dTileset, true)
             }

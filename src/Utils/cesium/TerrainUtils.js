@@ -15,7 +15,8 @@
  ******************************************************************************/
 
 import { TERRAIN_FROM_CESIUM, TERRAIN_FROM_CESIUM_ELLIPSOID, TERRAIN_FROM_URL, URL_AUTHENT_KEY } from '@Core/constants'
-import { CesiumTerrainProvider, EllipsoidTerrainProvider, IonResource, Terrain }                 from 'cesium'
+import { IonLayerUtils } from './IonLayerUtils'
+import { CesiumTerrainProvider, EllipsoidTerrainProvider, Terrain } from 'cesium'
 
 export class TerrainUtils {
 
@@ -25,7 +26,7 @@ export class TerrainUtils {
      * @param entity {string|object} Entity Id or Entity Object
      * @return {Promise<CesiumTerrainProvider>|null}
      */
-    static setTerrain(entity) {
+    static async setTerrain(entity) {
         // we assume that if it not a string,it is the entity object
         const theEntity = (typeof entity === 'string') ? __.layersAndTerrainManager.getEntityProxy(entity) : entity
 
@@ -50,7 +51,8 @@ export class TerrainUtils {
         }
 
         if (theEntity.terrainType === TERRAIN_FROM_CESIUM) {
-            return CesiumTerrainProvider.fromUrl(IonResource.fromAssetId(1), {
+            const resource = await IonLayerUtils.ionResourceFromAssetId(theEntity.assetId ?? 1)
+            return CesiumTerrainProvider.fromUrl(resource, {
                 requestVertexNormals: false,
             })
         }
@@ -79,12 +81,8 @@ export class TerrainUtils {
                 && /401|403|unauthorized|forbidden/.test(errorMessage)
 
             if (shouldFallback) {
-                await __.ui.ionTokenManager.fallbackToSharedToken('invalid')
-                const terrain = new Terrain(await TerrainUtils.setTerrain(theEntity))
-                if (terrain) {
-                    await lgs.scene.setTerrain(terrain)
-                    return
-                }
+                await __.ui.ionTokenManager.clear()
+                return
             }
 
             const name = theEntity?.name ?? theEntity?.id ?? entity ?? 'terrain'

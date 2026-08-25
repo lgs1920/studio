@@ -27,6 +27,22 @@ const indexLayersById = config => new Map(
 )
 
 describe('layers-terrains configuration', () => {
+    it('uses non-Ion defaults for a new profile', () => {
+        const config = loadLayersTerrains()
+
+        expect(config.base).toBe('arcgis-normal')
+        expect(config.terrain).toBe('reearth-world')
+    })
+
+    it('classifies Ion-dependent layers as freemium and the ellipsoid as free', () => {
+        const layersById = indexLayersById(loadLayersTerrains())
+
+        expect(layersById.get('cesium-world').usage.type).toBe('freemium')
+        expect(layersById.get('google-photorealistic-3d').usage.type).toBe('freemium')
+        expect(layersById.get('google-maps-2d-satellite').usage.type).toBe('freemium')
+        expect(layersById.get('cesium-ellipsoid').usage.type).toBe('free')
+    })
+
     it('keeps active layer ids resolvable', () => {
         const config = loadLayersTerrains()
         const layersById = indexLayersById(config)

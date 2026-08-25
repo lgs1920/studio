@@ -14,7 +14,6 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { CacheManager }        from '@Core/cache/CacheManager'
 import {
     APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, GLOBAL_PARENT, JOURNEY_GROUPS_STORE, JOURNEYS_STORE,
     ORIGIN_STORE, platforms, POIS_STORE, SERVERS, SETTINGS_STORE, VAULT_STORE, WIDGETS_STORE,
@@ -35,7 +34,6 @@ import { WidgetCache }         from '@Core/ui/widget-manager/WidgetCache'
 import { WidgetManager }       from '@Core/ui/widget-manager/WidgetManager'
 import { AppUtils }            from '@Utils/AppUtils'
 import { MouseUtils }          from '@Utils/cesium/MouseUtils'
-import { IonLayerUtils }       from '@Utils/cesium/IonLayerUtils'
 import { CSSUtils }            from '@Utils/CSSUtils'
 import { UIToast }             from '@Utils/UIToast'
 import { UIUtils }             from '@Utils/UIUtils'
@@ -401,10 +399,6 @@ export class LGS1920Context {
         const syncStartupWarning = this.databaseSyncManager?.startupWarning
         if (syncStartupWarning) {
             window.setTimeout(() => UIToast.warning(syncStartupWarning), 0)
-        }
-
-        if (!__.app.cesiumCache) {
-            __.app.cesiumCache = new CacheManager(IonLayerUtils.tokenCacheName(), 500 * 1024 * 1024)
         }
 
         //startCacheMonitoring()

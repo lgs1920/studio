@@ -258,7 +258,7 @@ export const MapLayer = (props) => {
             return null
         }
 
-        if (layerTile === ION && layerType === props.type) {
+        if (layerTile === ION && layerType === props.type && (!IonLayerUtils.isIonDependentLayer(theLayer) || ion.source === 'user')) {
             return IonLayerUtils.imageryProviderFromLayer(theLayer)
         }
 
@@ -401,6 +401,8 @@ export const MapLayer = (props) => {
         layerUsageUnlocked,
         layerApiKey,
         layerOther,
+        layerProxy,
+        ion.source,
         minLevel,
         maxLevel,
         theLayer,
@@ -411,7 +413,7 @@ export const MapLayer = (props) => {
             return null
         }
 
-        if (IonLayerUtils.isPersonalLayer(theLayer) && ion.source !== 'user') {
+        if (IonLayerUtils.isIonDependentLayer(theLayer) && ion.source !== 'user') {
             return null
         }
 

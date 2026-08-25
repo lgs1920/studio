@@ -24,11 +24,11 @@ import { SettingsSection }          from '@Core/settings/SettingsSection'
 import { ionTokenManager }          from '@Core/ui/IonTokenManager'
 import { ensureJourneyReplaySettings } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import axios                        from 'axios'
-import * as Cesium                  from 'cesium'
 import YAML                         from 'yaml'
 import { EventEmitter }             from '../assets/libs/EventEmitter/EventEmitter'
 import { FA2SL }                    from './FA2SL'
 import { CountApi }                  from './CountApi'
+import { IonLayerUtils }             from './cesium/IonLayerUtils'
 
 export class AppUtils {
     static THEME_STORAGE_KEY = 'theme'
@@ -417,7 +417,7 @@ export class AppUtils {
                     continue
                 }
 
-                if (layer.usage.type !== FREE_ANONYMOUS_ACCESS) {
+                if (layer.usage.type !== FREE_ANONYMOUS_ACCESS && !IonLayerUtils.isIonDependentLayer(layer)) {
                     const token = await lgs.db.vault.get(layer.id, VAULT_STORE)
                     // We get a token, let's use it now
                     if (token) {
@@ -462,10 +462,6 @@ export class AppUtils {
                 }
 
                 lgs.events = new EventEmitter()
-
-                // Cesium ION auth
-                Cesium.Ion.defaultAccessToken = lgs.stores.ion.token || ionTokenManager.sharedToken
-
 
                 // Shoelace needs to avoid bubbling events. Here's an helper
                 window.isOK = (event) => {

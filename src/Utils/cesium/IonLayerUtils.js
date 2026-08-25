@@ -14,9 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {
-    BASE3D_ENTITY, PERSONAL_ACCESS, VAULT_STORE,
-} from '@Core/constants'
+import { BASE3D_ENTITY } from '@Core/constants'
 import { CacheManager } from '@Core/cache/CacheManager'
 import { Cesium3DTileset, Google2DImageryProvider, Ion, IonImageryProvider, IonResource, createGooglePhotorealistic3DTileset } from 'cesium'
 
@@ -25,7 +23,7 @@ const DEFAULT_CACHE_QUOTA = 500 * 1024 * 1024
 
 const normalizeToken = value => typeof value === 'string' ? value.trim() : ''
 
-const getActiveToken = () => normalizeToken(globalThis.lgs?.stores?.ion?.token ?? Ion.defaultAccessToken)
+const getActiveToken = () => normalizeToken(globalThis.lgs?.stores?.ion?.token)
 
 export class IonLayerUtils {
     static lastSyncedToken = null
@@ -33,6 +31,10 @@ export class IonLayerUtils {
 
     static async syncCesiumCache(token = getActiveToken(), {purgePrevious = true} = {}) {
         const normalizedToken = normalizeToken(token)
+        if (!normalizedToken) {
+            return null
+        }
+
         const cacheName = IonLayerUtils.tokenCacheName(token)
         const currentCache = globalThis.__?.app?.cesiumCache
 
@@ -66,13 +68,48 @@ export class IonLayerUtils {
         return cacheName
     }
 
+    /**
+     * Returns the provider-level token and initializes the optional cache lazily.
+     * @param {string} accessToken Optional explicit token.
+     * @returns {Promise<string>} A usable Cesium Ion token.
+     */
+    static async getIonAccessToken(accessToken = getActiveToken()) {
+        const token = normalizeToken(accessToken)
+        if (!token) {
+            throw new Error('A Cesium Ion token is required for this layer.')
+        }
+
+        await IonLayerUtils.syncCesiumCache(token)
+        return token
+    }
+
+    /**
+     * Clears the optional Cesium Ion cache without creating a replacement cache.
+     * @returns {Promise<void>} A promise that resolves after the clear request is sent.
+     */
+    static async clearCesiumCache() {
+        const currentCache = globalThis.__?.app?.cesiumCache
+        try {
+            currentCache?.clear?.()
+        }
+        catch (error) {
+            console.error('[IonLayerUtils] Failed to clear Cesium cache:', error)
+        }
+
+        if (globalThis.__?.app) {
+            globalThis.__.app.cesiumCache = null
+        }
+        IonLayerUtils.lastSyncedToken = null
+    }
+
     static async ionResourceFromAssetId(assetId, accessToken = getActiveToken()) {
         const id = Number(assetId)
         if (!Number.isInteger(id) || id <= 0) {
             throw new Error(`Invalid Cesium Ion asset ID: ${assetId}`)
         }
 
-        return IonResource.fromAssetId(id, accessToken ? {accessToken} : undefined)
+        const token = await IonLayerUtils.getIonAccessToken(accessToken)
+        return IonResource.fromAssetId(id, {accessToken: token})
     }
 
     static async imageryProviderFromLayer(layer, {accessToken = getActiveToken()} = {}) {
@@ -81,17 +118,18 @@ export class IonLayerUtils {
             return null
         }
 
+        const token = await IonLayerUtils.getIonAccessToken(accessToken)
         const imageryKind = `${layer?.imageryKind ?? layer?.tilesKind ?? layer?.providerKind ?? ''}`.toLowerCase()
         if (imageryKind === 'google2d') {
             return Google2DImageryProvider.fromIonAssetId({
                 assetId:     id,
-                accessToken: accessToken || undefined,
+                accessToken: token,
                 mapType: layer?.mapType ?? 'satellite',
                 overlayLayerType: layer?.overlayLayerType,
             })
         }
 
-        return IonImageryProvider.fromAssetId(id, accessToken ? {accessToken} : undefined)
+        return IonImageryProvider.fromAssetId(id, {accessToken: token})
     }
 
     static async createTileset(layer, {accessToken = getActiveToken()} = {}) {
@@ -103,12 +141,20 @@ export class IonLayerUtils {
             || kind === 'google-photorealistic-3d'
             || kind === 'google-photorealistic-tiles'
             || `${layer?.id ?? ''}`.includes('photorealistic')) {
-            return createGooglePhotorealistic3DTileset(
-                {onlyUsingWithGoogleGeocoder: true},
-                {
-                    show: layer?.show ?? true,
-                },
-            )
+            const token = await IonLayerUtils.getIonAccessToken(accessToken)
+            const previousToken = Ion.defaultAccessToken
+            Ion.defaultAccessToken = token
+            try {
+                return await createGooglePhotorealistic3DTileset(
+                    {onlyUsingWithGoogleGeocoder: true},
+                    {
+                        show: layer?.show ?? true,
+                    },
+                )
+            }
+            finally {
+                Ion.defaultAccessToken = previousToken
+            }
         }
 
         if (kind === 'url' || tilesetUrl) {
@@ -133,19 +179,16 @@ export class IonLayerUtils {
         })
     }
 
-    static isPersonalLayer = (layer) => `${layer?.usage?.type ?? ''}`.toLowerCase() === PERSONAL_ACCESS
+    static isIonDependentLayer = layer => {
+        const assetId = Number(layer?.ionAssetId ?? layer?.assetId)
+        const sceneKind = `${layer?.sceneKind ?? layer?.base3d?.kind ?? layer?.tiles3d?.kind ?? ''}`.toLowerCase()
+        return layer?.tile === 'ion'
+            || layer?.terrainType === 'cesium'
+            || sceneKind.startsWith('google-photorealistic')
+            || (layer?.provider === 'cesium' && Number.isInteger(assetId) && assetId > 0)
+    }
 
     static isBase3DLayer = (layer) => `${layer?.type ?? ''}`.toLowerCase() === BASE3D_ENTITY
-
-    static setLayerToken = async (layer, token) => {
-        if (!layer) {
-            return
-        }
-        if (!globalThis.lgs?.db?.vault?.put) {
-            return
-        }
-        await globalThis.lgs.db.vault.put(layer.id, normalizeToken(token), VAULT_STORE)
-    }
 
     static getActiveToken = getActiveToken
 }

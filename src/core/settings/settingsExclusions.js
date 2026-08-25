@@ -20,7 +20,6 @@ export const SETTING_EXCLUSIONS = [
         'layers.base', 'layers.base3d', 'layers.tiles3d', 'layers.terrain', 'layers.overlay',
         'layers.filter', 'layers.colorSettings',
         'app', 'scene', 'starter', 'coordinateSystem', 'unitSystem', 'poi.filter',
-        'ion.usageSeconds', 'ion.introSeen',
         'journey.activity',
         'ui.camera', 'swatches.current',
         'ui.menu', 'ui.poi.rotate', 'ui.poi.focusOnEdit', 'ui.journeyToolbar',

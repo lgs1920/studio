@@ -16,7 +16,7 @@
 
 import { PopupAnchor }                  from '@Components/PopupAnchor'
 import { LGSPopup }                     from '@Components/LGSPopup'
-import { ALL, BASE3D_ENTITY, BASE_ENTITY, FREE_ANONYMOUS_ACCESS, OVERLAY_ENTITY, PERSONAL_ACCESS, TERRAIN_ENTITY, TILES3D_ENTITY, UNLOCKED } from '@Core/constants'
+import { ALL, BASE3D_ENTITY, BASE_ENTITY, FREE_ANONYMOUS_ACCESS, OVERLAY_ENTITY, TERRAIN_ENTITY, TILES3D_ENTITY, UNLOCKED } from '@Core/constants'
 import {
     WaBadge, WaButton, WaIcon, WaTab, WaTabGroup, WaTabPanel, WaTooltip,
 }                                       from '@web.awesome.me/webawesome-pro/dist/react'
@@ -28,6 +28,7 @@ import { LayersFilterPopup }            from './LayersFilterPopup'
 import { LayersColorsAdjustementPopup } from './LayersColorsAdjustementPopup'
 import { SelectEntity }                 from './SelectEntity'
 import { TokenLayerModal } from './TokenLayerModal'
+import { IonLayerUtils }                from '@Utils/cesium/IonLayerUtils'
 
 // Filter operator constants
 const AND = '&'
@@ -104,10 +105,14 @@ export const LayersAndTerrains = () => {
                     // Apply filter by usage
                     if (layers.filter.byUsage && layers.filter.byUsage !== ALL) {
                         const viewUnlocked = layers.filter.byUsage === UNLOCKED
-                        const personalUnlocked = layer.usage?.type === PERSONAL_ACCESS ? ion.source === 'user' : false
+                        const ionLayer = IonLayerUtils.isIonDependentLayer(layer)
+                        const personalUnlocked = ionLayer && ion.source === 'user'
+                        const accountUnlocked = ionLayer
+                            ? personalUnlocked
+                            : layer.usage?.unlocked === true
                         byUsage = viewUnlocked
-                                  ? layer.usage?.type === FREE_ANONYMOUS_ACCESS || layer.usage?.unlocked === true || personalUnlocked
-                                  : layer.usage?.type !== FREE_ANONYMOUS_ACCESS && layer.usage?.unlocked !== true && !personalUnlocked
+                                  ? layer.usage?.type === FREE_ANONYMOUS_ACCESS || accountUnlocked
+                                  : layer.usage?.type !== FREE_ANONYMOUS_ACCESS && !accountUnlocked
                     }
 
                     // Apply filter by countries

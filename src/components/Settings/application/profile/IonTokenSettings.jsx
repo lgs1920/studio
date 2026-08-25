@@ -7,39 +7,29 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-23
- * Last modified: 2026-06-23
- *
- *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WaButton, WaCallout, WaDetails, WaDivider, WaIcon, WaInput } from '@web.awesome.me/webawesome-pro/dist/react'
-import { UIToast }                                                   from '@Utils/UIToast'
-import { useRef, useState }                                          from 'react'
-import { useSnapshot }                                               from 'valtio'
+import { UIToast } from '@Utils/UIToast'
+import { useRef, useState } from 'react'
+import { useSnapshot } from 'valtio'
 import './style.css'
 
-const formatUsage = (seconds) => {
-    const total = Number(seconds)
-    if (!Number.isFinite(total) || total < 0) {
-        return '00:00'
-    }
-
-    const minutes = Math.floor(total / 60)
-    const rest = Math.floor(total % 60)
-    return `${String(minutes).padStart(2, '0')}:${String(rest).padStart(2, '0')}`
-}
-
+/**
+ * Renders provider-level Cesium Ion credential settings.
+ * @returns {JSX.Element} The credential settings panel.
+ */
 export const IonTokenSettings = () => {
     const ion = useSnapshot(lgs.stores.ion)
     const tokenRef = useRef(null)
     const [canSave, setCanSave] = useState(false)
-    const promptDelaySeconds = Number.isFinite(Number(lgs.configuration?.ion?.promptDelaySeconds))
-                                ? Number(lgs.configuration.ion.promptDelaySeconds)
-                                : 480
-    const activeMode = ion.source === 'user' ? 'personal' : 'standard'
+    const hasToken = ion.source === 'user'
 
+    /**
+     * Saves the token entered in the password field.
+     * @returns {Promise<void>} A promise that resolves after the save attempt.
+     */
     const handleSave = async () => {
         try {
             await __.ui.ionTokenManager.save(tokenRef.current?.value ?? '')
@@ -49,17 +39,21 @@ export const IonTokenSettings = () => {
             setCanSave(false)
             UIToast.success({
                                 caption: 'Cesium Ion token',
-                                text:    'The personal token was saved.',
+                                text:    'The provider token was saved.',
                             })
         }
         catch (error) {
             UIToast.error({
                               caption: 'Cesium Ion token',
-                              text:    error.message,
+                              text:    error?.message ?? String(error),
                           })
         }
     }
 
+    /**
+     * Removes the provider token and falls back to non-Ion defaults.
+     * @returns {Promise<void>} A promise that resolves after the clear attempt.
+     */
     const handleClear = async () => {
         try {
             await __.ui.ionTokenManager.clear()
@@ -69,13 +63,13 @@ export const IonTokenSettings = () => {
             setCanSave(false)
             UIToast.success({
                                 caption: 'Cesium Ion token',
-                                text:    'The personal token was removed.',
+                                text:    'The provider token was removed.',
                             })
         }
         catch (error) {
             UIToast.error({
                               caption: 'Cesium Ion token',
-                              text:    error.message,
+                              text:    error?.message ?? String(error),
                           })
         }
     }
@@ -87,25 +81,23 @@ export const IonTokenSettings = () => {
             </span>
             <div className="manage-profile-ui ion-token-settings">
                 <WaDivider/>
-                <WaCallout open variant={activeMode === 'personal' ? 'success' : 'neutral'} appearance="filled-outlined">
-                    <WaIcon slot="icon" name={activeMode === 'personal' ? 'circle-check' : 'circle-info'} variant="regular"/>
-                    {activeMode === 'personal'
-                     ? 'Your personal Cesium Ion token is active.'
-                     : `The shared Cesium Ion token is active. Cumulative allowance: ${formatUsage(ion.accumulatedSeconds)} / ${formatUsage(promptDelaySeconds)}.`}
+                <WaCallout open variant={hasToken ? 'success' : 'neutral'} appearance="filled-outlined">
+                    <WaIcon slot="icon" name={hasToken ? 'circle-check' : 'circle-info'} variant="regular"/>
+                    {hasToken
+                     ? 'A provider-level Cesium Ion token is available for Ion layers.'
+                     : 'Cesium Ion is optional. Add a personal token when you select an Ion layer.'}
                 </WaCallout>
 
-                {activeMode !== 'personal' && (
-                    <WaButton
-                        appearance="filled"
-                        variant="brand"
-                        href="https://ion.cesium.com/"
-                        target="_blank"
-                        rel="noreferrer"
-                    >
-                        <WaIcon slot="start" name="arrow-up-right-from-square" variant="regular"/>
-                        {'Open Cesium Ion'}
-                    </WaButton>
-                )}
+                <WaButton
+                    appearance="filled"
+                    variant="brand"
+                    href="https://ion.cesium.com/"
+                    target="_blank"
+                    rel="noreferrer"
+                >
+                    <WaIcon slot="start" name="arrow-up-right-from-square" variant="regular"/>
+                    {'Open Cesium Ion'}
+                </WaButton>
 
                 <WaInput
                     ref={tokenRef}
@@ -125,9 +117,9 @@ export const IonTokenSettings = () => {
                         {'Save token'}
                     </WaButton>
 
-                    <WaButton variant="neutral" appearance="outlined" onClick={handleClear} disabled={ion.source !== 'user'}>
+                    <WaButton variant="neutral" appearance="outlined" onClick={handleClear} disabled={!hasToken}>
                         <WaIcon slot="start" name="trash" variant="regular"/>
-                        {'Use default'}
+                        {'Remove token'}
                     </WaButton>
                 </div>
             </div>

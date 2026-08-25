@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { TerrainUtils } from '@Utils/cesium/TerrainUtils'
+import { IonLayerUtils } from '@Utils/cesium/IonLayerUtils'
 import { BASE_ENTITY, TERRAIN_ENTITY } from '@Core/constants'
 
 /**
@@ -126,6 +127,30 @@ export class LayersAndTerrainManager {
 
         const currentBase = lgs.settings.layers?.base ?? null
         const currentTerrain = lgs.settings.layers?.terrain ?? null
+
+        if (!lgs.stores.ion?.token) {
+            const fallbackBase = this.#defaults.base ?? 'arcgis-normal'
+            const fallbackTerrain = this.#defaults.terrain ?? 'reearth-world'
+            const selectedKeys = ['base', 'overlay', 'base3d', 'tiles3d', 'terrain']
+
+            for (const key of selectedKeys) {
+                const selected = this.#bases.get(lgs.settings.layers?.[key])
+                if (!IonLayerUtils.isIonDependentLayer(selected)) {
+                    continue
+                }
+
+                if (key === 'base') {
+                    lgs.settings.layers.base = fallbackBase
+                    this.#base = fallbackBase
+                }
+                else if (key === 'terrain') {
+                    lgs.settings.layers.terrain = fallbackTerrain
+                }
+                else {
+                    lgs.settings.layers[key] = ''
+                }
+            }
+        }
 
         if (!currentBase || !this.#bases.has(currentBase)) {
             const fallbackBase = this.#defaults.base
@@ -320,6 +345,6 @@ export class LayersAndTerrainManager {
      * @param {string|Object} entity - The terrain entity or configuration
      */
     changeTerrain = (entity) => {
-        TerrainUtils.changeTerrain(entity)
+        void TerrainUtils.changeTerrain(entity)
     }
 }

@@ -6,7 +6,7 @@ base: arcgis-normal                   # ID of the current base
 base3d: null                          # ID of the current 3D base scene
 tiles3d: null                         # ID of the current 3D tiles overlay
 overlay: null                         # ID of the current overlay
-terrain: cesium-world                 # ID of the current terrain
+terrain: reearth-world                # ID of the current terrain
 
 colorSettings:                        # Layers color Settings
 
@@ -74,7 +74,7 @@ providers:
         assetId: 1
         image: cesium-world.png
         usage:
-          type: free
+          type: freemium
           doc: ''
 
         type: terrain
@@ -102,7 +102,7 @@ providers:
         logoText: 'Google Maps'
         url: 'https://www.google.com/maps'
         usage:
-          type: personal
+          type: freemium
           doc: ''
 
         type: base3d
@@ -118,7 +118,7 @@ providers:
         image: cesium-world.png
         assetId: 3891168
         usage:
-          type: personal
+          type: freemium
           doc: ''
 
         type: base
@@ -135,7 +135,7 @@ providers:
         logoText: 'Google Maps'
         url: 'https://www.google.com/maps'
         usage:
-          type: personal
+          type: freemium
           doc: ''
 
         type: base
@@ -153,7 +153,7 @@ providers:
         logoText: 'Google Maps'
         url: 'https://www.google.com/maps'
         usage:
-          type: personal
+          type: freemium
           doc: ''
 
         type: base
@@ -167,7 +167,7 @@ providers:
         image: cesium-world.png
         assetId: 3891168
         usage:
-          type: personal
+          type: freemium
           doc: ''
 
         type: overlay
