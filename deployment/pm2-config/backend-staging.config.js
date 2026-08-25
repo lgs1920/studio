@@ -19,6 +19,9 @@ module.exports = {
         name   : "backend-staging",
         script : "/home/.bun/bin/bun run backend.js",
         watch : true,
-        wait_ready: true
+        wait_ready: true,
+        out_file: "/dev/null",
+        error_file: "/home/www/lgs1920/staging/backend/shared/logs/backend-staging-error.log",
+        log_date_format: "YYYY-MM-DD HH:mm:ss"
     }]
 }

@@ -20,6 +20,10 @@ management to track deployments. The scripts are part of the `LGS1920/backend` p
 - **Git Tag Management**: Creates a Git tag locally (format: `<platform>-<version>-<branch>-<date>`), pushes it to the
   remote repository on successful deployment, and deletes it if the deployment fails.
 - **PM2 Integration**: Restarts the `backend` application using PM2 with platform-specific configurations.
+- **Backend error log rotation**: Sends backend standard output to `/dev/null`, keeps backend errors in the
+  platform-specific shared log directory, and installs/configures `pm2-logrotate` during backend deployment.
+- **Backend watchdog**: Installs a user-level five-minute liveness watchdog and an `@reboot` PM2 startup entry for
+  backend deployments without requiring `sudo`.
 - **Backend environment loading**: Uploads the local `../backend/.env` to the platform backend shared directory,
   regenerates `LGS1920_CONTACT_CSRF_SECRET` in the transferred content, enforces directory mode `700` and file mode
   `600`, then loads it before starting PM2 with `--update-env`. SMTP variables are never added to Studio builds or
@@ -55,6 +59,8 @@ Before running the script, ensure the following are installed and configured:
 - **Configuration File**: A `deploy.yml` file in the `deployment/` directory, specifying remote server details, paths,
   and PM2 settings.
 - **PM2**: Required on the remote server (`/home/.bun/bin/pm2`) for `backend` deployments.
+- **PM2 log rotation**: The backend deployment user must be allowed to install PM2 modules with `pm2 install`.
+- **User crontab**: The backend deployment user must be allowed to manage its own crontab with `crontab`.
 
 Install dependencies using:
 
@@ -182,8 +188,11 @@ The script follows these steps:
    `LGS1920_CONTACT_CSRF_SECRET`, uploads the resulting environment content to the configured environment path, and
    applies mode `600`. The file stays outside the release tree.
 8. **Post-Deployment**: For `backend`, sources the shared environment file and starts or restarts the application
-   using PM2 with `--update-env` and the platform-specific config (e.g., `backend-production.config.js`). Studio
-   deployments do not execute the backend PM2 command.
+   using PM2 with `--update-env` and the platform-specific config (e.g., `backend-production.config.js`). The same
+   backend-only command creates `shared/logs`, installs `pm2-logrotate` if needed, and configures 10 MB rotation,
+   fourteen retained archives, gzip compression, and timestamped rotated filenames. It also installs an idempotent
+   user-level crontab block with a five-minute `/ping` watchdog and an `@reboot` startup command. Studio deployments
+   do not execute the backend PM2 command.
 9. **Tag Push**: Pushes the Git tag and branch to the remote repository (`origin`) if all steps succeed.
 10. **Error Handling**: Deletes the Git tag locally and remotely if any step fails, logging errors with color-coded
    output (red for errors, green for success, yellow for emphasis).

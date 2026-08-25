@@ -2,6 +2,7 @@ import path from 'node:path'
 import {randomBytes} from 'node:crypto'
 
 const CONTACT_CSRF_SECRET_NAME = 'LGS1920_CONTACT_CSRF_SECRET'
+const DEFAULT_BUN_BIN = '/home/.bun/bin/bun'
 const ENV_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/
 const SAFE_UNQUOTED_ENV_VALUE_PATTERN = /^[A-Za-z0-9_./:@%+,\-]*$/
 const SINGLE_QUOTED_ENV_VALUE_PATTERN = /^'(?:[^']*)'$/
@@ -88,27 +89,79 @@ export const quoteShellArgument = (value) => `'${String(value).replaceAll("'", "
  * @param {string} options.backendPath Active backend release path.
  * @param {string} options.environmentFile Backend-only environment file path.
  * @param {string} options.pm2Bin Absolute PM2 executable path.
+ * @param {string} options.bunBin Absolute Bun executable path.
+ * @param {string} options.pm2App PM2 backend application name.
+ * @param {string} options.platform Backend deployment platform.
+ * @param {number} options.backendPort Backend listening port.
  * @returns {string} Remote shell command.
  * @throws {TypeError} If a required command option is missing.
  */
-export const createBackendPm2Command = ({backendPath, environmentFile, pm2Bin} = {}) => {
-    if (!backendPath || !environmentFile || !pm2Bin) {
+export const createBackendPm2Command = ({
+    backendPath,
+    environmentFile,
+    pm2Bin,
+    bunBin = DEFAULT_BUN_BIN,
+    pm2App,
+    platform,
+    backendPort,
+} = {}) => {
+    if (!backendPath || !environmentFile || !pm2Bin || !pm2App || !platform || !backendPort) {
         throw new TypeError('Backend PM2 command options are incomplete')
     }
 
     const ecosystemFile = `${backendPath}/ecosystem.config.js`
+    const backendRoot = path.posix.dirname(backendPath)
+    const sharedDirectory = path.posix.join(backendRoot, 'shared')
+    const sharedLogDirectory = path.posix.join(sharedDirectory, 'logs')
+    const startupScript = path.posix.join(backendPath, 'backend-startup.js')
+    const watchdogScript = path.posix.join(backendPath, 'backend-watchdog.js')
+    const statePath = path.posix.join(sharedDirectory, 'backend-watchdog-state.json')
+    const watchdogLogPath = path.posix.join(sharedLogDirectory, 'watchdog.log')
+    const startupLogPath = path.posix.join(sharedLogDirectory, 'startup.log')
+    const temporaryCrontabPath = path.posix.join(sharedDirectory, '.backend-watchdog-crontab')
     const quotedBackendPath = quoteShellArgument(backendPath)
     const quotedEnvironmentFile = quoteShellArgument(environmentFile)
     const quotedEcosystemFile = quoteShellArgument(ecosystemFile)
+    const quotedSharedLogDirectory = quoteShellArgument(sharedLogDirectory)
     const quotedPm2Bin = quoteShellArgument(pm2Bin)
+    const quotedLogrotateModule = quoteShellArgument('pm2-logrotate')
+    const quotedBunBin = quoteShellArgument(bunBin)
+    const quotedPm2App = quoteShellArgument(pm2App)
+    const quotedPlatform = quoteShellArgument(platform)
+    const quotedWatchdogUrl = quoteShellArgument(`http://127.0.0.1:${backendPort}/ping`)
+    const quotedStartupScript = quoteShellArgument(startupScript)
+    const quotedWatchdogScript = quoteShellArgument(watchdogScript)
+    const quotedStatePath = quoteShellArgument(statePath)
+    const quotedWatchdogLogPath = quoteShellArgument(watchdogLogPath)
+    const quotedStartupLogPath = quoteShellArgument(startupLogPath)
+    const quotedTemporaryCrontabPath = quoteShellArgument(temporaryCrontabPath)
+    const watchdogCronBegin = `# BEGIN LGS1920 BACKEND WATCHDOG ${platform}`
+    const watchdogCronEnd = `# END LGS1920 BACKEND WATCHDOG ${platform}`
+    const quotedCronLines = [
+        watchdogCronBegin,
+        `*/5 * * * * ${quotedBunBin} ${quotedWatchdogScript} --platform ${quotedPlatform} --url ${quotedWatchdogUrl} --pm2-bin ${quotedPm2Bin} --pm2-app ${quotedPm2App} --environment-file ${quotedEnvironmentFile} --state-path ${quotedStatePath} >> ${quotedWatchdogLogPath} 2>&1`,
+        `@reboot sleep 30 && ${quotedBunBin} ${quotedStartupScript} --backend-path ${quotedBackendPath} --environment-file ${quotedEnvironmentFile} --pm2-bin ${quotedPm2Bin} >> ${quotedStartupLogPath} 2>&1`,
+        watchdogCronEnd,
+    ].map(quoteShellArgument).join(' ')
 
     return [
         `cd ${quotedBackendPath}`,
+        `install -d -m 750 ${quotedSharedLogDirectory}`,
         `test -r ${quotedEnvironmentFile}`,
         'set -a',
         `. ${quotedEnvironmentFile}`,
         'set +a',
+        `if ! ${quotedPm2Bin} describe ${quotedLogrotateModule} >/dev/null 2>&1; then ${quotedPm2Bin} install ${quotedLogrotateModule}; fi`,
+        `${quotedPm2Bin} set pm2-logrotate:max_size 10M`,
+        `${quotedPm2Bin} set pm2-logrotate:retain 14`,
+        `${quotedPm2Bin} set pm2-logrotate:compress true`,
+        `${quotedPm2Bin} set pm2-logrotate:dateFormat YYYY-MM-DD_HH-mm-ss`,
         `${quotedPm2Bin} startOrRestart ${quotedEcosystemFile} --cwd ${quotedBackendPath} --update-env`,
+        `if crontab -l 2>/dev/null > ${quotedTemporaryCrontabPath}; then :; else : > ${quotedTemporaryCrontabPath}; fi`,
+        `sed -i '/^${watchdogCronBegin}$/,/^${watchdogCronEnd}$/d' ${quotedTemporaryCrontabPath}`,
+        `printf '%s\\n' ${quotedCronLines} >> ${quotedTemporaryCrontabPath}`,
+        `crontab ${quotedTemporaryCrontabPath}`,
+        `rm -f ${quotedTemporaryCrontabPath}`,
         `${quotedPm2Bin} save`,
     ].join(' && ')
 }

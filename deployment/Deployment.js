@@ -711,6 +711,9 @@ export class Deployment {
                 backendPath:     where,
                 environmentFile,
                 pm2Bin:           this.pm2.bin,
+                pm2App:           `backend-${this.platform}`,
+                platform:         this.platform,
+                backendPort:      this.configuration.backend[this.platform].port,
             })
         }
         // Configure server paths. Registration data lives outside versioned releases.
