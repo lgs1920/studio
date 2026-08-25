@@ -1049,3 +1049,11 @@
 ## 2026-08-25 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/47e3894e2f48aba8bfd84170f0be35543ac87492)
 
 - Recorded automatically from Git history.
+
+## 2026-08-25 — [`docs: split Replay Timeline preview from editor specification`](https://github.com/lgs1920/studio/commit/3a2b9b9c4f199f2eb446cf9b284969ecd378602d)
+
+- Recorded automatically from Git history.
+
+## 2026-08-25 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/077f47711d4aa57fba7260fbaead95b59cfd5530)
+
+- Recorded automatically from Git history.
