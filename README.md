@@ -127,7 +127,7 @@ Replace the current separate Replay `start` / `replay` / `stop` clip UI with a t
 drawer. The timeline will combine start clips, one locked journey replay, stop clips, and widget clips across up to 20
 widget tracks. The same timeline state will drive Draft recording and HQ export deterministically.
 
-Technical spec: [Replay track timeline editor evolution](tech-doc/specs/replay-video/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md).
+Technical specs: [Replay Timeline preview](tech-doc/todo/CORE-REPLAY-TIMELINE-PREVIEW-SPEC.md) for 1.0.0 and [Replay track timeline editor evolution](tech-doc/todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) for the complete editor.
 
 ### 1.3 — 3D Camera Path Editor
 
@@ -151,7 +151,8 @@ points include:
 - [Replay implementation status](tech-doc/specs/replay-video/CORE-REPLAY-IMPLEMENTATION-STATUS.md)
 - [Replay quality validation](tech-doc/specs/replay-video/CORE-REPLAY-QUALITY-VALIDATION.md)
 - [Replay audit](tech-doc/specs/replay-video/REPLAY-AUDIT.md)
-- [Replay track timeline editor evolution](tech-doc/specs/replay-video/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md)
+- [Replay Timeline preview](tech-doc/todo/CORE-REPLAY-TIMELINE-PREVIEW-SPEC.md)
+- [Replay track timeline editor evolution](tech-doc/todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md)
 - [Drone camera path architecture](tech-doc/specs/replay-video/CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)
 - [Brand and season swatch reactivity](tech-doc/todo/BRAND_SEASON_SWATCH_REACTIVITY_SPEC.md)
 - [Clip altitude data alignment](tech-doc/specs/replay-video/CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md)

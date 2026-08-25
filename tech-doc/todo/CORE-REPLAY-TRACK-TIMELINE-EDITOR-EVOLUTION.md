@@ -2,7 +2,7 @@
 
 Status: **TODO**
 
-Target release: `1.1.0`
+Target release: `1.0.0` (read-only preparation preview) and `1.1.0` (editable authoring timeline)
 
 Date: 2026-07-16
 
@@ -19,6 +19,34 @@ The replay itself must remain mandatory. The main replay track should contain:
 Additional tracks, capped at 20, should contain widget clips. A widget track may contain a single widget clip or multiple widget clips. Moving and resizing a widget clip controls its visible time range. Widget screen position, scale, and bounds should continue to use the existing video widget board and widget manager. Each widget clip may define an enter effect and an exit effect. The default effect is an immediate cut with no animation.
 
 The editor must work in the existing Replay drawer, including the stacked/mobile drawer mode.
+
+## Delivery split
+
+The work tracked by this specification is delivered in two compatible slices:
+
+### 1.0.0 — Linked video preparation preview
+
+- Remove the linked Replay Draft recording step from video preparation.
+- Display a transient `Timeline` widget with exactly two read-only tracks.
+- Show `Start`, `Replay`, and `Stop` phase segments on the replay track.
+- Show Dynamic Stats and Journey Stats visibility intervals on the widget track.
+- Allow only playhead movement, play, pause, and replay.
+- Drive the scene from the canonical Replay frame contract without creating a second clock.
+- Keep the Timeline outside the captured video board.
+
+The detailed behavior is defined in [Replay Timeline Preview Specification](CORE-REPLAY-TIMELINE-PREVIEW-SPEC.md).
+
+### 1.1.0 — Editable authoring timeline
+
+- Persist the normalized `journey.replay.timeline` model.
+- Replace the existing clip lists with the complete multi-track editor.
+- Add editable widget tracks, clip movement, trimming, overlap validation, effects,
+  migration, and mobile editing behavior.
+- Make Draft recording and HQ export consume the normalized timeline.
+
+The 1.0.0 preview is intentionally a read-only projection of this future model.
+It must not introduce a temporary data model that would need to be discarded by
+the 1.1.0 editor.
 
 ## Current State
 
@@ -322,7 +350,11 @@ Costs:
 - More tests are needed because timeline edits directly affect video export.
 - More implementation work than dropping in a timeline package.
 
-Recommendation: this is the best long-term option.
+For the 1.0.0 read-only preview, use `@xzdarcy/react-timeline-editor` through
+an application-owned adapter. Keep the normalized model and playback authority
+in Studio so the package remains a rendering and pointer-input surface only.
+The custom implementation remains the fallback if the package spike fails, and
+the long-term 1.1.0 editor decision must be based on the spike results.
 
 ## Open Source Package Options
 
@@ -340,23 +372,28 @@ Package metadata was checked on 2026-07-16.
 
 ## Recommended Architecture
 
-Use a custom timeline model and a custom timeline UI for V1.
+Use a custom timeline model and an adapter around
+`@xzdarcy/react-timeline-editor` for the 1.0.0 preview.
 
 The project already owns the replay clock, the HQ export frame loop, the widget board, and overlay composition. A third-party timeline can only solve the visible editor surface. It cannot remove the need for a project-specific runtime model.
 
 Recommended compromise:
 
 1. Build `ReplayTrackTimelineModel` first.
-2. Build a custom V1 editor with plain pointer events.
-3. Keep the editor interaction surface intentionally small:
+2. Build the read-only two-track preview with `@xzdarcy/react-timeline-editor`.
+3. Keep the preview interaction surface intentionally small:
+   - move the cursor;
+   - play, pause, and replay;
+   - render controlled, locked actions only.
+4. For the 1.1.0 editor, add the full authoring interaction surface:
    - move clip;
    - trim left/right;
    - add/remove clip;
    - add/remove/collapse track;
    - select clip and edit fields;
    - snap to frames/seconds.
-4. Only add `@dnd-kit` if track reordering or mobile drag behavior becomes unreliable with existing code.
-5. Do not add a full timeline package unless a short spike proves that `@xzdarcy/react-timeline-editor` can satisfy locked replay, mobile drawer, styling, and controlled state without fighting the runtime.
+5. Keep all actions controlled and block move/resize callbacks for locked 1.0.0 clips.
+6. Only add `@dnd-kit` if 1.1.0 track reordering or mobile drag behavior becomes unreliable with existing code.
 
 ## Validation Rules
 
@@ -437,7 +474,17 @@ Effects must be deterministic and based only on frame time. They must not use in
 - Update drawer runtime setup to expose `replayRuntime.timeline`.
 - Keep writing generated `journey.replay.start/stop` for compatibility.
 
-### Phase 2: Timeline Drawer UI
+### Phase 2: Read-only Timeline Preview — 1.0.0
+
+- Add `JourneyReplayTimelinePreview` using the xzdarcy adapter.
+- Render exactly the replay and Replay widgets tracks.
+- Render Start, Replay, and Stop actions as locked controlled actions.
+- Render Dynamic Stats and Journey Stats visibility intervals from
+  `ReplayOverlayResolver`.
+- Connect cursor, play, pause, and replay to the canonical Replay frame scheduler.
+- Keep the widget outside the captured crop and remove the old linked Draft action.
+
+### Phase 3: Timeline Drawer UI — 1.1.0
 
 - Replace `JourneyReplayClipsTab` with `JourneyReplayTimelineTab`.
 - Keep `JourneyReplayClipsTab` available until the migration is stable.
@@ -447,14 +494,14 @@ Effects must be deterministic and based only on frame time. They must not use in
 - Implement selection and inspector.
 - Lock edits while replay is playing, recording, or HQ export is active.
 
-### Phase 3: Runtime and Overlay Visibility
+### Phase 4: Runtime and Overlay Visibility
 
 - Replace the local phase builder in `ReplayDeferredExporter` with the normalized timeline phases.
 - Publish `activeWidgetClips` in live replay dynamic frame state and HQ export frame state.
 - Extend `ReplayOverlayResolver` to resolve widget visibility from timeline clips.
 - Extend `ReplayVideoOverlayComposer` overlay options with deterministic opacity/transform output.
 
-### Phase 4: Mobile and Recording Polish
+### Phase 5: Mobile and Recording Polish
 
 - Tune stacked drawer layout.
 - Add touch-specific handle sizes.
@@ -462,7 +509,7 @@ Effects must be deterministic and based only on frame time. They must not use in
 - Ensure selected clip inspector works without covering the timeline controls.
 - Verify draft recording and HQ export render the same widget visibility/effects.
 
-### Phase 5: Cleanup
+### Phase 6: Cleanup
 
 - Deprecate direct editing of `journey.replay.start/stop`.
 - Keep import/migration support.

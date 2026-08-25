@@ -31,7 +31,8 @@ The status document is the authoritative roadmap. These files preserve the
 detailed functional and technical requirements for unfinished work.
 
 - [Start camera editor and clip synchronization](CORE-REPLAY-START-CAMERA-EDITOR-SPEC.md) — PARTIAL / TODO, 1.0.0
-- [Replay track timeline editor](CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) — TODO, 1.1.0
+- [Replay Timeline preview](../../todo/CORE-REPLAY-TIMELINE-PREVIEW-SPEC.md) — TODO, 1.0.0
+- [Replay track timeline editor](../../todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) — TODO, 1.0.0 preview / 1.1.0 editor
 - [POI animation during replay](CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md) — TODO, 1.1.0
 - [Clip altitude alignment](CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md) — TODO, 1.1.0
 - [HQ resolution profiles](HQ_4K_VIDEO_EXPORT_SPEC.md) — TODO, 1.1.0
