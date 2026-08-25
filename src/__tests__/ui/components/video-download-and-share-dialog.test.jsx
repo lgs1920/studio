@@ -80,8 +80,6 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', async () => {
     return {
     WaButton: ({children, ...props}) => <button type="button" {...props}>{children}</button>,
     WaButtonGroup: ({children, ...props}) => <div role="group" {...props}>{children}</div>,
-    WaOption: ({children, ...props}) => <option {...props}>{children}</option>,
-    WaSelect: ({children, value, onChange, ...props}) => <select value={value} onChange={onChange} {...props}>{children}</select>,
     WaDialog: ({children, open, onWaHide, lightDismiss, ...props}) => {
         const wasOpen = React.useRef(open)
         const manualHideDispatched = React.useRef(false)
@@ -490,6 +488,7 @@ describe('VideoDownloadAndShareDialog', () => {
         expect(screen.getByTestId('recording-info').getAttribute('data-quality')).toBe('HD')
         expect(screen.getByTestId('recording-info').getAttribute('data-metadata-status')).toBe('draft')
         expect(screen.getByRole('button', {name: 'Create HQ video'}).closest('.video-preview-create-hq-action')).not.toBeNull()
+        expect(screen.queryByLabelText('HQ camera')).toBeNull()
 
         await act(async () => {
             fireEvent.click(screen.getByRole('button', {name: 'Create HQ video'}))

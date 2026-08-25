@@ -30,7 +30,7 @@ import { cancelVideoEditing, prepareVideoCaptureUi } from '@Components/MainUI/vi
 import { VIDEO_CROP_ZONE } from '@Core/constants'
 import { CountApi } from '@Utils/CountApi'
 import {
-    WaButton, WaButtonGroup, WaDialog, WaDropdown, WaDropdownItem, WaIcon, WaInput, WaOption, WaSelect, WaTooltip,
+    WaButton, WaButtonGroup, WaDialog, WaDropdown, WaDropdownItem, WaIcon, WaInput, WaTooltip,
 }                        from '@web.awesome.me/webawesome-pro/dist/react'
 import {
     UIToast,
@@ -149,7 +149,6 @@ export const VideoDownloadAndShareDialog = () => {
     const [mediaUrl, setMediaUrl] = useState(null)
     const [hqMedia, setHqMedia] = useState(null)
     const [hqExportStatus, setHqExportStatus] = useState('idle')
-    const [hqRenderHostMode, setHqRenderHostMode] = useState('isolated')
     const _mainVideo = useRef(null)
     const _blurredVideo = useRef(null)
     const _recordingInfoButton = useRef(null)
@@ -531,7 +530,6 @@ export const VideoDownloadAndShareDialog = () => {
                 signal: controller.signal,
                 abortController: controller,
                 mediaMetadata: hqMediaMetadata,
-                renderHostMode: hqRenderHostMode,
             })
 
             const draftMediaData = getMediaData()
@@ -616,7 +614,7 @@ export const VideoDownloadAndShareDialog = () => {
         finally {
             _hqExportAbortController.current = null
         }
-    }, [__.recorder, getHqExportFilename, getHqFilenameStem, getMediaData, getVideoExtension, getVideoMimeType, hqRenderHostMode, isHqExporting, isReplayVideoLinked, prepareReplaySceneForDialog, releaseHqMediaUrl, waitForAnimationFrame])
+    }, [__.recorder, getHqExportFilename, getHqFilenameStem, getMediaData, getVideoExtension, getVideoMimeType, isHqExporting, isReplayVideoLinked, prepareReplaySceneForDialog, releaseHqMediaUrl, waitForAnimationFrame])
 
     /**
      * Handle share action with Web Share API fallback.
@@ -1038,17 +1036,6 @@ export const VideoDownloadAndShareDialog = () => {
                     )}
                     {!hasHqMedia && isReplayVideoLinked && (
                         <div className="video-preview-create-hq-action">
-                            <WaSelect
-                                label="HQ camera"
-                                label-at-start
-                                size="s"
-                                value={hqRenderHostMode}
-                                disabled={isHqExporting}
-                                onChange={event => setHqRenderHostMode(event.target.value)}
-                            >
-                                <WaOption value="isolated">{'Dedicated camera'}</WaOption>
-                                <WaOption value="visible">{'Visible map camera'}</WaOption>
-                            </WaSelect>
                             <WaTooltip for="video-preview-create-hq">{isHqExporting ? 'Creating HQ video' : 'Create an HQ version'}</WaTooltip>
                             <WaButton
                                 id="video-preview-create-hq"
