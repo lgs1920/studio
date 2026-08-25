@@ -1021,3 +1021,31 @@
 ## 2026-08-24 — [`docs: analyze parallel replay workspace execution`](https://github.com/lgs1920/studio/commit/2cf24f770a9f20ee397d90d789b7ebab6b561012)
 
 - Recorded automatically from Git history.
+
+## 2026-08-25 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/e479470595528f3343a05b063fa87f514790ade9)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-08-25 — [`fix: make Cesium Ion optional and provider-scoped (#483)`](https://github.com/lgs1920/studio/commit/6883ea049eeb5850c5ea6deecd74866b6ac27ccd)
+
+- Recorded automatically from Git history.
+
+## 2026-08-25 — [`refactor: remove obsolete FFmpeg conversion integration`](https://github.com/lgs1920/studio/commit/6acd6a252cbc8da9145a75177319470edfd9555e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-25 — [`feat: add backend deployment monitoring`](https://github.com/lgs1920/studio/commit/ca4cfe535afaa1961dd6601cb6029f97494dcc0c)
+
+- Recorded automatically from Git history.
+
+## 2026-08-25 — [`fix: expose Bun to PM2 module installation`](https://github.com/lgs1920/studio/commit/7306e12a59d363470a6a821d497fd03875025cb1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-25 — [`docs: update 1.0.0 release changelog`](https://github.com/lgs1920/studio/commit/627a1853072a493073491f2bd76be0e995c179dd)
+
+- Recorded automatically from Git history.
+
+## 2026-08-25 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/47e3894e2f48aba8bfd84170f0be35543ac87492)
+
+- Recorded automatically from Git history.
