@@ -7,7 +7,7 @@ description: Maintain and explain the LGS1920 Studio internal IndexedDB layer, L
 
 Work from `/home/christian/devs/assets/lgs1920/studio` and read `PROJECT_RULES.md` completely before acting.
 
-Read `tech-doc/current/src/core/db/INTERNAL_DATABASE_ARCHITECTURE.md` before any non-trivial database or synchronization change. Use `tech-doc/src/core/db/README.md` for the low-level `LocalDB` contract and `tech-doc/SYNC-GUIDE.md` for the user-facing local workflow.
+Read `tech-doc/specs/data/CORE-INTERNAL-DATABASE-ARCHITECTURE.md` before any non-trivial database or synchronization change. Use `tech-doc/specs/data/CORE-LOCALDB-API-REFERENCE.md` for the low-level `LocalDB` contract and `tech-doc/specs/data/SETTINGS_SYNC_GUIDE.md` for the user-facing local workflow.
 
 ## Scope
 
@@ -84,4 +84,4 @@ Add or run domain tests for settings, vault, journeys, POIs, groups, or widgets 
 - Empty, partial, corrupt, and legacy imports have defined behavior
 - Sensitive vault data and destructive source-of-truth rules are disclosed
 - Targeted tests pass
-- `tech-doc/current/src/core/db/INTERNAL_DATABASE_ARCHITECTURE.md` and nearby references match the implementation
+- `tech-doc/specs/data/CORE-INTERNAL-DATABASE-ARCHITECTURE.md` and nearby references match the implementation

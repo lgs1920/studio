@@ -820,7 +820,7 @@ true:
 - `deployment/deploy.yml`
   - remain the canonical environment configuration, or be replaced by a
     validated configuration source
-- `tech-doc/specs/DEPLOYMENT-README.md`
+- `tech-doc/specs/delivery/DEPLOYMENT-README.md`
   - document the final current behavior after migration
 
 ### New files likely to be added

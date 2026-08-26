@@ -21,7 +21,7 @@ Technical-documentation organization:
 - Treat `PROJECT_RULES.md` as the canonical rule source for documentation placement.
 - Classify implementation specifications from their content and the code, not from `COMMIT_HISTORY.md`.
 - Place proposed, pending-validation, explicit TODO, and future implementation specifications in `tech-doc/todo/`.
-- Place specifications and architecture documents describing the implemented behavior in `tech-doc/current/`.
+- Place specifications and architecture documents describing the implemented behavior in `tech-doc/specs/`.
 - Preserve module structure below those directories when it improves discoverability.
 - Update every link affected by a move, including links in the repository README and `tech-doc/README.md`.
 
