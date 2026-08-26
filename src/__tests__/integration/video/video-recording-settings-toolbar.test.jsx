@@ -52,6 +52,9 @@ describe('VideoRecordingSettingsToolbar', () => {
         vi.clearAllMocks()
         globalThis.__ = {
             ui: {
+                replay: {
+                    prepareReplayCamera: vi.fn(async () => true),
+                },
                 widgetManager: {
                     windowResizing: false,
                     getElementById: vi.fn(() => document.createElement('div')),
@@ -148,6 +151,9 @@ describe('VideoRecordingSettingsToolbar', () => {
 
         resolveCropSync()
         await vi.waitFor(() => expect(prepareVideoCaptureUi).toHaveBeenCalledTimes(1))
+        expect(globalThis.__.ui.replay.prepareReplayCamera).toHaveBeenCalledWith({
+            journey: globalThis.lgs.theJourney,
+        })
         expect(globalThis.lgs.stores.ui.video.editing).toBe(false)
         expect(globalThis.lgs.stores.ui.video.preRecording).toBe(true)
     })

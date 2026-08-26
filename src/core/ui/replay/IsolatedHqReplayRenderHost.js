@@ -11,6 +11,7 @@ import {
     applyReplayImageryLayerDescriptor,
     captureReplaySceneDescriptor,
 } from './ReplaySceneDescriptor'
+import {createReplayCropFrustum} from './ReplayCropFrustum'
 import {createReplaySceneTileReadinessCoordinator} from './ReplaySceneTileReadiness'
 
 /**
@@ -110,6 +111,7 @@ export class IsolatedHqReplayRenderHost {
     #createImageryLayer
     #createTileset
     #createReadinessCoordinator
+    #cropProjection
     #destroyed = false
 
     /**
@@ -127,6 +129,7 @@ export class IsolatedHqReplayRenderHost {
         createImageryLayer = provider => new ImageryLayer(provider),
         createTileset = definition => IonLayerUtils.createTileset(definition),
         createReadinessCoordinator = createReplaySceneTileReadinessCoordinator,
+        cropProjection = null,
     } = {}) {
         this.#dimensions = normalizeReplayHostDimensions(dimensions)
         this.#viewportDimensions = normalizeReplayHostViewportDimensions(viewportDimensions)
@@ -138,6 +141,23 @@ export class IsolatedHqReplayRenderHost {
         this.#createImageryLayer = createImageryLayer
         this.#createTileset = createTileset
         this.#createReadinessCoordinator = createReadinessCoordinator
+        this.#cropProjection = cropProjection
+    }
+
+    /**
+     * Apply the exact crop projection to the isolated camera.
+     *
+     * @returns {Object|null} Applied Cesium frustum.
+     */
+    #applyCropFrustum = () => {
+        const camera = this.#widget?.camera
+        const frustum = createReplayCropFrustum(this.#cropProjection)
+        if (!camera || !frustum) {
+            return null
+        }
+
+        camera.frustum = frustum
+        return frustum
     }
 
     /**
@@ -194,6 +214,7 @@ export class IsolatedHqReplayRenderHost {
 
         applyReplayHostEnvironment(this.#widget.scene, this.#descriptor)
         this.#widget.resize?.()
+        this.#applyCropFrustum()
         this.#widget.render?.()
         this.#readinessCoordinator = this.#createReadinessCoordinator(
             this.#widget.scene,
@@ -233,6 +254,7 @@ export class IsolatedHqReplayRenderHost {
             viewer: this.#widget,
             scene:  this.#widget.scene,
             canvas: this.#widget.canvas,
+            cropProjection: this.#cropProjection,
         }
         : null
 
@@ -263,6 +285,7 @@ export class IsolatedHqReplayRenderHost {
         }
 
         this.#widget.resize?.()
+        this.#applyCropFrustum()
         this.#widget.render?.()
         const ready = this.#readinessCoordinator?.prepareForCapture
             ? await this.#readinessCoordinator.prepareForCapture({
@@ -294,6 +317,7 @@ export class IsolatedHqReplayRenderHost {
         }
 
         this.#widget.resize?.()
+        this.#applyCropFrustum()
         this.#widget.render?.()
         const ready = this.#readinessCoordinator?.prepareForCapture
             ? await this.#readinessCoordinator.prepareForCapture({

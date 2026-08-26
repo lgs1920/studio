@@ -32,6 +32,8 @@ and issue analysis remain in [`REPLAY-AUDIT.md`](REPLAY-AUDIT.md).
   frame, progress, dynamic duration/remaining-time metrics, icon-only lifecycle
   actions, inline fallback, and Picture-in-Picture cleanup.
 - Logical crop viewport and physical output scaling for HQ capture and widgets.
+- Crop-aware isolated HQ camera frustums and readiness identity for 2D,
+  terrain, and 3D Tiles capture.
 - Frame-accurate HQ trace updates and deterministic Navigation camera updates.
 - Moving clip readiness separated from settled waits.
 
@@ -57,7 +59,7 @@ subject to the validation gates below.
 | Status | Target | Work item | Detailed specification |
 | --- | --- | --- | --- |
 | PARTIAL / TODO | 1.0.0 | Complete synchronized replay-start camera editing while preserving the implemented canonical camera and clip continuity | [Start camera editor](CORE-REPLAY-START-CAMERA-EDITOR-SPEC.md) |
-| TODO | 1.0.0 | Validate isolated HQ on fixed imagery, terrain, and 3D Tiles journeys; prove camera parity, resource teardown, crop-aware readiness, and visual quality | [Replay quality validation](CORE-REPLAY-QUALITY-VALIDATION.md) |
+| TODO | 1.0.0 | Validate isolated HQ on fixed imagery, terrain, and 3D Tiles journeys; prove camera parity, resource teardown, and visual quality | [Replay quality validation](CORE-REPLAY-QUALITY-VALIDATION.md) |
 | TODO | 1.0.0 | Replace linked Replay Draft preparation with a read-only two-track Timeline preview | [Timeline preview](../../todo/CORE-REPLAY-TIMELINE-PREVIEW-SPEC.md) |
 | TODO | 1.1.0 | Replace separated clip controls with the normalized editable multi-track replay timeline | [Track timeline editor](../../todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) |
 | TODO | 1.1.0 | Drive POI animation and displayed fields from canonical replay time | [POI animation](CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md) |

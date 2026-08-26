@@ -64,6 +64,26 @@ export const replayViewerFor = owner => replayRenderTargetFor(owner)?.viewer
     ?? null
 
 /**
+ * Resolve the camera used by a replay render target.
+ *
+ * Interactive replay writes to the canonical Studio camera. HQ replay writes
+ * to the isolated target camera and must not leak those writes to the map.
+ *
+ * @param {Object} owner - Replay session owner.
+ * @returns {Object|null} Active replay camera.
+ */
+export const replayCameraFor = owner => {
+    const target = replayRenderTargetFor(owner)
+    if (target) {
+        return target.viewer?.camera ?? null
+    }
+
+    return globalThis.lgs?.camera
+        ?? replayViewerFor(owner)?.camera
+        ?? null
+}
+
+/**
  * Resolve the Cesium scene for one replay owner.
  *
  * @param {Object} owner - Replay session owner.

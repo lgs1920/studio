@@ -165,6 +165,7 @@ describe('JourneyReplay camera interaction lifecycle', () => {
 
     it('protects an automatically applied frame from delayed Cesium synchronization', () => {
         const setView = vi.fn()
+        const hqSetView = vi.fn()
         const call = {
             now: () => 1000,
         }
@@ -177,8 +178,11 @@ describe('JourneyReplay camera interaction lifecycle', () => {
             [JOURNEY_REPLAY_INTERNAL_STATE]: state,
         }
         globalThis.lgs = {
+            camera: {
+                setView,
+            },
             viewer: {
-                camera: {setView},
+                camera: {setView: hqSetView},
             },
         }
 
@@ -190,6 +194,7 @@ describe('JourneyReplay camera interaction lifecycle', () => {
 
         expect(applied).toBe(true)
         expect(setView).toHaveBeenCalledOnce()
+        expect(hqSetView).not.toHaveBeenCalled()
         expect(state.cameraAutoTrackingIgnoreUntil).toBe(1250)
         expect(state.cameraApplyingView).toBe(false)
     })

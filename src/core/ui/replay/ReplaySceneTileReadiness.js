@@ -203,6 +203,17 @@ const replayCameraFootprintKey = scene => {
     const frustumAspect = Number.isFinite(perspectiveFov)
         ? quantizeCameraValue(Number.isFinite(Number(frustum.aspectRatio)) ? frustum.aspectRatio : 0, CAMERA_DIRECTION_QUANTIZATION)
         : quantizeCameraValue(orthographicHeight, CAMERA_POSITION_QUANTIZATION_METERS)
+    const cropProjectionKey = frustum.replayCropProjectionKey
+        ?? JSON.stringify([
+            frustum.left,
+            frustum.right,
+            frustum.top,
+            frustum.bottom,
+            frustum.xOffset,
+            frustum.yOffset,
+        ].map(value => Number.isFinite(Number(value)) ? Number(value) : null))
+    const drawingBufferWidth = Number(scene.drawingBufferWidth ?? scene.canvas?.width)
+    const drawingBufferHeight = Number(scene.drawingBufferHeight ?? scene.canvas?.height)
     const values = [
         scene.mode ?? scene.sceneMode ?? null,
         ...position.map(value => quantizeCameraValue(value, CAMERA_POSITION_QUANTIZATION_METERS)),
@@ -212,6 +223,9 @@ const replayCameraFootprintKey = scene => {
         frustumAspect,
         quantizeCameraValue(frustum.near, CAMERA_POSITION_QUANTIZATION_METERS),
         quantizeCameraValue(frustum.far, CAMERA_POSITION_QUANTIZATION_METERS),
+        cropProjectionKey,
+        Number.isFinite(drawingBufferWidth) ? drawingBufferWidth : null,
+        Number.isFinite(drawingBufferHeight) ? drawingBufferHeight : null,
     ]
 
     return values.every(value => value !== null && value !== undefined)

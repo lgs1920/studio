@@ -604,9 +604,10 @@ Cesium exposes view-based readiness signals. They must not be interpreted as
 permanent cache flags.
 
 `Globe.tilesLoaded` means that the globe's terrain and imagery load queues are
-empty for the current Cesium view. It covers the complete viewport, not the
-video crop rectangle. A tile outside the crop or near the viewport edge can
-keep this value `false`.
+empty for the current Cesium view. The isolated HQ host now gives Cesium the
+crop viewport and an exact crop sub-frustum, so the readiness observation is
+made for the exported crop rather than the interactive full canvas. Cesium
+still reports a view-level queue state, not a list of crop tile IDs.
 
 `Cesium3DTileset.tilesLoaded` means that the tileset has loaded the content
 needed to meet the current screen-space-error target for the current view. A
@@ -678,24 +679,31 @@ The required rule is therefore:
 - if a forced synchronous render is ever required, use it once at a controlled
   boundary, never as the retry mechanism.
 
-### 7.4 The current readiness scope is wider than the crop
+### 7.4 Crop-aware isolated HQ readiness
 
-The current readiness check is conservative but expensive:
+The isolated HQ path derives a serializable projection from the source camera
+and crop rectangle before the live scene is restored. The dedicated host then
+uses:
 
-- it checks the complete globe viewport rather than the crop footprint;
-- it checks every visible tileset found in the scene primitive collection;
-- it can include a visible 3D tileset that is not materially present in the
-  final crop;
-- it repeats the check for every exported frame;
-- it waits for a post-render boundary even when the view has not changed in a
-  meaningful way.
+- a crop-sized render viewport;
+- a perspective frustum with the crop's exact aspect ratio and principal-point
+  offsets for 3D; or
+- an off-center orthographic frustum for 2D.
+
+Terrain, imagery, and 3D Tiles readiness therefore observe the dedicated
+camera's crop view. A crop projection key and drawing-buffer dimensions are
+part of the readiness footprint identity, so changing the crop, output
+viewport, or camera projection cannot reuse a stale ready result. The
+readiness coordinator still reuses unchanged footprints and waits for a
+post-render boundary before capture.
 
 Cesium does not expose a stable public API for the exact visible imagery tile
 IDs of a crop. Reaching into private globe surface queues would be brittle and
-would couple the application to Cesium internals. The first implementation
-should therefore avoid pretending to have exact crop-level imagery readiness.
-It should reduce unnecessary waits through cache retention, camera-footprint
-reuse, event-based invalidation, and bounded time budgets.
+would couple the application to Cesium internals. The implementation therefore
+uses the public view-based `tilesLoaded` signals from the crop camera and does
+not pretend to expose exact imagery tile IDs. It reduces unnecessary waits
+through cache retention, camera-footprint reuse, event-based invalidation, and
+bounded time budgets.
 
 ### 7.5 Cache layers and retention policy
 

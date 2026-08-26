@@ -201,4 +201,19 @@ describe('CameraManager orbit', () => {
 
         expect(lgs.camera.lookAtTransform).toHaveBeenCalledTimes(1)
     })
+
+    it('cancels the active panorama motion before clearing its state', () => {
+        installCameraManagerGlobals()
+        const manager = new CameraManager()
+        const cancel = vi.fn()
+        lgs.stores.ui.mainUI.panorama.active = true
+        lgs.stores.ui.mainUI.panorama.target = orbitTarget
+
+        manager.setPanoramicCancel(cancel)
+
+        expect(manager.stopPanoramic()).toBe(true)
+        expect(cancel).toHaveBeenCalledOnce()
+        expect(lgs.stores.ui.mainUI.panorama.active).toBe(false)
+        expect(lgs.stores.ui.mainUI.panorama.target).toBe(false)
+    })
 })

@@ -143,12 +143,18 @@ describe('VideoRecordingScreenArea start flow', () => {
                 },
                 replay: {
                     captureCameraState: vi.fn(),
+                    prepareReplayCamera: vi.fn(async () => true),
                     waitForSceneRestore: vi.fn(() => Promise.resolve()),
                 },
                 replayVideoSync: {
                     arm:     vi.fn(),
                     disarm:  vi.fn(),
                     isArmed: vi.fn(() => false),
+                },
+                cameraManager: {
+                    isRotating:    vi.fn(() => false),
+                    stopPanoramic: vi.fn(),
+                    stopRotate:    vi.fn(async () => undefined),
                 },
                 widgetCache: {
                     getAll: vi.fn(({widgetsBoard}) => (
@@ -260,6 +266,9 @@ describe('VideoRecordingScreenArea start flow', () => {
         }))
         expect(globalThis.__.ui.replayVideoSync.arm).not.toHaveBeenCalled()
         expect(globalThis.__.ui.replayVideoSync.disarm).not.toHaveBeenCalled()
+        expect(globalThis.__.ui.cameraManager.stopPanoramic).toHaveBeenCalledOnce()
+        expect(globalThis.__.ui.cameraManager.stopRotate).not.toHaveBeenCalled()
+        expect(globalThis.__.ui.replay.prepareReplayCamera).toHaveBeenCalledOnce()
 
         expect(globalThis.lgs.stores.ui.video.preRecording).toBe(false)
         expect(globalThis.lgs.stores.ui.video.recording).toBe(true)

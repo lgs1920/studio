@@ -128,7 +128,7 @@ export const syncCameraFromCesiumControls = (mode, {sample = null, altitudeMode 
             ?? state.sampler?.atProgress?.(state.controller.progress ?? 0)
 
         if (!resolvedSample) {
-            const camera = globalThis.lgs?.viewer?.camera
+            const camera = globalThis.lgs?.camera ?? globalThis.lgs?.viewer?.camera
             const position = camera?.positionCartographic
             if (camera && position) {
                 resolvedSample = {
@@ -190,7 +190,17 @@ export const handleProfileLeave = (mode, ) => {
         }
     }
 
-export const showCameraAnglePreview = (mode, ) => {}
+/**
+ * Show the camera angle preview overlay for the current replay anchor.
+ *
+ * @param {object} mode - Replay session mode.
+ * @param {object} options - Overlay display options.
+ * @returns {void}
+ */
+export const showCameraAnglePreview = (mode, options = {}) => {
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    call.showCameraAnglePreviewOverlay(options)
+}
 
 export const hideCameraAnglePreview = (mode, ) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
@@ -345,6 +355,7 @@ export const resetCameraController = (mode, {
         state.terrainHeightLookupBypass = false
         state.terrainHeightLookupTrace = false
         state.cameraPointerActive = false
+        state.replayCameraPrepared = false
         state.cameraAutoTrackingIgnoreUntil = 0
         state.journeyToolbarHidden = false
         state.journeyToolbarWasVisible = null
@@ -364,7 +375,7 @@ export const resetCameraController = (mode, {
 export const captureCameraState = (mode, {sample = null} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-        const camera = globalThis.lgs?.viewer?.camera
+        const camera = globalThis.lgs?.camera ?? globalThis.lgs?.viewer?.camera
         const position = camera?.positionCartographic
         const sampleHeight = finiteNumber(sample?.altitude ?? sample?.height)
         if (!camera && sampleHeight === null) {

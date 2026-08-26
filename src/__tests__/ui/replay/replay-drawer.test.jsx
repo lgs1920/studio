@@ -587,7 +587,7 @@ describe('JourneyReplayDrawer', () => {
         })
     })
 
-    it('inverts the camera angle slider without showing the runtime preview while editing', async () => {
+    it('applies the camera angle slider and shows the runtime preview while editing', async () => {
         const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
         globalThis.lgs.stores.replay.camera.positionMode = 'behind'
         globalThis.lgs.settings.ui.replay.camera.positionMode = 'behind'
@@ -625,20 +625,27 @@ describe('JourneyReplayDrawer', () => {
         expect(globalThis.__.ui.replay.showCameraAnglePreview).not.toHaveBeenCalled()
         expect(globalThis.lgs.viewer.entities.getById('journey-start').show).toBe(true)
         expect(globalThis.lgs.viewer.entities.getById('journey-stop').show).toBe(true)
+        globalThis.__.ui.replay.refreshCamera.mockClear()
         fireEvent.input(angleInput, {target: {value: '20'}})
+        fireEvent.input(angleInput, {target: {value: '40'}})
 
         await waitFor(() => {
-            expect(globalThis.lgs.settings.ui.replay.camera.headingOffset).toBe(-20)
-            expect(globalThis.lgs.stores.replay.camera.headingOffset).toBe(-20)
+            expect(globalThis.lgs.settings.ui.replay.camera.headingOffset).toBe(-40)
+            expect(globalThis.lgs.stores.replay.camera.headingOffset).toBe(-40)
         })
+        expect(globalThis.__.ui.replay.refreshCamera).toHaveBeenCalledTimes(2)
 
-        expect(globalThis.__.ui.replay.showCameraAnglePreview).not.toHaveBeenCalled()
+        expect(globalThis.__.ui.replay.showCameraAnglePreview).toHaveBeenCalledTimes(2)
+        expect(globalThis.__.ui.replay.showCameraAnglePreview).toHaveBeenLastCalledWith({
+            displayOffset: 40,
+            positionMode:  'behind',
+        })
         expect(setTimeoutSpy).not.toHaveBeenCalledWith(expect.any(Function), 5000)
 
         fireEvent.blur(angleInput)
         expect(globalThis.__.ui.replay.hideCameraAnglePreview).not.toHaveBeenCalled()
-        expect(globalThis.lgs.viewer.entities.getById('journey-start').show).toBe(true)
-        expect(globalThis.lgs.viewer.entities.getById('journey-stop').show).toBe(true)
+        expect(globalThis.lgs.viewer.entities.getById('journey-start').show).toBe(false)
+        expect(globalThis.lgs.viewer.entities.getById('journey-stop').show).toBe(false)
         setTimeoutSpy.mockRestore()
     })
 

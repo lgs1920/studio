@@ -10,7 +10,7 @@ import {CameraUtils} from '@Utils/cesium/CameraUtils'
 import {cameraViewToSlippyLevel} from '@Utils/cesium/CameraLevel'
 import {POIUtils} from '@Utils/cesium/POIUtils'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
-import {faCamera} from '@fortawesome/pro-solid-svg-icons'
+import {faVideo} from '@fortawesome/pro-regular-svg-icons'
 import {faPersonHiking} from '@fortawesome/pro-regular-svg-icons'
 import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
 import {finiteNumber, replayStore} from './JourneyReplayRuntime'
@@ -551,6 +551,11 @@ export const cameraAnglePreviewStartHeading = (mode) => {
             return 0
         }
 
+        const replayStartHeading = call.headingFromPositionProperty?.(0)
+        if (Number.isFinite(replayStartHeading)) {
+            return replayStartHeading
+        }
+
         const previewSamples = sampler?.samples?.slice?.(0, 6) ?? []
         if (previewSamples.length < 2) {
             return 0
@@ -604,7 +609,7 @@ export const showCameraAnglePreviewOverlay = (mode, {
             Math.cos(angleHeading) * CAMERA_ANGLE_PREVIEW_OFFSET_LENGTH,
             0,
         ), new Cartesian3())
-        const followTerrain = true
+        const followTerrain = false
         const markerColorCss = globalThis.lgs?.theTrack?.marker?.foregroundColor
                                ?? globalThis.lgs?.theTrack?.marker?.color
                                ?? normalizeJourneyReplayProgressionStyle(
@@ -619,8 +624,13 @@ export const showCameraAnglePreviewOverlay = (mode, {
             name:     'JourneyReplay camera angle axis',
             polyline: {
                 positions:     [anchor, axisEnd],
-                width:         4,
-                material:      markerColor,
+                width:         2,
+                material:      new PolylineDashMaterialProperty({
+                    color:       markerColor,
+                    gapColor:    Color.TRANSPARENT,
+                    dashLength:  18,
+                    dashPattern: 255,
+                }),
                 clampToGround: followTerrain,
                 arcType:       followTerrain ? ArcType.GEODESIC : ArcType.NONE,
             },
@@ -647,25 +657,19 @@ export const showCameraAnglePreviewOverlay = (mode, {
             name:     'JourneyReplay camera angle offset',
             polyline: {
                 positions:     [anchor, angleEnd],
-                width:         1.5,
-                material:      new PolylineDashMaterialProperty({
-                    color:       markerColor,
-                    gapColor:    Color.TRANSPARENT,
-                    dashLength:  18,
-                    dashPattern: 255,
-                }),
+                width:         4,
+                material:      markerColor,
                 clampToGround: followTerrain,
                 arcType:       followTerrain ? ArcType.GEODESIC : ArcType.NONE,
             },
             show: true,
         })
-        const cameraIcon = Math.abs(offsetDegrees) > 0.0001
-            ? entities.add({
+        const cameraIcon = entities.add({
                 id:       `replay-camera-angle-preview-camera-${state.sampler?.journey?.slug ?? 'current'}`,
                 name:     'JourneyReplay camera angle camera',
                 position: angleEnd,
                 billboard: {
-                    image:            makeFontAwesomeIconDataUri(faCamera, markerColorCss, CAMERA_ANGLE_PREVIEW_ICON_SIZE),
+                    image:            makeFontAwesomeIconDataUri(faVideo, markerColorCss, CAMERA_ANGLE_PREVIEW_ICON_SIZE),
                     width:            CAMERA_ANGLE_PREVIEW_ICON_SIZE,
                     height:           CAMERA_ANGLE_PREVIEW_ICON_SIZE,
                     horizontalOrigin: HorizontalOrigin.CENTER,
@@ -674,9 +678,21 @@ export const showCameraAnglePreviewOverlay = (mode, {
                     heightReference: followTerrain ? HeightReference.CLAMP_TO_GROUND : HeightReference.NONE,
                     pixelOffset:      new Cartesian2(18, 0),
                 },
+                label: {
+                    text:                    `${Math.round(offsetDegrees)}°`,
+                    font:                    'bold 14px sans-serif',
+                    fillColor:               markerColor,
+                    outlineColor:            Color.BLACK,
+                    outlineWidth:            3,
+                    showBackground:          true,
+                    backgroundColor:         Color.fromAlpha(Color.BLACK, 0.65),
+                    horizontalOrigin:        HorizontalOrigin.LEFT,
+                    verticalOrigin:          VerticalOrigin.CENTER,
+                    pixelOffset:             new Cartesian2(34, 0),
+                    disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                },
                 show: true,
             })
-            : null
         state.cameraAnglePreviewEntities = {
             axis,
             axisEndIcon,

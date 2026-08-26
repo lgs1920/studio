@@ -105,6 +105,7 @@ export class CameraManager {
     resolutionScale: null,
     shadows: null,
   };
+  #panoramicCancel = null;
 
   constructor(settings) {
     // Singleton
@@ -779,5 +780,36 @@ export class CameraManager {
       text: "Please use another feature!",
     });
   };
-  stopPanoramic = () => {};
+  /**
+   * Register the active panorama motion cancellation callback.
+   *
+   * @param {Function|null} cancel - Callback that stops the panorama flight and animation frame.
+   * @return {Function} Callback unregistering this exact panorama motion handler.
+   */
+  setPanoramicCancel = (cancel) => {
+    this.#panoramicCancel = typeof cancel === "function" ? cancel : null;
+    return () => {
+      if (this.#panoramicCancel === cancel) {
+        this.#panoramicCancel = null;
+      }
+    };
+  };
+
+  /**
+   * Stop the active panorama flight and its render loop immediately.
+   *
+   * @return {boolean} Whether a panorama state or motion handler was active.
+   */
+  stopPanoramic = () => {
+    const panorama = lgs.stores?.ui?.mainUI?.panorama;
+    const cancel = this.#panoramicCancel;
+    const wasActive = panorama?.active === true;
+    this.#panoramicCancel = null;
+    if (panorama) {
+      panorama.active = false;
+      panorama.target = false;
+    }
+    cancel?.();
+    return Boolean(cancel || wasActive);
+  };
 }

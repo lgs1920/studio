@@ -132,7 +132,14 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             return
         }
 
+        const cameraPreparation = Promise.resolve(
+            __.ui.replay?.prepareReplayCamera?.({journey: lgs.theJourney}),
+        )
         await syncCropFrame('before-recording')
+        const prepared = await cameraPreparation
+        if (prepared === false) {
+            return
+        }
         prepareVideoCaptureUi()
         Object.assign($video, {
             editing:      false,

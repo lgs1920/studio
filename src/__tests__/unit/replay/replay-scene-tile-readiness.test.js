@@ -280,8 +280,15 @@ describe('ReplaySceneTileReadiness', () => {
                 positionWC: {x: 1000, y: 2000, z: 3000},
                 directionWC: {x: 0, y: 0, z: -1},
                 upWC: {x: 0, y: 1, z: 0},
-                frustum: {fov: 1, near: 1, far: 100000},
+                frustum: {
+                    fov: 1,
+                    near: 1,
+                    far: 100000,
+                    replayCropProjectionKey: 'crop-a',
+                },
             },
+            drawingBufferWidth: 640,
+            drawingBufferHeight: 360,
             postRender,
             primitives: createCollection([]),
             requestRender: vi.fn(() => postRender.emit(scene)),
@@ -291,6 +298,10 @@ describe('ReplaySceneTileReadiness', () => {
         await expect(coordinator.prepareForCapture({maxMillis: 200})).resolves.toBe(true)
         await expect(coordinator.prepareForCapture({maxMillis: 200})).resolves.toBe(true)
         expect(scene.requestRender).toHaveBeenCalledTimes(2)
+
+        scene.camera.frustum.replayCropProjectionKey = 'crop-b'
+        await expect(coordinator.prepareForCapture({maxMillis: 200})).resolves.toBe(true)
+        expect(scene.requestRender).toHaveBeenCalledTimes(3)
 
         scene.globe.tilesLoaded = false
         tileLoadProgressEvent.emit(2)

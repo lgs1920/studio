@@ -206,6 +206,7 @@ const setupPanoramaGlobals = () => {
                 optimizeContinuousCameraRender: vi.fn(),
                 raiseUpdateEvent:               vi.fn(() => undefined),
                 restoreContinuousCameraRender:  vi.fn(),
+                setPanoramicCancel:             vi.fn(() => vi.fn()),
             },
             poiManager: {
                 updatePOI: vi.fn(),
@@ -430,5 +431,23 @@ describe('PanoramaWidget interactions', () => {
         }))
         expect(pathFlyTo.mock.calls[0][0].target).toBeUndefined()
         expect(lgs.camera.flyTo).not.toHaveBeenCalled()
+    })
+
+    it('registers an immediate cancellation callback for panorama motion', async () => {
+        setupPanoramaGlobals()
+        const pathCancel = vi.fn()
+        CameraPath.buildCameraTransferPath.mockReturnValue({
+            flyTo: vi.fn(() => pathCancel),
+            sampleAt: vi.fn(),
+        })
+        const {PanoramaWidget} = await import('@Components/MainUI/PanoramaWidget')
+
+        render(<PanoramaWidget/>)
+
+        const register = __.ui.cameraManager.setPanoramicCancel
+        expect(register).toHaveBeenCalledWith(expect.any(Function))
+        register.mock.calls[0][0]()
+
+        expect(pathCancel).toHaveBeenCalledOnce()
     })
 })

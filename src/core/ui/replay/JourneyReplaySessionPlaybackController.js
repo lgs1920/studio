@@ -39,6 +39,7 @@ import {
 } from './ReplaySessionOwnership'
 import * as JourneyReplayCameraController from './JourneyReplayCameraController'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
+import {replayCameraFor} from './ReplayRenderTarget'
 import * as JourneyReplayVisibilityController from './JourneyReplayVisibilityController'
 import * as JourneyReplayClipController from './JourneyReplayClipController'
 import {
@@ -222,6 +223,96 @@ export const configure = (mode, options = {}) => {
         return state.sampler
     }
 
+/**
+ * Prepare the interactive camera for synchronized Replay recording.
+ *
+ * @param {object} mode - Replay mode.
+ * @param {object} options - Preparation options.
+ * @returns {Promise<boolean>} Whether the replay anchor was prepared.
+ */
+export const prepareReplayCamera = async (mode, {
+                                               journey = globalThis.lgs?.theJourney ?? null,
+                                           } = {}) => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const cameraManager = globalThis.__?.ui?.cameraManager
+    const liveCamera = replayCameraFor(mode)
+    const liveCameraPosition = liveCamera?.positionWC ?? liveCamera?.position
+    const capturedCameraPosition = liveCameraPosition
+        ? Cartesian3.clone(liveCameraPosition, new Cartesian3())
+        : null
+
+    cameraManager?.stopPanoramic?.()
+    if (cameraManager?.isRotating?.()) {
+        await cameraManager.stopRotate()
+    }
+
+    const savedCameraState = state.savedCameraState
+        ? {
+            destination: {...state.savedCameraState.destination},
+            orientation: {...state.savedCameraState.orientation},
+            altitude: state.savedCameraState.altitude,
+        }
+        : null
+    const replayEntryCameraState = state.replayEntryCameraState
+        ? {
+            destination: {...state.replayEntryCameraState.destination},
+            orientation: {...state.replayEntryCameraState.orientation},
+            altitude: state.replayEntryCameraState.altitude,
+        }
+        : null
+    call.cancelActiveCameraFlight?.()
+    globalThis.lgs?.camera?.cancelFlight?.()
+    const sampler = call.configure({journey, progress: 0}) ?? state.sampler
+    if (savedCameraState) {
+        state.savedCameraState = savedCameraState
+    }
+    if (replayEntryCameraState) {
+        state.replayEntryCameraState = replayEntryCameraState
+    }
+    const sample = sampler?.atProgress?.(0) ?? null
+    if (!sample) {
+        return false
+    }
+
+    const replaySettings = getJourneyReplaySettings()
+    const cameraSettings = normalizeJourneyReplayCamera(
+        globalThis.lgs?.stores?.replay?.camera ?? replaySettings.camera,
+    )
+    const markerSettings = normalizeJourneyReplayMarker(
+        globalThis.lgs?.stores?.replay?.marker ?? replaySettings.marker,
+    )
+    const view = call.cameraViewForSample({
+        sample,
+        progress: 0,
+        source: 'drawer',
+        cameraSettings,
+        markerSettings,
+        previousHeading: null,
+        previousPitch:   null,
+    })
+    if (!view) {
+        return false
+    }
+
+    const locked = call.lockReplayCameraToAnchor?.({
+        sample:       view.sample,
+        heading:      view.heading,
+        pitch:        view.pitch,
+        roll:         view.roll,
+        cameraSettings,
+        cameraHeight: view.cameraHeight,
+        cameraPosition: capturedCameraPosition,
+    }) === true
+    call.updateCameraSettingsFromCesiumControls?.(view.sample, {
+        altitudeMode: cameraSettings.altitudeMode,
+    })
+    call.bindCesiumCameraBridge()
+    state.replayCameraPrepared = locked
+    call.cesiumScene?.()?.requestRender?.()
+    return locked
+}
+
 export const start = (mode, options = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -268,7 +359,8 @@ export const start = (mode, options = {}) => {
         }
         const startSample = sampler.atProgress?.(options.progress ?? 0)
         const hasReplayEntryCameraState = Boolean(state.replayEntryCameraState)
-        if (!hasReplayEntryCameraState) {
+        const preparedCamera = state.replayCameraPrepared === true
+        if (!hasReplayEntryCameraState && !preparedCamera) {
             traceStartStep('capture-camera-state.begin')
             call.captureCameraState({sample: startSample})
             state.replayEntryCameraState = state.savedCameraState
@@ -280,7 +372,7 @@ export const start = (mode, options = {}) => {
                 : null
             traceStartStep('capture-camera-state.end')
         }
-        else {
+        else if (!preparedCamera) {
             traceStartStep('restore-camera-state.begin')
             call.restoreCameraState({
                                        clear:       false,
@@ -288,6 +380,7 @@ export const start = (mode, options = {}) => {
                                    })
             traceStartStep('restore-camera-state.end')
         }
+        state.replayCameraPrepared = false
         traceStartStep('capture-drawer-state.begin')
         call.captureJourneyReplayDrawerStateBeforePlayback()
         traceStartStep('capture-drawer-state.end')
@@ -694,9 +787,16 @@ export const refresh = (mode, {
 export const refreshCamera = (mode, options = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-        const sample = options.sample
+        let sample = options.sample
             ?? currentJourneyReplaySample(state.controller)
             ?? globalThis.lgs?.stores?.replay?.sample
+        const journey = globalThis.lgs?.theJourney
+            ?? globalThis.lgs?.stores?.main?.theJourney
+        if (!sample && journey) {
+            const sampler = call.configure?.({journey, progress: 0})
+                ?? state.sampler
+            sample = sampler?.atProgress?.(0) ?? null
+        }
         if (!sample) {
             return null
         }

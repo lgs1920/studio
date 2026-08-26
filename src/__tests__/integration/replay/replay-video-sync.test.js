@@ -75,7 +75,8 @@ const makeJourneyReplay = () => {
         setPublicationCadence: vi.fn(),
         setTerrainHeightLookupBypass: vi.fn(),
         setTerrainHeightLookupTrace: vi.fn(),
-        restoreCameraState: vi.fn(),
+        prepareReplayCamera: vi.fn(async () => true),
+        restoreCameraState:     vi.fn(),
         restorePlaybackScene: vi.fn(),
     }
 }
@@ -108,8 +109,7 @@ describe('JourneyReplayVideoSync', () => {
             expect(store.recordingSync).toBe(true)
             expect(globalThis.lgs.settings.ui.replay.recordingSync).toBe(true)
             expect(replay.setVideoSafeMode).toHaveBeenCalledWith(true)
-            expect(replay.restoreCameraState).toHaveBeenCalledWith({clear: false})
-            expect(replay.restoreCameraState.mock.invocationCallOrder[0]).toBeLessThan(replay.start.mock.invocationCallOrder[0])
+            expect(replay.restoreCameraState).not.toHaveBeenCalled()
             expect(replay.setTerrainHeightLookupBypass.mock.invocationCallOrder[0]).toBeLessThan(replay.start.mock.invocationCallOrder[0])
             expect(replay.setTerrainHeightLookupBypass).toHaveBeenLastCalledWith(false)
             expect(replay.setTerrainHeightLookupTrace).toHaveBeenLastCalledWith(false)
@@ -117,8 +117,7 @@ describe('JourneyReplayVideoSync', () => {
                 'draft.recorder.start.received',
                 'draft.replay.start.scheduled',
                 'draft.replay.terrain.lookup.bypass.start',
-                'draft.replay.camera.restore.start',
-                'draft.replay.camera.restore.end',
+                'draft.replay.camera.prepared',
                 'draft.replay.start.begin',
                 'draft.replay.terrain.lookup.bypass.end',
                 'draft.replay.start.end',
@@ -318,9 +317,9 @@ describe('JourneyReplayVideoSync', () => {
         window.dispatchEvent(new CustomEvent(REPLAY_EVENT_STOP_CLIPS_COMPLETE, {
             detail: {clipSequenceToken: 2},
         }))
-        await new Promise(resolve => setTimeout(resolve, 10))
-
-        expect(recorder.stopVideo).toHaveBeenCalledTimes(1)
+        await waitFor(() => {
+            expect(recorder.stopVideo).toHaveBeenCalledTimes(1)
+        })
     })
 
     it('ignores a replay start that resolves after the recording was disarmed', async () => {

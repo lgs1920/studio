@@ -1,4 +1,4 @@
-import { cleanup, render } from '@testing-library/react'
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 
@@ -21,7 +21,15 @@ import { VideoButton } from '@Components/MainUI/video/VideoButton'
 
 describe('VideoButton replay link state', () => {
     beforeEach(() => {
+        globalThis.__ = {
+            ui: {
+                replay: {
+                    prepareReplayCamera: vi.fn(async () => true),
+                },
+            },
+        }
         globalThis.lgs = {
+            theJourney: {slug: 'journey-a'},
             stores: {
                 ui: {
                     video: proxy({
@@ -38,6 +46,7 @@ describe('VideoButton replay link state', () => {
 
     afterEach(() => {
         cleanup()
+        globalThis.__ = undefined
         globalThis.lgs = undefined
     })
 
@@ -50,5 +59,18 @@ describe('VideoButton replay link state', () => {
         rerender(<VideoButton appearance="filled"/>)
 
         expect(container.querySelector('button').dataset.variant).toBe('warning')
+    })
+
+    it('prepares the replay camera when opening video preparation', async () => {
+        const {container} = render(<VideoButton appearance="filled"/>)
+
+        fireEvent.click(container.querySelector('button'))
+
+        await waitFor(() => {
+            expect(globalThis.__.ui.replay.prepareReplayCamera).toHaveBeenCalledWith({
+                journey: globalThis.lgs.theJourney,
+            })
+        })
+        expect(globalThis.lgs.stores.ui.video.editing).toBe(true)
     })
 })

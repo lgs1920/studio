@@ -27,6 +27,7 @@ import {
     applyReplayCesiumCameraCommand,
     replayCameraCommandForCesiumFrame,
 } from './ReplayCesiumCameraAdapter'
+import {replayCameraFor} from './ReplayRenderTarget'
 
 import {
     REPLAY_HEADING_TRANSITION_DURATION_SECONDS,
@@ -154,7 +155,7 @@ export const currentCameraFrame =  (mode, fallbackFrame) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const camera = (call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera
+        const camera = replayCameraFor(mode)
         const destination = [camera?.positionWC, camera?.position, fallbackFrame?.destination]
             .find(isUsableCartesian3)
         const direction = [camera?.directionWC, camera?.direction, fallbackFrame?.direction]
@@ -176,7 +177,7 @@ export const applyCameraFrame =  (mode, frame) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const camera = (call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera
+        const camera = replayCameraFor(mode)
         if (!camera
             || !isUsableCartesian3(frame?.destination)
             || !isUsableCartesian3(frame?.direction)
@@ -222,7 +223,7 @@ export const applyReplayCameraTransitionFrame = (mode, frame, target) => {
         target,
         source: 'replay-transition',
     })
-    const camera = (call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera
+    const camera = replayCameraFor(mode)
     if (!command || !camera) {
         return false
     }
@@ -751,16 +752,18 @@ export const cameraRecenterFrame = (mode, {
                                 roll = 0,
                                 cameraSettings,
                                 cameraHeight = null,
+                                cameraRange = null,
                             } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
+        const camera = replayCameraFor(mode)
         const targetHeight = finiteNumber(call.markerRenderHeightForSample(sample))
                             ?? finiteNumber(sample?.altitude ?? sample?.height)
                             ?? 0
         const target = call.markerRenderCartesianForSample(sample)
-        const cameraPosition = viewer?.camera?.positionWC ?? viewer?.camera?.position
+        const cameraPosition = camera?.positionWC ?? camera?.position
         const fallbackRange = cameraPosition && target
                               ? Cartesian3.distance(cameraPosition, target)
                               : replayCameraRangeFromPitch(call.cameraAltitudeForSample(sample, cameraSettings), pitch)
@@ -782,7 +785,7 @@ export const cameraRecenterFrame = (mode, {
         const currentHeight = requestedCameraHeight !== null
                               ? Math.max(targetHeight, requestedCameraHeight)
                               : replayCameraRecenterHeight(
-                    viewer.camera?.positionCartographic?.height,
+                    camera?.positionCartographic?.height,
                     call.cameraAltitudeForSample(sample, cameraSettings),
                 )
         const horizontalDistance = replayCameraRecenterHorizontalDistance({
@@ -791,7 +794,16 @@ export const cameraRecenterFrame = (mode, {
                                                                                   pitchRadians: safePitch,
                                                                                   fallbackRange,
                                                                               })
-        const heightDelta = currentHeight - targetHeight
+        const explicitCameraRange = finiteNumber(cameraRange)
+        const rangeForPose = explicitCameraRange !== null && explicitCameraRange > 0
+            ? explicitCameraRange
+            : null
+        const poseHorizontalDistance = rangeForPose === null
+            ? horizontalDistance
+            : Math.max(1, Math.cos(Math.abs(safePitch)) * rangeForPose)
+        const heightDelta = rangeForPose === null
+            ? currentHeight - targetHeight
+            : Math.max(0, Math.sin(Math.abs(safePitch)) * rangeForPose)
         const targetTransform = Transforms.eastNorthUpToFixedFrame(target)
         const east = Matrix4.getColumn(targetTransform, 0, new Cartesian3())
         const north = Matrix4.getColumn(targetTransform, 1, new Cartesian3())
@@ -804,7 +816,7 @@ export const cameraRecenterFrame = (mode, {
         const destination = Cartesian3.add(
             Cartesian3.add(
                 target,
-                Cartesian3.multiplyByScalar(headingAxis, -horizontalDistance, new Cartesian3()),
+                Cartesian3.multiplyByScalar(headingAxis, -poseHorizontalDistance, new Cartesian3()),
                 new Cartesian3(),
             ),
             Cartesian3.multiplyByScalar(up, heightDelta, new Cartesian3()),

@@ -17,6 +17,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { JSDOM } from 'jsdom'
 import { Output } from 'mediabunny'
+import {PerspectiveFrustum} from 'cesium'
 import {
     ReplayDeferredExporter,
     captureReplayDeferredExportContext,
@@ -893,6 +894,12 @@ describe('ReplayDeferredExporter', () => {
             heading: 0.5,
             pitch:   -0.5,
             roll:    0.25,
+            frustum: new PerspectiveFrustum({
+                fov:          Math.PI / 3,
+                aspectRatio: 320 / 180,
+                near:         1,
+                far:          10000,
+            }),
             positionCartographic: {
                 longitude: Math.PI / 2,
                 latitude:  Math.PI / 4,
@@ -1027,6 +1034,10 @@ describe('ReplayDeferredExporter', () => {
             expect(isolatedRenderHostFactory).toHaveBeenCalledWith(expect.objectContaining({
                 dimensions: {width: 320, height: 180},
                 viewportDimensions: {width: 320, height: 180},
+                cropProjection: expect.objectContaining({
+                    kind: 'perspective',
+                    crop: {left: 0, top: 0, width: 320, height: 180},
+                }),
             }))
             expect(setRenderTarget).toHaveBeenCalledWith(isolatedTarget)
             expect(clearRenderTarget).toHaveBeenCalledWith(isolatedTarget)

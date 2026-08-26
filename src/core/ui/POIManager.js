@@ -1143,6 +1143,7 @@ export class POIManager {
         const rotatingId = this.getRotatingPoiId()
         const panorama = lgs.stores.ui.mainUI.panorama
         const panoramaId = panorama.target?.slug ?? panorama.target?.id
+        __.ui.cameraManager?.stopPanoramic?.()
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
         }

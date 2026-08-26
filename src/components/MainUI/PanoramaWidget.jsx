@@ -1023,6 +1023,23 @@ export const PanoramaWidget = memo(() => {
         __.ui.cameraManager.endFlight?.();
       }
     };
+    /**
+     * Stop the panorama transfer and its continuous rotation without waiting
+     * for React to run the effect cleanup after the active state changes.
+     *
+     * @returns {void}
+     */
+    const cancelPanoramaMotion = () => {
+      cameraPathCancel?.();
+      cameraPathCancel = null;
+      if (animationRef.current) {
+        window.cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+      endFlight();
+    };
+    const unregisterPanoramicCancel =
+      __.ui.cameraManager.setPanoramicCancel?.(cancelPanoramaMotion);
     const startPanoramaRotation = () => {
       endFlight();
       if (!$panorama.active) {
@@ -1097,13 +1114,8 @@ export const PanoramaWidget = memo(() => {
     }
 
     return () => {
-      cameraPathCancel?.();
-      cameraPathCancel = null;
-      endFlight();
-      if (animationRef.current) {
-        window.cancelAnimationFrame(animationRef.current);
-        animationRef.current = null;
-      }
+      unregisterPanoramicCancel?.();
+      cancelPanoramaMotion();
 
       const nextController = lgs.scene?.screenSpaceCameraController;
       if (nextController && controllerStateRef.current) {

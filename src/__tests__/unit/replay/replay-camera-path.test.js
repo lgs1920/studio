@@ -74,6 +74,7 @@ import {
     cancelCameraBezierTransition,
     cameraCollisionForFrame,
     cameraCollisionForSample,
+    replayCameraPositionModeFromHeading,
 } from '@Core/ui/replay/JourneyReplayCameraState'
 import {
     resetCameraInterpolationState,
@@ -206,6 +207,26 @@ describe('Journey replay camera paths', () => {
         expect(redirectedView.heading).toBeCloseTo(0.65)
         expect(redirectedView.pitch).toBeCloseTo(-1.05)
         expect(call.cameraRedirectPitchLimits).toHaveBeenCalledOnce()
+    })
+
+    it('switches between Behind and Ahead when the live angle crosses ninety degrees', () => {
+        expect(replayCameraPositionModeFromHeading({
+            axisHeading: 0,
+            cameraHeading: 100 * Math.PI / 180,
+            positionMode: 'behind',
+        })).toEqual({positionMode: 'ahead', headingOffset: -80})
+
+        expect(replayCameraPositionModeFromHeading({
+            axisHeading: 0,
+            cameraHeading: Math.PI,
+            positionMode: 'behind',
+        })).toEqual({positionMode: 'ahead', headingOffset: 0})
+
+        expect(replayCameraPositionModeFromHeading({
+            axisHeading: 0,
+            cameraHeading: 90 * Math.PI / 180,
+            positionMode: 'behind',
+        })).toEqual({positionMode: 'behind', headingOffset: 90})
     })
 
     it('applies the exact configured pose on a post-replay refresh', () => {
@@ -954,6 +975,32 @@ describe('Journey replay camera paths', () => {
         expect(Cartesian3.dot(frame.direction, frame.correctedUp)).toBeCloseTo(0, 10)
         expect(Cartesian3.magnitude(frame.correctedUp)).toBeCloseTo(1, 10)
         expect(Cartesian3.dot(frame.direction, localUp)).toBeCloseTo(Math.sin(pitch), 10)
+    })
+
+    it('preserves an explicit live camera range when locking the replay anchor', () => {
+        const target = Cartesian3.fromDegrees(2, 48, 120)
+        vi.stubGlobal('lgs', {
+            viewer: {
+                camera: {
+                    positionCartographic: {height: 1000},
+                },
+            },
+        })
+        const {mode, call} = makeMode()
+        call.markerRenderHeightForSample = vi.fn(() => 120)
+        call.markerRenderCartesianForSample = vi.fn(() => target)
+        call.cameraAltitudeForSample = vi.fn(() => 1000)
+
+        const frame = resolveCameraRecenterFrame(mode, {
+            sample: {longitude: 2, latitude: 48, altitude: 120},
+            heading: 0.4,
+            pitch: -Math.PI / 4,
+            cameraHeight: 1000,
+            cameraRange: 2000,
+            cameraSettings: {altitudeMode: 'constant', altitude: 1000},
+        })
+
+        expect(Cartesian3.distance(frame.target, frame.destination)).toBeCloseTo(2000, 6)
     })
 
     it('applies the resolved roll to the camera up vector while preserving orthogonality', () => {

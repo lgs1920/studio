@@ -1079,6 +1079,7 @@ export class JourneyReplaySessionController {
             applyDeterministicCameraTransition: (...args) => JourneyReplayCameraController.applyDeterministicCameraTransition(this, ...args),
             applyDeterministicCameraFollower: (...args) => JourneyReplayCameraController.applyDeterministicCameraFollower(this, ...args),
             cameraRecenterFrame: (...args) => JourneyReplayCameraController.cameraRecenterFrame(this, ...args),
+            lockReplayCameraToAnchor: (...args) => JourneyReplayCameraController.lockReplayCameraToAnchor(this, ...args),
             cameraViewDelta: (...args) => JourneyReplayCameraController.cameraViewDelta(this, ...args),
             cameraViewIsStable: (...args) => JourneyReplayCameraController.cameraViewIsStable(this, ...args),
             rememberCameraView: (...args) => JourneyReplayCameraController.rememberCameraView(this, ...args),
@@ -1239,6 +1240,7 @@ export class JourneyReplaySessionController {
     ].join('|')
 
     configure = (...args) => JourneyReplaySessionPlaybackController.configure(this, ...args)
+    prepareReplayCamera = (...args) => JourneyReplaySessionPlaybackController.prepareReplayCamera(this, ...args)
     start = (...args) => JourneyReplaySessionPlaybackController.start(this, ...args)
     pause = (...args) => JourneyReplaySessionPlaybackController.pause(this, ...args)
     resume = (...args) => JourneyReplaySessionPlaybackController.resume(this, ...args)

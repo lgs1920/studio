@@ -67,6 +67,9 @@ import {
     IsolatedHqReplayRenderHost,
 }                              from '@Core/ui/replay/IsolatedHqReplayRenderHost'
 import {
+    captureReplayCropProjection,
+}                              from '@Core/ui/replay/ReplayCropFrustum'
+import {
     captureReplaySceneDescriptor,
 }                              from '@Core/ui/replay/ReplaySceneDescriptor'
 import {
@@ -329,7 +332,7 @@ const captureReplayCameraStateSnapshot = ({
         return savedState
     }
 
-    const camera = globalThis.lgs?.viewer?.camera ?? null
+    const camera = globalThis.lgs?.camera ?? globalThis.lgs?.viewer?.camera ?? null
     const position = camera?.positionCartographic ?? null
     const longitude = finiteNumber(position?.longitude, null)
     const latitude = finiteNumber(position?.latitude, null)
@@ -1841,7 +1844,20 @@ export const runReplayDeferredMp4Export = async ({
                                  dimensions: outputDimensions,
                                  fps,
                                  captureMode: plan.captureMode,
-                             })
+                                 })
+    const sourceViewportDimensions = outputRenderSpec?.sourceCanvasDimensions
+                                     ?? {
+                                         width:  Number(sourceCanvas?.width) || 0,
+                                         height: Number(sourceCanvas?.height) || 0,
+                                     }
+    const cropProjection = captureReplayCropProjection({
+        camera: globalThis.lgs?.camera
+                ?? replayMode?.cesiumViewer?.()?.camera
+                ?? globalThis.lgs?.viewer?.camera
+                ?? null,
+        sourceViewportDimensions,
+        cropRect: outputRenderSpec?.cropRect ?? null,
+    })
 
     const originalProgress = finiteNumber(controller?.progress, null)
     const originalPaused = Boolean(controller?.paused)
@@ -1962,6 +1978,7 @@ export const runReplayDeferredMp4Export = async ({
                         dimensions: outputDimensions,
                         viewportDimensions: isolatedViewportDimensions,
                         descriptor,
+                        cropProjection,
                         readiness: normalizeJourneyReplayReadiness(
                             replay?.readiness
                             ?? globalThis.lgs?.settings?.ui?.replay?.readiness,

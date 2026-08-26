@@ -32,7 +32,13 @@ export const VideoButton = (props) => {
         appearance = 'Filled',
     } = props ?? {}
 
-    const handleClick = () => {
+    const handleClick = async () => {
+        if (!$video.editing) {
+            const prepared = await __.ui.replay?.prepareReplayCamera?.({journey: lgs.theJourney})
+            if (prepared === false) {
+                return
+            }
+        }
         $video.editing = !$video.editing
     }
     return (

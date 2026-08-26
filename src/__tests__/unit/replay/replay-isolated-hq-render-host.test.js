@@ -1,7 +1,9 @@
 import {describe, expect, it, vi} from 'vitest'
+import {PerspectiveFrustum} from 'cesium'
 
 import {createReplayCameraCommand} from '@Core/ui/replay/ReplayCameraCommand'
 import {IsolatedHqReplayRenderHost} from '@Core/ui/replay/IsolatedHqReplayRenderHost'
+import {captureReplayCropProjection} from '@Core/ui/replay/ReplayCropFrustum'
 import {captureReplaySceneDescriptor} from '@Core/ui/replay/ReplaySceneDescriptor'
 
 /**
@@ -41,6 +43,18 @@ describe('IsolatedHqReplayRenderHost', () => {
 
     it('renders with an independent camera and destroys every owned resource', async () => {
         const interactiveCamera = {setView: vi.fn()}
+        const cropProjection = captureReplayCropProjection({
+            camera: {
+                frustum: new PerspectiveFrustum({
+                    fov:          Math.PI / 3,
+                    aspectRatio: 16 / 9,
+                    near:         1,
+                    far:          10000,
+                }),
+            },
+            sourceViewportDimensions: {width: 1920, height: 1080},
+            cropRect: {left: 100, top: 80, width: 960, height: 540},
+        })
         const isolatedCamera = {
             lookAtTransform: vi.fn(),
             setView: vi.fn(),
@@ -81,6 +95,7 @@ describe('IsolatedHqReplayRenderHost', () => {
             createImageryLayer: vi.fn(provider => ({imageryProvider: provider, alpha: 1})),
             createTileset: vi.fn(() => ({id: 'isolated-tileset'})),
             createReadinessCoordinator: vi.fn(() => readiness),
+            cropProjection,
         })
         const command = createReplayCameraCommand({
             pose: {
@@ -92,6 +107,10 @@ describe('IsolatedHqReplayRenderHost', () => {
         })
 
         await host.initialize()
+        expect(isolatedCamera.frustum).toBeInstanceOf(PerspectiveFrustum)
+        expect(isolatedCamera.frustum.aspectRatio).toBeCloseTo(16 / 9, 5)
+        expect(isolatedCamera.frustum.xOffset).not.toBe(0)
+        expect(isolatedCamera.frustum.yOffset).not.toBe(0)
         host.scene().screenSpaceCameraController.enableInputs = false
         const rendered = await host.renderFrame({
             intent: {id: 'intent-a', scene: {cameraCommand: command}},

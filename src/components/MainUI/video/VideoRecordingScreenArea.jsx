@@ -200,7 +200,19 @@ export const VideoRecordingScreenArea = memo(() => {
         || lgs.settings?.ui?.replay?.recordingSync === true
     ), [])
 
-    const prepareJourneyReplayForRecording = useCallback((renderSpec = null) => {
+    const prepareJourneyReplayForRecording = useCallback(async (renderSpec = null) => {
+        const cameraManager = __.ui.cameraManager
+        cameraManager?.stopPanoramic?.()
+        if (cameraManager?.isRotating?.()) {
+            await cameraManager.stopRotate()
+        }
+
+        const replay = __.ui.replay
+        const prepared = await replay?.prepareReplayCamera?.({journey: lgs.theJourney})
+        if (prepared === false) {
+            return false
+        }
+
         if (!isJourneyReplaySyncRequested()) {
             // A previous linked session may have armed the bridge while the
             // link was subsequently removed. Disarm only that bridge; an
@@ -212,7 +224,6 @@ export const VideoRecordingScreenArea = memo(() => {
             return true
         }
 
-        const replay = __.ui.replay
         if (typeof replay?.captureCameraState === 'function') {
             const cameraCaptureStartedAt = globalThis.performance?.now?.() ?? Date.now()
             replayVideoTraceDebug('draft.recording.replay-camera.capture.start', {
@@ -362,7 +373,7 @@ export const VideoRecordingScreenArea = memo(() => {
                 captureFps: selectedFps,
                 startToken,
             })
-            if (!prepareJourneyReplayForRecording(renderSpec)) {
+            if (!await prepareJourneyReplayForRecording(renderSpec)) {
                 return false
             }
             replayVideoTraceDebug('draft.recording.replay-bridge.end', {

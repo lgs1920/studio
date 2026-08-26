@@ -663,7 +663,7 @@ export const JourneyReplayDrawer = memo(() => {
         const replayMarker = normalizeJourneyReplayMarker(lgs.settings.ui.replay.marker)
         const rotationRunning = lgs.stores.ui?.mainUI?.rotate?.running === true
         const effectiveMode = mode ?? replayMarker.mode
-        if (rotationRunning && effectiveMode !== REPLAY_MARKER_MODE_TRACE) {
+        if (rotationRunning && (mode === null || effectiveMode !== REPLAY_MARKER_MODE_TRACE)) {
             await __.ui.cameraManager?.stopRotate?.()
         }
     }, [])
@@ -704,8 +704,10 @@ export const JourneyReplayDrawer = memo(() => {
         stopRotateIfNeeded,
     ])
 
-    const updateCamera = useCallback(async (updates, {syncCamera = true} = {}) => {
-        await stopRotateIfNeeded()
+    const updateCamera = useCallback(async (updates, {syncCamera = true, immediate = false} = {}) => {
+        if (!immediate || lgs.stores.ui?.mainUI?.rotate?.running === true) {
+            await stopRotateIfNeeded()
+        }
         const nextCamera = mergeCamera(lgs.settings.ui.replay.camera, updates)
         lgs.settings.ui.replay.camera = nextCamera
         lgs.stores.replay.camera = nextCamera
@@ -730,6 +732,10 @@ export const JourneyReplayDrawer = memo(() => {
                 sample:             replayState.sample ?? null,
                 suppressMoveEvents: true,
                 source:             'drawer',
+            })
+            __.ui.replay?.showCameraAnglePreview?.({
+                displayOffset: -nextCamera.headingOffset,
+                positionMode:  nextCamera.positionMode,
             })
         }
     }, [replayState.active, replayState.paused, replayState.playing, replayState.sample, refreshJourneyReplay, stopRotateIfNeeded])
@@ -1231,7 +1237,7 @@ export const JourneyReplayDrawer = memo(() => {
                              REPLAY_CAMERA_HEADING_OFFSET_MIN,
                              REPLAY_CAMERA_HEADING_OFFSET_MAX,
                          ),
-                     })
+                     }, {immediate: true})
     }, [camera.headingOffset, updateCamera])
 
     const updateCameraPreset = useCallback((event) => {
@@ -1499,14 +1505,12 @@ export const JourneyReplayDrawer = memo(() => {
                                                                 size="s"
                                                                 min={REPLAY_CAMERA_HEADING_OFFSET_MIN}
                                                                 max={REPLAY_CAMERA_HEADING_OFFSET_MAX}
-                                                                step="5"
+                                                                step="1"
                                                                 value={cameraAngleDisplayOffset}
                                                                 withTooltip
                                                                 label-at-start half-width
                                                                 valueFormatter={value => `${Math.round(Number(value) || 0)}°`}
-                                                                onInput={event => {
-                                                                    updateCameraHeadingOffset(event)
-                                                                }}
+                                                                onInput={updateCameraHeadingOffset}
                                                             />
                                                         </JourneyReplayStyleField>
                                                     }

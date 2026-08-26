@@ -3,7 +3,7 @@
  */
 
 
-import {ArcType, Cartesian2, Cartographic, CatmullRomSpline, Color, ExtrapolationType, JulianDate, EasingFunction, HeightReference, HorizontalOrigin, LinearApproximation, PolylineDashMaterialProperty, SampledPositionProperty, SceneTransforms, VerticalOrigin, Math as CesiumMath} from 'cesium'
+import {ArcType, Cartesian2, Cartesian3, Cartographic, CatmullRomSpline, Color, ExtrapolationType, JulianDate, EasingFunction, HeadingPitchRange, HeightReference, HorizontalOrigin, LinearApproximation, Matrix4, PolylineDashMaterialProperty, SampledPositionProperty, SceneTransforms, Transforms, VerticalOrigin, Math as CesiumMath} from 'cesium'
 import {REPLAY_DRAWER} from '@Core/constants'
 import {Journey} from '@Core/Journey'
 import {CameraUtils} from '@Utils/cesium/CameraUtils'
@@ -16,16 +16,17 @@ import {createReplayCameraCommand} from './ReplayCameraCommand'
 import {applyReplayCesiumCameraCommand} from './ReplayCesiumCameraAdapter'
 import {finiteNumber, replayStore} from './JourneyReplayRuntime'
 import {
-    clamp, lerp, hasFiniteLonLat, projectReplayTargetInCameraFrame, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForPositionMode, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
+    clamp, lerp, hasFiniteLonLat, projectReplayTargetInCameraFrame, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
 } from './JourneyReplayCameraMath'
 import {
     REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET, REPLAY_CAMERA_POSITION_AHEAD,
-    REPLAY_CAMERA_HEADING_OFFSET_MAX, REPLAY_CAMERA_HEADING_OFFSET_MIN, REPLAY_CAMERA_POSITION_SYSTEM,
+    REPLAY_CAMERA_HEADING_OFFSET_MAX, REPLAY_CAMERA_HEADING_OFFSET_MIN, REPLAY_CAMERA_POSITION_BEHIND,
+    REPLAY_CAMERA_POSITION_SYSTEM,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
     getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker,
 } from './JourneyReplayProgressionStyle'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
-import {replaySceneFor, replayViewerFor} from './ReplayRenderTarget'
+import {replayCameraFor, replaySceneFor, replayViewerFor} from './ReplayRenderTarget'
 
 import {
     REPLAY_HEADING_TRANSITION_DURATION_SECONDS,
@@ -132,6 +133,188 @@ import {
     viewportRectForCesiumSurface,
     updateToleranceZoneOverlay,
 } from './JourneyReplayCameraOverlay'
+
+/**
+ * Lock the interactive Cesium camera to one replay anchor.
+ *
+ * @param {object} mode - Replay camera mode.
+ * @param {object} options - Replay sample and camera pose.
+ * @returns {boolean} Whether the camera was locked to the anchor.
+ */
+export const lockReplayCameraToAnchor = (mode, {
+    sample,
+    heading,
+    pitch,
+    roll = 0,
+    cameraSettings,
+    cameraHeight = null,
+    cameraPosition = null,
+} = {}) => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const camera = replayCameraFor(mode)
+    const capturedPose = cameraPosition
+        ? cameraPoseAroundReplayAnchor({positionWC: cameraPosition}, sample)
+        : null
+    // Keep the captured framing, but always orient the replay camera on the
+    // departure tangent instead of inheriting an orbit heading.
+    const effectiveHeading = heading
+    const effectivePitch = capturedPose?.pitch ?? pitch
+    const effectiveCameraHeight = capturedPose?.height ?? cameraHeight
+    const effectiveCameraRange = capturedPose?.range ?? null
+    const frame = call.cameraRecenterFrame?.({
+        sample,
+        heading: effectiveHeading,
+        pitch: effectivePitch,
+        roll,
+        cameraSettings,
+        cameraHeight: effectiveCameraHeight,
+        cameraRange: effectiveCameraRange,
+    })
+    if (!camera || typeof camera.lookAtTransform !== 'function' || !frame?.target || !frame.destination) {
+        return false
+    }
+
+    const range = Cartesian3.distance(frame.destination, frame.target)
+    if (!Number.isFinite(range) || range <= 0) {
+        return false
+    }
+
+    const targetCartographic = Cartographic.fromCartesian(frame.target)
+    if (!targetCartographic) {
+        return false
+    }
+
+    const orbitTransform = Transforms.eastNorthUpToFixedFrame(frame.target)
+    state.cameraApplyingView = true
+    try {
+        CameraUtils.setOrbitTransform(camera, {
+            longitude: CesiumMath.toDegrees(targetCartographic.longitude),
+            latitude: CesiumMath.toDegrees(targetCartographic.latitude),
+            height: targetCartographic.height,
+        })
+        camera.lookAtTransform(
+            orbitTransform,
+            new HeadingPitchRange(frame.safeHeading, frame.safePitch, range),
+        )
+        call.rememberCameraView?.({
+            anchor: sample,
+            heading: frame.safeHeading,
+            pitch: frame.safePitch,
+            roll: frame.roll,
+        })
+        call.refreshReplayDiagnosticsOverlay?.()
+        return true
+    }
+    finally {
+        state.cameraApplyingView = false
+    }
+}
+
+/**
+ * Resolve the live camera pose relative to a fixed replay anchor.
+ *
+ * @param {Object|null} camera - Interactive Cesium camera.
+ * @param {Object|null} anchor - Replay anchor in geographic coordinates.
+ * @returns {Object|null} Target-relative heading, pitch, range, and height.
+ */
+const cameraPoseAroundReplayAnchor = (camera, anchor) => {
+    const position = camera?.positionWC ?? camera?.position
+    const target = safeCartesianFromLonLat(anchor)
+    if (!position || !target) {
+        return null
+    }
+
+    try {
+        const transform = Transforms.eastNorthUpToFixedFrame(target)
+        const inverse = Matrix4.inverseTransformation(transform, new Matrix4())
+        const localPosition = Matrix4.multiplyByPoint(inverse, position, new Cartesian3())
+        const horizontalDistance = Math.hypot(localPosition.x, localPosition.y)
+        const range = Cartesian3.magnitude(localPosition)
+        if (!Number.isFinite(horizontalDistance)
+            || !Number.isFinite(range)
+            || horizontalDistance <= 0
+            || range <= 0) {
+            return null
+        }
+
+        const cartographic = Cartographic.fromCartesian(position)
+        return {
+            heading: Math.atan2(-localPosition.x, -localPosition.y),
+            pitch: -Math.atan2(localPosition.z, horizontalDistance),
+            range,
+            height: Number.isFinite(cartographic?.height) ? cartographic.height : null,
+        }
+    }
+    catch {
+        return null
+    }
+}
+
+/**
+ * Return the interactive Studio camera used during recording preparation.
+ *
+ * @returns {Object|null} The live Studio Cesium camera.
+ */
+const interactiveReplayCamera = mode => replayCameraFor(mode)
+
+/**
+ * Resolve the closest Ahead/Behind representation for a live camera heading.
+ *
+ * The signed angle is limited to +/-90 degrees. Crossing that limit changes
+ * the side of the trace instead of clamping the camera heading.
+ *
+ * @param {object} options - Heading and current position inputs.
+ * @param {number|null} options.axisHeading - Trace tangent heading in radians.
+ * @param {number|null} options.cameraHeading - Live camera heading in radians.
+ * @param {string} options.positionMode - Current Ahead/Behind mode.
+ * @returns {{positionMode: string, headingOffset: number}|null} Normalized representation.
+ */
+export const replayCameraPositionModeFromHeading = ({
+    axisHeading,
+    cameraHeading,
+    positionMode,
+} = {}) => {
+    if (positionMode !== REPLAY_CAMERA_POSITION_AHEAD
+        && positionMode !== REPLAY_CAMERA_POSITION_BEHIND) {
+        return null
+    }
+
+    const resolvedAxisHeading = finiteNumber(axisHeading)
+    const resolvedCameraHeading = finiteNumber(cameraHeading)
+    if (resolvedAxisHeading === null || resolvedCameraHeading === null) {
+        return null
+    }
+
+    const candidates = [
+        {
+            positionMode: REPLAY_CAMERA_POSITION_BEHIND,
+            delta: replayAngularDelta(resolvedAxisHeading, resolvedCameraHeading),
+        },
+        {
+            positionMode: REPLAY_CAMERA_POSITION_AHEAD,
+            delta: replayAngularDelta(resolvedAxisHeading + Math.PI, resolvedCameraHeading),
+        },
+    ]
+    const current = candidates.find(candidate => candidate.positionMode === positionMode)
+    const alternate = candidates.find(candidate => candidate.positionMode !== positionMode)
+    const selected = Math.abs(current?.delta ?? Math.PI) <= Math.PI / 2
+        ? current
+        : alternate
+    if (!selected || selected.delta === null) {
+        return null
+    }
+
+    return {
+        positionMode: selected.positionMode,
+        headingOffset: clamp(
+            Math.round(CesiumMath.toDegrees(selected.delta)),
+            REPLAY_CAMERA_HEADING_OFFSET_MIN,
+            REPLAY_CAMERA_HEADING_OFFSET_MAX,
+        ),
+    }
+}
+
 export const applyCameraView = (mode, {anchor, heading, pitch, roll = 0, cameraSettings}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -187,8 +370,7 @@ export const applyCameraView = (mode, {anchor, heading, pitch, roll = 0, cameraS
             return false
         }
 
-        const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
-        const camera = viewer?.camera
+        const camera = replayCameraFor(mode)
         if (!camera || typeof camera.setView !== 'function') {
             replayVideoTraceDebug('camera.view.apply.end', {
                 elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startedAt,
@@ -534,24 +716,43 @@ export const updateCameraSettingsFromCesiumControls = (mode, sample, {altitudeMo
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const camera = (call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera
+        const camera = interactiveReplayCamera(mode)
         if (!camera || !sample) {
             return null
         }
 
         const terrainHeight = call.terrainHeightForLonLat(sample?.longitude, sample?.latitude)
-        const cameraHeight = finiteNumber(camera.positionCartographic?.height)
+        const anchoredPose = cameraPoseAroundReplayAnchor(camera, sample)
+        const cameraHeight = anchoredPose?.height ?? finiteNumber(camera.positionCartographic?.height)
         const currentCameraSettings = normalizeJourneyReplayCamera(globalThis.lgs?.stores?.replay?.camera ?? getJourneyReplaySettings().camera)
         const currentAltitude = currentCameraSettings.altitude
+        const pitchRadians = anchoredPose?.pitch ?? finiteNumber(camera.pitch)
+        const headingRadians = anchoredPose?.heading ?? finiteNumber(camera.heading)
         const next = {
-            pitch: clamp(Math.round(CesiumMath.toDegrees(camera.pitch)), -89, -5),
+            pitch: pitchRadians === null || pitchRadians === undefined
+                ? currentCameraSettings.pitch
+                : clamp(Math.round(CesiumMath.toDegrees(pitchRadians)), -89, -5),
         }
 
-        const headingDeg = Number.isFinite(camera.heading)
-            ? clamp(Math.round(CesiumMath.toDegrees(camera.heading)), -180, 180)
+        const headingDeg = headingRadians !== null && headingRadians !== undefined
+            ? clamp(Math.round(CesiumMath.toDegrees(headingRadians)), -180, 180)
             : undefined
         if (headingDeg !== undefined && currentCameraSettings.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
             next.heading = headingDeg
+        }
+        if (headingRadians !== null
+            && headingRadians !== undefined
+            && currentCameraSettings.positionMode !== REPLAY_CAMERA_POSITION_SYSTEM) {
+            const axisHeading = call.headingFromPositionProperty?.(sample?.progress ?? state.controller?.progress ?? 0)
+            const positionAndOffset = replayCameraPositionModeFromHeading({
+                axisHeading,
+                cameraHeading: headingRadians,
+                positionMode: currentCameraSettings.positionMode,
+            })
+            if (positionAndOffset) {
+                next.positionMode = positionAndOffset.positionMode
+                next.headingOffset = positionAndOffset.headingOffset
+            }
         }
 
         const nextAltitudeMode = altitudeMode ?? currentCameraSettings.altitudeMode
@@ -774,8 +975,7 @@ export const cancelCameraBezierTransition = (mode, resolveValue = false) => {
             state.cameraBezierFrame = null
         }
         if (hadActiveTransition) {
-            const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
-            viewer?.camera?.cancelFlight?.()
+            replayCameraFor(mode)?.cancelFlight?.()
         }
         if (state.cameraBezierResolve !== null) {
             const resolve = state.cameraBezierResolve
