@@ -38,9 +38,8 @@ import {
   normalizePanoramaPitch,
 } from "@Core/OrbitSettings";
 import { Widget } from "@Components/MainUI/widgets/Widget";
+import { CameraAdjustmentOverlay } from "./CameraAdjustmentOverlay";
 import { OrbitInteractionHintsToggleButton } from "@Components/MainUI/OrbitInteractionHintsWidget";
-import { faAngle, faMagnifyingGlassLocation, faVideo } from "@fortawesome/pro-regular-svg-icons";
-import { FA2SL } from "@Utils/FA2SL";
 import { foot, meter, UnitUtils } from "@Utils/UnitUtils";
 import { cameraViewToSlippyLevel } from "@Utils/cesium/CameraLevel";
 import {
@@ -68,7 +67,7 @@ const KEYBOARD_FAST_HEIGHT_STEP_METERS = 10;
 const KEYBOARD_FINE_HEIGHT_STEP_METERS = 1;
 const INTERACTION_PERSIST_DELAY = 400;
 const ADJUSTMENT_OVERLAY_DELAY = 2000;
-const PANORAMA_ADJUSTMENT_WIDGET = "panorama-adjustment-widget";
+const CAMERA_ADJUSTMENT_WIDGET = "camera-adjustment-widget";
 const EDITABLE_SELECTOR = [
   "input",
   "textarea",
@@ -256,7 +255,7 @@ export const PanoramaWidget = memo(() => {
       draggable: true,
       dynamic: true,
       group: SCENE_WIDGETS,
-      id: PANORAMA_ADJUSTMENT_WIDGET,
+      id: CAMERA_ADJUSTMENT_WIDGET,
       left: "50%",
       margin: lgs.gutter.s,
       opacity: 1,
@@ -285,7 +284,7 @@ export const PanoramaWidget = memo(() => {
   const centerAdjustmentWidget = useCallback(() => {
     centerAdjustmentCancelRef.current?.();
     centerAdjustmentCancelRef.current = scheduleCameraAdjustmentWidgetCenter(
-      PANORAMA_ADJUSTMENT_WIDGET
+      CAMERA_ADJUSTMENT_WIDGET
     );
   }, []);
 
@@ -377,7 +376,7 @@ export const PanoramaWidget = memo(() => {
 
   const hideAdjustmentOverlay = useCallback(() => {
     setAdjustmentVisible(false);
-    if (lgs.stores.ui.widget.current?.id === PANORAMA_ADJUSTMENT_WIDGET) {
+    if (lgs.stores.ui.widget.current?.id === CAMERA_ADJUSTMENT_WIDGET) {
       lgs.stores.ui.widget.current = { id: null };
     }
   }, []);
@@ -1299,33 +1298,13 @@ export const PanoramaWidget = memo(() => {
         </WaCard>
       </Widget>
 
-      <Widget
-        isVisible={adjustmentWidgetMounted}
+      <CameraAdjustmentOverlay
+        isVisible={!rotate.running}
         config={adjustmentConfig}
-        className={`panorama-adjustment-widget-shell${
-          adjustmentVisible ? " adjustment-visible" : ""
-        }`}
-      >
-        <div
-          className="panorama-adjustment-overlay"
-          onWheel={handleAdjustmentWheel}
-        >
-          <span className="panorama-adjustment-metric">
-            <sl-icon library="fa" name={FA2SL.set(faVideo)} />
-            <strong>{adjustmentValues.height}</strong>
-          </span>
-          <span className="panorama-adjustment-metric">
-            <sl-icon library="fa" name={FA2SL.set(faAngle)} />
-            <strong>{adjustmentValues.pitch}</strong>
-          </span>
-          {adjustmentValues.level !== null && (
-            <span className="panorama-adjustment-metric">
-              <sl-icon library="fa" name={FA2SL.set(faMagnifyingGlassLocation)} />
-              <strong>{adjustmentValues.level}</strong>
-            </span>
-          )}
-        </div>
-      </Widget>
+        visible={adjustmentVisible}
+        values={adjustmentValues}
+        onWheel={handleAdjustmentWheel}
+      />
     </div>
   );
 });

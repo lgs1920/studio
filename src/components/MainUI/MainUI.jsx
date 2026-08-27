@@ -14,6 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 import { Compass }          from '@Components/MainUI/compass/Compass'
+import { CameraAdjustmentOverlay } from '@Components/MainUI/CameraAdjustmentOverlay'
 import { FullScreenButton } from '@Components/FullScreenButton/FullScreenButton'
 import { ContextMenuRenderer } from '@Components/MainUI/context-menu/ContextMenuRenderer'
 import { MapPointContextMenuTrigger } from '@Components/MainUI/context-menu/MapPointContextMenuTrigger'
@@ -313,6 +314,7 @@ export const MainUI = memo(() => {
                     {mainUI.callForActions.active && <CallForActions/>}
                 </>
             )}
+            {video.editing && <CameraAdjustmentOverlay/>}
             <ContextMenuRenderer/>
             <VideoDownloadAndShareDialog/>
             <ReplayRecordingMonitorWidget/>

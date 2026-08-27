@@ -17,7 +17,7 @@
 const CAMERA_ADJUSTMENT_CENTER_RETRY_DELAY = 50
 const CAMERA_ADJUSTMENT_CENTER_RETRY_LIMIT = 12
 
-const cameraAdjustmentSelector = widgetId => `[data-widget="${widgetId}"] .panorama-adjustment-widget-shell`
+const cameraAdjustmentSelector = widgetId => `[data-widget="${widgetId}"] .camera-adjustment-widget-shell`
 
 const getCameraAdjustmentElement = widgetId => {
     const manager = __.ui?.widgetManager

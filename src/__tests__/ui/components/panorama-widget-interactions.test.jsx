@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { cleanup, fireEvent, render } from '@testing-library/react'
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { CURRENT_POI } from '@Core/constants'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
@@ -100,7 +100,7 @@ const makeMatchMedia = matches => vi.fn(() => ({
     removeEventListener: vi.fn(),
 }))
 
-const setupPanoramaGlobals = () => {
+const setupPanoramaGlobals = ({panoramaActive = true} = {}) => {
     const canvas = document.createElement('canvas')
     document.body.appendChild(canvas)
 
@@ -165,7 +165,7 @@ const setupPanoramaGlobals = () => {
                         running: false,
                     }),
                     panorama: proxy({
-                        active:       true,
+                        active:       panoramaActive,
                         direction:    1,
                         heading:      0,
                         heightOffset: 100,
@@ -306,7 +306,7 @@ describe('PanoramaWidget interactions', () => {
         const {PanoramaWidget} = await import('@Components/MainUI/PanoramaWidget')
 
         const {container} = render(<PanoramaWidget/>)
-        const overlay = container.querySelector('.panorama-adjustment-overlay')
+        const overlay = container.querySelector('.camera-adjustment-overlay')
 
         fireEvent.wheel(overlay, {deltaY: 1})
         expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(200)
@@ -325,6 +325,26 @@ describe('PanoramaWidget interactions', () => {
 
         fireEvent.wheel(overlay, {ctrlKey: true, deltaY: -1})
         expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(100)
+    })
+
+    it('shows the camera overlay when changing the camera', async () => {
+        const cameraChangedListeners = []
+        setupPanoramaGlobals({panoramaActive: false})
+        lgs.camera.changed.addEventListener = vi.fn(listener => {
+            cameraChangedListeners.push(listener)
+            return vi.fn()
+        })
+        const {PanoramaWidget} = await import('@Components/MainUI/PanoramaWidget')
+
+        const view = render(<PanoramaWidget/>)
+        expect(view.container.querySelector('.camera-adjustment-widget-shell.adjustment-visible')).toBeNull()
+
+        lgs.camera.positionCartographic.height = 1300
+        cameraChangedListeners[0]()
+
+        await waitFor(() => {
+            expect(view.container.querySelector('.camera-adjustment-widget-shell.adjustment-visible')).not.toBeNull()
+        })
     })
 
     it('maps arrow keys to panorama height steps', async () => {

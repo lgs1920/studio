@@ -459,7 +459,7 @@ describe('OrbitWidget interactions', () => {
 
         await waitFor(() => {
             expect(
-                view.container.querySelector('.panorama-adjustment-widget-shell.adjustment-visible'),
+                view.container.querySelector('.camera-adjustment-widget-shell.adjustment-visible'),
             ).not.toBeNull()
         })
     })

@@ -36,6 +36,11 @@ vi.mock('@Components/MainUI/PanoramaWidget', () => ({
 vi.mock('@Components/MainUI/OrbitWidget', () => ({
     OrbitWidget: () => <div data-testid="orbit-widget"/>,
 }))
+vi.mock('@Components/MainUI/CameraAdjustmentOverlay', () => ({
+    CameraAdjustmentOverlay: ({isVisible = true}) => isVisible
+        ? <div data-testid="camera-adjustment-overlay"/>
+        : null,
+}))
 vi.mock('@Components/MainUI/OrbitButton', () => ({
     OrbitButton: () => <div data-testid="orbit-button"/>,
 }))
@@ -284,5 +289,14 @@ describe('MainUI replay mask', () => {
         expect(container.querySelector('#lgs-main-ui')).toBeNull()
         expect(screen.getByTestId('replay-controls')).not.toBeNull()
         expect(screen.getByTestId('map-poi-monitor')).not.toBeNull()
+    })
+
+    it('keeps the camera adjustment overlay visible during video preparation', () => {
+        lgs.stores.ui.video.editing = true
+
+        const {container} = render(<MainUI/>)
+
+        expect(container.querySelector('#lgs-main-ui')).toBeNull()
+        expect(screen.getByTestId('camera-adjustment-overlay')).not.toBeNull()
     })
 })

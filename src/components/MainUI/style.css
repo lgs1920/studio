@@ -550,7 +550,7 @@ body.mobile .orbit-widget-body {
     cursor: grabbing;
 }
 
-.panorama-adjustment-widget-shell {
+.camera-adjustment-widget-shell {
     overflow: visible !important;
     width: auto !important;
     min-width: 0 !important;
@@ -564,11 +564,11 @@ body.mobile .orbit-widget-body {
     box-shadow: none !important;
 }
 
-.panorama-adjustment-widget-shell.adjustment-visible {
+.camera-adjustment-widget-shell.adjustment-visible {
     pointer-events: auto;
 }
 
-.panorama-adjustment-overlay {
+.camera-adjustment-overlay {
     font-size: var(--lgs-font-size-m);
     font-weight: 600;
     display: inline-flex;
@@ -590,16 +590,16 @@ body.mobile .orbit-widget-body {
     gap: var(--lgs-gutter);
 }
 
-.panorama-adjustment-widget-shell.adjustment-visible .panorama-adjustment-overlay {
+.camera-adjustment-widget-shell.adjustment-visible .camera-adjustment-overlay {
     transform: scale(1);
     opacity: 0.92;
 }
 
-.panorama-adjustment-widget-shell.dragging .panorama-adjustment-overlay {
+.camera-adjustment-widget-shell.dragging .camera-adjustment-overlay {
     cursor: grabbing;
 }
 
-.panorama-adjustment-metric {
+.camera-adjustment-metric {
     display: inline-flex;
     align-items: center;
     justify-content: flex-start;
@@ -607,11 +607,11 @@ body.mobile .orbit-widget-body {
     gap: var(--lgs-gutter-xs);
 }
 
-.panorama-adjustment-metric sl-icon {
+.camera-adjustment-metric sl-icon {
     font-size: var(--lgs-font-size-m);
 }
 
-.panorama-adjustment-lock-control {
+.camera-adjustment-lock-control {
     font: inherit;
     line-height: 1;
     position: relative;
@@ -632,7 +632,7 @@ body.mobile .orbit-widget-body {
     background: transparent;
 }
 
-.panorama-adjustment-lock-control::before {
+.camera-adjustment-lock-control::before {
     position: absolute;
     top: 0;
     bottom: 0;
@@ -643,19 +643,23 @@ body.mobile .orbit-widget-body {
     background: color-mix(in oklab, var(--wa-color-brand-on-quiet) 38%, transparent);
 }
 
-.panorama-adjustment-lock-control:hover {
+.camera-adjustment-lock-control:hover {
     color: inherit;
     background: transparent;
 }
 
-.panorama-adjustment-lock-control wa-icon {
+.camera-adjustment-lock-control wa-icon {
     font-size: var(--lgs-font-size-m);
     width: 1em;
     height: 1em;
 }
 
-.panorama-adjustment-overlay strong {
+.camera-adjustment-overlay strong {
     font-size: var(--lgs-font-size-m);
+}
+
+.camera-adjustment-angle-direction {
+    font-size: var(--lgs-font-size-s);
 }
 
 #used-platform {

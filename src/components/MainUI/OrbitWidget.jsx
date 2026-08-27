@@ -27,13 +27,12 @@ import {
   OrbitInteractionHintsWidget,
 } from "@Components/MainUI/OrbitInteractionHintsWidget";
 import { Widget } from "@Components/MainUI/widgets/Widget";
+import { CameraAdjustmentOverlay } from "./CameraAdjustmentOverlay";
 import {
   LGS_WIDGET,
   SCENE_WIDGETS,
   SCENE_WIDGETS_BOARD,
 } from "@Core/constants";
-import { faAngle, faMagnifyingGlassLocation, faVideo } from "@fortawesome/pro-regular-svg-icons";
-import { FA2SL } from "@Utils/FA2SL";
 import { foot, meter, UnitUtils } from "@Utils/UnitUtils";
 import { cameraViewToSlippyLevel } from "@Utils/cesium/CameraLevel";
 import {
@@ -683,41 +682,14 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
   ]);
 
   return (
-    <Widget
+    <CameraAdjustmentOverlay
       isVisible={adjustmentWidgetMounted}
       config={config}
-      className={`panorama-adjustment-widget-shell${
-        visible ? " adjustment-visible" : ""
-      }`}
-    >
-      <div className="panorama-adjustment-overlay">
-        <span className="panorama-adjustment-metric">
-          <sl-icon library="fa" name={FA2SL.set(faVideo)} />
-          <strong>{values.height}</strong>
-        </span>
-        <span className="panorama-adjustment-metric">
-          <sl-icon library="fa" name={FA2SL.set(faAngle)} />
-          <strong>{values.pitch}</strong>
-        </span>
-        {values.level !== null && (
-          <span className="panorama-adjustment-metric">
-            <sl-icon library="fa" name={FA2SL.set(faMagnifyingGlassLocation)} />
-            <strong>{values.level}</strong>
-          </span>
-        )}
-        {adjustmentWidgetLocked && (
-          <button
-            type="button"
-            className="panorama-adjustment-lock-control"
-            aria-label="Unlock camera adjustment widget"
-            onClick={unlockAdjustmentWidget}
-            onPointerDown={(event) => event.stopPropagation()}
-          >
-            <WaIcon name="lock" variant="regular" />
-          </button>
-        )}
-      </div>
-    </Widget>
+      visible={visible}
+      values={values}
+      locked={adjustmentWidgetLocked}
+      onUnlock={unlockAdjustmentWidget}
+    />
   );
 });
 
