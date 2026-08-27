@@ -1117,3 +1117,19 @@
 ## 2026-08-27 — [`docs: clarify deployment workflow`](https://github.com/lgs1920/studio/commit/fbcb300687145cbda7e84da794211df3afe17b86)
 
 - Recorded automatically from Git history.
+
+## 2026-08-27 — [`fix: preserve camera overlay during widget drag`](https://github.com/lgs1920/studio/commit/38d20ce7f9ab3b75c05ff75243ddfc2a96a559f7)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`docs: add analytical rigor rules`](https://github.com/lgs1920/studio/commit/4470341dac68300c4cdb7b2bc845eef29fd0a2f7)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`chore: centralize project skills`](https://github.com/lgs1920/studio/commit/aa83fcd4ec61c7fef51b67c6d302a3b8ece62de1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/3c3a1ff96706fd7520fa5cab9609f3cd4c67bc3d)
+
+- Recorded automatically from Git history.
