@@ -1109,3 +1109,11 @@
 ## 2026-08-27 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/d3e84d2040a123984469cfe97e43f23b8c6e9696)
 
 - Recorded automatically from Git history.
+
+## 2026-08-27 — [`fix: handle deployment Git synchronization`](https://github.com/lgs1920/studio/commit/7148f4f7966514fbe2bf5ca5aa721483de425a79)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`docs: clarify deployment workflow`](https://github.com/lgs1920/studio/commit/fbcb300687145cbda7e84da794211df3afe17b86)
+
+- Recorded automatically from Git history.
