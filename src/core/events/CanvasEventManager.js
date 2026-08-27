@@ -24,7 +24,7 @@
  */
 import { DOUBLE_CLICK_TIMEOUT, DOUBLE_TAP_TIMEOUT, LGS_CONTEXT_MENU_HOOK, LONG_TAP_TIMEOUT } from '@Core/constants'
 import { ScreenSpaceEventHandler }                                                           from 'cesium'
-import { CesiumInputGate, getCesiumInputState }                                              from './CesiumInputGate'
+import { CesiumInputGate }                                                                    from './CesiumInputGate'
 import { CESIUM_EVENTS, EVENT_LOWEST, EVENTS, MODIFIER_SEPARATOR, MODIFIERS }                from './cesiumEvents'
 
 const LONG_TAP_MOVE_THRESHOLD = 10
@@ -147,11 +147,11 @@ export class CanvasEventManager {
     #modifierState = {ctrl: false, alt: false, shift: false}
 
     /**
-     * Cleanup callbacks for the temporary DOM event tracing listeners.
+     * Cleanup callbacks for temporary canvas event listeners.
      * @type {Array<Function>}
      * @private
      */
-    #canvasEventTraceCleanup = []
+    #canvasEventCleanup = []
 
     /**
      * Creates or returns the singleton instance of CanvasEventManager.
@@ -184,62 +184,10 @@ export class CanvasEventManager {
 
         this.#viewer.scene.canvas.setAttribute('tabindex', '0')
         this.#setupSynchronizedInputGuard()
-        this.#setupCanvasEventTracing()
         this.#setupCanvasFocus()
         this.#setupKeyboardEvents()
         this.#setupMousePositionTracking()
         CanvasEventManager.#instance = this
-    }
-
-    /**
-     * Traces DOM input events before and at the Cesium canvas to identify an
-     * overlay or another layer that intercepts the event.
-     * @private
-     */
-    #setupCanvasEventTracing() {
-        const canvas = this.#viewer.scene.canvas
-        const eventTypes = ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'wheel', 'touchstart', 'touchend']
-
-        const describeElement = element => {
-            if (!element || !element.tagName) {
-                return null
-            }
-
-            return {
-                tagName: element.tagName.toLowerCase(),
-                id:      element.id || null,
-                classes: typeof element.className === 'string' ? element.className : null,
-            }
-        }
-
-        const getPosition = event => {
-            const touch = event.touches?.[0] ?? event.changedTouches?.[0]
-            return {
-                clientX: event.clientX ?? touch?.clientX ?? null,
-                clientY: event.clientY ?? touch?.clientY ?? null,
-            }
-        }
-
-        const traceDomEvent = event => {
-            const path = event.composedPath?.() ?? []
-            const position = getPosition(event)
-            const synchronizedRecordingState = getCesiumInputState()
-
-            console.log('[CanvasEventManager] DOM event received', {
-                type:          event.type,
-                target:        describeElement(event.target),
-                reachedCanvas: path.includes(canvas) || event.target === canvas,
-                path:          path.slice(0, 8).map(describeElement).filter(Boolean),
-                defaultPrevented: event.defaultPrevented,
-                synchronizedRecordingState,
-                ...position,
-            })
-        }
-
-        eventTypes.forEach(eventType => {
-            document.addEventListener(eventType, traceDomEvent, true)
-            this.#canvasEventTraceCleanup.push(() => document.removeEventListener(eventType, traceDomEvent, true))
-        })
     }
 
     /**
@@ -273,7 +221,7 @@ export class CanvasEventManager {
         eventTypes.forEach(eventType => {
             const options = {capture: true, passive: false}
             document.addEventListener(eventType, blockSynchronizedInput, options)
-            this.#canvasEventTraceCleanup.push(() => document.removeEventListener(eventType, blockSynchronizedInput, options))
+            this.#canvasEventCleanup.push(() => document.removeEventListener(eventType, blockSynchronizedInput, options))
         })
     }
 
@@ -288,7 +236,7 @@ export class CanvasEventManager {
         const focusCanvas = () => canvas.focus({preventScroll: true})
 
         canvas.addEventListener('pointerdown', focusCanvas, true)
-        this.#canvasEventTraceCleanup.push(() => canvas.removeEventListener('pointerdown', focusCanvas, true))
+        this.#canvasEventCleanup.push(() => canvas.removeEventListener('pointerdown', focusCanvas, true))
     }
 
     /**
@@ -689,16 +637,6 @@ export class CanvasEventManager {
             const picked = position ? this.#viewer.scene.pick(position) : undefined
             const entityId = pickedObjectEntityId(picked)
             const eventName = modifier ? `${modifier.name}${MODIFIER_SEPARATOR}${eventType}` : eventType
-
-            if (eventType !== EVENTS.MOUSE_MOVE) {
-                console.log('[CanvasEventManager] Cesium event received by canvas', {
-                    eventType,
-                    eventName,
-                    position: position ? {x: position.x, y: position.y} : null,
-                    pickedType: picked?.constructor?.name ?? null,
-                    entityId,
-                })
-            }
 
             if (!this.#handlers.has(eventName)) {
                 return
@@ -1105,8 +1043,8 @@ export class CanvasEventManager {
     destroy() {
         this.removeAllListeners()
         this.#cesiumInputGate.destroy()
-        this.#canvasEventTraceCleanup.forEach(cleanup => cleanup())
-        this.#canvasEventTraceCleanup = []
+        this.#canvasEventCleanup.forEach(cleanup => cleanup())
+        this.#canvasEventCleanup = []
         this.#mouseMotionActions.clear()
         this.#hoveredEntityIds.clear()
         this.#touchTapActions = null
