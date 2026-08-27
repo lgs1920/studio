@@ -19,10 +19,12 @@ import path           from 'path'
 import process        from 'node:process'
 import { Deployment } from './deployment/Deployment.js'
 
+// Keep the platform values centralized so CLI flags and deployment configuration
+// always use the same identifiers.
 const platforms = {production: 'production', staging: 'staging', test: 'test'}
 
 /*******************************************************************************
- * Read/manage arguments
+ * Parse command-line arguments
  */
 const parser = new argparse.ArgumentParser(
     {
@@ -46,6 +48,9 @@ parser.add_argument('--test', '-t', {
     help:   'Deploy to test platform',
 })
 const args = parser.parse_args()
+
+// The product is inferred by Deployment from the current directory name.
+// When no platform flag is provided, the script intentionally falls back to test.
 const deployment = new Deployment(
     {
         local:    path.dirname(process.cwd()),
@@ -53,6 +58,8 @@ const deployment = new Deployment(
         product:  path.basename(process.cwd()),
     })
 
+// Deployment exposes a promise so the CLI exits with a meaningful status code:
+// zero for success and one for any build, transfer, or remote deployment error.
 deployment.done
     .then(() => process.exit(0))
     .catch(() => process.exit(1))

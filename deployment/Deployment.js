@@ -706,10 +706,14 @@ export class Deployment {
                 let failure = null
 
                 try {
+                    // Keep the release activation atomic: upload and unpack first,
+                    // then switch the stable `current` link only after preparation succeeds.
                     await this.unzip(connection)
                     await this.uploadBackendEnvironment(connection)
                     console.log('    > Deploying release...')
                     await this.link(connection)
+                    // Restarting the backend is deliberately performed after the link switch
+                    // so PM2 always starts the newly activated release.
                     await this.postDeployment(connection)
                     await this.pushTag()
                     console.log('\n---')
@@ -796,7 +800,7 @@ export class Deployment {
         }
         const backendRoot = path.join(this.configuration.remote[this.platform].path, this.platform, 'backend')
         if (this.product === this.products.backend) {
-            // Load the shared backend-only environment remotely so SMTP credentials never enter Studio releases.
+            // Keep backend credentials in shared storage so they never enter a versioned release archive.
             const where = path.join(backendRoot, this.current)
             const environmentFile = path.join(backendRoot, this.pm2.environmentFile)
             this.configuration.backend[this.platform].pm2.command = createBackendPm2Command({
@@ -808,7 +812,7 @@ export class Deployment {
                 backendPort:      this.configuration.backend[this.platform].port,
             })
         }
-        // Configure server paths. Registration data lives outside versioned releases.
+        // Resolve persistent server paths outside versioned releases.
         this.configuration.backend[this.platform].registrationFile = resolveBackendRegistrationFile({
             remoteBackendRoot: backendRoot,
             registrationFile:   this.configuration.backend[this.platform].registrationFile,
@@ -825,7 +829,7 @@ export class Deployment {
             'studio',
             this.configuration.remote.current
         )
-        // Save server configuration to servers.json
+        // Store the resolved runtime endpoints in the release for the client application.
         fs.writeFileSync(`${this.localDistPath}/servers.json`, JSON.stringify({
                                                                                   platform: this.platform,
                                                                                   backend:  this.configuration.backend[this.platform],
@@ -833,12 +837,12 @@ export class Deployment {
                                                                                   site:     this.configuration.site[this.platform],
                                                                               }), 'utf8')
         console.log(`    > ${this.yellow}Server configuration saved to servers.json${this.reset}`)
-        // Save build date to build.json
+        // Store build metadata separately from the application source files.
         fs.writeFileSync(`${this.localDistPath}/build.json`, JSON.stringify({date: Date.now()}))
         console.log(`    > ${this.yellow}Build date saved to build.json${this.reset}`)
-        // Save branch information
+        // Preserve the source branch used to create this release.
         await this.saveBranchInfo()
-        // Zip the distribution
+        // Archive the fully prepared release, including generated deployment metadata.
         await this.zip()
     }
 

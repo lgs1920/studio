@@ -2,12 +2,20 @@
 
 ## Overview
 
-The `Deployment.js` script, invoked via `deploy.js`, is a Node.js module designed to automate the deployment of the
-LGS1920 project applications (`studio` or `backend`) to various platforms (`production`, `staging`, or `test`). It
-handles building, zipping, transferring, and deploying the application to a remote server via SSH, along with Git tag
-management to track deployments. The scripts are part of the `LGS1920/backend` project, located at
-`/home/christian/devs/assets/lgs1920/backend/deployment/Deployment.js` and
-`/home/christian/devs/assets/lgs1920/backend/deploy.js`.
+The `deploy.js` entry point invokes `deployment/Deployment.js` to automate releases of an LGS1920 product to the
+`production`, `staging`, or `test` platform. The product is inferred from the name of the current working directory
+(`studio` or `backend`).
+
+The deployment is executed with Bun. It builds the product, prepares a versioned release archive, transfers the
+archive to the configured server over SSH/SCP, activates the release through a stable `current` symbolic link, and
+pushes a deployment tag when every step succeeds.
+
+The deployment implementation is located in:
+
+- `deploy.js`: command-line entry point and platform selection.
+- `deployment/Deployment.js`: deployment lifecycle, build, archive, SSH, and Git operations.
+- `deployment/DeploymentCommands.js`: backend environment validation and safe remote PM2 command generation.
+- `deployment/deploy.yml`: product, platform, local, and remote configuration.
 
 ### Key Features
 
@@ -35,22 +43,21 @@ management to track deployments. The scripts are part of the `LGS1920/backend` p
 
 Before running the script, ensure the following are installed and configured:
 
-- **Node.js**: Required for running the script.
-- **Bun**: Used for building and running the application (e.g., `bun run build`, `bun build.js`).
+- **Bun**: Required to run the deployment script and build the applications.
 - **Git**: Required for version control and tag management.
-- **SSH and SCP**: Required for remote server access and file transfer (via `sshpass` for SCP).
+- **SSH and SCP**: Required for remote server access and file transfer. The script invokes `sshpass` for SCP.
 - **Node Modules**:
     - `argparse`: For command-line argument parsing in `deploy.js`.
-    - `child_process`: Built-in module for process execution.
-    - `path`: Built-in module for path manipulation.
+    - `node:child_process`: Built-in module for process execution.
+    - `node:path`: Built-in module for path manipulation.
     - `simple-git`: For Git operations.
     - `ssh2`: For SSH connections.
     - `zip-a-folder`: For zipping the build.
-    - `fs`: Built-in module (via `require`) for file system operations.
+    - `node:fs`: Built-in module for file system operations.
     - `yaml`: For parsing the `deploy.yml` configuration file.
 - **Environment Variables**:
     - `LGS1920_PASSWORD_PRODUCTION`, `LGS1920_PASSWORD_STAGING`, or `LGS1920_PASSWORD_TEST`: Password for SSH
-      authentication to the respective platform (user: `p5077` on `p5077.webmo.fr`).
+      authentication to the respective platform (user: `p5077` on `p5077.phpnet.org`).
     - `LGS1920_GITHUB_TOKEN`: GitHub token for Git authentication.
     - `LGS1920_GITHUB_USER`: GitHub username for Git operations.
 - **Backend local environment**: A readable `../backend/.env` file is required for a backend deployment. It is
@@ -62,11 +69,8 @@ Before running the script, ensure the following are installed and configured:
 - **PM2 log rotation**: The backend deployment user must be allowed to install PM2 modules with `pm2 install`.
 - **User crontab**: The backend deployment user must be allowed to manage its own crontab with `crontab`.
 
-Install dependencies using:
-
-```bash
-npm install argparse simple-git ssh2 zip-a-folder yaml
-```
+Dependencies are declared in `package.json` and should be installed with the project's package manager before
+deployment.
 
 ## Configuration
 
@@ -86,7 +90,7 @@ The script relies on a `deploy.yml` file located in the `deployment/` directory.
 - **Local**: The local distribution directory (`dist`) where builds are stored.
 - **Remote**: Server details:
     - User: `p5077`.
-    - Host: `p5077.webmo.fr`.
+    - Host: `p5077.phpnet.org`.
     - Path: `/home/www/lgs1920`.
     - Release directories: `releases` for builds, `current` for the active symbolic link.
 
@@ -94,9 +98,8 @@ Ensure the `deploy.yml` file is present and correctly formatted before running t
 
 ## Usage
 
-The `deploy.js` script is executed using Bun’s `run` command and requires a single platform flag to specify the target
-platform (`production`, `staging`, or `test`). The product (`studio` or `backend`) is inferred from the current working
-directory’s name, and the local path is set to the parent directory of the current working directory.
+The `deploy.js` script is executed using Bun’s `run` command. The product (`studio` or `backend`) is inferred from the
+current working directory’s name, and the local workspace path is set to its parent directory.
 
 ### Command-Line Flags
 
@@ -104,7 +107,13 @@ directory’s name, and the local path is set to the parent directory of the cur
 - `-s, --staging`: Deploy to the `staging` platform.
 - `-t, --test`: Deploy to the `test` platform.
 
-**Note**: Exactly one platform flag must be provided. The script infers:
+The script resolves the target platform in this order:
+
+- `--prod` / `-p` selects `production`.
+- Otherwise, `--staging` / `-s` selects `staging`.
+- Otherwise, `--test` / `-t`, or no platform flag, selects `test`.
+
+The script infers:
 - `product`: From the current directory name (e.g., `studio` if run from `/home/christian/devs/assets/lgs1920/studio`).
 - `local`: From the parent directory of the current working directory (e.g., `/home/christian/devs/assets/lgs1920`).
 
@@ -124,7 +133,7 @@ determines the `product`.
    cd /home/christian/devs/assets/lgs1920/studio
    bun run deploy -s
    ```
-   Builds the `studio` application, zips it, transfers it to `p5077.webmo.fr:/home/www/lgs1920/staging/studio/releases`,
+   Builds the `studio` application, zips it, transfers it to `p5077.phpnet.org:/home/www/lgs1920/staging/studio/releases`,
    deploys it, and pushes a Git tag (e.g., `staging-1.0.0-main-20251009185822`) on success.
 
 2. **Deploy the `backend` product to the `production` platform**:
@@ -134,7 +143,7 @@ determines the `product`.
    bun run deploy -p
    ```
    Builds the `backend` application (with minification), zips it, transfers it to
-   `p5077.webmo.fr:/home/www/lgs1920/production/backend/releases`, deploys it, restarts the application with PM2 using
+   `p5077.phpnet.org:/home/www/lgs1920/production/backend/releases`, deploys it, restarts the application with PM2 using
    `backend-production.config.js` on port 3333, and pushes a Git tag on success. Before PM2 starts, the local `.env`
    is uploaded to `/home/www/lgs1920/production/backend/shared/backend.env` with restrictive permissions.
 
@@ -151,13 +160,12 @@ determines the `product`.
    cd /home/christian/devs/assets/lgs1920/studio
    bun run deploy -p
    ```
-   Deploys the `studio` application to `p5077.webmo.fr:/home/www/lgs1920/production/studio/releases` without PM2
+   Deploys the `studio` application to `p5077.phpnet.org:/home/www/lgs1920/production/studio/releases` without PM2
    restart.
 
 ### Parameter Notes
 
-- **Platform**: Must be one of `production`, `staging`, or `test`, specified via `-p/--prod`, `-s/--staging`, or
-  `-t/--test`. Only one flag can be used at a time.
+- **Platform**: One of `production`, `staging`, or `test`, selected via `-p/--prod`, `-s/--staging`, or `-t/--test`.
 - **Product**: Automatically set to the current directory name (`studio` or `backend`). Run the command from the
   appropriate directory.
 - **Local Path**: Automatically set to the parent directory of the current working directory (e.g.,
@@ -169,7 +177,7 @@ determines the `product`.
 The script follows these steps:
 
 1. **Configuration**: Loads `deploy.yml`, initializes Git (with GitHub token) and SSH configurations (user: `p5077`,
-   host: `p5077.webmo.fr`), and retrieves the current branch and version from `version.json` (for `backend`) or
+   host: `p5077.phpnet.org`), and retrieves the current branch and version from `version.json` (for `backend`) or
    `public/version.json` (for `studio`).
 2. **Build**: Builds the application using Bun (`bun run build` for `studio`, `bun build.js` with optional `-m` for
    `backend` in `production`). Stores the build in `dist/<version>`.
@@ -195,7 +203,8 @@ The script follows these steps:
    do not execute the backend PM2 command.
 9. **Tag Push**: Pushes the Git tag and branch to the remote repository (`origin`) if all steps succeed.
 10. **Error Handling**: Deletes the Git tag locally and remotely if any step fails, logging errors with color-coded
-   output (red for errors, green for success, yellow for emphasis).
+   output (red for errors, green for success, yellow for emphasis). The CLI exits with status `0` on success and
+   status `1` on failure.
 
 ## Troubleshooting
 
@@ -218,7 +227,7 @@ The script follows these steps:
   Verify that `deployment/deploy.yml` exists in the project directory and matches the expected structure.
 
 - **Error: SSH connection failed**:
-  Check the SSH credentials (`p5077`, password from environment variable) and ensure `p5077.webmo.fr` is accessible.
+  Check the SSH credentials (`p5077`, password from environment variable) and ensure `p5077.phpnet.org` is accessible.
 
 - **Error: Git push failed**:
   Verify the GitHub token and user credentials, and ensure the repository remote (`origin`) is correctly set.
