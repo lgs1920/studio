@@ -171,30 +171,30 @@ The repository includes a set of internal Skills for AI-assisted development. Th
 workflow constraints, and validation expectations for recurring tasks. They are instructions for contributors and AI
 agents, not runtime application dependencies.
 
-The Skills are stored in [.aiassistant/skills/](.aiassistant/skills/) and cover:
+The Skills are stored in the agent-independent [skills/](skills/) directory and cover:
 
-- [Accessibility audits](.aiassistant/skills/lgs-1920-studio-accessibility-audit/SKILL.md)
-- [Browser persistence](.aiassistant/skills/lgs-1920-studio-browser-persistence/SKILL.md)
-- [Bun and Elysia backend](.aiassistant/skills/lgs-1920-studio-bun-elysia-backend/SKILL.md)
-- [Cesium camera](.aiassistant/skills/lgs-1920-studio-cesium-camera/SKILL.md)
-- [CSS theme system](.aiassistant/skills/lgs-1920-studio-css-theme-system/SKILL.md)
-- [Documentation maintenance](.aiassistant/skills/lgs-1920-studio-documentation-maintenance/SKILL.md)
-- [GitHub issues and Project workflow](.aiassistant/skills/lgs-1920-studio-github-issues/SKILL.md)
-- [GPX journey import](.aiassistant/skills/lgs-1920-studio-gpx-journey-import/SKILL.md)
-- [Internal database](.aiassistant/skills/lgs-1920-studio-internal-database/SKILL.md)
-- [Journey statistics](.aiassistant/skills/lgs-1920-studio-journey-statistics/SKILL.md)
-- [Map layer providers](.aiassistant/skills/lgs-1920-studio-map-layer-provider/SKILL.md)
-- [Map POI management](.aiassistant/skills/lgs-1920-studio-map-poi-management/SKILL.md)
-- [Performance rendering](.aiassistant/skills/lgs-1920-studio-performance-rendering/SKILL.md)
-- [Replay video export](.aiassistant/skills/lgs-1920-studio-replay-video-export/SKILL.md)
-- [Scene composition](.aiassistant/skills/lgs-1920-studio-scene-composition/SKILL.md)
-- [Testing workflow](.aiassistant/skills/lgs-1920-studio-testing-workflow/SKILL.md)
-- [Valtio stores](.aiassistant/skills/lgs-1920-studio-valtio-store/SKILL.md)
-- [Web Awesome UI](.aiassistant/skills/lgs-1920-studio-webawesome-ui/SKILL.md)
-- [Widget creation](.aiassistant/skills/lgs-1920-studio-widget-creation/SKILL.md)
+- [Accessibility audits](skills/lgs-1920-studio-accessibility-audit/SKILL.md)
+- [Browser persistence](skills/lgs-1920-studio-browser-persistence/SKILL.md)
+- [Bun and Elysia backend](skills/lgs-1920-studio-bun-elysia-backend/SKILL.md)
+- [Cesium camera](skills/lgs-1920-studio-cesium-camera/SKILL.md)
+- [CSS theme system](skills/lgs-1920-studio-css-theme-system/SKILL.md)
+- [Documentation maintenance](skills/lgs-1920-studio-documentation-maintenance/SKILL.md)
+- [GitHub issues and Project workflow](skills/lgs-1920-studio-github-issues/SKILL.md)
+- [GPX journey import](skills/lgs-1920-studio-gpx-journey-import/SKILL.md)
+- [Internal database](skills/lgs-1920-studio-internal-database/SKILL.md)
+- [Journey statistics](skills/lgs-1920-studio-journey-statistics/SKILL.md)
+- [Map layer providers](skills/lgs-1920-studio-map-layer-provider/SKILL.md)
+- [Map POI management](skills/lgs-1920-studio-map-poi-management/SKILL.md)
+- [Performance rendering](skills/lgs-1920-studio-performance-rendering/SKILL.md)
+- [Replay video export](skills/lgs-1920-studio-replay-video-export/SKILL.md)
+- [Scene composition](skills/lgs-1920-studio-scene-composition/SKILL.md)
+- [Testing workflow](skills/lgs-1920-studio-testing-workflow/SKILL.md)
+- [Valtio stores](skills/lgs-1920-studio-valtio-store/SKILL.md)
+- [Web Awesome UI](skills/lgs-1920-studio-webawesome-ui/SKILL.md)
+- [Widget creation](skills/lgs-1920-studio-widget-creation/SKILL.md)
 
-Commit preparation and release work are also covered by the [Git commit quality](.aiassistant/skills/lgs-1920-studio-git-commit-quality/SKILL.md)
-and [release changelog](.aiassistant/skills/lgs-1920-studio-release-changelog/SKILL.md) Skills.
+Commit preparation and release work are also covered by the [Git commit quality](skills/lgs-1920-studio-git-commit-quality/SKILL.md)
+and [release changelog](skills/lgs-1920-studio-release-changelog/SKILL.md) Skills.
 
 ## Technology Stack
 

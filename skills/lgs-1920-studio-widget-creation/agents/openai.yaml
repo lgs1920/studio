@@ -1,0 +1,4 @@
+interface:
+  display_name: "Widget Creation"
+  short_description: "Create and evolve LGS1920 widgets"
+  default_prompt: "Use $lgs-1920-studio-widget-creation to create or modify an LGS1920 scene widget."

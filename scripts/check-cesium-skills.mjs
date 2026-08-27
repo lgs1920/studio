@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url"
 
 const scriptDirectory = fileURLToPath(new URL(".", import.meta.url))
 const projectRoot = join(scriptDirectory, "..")
-const skillsRoot = join(projectRoot, ".agents", "skills")
+const skillsRoot = join(projectRoot, "skills")
 const registryUrl = "https://registry.npmjs.org/cesium/latest"
 
 /**
