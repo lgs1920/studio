@@ -1089,3 +1089,15 @@
 ## 2026-08-27 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/53c9e44cbf54e7207bc63985fee755bd4b8288be)
 
 - Recorded automatically from Git history.
+
+## 2026-08-27 — [`fix: use SnapDOM geometry for replay widgets`](https://github.com/lgs1920/studio/commit/514cf43bf722d3260216b5a71ac9e4bb5e242ebe)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`fix: synchronize replay journey visibility settings`](https://github.com/lgs1920/studio/commit/92ee4134282c262ee326731f36d2c782455497ae)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/4be52e18433e62128ab4687d498714e667110ebd)
+
+- Recorded automatically from Git history.
