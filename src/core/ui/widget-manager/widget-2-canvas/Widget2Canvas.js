@@ -50,6 +50,7 @@ export class Widget2Canvas {
     #partOrder = []
     #partsDirty = true
     #captureSandbox = null
+    #captureGeometry = null
 
     #timingLabel = 'Widget2Canvas'
 
@@ -241,7 +242,7 @@ export class Widget2Canvas {
                 element,
                 role,
                 dirty: existing?.dirty ?? true,
-                canvas: existing?.canvas ?? null,
+                capture: existing?.capture ?? null,
             })
         }
 
@@ -320,7 +321,7 @@ export class Widget2Canvas {
         }
 
         const scale = this.#options.scale
-        const {width: logicalW, height: logicalH} = this.#readOriginalLogicalSize()
+        const {width: logicalW, height: logicalH} = this.#readLogicalSize()
 
         if (logicalW <= 0 || logicalH <= 0) {
             return null
@@ -341,12 +342,12 @@ export class Widget2Canvas {
                 continue
             }
 
-            if (entry.dirty || !entry.canvas) {
-                entry.canvas = await this.#renderPart(entry.element, entry.role)
+            if (entry.dirty || !entry.capture) {
+                entry.capture = await this.#renderPart(entry.element, entry.role)
                 entry.dirty = false
             }
 
-            const source = entry.canvas
+            const source = entry.capture?.source
             const rect = entry.element.getBoundingClientRect()
             if (!source || rect.width <= 0 || rect.height <= 0) {
                 continue
@@ -419,12 +420,20 @@ export class Widget2Canvas {
         return clone
     }
 
-    #readOriginalLogicalSize = () => {
-        const rect = this.#original?.getBoundingClientRect?.()
+    /**
+     * Reads an element's logical layout dimensions without applying raster scale.
+     *
+     * @param {HTMLElement|SVGElement|null} element - Element whose layout dimensions are required.
+     * @returns {{width: number, height: number}} Logical dimensions in CSS pixels.
+     */
+    #readLogicalSize = (element = this.#original) => {
+        const rect = element?.getBoundingClientRect?.()
+        const layoutWidth = Math.max(element?.offsetWidth || 0, element?.scrollWidth || 0)
+        const layoutHeight = Math.max(element?.offsetHeight || 0, element?.scrollHeight || 0)
 
         return {
-            width:  this.#original?.offsetWidth || rect?.width || 0,
-            height: this.#original?.offsetHeight || rect?.height || 0,
+            width:  layoutWidth || rect?.width || 0,
+            height: layoutHeight || rect?.height || 0,
         }
     }
 
@@ -506,7 +515,7 @@ export class Widget2Canvas {
         }
 
         const scale = this.#options.scale
-        const {width: logicalW, height: logicalH} = this.#readOriginalLogicalSize()
+        const {width: logicalW, height: logicalH} = this.#readLogicalSize()
         if (logicalW <= 0 || logicalH <= 0) {
             return false
         }
@@ -561,8 +570,8 @@ export class Widget2Canvas {
             }
 
             if (this.#options.captureWholeWidget || !this.#partOrder.length) {
-                const fullCanvas = await this.#renderPart(this.#original)
-                this.#updateCanvas(fullCanvas)
+                const capture = await this.#renderPart(this.#original)
+                this.#updateCanvas(capture?.source, capture?.dimensions)
                 return
             }
 
@@ -593,7 +602,10 @@ export class Widget2Canvas {
                 if (startedAt) {
                     this.#logTiming(`canvas:${el.tagName?.toLowerCase?.() ?? 'canvas'}`, startedAt)
                 }
-                return canvasCopy
+                return {
+                    source:     canvasCopy,
+                    dimensions: this.#readLogicalSize(el),
+                }
             }
         }
         if (el instanceof SVGElement) {
@@ -658,16 +670,32 @@ export class Widget2Canvas {
             if (startedAt) {
                 this.#logTiming(`svg:${el.tagName?.toLowerCase?.() ?? 'svg'}`, startedAt)
             }
-            return img
+            return {
+                source:     img,
+                dimensions: {width: baseWidth, height: baseHeight},
+            }
         }
 
-        const canvas = typeof snapdom === 'function'
-                       ? await (await snapdom(el, options)).toCanvas()
-                       : await snapdom.toCanvas(el, options)
+        let capture = null
+        let canvas = null
+        if (typeof snapdom === 'function') {
+            capture = await snapdom(el, options)
+            canvas = await capture.toCanvas()
+        }
+        else {
+            canvas = await snapdom.toCanvas(el, options)
+        }
+
+        const metadataWidth = Number(capture?.meta?.w0)
+        const metadataHeight = Number(capture?.meta?.h0)
+        const fallbackDimensions = this.#readLogicalSize(el)
+        const dimensions = metadataWidth > 0 && metadataHeight > 0
+                          ? {width: metadataWidth, height: metadataHeight}
+                          : fallbackDimensions
         if (startedAt) {
             this.#logTiming(`snapdom:${el?.tagName?.toLowerCase?.() ?? 'node'}`, startedAt)
         }
-        return canvas
+        return {source: canvas, dimensions}
     }
     #renderPart = async (el, role = 'dynamic') => {
         let target = el
@@ -696,20 +724,29 @@ export class Widget2Canvas {
     }
 
     /**
-     * Updates the visible canvas while maintaining HiDPI consistency.
-     * Uses a single canvas instance to keep video streams alive.
-     * @param {HTMLCanvasElement|HTMLImageElement} source
+     * Updates the visible canvas using logical capture dimensions and raster source pixels.
+     *
+     * @param {HTMLCanvasElement|HTMLImageElement} source - Rasterized capture source.
+     * @param {{width?: number, height?: number}|null} dimensions - Logical capture dimensions in CSS pixels.
      */
-    #updateCanvas = (source) => {
+    #updateCanvas = (source, dimensions = null) => {
         const scale = Number(this.#options.scale) > 0 ? Number(this.#options.scale) : 1
         const sourceWidth = Number(source?.width) || 0
         const sourceHeight = Number(source?.height) || 0
-        const logicalW = sourceWidth > 0
-                         ? sourceWidth / scale
-                         : (this.#original?.offsetWidth ?? 0)
-        const logicalH = sourceHeight > 0
-                         ? sourceHeight / scale
-                         : (this.#original?.offsetHeight ?? 0)
+        const metadataWidth = Number(dimensions?.width)
+        const metadataHeight = Number(dimensions?.height)
+        const logicalW = metadataWidth > 0
+                         ? metadataWidth
+                         : sourceWidth > 0
+                           ? sourceWidth / scale
+                           : (this.#original?.offsetWidth ?? 0)
+        const logicalH = metadataHeight > 0
+                         ? metadataHeight
+                         : sourceHeight > 0
+                           ? sourceHeight / scale
+                           : (this.#original?.offsetHeight ?? 0)
+
+        this.#captureGeometry = {width: logicalW, height: logicalH}
 
         // 1. If the canvas doesn't exist, create it once
         if (!this.#canvas) {
@@ -749,6 +786,13 @@ export class Widget2Canvas {
     getContext = () => this.#canvas?.getContext('2d') ?? null
     getCanvas = () => this.#canvas
 
+    /**
+     * Returns the logical geometry used by the latest canvas capture.
+     *
+     * @returns {{width: number, height: number}|null} Latest capture geometry in CSS pixels.
+     */
+    getCaptureGeometry = () => this.#captureGeometry
+
     #shouldLogTiming = () => this.#options.debugTiming === true
 
     #logTiming = (phase, startedAt) => {
@@ -776,6 +820,7 @@ export class Widget2Canvas {
         this.#queuedRefresh = false
         this.#refreshing = false
         this.#resolveRefreshIdleWaiters(false)
+        this.#captureGeometry = null
         this.#canvas?.remove()
         this.#canvas = null
         this.#original = null

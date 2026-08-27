@@ -100,7 +100,8 @@ export const JourneyStatsWidget = ({
             stopPropagation: false,
             snap:            false,
             captureWholeWidget: true,
-            refreshMode:     mode === 'dynamic' ? 'both' : undefined,
+            // Dynamic Stats refreshes are scheduled by JourneyStats after its layout pass.
+            refreshMode:     mode === 'dynamic' ? 'manual' : undefined,
             widgetsBoard:    widgetsBoard,
             zIndex: zIndex,
         }

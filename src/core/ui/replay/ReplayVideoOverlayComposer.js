@@ -24,6 +24,35 @@ const OVERLAY_FLUSH_TIMEOUT_MS = 1000
 
 const getComputedStyleSafe = element => globalThis.getComputedStyle?.(element) ?? globalThis.window?.getComputedStyle?.(element) ?? null
 
+const parseTransformScale = transform => {
+    if (!transform || transform === 'none') {
+        return null
+    }
+
+    const matrixMatch = transform.match(/^matrix(3d)?\(([^)]+)\)$/)
+    if (matrixMatch) {
+        const values = matrixMatch[2].split(',').map(value => Number.parseFloat(value.trim()))
+        if (values.every(Number.isFinite)) {
+            const a = values[0]
+            const b = values[1]
+            const c = matrixMatch[1] ? values[4] : values[2]
+            const d = matrixMatch[1] ? values[5] : values[3]
+            return {x: Math.hypot(a, b), y: Math.hypot(c, d)}
+        }
+    }
+
+    const scaleMatch = transform.match(/scale\(\s*([\d.+-]+)(?:\s*,\s*([\d.+-]+))?\s*\)/)
+    if (scaleMatch) {
+        const x = Number.parseFloat(scaleMatch[1])
+        const y = Number.parseFloat(scaleMatch[2] ?? scaleMatch[1])
+        if (Number.isFinite(x) && Number.isFinite(y)) {
+            return {x: Math.abs(x), y: Math.abs(y)}
+        }
+    }
+
+    return null
+}
+
 export const getReplayVideoOverlayMetrics = (el, depth = 0) => {
     if (!el || depth > 2) {
         return {blur: 0, radius: 0, border: 0, margins: {top: 0, right: 0, bottom: 0, left: 0}}
@@ -89,6 +118,10 @@ export const resolveReplayVideoWidgetScale = (el, configScale) => {
     }
     const style = getComputedStyleSafe(el)
     const transform = style?.transform
+    const parsedTransformScale = parseTransformScale(transform)
+    if (parsedTransformScale) {
+        return parsedTransformScale
+    }
     let matrixScaleX = 0
     let matrixScaleY = 0
     const Matrix = globalThis.DOMMatrixReadOnly ?? globalThis.window?.DOMMatrixReadOnly
@@ -102,12 +135,7 @@ export const resolveReplayVideoWidgetScale = (el, configScale) => {
             // Ignore invalid transform matrices and keep fallback scale resolution.
         }
     }
-    const rect = el.getBoundingClientRect?.()
-    const cssWidth = parseFloat(style?.width) || rect?.width
-    const cssHeight = parseFloat(style?.height) || rect?.height
-    const ratioScaleX = cssWidth ? rect.width / cssWidth : 0
-    const ratioScaleY = cssHeight ? rect.height / cssHeight : 0
-    return {x: matrixScaleX || ratioScaleX || baseScaleX, y: matrixScaleY || ratioScaleY || baseScaleY}
+    return {x: matrixScaleX || baseScaleX, y: matrixScaleY || baseScaleY}
 }
 
 const getSortedVideoWidgetKeys = ({widgetKeys = null, widgetsBoard = VIDEO_WIDGETS_BOARD} = {}) => {
@@ -286,8 +314,13 @@ export const buildReplayVideoComposerOverlays = ({
         const canvasStyle = getComputedStyleSafe(canvasEl)
         const parsedWidth = parseFloat(canvasStyle?.width)
         const parsedHeight = parseFloat(canvasStyle?.height)
-        const width = Number.isFinite(parsedWidth) && parsedWidth > 0 ? parsedWidth : Number(canvasEl.width) || 0
-        const height = Number.isFinite(parsedHeight) && parsedHeight > 0 ? parsedHeight : Number(canvasEl.height) || 0
+        const canvasWidth = Number.isFinite(parsedWidth) && parsedWidth > 0 ? parsedWidth : Number(canvasEl.width) || 0
+        const canvasHeight = Number.isFinite(parsedHeight) && parsedHeight > 0 ? parsedHeight : Number(canvasEl.height) || 0
+        const captureGeometry = Widget2Canvas.get(key)?.getCaptureGeometry?.()
+        const captureWidth = Number(captureGeometry?.width) || 0
+        const captureHeight = Number(captureGeometry?.height) || 0
+        const width = captureWidth > 0 ? captureWidth : canvasWidth
+        const height = captureHeight > 0 ? captureHeight : canvasHeight
 
         composer.addOverlay(canvasEl, {
             x:             ((Number(position.left) || 0) - normalizedCrop.left - margins.left) * scaleX,

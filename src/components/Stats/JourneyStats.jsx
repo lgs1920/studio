@@ -172,6 +172,68 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
     const scaleCorrection = useWidgetScaleCorrection(id)
     const [journeyLocationState, setJourneyLocationState] = useState({slug: null, value: ''})
     const widgetRef = useRef(null)
+    const dynamicRefreshFrames = useRef({first: null, second: null, widgetId: null})
+
+    /**
+     * Cancels a pending delayed refresh for the dynamic widget capture.
+     */
+    const cancelScheduledDynamicRefresh = useCallback(() => {
+        const frames = dynamicRefreshFrames.current
+
+        if (frames.first !== null && typeof globalThis.cancelAnimationFrame === 'function') {
+            globalThis.cancelAnimationFrame(frames.first)
+        }
+        if (frames.second !== null && typeof globalThis.cancelAnimationFrame === 'function') {
+            globalThis.cancelAnimationFrame(frames.second)
+        }
+
+        frames.first = null
+        frames.second = null
+        frames.widgetId = null
+    }, [])
+
+    /**
+     * Schedules one coalesced refresh after the layout synchronization has had
+     * two animation frames to resize and recenter the widget.
+     */
+    const scheduleDynamicRefresh = useCallback(() => {
+        if (!id) {
+            return
+        }
+
+        const frames = dynamicRefreshFrames.current
+        if (frames.first !== null || frames.second !== null) {
+            if (frames.widgetId === id) {
+                return
+            }
+
+            cancelScheduledDynamicRefresh()
+        }
+
+        if (typeof globalThis.requestAnimationFrame !== 'function') {
+            Widget2Canvas.refresh(id)
+            return
+        }
+
+        frames.widgetId = id
+        frames.first = globalThis.requestAnimationFrame(() => {
+            frames.first = null
+
+            if (frames.widgetId !== id) {
+                return
+            }
+
+            frames.second = globalThis.requestAnimationFrame(() => {
+                const scheduledWidgetId = frames.widgetId
+                frames.second = null
+                frames.widgetId = null
+
+                if (scheduledWidgetId) {
+                    Widget2Canvas.refresh(scheduledWidgetId)
+                }
+            })
+        })
+    }, [cancelScheduledDynamicRefresh, id])
 
     const configuration = useOptionalSnapshot(
         resolveWidgetConfiguration(widgetKey),
@@ -249,10 +311,11 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
 
     useLayoutEffect(() => {
         if (!isDynamicMode || !isVideoBoard || !id) {
+            cancelScheduledDynamicRefresh()
             return
         }
 
-        Widget2Canvas.refresh(id)
+        scheduleDynamicRefresh()
     }, [
         id,
         isDynamicMode,
@@ -261,7 +324,14 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
         displayMetrics.distance,
         displayMetrics.positive?.elevation,
         displayMetrics.duration,
+        isImperial,
+        units,
+        useVideoStatsPlaceholder,
+        cancelScheduledDynamicRefresh,
+        scheduleDynamicRefresh,
     ])
+
+    useEffect(() => () => cancelScheduledDynamicRefresh(), [cancelScheduledDynamicRefresh])
 
     const formattedDuration = useMemo(() => {
         const seconds = displayMetrics?.duration

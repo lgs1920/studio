@@ -16,8 +16,8 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const {snapdomToCanvasMock} = vi.hoisted(() => ({
-    snapdomToCanvasMock: vi.fn(async (element) => {
+const {snapdomMock, snapdomToCanvasMock} = vi.hoisted(() => {
+    const snapdomToCanvasMock = vi.fn(async (element) => {
         const canvas = document.createElement('canvas')
         const rect = element?.getBoundingClientRect?.()
         const width = Math.max(1, Math.ceil(rect?.width ?? element?.offsetWidth ?? 1))
@@ -26,13 +26,29 @@ const {snapdomToCanvasMock} = vi.hoisted(() => ({
         canvas.width = width
         canvas.height = height
         return canvas
-    }),
-}))
+    })
+
+    const snapdomMock = vi.fn(async (element, options) => {
+        const rect = element?.getBoundingClientRect?.()
+        const width = Math.max(1, Math.ceil(rect?.width ?? element?.offsetWidth ?? 1))
+        const height = Math.max(1, Math.ceil(rect?.height ?? element?.offsetHeight ?? 1))
+
+        return {
+            meta: {
+                w0: width,
+                h0: height,
+            },
+            toCanvas: () => snapdomToCanvasMock(element, options),
+        }
+    })
+
+    snapdomMock.toCanvas = snapdomToCanvasMock
+
+    return {snapdomMock, snapdomToCanvasMock}
+})
 
 vi.mock('@zumer/snapdom', () => ({
-    snapdom: {
-        toCanvas: snapdomToCanvasMock,
-    },
+    snapdom: snapdomMock,
 }))
 
 import { Widget2Canvas } from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
@@ -81,6 +97,7 @@ describe('Widget2Canvas refresh modes', () => {
         mirror = null
         target = null
         child = null
+        snapdomMock.mockClear()
         snapdomToCanvasMock.mockClear()
         vi.unstubAllGlobals()
         vi.restoreAllMocks()
@@ -139,6 +156,21 @@ describe('Widget2Canvas refresh modes', () => {
         expect(refreshSpy).not.toHaveBeenCalled()
         expect(canvasContext.fillRect).toHaveBeenCalled()
         expect(canvasContext.drawImage).toHaveBeenCalled()
+    })
+
+    it('does not schedule automatic snapshots in manual mode', async () => {
+        mirror = new Widget2Canvas(target, {refreshMode: 'manual'})
+        const refreshSpy = vi.spyOn(mirror, 'refresh').mockResolvedValue(undefined)
+
+        await mirror.init()
+        expect(refreshSpy).toHaveBeenCalledTimes(1)
+        expect(rafCallbacks).toHaveLength(0)
+
+        child.textContent = 'updated'
+        await flushMicrotasks()
+
+        expect(refreshSpy).toHaveBeenCalledTimes(1)
+        expect(rafCallbacks).toHaveLength(0)
     })
 
     it('normalizes live canvas drawing against rendered transform scale', async () => {
@@ -264,6 +296,72 @@ describe('Widget2Canvas refresh modes', () => {
 
         expect(snapdomToCanvasMock).toHaveBeenCalledTimes(1)
         expect(snapdomToCanvasMock).toHaveBeenCalledWith(target, expect.anything())
+    })
+
+    it('uses SnapDOM logical metadata instead of raster dimensions for the visible canvas size', async () => {
+        target?.remove?.()
+        target = document.createElement('div')
+        Object.defineProperties(target, {
+            offsetWidth:  {configurable: true, value: 120},
+            offsetHeight: {configurable: true, value: 40},
+        })
+        target.getBoundingClientRect = () => ({left: 0, top: 0, width: 120, height: 40})
+        document.body.appendChild(target)
+
+        snapdomMock.mockImplementationOnce(async () => {
+            const source = document.createElement('canvas')
+            source.width = 480
+            source.height = 160
+
+            return {
+                meta: {
+                    w0: 120,
+                    h0: 40,
+                },
+                toCanvas: async () => source,
+            }
+        })
+
+        mirror = new Widget2Canvas(target, {scale: 2, widgetId: 'snapdom-metadata-widget'})
+        await mirror.init()
+
+        const canvas = mirror.getCanvas()
+        expect(canvas.width).toBe(480)
+        expect(canvas.height).toBe(160)
+        expect(canvas.style.width).toBe('120px')
+        expect(canvas.style.height).toBe('40px')
+        expect(mirror.getCaptureGeometry()).toEqual({width: 120, height: 40})
+    })
+
+    it('keeps overflowing widget content in the visible canvas dimensions', async () => {
+        target?.remove?.()
+        target = document.createElement('div')
+        Object.defineProperties(target, {
+            offsetWidth:  {configurable: true, value: 120},
+            offsetHeight: {configurable: true, value: 40},
+            scrollWidth:  {configurable: true, value: 120},
+            scrollHeight: {configurable: true, value: 60},
+        })
+        target.getBoundingClientRect = () => ({left: 0, top: 0, width: 120, height: 40})
+        document.body.appendChild(target)
+
+        snapdomMock.mockImplementationOnce(async () => {
+            const source = document.createElement('canvas')
+            source.width = 480
+            source.height = 240
+
+            return {
+                meta: {},
+                toCanvas: async () => source,
+            }
+        })
+
+        mirror = new Widget2Canvas(target, {scale: 2})
+        await mirror.init()
+
+        const canvas = mirror.getCanvas()
+        expect(canvas.style.width).toBe('120px')
+        expect(canvas.style.height).toBe('60px')
     })
 
     it('queues a fresh refresh while a refresh is already pending', async () => {

@@ -326,7 +326,13 @@ describe('JourneyStats', () => {
         expect(widget.textContent).toContain('00')
         expect(widget.querySelector('.journey-stats-placeholder')).not.toBeNull()
         expect(widget.textContent).not.toContain('120')
-        expect(widgetCanvasRefresh).toHaveBeenCalledWith('journey-stats-widget#1')
+        expect(widgetCanvasRefresh).not.toHaveBeenCalled()
+        await waitFor(() => expect(widgetCanvasRefresh).toHaveBeenCalledWith('journey-stats-widget#1'))
+
+        globalThis.lgs.stores.ui.video.recording = true
+
+        await waitFor(() => expect(widget.textContent).toContain('120'))
+        await waitFor(() => expect(widgetCanvasRefresh).toHaveBeenCalledTimes(2))
     })
 
     it('updates dynamic stats when the replay frame sample changes', async () => {

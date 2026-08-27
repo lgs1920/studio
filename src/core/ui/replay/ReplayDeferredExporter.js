@@ -34,7 +34,7 @@ import {
     buildReplayVideoTimeline, replayClipSignature, resolveReplayVideoFramePhase,
 }                              from '@Core/ui/replay/ReplayVideoTimeline'
 import {
-    buildReplayVideoComposerOverlays, isReplayVideoWidgetReady,
+    buildReplayVideoComposerOverlays, flushReplayVideoOverlayCanvases, isReplayVideoWidgetReady,
 }                              from '@Core/ui/replay/ReplayVideoOverlayComposer'
 import {
     ReplayVideoRenderSession,
@@ -2254,6 +2254,7 @@ export const runReplayDeferredMp4Export = async ({
                                 sourceCanvasHeight: frameSource.height,
                             })
                         }
+                        await flushReplayVideoOverlayCanvases()
                         buildReplayVideoComposerOverlays({
                             composer:      replayComposer,
                             cropRect:      cropRect ?? {left: 0, top: 0, width: canvas.width, height: canvas.height},
