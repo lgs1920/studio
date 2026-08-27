@@ -1101,3 +1101,11 @@
 ## 2026-08-27 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/4be52e18433e62128ab4687d498714e667110ebd)
 
 - Recorded automatically from Git history.
+
+## 2026-08-27 — [`chore(events): remove canvas event trace logs`](https://github.com/lgs1920/studio/commit/0223534ab2b697858e90fe91a1c94766083e0e2d)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/d3e84d2040a123984469cfe97e43f23b8c6e9696)
+
+- Recorded automatically from Git history.
