@@ -27,7 +27,6 @@ import { PopupDrawer } from '@Components/PopupDrawer'
 import WaDrawer     from '@Components/WaDrawerNonModal'
 import { REPLAY_DRAWER } from '@Core/constants'
 import classNames from 'classnames'
-import { getJourneyReplayHideOtherJourneys } from '@Core/ui/JourneyVisibility'
 import {
     clampJourneyReplayNumber, DEFAULT_REPLAY_CAMERA, DEFAULT_REPLAY_SCOPE, ensureJourneyReplaySettings, REPLAY_CAMERA_ALTITUDE_CONSTANT,
     REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET, REPLAY_CAMERA_POSITION_AHEAD, REPLAY_CAMERA_POSITION_BEHIND,
@@ -410,7 +409,7 @@ export const JourneyReplayDrawer = memo(() => {
     const replayState = useSnapshot(lgs.stores.replay)
     ensureJourneyReplaySettings()
     const replaySettings = useSnapshot(lgs.settings.ui.replay)
-    useOptionalSnapshot(lgs.settings.journey)
+    const journeySettings = useOptionalSnapshot(lgs.settings.journey, {hideOtherJourneys: false})
     const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
     const {drawer: drawerPlacement} = useSnapshot(lgs.editorSettingsProxy.menu)
     const swatches = useOptionalSnapshot(lgs.settings.swatches, {list: []}).list.join(';')
@@ -480,7 +479,9 @@ export const JourneyReplayDrawer = memo(() => {
     const animateAllPoisDuringJourneyReplay = replaySettings.animateAllPoisDuringJourneyReplay === true
     const cameraPresetKey = getJourneyReplayCameraPresetKey(camera)
     const marker = normalizeJourneyReplayMarker(replaySettings.marker)
-    const hideOtherJourneys = getJourneyReplayHideOtherJourneys()
+    const hideOtherJourneys = replayState.inheritHideOtherJourneys === false
+                               ? replayState.hideOtherJourneys === true
+                               : replayState.hideOtherJourneys === true || journeySettings.hideOtherJourneys === true
     const durationLocked = replayState.active || replayState.playing || replayState.paused
     const syncWithVideo = replayState.recordingSync === true
     const [poiVisibilityOverrides, setPoiVisibilityOverrides] = useState({})
@@ -531,8 +532,8 @@ export const JourneyReplayDrawer = memo(() => {
         replayRuntime.hideAllPoisDuringJourneyReplay = replaySettings.hideAllPoisDuringJourneyReplay === true
         replayRuntime.animateAllPoisDuringJourneyReplay = replaySettings.animateAllPoisDuringJourneyReplay === true
         replayRuntime.clips = clips
-        replayRuntime.hideOtherJourneys = replayState.hideOtherJourneys === true
-        replayRuntime.inheritHideOtherJourneys = replayState.inheritHideOtherJourneys !== false
+        replayRuntime.hideOtherJourneys = replaySettings.hideOtherJourneys === true
+        replayRuntime.inheritHideOtherJourneys = replaySettings.inheritHideOtherJourneys !== false
 
         if (journeyChanged) {
             replayRuntime.progress = 0
@@ -554,9 +555,9 @@ export const JourneyReplayDrawer = memo(() => {
         replaySettings.readiness,
         replaySettings.hideAllPoisDuringJourneyReplay,
         replaySettings.animateAllPoisDuringJourneyReplay,
+        replaySettings.hideOtherJourneys,
+        replaySettings.inheritHideOtherJourneys,
         replaySettings.clips,
-        replayState.hideOtherJourneys,
-        replayState.inheritHideOtherJourneys,
         clips,
         currentJourney?.replay?.start,
         currentJourney?.replay?.stop,

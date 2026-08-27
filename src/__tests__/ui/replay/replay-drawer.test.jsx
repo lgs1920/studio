@@ -897,6 +897,7 @@ describe('JourneyReplayDrawer', () => {
             expect(globalThis.lgs.stores.replay.hideOtherJourneys).toBe(true)
             expect(__.ui.replay.setHideOtherJourneys).toHaveBeenCalledWith(true)
             expect(globalThis.lgs.settings.ui.replay.hideOtherJourneys).toBe(true)
+            expect(hideOtherJourneysSwitch.checked).toBe(true)
         })
     })
 
