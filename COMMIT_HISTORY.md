@@ -1081,3 +1081,11 @@
 ## 2026-08-27 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/b0f0fd01dbe7e2a05117140b701b5a19ca2ec888)
 
 - Recorded automatically from Git history.
+
+## 2026-08-27 — [`fix(camera): prevent camera from moving below terrain`](https://github.com/lgs1920/studio/commit/672b9689505cbd5a822693bf170dfc3e72e90954)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/53c9e44cbf54e7207bc63985fee755bd4b8288be)
+
+- Recorded automatically from Git history.
