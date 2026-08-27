@@ -1073,3 +1073,11 @@
 ## 2026-08-26 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/0fcc656410f258727683f4677c2b9b92bb486781)
 
 - Recorded automatically from Git history.
+
+## 2026-08-27 — [`fix: unify camera adjustment overlay`](https://github.com/lgs1920/studio/commit/bd6c758da94d99775239e5bb54dc037ec68c7845)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/b0f0fd01dbe7e2a05117140b701b5a19ca2ec888)
+
+- Recorded automatically from Git history.
