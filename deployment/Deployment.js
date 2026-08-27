@@ -31,6 +31,7 @@ import {
     resolveBackendRegistrationFile,
 } from './DeploymentCommands.js'
 
+const DEFAULT_PUSH_ATTEMPTS = 3
 const STUDIO_APP_NAME = 'LGS1920 Studio Development'
 const STUDIO_HTACCESS_CONTENT = `<IfModule mod_headers.c>
     <FilesMatch ".+-[A-Za-z0-9_-]{8,}\\.(css|js|mjs|map|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|otf|eot|wasm)$">
@@ -44,6 +45,91 @@ const STUDIO_HTACCESS_CONTENT = `<IfModule mod_headers.c>
     </FilesMatch>
 </IfModule>
 `
+
+/**
+ * Returns a readable message from an unknown Git error value.
+ *
+ * @param {unknown} error - The error returned by the Git client.
+ * @returns {string} The error message.
+ */
+const getGitErrorMessage = (error) => error instanceof Error ? error.message : String(error)
+
+/**
+ * Determines whether a push failed because the remote branch advanced first.
+ *
+ * @param {unknown} error - The error returned by the Git client.
+ * @returns {boolean} Whether the error is recoverable by a fast-forward pull.
+ */
+const isNonFastForwardPushError = (error) => /fetch first|non-fast-forward|non fast-forward/i.test(getGitErrorMessage(error))
+
+/**
+ * Determines whether a remote tag was already absent during cleanup.
+ *
+ * @param {unknown} error - The error returned by the Git client.
+ * @returns {boolean} Whether the remote tag does not exist.
+ */
+const isMissingRemoteTagError = (error) => /remote ref does not exist|unable to delete .*remote ref/i.test(getGitErrorMessage(error))
+
+/**
+ * Pushes a branch and retries when an automatic remote commit wins a race.
+ *
+ * Only fast-forward synchronization is allowed. A real branch divergence is
+ * left for the operator to resolve instead of being merged by the deployment.
+ *
+ * @param {Object} params - Push options.
+ * @param {Object} params.git - The configured simple-git instance.
+ * @param {string} [params.remote='origin'] - The Git remote name.
+ * @param {string} params.branch - The branch to push.
+ * @param {number} [params.maxAttempts=3] - Maximum number of push attempts.
+ * @returns {Promise<Object>} The successful Git push result.
+ * @throws {Error} If the push fails for another reason or cannot be fast-forwarded.
+ */
+export const pushBranchWithRetry = async ({
+    git,
+    remote = 'origin',
+    branch,
+    maxAttempts = DEFAULT_PUSH_ATTEMPTS,
+}) => {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            return await git.push(remote, branch)
+        }
+        catch (error) {
+            if (!isNonFastForwardPushError(error) || attempt === maxAttempts) {
+                throw error
+            }
+
+            console.warn(`    > Remote branch ${branch} advanced during deployment, synchronizing before retry ${attempt + 1}/${maxAttempts}`)
+            await git.pull(remote, branch, ['--ff-only'])
+        }
+    }
+}
+
+/**
+ * Deletes a Git tag locally and remotely when the remote tag exists.
+ *
+ * @param {Object} params - Tag deletion options.
+ * @param {Object} params.git - The configured simple-git instance.
+ * @param {string} [params.remote='origin'] - The Git remote name.
+ * @param {string} params.tagName - The tag to delete.
+ * @returns {Promise<boolean>} Whether the remote tag was deleted.
+ * @throws {Error} If tag deletion fails for a reason other than a missing remote tag.
+ */
+export const deleteGitTag = async ({git, remote = 'origin', tagName}) => {
+    await git.tag(['-d', tagName])
+
+    try {
+        await git.push(remote, `:${tagName}`)
+        return true
+    }
+    catch (error) {
+        if (isMissingRemoteTagError(error)) {
+            return false
+        }
+
+        throw error
+    }
+}
 
 /**
  * Manages the deployment of applications to various platforms (production, staging, test).
@@ -490,7 +576,7 @@ export class Deployment {
             return remotes.find(remote => remote.name === target)
         }
         catch (error) {
-            console.error(`${this.red}Error retrieving remotes: ${error}${this.reset}`)
+            console.error(`${this.red}Error retrieving remotes: ${getGitErrorMessage(error)}${this.reset}`)
             process.exit(1)
         }
     }
@@ -518,7 +604,10 @@ export class Deployment {
      */
     pushTag = async () => {
         console.log(`    > Pushing Git tag on branch ${this.branch}`)
-        await this.git.push('origin', this.branch)
+        await pushBranchWithRetry({
+            git:    this.git,
+            branch: this.branch,
+        })
         await this.git.pushTags('origin')
         console.log(`    > ${this.green}Tag ${this.yellow}${this.tagName}${this.green} pushed to remote repository${this.reset}`)
     }
@@ -536,9 +625,12 @@ export class Deployment {
 
         console.log(`    > Deleting Git tag: ${this.tagName}`)
         try {
-            await this.git.removeTag(this.tagName)
-            await this.git.push('origin', `:${this.tagName}`)
-            console.log(`    > ${this.green}Tag ${this.tagName} deleted locally and remotely${this.reset}`)
+            const remoteTagDeleted = await deleteGitTag({
+                git:     this.git,
+                tagName: this.tagName,
+            })
+            const remoteStatus = remoteTagDeleted ? ' and remotely' : ' locally (remote tag was not present)'
+            console.log(`    > ${this.green}Tag ${this.tagName} deleted${remoteStatus}${this.reset}`)
         }
         catch (error) {
             console.error(`    > ${this.red}Failed to delete tag ${this.tagName}: ${error.message}${this.reset}`)
@@ -769,7 +861,7 @@ export class Deployment {
             await this.runRemoteDeployment()
         }
         catch (error) {
-            console.error(`${this.red}Error: ${error}${this.reset}`)
+            console.error(`${this.red}Error: ${getGitErrorMessage(error)}${this.reset}`)
             await this.deleteTag()
             throw error
         }
