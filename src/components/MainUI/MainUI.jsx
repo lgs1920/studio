@@ -15,6 +15,7 @@
  ******************************************************************************/
 import { Compass }          from '@Components/MainUI/compass/Compass'
 import { CameraAdjustmentOverlay } from '@Components/MainUI/CameraAdjustmentOverlay'
+import { JourneyReplayCameraAngleGuide } from '@Components/JourneyReplay/JourneyReplayCameraAngleGuide'
 import { FullScreenButton } from '@Components/FullScreenButton/FullScreenButton'
 import { ContextMenuRenderer } from '@Components/MainUI/context-menu/ContextMenuRenderer'
 import { MapPointContextMenuTrigger } from '@Components/MainUI/context-menu/MapPointContextMenuTrigger'
@@ -229,6 +230,7 @@ export const MainUI = memo(() => {
     return (
         <>
             <MapPointContextMenuTrigger/>
+            <JourneyReplayCameraAngleGuide/>
             <MapPOIMonitor/>
             {!isJourneyReplayUiHidden && (
                 <>
