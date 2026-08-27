@@ -62,6 +62,11 @@ bun run build
 | --- | --- | --- |
 | `bun run commit-history:update` | Updates `COMMIT_HISTORY.md` with commits that are not documented yet. | This command modifies a tracked file. |
 | `bun run commit-history:update -- --check` | Checks whether `COMMIT_HISTORY.md` is up to date without writing it. | The second `--` forwards `--check` to the script. |
+| `bun run cesium:skills:check` | Compares every Cesium skill document with the latest CesiumJS version published to npm. | Exits with status `1` and lists stale or undocumented baselines when an update is needed. |
+
+Run `bun run cesium:skills:check` after a CesiumJS dependency update or before starting Cesium-related work. The check
+inspects all Markdown files under `skills/cesiumjs-*`, including `SKILL.md` and `REFERENCE.md`, and points to the
+[official CesiumJS API reference](https://cesium.com/learn/cesiumjs/ref-doc/) when a document needs review.
 
 ### Logo assets
 
