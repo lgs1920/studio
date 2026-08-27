@@ -194,7 +194,11 @@ export class IsolatedHqReplayRenderHost {
             this.#dimensions.width / this.#viewportDimensions.width,
         )
         if (this.#widget.scene?.screenSpaceCameraController) {
-            this.#widget.scene.screenSpaceCameraController.enableInputs = false
+            const cameraController = this.#widget.scene.screenSpaceCameraController
+            cameraController.enableInputs = false
+            cameraController.enableCollisionDetection = true
+            cameraController.maximumTiltAngle = Math.PI / 2
+            cameraController.minimumCollisionTerrainHeight = 15000
         }
 
         for (const layerDescriptor of this.#descriptor.imageryLayers ?? []) {
@@ -279,6 +283,7 @@ export class IsolatedHqReplayRenderHost {
         const appliedFrame = applyReplayCesiumCameraCommand({
             camera: this.#widget.camera,
             command: replayCameraCommandFromIntent(intent),
+            scene: this.#widget.scene,
         })
         if (!appliedFrame) {
             throw new Error('The HQ replay frame does not contain an applicable camera command')

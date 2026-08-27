@@ -4,6 +4,10 @@
 
 
 import {Cartesian3} from 'cesium'
+import {
+    replayCesiumCameraDestinationAboveTerrain,
+    replayCesiumCameraFrameAboveTerrain,
+} from './ReplayCesiumCameraAdapter'
 import {finiteNumber, isJourneyReplayCameraActive, replayStore} from './JourneyReplayRuntime'
 import {
     REPLAY_MARKER_MODE_HYSTERESIS,
@@ -90,7 +94,7 @@ export const recenterCameraToSample = (mode, {
             return
         }
 
-        const {destination, direction, correctedUp, safeHeading, safePitch, roll: safeRoll} = frame
+        const {safeHeading, safePitch, roll: safeRoll} = frame
         const finishFlight = () => {
             state.cameraFlightActive = false
         }
@@ -116,11 +120,15 @@ export const recenterCameraToSample = (mode, {
                                      }))
         }
         if (instant || duration <= 0) {
+            const safeFrame = replayCesiumCameraFrameAboveTerrain({
+                frame,
+                scene: call.cesiumScene?.(),
+            })
             camera.setView?.({
-                                        destination,
+                                        destination: safeFrame.destination,
                                         orientation: {
-                                            direction,
-                                            up: correctedUp,
+                                            direction: safeFrame.direction,
+                                            up:        safeFrame.correctedUp ?? safeFrame.up,
                                         },
                                     })
             call.refreshReplayDiagnosticsOverlay?.()
@@ -245,6 +253,7 @@ export const startCameraTransition = (mode, {
                     const cancelTransition = transferPath.flyTo({
                         camera,
                         target: frame.target,
+                        scene: call.cesiumScene?.(),
                         duration: Math.max(0, Number(duration) || 0),
                         cadence: draftTiming ? 'time' : 'frame',
                         complete: () => settle(true),
@@ -261,8 +270,12 @@ export const startCameraTransition = (mode, {
 
             if (typeof camera.flyTo === 'function') {
                 try {
-                    camera.flyTo({
+                    const safeEndPosition = replayCesiumCameraDestinationAboveTerrain({
                         destination: endPosition,
+                        scene: call.cesiumScene?.(),
+                    })
+                    camera.flyTo({
+                        destination: safeEndPosition,
                         orientation: {
                             direction: endDirection,
                             up:        endUp,

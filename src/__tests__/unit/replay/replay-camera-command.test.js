@@ -1,4 +1,4 @@
-import {Cartesian3, Matrix4} from 'cesium'
+import {Cartesian3, Cartographic, Matrix4} from 'cesium'
 import {describe, expect, it, vi} from 'vitest'
 
 import {
@@ -7,6 +7,8 @@ import {
 } from '@Core/ui/replay/ReplayCameraCommand'
 import {
     applyReplayCesiumCameraCommand,
+    constrainReplayCesiumCameraAboveTerrain,
+    replayCesiumCameraDestinationAboveTerrain,
     replayCameraCommandForCesiumFrame,
     replayCesiumCameraFrameForCommand,
 } from '@Core/ui/replay/ReplayCesiumCameraAdapter'
@@ -132,6 +134,78 @@ describe('replay camera command', () => {
                 up: frame.up,
             },
         })
+    })
+
+    it('raises a camera destination above the available terrain with clearance', () => {
+        const destination = Cartesian3.fromDegrees(2, 48, 100)
+        const scene = {
+            globe: {
+                getHeight: vi.fn(() => 250),
+            },
+        }
+
+        const safeDestination = replayCesiumCameraDestinationAboveTerrain({
+            destination,
+            scene,
+            clearanceMeters: 10,
+        })
+
+        expect(Cartographic.fromCartesian(safeDestination).height).toBeCloseTo(260, 6)
+        expect(scene.globe.getHeight).toHaveBeenCalledOnce()
+    })
+
+    it('leaves a destination unchanged when terrain height is unavailable', () => {
+        const destination = Cartesian3.fromDegrees(2, 48, 100)
+        const scene = {
+            globe: {
+                getHeight: vi.fn(() => undefined),
+            },
+        }
+
+        expect(replayCesiumCameraDestinationAboveTerrain({destination, scene})).toBe(destination)
+    })
+
+    it('corrects a camera already below the available terrain', () => {
+        const camera = {
+            heading: 0.2,
+            pitch: -0.5,
+            positionWC: Cartesian3.fromDegrees(5.7, 45.3, 1000),
+            roll: 0.1,
+            setView: vi.fn(),
+        }
+        const scene = {
+            globe: {
+                getHeight: () => 2000,
+            },
+        }
+
+        expect(constrainReplayCesiumCameraAboveTerrain({camera, scene})).toBe(true)
+        expect(camera.setView).toHaveBeenCalledWith(expect.objectContaining({
+            orientation: {
+                heading: camera.heading,
+                pitch: camera.pitch,
+                roll: camera.roll,
+            },
+        }))
+        expect(Cartographic.fromCartesian(camera.setView.mock.calls[0][0].destination).height).toBeCloseTo(2003)
+    })
+
+    it('applies terrain clearance before setting a replay camera command', () => {
+        const calls = []
+        const camera = {
+            lookAtTransform: vi.fn(transform => calls.push({type: 'release', transform})),
+            setView: vi.fn(view => calls.push({type: 'set-view', view})),
+        }
+        const scene = {
+            globe: {
+                getHeight: vi.fn(() => 2000),
+            },
+        }
+        const command = createCommandFixture()
+        const frame = applyReplayCesiumCameraCommand({camera, command, scene})
+
+        expect(Cartographic.fromCartesian(frame.destination).height).toBeCloseTo(2003, 6)
+        expect(calls[1].view.destination).toBe(frame.destination)
     })
 
     it('prefers the command already published by a canonical frame intent', () => {

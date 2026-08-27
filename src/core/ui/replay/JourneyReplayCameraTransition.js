@@ -25,6 +25,7 @@ import {
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
 import {
     applyReplayCesiumCameraCommand,
+    replayCesiumCameraFrameAboveTerrain,
     replayCameraCommandForCesiumFrame,
 } from './ReplayCesiumCameraAdapter'
 import {replayCameraFor} from './ReplayRenderTarget'
@@ -192,11 +193,15 @@ export const applyCameraFrame =  (mode, frame) => {
         )
         state.cameraApplyingView = true
         try {
+            const safeFrame = replayCesiumCameraFrameAboveTerrain({
+                frame,
+                scene: call.cesiumScene?.(),
+            })
             camera.setView?.({
-                destination: frame.destination,
+                destination: safeFrame.destination,
                 orientation: {
-                    direction: frame.direction,
-                    up:        frame.up,
+                    direction: safeFrame.direction,
+                    up:        safeFrame.up,
                 },
             })
             return true
@@ -235,7 +240,11 @@ export const applyReplayCameraTransitionFrame = (mode, frame, target) => {
     )
     state.cameraApplyingView = true
     try {
-        return Boolean(applyReplayCesiumCameraCommand({camera, command}))
+        return Boolean(applyReplayCesiumCameraCommand({
+            camera,
+            command,
+            scene: call.cesiumScene?.(),
+        }))
     }
     finally {
         state.cameraApplyingView = false

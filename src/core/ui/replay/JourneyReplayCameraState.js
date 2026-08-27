@@ -13,7 +13,10 @@ import {faCamera} from '@fortawesome/pro-solid-svg-icons'
 import {faPersonHiking} from '@fortawesome/pro-regular-svg-icons'
 import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
 import {createReplayCameraCommand} from './ReplayCameraCommand'
-import {applyReplayCesiumCameraCommand} from './ReplayCesiumCameraAdapter'
+import {
+    applyReplayCesiumCameraCommand,
+    replayCesiumCameraFrameAboveTerrain,
+} from './ReplayCesiumCameraAdapter'
 import {finiteNumber, replayStore} from './JourneyReplayRuntime'
 import {
     clamp, lerp, hasFiniteLonLat, projectReplayTargetInCameraFrame, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
@@ -383,7 +386,11 @@ export const applyCameraView = (mode, {anchor, heading, pitch, roll = 0, cameraS
         state.cameraAutoTrackingIgnoreUntil = call.now() + 250
         state.cameraApplyingView = true
         try {
-            const appliedFrame = applyReplayCesiumCameraCommand({camera, command})
+            const appliedFrame = applyReplayCesiumCameraCommand({
+                camera,
+                command,
+                scene: call.cesiumScene?.(),
+            })
             if (!appliedFrame) {
                 return false
             }

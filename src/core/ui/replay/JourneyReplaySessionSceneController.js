@@ -48,6 +48,7 @@ import {
 }                                                                                          from './JourneyReplayPlaybackController'
 import { replayVideoTraceDebug }                                                           from './ReplayVideoTraceDebug'
 import {disposeReplaySceneFrameQualifier} from './ReplaySceneFrameQualifier'
+import {replayCesiumCameraDestinationAboveTerrain} from './ReplayCesiumCameraAdapter'
 import {
     currentReplaySessionOwnership,
     invalidateReplaySessionOwnership,
@@ -579,12 +580,16 @@ export const restoreCameraState = (mode, {clear = true, cameraState = null} = {}
 
         camera.cancelFlight?.()
         CameraUtils.unlock(camera)
-        camera.setView?.({
+        const destination = replayCesiumCameraDestinationAboveTerrain({
             destination: Cartesian3.fromDegrees(
                 savedCameraState.destination.longitude,
                 savedCameraState.destination.latitude,
                 finiteNumber(savedCameraState.destination.height) ?? finiteNumber(savedCameraState.altitude) ?? 0,
             ),
+            scene: globalThis.lgs?.scene ?? call.cesiumScene?.(),
+        })
+        camera.setView?.({
+            destination,
             orientation: savedCameraState.orientation,
         })
         return true

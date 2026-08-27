@@ -6,6 +6,160 @@ import {Cartesian3, Cartographic, Math as CesiumMath, Matrix4, Transforms} from 
 
 import {createReplayCameraCommand, isReplayCameraCommand} from './ReplayCameraCommand'
 
+export const REPLAY_CAMERA_TERRAIN_CLEARANCE_METERS = 3
+
+const finiteNumber = value => {
+    if (value === null || value === undefined || value === '') {
+        return null
+    }
+
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+}
+
+/**
+ * Resolve a camera destination that remains above the currently available terrain.
+ *
+ * @param {Object} options - Destination, Cesium scene, and clearance settings.
+ * @param {Cartesian3|null} options.destination - Candidate camera destination.
+ * @param {Object|null} options.scene - Cesium scene containing the globe.
+ * @param {number} [options.clearanceMeters=3] - Minimum clearance above terrain.
+ * @returns {Cartesian3|null} Safe destination or null when the input is invalid.
+ */
+export const replayCesiumCameraDestinationAboveTerrain = ({
+    destination = null,
+    scene = null,
+    clearanceMeters = REPLAY_CAMERA_TERRAIN_CLEARANCE_METERS,
+} = {}) => {
+    if (!destination || !scene?.globe?.getHeight) {
+        return destination
+    }
+
+    try {
+        const cartographic = Cartographic.fromCartesian(destination)
+        const terrainHeight = finiteNumber(scene.globe.getHeight(cartographic))
+        if (terrainHeight === null) {
+            return destination
+        }
+
+        const clearance = Math.max(
+            0,
+            finiteNumber(clearanceMeters) ?? REPLAY_CAMERA_TERRAIN_CLEARANCE_METERS,
+        )
+        const minimumHeight = terrainHeight + clearance
+        if (cartographic.height >= minimumHeight) {
+            return destination
+        }
+
+        cartographic.height = minimumHeight
+        return Cartesian3.fromRadians(
+            cartographic.longitude,
+            cartographic.latitude,
+            cartographic.height,
+            undefined,
+            new Cartesian3(),
+        )
+    }
+    catch {
+        return destination
+    }
+}
+
+/**
+ * Apply terrain clearance to a Cesium camera frame.
+ *
+ * @param {Object} options - Camera frame and terrain settings.
+ * @param {Object|null} options.frame - Candidate Cesium camera frame.
+ * @param {Object|null} options.scene - Cesium scene containing the globe.
+ * @param {number} [options.clearanceMeters=3] - Minimum clearance above terrain.
+ * @returns {Object|null} Terrain-safe camera frame.
+ */
+export const replayCesiumCameraFrameAboveTerrain = ({
+    frame = null,
+    scene = null,
+    clearanceMeters = REPLAY_CAMERA_TERRAIN_CLEARANCE_METERS,
+} = {}) => {
+    if (!frame?.destination) {
+        return frame
+    }
+
+    const destination = replayCesiumCameraDestinationAboveTerrain({
+        destination: frame.destination,
+        scene,
+        clearanceMeters,
+    })
+    return destination === frame.destination
+        ? frame
+        : {...frame, destination}
+}
+
+/**
+ * Apply terrain clearance to a Cesium camera view.
+ *
+ * @param {Object} options - Camera view and terrain settings.
+ * @param {Object|null} options.view - Candidate Cesium camera view.
+ * @param {Object|null} options.scene - Cesium scene containing the globe.
+ * @param {number} [options.clearanceMeters=3] - Minimum clearance above terrain.
+ * @returns {Object|null} Terrain-safe camera view.
+ */
+export const replayCesiumCameraViewAboveTerrain = ({
+    view = null,
+    scene = null,
+    clearanceMeters = REPLAY_CAMERA_TERRAIN_CLEARANCE_METERS,
+} = {}) => {
+    if (!view?.destination) {
+        return view
+    }
+
+    const destination = replayCesiumCameraDestinationAboveTerrain({
+        destination: view.destination,
+        scene,
+        clearanceMeters,
+    })
+    return destination === view.destination
+        ? view
+        : {...view, destination}
+}
+
+/**
+ * Correct a Cesium camera that is already below the currently available terrain.
+ *
+ * @param {Object} options - Cesium camera, scene, and clearance settings.
+ * @param {Object|null} options.camera - Cesium camera to constrain.
+ * @param {Object|null} options.scene - Cesium scene containing the globe.
+ * @param {number} [options.clearanceMeters=3] - Minimum clearance above terrain.
+ * @returns {boolean} Whether the camera was corrected.
+ */
+export const constrainReplayCesiumCameraAboveTerrain = ({
+    camera = null,
+    scene = null,
+    clearanceMeters = REPLAY_CAMERA_TERRAIN_CLEARANCE_METERS,
+} = {}) => {
+    if (!camera?.setView) {
+        return false
+    }
+
+    const currentDestination = camera.positionWC ?? camera.position
+    const destination = replayCesiumCameraDestinationAboveTerrain({
+        destination: currentDestination,
+        scene,
+        clearanceMeters,
+    })
+    if (!destination || destination === currentDestination) {
+        return false
+    }
+
+    camera.setView({
+        destination,
+        orientation: {
+            heading: camera.heading,
+            pitch: camera.pitch,
+            roll: camera.roll,
+        },
+    })
+    return true
+}
+
 /**
  * Apply a bounded roll to one camera up vector.
  *
@@ -178,7 +332,12 @@ export const replayCameraCommandForCesiumFrame = ({
  * @param {Object} options - Cesium camera and replay command.
  * @returns {Object|null} Applied Cesium frame or null.
  */
-export const applyReplayCesiumCameraCommand = ({camera = null, command = null} = {}) => {
+export const applyReplayCesiumCameraCommand = ({
+    camera = null,
+    command = null,
+    scene = null,
+    clearanceMeters = REPLAY_CAMERA_TERRAIN_CLEARANCE_METERS,
+} = {}) => {
     if (!camera || typeof camera.setView !== 'function') {
         return null
     }
@@ -188,13 +347,19 @@ export const applyReplayCesiumCameraCommand = ({camera = null, command = null} =
         return null
     }
 
+    const safeFrame = replayCesiumCameraFrameAboveTerrain({
+        frame,
+        scene,
+        clearanceMeters,
+    })
+
     camera.lookAtTransform?.(Matrix4.IDENTITY)
     camera.setView({
-        destination: frame.destination,
+        destination: safeFrame.destination,
         orientation: {
-            direction: frame.direction,
-            up: frame.up,
+            direction: safeFrame.direction,
+            up: safeFrame.up,
         },
     })
-    return frame
+    return safeFrame
 }

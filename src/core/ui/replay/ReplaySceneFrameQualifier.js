@@ -90,7 +90,7 @@ export const createReplaySceneFrameQualifier = ({
         throwIfReplayFrameQualificationAborted({disposed, signal, requestId, activeRequestId})
 
         const command = replayCameraCommandFromIntent(intent)
-        const appliedFrame = applyCameraCommand({camera, command})
+        const appliedFrame = applyCameraCommand({camera, command, scene})
         if (!appliedFrame) {
             return {
                 intent,

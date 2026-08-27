@@ -17,6 +17,7 @@
 import '@shoelace-style/shoelace/dist/themes/light.css'
 /* oxlint-disable react/only-export-components */
 import { CanvasEventManager } from '@Core/events/CanvasEventManager'
+import {constrainReplayCesiumCameraAboveTerrain} from '@Core/ui/replay/ReplayCesiumCameraAdapter'
 import { LayersUtils }        from '@Utils/cesium/LayersUtils'
 import { SceneUtils }                                                                                  from '@Utils/cesium/SceneUtils'
 import { Color, ImageryLayerCollection, ScreenSpaceEventType, Viewer as CesiumViewer, WebMercatorProjection } from 'cesium'
@@ -26,8 +27,26 @@ let layersInitialized = false
 let cameraUpdateHandlerAttached = false
 let canvasEventsInitialized = false
 let cameraUpdateInProgress = false
+let cameraTerrainCorrectionInProgress = false
 
 const VIEWER_BASE_COLOR = Color.fromCssColorString('hsla(125, 87%, 18%, 0.95)')
+
+const constrainCameraAboveTerrain = () => {
+    if (cameraTerrainCorrectionInProgress) {
+        return
+    }
+
+    cameraTerrainCorrectionInProgress = true
+    try {
+        constrainReplayCesiumCameraAboveTerrain({
+            camera: lgs.camera,
+            scene: lgs.scene,
+        })
+    }
+    finally {
+        cameraTerrainCorrectionInProgress = false
+    }
+}
 
 export const ensureViewer = () => {
 
@@ -92,6 +111,13 @@ export const ensureViewer = () => {
     lgs.scene.globe.baseColor = VIEWER_BASE_COLOR.clone()
     lgs.scene.backgroundColor = VIEWER_BASE_COLOR.clone()
 
+    const cameraController = lgs.scene.screenSpaceCameraController
+    if (cameraController) {
+        cameraController.enableCollisionDetection = true
+        cameraController.maximumTiltAngle = Math.PI / 2
+        cameraController.minimumCollisionTerrainHeight = 15000
+    }
+
     //lgs.scene.maximumRenderTimeChange = 0.2
     //lgs.scene.debugShowFramesPerSecond=true
 
@@ -110,6 +136,8 @@ export const ensureViewer = () => {
 
     // Manage Camera
     if (!cameraUpdateHandlerAttached) {
+        lgs.camera.changed.addEventListener(constrainCameraAboveTerrain)
+        lgs.scene.postRender.addEventListener(constrainCameraAboveTerrain)
         lgs.camera.changed.addEventListener(raiseCameraUpdateEvent)
         cameraUpdateHandlerAttached = true
     }

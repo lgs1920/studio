@@ -15,6 +15,10 @@
  ******************************************************************************/
 
 import { Cartesian3, Cartographic, Matrix4, Transforms } from 'cesium'
+import {
+    REPLAY_CAMERA_TERRAIN_CLEARANCE_METERS,
+    replayCesiumCameraViewAboveTerrain,
+} from './ReplayCesiumCameraAdapter'
 
 const CAMERA_TRANSFER_THRESHOLD_FALLBACK_KM = 50
 const CAMERA_TRANSFER_ELEVATE_RATIO = 3
@@ -391,6 +395,8 @@ export const buildCameraTransferPath = ({
                     beforeFrame = null,
                     afterFrame = null,
                     cadence = 'frame',
+                    scene = null,
+                    clearanceMeters = REPLAY_CAMERA_TERRAIN_CLEARANCE_METERS,
                 } = {}) => {
             if (!camera?.setView) {
                 return false
@@ -423,9 +429,14 @@ export const buildCameraTransferPath = ({
                 const ratio = clamp(((globalThis.performance?.now?.() ?? Date.now()) - startTime) / durationMs, 0, 1)
                 const view = cameraTransferViewAt(path, target, ratio, orientation)
                 if (view) {
-                    beforeFrame?.(view)
-                    camera.setView(view)
-                    afterFrame?.(view)
+                    const safeView = replayCesiumCameraViewAboveTerrain({
+                        view,
+                        scene,
+                        clearanceMeters,
+                    })
+                    beforeFrame?.(safeView)
+                    camera.setView(safeView)
+                    afterFrame?.(safeView)
                 }
 
                 if (ratio >= 1) {
