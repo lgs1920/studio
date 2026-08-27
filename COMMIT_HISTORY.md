@@ -1057,3 +1057,19 @@
 ## 2026-08-25 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/077f47711d4aa57fba7260fbaead95b59cfd5530)
 
 - Recorded automatically from Git history.
+
+## 2026-08-25 — [`fix: remove HQ camera selector from video dialog`](https://github.com/lgs1920/studio/commit/e6cda9ddbc3e4f2311304ba36a0edb074f5fdfdb)
+
+- Recorded automatically from Git history.
+
+## 2026-08-26 — [`fix(replay): stabilize preparation camera and live angle editing (#457)`](https://github.com/lgs1920/studio/commit/48c963fe158a2432bc0e6e78b6ca7f1301af74f5)
+
+- Fixes #457
+
+## 2026-08-26 — [`docs: update documentation paths`](https://github.com/lgs1920/studio/commit/32775487783cf1dc259ed3b61292c0d4804d22c7)
+
+- Recorded automatically from Git history.
+
+## 2026-08-26 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/0fcc656410f258727683f4677c2b9b92bb486781)
+
+- Recorded automatically from Git history.
