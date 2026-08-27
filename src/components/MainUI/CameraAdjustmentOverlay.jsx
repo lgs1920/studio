@@ -12,7 +12,7 @@ import { FA2SL } from '@Utils/FA2SL'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import { Math as CesiumMath } from 'cesium'
-import { memo, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 
 const CAMERA_ADJUSTMENT_WIDGET = 'camera-adjustment-widget'
 const CAMERA_CHANGE_RETRY_DELAY = 100
@@ -112,6 +112,8 @@ const currentCameraMovementSnapshot = () => {
  * @param {boolean} [props.locked=false] - Whether the overlay is locked.
  * @param {Function} [props.onUnlock] - Unlock callback.
  * @param {Function} [props.onWheel] - Wheel callback.
+ * @param {Function} [props.onDragStart] - Callback invoked when dragging starts.
+ * @param {Function} [props.onDragEnd] - Callback invoked when dragging ends.
  * @returns {JSX.Element} Shared camera adjustment overlay.
  */
 export const CameraAdjustmentOverlay = memo(({
@@ -122,6 +124,8 @@ export const CameraAdjustmentOverlay = memo(({
     locked = false,
     onUnlock,
     onWheel,
+    onDragStart,
+    onDragEnd,
 }) => {
     const replay = useOptionalSnapshot(lgs.stores?.replay, DEFAULT_REPLAY_OVERLAY_STATE)
     const video = useOptionalSnapshot(lgs.stores?.ui?.video, DEFAULT_VIDEO_OVERLAY_STATE)
@@ -134,9 +138,46 @@ export const CameraAdjustmentOverlay = memo(({
         : replayCamera.positionMode === REPLAY_CAMERA_POSITION_BEHIND ? 'behind' : null
     const replayCameraChevron = replayCameraDirection === 'behind' ? 'caret-up' : 'caret-down'
     const cameraChangeTimer = useRef(null)
+    const _dragging = useRef(false)
+    const _child = useRef({})
     const lastCameraKey = useRef(null)
     const [cameraChange, setCameraChange] = useState(null)
     const widgetConfig = config ?? DEFAULT_CAMERA_ADJUSTMENT_CONFIG
+
+    /**
+     * Pauses the shared camera-change expiration while the widget is dragged.
+     */
+    const handleDragStart = useCallback(() => {
+        _dragging.current = true
+        if (cameraChangeTimer.current) {
+            window.clearTimeout(cameraChangeTimer.current)
+            cameraChangeTimer.current = null
+        }
+        onDragStart?.()
+    }, [onDragStart])
+
+    /**
+     * Restarts the shared camera-change expiration after the widget is released.
+     */
+    const handleDragEnd = useCallback(() => {
+        _dragging.current = false
+        onDragEnd?.()
+        if (!cameraChange) {
+            return
+        }
+        if (cameraChangeTimer.current) {
+            window.clearTimeout(cameraChangeTimer.current)
+        }
+        cameraChangeTimer.current = window.setTimeout(() => {
+            setCameraChange(null)
+            cameraChangeTimer.current = null
+        }, ADJUSTMENT_OVERLAY_DELAY)
+    }, [cameraChange, onDragEnd])
+
+    useEffect(() => {
+        _child.current.onDragStart = handleDragStart
+        _child.current.onDragEnd = handleDragEnd
+    }, [handleDragEnd, handleDragStart])
 
     useEffect(() => {
         if (widgetConfig.id !== CAMERA_ADJUSTMENT_WIDGET || !isVisible) {
@@ -158,6 +199,10 @@ export const CameraAdjustmentOverlay = memo(({
 
             if (cameraChangeTimer.current) {
                 window.clearTimeout(cameraChangeTimer.current)
+                cameraChangeTimer.current = null
+            }
+            if (_dragging.current) {
+                return
             }
             cameraChangeTimer.current = window.setTimeout(() => {
                 setCameraChange(null)
@@ -200,6 +245,7 @@ export const CameraAdjustmentOverlay = memo(({
         <Widget
             isVisible={isVisible}
             config={widgetConfig}
+            childRef={_child}
             className={`camera-adjustment-widget-shell${displayedVisible ? ' adjustment-visible' : ''}`}
         >
             <div className="camera-adjustment-overlay" onWheel={onWheel}>

@@ -1,4 +1,4 @@
-import { cleanup, render, waitFor } from '@testing-library/react'
+import { act, cleanup, render, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 import { proxyMap } from 'valtio/utils'
@@ -148,6 +148,9 @@ const installGlobals = ({grid = {enabled: false, size: 30, snap: true}} = {}) =>
                     ratio: {locked: false},
                 })),
                 manageControlBox: vi.fn(),
+                onDrag: vi.fn(),
+                onDragEnd: vi.fn(),
+                onDragStart: vi.fn(),
                 onRotate: vi.fn(),
                 refreshEditorPreviewSnapshot: vi.fn(),
                 resolveWidgetsBoardContainer: vi.fn(() => canvas),
@@ -210,6 +213,45 @@ describe('Widget snap behavior', () => {
         })
         await waitFor(() => expect(__.ui.widgetManager.retrieveConfig).toHaveBeenCalled())
         expect(__.ui.widgetManager.retrieveConfig.mock.calls[0][1].snappable).toBe(false)
+    })
+
+    it('notifies child content when widget dragging starts and ends', async () => {
+        installGlobals()
+        const onDragStart = vi.fn()
+        const onDragEnd = vi.fn()
+        const childRef = {current: {onDragStart, onDragEnd}}
+
+        render(
+            <Widget
+                isVisible={true}
+                childRef={childRef}
+                config={{
+                    id:             'snap-widget',
+                    group:          'test-widgets',
+                    showControlBox: true,
+                }}
+            >
+                <div>content</div>
+            </Widget>,
+        )
+
+        const dragStartEvent = {
+            composedPath: () => [],
+            inputEvent: {
+                clientX:      0,
+                clientY:      0,
+                composedPath: () => [],
+                pointerType:  'mouse',
+            },
+            stopDrag: vi.fn(),
+        }
+        const dragEndEvent = {target: document.createElement('div')}
+
+        await act(async () => latestMoveableProps().onDragStart(dragStartEvent))
+        await act(async () => latestMoveableProps().onDragEnd(dragEndEvent))
+
+        expect(onDragStart).toHaveBeenCalledWith(dragStartEvent)
+        expect(onDragEnd).toHaveBeenCalledWith(dragEndEvent)
     })
 
     it('keeps rotation updates continuous for every widget preview', async () => {

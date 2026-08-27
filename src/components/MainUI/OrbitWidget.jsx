@@ -253,6 +253,7 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
   const timerRef = useRef(null);
   const centerAdjustmentCancelRef = useRef(null);
   const lastCameraKeyRef = useRef(null);
+  const _adjustmentDragging = useRef(false);
   const pointerActiveRef = useRef(false);
   const userActionUntilRef = useRef(0);
   const userActionFrameRef = useRef(null);
@@ -319,7 +320,7 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
         window.clearTimeout(timerRef.current);
       }
 
-      if (!adjustmentWidgetLocked) {
+      if (!adjustmentWidgetLocked && !_adjustmentDragging.current) {
         timerRef.current = window.setTimeout(() => {
           hide();
           timerRef.current = null;
@@ -338,12 +339,38 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
       return;
     }
 
-    if (visibleRef.current && !timerRef.current) {
+    if (visibleRef.current && !timerRef.current && !_adjustmentDragging.current) {
       timerRef.current = window.setTimeout(() => {
         hide();
         timerRef.current = null;
       }, ADJUSTMENT_OVERLAY_DELAY);
     }
+  }, [adjustmentWidgetLocked, hide]);
+
+  /**
+   * Pauses the orbit adjustment overlay expiration while its widget is dragged.
+   */
+  const pauseAdjustmentOverlayTimer = useCallback(() => {
+    _adjustmentDragging.current = true;
+    if (timerRef.current) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  /**
+   * Restarts the orbit adjustment overlay expiration after the widget is released.
+   */
+  const resumeAdjustmentOverlayTimer = useCallback(() => {
+    _adjustmentDragging.current = false;
+    if (adjustmentWidgetLocked || !visibleRef.current || timerRef.current) {
+      return;
+    }
+
+    timerRef.current = window.setTimeout(() => {
+      hide();
+      timerRef.current = null;
+    }, ADJUSTMENT_OVERLAY_DELAY);
   }, [adjustmentWidgetLocked, hide]);
 
   const unlockAdjustmentWidget = useCallback((event) => {
@@ -689,6 +716,8 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
       values={values}
       locked={adjustmentWidgetLocked}
       onUnlock={unlockAdjustmentWidget}
+      onDragStart={pauseAdjustmentOverlayTimer}
+      onDragEnd={resumeAdjustmentOverlayTimer}
     />
   );
 });

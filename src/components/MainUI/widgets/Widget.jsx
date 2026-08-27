@@ -955,7 +955,7 @@ export const Widget = ({
         _children.current?.onDragStart?.(event)
         __.ui.widgetManager.onDragStart(event)
         __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, true, isMouseOver)
-    }, [canDrag, isMouseOver])
+    }, [canDrag, isMouseOver, _children])
 
     const handleDrag = useCallback((event) => {
         const input = event.inputEvent
@@ -988,15 +988,16 @@ export const Widget = ({
         }
         __.ui.widgetManager.onDrag(event)
         _children.current?.handleDrag?.(event)
-    }, [canDrag])
+    }, [canDrag, _children])
 
     const handleDragEnd = useCallback(async (event) => {
         __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, false, isMouseOver)
         setIsDragging(false)
         _dragConfirmed.current = false
+        _children.current?.onDragEnd?.(event)
         await __.ui.widgetManager.onDragEnd(event)
         _moveable.current?.updateRect()
-    }, [isMouseOver])
+    }, [isMouseOver, _children])
 
     const handleDoubleClick = useCallback((event) => {
         if (hasNoDragInPath(event)) {

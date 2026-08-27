@@ -230,6 +230,7 @@ export const PanoramaWidget = memo(() => {
   const controllerStateRef = useRef(null);
   const interactionPersistTimerRef = useRef(null);
   const adjustmentOverlayTimerRef = useRef(null);
+  const _adjustmentOverlayDragging = useRef(false);
   const centerAdjustmentCancelRef = useRef(null);
   const [adjustmentVisible, setAdjustmentVisible] = useState(false);
   const [adjustmentValues, setAdjustmentValues] = useState(() => ({
@@ -390,13 +391,41 @@ export const PanoramaWidget = memo(() => {
         window.clearTimeout(adjustmentOverlayTimerRef.current);
       }
 
-      adjustmentOverlayTimerRef.current = window.setTimeout(() => {
-        hideAdjustmentOverlay();
-        adjustmentOverlayTimerRef.current = null;
-      }, ADJUSTMENT_OVERLAY_DELAY);
+      if (!_adjustmentOverlayDragging.current) {
+        adjustmentOverlayTimerRef.current = window.setTimeout(() => {
+          hideAdjustmentOverlay();
+          adjustmentOverlayTimerRef.current = null;
+        }, ADJUSTMENT_OVERLAY_DELAY);
+      }
     },
     [hideAdjustmentOverlay]
   );
+
+  /**
+   * Pauses the panorama adjustment overlay expiration while its widget is dragged.
+   */
+  const pauseAdjustmentOverlayTimer = useCallback(() => {
+    _adjustmentOverlayDragging.current = true;
+    if (adjustmentOverlayTimerRef.current) {
+      window.clearTimeout(adjustmentOverlayTimerRef.current);
+      adjustmentOverlayTimerRef.current = null;
+    }
+  }, []);
+
+  /**
+   * Restarts the panorama adjustment overlay expiration after the widget is released.
+   */
+  const resumeAdjustmentOverlayTimer = useCallback(() => {
+    _adjustmentOverlayDragging.current = false;
+    if (!adjustmentVisible || adjustmentOverlayTimerRef.current) {
+      return;
+    }
+
+    adjustmentOverlayTimerRef.current = window.setTimeout(() => {
+      hideAdjustmentOverlay();
+      adjustmentOverlayTimerRef.current = null;
+    }, ADJUSTMENT_OVERLAY_DELAY);
+  }, [adjustmentVisible, hideAdjustmentOverlay]);
 
   const showAdjustmentOverlay = useCallback(
     (heightOffset, pitch) => {
@@ -1304,6 +1333,8 @@ export const PanoramaWidget = memo(() => {
         visible={adjustmentVisible}
         values={adjustmentValues}
         onWheel={handleAdjustmentWheel}
+        onDragStart={pauseAdjustmentOverlayTimer}
+        onDragEnd={resumeAdjustmentOverlayTimer}
       />
     </div>
   );

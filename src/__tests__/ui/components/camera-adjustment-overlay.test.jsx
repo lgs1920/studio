@@ -1,12 +1,16 @@
-import { render, waitFor } from '@testing-library/react'
+import { act, render, waitFor } from '@testing-library/react'
 import { CameraAdjustmentOverlay } from '@Components/MainUI/CameraAdjustmentOverlay'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 
+const widgetMock = vi.hoisted(() => ({childRef: null}))
+const CAMERA_ADJUSTMENT_HIDE_DELAY = 2000
+
 vi.mock('@Components/MainUI/widgets/Widget', () => ({
-    Widget: ({children, className, isVisible = true}) => isVisible
-        ? <div className={className}>{children}</div>
-        : null,
+    Widget: ({children, className, childRef, isVisible = true}) => {
+        widgetMock.childRef = childRef
+        return isVisible ? <div className={className}>{children}</div> : null
+    },
 }))
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
@@ -20,6 +24,8 @@ vi.mock('@Utils/FA2SL', () => ({
 }))
 
 afterEach(() => {
+    vi.useRealTimers()
+    widgetMock.childRef = null
     globalThis.lgs = undefined
 })
 
@@ -151,5 +157,53 @@ describe('CameraAdjustmentOverlay', () => {
             expect(view.container.querySelector('.camera-adjustment-widget-shell.adjustment-visible')).not.toBeNull()
             expect(view.getByText('1200')).toBeTruthy()
         })
+    })
+
+    it('keeps the overlay visible while dragging and restarts its timer after release', async () => {
+        vi.useFakeTimers()
+        const cameraChangedListeners = []
+        globalThis.lgs = {
+            camera: {
+                heading: 0,
+                pitch: -0.5,
+                roll: 0,
+                positionCartographic: {height: 1000, latitude: 2, longitude: 1},
+                changed: {
+                    addEventListener: listener => {
+                        cameraChangedListeners.push(listener)
+                        return () => {}
+                    },
+                },
+            },
+            scene: {},
+            settings: {unitSystem: proxy({current: 'metric'})},
+            stores: {
+                replay: proxy({camera: {headingOffset: 0, positionMode: 'system'}}),
+                ui: {video: proxy({preRecording: false})},
+            },
+        }
+
+        const view = render(
+            <CameraAdjustmentOverlay
+                config={{id: 'camera-adjustment-widget'}}
+                isVisible
+                values={{height: '1 000 m', level: 'L12', pitch: '-29°'}}
+            />,
+        )
+
+        globalThis.lgs.camera.positionCartographic.height = 1200
+        await act(async () => cameraChangedListeners[0]())
+        expect(view.container.querySelector('.camera-adjustment-widget-shell.adjustment-visible')).not.toBeNull()
+
+        await act(async () => widgetMock.childRef.current.onDragStart())
+        await act(async () => vi.advanceTimersByTime(CAMERA_ADJUSTMENT_HIDE_DELAY))
+        expect(view.container.querySelector('.camera-adjustment-widget-shell.adjustment-visible')).not.toBeNull()
+
+        await act(async () => widgetMock.childRef.current.onDragEnd())
+        await act(async () => vi.advanceTimersByTime(CAMERA_ADJUSTMENT_HIDE_DELAY - 1))
+        expect(view.container.querySelector('.camera-adjustment-widget-shell.adjustment-visible')).not.toBeNull()
+
+        await act(async () => vi.advanceTimersByTime(1))
+        expect(view.container.querySelector('.camera-adjustment-widget-shell.adjustment-visible')).toBeNull()
     })
 })
