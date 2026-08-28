@@ -3,7 +3,7 @@ import {afterEach, describe, expect, it, vi} from 'vitest'
 import {defaultJourneyReplaySettings} from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from '@Core/ui/replay/JourneyReplayInternal'
 import {lockReplayCameraToAnchor} from '@Core/ui/replay/JourneyReplayCameraState'
-import {enterReplayPreparation, prepareReplayCamera, refreshCamera} from '@Core/ui/replay/JourneyReplaySessionPlaybackController'
+import {enterReplayPreparation, leaveReplayPreparation, prepareReplayCamera, refreshCamera} from '@Core/ui/replay/JourneyReplaySessionPlaybackController'
 
 afterEach(() => {
     delete globalThis.__
@@ -185,6 +185,7 @@ describe('replay preparation camera', () => {
         })
         const call = {
             cancelActiveCameraFlight: vi.fn(),
+            captureCameraState:       vi.fn(),
             cesiumScene:              () => ({requestRender: vi.fn()}),
             configure:                vi.fn(() => ({atProgress: () => sample})),
             cameraViewForSample:      vi.fn(() => ({
@@ -217,7 +218,37 @@ describe('replay preparation camera', () => {
 
         resolveSceneRestore()
         await expect(preparation).resolves.toBe(true)
+        expect(call.captureCameraState).toHaveBeenCalledOnce()
         expect(call.setReplayPreparationPivot).toHaveBeenCalledWith(sample)
         expect(call.lockReplayCameraToAnchor).toHaveBeenCalledOnce()
+    })
+
+    it('restores the main-scene camera when leaving Replay preparation', () => {
+        const state = {
+            replayCameraPrepared:   true,
+            replayEntryCameraState: {destination: {}, orientation: {}},
+            replayPreparationSample: {longitude: 2, latitude: 48, altitude: 120},
+            savedCameraState:       {destination: {}, orientation: {}, pivot: {longitude: 2, latitude: 48, height: 120}},
+        }
+        const call = {
+            cancelActiveCameraFlight:          vi.fn(),
+            restoreCameraState:                vi.fn(() => true),
+            restoreCurrentJourneyVisibility:   vi.fn(),
+            restoreOtherJourneysVisibility:    vi.fn(),
+            setContinuousRender:               vi.fn(),
+            setJourneyReplayOrbitAllowed:      vi.fn(),
+            stopCameraLiveSyncLoop:            vi.fn(),
+        }
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: state,
+            [JOURNEY_REPLAY_INTERNAL_CALL]:  call,
+        }
+
+        expect(leaveReplayPreparation(mode)).toBe(true)
+        expect(call.restoreCameraState).toHaveBeenCalledOnce()
+        expect(state.replayCameraPrepared).toBe(false)
+        expect(state.replayEntryCameraState).toBeNull()
+        expect(state.replayPreparationSample).toBeNull()
+        expect(state.savedCameraState).toBeNull()
     })
 })

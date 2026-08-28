@@ -222,7 +222,7 @@ export const VideoRecordingScreenArea = memo(() => {
             return false
         }
 
-        if (typeof replay?.captureCameraState === 'function') {
+        if (typeof replay?.captureCameraState === 'function' && !replay.savedCameraState) {
             const cameraCaptureStartedAt = globalThis.performance?.now?.() ?? Date.now()
             replayVideoTraceDebug('draft.recording.replay-camera.capture.start', {
                 captureMode: renderSpec?.captureMode ?? $video.captureMode ?? lgs.settings.ui.video.captureMode ?? 'speed',

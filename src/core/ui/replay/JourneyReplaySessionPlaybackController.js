@@ -236,6 +236,13 @@ export const prepareReplayCamera = async (mode, {
         ? Cartesian3.clone(liveCameraPosition, new Cartesian3())
         : null
 
+    if (!state.savedCameraState
+        && !state.controller?.running
+        && !state.controller?.paused
+        && typeof call.captureCameraState === 'function') {
+        call.captureCameraState()
+    }
+
     cameraManager?.stopPanoramic?.()
     if (cameraManager?.isRotating?.()) {
         await cameraManager.stopRotate()
@@ -340,6 +347,36 @@ export const enterReplayPreparation = async (mode, {
 
     const prepared = await prepareReplayCamera(mode, {journey})
     return prepared === true && isCurrentTransition()
+}
+
+/**
+ * Leave transient Replay preparation and restore the main-scene camera state.
+ *
+ * @param {object} mode - Replay session mode.
+ * @returns {boolean} Whether the pre-preparation camera state was restored.
+ */
+export const leaveReplayPreparation = (mode) => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    state.preparationTransitionToken = (state.preparationTransitionToken ?? 0) + 1
+
+    if (state.controller?.running || state.controller?.paused) {
+        state.controller.stop({emit: false, clearProgress: true})
+    }
+    call.cancelActiveCameraFlight?.()
+    call.stopCameraLiveSyncLoop?.()
+    call.setContinuousRender?.(false)
+    state.renderer?.clear?.()
+    call.restoreOtherJourneysVisibility?.()
+    call.restoreCurrentJourneyVisibility?.()
+    call.setJourneyReplayOrbitAllowed?.(true)
+
+    const restored = call.restoreCameraState?.() === true
+    state.replayCameraPrepared = false
+    state.replayPreparationSample = null
+    state.replayEntryCameraState = null
+    state.savedCameraState = null
+    return restored
 }
 
 export const start = (mode, options = {}) => {

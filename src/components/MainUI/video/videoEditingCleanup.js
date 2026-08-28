@@ -53,8 +53,21 @@ export const restoreVideoCaptureUi = () => {
     }
 }
 
+/**
+ * Cancel video editing and release any transient linked Replay preparation.
+ *
+ * @returns {void} Nothing.
+ */
 export const cancelVideoEditing = () => {
-    lgs.stores.ui.video.editing = false
+    const videoStore = lgs.stores.ui.video
+    const linkedTimelinePreparation = videoStore.timelinePreviewActive === true
+    if (linkedTimelinePreparation) {
+        __.ui.replay?.pause?.()
+        __.ui.replay?.leaveReplayPreparation?.()
+        lgs.stores.replay.recordingSync = false
+        videoStore.timelinePreviewActive = false
+    }
+    videoStore.editing = false
     __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGETS, true)
 
     restoreVideoCaptureUi()

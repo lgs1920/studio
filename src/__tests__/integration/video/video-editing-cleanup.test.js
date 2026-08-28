@@ -106,4 +106,19 @@ describe('cancelVideoEditing', () => {
         expect(__.ui.contextMenu.hide).toHaveBeenCalled()
         expect(__.ui.drawerManager.close).toHaveBeenCalled()
     })
+
+    it('clears the transient linked timeline preparation on cancel', () => {
+        lgs.stores.ui.video.timelinePreviewActive = true
+        __.ui.replay = {
+            leaveReplayPreparation: vi.fn(),
+            pause:                 vi.fn(),
+        }
+
+        cancelVideoEditing()
+
+        expect(__.ui.replay.pause).toHaveBeenCalledTimes(1)
+        expect(__.ui.replay.leaveReplayPreparation).toHaveBeenCalledTimes(1)
+        expect(lgs.stores.ui.video.timelinePreviewActive).toBe(false)
+        expect(lgs.stores.replay.recordingSync).toBe(false)
+    })
 })

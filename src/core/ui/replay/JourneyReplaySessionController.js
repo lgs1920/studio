@@ -971,6 +971,7 @@ export class JourneyReplaySessionController {
             setReplayPreparationPivot: (...args) => JourneyReplaySessionSceneController.setReplayPreparationPivot(this, ...args),
             capturePlaybackCameraSettings: (...args) => JourneyReplaySessionSceneController.capturePlaybackCameraSettings(this, ...args),
             enterReplayPreparation: (...args) => JourneyReplaySessionPlaybackController.enterReplayPreparation(this, ...args),
+            leaveReplayPreparation: (...args) => JourneyReplaySessionPlaybackController.leaveReplayPreparation(this, ...args),
             captureJourneyReplayDrawerStateBeforePlayback: (...args) => JourneyReplaySessionSceneController.captureJourneyReplayDrawerStateBeforePlayback(this, ...args),
             markPlaybackCameraUserAdjusted: (...args) => JourneyReplaySessionSceneController.markPlaybackCameraUserAdjusted(this, ...args),
             restorePlaybackCameraSettings: (...args) => JourneyReplaySessionSceneController.restorePlaybackCameraSettings(this, ...args),
@@ -1215,6 +1216,13 @@ export class JourneyReplaySessionController {
      * @returns {Promise<boolean>} Whether the preparation state was applied.
      */
     enterReplayPreparation = (...args) => JourneyReplaySessionPlaybackController.enterReplayPreparation(this, ...args)
+    /**
+     * Leave transient Replay preparation and restore the main-scene camera.
+     *
+     * @param {...*} args - Preparation cleanup arguments.
+     * @returns {boolean} Whether the camera state was restored.
+     */
+    leaveReplayPreparation = (...args) => JourneyReplaySessionPlaybackController.leaveReplayPreparation(this, ...args)
     start = (...args) => JourneyReplaySessionPlaybackController.start(this, ...args)
     pause = (...args) => JourneyReplaySessionPlaybackController.pause(this, ...args)
     resume = (...args) => JourneyReplaySessionPlaybackController.resume(this, ...args)
