@@ -1133,3 +1133,31 @@
 ## 2026-08-27 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/3c3a1ff96706fd7520fa5cab9609f3cd4c67bc3d)
 
 - Recorded automatically from Git history.
+
+## 2026-08-27 — [`fix: repair replay camera angle guide (#495)`](https://github.com/lgs1920/studio/commit/8f97c3aa2962eb81433a439695882dd9ce8d1566)
+
+- Recorded automatically from Git history.
+
+## 2026-08-28 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/736e9cb6d14be040e5b469be3c5de966ed199e96)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-08-28 — [`fix: preserve widget capture geometry`](https://github.com/lgs1920/studio/commit/bc4191ab6f9f0ccd0c35b13b6f44a06a0d370562)
+
+- Recorded automatically from Git history.
+
+## 2026-08-28 — [`fix: stabilize default widget placement`](https://github.com/lgs1920/studio/commit/7e9abd4bee477cc6d82b24921c286eb6a51ef9e2)
+
+- Recorded automatically from Git history.
+
+## 2026-08-28 — [`fix: rebuild replay camera angle guide`](https://github.com/lgs1920/studio/commit/8da62ee93b22c5dbc3bcd2a7c096d4dd2363b818)
+
+- Recorded automatically from Git history.
+
+## 2026-08-28 — [`fix: refresh video stats canvas`](https://github.com/lgs1920/studio/commit/568dd1d324ad0957a22cc08cb723af8b18d426d1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-28 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/1043af13d6abfbc47abab2c86824a426c764db39)
+
+- Recorded automatically from Git history.
