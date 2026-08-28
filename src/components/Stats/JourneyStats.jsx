@@ -172,13 +172,13 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
     const scaleCorrection = useWidgetScaleCorrection(id)
     const [journeyLocationState, setJourneyLocationState] = useState({slug: null, value: ''})
     const widgetRef = useRef(null)
-    const dynamicRefreshFrames = useRef({first: null, second: null, widgetId: null})
+    const canvasRefreshFrames = useRef({first: null, second: null, widgetId: null})
 
     /**
      * Cancels a pending delayed refresh for the dynamic widget capture.
      */
     const cancelScheduledDynamicRefresh = useCallback(() => {
-        const frames = dynamicRefreshFrames.current
+        const frames = canvasRefreshFrames.current
 
         if (frames.first !== null && typeof globalThis.cancelAnimationFrame === 'function') {
             globalThis.cancelAnimationFrame(frames.first)
@@ -196,12 +196,12 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
      * Schedules one coalesced refresh after the layout synchronization has had
      * two animation frames to resize and recenter the widget.
      */
-    const scheduleDynamicRefresh = useCallback(() => {
+    const scheduleCanvasRefresh = useCallback(() => {
         if (!id) {
             return
         }
 
-        const frames = dynamicRefreshFrames.current
+        const frames = canvasRefreshFrames.current
         if (frames.first !== null || frames.second !== null) {
             if (frames.widgetId === id) {
                 return
@@ -310,12 +310,12 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
     }, [dynamicReplaySample, element.dataSource, fallbackMetrics, replay, isDynamicMode, metricsSnap])
 
     useLayoutEffect(() => {
-        if (!isDynamicMode || !isVideoBoard || !id) {
+        if (!isVideoBoard || !id) {
             cancelScheduledDynamicRefresh()
             return
         }
 
-        scheduleDynamicRefresh()
+        scheduleCanvasRefresh()
     }, [
         id,
         isDynamicMode,
@@ -328,7 +328,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
         units,
         useVideoStatsPlaceholder,
         cancelScheduledDynamicRefresh,
-        scheduleDynamicRefresh,
+        scheduleCanvasRefresh,
     ])
 
     useEffect(() => () => cancelScheduledDynamicRefresh(), [cancelScheduledDynamicRefresh])

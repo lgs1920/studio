@@ -288,6 +288,7 @@ describe('JourneyStats', () => {
         expect(widget.dataset.videoOverlayVisible).toBe('true')
         expect(widget.textContent).toContain('120')
         expect(widget.querySelector('.journey-stats-placeholder')).toBeNull()
+        await waitFor(() => expect(widgetCanvasRefresh).toHaveBeenCalledWith('journey-stats-widget#1'))
     })
 
     it('uses placeholder values for dynamic stats on the video board before recording starts', async () => {
