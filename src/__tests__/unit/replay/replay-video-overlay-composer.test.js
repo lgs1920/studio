@@ -230,7 +230,7 @@ describe('getReplayVideoOverlayMetrics', () => {
         }
 
         const captureGeometrySpy = vi.spyOn(Widget2Canvas, 'get').mockReturnValue({
-            getCaptureGeometry: () => ({width: 100, height: 60}),
+            getCaptureGeometry: () => ({width: 100, height: 60, offsetX: 4, offsetY: 6}),
         })
 
         buildReplayVideoComposerOverlays({
@@ -243,6 +243,8 @@ describe('getReplayVideoOverlayMetrics', () => {
         expect(composer.addOverlay).toHaveBeenCalledWith(
             widgetCanvas,
             expect.objectContaining({
+                x: 26,
+                y: 44,
                 w: 100,
                 h: 60,
             }),

@@ -298,7 +298,7 @@ describe('Widget2Canvas refresh modes', () => {
         expect(snapdomToCanvasMock).toHaveBeenCalledWith(target, expect.anything())
     })
 
-    it('uses SnapDOM logical metadata instead of raster dimensions for the visible canvas size', async () => {
+    it('uses SnapDOM viewBox metadata instead of raster dimensions for the visible canvas size', async () => {
         target?.remove?.()
         target = document.createElement('div')
         Object.defineProperties(target, {
@@ -310,13 +310,17 @@ describe('Widget2Canvas refresh modes', () => {
 
         snapdomMock.mockImplementationOnce(async () => {
             const source = document.createElement('canvas')
-            source.width = 480
-            source.height = 160
+            source.width = 560
+            source.height = 240
 
             return {
                 meta: {
                     w0: 120,
                     h0: 40,
+                    vbW: 140,
+                    vbH: 60,
+                    contentX: 4,
+                    contentY: 6,
                 },
                 toCanvas: async () => source,
             }
@@ -326,11 +330,11 @@ describe('Widget2Canvas refresh modes', () => {
         await mirror.init()
 
         const canvas = mirror.getCanvas()
-        expect(canvas.width).toBe(480)
-        expect(canvas.height).toBe(160)
-        expect(canvas.style.width).toBe('120px')
-        expect(canvas.style.height).toBe('40px')
-        expect(mirror.getCaptureGeometry()).toEqual({width: 120, height: 40})
+        expect(canvas.width).toBe(560)
+        expect(canvas.height).toBe(240)
+        expect(canvas.style.width).toBe('140px')
+        expect(canvas.style.height).toBe('60px')
+        expect(mirror.getCaptureGeometry()).toEqual({width: 140, height: 60, offsetX: 4, offsetY: 6})
     })
 
     it('keeps overflowing widget content in the visible canvas dimensions', async () => {

@@ -686,11 +686,25 @@ export class Widget2Canvas {
             canvas = await snapdom.toCanvas(el, options)
         }
 
-        const metadataWidth = Number(capture?.meta?.w0)
-        const metadataHeight = Number(capture?.meta?.h0)
+        const viewBoxWidth = Number(capture?.meta?.vbW)
+        const viewBoxHeight = Number(capture?.meta?.vbH)
+        const legacyWidth = Number(capture?.meta?.w0)
+        const legacyHeight = Number(capture?.meta?.h0)
+        const hasViewBoxGeometry = viewBoxWidth > 0 && viewBoxHeight > 0
+        const metadataWidth = hasViewBoxGeometry ? viewBoxWidth : legacyWidth
+        const metadataHeight = hasViewBoxGeometry ? viewBoxHeight : legacyHeight
         const fallbackDimensions = this.#readLogicalSize(el)
         const dimensions = metadataWidth > 0 && metadataHeight > 0
-                          ? {width: metadataWidth, height: metadataHeight}
+                          ? {
+                              width: metadataWidth,
+                              height: metadataHeight,
+                              ...(hasViewBoxGeometry
+                                  ? {
+                                      offsetX: Number.isFinite(Number(capture?.meta?.contentX)) ? Number(capture.meta.contentX) : null,
+                                      offsetY: Number.isFinite(Number(capture?.meta?.contentY)) ? Number(capture.meta.contentY) : null,
+                                  }
+                                  : {}),
+                          }
                           : fallbackDimensions
         if (startedAt) {
             this.#logTiming(`snapdom:${el?.tagName?.toLowerCase?.() ?? 'node'}`, startedAt)
@@ -727,7 +741,7 @@ export class Widget2Canvas {
      * Updates the visible canvas using logical capture dimensions and raster source pixels.
      *
      * @param {HTMLCanvasElement|HTMLImageElement} source - Rasterized capture source.
-     * @param {{width?: number, height?: number}|null} dimensions - Logical capture dimensions in CSS pixels.
+     * @param {{width?: number, height?: number, offsetX?: number|null, offsetY?: number|null}|null} dimensions - Logical capture dimensions in CSS pixels.
      */
     #updateCanvas = (source, dimensions = null) => {
         const scale = Number(this.#options.scale) > 0 ? Number(this.#options.scale) : 1
@@ -747,6 +761,10 @@ export class Widget2Canvas {
                            : (this.#original?.offsetHeight ?? 0)
 
         this.#captureGeometry = {width: logicalW, height: logicalH}
+        if (Number.isFinite(Number(dimensions?.offsetX)) && Number.isFinite(Number(dimensions?.offsetY))) {
+            this.#captureGeometry.offsetX = Number(dimensions.offsetX)
+            this.#captureGeometry.offsetY = Number(dimensions.offsetY)
+        }
 
         // 1. If the canvas doesn't exist, create it once
         if (!this.#canvas) {
@@ -789,7 +807,7 @@ export class Widget2Canvas {
     /**
      * Returns the logical geometry used by the latest canvas capture.
      *
-     * @returns {{width: number, height: number}|null} Latest capture geometry in CSS pixels.
+     * @returns {{width: number, height: number, offsetX?: number, offsetY?: number}|null} Latest capture geometry in CSS pixels.
      */
     getCaptureGeometry = () => this.#captureGeometry
 

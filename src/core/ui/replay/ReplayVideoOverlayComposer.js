@@ -321,10 +321,19 @@ export const buildReplayVideoComposerOverlays = ({
         const captureHeight = Number(captureGeometry?.height) || 0
         const width = captureWidth > 0 ? captureWidth : canvasWidth
         const height = captureHeight > 0 ? captureHeight : canvasHeight
+        const captureOffsetX = Number(captureGeometry?.offsetX)
+        const captureOffsetY = Number(captureGeometry?.offsetY)
+        const hasCaptureViewBoxOrigin = Number.isFinite(captureOffsetX) && Number.isFinite(captureOffsetY)
+        const overlayX = hasCaptureViewBoxOrigin
+            ? (Number(position.left) || 0) - normalizedCrop.left - captureOffsetX
+            : (Number(position.left) || 0) - normalizedCrop.left - margins.left
+        const overlayY = hasCaptureViewBoxOrigin
+            ? (Number(position.top) || 0) - normalizedCrop.top - captureOffsetY
+            : (Number(position.top) || 0) - normalizedCrop.top - margins.top
 
         composer.addOverlay(canvasEl, {
-            x:             ((Number(position.left) || 0) - normalizedCrop.left - margins.left) * scaleX,
-            y:             ((Number(position.top) || 0) - normalizedCrop.top - margins.top) * scaleY,
+            x:             overlayX * scaleX,
+            y:             overlayY * scaleY,
             w:             width * scaleX,
             h:             height * scaleY,
             contentWidth:  Math.max(0, width - (margins.left + margins.right)) * scaleX,
