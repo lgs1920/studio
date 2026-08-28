@@ -14,6 +14,7 @@ import {REPLAY_EVENT_UPDATE} from '@Core/ui/replay/JourneyReplayPlaybackControll
 import {beginReplaySessionOwnership} from '@Core/ui/replay/ReplaySessionOwnership'
 import {
     abortPlaybackAfterListenerError, bindRenderer, captureCameraState, restoreCameraState, restorePlaybackScene, restorePlaybackSceneInternal,
+    setReplayPreparationPivot,
 } from '@Core/ui/replay/JourneyReplaySessionSceneController'
 
 const makeMode = () => {
@@ -326,6 +327,45 @@ describe('JourneyReplaySessionSceneController', () => {
         finally {
             delete globalThis.__
         }
+    })
+
+    it('forces the preparation pivot to the departure sample', () => {
+        const cameraManager = {target: {longitude: 9, latitude: 9, height: 9}}
+        const cameraStore = {target: {longitude: 9, latitude: 9, height: 9}}
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {},
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {},
+        }
+        globalThis.__ = {ui: {cameraManager}}
+        globalThis.lgs = {
+            stores: {
+                main: {
+                    components: {
+                        camera: cameraStore,
+                    },
+                },
+            },
+        }
+
+        expect(setReplayPreparationPivot(mode, {
+            altitude: 125,
+            latitude: 48.1,
+            longitude: 2.1,
+        })).toEqual({
+            height:    125,
+            latitude: 48.1,
+            longitude: 2.1,
+        })
+        expect(cameraManager.target).toEqual({
+            height:    125,
+            latitude: 48.1,
+            longitude: 2.1,
+        })
+        expect(cameraStore.target).toEqual({
+            height:    125,
+            latitude: 48.1,
+            longitude: 2.1,
+        })
     })
 
     it('reapplies the active replay camera when an obsolete focus settles late', async () => {

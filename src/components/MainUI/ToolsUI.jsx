@@ -31,6 +31,7 @@ export const ToolsUI = () => {
     const replay = useSnapshot(lgs.stores.replay)
     const $cropper = lgs.stores.ui.video.cropper
     const _journeyToolbarHiddenByVideoEditor = useRef(false)
+    const _replayPreparationActive = useRef(false)
 
     useEffect(() => {
         const linkedReplay = replay.recordingSync === true
@@ -50,6 +51,32 @@ export const ToolsUI = () => {
             _journeyToolbarHiddenByVideoEditor.current = false
         }
     }, [replay.active, replay.paused, replay.playing, replay.recordingSync, video.editing])
+
+    useEffect(() => {
+        const captureActive = video.preRecording || video.recording || video.snapshot || video.finalizing
+        const preparationActive = video.editing && replay.recordingSync === true && !captureActive
+        if (!preparationActive) {
+            _replayPreparationActive.current = false
+            return undefined
+        }
+
+        if (_replayPreparationActive.current) {
+            return undefined
+        }
+
+        _replayPreparationActive.current = true
+        let transitionActive = true
+        void __.ui.replay?.enterReplayPreparation?.({
+            journey:    lgs.theJourney,
+            shouldApply: () => transitionActive
+                           && lgs.stores.ui.video.editing === true
+                           && lgs.stores.replay.recordingSync === true,
+        })
+
+        return () => {
+            transitionActive = false
+        }
+    }, [replay.recordingSync, video.editing, video.finalizing, video.preRecording, video.recording, video.snapshot])
 
     useEffect(() => {
         const appContainer = document.getElementById('lgs1920-container')

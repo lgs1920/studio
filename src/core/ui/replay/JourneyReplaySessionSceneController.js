@@ -389,6 +389,38 @@ const restoreCameraPivot = pivot => {
     }
 }
 
+/**
+ * Force the preparation pivot to the first replay sample.
+ *
+ * @param {object} mode - Replay session mode.
+ * @param {object|null} sample - Departure sample used by the preparation camera.
+ * @returns {object|null} Applied preparation pivot.
+ */
+export const setReplayPreparationPivot = (mode, sample) => {
+    const longitude = finiteNumber(sample?.longitude)
+    const latitude = finiteNumber(sample?.latitude)
+    const height = finiteNumber(sample?.altitude ?? sample?.height) ?? 0
+    if (longitude === null || latitude === null) {
+        return null
+    }
+
+    const pivot = {
+        height,
+        latitude,
+        longitude,
+    }
+    const cameraManager = globalThis.__?.ui?.cameraManager
+    if (cameraManager) {
+        cameraManager.target = {...pivot}
+    }
+    const cameraStore = globalThis.lgs?.stores?.main?.components?.camera
+    if (cameraStore) {
+        cameraStore.target = {...pivot}
+    }
+
+    return pivot
+}
+
 export const captureCameraState = (mode, {sample = null} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]

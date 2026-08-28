@@ -3,7 +3,7 @@ import {afterEach, describe, expect, it, vi} from 'vitest'
 import {defaultJourneyReplaySettings} from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from '@Core/ui/replay/JourneyReplayInternal'
 import {lockReplayCameraToAnchor} from '@Core/ui/replay/JourneyReplayCameraState'
-import {prepareReplayCamera, refreshCamera} from '@Core/ui/replay/JourneyReplaySessionPlaybackController'
+import {enterReplayPreparation, prepareReplayCamera, refreshCamera} from '@Core/ui/replay/JourneyReplaySessionPlaybackController'
 
 afterEach(() => {
     delete globalThis.__
@@ -71,6 +71,7 @@ describe('replay preparation camera', () => {
             })),
             recenterCameraToSample:   vi.fn(async () => undefined),
             lockReplayCameraToAnchor: vi.fn(() => true),
+            setReplayPreparationPivot: vi.fn(),
             updateCameraSettingsFromCesiumControls: vi.fn(),
             bindCesiumCameraBridge:   vi.fn(),
         }
@@ -113,6 +114,7 @@ describe('replay preparation camera', () => {
         expect(call.configure).toHaveBeenCalledWith({journey: globalThis.lgs.theJourney, progress: 0})
         expect(call.recenterCameraToSample).not.toHaveBeenCalled()
         expect(call.lockReplayCameraToAnchor).toHaveBeenCalledOnce()
+        expect(call.setReplayPreparationPivot).toHaveBeenCalledWith(sample)
         expect(call.lockReplayCameraToAnchor.mock.calls[0][0].cameraPosition).toEqual(
             globalThis.lgs.camera.positionWC,
         )
@@ -172,5 +174,50 @@ describe('replay preparation camera', () => {
             sample: departure,
         }))
         expect(call.updateCamera).not.toHaveBeenCalled()
+    })
+
+    it('waits for scene restoration before rebuilding the canonical preparation view', async () => {
+        const settings = defaultJourneyReplaySettings()
+        const sample = {longitude: 2, latitude: 48, altitude: 120, progress: 0}
+        let resolveSceneRestore
+        const sceneRestorePromise = new Promise(resolve => {
+            resolveSceneRestore = resolve
+        })
+        const call = {
+            cancelActiveCameraFlight: vi.fn(),
+            cesiumScene:              () => ({requestRender: vi.fn()}),
+            configure:                vi.fn(() => ({atProgress: () => sample})),
+            cameraViewForSample:      vi.fn(() => ({
+                sample,
+                heading:     0,
+                pitch:       -Math.PI / 4,
+                roll:        0,
+                cameraHeight: 1200,
+            })),
+            lockReplayCameraToAnchor: vi.fn(() => true),
+            setReplayPreparationPivot: vi.fn(),
+            updateCameraSettingsFromCesiumControls: vi.fn(),
+            bindCesiumCameraBridge:   vi.fn(),
+        }
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {sceneRestorePromise},
+            [JOURNEY_REPLAY_INTERNAL_CALL]: call,
+        }
+        globalThis.lgs = {
+            camera: {positionWC: Cartesian3.fromDegrees(2, 48, 1200)},
+            settings: {ui: {replay: settings}},
+            stores: {replay: {camera: settings.camera, marker: settings.marker}},
+        }
+
+        const preparation = enterReplayPreparation(mode, {
+            journey: {},
+            shouldApply: () => true,
+        })
+        expect(call.configure).not.toHaveBeenCalled()
+
+        resolveSceneRestore()
+        await expect(preparation).resolves.toBe(true)
+        expect(call.setReplayPreparationPivot).toHaveBeenCalledWith(sample)
+        expect(call.lockReplayCameraToAnchor).toHaveBeenCalledOnce()
     })
 })

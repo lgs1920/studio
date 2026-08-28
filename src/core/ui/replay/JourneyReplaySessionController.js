@@ -267,6 +267,7 @@ export class JourneyReplaySessionController {
     #clipSequenceToken = 0
     #sceneRestoreDeferred = false
     #sceneRestorePromise = null
+    #preparationTransitionToken = 0
     #replayPoiExpandedState = new Map()
     #replayPoiCollapseTimers = new Map()
     #replayPoiTriggered = new Set()
@@ -835,6 +836,13 @@ export class JourneyReplaySessionController {
                 this.#sceneRestorePromise = value
             },
         })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'preparationTransitionToken', {
+            configurable: true,
+            get: () => this.#preparationTransitionToken,
+            set: value => {
+                this.#preparationTransitionToken = value
+            },
+        })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'replayEntryCameraState', {
             configurable: true,
             get: () => this.#replayEntryCameraState,
@@ -960,7 +968,9 @@ export class JourneyReplaySessionController {
             focusJourneyAfterPlayback: (...args) => JourneyReplayClipController.focusJourneyAfterPlayback(this, ...args),
             resetCameraController: (...args) => JourneyReplaySessionSceneController.resetCameraController(this, ...args),
             captureCameraState: (...args) => JourneyReplaySessionSceneController.captureCameraState(this, ...args),
+            setReplayPreparationPivot: (...args) => JourneyReplaySessionSceneController.setReplayPreparationPivot(this, ...args),
             capturePlaybackCameraSettings: (...args) => JourneyReplaySessionSceneController.capturePlaybackCameraSettings(this, ...args),
+            enterReplayPreparation: (...args) => JourneyReplaySessionPlaybackController.enterReplayPreparation(this, ...args),
             captureJourneyReplayDrawerStateBeforePlayback: (...args) => JourneyReplaySessionSceneController.captureJourneyReplayDrawerStateBeforePlayback(this, ...args),
             markPlaybackCameraUserAdjusted: (...args) => JourneyReplaySessionSceneController.markPlaybackCameraUserAdjusted(this, ...args),
             restorePlaybackCameraSettings: (...args) => JourneyReplaySessionSceneController.restorePlaybackCameraSettings(this, ...args),
@@ -1197,6 +1207,14 @@ export class JourneyReplaySessionController {
 
     configure = (...args) => JourneyReplaySessionPlaybackController.configure(this, ...args)
     prepareReplayCamera = (...args) => JourneyReplaySessionPlaybackController.prepareReplayCamera(this, ...args)
+
+    /**
+     * Return the Replay session to its canonical preparation state.
+     *
+     * @param {...*} args - Preparation transition arguments.
+     * @returns {Promise<boolean>} Whether the preparation state was applied.
+     */
+    enterReplayPreparation = (...args) => JourneyReplaySessionPlaybackController.enterReplayPreparation(this, ...args)
     start = (...args) => JourneyReplaySessionPlaybackController.start(this, ...args)
     pause = (...args) => JourneyReplaySessionPlaybackController.pause(this, ...args)
     resume = (...args) => JourneyReplaySessionPlaybackController.resume(this, ...args)

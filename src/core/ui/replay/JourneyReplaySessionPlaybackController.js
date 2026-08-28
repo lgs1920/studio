@@ -292,6 +292,7 @@ export const prepareReplayCamera = async (mode, {
         return false
     }
 
+    call.setReplayPreparationPivot?.(view.sample ?? sample)
     const locked = call.lockReplayCameraToAnchor?.({
         sample:       view.sample,
         heading:      view.heading,
@@ -308,6 +309,37 @@ export const prepareReplayCamera = async (mode, {
     state.replayCameraPrepared = locked
     call.cesiumScene?.()?.requestRender?.()
     return locked
+}
+
+/**
+ * Return the Replay session to its canonical preparation state.
+ *
+ * @param {object} mode - Replay mode.
+ * @param {object} options - Preparation transition options.
+ * @param {object|null} [options.journey] - Journey used to rebuild the sampler.
+ * @param {Function} [options.shouldApply] - Predicate guarding stale transitions.
+ * @returns {Promise<boolean>} Whether the preparation state was applied.
+ */
+export const enterReplayPreparation = async (mode, {
+                                                  journey = globalThis.lgs?.theJourney ?? null,
+                                                  shouldApply = null,
+                                              } = {}) => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const canApply = typeof shouldApply === 'function' ? shouldApply : () => true
+    const preparationToken = (state.preparationTransitionToken ?? 0) + 1
+    state.preparationTransitionToken = preparationToken
+    const isCurrentTransition = () => preparationToken === state.preparationTransitionToken && canApply()
+    const sceneRestorePromise = state.sceneRestorePromise
+
+    if (sceneRestorePromise) {
+        await Promise.resolve(sceneRestorePromise)
+    }
+    if (!isCurrentTransition()) {
+        return false
+    }
+
+    const prepared = await prepareReplayCamera(mode, {journey})
+    return prepared === true && isCurrentTransition()
 }
 
 export const start = (mode, options = {}) => {
@@ -821,7 +853,8 @@ const refreshPreparationCamera = (mode, sample, options = {}) => {
     if (options.suppressMoveEvents !== false) {
         state.cameraAutoTrackingIgnoreUntil = call.now() + 250
     }
-    return call.lockReplayCameraToAnchor?.({
+    call.setReplayPreparationPivot?.(view.sample ?? sample)
+    const locked = call.lockReplayCameraToAnchor?.({
         cameraHeight: view.cameraHeight,
         cameraSettings,
         heading:      view.heading,
@@ -829,6 +862,7 @@ const refreshPreparationCamera = (mode, sample, options = {}) => {
         roll:         view.roll,
         sample:       view.sample,
     }) === true
+    return locked
 }
 
 export const refreshCamera = (mode, options = {}) => {

@@ -64,6 +64,7 @@ describe('ToolsUI linked replay video editing', () => {
                     hideJourneyToolbarVisibility: vi.fn(),
                     isJourneyToolbarTemporarilyHidden: vi.fn(() => false),
                     restoreJourneyToolbarVisibility: vi.fn(),
+                    enterReplayPreparation: vi.fn(async () => true),
                 },
             },
         }
@@ -114,5 +115,22 @@ describe('ToolsUI linked replay video editing', () => {
         render(<ToolsUI/>)
 
         await waitFor(() => expect(document.getElementById('lgs1920-container')?.classList.contains('lgs-video-crop-input-mode')).toBe(true))
+    })
+
+    it('returns an interrupted linked recording to the canonical Replay preparation state', async () => {
+        const enterReplayPreparation = globalThis.__.ui.replay.enterReplayPreparation
+        render(<ToolsUI/>)
+
+        globalThis.lgs.stores.ui.video.recording = true
+        await waitFor(() => expect(globalThis.lgs.stores.ui.video.recording).toBe(true))
+
+        globalThis.lgs.stores.ui.video.recording = false
+        globalThis.lgs.stores.ui.video.editing = true
+
+        await waitFor(() => expect(enterReplayPreparation).toHaveBeenCalledWith(expect.objectContaining({
+            journey:     undefined,
+            shouldApply: expect.any(Function),
+        })))
+        expect(enterReplayPreparation.mock.calls[0][0].shouldApply()).toBe(true)
     })
 })
