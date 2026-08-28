@@ -20,12 +20,16 @@ import {
     WELCOME_BACKGROUND_PLAYBACK_RATE,
 }                                                               from '@Assets/media/welcome-background-media'
 import { formatBuildInfo }                                    from '@Utils/BuildInfoUtils'
-import { WaButton, WaFormatDate, WaIcon }                    from '@web.awesome.me/webawesome-pro/dist/react'
+import {
+    WaButton, WaFormatDate, WaIcon, WaProgressBar,
+}                                                               from '@web.awesome.me/webawesome-pro/dist/react'
 import { useCallback, useEffect, useRef, useState }            from 'react'
 
 const WELCOME_BACKGROUND_MEDIA = getWelcomeBackgroundMedia()
 const WELCOME_VIDEO_CROSSFADE_DURATION = 2300
 const WELCOME_VIDEO_CROSSFADE_LEAD_SECONDS = 3
+const INITIALIZATION_PROGRESS_VALUES = [0, 10, 20, 40, 60, 80]
+const INITIALIZATION_COMPLETION_DISPLAY_MS = 3000
 
 /**
  * Renders the persistent Studio welcome hero.
@@ -38,10 +42,12 @@ export const WelcomeHero = ({
                              appReady = false,
                              onEnter,
                              backgroundMedia = WELCOME_BACKGROUND_MEDIA,
+                             initializationProgress = null,
                          }) => {
     const _welcomeVideo = useRef(null)
     const _incomingWelcomeVideo = useRef(null)
     const _crossfadeTimer = useRef(null)
+    const _initializationCompletionTimer = useRef(null)
     const [activeVideoSlot, setActiveVideoSlot] = useState('primary')
     const [primaryVideoChoice, setPrimaryVideoChoice] = useState(() => backgroundMedia.id
         ? bannerMediaCatalog.outdoor.find(choice => choice.id === backgroundMedia.id)
@@ -55,7 +61,15 @@ export const WelcomeHero = ({
     const [imageState, setImageState] = useState(
         backgroundMedia.imageSources.length > 0 ? 'ready' : 'unavailable'
     )
+    const [showInitializationProgress, setShowInitializationProgress] = useState(true)
     const readyToEnter = initComplete && appReady
+    const initializationSteps = initializationProgress?.steps ?? []
+    const activeInitializationStep = readyToEnter
+        ? initializationSteps.length
+        : Math.min(Math.max(initializationProgress?.activeStep ?? 0, 0), initializationSteps.length)
+    const initializationPercentage = readyToEnter
+        ? 100
+        : INITIALIZATION_PROGRESS_VALUES[activeInitializationStep] ?? 0
     const videoReady = videoState === 'ready'
     const imageVisible = !videoReady && imageState === 'ready'
     const studioVersion = lgs.versions?.studio ?? 'Unknown version'
@@ -151,6 +165,29 @@ export const WelcomeHero = ({
     }, [])
 
     useEffect(() => {
+        if (_initializationCompletionTimer.current) {
+            window.clearTimeout(_initializationCompletionTimer.current)
+            _initializationCompletionTimer.current = null
+        }
+
+        if (!readyToEnter) {
+            return
+        }
+
+        _initializationCompletionTimer.current = window.setTimeout(() => {
+            setShowInitializationProgress(false)
+            _initializationCompletionTimer.current = null
+        }, INITIALIZATION_COMPLETION_DISPLAY_MS)
+
+        return () => {
+            if (_initializationCompletionTimer.current) {
+                window.clearTimeout(_initializationCompletionTimer.current)
+                _initializationCompletionTimer.current = null
+            }
+        }
+    }, [readyToEnter])
+
+    useEffect(() => {
         if (_welcomeVideo.current) {
             _welcomeVideo.current.playbackRate = WELCOME_BACKGROUND_PLAYBACK_RATE
         }
@@ -168,6 +205,55 @@ export const WelcomeHero = ({
         document.activeElement?.blur()
         onEnter?.()
     }, [onEnter, readyToEnter])
+
+    /**
+     * Renders the initialization progress shown while Studio is becoming ready.
+     *
+     * @returns {object|null} Initialization progress or nothing when no progress was provided.
+     */
+    const renderInitializationProgress = () => {
+        if (initializationSteps.length === 0 || (readyToEnter && !showInitializationProgress)) {
+            return null
+        }
+
+        return (
+            <div className="welcome-initialization" aria-label="Studio initialization progress" aria-live="polite">
+                <div className="welcome-initialization-header">
+                    <span>{'Preparing Studio'}</span>
+                    <span>{initializationPercentage}%</span>
+                </div>
+                <WaProgressBar
+                    className="welcome-initialization-progress"
+                    value={initializationPercentage}
+                    label={`Studio initialization: ${initializationPercentage}%`}
+                />
+                <ol className="welcome-initialization-steps">
+                    {initializationSteps.map((step, index) => {
+                        const isComplete = index < activeInitializationStep
+                        const isActive = index === activeInitializationStep
+                        const status = isComplete ? 'Complete' : isActive ? 'In progress' : 'Waiting'
+
+                        return (
+                            <li
+                                className={`welcome-initialization-step${isComplete ? ' is-complete' : ''}${isActive ? ' is-active' : ''}`}
+                                aria-current={isActive ? 'step' : undefined}
+                                key={step.id}
+                            >
+                                <WaIcon
+                                    name={isComplete ? 'circle-check' : isActive ? 'gear' : 'circle'}
+                                    variant="regular"
+                                    animation={isActive ? 'spin' : ''}
+                                    aria-hidden="true"
+                                />
+                                <span className="welcome-initialization-step-label">{step.label}</span>
+                                <span className="welcome-initialization-step-status">{status}</span>
+                            </li>
+                        )
+                    })}
+                </ol>
+            </div>
+        )
+    }
 
     return (
         <div id="welcome-hero"
@@ -296,6 +382,7 @@ export const WelcomeHero = ({
                             {'Enter Studio'}
                         </WaButton>
                     </div>
+                    {renderInitializationProgress()}
                 </section>
             </div>
         </div>

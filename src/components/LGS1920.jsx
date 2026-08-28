@@ -76,6 +76,14 @@ import { useSnapshot } from 'valtio'
 
 const APP_SURFACE_READY_TIMEOUT = 1500
 const INITIAL_FOCUS_READY_TIMEOUT = 2500
+const INITIALIZATION_STEPS = [
+    {id: 'application', label: 'Loading application configuration'},
+    {id: 'services', label: 'Starting application services'},
+    {id: 'data', label: 'Loading terrain and journeys'},
+    {id: 'camera', label: 'Preparing the initial map view'},
+    {id: 'surface', label: 'Rendering the Studio interface'},
+    {id: 'ready', label: 'Finalizing Studio launch'},
+]
 
 const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve))
 
@@ -162,6 +170,7 @@ export const LGS1920 = () => {
     // State to track initialization status and errors
     const [initStatus, setInitStatus] = useState(null)
     const [initError, setInitError] = useState(null)
+    const [initializationStep, setInitializationStep] = useState(0)
     const [appVisible, setAppVisible] = useState(false)
     const [initialFocusReady, setInitialFocusReady] = useState(false)
     const [appSurfaceReady, setAppSurfaceReady] = useState(false)
@@ -169,11 +178,26 @@ export const LGS1920 = () => {
     const appUpdateStore = globalThis.__?.updater?.store
         ?? globalThis.lgs?.stores?.ui?.appUpdate
     const appUpdate = useSnapshot(appUpdateStore)
+    const appReady = initStatus === true
+        && initialFocusReady
+        && appSurfaceReady
+        && !appUpdate.isUpdateCheckPending
+        && !appUpdate.isAutomaticUpdateInProgress
 
     const revealApp = useCallback(() => {
         document.body.classList.remove('lgs-app-booting')
         document.body.classList.add('lgs-app-visible')
         setAppVisible(true)
+    }, [])
+
+    /**
+     * Advances the welcome screen to the currently running initialization step.
+     *
+     * @param {number} stepIndex - Zero-based index of the active initialization step.
+     * @returns {void}
+     */
+    const advanceInitializationStep = useCallback((stepIndex) => {
+        setInitializationStep(Math.min(Math.max(stepIndex, 0), INITIALIZATION_STEPS.length - 1))
     }, [])
 
     const markAppSurfaceReady = useCallback(() => {
@@ -332,6 +356,7 @@ export const LGS1920 = () => {
                 const lgs = window.lgs
 
                 // Initialize app
+                advanceInitializationStep(0)
                 const initResult = await initializeApp()
                 setInitError(initResult.error)
 
@@ -345,6 +370,7 @@ export const LGS1920 = () => {
                     return
                 }
                 // Initialize managers and layers
+                advanceInitializationStep(1)
                 await initializeManagersAndLayers(lgs)
 
                 // Attach drawer events
@@ -354,12 +380,14 @@ export const LGS1920 = () => {
                 document.body.classList.add(lgs.platform)
 
                 // Initialize data (terrain, journeys, POIs)
+                advanceInitializationStep(2)
                 await initializeData(lgs)
 
                 // Set up starter target from settings. It is persisted only if the first view needs it.
                 const starter = await setupStarterPOI(lgs, {persist: false})
 
                 // Configure camera
+                advanceInitializationStep(3)
                 const {focusTarget, cameraStore} = await configureStartupCamera({
                                                                                     context:        lgs,
                                                                                     starter,
@@ -374,6 +402,7 @@ export const LGS1920 = () => {
 
                 // Mark UI as initialized
                 __.app.uiInit = true
+                advanceInitializationStep(4)
                 setInitStatus(true)
 
                 // log starting information
@@ -392,7 +421,7 @@ export const LGS1920 = () => {
         }
 
         initialize()
-    }, [initializeStartupPOIs, setupStarterPOI])
+    }, [advanceInitializationStep, initializeStartupPOIs, setupStarterPOI])
 
     useEffect(() => {
         if (deferredJourneyDataStarted.current || initStatus !== true || !initialFocusReady || !appSurfaceReady) {
@@ -420,11 +449,11 @@ export const LGS1920 = () => {
             {!initError && !appVisible && (
                 <WelcomeHero
                     initComplete={initStatus === true}
-                    appReady={initStatus === true
-                        && initialFocusReady
-                        && appSurfaceReady
-                        && !appUpdate.isUpdateCheckPending
-                        && !appUpdate.isAutomaticUpdateInProgress}
+                    appReady={appReady}
+                    initializationProgress={{
+                        activeStep: appReady ? INITIALIZATION_STEPS.length - 1 : initializationStep,
+                        steps: INITIALIZATION_STEPS,
+                    }}
                     onEnter={revealApp}
                 />
             )}

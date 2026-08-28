@@ -28,6 +28,9 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
         : <button {...props}>{children}</button>,
     WaFormatDate: ({date, ...props}) => <time {...props}>{date}</time>,
     WaIcon: () => null,
+    WaProgressBar: ({children, label, value, ...props}) => (
+        <div role="progressbar" aria-label={label} aria-valuenow={value} {...props}>{children}</div>
+    ),
 }))
 
 import { WelcomeHero } from '@Components/MainUI/WelcomeHero'
@@ -99,6 +102,107 @@ describe('WelcomeHero', () => {
         fireEvent.click(button)
 
         expect(onEnter).not.toHaveBeenCalled()
+    })
+
+    it('shows the current initialization step and overall progress', () => {
+        globalThis.lgs = {
+            versions: {studio: '1.0.0'},
+            build: {id: 'build-42'},
+        }
+
+        render(
+            <WelcomeHero
+                initializationProgress={{
+                    activeStep: 1,
+                    steps: [
+                        {id: 'application', label: 'Loading application configuration'},
+                        {id: 'services', label: 'Starting application services'},
+                        {id: 'data', label: 'Loading terrain and journeys'},
+                        {id: 'camera', label: 'Preparing the initial map view'},
+                        {id: 'surface', label: 'Rendering the Studio interface'},
+                        {id: 'ready', label: 'Finalizing Studio launch'},
+                    ],
+                }}
+            />
+        )
+
+        expect(screen.getByRole('progressbar', {name: 'Studio initialization: 10%'})
+            .getAttribute('aria-valuenow')).toBe('10')
+        expect(document.querySelectorAll('.welcome-initialization-step').length).toBe(6)
+        expect(screen.getByText('Loading application configuration').parentElement
+            .classList.contains('is-complete')).toBe(true)
+        expect(screen.getByText('Starting application services').parentElement
+            .classList.contains('is-active')).toBe(true)
+        expect(screen.getByText('Loading terrain and journeys').parentElement
+            .classList.contains('welcome-initialization-step')).toBe(true)
+        expect(screen.getByText('In progress')).toBeTruthy()
+    })
+
+    it('keeps completed initialization steps visible for three seconds', () => {
+        vi.useFakeTimers()
+        globalThis.lgs = {
+            versions: {studio: '1.0.0'},
+            build: {id: 'build-42'},
+        }
+
+        render(
+            <WelcomeHero
+                initComplete
+                appReady
+                initializationProgress={{
+                    activeStep: 5,
+                    steps: [
+                        {id: 'application', label: 'Loading application configuration'},
+                        {id: 'services', label: 'Starting application services'},
+                        {id: 'data', label: 'Loading terrain and journeys'},
+                        {id: 'camera', label: 'Preparing the initial map view'},
+                        {id: 'surface', label: 'Rendering the Studio interface'},
+                        {id: 'ready', label: 'Finalizing Studio launch'},
+                    ],
+                }}
+            />
+        )
+
+        expect(screen.getByText('Finalizing Studio launch')).toBeTruthy()
+        expect(screen.getByRole('progressbar', {name: 'Studio initialization: 100%'})
+            .getAttribute('aria-valuenow')).toBe('100')
+
+        act(() => {
+            vi.advanceTimersByTime(2999)
+        })
+        expect(screen.getByText('Finalizing Studio launch')).toBeTruthy()
+
+        act(() => {
+            vi.advanceTimersByTime(1)
+        })
+        expect(screen.queryByText('Finalizing Studio launch')).toBeNull()
+    })
+
+    it('keeps the progress at 60 percent until Studio is ready', () => {
+        globalThis.lgs = {
+            versions: {studio: '1.0.0'},
+            build: {id: 'build-42'},
+        }
+
+        render(
+            <WelcomeHero
+                initComplete
+                initializationProgress={{
+                    activeStep: 4,
+                    steps: [
+                        {id: 'application', label: 'Loading application configuration'},
+                        {id: 'services', label: 'Starting application services'},
+                        {id: 'data', label: 'Loading terrain and journeys'},
+                        {id: 'camera', label: 'Preparing the initial map view'},
+                        {id: 'surface', label: 'Rendering the Studio interface'},
+                        {id: 'ready', label: 'Finalizing Studio launch'},
+                    ],
+                }}
+            />
+        )
+
+        expect(screen.getByRole('progressbar', {name: 'Studio initialization: 60%'})
+            .getAttribute('aria-valuenow')).toBe('60')
     })
 
     it('renders the resolved video and falls back to the resolved image', () => {

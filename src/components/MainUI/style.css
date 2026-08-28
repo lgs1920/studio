@@ -1107,6 +1107,86 @@ body.mobile .orbit-widget-body {
     gap: var(--lgs-gutter-xs);
 }
 
+.welcome-initialization {
+    display: flex;
+    flex-direction: column;
+    width: min(28rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
+    padding: var(--lgs-gutter-s);
+    border: 1px solid var(--wa-color-surface-border);
+    border-radius: var(--lgs-border-radius-s);
+    color: var(--wa-color-text-normal);
+    background: var(--lgs-theme-background-color);
+    box-shadow: 0 0.8rem 2rem rgba(0, 0, 0, .16);
+    backdrop-filter: blur(var(--lgs-blur));
+    gap: var(--lgs-gutter-xs);
+
+    & .welcome-initialization-header {
+        display: flex;
+        justify-content: space-between;
+        font-size: var(--lgs-font-size-s);
+        font-weight: var(--lgs-font-weight-bold);
+        letter-spacing: .02em;
+        text-transform: uppercase;
+    }
+
+    & wa-progress-bar {
+        margin: 0;
+        /* Progress track height for the welcome initialization indicator. */
+        --track-height: .35rem;
+    }
+
+    & .welcome-initialization-steps {
+        display: flex;
+        flex-direction: column;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        transition: transform 420ms cubic-bezier(.22, 1, .36, 1);
+        gap: .1rem;
+    }
+
+    & .welcome-initialization-step {
+        display: grid;
+        align-items: center;
+        height: 1.25rem;
+        min-height: 1.25rem;
+        grid-template-columns: 1rem minmax(0, 1fr) auto;
+        color: color-mix(in oklab, var(--wa-color-text-normal) 56%, transparent);
+        font-size: var(--lgs-font-size-s);
+        line-height: 1.25;
+        gap: var(--lgs-gutter-xs);
+    }
+
+    & .welcome-initialization-step wa-icon {
+        font-size: .82rem;
+        text-align: center;
+    }
+
+    & .welcome-initialization-step-label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    & .welcome-initialization-step.is-active {
+        color: var(--wa-color-brand-60);
+    }
+
+    & .welcome-initialization-step.is-complete {
+        color: color-mix(in oklab, var(--wa-color-text-normal) 76%, transparent);
+    }
+
+    & .welcome-initialization-step.is-complete wa-icon {
+        color: var(--wa-color-brand-60);
+    }
+
+    & .welcome-initialization-step-status {
+        font-size: .68rem;
+        white-space: nowrap;
+        opacity: .76;
+    }
+}
+
 @media (max-width: 700px) {
     .welcome-hero-shell {
         overflow-y: auto;
