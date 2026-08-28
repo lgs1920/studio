@@ -84,7 +84,7 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => {
     const WaCard = ({children, ...props}) => <div {...props}>{children}</div>
     const WaColorPicker = props => <input data-testid={props['aria-label'] ?? 'color'} {...props} />
     const WaDivider = () => <hr/>
-    const WaIcon = props => <span {...props}/>
+    const WaIcon = ({name, ...props}) => <span data-icon={name} {...props}/>
     const WaDetails = ({children, ...props}) => <div {...props}>{children}</div>
     const WaNumberInput = ({label, onInput, value, ...props}) => (
         <label>
@@ -308,6 +308,7 @@ describe('JourneyReplayDrawer', () => {
     it('keeps the drawer limited to Replay configuration', () => {
         const view = render(<JourneyReplayDrawer/>)
 
+        expect(document.body.querySelector('.replay-drawer-title [data-icon="sliders"]')).not.toBeNull()
         expect(view.queryByTestId('replay-progress')).toBeNull()
         expect(view.queryByText('Sync with Video')).toBeNull()
         expect(view.queryByRole('button', {name: 'Start Journey Replay'})).toBeNull()

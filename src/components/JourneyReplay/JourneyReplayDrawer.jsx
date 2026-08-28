@@ -1307,7 +1307,7 @@ export const JourneyReplayDrawer = memo(() => {
                     className={classNames('replay-drawer', {'drawer-is-stacked': isStacked})}
                 >
                     <span slot="label" className="replay-drawer-title">
-                        <WaIcon name="drone" variant="regular"/>
+                        <WaIcon name="sliders" variant="regular"/>
                         {REPLAY_LABEL}
                     </span>
                     <PanelActions stackedPanel={isStacked} onBack={isStacked ? closeDrawerWithManager : null}>
