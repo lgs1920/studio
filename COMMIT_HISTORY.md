@@ -1181,3 +1181,7 @@
 ## 2026-08-28 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/903949b9f024fe9388a91e84160d3dd42d0a0cd8)
 
 - Recorded automatically from Git history.
+
+## 2026-08-28 — [`fix(replay): use sliders icon in drawer title`](https://github.com/lgs1920/studio/commit/e6cb129432d15d8ecc48c17314c48804f9933a44)
+
+- Recorded automatically from Git history.
