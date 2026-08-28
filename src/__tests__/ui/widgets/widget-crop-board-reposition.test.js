@@ -189,6 +189,32 @@ describe('crop board widget repositioning', () => {
         expect(position).toEqual({left: 385, top: 285})
     })
 
+    it('centers a widget horizontally at a percentage of the container height', () => {
+        const config = {
+            id: 'camera-adjustment-widget',
+            type: LGS_WIDGET,
+            container: board,
+            boundsContainer: board,
+            element: widget,
+            dimensions: {width: 200, height: 100},
+            scale: {x: 1, y: 1},
+            margin: 0,
+            position: {left: 0, top: 0},
+        }
+        const positionManager = new WidgetPosition({
+            getIdFromElement: vi.fn(() => config.id),
+            getWidgetConfig: vi.fn(() => config),
+            getMoveable: vi.fn(() => null),
+            refreshEditorPreviewSnapshot: vi.fn(),
+            saveWidgetPosition: vi.fn(),
+        })
+
+        const position = positionManager.toTopPercentage(widget, 10, 0)
+
+        expect(position).toEqual({left: 200, top: 40})
+        expect(config.attachTo).toBe('top')
+    })
+
     it('converts local crop coordinates to the screen board only once', () => {
         const canvas = document.createElement('div')
         document.body.appendChild(canvas)

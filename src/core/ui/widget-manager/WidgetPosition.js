@@ -42,9 +42,10 @@ export class WidgetPosition {
      * @param {HTMLElement} element - The DOM element to position
      * @param {string} anchor - The anchor point (e.g., 'center', 'top-left')
      * @param {number} [margin=this.#defaultMargin] - Margin to apply
+     * @param {number|null} [topRatio=null] - Optional vertical percentage for the top anchor
      * @returns {Object} New position object with left and top coordinates
      */
-    #positionElement = (element, anchor, margin = this.#defaultMargin) => {
+    #positionElement = (element, anchor, margin = this.#defaultMargin, topRatio = null) => {
         const elementId = this.#widgetManager.getIdFromElement(element)
         const config = this.#widgetManager.getWidgetConfig(elementId)
         if (!config || !config.container || !this.#validPositions.includes(anchor)) {
@@ -90,7 +91,9 @@ export class WidgetPosition {
             }),
             'top':          () => ({
                 centerX: boundsContainer.left + (boundsContainer.width / 2),
-                centerY: boundsContainer.top + margin + (rotatedHeight / 2),
+                centerY: boundsContainer.top + (
+                    Number.isFinite(topRatio) ? (boundsContainer.height * (topRatio / 100)) : margin
+                ) + (rotatedHeight / 2),
             }),
             'left':         () => ({
                 centerX: boundsContainer.left + margin + (rotatedWidth / 2),
@@ -205,6 +208,15 @@ export class WidgetPosition {
      * @returns {Object} New position object
      */
     toTop = (element, margin = this.#defaultMargin) => this.#positionElement(element, 'top', margin)
+
+    /**
+     * Positions a widget horizontally centered at a percentage of the container height.
+     * @param {HTMLElement} element - The DOM element to position
+     * @param {number} topRatio - Vertical position as a percentage of the container height
+     * @param {number} [margin=0] - Additional margin from the requested vertical position
+     * @returns {Object} New position object
+     */
+    toTopPercentage = (element, topRatio, margin = 0) => this.#positionElement(element, 'top', margin, topRatio)
 
     /**
      * Positions the widget at the left of its container.

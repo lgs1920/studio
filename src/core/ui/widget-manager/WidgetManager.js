@@ -811,6 +811,15 @@ export class WidgetManager {
     toTop = (element, margin = 0) => this.#position.toTop(element, margin)
 
     /**
+     * Positions a widget horizontally centered at a percentage of the container height.
+     * @param {HTMLElement} element - The DOM element to position
+     * @param {number} topRatio - Vertical position as a percentage of the container height
+     * @param {number} [margin=0] - Additional margin from the requested vertical position
+     * @returns {Object} New position object
+     */
+    toTopPercentage = (element, topRatio, margin = 0) => this.#position.toTopPercentage(element, topRatio, margin)
+
+    /**
      * Positions the widget at the left of its container.
      * @param {HTMLElement} element - The DOM element to position
      * @param {number} [margin=0] - Margin to apply

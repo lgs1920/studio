@@ -18,7 +18,7 @@ const CAMERA_ADJUSTMENT_WIDGET = 'camera-adjustment-widget'
 const CAMERA_CHANGE_RETRY_DELAY = 100
 const ADJUSTMENT_OVERLAY_DELAY = 2000
 const DEFAULT_CAMERA_ADJUSTMENT_CONFIG = {
-    attachTo: 'center',
+    attachTo: 'top',
     canReduce: false,
     contextMenu: {canRemove: false},
     draggable: true,
@@ -26,7 +26,7 @@ const DEFAULT_CAMERA_ADJUSTMENT_CONFIG = {
     group: SCENE_WIDGETS,
     id: CAMERA_ADJUSTMENT_WIDGET,
     left: '50%',
-    margin: 8,
+    margin: 0,
     opacity: 1,
     persist: false,
     resizable: false,
@@ -34,7 +34,7 @@ const DEFAULT_CAMERA_ADJUSTMENT_CONFIG = {
     scalable: false,
     snappable: true,
     stopPropagation: true,
-    top: '50%',
+    top: '10%',
     transient: true,
     type: LGS_WIDGET,
     widgetsBoard: SCENE_WIDGETS_BOARD,

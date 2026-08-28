@@ -202,7 +202,9 @@ export class WidgetDynamicRenderer {
                 })
 
                 // Only update the Valtio store once everything is ready in cache
+                const currentEntry = $widget.list.get(widgetId) ?? {}
                 $widget.list.set(widgetId, {
+                    ...currentEntry,
                     ...props,
                     group,
                     zIndex,

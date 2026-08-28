@@ -1,15 +1,18 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { SETTINGS_STORE } from '@Core/constants'
+import { SCENE_WIDGETS, SETTINGS_STORE, TEXT_WIDGET } from '@Core/constants'
 import { SettingsSection } from '@Core/settings/SettingsSection'
+import { resetTextWidgetPositionSequence } from '@Components/Text/textWidgetPosition'
 import { proxy } from 'valtio'
+
+const widgetRendererMock = vi.hoisted(() => ({
+    theGroups:    vi.fn(),
+    renderWidget: vi.fn(),
+}))
 
 vi.mock('@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender', () => ({
     WidgetDynamicRenderer: {
-        instance: {
-            theGroups:     () => new Map(),
-            renderWidget:  vi.fn(),
-        },
+        instance: widgetRendererMock,
     },
 }))
 
@@ -42,12 +45,26 @@ import { WidgetsPanelContent } from '@Components/MainUI/widgets/WidgetsPanelCont
 describe('WidgetsPanelContent', () => {
     beforeEach(() => {
         globalThis.__ = {
+            widgets: new Map([
+                [SCENE_WIDGETS, {
+                    widgets: new Map([
+                        [TEXT_WIDGET, {name: 'Text', icon: 'text', max: 10, type: 'lgs-visual-widget'}],
+                    ]),
+                }],
+            ]),
             ui: {
                 widgetManager: {
+                    defineElementId:   vi.fn((group, key) => `${key}#new`),
                     getWidgetsByGroup: vi.fn(() => Promise.resolve([])),
+                    isMaxWidgetsReached: vi.fn(() => false),
                 },
             },
         }
+        widgetRendererMock.theGroups.mockImplementation(groups => new Map(
+            groups.map(group => [group, globalThis.__.widgets.get(group)]),
+        ))
+        widgetRendererMock.renderWidget.mockClear()
+        resetTextWidgetPositionSequence()
         globalThis.lgs = {
             settings: {
                 ui: proxy({
@@ -80,6 +97,7 @@ describe('WidgetsPanelContent', () => {
         cleanup()
         globalThis.__ = undefined
         globalThis.lgs = undefined
+        resetTextWidgetPositionSequence()
     })
 
     it('marks the grid number input as non draggable to prevent widget pseudo double-click handling', async () => {
@@ -149,5 +167,34 @@ describe('WidgetsPanelContent', () => {
         await waitFor(() => {
             expect(document.querySelector('wa-number-input.widget-grid-size-input')).toBeNull()
         })
+    })
+
+    it('applies the text widget creation sequence from the widget panel', async () => {
+        render(<WidgetsPanelContent groups={[SCENE_WIDGETS]}/>)
+
+        const textEntry = await screen.findByText('Text')
+        fireEvent.click(textEntry.closest('li'))
+        fireEvent.click(textEntry.closest('li'))
+
+        expect(widgetRendererMock.renderWidget).toHaveBeenNthCalledWith(
+            1,
+            SCENE_WIDGETS,
+            'text-widget#new',
+            expect.objectContaining({
+                attachTo: 'top-left',
+                left:     '20%',
+                top:      '20%',
+            }),
+        )
+        expect(widgetRendererMock.renderWidget).toHaveBeenNthCalledWith(
+            2,
+            SCENE_WIDGETS,
+            'text-widget#new',
+            expect.objectContaining({
+                attachTo: 'top-left',
+                left:     '25%',
+                top:      '25%',
+            }),
+        )
     })
 })

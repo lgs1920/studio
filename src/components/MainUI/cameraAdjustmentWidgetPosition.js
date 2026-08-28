@@ -16,6 +16,7 @@
 
 const CAMERA_ADJUSTMENT_CENTER_RETRY_DELAY = 50
 const CAMERA_ADJUSTMENT_CENTER_RETRY_LIMIT = 12
+const CAMERA_ADJUSTMENT_TOP_PERCENTAGE = 10
 
 const cameraAdjustmentSelector = widgetId => `[data-widget="${widgetId}"] .camera-adjustment-widget-shell`
 
@@ -63,7 +64,7 @@ export const scheduleCameraAdjustmentWidgetCenter = (widgetId, retries = CAMERA_
         }, CAMERA_ADJUSTMENT_CENTER_RETRY_DELAY)
     }
 
-    function center() {
+    const center = () => {
         frameId = null
         if (cancelled) {
             return
@@ -74,16 +75,16 @@ export const scheduleCameraAdjustmentWidgetCenter = (widgetId, retries = CAMERA_
         const elementId = element ? manager?.retrieveElementId?.(element) : null
         const config = elementId ? manager?.getWidgetConfig?.(elementId) : null
 
-        if (!manager?.toCenter || !element || elementId !== widgetId || !config?.container || !config.runtimeReady) {
+        if (!manager?.toTopPercentage || !element || elementId !== widgetId || !config?.container || !config.runtimeReady) {
             retry()
             return
         }
 
         config.persist = false
         config.fromDB = false
-        config.attachTo = 'center'
+        config.attachTo = 'top'
         manager.setConfig?.(elementId, config)
-        manager.toCenter(element, 0)
+        manager.toTopPercentage?.(element, CAMERA_ADJUSTMENT_TOP_PERCENTAGE, 0)
     }
 
     schedule()

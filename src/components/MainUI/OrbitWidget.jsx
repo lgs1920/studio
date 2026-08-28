@@ -268,7 +268,7 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
   );
   const config = useMemo(
     () => ({
-      attachTo: "center",
+      attachTo: "top",
       canReduce: false,
       contextMenu: {
         canRemove: false,
@@ -278,7 +278,7 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
       group: SCENE_WIDGETS,
       id: CAMERA_ADJUSTMENT_WIDGET,
       left: "50%",
-      margin: lgs.gutter.s,
+      margin: 0,
       opacity: 1,
       persist: false,
       resizable: false,
@@ -286,7 +286,7 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
       scalable: false,
       snappable: true,
       stopPropagation: true,
-      top: "50%",
+      top: "10%",
       transient: true,
       type: LGS_WIDGET,
       widgetsBoard: SCENE_WIDGETS_BOARD,

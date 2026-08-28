@@ -15,8 +15,9 @@
  ******************************************************************************/
 
 import {
-    SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD, LGS_VISUAL_WIDGET, WIDGET_LAYER_START, WIDGET_LAYER_STEP,
+    SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD, LGS_VISUAL_WIDGET, TEXT_WIDGET, WIDGET_LAYER_START, WIDGET_LAYER_STEP,
 }                                from '@Core/constants'
+import { getNextTextWidgetPosition } from '@Components/Text/textWidgetPosition'
 import {
     getManageableWidgets,
     openWidgetManagementDrawer,
@@ -108,6 +109,9 @@ export const WidgetsPanelContent = ({groups}) => {
             return
         }
 
+        const isNewTextWidget = key === TEXT_WIDGET && props.left === undefined && props.top === undefined
+        const textWidgetPosition = isNewTextWidget ? getNextTextWidgetPosition() : {}
+
         const additionalProps = {}
 
         // Only apply zIndex to visual components
@@ -123,6 +127,7 @@ export const WidgetsPanelContent = ({groups}) => {
 
         widgetDynamicRenderer.renderWidget(group, id, {
             ...props,
+            ...textWidgetPosition,
             widgetsBoard,
             forceRefresh: true,
             ...additionalProps,

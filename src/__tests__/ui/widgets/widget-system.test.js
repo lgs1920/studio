@@ -586,4 +586,33 @@ describe('Widget dynamic renderer bootstrap', () => {
                                                                 zIndex:       WIDGET_LAYER_START,
                                                             })
     })
+
+    it('preserves creation positioning when a concrete widget is rendered again', async () => {
+        const DynamicTestWidget = () => null
+        const renderer = WidgetDynamicRenderer.instance
+        renderer.registry = {
+            getLazyComponent: vi.fn(async () => DynamicTestWidget),
+        }
+
+        const widgetId = `${DYNAMIC_TEST_WIDGET}#positioned`
+        await renderer.renderWidget(SCENE_WIDGETS, widgetId, {
+            attachTo:    'top-left',
+            forceRefresh: true,
+            left:        '25%',
+            top:         '25%',
+            widgetsBoard: SCENE_WIDGETS_BOARD,
+        })
+
+        await renderer.renderWidget(SCENE_WIDGETS, widgetId, {
+            forceRefresh: true,
+            widgetsBoard: SCENE_WIDGETS_BOARD,
+        })
+
+        expect(widgetListStore.get(widgetId)).toMatchObject({
+                                                                 attachTo:    'top-left',
+                                                                 left:        '25%',
+                                                                 top:         '25%',
+                                                                 widgetsBoard: SCENE_WIDGETS_BOARD,
+                                                             })
+    })
 })
