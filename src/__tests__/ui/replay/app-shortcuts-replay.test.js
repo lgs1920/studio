@@ -188,4 +188,44 @@ describe('app replay shortcuts', () => {
 
         expect(globalThis.__.ui.sceneManager.focus).toHaveBeenCalled()
     })
+
+    it('adjusts replay camera heading and angle from arrows without map focus', async () => {
+        const canvas = document.createElement('canvas')
+        document.body.appendChild(canvas)
+        globalThis.lgs.viewer = {scene: {canvas}}
+        globalThis.lgs.settings.ui.replay.camera = {
+            ...globalThis.lgs.settings.ui.replay.camera,
+            heading:       10,
+            headingOffset: 0,
+            positionMode:  'behind',
+        }
+        globalThis.lgs.stores.replay.camera = globalThis.lgs.settings.ui.replay.camera
+        globalThis.lgs.stores.ui.video = proxy({editing: true})
+        globalThis.lgs.stores.ui.drawers = proxy({open: null})
+        globalThis.__.ui.replay = {
+            refreshCamera: vi.fn(),
+        }
+        const {installAppShortcuts} = await import('@Core/events/appShortcuts')
+        const removers = installAppShortcuts({
+            addShortcut: vi.fn(() => vi.fn()),
+        })
+
+        window.dispatchEvent(new KeyboardEvent('keydown', {bubbles: true, cancelable: true, key: 'ArrowUp'}))
+        await Promise.resolve()
+        expect(globalThis.lgs.settings.ui.replay.camera.heading).toBe(11)
+        expect(globalThis.lgs.settings.ui.replay.camera.headingOffset).toBe(0)
+
+        window.dispatchEvent(new KeyboardEvent('keydown', {bubbles: true, cancelable: true, key: 'ArrowRight'}))
+        await Promise.resolve()
+
+        expect(globalThis.lgs.settings.ui.replay.camera.heading).toBe(11)
+        expect(globalThis.lgs.settings.ui.replay.camera.headingOffset).toBe(-1)
+        expect(globalThis.__.ui.replay.refreshCamera).toHaveBeenCalledTimes(2)
+        expect(globalThis.__.ui.replay.refreshCamera).toHaveBeenLastCalledWith(expect.objectContaining({
+            preparation: true,
+        }))
+        expect(globalThis.lgs.stores.replay.cameraUpdateSource).toBe('keyboard')
+        removers.forEach(remove => remove?.())
+        canvas.remove()
+    })
 })

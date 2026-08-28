@@ -9,8 +9,6 @@ import {Journey} from '@Core/Journey'
 import {CameraUtils} from '@Utils/cesium/CameraUtils'
 import {POIUtils} from '@Utils/cesium/POIUtils'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
-import {faCamera} from '@fortawesome/pro-solid-svg-icons'
-import {faPersonHiking} from '@fortawesome/pro-regular-svg-icons'
 import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
 import {createReplayCameraCommand} from './ReplayCameraCommand'
 import {
@@ -56,17 +54,12 @@ import {
     CAMERA_REDIRECT_RENDERED_DEPTH_CLEARANCE_METERS,
     REPLAY_TOLERANCE_RECENTER_REPLACE_DELAY_MS,
     REPLAY_TRACKING_DYNAMIC_LOOKAHEAD_FACTOR,
-    CAMERA_ANGLE_PREVIEW_AXIS_LENGTH,
-    CAMERA_ANGLE_PREVIEW_OFFSET_LENGTH,
-    CAMERA_ANGLE_PREVIEW_ICON_SIZE,
     REPLAY_JOURNEY_TOOLBAR_VISIBILITY_EVENT,
     REPLAY_EVENT_STOP_CLIPS_COMPLETE,
     CAMERA_REDIRECT_CANDIDATES,
     isUsableCartesian3,
     safeCartesian3Normalize,
     safeCartesian3Lerp,
-    makeFontAwesomeIconDataUri,
-    resolveJourneyActivityIcon,
 } from './JourneyReplayCameraShared'
 import {
     headingBetweenPoints,
@@ -123,15 +116,6 @@ import {
 import {
     removeToleranceZoneOverlay,
     setToleranceZoneOverlayVisible,
-    cameraAnglePreviewEntityCollection,
-    removeCameraAnglePreviewOverlay,
-    cameraAnglePreviewPOIIds,
-    cameraAnglePreviewPOIForId,
-    hideCameraAnglePreviewPOIs,
-    restoreCameraAnglePreviewPOIs,
-    cameraAnglePreviewStartHeading,
-    showCameraAnglePreviewOverlay,
-    hideCameraAnglePreviewOverlay,
     videoCropRect,
     viewportRectForCesiumSurface,
     updateToleranceZoneOverlay,
@@ -264,8 +248,9 @@ const interactiveReplayCamera = mode => replayCameraFor(mode)
 /**
  * Resolve the closest Ahead/Behind representation for a live camera heading.
  *
- * The signed angle is limited to +/-90 degrees. Crossing that limit changes
- * the side of the trace instead of clamping the camera heading.
+ * The interactive angle supports a complete rotation, while mouse-driven
+ * synchronization keeps the closest side of the trace by switching between
+ * Ahead and Behind when the current side crosses ninety degrees.
  *
  * @param {object} options - Heading and current position inputs.
  * @param {number|null} options.axisHeading - Trace tangent heading in radians.
@@ -803,6 +788,9 @@ export const updateCameraFromCesiumControls = (mode, {userInteraction = false} =
                                           || state.cameraUserAdjusting === true
         if (!authorizedUserInteraction) {
             return
+        }
+        if (store?.cameraUpdateSource === 'keyboard') {
+            store.cameraUpdateSource = null
         }
         const logicalNow = finiteNumber(call.now?.()) ?? 0
         if (!userInteraction

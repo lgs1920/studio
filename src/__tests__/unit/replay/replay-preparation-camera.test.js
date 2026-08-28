@@ -3,8 +3,7 @@ import {afterEach, describe, expect, it, vi} from 'vitest'
 import {defaultJourneyReplaySettings} from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from '@Core/ui/replay/JourneyReplayInternal'
 import {lockReplayCameraToAnchor} from '@Core/ui/replay/JourneyReplayCameraState'
-import {prepareReplayCamera} from '@Core/ui/replay/JourneyReplaySessionPlaybackController'
-import {showCameraAnglePreview} from '@Core/ui/replay/JourneyReplaySessionSceneController'
+import {prepareReplayCamera, refreshCamera} from '@Core/ui/replay/JourneyReplaySessionPlaybackController'
 
 afterEach(() => {
     delete globalThis.__
@@ -12,23 +11,6 @@ afterEach(() => {
 })
 
 describe('replay preparation camera', () => {
-    it('delegates camera angle preview rendering to the overlay controller', () => {
-        const showCameraAnglePreviewOverlay = vi.fn()
-        const mode = {
-            [JOURNEY_REPLAY_INTERNAL_CALL]: {showCameraAnglePreviewOverlay},
-        }
-
-        showCameraAnglePreview(mode, {
-            displayOffset: 40,
-            positionMode:  'behind',
-        })
-
-        expect(showCameraAnglePreviewOverlay).toHaveBeenCalledWith({
-            displayOffset: 40,
-            positionMode:  'behind',
-        })
-    })
-
     it('locks Cesium navigation to the replay anchor', () => {
         const target = Cartesian3.fromDegrees(2, 48, 120)
         const destination = Cartesian3.add(target, new Cartesian3(500, 500, 500), new Cartesian3())
@@ -137,5 +119,58 @@ describe('replay preparation camera', () => {
         expect(call.updateCameraSettingsFromCesiumControls).toHaveBeenCalledWith(sample, {
             altitudeMode: settings.camera.altitudeMode,
         })
+    })
+
+    it('keeps keyboard camera changes locked to the departure pivot', () => {
+        const settings = defaultJourneyReplaySettings()
+        const departure = {longitude: 2, latitude: 48, altitude: 120, progress: 0}
+        const laterSample = {longitude: 2.1, latitude: 48.1, altitude: 120, progress: 0.7}
+        const call = {
+            cameraViewForSample: vi.fn(() => ({
+                cameraHeight: 1200,
+                heading:      0.4,
+                pitch:        -0.8,
+                roll:         0,
+                sample:       departure,
+            })),
+            configure: vi.fn(() => ({atProgress: () => departure})),
+            lockReplayCameraToAnchor: vi.fn(() => true),
+            now: vi.fn(() => 1000),
+            updateCamera: vi.fn(),
+        }
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                cameraAutoTrackingIgnoreUntil: 0,
+                controller: {
+                    currentSample: () => laterSample,
+                    progress:      0.7,
+                },
+                sampler: {atProgress: () => departure},
+            },
+            [JOURNEY_REPLAY_INTERNAL_CALL]: call,
+        }
+        globalThis.lgs = {
+            settings: {ui: {replay: settings}},
+            stores: {
+                replay: {camera: settings.camera, marker: settings.marker},
+                main: {theJourney: {}},
+            },
+            theJourney: {},
+        }
+
+        expect(refreshCamera(mode, {
+            preparation: true,
+            source:      'keyboard',
+        })).toEqual(departure)
+        expect(call.configure).not.toHaveBeenCalled()
+        expect(call.cameraViewForSample).toHaveBeenCalledWith(expect.objectContaining({
+            progress: 0,
+            sample:   departure,
+            source:   'keyboard',
+        }))
+        expect(call.lockReplayCameraToAnchor).toHaveBeenCalledWith(expect.objectContaining({
+            sample: departure,
+        }))
+        expect(call.updateCamera).not.toHaveBeenCalled()
     })
 })

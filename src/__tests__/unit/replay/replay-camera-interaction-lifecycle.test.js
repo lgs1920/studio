@@ -236,6 +236,38 @@ describe('JourneyReplay camera interaction lifecycle', () => {
         expect(syncCameraFromCesiumControls).toHaveBeenCalledOnce()
     })
 
+    it('allows mouse synchronization after a keyboard camera adjustment', () => {
+        const syncCameraFromCesiumControls = vi.fn()
+        const call = {
+            markPlaybackCameraUserAdjusted: vi.fn(),
+            now: () => 2000,
+        }
+        const state = {
+            cameraApplyingView:            false,
+            cameraAutoTrackingIgnoreUntil: 0,
+            cameraPointerActive:            true,
+            cameraUserAdjusting:            true,
+            suppressPlaybackCameraSync:     false,
+        }
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_CALL]:  call,
+            [JOURNEY_REPLAY_INTERNAL_STATE]: state,
+            syncCameraFromCesiumControls,
+        }
+        globalThis.lgs = {
+            stores: {
+                replay: {
+                    cameraUpdateSource: 'keyboard',
+                },
+            },
+        }
+
+        updateCameraFromCesiumControls(mode)
+
+        expect(globalThis.lgs.stores.replay.cameraUpdateSource).toBeNull()
+        expect(syncCameraFromCesiumControls).toHaveBeenCalledOnce()
+    })
+
     it('does not accumulate repeated automatic pitch offsets into the nominal setting', () => {
         let now = 1000
         const camera = {

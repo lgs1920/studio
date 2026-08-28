@@ -142,7 +142,7 @@ describe('replay settings normalization', () => {
         const camera = normalizeJourneyReplayCamera({
             altitudeMode: 'constant',
             altitude:     1500,
-            headingOffset: 120,
+            headingOffset: 240,
             pitch:        -50,
             positionMode: REPLAY_CAMERA_POSITION_AHEAD,
         })

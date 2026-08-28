@@ -3,7 +3,7 @@
  */
 
 import {
-    faDrone,
+    faVideo,
 } from '@fortawesome/pro-solid-svg-icons'
 import {
     BoundingSphere,
@@ -19,26 +19,49 @@ import {
     REPLAY_CAMERA_HEADING_OFFSET_MIN,
     REPLAY_CAMERA_POSITION_AHEAD,
     REPLAY_CAMERA_POSITION_SYSTEM,
+    replayCameraSettingsFromArrowKey,
 } from './JourneyReplayProgressionStyle'
+
+export {replayCameraSettingsFromArrowKey}
 
 const CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS = 1200
 const CAMERA_ANGLE_GUIDE_CONE_BASE_HALF_WIDTH_METERS = 240
 const CAMERA_ANGLE_GUIDE_DEPARTURE_DISTANCE_METERS = 300
 const EARTH_RADIUS_METERS = 6378137
-const CAMERA_ANGLE_GUIDE_MAX_SCREEN_RATIO = 0.14
+const CAMERA_ANGLE_GUIDE_MAX_SCREEN_RATIO = 0.2
 const CAMERA_ANGLE_GUIDE_INNER_HEIGHT_RATIO = 0.95
 const CAMERA_ANGLE_GUIDE_INNER_ARC_FLATTENING = 0.32
 const CAMERA_ANGLE_GUIDE_ICON_SIZE = 28
 const CAMERA_ANGLE_GUIDE_ICON_GAP_PIXELS = 28
 const CAMERA_ANGLE_GUIDE_ELEVATION_OFFSET_METERS = 5
+const CAMERA_ANGLE_GUIDE_PICK_HEIGHT_TOLERANCE_METERS = 12
 const CAMERA_ANGLE_GUIDE_DEPTH_CLEARANCE_METERS = 8
 const CAMERA_ANGLE_GUIDE_CONE_ALPHA = 0.8
 const CAMERA_ANGLE_GUIDE_OVERLAY_CLASS = 'replay-camera-angle-guide-dom'
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg'
 const DEFAULT_CAMERA_ANGLE_GUIDE_COLOR = '#ff6a00'
-const DEFAULT_CAMERA_ANGLE_GUIDE_HEADING_COLOR = '#ffffff'
+const DEFAULT_CAMERA_ANGLE_GUIDE_HEADING_COLOR = '#facc15'
+const CAMERA_ANGLE_GUIDE_LESS_LUMINOUS_FACTOR = 0.72
 const cameraAngleGuideRecords = new WeakMap()
 let cameraAngleGuideGradientCounter = 0
+
+/**
+ * Build a key for the guide geometry that requires a new DOM overlay.
+ *
+ * @param {Object|null} guide - Resolved replay camera guide.
+ * @returns {string} Stable geometry key.
+ */
+const guideGeometryKeyFrom = guide => [
+    guide?.anchor?.longitude,
+    guide?.anchor?.latitude,
+    guide?.anchor?.height,
+    guide?.directionPoint?.longitude,
+    guide?.directionPoint?.latitude,
+    guide?.directionPoint?.height,
+    guide?.cameraGroundHeight,
+    guide?.coneHeight,
+    guide?.axisHeading,
+].map(value => Number.isFinite(Number(value)) ? Number(value).toFixed(12) : '').join('|')
 /**
  * Convert a coordinate-like value into a finite map position.
  *
@@ -268,35 +291,39 @@ const positionAtHeadingOffset = (transform, heading, forward, lateral = 0) => Ma
 const positionAtHeading = (transform, heading, distance) => positionAtHeadingOffset(transform, heading, distance)
 
 /**
- * Resolve the cone length from the visible map size.
+ * Resolve the world-space cone length allowed by the current map viewport.
+ *
+ * The initial length is capped to twenty percent of the smallest viewport
+ * dimension. Once reduced by a closer zoom, the length is not increased by a
+ * later zoom out, which prevents the guide from growing unexpectedly.
  *
  * @param {Object} viewer - Cesium viewer.
  * @param {Cartesian3} anchor - Cone anchor in world coordinates.
+ * @param {number} currentLength - Current guide length in metres.
  * @returns {number} Cone length in metres.
  */
-const coneLengthFrom = (viewer, anchor) => {
+const coneLengthFrom = (viewer, anchor, currentLength = CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS) => {
     const scene = viewer?.scene
     const camera = viewer?.camera
-    // Camera#getPixelSize expects drawing-buffer dimensions. Keep these values
-    // in render pixels; the DOM projection is converted separately to CSS px.
     const width = Number(scene?.drawingBufferWidth ?? viewer?.canvas?.clientWidth)
     const height = Number(scene?.drawingBufferHeight ?? viewer?.canvas?.clientHeight)
+    const safeCurrentLength = Number.isFinite(currentLength) && currentLength > 0
+        ? Math.min(CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS, currentLength)
+        : CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS
     if (!camera?.getPixelSize || !Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-        return CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS
+        return safeCurrentLength
     }
 
     try {
         const metersPerPixel = camera.getPixelSize(new BoundingSphere(anchor, 1), width, height)
         if (!Number.isFinite(metersPerPixel) || metersPerPixel <= 0) {
-            return CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS
+            return safeCurrentLength
         }
-        return Math.max(1, Math.min(
-            CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS,
-            metersPerPixel * Math.min(width, height) * CAMERA_ANGLE_GUIDE_MAX_SCREEN_RATIO,
-        ))
+        const viewportLimit = metersPerPixel * Math.min(width, height) * CAMERA_ANGLE_GUIDE_MAX_SCREEN_RATIO
+        return Math.max(1, Math.min(safeCurrentLength, viewportLimit))
     }
     catch {
-        return CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS
+        return safeCurrentLength
     }
 }
 
@@ -358,17 +385,20 @@ const positionAtHeight = (position, height) => {
  * @param {Matrix4} groundTransform - ENU transform at the trace ground anchor.
  * @param {Object} guide - Resolved guide geometry.
  * @param {number} coneHeading - Current cone heading in radians.
- * @returns {{cameraEnd: Cartesian3, cameraGroundPosition: Cartesian3, droneIconPosition: Cartesian3, inner: Array<Cartesian3>, innerBaseCenter: Cartesian3, outer: Array<Cartesian3>, outerBaseCenter: Cartesian3}} Cone vertices.
+ * @param {number|null} coneLength - Optional viewport-capped cone length.
+ * @returns {{cameraEnd: Cartesian3, cameraGroundPosition: Cartesian3, videoIconPosition: Cartesian3, inner: Array<Cartesian3>, innerBaseCenter: Cartesian3, outer: Array<Cartesian3>, outerBaseCenter: Cartesian3}} Cone vertices.
  */
-const coneGeometryFrom = (viewer, anchor, transform, groundTransform, guide, coneHeading = guide.coneHeading) => {
-    const length = coneLengthFrom(viewer, anchor)
+const coneGeometryFrom = (viewer, anchor, transform, groundTransform, guide, coneHeading = guide.coneHeading, coneLength = null) => {
+    const length = Number.isFinite(coneLength) && coneLength > 0
+        ? coneLength
+        : coneLengthFrom(viewer, anchor)
     const iconGap = iconGapFrom(viewer, anchor)
     const baseHalfWidth = Math.min(CAMERA_ANGLE_GUIDE_CONE_BASE_HALF_WIDTH_METERS, length * 0.32)
     const innerBaseHalfWidth = baseHalfWidth * CAMERA_ANGLE_GUIDE_INNER_HEIGHT_RATIO
     const outerBaseLeft = positionAtHeadingOffset(transform, coneHeading, 0, -baseHalfWidth)
     const outerBaseRight = positionAtHeadingOffset(transform, coneHeading, 0, baseHalfWidth)
     const outerTip = positionAtHeading(transform, coneHeading, length)
-    const droneIconPosition = positionAtHeading(transform, coneHeading, length + iconGap)
+    const videoIconPosition = positionAtHeading(transform, coneHeading, length + iconGap)
     const innerBaseOffset = length * (1 - CAMERA_ANGLE_GUIDE_INNER_HEIGHT_RATIO)
     const innerBaseLeft = positionAtHeadingOffset(transform, coneHeading, innerBaseOffset, -innerBaseHalfWidth)
     const innerBaseRight = positionAtHeadingOffset(transform, coneHeading, innerBaseOffset, innerBaseHalfWidth)
@@ -380,7 +410,7 @@ const coneGeometryFrom = (viewer, anchor, transform, groundTransform, guide, con
     return {
         cameraEnd:             outerTip,
         cameraGroundPosition,
-        droneIconPosition,
+        videoIconPosition,
         inner:                 [innerBaseLeft, innerBaseRight, outerTip],
         innerBaseCenter,
         outer:                 [outerBaseLeft, outerBaseRight, outerTip],
@@ -403,6 +433,38 @@ const guideColorFrom = (value, fallback = DEFAULT_CAMERA_ANGLE_GUIDE_COLOR) => {
         return Color.fromCssColorString(fallback)
     }
 }
+
+/**
+ * Resolve a CSS custom property from the active document theme.
+ *
+ * @param {string} propertyName - CSS custom property name.
+ * @param {string} fallback - Fallback CSS color.
+ * @returns {string} Resolved CSS color.
+ */
+const cssThemeColorFrom = (propertyName, fallback) => {
+    if (typeof document === 'undefined' || typeof getComputedStyle !== 'function') {
+        return fallback
+    }
+    const value = getComputedStyle(document.documentElement).getPropertyValue(propertyName).trim()
+    const variableMatch = value.match(/^var\(\s*(--[\w-]+)\s*\)$/)
+    if (variableMatch && variableMatch[1] !== propertyName) {
+        return cssThemeColorFrom(variableMatch[1], fallback)
+    }
+    return value || fallback
+}
+
+/**
+ * Reduce the luminosity of a Cesium color while keeping it opaque.
+ *
+ * @param {Color} color - Source color.
+ * @returns {Color} Less luminous opaque color.
+ */
+const lessLuminousColorFrom = color => new Color(
+    color.red * CAMERA_ANGLE_GUIDE_LESS_LUMINOUS_FACTOR,
+    color.green * CAMERA_ANGLE_GUIDE_LESS_LUMINOUS_FACTOR,
+    color.blue * CAMERA_ANGLE_GUIDE_LESS_LUMINOUS_FACTOR,
+    1,
+)
 
 /**
  * Build a self-contained SVG data URL for a map billboard icon.
@@ -577,6 +639,34 @@ const domAngleFrom = (origin, direction) => {
 }
 
 /**
+ * Interpolate a projected point along a segment.
+ *
+ * @param {{x: number, y: number}} start - Segment start.
+ * @param {{x: number, y: number}} end - Segment end.
+ * @param {number} ratio - Segment interpolation ratio.
+ * @returns {{x: number, y: number}} Interpolated point.
+ */
+const interpolateProjectedPoint = (start, end, ratio) => ({
+    x: start.x + ((end.x - start.x) * ratio),
+    y: start.y + ((end.y - start.y) * ratio),
+})
+
+/**
+ * Format the configured camera angle for the guide label.
+ *
+ * @param {number} angleDegrees - Display angle in degrees.
+ * @returns {string} Formatted angle label.
+ */
+const angleLabelFrom = angleDegrees => {
+    const value = Number(angleDegrees)
+    if (!Number.isFinite(value)) {
+        return ''
+    }
+    const roundedValue = Math.round(value * 10) / 10
+    return `${roundedValue > 0 ? '+' : ''}${roundedValue}°`
+}
+
+/**
  * Build the SVG arc command joining two points with an optionally flattened base.
  *
  * @param {{x: number, y: number}} baseLeft - Left base point.
@@ -659,23 +749,6 @@ const svgGradientAxisFrom = (tip, baseLeft, baseRight) => {
 }
 
 /**
- * Resolve the shortest heading change since the guide was mounted.
- *
- * @param {Object} viewer - Cesium viewer.
- * @param {number|null} initialHeading - Camera heading at mount time.
- * @returns {number} Signed heading change in radians.
- */
-const cameraHeadingDeltaFrom = (viewer, initialHeading) => {
-    const currentHeading = Number(viewer?.camera?.heading)
-    if (!Number.isFinite(currentHeading) || !Number.isFinite(initialHeading)) {
-        return 0
-    }
-
-    const fullTurn = Math.PI * 2
-    return ((currentHeading - initialHeading + Math.PI) % fullTurn + fullTurn) % fullTurn - Math.PI
-}
-
-/**
  * Create an SVG stroke path style.
  *
  * @param {Color} color - Stroke color.
@@ -711,58 +784,68 @@ const positionGuideIcon = (icon, point, heading = null) => {
 }
 
 /**
- * Check whether a projected map point is inside the visible DOM map viewport.
+ * Check whether a Cesium Cartesian contains finite coordinates.
  *
- * @param {{x: number, y: number}|null} point - Projected map point.
- * @param {number} width - Overlay width in CSS pixels.
- * @param {number} height - Overlay height in CSS pixels.
- * @returns {boolean} Whether the point is visible in the viewport.
+ * @param {Cartesian3|null} position - Cartesian position.
+ * @returns {boolean} Whether the position is usable.
  */
-const isGuidePointVisible = (point, width, height) => Boolean(
-    point
-    && Number.isFinite(point.x)
-    && Number.isFinite(point.y)
-    && point.x >= 0
-    && point.x <= width
-    && point.y >= 0
-    && point.y <= height,
+const isFiniteCartesianPosition = position => Boolean(
+    position
+    && [position.x, position.y, position.z].every(Number.isFinite),
 )
 
 /**
- * Check whether the departure point is inside the Cesium viewport and visible
- * in the rendered depth buffer when that information is available.
+ * Check whether a depth pick projects back to the pixel that was queried.
+ *
+ * @param {Object} scene - Cesium scene.
+ * @param {Cartesian3} position - Picked world position.
+ * @param {{x: number, y: number}} expectedCanvasPoint - Queried canvas point.
+ * @returns {boolean} Whether the pick is spatially consistent.
+ */
+const isGuidePickProjectionConsistent = (scene, position, expectedCanvasPoint) => {
+    if (typeof scene?.cartesianToCanvasCoordinates !== 'function') {
+        return true
+    }
+    try {
+        const projectedPick = scene.cartesianToCanvasCoordinates(position, new Cartesian2())
+        return Boolean(
+            projectedPick
+            && Number.isFinite(projectedPick.x)
+            && Number.isFinite(projectedPick.y)
+            && Math.hypot(projectedPick.x - expectedCanvasPoint.x, projectedPick.y - expectedCanvasPoint.y) <= 4,
+        )
+    }
+    catch {
+        return false
+    }
+}
+
+/**
+ * Check whether the elevated departure anchor is visible in the current map.
+ * The pick altitude is allowed to differ from the simulated trace altitude;
+ * only a pick clearly above the elevated guide can occlude it.
  *
  * @param {Object} viewer - Cesium viewer.
  * @param {HTMLElement} overlay - DOM overlay.
- * @param {Cartesian3} position - Departure position on the trace.
- * @param {number} width - Overlay width in CSS pixels.
- * @param {number} height - Overlay height in CSS pixels.
+ * @param {Cartesian3} position - Elevated departure position.
  * @param {boolean} checkDepth - Whether the current rendered depth may be used.
  * @returns {boolean} Whether the departure point can currently be seen.
  */
-const isGuideWorldPositionVisible = (viewer, overlay, position, width, height, checkDepth) => {
+const isGuideWorldPositionVisible = (viewer, overlay, position, checkDepth) => {
     const projection = guideProjectionFrom(viewer, overlay, position)
-    const canvas = viewer?.scene?.canvas
-    const canvasWidth = Number(canvas?.clientWidth) || width
-    const canvasHeight = Number(canvas?.clientHeight) || height
-    if (!projection
-        || !isGuidePointVisible(projection.dom, width, height)
-        || !isGuidePointVisible(projection.canvas, canvasWidth, canvasHeight)) {
-        return false
+    if (!projection) {
+        return true
     }
 
     const scene = viewer?.scene
     const camera = viewer?.camera ?? scene?.camera
     const cameraPosition = camera?.positionWC ?? camera?.position
-    if (!scene || !camera || !cameraPosition) {
-        return true
-    }
-    if (!checkDepth) {
+    if (!scene || !camera || !isFiniteCartesianPosition(cameraPosition) || !checkDepth) {
         return true
     }
 
-    let pickedPosition = null
     const canvasPosition = new Cartesian2(projection.canvas.x, projection.canvas.y)
+    let pickedPosition = null
     if (scene.pickPositionSupported === true && typeof scene.pickPosition === 'function') {
         try {
             pickedPosition = scene.pickPosition(canvasPosition)
@@ -771,15 +854,24 @@ const isGuideWorldPositionVisible = (viewer, overlay, position, width, height, c
             pickedPosition = null
         }
     }
-    if (!pickedPosition) {
+    if (!isFiniteCartesianPosition(pickedPosition)) {
         const pickRay = camera.getPickRay?.(canvasPosition)
         pickedPosition = pickRay ? scene.globe?.pick?.(pickRay, scene) : null
     }
-    if (!pickedPosition) {
+    if (!isFiniteCartesianPosition(pickedPosition)) {
+        return true
+    }
+    if (!isGuidePickProjectionConsistent(scene, pickedPosition, projection.canvas)) {
         return true
     }
 
     try {
+        const targetCartographic = Cartographic.fromCartesian(position)
+        const pickedCartographic = Cartographic.fromCartesian(pickedPosition)
+        if (targetCartographic && pickedCartographic
+            && pickedCartographic.height <= targetCartographic.height + CAMERA_ANGLE_GUIDE_PICK_HEIGHT_TOLERANCE_METERS) {
+            return true
+        }
         const targetDistance = Cartesian3.distance(cameraPosition, position)
         const pickedDistance = Cartesian3.distance(cameraPosition, pickedPosition)
         return pickedDistance + CAMERA_ANGLE_GUIDE_DEPTH_CLEARANCE_METERS >= targetDistance
@@ -795,18 +887,25 @@ const isGuideWorldPositionVisible = (viewer, overlay, position, width, height, c
  * @param {Object} viewer - Cesium viewer.
  * @param {Object} record - Mounted guide record.
  * @param {boolean} checkDepth - Whether the current rendered depth may be used.
- * @returns {void}
+ * @returns {'drawn'|'hidden'|'unprojected'} Guide update status.
  */
 const updateGuideOverlay = (viewer, record, checkDepth = true) => {
     const {overlay, elements} = record
     const overlayRect = overlay.getBoundingClientRect?.() ?? {}
     const width = Number(overlayRect.width) || overlay.clientWidth || viewer.scene.canvas?.clientWidth || 1
     const height = Number(overlayRect.height) || overlay.clientHeight || viewer.scene.canvas?.clientHeight || 1
-    if (!isGuideWorldPositionVisible(viewer, overlay, record.groundAnchor, width, height, checkDepth)) {
-        overlay.style.visibility = 'hidden'
-        return
+    if (!checkDepth) {
+        // A camera event is a geometry update, not a visibility decision.
+        // Restore the overlay immediately so a previous occlusion result cannot
+        // leave the guide hidden while Cesium is between projections.
+        overlay.style.visibility = 'visible'
     }
-    const coneHeading = record.guide.coneHeading + cameraHeadingDeltaFrom(viewer, record.initialCameraHeading)
+    if (!isGuideWorldPositionVisible(viewer, overlay, record.visibilityAnchor, checkDepth)) {
+        overlay.style.visibility = 'hidden'
+        return 'hidden'
+    }
+    const coneHeading = record.guide.coneHeading
+    record.coneLength = coneLengthFrom(viewer, record.anchor, record.coneLength)
     const geometry = coneGeometryFrom(
         viewer,
         record.anchor,
@@ -814,6 +913,7 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
         record.groundTransform,
         record.guide,
         coneHeading,
+        record.coneLength,
     )
     const outer = geometry.outer.map(position => projectGuidePosition(viewer, overlay, position))
     const inner = geometry.inner.map(position => projectGuidePosition(viewer, overlay, position))
@@ -821,11 +921,13 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
     const innerBaseCenter = projectGuidePosition(viewer, overlay, geometry.innerBaseCenter)
     const traceDirection = projectGuidePosition(viewer, overlay, record.directionPosition)
     const cameraGround = projectGuidePosition(viewer, overlay, geometry.cameraGroundPosition)
-    const droneIcon = projectGuidePosition(viewer, overlay, geometry.droneIconPosition)
+    const videoIcon = projectGuidePosition(viewer, overlay, geometry.videoIconPosition)
 
     if (outer.some(point => !point) || inner.some(point => !point)) {
-        overlay.style.visibility = 'hidden'
-        return
+        // Keep the last valid cone visible while Cesium temporarily has no
+        // screen projection (camera flight, resize, or tile update).
+        overlay.style.visibility = 'visible'
+        return 'unprojected'
     }
 
     const rotationCenter = outerBaseCenter
@@ -851,13 +953,16 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
     const rotatedCameraGround = rotationCenter && cameraGround
         ? rotateProjectedPoint(cameraGround, rotationCenter, domRotation)
         : cameraGround
-    const rotatedDroneIcon = rotationCenter && droneIcon
-        ? rotateProjectedPoint(droneIcon, rotationCenter, domRotation)
-        : droneIcon
+    const rotatedVideoIcon = rotationCenter && videoIcon
+        ? rotateProjectedPoint(videoIcon, rotationCenter, domRotation)
+        : videoIcon
     const [outerLeft, outerRight, tip] = rotatedOuter
     const [innerOuterLeft, innerOuterRight, innerTip] = rotatedInner
     const [left, right] = recenterProjectedBase(outerLeft, outerRight, outerBaseCenter)
     const [innerLeft, innerRight] = recenterProjectedBase(innerOuterLeft, innerOuterRight, rotatedInnerBaseCenter)
+    const angleLabelPoint = rotatedInnerBaseCenter && innerTip
+        ? interpolateProjectedPoint(rotatedInnerBaseCenter, innerTip, 0.24)
+        : null
     const innerGradientAxis = svgGradientAxisFrom(innerTip, innerLeft, innerRight)
     elements.outer.setAttribute('d', svgConePathFrom(left, right, tip))
     elements.inner.setAttribute('d', svgConePathFrom(
@@ -878,11 +983,23 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
     elements.rightSide.setAttribute('y1', right.y)
     elements.rightSide.setAttribute('x2', tip.x)
     elements.rightSide.setAttribute('y2', tip.y)
-    if (rotatedCameraGround && rotatedDroneIcon) {
+    if (angleLabelPoint) {
+        elements.angleLabel.textContent = angleLabelFrom(record.guide.angleDegrees)
+        elements.angleLabel.setAttribute('x', angleLabelPoint.x)
+        elements.angleLabel.setAttribute('y', angleLabelPoint.y)
+        const coneAngle = domAngleFrom(rotatedInnerBaseCenter, innerTip)
+        const perpendicularAngle = coneAngle === null ? 270 : (coneAngle * 180 / Math.PI) + 270
+        elements.angleLabel.setAttribute('transform', `rotate(${perpendicularAngle} ${angleLabelPoint.x} ${angleLabelPoint.y})`)
+        elements.angleLabel.style.display = 'block'
+    }
+    else {
+        elements.angleLabel.style.display = 'none'
+    }
+    if (rotatedCameraGround && rotatedVideoIcon) {
         elements.cameraElevation.setAttribute('x1', rotatedCameraGround.x)
         elements.cameraElevation.setAttribute('y1', rotatedCameraGround.y)
-        elements.cameraElevation.setAttribute('x2', rotatedDroneIcon.x)
-        elements.cameraElevation.setAttribute('y2', rotatedDroneIcon.y)
+        elements.cameraElevation.setAttribute('x2', rotatedVideoIcon.x)
+        elements.cameraElevation.setAttribute('y2', rotatedVideoIcon.y)
         elements.cameraElevation.style.display = 'block'
     }
     else {
@@ -892,12 +1009,13 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
         ? domAngleFrom(rotationCenter, tip)
         : null
     positionGuideIcon(
-        elements.droneIcon,
-        rotatedDroneIcon,
+        elements.videoIcon,
+        rotatedVideoIcon,
         projectedConeHeading === null ? null : projectedConeHeading + Math.PI,
     )
     elements.svg.setAttribute('viewBox', `0 0 ${width} ${height}`)
     overlay.style.visibility = 'visible'
+    return 'drawn'
 }
 
 /**
@@ -923,7 +1041,7 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor}) => {
         overflow:     'hidden',
         pointerEvents: 'none',
         position:     'absolute',
-        visibility:   'hidden',
+        visibility:   'visible',
         width:        '100%',
         height:       '100%',
         zIndex:       '2',
@@ -978,7 +1096,19 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor}) => {
     const leftSide = createLine(aheadColor)
     const rightSide = createLine(aheadColor)
     const cameraElevation = createLine(aheadColor)
-    svg.append(definitions, outer, inner, leftSide, rightSide, cameraElevation)
+    const angleLabel = createSvgElement('text', {
+        'data-part':       'angle-label',
+        'dominant-baseline': 'middle',
+        fill:              cssColorFrom(headingColor),
+        opacity:           1,
+        'text-anchor':      'middle',
+    })
+    angleLabel.style.fontFamily = 'system-ui, sans-serif'
+    angleLabel.style.fontSize = '14px'
+    angleLabel.style.fontWeight = '700'
+    angleLabel.style.pointerEvents = 'none'
+    angleLabel.style.userSelect = 'none'
+    svg.append(definitions, outer, inner, leftSide, rightSide, cameraElevation, angleLabel)
 
     const createIcon = (image) => {
         const icon = document.createElement('img')
@@ -995,13 +1125,14 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor}) => {
         })
         return icon
     }
-    const droneIcon = createIcon(iconDataUriFrom(faDrone, aheadColor))
-    overlay.append(svg, droneIcon)
+    const videoIcon = createIcon(iconDataUriFrom(faVideo, aheadColor))
+    overlay.append(svg, videoIcon)
     container.appendChild(overlay)
     return {
         elements: {
+            angleLabel,
             cameraElevation,
-            droneIcon,
+            videoIcon,
             innerGradient,
             inner,
             leftSide,
@@ -1019,9 +1150,19 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor}) => {
  * @param {Object} viewer - Cesium viewer.
  * @param {Object} record - Mounted guide record.
  * @param {boolean} checkDepth - Whether the current rendered depth may be used.
- * @returns {void}
+ * @returns {'drawn'|'hidden'|'unprojected'} Guide update status.
  */
-const updateGuideGeometry = (viewer, record, checkDepth = true) => updateGuideOverlay(viewer, record, checkDepth)
+const updateGuideGeometry = (viewer, record, checkDepth = true) => {
+    const status = updateGuideOverlay(viewer, record, checkDepth)
+    if (status === 'drawn') {
+        record.projectionRetryCount = 0
+    }
+    else if (status === 'unprojected' && record.projectionRetryCount < 4) {
+        record.projectionRetryCount += 1
+        viewer.scene?.requestRender?.()
+    }
+    return status
+}
 
 /**
  * Remove the currently mounted map guide for a viewer.
@@ -1038,6 +1179,10 @@ export const removeJourneyReplayCameraAngleGuide = viewer => {
     cameraAngleGuideRecords.delete(viewer)
     record.removeCameraChangedListener?.()
     record.removePostRenderListener?.()
+    record.removeCameraMoveStartListener?.()
+    if (record.canvasWheelListener) {
+        viewer.scene?.canvas?.removeEventListener?.('wheel', record.canvasWheelListener, true)
+    }
     globalThis.removeEventListener?.('resize', record.resizeListener)
     record.overlay?.remove()
     return true
@@ -1060,6 +1205,11 @@ export const mountJourneyReplayCameraAngleGuide = (viewer, guide, colors = {}) =
     const groundAnchor = Cartesian3.fromDegrees(guide.anchor.longitude, guide.anchor.latitude, guide.anchor.height)
     const coneHeight = Number.isFinite(guide.coneHeight) ? guide.coneHeight : guide.anchor.height
     const anchor = Cartesian3.fromDegrees(guide.anchor.longitude, guide.anchor.latitude, coneHeight)
+    const visibilityAnchor = Cartesian3.fromDegrees(
+        guide.anchor.longitude,
+        guide.anchor.latitude,
+        guide.anchor.height + CAMERA_ANGLE_GUIDE_ELEVATION_OFFSET_METERS,
+    )
     const transform = Transforms.eastNorthUpToFixedFrame(anchor)
     const groundTransform = Transforms.eastNorthUpToFixedFrame(groundAnchor)
     const directionPosition = guide.directionPoint
@@ -1073,13 +1223,21 @@ export const mountJourneyReplayCameraAngleGuide = (viewer, guide, colors = {}) =
             guide.axisHeading,
             CAMERA_ANGLE_GUIDE_DEPARTURE_DISTANCE_METERS,
         )
-    const headingColorValue = typeof colors === 'string' ? colors : colors?.headingColor
-    const aheadColorValue = typeof colors === 'string' ? colors : colors?.aheadColor
-    const headingColor = guideColorFrom(headingColorValue, DEFAULT_CAMERA_ANGLE_GUIDE_HEADING_COLOR)
-    const aheadColor = guideColorFrom(aheadColorValue, DEFAULT_CAMERA_ANGLE_GUIDE_COLOR)
+    const brandColorValue = typeof colors === 'string'
+        ? colors
+        : colors?.brandColor ?? colors?.headingColor
+    const headingColor = guideColorFrom(
+        brandColorValue ?? cssThemeColorFrom('--wa-color-brand', DEFAULT_CAMERA_ANGLE_GUIDE_HEADING_COLOR),
+        DEFAULT_CAMERA_ANGLE_GUIDE_HEADING_COLOR,
+    )
+    const aheadColor = guideColorFrom(
+        typeof colors === 'string' ? null : colors?.aheadColor,
+        lessLuminousColorFrom(headingColor).toCssColorString(),
+    )
+    const coneColor = guide.mode === 'Ahead' ? aheadColor : headingColor
     const overlayParts = createGuideOverlay({
         aheadColor,
-        headingColor,
+        headingColor: coneColor,
         viewer,
     })
     if (!overlayParts) {
@@ -1092,20 +1250,64 @@ export const mountJourneyReplayCameraAngleGuide = (viewer, guide, colors = {}) =
         groundAnchor,
         groundTransform,
         guide,
+        depthProbePending: true,
         directionPosition,
-        initialCameraHeading: Number.isFinite(Number(viewer.camera?.heading))
-            ? Number(viewer.camera.heading)
-            : null,
+        coneLength: coneLengthFrom(viewer, anchor),
+        projectionRetryCount: 0,
         transform,
+        visibilityAnchor,
     }
     cameraAngleGuideRecords.set(viewer, record)
     record.removeCameraChangedListener = viewer.camera?.changed?.addEventListener?.(() => {
+        record.depthProbePending = true
         updateGuideGeometry(viewer, record, false)
         viewer.scene?.requestRender?.()
     })
-    record.removePostRenderListener = viewer.scene?.postRender?.addEventListener?.(() => updateGuideGeometry(viewer, record))
-    record.resizeListener = () => updateGuideGeometry(viewer, record, false)
+    record.removeCameraMoveStartListener = viewer.camera?.moveStart?.addEventListener?.(() => {
+        record.depthProbePending = true
+    })
+    record.removePostRenderListener = viewer.scene?.postRender?.addEventListener?.(() => {
+        if (!record.depthProbePending) {
+            return
+        }
+        record.depthProbePending = false
+        updateGuideGeometry(viewer, record, true)
+    })
+    record.resizeListener = () => {
+        record.depthProbePending = true
+        updateGuideGeometry(viewer, record, false)
+        viewer.scene?.requestRender?.()
+    }
+    record.canvasWheelListener = () => {
+        record.depthProbePending = true
+    }
+    viewer.scene.canvas.addEventListener?.('wheel', record.canvasWheelListener, true)
     globalThis.addEventListener?.('resize', record.resizeListener)
     updateGuideGeometry(viewer, record, false)
+    viewer.scene?.requestRender?.()
+    return true
+}
+
+/**
+ * Update a mounted guide without replacing its DOM overlay.
+ *
+ * @param {Object} viewer - Cesium viewer.
+ * @param {Object|null} guide - New resolved replay camera guide.
+ * @returns {boolean} Whether the mounted guide was updated.
+ */
+export const updateJourneyReplayCameraAngleGuide = (viewer, guide) => {
+    const record = viewer ? cameraAngleGuideRecords.get(viewer) : null
+    if (!record || !guide || guideGeometryKeyFrom(record.guide) !== guideGeometryKeyFrom(guide)) {
+        return false
+    }
+
+    const angleChanged = record.guide.coneHeading !== guide.coneHeading
+        || record.guide.angleDegrees !== guide.angleDegrees
+    record.guide = guide
+    if (angleChanged) {
+        record.depthProbePending = true
+    }
+    updateGuideGeometry(viewer, record, false)
+    viewer.scene?.requestRender?.()
     return true
 }

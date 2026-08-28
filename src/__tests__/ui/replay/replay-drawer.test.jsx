@@ -293,34 +293,6 @@ describe('JourneyReplayDrawer', () => {
                     refreshCamera: vi.fn(),
                     stop:          vi.fn(),
                     setHideOtherJourneys: vi.fn(),
-                    getAnglePreviewPoiIds: vi.fn(() => {
-                        const journey = globalThis.lgs?.stores?.main?.theJourney
-                        const tracks = Array.from(journey?.tracks?.values?.() ?? [])
-                        if (tracks.length === 0) {
-                            return []
-                        }
-
-                        return Array.from(new Set([
-                            tracks[0]?.flags?.start,
-                            tracks[tracks.length - 1]?.flags?.stop,
-                        ].filter(Boolean)))
-                    }),
-                    showCameraAnglePreview: vi.fn(() => {
-                        for (const poiId of globalThis.__.ui.replay.getAnglePreviewPoiIds()) {
-                            const poi = poiEntities.get(poiId)
-                            if (poi) {
-                                poi.show = false
-                            }
-                        }
-                    }),
-                    hideCameraAnglePreview: vi.fn(() => {
-                        for (const poiId of globalThis.__.ui.replay.getAnglePreviewPoiIds()) {
-                            const poi = poiEntities.get(poiId)
-                            if (poi) {
-                                poi.show = true
-                            }
-                        }
-                    }),
                 },
             },
         }
@@ -587,7 +559,7 @@ describe('JourneyReplayDrawer', () => {
         })
     })
 
-    it('applies the camera angle slider and shows the runtime preview while editing', async () => {
+    it('applies the camera angle slider without mutating the Cesium scene', async () => {
         const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
         globalThis.lgs.stores.replay.camera.positionMode = 'behind'
         globalThis.lgs.settings.ui.replay.camera.positionMode = 'behind'
@@ -622,7 +594,6 @@ describe('JourneyReplayDrawer', () => {
         const angleInput = view.getByLabelText('Camera angle')
 
         fireEvent.focus(angleInput)
-        expect(globalThis.__.ui.replay.showCameraAnglePreview).not.toHaveBeenCalled()
         expect(globalThis.lgs.viewer.entities.getById('journey-start').show).toBe(true)
         expect(globalThis.lgs.viewer.entities.getById('journey-stop').show).toBe(true)
         globalThis.__.ui.replay.refreshCamera.mockClear()
@@ -635,17 +606,11 @@ describe('JourneyReplayDrawer', () => {
         })
         expect(globalThis.__.ui.replay.refreshCamera).toHaveBeenCalledTimes(2)
 
-        expect(globalThis.__.ui.replay.showCameraAnglePreview).toHaveBeenCalledTimes(2)
-        expect(globalThis.__.ui.replay.showCameraAnglePreview).toHaveBeenLastCalledWith({
-            displayOffset: 40,
-            positionMode:  'behind',
-        })
         expect(setTimeoutSpy).not.toHaveBeenCalledWith(expect.any(Function), 5000)
 
         fireEvent.blur(angleInput)
-        expect(globalThis.__.ui.replay.hideCameraAnglePreview).not.toHaveBeenCalled()
-        expect(globalThis.lgs.viewer.entities.getById('journey-start').show).toBe(false)
-        expect(globalThis.lgs.viewer.entities.getById('journey-stop').show).toBe(false)
+        expect(globalThis.lgs.viewer.entities.getById('journey-start').show).toBe(true)
+        expect(globalThis.lgs.viewer.entities.getById('journey-stop').show).toBe(true)
         setTimeoutSpy.mockRestore()
     })
 

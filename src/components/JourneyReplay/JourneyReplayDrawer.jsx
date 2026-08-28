@@ -734,10 +734,6 @@ export const JourneyReplayDrawer = memo(() => {
                 suppressMoveEvents: true,
                 source:             'drawer',
             })
-            __.ui.replay?.showCameraAnglePreview?.({
-                displayOffset: -nextCamera.headingOffset,
-                positionMode:  nextCamera.positionMode,
-            })
         }
     }, [replayState.active, replayState.paused, replayState.playing, replayState.sample, refreshJourneyReplay, stopRotateIfNeeded])
 

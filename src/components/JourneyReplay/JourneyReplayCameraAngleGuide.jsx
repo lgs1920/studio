@@ -5,13 +5,13 @@
 import {REPLAY_DRAWER} from '@Core/constants'
 import {
     normalizeJourneyReplayCamera,
-    REPLAY_CAMERA_POSITION_AHEAD,
     REPLAY_CAMERA_POSITION_SYSTEM,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {
     mountJourneyReplayCameraAngleGuide,
     removeJourneyReplayCameraAngleGuide,
     resolveJourneyReplayCameraAngleGuide,
+    updateJourneyReplayCameraAngleGuide,
 } from '@Core/ui/replay/JourneyReplayCameraAngleGuide'
 import {useOptionalSnapshot} from '@Utils/ValtioUtils'
 import {useEffect} from 'react'
@@ -20,10 +20,6 @@ import {useSnapshot} from 'valtio'
 const DEFAULT_REPLAY_ANGLE_GUIDE_SETTINGS = {
     camera: {headingOffset: 0, positionMode: REPLAY_CAMERA_POSITION_SYSTEM},
 }
-const REPLAY_CAMERA_ANGLE_GUIDE_COLORS = Object.freeze({
-    ahead:  '#ff8a00',
-    behind: '#22c55e',
-})
 
 /**
  * Mount the 3D camera composition guide while replay camera settings are edited.
@@ -50,22 +46,34 @@ export const JourneyReplayCameraAngleGuide = () => {
         const journey = lgs.stores.main.theJourney
         const guide = resolveJourneyReplayCameraAngleGuide({
             camera: {
-                headingOffset: cameraHeadingOffset,
+                headingOffset: lgs.settings?.ui?.replay?.camera?.headingOffset ?? 0,
                 positionMode:  cameraPositionMode,
             },
             journey,
         })
-        const guideColor = cameraPositionMode === REPLAY_CAMERA_POSITION_AHEAD
-            ? REPLAY_CAMERA_ANGLE_GUIDE_COLORS.ahead
-            : REPLAY_CAMERA_ANGLE_GUIDE_COLORS.behind
-        if (!mountJourneyReplayCameraAngleGuide(viewer, guide, {
-            aheadColor:   guideColor,
-            headingColor: guideColor,
-        })) {
+        if (!mountJourneyReplayCameraAngleGuide(viewer, guide)) {
             removeJourneyReplayCameraAngleGuide(viewer)
         }
 
         return () => removeJourneyReplayCameraAngleGuide(viewer)
+    }, [cameraPositionMode, editing, main.theJourney])
+
+    useEffect(() => {
+        if (!editing || cameraPositionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
+            return
+        }
+
+        const viewer = lgs.viewer
+        const guide = resolveJourneyReplayCameraAngleGuide({
+            camera: {
+                headingOffset: cameraHeadingOffset,
+                positionMode:  cameraPositionMode,
+            },
+            journey: lgs.stores.main.theJourney,
+        })
+        if (!updateJourneyReplayCameraAngleGuide(viewer, guide)) {
+            mountJourneyReplayCameraAngleGuide(viewer, guide)
+        }
     }, [cameraHeadingOffset, cameraPositionMode, editing, main.theJourney])
 
     return null

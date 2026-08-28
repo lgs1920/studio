@@ -13,7 +13,7 @@ import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from '@Core
 import {REPLAY_EVENT_UPDATE} from '@Core/ui/replay/JourneyReplayPlaybackController'
 import {beginReplaySessionOwnership} from '@Core/ui/replay/ReplaySessionOwnership'
 import {
-    abortPlaybackAfterListenerError, bindRenderer, restoreCameraState, restorePlaybackScene, restorePlaybackSceneInternal,
+    abortPlaybackAfterListenerError, bindRenderer, captureCameraState, restoreCameraState, restorePlaybackScene, restorePlaybackSceneInternal,
 } from '@Core/ui/replay/JourneyReplaySessionSceneController'
 
 const makeMode = () => {
@@ -274,6 +274,58 @@ describe('JourneyReplaySessionSceneController', () => {
             altitude: 2400,
         })
         expect(camera.setView).toHaveBeenCalledTimes(1)
+    })
+
+    it('preserves the camera pivot when restoring after replay', () => {
+        const pivot = {
+            height:          120,
+            id:              'departure-pivot',
+            latitude:        48.1,
+            longitude:       2.1,
+            simulatedHeight: 125,
+        }
+        const cameraManager = {target: {...pivot}}
+        const camera = {
+            cancelFlight: vi.fn(),
+            heading:      0.4,
+            latitude:     0,
+            longitude:    0,
+            pitch:        -0.8,
+            positionCartographic: {height: 5000, latitude: 0.8, longitude: 0.03},
+            roll:         0,
+            lookAtTransform: vi.fn(),
+            setView:      vi.fn(),
+        }
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_CALL]:  {},
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {lastCameraHeading: 0, lastCameraPitch: -1},
+        }
+        globalThis.__ = {ui: {cameraManager}}
+        globalThis.lgs = {
+            stores: {
+                main: {
+                    components: {
+                        camera: {target: {...pivot}},
+                    },
+                },
+            },
+            viewer: {camera},
+        }
+
+        try {
+            const captured = captureCameraState(mode)
+            expect(captured.pivot).toEqual(pivot)
+
+            cameraManager.target = {longitude: 9, latitude: 9, height: 9}
+            globalThis.lgs.stores.main.components.camera.target = {longitude: 9, latitude: 9, height: 9}
+            expect(restoreCameraState(mode)).toBe(true)
+
+            expect(cameraManager.target).toEqual(pivot)
+            expect(globalThis.lgs.stores.main.components.camera.target).toEqual(pivot)
+        }
+        finally {
+            delete globalThis.__
+        }
     })
 
     it('reapplies the active replay camera when an obsolete focus settles late', async () => {

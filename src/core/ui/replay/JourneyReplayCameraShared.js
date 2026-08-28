@@ -8,12 +8,9 @@
 
 import {ArcType, Cartesian2, Cartesian3, Cartographic, CatmullRomSpline, Color, ExtrapolationType, JulianDate, EasingFunction, HeightReference, HorizontalOrigin, LinearApproximation, Matrix4, PolylineDashMaterialProperty, SampledPositionProperty, SceneTransforms, Transforms, VerticalOrigin, Math as CesiumMath} from 'cesium'
 import {REPLAY_DRAWER} from '@Core/constants'
-import {Journey} from '@Core/Journey'
 import {CameraUtils} from '@Utils/cesium/CameraUtils'
 import {POIUtils} from '@Utils/cesium/POIUtils'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
-import {faCamera} from '@fortawesome/pro-solid-svg-icons'
-import {faPersonHiking} from '@fortawesome/pro-regular-svg-icons'
 import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
 import {finiteNumber, replayStore} from './JourneyReplayRuntime'
 import {
@@ -80,9 +77,6 @@ export const REPLAY_CAMERA_IMMEDIATE_RELIEF_ACTIVATION_MILLIS = 0
 export const REPLAY_CAMERA_NEAR_RELIEF_ACTIVATION_MILLIS = 50
 export const REPLAY_TOLERANCE_RECENTER_REPLACE_DELAY_MS = 300
 export const REPLAY_TRACKING_DYNAMIC_LOOKAHEAD_FACTOR = 1.35
-export const CAMERA_ANGLE_PREVIEW_AXIS_LENGTH = 1800
-export const CAMERA_ANGLE_PREVIEW_OFFSET_LENGTH = 1800
-export const CAMERA_ANGLE_PREVIEW_ICON_SIZE = 24
 export const REPLAY_JOURNEY_TOOLBAR_VISIBILITY_EVENT = 'lgs:replay:journey-toolbar-visibility'
 export const REPLAY_EVENT_STOP_CLIPS_COMPLETE = 'replay/stop-clips-complete'
 export const CAMERA_REDIRECT_CANDIDATES = Object.freeze([
@@ -129,28 +123,6 @@ export const safeCartesian3Lerp = (left, right, ratio, result = new Cartesian3()
     }
 
     return Cartesian3.lerp(left, right, ratio, result)
-}
-
-export const makeFontAwesomeIconDataUri = (definition, color, size = 24) => {
-    const [width, height, , , pathData] = definition.icon
-    const paths = (Array.isArray(pathData) ? pathData : [pathData]).filter(Boolean)
-    const scale = Math.min((size * 0.78) / width, (size * 0.78) / height)
-    const x = (size - width * scale) / 2
-    const y = (size - height * scale) / 2
-    const fill = `${color ?? '#ffffff'}`
-    const svg = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-            <g transform="translate(${x} ${y}) scale(${scale})">
-                ${paths.map(path => `<path d="${path}" fill="${fill}"/>`).join('')}
-            </g>
-        </svg>
-    `.trim()
-    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
-}
-
-export const resolveJourneyActivityIcon = (journey = null) => {
-    const activityIcon = Journey.activityProfile(journey?.activity, journey?.activitySettings)?.icon
-    return activityIcon === 'person-hiking' ? faPersonHiking : faPersonHiking
 }
 
 export {replayPitchLookaheadFactor} from './JourneyReplayCameraMath'

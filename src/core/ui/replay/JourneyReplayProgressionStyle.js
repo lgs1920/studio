@@ -42,8 +42,11 @@ export const REPLAY_CAMERA_POSITION_BEHIND = 'behind'
 export const REPLAY_CAMERA_POSITION_AHEAD = 'ahead'
 export const REPLAY_CAMERA_POSITION_SYSTEM = 'system'
 export const REPLAY_CAMERA_PREVIEW_MODE_TERRAIN = 'terrain'
-export const REPLAY_CAMERA_HEADING_OFFSET_MIN = -90
-export const REPLAY_CAMERA_HEADING_OFFSET_MAX = 90
+export const REPLAY_CAMERA_HEADING_OFFSET_MIN = -180
+export const REPLAY_CAMERA_HEADING_OFFSET_MAX = 180
+const REPLAY_CAMERA_HEADING_MIN = -180
+const REPLAY_CAMERA_HEADING_MAX = 180
+const REPLAY_CAMERA_KEYBOARD_STEP_DEGREES = 1
 export const REPLAY_CAMERA_PRESET_CUSTOM = 'custom'
 export const REPLAY_CAMERA_PRESET_DEFAULT = 'default'
 export const REPLAY_CAMERA_PRESET_ULTRA_SMOOTH = 'ultra-smooth'
@@ -225,6 +228,24 @@ export const defaultJourneyReplaySettings = () => ({
         }
     })(),
 })
+
+/**
+ * Wrap an angle inside its complete rotation range.
+ *
+ * @param {number} currentAngle - Current angle in degrees.
+ * @param {number} delta - Requested change in degrees.
+ * @param {number} minimum - Inclusive lower bound in degrees.
+ * @param {number} maximum - Inclusive upper bound in degrees.
+ * @returns {number} Wrapped angle in degrees.
+ */
+const wrappedReplayAngle = (currentAngle, delta, minimum, maximum) => {
+    const nextAngle = currentAngle + delta
+    return nextAngle > maximum
+        ? minimum
+        : nextAngle < minimum
+            ? maximum
+            : nextAngle
+}
 
 const finiteNumber = value => {
     const number = Number(value)
@@ -463,6 +484,64 @@ export const normalizeJourneyReplayCamera = (camera = {}) => ({
         }
     })(),
 })
+
+/**
+ * Apply one arrow-key adjustment to replay camera settings.
+ *
+ * Up/down change only the heading. Left/right change only the displayed
+ * Ahead/Behind angle, which uses the inverse persisted offset convention.
+ *
+ * @param {Object} camera - Current replay camera settings.
+ * @param {string} key - Browser keyboard key.
+ * @returns {Object|null} Updated normalized camera settings, or null when the key is unrelated.
+ */
+export const replayCameraSettingsFromArrowKey = (camera, key) => {
+    const current = normalizeJourneyReplayCamera(camera)
+    const next = {...current}
+    switch (key) {
+        case 'ArrowUp':
+            next.heading = wrappedReplayAngle(
+                current.heading,
+                REPLAY_CAMERA_KEYBOARD_STEP_DEGREES,
+                REPLAY_CAMERA_HEADING_MIN,
+                REPLAY_CAMERA_HEADING_MAX,
+            )
+            break
+        case 'ArrowDown':
+            next.heading = wrappedReplayAngle(
+                current.heading,
+                -REPLAY_CAMERA_KEYBOARD_STEP_DEGREES,
+                REPLAY_CAMERA_HEADING_MIN,
+                REPLAY_CAMERA_HEADING_MAX,
+            )
+            break
+        case 'ArrowRight':
+            if (current.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
+                return null
+            }
+            next.headingOffset = wrappedReplayAngle(
+                current.headingOffset,
+                -REPLAY_CAMERA_KEYBOARD_STEP_DEGREES,
+                REPLAY_CAMERA_HEADING_OFFSET_MIN,
+                REPLAY_CAMERA_HEADING_OFFSET_MAX,
+            )
+            break
+        case 'ArrowLeft':
+            if (current.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
+                return null
+            }
+            next.headingOffset = wrappedReplayAngle(
+                current.headingOffset,
+                REPLAY_CAMERA_KEYBOARD_STEP_DEGREES,
+                REPLAY_CAMERA_HEADING_OFFSET_MIN,
+                REPLAY_CAMERA_HEADING_OFFSET_MAX,
+            )
+            break
+        default:
+            return null
+    }
+    return normalizeJourneyReplayCamera(next)
+}
 
 export const normalizeJourneyReplayReadiness = (readiness = {}) => {
     const policy = [

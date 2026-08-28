@@ -27,14 +27,11 @@ import {
 import {
     TrackUtils,
 }                                                                                          from '@Utils/cesium/TrackUtils'
-import { Journey }                                                                         from '@Core/Journey'
 import {
     ArcType, Cartesian2, Cartesian3, Cartographic, CatmullRomSpline, Color, ExtrapolationType, JulianDate,
     EasingFunction, HeightReference, HorizontalOrigin, LinearApproximation, Math as CesiumMath, Matrix4,
     PolylineDashMaterialProperty, SampledPositionProperty, SceneTransforms, Transforms, VerticalOrigin,
 }                                                                                          from 'cesium'
-import { faCamera }                                                                        from '@fortawesome/pro-solid-svg-icons'
-import { faPersonHiking }                                                                  from '@fortawesome/pro-regular-svg-icons'
 import {
     JourneyReplayCesiumRenderer,
 }                                                                                          from './JourneyReplayCesiumRenderer'
@@ -100,6 +97,7 @@ const cloneReplayCameraState = cameraState => {
             ...cameraState.orientation,
         },
         altitude: cameraState.altitude,
+        pivot: cameraState.pivot ? Object.assign({}, cameraState.pivot) : null,
     }
 }
 
@@ -140,9 +138,6 @@ const REPLAY_TRACKING_DYNAMIC_TARGET_ZONE_RATIO = 0.3
 const REPLAY_TRACKING_DYNAMIC_LOOKAHEAD_FACTOR = 1.35
 const REPLAY_POI_TRIGGER_EPSILON_METERS = 0.001
 const REPLAY_POI_TRIGGER_SCAN_MARGIN_METERS = 5
-const CAMERA_ANGLE_PREVIEW_AXIS_LENGTH = 1800
-const CAMERA_ANGLE_PREVIEW_OFFSET_LENGTH = 1800
-const CAMERA_ANGLE_PREVIEW_ICON_SIZE = 24
 export const REPLAY_JOURNEY_TOOLBAR_VISIBILITY_EVENT = 'lgs:replay:journey-toolbar-visibility'
 export const REPLAY_EVENT_STOP_CLIPS_COMPLETE = 'replay/stop-clips-complete'
 
@@ -188,28 +183,6 @@ const safeCartesian3Lerp = (left, right, ratio, result = new Cartesian3()) => {
     return Cartesian3.lerp(left, right, ratio, result)
 }
 
-const makeFontAwesomeIconDataUri = (definition, color, size = 24) => {
-    const [width, height, , , pathData] = definition.icon
-    const paths = (Array.isArray(pathData) ? pathData : [pathData]).filter(Boolean)
-    const scale = Math.min((size * 0.78) / width, (size * 0.78) / height)
-    const x = (size - width * scale) / 2
-    const y = (size - height * scale) / 2
-    const fill = `${color ?? '#ffffff'}`
-    const svg = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-            <g transform="translate(${x} ${y}) scale(${scale})">
-                ${paths.map(path => `<path d="${path}" fill="${fill}"/>`).join('')}
-            </g>
-        </svg>
-    `.trim()
-    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
-}
-
-const resolveJourneyActivityIcon = (journey = null) => {
-    const activityIcon = Journey.activityProfile(journey?.activity, journey?.activitySettings)?.icon
-    return activityIcon === 'person-hiking' ? faPersonHiking : faPersonHiking
-}
-
 export {replayPitchLookaheadFactor} from './JourneyReplayCameraMath'
 export * from './JourneyReplayCameraMath'
 
@@ -217,6 +190,7 @@ export class JourneyReplaySessionController {
     #controller
     #renderer
     #sampler = null
+    #replayPreparationSample = null
     #samplerConfigKey = null
     #unbind = []
     #requestRenderMode = null
@@ -282,8 +256,6 @@ export class JourneyReplaySessionController {
     #toleranceZoneOverlay = null
     #toleranceZoneOverlayVisible = true
     #lastToleranceZoneHysteresis = null
-    #cameraAnglePreviewEntities = null
-    #cameraAnglePreviewPOIVisibilityState = new Map()
     #journeyToolbarWasVisible = null
     #journeyToolbarHidden = false
     #hiddenJourneyVisibility = new Map()
@@ -329,6 +301,13 @@ export class JourneyReplaySessionController {
             get: () => this.#sampler,
             set: value => {
                 this.#sampler = value
+            },
+        })
+        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'replayPreparationSample', {
+            configurable: true,
+            get: () => this.#replayPreparationSample,
+            set: value => {
+                this.#replayPreparationSample = value
             },
         })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'samplerConfigKey', {
@@ -779,20 +758,6 @@ export class JourneyReplaySessionController {
                 this.#lastToleranceZoneHysteresis = value
             },
         })
-        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'cameraAnglePreviewEntities', {
-            configurable: true,
-            get: () => this.#cameraAnglePreviewEntities,
-            set: value => {
-                this.#cameraAnglePreviewEntities = value
-            },
-        })
-        Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'cameraAnglePreviewPOIVisibilityState', {
-            configurable: true,
-            get: () => this.#cameraAnglePreviewPOIVisibilityState,
-            set: value => {
-                this.#cameraAnglePreviewPOIVisibilityState = value
-            },
-        })
         Object.defineProperty(this[JOURNEY_REPLAY_INTERNAL_STATE], 'journeyToolbarWasVisible', {
             configurable: true,
             get: () => this.#journeyToolbarWasVisible,
@@ -1087,15 +1052,6 @@ export class JourneyReplaySessionController {
             applyResolvedReplayCameraView: (...args) => JourneyReplayCameraController.applyResolvedReplayCameraView(this, ...args),
             removeToleranceZoneOverlay: (...args) => JourneyReplayCameraController.removeToleranceZoneOverlay(this, ...args),
             setToleranceZoneOverlayVisible: (...args) => JourneyReplayCameraController.setToleranceZoneOverlayVisible(this, ...args),
-            cameraAnglePreviewEntityCollection: (...args) => JourneyReplayCameraController.cameraAnglePreviewEntityCollection(this, ...args),
-            removeCameraAnglePreviewOverlay: (...args) => JourneyReplayCameraController.removeCameraAnglePreviewOverlay(this, ...args),
-            cameraAnglePreviewPOIIds: (...args) => JourneyReplayCameraController.cameraAnglePreviewPOIIds(this, ...args),
-            cameraAnglePreviewPOIForId: (...args) => JourneyReplayCameraController.cameraAnglePreviewPOIForId(this, ...args),
-            hideCameraAnglePreviewPOIs: (...args) => JourneyReplayCameraController.hideCameraAnglePreviewPOIs(this, ...args),
-            restoreCameraAnglePreviewPOIs: (...args) => JourneyReplayCameraController.restoreCameraAnglePreviewPOIs(this, ...args),
-            cameraAnglePreviewStartHeading: (...args) => JourneyReplayCameraController.cameraAnglePreviewStartHeading(this, ...args),
-            showCameraAnglePreviewOverlay: (...args) => JourneyReplayCameraController.showCameraAnglePreviewOverlay(this, ...args),
-            hideCameraAnglePreviewOverlay: (...args) => JourneyReplayCameraController.hideCameraAnglePreviewOverlay(this, ...args),
             videoCropRect: (...args) => JourneyReplayCameraController.videoCropRect(this, ...args),
             viewportRectForCesiumSurface: (...args) => JourneyReplayCameraController.viewportRectForCesiumSurface(this, ...args),
             updateToleranceZoneOverlay: (...args) => JourneyReplayCameraController.updateToleranceZoneOverlay(this, ...args),
@@ -1259,8 +1215,6 @@ export class JourneyReplaySessionController {
     syncCameraFromCesiumControls = (...args) => JourneyReplaySessionSceneController.syncCameraFromCesiumControls(this, ...args)
     handleProfileHover = (...args) => JourneyReplaySessionSceneController.handleProfileHover(this, ...args)
     handleProfileLeave = (...args) => JourneyReplaySessionSceneController.handleProfileLeave(this, ...args)
-    showCameraAnglePreview = (...args) => JourneyReplaySessionSceneController.showCameraAnglePreview(this, ...args)
-    hideCameraAnglePreview = (...args) => JourneyReplaySessionSceneController.hideCameraAnglePreview(this, ...args)
     stop = (...args) => JourneyReplaySessionSceneController.stop(this, ...args)
     restorePlaybackScene = (...args) => JourneyReplaySessionSceneController.restorePlaybackScene(this, ...args)
     waitForSceneRestore = (...args) => JourneyReplaySessionSceneController.waitForSceneRestore(this, ...args)

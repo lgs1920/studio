@@ -22,7 +22,11 @@ import { hasActiveAppShortcutBlocker }                  from '@Core/events/short
 import { MapTarget }                                    from '@Core/MapTarget'
 import { getOrbitSettings, setOrbitStoreSettings }      from '@Core/OrbitSettings'
 import { getGlobalHideOtherJourneys, setGlobalHideOtherJourneys } from '@Core/ui/JourneyVisibility'
-import { REPLAY_MARKER_MODE_TRACE, normalizeJourneyReplayMarker } from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import {
+    REPLAY_MARKER_MODE_TRACE,
+    normalizeJourneyReplayMarker,
+    replayCameraSettingsFromArrowKey,
+} from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {
     hasManageableWidgets,
     openWidgetManagementDrawer,
@@ -62,6 +66,51 @@ const finiteNumber = value => {
 const isWidgetShortcutEditableTarget = target => {
     const ElementClass = globalThis.Element
     return ElementClass && target instanceof ElementClass && Boolean(target.closest(WIDGET_SHORTCUT_EDITABLE_SELECTOR))
+}
+
+/**
+ * Check whether replay camera preparation owns the arrow keys.
+ *
+ * @returns {boolean} Whether replay camera preparation is active.
+ */
+const isReplayCameraPreparationActive = () => {
+    const video = lgs.stores.ui?.video
+    const replay = lgs.stores.replay
+    const replayPlaybackActive = Boolean(replay?.playing || replay?.paused)
+    if (replayPlaybackActive) {
+        return false
+    }
+
+    const videoPreparationActive = video?.editing === true
+        && !video.preRecording
+        && !video.recording
+        && !video.snapshot
+        && !video.finalizing
+    const replayDrawerOpen = lgs.stores.ui?.drawers?.open === REPLAY_DRAWER
+    return videoPreparationActive || replayDrawerOpen
+}
+
+/**
+ * Normalize a native or legacy arrow-key event for replay camera preparation.
+ *
+ * @param {KeyboardEvent} event - Browser keyboard event.
+ * @returns {string|null} Canonical arrow key or null when unrelated.
+ */
+const replayCameraArrowKeyFrom = event => {
+    const supportedKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
+    if (supportedKeys.includes(event?.key)) {
+        return event.key
+    }
+    if (supportedKeys.includes(event?.code)) {
+        return event.code
+    }
+
+    return {
+        37: 'ArrowLeft',
+        38: 'ArrowUp',
+        39: 'ArrowRight',
+        40: 'ArrowDown',
+    }[event?.keyCode] ?? null
 }
 
 const mapTargetHeight = value => {
@@ -657,6 +706,54 @@ const widgetKeyboardShortcutAction = event => {
     return null
 }
 
+/**
+ * Build the replay-camera keyboard action when the Cesium map owns focus.
+ *
+ * @param {KeyboardEvent} event - Browser keyboard event.
+ * @returns {Function|null} Replay action, no-op blocker, or null when unrelated.
+ */
+const replayCameraKeyboardAction = event => {
+    const key = replayCameraArrowKeyFrom(event)
+    if (!key
+        || event.altKey
+        || event.ctrlKey
+        || event.metaKey
+        || event.shiftKey
+        || hasActiveAppShortcutBlocker()) {
+        return null
+    }
+
+    if (!isReplayCameraPreparationActive()) {
+        return null
+    }
+
+    const replaySettings = lgs.settings?.ui?.replay
+    if (!replaySettings?.camera) {
+        return () => {
+        }
+    }
+
+    const nextCamera = replayCameraSettingsFromArrowKey(replaySettings.camera, key)
+    if (!nextCamera) {
+        return () => {
+        }
+    }
+
+    return () => {
+        lgs.settings.ui.replay.camera = nextCamera
+        if (lgs.stores.replay) {
+            lgs.stores.replay.camera = nextCamera
+            lgs.stores.replay.cameraUpdateSource = 'keyboard'
+            lgs.stores.replay.cameraUserAdjusted = true
+        }
+        return __.ui.replay?.refreshCamera?.({
+            preparation:        true,
+            suppressMoveEvents: true,
+            source:             'keyboard',
+        })
+    }
+}
+
 const installWidgetKeyboardShortcuts = () => {
     const target = APP_SHORTCUT_TARGET()
 
@@ -666,7 +763,7 @@ const installWidgetKeyboardShortcuts = () => {
     }
 
     const listener = event => {
-        const action = widgetKeyboardShortcutAction(event)
+        const action = replayCameraKeyboardAction(event) ?? widgetKeyboardShortcutAction(event)
 
         if (!action) {
             return

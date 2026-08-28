@@ -41,6 +41,20 @@
   keys:
     - Alt+Shift+W
   scope: Replay mode
+- action: Adjust replay camera heading
+  description: Adjusts only the replay camera heading by 1 degree while replay camera preparation is active.
+  id: replay-camera-heading-keyboard
+  keys:
+    - ArrowUp
+    - ArrowDown
+  scope: Replay camera setup
+- action: Adjust replay camera angle
+  description: Adjusts the Ahead/Behind replay camera angle by 1 degree while replay camera preparation is active.
+  id: replay-camera-angle-keyboard
+  keys:
+    - ArrowLeft
+    - ArrowRight
+  scope: Replay camera setup
 - action: Manage widgets
   description: Opens the widget management drawer for the current board.
   id: widget-management-show
