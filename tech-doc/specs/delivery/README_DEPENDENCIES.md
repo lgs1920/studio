@@ -143,6 +143,7 @@ These are the current package names declared in the `devDependencies` section of
 @types/serve-static
 @vitejs/plugin-react
 baseline-browser-mapping
+canvas
 jsdom
 oxlint
 oxlint-tsgolint
