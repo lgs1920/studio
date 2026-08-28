@@ -1161,3 +1161,23 @@
 ## 2026-08-28 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/1043af13d6abfbc47abab2c86824a426c764db39)
 
 - Recorded automatically from Git history.
+
+## 2026-08-28 — [`fix: centralize replay preparation return`](https://github.com/lgs1920/studio/commit/085733b4f2a7ed94c7b4753c368ef576924c21e5)
+
+- Recorded automatically from Git history.
+
+## 2026-08-28 — [`test: enable canvas support in jsdom`](https://github.com/lgs1920/studio/commit/782c40bdf56b929f9ff32244a896c6e9583de4e1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-28 — [`fix(video): separate standard and replay entry points (#498)`](https://github.com/lgs1920/studio/commit/fa3ae9b5c84453914ba33753b39cb9784636a4cc)
+
+- Recorded automatically from Git history.
+
+## 2026-08-28 — [`test(replay): align current camera and smoothing contracts`](https://github.com/lgs1920/studio/commit/b94b96b8c89bb5a52d512492e0c0c46a1db3add8)
+
+- Recorded automatically from Git history.
+
+## 2026-08-28 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/903949b9f024fe9388a91e84160d3dd42d0a0cd8)
+
+- Recorded automatically from Git history.
