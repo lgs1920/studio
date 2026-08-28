@@ -242,6 +242,7 @@ describe('VideoRecordingScreenArea start flow', () => {
 
         await waitFor(() => {
             expect(recorder.startVideo).toHaveBeenCalledTimes(1)
+            expect(globalThis.lgs.stores.ui.video.recording).toBe(true)
         })
 
         const traceEntries = globalThis.__lgsReplayVideoTrace ?? []
@@ -252,10 +253,6 @@ describe('VideoRecordingScreenArea start flow', () => {
             'draft.recording.ui.prepare.end',
             'draft.recording.crop.sync.start',
             'draft.recording.crop.sync.end',
-            'draft.recording.replay-bridge.start',
-            'draft.recording.replay-bridge.end',
-            'draft.recording.scene-restore.wait.start',
-            'draft.recording.scene-restore.wait.end',
             'draft.recording.composer.first-frame.end',
             'draft.recording.initialize.end',
             'draft.recorder.start.begin',
@@ -266,9 +263,10 @@ describe('VideoRecordingScreenArea start flow', () => {
         }))
         expect(globalThis.__.ui.replayVideoSync.arm).not.toHaveBeenCalled()
         expect(globalThis.__.ui.replayVideoSync.disarm).not.toHaveBeenCalled()
-        expect(globalThis.__.ui.cameraManager.stopPanoramic).toHaveBeenCalledOnce()
+        expect(globalThis.__.ui.cameraManager.stopPanoramic).not.toHaveBeenCalled()
         expect(globalThis.__.ui.cameraManager.stopRotate).not.toHaveBeenCalled()
-        expect(globalThis.__.ui.replay.prepareReplayCamera).toHaveBeenCalledOnce()
+        expect(globalThis.__.ui.replay.prepareReplayCamera).not.toHaveBeenCalled()
+        expect(globalThis.__.ui.replay.waitForSceneRestore).not.toHaveBeenCalled()
 
         expect(globalThis.lgs.stores.ui.video.preRecording).toBe(false)
         expect(globalThis.lgs.stores.ui.video.recording).toBe(true)
@@ -304,4 +302,5 @@ describe('VideoRecordingScreenArea start flow', () => {
             'draft.recording.replay-camera.capture.end',
         ]))
     })
+
 })

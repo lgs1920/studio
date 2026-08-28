@@ -30,7 +30,6 @@ import { EditorPanelButton } from '@Editor/EditorPanelButton'
 import { VideoButton }       from '@Components/MainUI/video/VideoButton'
 import { VideoDownloadAndShareDialog } from '@Components/MainUI/video/VideoDownloadAndShareDialog'
 import { ReplayRecordingMonitorWidget } from '@Components/MainUI/video/ReplayRecordingMonitorWidget'
-import { SyncLinkBadge }     from '@Components/MainUI/SyncLinkBadge'
 import { TextButton }        from '@Components/Text/TextButton'
 import { TracksEditor }                         from '@Components/TracksEditor/TracksEditor'
 import { JourneyGroupsDrawer }                  from '@Editor/groups/JourneyGroupsDrawer'
@@ -86,6 +85,19 @@ export const MainUI = memo(() => {
 
     const closeDrawer = useCallback(() => {
         __.ui.drawerManager.close()
+    }, [])
+
+    /**
+     * Starts the synchronized Replay video entry point.
+     *
+     * @returns {void} Nothing.
+     */
+    const startReplayVideo = useCallback(() => {
+        __.ui.replayVideoSync?.arm?.({
+            autoStopRecording: true,
+            resetToStart:      true,
+        })
+        lgs.stores.ui.video.editing = true
     }, [])
 
     const handleKeyDown = useCallback((event) => {
@@ -254,24 +266,19 @@ export const MainUI = memo(() => {
                                         <GeocodingButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                         <OrbitButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                         {!videoCaptureActive && <FullScreenButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>}
-                                        <div
-                                            className={`sync-linked-actions ${
-                                                replay.recordingSync === true ? 'is-linked' : 'is-unlinked'
-                                            }`}
-                                        >
+                                        <div className="video-entry-actions">
                                             <VideoButton
                                                 tooltip={toolBar.fromStart ? 'left' : 'right'}
-                                                className="square-button sync-linked-video-button"
+                                                className="square-button"
                                                 appearance="filled"
                                             />
-                                            <SyncLinkBadge
-                                                visible={Boolean(theJourney)}
-                                                tooltip={toolBar.fromStart ? 'left' : 'right'}
-                                                className="sync-linked-actions-badge"
-                                            />
                                             <JourneyReplayButton
+                                                id="launch-the-replay-video"
                                                 tooltip={toolBar.fromStart ? 'left' : 'right'}
-                                                variant={replay.recordingSync === true ? 'warning' : 'brand'}
+                                                tooltipText="Record a synchronized Replay video"
+                                                ariaLabel="Record a synchronized Replay video"
+                                                onClick={startReplayVideo}
+                                                variant="brand"
                                                 appearance="filled"
                                             />
                                         </div>

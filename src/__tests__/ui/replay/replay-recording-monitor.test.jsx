@@ -121,15 +121,13 @@ describe('ReplayRecordingMonitorWidget', () => {
         })
     }
 
-    it('owns the normal replay transport when the toolbar is visible', () => {
+    it('does not render an independent Replay transport widget', () => {
         render(<ReplayRecordingMonitorWidget/>)
 
-        expect(screen.getByText('Replay')).not.toBeNull()
-        expect(screen.getByTestId('replay-progress').dataset.showSettings).toBe('true')
-        expect(document.querySelector('.replay-recording-monitor.is-replay-controls')).not.toBeNull()
-        expect(document.querySelector('[data-icon="clapperboard-play"]')).not.toBeNull()
-        expect(screen.queryByLabelText('Close recording monitor')).toBeNull()
-        expect(screen.queryByLabelText('Minimize recording monitor')).toBeNull()
+        expect(screen.queryByText('Replay')).toBeNull()
+        expect(screen.queryByTestId('replay-progress')).toBeNull()
+        expect(screen.queryByLabelText('Pause Journey Replay')).toBeNull()
+        expect(screen.queryByLabelText('Start Journey Replay')).toBeNull()
     })
 
     it('hides normal replay transport while synchronized recording owns the surface', () => {

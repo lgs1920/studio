@@ -17,12 +17,7 @@
 /*******************************************************************************
  * VideoRecorderToolbar.jsx - Displays video recording controls and stats
  ******************************************************************************/
-import { JourneyReplayProgressBar } from '@Components/JourneyReplay/JourneyReplayProgressBar'
 import { restoreVideoCaptureUi } from '@Components/MainUI/video/videoEditingCleanup'
-import {
-    resolveReplayTimelineDuration,
-    resolveReplayTimelineProgress,
-} from '@Core/ui/replay/ReplayProgress'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { UIToast }                          from '@Utils/UIToast'
 import { UnitUtils }                        from '@Utils/UnitUtils'
@@ -96,29 +91,7 @@ const finiteNumber = value => {
  */
 export const VideoRecorderToolbar = ({toolbar}) => {
     const $video = lgs.stores.ui.video
-    const replay = useSnapshot(lgs.stores.replay)
     const video = useSnapshot($video)
-    const syncWithJourneyReplay = replay.recordingSync === true
-    const isMobile = __.device?.isMobile === true
-    const hasPreparedDraftVideoTimeline = finiteNumber(replay.deferredExportPlan?.videoTimeline?.durationMillis) > 0
-    // The controller duration is the Draft playback clock; durationMillis is the sampler track time.
-    const controllerDurationSeconds = finiteNumber(__.ui?.replay?.controller?.duration)
-    const configuredDurationSeconds = finiteNumber(replay.duration)
-    const controllerReplayDurationMillis = controllerDurationSeconds !== null && controllerDurationSeconds > 0
-                                             ? controllerDurationSeconds * 1000
-                                             : null
-    const configuredReplayDurationMillis = configuredDurationSeconds !== null && configuredDurationSeconds > 0
-                                             ? configuredDurationSeconds * 1000
-                                             : null
-    const replayDurationMillis = finiteNumber(replay.deferredExportPlan?.videoTimeline?.replayDurationMillis)
-                                 ?? (controllerReplayDurationMillis > 0 ? controllerReplayDurationMillis : null)
-                                 ?? configuredReplayDurationMillis
-                                 ?? replay.durationMillis
-    const videoTimelineDurationMillis = resolveReplayTimelineDuration({
-        videoTimelineDurationMillis: replay.deferredExportPlan?.videoTimeline?.durationMillis,
-        replayDurationMillis,
-        clips:                       replay.clips ?? lgs.settings?.ui?.replay?.clips,
-    })
 
     const [state, setState] = useState({
                                            recordedDuration: 0,
@@ -126,11 +99,9 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                                            finalizing:   false,
     })
     const _wasPreRecording = useRef(false)
-    const _hasRecordedDuration = useRef(false)
 
     useEffect(() => {
         if (video.preRecording && !_wasPreRecording.current) {
-            _hasRecordedDuration.current = false
             setState(previous => ({
                                      ...previous,
                                      recordedDuration: 0,
@@ -142,16 +113,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
         _wasPreRecording.current = video.preRecording
     }, [video.preRecording])
 
-    const draftVideoProgress = syncWithJourneyReplay && video.preRecording
-                               ? 0
-                               : syncWithJourneyReplay
-                                 && videoTimelineDurationMillis !== null
-                                 && (hasPreparedDraftVideoTimeline || _hasRecordedDuration.current)
-                               ? resolveReplayTimelineProgress({
-                                   elapsedMillis:  state.recordedDuration,
-                                   durationMillis: videoTimelineDurationMillis,
-                               })
-                               : null
     const indicatorState = video.finalizing
                           ? 'finalizing'
                           : (video.preRecording ? 'preparing' : 'recording')
@@ -205,7 +166,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             const duration = finiteNumber(event.detail?.duration)
             const size = finiteNumber(event.detail?.size)
             if (duration !== null) {
-                _hasRecordedDuration.current = true
             }
             setState((prev) => ({
                 ...prev,
@@ -223,7 +183,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
 
             // Use the duration from the recorder
             const duration = __.recorder ? __.recorder.mediaData.duration : 0
-            _hasRecordedDuration.current = true
             updateState({
                             paused:           true,
                             recordedDuration: duration,
@@ -238,7 +197,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
 
             // Use the duration from the recorder
             const duration = __.recorder ? __.recorder.mediaData.duration : 0
-            _hasRecordedDuration.current = true
             updateState({
                             paused:           false,
                             recordedDuration: duration,
@@ -272,13 +230,11 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                 size:         0,
             }
             if (event.type === ScreenMediaRecorder.events.CANCEL) {
-                _hasRecordedDuration.current = false
                 stopState.recordedDuration = 0
                 stopState.recordedSize = 0
             }
             else {
                 if (finalDuration !== null) {
-                    _hasRecordedDuration.current = true
                     stopState.recordedDuration = Math.max(0, finalDuration)
                 }
                 if (finalSize !== null) {
@@ -346,7 +302,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
                         recordedSize: 0,
                         finalizing:   false,
                     })
-        _hasRecordedDuration.current = false
         showToast('warning', 'Recording has been canceled!')
     }, [updateState, showToast])
 
@@ -364,33 +319,6 @@ export const VideoRecorderToolbar = ({toolbar}) => {
             />
             <span className="duration">{formatDuration(state.recordedDuration)}</span>
             <span className="size">{formatSize(state.recordedSize)}</span>
-            {syncWithJourneyReplay && (
-                isMobile ? (
-                    <JourneyReplayProgressBar
-                        className="video-recorder-replay-progress"
-                        showActions={false}
-                        showSnapshot
-                        actionAppearance="plain"
-                        snapshotAppearance="plain"
-                        showSettings={false}
-                        showTime={false}
-                        showDistance={false}
-                        progressOverride={draftVideoProgress}
-                        disabled={video.preRecording}
-                    />
-                ) : (
-                    <JourneyReplayProgressBar
-                        className="video-recorder-replay-progress"
-                        showActions={false}
-                        showSnapshot
-                        actionAppearance="plain"
-                        snapshotAppearance="plain"
-                        showSettings={false}
-                        progressOverride={draftVideoProgress}
-                        disabled={video.preRecording}
-                    />
-                )
-            )}
             {video.preRecording ? (
                 <div className="blinking">Preparing...</div>
             ) : state.finalizing ? (

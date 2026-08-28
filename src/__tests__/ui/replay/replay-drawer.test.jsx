@@ -305,6 +305,15 @@ describe('JourneyReplayDrawer', () => {
         vi.unstubAllGlobals()
     })
 
+    it('keeps the drawer limited to Replay configuration', () => {
+        const view = render(<JourneyReplayDrawer/>)
+
+        expect(view.queryByTestId('replay-progress')).toBeNull()
+        expect(view.queryByText('Sync with Video')).toBeNull()
+        expect(view.queryByRole('button', {name: 'Start Journey Replay'})).toBeNull()
+        expect(view.queryByRole('button', {name: 'Pause Journey Replay'})).toBeNull()
+    })
+
     it('commits pitch edits while typing', async () => {
         const view = render(<JourneyReplayDrawer/>)
         const pitchInput = view.getByLabelText('Pitch (deg)')
@@ -539,14 +548,9 @@ describe('JourneyReplayDrawer', () => {
         })
     })
 
-    it('shows the debug camera switch only for video-linked replay and keeps it disabled by default', async () => {
+    it('shows the debug camera switch as a Replay setting and keeps it disabled by default', async () => {
         const view = render(<JourneyReplayDrawer/>)
         fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
-
-        expect(view.queryByLabelText('Debug camera')).toBeNull()
-
-        globalThis.lgs.settings.ui.replay.recordingSync = true
-        globalThis.lgs.stores.replay.recordingSync = true
 
         const debugSwitch = await view.findByLabelText('Debug camera')
         expect(debugSwitch.checked).toBe(false)

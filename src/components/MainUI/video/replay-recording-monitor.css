@@ -27,10 +27,6 @@
     box-shadow: var(--wa-shadow-l);
     backdrop-filter: blur(12px);
 
-    &.is-replay-controls {
-        width: 100%;
-    }
-
     .replay-recording-monitor-header,
     .replay-recording-monitor-status,
     .replay-recording-monitor-metrics,
@@ -218,23 +214,9 @@
         }
     }
 
-    .replay-recording-monitor-replay-controls {
-        justify-content: stretch;
-        width: 100%;
-        max-width: none;
-
-        .replay-progress-bar {
-            flex: 1 1 auto;
-            width: 100%;
-        }
-    }
 }
 
 @media (max-width: 640px) {
-    .replay-recording-monitor.is-replay-controls {
-        width: calc(100vw - 2rem);
-    }
-
     .replay-recording-monitor {
         min-width: 0;
         width: 100%;
@@ -244,14 +226,4 @@
         min-height: 0;
     }
 
-    .replay-recording-monitor-replay-controls .replay-progress-bar {
-        flex-wrap: wrap;
-        row-gap: var(--lgs-gutter-xs, 0.25rem);
-    }
-
-    .replay-recording-monitor-replay-controls .replay-progress-scrubber {
-        flex-basis: 100%;
-        order: -1;
-        width: 100%;
-    }
 }

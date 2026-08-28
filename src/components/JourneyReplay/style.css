@@ -107,22 +107,6 @@
     width: 100%;
 }
 
-.replay-sync-row {
-    align-items: center;
-    display: flex;
-    gap: var(--wa-space-s, 0.75rem);
-    min-width: 0;
-}
-
-.replay-sync-switch {
-    flex: 1 1 auto;
-    min-width: 0;
-}
-
-.replay-sync-video-button {
-    flex: 0 0 auto;
-}
-
 .replay-total-duration-row {
     align-items: center;
     color: var(--wa-form-control-label-color);
@@ -922,28 +906,6 @@ wa-select[label-at-start].half-width::part(base) {
     font-size: var(--lgs-font-size);
 }
 
-.replay-progress-card-in-drawer {
-    align-self: center;
-    max-width: 100%;
-    width: 100%;
-}
-
-.replay-progress-card-in-drawer::part(body) {
-    align-items: center;
-    display: flex;
-    justify-content: center;
-    min-width: 0;
-    width: 100%;
-}
-
-.replay-progress-bar-in-drawer {
-    align-self: center;
-    flex-wrap: wrap;
-    justify-content: center;
-    row-gap: var(--lgs-gutter-xs, 0.25rem);
-    width: 100%;
-}
-
 @media (max-width: 640px) {
     .replay-controls .replay-progress-distance {
         display: none;
@@ -958,14 +920,4 @@ wa-select[label-at-start].half-width::part(base) {
         display: none;
     }
 
-    .replay-progress-bar-in-drawer {
-        flex-wrap: wrap;
-        row-gap: var(--lgs-gutter-xs, 0.25rem);
-    }
-
-    .replay-progress-bar-in-drawer .replay-progress-scrubber {
-        flex-basis: 100%;
-        order: -1;
-        width: 100%;
-    }
 }

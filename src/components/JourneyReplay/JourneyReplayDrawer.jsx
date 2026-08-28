@@ -15,11 +15,9 @@
  ******************************************************************************/
 
 import DrawerFooter from '@Components/DrawerFooter'
-import { JourneyReplayProgressBar } from '@Components/JourneyReplay/JourneyReplayProgressBar'
 import { JourneyReplayClipsTab } from '@Components/JourneyReplay/JourneyReplayClipsTab'
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import { openPOIEditor }                  from '@Components/MainUI/MapPOI/openPOIEditor'
-import { VideoButton } from '@Components/MainUI/video/VideoButton'
 import { formatSliderPercent } from '@Components/MainUI/widgets/editor/elements/sliderUtils'
 import PanelActions from '@Components/PanelsActions'
 import { PopupAnchor } from '@Components/PopupAnchor'
@@ -56,7 +54,7 @@ import { isJourneyReplayCameraActive } from '@Core/ui/replay/JourneyReplayRuntim
 import { FA_CAMERA_SLIDERS_SRC } from '@Utils/FA2WA'
 import { ELEVATION_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import {
-    WaBadge, WaButton, WaCard, WaColorPicker, WaDetails, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider,
+    WaBadge, WaButton, WaColorPicker, WaDetails, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider,
     WaSwitch, WaTab, WaTooltip,
     WaTabGroup,
     WaTabPanel,
@@ -483,7 +481,6 @@ export const JourneyReplayDrawer = memo(() => {
                                ? replayState.hideOtherJourneys === true
                                : replayState.hideOtherJourneys === true || journeySettings.hideOtherJourneys === true
     const durationLocked = replayState.active || replayState.playing || replayState.paused
-    const syncWithVideo = replayState.recordingSync === true
     const [poiVisibilityOverrides, setPoiVisibilityOverrides] = useState({})
     const [, setPoiRevision] = useState(0)
     const [cameraDrafts, setCameraDrafts] = useState({
@@ -563,15 +560,6 @@ export const JourneyReplayDrawer = memo(() => {
         currentJourney?.replay?.stop,
         journeySlug,
     ])
-
-    useEffect(() => {
-        if (drawerOpen !== REPLAY_DRAWER || !hasJourney) {
-            return
-        }
-
-        const replayRuntime = lgs.stores.replay
-        replayRuntime.toolbarVisible = true
-    }, [drawerOpen, hasJourney])
 
     useEffect(() => {
         if (drawerOpen === REPLAY_DRAWER) {
@@ -1040,19 +1028,6 @@ export const JourneyReplayDrawer = memo(() => {
     const pitchDisplayValue = cameraDrafts.pitch ?? String(camera.pitch)
     const headingDisplayValue = cameraDrafts.heading ?? String(camera.heading ?? 0)
 
-    const updateSyncWithVideo = useCallback((event) => {
-        const enabled = Boolean(event?.target?.checked)
-        if (enabled) {
-            __.ui.replayVideoSync?.arm({
-                autoStopRecording: true,
-                resetToStart:      true,
-            })
-        }
-        else {
-            __.ui.replayVideoSync?.disarm()
-        }
-    }, [])
-
     const updateActiveTab = useCallback((event) => {
         setActiveTab(event?.detail?.name ?? REPLAY_TAB_RUNNER)
     }, [])
@@ -1362,32 +1337,6 @@ export const JourneyReplayDrawer = memo(() => {
                             <p className="replay-empty-state">{`Import or select a journey to use ${REPLAY_LABEL}.`}</p>
                         ) : (
                              <>
-                                 <WaCard appearance="outlined" className="replay-progress-card-in-drawer">
-                                     <JourneyReplayProgressBar
-                                         className="replay-progress-bar-in-drawer"
-                                         disabled={syncWithVideo}
-                                     />
-                                 </WaCard>
-                                 <div className="replay-sync-row">
-                                     <WaSwitch
-                                         label-at-start
-                                         size="xs"
-                                         className="replay-sync-switch half-width"
-                                         checked={syncWithVideo}
-                                         onChange={updateSyncWithVideo}
-                                     >
-                                         {'Sync with Video'}
-                                     </WaSwitch>
-                                     {syncWithVideo &&
-                                         <VideoButton
-                                             id="launch-the-video-editor-replay"
-                                             tooltip="left"
-                                             className="replay-sync-video-button square-button"
-                                             variant="brand"
-                                             appearance="plain"
-                                         />
-                                     }
-                                 </div>
                                  <WaSwitch
                                      label-at-start
                                      size="xs"
@@ -1659,17 +1608,15 @@ export const JourneyReplayDrawer = memo(() => {
                                                                  <div className="replay-fieldset">
                                                         <WaDivider/>
                                                         <h4 className="replay-style-subtitle">{'Diagnostics'}</h4>
-                                                        {syncWithVideo && (
-                                                            <WaSwitch
-                                                                className="replay-debug-camera-switch half-width"
-                                                                size="xs"
-                                                                label-at-start
-                                                                checked={camera.debug === true}
-                                                                onChange={updateDebugCamera}
-                                                            >
-                                                                {'Debug camera'}
-                                                            </WaSwitch>
-                                                        )}
+                                                        <WaSwitch
+                                                            className="replay-debug-camera-switch half-width"
+                                                            size="xs"
+                                                            label-at-start
+                                                            checked={camera.debug === true}
+                                                            onChange={updateDebugCamera}
+                                                        >
+                                                            {'Debug camera'}
+                                                        </WaSwitch>
                                                         <WaDivider/>
                                                         <h4 className="replay-style-subtitle">{'Tile readiness'}</h4>
                                                         <WaSwitch

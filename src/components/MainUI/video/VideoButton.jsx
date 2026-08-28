@@ -20,24 +20,19 @@ import { useSnapshot }                 from 'valtio'
 
 export const VideoButton = (props) => {
     const $video = lgs.stores.ui.video
-    const replay = useSnapshot(lgs.stores.replay)
     const video = useSnapshot($video)
-    const syncWithJourneyReplay = replay.recordingSync === true
     const {
         id = 'launch-the-video-editor',
         className = 'square-button',
         tooltip = 'right',
-        tooltipText = 'Record a new video',
-        variant = syncWithJourneyReplay ? 'warning' : 'brand',
+        tooltipText = 'Record a standard video',
+        variant = 'brand',
         appearance = 'Filled',
     } = props ?? {}
 
-    const handleClick = async () => {
+    const handleClick = () => {
         if (!$video.editing) {
-            const prepared = await __.ui.replay?.prepareReplayCamera?.({journey: lgs.theJourney})
-            if (prepared === false) {
-                return
-            }
+            __.ui.replayVideoSync?.disarm?.()
         }
         $video.editing = !$video.editing
     }
@@ -52,7 +47,7 @@ export const VideoButton = (props) => {
                               onClick={handleClick}
                               variant={variant}
                               appearance={appearance}>
-                        <WaIcon name="clapperboard-play" variant="regular"/>
+                        <WaIcon name="video" variant="regular"/>
                     </WaButton>
                 </>
             }

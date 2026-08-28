@@ -32,6 +32,7 @@ vi.mock('@Components/MainUI/video/toolbox/VideoPresetToolbar', () => ({
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaButton: ({children, ...props}) => <button type="button" {...props}>{children}</button>,
     WaIcon: ({name}) => <span data-icon={name}/>,
+    WaTooltip: ({children}) => <span>{children}</span>,
 }))
 
 vi.mock('@Components/MainUI/video/videoEditingCleanup', () => ({
@@ -52,6 +53,11 @@ describe('VideoRecordingSettingsToolbar', () => {
         vi.clearAllMocks()
         globalThis.__ = {
             ui: {
+                drawerManager: {
+                    close: vi.fn(),
+                    isCurrent: vi.fn(() => false),
+                    open: vi.fn(),
+                },
                 replay: {
                     prepareReplayCamera: vi.fn(async () => true),
                 },
@@ -109,6 +115,7 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(prepareVideoEditingUi).toHaveBeenCalledTimes(1)
         expect(screen.getByRole('button', {name: 'Ratio: 16:9'})).not.toBeNull()
         expect(screen.getByRole('button', {name: 'Quality: H · 30 FPS'})).not.toBeNull()
+        expect(screen.getByRole('button', {name: 'Quality: H · 30 FPS'}).querySelector('[data-icon="ranking-star"]')).not.toBeNull()
         expect(screen.getByRole('button', {name: 'Record'})).not.toBeNull()
         expect(screen.getByRole('button', {name: 'Cancel'})).not.toBeNull()
         expect(screen.getByRole('toolbar', {name: 'Video recording settings'})).not.toBeNull()
@@ -126,7 +133,7 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(screen.getByTestId('preset-popup-content')).not.toBeNull()
     })
 
-    it('shows the replay launcher only when replay synchronization is active', () => {
+    it('shows the Replay settings sliders only when synchronization is active', () => {
         render(<VideoRecordingSettingsToolbar/>)
         expect(screen.queryByRole('button', {name: 'Journey Replay Settings'})).toBeNull()
 
@@ -135,6 +142,13 @@ describe('VideoRecordingSettingsToolbar', () => {
         render(<VideoRecordingSettingsToolbar/>)
 
         expect(screen.getByRole('button', {name: 'Journey Replay Settings'})).not.toBeNull()
+        expect(screen.getByRole('button', {name: 'Journey Replay Settings'}).querySelector('[data-icon="sliders"]')).not.toBeNull()
+        expect(document.querySelectorAll('.video-recording-settings-separator')).toHaveLength(2)
+        expect(document.getElementById('launch-the-replay-editor-from-video')?.classList).toContain('video-recording-settings-action')
+        expect(document.getElementById('video-start-recording')?.classList).toContain('video-recording-settings-action')
+
+        fireEvent.click(screen.getByRole('button', {name: 'Journey Replay Settings'}))
+        expect(globalThis.__.ui.drawerManager.open).toHaveBeenCalledWith('replay-drawer')
     })
 
     it('waits for crop persistence before starting capture', async () => {
@@ -151,11 +165,20 @@ describe('VideoRecordingSettingsToolbar', () => {
 
         resolveCropSync()
         await vi.waitFor(() => expect(prepareVideoCaptureUi).toHaveBeenCalledTimes(1))
-        expect(globalThis.__.ui.replay.prepareReplayCamera).toHaveBeenCalledWith({
-            journey: globalThis.lgs.theJourney,
-        })
+        expect(globalThis.__.ui.replay.prepareReplayCamera).not.toHaveBeenCalled()
         expect(globalThis.lgs.stores.ui.video.editing).toBe(false)
         expect(globalThis.lgs.stores.ui.video.preRecording).toBe(true)
+    })
+
+    it('prepares the Replay camera only for a synchronized video', async () => {
+        globalThis.lgs.stores.replay.recordingSync = true
+        render(<VideoRecordingSettingsToolbar/>)
+
+        fireEvent.click(screen.getByRole('button', {name: 'Record'}))
+
+        await vi.waitFor(() => expect(globalThis.__.ui.replay.prepareReplayCamera).toHaveBeenCalledWith({
+            journey: globalThis.lgs.theJourney,
+        }))
     })
 
     it('waits for crop persistence before cancelling video setup', async () => {

@@ -1,5 +1,3 @@
-import {JourneyReplayProgressBar} from '@Components/JourneyReplay/JourneyReplayProgressBar'
-import '@Components/JourneyReplay/style.css'
 import {Widget} from '@Components/MainUI/widgets/Widget'
 import '@Components/MainUI/video/style.css'
 import {captureReplayCropSnapshot} from '@Core/ui/ReplayCropSnapshot'
@@ -140,7 +138,6 @@ const ReplayRecordingProgress = ({percentage}) => (
  * @returns {JSX.Element|null} Monitor widget content.
  */
 const ReplayRecordingMonitorSurface = ({snapshot}) => {
-    const replay = useSnapshot(lgs.stores.replay)
     const video = useSnapshot(lgs.stores.ui.video)
     const _canvas = useRef(null)
     const _video = useRef(null)
@@ -149,16 +146,6 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
     const [expandRequestKey, setExpandRequestKey] = useState(null)
     const [closed, setClosed] = useState(false)
     const recordingActive = snapshot.active === true
-    const videoCaptureActive = video.editing
-                               || video.preRecording
-                               || video.recording
-                               || video.recordingHQ
-                               || video.snapshot
-                               || video.finalizing
-    const replayControlsVisible = !recordingActive
-                                  && replay.recordingSync !== true
-                                  && !videoCaptureActive
-                                  && (replay.toolbarVisible || replay.active || replay.paused)
 
     const closeMonitorWidget = useCallback(() => {
         setClosed(true)
@@ -334,7 +321,7 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
         void captureReplayCropSnapshot()
     }, [])
 
-    if ((!recordingActive && !replayControlsVisible) || (recordingActive && closed)) {
+    if (!recordingActive || closed) {
         return null
     }
 
@@ -367,14 +354,12 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
                           ? 'finalizing'
                           : (isPreparing ? 'preparing' : 'recording')
     const indicatorAnimation = 'beat-fade'
-    const title = !recordingActive
-                  ? 'Replay'
-                  : (isFinalizing ? 'Finalizing' : (isPreparing ? 'Preparing' : 'Recording'))
+    const title = isFinalizing ? 'Finalizing' : (isPreparing ? 'Preparing' : 'Recording')
     const titleClassName = isPreparing || isFinalizing ? ' blinking' : ''
     const surface = (
         <aside
-            className={`replay-recording-monitor lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal wa-theme-lgs1920-on-map${recordingActive ? ' is-recording' : ' is-replay-controls'}`}
-            aria-live={recordingActive ? 'polite' : 'off'}
+            className="replay-recording-monitor lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal wa-theme-lgs1920-on-map is-recording"
+            aria-live="polite"
         >
             <div className="replay-recording-monitor-header">
                 {recordingActive && (
@@ -388,7 +373,6 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
                     />
                 )}
                 <span className={`replay-recording-monitor-title${titleClassName}`}>
-                    {!recordingActive && <WaIcon name="clapperboard-play" variant="regular" label={title}/>}
                     {title}
                 </span>
                 {recordingActive && (
@@ -403,11 +387,6 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
                     />
                 )}
             </div>
-            {!recordingActive && (
-                <div className="replay-recording-monitor-replay-controls replay-controls">
-                    <JourneyReplayProgressBar showSettings/>
-                </div>
-            )}
             {recordingActive && (
                 <>
                     <div className="replay-recording-monitor-preview">

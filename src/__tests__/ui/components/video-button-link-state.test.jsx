@@ -13,16 +13,19 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
             {children}
         </button>
     ),
-    WaIcon: () => null,
+    WaIcon: ({name}) => <span data-icon={name}/>,
     WaTooltip: () => null,
 }))
 
 import { VideoButton } from '@Components/MainUI/video/VideoButton'
 
-describe('VideoButton replay link state', () => {
+describe('VideoButton standard video entry point', () => {
     beforeEach(() => {
         globalThis.__ = {
             ui: {
+                replayVideoSync: {
+                    disarm: vi.fn(),
+                },
                 replay: {
                     prepareReplayCamera: vi.fn(async () => true),
                 },
@@ -50,7 +53,7 @@ describe('VideoButton replay link state', () => {
         globalThis.lgs = undefined
     })
 
-    it('switches from brand to warning when replay becomes linked', () => {
+    it('keeps the standard video entry point on the brand variant', () => {
         const {container, rerender} = render(<VideoButton appearance="filled"/>)
 
         expect(container.querySelector('button').dataset.variant).toBe('brand')
@@ -58,19 +61,23 @@ describe('VideoButton replay link state', () => {
         lgs.stores.replay.recordingSync = true
         rerender(<VideoButton appearance="filled"/>)
 
-        expect(container.querySelector('button').dataset.variant).toBe('warning')
+        expect(container.querySelector('button').dataset.variant).toBe('brand')
     })
 
-    it('prepares the replay camera when opening video preparation', async () => {
+    it('does not prepare or link Replay when opening standard video preparation', async () => {
         const {container} = render(<VideoButton appearance="filled"/>)
 
         fireEvent.click(container.querySelector('button'))
 
-        await waitFor(() => {
-            expect(globalThis.__.ui.replay.prepareReplayCamera).toHaveBeenCalledWith({
-                journey: globalThis.lgs.theJourney,
-            })
-        })
+        await waitFor(() => expect(globalThis.lgs.stores.ui.video.editing).toBe(true))
+        expect(globalThis.__.ui.replay.prepareReplayCamera).not.toHaveBeenCalled()
+        expect(globalThis.__.ui.replayVideoSync.disarm).toHaveBeenCalledTimes(1)
         expect(globalThis.lgs.stores.ui.video.editing).toBe(true)
+    })
+
+    it('uses the video icon for the standard entry point', () => {
+        const {container} = render(<VideoButton appearance="filled"/>)
+
+        expect(container.querySelector('[data-icon="video"]')).not.toBeNull()
     })
 })

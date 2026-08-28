@@ -201,6 +201,15 @@ export const VideoRecordingScreenArea = memo(() => {
     ), [])
 
     const prepareJourneyReplayForRecording = useCallback(async (renderSpec = null) => {
+        if (!isJourneyReplaySyncRequested()) {
+            // A standard video must not prepare, start, or otherwise affect Replay.
+            const replayVideoSync = __.ui.replayVideoSync
+            if (replayVideoSync?.isArmed?.() === true) {
+                replayVideoSync.disarm?.()
+            }
+            return true
+        }
+
         const cameraManager = __.ui.cameraManager
         cameraManager?.stopPanoramic?.()
         if (cameraManager?.isRotating?.()) {
@@ -211,17 +220,6 @@ export const VideoRecordingScreenArea = memo(() => {
         const prepared = await replay?.prepareReplayCamera?.({journey: lgs.theJourney})
         if (prepared === false) {
             return false
-        }
-
-        if (!isJourneyReplaySyncRequested()) {
-            // A previous linked session may have armed the bridge while the
-            // link was subsequently removed. Disarm only that bridge; an
-            // unrelated replay-only session must remain untouched.
-            const replayVideoSync = __.ui.replayVideoSync
-            if (replayVideoSync?.isArmed?.() === true) {
-                replayVideoSync.disarm?.()
-            }
-            return true
         }
 
         if (typeof replay?.captureCameraState === 'function') {
@@ -367,35 +365,37 @@ export const VideoRecordingScreenArea = memo(() => {
                 sourceCanvas: lgs.canvas,
             })
             const selectedFps = renderSpec.fps
-            const replayBridgeStartedAt = globalThis.performance?.now?.() ?? Date.now()
-            replayVideoTraceDebug('draft.recording.replay-bridge.start', {
-                captureMode: renderSpec.captureMode,
-                captureFps: selectedFps,
-                startToken,
-            })
-            if (!await prepareJourneyReplayForRecording(renderSpec)) {
-                return false
-            }
-            replayVideoTraceDebug('draft.recording.replay-bridge.end', {
-                elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - replayBridgeStartedAt,
-                startToken,
-                syncRequested: isJourneyReplaySyncRequested(),
-            })
+            if (isJourneyReplaySyncRequested()) {
+                const replayBridgeStartedAt = globalThis.performance?.now?.() ?? Date.now()
+                replayVideoTraceDebug('draft.recording.replay-bridge.start', {
+                    captureMode: renderSpec.captureMode,
+                    captureFps: selectedFps,
+                    startToken,
+                })
+                if (!await prepareJourneyReplayForRecording(renderSpec)) {
+                    return false
+                }
+                replayVideoTraceDebug('draft.recording.replay-bridge.end', {
+                    elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - replayBridgeStartedAt,
+                    startToken,
+                    syncRequested: true,
+                })
 
-            const sceneRestoreStartedAt = globalThis.performance?.now?.() ?? Date.now()
-            replayVideoTraceDebug('draft.recording.scene-restore.wait.start', {
-                timeoutMs: VIDEO_RECORDER_INITIALIZE_TIMEOUT_MS,
-                startToken,
-            })
-            await withTimeout(
-                Promise.resolve(__.ui.replay?.waitForSceneRestore?.()),
-                VIDEO_RECORDER_INITIALIZE_TIMEOUT_MS,
-                'Replay scene restoration timed out before video recording.',
-            )
-            replayVideoTraceDebug('draft.recording.scene-restore.wait.end', {
-                elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - sceneRestoreStartedAt,
-                startToken,
-            })
+                const sceneRestoreStartedAt = globalThis.performance?.now?.() ?? Date.now()
+                replayVideoTraceDebug('draft.recording.scene-restore.wait.start', {
+                    timeoutMs: VIDEO_RECORDER_INITIALIZE_TIMEOUT_MS,
+                    startToken,
+                })
+                await withTimeout(
+                    Promise.resolve(__.ui.replay?.waitForSceneRestore?.()),
+                    VIDEO_RECORDER_INITIALIZE_TIMEOUT_MS,
+                    'Replay scene restoration timed out before video recording.',
+                )
+                replayVideoTraceDebug('draft.recording.scene-restore.wait.end', {
+                    elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - sceneRestoreStartedAt,
+                    startToken,
+                })
+            }
             if (startToken !== _recordingStartToken.current) {
                 return false
             }

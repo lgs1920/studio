@@ -13,14 +13,13 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { JourneyReplayButton } from '@Components/JourneyReplay/JourneyReplayButton'
 import { LGSPopup } from '@Components/LGSPopup'
 import { CropRatioEditorToolbar } from '@Components/ToolsUI/cropper/widgets/CropRatioEditorToolbar'
 import { VideoPresetToolbar } from '@Components/MainUI/video/toolbox/VideoPresetToolbar'
 import { cancelVideoEditing, prepareVideoCaptureUi, prepareVideoEditingUi } from '@Components/MainUI/video/videoEditingCleanup'
-import { VIDEO_CROP_ZONE } from '@Core/constants'
+import { REPLAY_DRAWER, VIDEO_CROP_ZONE } from '@Core/constants'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
-import { WaButton, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot } from 'valtio'
 import '../style.css'
@@ -132,9 +131,9 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             return
         }
 
-        const cameraPreparation = Promise.resolve(
-            __.ui.replay?.prepareReplayCamera?.({journey: lgs.theJourney}),
-        )
+        const cameraPreparation = replay.recordingSync === true
+            ? Promise.resolve(__.ui.replay?.prepareReplayCamera?.({journey: lgs.theJourney}))
+            : Promise.resolve(true)
         await syncCropFrame('before-recording')
         const prepared = await cameraPreparation
         if (prepared === false) {
@@ -148,7 +147,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             finalizing:   false,
             paused:       false,
         })
-    }, [$video, syncCropFrame])
+    }, [$video, replay.recordingSync, syncCropFrame])
 
     useEffect(() => {
         const safeFPS = Number.isInteger(lgs.settings.ui.video?.fps)
@@ -228,19 +227,32 @@ export const VideoRecordingSettingsToolbar = memo(() => {
         return null
     }
 
-    const leadingAction = replay.recordingSync === true && Boolean(lgs.theJourney) ? (
-        <JourneyReplayButton
-            id="launch-the-replay-editor-from-video"
-            tooltip="top"
-            tooltipText="Journey Replay Settings"
-            tooltipPlacement="top"
-            tooltipStyle="wa"
-            variant="brand"
-            appearance="plain"
-            className="video-recording-settings-replay"
-            showOnlyWhenLinked
-            ariaLabel="Journey Replay Settings"
-        />
+    const replaySettingsAction = replay.recordingSync === true && Boolean(lgs.theJourney) ? (
+        <>
+            <span className="video-recording-settings-separator" aria-hidden="true"/>
+            <WaTooltip for="launch-the-replay-editor-from-video" placement="top">
+                {'Journey Replay Settings'}
+            </WaTooltip>
+            <WaButton
+                id="launch-the-replay-editor-from-video"
+                size="s"
+                variant="brand"
+                appearance="plain"
+                className="video-recording-settings-action video-recording-settings-replay"
+                aria-label="Journey Replay Settings"
+                aria-pressed={__.ui.drawerManager?.isCurrent?.(REPLAY_DRAWER) === true}
+                onClick={() => {
+                    if (__.ui.drawerManager?.isCurrent?.(REPLAY_DRAWER) === true) {
+                        __.ui.drawerManager.close()
+                    }
+                    else {
+                        __.ui.drawerManager.open(REPLAY_DRAWER)
+                    }
+                }}
+            >
+                <WaIcon name="sliders" label="Journey Replay Settings"/>
+            </WaButton>
+        </>
     ) : null
 
     return (
@@ -279,7 +291,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                     appearance={openPopup === VIDEO_PRESET_POPUP ? 'outlined' : 'plain'}
                     onClick={() => togglePopup(VIDEO_PRESET_POPUP)}
                 >
-                    <WaIcon name="sliders" label=""/>
+                    <WaIcon name="ranking-star" label=""/>
                     <span>
                         <span className="video-recording-settings-quality-prefix">{'Quality:'}</span>
                         {` ${currentQuality} · ${currentFPS} FPS`}
@@ -302,7 +314,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                     </div>
                 </LGSPopup>
 
-                {leadingAction}
+                {replaySettingsAction}
 
                 <WaButton
                     id="video-start-recording"
@@ -317,7 +329,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                     <span>{'Record'}</span>
                 </WaButton>
 
-                <span className="video-recording-settings-cancel-separator" aria-hidden="true"/>
+                <span className="video-recording-settings-separator" aria-hidden="true"/>
 
                 <WaButton
                     id="video-cancel-editing"
