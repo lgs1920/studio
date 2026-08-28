@@ -37,6 +37,7 @@ import {
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
     getJourneyReplayCameraPresetKey, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplaySettings,
 }                                                                      from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import { REPLAY_CAMERA_TERRAIN_CLEARANCE_METERS }                      from '@Core/ui/replay/ReplayCesiumCameraAdapter'
 import { gpx }                                                         from '@tmcw/togeojson'
 import { applyGpxStyleExtensionProperties, extractLgsTrackProperties } from '@Utils/JourneyGpxUtils'
 import { Cartesian3, Cartographic, Matrix4, Math as CesiumMath, Transforms } from 'cesium'
@@ -1791,7 +1792,7 @@ describe('replay visibility and clips', () => {
             const restoredLatitude = (0.2 * 180) / Math.PI
             expect(Cartesian3.distance(
                 setViewCalls[0].destination,
-                Cartesian3.fromDegrees(restoredLongitude, restoredLatitude, 120),
+                Cartesian3.fromDegrees(restoredLongitude, restoredLatitude, 120 + REPLAY_CAMERA_TERRAIN_CLEARANCE_METERS),
             )).toBeLessThan(1)
             expect(journey.visible).toBe(true)
             expect(journey.updateVisibility).toHaveBeenCalledWith(true)

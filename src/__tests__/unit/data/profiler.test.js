@@ -37,6 +37,8 @@ vi.mock('@Utils/cesium/trackRenderStyle', () => ({
 }))
 
 vi.mock('@Utils/cesium/trackRenderSmoothing', () => ({
+    TRACK_RENDER_SMOOTHING_MAX_STEP: 6,
+    TRACK_RENDER_SMOOTHING_MIN_STEP: 1,
     getTrackRenderContent: track => track.__renderGeometry
                                    ? {geometry: track.__renderGeometry}
                                    : null,
