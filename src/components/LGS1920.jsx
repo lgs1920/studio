@@ -442,7 +442,7 @@ export const LGS1920 = () => {
         <>
             {!initStatus && initError && <InitErrorMessage error={initError}/>}
 
-            <AppUpdate/>
+            <AppUpdate updateDialogEnabled={appVisible}/>
 
             {initStatus === true && <AppSurface onReady={markAppSurfaceReady}/>}
 

@@ -84,9 +84,10 @@ const getInstallInstructions = (device = globalThis.__?.device ?? {}) => {
  * Component to manage PWA installation and update banners using Shoelace components.
  * Uses __.updater.store for AppUpdateManager state to handle install prompts and Service Worker updates.
  * @param {string} mode - The display mode ('banner' or other, which enables manual display)
+ * @param {boolean} updateDialogEnabled - Whether the PWA update dialog may be displayed.
  * @returns {JSX.Element} The AppUpdate component
  */
-export const AppUpdate = ({mode = 'banner'}) => {
+export const AppUpdate = ({mode = 'banner', updateDialogEnabled = true}) => {
     // Snapshot of the updater store for reactive access
     const $updaterStore = globalThis.__?.updater?.store
         ?? globalThis.lgs?.stores?.ui?.appUpdate
@@ -245,6 +246,11 @@ export const AppUpdate = ({mode = 'banner'}) => {
     }, [isInstallRequired, mode])
 
     useEffect(() => {
+        if (!updateDialogEnabled) {
+            setShowUpdateDialog(false)
+            return
+        }
+
         if (!isUpdateAvailable) {
             setShowUpdateDialog(false)
             setDismissedUpdateTag(null)
@@ -258,7 +264,7 @@ export const AppUpdate = ({mode = 'banner'}) => {
             setUpdateError(null)
             setIsApplyingUpdate(false)
         }
-    }, [dismissedUpdateTag, isUpdateAvailable, updateTag])
+    }, [dismissedUpdateTag, isUpdateAvailable, updateDialogEnabled, updateTag])
 
     /**
      * Renders the persistent service worker update dialog.
@@ -266,7 +272,7 @@ export const AppUpdate = ({mode = 'banner'}) => {
      * @returns {JSX.Element|null} The update dialog when an update is available.
      */
     const renderUpdateDialog = () => {
-        if (!isUpdateAvailable) {
+        if (!updateDialogEnabled || !isUpdateAvailable) {
             return null
         }
 

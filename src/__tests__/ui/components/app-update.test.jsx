@@ -121,6 +121,19 @@ describe('AppUpdate', () => {
         await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     })
 
+    it('waits for the introduction to close before showing a PWA update', async () => {
+        setupAppContext()
+
+        const {rerender} = render(<AppUpdate updateDialogEnabled={false}/>)
+
+        await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+
+        rerender(<AppUpdate updateDialogEnabled/>)
+
+        expect(await screen.findByRole('dialog')).not.toBeNull()
+        expect(screen.getByText(/A new version \(2026-08-18T12:00:00Z\) is ready to be installed/)).not.toBeNull()
+    })
+
     it('keeps update errors visible in the dialog', async () => {
         const applyUpdate = vi.fn().mockRejectedValue(new Error('The new service worker is not ready yet'))
         setupAppContext({applyUpdate})
