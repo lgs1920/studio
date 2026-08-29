@@ -26,6 +26,7 @@ implementation documents. Implemented and historical documents belong under
 
 - [Arrow widget](ARROW_WIDGET_SPEC.md)
 - [Brand and season swatch reactivity](BRAND_SEASON_SWATCH_REACTIVITY_SPEC.md)
+- [Non-distorting widget resize](CORE-WIDGET-NON-DISTORTING-RESIZE-SPEC.md) — TODO, 1.0.0
 - [Main UI work](MAINUI-TODO.md)
 - [Profile work](PROFILE-TODO.md)
 - [Translation notes](Translate.md)

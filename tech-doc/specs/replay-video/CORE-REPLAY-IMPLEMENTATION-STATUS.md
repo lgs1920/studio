@@ -60,7 +60,7 @@ subject to the validation gates below.
 | --- | --- | --- | --- |
 | PARTIAL / TODO | 1.0.0 | Complete synchronized replay-start camera editing while preserving the implemented canonical camera and clip continuity | [Start camera editor](CORE-REPLAY-START-CAMERA-EDITOR-SPEC.md) |
 | TODO | 1.0.0 | Validate isolated HQ on fixed imagery, terrain, and 3D Tiles journeys; prove camera parity, resource teardown, and visual quality | [Replay quality validation](CORE-REPLAY-QUALITY-VALIDATION.md) |
-| TODO | 1.0.0 | Replace linked Replay Draft preparation with a read-only two-track Timeline preview | [Timeline preview](../../todo/CORE-REPLAY-TIMELINE-PREVIEW-SPEC.md) |
+| TODO | 1.0.0 | Replace linked Replay Draft preparation with a compact stacked-widget Timeline preview | [Timeline preview](../../todo/CORE-REPLAY-TIMELINE-PREVIEW-SPEC.md) |
 | TODO | 1.1.0 | Replace separated clip controls with the normalized editable multi-track replay timeline | [Track timeline editor](../../todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) |
 | TODO | 1.1.0 | Drive POI animation and displayed fields from canonical replay time | [POI animation](CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md) |
 | TODO | 1.1.0 | Align clip altitude inputs and continuity across reordered sequences | [Clip altitude alignment](CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md) |

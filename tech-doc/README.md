@@ -93,6 +93,7 @@ below by engineering domain rather than storage directory.
 
 - [Arrow widget](todo/ARROW_WIDGET_SPEC.md)
 - [Brand and season swatch reactivity](todo/BRAND_SEASON_SWATCH_REACTIVITY_SPEC.md)
+- [Non-distorting widget resize](todo/CORE-WIDGET-NON-DISTORTING-RESIZE-SPEC.md) — TODO, 1.0.0
 - [Main UI work](todo/MAINUI-TODO.md)
 - [Profile work](todo/PROFILE-TODO.md)
 - [Translation notes](todo/Translate.md)

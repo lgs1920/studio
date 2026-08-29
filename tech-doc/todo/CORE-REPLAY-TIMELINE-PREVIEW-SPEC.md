@@ -15,7 +15,7 @@ It does not replace the future editable multi-track authoring model.
 Replace the linked-video Draft recording step with a non-recording Replay
 preview during video preparation.
 
-The preview gives the user one read-only two-track timeline. Its playhead can
+The preview gives the user one compact multi-track timeline. Its playhead can
 seek and play the Replay so the user can verify:
 
 - the Replay marker;
@@ -48,17 +48,19 @@ decision and must not be inferred from this proposal.
 
 ## First version timeline
 
-The first version is read-only. It does not support:
+The first version allows moving existing time actions and widget rows. It does
+not support:
 
-- moving an item;
 - resizing an item;
 - creating or deleting an item;
 - changing a widget start or end time;
 - changing Replay duration;
 - changing camera commands or camera-path points;
-- adding or removing tracks.
+- adding or removing tracks;
+- moving the mandatory Replay track row.
 
-It contains exactly two visible tracks.
+It contains one mandatory Replay track and one separate visible track for each
+Replay-driven widget that has an active visibility interval.
 
 ### Track 1: Replay
 
@@ -79,10 +81,10 @@ timeline must not rebuild phase boundaries from UI duration fields.
 The marker and trace are scene effects of the current Replay frame. They are
 not independent timeline clocks or independent timeline items.
 
-### Track 2: Replay widgets
+### Tracks 2+: Replay widgets
 
-The second track displays the currently supported Replay-driven video widgets
-as read-only visibility intervals:
+Each active video widget has its own track, ordered by the widget stack. The
+currently supported Replay-driven widgets use these visibility rules:
 
 - `dynamic-stats-widget` during the active Replay interval, except for the
   terminal Replay frame window;
@@ -91,10 +93,15 @@ as read-only visibility intervals:
 
 The intervals must be derived from `ReplayOverlayResolver`. The Timeline is a
 visual projection of widget visibility and must not become a second visibility
-authority.
+authority. If both widgets are active, two separate widget tracks are shown.
+Static video widgets occupy the full preparation range.
 
-The row may contain multiple colored segments, but it remains one track. The
-first version does not expose a separate row for each widget.
+The editor displays the mandatory Replay track at the bottom. Widget rows can
+be dragged above or below one another; the resulting order is persisted through
+the widget manager's z-index ordering. Changes made in the widget ordering
+panel are reflected back into the timeline. The compact legend uses a route
+icon for Replay and a widget icon plus the widget name for every widget row;
+it does not display numeric track labels.
 
 ## Programmatic visibility and branding
 
@@ -309,10 +316,10 @@ Risks:
 - The first version would use only its visual rows and playhead adapter, not
   its playback engine.
 
-The package provides the controls needed to lock the first-version actions:
-`disableDrag` disables action dragging, while `onActionMoving` and
-`onActionResizing` can return `false` as defensive guards. Cursor interaction
-remains available through `onCursorDrag`, `onCursorDragStart`,
+The package provides the controls needed for the first-version interaction:
+action dragging remains enabled, while `onActionResizing` returns `false` as a
+defensive guard. Cursor interaction remains available through `onCursorDrag`,
+`onCursorDragStart`,
 `onCursorDragEnd`, and `onClickTimeArea`. These controls must be connected to
 the Replay scrub contract rather than to the package runner. See the
 [official props documentation](https://zdarcy.com/guide/intro/2-props.html).
@@ -411,10 +418,10 @@ replaceable without changing Replay, camera, trace, or widget authorities.
 ### Phase 3: Timeline surface
 
 - Mount the transient Timeline widget outside the captured crop.
-- Render the two read-only tracks.
+- Render one Replay track and one track per active video widget.
 - Connect the playhead to latest-request-wins scrub and settled qualification.
 - Connect Play/Pause to the interactive Replay session.
-- Verify marker, trace, Dynamic Stats, and Journey Stats transitions.
+- Verify marker, trace, widget stacking, and Stats transitions.
 
 ### Phase 4: direct final export
 
@@ -434,9 +441,11 @@ replaceable without changing Replay, camera, trace, or widget authorities.
 
 - Linked video preparation never initializes or starts the Draft recorder.
 - A Timeline surface appears only during linked video preparation.
-- The surface has exactly two read-only tracks.
+- The surface has one Replay track and one separate track per active video widget.
 - The Replay track displays the configured Start, Replay, and Stop segments.
-- Start, Replay, Stop, and widget segments cannot be moved or resized.
+- Start, Replay, Stop, and widget segments can be moved but not resized.
+- Widget rows can be reordered, excluding the mandatory Replay row, and the
+  order is persisted through the widget manager.
 - The application can add or remove a segment by updating controlled timeline
   data.
 - Timeline colors, labels, scale, grid, cursor, and action appearance follow
@@ -446,6 +455,8 @@ replaceable without changing Replay, camera, trace, or widget authorities.
 - Dragging coalesces requests and does not block the main thread with full
   trajectory compilation.
 - The marker and trace follow the canonical Replay frame.
+- The legend uses compact colored route/widget icons and widget names without
+  numeric track labels.
 - Dynamic Stats and Journey Stats visibility matches
   `ReplayOverlayResolver` at start, middle, terminal Replay frames, and stop
   phase.
@@ -461,8 +472,8 @@ replaceable without changing Replay, camera, trace, or widget authorities.
 1. Does “remove Draft recording” apply only to linked video mode, or to all
    video recording modes?
 2. What exact action starts the final HQ export from the prepared Timeline?
-3. Should the Timeline be movable and resizable, or fixed in a standard
-   preparation position?
+3. The Timeline widget remains movable through its standard widget host, while
+   timeline actions can move in time but cannot be resized.
 4. Should Play restart from zero after reaching the end, or resume the final
    frame until the user seeks?
 5. Which package should pass the controlled-playhead spike: Option A or Option

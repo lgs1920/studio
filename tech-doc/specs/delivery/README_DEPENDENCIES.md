@@ -15,6 +15,7 @@ to provide a readable dependency snapshot for contributors and maintainers.
 - Shoelace
 - ECharts
 - Mediabunny
+- `@xzdarcy/react-timeline-editor`
 
 ### Build and Quality Tooling
 
@@ -67,6 +68,7 @@ These are the current package names declared in the `dependencies` section of `p
 @turf/point-to-line-distance
 @turf/transform-rotate
 @web.awesome.me/webawesome-pro
+@xzdarcy/react-timeline-editor
 @zumer/snapdom
 argparse
 axios

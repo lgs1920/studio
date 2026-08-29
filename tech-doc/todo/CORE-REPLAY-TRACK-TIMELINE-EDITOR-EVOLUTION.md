@@ -27,7 +27,8 @@ The work tracked by this specification is delivered in two compatible slices:
 ### 1.0.0 — Linked video preparation preview
 
 - Remove the linked Replay Draft recording step from video preparation.
-- Display a transient `Timeline` widget with exactly two read-only tracks.
+- Display a transient `Timeline` widget with one Replay track and one track per
+  active video widget, while keeping Logo and Credits fixed at the top.
 - Show `Start`, `Replay`, and `Stop` phase segments on the replay track.
 - Show Dynamic Stats and Journey Stats visibility intervals on the widget track.
 - Allow only playhead movement, play, pause, and replay.
@@ -380,7 +381,8 @@ The project already owns the replay clock, the HQ export frame loop, the widget 
 Recommended compromise:
 
 1. Build `ReplayTrackTimelineModel` first.
-2. Build the read-only two-track preview with `@xzdarcy/react-timeline-editor`.
+2. Build the compact stacked-widget preview with
+   `@xzdarcy/react-timeline-editor`, including row and action drag behavior.
 3. Keep the preview interaction surface intentionally small:
    - move the cursor;
    - play, pause, and replay;
