@@ -28,6 +28,7 @@ import { CropZone }              from './CropZone'
  * @param {React.ReactNode} [props.infoComponent=null] - Component to display additional information
  * @param {boolean} [props.infoPosition=true] - Whether to show the info component at the default position
  * @param {boolean} [props.overlay=false] - Whether to display an overlay outside the crop zone
+ * @param {number} [props.selectionRequestKey=0] - Changes request selection of the crop widget
  * @param {Object} props.context - Valtio proxy context containing crop zone configuration
  * @param {string} props.context.id - Unique identifier for the widget
  * @param {boolean} [props.context.forceEven=false] - Whether to force even dimensions for the crop zone
@@ -42,6 +43,7 @@ export const CropZoneWidget = memo(({
                                         infoPosition = true,
                                         overlay = false,
                                         context,
+                                        selectionRequestKey = 0,
                                     }) => {
     // Reference to the CropZone DOM element
     const _cropZone = useRef(null)
@@ -121,6 +123,7 @@ export const CropZoneWidget = memo(({
             className={['video-crop-zone-widget', className].filter(Boolean).join(' ')}
             moveableClassName={moveableClassName}
             containerClassName={containerClassName}
+            selectionRequestKey={selectionRequestKey}
         >
             <CropZone
                 onDoubleClick={onDoubleClick}

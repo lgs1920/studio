@@ -33,7 +33,7 @@ import { CropRatioEditorWidget } from '@Components/ToolsUI/cropper/widgets/CropR
  */
 import { DefinedCropZone }                                                                  from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
 import { JOURNEY_WIDGETS, MULTI_PURPOSE_WIDGETS } from '@Core/constants'
-import { memo, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot } from 'valtio'
 import { buildCropOverlayBlockers } from './cropOverlayBlockers'
 import { CropZoneWidget }        from './widgets/CropZoneWidget'
@@ -53,7 +53,56 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                ? {...config.cropDimensions}
                : {left: 0, top: 0, width: 0, height: 0}
     })
+    const [selectionRequestKey, setSelectionRequestKey] = useState(0)
     const hideWidgetPanel = Boolean(video.preRecording || video.recording || video.snapshot || video.finalizing)
+
+    /**
+     * Activates crop editing when the user double-clicks inside the visible crop zone.
+     * @param {MouseEvent} event - Double-click event from the map or document
+     */
+    const handleCropDoubleClick = useCallback((event) => {
+        if (hideWidgetPanel || typeof document === 'undefined') {
+            return
+        }
+
+        const eventPath = event.composedPath?.() ?? [event.target]
+        const isOverlayControl = eventPath.some(element => element?.closest?.('wa-drawer, .sl-backdrop'))
+        if (isOverlayControl) {
+            return
+        }
+
+        const cropElement = _cropperContainer.current?.querySelector('.crop-zone')
+        const rect = cropElement?.getBoundingClientRect?.()
+        const clientX = Number(event.clientX)
+        const clientY = Number(event.clientY)
+        const isInsideCrop = Boolean(rect && rect.width > 0 && rect.height > 0
+            && Number.isFinite(clientX) && Number.isFinite(clientY)
+            && clientX >= rect.left && clientX <= rect.right
+            && clientY >= rect.top && clientY <= rect.bottom)
+        if (!isInsideCrop) {
+            return
+        }
+
+        event.preventDefault()
+        event.stopPropagation()
+        Object.assign(context, {
+            presetEditor: true,
+            ratioEditor:  true,
+            widgetEditor: true,
+        })
+        setSelectionRequestKey(current => current + 1)
+    }, [context, hideWidgetPanel])
+
+    useEffect(() => {
+        if (typeof document === 'undefined') {
+            return undefined
+        }
+
+        const canvas = globalThis.lgs?.canvas
+        const targets = [canvas, document].filter((target, index, items) => target?.addEventListener && items.indexOf(target) === index)
+        targets.forEach(target => target.addEventListener('dblclick', handleCropDoubleClick, true))
+        return () => targets.forEach(target => target.removeEventListener('dblclick', handleCropDoubleClick, true))
+    }, [handleCropDoubleClick])
 
     useEffect(() => {
         if (_overlay.current) {
@@ -121,6 +170,7 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                             infoComponent={options.infoComponent}
                             overlay={overlayElement}
                             context={context}
+                            selectionRequestKey={selectionRequestKey}
                         />
                 )}
                 {overlay && (
