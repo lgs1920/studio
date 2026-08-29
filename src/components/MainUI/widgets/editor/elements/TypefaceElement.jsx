@@ -46,7 +46,7 @@ export const TypefaceElement = ({id}) => {
             className="lgs--text-widget-typeface-trigger"
             onChange={handleFontChange}
         >
-            <WaIcon slot="start" variant="regular" name="text"/>
+            <WaIcon slot="start" variant="regular" name="font"/>
             {WIDGET_FONT_FAMILIES.map(font => (
                 <WaOption key={font} value={font.replace(/\s/g, '_')}>
                     <span style={{fontFamily: font === 'System' ? WIDGET_SYSTEM_FONT_STACK : font}}>Typeface</span>

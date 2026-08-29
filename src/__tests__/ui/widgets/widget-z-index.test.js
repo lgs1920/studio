@@ -34,4 +34,27 @@ describe('resolveActiveWidgetZIndex', () => {
             widgetDefinition:  {},
         })).toBe(4002)
     })
+
+    it('keeps the Replay Timeline above every other widget', () => {
+        const widgets = new Map([
+            ['credits-widget', {zIndex: 4000}],
+            ['logo-widget', {zIndex: 4001}],
+            ['text-widget#1', {zIndex: 12000}],
+            ['replay-timeline-widget', {zIndex: 4002}],
+        ])
+
+        expect(resolveActiveWidgetZIndex({
+            widgetId:         'replay-timeline-widget',
+            widgetListSnapshot: widgets,
+            config:            {zIndex: 4002},
+            widgetDefinition:  {alwaysOnTop: true},
+        })).toBe(12001)
+
+        expect(resolveActiveWidgetZIndex({
+            widgetId:         'logo-widget',
+            widgetListSnapshot: widgets,
+            config:            {zIndex: 4001},
+            widgetDefinition:  {alwaysOnTop: true},
+        })).toBe(12000)
+    })
 })

@@ -15,7 +15,9 @@
  ******************************************************************************/
 
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
-import { CREDITS_WIDGET, LOGO_WIDGET, WIDGET_LAYER_START, WIDGET_LAYER_STEP, WIDGET_LAYER_TOP } from '@Core/constants'
+import {
+    CREDITS_WIDGET, LOGO_WIDGET, REPLAY_TIMELINE_WIDGET, WIDGET_LAYER_START, WIDGET_LAYER_STEP, WIDGET_LAYER_TOP,
+} from '@Core/constants'
 import { WaCard, WaDivider }                        from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames from 'classnames'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
@@ -24,7 +26,7 @@ import { useSnapshot }       from 'valtio'
 import { SortableWidgetRow } from './SortableWidgetRow'
 
 const NO_EXCLUDED_WIDGET_TYPES = []
-const CORE_FIXED_WIDGET_TYPES = [CREDITS_WIDGET, LOGO_WIDGET]
+const CORE_FIXED_WIDGET_TYPES = [CREDITS_WIDGET, LOGO_WIDGET, REPLAY_TIMELINE_WIDGET]
 
 export const WidgetsOrderingPanelContent = ({
     widgetsBoard,

@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { SCENE_WIDGETS, SETTINGS_STORE, TEXT_WIDGET } from '@Core/constants'
+import { SCENE_WIDGETS, SCENE_WIDGETS_BOARD, SETTINGS_STORE, TEXT_WIDGET } from '@Core/constants'
 import { SettingsSection } from '@Core/settings/SettingsSection'
 import { resetTextWidgetPositionSequence } from '@Components/Text/textWidgetPosition'
 import { proxy } from 'valtio'
@@ -195,6 +195,24 @@ describe('WidgetsPanelContent', () => {
                 left:     '25%',
                 top:      '25%',
             }),
+        )
+    })
+
+    it('places a newly created visual widget above existing widgets', async () => {
+        globalThis.lgs.stores.ui.widget.list.set('text-widget#existing', {
+            widgetsBoard: SCENE_WIDGETS_BOARD,
+            zIndex: 4100,
+        })
+
+        render(<WidgetsPanelContent groups={[SCENE_WIDGETS]}/>)
+
+        const textEntry = await screen.findByText('Text')
+        fireEvent.click(textEntry.closest('li'))
+
+        expect(widgetRendererMock.renderWidget).toHaveBeenCalledWith(
+            SCENE_WIDGETS,
+            'text-widget#new',
+            expect.objectContaining({zIndex: 4101}),
         )
     })
 })

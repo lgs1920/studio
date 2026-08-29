@@ -43,7 +43,7 @@ export const TextButton = (props) => {
                 variant={'brand'}
                 appearance="Filled"
             >
-                <WaIcon name="text" variant="regular"/>
+                <WaIcon name="font" variant="regular"/>
             </WaButton>
         </>
     )

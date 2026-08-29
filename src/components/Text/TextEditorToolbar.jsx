@@ -241,7 +241,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
                                 '--sl-input-font-family': appliedFontStack,
                             }}
                         >
-                            <WaIcon slot="start" variant="regular" name="text"/>
+                            <WaIcon slot="start" variant="regular" name="font"/>
                             {WIDGET_FONT_FAMILIES.map(font => (
                                 <WaOption key={font} value={font.replace(/\s/g, '_')}>
                                 <span
