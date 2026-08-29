@@ -566,16 +566,16 @@ describe('journey metrics', () => {
         expect(profileVisibilitySpy).toHaveBeenCalled()
     })
 
-    it('matches the expected Mont Blanc journey statistics', () => {
+    it('matches the expected LGS1920 journey statistics', () => {
         const document = new DOMParser().parseFromString(
-            readFileSync('public/samples/journeys/Mont Blanc.gpx', 'utf8'),
+            readFileSync('public/samples/journeys/LGS1920.gpx', 'utf8'),
             'text/xml',
         )
         const geoJson = gpx(document)
         const trackFeature = geoJson.features.find(feature => feature?.geometry?.type === 'LineString')
-        const track = new Track('MB4806', {
-            parent:    'mont-blanc#gpx',
-            slug:      'mont-blanc#gpx',
+        const track = new Track('LGS1920', {
+            parent:    'lgs1920#gpx',
+            slug:      'lgs1920#gpx',
             activity:  'trek',
             color:     '#ffffff',
             thickness: 2,
@@ -585,13 +585,13 @@ describe('journey metrics', () => {
         })
 
         track.extractMetrics()
-        expect(track.metrics.global.distance / 1000).toBeCloseTo(39.94, 2)
-        expect(track.metrics.global.duration).toBe(66518)
-        expect(track.metrics.global.averageSpeed * 3.6).toBeCloseTo(2.16, 2)
-        expect(track.metrics.global.positive.distance).toBeGreaterThan(10000)
-        expect(track.metrics.global.negative.distance).toBeGreaterThan(10000)
-        expect(track.metrics.global.positive.elevation).toBeCloseTo(4275.33, 2)
-        expect(track.metrics.global.negative.elevation).toBeCloseTo(-4210.33, 2)
+        expect(track.metrics.global.distance / 1000).toBeCloseTo(13.14, 2)
+        expect(track.metrics.global.duration).toBe(31293)
+        expect(track.metrics.global.averageSpeed * 3.6).toBeCloseTo(1.51, 2)
+        expect(track.metrics.global.positive.distance).toBeGreaterThan(6000)
+        expect(track.metrics.global.negative.distance).toBeGreaterThan(6000)
+        expect(track.metrics.global.positive.elevation).toBeCloseTo(1120.6, 2)
+        expect(track.metrics.global.negative.elevation).toBeCloseTo(-1121.1, 2)
         expect(track.metrics.global.flat.elevation).toBe(0)
         expect(track.metrics.global.positive.points).toBeGreaterThan(0)
     }, 60000)
