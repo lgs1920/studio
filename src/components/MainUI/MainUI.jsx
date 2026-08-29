@@ -97,6 +97,7 @@ export const MainUI = memo(() => {
             autoStopRecording: true,
             resetToStart:      true,
         })
+        lgs.stores.ui.video.timelinePreviewActive = true
         lgs.stores.ui.video.editing = true
     }, [])
 

@@ -44,6 +44,8 @@ export const VideoRecordingSettingsToolbar = memo(() => {
                               && !video.recording
                               && !video.snapshot
                               && !video.finalizing
+    const linkedTimelinePreparation = replay.recordingSync === true
+                                      && video.timelinePreviewActive === true
 
     const currentRatio = lgs.configuration.videoFormats.find(format => format.value === video.ratio)
     const currentQuality = ScreenMediaRecorder.QUALITY[video.quality]?.short ?? 'M'
@@ -148,6 +150,14 @@ export const VideoRecordingSettingsToolbar = memo(() => {
             paused:       false,
         })
     }, [$video, replay.recordingSync, syncCropFrame])
+
+    /**
+     * Requests direct HQ export from the linked Replay preparation view.
+     * @returns {void} Nothing.
+     */
+    const handleHqExport = useCallback(() => {
+        globalThis.window?.dispatchEvent(new globalThis.CustomEvent('lgs:video:start-hq-export'))
+    }, [])
 
     useEffect(() => {
         const safeFPS = Number.isInteger(lgs.settings.ui.video?.fps)
@@ -316,18 +326,33 @@ export const VideoRecordingSettingsToolbar = memo(() => {
 
                 {replaySettingsAction}
 
-                <WaButton
-                    id="video-start-recording"
-                    size="s"
-                    variant="brand"
-                    appearance="plain"
-                    className="video-recording-settings-action video-recorder-start-recording"
-                    aria-label="Record"
-                    onClick={() => void handleVideoRecording()}
-                >
-                    <WaIcon name="clapperboard-play" label=""/>
-                    <span>{'Record'}</span>
-                </WaButton>
+                {linkedTimelinePreparation ? (
+                    <WaButton
+                        id="video-start-hq-export"
+                        size="s"
+                        variant="brand"
+                        appearance="plain"
+                        className="video-recording-settings-action video-recorder-start-recording"
+                        aria-label="Create HQ video"
+                        onClick={handleHqExport}
+                    >
+                        <WaIcon name="clapperboard-play" label=""/>
+                        <span>{'Create HQ'}</span>
+                    </WaButton>
+                ) : (
+                    <WaButton
+                        id="video-start-recording"
+                        size="s"
+                        variant="brand"
+                        appearance="plain"
+                        className="video-recording-settings-action video-recorder-start-recording"
+                        aria-label="Record"
+                        onClick={() => void handleVideoRecording()}
+                    >
+                        <WaIcon name="clapperboard-play" label=""/>
+                        <span>{'Record'}</span>
+                    </WaButton>
+                )}
 
                 <span className="video-recording-settings-separator" aria-hidden="true"/>
 

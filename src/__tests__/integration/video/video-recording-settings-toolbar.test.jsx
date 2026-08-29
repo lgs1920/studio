@@ -151,6 +151,22 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(globalThis.__.ui.drawerManager.open).toHaveBeenCalledWith('replay-drawer')
     })
 
+    it('replaces Draft recording with direct HQ export during timeline preparation', () => {
+        globalThis.lgs.stores.replay.recordingSync = true
+        globalThis.lgs.stores.ui.video.timelinePreviewActive = true
+        const requestHqExport = vi.fn()
+        globalThis.window.addEventListener('lgs:video:start-hq-export', requestHqExport)
+
+        render(<VideoRecordingSettingsToolbar/>)
+
+        expect(screen.queryByRole('button', {name: 'Record'})).toBeNull()
+        expect(screen.getByRole('button', {name: 'Create HQ video'})).not.toBeNull()
+        fireEvent.click(screen.getByRole('button', {name: 'Create HQ video'}))
+        expect(requestHqExport).toHaveBeenCalledTimes(1)
+
+        globalThis.window.removeEventListener('lgs:video:start-hq-export', requestHqExport)
+    })
+
     it('waits for crop persistence before starting capture', async () => {
         let resolveCropSync = null
         globalThis.__.ui.widgetManager.syncCropDimensionsFromElement = vi.fn(() => new Promise(resolve => {

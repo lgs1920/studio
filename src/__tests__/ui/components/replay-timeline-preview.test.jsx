@@ -1,0 +1,564 @@
+import {act, cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react'
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import {proxy} from 'valtio'
+import {proxyMap} from 'valtio/utils'
+
+const timelineMocks = vi.hoisted(() => ({
+    props: null,
+}))
+
+const snapshotMocks = vi.hoisted(() => ({
+    snapdom: vi.fn(),
+}))
+
+vi.mock('@zumer/snapdom', () => ({
+    snapdom: snapshotMocks.snapdom,
+}))
+
+vi.mock('@xzdarcy/react-timeline-editor', async () => {
+    const React = await vi.importActual('react')
+
+    return {
+        Timeline: React.forwardRef((props, ref) => {
+            timelineMocks.props = props
+            const timelineElementRef = React.useRef(null)
+            React.useImperativeHandle(ref, () => ({
+                get target() {
+                    return timelineElementRef.current
+                },
+                setTime: vi.fn(),
+            }))
+            const [draggedRows, setDraggedRows] = React.useState([])
+            return (
+                <div ref={timelineElementRef} data-testid="timeline-editor" data-disable-drag={props.disableDrag}>
+                    {props.editorData.map(row => (
+                        <div className={`timeline-editor-edit-row ${row.classNames.join(' ')}`} key={row.id}>
+                            <div className="timeline-editor-edit-row-drag-handle"
+                                 data-drag-started={draggedRows.includes(row.id)}
+                                 data-testid={`timeline-drag-handle-${row.id}`}
+                                 onMouseDown={() => {
+                                     setDraggedRows(current => [...current, row.id])
+                                     props.onRowDragStart?.({row})
+                                 }}/>
+                        </div>
+                    ))}
+                </div>
+            )
+        }),
+    }
+})
+
+vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
+    WaButton: ({children, ...props}) => <button type="button" {...props}>{children}</button>,
+    WaButtonGroup: ({children, ...props}) => <div {...props}>{children}</div>,
+    WaIcon: ({name, ...props}) => <span data-icon={name} {...props}/>,
+    WaTooltip: ({children, ...props}) => <div {...props}>{children}</div>,
+    WaPopup: ({active, children, ...props}) => active ? <div {...props}>{children}</div> : null,
+}))
+
+vi.mock('@Components/MainUI/widgets/WidgetsPanelContent', () => ({
+    WidgetsPanelContent: ({themeClassName}) => <div data-testid="replay-widget-menu" data-theme={themeClassName}/>,
+}))
+
+import {ReplayTimelinePreview} from '@Components/MainUI/video/ReplayTimelinePreview'
+
+describe('ReplayTimelinePreview', () => {
+    beforeEach(() => {
+        timelineMocks.props = null
+        snapshotMocks.snapdom.mockImplementation(async element => ({
+            toCanvas: async () => {
+                const bounds = element.getBoundingClientRect?.() ?? {}
+                const canvas = document.createElement('canvas')
+                canvas.width = Number(bounds.width) || 500
+                canvas.height = Number(bounds.height) || 200
+                return canvas
+            },
+        }))
+        globalThis.__ = {
+            ui: {
+                widgetManager: {
+                    reorderWidgets: vi.fn(),
+                },
+                replay: {
+                    enterReplayPreparation: vi.fn(async () => true),
+                    toggle: vi.fn(),
+                    pause: vi.fn(),
+                    start: vi.fn(),
+                    seek: vi.fn(() => ({sample: null})),
+                    refresh: vi.fn(),
+                },
+            },
+        }
+        globalThis.lgs = {
+            settings: {
+                widgets: {
+                    'dynamic-stats-widget': {name: 'Dynamic Stats', icon: 'chart-line', timelineColor: 'indigo'},
+                    'journey-stats-widget': {name: 'Journey Stats', icon: 'mountain', timelineColor: 'green'},
+                },
+                ui: {
+                    replay: {
+                        duration: 4,
+                        clips: {catalog: {}, start: [], stop: []},
+                    },
+                },
+            },
+            stores: {
+                main: proxy({theJourney: null}),
+                ui: {
+                    widget: {
+                        list: proxyMap([
+                            ['dynamic-stats-widget', {widgetsBoard: 'video-crop-zone', zIndex: 4001}],
+                            ['journey-stats-widget', {widgetsBoard: 'video-crop-zone', zIndex: 4000}],
+                        ]),
+                    },
+                    video: proxy({
+                        editing: true,
+                        timelinePreviewActive: true,
+                        fps: 0,
+                        preRecording: false,
+                        recording: false,
+                        recordingHQ: false,
+                        finalizing: false,
+                    }),
+                },
+                replay: proxy({
+                    recordingSync: true,
+                    durationMillis: 4000,
+                    direction: 1,
+                    playing: false,
+                    dynamicFrameState: {frameTimeMs: 1000},
+                    clips: {catalog: {}, start: [], stop: []},
+                }),
+            },
+        }
+    })
+
+    afterEach(() => {
+        cleanup()
+        globalThis.__ = undefined
+        globalThis.lgs = undefined
+    })
+
+    it('renders one locked row per active widget and delegates transport controls to Replay', () => {
+        render(<ReplayTimelinePreview/>)
+
+        expect(screen.getByTestId('replay-timeline-preview')).not.toBeNull()
+        expect(screen.getByTestId('replay-timeline-preview').className)
+            .not.toContain('lgs-on-map-theme-vars')
+        expect(screen.getByTestId('replay-timeline-track-legend').textContent).toContain('Replay')
+        expect(screen.getByTestId('replay-timeline-track-legend').textContent).toContain('Journey Stats')
+        expect(screen.getByTestId('replay-timeline-track-legend').textContent).toContain('Dynamic Stats')
+        expect(screen.getByTestId('replay-timeline-track-legend').querySelector('[data-icon="route"]')).not.toBeNull()
+        expect(screen.getByTestId('replay-timeline-track-legend').querySelector('[data-icon="chart-line"]')).not.toBeNull()
+        expect(screen.getByTestId('replay-timeline-track-legend').querySelector('[data-icon="mountain"]')).not.toBeNull()
+        const journeyLegend = screen.getByLabelText('Journey Stats')
+        const journeyDragIcon = journeyLegend.querySelector('.replay-timeline-preview__track-drag-icon [data-icon]')
+        expect(journeyDragIcon?.getAttribute('data-icon'))
+            .toBe('grip-dots-vertical')
+        expect(journeyDragIcon?.getAttribute('variant'))
+            .toBe('solid')
+        const replayLegend = screen.getByLabelText('Replay')
+        expect(replayLegend.querySelector('.replay-timeline-preview__track-drag-icon [data-icon]')?.getAttribute('data-icon'))
+            .toBe('thumbtack')
+        expect(screen.getByTestId('replay-timeline-track-legend').querySelector('[data-icon="chart-line"]')
+            .className).toContain('wa-neutral wa-neutral-indigo')
+        expect(screen.getByTestId('replay-timeline-track-legend').querySelector('[data-icon="chart-line"]')
+            .parentElement.className).toContain('wa-neutral wa-neutral-indigo')
+        expect(screen.getByTestId('replay-timeline-track-legend').querySelector('[data-track-number]')).toBeNull()
+        expect(screen.getByTestId('timeline-editor').getAttribute('data-disable-drag')).toBe('false')
+        expect(timelineMocks.props.editorData).toHaveLength(3)
+        expect(timelineMocks.props.editorData.map(row => row.id)).toEqual([
+            'dynamic-stats-widget',
+            'journey-stats-widget',
+            'replay',
+        ])
+        expect(timelineMocks.props.scaleSplitCount).toBe(5)
+        expect(timelineMocks.props.scaleWidth).toBe(40)
+        expect(timelineMocks.props.rowHeight).toBe(24)
+        expect(timelineMocks.props.enableRowDrag).toBe(true)
+        expect(timelineMocks.props.hideCursor).toBe(false)
+        expect(timelineMocks.props.onScroll).toBeTypeOf('function')
+        expect(timelineMocks.props.getScaleRender(5020).props.children).toBe('5020')
+        expect(timelineMocks.props.editorData.flatMap(row => row.actions).every(action => (
+            action.locked === false && action.movable === true && action.flexible === false
+        ))).toBe(true)
+        expect(timelineMocks.props.onActionResizing({})).toBe(false)
+        const dynamicAction = timelineMocks.props.editorData
+            .find(row => row.id === 'dynamic-stats-widget').actions[0]
+        const dynamicActionRender = timelineMocks.props.getActionRender(dynamicAction)
+        expect(dynamicActionRender.props.children[0].props.children.props.action).toBe(dynamicAction)
+        expect(dynamicActionRender.props.children[1].props.children.props.children[0].props.children[0].props.name).toBe('chart-line')
+        expect(dynamicActionRender.props.children[1].props.children.props.children[0].props.children[1].props.children)
+            .toBe('Dynamic Stats')
+        const {container: dynamicActionContainer} = render(dynamicActionRender)
+        expect(dynamicActionContainer.querySelector('.replay-timeline-action')?.textContent).toBe('Dynamic Stats')
+        expect(dynamicActionContainer.querySelector('.replay-timeline-action__icon-trigger [data-icon="chart-line"]')).not.toBeNull()
+        expect(dynamicActionContainer.querySelector('.replay-timeline-action__icon-trigger [data-icon="chart-line"]')
+            .getAttribute('variant')).toBe('solid')
+        expect(dynamicActionContainer.querySelector('.replay-timeline-action__snapshot')).toBeNull()
+        expect(dynamicActionContainer.querySelector('.replay-timeline-action-tooltip__widget-copy')).not.toBeNull()
+        expect(dynamicActionContainer.querySelector('[for="replay-timeline-action-dynamic-stats-widget-0"]'))
+            .not.toBeNull()
+        expect(timelineMocks.props.editorData
+            .find(row => row.id === 'dynamic-stats-widget').classNames)
+            .toEqual(expect.arrayContaining(['wa-neutral', 'wa-neutral-indigo']))
+        expect(dynamicActionRender.props.children[0].props.className)
+            .toContain('wa-neutral wa-neutral-indigo')
+        const journeyAction = timelineMocks.props.editorData
+            .find(row => row.id === 'journey-stats-widget').actions[0]
+        const journeyActionRender = timelineMocks.props.getActionRender(journeyAction)
+        expect(journeyActionRender.props.children[0].props.className)
+            .toContain('wa-neutral wa-neutral-green')
+        const replayAction = timelineMocks.props.editorData
+            .find(row => row.id === 'replay').actions[0]
+        expect(timelineMocks.props.getActionRender(replayAction).props.children[0].props.children.props.action)
+            .toBe(replayAction)
+        globalThis.lgs.canvas = {
+            width: 320,
+            height: 180,
+            toDataURL: vi.fn(() => 'data:image/webp;base64,map-preview'),
+        }
+        const {container: replayActionContainer} = render(timelineMocks.props.getActionRender(replayAction))
+        expect(replayActionContainer.querySelector('.replay-timeline-action__map-fragment')?.className)
+            .toContain('replay-timeline-action__map-fragment--captured')
+        expect(replayActionContainer.querySelector('.replay-timeline-action__map-fragment'))
+            .not.toBeNull()
+        expect(replayActionContainer.querySelector('.replay-timeline-action__map-fragment')
+            .style.backgroundImage).toContain('map-preview')
+        timelineMocks.props.onRowDragEnd({
+            row: {id: 'dynamic-stats-widget'},
+            editorData: [
+                {id: 'dynamic-stats-widget'},
+                {id: 'journey-stats-widget'},
+                {id: 'replay'},
+            ],
+        })
+        expect(globalThis.__.ui.widgetManager.reorderWidgets).toHaveBeenCalledWith([
+            'dynamic-stats-widget',
+            'journey-stats-widget',
+        ])
+
+        fireEvent.click(screen.getByTestId('replay-timeline-play'))
+        fireEvent.click(screen.getByTestId('replay-timeline-replay'))
+        expect(globalThis.__.ui.replay.toggle).toHaveBeenCalledTimes(1)
+        expect(globalThis.__.ui.replay.start).toHaveBeenCalledWith({progress: 0})
+
+        const widgetMenuTrigger = screen.getByRole('button', {name: 'Add widget to timeline'})
+        fireEvent.click(widgetMenuTrigger)
+        expect(screen.getByTestId('replay-widget-menu').getAttribute('data-theme')).toBe('wa-theme-lgs1920')
+        fireEvent.click(widgetMenuTrigger)
+        expect(screen.queryByTestId('replay-widget-menu')).toBeNull()
+    })
+
+    it('moves the track legend with the timeline vertical scroll position', () => {
+        render(<ReplayTimelinePreview/>)
+
+        act(() => {
+            timelineMocks.props.onScroll({scrollTop: 48})
+        })
+
+        expect(screen.getByTestId('replay-timeline-track-legend-rows').style.transform)
+            .toBe('translateY(-48px)')
+    })
+
+    it('removes clip thumbnails while keeping the Replay map thumbnail', async () => {
+        globalThis.lgs.settings.ui.replay.clips.catalog = {
+            intro: {id: 'intro', label: 'Intro', slots: ['start'], defaults: {duration: 2}},
+        }
+        globalThis.lgs.stores.replay.clips = {
+            catalog: {
+                intro: {id: 'intro', label: 'Intro', slots: ['start'], defaults: {duration: 2}},
+            },
+            start: [{clipId: 'intro'}],
+            stop: [],
+        }
+        globalThis.lgs.canvas = {
+            width: 320,
+            height: 180,
+            toDataURL: vi.fn(() => 'data:image/webp;base64,map-preview'),
+        }
+
+        render(<ReplayTimelinePreview/>)
+
+        const replayRow = timelineMocks.props.editorData.find(row => row.id === 'replay')
+        const startAction = replayRow.actions.find(action => action.kind === 'start')
+        const replayAction = replayRow.actions.find(action => action.kind === 'replay')
+        const {container: startContainer} = render(timelineMocks.props.getActionRender(startAction))
+        const {container: replayContainer} = render(timelineMocks.props.getActionRender(replayAction))
+
+        expect(startContainer.querySelector('.replay-timeline-action')?.textContent).toContain('Intro')
+        expect(startContainer.querySelector('.replay-timeline-action__map-fragment')).toBeNull()
+        await waitFor(() => {
+            expect(replayContainer.querySelector('.replay-timeline-action-tooltip__map-fragment')?.className)
+                .toContain('replay-timeline-action__map-fragment--captured')
+        })
+    })
+
+    it('starts a movable row drag from the track name', () => {
+        render(<ReplayTimelinePreview/>)
+
+        act(() => {
+            fireEvent.mouseDown(screen.getByLabelText('Journey Stats'), {button: 0})
+        })
+
+        expect(screen.getByTestId('timeline-drag-handle-journey-stats-widget')
+            .getAttribute('data-drag-started')).toBe('true')
+        expect(screen.getByTestId('replay-timeline-layout').className)
+            .toContain('replay-timeline-preview__timeline-layout--dragging')
+        expect(screen.getByLabelText('Journey Stats').className)
+            .toContain('replay-timeline-preview__track-legend-row--dragging')
+        expect(screen.getByTestId('timeline-editor').parentElement.className)
+            .toContain('wa-neutral wa-neutral-green')
+
+        act(() => {
+            timelineMocks.props.onRowDragEnd({
+                row: {id: 'journey-stats-widget'},
+                editorData: timelineMocks.props.editorData,
+            })
+        })
+
+        expect(screen.getByTestId('replay-timeline-layout').className)
+            .not.toContain('replay-timeline-preview__timeline-layout--dragging')
+    })
+
+    it('uses the journey clips before Replay has hydrated its transient clip store', () => {
+        globalThis.lgs.theJourney = {
+            replay: {
+                start: [{clipId: 'intro'}],
+                stop: [{clipId: 'outro'}],
+            },
+        }
+        globalThis.lgs.settings.ui.replay.clips.catalog = {
+            intro: {
+                id: 'intro',
+                label: 'Intro',
+                icon: 'plane-departure',
+                slots: ['start'],
+                defaults: {duration: 2},
+            },
+            outro: {
+                id: 'outro',
+                label: 'Outro',
+                icon: 'plane-arrival',
+                slots: ['stop'],
+                defaults: {duration: 1},
+            },
+        }
+
+        render(<ReplayTimelinePreview/>)
+
+        expect(timelineMocks.props.editorData.find(row => row.id === 'replay').actions.map(action => action.label)).toEqual([
+            'Intro',
+            'Replay',
+            'Outro',
+        ])
+
+        const replayActions = timelineMocks.props.editorData.find(row => row.id === 'replay').actions
+        expect(replayActions.map(action => action.icon)).toEqual([
+            'plane-departure',
+            'route',
+            'plane-arrival',
+        ])
+
+        const {container: introContainer} = render(timelineMocks.props.getActionRender(replayActions[0]))
+        const {container: replayContainer} = render(timelineMocks.props.getActionRender(replayActions[1]))
+        const {container: outroContainer} = render(timelineMocks.props.getActionRender(replayActions[2]))
+
+        expect(introContainer.querySelector('.replay-timeline-action__icon-trigger [data-icon="plane-departure"]'))
+            .not.toBeNull()
+        expect(replayContainer.querySelector('.replay-timeline-action__icon-trigger [data-icon="route"]'))
+            .not.toBeNull()
+        expect(outroContainer.querySelector('.replay-timeline-action__icon-trigger [data-icon="plane-arrival"]'))
+            .not.toBeNull()
+    })
+
+    it('refreshes clip actions when Replay creates a clip after the timeline mounted', async () => {
+        render(<ReplayTimelinePreview/>)
+
+        expect(timelineMocks.props.editorData.find(row => row.id === 'replay').actions.map(action => action.label))
+            .toEqual(['Replay'])
+
+        act(() => {
+            globalThis.lgs.stores.replay.clips = {
+                catalog: {
+                    intro: {id: 'intro', label: 'Intro', slots: ['start'], defaults: {duration: 2}},
+                },
+                start: [{clipId: 'intro'}],
+                stop: [],
+            }
+        })
+
+        await waitFor(() => {
+            expect(timelineMocks.props.editorData.find(row => row.id === 'replay').actions.map(action => action.label))
+                .toEqual(['Intro', 'Replay'])
+        })
+    })
+
+    it('keeps Logo and Credits tracks above movable widget tracks', () => {
+        globalThis.lgs.settings.widgets['logo-widget'] = {name: 'Logo', icon: 'image'}
+        globalThis.lgs.settings.widgets['credits-widget'] = {name: 'Credits', icon: 'user'}
+        globalThis.lgs.stores.ui.widget.list.set('logo-widget', {
+            widgetsBoard: 'video-crop-zone',
+            zIndex: 10001,
+        })
+        globalThis.lgs.stores.ui.widget.list.set('credits-widget', {
+            widgetsBoard: 'video-crop-zone',
+            zIndex: 10000,
+        })
+
+        render(<ReplayTimelinePreview/>)
+
+        expect(timelineMocks.props.editorData.map(row => row.id)).toEqual([
+            'logo-widget',
+            'credits-widget',
+            'dynamic-stats-widget',
+            'journey-stats-widget',
+            'replay',
+        ])
+        expect(screen.getByTestId('replay-timeline-track-legend').querySelector('[data-icon="image"]')).not.toBeNull()
+        const fixedRows = timelineMocks.props.editorData.filter(row => (
+            row.id === 'logo-widget' || row.id === 'credits-widget'
+        ))
+        expect(fixedRows.every(row => row.fixed === true && row.movable === false)).toBe(true)
+        expect(fixedRows.flatMap(row => row.actions).every(action => action.movable === false)).toBe(true)
+    })
+
+    it('uses the text content and regular catalog icon for a text widget track', () => {
+        globalThis.lgs.settings.widgets['text-widget'] = {
+            name: 'Text',
+            icon: 'font',
+            timelineColor: 'pink',
+            configuration: {
+                default: {text: {content: 'My Route'}},
+                elements: {
+                    'text-widget#title': {text: {content: 'Actual text content'}},
+                },
+            },
+        }
+        globalThis.lgs.stores.ui.widget.list.set('text-widget#title', {
+            widgetsBoard: 'video-crop-zone',
+            zIndex: 3999,
+        })
+
+        render(<ReplayTimelinePreview/>)
+
+        expect(screen.getByTestId('replay-timeline-track-legend').textContent).toContain('Actual text content')
+        expect(screen.getByTestId('replay-timeline-track-legend').textContent).not.toContain('Widget ·')
+        expect(screen.getByTestId('replay-timeline-track-legend').querySelector('[data-icon="font"]')).not.toBeNull()
+        const textAction = timelineMocks.props.editorData
+            .find(row => row.id === 'text-widget#title').actions[0]
+        const textActionRender = timelineMocks.props.getActionRender(textAction)
+        expect(textActionRender.props.children[0].props.children.props.action).toBe(textAction)
+        expect(textActionRender.props.children[1].props.children.props.children[0].props.children[0].props.name).toBe('font')
+        expect(textActionRender.props.children[1].props.children.props.children[0].props.children[0].props.variant).toBe('regular')
+        expect(textActionRender.props.children[1].props.children.props.children[0].props.children[1].props.children)
+            .toBe('Actual text content')
+        expect(textActionRender.props.children[0].props.className)
+            .toContain('wa-neutral wa-neutral-pink')
+    })
+
+    it('keeps the profile chart visible when copying a widget into an action', async () => {
+        globalThis.lgs.settings.widgets['profile-widget'] = {
+            name: 'Profile',
+            icon: 'chart-area',
+            timelineColor: 'pink',
+        }
+        globalThis.lgs.stores.ui.widget.list.set('profile-widget', {
+            widgetsBoard: 'video-crop-zone',
+            zIndex: 3999,
+        })
+
+        const source = document.createElement('div')
+        const sourceCanvas = document.createElement('canvas')
+        sourceCanvas.width = 500
+        sourceCanvas.height = 200
+        source.append(sourceCanvas)
+        document.body.append(source)
+        vi.spyOn(source, 'getBoundingClientRect').mockReturnValue({width: 500, height: 200})
+
+        globalThis.__.ui.widgetManager.getElementById = vi.fn(() => source)
+
+        render(<ReplayTimelinePreview/>)
+        const profileAction = timelineMocks.props.editorData
+            .find(row => row.id === 'profile-widget').actions[0]
+        const {container} = render(timelineMocks.props.getActionRender(profileAction))
+
+        await act(async () => {
+            await Promise.resolve()
+        })
+
+        expect(container.querySelector('.replay-timeline-action__widget-copy-root')).not.toBeNull()
+        expect(container.querySelector('.replay-timeline-action__widget-copy')?.style.aspectRatio)
+            .toBe('2.5 / 1')
+        expect(snapshotMocks.snapdom).toHaveBeenCalledWith(source, expect.objectContaining({
+            backgroundColor: 'transparent',
+        }))
+        expect(profileAction.widgetId).toBe('profile-widget')
+
+        source.remove()
+    })
+
+    it('mounts a widget copy when the widget appears after the timeline action', async () => {
+        globalThis.lgs.settings.widgets['profile-widget'] = {
+            name: 'Profile',
+            icon: 'chart-area',
+            timelineColor: 'pink',
+        }
+        globalThis.lgs.stores.ui.widget.list.set('profile-widget', {
+            widgetsBoard: 'video-crop-zone',
+            zIndex: 3999,
+        })
+        globalThis.__.ui.widgetManager.getElementById = vi.fn(() => null)
+
+        render(<ReplayTimelinePreview/>)
+        const profileAction = timelineMocks.props.editorData
+            .find(row => row.id === 'profile-widget').actions[0]
+        const {container} = render(timelineMocks.props.getActionRender(profileAction))
+        expect(container.querySelector('.replay-timeline-action__widget-copy-root')).toBeNull()
+
+        const widgetContainer = document.createElement('div')
+        widgetContainer.className = 'lgs-widget-container'
+        widgetContainer.dataset.widget = 'profile-widget'
+        const widget = document.createElement('div')
+        widget.className = 'lgs-widget'
+        const canvas = document.createElement('canvas')
+        widget.append(canvas)
+        vi.spyOn(widget, 'getBoundingClientRect').mockReturnValue({width: 400, height: 200})
+        widgetContainer.append(widget)
+        document.body.append(widgetContainer)
+
+        await waitFor(() => {
+            expect(container.querySelector('.replay-timeline-action__widget-copy-root')).not.toBeNull()
+        })
+
+        widgetContainer.remove()
+    })
+
+    it('uses the configured Replay duration instead of the journey elapsed duration', () => {
+        globalThis.lgs.stores.replay.duration = 60
+        globalThis.lgs.stores.replay.durationMillis = 5_020_000
+
+        render(<ReplayTimelinePreview/>)
+
+        expect(timelineMocks.props.maxScaleCount).toBe(60)
+    })
+
+    it('requests HQ export through the existing dialog lifecycle', () => {
+        const requestHqExport = vi.fn()
+        globalThis.window.addEventListener('lgs:video:start-hq-export', requestHqExport)
+
+        render(<ReplayTimelinePreview/>)
+        fireEvent.click(screen.getByTestId('replay-timeline-export'))
+
+        expect(requestHqExport).toHaveBeenCalledTimes(1)
+        globalThis.window.removeEventListener('lgs:video:start-hq-export', requestHqExport)
+    })
+
+    it('stays hidden outside linked timeline preparation', () => {
+        globalThis.lgs.stores.ui.video.timelinePreviewActive = false
+
+        render(<ReplayTimelinePreview/>)
+
+        expect(screen.queryByTestId('replay-timeline-preview')).toBeNull()
+    })
+})

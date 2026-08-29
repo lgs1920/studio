@@ -497,6 +497,7 @@ export const VideoDownloadAndShareDialog = () => {
             return
         }
 
+        const wasTimelinePreviewActive = lgs.stores.ui.video.timelinePreviewActive === true
         Object.assign(lgs.stores.ui.video, {
             editing:    true,
             recordingHQ: true,
@@ -583,6 +584,7 @@ export const VideoDownloadAndShareDialog = () => {
                 editing:    false,
                 recordingHQ: false,
                 finalizing: false,
+                timelinePreviewActive: wasTimelinePreviewActive,
             })
             _dialogHiddenForHqExport.current = false
             _suppressNextDialogHideCleanup.current = false
@@ -605,6 +607,7 @@ export const VideoDownloadAndShareDialog = () => {
                 editing:    false,
                 recordingHQ: false,
                 finalizing: false,
+                timelinePreviewActive: wasTimelinePreviewActive,
             })
             _dialogHiddenForHqExport.current = false
             _suppressNextDialogHideCleanup.current = false
@@ -615,6 +618,20 @@ export const VideoDownloadAndShareDialog = () => {
             _hqExportAbortController.current = null
         }
     }, [__.recorder, getHqExportFilename, getHqFilenameStem, getMediaData, getVideoExtension, getVideoMimeType, isHqExporting, isReplayVideoLinked, prepareReplaySceneForDialog, releaseHqMediaUrl, waitForAnimationFrame])
+
+    /**
+     * Starts the linked Replay HQ export requested by the preparation timeline.
+     */
+    useEffect(() => {
+        const handleStartHqExport = () => {
+            if (globalThis.lgs?.stores?.replay?.recordingSync === true) {
+                void startHqExport()
+            }
+        }
+
+        globalThis.window?.addEventListener('lgs:video:start-hq-export', handleStartHqExport)
+        return () => globalThis.window?.removeEventListener('lgs:video:start-hq-export', handleStartHqExport)
+    }, [startHqExport])
 
     /**
      * Handle share action with Web Share API fallback.

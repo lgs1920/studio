@@ -543,6 +543,27 @@ describe('VideoDownloadAndShareDialog', () => {
         await expect(globalThis.navigator.share.mock.calls[1][0].files[0].text()).resolves.toBe('video')
     })
 
+    it('starts direct HQ export from linked timeline preparation without a Draft blob', async () => {
+        globalThis.lgs.stores.replay = {
+            recordingSync: true,
+            deferredExportPlan: null,
+        }
+        globalThis.lgs.stores.ui.video.timelinePreviewActive = true
+
+        render(<VideoDownloadAndShareDialog/>)
+
+        await act(async () => {
+            globalThis.window.dispatchEvent(new globalThis.CustomEvent('lgs:video:start-hq-export'))
+            await Promise.resolve()
+        })
+
+        await waitFor(() => expect(exportReplayDeferredMp4).toHaveBeenCalledTimes(1))
+        expect(countMocks.sendDraftVideo).not.toHaveBeenCalled()
+        expect(countMocks.sendHqVideo).toHaveBeenCalledTimes(1)
+        expect(prepareVideoCaptureUi).toHaveBeenCalledTimes(1)
+        expect(screen.getByTestId('video-preview-dialog')).not.toBeNull()
+    })
+
     it('preserves non-draft video metadata in the recording information', async () => {
         recorder.mediaData.metadata = {
             status: 'published',

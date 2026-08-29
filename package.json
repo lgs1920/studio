@@ -57,6 +57,7 @@
     "@turf/point-to-line-distance": "^7.4.0",
     "@turf/transform-rotate": "^7.4.0",
     "@web.awesome.me/webawesome-pro": "3.12.0",
+    "@xzdarcy/react-timeline-editor": "1.0.0",
     "@zumer/snapdom": "2.24.10",
     "argparse": "^3.0.1",
     "axios": "^1.20.0",

@@ -19,8 +19,10 @@
  * Delegates functionality to specialized classes.
  */
 import {
-    CAMERA_INFORMATION_WIDGET, JOURNEY_EDITOR_DRAWER, JOURNEY_TOOLBAR_WIDGET, PROFILE_WIDGET, SCENE_WIDGETS_BOARD,
-    VIDEO_WIDGETS_BOARD, WIDGET_EDITOR_POST_RENDER_EVENT, WIDGET_EDITOR_PRE_RENDER_EVENT, WIDGETS_EDITOR_DRAWER,
+    CAMERA_INFORMATION_WIDGET, CREDITS_WIDGET, JOURNEY_EDITOR_DRAWER, JOURNEY_TOOLBAR_WIDGET, LOGO_WIDGET, PROFILE_WIDGET,
+    SCENE_WIDGETS_BOARD,
+    VIDEO_WIDGETS_BOARD, WIDGET_EDITOR_POST_RENDER_EVENT, WIDGET_EDITOR_PRE_RENDER_EVENT, WIDGET_LAYER_START,
+    WIDGET_LAYER_STEP, WIDGETS_EDITOR_DRAWER,
 }                                from '@Core/constants'
 import { Export }                from '@Core/ui/Export'
 import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
@@ -346,6 +348,13 @@ export class WidgetManager {
     setConfig = (elementId, config) => this.#registry.setConfig(elementId, config)
 
     /**
+     * Invalidates one widget runtime while preserving its persisted position.
+     * @param {string} elementId - Widget identifier.
+     * @returns {boolean} Whether a runtime configuration was invalidated.
+     */
+    invalidateRuntimeById = elementId => this.#registry.invalidateRuntimeById(elementId)
+
+    /**
      * Retrieves widget configurations by group ID.
      * @param {string} groupId - The group identifier
      * @returns {Object[]} Array of widget configurations
@@ -552,6 +561,53 @@ export class WidgetManager {
         }
         await this.#widgetDB.saveWidgetPosition(widgetId, positionData)
 
+    }
+
+    /**
+     * Applies a video widget stack order and persists every affected layer.
+     *
+     * The input follows the visual order used by the widget management panel:
+     * first item is topmost, last item is bottommost.
+     *
+     * @param {Array<string>} orderedWidgetIds - Widget instance IDs, top to bottom.
+     * @returns {Promise<void>}
+     */
+    reorderWidgets = async orderedWidgetIds => {
+        const ids = [...new Set(orderedWidgetIds ?? [])]
+            .filter(Boolean)
+            .filter(id => ![CREDITS_WIDGET, LOGO_WIDGET].includes(id.split('#')[0]))
+        const $list = lgs.stores.ui.widget.list
+        const updates = ids.map((id, index) => {
+            const current = $list.get(id)
+            if (!current) {
+                return null
+            }
+
+            return {
+                id,
+                zIndex: WIDGET_LAYER_START + ((ids.length - 1 - index) * WIDGET_LAYER_STEP),
+                current,
+            }
+        }).filter(Boolean)
+
+        for (const update of updates) {
+            $list.set(update.id, {...update.current, zIndex: update.zIndex})
+            const cacheEntry = __.ui.widgetCache?.get?.(update.id) ?? {}
+            __.ui.widgetCache?.set?.(update.id, {...cacheEntry, zIndex: update.zIndex})
+            const element = typeof document !== 'undefined'
+                ? document.querySelector(`.lgs-widget-container[data-widget="${update.id}"]`)
+                : null
+            if (element) {
+                element.style.zIndex = update.zIndex
+            }
+        }
+
+        await Promise.all(updates.map(async update => {
+            const position = await this.getWidgetPosition(update.id)
+            if (position) {
+                await this.saveWidgetPosition(update.id, {...position, zIndex: update.zIndex}, false)
+            }
+        }))
     }
 
     /**

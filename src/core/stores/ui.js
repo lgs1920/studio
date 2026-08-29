@@ -87,6 +87,7 @@ export const ui = {
         captureMode: 'speed',
         url:     null,
         editing:         false,
+        timelinePreviewActive: false,
         recording:       false,
         recordingHQ:     false,
         preRecording: false,

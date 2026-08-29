@@ -484,7 +484,8 @@ export const COMPASS_WIDGET       = 'compass-widget',
              JOURNEY_TOOLBAR_WIDGET = 'journey-toolbar-widget',
              PROFILE_WIDGET       = 'profile-widget',
              TEXT_WIDGET          = 'text-widget',
-             JOURNEY_STATS_WIDGET = 'journey-stats-widget'
+             JOURNEY_STATS_WIDGET = 'journey-stats-widget',
+             REPLAY_TIMELINE_WIDGET = 'replay-timeline-widget'
 
 export const WIDGETS_CAPABILITIES   = [
            'canRemove',
@@ -524,6 +525,11 @@ export const WIDGETS_CAPABILITIES   = [
                                                   [
                                                       TEXT_WIDGET, {
                                                       component: 'TextWidget',
+                                                  },
+                                                  ],
+                                                  [
+                                                      REPLAY_TIMELINE_WIDGET, {
+                                                      component: 'ReplayTimelineWidget',
                                                   },
                                                   ],
                                               ]),

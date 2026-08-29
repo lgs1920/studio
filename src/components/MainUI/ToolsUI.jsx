@@ -15,12 +15,13 @@
  ******************************************************************************/
 import { CameraAndTargetPanel }     from '@Components/cesium/CameraAndTargetPanel/CameraAndTargetPanel'
 import { VideoRecordingSettingsWidget } from '@Components/MainUI/video/toolbox/VideoRecordingSettingsWidget'
+import { DynamicWidget } from '@Components/MainUI/widgets/DynamicWidget'
 import { VideoSettingsInfo }    from '@Components/MainUI/video/VideoSettingsInfo'
 import { SceneWidgetsRenderer } from '@Components/MainUI/widgets/SceneWidgetsRenderer'
 import { WidgetContextMenu }    from '@Components/MainUI/widgets/WidgetContextMenu'
 import { Cropper }           from '@Components/ToolsUI/cropper/Cropper'
 import { VideoRecordingScreenArea } from '@Components/MainUI/video/VideoRecordingScreenArea'
-import { JOURNEY_TOOLBAR_WIDGET }    from '@Core/constants'
+import { JOURNEY_TOOLBAR_WIDGET, JOURNEY_WIDGETS, SCENE_WIDGETS_BOARD } from '@Core/constants'
 import { JourneyToolbarWidget }     from '@Editor/JourneyToolbarWidget'
 import { useEffect, useRef }        from 'react'
 import { useSnapshot }              from 'valtio/index'
@@ -103,6 +104,15 @@ export const ToolsUI = () => {
                              renderRatioWidget={false}
                              options={{infoComponent: <VideoSettingsInfo/>}}/>
                     <VideoRecordingSettingsWidget id="video-recording-settings-widget"/>
+                    {video.timelinePreviewActive === true && replay.recordingSync === true && (
+                        <DynamicWidget
+                            id="replay-timeline-widget"
+                            props={{
+                                group:        JOURNEY_WIDGETS,
+                                widgetsBoard: SCENE_WIDGETS_BOARD,
+                            }}
+                        />
+                    )}
                     <WidgetContextMenu/>
                 </>
             ) : (

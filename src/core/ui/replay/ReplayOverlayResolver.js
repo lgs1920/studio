@@ -180,8 +180,8 @@ const videoOverlayModeForWidgetId = (widgetId = '') => {
     return VIDEO_STATS_WIDGET_MODES[baseId] ?? null
 }
 
-export const isJourneyReplayLinked = () => globalThis.lgs?.stores?.replay?.recordingSync === true
-    || globalThis.lgs?.settings?.ui?.replay?.recordingSync === true
+export const isJourneyReplayLinked = (replay = defaultReplayStore()) => replay?.recordingSync === true
+    || (replay === defaultReplayStore() && globalThis.lgs?.settings?.ui?.replay?.recordingSync === true)
 
 /**
  * Return true when the journey has stop clips configured.
@@ -309,13 +309,14 @@ const resolveReplayStatsWidgetVisibility = ({
     replay = defaultReplayStore(),
     controller = undefined,
     includeEditorPhase = false,
+    linked = undefined,
 } = {}) => {
     if (includeEditorPhase && isVideoWidgetEditorPhase()) {
         return true
     }
 
     const replayState = resolveReplayVisibilityState({replay, controller})
-    if (!isJourneyReplayLinked() || !replayState) {
+    if (!(linked ?? isJourneyReplayLinked(replay)) || !replayState) {
         return false
     }
 
@@ -341,12 +342,15 @@ export const resolveReplayVideoStatsWidgetVisibility = ({
     mode = 'journey',
     replay = defaultReplayStore(),
     controller = undefined,
+    includeEditorPhase = true,
+    linked = undefined,
 } = {}) => (
     resolveReplayStatsWidgetVisibility({
         mode,
         replay,
         controller,
-        includeEditorPhase: true,
+        includeEditorPhase,
+        linked,
     })
 )
 

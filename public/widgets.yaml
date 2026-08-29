@@ -26,6 +26,7 @@ widgets:
     name: "Compass"
     description: "A compass widget"
     icon: "compass"
+    timelineColor: "green"
     mandatory: false
     max: 1
     component: "CompassWidget"
@@ -78,6 +79,7 @@ widgets:
     name: "Credits"
     description: "Map credits"
     icon: "user"
+    timelineColor: "gray"
     mandatory: true
     component: "CreditsWidget"
     type: "lgs-visual-widget"
@@ -91,6 +93,7 @@ widgets:
     name: "Logo"
     description: "LGS1920 logo"
     icon: "image"
+    timelineColor: "gray"
     mandatory: true
     max: 1
     component: "LogoWidget"
@@ -105,12 +108,13 @@ widgets:
     name: "Elevation Profile"
     description: "Journey elevation profile"
     icon: "chart-fft"
+    timelineColor: "indigo"
     mandatory: false
     max: 1
     component: "ProfileWidget"
     type: "lgs-visual-widget"
     path: "@Components/Profile"
-    ratio: "16x9"
+    ratio: "0x0"
     groups:
       - "journey-widgets"
       - "scene-widgets"
@@ -181,11 +185,31 @@ widgets:
       user:
       elements:
 
+  replay-timeline-widget:
+    id: "replay-timeline-widget"
+    name: "Replay Timeline"
+    description: "Locked Replay preparation timeline"
+    icon: "timeline"
+    timelineColor: "blue"
+    mandatory: false
+    max: 1
+    component: "ReplayTimelineWidget"
+    type: "lgs-visual-widget"
+    alwaysOnTop: true
+    groups:
+      - "journey-widgets"
+    availability:
+      boards:
+        - "scene"
+      requires:
+        - "hasJourney"
+
   text-widget:
     id: "text-widget"
     name: "Text"
     description: "Text widget"
-    icon: "text"
+    icon: "font"
+    timelineColor: "blue"
     mandatory: false
     component: "TextWidget"
     type: "lgs-visual-widget"
@@ -248,6 +272,7 @@ widgets:
     name: "Journey Stats"
     description: "Journey Stats"
     icon: "route"
+    timelineColor: "pink"
     mandatory: false
     max: 1
     component: "JourneyStatsWidget"
@@ -319,6 +344,7 @@ widgets:
     name: "Dynamic Stats"
     description: "Live replay stats"
     icon: "route"
+    timelineColor: "indigo"
     mandatory: false
     max: 1
     component: "DynamicStatsWidget"

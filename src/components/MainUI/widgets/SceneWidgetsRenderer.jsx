@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 import { DynamicWidget } from '@Components/MainUI/widgets/DynamicWidget'
-import { SCENE_WIDGETS_BOARD } from '@Core/constants'
+import { REPLAY_TIMELINE_WIDGET, SCENE_WIDGETS_BOARD } from '@Core/constants'
 import { useMemo } from 'react'
 import { useSnapshot }   from 'valtio'
 
@@ -33,6 +33,7 @@ export const SceneWidgetsRenderer = () => {
 
     const sceneWidgets = useMemo(() => {
         return Array.from(list.entries()).filter(([, props]) => props?.widgetsBoard === SCENE_WIDGETS_BOARD)
+            .filter(([id]) => id.split('#')[0] !== REPLAY_TIMELINE_WIDGET)
     }, [list])
 
     if (isVideoSceneActive) {
