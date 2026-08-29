@@ -16,6 +16,7 @@
 
 import { CREDITS_WIDGET, LGS_VISUAL_WIDGET, LOGO_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { v4 as uuid }        from 'uuid'
+import { fitWidgetDimensionsToBounds, isNonDistortingWidget } from './widgetResizeUtils'
 
 /**
  * Handles widget layout, control box visibility, and setup routines.
@@ -348,8 +349,10 @@ export class WidgetCoreControls {
         const widget = element.getBoundingClientRect()
         const margin = Number.isFinite(config.margin) ? config.margin : 0
 
-        let defaultWidth = widget.width || 200
-        let defaultHeight = widget.height || 200
+        const configuredWidth = Number(config.width)
+        const configuredHeight = Number(config.height)
+        let defaultWidth = Number.isFinite(configuredWidth) && configuredWidth > 0 ? configuredWidth : (widget.width || 200)
+        let defaultHeight = Number.isFinite(configuredHeight) && configuredHeight > 0 ? configuredHeight : (widget.height || 200)
 
         if ((config.fromDB || config.fromRuntime) && config.dimensions?.width && config.dimensions?.height) {
             defaultWidth = config.dimensions.width
@@ -787,8 +790,34 @@ export class WidgetCoreControls {
                 }
             }
 
+            const isLayoutResizable = isNonDistortingWidget(config)
+            let dimensionsWereAdapted = false
+            if (allowAutoAdapt && !skipInitialAutoAdapt && isLayoutResizable && !isVideoBoardWidget) {
+                const currentDimensions = {
+                    width:  Number(config.dimensions?.width) || Number(element.getBoundingClientRect().width) || 0,
+                    height: Number(config.dimensions?.height) || Number(element.getBoundingClientRect().height) || 0,
+                }
+                const elementMargins = this.#getElementMargins(element)
+                const dimensions = fitWidgetDimensionsToBounds({
+                    config,
+                    element,
+                    dimensions: currentDimensions,
+                    bounds: {
+                        width:  boundsRect.width,
+                        height: boundsRect.height,
+                    },
+                    margins: elementMargins,
+                })
+                dimensionsWereAdapted = dimensions.width !== currentDimensions.width || dimensions.height !== currentDimensions.height
+                if (dimensionsWereAdapted) {
+                    config.dimensions = dimensions
+                    element.style.width = `${dimensions.width}px`
+                    element.style.height = `${dimensions.height}px`
+                }
+            }
+
             let scaleWasAdapted = false
-            if (allowAutoAdapt && !skipInitialAutoAdapt && !config.isCropper && config.type === LGS_VISUAL_WIDGET &&
+            if (allowAutoAdapt && !skipInitialAutoAdapt && !isLayoutResizable && !config.isCropper && config.type === LGS_VISUAL_WIDGET &&
                 config.widgetsBoard !== VIDEO_WIDGETS_BOARD) {
                 const oldScale = {...config.scale}
                 config.scale = this.adaptScaleToContainer(config, boundsRect)
@@ -808,14 +837,14 @@ export class WidgetCoreControls {
                 }
             }
 
-            if ((!first && config.savedRatios && !isVideoBoardWidget) || scaleWasAdapted || positionWasAdapted) {
+            if ((!first && config.savedRatios && !isVideoBoardWidget) || dimensionsWereAdapted || scaleWasAdapted || positionWasAdapted) {
                 element.style.left = `${config.position.left}px`
                 element.style.top = `${config.position.top}px`
                 setPosition(config.position)
             }
 
             if (!first && allowAutoAdapt && !config.isCropper && !isVideoBoardWidget &&
-                (scaleWasAdapted || positionWasAdapted) && config.persist) {
+                (dimensionsWereAdapted || scaleWasAdapted || positionWasAdapted) && config.persist) {
                 __.ui.widgetManager.saveWidgetPosition(config.id, config)
             }
 
@@ -1070,6 +1099,10 @@ export class WidgetCoreControls {
             config.ratio = this.#registry.getRatio(initialConfig.ratio ?? fallback)
         }
 
+        if (isNonDistortingWidget(config)) {
+            config.scale = {x: 1, y: 1}
+        }
+
         const hasCropDimensions = config.isCropper &&
             Number.isFinite(config.cropDimensions?.left) &&
             Number.isFinite(config.cropDimensions?.top) &&
@@ -1108,6 +1141,12 @@ export class WidgetCoreControls {
             Number.isFinite(config.dimensions?.height) &&
             config.dimensions.width > 0 &&
             config.dimensions.height > 0) {
+            element.style.width = `${config.dimensions.width}px`
+            element.style.height = `${config.dimensions.height}px`
+        }
+
+        if (!config.isCropper && config.resizable &&
+            Number.isFinite(config.dimensions?.width) && Number.isFinite(config.dimensions?.height)) {
             element.style.width = `${config.dimensions.width}px`
             element.style.height = `${config.dimensions.height}px`
         }

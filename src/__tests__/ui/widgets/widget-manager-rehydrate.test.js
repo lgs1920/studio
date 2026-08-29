@@ -84,4 +84,21 @@ describe('WidgetManager video widget rehydration', () => {
         expect(manager.setScale).toHaveBeenCalledWith(widget, 1.65, 1.65)
         expect(widgetCache.mount).toHaveBeenCalledWith(config.id)
     })
+
+    it('persists a top-to-bottom video widget order as descending z-index values', async () => {
+        const topWidget = 'dynamic-stats-widget'
+        const bottomWidget = 'journey-stats-widget'
+        lgs.stores.ui.widget.list = new Map([
+            [topWidget, {widgetsBoard: VIDEO_WIDGETS_BOARD, zIndex: 4000}],
+            [bottomWidget, {widgetsBoard: VIDEO_WIDGETS_BOARD, zIndex: 4001}],
+        ])
+        manager.getWidgetPosition = vi.fn(async () => ({left: 0, top: 0, width: 100, height: 50}))
+        manager.saveWidgetPosition = vi.fn(async () => undefined)
+
+        await manager.reorderWidgets([bottomWidget, topWidget])
+
+        expect(lgs.stores.ui.widget.list.get(bottomWidget).zIndex).toBe(4001)
+        expect(lgs.stores.ui.widget.list.get(topWidget).zIndex).toBe(4000)
+        expect(manager.saveWidgetPosition).toHaveBeenCalledTimes(2)
+    })
 })

@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { LGS_VISUAL_WIDGET, LGS_WIDGET, SCENE_WIDGETS_BOARD, SECOND, WIDGETS_CAPABILITIES } from '@Core/constants'
+import { isNonDistortingWidget } from './widgetResizeUtils'
 import { v4 as uuid }                                      from 'uuid'
 
 /**
@@ -159,6 +160,22 @@ export class WidgetCoreRegistry {
      */
     setConfig = (elementId, config) => {
         this.#widgets.set(elementId, config)
+    }
+
+    /**
+     * Invalidates one widget runtime while preserving its persisted position.
+     *
+     * @param {string} elementId - Widget identifier.
+     * @returns {boolean} Whether a runtime configuration was invalidated.
+     */
+    invalidateRuntimeById = elementId => {
+        const config = this.#widgets.get(elementId)
+        if (!config) {
+            return false
+        }
+
+        this.#invalidateRuntimeConfig(elementId, config)
+        return true
     }
 
     /**
@@ -476,6 +493,7 @@ export class WidgetCoreRegistry {
                 canReduce:              initialConfig.canReduce ?? true,
                 centerRatio:            {x: 0.5, y: 0.5},
                 collapsed:              initialConfig.collapsed ?? false,
+                constrainResizeToContent: initialConfig.constrainResizeToContent ?? true,
                 container:              initialConfig.container,
                 contextMenu:            this.cloneContext(initialConfig?.contextMenu ?? {}, WIDGETS_CAPABILITIES),
                 boundsContainer:        initialConfig.boundsContainer ?? initialConfig.container,
@@ -511,6 +529,7 @@ export class WidgetCoreRegistry {
                 previousCropDimensions: null,
                 ratio:                  ratio,
                 resizeFromCenter:       initialConfig.resizeFromCenter ?? false,
+                resizeToContent:        initialConfig.resizeToContent ?? null,
                 resizable:              initialConfig.resizable ?? false,
                 rotate:                 initialConfig.rotate ?? 0,
                 runtimeReady:           false,
@@ -528,6 +547,8 @@ export class WidgetCoreRegistry {
                 type:                   initialConfig.type ?? LGS_WIDGET,
                 useRatio:               initialConfig.useRatio ?? true,
                 widgetsBoard:           initialConfig.widgetsBoard,
+                width:                   initialConfig.width,
+                height:                  initialConfig.height,
                 zIndex: initialConfig.zIndex ?? 0,
             }
         }
@@ -583,6 +604,30 @@ export class WidgetCoreRegistry {
             }
             if (initialConfig.preserveChildrenWhenCollapsed !== undefined) {
                 config.preserveChildrenWhenCollapsed = initialConfig.preserveChildrenWhenCollapsed
+            }
+            if (initialConfig.width !== undefined) {
+                config.width = initialConfig.width
+            }
+            if (initialConfig.height !== undefined) {
+                config.height = initialConfig.height
+            }
+            if (initialConfig.min !== undefined) {
+                config.min = initialConfig.min
+            }
+            if (initialConfig.max !== undefined) {
+                config.max = initialConfig.max
+            }
+            if (initialConfig.resizeToContent !== undefined) {
+                config.resizeToContent = initialConfig.resizeToContent
+            }
+            if (initialConfig.constrainResizeToContent !== undefined) {
+                config.constrainResizeToContent = initialConfig.constrainResizeToContent
+            }
+            if (initialConfig.persist !== undefined) {
+                config.persist = initialConfig.persist
+            }
+            if (initialConfig.transient !== undefined) {
+                config.transient = initialConfig.transient
             }
         }
 
@@ -804,7 +849,7 @@ export class WidgetCoreRegistry {
         const fallbackTopRatio = config.savedRatios?.topRatio
         const leftRatio = Number.isFinite(computedLeftRatio) ? computedLeftRatio : (Number.isFinite(fallbackLeftRatio) ? fallbackLeftRatio : 0)
         const topRatio = Number.isFinite(computedTopRatio) ? computedTopRatio : (Number.isFinite(fallbackTopRatio) ? fallbackTopRatio : 0)
-        const scale = config.isCropper
+        const scale = config.isCropper || isNonDistortingWidget(config)
                       ? {x: 1, y: 1}
                       : config.scale
                         ? {

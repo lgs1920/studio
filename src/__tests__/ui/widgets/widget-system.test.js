@@ -65,6 +65,7 @@ const installGlobals = () => {
             videoFormats: [
                 {value: '1x1', locked: true, aspectRatio: 1},
                 {value: '16x9', locked: true, aspectRatio: 16 / 9},
+                {value: '0x0', locked: false, aspectRatio: 0},
             ],
             widgetRatio: {value: '1x1', locked: true, aspectRatio: 1},
         },
@@ -208,6 +209,50 @@ describe('Widget registry ratio resolution', () => {
         })
 
         expect(config.ratio.value).toBe('16x9')
+    })
+
+    it('keeps an explicit free visual widget ratio', async () => {
+        const registry = new WidgetCoreRegistry()
+        const config = await registry.retrieveConfig({}, {
+            id:        `${PROFILE_WIDGET}#free`,
+            type:      LGS_VISUAL_WIDGET,
+            ratio:     '0x0',
+            container: document.body,
+        })
+
+        expect(config.ratio).toEqual({value: '0x0', locked: false, aspectRatio: 0})
+    })
+
+    it('refreshes resize behavior when a runtime widget configuration is reused', async () => {
+        const registry = new WidgetCoreRegistry()
+        const widgetId = `${PROFILE_WIDGET}#runtime`
+        registry.setConfig(widgetId, {
+            id:            widgetId,
+            runtimeReady:  false,
+            resizable:     false,
+            scalable:      true,
+            min:           {width: 10, height: 10},
+            max:           {width: 500, height: 500},
+            container:     document.body,
+        })
+
+        const config = await registry.retrieveConfig({}, {
+            id:              widgetId,
+            container:       document.body,
+            max:             {width: 900},
+            min:             {width: 150},
+            resizable:       true,
+            constrainResizeToContent: false,
+            resizeToContent: {height: true},
+            scalable:        false,
+        })
+
+        expect(config.resizable).toBe(true)
+        expect(config.scalable).toBe(false)
+        expect(config.min).toEqual({width: 150})
+        expect(config.max).toEqual({width: 900})
+        expect(config.resizeToContent).toEqual({height: true})
+        expect(config.constrainResizeToContent).toBe(false)
     })
 
     it('migrates old persisted global ratios when an explicit widget ratio is requested', async () => {

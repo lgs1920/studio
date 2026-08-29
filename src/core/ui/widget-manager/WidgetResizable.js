@@ -18,6 +18,7 @@
  * Singleton class that manages resizable functionality for widgets.
  */
 import { LGS_ANIMATION_RESIZING } from '@Core/constants'
+import { constrainWidgetDimensions } from './widgetResizeUtils'
 
 export class WidgetResizable {
     // Singleton instance
@@ -111,9 +112,26 @@ export class WidgetResizable {
             return
         }
         this.#widgetManager.isResizing = true
-        const width = Math.round(event.width)
-        const height = Math.round(event.height)
         const config = this.#widgetManager.getWidgetConfig(this.#widgetManager.retrieveElementId(target))
+        if (!config) {
+            this.#widgetManager.isResizing = false
+            return
+        }
+
+        const requestedWidth = Math.round(event.width)
+        const requestedHeight = Math.round(event.height)
+        const preferredAxis = event.direction?.[0] === 0 && event.direction?.[1] !== 0 ? 'height' : 'width'
+        const constrainedDimensions = config.isCropper
+            ? {width: requestedWidth, height: requestedHeight}
+            : constrainWidgetDimensions({
+                config,
+                element: target,
+                width: requestedWidth,
+                height: requestedHeight,
+                preferredAxis,
+            })
+        const width = Math.round(constrainedDimensions.width)
+        const height = Math.round(constrainedDimensions.height)
         const prevCropDimensions = config.isCropper ? {...config.cropDimensions} : {}
         const baseLeft = __.app.parsePx(target.style.left || '0')
         const baseTop = __.app.parsePx(target.style.top || '0')
@@ -267,6 +285,17 @@ export class WidgetResizable {
             const width = __.app.parsePx(event.target.style.width || '0') || event.target.getBoundingClientRect().width || config.dimensions?.width || 0
             const height = __.app.parsePx(event.target.style.height || '0') || event.target.getBoundingClientRect().height || config.dimensions?.height || 0
             config.dimensions = {width, height}
+        }
+
+        const widgetList = globalThis.lgs?.stores?.ui?.widget?.list
+        if (!config.isCropper && widgetList?.get && widgetList?.set) {
+            const entry = widgetList.get(config.id) ?? {}
+            const nextEntry = {
+                ...entry,
+                dimensions: config.dimensions,
+                position:   config.position,
+            }
+            widgetList.set(config.id, nextEntry)
         }
 
         if (config.persist) {

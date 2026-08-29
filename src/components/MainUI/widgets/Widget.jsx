@@ -34,6 +34,7 @@ import {
     DEFAULT_WIDGET_GRID_SETTINGS,
     getWidgetGridSettings,
 }                                 from '@Core/ui/widget-manager/widgetGridUtils'
+import {resolveWidgetResizeLimits} from '@Core/ui/widget-manager/widgetResizeUtils'
 import { useOptionalSnapshot }     from '@Utils/ValtioUtils'
 import { WaIcon }                 from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                 from 'classnames'
@@ -353,6 +354,7 @@ const createWidgetSnapshot = (sourceCanvas, canvasRect, widgetRect, previewerRec
  * @param {Object} props.config                     - Complete widget configuration object
  * @param {React.RefObject} [props.childRef]        - Optional forwarded ref to inner content
  * @param {number|string|null} [props.expandRequestKey=null] - Changes request host-managed expansion
+ * @param {number} [props.selectionRequestKey=0]    - Changes request cropper selection
  * @returns {JSX.Element|null}
  */
 export const Widget = ({
@@ -364,6 +366,7 @@ export const Widget = ({
     config,
     childRef,
     expandRequestKey = null,
+    selectionRequestKey = 0,
 }) => {
     // Core DOM references
     const _widget = useRef(null)
@@ -394,6 +397,7 @@ export const Widget = ({
     const [locked, setLocked] = useState(false)
     const [collapsedIconFallback, setCollapsedIconFallback] = useState(false)
     const [showLockedHint, setShowLockedHint] = useState(false)
+    const [contentResizeLimits, setContentResizeLimits] = useState(null)
 
     // Global stores (valtio)
     const $widget = lgs.stores.ui.widget
@@ -1208,6 +1212,15 @@ export const Widget = ({
         __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, true, true)
     }, [widgetId, drawers.entity, drawers.open, canInteract])
 
+    useEffect(() => {
+        if (!config.isCropper || selectionRequestKey === 0) {
+            return undefined
+        }
+
+        const frameId = requestAnimationFrame(selectWidget)
+        return () => cancelAnimationFrame(frameId)
+    }, [config.isCropper, selectWidget, selectionRequestKey])
+
     const handlePointerDown = useCallback((event) => {
         if (hasNoDragInPath(event)) {
             return
@@ -1221,6 +1234,24 @@ export const Widget = ({
         }
         selectWidget()
     }, [canLock, selectWidget, toggleLocked])
+
+    /**
+     * Resolves a drag handle inside the current widget element.
+     *
+     * @returns {HTMLElement|null} The scoped drag handle or the widget itself.
+     */
+    const resolveDragTarget = useCallback(() => {
+        const element = _widget.current
+        if (!element) {
+            return null
+        }
+
+        if (typeof config?.handle === 'string') {
+            return element.querySelector(config.handle) ?? element
+        }
+
+        return config?.handle ?? element
+    }, [config.handle])
 
     const handleBound = useCallback(() => __.ui.widgetManager.setBoundStatus(_widget.current), [])
 
@@ -1265,6 +1296,80 @@ export const Widget = ({
             observer.disconnect()
         }
     }, [widgetId])
+
+    useEffect(() => {
+        const resizeToContent = config?.constrainResizeToContent === false
+            ? null
+            : config?.resizeToContent
+        const element = _widget.current
+        if (!element || config?.isCropper || !resizeToContent || typeof ResizeObserver === 'undefined') {
+            setContentResizeLimits(null)
+            return undefined
+        }
+
+        const content = typeof resizeToContent === 'object' && resizeToContent.target
+            ? (typeof resizeToContent.target === 'string'
+                ? element.querySelector(resizeToContent.target)
+                : resizeToContent.target)
+            : element.firstElementChild
+
+        if (!content) {
+            setContentResizeLimits(null)
+            return undefined
+        }
+
+        const originalMaxWidth = element.style.maxWidth
+        const originalMaxHeight = element.style.maxHeight
+        const originalMinWidth = element.style.minWidth
+        const originalMinHeight = element.style.minHeight
+
+        const updateLimits = () => {
+            const runtimeConfig = __.ui.widgetManager.getWidgetConfig(widgetId) ?? config
+            const limits = resolveWidgetResizeLimits(runtimeConfig, element)
+            const limitsWidth = resizeToContent === true || resizeToContent?.width === true
+            const limitsHeight = resizeToContent === true || resizeToContent?.height === true
+
+            if (limitsWidth && Number.isFinite(limits.maxWidth)) {
+                element.style.maxWidth = `${limits.maxWidth}px`
+            }
+            if (limitsHeight && Number.isFinite(limits.maxHeight)) {
+                element.style.maxHeight = `${limits.maxHeight}px`
+            }
+            const minimumWidth = resizeToContent?.minWidth === true || resizeToContent?.min?.width === true
+            const minimumHeight = resizeToContent?.minHeight === true || resizeToContent?.min?.height === true
+            if (minimumWidth && Number.isFinite(limits.minWidth)) {
+                element.style.minWidth = `${limits.minWidth}px`
+            }
+            if (minimumHeight && Number.isFinite(limits.minHeight)) {
+                element.style.minHeight = `${limits.minHeight}px`
+            }
+
+            setContentResizeLimits(previous => previous?.minWidth === limits.minWidth
+                && previous?.minHeight === limits.minHeight
+                && previous?.maxWidth === limits.maxWidth
+                && previous?.maxHeight === limits.maxHeight
+                ? previous
+                : {
+                    minWidth:  limits.minWidth,
+                    minHeight: limits.minHeight,
+                    maxWidth:  limits.maxWidth,
+                    maxHeight: limits.maxHeight,
+                })
+            _moveable.current?.updateRect()
+        }
+
+        updateLimits()
+        const observer = new ResizeObserver(updateLimits)
+        observer.observe(content)
+
+        return () => {
+            observer.disconnect()
+            element.style.maxWidth = originalMaxWidth
+            element.style.maxHeight = originalMaxHeight
+            element.style.minWidth = originalMinWidth
+            element.style.minHeight = originalMinHeight
+        }
+    }, [config, config?.constrainResizeToContent, config?.isCropper, config?.resizeToContent, widgetId])
 
     useEffect(() => {
         if (!isSelected || keyboardUpdate === 0) {
@@ -1349,6 +1454,7 @@ export const Widget = ({
                 canLock:        config.canLock ?? true,
                 canReduce:      isVisualWidget ? false : (config.canReduce ?? true),
                 collapsed:      isVisualWidget ? false : (config.collapsed ?? false),
+                constrainResizeToContent: config.constrainResizeToContent ?? true,
                 contextMenu:    __.ui.widgetManager.cloneContext(config?.contextMenu ?? {}, WIDGETS_CAPABILITIES),
                 cropDimensions: config.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0},
                 dynamic:        config.dynamic ?? false,
@@ -1376,6 +1482,7 @@ export const Widget = ({
                 ratio:          config.ratio ?? null,
                 resizeFromCenter: config.resizeFromCenter ?? false,
                 resizable:      config.resizable ?? false,
+                resizeToContent: config.resizeToContent ?? null,
                 rotatable:      config.rotatable ?? false,
                 scalable:       config.scalable ?? false,
                 showControlBox: config.showControlBox ?? true,
@@ -1390,6 +1497,7 @@ export const Widget = ({
                 preserveChildrenWhenCollapsed: config.preserveChildrenWhenCollapsed ?? false,
                 widgetsBoard:   config.widgetsBoard || null,
                 width:          config.width,
+                height:         config.isCropper ? undefined : config.height,
                 zIndex:         activeZIndex, // Inject the reactive value immediately
             }
 
@@ -1413,21 +1521,37 @@ export const Widget = ({
 
                 // Synchronize store entry if missing
                 if (!$widget.list.has(widgetId)) {
-                    $widget.list.set(widgetId, {
+                    const widgetEntry = {
                         zIndex:      activeZIndex,
                         collapsed:   Boolean(resolved.collapsed),
                         icon:        collapsedIcon,
                         locked:      Boolean(resolved.locked),
                         widgetsBoard: resolved.widgetsBoard,
-                    })
+                    }
+                    if (!resolved.isCropper) {
+                        Object.assign(widgetEntry, {
+                            dimensions: resolved.dimensions,
+                            position:   resolved.position,
+                            ratio:      resolved.ratio,
+                        })
+                    }
+                    $widget.list.set(widgetId, widgetEntry)
                 }
                 else {
-                    updateWidgetStoreEntry({
+                    const widgetEntry = {
                         collapsed:   Boolean(resolved.collapsed),
                         icon:        collapsedIcon,
                         locked:      Boolean(resolved.locked),
                         widgetsBoard: resolved.widgetsBoard,
-                    })
+                    }
+                    if (!resolved.isCropper) {
+                        Object.assign(widgetEntry, {
+                            dimensions: resolved.dimensions,
+                            position:   resolved.position,
+                            ratio:      resolved.ratio,
+                        })
+                    }
+                    updateWidgetStoreEntry(widgetEntry)
                 }
 
                 _widget.current.style.opacity = liveOpacity
@@ -1635,7 +1759,7 @@ export const Widget = ({
                 origin={false}
                 ref={_moveable}
                 target={_widget}
-                dragTarget={config.handle}
+                dragTarget={config.handle ? resolveDragTarget : _widget}
                 draggable={canDrag}
                 edgeDraggable={true}
                 edge={['w', 'e', 's', 'n']}
@@ -1648,6 +1772,10 @@ export const Widget = ({
                 stopPropagation={true}
                 keepRatio={Boolean(__.ui.widgetManager.getWidgetConfig(widgetId)?.ratio?.locked ?? config?.ratio?.locked)}
                 resizable={canResize}
+                minWidth={canResize && !config.isCropper ? contentResizeLimits?.minWidth ?? config?.min?.width : undefined}
+                minHeight={canResize && !config.isCropper ? contentResizeLimits?.minHeight ?? config?.min?.height : undefined}
+                maxWidth={canResize && !config.isCropper ? contentResizeLimits?.maxWidth ?? config?.max?.width : undefined}
+                maxHeight={canResize && !config.isCropper ? contentResizeLimits?.maxHeight ?? config?.max?.height : undefined}
                 onResize={handleResize}
                 onResizeStart={handleResizeStart}
                 onResizeEnd={handleResizeEnd}

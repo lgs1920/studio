@@ -41,6 +41,7 @@ import { useSnapshot }                 from 'valtio'
 import { useOptionalSnapshot }         from '@Utils/ValtioUtils'
 
 const PROFILE_WIDGET_RATIO_CUSTOM_VALUE = 'custom'
+const PROFILE_WIDGET_RATIO_NONE_VALUE = '0x0'
 const PROFILE_WIDGET_RATIO_PRESETS = [
     {value: '16x9', label: 'Large', aspectRatio: 16 / 9},
     {value: '4x1', label: 'X large', aspectRatio: 4 / 1},
@@ -109,6 +110,14 @@ const normalizeRatioPreset = (ratio) => {
     }
 
     const value = ratio.value ?? ratio
+    if (value === PROFILE_WIDGET_RATIO_NONE_VALUE) {
+        return {
+            value:       PROFILE_WIDGET_RATIO_NONE_VALUE,
+            aspectRatio: 0,
+            locked:      false,
+        }
+    }
+
     const preset = PROFILE_WIDGET_RATIO_PRESETS.find(item => item.value === value)
     if (preset) {
         return {
@@ -201,14 +210,19 @@ export const ProfileWidgetEditor = ({entity}) => {
     const profileSettings = useSnapshot(lgs.settings.ui.profile)
     const sliderRefs = useRef({})
     const ratioPresets = useMemo(() => {
-        return PROFILE_WIDGET_RATIO_PRESETS.map(ratio => ({
+        return [{
+            value:       PROFILE_WIDGET_RATIO_NONE_VALUE,
+            label:       'None',
+            aspectRatio: 0,
+            locked:      false,
+        }, ...PROFILE_WIDGET_RATIO_PRESETS.map(ratio => ({
             value:       String(ratio.value),
             label:       ratio.label ?? String(ratio.value).replace(/x/g, ':'),
             aspectRatio: Number(ratio.aspectRatio),
             locked:      true,
             width:       ratio.width,
             height:      ratio.height,
-        }))
+        }))]
     }, [])
 
     const sanitizeSliderValue = useCallback((rawValue, fallback, options = {}) => {
@@ -253,8 +267,8 @@ export const ProfileWidgetEditor = ({entity}) => {
     }, [])
     const widgetConfig = __.ui.widgetManager.getWidgetConfig(entity)
     const [ratioState, setRatioState] = useState(() => {
-        return normalizeRatioPreset(widgetConfig?.ratio ?? lgs.configuration?.widgetRatio)
-            ?? buildCustomRatio(16, 9)
+        return normalizeRatioPreset(widgetConfig?.ratio)
+            ?? normalizeRatioPreset({value: PROFILE_WIDGET_RATIO_NONE_VALUE, locked: false, aspectRatio: 0})
     })
     const [customRatioDraft, setCustomRatioDraft] = useState(() => {
         const currentRatio = normalizeRatioPreset(widgetConfig?.ratio)
@@ -270,8 +284,9 @@ export const ProfileWidgetEditor = ({entity}) => {
         height: stringifyRatioDimension(customRatioDraft?.height, 1280),
     }))
     useEffect(() => {
-        const currentRatio = __.ui.widgetManager.getWidgetConfig(entity)?.ratio ?? lgs.configuration?.widgetRatio
-        const normalizedRatio = normalizeRatioPreset(currentRatio) ?? buildCustomRatio(1600, 1280)
+        const currentRatio = __.ui.widgetManager.getWidgetConfig(entity)?.ratio
+        const normalizedRatio = normalizeRatioPreset(currentRatio)
+            ?? normalizeRatioPreset({value: PROFILE_WIDGET_RATIO_NONE_VALUE, locked: false, aspectRatio: 0})
         setRatioState(normalizedRatio)
         const currentConfig = __.ui.widgetManager.getWidgetConfig(entity)
         const currentElement = __.ui.widgetManager.getElementById?.(entity)
@@ -491,6 +506,15 @@ export const ProfileWidgetEditor = ({entity}) => {
 
     const handleRatioPresetChange = useCallback((event) => {
         const value = event.target.value
+        if (value === PROFILE_WIDGET_RATIO_NONE_VALUE) {
+            persistWidgetRatio({
+                                   value:       PROFILE_WIDGET_RATIO_NONE_VALUE,
+                                   aspectRatio: 0,
+                                   locked:      false,
+                               }, {resizeMode: 'none'})
+            return
+        }
+
         if (value === PROFILE_WIDGET_RATIO_CUSTOM_VALUE) {
             const currentConfig = __.ui.widgetManager.getWidgetConfig(entity)
             const currentElement = __.ui.widgetManager.getElementById?.(entity)

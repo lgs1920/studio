@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor }     from '@testing-library/react'
+import { cleanup, fireEvent, render, screen }                from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy }                                           from 'valtio'
 
@@ -295,9 +295,18 @@ describe('ProfileWidgetEditor', () => {
     it('exposes the updated preset list', () => {
         render(<ProfileWidgetEditor entity="profile-widget#1"/>)
 
+        expect(screen.getByRole('option', {name: 'None'})).toBeTruthy()
         expect(screen.getByRole('option', {name: 'Large'})).toBeTruthy()
         expect(screen.getByRole('option', {name: 'X large'})).toBeTruthy()
         expect(screen.getByRole('option', {name: 'Golden'})).toBeTruthy()
         expect(screen.queryByRole('option', {name: '4:3'})).toBeNull()
+    })
+
+    it('defaults the ratio selector to None for a free profile widget', () => {
+        widgetConfig.ratio = {value: '0x0', aspectRatio: 0, locked: false}
+
+        render(<ProfileWidgetEditor entity="profile-widget#1"/>)
+
+        expect(screen.getByLabelText('Ratio').value).toBe('0x0')
     })
 })

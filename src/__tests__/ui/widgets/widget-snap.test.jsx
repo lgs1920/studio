@@ -215,6 +215,15 @@ describe('Widget snap behavior', () => {
         expect(__.ui.widgetManager.retrieveConfig.mock.calls[0][1].snappable).toBe(false)
     })
 
+    it('resolves a configured drag handle inside the widget and falls back safely', () => {
+        installGlobals()
+
+        renderWidget({handle: '.missing-drag-handle'})
+
+        const widgetElement = document.querySelector('.lgs-widget')
+        expect(latestMoveableProps().dragTarget()).toBe(widgetElement)
+    })
+
     it('notifies child content when widget dragging starts and ends', async () => {
         installGlobals()
         const onDragStart = vi.fn()
@@ -428,6 +437,28 @@ describe('Widget snap behavior', () => {
         expect(container.querySelector('.lgs-widget-container')?.style.pointerEvents).toBe('none')
         expect(container.querySelector('.lgs-widget')?.classList.contains('crop-pass-through')).toBe(true)
         expect(latestMoveableProps().style).toEqual({pointerEvents: 'auto'})
+    })
+
+    it('selects a cropper when its host requests selection', async () => {
+        installGlobals()
+
+        render(
+            <Widget
+                isVisible={true}
+                selectionRequestKey={1}
+                config={{
+                    id:        'video-crop-zone',
+                    group:     'test-widgets',
+                    showControlBox: true,
+                    type:      LGS_VISUAL_WIDGET,
+                    isCropper: true,
+                }}>
+                <div>content</div>
+            </Widget>,
+        )
+
+        await waitFor(() => expect(lgs.stores.ui.widget.current.id).toBe('video-crop-zone#test'))
+        expect(__.ui.widgetManager.manageControlBox).toHaveBeenCalled()
     })
 
     it('cancels an in-flight canvas mirror initialization when the widget unmounts', async () => {
