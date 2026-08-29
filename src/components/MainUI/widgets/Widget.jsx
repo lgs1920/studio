@@ -436,6 +436,9 @@ export const Widget = ({
         const definition = config.group ? __.widgets.get(config.group)?.widgets?.get(widgetTypeId) : null
         return definition ?? null
     }, [config.group, widgetTypeId])
+    const widgetEntry = widgetListSnapshot.get(widgetId)
+    const canHide = config.canHide ?? widgetDefinition?.canHide ?? false
+    const isWidgetVisible = !canHide || widgetEntry?.visible !== false
     const collapsedIcon = useMemo(
         () => resolveCollapsedWidgetIcon(config.icon, widgetDefinition?.icon),
         [config.icon, widgetDefinition?.icon],
@@ -1451,6 +1454,7 @@ export const Widget = ({
                                 ?? __.ui.widgetManager.resolveWidgetsBoardReferenceContainer(config.widgetsBoard)
                                 ?? actualContainer,
                 boundsContainer: config.boundsContainer ?? actualContainer,
+                canHide:        canHide,
                 canLock:        config.canLock ?? true,
                 canReduce:      isVisualWidget ? false : (config.canReduce ?? true),
                 collapsed:      isVisualWidget ? false : (config.collapsed ?? false),
@@ -1493,6 +1497,7 @@ export const Widget = ({
                 transient:      config.transient ?? false,
                 ttl:            config.ttl ?? null,
                 type:           config.type ?? LGS_WIDGET,
+                visible:        isWidgetVisible,
                 onRemove:       config.onRemove ?? null,
                 preserveChildrenWhenCollapsed: config.preserveChildrenWhenCollapsed ?? false,
                 widgetsBoard:   config.widgetsBoard || null,
@@ -1524,6 +1529,7 @@ export const Widget = ({
                     const widgetEntry = {
                         zIndex:      activeZIndex,
                         collapsed:   Boolean(resolved.collapsed),
+                        visible:     resolved.visible !== false,
                         icon:        collapsedIcon,
                         locked:      Boolean(resolved.locked),
                         widgetsBoard: resolved.widgetsBoard,
@@ -1540,6 +1546,7 @@ export const Widget = ({
                 else {
                     const widgetEntry = {
                         collapsed:   Boolean(resolved.collapsed),
+                        visible:     resolved.visible !== false,
                         icon:        collapsedIcon,
                         locked:      Boolean(resolved.locked),
                         widgetsBoard: resolved.widgetsBoard,
@@ -1616,6 +1623,7 @@ export const Widget = ({
             $widget.list.set(widgetId, {
                 zIndex:      activeZIndex,
                 collapsed:   false,
+                visible:     config.visible !== false,
                 icon:        config.icon ?? collapsedIcon,
                 locked:      Boolean(config.locked),
                 widgetsBoard: config.widgetsBoard,
@@ -1678,7 +1686,7 @@ export const Widget = ({
             data-widget={widgetId}
             style={{
                 zIndex:        activeZIndex,
-                pointerEvents: cropPassThrough ? 'none' : 'auto',
+                pointerEvents: cropPassThrough || !isWidgetVisible ? 'none' : 'auto',
             }}
         >
             <div
@@ -1697,6 +1705,7 @@ export const Widget = ({
                     'crop-pass-through': cropPassThrough,
                     'recording-locked': inputBlocked,
                     'lgs-widget-preview-only': previewOnly,
+                    'lgs-widget-user-hidden': !isWidgetVisible,
                 })}
                 ref={(el) => {
                     _widget.current = el

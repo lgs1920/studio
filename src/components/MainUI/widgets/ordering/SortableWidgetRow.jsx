@@ -14,6 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { ToggleStateIcon }                    from '@Components/ToggleStateIcon'
 import { EDIT_WIDGET_ICON }                   from '@Core/constants'
 import { WaButton, WaCard, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useMemo }                             from 'react'
@@ -51,6 +52,18 @@ export const SortableWidgetRow = ({widget}) => {
 
         return rawName.length > 25 ? `${rawName.slice(0, 25)}...` : rawName
     }, [elementConfig?.text?.content, instance?.name, widget.type])
+
+    /**
+     * Toggles the visibility of the current widget through the shared manager action.
+     *
+     * @param {boolean} nextVisible - Requested visibility state
+     * @param {Event} event - Toggle button event
+     */
+    const toggleVisibility = (nextVisible, event) => {
+        event?.preventDefault?.()
+        event?.stopPropagation?.()
+        __.ui.widgetManager.toggleWidgetVisibility(widget.id, nextVisible)
+    }
 
     /**
      * Updates global UI state and forces Moveable refresh.
@@ -104,6 +117,18 @@ export const SortableWidgetRow = ({widget}) => {
                 {displayName}
             </div>
             <div className="widget-ordering-actions">
+                {widget.canHide && (
+                    <div onClick={event => event.stopPropagation()}>
+                        <ToggleStateIcon
+                            initial={widget.visible}
+                            size="s"
+                            appearance="plain"
+                            buttonVariant="neutral"
+                            aria-label={widget.visible ? 'Hide widget' : 'Show widget'}
+                            onChange={toggleVisibility}
+                        />
+                    </div>
+                )}
                 <WaTooltip placement="top" for={`center-widget-${widget.id}`}>{'Recenter'}</WaTooltip>
                 <WaButton
                     id={`center-widget-${widget.id}`}

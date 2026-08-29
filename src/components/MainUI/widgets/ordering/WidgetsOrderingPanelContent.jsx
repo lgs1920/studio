@@ -79,6 +79,8 @@ export const WidgetsOrderingPanelContent = ({
                     zIndex: parseInt(_currentZ, 10),
                     type:   _widgetType,
                     fixed:  _instance.fixedPosition ?? false,
+                    canHide: _instance.canHide === true || __.ui.widgetManager.getWidgetConfig(id)?.canHide === true,
+                    visible: entry?.visible !== false,
                 }
             })
             .filter(Boolean)

@@ -348,6 +348,44 @@ export class WidgetManager {
     setConfig = (elementId, config) => this.#registry.setConfig(elementId, config)
 
     /**
+     * Toggles the user-controlled visibility of a hideable widget.
+     *
+     * @param {string|null|undefined} widgetId - Widget identifier
+     * @param {boolean|undefined} [visible] - Explicit visibility, or the inverse of the current state
+     * @returns {boolean|null} The resulting visibility, or null when the widget cannot be hidden
+     */
+    toggleWidgetVisibility = (widgetId, visible) => {
+        if (!widgetId) {
+            return null
+        }
+
+        const config = this.getWidgetConfig(widgetId)
+        if (!config?.canHide || config.mandatory) {
+            return null
+        }
+
+        const currentEntry = lgs.stores.ui.widget.list.get(widgetId) ?? {}
+        const currentVisible = currentEntry.visible !== false && config.visible !== false
+        const nextVisible = visible === undefined ? !currentVisible : Boolean(visible)
+        const element = this.getElementById(widgetId)
+
+        config.visible = nextVisible
+        this.setConfig(widgetId, config)
+        lgs.stores.ui.widget.list.set(widgetId, {...currentEntry, visible: nextVisible})
+        element?.classList.toggle('lgs-widget-user-hidden', !nextVisible)
+
+        if (!nextVisible && lgs.stores.ui.widget.current?.id === widgetId) {
+            lgs.stores.ui.widget.current = {id: null}
+        }
+
+        if (config.persist) {
+            void this.saveWidgetPosition(widgetId, config)
+        }
+
+        return nextVisible
+    }
+
+    /**
      * Invalidates one widget runtime while preserving its persisted position.
      * @param {string} elementId - Widget identifier.
      * @returns {boolean} Whether a runtime configuration was invalidated.

@@ -52,8 +52,16 @@ describe('SortableWidgetRow', () => {
                     toCenter: vi.fn(),
                     removeWidget: vi.fn(),
                     editWidget: vi.fn(),
+                    toggleWidgetVisibility: vi.fn(),
                 },
             },
+        }
+        globalThis.lgs.stores = {
+            ui: proxy({
+                widget: {
+                    list: new Map(),
+                },
+            }),
         }
     })
 
@@ -69,5 +77,20 @@ describe('SortableWidgetRow', () => {
         fireEvent.click(screen.getByLabelText('Edit'))
 
         expect(__.ui.widgetManager.editWidget).toHaveBeenCalledWith('test-widget#1', {stacked: true})
+    })
+
+    it('does not render a visibility toggle for a non-hideable widget', () => {
+        render(<SortableWidgetRow widget={{id: 'test-widget#1', type: 'test-widget', canHide: false, visible: true}} />)
+
+        expect(screen.queryByLabelText('Hide widget')).toBeNull()
+        expect(screen.queryByLabelText('Show widget')).toBeNull()
+    })
+
+    it('toggles visibility through the shared widget manager action', () => {
+        render(<SortableWidgetRow widget={{id: 'test-widget#1', type: 'test-widget', canHide: true, visible: true}} />)
+
+        fireEvent.click(screen.getByLabelText('Hide widget'))
+
+        expect(__.ui.widgetManager.toggleWidgetVisibility).toHaveBeenCalledWith('test-widget#1', false)
     })
 })

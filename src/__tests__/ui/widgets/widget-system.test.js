@@ -190,11 +190,37 @@ describe('Widget persistence bootstrap', () => {
                                                                 zIndex:       WIDGET_LAYER_START,
                                                             })
     })
+
+    it('restores a persisted hidden state for a widget instance', async () => {
+        const widgetId = `${PROFILE_WIDGET}#hidden`
+        addPersistedRecord(widgetId, {
+            widgetsBoard: SCENE_WIDGETS_BOARD,
+            visible:      false,
+            zIndex:       WIDGET_LAYER_START,
+        })
+
+        await new WidgetCache().init()
+
+        expect(widgetListStore.get(widgetId)).toMatchObject({visible: false})
+    })
 })
 
 describe('Widget registry ratio resolution', () => {
     beforeEach(() => {
         installGlobals()
+    })
+
+    it('keeps the hide capability and visibility state in runtime configuration', async () => {
+        const registry = new WidgetCoreRegistry()
+        const config = await registry.retrieveConfig({}, {
+            id:        `${PROFILE_WIDGET}#hidden`,
+            canHide:   true,
+            visible:   false,
+            container: document.body,
+        })
+
+        expect(config.canHide).toBe(true)
+        expect(config.visible).toBe(false)
     })
 
     it('keeps an explicit visual widget ratio instead of the global widget ratio', async () => {

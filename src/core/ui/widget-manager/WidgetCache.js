@@ -313,6 +313,7 @@ export class WidgetCache {
 
                 $widget.list.set(widgetId, {
                     group:        position.group,
+                    visible:      position.visible !== false,
                     widgetsBoard: position.widgetsBoard,
                 })
             }
@@ -342,6 +343,7 @@ export class WidgetCache {
             // Create  global store
             const item = {
                 group: position.group,
+                visible: position.visible !== false,
                 widgetsBoard: position.widgetsBoard || this.#defaultBoard,
                 zIndex,
             }

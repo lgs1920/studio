@@ -2119,6 +2119,11 @@ hr {
     visibility: hidden !important;
 }
 
+.lgs-widget.lgs-widget-user-hidden {
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
 .lgs-widget * {
     user-select: none !important;
 }

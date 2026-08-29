@@ -57,6 +57,7 @@ const WidgetContextIconButton = ({id, icon, label, onClick}) => (
 export const WidgetContextMenu = ({targetId, menuRef}) => {
     // Shared store state
     const drawers = useSnapshot(lgs.stores.ui.drawers)
+    const widget = useSnapshot(lgs.stores.ui.widget)
     const toolbars = useSnapshot(lgs.settings.ui.toolbars)
 
     // Core widget data
@@ -65,6 +66,8 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
     const isReplayRecordingMonitor = targetId === REPLAY_RECORDING_MONITOR_WIDGET_ID
     const canLock = config?.canLock ?? true
     const isLocked = canLock && Boolean(config?.locked)
+    const canHide = config?.canHide === true
+    const isVisible = widget.list.get(targetId)?.visible !== false
 
     // Memoized capabilities for performance
     const capabilities = useMemo(() => {
@@ -78,14 +81,14 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
             }
         }
         return {
-            hasAny:      canLock || __.ui.widgetManager.hasCapabilities(config.contextMenu, WIDGETS_CAPABILITIES),
+            hasAny:      canLock || canHide || __.ui.widgetManager.hasCapabilities(config.contextMenu, WIDGETS_CAPABILITIES),
             canReset:    config.contextMenu.canReset,
             canEdit:     config.contextMenu.canEdit,
             canRemove:   config.contextMenu.canRemove,
             canPosition: config.contextMenu.canPosition,
             canSnapshot: config.contextMenu.canSnapshot,
         }
-    }, [canLock, config])
+    }, [canHide, canLock, config])
 
     // Early return if widget is invalid
     if (!element || !config || !capabilities.hasAny) {
@@ -139,6 +142,14 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
             void __.ui.widgetManager.saveWidgetPosition(targetId, widgetConfig)
         }
 
+        closeMenu()
+    }
+
+    /**
+     * Toggles widget visibility through the shared widget manager action.
+     */
+    const toggleVisibility = () => {
+        __.ui.widgetManager.toggleWidgetVisibility(targetId)
         closeMenu()
     }
 
@@ -237,6 +248,13 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                     <li onClick={toggleLocked}>
                         <WaIcon name={isLocked ? 'thumbtack-slash' : 'thumbtack'} variant="regular"/>
                         <span>{isLocked ? 'Unlock' : 'Lock'}</span>
+                    </li>
+                )}
+
+                {canHide && (
+                    <li onClick={toggleVisibility}>
+                        <WaIcon name={isVisible ? 'eye-slash' : 'eye'} variant="regular"/>
+                        <span>{isVisible ? 'Hide' : 'Show'}</span>
                     </li>
                 )}
 

@@ -28,6 +28,7 @@ widgets:
     icon: "compass"
     timelineColor: "green"
     mandatory: false
+    canHide: true
     max: 1
     component: "CompassWidget"
     type: "lgs-visual-widget"
@@ -110,6 +111,7 @@ widgets:
     icon: "chart-fft"
     timelineColor: "indigo"
     mandatory: false
+    canHide: true
     max: 1
     component: "ProfileWidget"
     type: "lgs-visual-widget"
@@ -192,6 +194,7 @@ widgets:
     icon: "timeline"
     timelineColor: "blue"
     mandatory: false
+    canHide: true
     max: 1
     component: "ReplayTimelineWidget"
     type: "lgs-visual-widget"
@@ -211,6 +214,7 @@ widgets:
     icon: "font"
     timelineColor: "blue"
     mandatory: false
+    canHide: true
     component: "TextWidget"
     type: "lgs-visual-widget"
     path: "@Components/Text"
@@ -274,6 +278,7 @@ widgets:
     icon: "route"
     timelineColor: "pink"
     mandatory: false
+    canHide: true
     max: 1
     component: "JourneyStatsWidget"
     type: "lgs-visual-widget"
@@ -346,6 +351,7 @@ widgets:
     icon: "route"
     timelineColor: "indigo"
     mandatory: false
+    canHide: true
     max: 1
     component: "DynamicStatsWidget"
     type: "lgs-visual-widget"

@@ -489,6 +489,7 @@ export class WidgetCoreRegistry {
                 attachTo:               anchor,
                 boundStatus:            {left: false, top: false, right: false, bottom: false},
                 bounds:                 {left: 0, top: 0, right: 0, bottom: 0},
+                canHide:                initialConfig.canHide ?? false,
                 canLock:                initialConfig.canLock ?? true,
                 canReduce:              initialConfig.canReduce ?? true,
                 centerRatio:            {x: 0.5, y: 0.5},
@@ -546,6 +547,7 @@ export class WidgetCoreRegistry {
                 ttl:                    initialConfig.ttl ?? this.#ttl,
                 type:                   initialConfig.type ?? LGS_WIDGET,
                 useRatio:               initialConfig.useRatio ?? true,
+                visible:                initialConfig.visible ?? true,
                 widgetsBoard:           initialConfig.widgetsBoard,
                 width:                   initialConfig.width,
                 height:                  initialConfig.height,
@@ -562,6 +564,12 @@ export class WidgetCoreRegistry {
             }
             if (initialConfig.canLock !== undefined) {
                 config.canLock = initialConfig.canLock
+            }
+            if (initialConfig.canHide !== undefined) {
+                config.canHide = initialConfig.canHide
+            }
+            if (initialConfig.visible !== undefined) {
+                config.visible = initialConfig.visible
             }
             if (initialConfig.canReduce !== undefined) {
                 config.canReduce = initialConfig.canReduce
@@ -705,6 +713,7 @@ export class WidgetCoreRegistry {
                 }
 
                 config.group = savedWidget.group || config.group
+                config.visible = savedWidget.visible !== false
                 config.collapsed = Boolean(savedWidget.collapsed)
                 config.locked = Boolean(savedWidget.locked)
                 config.expandedDimensions = savedWidget.expandedDimensions ?? config.expandedDimensions
@@ -902,6 +911,7 @@ export class WidgetCoreRegistry {
             positionReference: config.widgetsBoard && config.widgetsBoard !== SCENE_WIDGETS_BOARD ? 'board' : 'scene',
             collapsed:          Boolean(config.collapsed),
             locked:             Boolean(config.locked),
+            visible:            config.visible !== false,
             expandedDimensions: expandedDimensions,
             expandedInlineDimensions: expandedInlineDimensions,
             icon:               config.icon ?? null,

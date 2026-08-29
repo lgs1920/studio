@@ -35,6 +35,7 @@ describe('WidgetManager video widget rehydration', () => {
 
         config = {
             id:          'credits-widget#video',
+            canHide:     true,
             dimensions:  {width: 200, height: 100},
             element:     null,
             isCropper:   false,
@@ -100,5 +101,18 @@ describe('WidgetManager video widget rehydration', () => {
         expect(lgs.stores.ui.widget.list.get(bottomWidget).zIndex).toBe(4001)
         expect(lgs.stores.ui.widget.list.get(topWidget).zIndex).toBe(4000)
         expect(manager.saveWidgetPosition).toHaveBeenCalledTimes(2)
+    })
+
+    it('toggles user visibility without changing video board isolation classes', () => {
+        const widgetId = config.id
+
+        expect(manager.toggleWidgetVisibility(widgetId)).toBe(false)
+        expect(lgs.stores.ui.widget.list.get(widgetId).visible).toBe(false)
+        expect(widget.classList.contains('lgs-widget-user-hidden')).toBe(true)
+        expect(widget.classList.contains('lgs-widget-hidden')).toBe(false)
+
+        expect(manager.toggleWidgetVisibility(widgetId)).toBe(true)
+        expect(lgs.stores.ui.widget.list.get(widgetId).visible).toBe(true)
+        expect(widget.classList.contains('lgs-widget-user-hidden')).toBe(false)
     })
 })
