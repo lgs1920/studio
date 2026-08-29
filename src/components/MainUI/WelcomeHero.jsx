@@ -13,6 +13,7 @@
 import { SloganSvg }                                         from '@Components/MainUI/SloganSvg'
 import { WelcomeHeroControls }                               from '@Components/MainUI/WelcomeHeroControls'
 import { WelcomeHeroRoute }                                  from '@Components/MainUI/WelcomeHeroRoute'
+import { platforms }                                          from '@Core/constants'
 import {
     bannerMediaCatalog,
     getWelcomeBackgroundMedia,
@@ -212,14 +213,16 @@ export const WelcomeHero = ({
      * @returns {object|null} Initialization progress or nothing when no progress was provided.
      */
     const renderInitializationProgress = () => {
-        if (initializationSteps.length === 0 || (readyToEnter && !showInitializationProgress)) {
+        if (lgs.platform === platforms.DEV
+            || initializationSteps.length === 0
+            || (readyToEnter && !showInitializationProgress)) {
             return null
         }
 
         return (
             <div className="welcome-initialization" aria-label="Studio initialization progress" aria-live="polite">
                 <div className="welcome-initialization-header">
-                    <span>{'Preparing Studio'}</span>
+                    <span>{'preparing studio'}</span>
                     <span>{initializationPercentage}%</span>
                 </div>
                 <WaProgressBar

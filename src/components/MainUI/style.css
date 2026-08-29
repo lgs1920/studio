@@ -1045,6 +1045,8 @@ body.mobile .orbit-widget-body {
     align-items: center;
     flex-direction: column;
     justify-content: center;
+    width: min(28rem, 100%);
+    min-width: 0;
     gap: var(--lgs-gutter);
 }
 
@@ -1083,7 +1085,8 @@ body.mobile .orbit-widget-body {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    width: min(28rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
+    width: 100%;
+    max-width: 28rem;
     gap: var(--lgs-gutter-s);
 }
 
@@ -1110,7 +1113,9 @@ body.mobile .orbit-widget-body {
 .welcome-initialization {
     display: flex;
     flex-direction: column;
-    width: min(28rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
+    width: 100%;
+    max-width: 28rem;
+    min-width: 0;
     padding: var(--lgs-gutter-s);
     border: 1px solid var(--wa-color-surface-border);
     border-radius: var(--lgs-border-radius-s);
@@ -1124,9 +1129,8 @@ body.mobile .orbit-widget-body {
         display: flex;
         justify-content: space-between;
         font-size: var(--lgs-font-size-s);
-        font-weight: var(--lgs-font-weight-bold);
+        font-weight: normal;
         letter-spacing: .02em;
-        text-transform: uppercase;
     }
 
     & wa-progress-bar {
@@ -1202,7 +1206,7 @@ body.mobile .orbit-widget-body {
     }
 
     .welcome-hero-content .welcome-slogan {
-        max-width: min(24rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
+        max-width: 100%;
     }
 }
 

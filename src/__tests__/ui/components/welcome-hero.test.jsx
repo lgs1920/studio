@@ -128,6 +128,7 @@ describe('WelcomeHero', () => {
 
         expect(screen.getByRole('progressbar', {name: 'Studio initialization: 10%'})
             .getAttribute('aria-valuenow')).toBe('10')
+        expect(screen.getByText('preparing studio')).toBeTruthy()
         expect(document.querySelectorAll('.welcome-initialization-step').length).toBe(6)
         expect(screen.getByText('Loading application configuration').parentElement
             .classList.contains('is-complete')).toBe(true)
@@ -136,6 +137,29 @@ describe('WelcomeHero', () => {
         expect(screen.getByText('Loading terrain and journeys').parentElement
             .classList.contains('welcome-initialization-step')).toBe(true)
         expect(screen.getByText('In progress')).toBeTruthy()
+    })
+
+    it('hides the initialization progress in development', () => {
+        globalThis.lgs = {
+            platform: 'development',
+            versions: {studio: '1.0.0'},
+            build: {id: 'build-42'},
+        }
+
+        render(
+            <WelcomeHero
+                initializationProgress={{
+                    activeStep: 1,
+                    steps: [
+                        {id: 'application', label: 'Loading application configuration'},
+                        {id: 'services', label: 'Starting application services'},
+                    ],
+                }}
+            />
+        )
+
+        expect(screen.queryByRole('progressbar')).toBeNull()
+        expect(screen.queryByText('Loading application configuration')).toBeNull()
     })
 
     it('keeps completed initialization steps visible for three seconds', () => {
