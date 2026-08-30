@@ -3,6 +3,7 @@
 ## Current Architecture and Operation
 
 - [Replay architecture](CORE-REPLAY-ARCHITECTURE.md)
+- [Replay timeline preparation implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md)
 - [Replay implementation status](CORE-REPLAY-IMPLEMENTATION-STATUS.md)
 - [Replay HQ recording camera and monitor](CORE-REPLAY-HQ-RECORDING-MONITOR-SPEC.md)
 - [Replay core implementation](CORE-UI-REPLAY-README-REPLAY.md)

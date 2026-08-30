@@ -4,7 +4,7 @@
 
 import {WaButton, WaButtonGroup, WaIcon} from '@web.awesome.me/webawesome-pro/dist/react'
 import {Timeline} from '@xzdarcy/react-timeline-editor'
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
+import {forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState} from 'react'
 import {useSnapshot} from 'valtio'
 import {
     CREDITS_WIDGET,
@@ -25,11 +25,16 @@ import {createReplayScrubScheduler} from '@Core/ui/replay/ReplayScrubScheduler'
 import {resolveReplayVideoFramePhase} from '@Core/ui/replay/ReplayVideoTimeline'
 import {useOptionalSnapshot} from '@Utils/ValtioUtils'
 import {
+    clampReplayTimelineLegendWidth,
     decorateReplayTimelineEditorData,
     relayReplayTimelineRowDrag,
     REPLAY_TIMELINE_UI,
-    resolveReplayTimelineHeight,
+    REPLAY_TIMELINE_ZOOM,
+    resolveReplayTimelineScale,
     resolveReplayTimelineLegendTransform,
+    resolveReplayTimelineRowHeight,
+    resolveReplayTimelineScaleCount,
+    stepReplayTimelineZoom,
 } from './replayTimelineUtils'
 import {
     buildReplayPreparationTimeline,
@@ -134,7 +139,13 @@ const formatTimelineTime = seconds => {
  * @param {number} seconds - Elapsed time in seconds.
  * @returns {string} Seconds label.
  */
-const formatTimelineScale = seconds => `${Math.max(0, Math.round(Number(seconds) || 0))}`
+const formatTimelineScale = seconds => {
+    const normalizedSeconds = Math.max(0, Number(seconds) || 0)
+    const displaySeconds = Number.isInteger(normalizedSeconds)
+        ? normalizedSeconds
+        : Number(normalizedSeconds.toFixed(3))
+    return `${displaySeconds}`
+}
 
 /**
  * Return the action icon associated with one projected Timeline action.
@@ -388,7 +399,7 @@ const requestHqExport = () => {
  *
  * @returns {JSX.Element} Preview surface or null outside linked preparation.
  */
-export const ReplayTimelinePreview = () => {
+export const ReplayTimelinePreview = forwardRef((_, ref) => {
     const video = useSnapshot(lgs.stores.ui.video)
     const replay = useSnapshot(lgs.stores.replay)
     const main = useSnapshot(lgs.stores.main)
@@ -396,11 +407,19 @@ export const ReplayTimelinePreview = () => {
     const widgetSettings = useOptionalSnapshot(lgs.settings?.widgets, {})
     const replaySettings = useOptionalSnapshot(lgs.settings?.ui?.replay, {})
     const _timeline = useRef(null)
+    const _timelineLayout = useRef(null)
+    const _timelineSurface = useRef(null)
     const _scrubScheduler = useRef(null)
     const _lastTimelineSignature = useRef(null)
+    const _legendResize = useRef(null)
     const [timelineScrollTop, setTimelineScrollTop] = useState(0)
+    const [timelineLayoutHeight, setTimelineLayoutHeight] = useState(0)
+    const [timelineSurfaceWidth, setTimelineSurfaceWidth] = useState(0)
     const [draggedRowId, setDraggedRowId] = useState(null)
+    const [isLegendResizing, setIsLegendResizing] = useState(false)
+    const [trackLegendWidth, setTrackLegendWidth] = useState(REPLAY_TIMELINE_UI.legendWidth)
     const [widgetMenuOpen, setWidgetMenuOpen] = useState(false)
+    const [zoomPercent, setZoomPercent] = useState(REPLAY_TIMELINE_ZOOM.defaultPercent)
     const journey = main?.theJourney ?? lgs.theJourney
     const widgetOrder = useMemo(() => resolveVideoWidgetOrder(widgetList, widgetSettings), [widgetList, widgetSettings])
     const linkedPreparation = video.editing === true
@@ -424,7 +443,97 @@ export const ReplayTimelinePreview = () => {
     const timelineEditorData = useMemo(() => decorateReplayTimelineEditorData(editorData), [editorData])
     const currentTimeMillis = resolveCurrentTimeMillis(replay, projection)
     const isPlaying = replay.playing === true
-    const timelineHeight = resolveReplayTimelineHeight(editorData.length)
+    const timelineScale = useMemo(() => resolveReplayTimelineScale(zoomPercent), [zoomPercent])
+    const timelineScaleCount = resolveReplayTimelineScaleCount({
+        durationPaddingRatio: REPLAY_TIMELINE_UI.horizontalScrollDurationRatio,
+        durationSeconds:      projection.durationSeconds,
+        majorSeconds:          timelineScale.majorSeconds,
+        width:                 timelineSurfaceWidth,
+    })
+    const timelineRowHeight = resolveReplayTimelineRowHeight({
+        height:   timelineLayoutHeight,
+        rowCount: editorData.length,
+    })
+    const timelineViewportHeight = Math.max(
+        0,
+        timelineLayoutHeight
+        - REPLAY_TIMELINE_UI.headerHeight
+        - REPLAY_TIMELINE_UI.horizontalScrollbarHeight,
+    )
+    const timelineHasVerticalOverflow = timelineLayoutHeight > 0
+        && editorData.length * timelineRowHeight > timelineViewportHeight
+
+    useImperativeHandle(ref, () => ({
+        handleResize: () => {
+            const height = _timelineLayout.current?.getBoundingClientRect?.().height
+            if (Number.isFinite(height)) {
+                setTimelineLayoutHeight(current => current === height ? current : height)
+            }
+        },
+    }), [])
+
+    useEffect(() => {
+        if (!linkedPreparation || !_timelineLayout.current || typeof ResizeObserver !== 'function') {
+            return undefined
+        }
+
+        const resizeObserver = new ResizeObserver(entries => {
+            const height = entries[0]?.contentRect?.height
+            if (Number.isFinite(height)) {
+                setTimelineLayoutHeight(current => current === height ? current : height)
+            }
+        })
+        resizeObserver.observe(_timelineLayout.current)
+
+        return () => resizeObserver.disconnect()
+    }, [editorData.length, linkedPreparation])
+
+    useEffect(() => {
+        if (!linkedPreparation || !_timelineSurface.current || typeof ResizeObserver !== 'function') {
+            return undefined
+        }
+
+        const resizeObserver = new ResizeObserver(entries => {
+            const width = entries[0]?.contentRect?.width
+            if (Number.isFinite(width)) {
+                setTimelineSurfaceWidth(current => current === width ? current : width)
+            }
+        })
+        resizeObserver.observe(_timelineSurface.current)
+
+        return () => resizeObserver.disconnect()
+    }, [linkedPreparation])
+
+    useEffect(() => {
+        const handlePointerMove = event => {
+            if (!_legendResize.current) {
+                return
+            }
+
+            event.preventDefault()
+            const nextWidth = _legendResize.current.startWidth
+                + (event.clientX - _legendResize.current.startX)
+            setTrackLegendWidth(clampReplayTimelineLegendWidth(nextWidth))
+        }
+        const stopResizing = () => {
+            if (!_legendResize.current) {
+                return
+            }
+
+            _legendResize.current = null
+            setIsLegendResizing(false)
+        }
+
+        window.addEventListener('pointermove', handlePointerMove, {passive: false})
+        window.addEventListener('pointerup', stopResizing)
+        window.addEventListener('pointercancel', stopResizing)
+
+        return () => {
+            window.removeEventListener('pointermove', handlePointerMove)
+            window.removeEventListener('pointerup', stopResizing)
+            window.removeEventListener('pointercancel', stopResizing)
+        }
+    }, [])
 
     const applyTimelineTime = useCallback(async ({progress, settled, signal}) => {
         const timeMillis = progress * projection.durationMillis
@@ -473,7 +582,7 @@ export const ReplayTimelinePreview = () => {
         }
 
         _timeline.current.setTime(currentTimeMillis / 1000)
-    }, [currentTimeMillis, linkedPreparation, projection.durationMillis])
+    }, [currentTimeMillis, linkedPreparation, projection.durationMillis, timelineScale.majorSeconds])
 
     useEffect(() => {
         if (!draggedRowId) {
@@ -498,14 +607,43 @@ export const ReplayTimelinePreview = () => {
         })
     }, [linkedPreparation, projection.signature])
 
+    /**
+     * Normalize a timeline time to the controlled Replay duration.
+     *
+     * @param {number} timeSeconds - Requested timeline time in seconds.
+     * @returns {number} Clamped timeline time in seconds.
+     */
+    const normalizeTimelineTime = useCallback(timeSeconds => {
+        const numericTime = Number(timeSeconds)
+        if (!Number.isFinite(numericTime)) {
+            return 0
+        }
+        return Math.max(0, Math.min(projection.durationMillis / 1000, numericTime))
+    }, [projection.durationMillis])
+
+    /**
+     * Move the package cursor immediately while Replay settles the canonical time.
+     *
+     * @param {number} timeSeconds - Requested timeline time in seconds.
+     * @returns {void}
+     */
+    const setTimelineCursor = useCallback(timeSeconds => {
+        if (projection.durationMillis <= 0) {
+            return
+        }
+        _timeline.current?.setTime?.(normalizeTimelineTime(timeSeconds))
+    }, [normalizeTimelineTime, projection.durationMillis])
+
     const seekToTime = useCallback(timeSeconds => {
         if (projection.durationMillis <= 0) {
             return
         }
+        const normalizedTime = normalizeTimelineTime(timeSeconds)
+        setTimelineCursor(normalizedTime)
         _scrubScheduler.current?.settle?.(
-            Math.max(0, Math.min(1, (Number(timeSeconds) * 1000) / projection.durationMillis)),
+            (normalizedTime * 1000) / projection.durationMillis,
         )
-    }, [projection.durationMillis])
+    }, [normalizeTimelineTime, projection.durationMillis, setTimelineCursor])
 
     const requestTime = useCallback(timeSeconds => {
         if (projection.durationMillis <= 0) {
@@ -527,6 +665,48 @@ export const ReplayTimelinePreview = () => {
     const handleReplay = useCallback(() => {
         __.ui.replay?.start?.({progress: projection.direction < 0 ? 1 : 0})
     }, [projection.direction])
+
+    /**
+     * Move the visible timeline zoom by one configured increment.
+     *
+     * @param {number} direction - Positive or negative zoom direction.
+     * @returns {void}
+     */
+    const handleTimelineZoom = useCallback(direction => {
+        setZoomPercent(current => stepReplayTimelineZoom(current, direction))
+    }, [])
+
+    /**
+     * Zoom the timeline in response to a wheel gesture over its surface.
+     *
+     * @param {WheelEvent} event - Wheel event received by the timeline surface.
+     * @returns {void}
+     */
+    const handleTimelineWheel = useCallback(event => {
+        if (!event?.ctrlKey || !Number.isFinite(event?.deltaY) || event.deltaY === 0) {
+            return
+        }
+
+        event.preventDefault()
+        handleTimelineZoom(event.deltaY < 0 ? -1 : 1)
+    }, [handleTimelineZoom])
+
+    /**
+     * Zoom the timeline with the arrow keys while its surface has focus.
+     *
+     * @param {KeyboardEvent} event - Keyboard event received by the timeline surface.
+     * @returns {void}
+     */
+    const handleTimelineKeyDown = useCallback(event => {
+        if (event?.altKey || event?.ctrlKey || event?.metaKey || event?.shiftKey) {
+            return
+        }
+
+        if (event?.key === 'ArrowLeft' || event?.key === 'ArrowRight') {
+            event.preventDefault()
+            handleTimelineZoom(event.key === 'ArrowRight' ? 1 : -1)
+        }
+    }, [handleTimelineZoom])
 
     /**
      * Mark the row currently handled by the package row-drag interaction.
@@ -593,6 +773,26 @@ export const ReplayTimelinePreview = () => {
     }, [])
 
     /**
+     * Start resizing the external track legend with the pointer.
+     *
+     * @param {PointerEvent} event - Pointer event received by the resize handle.
+     * @returns {void}
+     */
+    const handleTrackLegendResizeStart = useCallback(event => {
+        if (event.button !== 0) {
+            return
+        }
+
+        event.preventDefault()
+        event.stopPropagation()
+        _legendResize.current = {
+            startWidth: trackLegendWidth,
+            startX:      event.clientX,
+        }
+        setIsLegendResizing(true)
+    }, [trackLegendWidth])
+
+    /**
      * Toggles the editor associated with a double-clicked timeline action.
      * Replay actions intentionally remain inert because the Replay row is not
      * an editable drawer entity.
@@ -634,42 +834,47 @@ export const ReplayTimelinePreview = () => {
         <section className="replay-timeline-preview wa-theme-lgs1920"
                  data-testid="replay-timeline-preview"
                  aria-label="Replay tracks">
-            <header className="replay-timeline-preview__header">
-                <WaButtonGroup label="Replay controls">
-                    <WaButton appearance="plain"
-                              size="s"
-                              aria-label={isPlaying ? 'Pause Replay' : 'Play Replay'}
-                              data-testid="replay-timeline-play"
-                              onClick={isPlaying ? handlePause : handleTogglePlayback}>
-                        <WaIcon name={isPlaying ? 'pause' : 'play'} label=""/>
-                    </WaButton>
-                    <WaButton appearance="plain"
-                              size="s"
-                              aria-label="Replay from beginning"
-                              data-testid="replay-timeline-replay"
-                              onClick={handleReplay}>
-                        <WaIcon name="arrow-rotate-left" label=""/>
-                    </WaButton>
-                    <WaButton variant="brand"
-                              appearance="filled"
-                              size="s"
-                              aria-label="Create HQ video"
-                              data-testid="replay-timeline-export"
-                              onClick={requestHqExport}>
-                        <WaIcon name="clapperboard-play" label=""/>
-                        <span>{'Create HQ'}</span>
-                    </WaButton>
-                </WaButtonGroup>
-            </header>
-            <div className="replay-timeline-preview__transport" aria-label="Replay transport">
-                <span data-testid="replay-timeline-current-time">{formatTimelineTime(currentTimeMillis / 1000)}</span>
-                <span>{' / '}</span>
-                <span>{formatTimelineTime(projection.durationSeconds)}</span>
+            <div className="replay-timeline-preview__top">
+                <header className="replay-timeline-preview__header">
+                    <WaButtonGroup label="Replay controls">
+                        <WaButton appearance="plain"
+                                  size="s"
+                                  aria-label={isPlaying ? 'Pause Replay' : 'Play Replay'}
+                                  data-testid="replay-timeline-play"
+                                  onClick={isPlaying ? handlePause : handleTogglePlayback}>
+                            <WaIcon name={isPlaying ? 'pause' : 'play'} label=""/>
+                        </WaButton>
+                        <WaButton appearance="plain"
+                                  size="s"
+                                  aria-label="Replay from beginning"
+                                  data-testid="replay-timeline-replay"
+                                  onClick={handleReplay}>
+                            <WaIcon name="arrow-rotate-left" label=""/>
+                        </WaButton>
+                        <WaButton variant="brand"
+                                  appearance="filled"
+                                  size="s"
+                                  aria-label="Create HQ video"
+                                  data-testid="replay-timeline-export"
+                                  onClick={requestHqExport}>
+                            <WaIcon name="clapperboard-play" label=""/>
+                            <span>{'Create HQ'}</span>
+                        </WaButton>
+                    </WaButtonGroup>
+                </header>
+                <div className="replay-timeline-preview__transport" aria-label="Replay transport">
+                    <span data-testid="replay-timeline-current-time">{formatTimelineTime(currentTimeMillis / 1000)}</span>
+                    <span>{' / '}</span>
+                    <span>{formatTimelineTime(projection.durationSeconds)}</span>
+                </div>
             </div>
-            <div className={`replay-timeline-preview__timeline-layout${draggedRowId ? ' replay-timeline-preview__timeline-layout--dragging' : ''}`}
+            <div className={`replay-timeline-preview__timeline-layout${draggedRowId ? ' replay-timeline-preview__timeline-layout--dragging' : ''}${isLegendResizing ? ' replay-timeline-preview__timeline-layout--resizing' : ''}`}
                  data-capture-exclude="true"
                  data-testid="replay-timeline-layout"
-                 style={{'--replay-timeline-track-legend-width': `${REPLAY_TIMELINE_UI.legendWidth}px`}}>
+                 ref={_timelineLayout}
+                 style={{
+                     '--replay-timeline-track-legend-width': `${trackLegendWidth}px`,
+                 }}>
                 <div className="replay-timeline-preview__track-legend"
                      data-testid="replay-timeline-track-legend"
                      aria-label="Timeline tracks">
@@ -706,6 +911,7 @@ export const ReplayTimelinePreview = () => {
                                     <div className={`replay-timeline-preview__track-legend-row replay-timeline-preview__track-legend-row--${trackLegendClass(row)} ${colorClasses(row.colorClasses)}${row.movable !== false && row.fixed !== true ? ' replay-timeline-preview__track-legend-row--movable' : ''}${draggedRowId === row.id ? ' replay-timeline-preview__track-legend-row--dragging' : ''}`}
                                          key={row.id}
                                          aria-label={trackLegendLabel(row)}
+                                         style={{height: `${timelineRowHeight}px`}}
                                          onMouseDown={event => handleTrackLegendMouseDown(event, row, rowIndex)}>
                                         <span className="replay-timeline-preview__track-drag-icon"
                                               aria-hidden="true">
@@ -740,20 +946,37 @@ export const ReplayTimelinePreview = () => {
                         </div>
                     </div>
                 </div>
-                <div className={`replay-timeline-preview__surface${draggedRow ? ` ${colorClasses(draggedRow.colorClasses)}` : ''}`}>
+                <div className="replay-timeline-preview__track-legend-resizer"
+                     data-testid="replay-timeline-track-legend-resizer"
+                     role="separator"
+                     aria-label="Resize track title area"
+                     aria-orientation="vertical"
+                     aria-valuemin={REPLAY_TIMELINE_UI.legendMinWidth}
+                     aria-valuemax={REPLAY_TIMELINE_UI.legendMaxWidth}
+                     aria-valuenow={trackLegendWidth}
+                     onPointerDown={handleTrackLegendResizeStart}/>
+                <div className={`replay-timeline-preview__surface${draggedRow ? ` ${colorClasses(draggedRow.colorClasses)}` : ''}${timelineHasVerticalOverflow ? ' replay-timeline-preview__surface--vertical-scroll' : ''}`}
+                     ref={_timelineSurface}
+                     data-testid="replay-timeline-surface"
+                     role="group"
+                     aria-label="Timeline time scale and scrubbing"
+                     tabIndex={0}
+                     data-zoom-percent={zoomPercent}
+                     onKeyDown={handleTimelineKeyDown}
+                     onWheel={handleTimelineWheel}>
                     <Timeline
-                    style={{height: `${timelineHeight}px`}}
+                    style={{height: '100%'}}
                     editorData={timelineEditorData}
                     effects={{}}
-                    scale={1}
+                    scale={timelineScale.majorSeconds}
                     scaleWidth={REPLAY_TIMELINE_UI.scaleWidth}
-                    scaleSplitCount={REPLAY_TIMELINE_UI.scaleSplitCount}
-                    minScaleCount={Math.max(10, Math.ceil(projection.durationSeconds))}
-                    maxScaleCount={Math.max(10, Math.ceil(projection.durationSeconds))}
-                    rowHeight={REPLAY_TIMELINE_UI.rowHeight}
+                    scaleSplitCount={timelineScale.scaleSplitCount}
+                    minScaleCount={timelineScaleCount}
+                    maxScaleCount={timelineScaleCount}
+                    rowHeight={timelineRowHeight}
                     disableDrag={false}
                     enableRowDrag
-                    autoScroll={false}
+                    autoScroll
                     autoReRender
                     onScroll={handleTimelineScroll}
                     onRowDragStart={handleTimelineRowDragStart}
@@ -784,6 +1007,6 @@ export const ReplayTimelinePreview = () => {
             </div>
         </section>
     )
-}
+})
 
 ReplayTimelinePreview.displayName = 'ReplayTimelinePreview'

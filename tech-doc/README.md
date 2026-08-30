@@ -13,6 +13,7 @@ below by engineering domain rather than storage directory.
 ### Current
 
 - [Replay architecture](specs/replay-video/CORE-REPLAY-ARCHITECTURE.md)
+- [Replay timeline preparation implementation](specs/replay-video/CORE-REPLAY-TIMELINE-IMPLEMENTATION.md)
 - [Replay implementation status](specs/replay-video/CORE-REPLAY-IMPLEMENTATION-STATUS.md)
 - [Replay quality validation](specs/replay-video/CORE-REPLAY-QUALITY-VALIDATION.md)
 - [Replay audit](specs/replay-video/REPLAY-AUDIT.md)

@@ -147,6 +147,7 @@ These are the current package names declared in the `devDependencies` section of
 baseline-browser-mapping
 canvas
 jsdom
+less
 oxlint
 oxlint-tsgolint
 typescript

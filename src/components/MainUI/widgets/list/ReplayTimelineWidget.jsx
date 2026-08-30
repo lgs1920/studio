@@ -6,7 +6,7 @@ import {ReplayTimelinePreview} from '@Components/MainUI/video/ReplayTimelinePrev
 import {Widget} from '@Components/MainUI/widgets/Widget'
 import {JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS_BOARD} from '@Core/constants'
 import {constrainWidgetDimensions} from '@Core/ui/widget-manager/widgetResizeUtils'
-import {useEffect, useMemo} from 'react'
+import {useEffect, useMemo, useRef} from 'react'
 
 const REPLAY_TIMELINE_FREE_RATIO = {value: '0x0', aspectRatio: 0, locked: false}
 
@@ -20,6 +20,7 @@ const REPLAY_TIMELINE_FREE_RATIO = {value: '0x0', aspectRatio: 0, locked: false}
  */
 export const ReplayTimelineWidget = ({id, zIndex}) => {
     const container = useMemo(() => lgs.canvas, [])
+    const timelinePreviewRef = useRef(null)
 
     useEffect(() => {
         let cancelled = false
@@ -110,7 +111,6 @@ export const ReplayTimelineWidget = ({id, zIndex}) => {
         draggable:     true,
         min:           {width: 360, height: 66},
         max:           {width: 3840, height: 2160},
-        resizeToContent: {minHeight: true},
         resizable:     true,
         scalable:      false,
         snap:          false,
@@ -119,8 +119,8 @@ export const ReplayTimelineWidget = ({id, zIndex}) => {
     }), [container, id, zIndex])
 
     return (
-        <Widget isVisible config={config}>
-            <ReplayTimelinePreview/>
+        <Widget isVisible config={config} childRef={timelinePreviewRef}>
+            <ReplayTimelinePreview ref={timelinePreviewRef}/>
         </Widget>
     )
 }

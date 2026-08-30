@@ -5,6 +5,7 @@ import {proxyMap} from 'valtio/utils'
 
 const timelineMocks = vi.hoisted(() => ({
     props: null,
+    setTime: null,
 }))
 
 vi.mock('@xzdarcy/react-timeline-editor', async () => {
@@ -14,12 +15,14 @@ vi.mock('@xzdarcy/react-timeline-editor', async () => {
         Timeline: React.forwardRef((props, ref) => {
             timelineMocks.props = props
             const timelineElementRef = React.useRef(null)
+            const setTime = vi.fn()
+            timelineMocks.setTime = setTime
             React.useImperativeHandle(ref, () => ({
                 get target() {
                     return timelineElementRef.current
                 },
-                setTime: vi.fn(),
-            }))
+                setTime,
+            }), [setTime])
             const [draggedRows, setDraggedRows] = React.useState([])
             return (
                 <div ref={timelineElementRef} data-testid="timeline-editor" data-disable-drag={props.disableDrag}>
@@ -56,6 +59,7 @@ import {ReplayTimelinePreview} from '@Components/MainUI/video/ReplayTimelinePrev
 describe('ReplayTimelinePreview', () => {
     beforeEach(() => {
         timelineMocks.props = null
+        timelineMocks.setTime = null
         globalThis.__ = {
             ui: {
                 widgetManager: {
@@ -158,6 +162,9 @@ describe('ReplayTimelinePreview', () => {
         expect(screen.getByTestId('replay-timeline-track-legend').querySelector('[data-icon="chart-line"]')).not.toBeNull()
         expect(screen.getByTestId('replay-timeline-track-legend').querySelector('[data-icon="mountain"]')).not.toBeNull()
         const journeyLegend = screen.getByLabelText('Journey Stats')
+        expect([...screen.getByTestId('replay-timeline-track-legend')
+            .querySelectorAll('.replay-timeline-preview__track-legend-row')]
+            .map(row => row.style.height)).toEqual(['24px', '24px', '24px'])
         const journeyDragIcon = journeyLegend.querySelector('.replay-timeline-preview__track-drag-icon [data-icon]')
         expect(journeyDragIcon?.getAttribute('data-icon'))
             .toBe('grip-dots-vertical')
@@ -184,8 +191,10 @@ describe('ReplayTimelinePreview', () => {
             'replay',
         ])
         expect(timelineMocks.props.scaleSplitCount).toBe(5)
+        expect(timelineMocks.props.scale).toBe(1)
         expect(timelineMocks.props.scaleWidth).toBe(40)
         expect(timelineMocks.props.rowHeight).toBe(24)
+        expect(timelineMocks.props.autoScroll).toBe(true)
         expect(timelineMocks.props.enableRowDrag).toBe(true)
         expect(timelineMocks.props.hideCursor).toBe(false)
         expect(timelineMocks.props.onScroll).toBeTypeOf('function')
@@ -259,6 +268,53 @@ describe('ReplayTimelinePreview', () => {
         expect(screen.queryByText('Timeline', {exact: true})).toBeNull()
     })
 
+    it('zooms the time ruler with the wheel and arrow keys without changing its physical scale', () => {
+        render(<ReplayTimelinePreview/>)
+
+        const surface = screen.getByTestId('replay-timeline-surface')
+        expect(surface.getAttribute('data-zoom-percent')).toBe('0')
+        expect(timelineMocks.props.scaleWidth).toBe(40)
+
+        fireEvent.wheel(surface, {ctrlKey: true, deltaY: -100})
+        expect(surface.getAttribute('data-zoom-percent')).toBe('-20')
+        expect(timelineMocks.props.scale).toBe(1)
+        expect(timelineMocks.props.scaleSplitCount).toBe(5)
+
+        fireEvent.keyDown(surface, {key: 'ArrowRight'})
+        expect(surface.getAttribute('data-zoom-percent')).toBe('0')
+
+        fireEvent.keyDown(surface, {key: 'ArrowRight'})
+        expect(surface.getAttribute('data-zoom-percent')).toBe('20')
+
+        fireEvent.keyDown(surface, {key: 'ArrowLeft'})
+        expect(surface.getAttribute('data-zoom-percent')).toBe('0')
+
+        fireEvent.wheel(surface, {deltaY: -100})
+        expect(surface.getAttribute('data-zoom-percent')).toBe('0')
+    })
+
+    it('moves the cursor to the clicked time ruler position', () => {
+        render(<ReplayTimelinePreview/>)
+
+        expect(timelineMocks.props.onClickTimeArea(2)).toBe(false)
+        expect(timelineMocks.setTime).toHaveBeenCalledWith(2)
+    })
+
+    it('clamps wheel zoom at the configured boundaries', () => {
+        render(<ReplayTimelinePreview/>)
+
+        const surface = screen.getByTestId('replay-timeline-surface')
+        for (let index = 0; index < 30; index += 1) {
+            fireEvent.keyDown(surface, {key: 'ArrowRight'})
+        }
+        expect(surface.getAttribute('data-zoom-percent')).toBe('500')
+
+        for (let index = 0; index < 30; index += 1) {
+            fireEvent.wheel(surface, {ctrlKey: true, deltaY: -100})
+        }
+        expect(surface.getAttribute('data-zoom-percent')).toBe('-50')
+    })
+
     it('moves the track legend with the timeline vertical scroll position', () => {
         render(<ReplayTimelinePreview/>)
 
@@ -268,6 +324,27 @@ describe('ReplayTimelinePreview', () => {
 
         expect(screen.getByTestId('replay-timeline-track-legend-rows').style.transform)
             .toBe('translateY(-48px)')
+    })
+
+    it('resizes the track title area between 120 and 300 pixels', () => {
+        render(<ReplayTimelinePreview/>)
+
+        const layout = screen.getByTestId('replay-timeline-layout')
+        const resizer = screen.getByTestId('replay-timeline-track-legend-resizer')
+        expect(layout.style.getPropertyValue('--replay-timeline-track-legend-width')).toBe('136px')
+        expect(resizer.getAttribute('aria-valuenow')).toBe('136')
+
+        fireEvent.pointerDown(resizer, {button: 0, clientX: 100})
+        fireEvent.pointerMove(window, {clientX: 400})
+        expect(layout.style.getPropertyValue('--replay-timeline-track-legend-width')).toBe('300px')
+        expect(resizer.getAttribute('aria-valuenow')).toBe('300')
+
+        fireEvent.pointerMove(window, {clientX: -200})
+        expect(layout.style.getPropertyValue('--replay-timeline-track-legend-width')).toBe('120px')
+        expect(resizer.getAttribute('aria-valuenow')).toBe('120')
+
+        fireEvent.pointerUp(window)
+        expect(layout.className).not.toContain('replay-timeline-preview__timeline-layout--resizing')
     })
 
     it('toggles a widget track and hatches every action with the track color', async () => {
@@ -534,7 +611,7 @@ describe('ReplayTimelinePreview', () => {
 
         render(<ReplayTimelinePreview/>)
 
-        expect(timelineMocks.props.maxScaleCount).toBe(60)
+        expect(timelineMocks.props.maxScaleCount).toBe(72)
     })
 
     it('requests HQ export through the existing dialog lifecycle', () => {

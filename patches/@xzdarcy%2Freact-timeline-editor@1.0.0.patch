@@ -1,0 +1,133 @@
+diff --git a/node_modules/@xzdarcy/react-timeline-editor/.bun-tag-931f1cfd9e937648 b/.bun-tag-931f1cfd9e937648
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/package.json b/package.json
+index 31604ec08ab61a93aade577e4931bdec62611884..4015e6b423b35f041d55956e0242f26b3f2a4368 100644
+--- a/package.json
++++ b/package.json
+@@ -26,8 +26,8 @@
+     "src",
+     "dist"
+   ],
+-  "main": "dist/index.es.js",
+-  "module": "dist/index.es.js",
++  "main": "src/index.tsx",
++  "module": "src/index.tsx",
+   "typings": "dist/index.d.ts",
+   "peerDependencies": {
+     "react": ">=18.0.0",
+diff --git a/src/components/row_rnd/hooks/useAutoScroll.ts b/src/components/row_rnd/hooks/useAutoScroll.ts
+index f4ed04c86d958b7264065ac2885c8f667bb66c88..b3189fb99b57eff39b8402d92ba147cc3136299f 100644
+--- a/src/components/row_rnd/hooks/useAutoScroll.ts
++++ b/src/components/row_rnd/hooks/useAutoScroll.ts
+@@ -2,17 +2,50 @@ import { DragEvent, ResizeEvent } from '@interactjs/types/index';
+ import { useRef } from 'react';
+ 
+ const DEFAULT_SPEED = 1;
+-const MAX_SPEED = 3;
++const MAX_SPEED = 12;
+ const CRITICAL_SIZE = 10;
++const ACCELERATION_INTERVAL = 250;
+ 
+ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
+   const leftBoundRef = useRef(Number.MIN_SAFE_INTEGER);
+   const rightBoundRef = useRef(Number.MAX_SAFE_INTEGER);
+ 
+-  const speed = useRef(DEFAULT_SPEED);
+   const frame = useRef<number>();
++  const edgeDirection = useRef<number | null>(null);
++  const edgeStartedAt = useRef<number | null>(null);
++
++  const resetEdgeAcceleration = () => {
++    edgeDirection.current = null;
++    edgeStartedAt.current = null;
++  };
++
++  const resolveEdgeScroll = (clientX: number) => {
++    if (clientX >= rightBoundRef.current || clientX <= leftBoundRef.current) {
++      const direction = clientX >= rightBoundRef.current ? 1 : -1;
++      if (edgeDirection.current !== direction || edgeStartedAt.current === null) {
++        edgeDirection.current = direction;
++        edgeStartedAt.current = Date.now();
++      }
++
++      const over = Math.abs(clientX >= rightBoundRef.current ? clientX - rightBoundRef.current : clientX - leftBoundRef.current);
++      return {
++        direction,
++        distanceSpeed: Math.max(DEFAULT_SPEED, Math.min(Number((over / CRITICAL_SIZE).toFixed(0)) * DEFAULT_SPEED, MAX_SPEED)),
++      };
++    }
++
++    resetEdgeAcceleration();
++    return null;
++  };
++
++  const getEdgeScrollDelta = ({direction, distanceSpeed}: {direction: number, distanceSpeed: number}) => {
++    const heldMillis = edgeStartedAt.current === null ? 0 : Math.max(0, Date.now() - edgeStartedAt.current);
++    const heldSpeed = DEFAULT_SPEED + Math.floor(heldMillis / ACCELERATION_INTERVAL);
++    return direction * Math.min(MAX_SPEED, Math.max(distanceSpeed, heldSpeed));
++  };
+ 
+   const initAutoScroll = () => {
++    resetEdgeAcceleration();
+     if (target?.current) {
+       const { left, width } = target.current.getBoundingClientRect();
+       leftBoundRef.current = left;
+@@ -24,13 +57,9 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
+     // 超出
+     if (e.clientX >= rightBoundRef.current || e.clientX <= leftBoundRef.current) {
+       frame.current && cancelAnimationFrame(frame.current);
+-      const over = Math.abs(e.clientX >= rightBoundRef.current ? e.clientX - rightBoundRef.current : e.clientX - leftBoundRef.current);
+-      speed.current = Math.min(Number((over / CRITICAL_SIZE).toFixed(0)) * DEFAULT_SPEED, MAX_SPEED);
+-
+-      const dir = e.clientX >= rightBoundRef.current ? 1 : -1;
+-      const delta = dir * speed.current;
++      const edgeScroll = resolveEdgeScroll(e.clientX);
+       const loop = () => {
+-        deltaScroll && deltaScroll(delta);
++        edgeScroll && deltaScroll && deltaScroll(getEdgeScrollDelta(edgeScroll));
+         frame.current = requestAnimationFrame(loop);
+       };
+ 
+@@ -38,6 +67,7 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
+       return false;
+     } else {
+       frame.current && cancelAnimationFrame(frame.current);
++      resetEdgeAcceleration();
+     }
+ 
+     return true;
+@@ -46,13 +76,9 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
+   const dealResizeAutoScroll = (e: ResizeEvent, dir: 'left' | 'right', deltaScroll?: (delta: number) => void) => {
+     if (e.clientX >= rightBoundRef.current || e.clientX < leftBoundRef.current) {
+       frame.current && cancelAnimationFrame(frame.current);
+-      const over = Math.abs(e.clientX >= rightBoundRef.current ? e.clientX - rightBoundRef.current : e.clientX - leftBoundRef.current);
+-      speed.current = Math.min(Number((over / CRITICAL_SIZE).toFixed(0)) * DEFAULT_SPEED, MAX_SPEED);
+-
+-      const direction = e.clientX >= rightBoundRef.current ? 1 : -1;
+-      const delta = direction * speed.current;
++      const edgeScroll = resolveEdgeScroll(e.clientX);
+       const loop = () => {
+-        deltaScroll && deltaScroll(delta);
++        edgeScroll && deltaScroll && deltaScroll(getEdgeScrollDelta(edgeScroll));
+         frame.current = requestAnimationFrame(loop);
+       };
+ 
+@@ -61,6 +87,7 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
+       return false;
+     } else {
+       frame.current && cancelAnimationFrame(frame.current);
++      resetEdgeAcceleration();
+     }
+     return true;
+   };
+@@ -68,8 +95,8 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
+   const stopAutoScroll = () => {
+     leftBoundRef.current = Number.MIN_SAFE_INTEGER;
+     rightBoundRef.current = Number.MAX_SAFE_INTEGER;
+-    speed.current = DEFAULT_SPEED;
+     frame.current && cancelAnimationFrame(frame.current);
++    resetEdgeAcceleration();
+   };
+ 
+   return {

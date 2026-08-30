@@ -131,6 +131,7 @@
     "baseline-browser-mapping": "^2.11.20",
     "canvas": "^3.2.3",
     "jsdom": "^30.0.1",
+    "less": "^4.4.0",
     "oxlint": "1.80.0",
     "oxlint-tsgolint": "7.0.2001",
     "typescript": "^7.0.2",
@@ -143,5 +144,8 @@
     "canvas",
     "core-js",
     "protobufjs"
-  ]
+  ],
+  "patchedDependencies": {
+    "@xzdarcy/react-timeline-editor@1.0.0": "patches/@xzdarcy%2Freact-timeline-editor@1.0.0.patch"
+  }
 }

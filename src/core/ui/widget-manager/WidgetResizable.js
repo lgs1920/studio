@@ -20,6 +20,48 @@
 import { LGS_ANIMATION_RESIZING } from '@Core/constants'
 import { constrainWidgetDimensions } from './widgetResizeUtils'
 
+/**
+ * Resolve the maximum dimensions allowed by the active widget bounds for one
+ * resize direction.
+ *
+ * @param {Object} options - Resize geometry options.
+ * @param {Object} options.config - Widget runtime configuration.
+ * @param {Array<number>} options.direction - Moveable resize direction.
+ * @param {number} options.left - Current absolute left position.
+ * @param {number} options.top - Current absolute top position.
+ * @param {number} options.width - Current widget width.
+ * @param {number} options.height - Current widget height.
+ * @returns {{maxWidth?: number, maxHeight?: number}} Directional bounds.
+ */
+const resolveDirectionalResizeBounds = ({config, direction, left, top, width, height}) => {
+    const bounds = config?.bounds
+    if (!bounds) {
+        return {}
+    }
+
+    const [directionX, directionY] = direction
+    const margin = Math.max(0, Number(config.margin) || 0)
+    const leftBound = Number(bounds.left) + margin
+    const rightBound = Number(bounds.right) - margin
+    const topBound = Number(bounds.top) + margin
+    const bottomBound = Number(bounds.bottom) - margin
+    const result = {}
+
+    if (directionX !== 0 && Number.isFinite(leftBound) && Number.isFinite(rightBound)) {
+        result.maxWidth = directionX < 0
+            ? (left + width) - leftBound
+            : rightBound - left
+    }
+
+    if (directionY !== 0 && Number.isFinite(topBound) && Number.isFinite(bottomBound)) {
+        result.maxHeight = directionY < 0
+            ? (top + height) - topBound
+            : bottomBound - top
+    }
+
+    return result
+}
+
 export class WidgetResizable {
     // Singleton instance
     static #instance = null
@@ -118,9 +160,26 @@ export class WidgetResizable {
             return
         }
 
+        const direction = Array.isArray(event.direction) ? event.direction : [1, 1]
         const requestedWidth = Math.round(event.width)
         const requestedHeight = Math.round(event.height)
-        const preferredAxis = event.direction?.[0] === 0 && event.direction?.[1] !== 0 ? 'height' : 'width'
+        const baseLeft = __.app.parsePx(target.style.left || '0')
+        const baseTop = __.app.parsePx(target.style.top || '0')
+        const currentWidth = config.isCropper
+            ? config.cropDimensions?.width || requestedWidth
+            : __.app.parsePx(target.style.width || '0') || requestedWidth
+        const currentHeight = config.isCropper
+            ? config.cropDimensions?.height || requestedHeight
+            : __.app.parsePx(target.style.height || '0') || requestedHeight
+        const directionalBounds = resolveDirectionalResizeBounds({
+            config,
+            direction,
+            left:   baseLeft,
+            top:    baseTop,
+            width:  currentWidth,
+            height: currentHeight,
+        })
+        const preferredAxis = direction[0] === 0 && direction[1] !== 0 ? 'height' : 'width'
         const constrainedDimensions = config.isCropper
             ? {width: requestedWidth, height: requestedHeight}
             : constrainWidgetDimensions({
@@ -129,14 +188,12 @@ export class WidgetResizable {
                 width: requestedWidth,
                 height: requestedHeight,
                 preferredAxis,
+                maxWidth: directionalBounds.maxWidth,
+                maxHeight: directionalBounds.maxHeight,
             })
         const width = Math.round(constrainedDimensions.width)
         const height = Math.round(constrainedDimensions.height)
         const prevCropDimensions = config.isCropper ? {...config.cropDimensions} : {}
-        const baseLeft = __.app.parsePx(target.style.left || '0')
-        const baseTop = __.app.parsePx(target.style.top || '0')
-        const currentWidth = config.isCropper ? prevCropDimensions?.width || width : __.app.parsePx(target.style.width || '0') || width
-        const currentHeight = config.isCropper ? prevCropDimensions?.height || height : __.app.parsePx(target.style.height || '0') || height
         const resizeOffsetX = Number.isFinite(event?.drag?.beforeDist?.[0]) ? Math.round(event.drag.beforeDist[0]) : null
         const resizeOffsetY = Number.isFinite(event?.drag?.beforeDist?.[1]) ? Math.round(event.drag.beforeDist[1]) : null
         let finalLeft
@@ -162,7 +219,7 @@ export class WidgetResizable {
             }
         }
         else {
-            const [dx, dy] = event.direction
+            const [dx, dy] = direction
             const directionMap = {
                 '1,1':   {left: baseLeft, top: baseTop},
                 '1,-1':  {left: baseLeft, top: baseTop + (currentHeight - height)},

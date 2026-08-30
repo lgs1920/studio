@@ -2,7 +2,7 @@
 
 Status: current implementation inventory
 
-Date: 2026-08-24
+Date: 2026-08-30
 
 ## Purpose
 
@@ -36,6 +36,10 @@ and issue analysis remain in [`REPLAY-AUDIT.md`](REPLAY-AUDIT.md).
   terrain, and 3D Tiles capture.
 - Frame-accurate HQ trace updates and deterministic Navigation camera updates.
 - Moving clip readiness separated from settled waits.
+- Linked-video Replay preparation timeline with a normalized read-only
+  multi-track projection, controlled playhead and scrubbing, widget visibility
+  tracks, widget-row ordering, and clip/widget editor navigation. See
+  [Replay timeline preparation implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md).
 
 These items describe the current branch, not a released version. They remain
 subject to the validation gates below.
@@ -53,6 +57,9 @@ subject to the validation gates below.
 - Automated tests cover contracts and routing, but fixed visual reference
   journeys and video artifact comparison are not complete.
 - `JourneyReplayRunner` remains in the application for legacy consumers.
+- The delivered timeline is a read-only preparation projection. Persisted
+  editable timeline authoring, item trimming, overlap validation, and complete
+  timeline-driven Draft/HQ authoring remain future work.
 
 ## TODO roadmap
 
@@ -60,7 +67,7 @@ subject to the validation gates below.
 | --- | --- | --- | --- |
 | PARTIAL / TODO | 1.0.0 | Complete synchronized replay-start camera editing while preserving the implemented canonical camera and clip continuity | [Start camera editor](CORE-REPLAY-START-CAMERA-EDITOR-SPEC.md) |
 | TODO | 1.0.0 | Validate isolated HQ on fixed imagery, terrain, and 3D Tiles journeys; prove camera parity, resource teardown, and visual quality | [Replay quality validation](CORE-REPLAY-QUALITY-VALIDATION.md) |
-| TODO | 1.0.0 | Replace linked Replay Draft preparation with a compact stacked-widget Timeline preview | [Timeline preview](../../todo/CORE-REPLAY-TIMELINE-PREVIEW-SPEC.md) |
+| IMPLEMENTED | 1.0.0 | Deliver linked Replay preparation as a compact controlled Timeline preview | [Timeline implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md) |
 | TODO | 1.1.0 | Replace separated clip controls with the normalized editable multi-track replay timeline | [Track timeline editor](../../todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) |
 | TODO | 1.1.0 | Drive POI animation and displayed fields from canonical replay time | [POI animation](CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md) |
 | TODO | 1.1.0 | Align clip altitude inputs and continuity across reordered sequences | [Clip altitude alignment](CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md) |

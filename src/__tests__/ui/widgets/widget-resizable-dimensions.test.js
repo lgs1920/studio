@@ -18,6 +18,13 @@ describe('non-distorting widget resize', () => {
 
         expect(isNonDistortingWidget(config)).toBe(true)
         expect(constrainWidgetDimensions({config, width: 450, height: 20})).toEqual({width: 400, height: 50})
+        expect(constrainWidgetDimensions({
+            config,
+            width:    450,
+            height:   280,
+            maxWidth: 250,
+            maxHeight: 160,
+        })).toEqual({width: 250, height: 160})
     })
 
     it('can constrain either axis to the rendered content dimensions', () => {
@@ -95,6 +102,29 @@ describe('non-distorting widget resize', () => {
             minHeight: 50,
             maxWidth:  1200,
             maxHeight: 1000,
+        })
+    })
+
+    it('keeps the static minimum when content resizing is not configured', () => {
+        const element = document.createElement('div')
+        const content = document.createElement('div')
+        Object.defineProperties(content, {
+            scrollWidth:  {configurable: true, value: 480},
+            scrollHeight: {configurable: true, value: 900},
+        })
+        element.append(content)
+
+        const config = {
+            constrainResizeToContent: true,
+            min:                     {width: 100, height: 66},
+            max:                     {width: 1200, height: 2160},
+        }
+
+        expect(resolveWidgetResizeLimits(config, element)).toEqual({
+            minWidth:  100,
+            minHeight: 66,
+            maxWidth:  1200,
+            maxHeight: 2160,
         })
     })
 
@@ -178,5 +208,38 @@ describe('non-distorting widget resize', () => {
         expect(config.dimensions).toEqual({width: 400, height: 200})
         expect(lgs.stores.ui.widget.list.get(config.id).dimensions).toEqual({width: 400, height: 200})
         expect(widgetManager.saveWidgetPosition).toHaveBeenCalledWith(config.id, config)
+
+        config.max = {width: 1000, height: 1000}
+        Object.assign(target.style, {
+            left:   '200px',
+            top:    '20px',
+            width:  '200px',
+            height: '100px',
+        })
+        resizable.onResizeStart({target, direction: [1, 0]})
+        resizable.onResize({
+            width:     500,
+            height:    100,
+            direction: [1, 0],
+            drag:      {beforeDist: [0, 0]},
+        }, {widget: {current: target}, child: {current: null}}, vi.fn())
+
+        expect(target.style.left).toBe('200px')
+        expect(target.style.width).toBe('300px')
+
+        Object.assign(target.style, {
+            left:  '200px',
+            width: '200px',
+        })
+        resizable.onResizeStart({target, direction: [-1, 0]})
+        resizable.onResize({
+            width:     500,
+            height:    100,
+            direction: [-1, 0],
+            drag:      {beforeDist: [0, 0]},
+        }, {widget: {current: target}, child: {current: null}}, vi.fn())
+
+        expect(target.style.left).toBe('0px')
+        expect(target.style.width).toBe('400px')
     })
 })

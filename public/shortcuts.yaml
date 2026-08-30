@@ -41,6 +41,14 @@
   keys:
     - Alt+Shift+W
   scope: Replay mode
+- action: Zoom Replay timeline
+  description: Changes the visible time range of the focused Replay timeline in 20% increments with Ctrl+Wheel or arrow keys.
+  id: replay-timeline-zoom
+  keys:
+    - Ctrl+Wheel
+    - ArrowLeft
+    - ArrowRight
+  scope: Replay timeline
 - action: Adjust replay camera heading
   description: Adjusts only the replay camera heading by 1 degree while replay camera preparation is active.
   id: replay-camera-heading-keyboard

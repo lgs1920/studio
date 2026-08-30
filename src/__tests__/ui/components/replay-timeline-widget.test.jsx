@@ -4,17 +4,19 @@ import {proxyMap} from 'valtio/utils'
 
 const widgetMocks = vi.hoisted(() => ({
     config: null,
+    childRef: null,
     runtimeConfig: {
         dimensions:       {width: 2160, height: 900},
         min:              {width: 360, height: 66},
         max:              {width: 3840, height: 2160},
-        resizeToContent:  {minHeight: true},
+        resizeToContent:  undefined,
     },
 }))
 
 vi.mock('@Components/MainUI/widgets/Widget', () => ({
-    Widget: ({children, config}) => {
+    Widget: ({children, childRef, config}) => {
         widgetMocks.config = config
+        widgetMocks.childRef = childRef
         return <div data-testid="replay-timeline-widget-host">{children}</div>
     },
 }))
@@ -28,11 +30,12 @@ import {ReplayTimelineWidget} from '@Components/MainUI/widgets/list/ReplayTimeli
 describe('ReplayTimelineWidget dimensions', () => {
     beforeEach(() => {
         widgetMocks.config = null
+        widgetMocks.childRef = null
         widgetMocks.runtimeConfig = {
             dimensions:      {width: 2160, height: 900},
             min:             {width: 360, height: 66},
             max:             {width: 3840, height: 2160},
-            resizeToContent: {minHeight: true},
+            resizeToContent: undefined,
         }
         globalThis.__ = {
             ui: {
@@ -67,7 +70,7 @@ describe('ReplayTimelineWidget dimensions', () => {
         globalThis.lgs = undefined
     })
 
-    it('restores persisted dimensions while respecting the preview content minimum', async () => {
+    it('restores persisted dimensions while respecting the static widget minimum', async () => {
         const {unmount} = render(<ReplayTimelineWidget id="replay-timeline-widget"/>)
         const content = screen.getByTestId('replay-timeline-preview')
         vi.spyOn(content, 'getBoundingClientRect').mockReturnValue({
@@ -85,7 +88,8 @@ describe('ReplayTimelineWidget dimensions', () => {
         expect(widgetMocks.config.height).toBeUndefined()
         expect(widgetMocks.config.persist).toBe(true)
         expect(widgetMocks.config.constrainResizeToContent).toBe(true)
-        expect(widgetMocks.config.resizeToContent).toEqual({minHeight: true})
+        expect(widgetMocks.config.resizeToContent).toBeUndefined()
+        expect(widgetMocks.childRef).toBeDefined()
         await waitFor(() => expect(widgetMocks.runtimeConfig.dimensions).toEqual({width: 2160, height: 900}))
         expect(__.ui.widgetManager.saveWidgetPosition).not.toHaveBeenCalled()
 

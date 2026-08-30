@@ -79,25 +79,44 @@ export const resolveWidgetResizeRatio = config => {
  * @param {number} options.width - Requested width.
  * @param {number} options.height - Requested height.
  * @param {'width'|'height'} [options.preferredAxis='width'] - Axis used by edge resizing.
+ * @param {number} [options.maxWidth] - Optional maximum width imposed by the active bounds.
+ * @param {number} [options.maxHeight] - Optional maximum height imposed by the active bounds.
  * @returns {{width: number, height: number}} Constrained dimensions.
  */
-export const constrainWidgetDimensions = ({config, element = null, width, height, preferredAxis = 'width'}) => {
+export const constrainWidgetDimensions = ({
+    config,
+    element = null,
+    width,
+    height,
+    preferredAxis = 'width',
+    maxWidth,
+    maxHeight,
+}) => {
     const limits = resolveWidgetResizeLimits(config, element)
+    const boundedLimits = {
+        ...limits,
+        maxWidth: Number.isFinite(Number(maxWidth))
+            ? Math.min(limits.maxWidth, Math.max(limits.minWidth, Number(maxWidth)))
+            : limits.maxWidth,
+        maxHeight: Number.isFinite(Number(maxHeight))
+            ? Math.min(limits.maxHeight, Math.max(limits.minHeight, Number(maxHeight)))
+            : limits.maxHeight,
+    }
     const requestedWidth = Number(width)
     const requestedHeight = Number(height)
-    const safeWidth = Number.isFinite(requestedWidth) && requestedWidth > 0 ? requestedWidth : limits.minWidth
-    const safeHeight = Number.isFinite(requestedHeight) && requestedHeight > 0 ? requestedHeight : limits.minHeight
+    const safeWidth = Number.isFinite(requestedWidth) && requestedWidth > 0 ? requestedWidth : boundedLimits.minWidth
+    const safeHeight = Number.isFinite(requestedHeight) && requestedHeight > 0 ? requestedHeight : boundedLimits.minHeight
     const ratio = resolveWidgetResizeRatio(config)
 
     if (!ratio) {
         return {
-            width:  Math.min(Math.max(safeWidth, limits.minWidth), limits.maxWidth),
-            height: Math.min(Math.max(safeHeight, limits.minHeight), limits.maxHeight),
+            width:  Math.min(Math.max(safeWidth, boundedLimits.minWidth), boundedLimits.maxWidth),
+            height: Math.min(Math.max(safeHeight, boundedLimits.minHeight), boundedLimits.maxHeight),
         }
     }
 
-    const minimumRatioWidth = Math.max(limits.minWidth, limits.minHeight * ratio)
-    const maximumRatioWidth = Math.min(limits.maxWidth, limits.maxHeight * ratio)
+    const minimumRatioWidth = Math.max(boundedLimits.minWidth, boundedLimits.minHeight * ratio)
+    const maximumRatioWidth = Math.min(boundedLimits.maxWidth, boundedLimits.maxHeight * ratio)
     const requestedRatioWidth = preferredAxis === 'height' ? safeHeight * ratio : safeWidth
     const widthLimit = maximumRatioWidth >= minimumRatioWidth ? maximumRatioWidth : minimumRatioWidth
     const constrainedWidth = Math.min(Math.max(requestedRatioWidth, minimumRatioWidth), widthLimit)
