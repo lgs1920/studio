@@ -381,7 +381,11 @@
             background-color: var(--wa-color-fill-normal, var(--wa-color-neutral-fill-normal)) !important;
             background-image: repeating-linear-gradient(
                 -45deg,
-                var(--wa-color-fill-loud, var(--wa-color-neutral-fill-loud)) 0 4px,
+                color-mix(
+                    in oklab,
+                    var(--wa-color-fill-normal, var(--wa-color-neutral-fill-normal)) 85%,
+                    var(--wa-color-fill-loud, var(--wa-color-neutral-fill-loud)) 15%
+                ) 0 4px,
                 var(--wa-color-fill-normal, var(--wa-color-neutral-fill-normal)) 4px 8px
             ) !important;
         }
