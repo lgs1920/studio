@@ -593,7 +593,7 @@ export const ReplayTimelinePreview = () => {
     }, [])
 
     /**
-     * Opens the editor associated with a double-clicked timeline action.
+     * Toggles the editor associated with a double-clicked timeline action.
      * Replay actions intentionally remain inert because the Replay row is not
      * an editable drawer entity.
      *
@@ -605,7 +605,7 @@ export const ReplayTimelinePreview = () => {
         if (action?.widgetId) {
             event.preventDefault()
             event.stopPropagation()
-            __.ui.widgetManager?.editWidget?.(action.widgetId, {toggle: false})
+            __.ui.widgetManager?.editWidget?.(action.widgetId, {toggle: true})
             return
         }
 
@@ -615,9 +615,14 @@ export const ReplayTimelinePreview = () => {
 
         event.preventDefault()
         event.stopPropagation()
-        __.ui.drawerManager?.open?.(REPLAY_DRAWER, {
-            clipId: action.clip.id,
-            tab:    'clips',
+        __.ui.drawerManager?.toggleNavigation?.(REPLAY_DRAWER, {
+            navigation: {
+                tab:    'clips',
+                target: {
+                    type: 'anchor',
+                    id:   `replay-clip-${action.clip.id}`,
+                },
+            },
         })
     }, [])
 

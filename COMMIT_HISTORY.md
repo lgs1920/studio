@@ -1,5 +1,17 @@
 # Commit History
 
+## 2026-08-30 — [`feat(ui): add hierarchical drawer navigation engine`](https://github.com/lgs1920/studio/commit/3551b66a)
+
+- Store drawer navigation in Valtio as a drawer, tab, and internal target hierarchy.
+- Activate requested tabs, expand parent details, and scroll to internal drawer targets.
+- Add navigation toggling and close previous details targets when switching destination.
+
+## 2026-08-30 — `fix(replay): toggle timeline drawer targets`
+
+- Open or close the related widget editor or Replay drawer from a timeline double-click.
+- Focus the selected Replay clip through the generic drawer navigation engine.
+- Keep the locked Replay timeline action inert.
+
 ## 2026-08-03 — [`docs: add Three.js camera orientation preview`](https://github.com/lgs1920/studio/commit/422a46c3994f4bcadce94a1385991f4e2d5551d9)
 
 - Add the 3D Three.js camera HPR orientation sphere prototype, poster, and MP4 preview.

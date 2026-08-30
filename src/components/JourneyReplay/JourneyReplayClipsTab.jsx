@@ -368,6 +368,7 @@ const ClipDetails = ({
 
     return (
         <WaDetails
+            id={`replay-clip-${clip.id}`}
             data-id={clip.id}
             className="lgs--details-hoverable replay-clip-details"
             open={isOpen}
@@ -547,25 +548,14 @@ const ClipList = ({
  *
  * @param {Object} props - Component properties.
  * @param {Object} props.settings - Replay settings snapshot.
- * @param {string|null} [props.openClipId=null] - Clip instance to expand after opening the tab.
  * @returns {JSX.Element} Replay clip editor.
  */
-export const JourneyReplayClipsTab = memo(({settings, openClipId = null}) => {
+export const JourneyReplayClipsTab = memo(({settings}) => {
     const [addState, setAddState] = useState(emptyAddState())
     const [openClipIds, setOpenClipIds] = useState(() => new Set())
     const mainStore = useSnapshot(lgs.stores.main)
     const currentJourney = mainStore?.theJourney ?? lgs.theJourney ?? lgs.stores.main?.theJourney
     const currentClips = readCurrentClips(settings, currentJourney)
-
-    useEffect(() => {
-        if (!openClipId) {
-            return
-        }
-
-        setOpenClipIds(current => current.has(openClipId)
-            ? current
-            : new Set([...current, openClipId]))
-    }, [openClipId])
 
     const saveClips = useCallback((nextClips) => {
         syncClips(nextClips)

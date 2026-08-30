@@ -264,7 +264,7 @@ describe('JourneyReplayClipsTab', () => {
         })
     })
 
-    it('opens the requested clip instance when entering the Clips tab', async () => {
+    it('renders a stable internal anchor for every clip instance', () => {
         const replay = globalThis.lgs.settings.ui.replay
         const takeOff = createJourneyReplayClipInstance(replay.clips.catalog['take-off'], 'start', {
             params: {
@@ -277,16 +277,9 @@ describe('JourneyReplayClipsTab', () => {
         globalThis.lgs.theJourney.replay.start = [takeOff]
         globalThis.lgs.stores.replay.clips.start = [takeOff]
 
-        const view = render(
-            <JourneyReplayClipsTab
-                settings={replay}
-                openClipId={takeOff.id}
-            />,
-        )
+        const view = render(<JourneyReplayClipsTab settings={replay}/>)
 
-        await waitFor(() => {
-            expect(view.container.querySelector(`[data-id="${takeOff.id}"]`)?.hasAttribute('open')).toBe(true)
-        })
+        expect(view.container.querySelector(`#replay-clip-${takeOff.id}`)).not.toBeNull()
     })
 
     it('removes a clip from the list', async () => {

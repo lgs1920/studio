@@ -396,12 +396,13 @@ const REPLAY_POI_HIDDEN_FIELDS = [
 ]
 const REPLAY_TAB_RUNNER = 'runner'
 const REPLAY_TAB_STYLE = 'style'
+const REPLAY_TAB_CLIPS = 'clips'
 const REPLAY_TAB_POIS = 'pois'
 const REPLAY_ADVANCED_CAMERA_POPUP_ANCHOR_ID = 'replay-advanced-camera-popup-anchor'
 const REPLAY_ADVANCED_CAMERA_SETUP_BUTTON_ID = 'replay-advanced-camera-setup-button'
 
 export const JourneyReplayDrawer = memo(() => {
-    const {drawers: {open: drawerOpen, options: drawerOptions}} = useSnapshot(lgs.stores.ui)
+    const {drawers: {open: drawerOpen, navigation: drawerNavigation}} = useSnapshot(lgs.stores.ui)
     const {theJourney: currentJourney} = useSnapshot(lgs.stores.main)
     const poiList = lgs.stores.main.components.pois.list
     const replayState = useSnapshot(lgs.stores.replay)
@@ -563,9 +564,9 @@ export const JourneyReplayDrawer = memo(() => {
 
     useEffect(() => {
         if (drawerOpen === REPLAY_DRAWER) {
-            setActiveTab(drawerOptions?.tab === 'clips' ? 'clips' : REPLAY_TAB_RUNNER)
+            setActiveTab(drawerNavigation?.tab ?? REPLAY_TAB_RUNNER)
         }
-    }, [drawerOpen, drawerOptions?.tab, journeySlug])
+    }, [drawerOpen, drawerNavigation?.tab, journeySlug])
 
     useEffect(() => {
         if (drawerOpen !== REPLAY_DRAWER || activeTab !== REPLAY_TAB_RUNNER) {
@@ -1969,13 +1970,12 @@ export const JourneyReplayDrawer = memo(() => {
                                          </LGSScrollbars>
                                      </WaTabPanel>
 
-                                     <WaTabPanel name="clips">
+                                     <WaTabPanel name={REPLAY_TAB_CLIPS}>
                                          <LGSScrollbars>
                                              <div className="replay-tab-panel">
                                                  <JourneyReplayClipsTab
                                                      settings={replaySettings}
                                                      state={replayState}
-                                                     openClipId={drawerOptions?.clipId}
                                                  />
                                              </div>
                                          </LGSScrollbars>

@@ -69,6 +69,7 @@ describe('ReplayTimelinePreview', () => {
                 },
                 drawerManager: {
                     open: vi.fn(),
+                    toggleNavigation: vi.fn(),
                 },
                 replay: {
                     enterReplayPreparation: vi.fn(async () => true),
@@ -307,7 +308,7 @@ describe('ReplayTimelinePreview', () => {
 
         expect(globalThis.__.ui.widgetManager.editWidget).toHaveBeenCalledWith(
             'dynamic-stats-widget',
-            {toggle: false},
+            {toggle: true},
         )
 
         const clipAction = {
@@ -320,9 +321,14 @@ describe('ReplayTimelinePreview', () => {
         const clipView = render(timelineMocks.props.getActionRender(clipAction))
         fireEvent.doubleClick(clipView.container.firstElementChild)
 
-        expect(globalThis.__.ui.drawerManager.open).toHaveBeenCalledWith('replay-drawer', {
-            clipId: 'clip-instance-1',
-            tab:    'clips',
+        expect(globalThis.__.ui.drawerManager.toggleNavigation).toHaveBeenCalledWith('replay-drawer', {
+            navigation: {
+                tab:    'clips',
+                target: {
+                    type: 'anchor',
+                    id:   'replay-clip-clip-instance-1',
+                },
+            },
         })
 
         const replayView = render(timelineMocks.props.getActionRender({
@@ -334,7 +340,7 @@ describe('ReplayTimelinePreview', () => {
         fireEvent.doubleClick(replayView.container.firstElementChild)
 
         expect(globalThis.__.ui.widgetManager.editWidget).toHaveBeenCalledTimes(1)
-        expect(globalThis.__.ui.drawerManager.open).toHaveBeenCalledTimes(1)
+        expect(globalThis.__.ui.drawerManager.toggleNavigation).toHaveBeenCalledTimes(1)
     })
 
     it('does not render hover tooltips for Replay or clip actions', () => {
