@@ -1241,3 +1241,71 @@
 ## 2026-08-29 — [`feat(widget): add hide and show controls (#505)`](https://github.com/lgs1920/studio/commit/609e5a73071cd8276ab56b3e5215471c7ca71f32)
 
 - Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(replay): simplify timeline action previews`](https://github.com/lgs1920/studio/commit/b6aafd47cf0035aa75e5ab28403e85438dd99691)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`feat(ui): support link mode for ToggleStateIcon`](https://github.com/lgs1920/studio/commit/004820ae74079cf370e4217e13452d61151df037)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(replay): align timeline track controls`](https://github.com/lgs1920/studio/commit/84f6d9e1fab3072e5207e0471338c5f3300f3395)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(ui): align widget menu theming`](https://github.com/lgs1920/studio/commit/bcde2dfeb35d07ddbd757fb43d5977382e6a3283)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`chore: update project skills`](https://github.com/lgs1920/studio/commit/e9f2134cc14cf4a5eb786c5119d72c7a5043bc4d)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`Merge remote-tracking branch 'origin/add-timeline' into add-timeline`](https://github.com/lgs1920/studio/commit/b291a8c69f2ba6ba776785386a65c6668a879540)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(widget): refresh catalog metadata from yaml`](https://github.com/lgs1920/studio/commit/a9bbbb2a89fed1c4e42f4c8aa79cd1c52d8b88ec)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(crop): add video resize context action`](https://github.com/lgs1920/studio/commit/94397284ba571e59305e15f9327daf7efc334048)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`feat(replay): open editors from timeline actions`](https://github.com/lgs1920/studio/commit/c48a032a6677ed4a4c77aa84eeef0677270a71b1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(replay): toggle timeline drawer targets`](https://github.com/lgs1920/studio/commit/b9a5be3f6ef019bb5b3278d1090b6ea4f7fa1d91)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`chore: add replay timeline skill`](https://github.com/lgs1920/studio/commit/f4cc4b4cb64f2c7edba96253d8eddb4db99d8676)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(ui): prevent native menus and text selection`](https://github.com/lgs1920/studio/commit/55111ac1864e99d6279f417be6ddd13fcc18570d)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(widget): reduce stats widget minimum width`](https://github.com/lgs1920/studio/commit/3f37dac1240b5744ae4420ed0d8bdcb5a5145011)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(replay): stabilize timeline editor layout`](https://github.com/lgs1920/studio/commit/7ada6db995f53e23f889869bbb0cdc02220b72fc)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(replay): accelerate timeline edge scrolling`](https://github.com/lgs1920/studio/commit/56b8f3c5c8ab23027fba508295bcb56b87065d9b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(replay): improve timeline edge scrolling`](https://github.com/lgs1920/studio/commit/e76dbecacbdb989886a5f4b0d85f2ea3cf4ca349)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(replay): throttle timeline scrubbing`](https://github.com/lgs1920/studio/commit/b589fbee70fd37f489c8ecd5853305189510c395)
+
+- Recorded automatically from Git history.
