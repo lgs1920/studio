@@ -26,6 +26,7 @@ describe('replayTimelineUtils', () => {
         expect(REPLAY_TIMELINE_UI.legendMaxWidth).toBe(300)
         expect(REPLAY_TIMELINE_UI.scaleWidth).toBe(40)
         expect(REPLAY_TIMELINE_UI.horizontalScrollbarHeight).toBe(8)
+        expect(REPLAY_TIMELINE_UI.scrubThrottleMillis).toBe(50)
         expect(REPLAY_TIMELINE_UI.horizontalScrollDurationRatio).toBe(0.2)
         expect(resolveReplayTimelineHeight(2)).toBe(90)
         expect(REPLAY_TIMELINE_UI.scaleIntervalMillis).toBe(200)

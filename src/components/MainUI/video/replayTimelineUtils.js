@@ -5,6 +5,7 @@
 export const REPLAY_TIMELINE_UI = Object.freeze({
     headerHeight: 42,
     horizontalScrollbarHeight: 8,
+    scrubThrottleMillis: 50,
     legendWidth: 136,
     legendMaxWidth: 300,
     legendMinWidth: 120,

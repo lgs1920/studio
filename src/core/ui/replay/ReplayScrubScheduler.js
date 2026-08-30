@@ -28,7 +28,7 @@ const cancelBrowserFrame = handle => globalThis.cancelAnimationFrame(handle)
 const ignoreSchedulerError = () => {}
 
 /**
- * Create a scheduler that applies at most one transient seek per animation frame.
+ * Create a scheduler that applies coalesced transient seek requests.
  *
  * New requests abort the previous asynchronous application. A settled request,
  * typically emitted when the pointer is released, is applied immediately.
@@ -37,6 +37,7 @@ const ignoreSchedulerError = () => {}
  * @param {Function} options.apply - Apply one normalized scrub request.
  * @param {Function} options.requestFrame - Animation-frame scheduler.
  * @param {Function} options.cancelFrame - Animation-frame cancellation function.
+ * @param {number} [options.throttleMillis=0] - Minimum delay between transient applications.
  * @param {Function} options.onError - Non-abort error observer.
  * @returns {Object} Scrub scheduler API.
  */
@@ -44,6 +45,9 @@ export const createReplayScrubScheduler = (options = {}) => {
     const apply = options.apply
     const requestFrame = typeof options.requestFrame === 'function' ? options.requestFrame : requestBrowserFrame
     const cancelFrame = typeof options.cancelFrame === 'function' ? options.cancelFrame : cancelBrowserFrame
+    const throttleMillis = Number.isFinite(Number(options.throttleMillis))
+        ? Math.max(0, Number(options.throttleMillis))
+        : 0
     const onError = typeof options.onError === 'function' ? options.onError : ignoreSchedulerError
 
     if (typeof apply !== 'function') {
@@ -52,9 +56,11 @@ export const createReplayScrubScheduler = (options = {}) => {
 
     let disposed = false
     let frameHandle = null
+    let throttleHandle = null
     let latestRequest = null
     let requestId = 0
     let activeAbortController = null
+    let lastTransientApplyAt = null
 
     /**
      * Abort the currently applying request without changing queued work.
@@ -72,12 +78,15 @@ export const createReplayScrubScheduler = (options = {}) => {
      * @returns {void}
      */
     const cancelQueuedFrame = () => {
-        if (frameHandle === null) {
-            return
+        if (frameHandle !== null) {
+            cancelFrame(frameHandle)
+            frameHandle = null
         }
 
-        cancelFrame(frameHandle)
-        frameHandle = null
+        if (throttleHandle !== null) {
+            globalThis.clearTimeout(throttleHandle)
+            throttleHandle = null
+        }
     }
 
     /**
@@ -126,7 +135,31 @@ export const createReplayScrubScheduler = (options = {}) => {
      */
     const flushQueuedRequest = () => {
         frameHandle = null
+        lastTransientApplyAt = Date.now()
         void applyLatestRequest(false)
+    }
+
+    /**
+     * Schedule one coalesced transient request after the configured throttle interval.
+     *
+     * @returns {void}
+     */
+    const scheduleTransientFlush = () => {
+        if (frameHandle !== null || throttleHandle !== null) {
+            return
+        }
+
+        const elapsed = lastTransientApplyAt === null ? Number.POSITIVE_INFINITY : Date.now() - lastTransientApplyAt
+        const delay = Math.max(0, throttleMillis - elapsed)
+        if (delay > 0) {
+            throttleHandle = globalThis.setTimeout(() => {
+                throttleHandle = null
+                frameHandle = requestFrame(flushQueuedRequest)
+            }, delay)
+            return
+        }
+
+        frameHandle = requestFrame(flushQueuedRequest)
     }
 
     /**
@@ -146,9 +179,7 @@ export const createReplayScrubScheduler = (options = {}) => {
             progress: clampReplayProgress(progress),
             requestId,
         }
-        if (frameHandle === null) {
-            frameHandle = requestFrame(flushQueuedRequest)
-        }
+        scheduleTransientFlush()
         return requestId
     }
 
@@ -165,6 +196,7 @@ export const createReplayScrubScheduler = (options = {}) => {
 
         cancelQueuedFrame()
         abortActiveRequest()
+        lastTransientApplyAt = null
         requestId += 1
         latestRequest = {
             progress: clampReplayProgress(progress),
@@ -182,6 +214,7 @@ export const createReplayScrubScheduler = (options = {}) => {
         cancelQueuedFrame()
         abortActiveRequest()
         latestRequest = null
+        lastTransientApplyAt = null
     }
 
     /**

@@ -1,4 +1,4 @@
-import {describe, expect, it, vi} from 'vitest'
+import {afterEach, describe, expect, it, vi} from 'vitest'
 
 import {createReplayScrubScheduler} from '@Core/ui/replay/ReplayScrubScheduler'
 
@@ -48,6 +48,10 @@ const createFrameHarness = () => {
 }
 
 describe('ReplayScrubScheduler', () => {
+    afterEach(() => {
+        vi.useRealTimers()
+    })
+
     it('coalesces pointer input and applies only the latest progress', async () => {
         const frames = createFrameHarness()
         const apply = vi.fn()
@@ -92,6 +96,40 @@ describe('ReplayScrubScheduler', () => {
             progress: 0.6,
             requestId: 2,
             settled: true,
+        })
+    })
+
+    it('throttles transient requests while keeping the latest position', async () => {
+        vi.useFakeTimers()
+        const frames = createFrameHarness()
+        const apply = vi.fn()
+        const scheduler = createReplayScrubScheduler({
+            apply,
+            requestFrame: frames.requestFrame,
+            cancelFrame: frames.cancelFrame,
+            throttleMillis: 100,
+        })
+
+        scheduler.request(0.1)
+        frames.flush()
+        await Promise.resolve()
+
+        scheduler.request(0.2)
+        scheduler.request(0.3)
+        expect(frames.callbacks.size).toBe(0)
+
+        vi.advanceTimersByTime(99)
+        expect(frames.callbacks.size).toBe(0)
+
+        vi.advanceTimersByTime(1)
+        expect(frames.callbacks.size).toBe(1)
+        frames.flush()
+        await Promise.resolve()
+
+        expect(apply).toHaveBeenCalledTimes(2)
+        expect(apply.mock.calls[1][0]).toMatchObject({
+            progress: 0.3,
+            settled: false,
         })
     })
 

@@ -565,7 +565,8 @@ export const ReplayTimelinePreview = forwardRef((_, ref) => {
         }
 
         const scheduler = createReplayScrubScheduler({
-            apply: applyTimelineTime,
+            apply:          applyTimelineTime,
+            throttleMillis: REPLAY_TIMELINE_UI.scrubThrottleMillis,
         })
         _scrubScheduler.current = scheduler
         return () => {
