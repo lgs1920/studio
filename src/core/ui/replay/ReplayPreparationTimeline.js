@@ -90,6 +90,8 @@ const resolveWidgetTrackDefinitions = widgetOrder => {
             icon: mode.icon,
             colorClasses: timelineColorClasses(mode.timelineColor),
             timelineColor: normalizeTimelineColor(mode.timelineColor),
+            canHide: true,
+            visible: true,
             fixed: false,
         }))
     }
@@ -119,6 +121,8 @@ const resolveWidgetTrackDefinitions = widgetOrder => {
             timelineColor: normalizeTimelineColor(
                 typeof widget === 'object' ? widget?.timelineColor : mode?.timelineColor,
             ),
+            canHide: typeof widget === 'object' && widget?.canHide === true,
+            visible: !(typeof widget === 'object' && widget?.visible === false),
             fixed: typeof widget === 'object' && widget?.fixed === true,
         }
     }).filter(Boolean)
@@ -184,6 +188,7 @@ const actionFromRange = ({
     icon = null,
     movable = true,
     timelineColor = DEFAULT_TIMELINE_COLOR,
+    visible = true,
 }) => ({
     id,
     kind,
@@ -200,6 +205,7 @@ const actionFromRange = ({
     clip,
     icon,
     colorClasses: timelineColorClasses(timelineColor),
+    visible,
     locked: !movable,
     movable,
     flexible: false,
@@ -384,6 +390,7 @@ const buildWidgetActions = (timeline, frameTimeline, modeDefinition) => {
             icon: modeDefinition.icon,
             movable: modeDefinition.movable !== false,
             timelineColor: modeDefinition.timelineColor,
+            visible: modeDefinition.visible,
         }))
     }
 
@@ -415,6 +422,7 @@ const buildStaticWidgetActions = (timeline, widgetDefinition) => {
         icon: widgetDefinition.icon,
         timelineColor: widgetDefinition.timelineColor,
         movable: widgetDefinition.fixed !== true,
+        visible: widgetDefinition.visible,
     })]
 }
 
@@ -474,6 +482,8 @@ export const buildReplayPreparationTimeline = (options = {}) => {
         locked: widget.fixed,
         movable: !widget.fixed,
         fixed: widget.fixed,
+        canHide: widget.canHide,
+        visible: widget.visible,
         icon: widget.icon,
         colorClasses: timelineColorClasses(widget.timelineColor),
         timelineColor: widget.timelineColor,
@@ -485,6 +495,7 @@ export const buildReplayPreparationTimeline = (options = {}) => {
                 label: widget.label,
                 icon: widget.icon,
                 timelineColor: widget.timelineColor,
+                visible: widget.visible,
                 movable: !widget.fixed,
             })
             : buildStaticWidgetActions(timeline, widget),
@@ -498,6 +509,8 @@ export const buildReplayPreparationTimeline = (options = {}) => {
         icon: track.icon,
         movable: track.movable,
         fixed: track.fixed,
+        canHide: track.canHide,
+        visible: track.visible,
         colorClasses: track.colorClasses,
         classNames: [
             `replay-timeline-row-${track.kind}`,

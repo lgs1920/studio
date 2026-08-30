@@ -2,9 +2,8 @@
  * Replay Timeline preview for linked video preparation.
  */
 
-import {WaButton, WaButtonGroup, WaIcon, WaTooltip} from '@web.awesome.me/webawesome-pro/dist/react'
+import {WaButton, WaButtonGroup, WaIcon} from '@web.awesome.me/webawesome-pro/dist/react'
 import {Timeline} from '@xzdarcy/react-timeline-editor'
-import {snapdom} from '@zumer/snapdom'
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {useSnapshot} from 'valtio'
 import {
@@ -20,6 +19,7 @@ import {
 } from '@Core/constants'
 import {LGSPopup} from '@Components/LGSPopup'
 import {WidgetsPanelContent} from '@Components/MainUI/widgets/WidgetsPanelContent'
+import {ToggleStateIcon} from '@Components/ToggleStateIcon'
 import {createReplayScrubScheduler} from '@Core/ui/replay/ReplayScrubScheduler'
 import {resolveReplayVideoFramePhase} from '@Core/ui/replay/ReplayVideoTimeline'
 import {useOptionalSnapshot} from '@Utils/ValtioUtils'
@@ -167,187 +167,15 @@ const actionPreviewType = action => ['start', 'replay', 'stop'].includes(action?
     : 'widget'
 
 /**
- * Resolve the stable DOM id used as the tooltip target for one action.
- *
- * @param {Object} action - Timeline action.
- * @returns {string} Tooltip target id.
- */
-const actionTooltipId = action => `replay-timeline-action-${String(action?.id ?? 'unknown')
-    .replace(/[^a-zA-Z0-9_-]/g, '-')}`
-
-/**
- * Resolve the text displayed in an action tooltip.
+ * Resolve the text displayed in an action item.
  *
  * Text widget actions already carry their configured text as the label.
- * Other widget actions carry the widget name, while Replay actions carry the
- * phase or clip label.
+ * Other actions carry their phase or clip label.
  *
  * @param {Object} action - Timeline action.
- * @returns {string} Tooltip label.
+ * @returns {string} Action label.
  */
-const actionTooltipLabel = action => String(action?.label ?? action?.widgetId ?? action?.kind ?? '')
-
-/**
- * Render a copy of the current map canvas for a Replay action.
- *
- * @returns {JSX.Element} Map snapshot miniature.
- */
-function TimelineMapSnapshot({className = ''}) {
-    const [image, setImage] = useState(null)
-
-    useEffect(() => {
-        let disposed = false
-        let frameId = null
-        let attempts = 0
-
-        const capture = () => {
-            try {
-                const canvas = globalThis.lgs?.canvas
-                if (canvas?.width && canvas?.height) {
-                    const nextImage = canvas.toDataURL('image/webp', 0.72)
-                    if (!disposed) {
-                        setImage(nextImage)
-                    }
-                    return
-                }
-            }
-            catch {
-                // A tainted canvas keeps the map fallback visible.
-                return
-            }
-
-            attempts++
-            if (!disposed && attempts < 10 && typeof globalThis.requestAnimationFrame === 'function') {
-                frameId = globalThis.requestAnimationFrame(capture)
-            }
-        }
-
-        capture()
-
-        return () => {
-            disposed = true
-            if (frameId !== null) {
-                globalThis.cancelAnimationFrame?.(frameId)
-            }
-        }
-    }, [])
-
-    return (
-        <span className={`replay-timeline-action__map-fragment${image ? ' replay-timeline-action__map-fragment--captured' : ''} ${className}`}
-              style={image ? {backgroundImage: `url("${String(image)}")`} : undefined}/>
-    )
-}
-
-/**
- * Resolve the rendered DOM element for one widget instance.
- *
- * @param {string|null} widgetId - Widget instance identifier.
- * @returns {HTMLElement|null} Rendered widget element.
- */
-const resolveTimelineWidgetSource = widgetId => {
-    if (!widgetId) {
-        return null
-    }
-
-    const managerSource = globalThis.__?.ui?.widgetManager?.getElementById?.(widgetId)
-    if (managerSource) {
-        return managerSource
-    }
-
-    const candidates = globalThis.document?.querySelectorAll?.('[data-widget] .lgs-widget') ?? []
-    return Array.from(candidates).find(element => element.closest('.lgs-widget-container')?.dataset.widget === widgetId)
-        ?? null
-}
-
-/**
- * Render a transparent snapshot of the widget represented by a timeline action.
- *
- * @param {Object} props - Component properties.
- * @param {Object} props.action - Timeline action.
- * @returns {JSX.Element} Widget copy miniature.
- */
-function TimelineWidgetSnapshot({action, className = ''}) {
-    const snapshotRef = useRef(null)
-    const [source, setSource] = useState(null)
-
-    useEffect(() => {
-        const widgetId = action?.widgetId
-        if (!widgetId) {
-            return undefined
-        }
-
-        const updateSource = () => {
-            const nextSource = resolveTimelineWidgetSource(widgetId)
-            setSource(currentSource => currentSource === nextSource ? currentSource : nextSource)
-        }
-        updateSource()
-
-        const observer = globalThis.MutationObserver && globalThis.document?.body
-            ? new globalThis.MutationObserver(updateSource)
-            : null
-        observer?.observe(globalThis.document.body, {childList: true, subtree: true})
-
-        return () => observer?.disconnect()
-    }, [action?.widgetId])
-
-    useEffect(() => {
-        const host = snapshotRef.current
-        if (!host || !source) {
-            return undefined
-        }
-
-        const bounds = source.getBoundingClientRect?.()
-        const sourceWidth = Number(bounds?.width) || Number(source.offsetWidth) || 1
-        const sourceHeight = Number(bounds?.height) || Number(source.offsetHeight) || 1
-        host.style.aspectRatio = String(sourceWidth / sourceHeight)
-
-        let disposed = false
-        const renderSnapshot = async () => {
-            try {
-                const snapshot = await snapdom(source, {
-                    backgroundColor: 'transparent',
-                    scale: 1,
-                })
-                const canvas = await snapshot.toCanvas()
-                if (disposed || !canvas) {
-                    return
-                }
-
-                canvas.className = 'replay-timeline-action__widget-copy-root'
-                Object.assign(canvas.style, {
-                    display: 'block',
-                    width: '100%',
-                    height: '100%',
-                    maxWidth: 'none',
-                    maxHeight: 'none',
-                    objectFit: 'contain',
-                    pointerEvents: 'none',
-                })
-                while (host.firstChild) {
-                    host.removeChild(host.firstChild)
-                }
-                host.append(canvas)
-            }
-            catch {
-                // A failed optional snapshot leaves the coloured timeline item visible.
-            }
-        }
-        void renderSnapshot()
-
-        return () => {
-            disposed = true
-            host.style.aspectRatio = ''
-            while (host.firstChild) {
-                host.removeChild(host.firstChild)
-            }
-        }
-    }, [source])
-
-    return (
-        <span ref={snapshotRef}
-              className={`replay-timeline-action__widget-copy ${className}`}/>
-    )
-}
+const actionLabel = action => String(action?.label ?? action?.widgetId ?? action?.kind ?? '')
 
 /**
  * Render the actual visual copy placed before a timeline action icon.
@@ -365,47 +193,12 @@ function TimelineActionPreview({action}) {
             <span className="replay-timeline-action__icon-trigger">
                 <WaIcon name={actionIcon(action)} variant="solid" label=""/>
             </span>
-            <span className="replay-timeline-action__label">{actionTooltipLabel(action)}</span>
+            <span className="replay-timeline-action__label">{actionLabel(action)}</span>
         </span>
     )
 }
 
 const renderActionPreview = action => <TimelineActionPreview action={action}/>
-
-/**
- * Render the action metadata in a hover tooltip instead of inside the block.
- *
- * @param {Object} action - Timeline action.
- * @returns {JSX.Element} Action tooltip.
- */
-const actionTooltipSnapshot = action => {
-    if (action?.kind === 'replay') {
-        return <TimelineMapSnapshot className="replay-timeline-action-tooltip__map-fragment"/>
-    }
-    if (action?.kind === 'start' || action?.kind === 'stop') {
-        return null
-    }
-    return <TimelineWidgetSnapshot action={action} className="replay-timeline-action-tooltip__widget-copy"/>
-}
-
-const renderActionTooltip = action => {
-    const snapshot = actionTooltipSnapshot(action)
-    return (
-        <WaTooltip for={actionTooltipId(action)} placement="top">
-            <span className="replay-timeline-action-tooltip">
-                <span className="replay-timeline-action-tooltip__header">
-                    <WaIcon name={actionIcon(action)} variant="regular" label=""/>
-                    <span>{actionTooltipLabel(action)}</span>
-                </span>
-                {snapshot && (
-                    <span className="replay-timeline-action-tooltip__snapshot">
-                        {snapshot}
-                    </span>
-                )}
-            </span>
-        </WaTooltip>
-    )
-}
 
 /**
  * Convert a Web Awesome color class list to a DOM class string.
@@ -509,15 +302,21 @@ const resolveVideoWidgetOrder = (widgetList, widgetSettings) => Array.from(widge
         }
         return leftId.localeCompare(rightId)
     })
-    .map(([id]) => {
+    .map(([id, entry]) => {
         const widgetType = id.split('#')[0]
         const definition = resolveWidgetDefinition(widgetType, widgetSettings)
+        const runtimeConfig = globalThis.__?.ui?.widgetManager?.getWidgetConfig?.(id)
+        const canHide = (definition?.canHide === true || runtimeConfig?.canHide === true)
+                        && definition?.mandatory !== true
+                        && runtimeConfig?.mandatory !== true
         return {
             id,
             type: widgetType,
             label: resolveWidgetLabel(id, widgetType, definition),
             icon: definition?.icon ?? 'puzzle-piece',
             timelineColor: definition?.timelineColor,
+            canHide,
+            visible: entry?.visible !== false && runtimeConfig?.visible !== false,
             fixed: widgetType === CREDITS_WIDGET || widgetType === LOGO_WIDGET,
         }
     })
@@ -751,6 +550,24 @@ export const ReplayTimelinePreview = () => {
     }, [])
 
     /**
+     * Toggle the visibility of the widget represented by a timeline track.
+     *
+     * @param {Object} row - Timeline row represented by the legend entry.
+     * @param {boolean} nextVisible - Requested widget visibility.
+     * @param {Event} event - Visibility button event.
+     * @returns {void}
+     */
+    const handleTrackVisibilityChange = useCallback((row, nextVisible, event) => {
+        event?.preventDefault?.()
+        event?.stopPropagation?.()
+        if (!row?.canHide) {
+            return
+        }
+
+        __.ui.widgetManager.toggleWidgetVisibility?.(row.id, nextVisible)
+    }, [])
+
+    /**
      * Keep the external track legend aligned with the virtualized timeline rows.
      *
      * @param {Object} scrollState - Vertical scroll state emitted by Timeline.
@@ -865,6 +682,23 @@ export const ReplayTimelinePreview = () => {
                                                     variant="solid"
                                                     label=""/>
                                         </span>
+                                        <span className="replay-timeline-preview__track-visibility-toggle lgs-widget-no-drag"
+                                              onClick={event => event.stopPropagation()}
+                                              onMouseDown={event => event.stopPropagation()}>
+                                            {row.canHide && (
+                                                <ToggleStateIcon
+                                                    initial={row.visible !== false}
+                                                    mode="link"
+                                                    size="s"
+                                                    appearance="plain"
+                                                    buttonVariant="neutral"
+                                                    aria-label={row.visible !== false
+                                                        ? `Hide ${trackLegendLabel(row)}`
+                                                        : `Show ${trackLegendLabel(row)}`}
+                                                    onChange={(nextVisible, event) => handleTrackVisibilityChange(row, nextVisible, event)}
+                                                />
+                                            )}
+                                        </span>
                                         <span className={`replay-timeline-preview__track-icon-frame ${colorClasses(row.colorClasses)}`}>
                                             <WaIcon className={colorClasses(row.colorClasses)} name={trackLegendIcon(row)} variant="regular" label=""/>
                                         </span>
@@ -904,16 +738,12 @@ export const ReplayTimelinePreview = () => {
                     getScaleRender={scale => <span>{formatTimelineScale(scale)}</span>}
                     getActionRender={action => {
                         return (
-                            <>
-                                <div id={actionTooltipId(action)}
-                                     className={`replay-timeline-action replay-timeline-action--${actionColorClass(action)} replay-timeline-action--${action.kind ?? 'replay'} ${colorClasses(action.colorClasses)}`}
-                                     data-action-kind={action.kind}
-                                     data-testid={`replay-timeline-action-${action.id}`}
-                                     aria-label={actionTooltipLabel(action)}>
-                                    {renderActionPreview(action)}
-                                </div>
-                                {renderActionTooltip(action)}
-                            </>
+                            <div className={`replay-timeline-action replay-timeline-action--${actionColorClass(action)} replay-timeline-action--${action.kind ?? 'replay'} ${colorClasses(action.colorClasses)}${action.visible === false ? ' replay-timeline-action--hidden' : ''}`}
+                                 data-action-kind={action.kind}
+                                 data-testid={`replay-timeline-action-${action.id}`}
+                                 aria-label={actionLabel(action)}>
+                                {renderActionPreview(action)}
+                            </div>
                         )
                     }}
                     ref={_timeline}
