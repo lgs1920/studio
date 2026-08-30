@@ -58,6 +58,7 @@ const SNAPSHOT_MAX_PADDING = 220
 const WIDGET_SNAP_GRID_GUIDELINE_CLASS = 'lgs-widget-snap-grid-guideline'
 const WIDGET_SNAP_CENTER_GUIDELINE_CLASS = 'lgs-widget-snap-center-guideline'
 const WIDGET_SNAP_ELEMENT_GUIDELINE_CLASS = 'lgs-widget-snap-element-guideline'
+const CROP_RESIZE_DIRECTIONS = Object.freeze(['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'])
 
 /**
  * Converts numeric positions into Moveable guidelines with a visual class.
@@ -422,6 +423,9 @@ export const Widget = ({
     })
     const selectedId = widget.current?.id ?? null
     const isSelected = selectedId === widgetId
+                       || Boolean(config.isCropper
+                                  && typeof selectedId === 'string'
+                                  && selectedId.split('#')[0] === widgetId?.split('#')[0])
     const keyboardUpdate = widget.current?.keyboardUpdate ?? 0
     const widgetTypeId = widgetId?.split('#')[0] ?? widgetId
     const isReplayRecordingMonitor = widgetId === REPLAY_RECORDING_MONITOR_WIDGET_ID
@@ -1215,14 +1219,24 @@ export const Widget = ({
         __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, true, true)
     }, [widgetId, drawers.entity, drawers.open, canInteract])
 
-    useEffect(() => {
-        if (!config.isCropper || selectionRequestKey === 0) {
-            return undefined
+    /**
+     * Displays the cropper resize handles independently of manager registry state.
+     *
+     * @returns {boolean} Whether Moveable was ready and the handles were requested.
+     */
+    const showCropperControlBox = useCallback(() => {
+        if (!config.isCropper || !_moveable.current?.target) {
+            return false
         }
 
-        const frameId = requestAnimationFrame(selectWidget)
-        return () => cancelAnimationFrame(frameId)
-    }, [config.isCropper, selectWidget, selectionRequestKey])
+        setControlBox({
+            renderDirections: CROP_RESIZE_DIRECTIONS,
+            zoom:             1,
+            opacity:          1,
+        })
+        _moveable.current.updateRect()
+        return true
+    }, [config.isCropper])
 
     const handlePointerDown = useCallback((event) => {
         if (hasNoDragInPath(event)) {
@@ -1257,6 +1271,60 @@ export const Widget = ({
     }, [config.handle])
 
     const handleBound = useCallback(() => __.ui.widgetManager.setBoundStatus(_widget.current), [])
+
+    useEffect(() => {
+        if (!config.isCropper || selectionRequestKey === 0) {
+            return undefined
+        }
+
+        let cancelled = false
+        let frameId = 0
+        let attempts = 0
+        let selectionRequested = false
+
+        /**
+         * Confirms cropper selection after the selected state has rendered.
+         */
+        const confirmSelection = () => {
+            if (!cancelled && _moveable.current?.target) {
+                selectWidget()
+                showCropperControlBox()
+            }
+        }
+
+        /**
+         * Waits for Moveable to attach its target before selecting the cropper.
+         */
+        const selectWhenReady = () => {
+            if (cancelled) {
+                return
+            }
+
+            if (_moveable.current?.target) {
+                selectWidget()
+                showCropperControlBox()
+                frameId = requestAnimationFrame(confirmSelection)
+                return
+            }
+
+            if (!selectionRequested) {
+                selectionRequested = true
+                selectWidget()
+                showCropperControlBox()
+            }
+
+            attempts += 1
+            if (attempts < 60) {
+                frameId = requestAnimationFrame(selectWhenReady)
+            }
+        }
+
+        frameId = requestAnimationFrame(selectWhenReady)
+        return () => {
+            cancelled = true
+            cancelAnimationFrame(frameId)
+        }
+    }, [config.isCropper, selectWidget, selectionRequestKey, showCropperControlBox])
 
     useEffect(() => {
         if (isSelected) {
@@ -1763,7 +1831,10 @@ export const Widget = ({
 
             <Moveable
                 className={classNames('lgs-widget-control-box', moveableClassName)}
-                style={{pointerEvents: isSelected && !effectiveLocked ? 'auto' : 'none'}}
+                style={{
+                    opacity:      isSelected && !effectiveLocked ? 1 : 0,
+                    pointerEvents: isSelected && !effectiveLocked ? 'auto' : 'none',
+                }}
                 container={actualContainer ?? lgs.canvas}
                 origin={false}
                 ref={_moveable}
@@ -1814,8 +1885,8 @@ export const Widget = ({
                 snapDirections={canSnapWidget ? {top: true, right: true, bottom: true, left: true, center: canSnapCenter, middle: canSnapCenter} : false}
                 elementSnapDirections={canSnapWidget ? {top: true, left: true, bottom: true, right: true, center: canSnapCenter, middle: canSnapCenter} : false}
                 maxSnapElementGuidelineDistance={canSnapWidget ? 10 : 0}
-                renderDirections={controlBox.renderDirections}
-                zoom={controlBox.zoom}
+                renderDirections={config.isCropper && isSelected ? CROP_RESIZE_DIRECTIONS : controlBox.renderDirections}
+                zoom={config.isCropper && isSelected ? 1 : controlBox.zoom}
                 onRender={(event) => !config.isCropper && (event.target.style.cssText += event.cssText)}
                 useMutationObserver={false}
                 useResizeObserver={false}

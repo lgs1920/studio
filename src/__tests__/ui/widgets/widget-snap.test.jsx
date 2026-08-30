@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 import { proxyMap } from 'valtio/utils'
 import { LGS_TOOLBAR, LGS_VISUAL_WIDGET } from '@Core/constants'
+import { forwardRef, useImperativeHandle } from 'react'
 
 const moveableState = vi.hoisted(() => ({
     props: [],
@@ -14,13 +15,11 @@ const widgetCanvasState = vi.hoisted(() => ({
 }))
 
 vi.mock('react-moveable', () => ({
-    default: vi.fn((props) => {
+    default: forwardRef((props, ref) => {
+        useImperativeHandle(ref, () => ({
+            updateRect: vi.fn(),
+        }), [])
         moveableState.props.push(props)
-        if (props.ref && typeof props.ref === 'object') {
-            props.ref.current = {
-                updateRect: vi.fn(),
-            }
-        }
         return <div data-testid="moveable"/>
     }),
 }))
@@ -159,8 +158,14 @@ const installGlobals = ({grid = {enabled: false, size: 30, snap: true}} = {}) =>
                 retrieveElementId: vi.fn(element => element?.id),
                 setBoundStatus: vi.fn(),
                 setConfig: vi.fn(),
-                setupElement: vi.fn(async (element, config) => {
+                setupElement: vi.fn(async (element, config, setBounds, setPosition, moveable) => {
                     element.id = config.id
+                    if (moveable) {
+                        moveable.current = {
+                            ...(moveable.current ?? {}),
+                            target: element,
+                        }
+                    }
                     return true
                 }),
             },
@@ -385,7 +390,7 @@ describe('Widget snap behavior', () => {
 
         expect(container.querySelector('.lgs-widget-container')?.style.pointerEvents).toBe('none')
         expect(container.querySelector('.lgs-widget')?.classList.contains('crop-pass-through')).toBe(true)
-        expect(latestMoveableProps().style).toEqual({pointerEvents: 'none'})
+        expect(latestMoveableProps().style).toEqual({opacity: 0, pointerEvents: 'none'})
     })
 
     it('locks visual widget input only during synchronized recording', () => {
@@ -436,10 +441,25 @@ describe('Widget snap behavior', () => {
 
         expect(container.querySelector('.lgs-widget-container')?.style.pointerEvents).toBe('none')
         expect(container.querySelector('.lgs-widget')?.classList.contains('crop-pass-through')).toBe(true)
-        expect(latestMoveableProps().style).toEqual({pointerEvents: 'auto'})
+        expect(latestMoveableProps().style).toEqual({opacity: 1, pointerEvents: 'auto'})
     })
 
-    it('selects a cropper when its host requests selection', async () => {
+    it('recognizes the cropper base identifier while its runtime identifier is being resolved', () => {
+        installGlobals()
+        lgs.stores.ui.widget.current = {id: 'video-crop-zone', rotate: 0}
+
+        renderWidget({
+            id:        'video-crop-zone',
+            type:      LGS_VISUAL_WIDGET,
+            isCropper: true,
+        })
+
+        expect(latestMoveableProps().style).toEqual({opacity: 1, pointerEvents: 'auto'})
+        expect(latestMoveableProps().renderDirections).toEqual(['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'])
+        expect(latestMoveableProps().zoom).toBe(1)
+    })
+
+    it('selects a cropper when a selection request is received', async () => {
         installGlobals()
 
         render(
@@ -447,17 +467,21 @@ describe('Widget snap behavior', () => {
                 isVisible={true}
                 selectionRequestKey={1}
                 config={{
-                    id:        'video-crop-zone',
-                    group:     'test-widgets',
+                    id:            'video-crop-zone',
+                    group:         'test-widgets',
                     showControlBox: true,
-                    type:      LGS_VISUAL_WIDGET,
-                    isCropper: true,
+                    type:          LGS_VISUAL_WIDGET,
+                    isCropper:     true,
+                    resizable:     true,
                 }}>
                 <div>content</div>
             </Widget>,
         )
 
         await waitFor(() => expect(lgs.stores.ui.widget.current.id).toBe('video-crop-zone#test'))
+        await waitFor(() => expect(latestMoveableProps().renderDirections).toEqual(['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']))
+        expect(latestMoveableProps().zoom).toBe(1)
+        expect(latestMoveableProps().resizable).toBe(true)
         expect(__.ui.widgetManager.manageControlBox).toHaveBeenCalled()
     })
 

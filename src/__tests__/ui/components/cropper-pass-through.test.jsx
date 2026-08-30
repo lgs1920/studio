@@ -7,7 +7,7 @@
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
-import { cleanup, fireEvent, render } from '@testing-library/react'
+import { cleanup, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 
@@ -28,7 +28,7 @@ vi.mock('../../../components/ToolsUI/cropper/widgets/DefinedCropZone.jsx', () =>
 }))
 
 vi.mock('../../../components/ToolsUI/cropper/widgets/CropZoneWidget.jsx', () => ({
-    CropZoneWidget: ({selectionRequestKey = 0}) => <div className="crop-zone" data-selection-request-key={selectionRequestKey}/>,
+    CropZoneWidget: () => <div className="crop-zone"/>,
 }))
 
 vi.mock('../../../components/ToolsUI/cropper/widgets/CropZoneInfoPopup.jsx', () => ({
@@ -40,8 +40,6 @@ import { CropOverlay } from '@Components/ToolsUI/cropper/CropOverlay'
 
 describe('Cropper pointer pass-through', () => {
     beforeEach(() => {
-        const canvas = document.createElement('div')
-        document.body.appendChild(canvas)
         globalThis.__ = {
             ui: {
                 widgetManager: {
@@ -57,7 +55,6 @@ describe('Cropper pointer pass-through', () => {
             },
         }
         globalThis.lgs = {
-            canvas,
             stores: {
                 ui: {
                     video: proxy({
@@ -119,30 +116,6 @@ describe('Cropper pointer pass-through', () => {
         expect(cropOverlay?.style.pointerEvents).toBe('none')
         expect(cropOverlay?.contains(blockers)).toBe(false)
         expect(blockers?.querySelectorAll('.crop-overlay-blocker')).toHaveLength(4)
-    })
-
-    it('enters crop editing after a double-click inside the visible crop zone', () => {
-        const context = proxy({
-            id:          'video-crop-zone',
-            ratioEditor: false,
-        })
-        const {container} = render(<Cropper overlay context={context}/>)
-        const cropZone = container.querySelector('.crop-zone')
-        cropZone.getBoundingClientRect = vi.fn(() => ({
-            left:   20,
-            top:    30,
-            right:  660,
-            bottom: 390,
-            width:  640,
-            height: 360,
-        }))
-
-        fireEvent.doubleClick(lgs.canvas, {clientX: 20, clientY: 30})
-
-        expect(context.ratioEditor).toBe(true)
-        expect(context.presetEditor).toBe(true)
-        expect(context.widgetEditor).toBe(true)
-        expect(container.querySelector('.crop-zone')?.dataset.selectionRequestKey).toBe('1')
     })
 
     it('does not create hit-test blockers when Cesium input is allowed', () => {

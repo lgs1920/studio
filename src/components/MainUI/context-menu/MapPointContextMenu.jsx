@@ -16,6 +16,7 @@
 
 import {
     CURRENT_MAP_POINT, POI_STANDARD_TYPE, POIS_EDITOR_DRAWER, ROTATION_ICON, SCENE_MODE_2D, SCENE_WIDGETS_BOARD,
+    VIDEO_CROP_ZONE,
 } from '@Core/constants'
 import { openPOIEditor } from '@Components/MainUI/MapPOI/openPOIEditor'
 import {
@@ -37,6 +38,7 @@ export const MapPointContextMenu = ({target, menuRef, hideVideoActions = false})
     const rotateState = useSnapshot(lgs.stores.ui.mainUI.rotate)
     const panoramaState = useSnapshot(lgs.stores.ui.mainUI.panorama)
     const widget = useSnapshot(lgs.stores.ui.widget)
+    const video = useSnapshot(lgs.stores.ui.video)
     const sceneMode = useSnapshot(lgs.settings.scene.mode)
     const coordinateSystem = lgs.settings.coordinateSystem.current
     const unitSystem = lgs.settings.unitSystem.current
@@ -45,6 +47,7 @@ export const MapPointContextMenu = ({target, menuRef, hideVideoActions = false})
         () => getManageableWidgets(SCENE_WIDGETS_BOARD, widget.list).length > 0,
         [widget.list],
     )
+    const canResizeVideo = video.editing === true && video.preRecording !== true
 
     const hideMenu = useCallback(() => __.ui.contextMenu.hide(), [])
     const openEditDrawer = useCallback(async (poiId) => {
@@ -171,6 +174,34 @@ export const MapPointContextMenu = ({target, menuRef, hideVideoActions = false})
         hideMenu()
     }, [hideMenu])
 
+    /**
+     * Opens the video crop editor and selects the crop zone.
+     */
+    const resizeVideo = useCallback(() => {
+        if (!canResizeVideo) {
+            return
+        }
+
+        const cropper = lgs.stores.ui.video?.cropper
+        if (cropper) {
+            Object.assign(cropper, {
+                presetEditor: true,
+                ratioEditor:  true,
+                resizable:     true,
+                selectionRequestKey: (cropper.selectionRequestKey ?? 0) + 1,
+                widgetEditor: true,
+            })
+        }
+
+        const rotation = Number(__.ui.widgetManager.getWidgetConfig?.(VIDEO_CROP_ZONE)?.rotate)
+        lgs.stores.ui.widget.current = {
+            ...(lgs.stores.ui.widget.current ?? {}),
+            id:     VIDEO_CROP_ZONE,
+            rotate: Number.isFinite(rotation) ? rotation : 0,
+        }
+        hideMenu()
+    }, [canResizeVideo, hideMenu])
+
     const isPointRotating = target
         && rotateState.running
         && rotateState.target?.element === CURRENT_MAP_POINT
@@ -266,6 +297,16 @@ export const MapPointContextMenu = ({target, menuRef, hideVideoActions = false})
                         }}>
                             <WaIcon name="layer" variant="regular"/>
                             <span>{'Manage widgets'}</span>
+                        </li>
+                    </>
+                )}
+                {canResizeVideo && (
+                    <>
+                        <li className="widget-no-hover">
+                            <WaDivider/>
+                        </li>
+                        <li id="resize-video-map-context" onClick={resizeVideo}>
+                            <WaIcon name="expand" variant="regular"/>{'Resize Video'}
                         </li>
                     </>
                 )}

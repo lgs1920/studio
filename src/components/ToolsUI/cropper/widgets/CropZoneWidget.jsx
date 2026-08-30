@@ -70,6 +70,7 @@ export const CropZoneWidget = memo(({
             type:             LGS_VISUAL_WIDGET,
             isCropper:        true,
             resizable:        true,
+            showControlBox:   true,
             draggable:        !lockToCenter,
             snappable:        true,
             outsideOverlay:   overlay,
