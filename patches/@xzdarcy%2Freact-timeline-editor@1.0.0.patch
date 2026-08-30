@@ -1,4 +1,13 @@
+diff --git a/node_modules/@xzdarcy/react-timeline-editor/.bun-tag-6114187bdb5009db b/.bun-tag-6114187bdb5009db
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/@xzdarcy/react-timeline-editor/.bun-tag-7d24e1c647cbbabc b/.bun-tag-7d24e1c647cbbabc
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 diff --git a/node_modules/@xzdarcy/react-timeline-editor/.bun-tag-931f1cfd9e937648 b/.bun-tag-931f1cfd9e937648
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/@xzdarcy/react-timeline-editor/.bun-tag-9a08e75deddb7d2a b/.bun-tag-9a08e75deddb7d2a
 new file mode 100644
 index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 diff --git a/package.json b/package.json
@@ -17,17 +26,17 @@ index 31604ec08ab61a93aade577e4931bdec62611884..4015e6b423b35f041d55956e0242f26b
    "peerDependencies": {
      "react": ">=18.0.0",
 diff --git a/src/components/row_rnd/hooks/useAutoScroll.ts b/src/components/row_rnd/hooks/useAutoScroll.ts
-index f4ed04c86d958b7264065ac2885c8f667bb66c88..b3189fb99b57eff39b8402d92ba147cc3136299f 100644
+index f4ed04c86d958b7264065ac2885c8f667bb66c88..befbadfb27fde4596be8e78726f0bc8ff3ff32c2 100644
 --- a/src/components/row_rnd/hooks/useAutoScroll.ts
 +++ b/src/components/row_rnd/hooks/useAutoScroll.ts
-@@ -2,17 +2,50 @@ import { DragEvent, ResizeEvent } from '@interactjs/types/index';
+@@ -2,17 +2,57 @@ import { DragEvent, ResizeEvent } from '@interactjs/types/index';
  import { useRef } from 'react';
  
  const DEFAULT_SPEED = 1;
 -const MAX_SPEED = 3;
-+const MAX_SPEED = 12;
  const CRITICAL_SIZE = 10;
-+const ACCELERATION_INTERVAL = 250;
++const EDGE_SCROLL_SPEEDS = [8, 16, 32, 64, 128];
++const ACCELERATION_INTERVAL = 100;
  
  export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
    const leftBoundRef = useRef(Number.MIN_SAFE_INTEGER);
@@ -54,7 +63,10 @@ index f4ed04c86d958b7264065ac2885c8f667bb66c88..b3189fb99b57eff39b8402d92ba147cc
 +      const over = Math.abs(clientX >= rightBoundRef.current ? clientX - rightBoundRef.current : clientX - leftBoundRef.current);
 +      return {
 +        direction,
-+        distanceSpeed: Math.max(DEFAULT_SPEED, Math.min(Number((over / CRITICAL_SIZE).toFixed(0)) * DEFAULT_SPEED, MAX_SPEED)),
++        distanceSpeed: Math.max(
++          EDGE_SCROLL_SPEEDS[0],
++          Math.min(Number((over / CRITICAL_SIZE).toFixed(0)) * DEFAULT_SPEED, EDGE_SCROLL_SPEEDS[EDGE_SCROLL_SPEEDS.length - 1]),
++        ),
 +      };
 +    }
 +
@@ -64,8 +76,12 @@ index f4ed04c86d958b7264065ac2885c8f667bb66c88..b3189fb99b57eff39b8402d92ba147cc
 +
 +  const getEdgeScrollDelta = ({direction, distanceSpeed}: {direction: number, distanceSpeed: number}) => {
 +    const heldMillis = edgeStartedAt.current === null ? 0 : Math.max(0, Date.now() - edgeStartedAt.current);
-+    const heldSpeed = DEFAULT_SPEED + Math.floor(heldMillis / ACCELERATION_INTERVAL);
-+    return direction * Math.min(MAX_SPEED, Math.max(distanceSpeed, heldSpeed));
++    const speedIndex = Math.min(
++      EDGE_SCROLL_SPEEDS.length - 1,
++      Math.floor(heldMillis / ACCELERATION_INTERVAL),
++    );
++    const heldSpeed = EDGE_SCROLL_SPEEDS[speedIndex];
++    return direction * Math.max(distanceSpeed, heldSpeed);
 +  };
  
    const initAutoScroll = () => {
@@ -73,7 +89,7 @@ index f4ed04c86d958b7264065ac2885c8f667bb66c88..b3189fb99b57eff39b8402d92ba147cc
      if (target?.current) {
        const { left, width } = target.current.getBoundingClientRect();
        leftBoundRef.current = left;
-@@ -24,13 +57,9 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
+@@ -24,13 +64,9 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
      // 超出
      if (e.clientX >= rightBoundRef.current || e.clientX <= leftBoundRef.current) {
        frame.current && cancelAnimationFrame(frame.current);
@@ -89,7 +105,7 @@ index f4ed04c86d958b7264065ac2885c8f667bb66c88..b3189fb99b57eff39b8402d92ba147cc
          frame.current = requestAnimationFrame(loop);
        };
  
-@@ -38,6 +67,7 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
+@@ -38,6 +74,7 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
        return false;
      } else {
        frame.current && cancelAnimationFrame(frame.current);
@@ -97,7 +113,7 @@ index f4ed04c86d958b7264065ac2885c8f667bb66c88..b3189fb99b57eff39b8402d92ba147cc
      }
  
      return true;
-@@ -46,13 +76,9 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
+@@ -46,13 +83,9 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
    const dealResizeAutoScroll = (e: ResizeEvent, dir: 'left' | 'right', deltaScroll?: (delta: number) => void) => {
      if (e.clientX >= rightBoundRef.current || e.clientX < leftBoundRef.current) {
        frame.current && cancelAnimationFrame(frame.current);
@@ -113,7 +129,7 @@ index f4ed04c86d958b7264065ac2885c8f667bb66c88..b3189fb99b57eff39b8402d92ba147cc
          frame.current = requestAnimationFrame(loop);
        };
  
-@@ -61,6 +87,7 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
+@@ -61,6 +94,7 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
        return false;
      } else {
        frame.current && cancelAnimationFrame(frame.current);
@@ -121,7 +137,7 @@ index f4ed04c86d958b7264065ac2885c8f667bb66c88..b3189fb99b57eff39b8402d92ba147cc
      }
      return true;
    };
-@@ -68,8 +95,8 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
+@@ -68,8 +102,8 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
    const stopAutoScroll = () => {
      leftBoundRef.current = Number.MIN_SAFE_INTEGER;
      rightBoundRef.current = Number.MAX_SAFE_INTEGER;
