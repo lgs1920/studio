@@ -55,7 +55,7 @@
         color: var(--wa-color-text-quiet);
         background: var(--wa-color-surface-default);
         font-family: var(--wa-font-family-body, sans-serif);
-        font-size: var(--wa-font-size-2xs, 0.625rem);
+        font-size: var(--wa-font-size-s, 0.875rem);
     }
 
     .replay-timeline-preview__track-legend-ruler {
@@ -70,9 +70,12 @@
     }
 
     .replay-timeline-preview__widget-menu-trigger {
-        width: 1.5rem;
-        height: 1.5rem;
-        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 0;
+        padding-inline: var(--lgs-gutter-xs);
+        white-space: nowrap;
     }
 
     .replay-timeline-preview__widget-menu-popup {
@@ -202,7 +205,7 @@
         color: var(--wa-color-text-normal);
         background: var(--wa-color-surface-default);
         font-family: var(--wa-font-family-body, sans-serif);
-        font-size: var(--wa-font-size-2xs, 0.625rem);
+        font-size: var(--wa-font-size-s, 0.875rem);
     }
 
     .timeline-editor-edit-area,
@@ -317,7 +320,7 @@
         background-color: var(--wa-color-fill-loud, var(--wa-color-neutral-fill-loud));
         border: var(--wa-border-width-s, 1px) var(--wa-border-style, solid) var(--wa-color-border-loud, var(--wa-color-neutral-border-loud));
         font-family: var(--wa-font-family-body, sans-serif);
-        font-size: var(--wa-font-size-2xs, 0.625rem);
+        font-size: var(--wa-font-size-s, 0.875rem);
         font-weight: 600;
         white-space: nowrap;
 

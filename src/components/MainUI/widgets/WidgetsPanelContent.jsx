@@ -45,6 +45,7 @@ import { useSnapshot }           from 'valtio'
  *
  * @param {Object} props
  * @param {Iterable<string>} props.groups - Group IDs to show in the panel
+ * @param {string} [props.themeClassName='wa-theme-lgs1920-on-map'] - Theme class applied to the panel
  * @returns {JSX.Element | null}
  */
 export const WidgetsPanelContent = ({groups, themeClassName = 'wa-theme-lgs1920-on-map'}) => {
@@ -52,7 +53,6 @@ export const WidgetsPanelContent = ({groups, themeClassName = 'wa-theme-lgs1920-
     const widgetDynamicRenderer = WidgetDynamicRenderer.instance
     const widget = useSnapshot(lgs.stores.ui.widget)
     const video = useSnapshot(lgs.stores.ui.video)
-    const toolbars = useSnapshot(lgs.settings.ui.toolbars)
     const gridSnapshot = useOptionalSnapshot(lgs.settings?.ui?.widgets?.grid, DEFAULT_WIDGET_GRID_SETTINGS)
     const grid = useMemo(
         () => getWidgetGridSettings(gridSnapshot),
@@ -276,7 +276,6 @@ export const WidgetsPanelContent = ({groups, themeClassName = 'wa-theme-lgs1920-
         <div
             className={`lgs-widget-menu widget-deck-panel lgs-card ${themeClassName}`}
             ref={_widgetDeckPanel}
-            style={{opacity: toolbars.opacity}}
             onMouseDown={handleInteraction}
             onTouchStart={handleInteraction}
         >

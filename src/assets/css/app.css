@@ -661,7 +661,8 @@ body {
     width: fit-content;
     min-width: fit-content;
     padding: var(--lgs-gutter-xs);
-    box-shadow: var(--lgs-on-map-floating-shadow, var(--wa-shadow-l));
+    box-shadow: var(--wa-shadow-l);
+    color: var(--wa-color-text-normal);
     --widget-deck-panel-max-width: 14rem;
     padding-block-end: calc(var(--lgs-gutter-s) + var(--lgs-gutter-xs));
     gap: 0;
@@ -706,7 +707,7 @@ body {
     padding: 2px;
     transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
     border: 1px solid transparent;
-    border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-xs));
+    border-radius: var(--wa-border-radius-s);
     background: transparent;
     gap: var(--lgs-gutter-xs);
 }
@@ -723,16 +724,16 @@ body {
 .widget-deck-item:hover,
 .widget-deck-item.selected,
 .widget-deck-item.is-selected {
-    color: var(--lgs-card-on-map-hover-color);
-    border-color: var(--lgs-card-on-map-hover-border-color);
-    background: var(--lgs-card-on-map-hover-bg-color);
+    color: var(--wa-color-neutral-on-loud);
+    border-color: var(--wa-color-neutral-border-loud);
+    background: var(--wa-color-neutral-fill-loud);
 }
 
 .widget-deck-item.selected,
 .widget-deck-item.is-selected {
-    color: var(--lgs-card-on-map-selected-color);
-    border-color: var(--lgs-card-on-map-selected-border-color);
-    background: var(--lgs-card-on-map-selected-bg-color);
+    color: var(--wa-color-brand-on-loud);
+    border-color: var(--wa-color-brand-border-loud);
+    background: var(--wa-color-brand-fill-loud);
 }
 
 .widget-deck-title {
@@ -879,7 +880,7 @@ body {
 
 .widget-menu-disabled {
     cursor: not-allowed !important;
-    color: var(--lgs-card-on-map-disabled-color) !important;
+    color: var(--wa-color-text-quiet) !important;
     border-color: transparent !important;
     background: transparent !important;
 }
@@ -887,7 +888,7 @@ body {
 .widget-deck-item.widget-menu-disabled:hover,
 .widget-deck-item.widget-menu-disabled.selected,
 .widget-deck-item.widget-menu-disabled.is-selected {
-    color: var(--lgs-card-on-map-disabled-color) !important;
+    color: var(--wa-color-text-quiet) !important;
     border-color: transparent !important;
     background: transparent !important;
 }

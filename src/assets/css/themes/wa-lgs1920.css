@@ -22,3 +22,8 @@
 :root.wa-theme-lgs1920 {
     color: var(--wa-color-text-normal);
 }
+
+.widget-deck-panel.wa-theme-lgs1920 {
+    background-color: var(--wa-color-surface-raised);
+    background-image: none;
+}

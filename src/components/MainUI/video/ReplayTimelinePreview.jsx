@@ -596,15 +596,11 @@ export const ReplayTimelinePreview = () => {
     }
 
     return (
-        <section className="replay-timeline-preview"
+        <section className="replay-timeline-preview wa-theme-lgs1920"
                  data-testid="replay-timeline-preview"
-                 aria-label="Replay Timeline preview">
+                 aria-label="Replay tracks">
             <header className="replay-timeline-preview__header">
-                <div>
-                    <span className="replay-timeline-preview__eyebrow">{'Replay preparation'}</span>
-                    <h2>{'Timeline'}</h2>
-                </div>
-                <WaButtonGroup label="Replay Timeline controls">
+                <WaButtonGroup label="Replay controls">
                     <WaButton appearance="plain"
                               size="s"
                               aria-label={isPlaying ? 'Pause Replay' : 'Play Replay'}
@@ -646,20 +642,20 @@ export const ReplayTimelinePreview = () => {
                         <WaButton id="replay-timeline-widget-menu-trigger"
                                   className="replay-timeline-preview__widget-menu-trigger"
                                   size="s"
-                                  variant="brand"
-                                  appearance="plain"
+                                  appearance="filled"
                                   aria-label="Add widget to timeline"
                                   aria-haspopup="menu"
                                   aria-expanded={widgetMenuOpen ? 'true' : 'false'}
                                   onClick={() => setWidgetMenuOpen(current => !current)}>
                             <WaIcon name="plus" variant="solid" label=""/>
+                            <span>{'Add widget'}</span>
                         </WaButton>
                     </div>
                     {widgetMenuOpen && (
                         <LGSPopup active
                                   anchor="replay-timeline-widget-menu-trigger"
-                                  className="replay-timeline-preview__widget-menu-popup"
-                                  placement="bottom-start"
+                                  className="replay-timeline-preview__widget-menu-popup wa-theme-lgs1920"
+                                  placement="right-start"
                                   distance={4}
                                   onRequestClose={() => setWidgetMenuOpen(false)}>
                             <WidgetsPanelContent groups={REPLAY_WIDGET_GROUPS}

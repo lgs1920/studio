@@ -41,7 +41,7 @@ vi.mock('@xzdarcy/react-timeline-editor', async () => {
 })
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
-    WaButton: ({children, ...props}) => <button type="button" {...props}>{children}</button>,
+    WaButton: ({children, size, ...props}) => <button type="button" data-wa-size={size} {...props}>{children}</button>,
     WaButtonGroup: ({children, ...props}) => <div {...props}>{children}</div>,
     WaIcon: ({name, ...props}) => <span data-icon={name} {...props}/>,
     WaPopup: ({active, children, ...props}) => active ? <div {...props}>{children}</div> : null,
@@ -142,6 +142,10 @@ describe('ReplayTimelinePreview', () => {
         expect(screen.getByTestId('replay-timeline-preview')).not.toBeNull()
         expect(screen.getByTestId('replay-timeline-preview').className)
             .not.toContain('lgs-on-map-theme-vars')
+        expect(screen.getByTestId('replay-timeline-preview').className)
+            .toContain('wa-theme-lgs1920')
+        expect(screen.getByTestId('replay-timeline-preview').className)
+            .not.toContain('wa-theme-lgs1920-on-map')
         expect(screen.getByTestId('replay-timeline-track-legend').textContent).toContain('Replay')
         expect(screen.getByTestId('replay-timeline-track-legend').textContent).toContain('Journey Stats')
         expect(screen.getByTestId('replay-timeline-track-legend').textContent).toContain('Dynamic Stats')
@@ -229,10 +233,25 @@ describe('ReplayTimelinePreview', () => {
         expect(globalThis.__.ui.replay.start).toHaveBeenCalledWith({progress: 0})
 
         const widgetMenuTrigger = screen.getByRole('button', {name: 'Add widget to timeline'})
+        expect(widgetMenuTrigger.textContent).toContain('Add widget')
+        expect(widgetMenuTrigger.getAttribute('data-wa-size')).toBe('s')
         fireEvent.click(widgetMenuTrigger)
-        expect(screen.getByTestId('replay-widget-menu').getAttribute('data-theme')).toBe('wa-theme-lgs1920')
+        const widgetMenu = screen.getByTestId('replay-widget-menu')
+        expect(widgetMenu.getAttribute('data-theme')).toBe('wa-theme-lgs1920')
+        expect(widgetMenu.parentElement.className)
+            .toContain('wa-theme-lgs1920')
+        expect(widgetMenu.parentElement.className)
+            .not.toContain('wa-theme-lgs1920-on-map')
+        expect(widgetMenu.parentElement.getAttribute('placement')).toBe('right-start')
         fireEvent.click(widgetMenuTrigger)
         expect(screen.queryByTestId('replay-widget-menu')).toBeNull()
+    })
+
+    it('keeps the timeline controls without a preparation or timeline heading', () => {
+        render(<ReplayTimelinePreview/>)
+
+        expect(screen.queryByText('Replay preparation')).toBeNull()
+        expect(screen.queryByText('Timeline', {exact: true})).toBeNull()
     })
 
     it('moves the track legend with the timeline vertical scroll position', () => {
