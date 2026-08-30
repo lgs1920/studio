@@ -401,7 +401,7 @@ const REPLAY_ADVANCED_CAMERA_POPUP_ANCHOR_ID = 'replay-advanced-camera-popup-anc
 const REPLAY_ADVANCED_CAMERA_SETUP_BUTTON_ID = 'replay-advanced-camera-setup-button'
 
 export const JourneyReplayDrawer = memo(() => {
-    const {drawers: {open: drawerOpen}} = useSnapshot(lgs.stores.ui)
+    const {drawers: {open: drawerOpen, options: drawerOptions}} = useSnapshot(lgs.stores.ui)
     const {theJourney: currentJourney} = useSnapshot(lgs.stores.main)
     const poiList = lgs.stores.main.components.pois.list
     const replayState = useSnapshot(lgs.stores.replay)
@@ -563,9 +563,9 @@ export const JourneyReplayDrawer = memo(() => {
 
     useEffect(() => {
         if (drawerOpen === REPLAY_DRAWER) {
-            setActiveTab(REPLAY_TAB_RUNNER)
+            setActiveTab(drawerOptions?.tab === 'clips' ? 'clips' : REPLAY_TAB_RUNNER)
         }
-    }, [drawerOpen, journeySlug])
+    }, [drawerOpen, drawerOptions?.tab, journeySlug])
 
     useEffect(() => {
         if (drawerOpen !== REPLAY_DRAWER || activeTab !== REPLAY_TAB_RUNNER) {
@@ -1975,6 +1975,7 @@ export const JourneyReplayDrawer = memo(() => {
                                                  <JourneyReplayClipsTab
                                                      settings={replaySettings}
                                                      state={replayState}
+                                                     openClipId={drawerOptions?.clipId}
                                                  />
                                              </div>
                                          </LGSScrollbars>

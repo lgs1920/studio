@@ -59,12 +59,16 @@ describe('ReplayTimelinePreview', () => {
         globalThis.__ = {
             ui: {
                 widgetManager: {
+                    editWidget: vi.fn(),
                     reorderWidgets: vi.fn(),
                     toggleWidgetVisibility: vi.fn((id, visible) => {
                         const current = globalThis.lgs.stores.ui.widget.list.get(id)
                         globalThis.lgs.stores.ui.widget.list.set(id, {...current, visible})
                         return visible
                     }),
+                },
+                drawerManager: {
+                    open: vi.fn(),
                 },
                 replay: {
                     enterReplayPreparation: vi.fn(async () => true),
@@ -286,6 +290,51 @@ describe('ReplayTimelinePreview', () => {
         })
 
         expect(screen.getByRole('link', {name: 'Show Dynamic Stats'})).not.toBeNull()
+    })
+
+    it('opens the related widget or clip editor on action double-click but ignores Replay', () => {
+        render(<ReplayTimelinePreview/>)
+
+        const widgetAction = {
+            colorClasses: [],
+            id:           'dynamic-stats-widget-0',
+            kind:         'dynamic-stats-widget',
+            label:        'Dynamic Stats',
+            widgetId:     'dynamic-stats-widget',
+        }
+        const widgetView = render(timelineMocks.props.getActionRender(widgetAction))
+        fireEvent.doubleClick(widgetView.container.firstElementChild)
+
+        expect(globalThis.__.ui.widgetManager.editWidget).toHaveBeenCalledWith(
+            'dynamic-stats-widget',
+            {toggle: false},
+        )
+
+        const clipAction = {
+            clip:         {id: 'clip-instance-1'},
+            colorClasses: [],
+            id:           'start-take-off',
+            kind:         'start',
+            label:        'TakeOff',
+        }
+        const clipView = render(timelineMocks.props.getActionRender(clipAction))
+        fireEvent.doubleClick(clipView.container.firstElementChild)
+
+        expect(globalThis.__.ui.drawerManager.open).toHaveBeenCalledWith('replay-drawer', {
+            clipId: 'clip-instance-1',
+            tab:    'clips',
+        })
+
+        const replayView = render(timelineMocks.props.getActionRender({
+            colorClasses: [],
+            id:           'replay-0',
+            kind:         'replay',
+            label:        'Replay',
+        }))
+        fireEvent.doubleClick(replayView.container.firstElementChild)
+
+        expect(globalThis.__.ui.widgetManager.editWidget).toHaveBeenCalledTimes(1)
+        expect(globalThis.__.ui.drawerManager.open).toHaveBeenCalledTimes(1)
     })
 
     it('does not render hover tooltips for Replay or clip actions', () => {

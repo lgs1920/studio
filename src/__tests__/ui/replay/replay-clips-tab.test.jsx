@@ -264,6 +264,31 @@ describe('JourneyReplayClipsTab', () => {
         })
     })
 
+    it('opens the requested clip instance when entering the Clips tab', async () => {
+        const replay = globalThis.lgs.settings.ui.replay
+        const takeOff = createJourneyReplayClipInstance(replay.clips.catalog['take-off'], 'start', {
+            params: {
+                duration: 2,
+                altitude: 300,
+                pitch: -35,
+            },
+        })
+
+        globalThis.lgs.theJourney.replay.start = [takeOff]
+        globalThis.lgs.stores.replay.clips.start = [takeOff]
+
+        const view = render(
+            <JourneyReplayClipsTab
+                settings={replay}
+                openClipId={takeOff.id}
+            />,
+        )
+
+        await waitFor(() => {
+            expect(view.container.querySelector(`[data-id="${takeOff.id}"]`)?.hasAttribute('open')).toBe(true)
+        })
+    })
+
     it('removes a clip from the list', async () => {
         const replay = globalThis.lgs.settings.ui.replay
         const takeOff = createJourneyReplayClipInstance(replay.clips.catalog['take-off'], 'start', {

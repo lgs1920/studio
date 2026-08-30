@@ -11,6 +11,7 @@ import {
     JOURNEY_WIDGETS,
     LOGO_WIDGET,
     MULTI_PURPOSE_WIDGETS,
+    REPLAY_DRAWER,
     REPLAY_RECORDING_MONITOR_WIDGET_ID,
     REPLAY_TIMELINE_WIDGET,
     VIDEO_WIDGETS_BOARD,
@@ -591,6 +592,35 @@ export const ReplayTimelinePreview = () => {
         relayReplayTimelineRowDrag({event, row, rowIndex, timelineElement})
     }, [])
 
+    /**
+     * Opens the editor associated with a double-clicked timeline action.
+     * Replay actions intentionally remain inert because the Replay row is not
+     * an editable drawer entity.
+     *
+     * @param {Object} action - Timeline action receiving the double-click.
+     * @param {MouseEvent} event - Double-click event from the action element.
+     * @returns {void}
+     */
+    const handleTimelineActionDoubleClick = useCallback((action, event) => {
+        if (action?.widgetId) {
+            event.preventDefault()
+            event.stopPropagation()
+            __.ui.widgetManager?.editWidget?.(action.widgetId, {toggle: false})
+            return
+        }
+
+        if (!['start', 'stop'].includes(action?.kind) || !action?.clip?.id) {
+            return
+        }
+
+        event.preventDefault()
+        event.stopPropagation()
+        __.ui.drawerManager?.open?.(REPLAY_DRAWER, {
+            clipId: action.clip.id,
+            tab:    'clips',
+        })
+    }, [])
+
     if (!linkedPreparation) {
         return null
     }
@@ -737,6 +767,7 @@ export const ReplayTimelinePreview = () => {
                             <div className={`replay-timeline-action replay-timeline-action--${actionColorClass(action)} replay-timeline-action--${action.kind ?? 'replay'} ${colorClasses(action.colorClasses)}${action.visible === false ? ' replay-timeline-action--hidden' : ''}`}
                                  data-action-kind={action.kind}
                                  data-testid={`replay-timeline-action-${action.id}`}
+                                 onDoubleClick={event => handleTimelineActionDoubleClick(action, event)}
                                  aria-label={actionLabel(action)}>
                                 {renderActionPreview(action)}
                             </div>
