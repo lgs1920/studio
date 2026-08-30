@@ -123,7 +123,7 @@
         flex: 0 0 18px;
         width: 18px;
         height: 18px;
-        color: var(--wa-color-text-quiet);
+        color: var(--wa-color-brand);
         background: transparent;
         border: 0;
 
@@ -164,6 +164,7 @@
         align-self: stretch;
         width: 1.25rem;
         height: 100%;
+        margin-inline-start: calc(-1 * var(--lgs-gutter-xxs) - 4px);
 
         .toggle-state-icon {
             display: flex;
