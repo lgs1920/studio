@@ -16,6 +16,37 @@
 
 import { ui } from '../../stores/ui.js'
 
+const DRAWER_NAVIGATION_MAX_ATTEMPTS = 12
+
+/**
+ * Normalizes the optional drawer navigation payload stored by the panel
+ * manager.
+ *
+ * @param {Object} options - Drawer opening options.
+ * @returns {Object|null} Normalized drawer navigation.
+ */
+const normalizeDrawerNavigation = (options = {}) => options.navigation
+                                  ?? (options.tab && !['current', 'default'].includes(options.tab)
+                                      ? {tab: options.tab}
+                                      : null)
+
+/**
+ * Compares two drawer navigation requests by their hierarchy and target.
+ *
+ * @param {Object|null} current - Current drawer navigation.
+ * @param {Object|null} next - Requested drawer navigation.
+ * @returns {boolean} Whether both requests identify the same destination.
+ */
+const sameDrawerNavigation = (current, next) => {
+    if (!current || !next) {
+        return current === next
+    }
+
+    return current.tab === next.tab
+        && current.target?.type === next.target?.type
+        && current.target?.id === next.target?.id
+}
+
 /**
  * Manages the state and interactions of drawers within the application.
  *
@@ -121,6 +152,57 @@ export class PanelManager {
         }
 
         return document.querySelector(`wa-drawer[id="${drawerId}"]`)
+    }
+
+    /**
+     * Resolves and focuses an internal drawer navigation target after its tab
+     * and any parent details element have been rendered.
+     *
+     * @param {Object|null} navigation - Drawer navigation request.
+     * @param {number} [attempt=0] - Number of render attempts already made.
+     */
+    #navigateToDrawerTarget = (navigation, attempt = 0) => {
+        const targetId = navigation?.target?.id
+        if (!targetId || ui.drawers.navigation?.target?.id !== targetId) {
+            return
+        }
+
+        const drawer = this.#getDrawerElement(ui.drawers.open)
+        const target = Array.from(drawer?.querySelectorAll('[id]') ?? [])
+            .find(element => element.id === targetId)
+
+        if (!target) {
+            if (attempt < DRAWER_NAVIGATION_MAX_ATTEMPTS) {
+                requestAnimationFrame(() => this.#navigateToDrawerTarget(navigation, attempt + 1))
+            }
+            return
+        }
+
+        const details = target.matches?.('wa-details') ? target : target.closest?.('wa-details')
+        for (const openDetails of Array.from(drawer.querySelectorAll('wa-details'))) {
+            if (openDetails !== details && openDetails.open && !openDetails.contains(target)) {
+                if (typeof openDetails.hide === 'function') {
+                    void openDetails.hide()
+                }
+                openDetails.open = false
+            }
+        }
+
+        if (details && !details.open) {
+            if (typeof details.show === 'function') {
+                void details.show()
+            }
+            details.open = true
+        }
+
+        requestAnimationFrame(() => {
+            if (ui.drawers.navigation?.target?.id !== targetId) {
+                return
+            }
+
+            target.scrollIntoView?.({block: 'center', inline: 'nearest'})
+            target.focus?.({preventScroll: true})
+        })
     }
 
     #getGroupKey = (element, selector, fallbackPrefix) => {
@@ -414,6 +496,22 @@ export class PanelManager {
     }
 
     /**
+     * Opens a drawer navigation request or closes it when already active.
+     *
+     * @param {string} id - Drawer identifier.
+     * @param {Object} [options] - Drawer opening options and navigation target.
+     */
+    toggleNavigation = (id, options = {}) => {
+        const nextNavigation = normalizeDrawerNavigation(options)
+        if (this.isCurrent(id) && sameDrawerNavigation(ui.drawers.navigation, nextNavigation)) {
+            this.close()
+            return
+        }
+
+        this.open(id, options)
+    }
+
+    /**
      * Configures and displays the specified drawer.
      * Pushes current state to the stack if stacked option is true.
      * @param {string} id
@@ -425,6 +523,8 @@ export class PanelManager {
                                  id:                  ui.drawers.open,
                                  action:              ui.drawers.action,
                                  entity:              ui.drawers.entity,
+                                 options:             ui.drawers.options,
+                                 navigation:          ui.drawers.navigation,
                                  suppressFocusOnOpen: ui.drawers.suppressFocusOnOpen,
                              })
         }
@@ -435,6 +535,7 @@ export class PanelManager {
         ui.drawers.open = id
         ui.drawers.action = options.action ?? ''
         ui.drawers.options = options
+        ui.drawers.navigation = normalizeDrawerNavigation(options)
         ui.drawers.entity = options.entity ?? null
         ui.drawers.suppressFocusOnOpen = Array.isArray(options.suppressFocusOnOpen) && options.suppressFocusOnOpen.length === 0
                                          ? false
@@ -442,17 +543,22 @@ export class PanelManager {
 
         let tabToActivate = null
 
-        if (options.tab && options.tab !== 'current' && options.tab !== 'default') {
-            tabToActivate = options.tab
+        const requestedTab = ui.drawers.navigation?.tab ?? options.tab
+
+        if (requestedTab && requestedTab !== 'current' && requestedTab !== 'default') {
+            tabToActivate = requestedTab
             this.tab = tabToActivate
         }
-        else if (options.tab === 'current' || (!options.tab && this.#tabs.has(id))) {
+        else if (requestedTab === 'current' || (!requestedTab && this.#tabs.has(id))) {
             tabToActivate = this.#tabs.get(id)
         }
 
         if (tabToActivate) {
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
+                    if (ui.drawers.open !== id) {
+                        return
+                    }
                     this.openTab(tabToActivate)
                 })
             })
@@ -462,9 +568,21 @@ export class PanelManager {
         if (drawer) {
             const frame = requestAnimationFrame(() => {
                 this.restoreDrawerUiState(drawer)
+                if (ui.drawers.navigation?.target?.id) {
+                    requestAnimationFrame(() => this.#navigateToDrawerTarget(ui.drawers.navigation))
+                }
             })
 
             drawer.__drawerStateOpenFrame = frame
+        }
+        else if (ui.drawers.navigation?.target?.id) {
+            requestAnimationFrame(() => {
+                if (ui.drawers.open !== id) {
+                    return
+                }
+
+                this.#navigateToDrawerTarget(ui.drawers.navigation)
+            })
         }
     }
 
@@ -504,6 +622,8 @@ export class PanelManager {
 
             ui.drawers.open = previous.id
             ui.drawers.action = previous.action
+            ui.drawers.options = previous.options ?? null
+            ui.drawers.navigation = previous.navigation ?? null
             ui.drawers.entity = previous.entity
             ui.drawers.suppressFocusOnOpen = previous.suppressFocusOnOpen ?? false
 
@@ -521,6 +641,8 @@ export class PanelManager {
             ui.drawers.open = null
             ui.drawers.entity = null
             ui.drawers.action = null
+            ui.drawers.options = null
+            ui.drawers.navigation = null
             ui.drawers.suppressFocusOnOpen = false
         }
     }
@@ -535,6 +657,8 @@ export class PanelManager {
         ui.drawers.open = null
         ui.drawers.entity = null
         ui.drawers.action = null
+        ui.drawers.options = null
+        ui.drawers.navigation = null
         ui.drawers.suppressFocusOnOpen = false
     }
 

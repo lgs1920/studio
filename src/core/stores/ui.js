@@ -34,6 +34,8 @@ export const ui = {
         over:                false,
         action:              null,
         entity:              null,
+        options:             null,
+        navigation:          null,
         suppressFocusOnOpen: false,
     },
 

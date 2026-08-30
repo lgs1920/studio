@@ -64,6 +64,8 @@ describe('PanelManager drawer UI state', () => {
         ui.drawers.open = null
         ui.drawers.action = null
         ui.drawers.entity = null
+        ui.drawers.options = null
+        ui.drawers.navigation = null
         ui.drawers.suppressFocusOnOpen = false
         PanelManager.instance = undefined
 
@@ -179,6 +181,92 @@ describe('PanelManager drawer UI state', () => {
         expect(tabGroup.show).toHaveBeenCalledWith('tab-user')
         expect(tabGroup.active).toBe('tab-user')
         expect(manager.tabActive('tab-user')).toBe(true)
+    })
+
+    it('opens an internal drawer target after activating its requested tab', () => {
+        const replayDrawer = document.createElement('wa-drawer')
+        replayDrawer.id = 'replay-drawer'
+
+        const tabGroup = createTabGroup('main-tabs', 'tab-runner')
+        tabGroup.append(createTab('tab-runner'), createTab('clips'))
+        const clipDetails = createDetails('replay-clip-instance-1', false)
+        clipDetails.scrollIntoView = vi.fn()
+        clipDetails.focus = vi.fn()
+        clipDetails.show = vi.fn(() => {
+            clipDetails.open = true
+        })
+        replayDrawer.append(tabGroup, clipDetails)
+        document.body.append(replayDrawer)
+
+        manager.attachEvents()
+        manager.open('replay-drawer', {
+            navigation: {
+                tab:    'clips',
+                target: {
+                    type: 'anchor',
+                    id:   'replay-clip-instance-1',
+                },
+            },
+        })
+
+        expect(ui.drawers.navigation).toEqual({
+            tab:    'clips',
+            target: {
+                type: 'anchor',
+                id:   'replay-clip-instance-1',
+            },
+        })
+        expect(tabGroup.show).toHaveBeenCalledWith('clips')
+        expect(clipDetails.show).toHaveBeenCalled()
+        expect(clipDetails.scrollIntoView).toHaveBeenCalledWith({block: 'center', inline: 'nearest'})
+        expect(clipDetails.focus).toHaveBeenCalledWith({preventScroll: true})
+    })
+
+    it('closes the drawer when toggling the active navigation target', () => {
+        manager.open('replay-drawer', {
+            navigation: {
+                tab:    'clips',
+                target: {type: 'anchor', id: 'replay-clip-instance-1'},
+            },
+        })
+
+        manager.toggleNavigation('replay-drawer', {
+            navigation: {
+                tab:    'clips',
+                target: {type: 'anchor', id: 'replay-clip-instance-1'},
+            },
+        })
+
+        expect(ui.drawers.open).toBeNull()
+        expect(ui.drawers.navigation).toBeNull()
+    })
+
+    it('closes the previous internal details target before opening another one', () => {
+        const replayDrawer = document.createElement('wa-drawer')
+        replayDrawer.id = 'replay-drawer'
+        const previousDetails = createDetails('replay-clip-instance-1', true)
+        const nextDetails = createDetails('replay-clip-instance-2', false)
+        nextDetails.scrollIntoView = vi.fn()
+        replayDrawer.append(previousDetails, nextDetails)
+        document.body.append(replayDrawer)
+        manager.attachEvents()
+
+        manager.open('replay-drawer', {
+            navigation: {
+                tab:    'clips',
+                target: {type: 'anchor', id: 'replay-clip-instance-1'},
+            },
+        })
+        manager.toggleNavigation('replay-drawer', {
+            navigation: {
+                tab:    'clips',
+                target: {type: 'anchor', id: 'replay-clip-instance-2'},
+            },
+        })
+
+        expect(previousDetails.open).toBe(false)
+        expect(nextDetails.open).toBe(true)
+        expect(nextDetails.scrollIntoView).toHaveBeenCalled()
     })
 
     it('restores the active tab before restoring details inside that tab when going back', () => {
