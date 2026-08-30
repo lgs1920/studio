@@ -15,6 +15,24 @@
  ******************************************************************************/
 import { HOUR, WIDGETS_STORE } from '@Core/constants'
 
+export const WIDGET_DEFINITION_METADATA_KEYS = Object.freeze(['name', 'icon', 'color', 'timelineColor'])
+
+/**
+ * Removes catalog metadata from widget position data before persistence.
+ *
+ * @param {Object} positionData - Widget position data to sanitize
+ * @returns {Object} Clone containing only persistence-owned fields
+ */
+export const stripWidgetDefinitionMetadata = positionData => {
+    if (!positionData || typeof positionData !== 'object') {
+        return positionData
+    }
+
+    return Object.fromEntries(
+        Object.entries(positionData).filter(([key]) => !WIDGET_DEFINITION_METADATA_KEYS.includes(key)),
+    )
+}
+
 export class WidgetDBManager {
 
     static #instance = null
@@ -47,7 +65,8 @@ export class WidgetDBManager {
      * @returns {Promise<void>}
      */
     saveWidgetPosition = async (widgetId, positionData) => {
-        await lgs.db.lgs1920.put(widgetId, positionData, WIDGETS_STORE, positionData.ttl)
+        const sanitizedPositionData = stripWidgetDefinitionMetadata(positionData)
+        await lgs.db.lgs1920.put(widgetId, sanitizedPositionData, WIDGETS_STORE, sanitizedPositionData.ttl)
     }
 
     /**

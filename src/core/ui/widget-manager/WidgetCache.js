@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 import { JOURNEY_WIDGETS, SCENE_WIDGETS, WIDGET_LAYER_START, WIDGETS_STORE } from '@Core/constants'
+import { stripWidgetDefinitionMetadata, WIDGET_DEFINITION_METADATA_KEYS } from './WidgetDBManager'
 
 /**
  * Utility class providing a clean, reactive API over the global Valtio proxy cache.
@@ -209,7 +210,7 @@ export class WidgetCache {
         }
 
         return {
-            ...position,
+            ...stripWidgetDefinitionMetadata(position),
             group,
             widgetsBoard: position.widgetsBoard || this.#defaultBoard,
             zIndex:       Number(position.zIndex) > 0 ? Number(position.zIndex) : WIDGET_LAYER_START,
@@ -221,9 +222,13 @@ export class WidgetCache {
             return false
         }
 
+        const hasDefinitionMetadata = WIDGET_DEFINITION_METADATA_KEYS.some(key =>
+            Object.prototype.hasOwnProperty.call(source, key))
+
         return source.group !== normalized.group ||
             (source.widgetsBoard || this.#defaultBoard) !== normalized.widgetsBoard ||
-            Number(source.zIndex) !== normalized.zIndex
+            Number(source.zIndex) !== normalized.zIndex ||
+            hasDefinitionMetadata
     }
 
     #resolveWidgetDefinition = (group, id) => {

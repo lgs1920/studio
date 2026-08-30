@@ -726,7 +726,6 @@ export class WidgetCoreRegistry {
                         config.dimensions = {width, height}
                     }
                 }
-                config.icon = initialConfig.icon ?? savedWidget.icon ?? config.icon
                 config.scale = savedWidget.scale || {x: 1, y: 1}
                 config.rotate = savedWidget.rotate || 0
                 const requestedRatioValue = this.#getRatioValue(initialConfig.ratio)
@@ -914,7 +913,6 @@ export class WidgetCoreRegistry {
             visible:            config.visible !== false,
             expandedDimensions: expandedDimensions,
             expandedInlineDimensions: expandedInlineDimensions,
-            icon:               config.icon ?? null,
             positionKey:        config.positionKey ?? null,
         }
     }

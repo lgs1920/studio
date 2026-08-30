@@ -211,7 +211,7 @@ widgets:
     id: "text-widget"
     name: "Text"
     description: "Text widget"
-    icon: "font"
+    icon: "text"
     timelineColor: "blue"
     mandatory: false
     canHide: true
@@ -275,7 +275,7 @@ widgets:
     id: "journey-stats-widget"
     name: "Journey Stats"
     description: "Journey Stats"
-    icon: "route"
+    icon: "chart-tree-map"
     timelineColor: "pink"
     mandatory: false
     canHide: true
@@ -348,7 +348,7 @@ widgets:
     id: "dynamic-stats-widget"
     name: "Dynamic Stats"
     description: "Live replay stats"
-    icon: "route"
+    icon: "chart-tree-map"
     timelineColor: "indigo"
     mandatory: false
     canHide: true

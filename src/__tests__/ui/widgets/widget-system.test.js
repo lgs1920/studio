@@ -21,6 +21,7 @@ import {
 }                                               from '../../../core/constants'
 import { WidgetDynamicRenderer }                from '../../../core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import { WidgetCache }                          from '../../../core/ui/widget-manager/WidgetCache'
+import { stripWidgetDefinitionMetadata }        from '../../../core/ui/widget-manager/WidgetDBManager'
 import { WidgetCoreRegistry }                   from '../../../core/ui/widget-manager/WidgetCoreRegistry'
 
 const widgetCacheStore = new Map()
@@ -173,6 +174,33 @@ describe('Widget persistence bootstrap', () => {
                                                                 zIndex:       WIDGET_LAYER_START + 2,
                                                             })
         expect(putCalls).toHaveLength(0)
+    })
+
+    it('removes widget catalog metadata from legacy persisted records', async () => {
+        const widgetId = `${JOURNEY_STATS_WIDGET}#metadata`
+        addPersistedRecord(widgetId, {
+            color:        'pink',
+            group:        JOURNEY_WIDGETS,
+            icon:         'chart-tree-map',
+            name:         'Journey Stats',
+            timelineColor: 'pink',
+            widgetsBoard: 'video-crop-zone',
+            zIndex:       WIDGET_LAYER_START + 2,
+        })
+
+        await new WidgetCache().init()
+
+        expect(putCalls).toEqual([
+            {
+                id:    widgetId,
+                store: WIDGETS_STORE,
+                value: {
+                    group:        JOURNEY_WIDGETS,
+                    widgetsBoard: 'video-crop-zone',
+                    zIndex:       WIDGET_LAYER_START + 2,
+                },
+            },
+        ])
     })
 
     it('restores journey widgets on non-scene boards with the journey group', async () => {
@@ -466,6 +494,10 @@ describe('Widget registry ratio resolution', () => {
                 y: 1.25,
             }, {}),
             type: LGS_VISUAL_WIDGET,
+            color: 'pink',
+            icon: 'chart-tree-map',
+            name: 'Journey Stats',
+            timelineColor: 'pink',
         })
 
         getComputedStyleSpy.mockRestore()
@@ -481,6 +513,10 @@ describe('Widget registry ratio resolution', () => {
             x: 1.25,
             y: 1.25,
         })
+        expect(positionData).not.toHaveProperty('color')
+        expect(positionData).not.toHaveProperty('icon')
+        expect(positionData).not.toHaveProperty('name')
+        expect(positionData).not.toHaveProperty('timelineColor')
     })
 
     it('persists crop dimensions without a visual scale', () => {
@@ -523,6 +559,24 @@ describe('Widget registry ratio resolution', () => {
         expect(positionData.width).toBe(640)
         expect(positionData.height).toBe(360)
         expect(positionData.scale).toEqual({x: 1, y: 1})
+    })
+})
+
+describe('Widget persistence metadata sanitization', () => {
+    it('strips catalog metadata without changing widget state fields', () => {
+        expect(stripWidgetDefinitionMetadata({
+            color:        'pink',
+            height:       180,
+            icon:         'chart-tree-map',
+            name:         'Journey Stats',
+            timelineColor: 'pink',
+            visible:      true,
+            width:        320,
+        })).toEqual({
+            height:  180,
+            visible: true,
+            width:   320,
+        })
     })
 })
 
