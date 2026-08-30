@@ -26,15 +26,16 @@ index 31604ec08ab61a93aade577e4931bdec62611884..4015e6b423b35f041d55956e0242f26b
    "peerDependencies": {
      "react": ">=18.0.0",
 diff --git a/src/components/row_rnd/hooks/useAutoScroll.ts b/src/components/row_rnd/hooks/useAutoScroll.ts
-index f4ed04c86d958b7264065ac2885c8f667bb66c88..befbadfb27fde4596be8e78726f0bc8ff3ff32c2 100644
+index f4ed04c86d958b7264065ac2885c8f667bb66c88..55f34e119d9da8357244e925f4be60bc8ce130ab 100644
 --- a/src/components/row_rnd/hooks/useAutoScroll.ts
 +++ b/src/components/row_rnd/hooks/useAutoScroll.ts
-@@ -2,17 +2,57 @@ import { DragEvent, ResizeEvent } from '@interactjs/types/index';
+@@ -2,17 +2,62 @@ import { DragEvent, ResizeEvent } from '@interactjs/types/index';
  import { useRef } from 'react';
  
  const DEFAULT_SPEED = 1;
 -const MAX_SPEED = 3;
  const CRITICAL_SIZE = 10;
++const EDGE_TRIGGER_SIZE = 24;
 +const EDGE_SCROLL_SPEEDS = [8, 16, 32, 64, 128];
 +const ACCELERATION_INTERVAL = 100;
  
@@ -53,14 +54,18 @@ index f4ed04c86d958b7264065ac2885c8f667bb66c88..befbadfb27fde4596be8e78726f0bc8f
 +  };
 +
 +  const resolveEdgeScroll = (clientX: number) => {
-+    if (clientX >= rightBoundRef.current || clientX <= leftBoundRef.current) {
-+      const direction = clientX >= rightBoundRef.current ? 1 : -1;
++    const atRightEdge = clientX >= rightBoundRef.current - EDGE_TRIGGER_SIZE;
++    const atLeftEdge = clientX <= leftBoundRef.current + EDGE_TRIGGER_SIZE;
++    if (atRightEdge || atLeftEdge) {
++      const direction = atRightEdge ? 1 : -1;
 +      if (edgeDirection.current !== direction || edgeStartedAt.current === null) {
 +        edgeDirection.current = direction;
 +        edgeStartedAt.current = Date.now();
 +      }
 +
-+      const over = Math.abs(clientX >= rightBoundRef.current ? clientX - rightBoundRef.current : clientX - leftBoundRef.current);
++      const over = direction > 0
++        ? clientX - (rightBoundRef.current - EDGE_TRIGGER_SIZE)
++        : (leftBoundRef.current + EDGE_TRIGGER_SIZE) - clientX;
 +      return {
 +        direction,
 +        distanceSpeed: Math.max(
@@ -89,9 +94,12 @@ index f4ed04c86d958b7264065ac2885c8f667bb66c88..befbadfb27fde4596be8e78726f0bc8f
      if (target?.current) {
        const { left, width } = target.current.getBoundingClientRect();
        leftBoundRef.current = left;
-@@ -24,13 +64,9 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
+@@ -22,15 +67,11 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
+ 
+   const dealDragAutoScroll = (e: DragEvent, deltaScroll?: (delta: number) => void) => {
      // 超出
-     if (e.clientX >= rightBoundRef.current || e.clientX <= leftBoundRef.current) {
+-    if (e.clientX >= rightBoundRef.current || e.clientX <= leftBoundRef.current) {
++    if (e.clientX >= rightBoundRef.current - EDGE_TRIGGER_SIZE || e.clientX <= leftBoundRef.current + EDGE_TRIGGER_SIZE) {
        frame.current && cancelAnimationFrame(frame.current);
 -      const over = Math.abs(e.clientX >= rightBoundRef.current ? e.clientX - rightBoundRef.current : e.clientX - leftBoundRef.current);
 -      speed.current = Math.min(Number((over / CRITICAL_SIZE).toFixed(0)) * DEFAULT_SPEED, MAX_SPEED);
@@ -105,7 +113,7 @@ index f4ed04c86d958b7264065ac2885c8f667bb66c88..befbadfb27fde4596be8e78726f0bc8f
          frame.current = requestAnimationFrame(loop);
        };
  
-@@ -38,6 +74,7 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
+@@ -38,21 +79,18 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
        return false;
      } else {
        frame.current && cancelAnimationFrame(frame.current);
@@ -113,9 +121,11 @@ index f4ed04c86d958b7264065ac2885c8f667bb66c88..befbadfb27fde4596be8e78726f0bc8f
      }
  
      return true;
-@@ -46,13 +83,9 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
+   };
+ 
    const dealResizeAutoScroll = (e: ResizeEvent, dir: 'left' | 'right', deltaScroll?: (delta: number) => void) => {
-     if (e.clientX >= rightBoundRef.current || e.clientX < leftBoundRef.current) {
+-    if (e.clientX >= rightBoundRef.current || e.clientX < leftBoundRef.current) {
++    if (e.clientX >= rightBoundRef.current - EDGE_TRIGGER_SIZE || e.clientX < leftBoundRef.current + EDGE_TRIGGER_SIZE) {
        frame.current && cancelAnimationFrame(frame.current);
 -      const over = Math.abs(e.clientX >= rightBoundRef.current ? e.clientX - rightBoundRef.current : e.clientX - leftBoundRef.current);
 -      speed.current = Math.min(Number((over / CRITICAL_SIZE).toFixed(0)) * DEFAULT_SPEED, MAX_SPEED);
@@ -129,7 +139,7 @@ index f4ed04c86d958b7264065ac2885c8f667bb66c88..befbadfb27fde4596be8e78726f0bc8f
          frame.current = requestAnimationFrame(loop);
        };
  
-@@ -61,6 +94,7 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
+@@ -61,6 +99,7 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
        return false;
      } else {
        frame.current && cancelAnimationFrame(frame.current);
@@ -137,7 +147,7 @@ index f4ed04c86d958b7264065ac2885c8f667bb66c88..befbadfb27fde4596be8e78726f0bc8f
      }
      return true;
    };
-@@ -68,8 +102,8 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
+@@ -68,8 +107,8 @@ export function useAutoScroll(target: React.RefObject<HTMLDivElement>) {
    const stopAutoScroll = () => {
      leftBoundRef.current = Number.MIN_SAFE_INTEGER;
      rightBoundRef.current = Number.MAX_SAFE_INTEGER;
