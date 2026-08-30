@@ -1193,3 +1193,39 @@
 ## 2026-08-28 — [`feat(ui): display Studio initialization progress (#501)`](https://github.com/lgs1920/studio/commit/579320acc6db23db627b9d93a1d257ad1441f61f)
 
 - Recorded automatically from Git history.
+
+## 2026-08-29 — [`fix(ui): refine initialization welcome layout`](https://github.com/lgs1920/studio/commit/e3bf77deb30baa4931c1a4d37e8d6d45ac4e7fa2)
+
+- Recorded automatically from Git history.
+
+## 2026-08-29 — [`fix(pwa): defer update dialog until studio entry`](https://github.com/lgs1920/studio/commit/989e08750135e275398196c7e22dcbc5060f3c2b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-29 — [`test: use LGS1920 fixture for journey metrics`](https://github.com/lgs1920/studio/commit/f5cd128ea81219418da07be5c1c403743992f956)
+
+- Recorded automatically from Git history.
+
+## 2026-08-29 — [`feat(replay): add preparation timeline`](https://github.com/lgs1920/studio/commit/d9da1fa3b7a9915292ae2c39fa3bfcfa3d701d82)
+
+- Recorded automatically from Git history.
+
+## 2026-08-29 — [`fix(widget): preserve profile and timeline dimensions`](https://github.com/lgs1920/studio/commit/a016c18dc46fb48be3d64cbb0b11e372364f5923)
+
+- Recorded automatically from Git history.
+
+## 2026-08-29 — [`fix(crop): restore crop zone selection`](https://github.com/lgs1920/studio/commit/4a9a3449a0b6fead83f24f0bdcff96a24ffee1f4)
+
+- Recorded automatically from Git history.
+
+## 2026-08-29 — [`fix(ui): stabilize widget stacking and editor controls`](https://github.com/lgs1920/studio/commit/8bbc0faf8bf54110adfc761e7b690700b11a1a13)
+
+- Recorded automatically from Git history.
+
+## 2026-08-29 — [`docs(replay): document preparation timeline changes`](https://github.com/lgs1920/studio/commit/097207f89d330627401f9a003fecd7b911f5a1ae)
+
+- Recorded automatically from Git history.
+
+## 2026-08-29 — [`feat(widget): add hide and show controls (#505)`](https://github.com/lgs1920/studio/commit/609e5a73071cd8276ab56b3e5215471c7ca71f32)
+
+- Recorded automatically from Git history.
