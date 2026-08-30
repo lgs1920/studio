@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-08-30 — `feat(ui): add LGS1920 Web Component timeline`
+
+- Add the standalone `lgs1920-timeline` Web Component with Web Awesome and Font Awesome integration.
+- Support controlled timeline data, JSON/YAML input, editable and persisted track names, slots, context menus, and CSS custom properties.
+- Keep the React adapter and component tests beside the Web Component implementation.
+
 ## 2026-08-30 — [`feat(ui): add hierarchical drawer navigation engine`](https://github.com/lgs1920/studio/commit/3551b66a)
 
 - Store drawer navigation in Valtio as a drawer, tab, and internal target hierarchy.
