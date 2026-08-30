@@ -37,6 +37,53 @@ body {
     overflow: hidden;
     height: 100%;
     margin: 0;
+
+    &,
+    & * {
+        user-select: none !important;
+        -webkit-user-select: none !important;
+    }
+
+    & :is(
+        input,
+        textarea,
+        select,
+        [contenteditable=""],
+        [contenteditable="true"],
+        [contenteditable="plaintext-only"],
+        [role="textbox"],
+        [data-lgs-shortcut-editable="true"],
+        wa-input,
+        wa-number-input,
+        wa-textarea,
+        wa-select,
+        wa-combobox,
+        sl-input,
+        sl-textarea,
+        sl-select
+    ) {
+        user-select: text !important;
+        -webkit-user-select: text !important;
+    }
+
+    & :is(
+        wa-input,
+        wa-number-input,
+        wa-textarea,
+        wa-select,
+        wa-combobox,
+        sl-input,
+        sl-textarea,
+        sl-select
+    )::part(input),
+    & :is(
+        wa-select,
+        wa-combobox,
+        sl-select
+    )::part(display-input) {
+        user-select: text !important;
+        -webkit-user-select: text !important;
+    }
 }
 
 .no-select {

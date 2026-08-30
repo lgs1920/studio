@@ -22,12 +22,15 @@ import './assets/css/themes/wa-lgs1920.css'
 import './assets/css/animations.css'
 import { UIUtils } from '@Utils/UIUtils'
 import { AppUtils } from '@Utils/AppUtils'
+import { installNativeContextMenuBlocker } from '@Core/events/NativeContextMenuBlocker'
 import {
     applyWelcomeBackgroundToImage,
     applyWelcomeBackgroundToVideo,
     getWelcomeBackgroundMedia,
     preloadWelcomeBackgroundMedia,
 }                                                               from '@Assets/media/welcome-background-media'
+
+installNativeContextMenuBlocker()
 
 
 /**
