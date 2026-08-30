@@ -1315,3 +1315,16 @@
 ## 2026-08-30 — [`fix(replay): throttle timeline scrubbing`](https://github.com/lgs1920/studio/commit/b589fbee70fd37f489c8ecd5853305189510c395)
 
 - Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(replay): lighten hidden timeline hatching`](https://github.com/lgs1920/studio/commit/33fb55801db7b0cbd53c61c27d9487a1919671dc)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`feat(ui): add LGS1920 Web Component timeline`](https://github.com/lgs1920/studio/commit/047c5b4d56b5f5abdfcdf9d9e971277c3be9605e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/1ffe1053373d733441a11b8a30aa6127736292aa)
+
+- # Conflicts:
+- #	COMMIT_HISTORY.md
