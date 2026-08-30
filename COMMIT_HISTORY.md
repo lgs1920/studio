@@ -1229,3 +1229,27 @@
 ## 2026-08-29 — [`feat(widget): add hide and show controls (#505)`](https://github.com/lgs1920/studio/commit/609e5a73071cd8276ab56b3e5215471c7ca71f32)
 
 - Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(replay): simplify timeline action previews`](https://github.com/lgs1920/studio/commit/b6aafd47cf0035aa75e5ab28403e85438dd99691)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`feat(ui): support link mode for ToggleStateIcon`](https://github.com/lgs1920/studio/commit/004820ae74079cf370e4217e13452d61151df037)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(replay): align timeline track controls`](https://github.com/lgs1920/studio/commit/84f6d9e1fab3072e5207e0471338c5f3300f3395)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(ui): align widget menu theming`](https://github.com/lgs1920/studio/commit/bcde2dfeb35d07ddbd757fb43d5977382e6a3283)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`chore: update project skills`](https://github.com/lgs1920/studio/commit/e9f2134cc14cf4a5eb786c5119d72c7a5043bc4d)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`Merge remote-tracking branch 'origin/add-timeline' into add-timeline`](https://github.com/lgs1920/studio/commit/b291a8c69f2ba6ba776785386a65c6668a879540)
+
+- Recorded automatically from Git history.
