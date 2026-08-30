@@ -2011,6 +2011,16 @@ wa-progress-bar.normal {
 /*******************************************************************************
  * Toggle State Icon
  ******************************************************************************/
+
+.toggle-state-icon-link {
+    text-decoration: none;
+}
+
+.toggle-state-icon-link:hover,
+.toggle-state-icon-link:focus-visible {
+    text-decoration: none;
+}
+
 /*.toggle-state-icon wa-button {*/
 /*    font-size: var(--lgs-font-size-m);*/
 /*}*/

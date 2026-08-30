@@ -35,6 +35,7 @@ const DEFAULT_ICONS = {
  * @param {string} props.className - Additional CSS classes
  * @param {Object} props.tooltip - Tooltip configuration with true/false properties
  * @param {boolean} props.disabled - Whether the button is disabled
+ * @param {'button'|'link'} props.mode - Interactive element mode
  * @returns {JSX.Element} The rendered toggle state icon
  */
 export const ToggleStateIcon = memo((props) => {
@@ -49,6 +50,7 @@ export const ToggleStateIcon = memo((props) => {
               className = '',
               tooltip,
               disabled  = false,
+              mode      = 'button',
               buttonVariant = 'brand',
               iconVariant   = 'regular',
               family        = false,
@@ -127,30 +129,64 @@ export const ToggleStateIcon = memo((props) => {
         setState(initial)
     }, [initial])
 
-    const buttonComponent = useMemo(() => (
-        <WaButton
-            name={currentIconName}
-            size={size}
-            disabled={disabled}
-            onClick={toggleState}
-            className={`toggle-state-icon-${state}`}
-            {...(size && {size})}
-            {...(id && {id})}
-            {...(style && {style})}
-            {...restProps}
-            appearance={appearance ?? 'plain'}
-            variant={buttonVariant}
-        >
+    /**
+     * Handle activation of the link mode without navigating away from the current view.
+     *
+     * @param {MouseEvent} event - Link activation event.
+     * @returns {Promise<void>} Completion of the state change.
+     */
+    const handleLinkClick = useCallback((event) => {
+        event.preventDefault()
+        return toggleState(event)
+    }, [toggleState])
+
+    const toggleComponent = useMemo(() => {
+        const icon = (
             <WaIcon name={currentIconName}
                     {...(family && {family})}
                     variant={iconVariant}/>
-        </WaButton>
-    ), [currentIconName, size, disabled, toggleState, state, id, style, restProps])
+        )
+
+        if (mode === 'link') {
+            return (
+                <a
+                    href="#"
+                    className={`toggle-state-icon-link toggle-state-icon-${state}`}
+                    {...(id && {id})}
+                    {...(style && {style})}
+                    {...restProps}
+                    aria-disabled={disabled ? 'true' : undefined}
+                    tabIndex={disabled ? -1 : undefined}
+                    onClick={handleLinkClick}
+                >
+                    {icon}
+                </a>
+            )
+        }
+
+        return (
+            <WaButton
+                name={currentIconName}
+                size={size}
+                disabled={disabled}
+                onClick={toggleState}
+                className={`toggle-state-icon-${state}`}
+                {...(size && {size})}
+                {...(id && {id})}
+                {...(style && {style})}
+                {...restProps}
+                appearance={appearance ?? 'plain'}
+                variant={buttonVariant}
+            >
+                {icon}
+            </WaButton>
+        )
+    }, [appearance, buttonVariant, currentIconName, disabled, family, handleLinkClick, iconVariant, id, mode, restProps, size, state, style, toggleState])
 
 
     return (
         <div className={`toggle-state-icon ${className} ${size}`}>
-            {buttonComponent}
+            {toggleComponent}
         </div>
     )
 })
