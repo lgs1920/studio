@@ -9,7 +9,7 @@ description: "CesiumJS materials and post-processing — Material, Fabric JSON, 
 Never extrapolate beyond the user's request. If a decision is not explicit, ask the user before acting. User directive: “JE N'EXTRAPOLE JAMAIS LA DEMANDE, JE DEMANDE AU MONSIEUR.”
 
 
-Version baseline: CesiumJS 1.143 (July 2026). All imports use ES module style.
+Version baseline: CesiumJS 1.144 (August 2026). All imports use ES module style.
 
 ## Material System (Fabric JSON)
 

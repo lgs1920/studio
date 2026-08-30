@@ -12,6 +12,8 @@ Never extrapolate beyond the user's request. If a decision is not explicit, ask 
 
 Reference for bootstrapping CesiumJS applications: Viewer, CesiumWidget, Ion/GoogleMaps/ITwinPlatform configuration, widgets, factory helpers, geocoder services, viewer mixins, Credits, and related enums.
 
+Version baseline: CesiumJS v1.144. Verify setup APIs against the latest official reference documentation.
+
 ## Quick Start
 
 ```js

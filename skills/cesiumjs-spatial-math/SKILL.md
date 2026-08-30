@@ -9,7 +9,7 @@ description: "CesiumJS spatial math - Cartesian3, Cartographic, Matrix4, Quatern
 Never extrapolate beyond the user's request. If a decision is not explicit, ask the user before acting. User directive: “JE N'EXTRAPOLE JAMAIS LA DEMANDE, JE DEMANDE AU MONSIEUR.”
 
 
-Version baseline: CesiumJS v1.143 (2026-07-01)
+Version baseline: CesiumJS v1.144 (2026-08-03)
 
 Mathematical foundation for every CesiumJS application: coordinate types, unit conversions, ellipsoid geometry, reference frame transforms, bounding volumes, intersection tests, and projections.
 

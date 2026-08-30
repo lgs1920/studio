@@ -9,7 +9,7 @@ description: "CesiumJS terrain, globe, and environment - TerrainProvider, Globe,
 Never extrapolate beyond the user's request. If a decision is not explicit, ask the user before acting. User directive: “JE N'EXTRAPOLE JAMAIS LA DEMANDE, JE DEMANDE AU MONSIEUR.”
 
 
-Version baseline: CesiumJS v1.143 | ES module imports (`import { ... } from "cesium";`)
+Version baseline: CesiumJS v1.144 | ES module imports (`import { ... } from "cesium";`)
 
 ## Terrain Providers
 

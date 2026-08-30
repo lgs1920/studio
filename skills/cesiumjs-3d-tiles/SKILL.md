@@ -9,7 +9,7 @@ description: "CesiumJS 3D Tiles - Cesium3DTileset, compressed and CAD-style glTF
 Never extrapolate beyond the user's request. If a decision is not explicit, ask the user before acting. User directive: “JE N'EXTRAPOLE JAMAIS LA DEMANDE, JE DEMANDE AU MONSIEUR.”
 
 
-Version baseline: CesiumJS v1.143 (ES module imports, async factory methods).
+Version baseline: CesiumJS v1.144 (ES module imports, async factory methods).
 
 ## Loading a Tileset
 
@@ -29,9 +29,13 @@ viewer.zoomTo(tileset, new HeadingPitchRange(
 ));
 ```
 
-CesiumJS 1.143 applies standalone model loading to glTF embedded in tilesets.
+CesiumJS 1.144 retains standalone model loading for glTF embedded in tilesets
+and adds support for the Bentley planar-fill glTF material extension used by
+CAD-style assets. Keep the runtime baseline aligned with the asset extensions
+you emit.
 Read the [glTF compatibility matrix](../cesiumjs-models-particles/REFERENCE.md)
-for automatic `KHR_meshopt_compression`, CAD extension behavior, and the unsupported planar-fill boundary.
+for automatic `KHR_meshopt_compression`, CAD extension behavior, and version
+compatibility boundaries.
 
 ```js
 // From Cesium ion

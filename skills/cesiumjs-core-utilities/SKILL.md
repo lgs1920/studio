@@ -9,7 +9,7 @@ description: "CesiumJS core utilities and networking - Resource, Color, Event, R
 Never extrapolate beyond the user's request. If a decision is not explicit, ask the user before acting. User directive: “JE N'EXTRAPOLE JAMAIS LA DEMANDE, JE DEMANDE AU MONSIEUR.”
 
 
-Version baseline: CesiumJS v1.143+ (ES module imports, `defaultValue` removed in v1.134)
+Version baseline: CesiumJS v1.144+ (ES module imports, `defaultValue` removed in v1.134)
 
 ## Breaking Change: defaultValue Removed (v1.134)
 

@@ -24,6 +24,12 @@ Preserve these boundaries:
 
 - Draft uses wall-clock scheduling, HQ uses fixed frame timestamps, and scrub is
   a latest-request-wins policy over the shared frame contract.
+- Linked video preparation uses a read-only canonical timeline projection for
+  start, replay, stop, and widget actions. Timeline editing must not create a
+  second replay clock or mutate persisted widget configuration implicitly.
+- User widget visibility and transient replay/capture masking are separate
+  concerns. Resolve replay-driven visibility through the shared overlay
+  resolver and restore transient composition state on every terminal path.
 - Camera, scene, canvas, and data-source writes resolve through the replay
   session's active render target.
 - HQ camera and trace decisions never depend on wall-clock throttling.
@@ -33,6 +39,9 @@ Preserve these boundaries:
   compatibility projections, not new replay clocks.
 - Qualification and readiness work must be cancellable and bounded; slider
   interaction must not synchronously compile a complete trajectory.
+- Replay camera preparation owns its keyboard adjustments only while the
+  preparation surface is active, and a preparation transition must restore the
+  main-scene pivot without overwriting a newer camera update.
 
 Add focused tests for every fix or feature. If a change can alter generated
 pixels, camera motion, trace progression, timing, or composition, do not report

@@ -9,7 +9,7 @@ description: "CesiumJS primitives and geometry - Primitive, GeometryInstance, Ap
 Never extrapolate beyond the user's request. If a decision is not explicit, ask the user before acting. User directive: “JE N'EXTRAPOLE JAMAIS LA DEMANDE, JE DEMANDE AU MONSIEUR.”
 
 
-> **Applies to:** CesiumJS v1.143+ (ES module imports, `??` instead of `defaultValue`)
+> **Applies to:** CesiumJS v1.144+ (ES module imports, `??` instead of `defaultValue`)
 
 ## Architecture
 
