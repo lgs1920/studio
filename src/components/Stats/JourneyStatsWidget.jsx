@@ -92,7 +92,7 @@ export const JourneyStatsWidget = ({
             scalable:        true,
             rotatable:       true,
             id,
-            min: {width: 150},
+            min: {width: 50},
             max: {width: 1000},
             persist:         true,
             transient:       true,
