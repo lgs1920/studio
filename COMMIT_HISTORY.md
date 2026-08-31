@@ -1315,3 +1315,28 @@
 ## 2026-08-30 — [`fix(replay): throttle timeline scrubbing`](https://github.com/lgs1920/studio/commit/b589fbee70fd37f489c8ecd5853305189510c395)
 
 - Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(replay): lighten hidden timeline hatching`](https://github.com/lgs1920/studio/commit/33fb55801db7b0cbd53c61c27d9487a1919671dc)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`feat(ui): add LGS1920 Web Component timeline`](https://github.com/lgs1920/studio/commit/047c5b4d56b5f5abdfcdf9d9e971277c3be9605e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`docs: clarify documentation status rules`](https://github.com/lgs1920/studio/commit/b0cb99380e9238e0cca0dbc78d862a940ab7dc7f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`chore(config): add Web Components Vite alias`](https://github.com/lgs1920/studio/commit/6eee1477c04aa6df78e7845c97ecd4935f98ada2)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`feat(ui): add resizable side drawers (#507)`](https://github.com/lgs1920/studio/commit/ac26845654de2d80e3a5176c86eefa447e83af2f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`Merge remote-tracking branch 'origin/add-timeline' into add-timeline`](https://github.com/lgs1920/studio/commit/abc81587e88097c73a2663b5c7a3a5e251bc889c)
+
+- # Conflicts:
+- #	COMMIT_HISTORY.md
