@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 import {describe, expect, it} from 'vitest'
-import {buildHeader, parseArguments, updateHeader} from '../../../../scripts/update-file-headers.mjs'
+import {buildHeader, parseArguments, processFiles, updateHeader} from '../../../../scripts/update-file-headers.mjs'
 
 describe('update-file-headers', () => {
     it('builds the shared WebStorm header with the Git-derived dates', () => {
@@ -52,5 +52,16 @@ describe('update-file-headers', () => {
             filePaths: [],
             stageChanges: true,
         })
+    })
+
+    it('processes every file after a check failure', () => {
+        const processedFiles = []
+        const success = processFiles(['first.js', 'second.js'], filePath => {
+            processedFiles.push(filePath)
+            return filePath !== 'first.js'
+        })
+
+        expect(processedFiles).toEqual(['first.js', 'second.js'])
+        expect(success).toBe(false)
     })
 })

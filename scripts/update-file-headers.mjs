@@ -204,6 +204,24 @@ export const processFile = (filePath, checkOnly, stageChanges) => {
 }
 
 /**
+ * Process every selected source file without stopping after the first failure.
+ *
+ * @param {string[]} filePaths - Relative repository file paths.
+ * @param {(filePath: string) => boolean} fileProcessor - File processing callback.
+ * @returns {boolean} True when every file was processed successfully.
+ */
+export const processFiles = (filePaths, fileProcessor) => {
+    let success = true
+    filePaths.forEach(filePath => {
+        if (!fileProcessor(filePath)) {
+            success = false
+        }
+    })
+
+    return success
+}
+
+/**
  * Parse command-line options for the header updater.
  *
  * @param {string[]} argumentsList - Process command-line arguments.
@@ -239,7 +257,7 @@ export const main = argumentsList => {
         return 1
     }
 
-    const success = supportedFiles.every(filePath => processFile(filePath, options.checkOnly, options.stageChanges))
+    const success = processFiles(supportedFiles, filePath => processFile(filePath, options.checkOnly, options.stageChanges))
     return success ? 0 : 1
 }
 
