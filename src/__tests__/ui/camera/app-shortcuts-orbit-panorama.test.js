@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-14
- * Last modified: 2026-06-14
+ * Last modified: 2026-08-31
  *
  *
  * Copyright © 2026 LGS1920
@@ -51,6 +51,8 @@ const makeEvent = () => ({
 })
 
 describe('app orbit and panorama shortcuts', () => {
+    let installedShortcutRemovers = []
+
     beforeEach(() => {
         vi.resetModules()
         vi.stubGlobal('fetch', vi.fn(async () => ({
@@ -164,6 +166,8 @@ describe('app orbit and panorama shortcuts', () => {
     })
 
     afterEach(() => {
+        installedShortcutRemovers.forEach(remove => remove())
+        installedShortcutRemovers = []
         globalThis.lgs = undefined
         globalThis.__ = undefined
         vi.unstubAllGlobals()
@@ -179,7 +183,7 @@ describe('app orbit and panorama shortcuts', () => {
             }),
         }
 
-        installAppShortcuts(shortcutManager)
+        installedShortcutRemovers = installAppShortcuts(shortcutManager)
 
         expect(callbacks.has('Alt+Shift+O')).toBe(true)
         expect(callbacks.has('Alt+Shift+P')).toBe(true)
@@ -197,7 +201,7 @@ describe('app orbit and panorama shortcuts', () => {
             }),
         }
 
-        installAppShortcuts(shortcutManager)
+        installedShortcutRemovers = installAppShortcuts(shortcutManager)
 
         const callback = callbacks.get('Alt+Shift+O')
         expect(callback).toBeTypeOf('function')
@@ -227,7 +231,7 @@ describe('app orbit and panorama shortcuts', () => {
             }),
         }
 
-        installAppShortcuts(shortcutManager)
+        installedShortcutRemovers = installAppShortcuts(shortcutManager)
 
         const callback = callbacks.get('Alt+O')
         expect(callback).toBeTypeOf('function')
@@ -258,7 +262,7 @@ describe('app orbit and panorama shortcuts', () => {
             }),
         }
 
-        installAppShortcuts(shortcutManager)
+        installedShortcutRemovers = installAppShortcuts(shortcutManager)
 
         const callback = callbacks.get('Alt+P')
         expect(callback).toBeTypeOf('function')
