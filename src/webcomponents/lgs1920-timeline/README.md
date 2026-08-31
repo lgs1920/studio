@@ -1,254 +1,266 @@
 # LGS1920 Timeline
 
-`lgs1920-timeline` is a standalone timeline Web Component compatible with Web
-Awesome 3 and Font Awesome.
+`lgs1920-timeline` is a generic video timeline Web Component designed for Web
+Awesome 3 and Font Awesome. It provides a time ruler, a playhead, editable
+track names, track actions, clip rendering, clip context menus, scrubbing,
+reordering, and playback controls.
 
-Its behavior is derived from `@xzdarcy/react-timeline-editor`, with the React
-implementation transformed into standalone JavaScript and CSS for this custom
-element.
+The implementation is based on `@xzdarcy/react-timeline-editor`. Its React
+implementation has been transformed into JavaScript and CSS for this Web
+Component, with a React wrapper exposing the same public model.
 
 ## Installation
 
-Import the module once before using the custom element:
+Import the custom element once in the application entry point:
 
 ```js
 import '/src/webcomponents/lgs1920-timeline/LGS1920Timeline.js'
 ```
 
-The module registers the `lgs1920-timeline` custom element and also exports the
-`LGS1920Timeline` class.
+Import the React wrapper when using React:
 
-## Basic usage
+```js
+import {LGS1920TimelineReact} from '/src/webcomponents/lgs1920-timeline/LGS1920TimelineReact'
+```
+
+## Usage
+
+The component has a compact controlled model:
+
+- `timeline` describes the timeline surface.
+- `tracks` describes the tracks and their clips.
+- `currentTimeMillis` controls the playhead.
+- `playing` controls the playback state.
+- `clipOptions` supplies entries for the clip menu.
 
 ```html
-<lgs1920-timeline id="timeline" aria-label="Timeline tracks"></lgs1920-timeline>
+<lgs1920-timeline id="timeline" aria-label="Video timeline"></lgs1920-timeline>
 ```
 
 ```js
-const timeline = document.querySelector('#timeline')
+const timeline = document.getElementById('timeline')
 
-timeline.setState({
-    linkedPreparation: true,
-    playing: false,
-    currentTimeMillis: 3_500,
-    projection: {
-        durationMillis: 60_000,
-        durationSeconds: 60,
-        editorData: [
-            {
-                id: 'overview',
-                label: 'Overview',
-                icon: 'route',
-                colorClasses: ['wa-neutral', 'wa-neutral-green'],
-                fixed: true,
-                movable: false,
-                actions: [
-                    {id: 'replay-start', kind: 'start', label: 'Start', start: 0, end: 1},
-                ],
-            },
-            {
-                id: 'map#main',
-                label: 'Map',
-                icon: 'map',
-                colorClasses: ['wa-brand', 'wa-brand-blue'],
-                canHide: true,
-                visible: true,
-                actions: [
-                    {id: 'map-action', kind: 'widget', label: 'Map', start: 4, end: 18, widgetId: 'map#main'},
-                ],
-            },
+timeline.timeline = {
+    durationMillis: 60_000,
+    visible: true,
+    zoomPercent: 0,
+    legendWidth: 180,
+    legendMinWidth: 120,
+    legendMaxWidth: 300,
+    rangeStartMillis: 0,
+    rangeEndMillis: 60_000,
+    editable: true,
+    collisionPolicy: 'allow',
+    durationPolicy: 'fixed',
+}
+
+timeline.tracks = [
+    {
+        id: 'camera#main',
+        label: 'Main camera',
+        icon: 'video',
+        canHide: true,
+        clips: [
+            {id: 'intro#001', label: 'Intro', kind: 'video', start: 0, end: 8},
+            {id: 'scene#002', label: 'Scene', kind: 'video', start: 12, end: 36},
         ],
     },
-})
+    {
+        id: 'music',
+        label: 'Music',
+        icon: 'music',
+        fixed: true,
+        movable: false,
+        clips: [
+            {id: 'music#001', label: 'Opening theme', kind: 'audio', start: 0, end: 42},
+        ],
+    },
+]
+
+timeline.currentTimeMillis = 3_500
+timeline.playing = false
+timeline.clipOptions = [
+    {group: 'media', key: 'video', label: 'Video clip', icon: 'film'},
+    {group: 'media', key: 'audio', label: 'Audio clip', icon: 'music'},
+]
 ```
 
-`editorData` may also be supplied at the top level when a projection object is
-not needed.
+Clips use seconds for their `start` and `end` positions. The playhead uses
+milliseconds through `currentTimeMillis`, matching the editor and playback
+clock integration.
 
-## JSON and YAML data input
+## Public properties
 
-For simple hosts, the complete timeline can be supplied through the `data`
-property as an object, JSON string, or YAML string. The same schema carries the
-duration, current state, track labels, track icons, visibility, and timeline
-items.
-
-```js
-timeline.data = {
-    durationSeconds: 60,
-    currentTimeMillis: 3_500,
-    linkedPreparation: true,
-    tracks: [
-        {
-            id: 'map#main',
-            label: 'Journey map',
-            icon: 'map',
-            colorClasses: ['wa-brand', 'wa-brand-blue'],
-            editable: true,
-            visible: true,
-            canHide: true,
-            items: [
-                {id: 'map-item', label: 'Map sequence', kind: 'widget', start: 4, end: 18},
-            ],
-        },
-    ],
-}
-```
-
-The equivalent JSON can be assigned directly:
-
-```js
-timeline.data = JSON.stringify({
-    durationSeconds: 60,
-    tracks: [
-        {id: 'overview', label: 'Overview', items: [{id: 'start', kind: 'start', start: 0, end: 1}]},
-    ],
-})
-```
-
-YAML is also accepted. The parser automatically detects JSON or YAML, or it
-can be selected explicitly with `dataFormat` or `data-format`.
-
-```yaml
-durationSeconds: 60
-linkedPreparation: true
-tracks:
-  - id: map#main
-    label: Journey map
-    icon: map
-    editable: true
-    items:
-      - id: map-item
-        label: Map sequence
-        kind: widget
-        start: 4
-        end: 18
-```
-
-```js
-timeline.dataFormat = 'yaml'
-timeline.data = yamlSource
-```
-
-`items` is the public data name and is normalized to the internal `actions`
-array. `editorData` and `actions` are also accepted as input fields.
-
-### Data schema
-
-| Field | Type | Description |
-| --- | --- | --- |
-| `durationMillis` or `durationSeconds` | `number` | Timeline duration. |
-| `currentTimeMillis` | `number` | Initial controlled playhead position. |
-| `playing` | `boolean` | Initial playback state. |
-| `linkedPreparation` | `boolean` | Whether the timeline is visible. |
-| `tracks` | `array` | Track definitions. |
-| `tracks[].id` | `string` | Stable track identifier. |
-| `tracks[].label` | `string` | Track name shown in the legend. |
-| `tracks[].editable` | `boolean` | Set `false` to disable label editing. Defaults to editable. |
-| `tracks[].icon` | `string` | Font Awesome icon name. |
-| `tracks[].visible` | `boolean` | Track visibility state. |
-| `tracks[].canHide` | `boolean` | Whether to display the visibility control. |
-| `tracks[].items` | `array` | Items/actions displayed on the track. |
-| `tracks[].items[].start` / `end` | `number` | Item start and end in seconds. |
-| `tracks[].items[].label` | `string` | Item label. |
-| `tracks[].items[].kind` | `string` | Item type such as `start`, `stop`, or `widget`. |
-| `tracks[].items[].icon` | `string` | Optional Font Awesome icon name. |
-
-## Editable and persisted track names
-
-Track names are editable by double-clicking a legend label. Press `Enter` or
-leave the input to save, or press `Escape` to cancel. Set `editable: false` on
-a track to keep its label read-only.
-
-Every successful edit emits `lgs1920-timeline-track-label-change`. Its detail
-contains `rowId`, `label`, `previousLabel`, the current `rows`, and a complete
-serializable `data` snapshot. Hosts can persist that snapshot wherever their
-application stores data:
-
-```js
-timeline.addEventListener('lgs1920-timeline-track-label-change', event => {
-    saveTimelineData(event.detail.data)
-})
-```
-
-For a browser-only opt-in persistence layer, set `persist-key`. Edited labels
-are stored in `localStorage` under a namespaced key and restored when the same
-key is used again:
-
-```html
-<lgs1920-timeline persist-key="replay-project-42"></lgs1920-timeline>
-```
-
-The persistence key is intentionally opt-in. Without it, the component remains
-fully controlled by its host.
-
-## Controlled state
+### `timeline`
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `projection` | `object` | Projection containing `durationMillis` or `durationSeconds` and `editorData`. |
-| `editorData` | `array` | Timeline rows when `projection` is not used. |
-| `currentTimeMillis` | `number` | Current logical timeline time. |
-| `playing` | `boolean` | Current timeline playback state. |
-| `linkedPreparation` | `boolean` | Shows the component when `true`. |
-| `widgetOptions` | `array` | Options rendered by the add-widget menu. |
-| `zoomPercent` | `number` | Optional controlled zoom from `-50` to `500`. |
-| `legendWidth` | `number` | Optional controlled legend width from `120` to `300` pixels. |
-| `data` | `object|string` | Complete timeline input in object, JSON, or YAML form. |
-| `dataFormat` | `string` | `auto`, `json`, or `yaml`. |
-| `persistKey` | `string` | Optional local-storage key for edited labels. |
+| `durationMillis` | `number` | Timeline duration in milliseconds. |
+| `rangeStartMillis` | `number` | Video range start in milliseconds. Defaults to `0`. |
+| `rangeEndMillis` | `number` | Video range end in milliseconds. Defaults to `durationMillis`. |
+| `visible` | `boolean` | Controls timeline visibility. Defaults to `true`. |
+| `zoomPercent` | `number` | Initial ruler zoom from `-50` to `500`. |
+| `legendWidth` | `number` | Initial track legend width in pixels. It is clamped between `legendMinWidth` and `legendMaxWidth`. |
+| `legendMinWidth` | `number` | Minimum track legend width in pixels. Defaults to `120`. |
+| `legendMaxWidth` | `number` | Maximum track legend width in pixels. Defaults to `300`. |
+| `editable` | `boolean` | Enables clip editing and track reordering. Defaults to `true`. |
+| `collisionPolicy` | `'allow' \| 'prevent' \| 'ripple'` | Default clip collision policy for tracks. |
+| `durationPolicy` | `'fixed' \| 'extend'` | Keeps the duration fixed or extends it when an edit exceeds the end. Defaults to `fixed`. |
+| `defaultTrackId` | `string` | Track used when a clip-menu option does not specify a track. |
+| `minClipDuration` | `number` | Default minimum clip duration in seconds. |
+| `defaultClipDuration` | `number` | Default duration for a clip-menu insertion in seconds. Defaults to `1`. |
+| `keyboardStepSeconds` | `number` | Keyboard resize step in seconds. Defaults to `0.1`. |
 
-Each row can contain `id`, `label`, `icon`, `colorClasses`, `visible`,
-`canHide`, `fixed`, `movable`, and an `actions` array. Each action can contain
-`id`, `kind`, `label`, `icon`, `start`, `end`, `visible`, `widgetId`, and
-`clip`.
+### `tracks`
+
+`tracks` is an array of track definitions:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `id` | `string` | Stable track identifier. `#` is used as the slot identifier separator. |
+| `label` | `string` | Track name shown in the legend. |
+| `editable` | `boolean` | Enables inline track-name editing. Defaults to `true`. |
+| `icon` | `string` | Font Awesome icon name. |
+| `colorClasses` | `string[]` | Web Awesome color classes. |
+| `visible` | `boolean` | Track visibility state. |
+| `canHide` | `boolean` | Enables the track visibility action. |
+| `fixed` | `boolean` | Prevents track reordering. |
+| `movable` | `boolean` | Enables track reordering. Defaults to `true`. |
+| `droppable` | `boolean` | Allows clips to be moved or inserted on the track. Defaults to `true`. |
+| `accepts` | `string[]` | Clip kinds accepted by the track. An empty value accepts every kind. |
+| `collisionPolicy` | `'allow' \| 'prevent' \| 'ripple'` | Collision behavior for clip edits on this track. |
+| `minClipDuration` | `number` | Minimum duration applied to clips on this track, in seconds. |
+| `clips` | `array` | Clips displayed on the track. |
+
+Each clip supports:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `id` | `string` | Stable clip identifier. `#` is used as the slot identifier separator. |
+| `start` | `number` | Clip start position in seconds. |
+| `end` | `number` | Clip end position in seconds. |
+| `label` | `string` | Default clip label. |
+| `name` | `string` | Optional display name when `label` is not supplied. |
+| `kind` | `string` | Application-defined clip type, such as `video`, `audio`, or `marker`. |
+| `icon` | `string` | Font Awesome icon name. |
+| `colorClasses` | `string[]` | Web Awesome color classes. |
+| `visible` | `boolean` | Clip visibility state. |
+| `movable` | `boolean` | Allows horizontal and inter-track movement. Defaults to `true`. |
+| `resizable` | `boolean` | Enables the start and end handles. Defaults to `true`. |
+| `fixed` | `boolean` | Disables movement and resizing. |
+| `minDuration` | `number` | Minimum clip duration in seconds. |
+| `metadata` | `object` | Optional application metadata. |
+
+### `currentTimeMillis`
+
+The controlled playhead position in milliseconds.
+
+### `playing`
+
+The controlled playback state. The component emits `play` and `pause`; the
+host updates this property after applying the requested state.
+
+### `clipOptions`
+
+Options displayed by the clip insertion menu. Each option can contain
+`group`, `key`, `label`, `icon`, `kind`, `trackId`, `start`, `end`, `duration`,
+and a `clip` object containing application fields to copy to the inserted clip.
+
+## React wrapper
+
+`LGS1920TimelineReact` exposes the Web Component properties as React props and
+maps component events to callback props. The wrapper keeps the timeline
+controlled by the parent component.
+
+```jsx
+import {LGS1920TimelineReact} from './LGS1920TimelineReact'
+
+const VideoTimeline = ({timeline, tracks, onTracksChange, currentTimeMillis, playing}) => (
+    <LGS1920TimelineReact
+        timeline={timeline}
+        tracks={tracks}
+        currentTimeMillis={currentTimeMillis}
+        playing={playing}
+        clipOptions={[
+            {group: 'media', key: 'video', label: 'Video clip', icon: 'film'},
+        ]}
+        onSeek={detail => console.log(detail.timeMillis)}
+        onPlay={() => console.log('play requested')}
+        onDblClick={detail => console.log(detail.clip)}
+        onTrackLabelChange={detail => {
+            onTracksChange(currentTracks => currentTracks.map(track => track.id === detail.trackId
+                ? {...track, label: detail.label}
+                : track))
+        }}
+    >
+        <h2 slot="header">Video sequence</h2>
+    </LGS1920TimelineReact>
+)
+```
+
+The wrapper forwards `children` to the custom element. Web Component slots can
+therefore be used directly in JSX with the standard `slot` attribute.
+Callbacks receive `(detail, event)`, where `detail` is the event payload and
+`event` is the original `CustomEvent`.
 
 ## Slots
 
-Slots use normal Web Component light-DOM syntax. Static slots replace the
-corresponding component area. Repeated row and action slots support a global
-template and an optional identifier-specific override.
+Slots customize labels, icons, controls, track actions, clip content, and
+context-menu entries. A global slot is used for every matching element. A
+targeted slot takes the form `{slot}-{id}` and overrides the global slot.
 
 ### Layout slots
 
 | Slot | Description |
 | --- | --- |
-| `additional-content` | Additional content rendered before the timeline header. |
-| `header` | Custom content in the header, before the transport controls. |
-| `transport-start` | Content before the current time. |
-| `transport-current` | Replaces the current time label. |
-| `transport-separator` | Replaces the ` / ` separator. |
-| `transport-total` | Replaces the total time label. |
-| `transport-end` | Content after the total time. |
-| `timeline-toolbar` | Content in the legend ruler before the add-widget button. |
+| `additional-content` | Content placed inside the component before the header. |
+| `header` | Header content displayed beside the playback controls. |
+| `header-actions` | General panel actions such as close, settings, or help. |
+| `timeline-actions` | Application actions such as recording or exporting video. |
+| `playback-start` | Content before the current time. |
+| `playback-current` | Current-time label. |
+| `playback-separator` | Separator between current and total time. |
+| `playback-total` | Total-time label. |
+| `playback-end` | Content after the total time. |
+| `timeline-toolbar` | Toolbar content beside the clip menu. |
 | `timeline-ruler` | Additional content over the time ruler. |
 | `footer` | Content below the timeline layout. |
-| `empty-state` | Content displayed in an empty add-widget menu. |
+| `empty-state` | Content displayed when the clip menu has no options. |
 
 ```html
-<lgs1920-timeline id="custom-layout">
-    <span slot="additional-content" class="timeline-context">Timeline editor</span>
-    <h2 slot="header">Project timeline</h2>
-    <span slot="transport-start">Time</span>
-    <strong slot="transport-current">00:00</strong>
-    <span slot="transport-separator">&nbsp;of&nbsp;</span>
-    <strong slot="transport-total">01:00</strong>
-    <wa-button slot="timeline-toolbar" appearance="plain">Filters</wa-button>
-    <small slot="footer">Use the controls to edit the timeline.</small>
+<lgs1920-timeline>
+    <div slot="additional-content">
+        <wa-badge variant="success">Ready</wa-badge>
+    </div>
+    <h2 slot="header">Sequence</h2>
+    <span slot="playback-separator"> of </span>
+    <wa-button slot="header-actions" appearance="plain">Close</wa-button>
+    <wa-button slot="timeline-actions" variant="brand">Record video</wa-button>
+    <wa-button slot="timeline-toolbar" appearance="plain">Markers</wa-button>
 </lgs1920-timeline>
 ```
 
-### Transport labels and icons
+The custom element is its own layout container. When placed in a Web Awesome
+drawer or another host panel, size the custom element from the outside:
+
+```css
+wa-drawer lgs1920-timeline,
+.timeline-panel lgs1920-timeline {
+    width: 100%;
+    height: 100%;
+}
+```
+
+### Playback and clip-menu slots
 
 | Slot | Description |
 | --- | --- |
-| `play-icon` / `pause-icon` | Play or pause Font Awesome/Web Awesome content. |
-| `replay-icon` | Restart icon. |
-| `export-icon` | Export icon. |
-| `add-widget-icon` | Add-widget icon. |
-| `play-label` / `pause-label` | Play or pause button label. |
-| `replay-label` | Restart button label. |
-| `export-label` | Export button label. |
-| `add-widget-label` | Add-widget button label. |
+| `play-icon` / `pause-icon` | Play or pause icon. |
+| `restart-icon` | Restart icon. |
+| `add-clip-icon` | Clip-menu icon. |
+| `play-label` / `pause-label` | Play or pause label. |
+| `restart-label` | Restart label. |
+| `add-clip-label` | Clip-menu label. |
 
 ```html
 <lgs1920-timeline>
@@ -256,136 +268,177 @@ template and an optional identifier-specific override.
     <span slot="play-label">Play</span>
     <wa-icon slot="pause-icon" name="circle-pause" variant="solid" label=""></wa-icon>
     <span slot="pause-label">Pause</span>
-    <wa-icon slot="replay-icon" name="rotate-left" variant="solid" label=""></wa-icon>
-    <span slot="replay-label">Restart</span>
-    <wa-icon slot="export-icon" name="file-video" variant="solid" label=""></wa-icon>
-    <span slot="export-label">Export</span>
+    <wa-icon slot="restart-icon" name="arrow-rotate-left" variant="solid" label=""></wa-icon>
+    <span slot="restart-label">Restart</span>
 </lgs1920-timeline>
 ```
 
-### Repeated track and action content
+### Track slots
 
-The following global slots are cloned for each repeated item. A `<template>`
-is recommended when the content is more than one node.
+Each track has a legend area and a right-aligned action area. The action area
+supports the `drag-trigger`, `visibility`, and `actions` slots.
 
-| Global slot | Contextual slot prefix | Description |
+| Global slot | Targeted slot | Description |
 | --- | --- | --- |
-| `drag-trigger` | `drag-trigger-{rowId}` | Row drag or fixed-row trigger. |
-| `visibility` | `visibility-{rowId}` | Row visibility control content. |
-| `name` | `name-{rowId}` | Track title content. |
-| `actions` | `actions-{rowId}` | Additional actions reserved for that track. |
-| `track-actions` | `track-actions-{rowId}` | Legacy alias for track actions. |
-| `track-drag-icon` | `track-drag-icon-{rowId}` | Legacy alias for the drag trigger. |
-| `track-visibility-icon` | `track-visibility-icon-{rowId}` | Legacy alias for visibility content. |
-| `track-icon` | `track-icon-{rowId}` | Track icon. |
-| `track-label` | `track-label-{rowId}` | Track label. |
-| `action-icon` | `action-icon-{actionId}` | Action icon. |
-| `action-label` | `action-label-{actionId}` | Action label. |
-| `action-content` | `action-content-{actionId}` | Complete HTML content for an item. |
-| `scale-label` | `scale-label-{tickIndex}` | Ruler label. |
-| `widget-option-icon` | Not contextual | Add-widget menu icon. |
-| `widget-option-label` | Not contextual | Add-widget menu label. |
+| `track-icon` | `track-icon-{trackId}` | Track icon. |
+| `track-label` or `name` | `track-label-{trackId}` or `name-{trackId}` | Track name content. |
+| `drag-trigger` | `drag-trigger-{trackId}` | Drag handle content. |
+| `visibility` | `visibility-{trackId}` | Visibility control content. |
+| `actions` | `actions-{trackId}` | Reserved track-specific actions. |
+| `track-context-menu` | — | Additional track context-menu commands. |
 
 ```html
 <lgs1920-timeline>
-    <template slot="track-icon">
-        <wa-icon name="layer-group" variant="solid" label=""></wa-icon>
-    </template>
-    <template slot="track-label">
-        <span class="custom-track-label">Custom track</span>
-    </template>
-    <template slot="action-icon">
-        <wa-icon name="sparkles" variant="solid" label=""></wa-icon>
-    </template>
-    <template slot="action-label">
-        <span class="custom-action-label">Custom action</span>
-    </template>
-</lgs1920-timeline>
-```
-
-For a row with the identifier `map#main`, the contextual slot name keeps the
-`#` separator:
-
-```html
-<lgs1920-timeline>
-    <wa-icon slot="track-icon-map#main" name="map-location-dot" variant="solid" label=""></wa-icon>
-    <span slot="track-label-map#main">Journey map</span>
-</lgs1920-timeline>
-```
-
-Contextual content has priority over its global slot. If neither is supplied,
-the built-in Font Awesome icon or data label is used.
-
-### Track title actions
-
-Every track legend row contains a track-content area and a right-aligned
-track-actions area. The track-actions area contains the contextual
-`drag-trigger-{rowId}` and `visibility-{rowId}` slots, followed by the reserved
-`actions-{rowId}` slot for host-defined actions. The track name itself is
-provided by `name-{rowId}` in the track-content area.
-
-```html
-<lgs1920-timeline>
-    <wa-icon slot="drag-trigger-map#main" name="grip-lines-vertical" variant="solid" label=""></wa-icon>
-    <wa-icon slot="visibility-map#main" name="eye" variant="solid" label=""></wa-icon>
-    <wa-button slot="actions-map#main" size="s" appearance="plain" aria-label="Open map settings">
+    <wa-icon slot="track-icon-camera#main" name="video" variant="solid" label=""></wa-icon>
+    <span slot="name-camera#main">Main camera</span>
+    <wa-icon slot="drag-trigger-camera#main" name="grip-lines-vertical" variant="solid" label=""></wa-icon>
+    <wa-button slot="actions-camera#main" appearance="plain" size="s" aria-label="Track settings">
         <wa-icon name="gear" variant="solid" label=""></wa-icon>
     </wa-button>
-    <span slot="name-map#main">Journey map title</span>
 </lgs1920-timeline>
 ```
 
-Double-clicking the `name-{rowId}` content opens the Web Awesome input for
-editing. Right-clicking a track title or any part of a track opens its context
-menu with rename and visibility commands. Context-menu commands emit
-composed events and update the local controlled projection immediately.
+### Clip slots
 
-### Item HTML content
+| Global slot | Targeted slot | Description |
+| --- | --- | --- |
+| `clip-icon` | `clip-icon-{clipId}` | Clip icon. |
+| `clip-label` | `clip-label-{clipId}` | Clip label. |
+| `clip-content` | `clip-content-{clipId}` | Complete clip content. |
+| `clip-start-handle` | `clip-start-handle-{clipId}` | Start resize handle content. |
+| `clip-end-handle` | `clip-end-handle-{clipId}` | End resize handle content. |
+| `clip-context-menu` | — | Additional clip context-menu commands. |
 
-An item can be rendered as arbitrary slotted HTML instead of the default icon
-and label pair. Use `action-content` for a repeated global template or
-`action-content-{actionId}` for one item.
+Clip content can be arbitrary HTML or Web Awesome components:
 
 ```html
 <lgs1920-timeline>
-    <template slot="action-content">
-        <span class="item-card">
-            <wa-icon name="wand-magic-sparkles" variant="solid" label=""></wa-icon>
-            <strong>Custom item</strong>
-            <small>HTML content</small>
+    <template slot="clip-content">
+        <span class="clip-card">
+            <wa-icon name="film" variant="solid" label=""></wa-icon>
+            <strong>Opening clip</strong>
         </span>
     </template>
 </lgs1920-timeline>
 ```
 
-Right-clicking an item opens its context menu. The menu emits an item edit
-request and provides show/hide behavior through
-`lgs1920-timeline-item-visibility-change`. Hosts can replace the item HTML or
-label in the next `data` update.
+For the clip id `intro#001`, the targeted content slot is
+`clip-content-intro#001`. The `#` separator is preserved in slot names.
 
-## Optional popup parent
+The video range handles can be customized with the global
+`timeline-start-handle` and `timeline-end-handle` slots.
 
-The optional `parent` property or attribute provides a parent element as the
-boundary used by Web Awesome popups. When it is omitted, Web Awesome detects
-the relevant overflow ancestors automatically.
+## Track names and controlled editing
+
+Double-click an editable track name to open the inline Web Awesome input.
+Press `Enter` or leave the input to commit the name; press `Escape` to cancel.
+The track context menu provides rename and visibility commands.
+
+The component emits the new name and a serializable public snapshot. The host
+stores the updated track definition and passes the new `tracks` array back.
 
 ```js
-const boundary = document.querySelector('#video-panel')
-timeline.parent = boundary
+timeline.addEventListener('lgs1920-timeline-track-label-change', event => {
+    const {trackId, label} = event.detail
+    tracks = tracks.map(track => track.id === trackId ? {...track, label} : track)
+    timeline.tracks = tracks
+})
 ```
 
-```html
-<lgs1920-timeline parent="#video-panel"></lgs1920-timeline>
+The same controlled flow applies to track visibility, clip visibility, and
+track reordering.
+
+## Clip and track editing
+
+The timeline supports controlled clip editing. The component renders a start
+and end handle on every resizable clip, moves clips horizontally when their
+body is dragged, and accepts a clip on another compatible track while it is
+being dragged. The target track is highlighted during the gesture.
+
+Clip movement preserves its duration. Resizing the start handle changes
+`start` while keeping `end` stable. Resizing the end handle changes `end` while
+keeping `start` stable. Both handles respect the timeline bounds and the
+configured minimum duration.
+
+Track collision behavior is selected with `collisionPolicy`:
+
+| Policy | Behavior |
+| --- | --- |
+| `allow` | Clips may overlap. |
+| `prevent` | An edit that overlaps another clip is rejected. |
+| `ripple` | Overlapping clips and subsequent clips are shifted to the right while their durations are preserved. |
+
+With `durationPolicy: 'extend'`, a ripple edit can increase the timeline
+duration. The committed event contains the resulting `durationMillis` and the
+complete `tracks` snapshot. With `durationPolicy: 'fixed'`, an edit that would
+leave the timeline bounds is rejected.
+
+Track reordering starts from the `drag-trigger` slot. The title area and the
+time surface follow the same row order, and a one-pixel brand insertion line
+shows the drop position. The committed `reorder` event contains the new
+`tracks` order and `dropIndex`.
+
+The component emits `clip-change-start` when an edit begins, `clip-changing`
+for live previews, and `clip-change` when the pointer or keyboard edit is
+committed. The host applies the resulting `tracks` value to keep the model
+controlled.
+
+## Events
+
+The component emits composed, bubbling custom events using the
+`lgs1920-timeline-` namespace. The event suffix follows Web Awesome-style
+lowercase kebab-case names. The React wrapper maps each suffix to the
+corresponding `on...` callback.
+
+| Event suffix | DOM event | React callback | Detail |
+| --- | --- | --- | --- |
+| `play` | `lgs1920-timeline-play` | `onPlay` | `{}` |
+| `pause` | `lgs1920-timeline-pause` | `onPause` | `{}` |
+| `restart` | `lgs1920-timeline-restart` | `onRestart` | `{}` |
+| `seek` | `lgs1920-timeline-seek` | `onSeek` | `{timeMillis, progress, settled}` |
+| `track-visibility-change` | `lgs1920-timeline-track-visibility-change` | `onTrackVisibilityChange` | `{trackId, visible, track, event, data}` |
+| `track-label-change` | `lgs1920-timeline-track-label-change` | `onTrackLabelChange` | `{trackId, label, previousLabel, tracks, data}` |
+| `dblclick` | `lgs1920-timeline-dblclick` | `onDblClick` | `{clip, event}` |
+| `add-clip` | `lgs1920-timeline-add-clip` | `onAddClip` | `{group, key, option, clip, trackId, durationMillis, tracks}` |
+| `clip-change-start` | `lgs1920-timeline-clip-change-start` | `onClipChangeStart` | `{type, edge, clipId, fromTrackId, toTrackId, clip, durationMillis, tracks}` |
+| `clip-changing` | `lgs1920-timeline-clip-changing` | `onClipChanging` | `{type, edge, clipId, fromTrackId, toTrackId, clip, durationMillis, tracks}` |
+| `clip-change` | `lgs1920-timeline-clip-change` | `onClipChange` | `{type, edge, clipId, fromTrackId, toTrackId, clip, durationMillis, tracks}` |
+| `range-change-start` | `lgs1920-timeline-range-change-start` | `onRangeChangeStart` | `{rangeStartMillis, rangeEndMillis, durationMillis, event}` |
+| `range-changing` | `lgs1920-timeline-range-changing` | `onRangeChanging` | `{rangeStartMillis, rangeEndMillis, durationMillis, event}` |
+| `range-change` | `lgs1920-timeline-range-change` | `onRangeChange` | `{rangeStartMillis, rangeEndMillis, durationMillis, event}` |
+| `reorder` | `lgs1920-timeline-reorder` | `onReorder` | `{trackIds, tracks, dropIndex}` |
+| `context-menu-open` | `lgs1920-timeline-context-menu-open` | `onContextMenuOpen` | `{type, identifier, event}` |
+| `clip-label-edit-request` | `lgs1920-timeline-clip-label-edit-request` | `onClipLabelEditRequest` | `{clip, event}` |
+| `clip-visibility-change` | `lgs1920-timeline-clip-visibility-change` | `onClipVisibilityChange` | `{trackId, clipId, visible, clip, event, data}` |
+
+```js
+timeline.addEventListener('lgs1920-timeline-seek', event => {
+    timeline.currentTimeMillis = event.detail.timeMillis
+})
+
+timeline.addEventListener('lgs1920-timeline-dblclick', event => {
+    console.log(event.detail.clip)
+})
 ```
 
-The `additional-content` slot is independent: it customizes content rendered
-inside the timeline and does not change popup positioning.
+The React equivalent uses the event suffix directly in the callback name:
+
+```jsx
+<LGS1920TimelineReact
+    timeline={timelineConfig}
+    tracks={tracks}
+    currentTimeMillis={currentTimeMillis}
+    onSeek={detail => setCurrentTimeMillis(detail.timeMillis)}
+    onDblClick={detail => console.log(detail.clip)}
+    onClipChange={detail => onTracksChange(detail.tracks)}
+    onTrackLabelChange={handleTrackLabelChange}
+/>
+```
 
 ## CSS customization
 
-All timeline-specific visual decisions are exposed as custom properties. The
-component also exposes CSS parts for targeted styling without breaking Shadow
-DOM encapsulation.
+The component exposes `--lgs-timeline-*` custom properties and CSS parts. Each
+property can be set on the host and can reference Web Awesome design tokens.
 
 ```css
 lgs1920-timeline {
@@ -397,115 +450,76 @@ lgs1920-timeline {
     --lgs-timeline-legend-width: 180px;
 }
 
-lgs1920-timeline::part(action) {
+lgs1920-timeline::part(clip) {
     letter-spacing: 0.02em;
-}
-
-lgs1920-timeline::part(resizer):hover {
-    background: var(--wa-color-brand-fill-loud);
 }
 ```
 
-| Custom property | Default purpose |
+| Custom property | Purpose |
 | --- | --- |
 | `--lgs-timeline-background` | Outer timeline background. |
 | `--lgs-timeline-text-color` | Normal text color. |
-| `--lgs-timeline-quiet-text-color` | Ruler and transport text color. |
+| `--lgs-timeline-quiet-text-color` | Ruler and playback text color. |
 | `--lgs-timeline-border-color` | Normal border color. |
-| `--lgs-timeline-quiet-border-color` | Grid and row border color. |
-| `--lgs-timeline-surface-color` | Legend and track surface color. |
+| `--lgs-timeline-quiet-border-color` | Grid and track border color. |
+| `--lgs-timeline-surface-color` | Legend and clip surface color. |
 | `--lgs-timeline-padding` | Outer padding. |
 | `--lgs-timeline-radius` | Outer corner radius. |
 | `--lgs-timeline-shadow` | Outer shadow. |
 | `--lgs-timeline-gap` | Header and top-section gap. |
-| `--lgs-timeline-header-height` | Ruler/header height. |
+| `--lgs-timeline-header-height` | Header and ruler height. |
 | `--lgs-timeline-min-height` | Minimum host and layout height. |
-| `--lgs-timeline-scrollbar-height` | Horizontal scrollbar height. |
+| `--lgs-timeline-scrollbar-height` | Horizontal scrollbar allowance. |
 | `--lgs-timeline-legend-width` | Track legend width. |
-| `--lgs-timeline-legend-min-width` | Minimum resizable legend width. |
-| `--lgs-timeline-legend-max-width` | Maximum resizable legend width. |
-| `--lgs-timeline-resizer-width` | Legend resizer width. |
-| `--lgs-timeline-row-height` | Minimum row height. |
+| `--lgs-timeline-legend-min-width` | Minimum legend width. |
+| `--lgs-timeline-legend-max-width` | Maximum legend width. |
+| `--lgs-timeline-resizer-width` | Web Awesome split-panel divider width. |
+| `--lgs-timeline-resizer-hit-area` | Web Awesome split-panel divider hit area. |
+| `--lgs-timeline-row-height` | Minimum track row height. |
 | `--lgs-timeline-scale-width` | Ruler pixels per major unit. |
-| `--lgs-timeline-scale-offset` | Ruler start offset. |
+| `--lgs-timeline-scale-offset` | Ruler left offset. |
 | `--lgs-timeline-playhead-color` | Playhead color. |
 | `--lgs-timeline-playhead-width` | Playhead width. |
 | `--lgs-timeline-end-marker-color` | End marker color. |
-| `--lgs-timeline-action-padding` | Action horizontal padding. |
-| `--lgs-timeline-action-min-width` | Minimum action width. |
-| `--lgs-timeline-popup-background` | Add-widget popup background. |
-| `--lgs-timeline-popup-border-color` | Add-widget popup border. |
-| `--lgs-timeline-popup-shadow` | Add-widget popup shadow. |
+| `--lgs-timeline-range-handle-width` | Video range handle width. |
+| `--lgs-timeline-range-handle-color` | Video range handle color. |
+| `--lgs-timeline-range-handle-focus-ring` | Video range handle focus ring. |
+| `--lgs-timeline-clip-padding` | Clip horizontal padding. |
+| `--lgs-timeline-clip-min-width` | Minimum clip width. |
+| `--lgs-timeline-clip-handle-width` | Clip resize handle width. |
+| `--lgs-timeline-clip-handle-color` | Clip resize handle color. |
+| `--lgs-timeline-clip-handle-hover-color` | Clip resize handle hover color. |
+| `--lgs-timeline-clip-handle-focus-ring` | Clip resize handle focus ring. |
+| `--lgs-timeline-track-drop-indicator-color` | Track reorder insertion indicator color. |
+| `--lgs-timeline-track-drop-indicator-width` | Track reorder insertion indicator width. |
+| `--lgs-timeline-popup-background` | Popup background. |
+| `--lgs-timeline-popup-border-color` | Popup border color. |
+| `--lgs-timeline-popup-shadow` | Popup shadow. |
 
-Available parts include `container`, `top`, `header`, `controls`, `transport`,
-`layout`, `legend`, `legend-ruler`, `legend-row`, `legend-icon`, `resizer`,
-`surface`, `canvas`, `ruler`, `tick`, `minor-tick`, `tracks`, `track`,
-`action`, `action-preview`, `playhead`, `end-marker`, `popup`, and `menu`.
+Useful CSS parts include `timeline`, `top`, `header`, `controls`, `header-actions`,
+`playback-controls`,
+`layout`, `legend`, `legend-ruler`, `legend-viewport`, `legend-rows`,
+`legend-row`, `legend-icon`, `legend-content`, `track-actions`, `split-panel`,
+`surface`, `canvas`, `ruler`, `tick`, `minor-tick`, `tracks`, `track`, `clip`,
+`clip-preview`, `clip-start-handle`, `clip-end-handle`, `timeline-start-handle`,
+`timeline-end-handle`, `playhead`, `end-marker`,
+`track-drop-indicator`, `popup`, `menu`, `context-popup`, and `context-menu`.
 
-## Events
+## Methods
 
-Events bubble and are composed across the Shadow DOM boundary. The primary
-prefix is `lgs1920-timeline-`. Compatibility aliases with the historic
-`lgs1920-wa-timeline-` prefix are emitted at the same time.
-
-| Event | Detail |
-| --- | --- |
-| `lgs1920-timeline-play` | `{}` |
-| `lgs1920-timeline-pause` | `{}` |
-| `lgs1920-timeline-replay` | `{}` |
-| `lgs1920-timeline-export` | `{}` |
-| `lgs1920-timeline-seek` | `{timeMillis, progress, settled}` |
-| `lgs1920-timeline-visibility-change` | `{rowId, visible, row, event}` |
-| `lgs1920-timeline-action-dblclick` | `{action, event}` |
-| `lgs1920-timeline-add-widget` | `{group, key, option}` |
-| `lgs1920-timeline-reorder` | `{rowIds, rows}` |
-| `lgs1920-timeline-track-label-change` | `{rowId, label, previousLabel, rows, data}` |
-| `lgs1920-timeline-data-error` | `{value, error}` |
-| `lgs1920-timeline-context-menu-open` | `{type, identifier, event}` |
-| `lgs1920-timeline-item-label-edit-request` | `{action, event}` |
-| `lgs1920-timeline-item-visibility-change` | `{rowId, itemId, visible, action, event, data}` |
-
-```js
-timeline.addEventListener('lgs1920-timeline-seek', event => {
-    timeline.setTime(event.detail.timeMillis)
-})
-
-timeline.addEventListener('lgs1920-timeline-action-dblclick', event => {
-    const {action} = event.detail
-    timeline.setAttribute('aria-label', `Selected item: ${action.label ?? action.id}`)
-})
-```
-
-## Public methods
+The controlled properties and events cover normal integration. The component
+also provides these small imperative helpers:
 
 | Method | Description |
 | --- | --- |
-| `setState(state)` | Apply the controlled projection and rerender. |
-| `setData(value)` | Parse and apply an object, JSON string, or YAML string. |
-| `setTime(timeMillis)` | Move the visual playhead without emitting `seek`. |
-| `setZoom(zoomPercent)` | Set the visible zoom from `-50` to `500`. |
-| `handleResize()` | Recompute surface dimensions after a container resize. |
-| `parent` | Get or set the optional popup positioning boundary. |
-
-## Interaction behavior
-
-- Clicking or dragging the timeline surface emits a controlled seek event.
-- The final pointer event has `settled: true`; intermediate scrub events have
-  `settled: false`.
-- `Ctrl`/`Cmd` plus the mouse wheel changes zoom.
-- Left and right arrow keys change zoom while the surface is focused.
-- Movable legend rows can be reordered with the pointer.
-- Dragging a row close to the timeline edge starts accelerated horizontal
-  auto-scroll.
-- The legend resizer is keyboard focusable and constrained to `120`–`300`
-  pixels by default.
-- Fixed rows cannot be reordered and rows with `canHide: false` do not render
-  a visibility control.
+| `setTime(timeMillis)` | Move the playhead without emitting `seek`. |
+| `setZoom(zoomPercent)` | Set the ruler zoom from `-50` to `500`. |
+| `handleResize()` | Recompute surface dimensions after an external resize. |
 
 ## Accessibility
 
-The host is a `region`, transport controls are Web Awesome buttons, the
-timeline surface is keyboard focusable, the resizer exposes separator value
-attributes, and dynamic rows/actions expose accessible labels. Custom slotted
-icons should use `label=""` when they are decorative and provide visible or
-semantic text through their matching label slot.
+The host is a labelled `region`, playback controls use Web Awesome buttons,
+the time surface is keyboard focusable, the Web Awesome split-panel exposes an
+accessible divider, and generated tracks and clips expose accessible labels. Decorative
+slotted icons should use `label=""` and receive visible or semantic text from
+their matching label slot.

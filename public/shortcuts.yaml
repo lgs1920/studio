@@ -100,6 +100,25 @@
     - Escape
   reference: true
   scope: App
+- action: Resize focused drawer
+  description: Adjusts the focused resizable drawer by 16 pixels with the horizontal arrow keys, or by 64 pixels with Shift plus an arrow key. Home selects the minimum width and End selects the configured maximum width.
+  id: drawer-resize-keyboard
+  keys:
+    - ArrowLeft
+    - ArrowRight
+    - Shift+ArrowLeft
+    - Shift+ArrowRight
+    - Home
+    - End
+  reference: true
+  scope: Resizable drawer
+- action: Toggle drawer minimum or maximum width
+  description: Double-clicks the resize handle to toggle the focused resizable drawer between its minimum initial width and its configured maximum width.
+  id: drawer-resize-toggle
+  keys:
+    - Double click
+  reference: true
+  scope: Resizable drawer
 - action: Edit selected widget
   description: Opens the editor for the selected widget.
   id: widget-edit

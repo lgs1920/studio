@@ -297,6 +297,10 @@ export default defineConfig({
                 replacement: path.resolve(PROJECT_ROOT, 'src/components')
             },
             {
+                find: '@WebComponents',
+                replacement: path.resolve(PROJECT_ROOT, 'src/webcomponents')
+            },
+            {
                 find: '@Stores',
                 replacement: path.resolve(PROJECT_ROOT, 'src/core/stores')
             },

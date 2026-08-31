@@ -38,7 +38,9 @@ and issue analysis remain in [`REPLAY-AUDIT.md`](REPLAY-AUDIT.md).
 - Moving clip readiness separated from settled waits.
 - Linked-video Replay preparation timeline with a normalized read-only
   multi-track projection, controlled playhead and scrubbing, widget visibility
-  tracks, widget-row ordering, and clip/widget editor navigation. See
+  tracks, widget-row ordering, clip/widget editor navigation, a resizable
+  track-title legend, bounded ruler zoom, and throttled transient scrubbing.
+  See
   [Replay timeline preparation implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md).
 
 These items describe the current branch, not a released version. They remain
