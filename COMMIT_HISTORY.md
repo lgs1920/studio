@@ -1,5 +1,11 @@
 # Commit History
 
+## 2026-08-31 — `refactor(replay): use timeline Web Component preview`
+
+- Replace the React timeline package rendering in the Replay preparation preview with `lgs1920-timeline`.
+- Preserve the existing projected tracks, clips, ordering, labels, duration, and current time.
+- Keep the first integration display-only while the Replay event and controller wiring remains decoupled.
+
 ## 2026-08-30 — `feat(ui): add LGS1920 Web Component timeline`
 
 - Add the standalone `lgs1920-timeline` Web Component with Web Awesome and Font Awesome integration.

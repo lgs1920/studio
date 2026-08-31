@@ -130,6 +130,9 @@ widget tracks. The same timeline state will drive Draft recording and HQ export 
 
 Technical specs: [Replay Timeline preview](tech-doc/todo/CORE-REPLAY-TIMELINE-PREVIEW-SPEC.md) for 1.0.0 and [Replay track timeline editor evolution](tech-doc/todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) for the complete editor.
 
+The current 1.0.0 integration renders the Replay preparation preview with the `lgs1920-timeline` Web Component in
+display-only mode. Replay event and controller wiring remains a follow-up step.
+
 ### 1.3 — 3D Camera Path Editor
 
 The 3D Camera editor will let users author an actual 3D camera path with GPS positions, altitude, duration, motion

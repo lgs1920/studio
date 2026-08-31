@@ -1,512 +1,71 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: replay-timeline-preview.css
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-29
+ * Last modified: 2026-08-31
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 .replay-timeline-preview {
     box-sizing: border-box;
+    display: block;
     width: 100%;
     height: 100%;
     min-width: 360px;
     min-height: 66px;
-    padding: var(--lgs-gutter-s);
-    color: var(--wa-color-text-normal);
-    background: var(--wa-color-surface-raised);
-    border: 1px solid var(--wa-color-border-normal);
-    border-radius: var(--wa-border-radius-m);
-    box-shadow: var(--wa-shadow-l);
-    backdrop-filter: blur(14px);
-    display: flex;
-    flex-direction: column;
     overflow: hidden;
 
-    .replay-timeline-preview__top {
-        display: flex;
-        flex: 0 1 auto;
-        min-height: 0;
-        flex-direction: column;
-    }
-
-    .replay-timeline-preview__header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--lgs-gutter-s);
-        margin-bottom: var(--lgs-gutter-xs);
-
-        h2 {
-            margin: 0;
-            font-size: var(--lgs-font-size-m);
-        }
-    }
-
-    .replay-timeline-preview__eyebrow {
+    lgs1920-timeline {
         display: block;
-        color: var(--wa-color-text-quiet);
-        font-size: var(--lgs-font-size-xs);
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-    }
-
-    .replay-timeline-preview__transport {
-        margin-bottom: var(--lgs-gutter-xxs);
-        color: var(--wa-color-text-quiet);
-        font-variant-numeric: tabular-nums;
-        text-align: right;
-    }
-
-    .replay-timeline-preview__timeline-layout {
-        display: grid;
-        flex: 1 1 auto;
-        /* Inline token keeping the track-name column fixed across future timeline layouts. */
-        grid-template-columns: var(--replay-timeline-track-legend-width) 6px minmax(0, 1fr);
-        min-height: 66px;
-        max-width: 100%;
-        margin-top: auto;
-        overflow: hidden;
-        border: 1px solid var(--wa-color-border-quiet);
-        border-radius: var(--wa-border-radius-s);
-    }
-
-    .replay-timeline-preview__track-legend {
-        width: var(--replay-timeline-track-legend-width);
-        min-width: var(--replay-timeline-track-legend-width);
-        height: 100%;
-        overflow: hidden;
-        color: var(--wa-color-text-quiet);
-        background: var(--wa-color-surface-default);
-        font-family: var(--wa-font-family-body, sans-serif);
-        font-size: var(--wa-font-size-s, 0.875rem);
-    }
-
-    .replay-timeline-preview__track-legend-resizer {
-        box-sizing: border-box;
-        width: 6px;
-        min-width: 6px;
-        height: 100%;
-        cursor: col-resize;
-        background: var(--wa-color-border-quiet);
-        border-inline: 1px solid var(--wa-color-border-normal);
-
-        &:hover,
-        &:focus-visible {
-            background: var(--wa-color-brand-fill-loud, var(--wa-color-brand));
-            outline: none;
-        }
-    }
-
-    .replay-timeline-preview__timeline-layout--resizing {
-        cursor: col-resize;
-        user-select: none;
-
-        .replay-timeline-preview__track-legend-resizer {
-            background: var(--wa-color-brand-fill-loud, var(--wa-color-brand));
-        }
-    }
-
-    .replay-timeline-preview__track-legend-ruler {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        padding-inline: var(--lgs-gutter-xxs);
-        height: 42px;
-        box-sizing: border-box;
-        background: var(--wa-color-surface-default);
-        border-bottom: 1px solid var(--wa-color-border-quiet);
-    }
-
-    .replay-timeline-preview__widget-menu-trigger {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 0;
-        padding-inline: var(--lgs-gutter-xs);
-        white-space: nowrap;
-    }
-
-    .replay-timeline-preview__widget-menu-popup {
-        .widget-deck-panel {
-            max-height: min(60vh, 30rem);
-            overflow-y: auto;
-        }
-    }
-
-    .replay-timeline-preview__track-legend-viewport {
-        height: calc(100% - 42px);
-        overflow: hidden;
-    }
-
-    .replay-timeline-preview__track-legend-rows {
-        will-change: transform;
-    }
-
-    .replay-timeline-preview__track-legend-row {
-        display: flex;
-        align-items: center;
-        gap: var(--lgs-gutter-xxs);
-        box-sizing: border-box;
-        height: 24px;
-        padding-inline: var(--lgs-gutter-xxs);
-        overflow: hidden;
-        color: var(--wa-color-text-normal);
-        background: var(--wa-color-surface-default);
-        border-bottom: var(--wa-border-width-s, 1px) var(--wa-border-style, solid) var(--wa-color-border-quiet, var(--wa-color-neutral-border-quiet));
-        white-space: nowrap;
-    }
-
-    .replay-timeline-preview__track-legend-row--dragging {
-        cursor: grabbing;
-        background: var(--wa-color-fill-loud, var(--wa-color-neutral-fill-loud));
-        border: var(--wa-border-width-s, 1px) var(--wa-border-style, solid) var(--wa-color-brand-border-loud, var(--wa-color-brand-border, var(--wa-color-neutral-border-loud)));
-        box-shadow: var(--wa-shadow-s);
-    }
-
-    .replay-timeline-preview__track-legend-row--movable {
-        cursor: grab;
-    }
-
-    .replay-timeline-preview__track-drag-icon {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        flex: 0 0 18px;
-        width: 18px;
-        height: 18px;
-        color: var(--wa-color-brand);
-        background: transparent;
-        border: 0;
-
-        > wa-icon {
-            display: block;
-            width: 14px;
-            height: 14px;
-        }
-    }
-
-    .replay-timeline-preview__track-icon-frame {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        flex: 0 0 18px;
-        width: 18px;
-        height: 18px;
-        color: var(--wa-color-on-loud, var(--wa-color-neutral-on-loud));
-        background: var(--wa-color-fill-loud, var(--wa-color-neutral-fill-loud));
-        border: var(--wa-border-width-s, 1px) var(--wa-border-style, solid) var(--wa-color-border-loud, var(--wa-color-neutral-border-loud));
-        border-radius: var(--wa-border-radius-s);
-        font-size: var(--wa-font-size-3xs, 0.5rem);
-    }
-
-    .replay-timeline-preview__track-label {
-        flex: 1 1 auto;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .replay-timeline-preview__track-visibility-toggle {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        flex: 0 0 auto;
-        align-self: stretch;
-        width: 1.25rem;
-        height: 100%;
-        margin-inline-start: calc(-1 * var(--lgs-gutter-xxs) - 4px);
-
-        .toggle-state-icon {
-            display: flex;
-            align-items: center;
-            height: 100%;
-        }
-
-        wa-button {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-sizing: border-box;
-            width: 1.25rem;
-            min-height: 0;
-            max-height: 100%;
-            height: 100%;
-            padding: 0;
-        }
-    }
-
-    .replay-timeline-preview__surface {
-        flex: 0 0 auto;
-        min-height: 0;
-        height: 100%;
-        min-width: 0;
-        max-width: 100%;
-        overflow-x: auto;
-        overflow-y: hidden;
-
-        &:focus-visible {
-            outline: 2px solid var(--wa-color-focus, var(--wa-color-brand));
-            outline-offset: -2px;
-        }
-    }
-
-    .timeline-editor {
-        box-sizing: border-box;
         width: 100%;
-        min-width: 0;
-        max-width: 100%;
-        height: auto;
-        min-height: 32px;
-        color: var(--wa-color-text-normal);
-        background: var(--wa-color-surface-default);
-        font-family: var(--wa-font-family-body, sans-serif);
-        font-size: var(--wa-font-size-s, 0.875rem);
+        height: 100%;
+        min-width: 360px;
+        min-height: 66px;
+
+        /* Remove the card spacing from the embedded display-only timeline. */
+        --lgs-timeline-padding: 0;
+        /* Remove the card corners from the embedded display-only timeline. */
+        --lgs-timeline-radius: 0;
+        /* Remove the card shadow from the embedded display-only timeline. */
+        --lgs-timeline-shadow: none;
+        /* Keep the preview flush with its widget container. */
+        --lgs-timeline-border-color: transparent;
+        /* Align the first ruler tick and clip with the surface edge. */
+        --lgs-timeline-scale-offset: 0px;
     }
 
-    .timeline-editor-edit-area,
-    .timeline-editor-time-area {
-        background: transparent;
+    lgs1920-timeline::part(top) {
+        display: flex;
+        flex: 0 0 56px;
+        height: 56px;
+        min-height: 56px;
     }
 
-    .timeline-editor-edit-area .ReactVirtualized__Grid {
-        background: var(--wa-color-surface-default);
-    }
-
-    .timeline-editor-time-area .timeline-editor-time-unit-scale {
-        color: var(--wa-color-text-quiet);
-        white-space: nowrap;
-    }
-
-    .timeline-editor-row {
-        border-bottom: 1px solid var(--wa-color-border-quiet);
-    }
-
-    .timeline-editor-edit-row {
-        color: var(--wa-color-text-normal);
-        background: var(--wa-color-surface-default);
-        background-image: linear-gradient(var(--wa-color-surface-default), var(--wa-color-surface-default)), linear-gradient(90deg, color-mix(in srgb, var(--wa-color-border-quiet) 60%, transparent) 1px, transparent 0);
-        border-bottom: var(--wa-border-width-s, 1px) var(--wa-border-style, solid) var(--wa-color-border-quiet, var(--wa-color-neutral-border-quiet));
-    }
-
-    .timeline-editor-edit-row.replay-timeline-row-fixed {
-        .timeline-editor-edit-row-drag-handle {
-            display: none;
-        }
-    }
-
-    .timeline-editor-edit-row-drag-handle {
+    lgs1920-timeline::part(header),
+    lgs1920-timeline::part(playback-controls),
+    lgs1920-timeline::part(controls) {
         display: none;
     }
 
-    .timeline-editor-drag-line {
-        border-left-color: color-mix(in srgb, var(--wa-color-brand-border-loud, var(--wa-color-brand-border, var(--wa-color-neutral-border-loud))) 60%, transparent);
+    lgs1920-timeline::part(legend-ruler) {
+        visibility: hidden;
     }
 
-    .timeline-editor-action {
-        background-color: transparent;
+    lgs1920-timeline::part(layout) {
+        border: 0;
+        border-radius: 0;
     }
 
-    .timeline-editor-time-unit {
-        border-right-color: color-mix(in srgb, var(--wa-color-text-normal) 24%, transparent);
-    }
-
-    .replay-timeline-preview__timeline-layout--dragging {
-        cursor: grabbing;
-
-        .timeline-editor-edit-row-dragging {
-            opacity: 1;
-            background: var(--wa-color-fill-loud, var(--wa-color-neutral-fill-loud));
-            border: var(--wa-border-width-s, 1px) var(--wa-border-style, solid) var(--wa-color-brand-border-loud, var(--wa-color-brand-border, var(--wa-color-neutral-border-loud)));
-            box-shadow: var(--wa-shadow-s);
-            cursor: grabbing;
-        }
-
-        .timeline-editor-edit-row-placeholder {
-            height: 24px;
-            min-height: 24px;
-            margin: 0;
-            background: color-mix(in srgb, var(--wa-color-fill-loud, var(--wa-color-neutral-fill-loud)) 70%, transparent);
-            border: var(--wa-border-width-s, 1px) var(--wa-border-style, solid) var(--wa-color-brand-border-loud, var(--wa-color-brand-border, var(--wa-color-neutral-border-loud)));
-        }
-
-        .timeline-editor-edit-area-drag-preview {
-            background: var(--wa-color-fill-loud, var(--wa-color-neutral-fill-loud)) !important;
-            border: var(--wa-border-width-s, 1px) var(--wa-border-style, solid) var(--wa-color-brand-border-loud, var(--wa-color-brand-border, var(--wa-color-neutral-border-loud))) !important;
-            box-shadow: var(--wa-shadow-s);
-            opacity: 0.88 !important;
-        }
-
-        .timeline-editor-edit-area-drag-preview > div {
-            display: none;
-        }
-    }
-
-    .timeline-editor-edit-area .ReactVirtualized__Grid {
-        overflow-x: auto !important;
-        overflow-y: hidden !important;
-        scrollbar-color: var(--wa-color-border-normal) transparent;
-        scrollbar-width: thin;
-    }
-
-    .replay-timeline-preview__surface--vertical-scroll .timeline-editor-edit-area .ReactVirtualized__Grid {
-        overflow-y: auto !important;
-    }
-
-    .timeline-editor-edit-area .ReactVirtualized__Grid::-webkit-scrollbar {
-        width: 6px;
-        height: 8px;
-    }
-
-    .timeline-editor-edit-area .ReactVirtualized__Grid::-webkit-scrollbar-thumb {
-        background: var(--wa-color-border-normal);
-        border-radius: 999px;
-    }
-
-    .timeline-editor-action {
-        border-radius: var(--wa-border-radius-s);
-    }
-
-    .replay-timeline-action {
-        display: flex;
-        align-items: center;
-        gap: var(--lgs-gutter-xxs);
-        box-sizing: border-box;
-        width: 100%;
-        height: 100%;
-        padding-inline: var(--lgs-gutter-xs);
-        overflow: hidden;
-        color: var(--wa-color-on-loud, var(--wa-color-neutral-on-loud));
-        background-color: var(--wa-color-fill-loud, var(--wa-color-neutral-fill-loud));
-        border: var(--wa-border-width-s, 1px) var(--wa-border-style, solid) var(--wa-color-border-loud, var(--wa-color-neutral-border-loud));
-        font-family: var(--wa-font-family-body, sans-serif);
-        font-size: var(--wa-font-size-s, 0.875rem);
-        font-weight: 600;
-        white-space: nowrap;
-
-        &.replay-timeline-action--hidden {
-            background-color: var(--wa-color-fill-normal, var(--wa-color-neutral-fill-normal)) !important;
-            background-image: repeating-linear-gradient(
-                -45deg,
-                color-mix(
-                    in oklab,
-                    var(--wa-color-fill-normal, var(--wa-color-neutral-fill-normal)) 85%,
-                    var(--wa-color-fill-loud, var(--wa-color-neutral-fill-loud)) 15%
-                ) 0 4px,
-                var(--wa-color-fill-normal, var(--wa-color-neutral-fill-normal)) 4px 8px
-            ) !important;
-        }
-
-        .replay-timeline-action__preview {
-            display: inline-flex;
-            align-items: center;
-            justify-content: flex-start;
-            position: relative;
-            flex: 1 1 auto;
-            width: auto;
-            min-width: 0;
-            max-width: 100%;
-            height: 100%;
-            overflow: hidden;
-            box-sizing: border-box;
-            color: var(--wa-color-on-loud, var(--wa-color-neutral-on-loud));
-            background-color: transparent;
-            border: 0;
-            border-radius: 0;
-        }
-
-        .replay-timeline-action__preview--widget {
-            gap: var(--lgs-gutter-xxs);
-        }
-
-        .replay-timeline-action__icon-trigger {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            flex: 0 0 16px;
-            width: 16px;
-            height: 90%;
-            color: var(--wa-color-on-loud, var(--wa-color-neutral-on-loud));
-            filter: drop-shadow(0 1px 2px color-mix(in srgb, black 60%, transparent));
-
-            > wa-icon {
-                display: block;
-                width: 14px;
-                height: 14px;
-            }
-        }
-
-        .replay-timeline-action__label {
-            min-width: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        > span:last-child {
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        > wa-icon {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            flex: 0 0 14px;
-            width: 14px;
-            height: 14px;
-            box-sizing: border-box;
-            padding: 2px;
-            color: var(--wa-color-on-loud, var(--wa-color-neutral-on-loud));
-            background: var(--wa-color-fill-loud, var(--wa-color-neutral-fill-loud));
-            border: var(--wa-border-width-s, 1px) var(--wa-border-style, solid) var(--wa-color-border-loud, var(--wa-color-neutral-border-loud));
-            border-radius: var(--wa-border-radius-s);
-        }
-}
-}
-
-.replay-timeline-preview .timeline-editor-cursor {
-    z-index: 100 !important;
-    border-left: 2px solid var(--wa-color-brand-border-loud, #1f4f8c) !important;
-    border-right: 2px solid var(--wa-color-brand-border-loud, #1f4f8c) !important;
-}
-
-.replay-timeline-preview .timeline-editor-cursor-top {
-    z-index: 101 !important;
-    display: block;
-    width: 12px !important;
-    height: 20px !important;
-    max-width: none !important;
-    border-radius: 3px;
-}
-
-.replay-timeline-preview .timeline-editor-cursor-top path {
-    fill: var(--wa-color-brand-fill-loud, var(--wa-color-brand, #5297ff)) !important;
-    stroke: var(--wa-color-brand-fill-loud, var(--wa-color-brand, #5297ff));
-    stroke-linejoin: round;
-    stroke-linecap: round;
-    stroke-width: 0.5px;
-}
-
-.replay-timeline-preview .timeline-editor-cursor::after {
-    content: '';
-    position: absolute;
-    z-index: 102;
-    top: 4px;
-    left: 50%;
-    width: 8px;
-    height: 12px;
-    transform: translateX(-50%) scaleX(2);
-    background-color: var(--wa-color-brand-on-loud, var(--wa-color-neutral-on-loud, #2f1809));
-    /* Font Awesome Pro solid grip-vertical icon. */
-    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 512'%3E%3Cpath fill='white' d='M128 40c0-22.1-17.9-40-40-40L40 0C17.9 0 0 17.9 0 40L0 88c0 22.1 17.9 40 40 40l48 0c22.1 0 40-17.9 40-40l0-48zm0 192c0-22.1-17.9-40-40-40l-48 0c-22.1 0-40 17.9-40 40l0 48c0 22.1 17.9 40 40 40l48 0c22.1 0 40-17.9 40-40l0-48zM0 424l0 48c0 22.1 17.9 40 40 40l48 0c22.1 0 40-17.9 40-40l0-48c0-22.1-17.9-40-40-40l-48 0c-22.1 0-40 17.9-40 40zM320 40c0-22.1-17.9-40-40-40L232 0c-22.1 0-40 17.9-40 40l0 48c0 22.1 17.9 40 40 40l48 0c22.1 0 40-17.9 40-40l0-48zM192 232l0 48c0 22.1 17.9 40 40 40l48 0c22.1 0 40-17.9 40-40l0-48c0-22.1-17.9-40-40-40l-48 0c-22.1 0-40 17.9-40 40zm128 192c0-22.1-17.9-40-40-40l-48 0c-22.1 0-40 17.9-40 40l0 48c0 22.1 17.9 40 40 40l48 0c22.1 0 40-17.9 40-40l0-48z'/%3E%3C/svg%3E") center / contain no-repeat;
-    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 512'%3E%3Cpath fill='white' d='M128 40c0-22.1-17.9-40-40-40L40 0C17.9 0 0 17.9 0 40L0 88c0 22.1 17.9 40 40 40l48 0c22.1 0 40-17.9 40-40l0-48zm0 192c0-22.1-17.9-40-40-40l-48 0c-22.1 0-40 17.9-40 40l0 48c0 22.1 17.9 40 40 40l48 0c22.1 0 40-17.9 40-40l0-48zM0 424l0 48c0 22.1 17.9 40 40 40l48 0c22.1 0 40-17.9 40-40l0-48c0-22.1-17.9-40-40-40l-48 0c-22.1 0-40 17.9-40 40zM320 40c0-22.1-17.9-40-40-40L232 0c-22.1 0-40 17.9-40 40l0 48c0 22.1 17.9 40 40 40l48 0c22.1 0 40-17.9 40-40l0-48zM192 232l0 48c0 22.1 17.9 40 40 40l48 0c22.1 0 40-17.9 40-40l0-48c0-22.1-17.9-40-40-40l-48 0c-22.1 0-40 17.9-40 40zm128 192c0-22.1-17.9-40-40-40l-48 0c-22.1 0-40 17.9-40 40l0 48c0 22.1 17.9 40 40 40l48 0c22.1 0 40-17.9 40-40l0-48z'/%3E%3C/svg%3E") center / contain no-repeat;
-    pointer-events: none;
-}
-
-.replay-timeline-preview .timeline-editor-cursor-area {
-    z-index: 102 !important;
-}
-
-@media (max-width: 720px) {
-    .replay-timeline-preview {
-        min-width: 320px;
-
-        .replay-timeline-preview__header {
-            align-items: flex-start;
-            flex-direction: column;
-        }
+    lgs1920-timeline::part(timeline-start-handle),
+    lgs1920-timeline::part(timeline-end-handle) {
+        pointer-events: none;
     }
 }

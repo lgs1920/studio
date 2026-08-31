@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: ReplayTimelineWidget.jsx
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-29
+ * Last modified: 2026-08-31
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 /**
  * Replay Timeline widget host for linked video preparation.
  */
@@ -99,7 +115,7 @@ export const ReplayTimelineWidget = ({id, zIndex}) => {
         top:           '50%',
         left:          '50%',
         attachTo:      'center',
-        handle:        '.replay-timeline-preview__header',
+        handle:        'lgs1920-timeline',
         type:          LGS_VISUAL_WIDGET,
         group:         JOURNEY_WIDGETS,
         id,
