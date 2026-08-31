@@ -8,23 +8,32 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/components/button-group/button-grou
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/icon/icon.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/input/input.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/popup/popup.js', () => ({}))
+vi.mock('@web.awesome.me/webawesome-pro/dist/components/split-panel/split-panel.js', () => ({}))
 
 import {LGS1920TimelineReact} from './LGS1920TimelineReact'
 
-const projection = {
+const timelineConfig = {
     durationMillis: 5_000,
-    editorData: [],
+    visible: true,
 }
+
+const tracks = []
 
 afterEach(() => cleanup())
 
 describe('LGS1920TimelineReact', () => {
     it('bridges controlled state, slots, and Web Component events', () => {
-        const seek = vi.fn()
+        const onSeek = vi.fn()
+        const onDblClick = vi.fn()
         const {container} = render(
             <LGS1920TimelineReact
-                state={{projection, linkedPreparation: true}}
-                eventHandlers={{seek}}>
+                timeline={timelineConfig}
+                tracks={tracks}
+                currentTimeMillis={0}
+                playing={false}
+                clipOptions={[]}
+                onSeek={onSeek}
+                onDblClick={onDblClick}>
                 <span slot="header">React header</span>
             </LGS1920TimelineReact>,
         )
@@ -36,7 +45,62 @@ describe('LGS1920TimelineReact', () => {
         }))
 
         expect(element.shadowRoot.querySelector('slot[name="header"]').assignedElements()[0].textContent).toBe('React header')
-        expect(seek).toHaveBeenCalledOnce()
-        expect(seek.mock.calls[0][0].detail.timeMillis).toBe(1_000)
+        expect(onSeek).toHaveBeenCalledOnce()
+        expect(onSeek.mock.calls[0][0].timeMillis).toBe(1_000)
+
+        element.dispatchEvent(new CustomEvent('lgs1920-timeline-dblclick', {
+            bubbles: true,
+            composed: true,
+            detail: {clip: {id: 'clip#001'}},
+        }))
+
+        expect(onDblClick).toHaveBeenCalledOnce()
+        expect(onDblClick.mock.calls[0][0].clip.id).toBe('clip#001')
+    })
+
+    it('maps clip editing events to React callbacks', () => {
+        const onClipChangeStart = vi.fn()
+        const onClipChanging = vi.fn()
+        const onClipChange = vi.fn()
+        const {container} = render(
+            <LGS1920TimelineReact
+                timeline={timelineConfig}
+                tracks={tracks}
+                onClipChangeStart={onClipChangeStart}
+                onClipChanging={onClipChanging}
+                onClipChange={onClipChange}/>,
+        )
+        const element = container.querySelector('lgs1920-timeline')
+        const detail = {clipId: 'clip#001', type: 'resize', edge: 'end'}
+        element.dispatchEvent(new CustomEvent('lgs1920-timeline-clip-change-start', {detail}))
+        element.dispatchEvent(new CustomEvent('lgs1920-timeline-clip-changing', {detail}))
+        element.dispatchEvent(new CustomEvent('lgs1920-timeline-clip-change', {detail}))
+
+        expect(onClipChangeStart).toHaveBeenCalledWith(detail, expect.any(CustomEvent))
+        expect(onClipChanging).toHaveBeenCalledWith(detail, expect.any(CustomEvent))
+        expect(onClipChange).toHaveBeenCalledWith(detail, expect.any(CustomEvent))
+    })
+
+    it('maps global video range events to React callbacks', () => {
+        const onRangeChangeStart = vi.fn()
+        const onRangeChanging = vi.fn()
+        const onRangeChange = vi.fn()
+        const {container} = render(
+            <LGS1920TimelineReact
+                timeline={timelineConfig}
+                tracks={tracks}
+                onRangeChangeStart={onRangeChangeStart}
+                onRangeChanging={onRangeChanging}
+                onRangeChange={onRangeChange}/>,
+        )
+        const element = container.querySelector('lgs1920-timeline')
+        const detail = {rangeStartMillis: 0, rangeEndMillis: 4_000}
+        element.dispatchEvent(new CustomEvent('lgs1920-timeline-range-change-start', {detail}))
+        element.dispatchEvent(new CustomEvent('lgs1920-timeline-range-changing', {detail}))
+        element.dispatchEvent(new CustomEvent('lgs1920-timeline-range-change', {detail}))
+
+        expect(onRangeChangeStart).toHaveBeenCalledWith(detail, expect.any(CustomEvent))
+        expect(onRangeChanging).toHaveBeenCalledWith(detail, expect.any(CustomEvent))
+        expect(onRangeChange).toHaveBeenCalledWith(detail, expect.any(CustomEvent))
     })
 })

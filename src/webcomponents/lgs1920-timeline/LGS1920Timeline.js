@@ -3,205 +3,65 @@ import '@web.awesome.me/webawesome-pro/dist/components/button-group/button-group
 import '@web.awesome.me/webawesome-pro/dist/components/icon/icon.js'
 import '@web.awesome.me/webawesome-pro/dist/components/input/input.js'
 import '@web.awesome.me/webawesome-pro/dist/components/popup/popup.js'
-import {parse as parseYaml} from 'yaml'
+import '@web.awesome.me/webawesome-pro/dist/components/split-panel/split-panel.js'
 import styles from './lgs1920-timeline.css?inline'
-
-const TAG_NAME = 'lgs1920-timeline'
-const MIN_ZOOM = -50
-const MAX_ZOOM = 500
-const ZOOM_STEP = 20
-const START_LEFT = 20
-const SCALE_WIDTH = 40
-const MIN_LEGEND_WIDTH = 120
-const MAX_LEGEND_WIDTH = 300
-const HEADER_HEIGHT = 42
-const HORIZONTAL_SCROLLBAR_HEIGHT = 8
-const MIN_ROW_HEIGHT = 24
-const EDGE_TRIGGER_SIZE = 24
-const EDGE_SCROLL_SPEEDS = [8, 16, 32, 64, 128]
-const ACCELERATION_INTERVAL = 100
-const GLOBAL_SLOTS = [
-    'track-drag-icon',
-    'track-visibility-icon',
-    'track-icon',
-    'track-label',
-    'drag-trigger',
-    'visibility',
-    'name',
-    'actions',
-    'track-actions',
-    'action-icon',
-    'action-label',
-    'action-content',
-    'scale-label',
-    'widget-option-icon',
-    'widget-option-label',
-    'track-context-menu',
-    'item-context-menu',
-]
-
-/**
- * Create a DOM element with a class name and HTML attributes.
- *
- * @param {string} tagName - Element tag name.
- * @param {string} [className=''] - Optional class name.
- * @param {Object} [attributes={}] - Attributes to apply.
- * @returns {HTMLElement} Created element.
- */
-const createElement = (tagName, className = '', attributes = {}) => {
-    const element = document.createElement(tagName)
-    if (className) element.className = className
-    Object.entries(attributes).forEach(([name, value]) => {
-        if (value === true) {
-            element.setAttribute(name, '')
-        } else if (value !== false && value !== null && value !== undefined) {
-            element.setAttribute(name, `${value}`)
-        }
-    })
-    return element
-}
-
-/**
- * Create a Font Awesome-backed Web Awesome icon.
- *
- * @param {string} name - Font Awesome icon name.
- * @param {string} [variant='regular'] - Web Awesome icon variant.
- * @returns {HTMLElement} Icon element.
- */
-const createIcon = (name, variant = 'regular') => createElement('wa-icon', '', {
-    name,
-    variant,
-    label: '',
-})
-
-/**
- * Create a composed, bubbling custom event.
- *
- * @param {string} name - Event name.
- * @param {Object} detail - Event detail payload.
- * @returns {CustomEvent} Composed custom event.
- */
-const createEvent = (name, detail) => new CustomEvent(name, {
-    bubbles: true,
-    composed: true,
-    detail,
-})
-
-/**
- * Format elapsed seconds as a compact minute and second label.
- *
- * @param {number} seconds - Elapsed time in seconds.
- * @returns {string} Formatted elapsed-time label.
- */
-const formatTime = seconds => {
-    const totalSeconds = Math.max(0, Math.round(Number(seconds) || 0))
-    return `${Math.floor(totalSeconds / 60)}:${`${totalSeconds % 60}`.padStart(2, '0')}`
-}
-
-/**
- * Format a ruler value without unnecessary decimal places.
- *
- * @param {number} seconds - Ruler value in seconds.
- * @returns {string} Ruler label.
- */
-const formatScale = seconds => {
-    const normalizedSeconds = Math.max(0, Number(seconds) || 0)
-    return `${Number.isInteger(normalizedSeconds) ? normalizedSeconds : Number(normalizedSeconds.toFixed(3))}`
-}
-
-/**
- * Resolve a human-readable action label.
- *
- * @param {Object} action - Timeline action.
- * @returns {string} Action label.
- */
-const resolveActionLabel = action => String(action?.label ?? action?.widgetId ?? action?.kind ?? '')
-
-/**
- * Resolve a human-readable row label.
- *
- * @param {Object} row - Timeline row.
- * @returns {string} Row label.
- */
-const resolveRowLabel = row => row?.id === 'replay' ? 'Replay' : String(row?.label ?? row?.id ?? '')
-
-/**
- * Resolve a Font Awesome icon for a timeline action.
- *
- * @param {Object} action - Timeline action.
- * @returns {string} Icon name.
- */
-const resolveActionIcon = action => action?.icon
-    ?? (action?.kind === 'start' ? 'play' : action?.kind === 'stop' ? 'stop' : 'puzzle-piece')
-
-/**
- * Join Web Awesome color classes with a safe fallback.
- *
- * @param {Array} colorClasses - Web Awesome color classes.
- * @returns {string} Class string.
- */
-const resolveColorClasses = colorClasses => Array.isArray(colorClasses) && colorClasses.length > 0
-    ? colorClasses.join(' ')
-    : 'wa-neutral wa-neutral-blue'
-
-/**
- * Create a stable slot suffix from a user-provided identifier.
- *
- * @param {string} identifier - Row or action identifier.
- * @returns {string} Slot-safe identifier.
- */
-const slotKey = identifier => String(identifier ?? '')
-
-/**
- * Clamp a numeric value between two bounds.
- *
- * @param {number} value - Value to clamp.
- * @param {number} minimum - Lower bound.
- * @param {number} maximum - Upper bound.
- * @returns {number} Clamped value.
- */
-const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value))
-
-/**
- * Resolve the major ruler unit for the configured zoom.
- *
- * @param {number} zoomPercent - Current zoom percentage.
- * @returns {{majorSeconds: number, scaleSplitCount: number}} Ruler configuration.
- */
-const resolveScale = zoomPercent => {
-    const zoom = clamp(Number(zoomPercent) || 0, MIN_ZOOM, MAX_ZOOM)
-    if (zoom <= -21) return {majorSeconds: 0.5, scaleSplitCount: 5}
-    if (zoom <= 100) return {majorSeconds: 1, scaleSplitCount: 5}
-    if (zoom <= 260) return {majorSeconds: 10, scaleSplitCount: 10}
-    if (zoom <= 360) return {majorSeconds: 30, scaleSplitCount: 6}
-    if (zoom <= 440) return {majorSeconds: 60, scaleSplitCount: 6}
-    return {majorSeconds: 300, scaleSplitCount: 10}
-}
+import {cloneRows, createTimelineClipEditor, resolveClipInterval, trackAcceptsClip} from './LGS1920TimelineEditing.js'
+import {createTimelineRenderer} from './LGS1920TimelineRendering.js'
+import {
+    ACCELERATION_INTERVAL,
+    EDGE_SCROLL_SPEEDS,
+    EDGE_TRIGGER_SIZE,
+    GLOBAL_SLOTS,
+    HEADER_HEIGHT,
+    HORIZONTAL_SCROLLBAR_HEIGHT,
+    MAX_ZOOM,
+    MIN_ROW_HEIGHT,
+    MIN_ZOOM,
+    SCALE_WIDTH,
+    START_LEFT,
+    TAG_NAME,
+    ZOOM_STEP,
+    clamp,
+    createElement,
+    createEvent,
+    createIcon,
+    formatTime,
+    resolveClipIcon,
+    resolveClipLabel,
+    resolveColorClasses,
+    resolveLegendBounds,
+    resolveRowLabel,
+    resolveScale,
+    slotKey,
+} from './LGS1920TimelineUtils.js'
 
 /**
  * Web Awesome-compatible LGS1920 timeline custom element.
  *
  * The element is a controlled DOM adapter. It has no React hooks, Valtio
  * dependency, playback clock, or application store ownership. Applications
- * provide a replay projection through setState and handle the emitted events.
+ * receive controlled props and emit interaction events.
  */
 export class LGS1920Timeline extends HTMLElement {
     #root
     #projection = null
     #rows = []
+    #timelineConfig = {}
+    #trackDefinitions = []
     #currentTimeMillis = 0
     #playing = false
-    #linkedPreparation = false
-    #widgetOptions = []
-    #dataValue = null
-    #dataFormat = 'auto'
+    #visible = true
+    #clipOptions = []
     #zoom = 0
     #legendWidth = 136
+    #interactionDurationMillis = null
+    #rangeStartMillis = 0
+    #rangeEndMillis = 0
+    #rangeEndFollowsDuration = true
     #surfaceWidth = 0
     #contentWidth = START_LEFT + SCALE_WIDTH
     #rowHeight = MIN_ROW_HEIGHT
     #menuOpen = false
-    #parent = null
     #surface = null
     #resizeObserver = null
     #dragState = null
@@ -212,6 +72,8 @@ export class LGS1920Timeline extends HTMLElement {
     #editingRowId = null
     #editingLabelValue = ''
     #contextMenuState = null
+    #clipEditor
+    #renderer
 
     /**
      * Construct the shadow DOM host and its persistent stylesheet.
@@ -222,113 +84,81 @@ export class LGS1920Timeline extends HTMLElement {
         const style = document.createElement('style')
         style.textContent = styles
         this.#root.append(style)
+        this.#clipEditor = createTimelineClipEditor({
+            getRows: () => this.#rows,
+            getTimelineConfig: () => this.#timelineConfig,
+            getProjectionDurationMillis: () => this.#projection?.durationMillis ?? 0,
+            getTimeAtClientX: clientX => this.#timeAtClientX(clientX),
+            getTrackAtClientY: clientY => this.#trackAtClientY(clientY),
+            getRangeEndFollowsDuration: () => this.#rangeEndFollowsDuration,
+            setRangeEndMillis: value => {
+                this.#rangeEndMillis = value
+            },
+            setRows: rows => {
+                this.#rows = rows
+            },
+            setInteractionDurationMillis: value => {
+                this.#interactionDurationMillis = value
+            },
+            emit: (name, detail) => this.#emit(name, detail),
+            render: () => this.#render(),
+        })
+        this.#renderer = createTimelineRenderer({
+            createElement,
+            createIcon,
+            resolveColorClasses,
+            resolveRowLabel,
+            resolveClipLabel,
+            resolveClipIcon,
+            numericToken: (name, fallback) => this.#numericToken(name, fallback),
+            getTimelineConfig: () => this.#timelineConfig,
+            getRows: () => this.#rows,
+            getDragState: () => this.#dragState,
+            getEditingRowId: () => this.#editingRowId,
+            getEditingLabelValue: () => this.#editingLabelValue,
+            setEditingLabelValue: value => {
+                this.#editingLabelValue = value
+            },
+            getRangeStartMillis: () => this.#rangeStartMillis,
+            getRangeEndMillis: () => this.#rangeEndMillis,
+            getDurationMillis: () => this.#durationMillis(),
+            getContentWidth: () => this.#contentWidth,
+            getZoom: () => this.#zoom,
+            contextualSlot: (prefix, identifier, globalName, fallback) => this.#contextualSlot(prefix, identifier, globalName, fallback),
+            hasContextualSlot: (prefix, identifier) => this.#hasContextualSlot(prefix, identifier),
+            globalSlotContent: (name, fallback) => this.#globalSlotContent(name, fallback),
+            button: options => this.#button(options),
+            openContextMenu: (type, identifier, anchor, event) => this.#openContextMenu(type, identifier, anchor, event),
+            beginTrackLabelEdit: row => this.#beginTrackLabelEdit(row),
+            commitTrackLabelEdit: () => this.#commitTrackLabelEdit(),
+            cancelTrackLabelEdit: () => this.#cancelTrackLabelEdit(),
+            startRowDrag: (event, rowId) => this.#startRowDrag(event, rowId),
+            toggleTrackVisibility: (row, event) => this.#toggleTrackVisibility(row, event),
+            startClipInteraction: (event, clipId, mode, edge) => this.#startClipInteraction(event, clipId, mode, edge),
+            resizeClipByKeyboard: (clipId, edge, event) => this.#clipEditor.resizeByKeyboard(clipId, edge, event),
+            startRangeInteraction: (event, edge) => this.#startRangeInteraction(event, edge),
+            moveRangeByKeyboard: (edge, event) => this.#moveRangeByKeyboard(edge, event),
+            seek: (clientX, settled) => this.#seek(clientX, settled),
+            addPointerListeners: () => this.#addPointerListeners(),
+            updateLegendScroll: () => this.#updateLegendScroll(),
+            handleWheel: event => this.#handleWheel(event),
+            handleKeyDown: event => this.#handleKeyDown(event),
+            emit: (name, detail) => this.#emit(name, detail),
+            setScrubPointerId: value => {
+                this.#scrubPointerId = value
+            },
+            scaleWidth: () => this.#numericToken('scale-width', SCALE_WIDTH),
+            scaleOffset: () => this.#numericToken('scale-offset', START_LEFT),
+        })
     }
 
     /**
-     * Declare the attribute that controls the optional popup parent.
+     * Declare the attributes that are handled by the custom element itself.
      *
      * @returns {Array<string>} Observed attributes.
      */
     static get observedAttributes() {
-        return ['parent', 'data', 'data-format', 'persist-key']
-    }
-
-    /**
-     * Get the optional parent used as the popup positioning boundary.
-     *
-     * @returns {HTMLElement|null} Resolved parent element.
-     */
-    get parent() {
-        return this.#parent
-    }
-
-    /**
-     * Set the optional parent used as the popup positioning boundary.
-     *
-     * @param {HTMLElement|string|null} value - Element or selector.
-     */
-    set parent(value) {
-        this.#parent = this.#resolveParent(value)
-        if (this.isConnected) this.#render()
-    }
-
-    /**
-     * Get the current serializable timeline data snapshot.
-     *
-     * @returns {Object} Timeline data snapshot.
-     */
-    get data() {
-        return this.#dataSnapshot()
-    }
-
-    /**
-     * Set timeline data from an object, JSON string, or YAML string.
-     *
-     * @param {Object|string} value - Timeline data.
-     */
-    set data(value) {
-        this.setData(value)
-    }
-
-    /**
-     * Get the active data parser format.
-     *
-     * @returns {string} `auto`, `json`, or `yaml`.
-     */
-    get dataFormat() {
-        return this.#dataFormat
-    }
-
-    /**
-     * Set the active data parser format.
-     *
-     * @param {string} value - `auto`, `json`, or `yaml`.
-     */
-    set dataFormat(value) {
-        this.#dataFormat = ['auto', 'json', 'yaml'].includes(value) ? value : 'auto'
-        if (this.#dataValue !== null) this.setData(this.#dataValue)
-    }
-
-    /**
-     * Get the optional local persistence key for edited track labels.
-     *
-     * @returns {string} Persistence key.
-     */
-    get persistKey() {
-        return this.getAttribute('persist-key') || ''
-    }
-
-    /**
-     * Set the optional local persistence key for edited track labels.
-     *
-     * @param {string} value - Persistence key.
-     */
-    set persistKey(value) {
-        if (value) {
-            this.setAttribute('persist-key', value)
-        } else {
-            this.removeAttribute('persist-key')
-        }
-    }
-
-    /**
-     * React to an observed attribute change.
-     *
-     * @param {string} name - Changed attribute name.
-     * @param {string|null} oldValue - Previous attribute value.
-     * @param {string|null} newValue - New attribute value.
-     */
-    attributeChangedCallback(name, oldValue, newValue) {
-        if (name === 'parent' && oldValue !== newValue) {
-            this.#parent = this.#resolveParent(newValue)
-            if (this.isConnected) this.#render()
-        }
-        if (name === 'data-format' && oldValue !== newValue) this.dataFormat = newValue
-        if (name === 'data' && oldValue !== newValue && newValue !== null) this.setData(newValue)
-        if (name === 'persist-key' && oldValue !== newValue && this.#rows.length > 0) {
-            this.#restorePersistedLabels()
-            this.#render()
-        }
+        return []
     }
 
     /**
@@ -337,8 +167,111 @@ export class LGS1920Timeline extends HTMLElement {
     connectedCallback() {
         this.setAttribute('role', 'region')
         if (!this.getAttribute('aria-label')) this.setAttribute('aria-label', 'Timeline')
-        this.#parent = this.#resolveParent(this.#parent ?? this.getAttribute('parent'))
         this.#render()
+    }
+
+    /**
+     * Get the global timeline configuration.
+     *
+     * @returns {Object} Timeline configuration.
+     */
+    get timeline() {
+        return {...this.#timelineConfig}
+    }
+
+    /**
+     * Set the global timeline configuration.
+     *
+     * @param {Object} value - Timeline configuration.
+     */
+    set timeline(value) {
+        this.#interactionDurationMillis = null
+        const config = value && typeof value === 'object' ? Object.assign({}, value) : {}
+        this.#rangeEndFollowsDuration = !Number.isFinite(Number(config.rangeEndMillis))
+        const {minimum, maximum} = resolveLegendBounds(config)
+        this.#timelineConfig = Object.assign({}, config, {
+            legendMinWidth: minimum,
+            legendMaxWidth: maximum,
+        })
+        this.#visible = this.#timelineConfig.visible !== false
+        this.#syncPublicProps()
+    }
+
+    /**
+     * Get the public track definitions.
+     *
+     * @returns {Array} Track definitions.
+     */
+    get tracks() {
+        return this.#rows.map(row => this.#publicTrack(row))
+    }
+
+    /**
+     * Set the public track definitions.
+     *
+     * @param {Array} value - Track definitions.
+     */
+    set tracks(value) {
+        this.#interactionDurationMillis = null
+        this.#trackDefinitions = Array.isArray(value) ? value : []
+        this.#syncPublicProps()
+    }
+
+    /**
+     * Get the current logical timeline time.
+     *
+     * @returns {number} Current time in milliseconds.
+     */
+    get currentTimeMillis() {
+        return this.#currentTimeMillis
+    }
+
+    /**
+     * Set the current logical timeline time.
+     *
+     * @param {number} value - Time in milliseconds.
+     */
+    set currentTimeMillis(value) {
+        this.#currentTimeMillis = Math.max(0, Number(value) || 0)
+        this.#updateDynamicState()
+    }
+
+    /**
+     * Get the current playback state.
+     *
+     * @returns {boolean} Whether playback is active.
+     */
+    get playing() {
+        return this.#playing
+    }
+
+    /**
+     * Set the current playback state.
+     *
+     * @param {boolean} value - Whether playback is active.
+     */
+    set playing(value) {
+        this.#playing = value === true
+        if (this.isConnected) this.#render()
+    }
+
+    /**
+     * Get the clip insertion options.
+     *
+     * @returns {Array} Clip options.
+     */
+    get clipOptions() {
+        return [...this.#clipOptions]
+    }
+
+    /**
+     * Set the clip insertion options.
+     *
+     * @param {Array} value - Clip options.
+     */
+    set clipOptions(value) {
+        this.#clipOptions = Array.isArray(value) ? value : []
+        if (this.isConnected) this.#render()
     }
 
     /**
@@ -351,40 +284,26 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
-     * Apply controlled timeline state and refresh the DOM projection.
-     *
-     * @param {Object} state - Controlled state.
-     * @param {Object} [state.projection] - Replay preparation projection.
-     * @param {Array} [state.editorData] - Timeline rows when no projection is supplied.
-     * @param {number} [state.currentTimeMillis=0] - Current logical time.
-     * @param {boolean} [state.playing=false] - Whether Replay is playing.
-     * @param {boolean} [state.linkedPreparation=false] - Whether the preview is active.
-     * @param {Array} [state.widgetOptions=[]] - Add-widget menu options.
-     * @param {number} [state.zoomPercent] - Controlled zoom percentage.
-     * @param {number} [state.legendWidth] - Controlled legend width.
+     * Synchronize the public properties with the internal editor projection.
      */
-    setState(state = {}) {
-        if (state.data !== undefined) {
-            this.setData(state.data)
-            return
-        }
-        this.#dataValue = null
-        this.#applyState(state)
-    }
-
-    /**
-     * Apply timeline data in object, JSON, or YAML form.
-     *
-     * @param {Object|string} value - Timeline data.
-     */
-    setData(value) {
-        try {
-            const parsed = this.#parseData(value)
-            this.#dataValue = value
-            this.#applyState(this.#normalizeData(parsed))
-        } catch (error) {
-            this.#emit('data-error', {value, error})
-        }
+    #syncPublicProps = () => {
+        const durationMillis = Number(this.#timelineConfig.durationMillis
+            ?? (Number(this.#timelineConfig.durationSeconds) * 1000)) || 0
+        const editorData = this.#trackDefinitions.map(track => ({
+            ...track,
+            actions: track.clips ?? [],
+        }))
+        this.#applyState({
+            projection: {...this.#timelineConfig, durationMillis, durationSeconds: durationMillis / 1000, editorData},
+            currentTimeMillis: this.#currentTimeMillis,
+            playing: this.#playing,
+            visible: this.#visible,
+            clipOptions: this.#clipOptions,
+            zoomPercent: this.#timelineConfig.zoomPercent,
+            legendWidth: this.#timelineConfig.legendWidth,
+            rangeStartMillis: this.#timelineConfig.rangeStartMillis,
+            rangeEndMillis: this.#timelineConfig.rangeEndMillis ?? durationMillis,
+        })
     }
 
     /**
@@ -397,11 +316,24 @@ export class LGS1920Timeline extends HTMLElement {
         this.#rows = state.editorData ?? state.projection?.editorData ?? state.rows ?? []
         this.#currentTimeMillis = Math.max(0, Number(state.currentTimeMillis ?? 0) || 0)
         this.#playing = state.playing === true
-        this.#linkedPreparation = state.linkedPreparation === true
-        this.#widgetOptions = Array.isArray(state.widgetOptions) ? state.widgetOptions : []
+        this.#visible = state.visible !== false
+        this.#clipOptions = Array.isArray(state.clipOptions) ? state.clipOptions : []
         if (Number.isFinite(Number(state.zoomPercent))) this.#zoom = clamp(Number(state.zoomPercent), MIN_ZOOM, MAX_ZOOM)
-        if (Number.isFinite(Number(state.legendWidth))) this.#legendWidth = clamp(Number(state.legendWidth), MIN_LEGEND_WIDTH, MAX_LEGEND_WIDTH)
-        this.#restorePersistedLabels()
+        if (Number.isFinite(Number(state.legendWidth))) {
+            const {minimum, maximum} = resolveLegendBounds(this.#timelineConfig)
+            this.#legendWidth = clamp(Number(state.legendWidth), minimum, maximum)
+        }
+        const durationMillis = Number(this.#projection?.durationMillis) || 0
+        if (Number.isFinite(Number(state.rangeStartMillis))) {
+            this.#rangeStartMillis = clamp(Number(state.rangeStartMillis), 0, durationMillis)
+        } else {
+            this.#rangeStartMillis = 0
+        }
+        if (Number.isFinite(Number(state.rangeEndMillis))) {
+            this.#rangeEndMillis = clamp(Math.max(this.#rangeStartMillis, Number(state.rangeEndMillis)), this.#rangeStartMillis, durationMillis)
+        } else {
+            this.#rangeEndMillis = durationMillis
+        }
         this.#render()
     }
 
@@ -434,114 +366,35 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
-     * Resolve a parent value to a DOM element.
+     * Convert an internal row to the public track shape.
      *
-     * @param {HTMLElement|string|null} value - Element or selector.
-     * @returns {HTMLElement|null} Resolved element.
+     * @param {Object} row - Internal timeline row.
+     * @returns {Object} Public track definition.
      */
-    #resolveParent = value => {
-        if (value instanceof HTMLElement) return value
-        if (typeof value !== 'string' || !value) return null
-        try {
-            return document.querySelector(value)
-        } catch {
-            return null
-        }
+    #publicTrack = row => {
+        const {actions, ...track} = row
+        return {...track, clips: actions ?? []}
     }
 
     /**
-     * Parse an object, JSON string, or YAML string into timeline data.
+     * Build a public snapshot for controlled track changes.
      *
-     * @param {Object|string} value - Raw timeline data.
-     * @returns {Object} Parsed timeline data.
+     * @returns {Object} Current timeline and track state.
      */
-    #parseData = value => {
-        if (value && typeof value === 'object') return value
-        if (typeof value !== 'string' || !value.trim()) throw new TypeError('Timeline data must be an object, JSON string, or YAML string')
-        if (this.#dataFormat === 'json') return JSON.parse(value)
-        if (this.#dataFormat === 'yaml') return parseYaml(value)
-        try {
-            return JSON.parse(value)
-        } catch {
-            return parseYaml(value)
-        }
-    }
-
-    /**
-     * Normalize the public data format to the internal projection format.
-     *
-     * @param {Object} data - Parsed timeline data.
-     * @returns {Object} Controlled component state.
-     */
-    #normalizeData = data => {
-        const tracks = data?.tracks ?? data?.editorData ?? []
-        const editorData = tracks.map(track => ({
-            ...track,
-            actions: track.actions ?? track.items ?? [],
-        }))
-        const durationMillis = Number(data?.durationMillis ?? (Number(data?.durationSeconds) * 1000)) || 0
-        return {
-            projection: Object.assign({}, data, {
-                durationMillis,
-                durationSeconds: durationMillis / 1000,
-                editorData,
-            }),
-            currentTimeMillis: data?.currentTimeMillis,
-            playing: data?.playing,
-            linkedPreparation: data?.linkedPreparation !== false,
-            widgetOptions: data?.widgetOptions,
-            zoomPercent: data?.zoomPercent,
-            legendWidth: data?.legendWidth,
-        }
-    }
-
-    /**
-     * Build a serializable data snapshot containing the current track labels.
-     *
-     * @returns {Object} Current timeline data.
-     */
-    #dataSnapshot = () => ({
-        ...(this.#dataValue && typeof this.#dataValue === 'object' ? this.#dataValue : {}),
-        durationMillis: this.#durationMillis(),
-        durationSeconds: this.#durationSeconds(),
-        currentTimeMillis: this.#currentTimeMillis,
-        playing: this.#playing,
-        linkedPreparation: this.#linkedPreparation,
-        zoomPercent: this.#zoom,
-        legendWidth: this.#legendWidth,
-        tracks: this.#rows.map(row => ({
-            ...row,
-            items: row.actions ?? [],
-        })),
+    #publicSnapshot = () => ({
+        timeline: {
+            ...this.#timelineConfig,
+            durationMillis: this.#durationMillis(),
+            currentTimeMillis: this.#currentTimeMillis,
+            playing: this.#playing,
+            visible: this.#visible,
+            zoomPercent: this.#zoom,
+            legendWidth: this.#legendWidth,
+            rangeStartMillis: this.#rangeStartMillis,
+            rangeEndMillis: this.#rangeEndMillis,
+        },
+        tracks: this.#rows.map(row => this.#publicTrack(row)),
     })
-
-    /**
-     * Restore persisted track labels from local storage when enabled.
-     */
-    #restorePersistedLabels = () => {
-        const key = this.persistKey
-        if (!key || typeof localStorage === 'undefined') return
-        try {
-            const value = JSON.parse(localStorage.getItem(`lgs1920-timeline:${key}:labels`) || '{}')
-            this.#rows = this.#rows.map(row => value[row.id] === undefined ? row : {...row, label: value[row.id]})
-        } catch {
-            return
-        }
-    }
-
-    /**
-     * Persist the current track labels to local storage when enabled.
-     */
-    #persistLabels = () => {
-        const key = this.persistKey
-        if (!key || typeof localStorage === 'undefined') return
-        try {
-            const labels = Object.fromEntries(this.#rows.map(row => [row.id, resolveRowLabel(row)]))
-            localStorage.setItem(`lgs1920-timeline:${key}:labels`, JSON.stringify(labels))
-        } catch {
-            return
-        }
-    }
 
     /**
      * Start editing one track label.
@@ -571,13 +424,12 @@ export class LGS1920Timeline extends HTMLElement {
         const rowId = this.#editingRowId
         this.#editingRowId = null
         this.#editingLabelValue = ''
-        this.#persistLabels()
         this.#emit('track-label-change', {
-            rowId,
+            trackId: rowId,
             label,
             previousLabel,
-            rows: this.#rows,
-            data: this.#dataSnapshot(),
+            tracks: this.#rows.map(row => this.#publicTrack(row)),
+            data: this.#publicSnapshot(),
         })
         this.#render()
     }
@@ -609,6 +461,7 @@ export class LGS1920Timeline extends HTMLElement {
      * @returns {number} Duration in milliseconds.
      */
     #durationMillis = () => {
+        if (Number.isFinite(this.#interactionDurationMillis)) return this.#interactionDurationMillis
         const duration = this.#projection?.durationMillis ?? (Number(this.#projection?.durationSeconds) * 1000)
         return Math.max(0, Number(duration) || 0)
     }
@@ -632,7 +485,7 @@ export class LGS1920Timeline extends HTMLElement {
      * Render the empty or active component state.
      */
     #render = () => {
-        if (!this.#linkedPreparation || !this.#projection) {
+        if (!this.#visible || !this.#projection) {
             this.hidden = true
             this.#root.replaceChildren(this.#root.querySelector('style'))
             this.#surface = null
@@ -682,26 +535,31 @@ export class LGS1920Timeline extends HTMLElement {
      */
     #structure = (scaleCount, majorSeconds, scaleSplitCount) => {
         const section = createElement('section', 'lgs1920-wa-timeline', {
-            part: 'container',
+            part: 'timeline',
             'data-testid': 'lgs1920-wa-timeline',
-            'aria-label': this.getAttribute('aria-label') || 'Replay tracks',
+            'aria-label': this.getAttribute('aria-label') || 'Video timeline tracks',
         })
         section.append(createElement('slot', 'lgs1920-wa-timeline__additional-content-slot', {name: 'additional-content'}), this.#slotRegistry())
 
         const top = createElement('div', 'lgs1920-wa-timeline__top', {part: 'top'})
         const header = createElement('header', 'lgs1920-wa-timeline__header', {part: 'header'})
-        header.append(createElement('slot', '', {name: 'header'}), this.#transportControls())
+        const headerActions = createElement('span', 'lgs1920-wa-timeline__header-actions', {part: 'header-actions'})
+        headerActions.append(
+            createElement('slot', '', {name: 'timeline-actions'}),
+            createElement('slot', '', {name: 'header-actions'}),
+        )
+        header.append(createElement('slot', '', {name: 'header'}), this.#playbackControls(), headerActions)
         top.append(header)
 
-        const transport = createElement('div', 'lgs1920-wa-timeline__transport', {part: 'transport', 'aria-label': 'Replay transport'})
-        transport.append(
-            createElement('slot', '', {name: 'transport-start'}),
-            this.#slotWithFallback('transport-current', this.#timeText(this.#currentTimeMillis / 1000, 'current')),
-            this.#slotWithFallback('transport-separator', document.createTextNode(' / ')),
-            this.#slotWithFallback('transport-total', this.#timeText(this.#durationSeconds(), 'total')),
-            createElement('slot', '', {name: 'transport-end'}),
+        const playback = createElement('div', 'lgs1920-wa-timeline__playback-controls', {part: 'playback-controls', 'aria-label': 'Timeline playback controls'})
+        playback.append(
+            createElement('slot', '', {name: 'playback-start'}),
+            this.#slotWithFallback('playback-current', this.#timeText(this.#currentTimeMillis / 1000, 'current')),
+            this.#slotWithFallback('playback-separator', document.createTextNode(' / ')),
+            this.#slotWithFallback('playback-total', this.#timeText(this.#durationSeconds(), 'total')),
+            createElement('slot', '', {name: 'playback-end'}),
         )
-        top.append(transport)
+        top.append(playback)
         section.append(top)
 
         const layout = createElement('div', 'lgs1920-wa-timeline__layout', {
@@ -711,7 +569,7 @@ export class LGS1920Timeline extends HTMLElement {
         })
         layout.style.setProperty('--lgs-timeline-legend-width', `${this.#legendWidth}px`)
         layout.style.setProperty('--lgs-timeline-row-height', `${this.#rowHeight}px`)
-        layout.append(this.#legend(), this.#resizer(), this.#surfaceElement(scaleCount, majorSeconds, scaleSplitCount))
+        layout.append(this.#splitPanel(scaleCount, majorSeconds, scaleSplitCount), this.#trackDropIndicator())
         section.append(layout)
         if (this.#contextMenuState) section.append(this.#contextMenu())
         section.append(createElement('slot', '', {name: 'footer'}))
@@ -719,39 +577,84 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
-     * Create the Web Awesome transport controls.
+     * Create the Web Awesome split panel for the track legend and time surface.
+     *
+     * @param {number} scaleCount - Number of major ruler units.
+     * @param {number} majorSeconds - Seconds represented by one major unit.
+     * @param {number} scaleSplitCount - Minor ruler subdivision count.
+     * @returns {HTMLElement} Split panel element.
+     */
+    #splitPanel = (scaleCount, majorSeconds, scaleSplitCount) => {
+        const {minimum, maximum} = resolveLegendBounds(this.#timelineConfig)
+        const splitPanel = createElement('wa-split-panel', 'lgs1920-wa-timeline__split-panel', {
+            part: 'split-panel',
+            orientation: 'horizontal',
+            primary: 'start',
+            'position-in-pixels': this.#legendWidth,
+        })
+        splitPanel.style.setProperty('--min', `${minimum}px`)
+        splitPanel.style.setProperty('--max', `min(${maximum}px, calc(100% - ${minimum}px))`)
+        splitPanel.style.setProperty('--divider-width', 'var(--lgs-timeline-resizer-width)')
+        splitPanel.style.setProperty('--divider-hit-area', 'var(--lgs-timeline-resizer-hit-area)')
+        splitPanel.addEventListener('wa-reposition', event => {
+            const width = Number(event.currentTarget?.positionInPixels)
+            if (!Number.isFinite(width)) return
+            this.#legendWidth = clamp(width, minimum, maximum)
+        })
+
+        const legend = this.#legend()
+        legend.slot = 'start'
+        const surface = this.#surfaceElement(scaleCount, majorSeconds, scaleSplitCount)
+        surface.slot = 'end'
+        splitPanel.append(legend, surface)
+        return splitPanel
+    }
+
+    /**
+     * Create the horizontal track insertion indicator used during row drag.
+     *
+     * @returns {HTMLElement} Drop indicator element.
+     */
+    #trackDropIndicator = () => {
+        const indicator = createElement('div', 'lgs1920-wa-timeline__track-drop-indicator', {
+            part: 'track-drop-indicator',
+            'data-track-drop-indicator': '',
+            'aria-hidden': 'true',
+        })
+        const dropIndex = this.#dragState?.type === 'row' ? this.#dragState.dropIndex : null
+        if (Number.isFinite(dropIndex)) {
+            const headerHeight = this.#numericToken('header-height', HEADER_HEIGHT)
+            indicator.style.top = `${headerHeight + (dropIndex * this.#rowHeight)}px`
+        } else {
+            indicator.hidden = true
+        }
+        return indicator
+    }
+
+    /**
+     * Create the Web Awesome video timeline playback controls.
      *
      * @returns {HTMLElement} Button group.
      */
-    #transportControls = () => {
-        const controls = createElement('wa-button-group', '', {label: 'Replay controls', part: 'controls'})
+    #playbackControls = () => {
+        const controls = createElement('wa-button-group', '', {label: 'Timeline playback controls', part: 'controls'})
         const play = this.#button({
             iconName: this.#playing ? 'pause' : 'play',
-            label: this.#playing ? 'Pause Replay' : 'Play Replay',
+            label: this.#playing ? 'Pause timeline' : 'Play timeline',
             testId: 'timeline-play',
             iconSlot: this.#playing ? 'pause-icon' : 'play-icon',
             labelSlot: this.#playing ? 'pause-label' : 'play-label',
         })
         play.addEventListener('click', () => this.#emit(this.#playing ? 'pause' : 'play', {}))
-        const replay = this.#button({
+        const restart = this.#button({
             iconName: 'arrow-rotate-left',
-            label: 'Replay from beginning',
-            testId: 'timeline-replay',
-            iconSlot: 'replay-icon',
-            labelSlot: 'replay-label',
+            label: 'Restart timeline',
+            testId: 'timeline-restart',
+            iconSlot: 'restart-icon',
+            labelSlot: 'restart-label',
         })
-        replay.addEventListener('click', () => this.#emit('replay', {}))
-        const exportButton = this.#button({
-            iconName: 'clapperboard-play',
-            label: 'Create HQ video',
-            testId: 'timeline-export',
-            iconSlot: 'export-icon',
-            labelSlot: 'export-label',
-            variant: 'brand',
-            appearance: 'filled',
-        })
-        exportButton.addEventListener('click', () => this.#emit('export', {}))
-        controls.append(play, replay, exportButton)
+        restart.addEventListener('click', () => this.#emit('restart', {}))
+        controls.append(play, restart)
         return controls
     }
 
@@ -809,7 +712,7 @@ export class LGS1920Timeline extends HTMLElement {
 
     /**
      * Create hidden global slot sources used to clone labels and icons into
-     * repeated row and action contexts.
+     * repeated track and clip contexts.
      *
      * @returns {HTMLElement} Slot registry.
      */
@@ -862,7 +765,7 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
-     * Create a contextual slot with a per-row or per-action override and a
+     * Create a contextual slot with a per-track or per-clip override and a
      * global slot fallback.
      *
      * @param {string} prefix - Contextual slot prefix.
@@ -880,7 +783,7 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
-     * Create the track legend and its add-widget menu.
+     * Create the track legend and its clip insertion menu.
      *
      * @returns {HTMLElement} Legend element.
      */
@@ -890,14 +793,14 @@ export class LGS1920Timeline extends HTMLElement {
         ruler.append(createElement('slot', '', {name: 'timeline-toolbar'}))
         const add = this.#button({
             iconName: 'plus',
-            label: 'Add widget to timeline',
-            testId: 'add-widget',
-            iconSlot: 'add-widget-icon',
-            labelSlot: 'add-widget-label',
+            label: 'Add clip to timeline',
+            testId: 'add-clip',
+            iconSlot: 'add-clip-icon',
+            labelSlot: 'add-clip-label',
             variant: 'brand',
             appearance: 'filled',
         })
-        add.id = 'lgs1920-timeline-widget-menu-trigger'
+        add.id = 'lgs1920-timeline-clip-menu-trigger'
         add.setAttribute('aria-haspopup', 'menu')
         add.setAttribute('aria-expanded', `${this.#menuOpen}`)
         add.addEventListener('click', () => {
@@ -917,7 +820,7 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
-     * Create the anchored Web Awesome popup used by the widget menu.
+     * Create the anchored Web Awesome popup used by the clip menu.
      *
      * @returns {HTMLElement} Popup element.
      */
@@ -926,41 +829,84 @@ export class LGS1920Timeline extends HTMLElement {
             placement: 'right-start',
             distance: 4,
             active: true,
-            anchor: 'lgs1920-timeline-widget-menu-trigger',
+            anchor: 'lgs1920-timeline-clip-menu-trigger',
             part: 'popup',
         })
-        const boundary = this.#parent
-        if (boundary) {
-            popup.flipBoundary = boundary
-            popup.shiftBoundary = boundary
-            popup.autoSizeBoundary = boundary
-        }
         const menu = createElement('div', 'lgs1920-wa-timeline__menu', {role: 'menu', part: 'menu'})
-        this.#widgetOptions.forEach(option => {
+        this.#clipOptions.forEach(option => {
             const item = createElement('wa-button', 'lgs1920-wa-timeline__menu-item', {
                 appearance: 'plain',
                 size: 's',
                 role: 'menuitem',
             })
-            item.append(...this.#globalSlotContent('widget-option-icon', createIcon(option.icon ?? 'puzzle-piece')))
-            item.append(...this.#globalSlotContent('widget-option-label', document.createTextNode(option.label ?? option.key ?? 'Widget')))
+            item.append(...this.#globalSlotContent('clip-option-icon', createIcon(option.icon ?? 'film')))
+            item.append(...this.#globalSlotContent('clip-option-label', document.createTextNode(option.label ?? option.key ?? 'Clip')))
             item.addEventListener('click', () => {
-                this.#emit('add-widget', {group: option.group, key: option.key, option})
+                this.#insertClip(option)
                 this.#menuOpen = false
                 this.#render()
             })
             menu.append(item)
         })
-        if (this.#widgetOptions.length === 0) menu.append(createElement('slot', '', {name: 'empty-state'}))
+        if (this.#clipOptions.length === 0) menu.append(createElement('slot', '', {name: 'empty-state'}))
         popup.append(menu)
         return popup
     }
 
     /**
-     * Open a context menu anchored to a track or item.
+     * Insert a clip from a clip-menu option at the current playhead.
      *
-     * @param {string} type - Context type: `track` or `item`.
-     * @param {string} identifier - Track or item identifier.
+     * @param {Object} option - Clip insertion option.
+     */
+    #insertClip = option => {
+        const requestedTrackId = option?.trackId ?? this.#timelineConfig.defaultTrackId
+        const target = this.#rows.find(row => row.id === requestedTrackId)
+            ?? this.#rows.find(row => trackAcceptsClip(row, {kind: option?.kind ?? option?.key}))
+        const start = Math.max(0, Number(option?.start ?? (this.#currentTimeMillis / 1000)) || 0)
+        const duration = Math.max(0, Number(option?.duration ?? this.#timelineConfig.defaultClipDuration ?? 1) || 0)
+        const id = option?.clip?.id
+            ?? option?.id
+            ?? `${option?.key ?? 'clip'}-${Date.now()}`
+        const clip = {
+            ...(option?.clip ?? {}),
+            id,
+            kind: option?.clip?.kind ?? option?.kind ?? option?.key ?? 'clip',
+            label: option?.clip?.label ?? option?.label ?? option?.key ?? 'Clip',
+            start,
+            end: Number(option?.end) > start ? Number(option.end) : start + duration,
+        }
+        if (!target || !trackAcceptsClip(target, clip)) {
+            this.#emit('add-clip', {group: option?.group, key: option?.key, option, clip: null, trackId: null, tracks: this.tracks})
+            return
+        }
+        const result = this.#clipEditor.place({
+            baseRows: cloneRows(this.#rows),
+            clip,
+            targetTrackId: target.id,
+        })
+        if (!result) {
+            this.#emit('add-clip', {group: option?.group, key: option?.key, option, clip: null, trackId: target.id, tracks: this.tracks})
+            return
+        }
+        this.#rows = result.rows
+        this.#interactionDurationMillis = result.durationMillis
+        const entry = this.#clipEditor.findClipEntry(result.rows, id)
+        this.#emit('add-clip', {
+            group: option?.group,
+            key: option?.key,
+            option,
+            clip: entry ? Object.assign({}, entry.clip, {trackId: entry.row.id}) : null,
+            trackId: target.id,
+            durationMillis: result.durationMillis,
+            tracks: result.rows.map(row => this.#publicTrack(row)),
+        })
+    }
+
+    /**
+     * Open a context menu anchored to a track or clip.
+     *
+     * @param {string} type - Context type: `track` or `clip`.
+     * @param {string} identifier - Track or clip identifier.
      * @param {HTMLElement} anchor - Anchor element in the shadow tree.
      * @param {MouseEvent} event - Context-menu event.
      */
@@ -1003,7 +949,7 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
-     * Create the context menu for the active track or item.
+     * Create the context menu for the active track or clip.
      *
      * @returns {HTMLElement} Context popup.
      */
@@ -1016,13 +962,8 @@ export class LGS1920Timeline extends HTMLElement {
             anchor: state.anchorId,
             part: 'context-popup',
         })
-        if (this.#parent) {
-            popup.flipBoundary = this.#parent
-            popup.shiftBoundary = this.#parent
-            popup.autoSizeBoundary = this.#parent
-        }
         const menu = createElement('div', 'lgs1920-wa-timeline__context-menu', {
-            label: state.type === 'track' ? 'Track actions' : 'Item actions',
+            label: state.type === 'track' ? 'Track actions' : 'Clip actions',
             role: 'menu',
             part: 'context-menu',
         })
@@ -1039,34 +980,106 @@ export class LGS1920Timeline extends HTMLElement {
             }
             menu.append(...this.#globalSlotContent('track-context-menu', null))
         } else {
-            const action = this.#findAction(state.identifier)
-            menu.append(this.#contextMenuItem('Edit item', 'edit-item', event => {
-                this.#emit('item-label-edit-request', {action, event})
+            const clip = this.#findClip(state.identifier)
+            menu.append(this.#contextMenuItem('Edit clip', 'edit-clip', event => {
+                this.#emit('clip-label-edit-request', {clip, event})
                 this.#closeContextMenu()
             }))
-            menu.append(this.#contextMenuItem(action?.visible === false ? 'Show item' : 'Hide item', 'toggle-item-visibility', event => {
-                this.#toggleItemVisibility(action, event)
+            menu.append(this.#contextMenuItem(clip?.visible === false ? 'Show clip' : 'Hide clip', 'toggle-clip-visibility', event => {
+                this.#toggleClipVisibility(clip, event)
             }))
-            menu.append(...this.#globalSlotContent('item-context-menu', null))
+            menu.append(...this.#globalSlotContent('clip-context-menu', null))
         }
         popup.append(menu)
         return popup
     }
 
     /**
-     * Find an action by identifier in the current rows.
+     * Find a clip by identifier in the current tracks.
      *
-     * @param {string} identifier - Action identifier.
-     * @returns {Object|null} Matching action and its row context.
+     * @param {string} identifier - Clip identifier.
+     * @returns {Object|null} Matching clip and its track context.
      */
-    #findAction = identifier => {
+    #findClip = identifier => {
         for (const row of this.#rows) {
-            const action = (row.actions ?? []).find(value => value.id === identifier)
-            if (action) return Object.assign({}, action, {rowId: row.id})
+            const clip = (row.actions ?? []).find(value => value.id === identifier)
+            if (clip) return Object.assign({}, clip, {trackId: row.id})
         }
         return null
     }
 
+    /**
+     * Convert a surface client coordinate to timeline seconds.
+     *
+     * @param {number} clientX - Pointer client coordinate.
+     * @returns {number} Timeline seconds.
+     */
+    #timeAtClientX = clientX => {
+        const rect = this.#surface?.getBoundingClientRect()
+        if (!rect) return 0
+        const {majorSeconds} = resolveScale(this.#zoom)
+        const scaleWidth = this.#numericToken('scale-width', SCALE_WIDTH)
+        const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
+        const x = Math.max(scaleOffset, clientX - rect.left + (this.#surface?.scrollLeft ?? 0))
+        return ((x - scaleOffset) / Math.max(Number.EPSILON, scaleWidth)) * majorSeconds
+    }
+
+    /**
+     * Resolve the track below a surface client coordinate.
+     *
+     * @param {number} clientY - Pointer client coordinate.
+     * @returns {Object|null} Track under the pointer.
+     */
+    #trackAtClientY = clientY => {
+        const rect = this.#surface?.getBoundingClientRect()
+        if (!rect) return null
+        const headerHeight = this.#numericToken('header-height', HEADER_HEIGHT)
+        const relativeY = clientY - rect.top + (this.#surface?.scrollTop ?? 0) - headerHeight
+        if (relativeY < 0) return null
+        const index = Math.floor(relativeY / Math.max(MIN_ROW_HEIGHT, this.#rowHeight))
+        return this.#rows[index] ?? null
+    }
+
+    /**
+     * Start a pointer interaction for moving or resizing a clip.
+     *
+     * @param {PointerEvent} event - Pointer event.
+     * @param {string} clipId - Clip identifier.
+     * @param {'move'|'resize'} mode - Interaction mode.
+     * @param {'start'|'end'|null} edge - Resized edge.
+     */
+    #startClipInteraction = (event, clipId, mode, edge = null) => {
+        if (event.button !== 0 || this.#timelineConfig.editable === false) return
+        const entry = this.#clipEditor.findClipEntry(this.#rows, clipId)
+        if (!entry) return
+        if (mode === 'move' && (entry.clip.movable === false || entry.clip.fixed === true)) return
+        if (mode === 'resize' && (entry.clip.resizable === false || entry.clip.fixed === true)) return
+        event.preventDefault()
+        event.stopPropagation()
+        const interval = resolveClipInterval(entry.clip)
+        this.#interactionDurationMillis = null
+        this.#dragState = {
+            type: 'clip',
+            mode,
+            edge,
+            clipId,
+            sourceTrackId: entry.row.id,
+            targetTrackId: entry.row.id,
+            startX: event.clientX,
+            startY: event.clientY,
+            pointerId: event.pointerId,
+            startTime: this.#timeAtClientX(event.clientX),
+            originalStart: interval.start,
+            originalEnd: interval.end,
+            baseRows: cloneRows(this.#rows),
+            lastResult: null,
+        }
+        this.#addPointerListeners()
+        this.#emit('clip-change-start', this.#clipEditor.changeDetail(this.#dragState, {
+            rows: this.#dragState.baseRows,
+            durationMillis: Number(this.#projection?.durationMillis) || 0,
+        }, event))
+    }
     /**
      * Toggle a track visibility state and emit its controlled change event.
      *
@@ -1079,213 +1092,111 @@ export class LGS1920Timeline extends HTMLElement {
         const visible = row.visible === false
         this.#rows = this.#rows.map(value => value.id === row.id ? {...value, visible} : value)
         this.#contextMenuState = null
-        this.#emit('visibility-change', {rowId: row.id, visible, row: Object.assign({}, row, {visible}), event, data: this.#dataSnapshot()})
+        this.#emit('track-visibility-change', {trackId: row.id, visible, track: this.#publicTrack(Object.assign({}, row, {visible})), event, data: this.#publicSnapshot()})
         this.#render()
     }
 
     /**
-     * Toggle an action visibility state and emit its controlled change event.
+     * Toggle a clip visibility state and emit its controlled change event.
      *
-     * @param {Object|null} action - Action to toggle.
+     * @param {Object|null} clip - Clip to toggle.
      * @param {Event} event - Triggering event.
      */
-    #toggleItemVisibility = (action, event) => {
-        if (!action) return
-        const visible = action.visible === false
-        this.#rows = this.#rows.map(row => row.id !== action.rowId
+    #toggleClipVisibility = (clip, event) => {
+        if (!clip) return
+        const visible = clip.visible === false
+        this.#rows = this.#rows.map(row => row.id !== clip.trackId
             ? row
-            : {...row, actions: (row.actions ?? []).map(value => value.id === action.id ? {...value, visible} : value)})
+            : {...row, actions: (row.actions ?? []).map(value => value.id === clip.id ? {...value, visible} : value)})
         this.#contextMenuState = null
-        this.#emit('item-visibility-change', {rowId: action.rowId, itemId: action.id, visible, action: Object.assign({}, action, {visible}), event, data: this.#dataSnapshot()})
+        this.#emit('clip-visibility-change', {trackId: clip.trackId, clipId: clip.id, visible, clip: Object.assign({}, clip, {visible}), event, data: this.#publicSnapshot()})
+        this.#render()
+    }
+
+    #legendRow = row => {
+        return this.#renderer.legendRow(row)
+    }
+
+    #surfaceElement = (scaleCount, majorSeconds, scaleSplitCount) => {
+        return this.#renderer.surfaceElement(scaleCount, majorSeconds, scaleSplitCount)
+    }
+
+    /**
+     * Start dragging a video range boundary.
+     *
+     * @param {PointerEvent} event - Pointer event.
+     * @param {'start'|'end'} edge - Range boundary.
+     */
+    #startRangeInteraction = (event, edge) => {
+        if (event.button !== 0 || this.#timelineConfig.editable === false) return
+        event.preventDefault()
+        event.stopPropagation()
+        this.#dragState = {
+            type: 'range',
+            edge,
+            startX: event.clientX,
+            pointerId: event.pointerId,
+            initialStartMillis: this.#rangeStartMillis,
+            initialEndMillis: this.#rangeEndMillis,
+        }
+        this.#rangeEndFollowsDuration = false
+        this.#addPointerListeners()
+        this.#emit('range-change-start', this.#rangeChangeDetail(event))
+    }
+
+    /**
+     * Preview a video range boundary movement.
+     *
+     * @param {PointerEvent} event - Pointer event.
+     */
+    #previewRangeInteraction = event => {
+        const state = this.#dragState
+        if (state?.type !== 'range') return
+        const nextMillis = clamp(this.#timeAtClientX(event.clientX) * 1000, 0, this.#durationMillis())
+        if (state.edge === 'start') {
+            this.#rangeStartMillis = Math.min(nextMillis, this.#rangeEndMillis)
+        } else {
+            this.#rangeEndMillis = Math.max(nextMillis, this.#rangeStartMillis)
+        }
+        this.#emit('range-changing', this.#rangeChangeDetail(event))
+        this.#updateDynamicState()
+    }
+
+    /**
+     * Move a video range boundary with the keyboard.
+     *
+     * @param {'start'|'end'} edge - Range boundary.
+     * @param {KeyboardEvent} event - Keyboard event.
+     */
+    #moveRangeByKeyboard = (edge, event) => {
+        if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return
+        event.preventDefault()
+        const step = Number(this.#timelineConfig.keyboardStepSeconds) > 0
+            ? Number(this.#timelineConfig.keyboardStepSeconds) * 1000
+            : 100
+        const delta = (event.key === 'ArrowRight' ? 1 : -1) * step * (event.shiftKey ? 10 : 1)
+        this.#rangeEndFollowsDuration = false
+        if (edge === 'start') {
+            this.#rangeStartMillis = clamp(this.#rangeStartMillis + delta, 0, this.#rangeEndMillis)
+        } else {
+            this.#rangeEndMillis = clamp(this.#rangeEndMillis + delta, this.#rangeStartMillis, this.#durationMillis())
+        }
+        this.#emit('range-change', this.#rangeChangeDetail(event))
         this.#render()
     }
 
     /**
-     * Create one track legend row.
+     * Build a public detail payload for a video range edit.
      *
-     * @param {Object} row - Timeline row.
-     * @returns {HTMLElement} Legend row.
+     * @param {Event} event - Triggering event.
+     * @returns {Object} Range event detail.
      */
-    #legendRow = row => {
-        const movable = row.movable !== false && row.fixed !== true
-        const label = resolveRowLabel(row)
-        const element = createElement('div', `lgs1920-wa-timeline__legend-row ${resolveColorClasses(row.colorClasses)}${movable ? ' lgs1920-wa-timeline__legend-row--movable' : ''}${this.#dragState?.rowId === row.id ? ' lgs1920-wa-timeline__legend-row--dragging' : ''}`, {
-            part: 'legend-row',
-            id: `lgs1920-timeline-track-${slotKey(row.id)}`,
-            'data-row-id': row.id,
-            'aria-label': label,
-        })
-        element.style.height = 'var(--lgs-timeline-row-height)'
-        element.addEventListener('contextmenu', event => this.#openContextMenu('track', row.id, element, event))
-        const iconFrame = createElement('span', `lgs1920-wa-timeline__icon-frame ${resolveColorClasses(row.colorClasses)}`, {part: 'legend-icon'})
-        iconFrame.append(this.#contextualSlot('track-icon', row.id, ['track-icon'], createIcon(row.icon ?? (row.id === 'replay' ? 'route' : 'puzzle-piece'))))
-        const labelPrefix = this.#hasContextualSlot('name', row.id) ? 'name' : 'track-label'
-        const labelElement = this.#editingRowId === row.id
-            ? createElement('wa-input', 'lgs1920-wa-timeline__label-editor', {
-                size: 's',
-                value: this.#editingLabelValue,
-                label: `Edit ${label}`,
-                'data-edit-row-id': row.id,
-            })
-            : this.#contextualSlot(labelPrefix, row.id, ['name', 'track-name', 'track-label'], document.createTextNode(label))
-        if (this.#editingRowId === row.id) {
-            labelElement.addEventListener('input', event => {
-                this.#editingLabelValue = event.target.value ?? ''
-            })
-            labelElement.addEventListener('change', () => this.#commitTrackLabelEdit())
-            labelElement.addEventListener('blur', () => this.#commitTrackLabelEdit())
-            labelElement.addEventListener('keydown', event => {
-                if (event.key === 'Enter') this.#commitTrackLabelEdit()
-                if (event.key === 'Escape') this.#cancelTrackLabelEdit()
-            })
-        } else if (row.editable !== false) {
-            labelElement.addEventListener('dblclick', event => {
-                event.preventDefault()
-                event.stopPropagation()
-                this.#beginTrackLabelEdit(row)
-            })
-        }
-        const trackContent = createElement('span', 'lgs1920-wa-timeline__track-content', {part: 'legend-content'})
-        trackContent.append(iconFrame, labelElement)
-        const actions = createElement('span', 'lgs1920-wa-timeline__track-actions', {part: 'track-actions'})
-        actions.addEventListener('pointerdown', event => event.stopPropagation())
-        actions.append(this.#contextualSlot('drag-trigger', row.id, ['drag-trigger', 'track-drag-icon'], createIcon(movable ? 'grip-dots-vertical' : 'thumbtack', 'solid')))
-        if (row.canHide) {
-            const visibility = this.#button({
-                iconName: row.visible === false ? 'eye' : 'eye-slash',
-                label: row.visible === false ? `Show ${label}` : `Hide ${label}`,
-                testId: 'visibility',
-                iconSlotElement: this.#contextualSlot('visibility', row.id, ['visibility', 'track-visibility-icon'], createIcon(row.visible === false ? 'eye' : 'eye-slash', 'solid')),
-            })
-            visibility.addEventListener('click', event => {
-                event.stopPropagation()
-                this.#toggleTrackVisibility(row, event)
-            })
-            actions.append(visibility)
-        }
-        const actionsPrefix = this.#hasContextualSlot('actions', row.id) ? 'actions' : 'track-actions'
-        actions.append(this.#contextualSlot(actionsPrefix, row.id, ['actions', 'track-actions'], null))
-        element.append(trackContent, actions)
-        if (movable) element.addEventListener('pointerdown', event => this.#startRowDrag(event, row.id))
-        return element
-    }
-
-    /**
-     * Create the ruler, tracks, playhead, and end marker surface.
-     *
-     * @param {number} scaleCount - Number of major ruler units.
-     * @param {number} majorSeconds - Seconds represented by one major unit.
-     * @param {number} scaleSplitCount - Minor ruler subdivision count.
-     * @returns {HTMLElement} Timeline surface.
-     */
-    #surfaceElement = (scaleCount, majorSeconds, scaleSplitCount) => {
-        const scaleWidth = this.#numericToken('scale-width', SCALE_WIDTH)
-        const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
-        const surface = createElement('div', 'lgs1920-wa-timeline__surface', {
-            part: 'surface',
-            'data-surface': '',
-            tabindex: 0,
-            role: 'group',
-            'aria-label': 'Timeline time scale and scrubbing',
-            'data-zoom-percent': this.#zoom,
-        })
-        const canvas = createElement('div', 'lgs1920-wa-timeline__canvas', {part: 'canvas'})
-        canvas.style.width = `${this.#contentWidth}px`
-        const ruler = createElement('div', 'lgs1920-wa-timeline__ruler', {part: 'ruler'})
-        ruler.style.width = `${this.#contentWidth}px`
-        for (let index = 0; index <= scaleCount; index += 1) {
-            const tick = createElement('span', `lgs1920-wa-timeline__tick${index === 0 ? ' lgs1920-wa-timeline__tick--origin' : ''}`, {part: 'tick'})
-            tick.style.left = `${scaleOffset + (index * scaleWidth)}px`
-            const tickLabel = this.#contextualSlot('scale-label', index, 'scale-label', document.createTextNode(formatScale(index * majorSeconds)))
-            tick.append(tickLabel)
-            for (let split = 1; split < scaleSplitCount; split += 1) {
-                const minor = createElement('span', 'lgs1920-wa-timeline__minor-tick', {part: 'minor-tick'})
-                minor.style.left = `${scaleOffset + ((index + (split / scaleSplitCount)) * scaleWidth)}px`
-                ruler.append(minor)
-            }
-            ruler.append(tick)
-        }
-        ruler.append(createElement('slot', '', {name: 'timeline-ruler'}))
-        const tracks = createElement('div', 'lgs1920-wa-timeline__tracks', {part: 'tracks'})
-        tracks.style.width = `${this.#contentWidth}px`
-        this.#rows.forEach(row => {
-            const track = createElement('div', `lgs1920-wa-timeline__track${row.visible === false ? ' lgs1920-wa-timeline__track--hidden' : ''}`, {part: 'track', 'data-row-id': row.id})
-            track.style.height = 'var(--lgs-timeline-row-height)'
-            for (const action of row.actions ?? []) track.append(this.#action(action, majorSeconds))
-            tracks.append(track)
-        })
-        canvas.append(ruler, tracks, createElement('div', 'lgs1920-wa-timeline__playhead', {part: 'playhead', 'data-playhead': ''}), createElement('div', 'lgs1920-wa-timeline__end-marker', {part: 'end-marker', 'data-end-marker': ''}))
-        surface.append(canvas)
-        surface.addEventListener('scroll', () => this.#updateLegendScroll())
-        surface.addEventListener('click', event => {
-            if (!event.target.closest('.lgs1920-wa-timeline__action')) this.#seek(event.clientX, true)
-        })
-        surface.addEventListener('wheel', event => this.#handleWheel(event))
-        surface.addEventListener('keydown', event => this.#handleKeyDown(event))
-        surface.addEventListener('pointerdown', event => {
-            if (event.button !== 0 || event.target.closest('.lgs1920-wa-timeline__action')) return
-            this.#scrubPointerId = event.pointerId
-            this.#addPointerListeners()
-            this.#seek(event.clientX, false)
-        })
-        return surface
-    }
-
-    /**
-     * Create one visual timeline action.
-     *
-     * @param {Object} value - Timeline action.
-     * @param {number} majorSeconds - Seconds represented by one ruler unit.
-     * @returns {HTMLElement} Action element.
-     */
-    #action = (value, majorSeconds) => {
-        const scaleWidth = this.#numericToken('scale-width', SCALE_WIDTH)
-        const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
-        const start = Math.max(0, Number(value.start) || 0)
-        const end = Math.max(start, Number(value.end) || start)
-        const action = createElement('div', `lgs1920-wa-timeline__action ${resolveColorClasses(value.colorClasses)}${value.visible === false ? ' lgs1920-wa-timeline__action--hidden' : ''}`, {
-            part: 'action',
-            id: `lgs1920-timeline-item-${slotKey(value.id)}`,
-            'data-action-id': value.id,
-            'data-action-kind': value.kind,
-            'aria-label': resolveActionLabel(value),
-        })
-        action.style.left = `${scaleOffset + ((start / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
-        action.style.width = `${Math.max(this.#numericToken('action-min-width', 8), ((end - start) / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
-        const preview = createElement('span', 'lgs1920-wa-timeline__action-preview', {part: 'action-preview'})
-        preview.append(this.#contextualSlot('action-icon', value.id, 'action-icon', createIcon(resolveActionIcon(value), 'solid')))
-        preview.append(this.#contextualSlot('action-label', value.id, 'action-label', document.createTextNode(resolveActionLabel(value))))
-        action.append(this.#contextualSlot('action-content', value.id, ['action-content'], preview))
-        action.addEventListener('contextmenu', event => this.#openContextMenu('item', value.id, action, event))
-        action.addEventListener('dblclick', event => this.#emit('action-dblclick', {action: value, event}))
-        return action
-    }
-
-    /**
-     * Create the draggable legend width separator.
-     *
-     * @returns {HTMLElement} Resize separator.
-     */
-    #resizer = () => {
-        const resizer = createElement('div', 'lgs1920-wa-timeline__resizer', {
-            part: 'resizer',
-            role: 'separator',
-            'aria-label': 'Resize track title area',
-            'aria-orientation': 'vertical',
-            'aria-valuemin': MIN_LEGEND_WIDTH,
-            'aria-valuemax': MAX_LEGEND_WIDTH,
-            'aria-valuenow': this.#legendWidth,
-            tabindex: 0,
-        })
-        resizer.addEventListener('pointerdown', event => {
-            if (event.button !== 0) return
-            event.preventDefault()
-            event.stopPropagation()
-            this.#dragState = {type: 'resize', startX: event.clientX, startWidth: this.#legendWidth}
-            this.#addPointerListeners()
-        })
-        return resizer
-    }
+    #rangeChangeDetail = event => ({
+        rangeStartMillis: this.#rangeStartMillis,
+        rangeEndMillis: this.#rangeEndMillis,
+        durationMillis: this.#durationMillis(),
+        event,
+    })
 
     /**
      * Seek from a client X coordinate using the package-compatible ruler math.
@@ -1316,7 +1227,13 @@ export class LGS1920Timeline extends HTMLElement {
     #startRowDrag = (event, rowId) => {
         if (event.button !== 0 || event.target.closest('wa-button')) return
         event.preventDefault()
-        this.#dragState = {type: 'row', rowId}
+        this.#dragState = {
+            type: 'row',
+            rowId,
+            pointerId: event.pointerId,
+            dropIndex: this.#rows.findIndex(row => row.id === rowId),
+            baseRows: cloneRows(this.#rows),
+        }
         this.#addPointerListeners()
         this.#render()
     }
@@ -1354,21 +1271,34 @@ export class LGS1920Timeline extends HTMLElement {
             this.#seek(event.clientX, false)
             return
         }
-        if (this.#dragState?.type === 'resize') {
+        if (this.#dragState?.type === 'clip') {
+            if (event.pointerId !== this.#dragState.pointerId) return
             event.preventDefault()
-            this.#legendWidth = clamp((this.#dragState.startWidth ?? this.#legendWidth) + event.clientX - (this.#dragState.startX ?? event.clientX), MIN_LEGEND_WIDTH, MAX_LEGEND_WIDTH)
-            this.#render()
+            this.#clipEditor.preview(this.#dragState, event)
+            return
+        }
+        if (this.#dragState?.type === 'range') {
+            if (event.pointerId !== this.#dragState.pointerId) return
+            event.preventDefault()
+            this.#previewRangeInteraction(event)
             return
         }
         if (this.#dragState?.type === 'row') {
+            if (event.pointerId !== this.#dragState.pointerId) return
             event.preventDefault()
             this.#handleRowAutoScroll(event.clientX)
             const viewport = this.#root.querySelector('.lgs1920-wa-timeline__legend-viewport')
             const rect = viewport?.getBoundingClientRect()
             if (!rect) return
-            const targetIndex = clamp(Math.floor((event.clientY - rect.top) / Math.max(MIN_ROW_HEIGHT, this.#rowHeight)), 0, this.#rows.length - 1)
+            const rowHeight = Math.max(MIN_ROW_HEIGHT, this.#rowHeight)
+            const dropIndex = clamp(Math.floor((event.clientY - rect.top + (rowHeight / 2)) / rowHeight), 0, this.#rows.length)
+            this.#dragState.dropIndex = dropIndex
             const currentIndex = this.#rows.findIndex(row => row.id === this.#dragState?.rowId)
-            if (currentIndex < 0 || currentIndex === targetIndex) return
+            const targetIndex = clamp(dropIndex > currentIndex ? dropIndex - 1 : dropIndex, 0, Math.max(0, this.#rows.length - 1))
+            if (currentIndex < 0 || currentIndex === targetIndex) {
+                this.#render()
+                return
+            }
             const rows = [...this.#rows]
             const [row] = rows.splice(currentIndex, 1)
             rows.splice(targetIndex, 0, row)
@@ -1385,14 +1315,31 @@ export class LGS1920Timeline extends HTMLElement {
      */
     #pointerUp = event => {
         if (this.#scrubPointerId !== null) this.#seek(event.clientX, true)
-        if (this.#dragState?.type === 'row') {
+        const state = this.#dragState
+        if (state?.type === 'range' && event.type === 'pointercancel') {
+            this.#rangeStartMillis = state.initialStartMillis
+            this.#rangeEndMillis = state.initialEndMillis
+        }
+        if (state?.type === 'range' && event.type === 'pointerup') {
+            this.#emit('range-change', this.#rangeChangeDetail(event))
+        }
+        if (state?.type === 'clip' && state.lastResult) {
+            if (event.type === 'pointerup') this.#emit('clip-change', this.#clipEditor.changeDetail(state, state.lastResult, event))
+            else {
+                this.#rows = state.baseRows
+                this.#interactionDurationMillis = null
+            }
+        }
+        if (state?.type === 'row' && event.type === 'pointercancel') this.#rows = state.baseRows
+        if (state?.type === 'row' && event.type === 'pointerup') {
             this.#emit('reorder', {
-                rowIds: this.#rows.filter(row => !row.fixed && row.movable !== false).map(row => row.id),
-                rows: this.#rows,
+                trackIds: this.#rows.filter(row => !row.fixed && row.movable !== false).map(row => row.id),
+                tracks: this.#rows.map(row => this.#publicTrack(row)),
+                dropIndex: state.dropIndex,
             })
-            this.#render()
         }
         this.#removePointerListeners()
+        if (state?.type === 'row' || state?.type === 'clip' || state?.type === 'range') this.#render()
     }
 
     /**
@@ -1488,7 +1435,7 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
-     * Update transport labels and controlled cursor geometry.
+     * Update playback labels and controlled cursor geometry.
      */
     #updateDynamicState = () => {
         const current = this.#root.querySelector('[data-current-time]')
@@ -1503,20 +1450,29 @@ export class LGS1920Timeline extends HTMLElement {
         const position = scaleOffset + ((ratio * this.#durationSeconds()) / majorSeconds * scaleWidth)
         const playhead = this.#root.querySelector('[data-playhead]')
         const end = this.#root.querySelector('[data-end-marker]')
+        const rangeStart = this.#root.querySelector('[data-range-handle="start"]')
+        const rangeEnd = this.#root.querySelector('[data-range-handle="end"]')
         if (playhead) playhead.style.left = `${position}px`
         if (end) end.style.left = `${scaleOffset + ((this.#durationSeconds() / majorSeconds) * scaleWidth)}px`
+        if (rangeStart) {
+            rangeStart.style.left = `${scaleOffset + ((this.#rangeStartMillis / 1000) / majorSeconds * scaleWidth)}px`
+            rangeStart.setAttribute('aria-valuenow', `${this.#rangeStartMillis}`)
+        }
+        if (rangeEnd) {
+            rangeEnd.style.left = `${scaleOffset + ((this.#rangeEndMillis / 1000) / majorSeconds * scaleWidth)}px`
+            rangeEnd.setAttribute('aria-valuenow', `${this.#rangeEndMillis}`)
+            rangeEnd.setAttribute('aria-valuemax', `${this.#durationMillis()}`)
+        }
     }
 
     /**
-     * Emit both the current component event and the previous compatibility
-     * event prefix so consumers can migrate without changing the React path.
+     * Emit the canonical component event.
      *
      * @param {string} name - Event suffix.
      * @param {Object} detail - Event detail payload.
      */
     #emit = (name, detail) => {
         this.dispatchEvent(createEvent(`lgs1920-timeline-${name}`, detail))
-        this.dispatchEvent(createEvent(`lgs1920-wa-timeline-${name}`, detail))
     }
 }
 

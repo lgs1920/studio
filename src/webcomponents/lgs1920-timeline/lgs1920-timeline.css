@@ -46,6 +46,8 @@
     --lgs-timeline-legend-max-width: 300px;
     /* Timeline legend resizer width. */
     --lgs-timeline-resizer-width: 6px;
+    /* Timeline legend resizer hit area. */
+    --lgs-timeline-resizer-hit-area: 12px;
     /* Timeline row height. */
     --lgs-timeline-row-height: 24px;
     /* Timeline ruler pixel width per major unit. */
@@ -58,10 +60,28 @@
     --lgs-timeline-playhead-width: 2px;
     /* Timeline end marker color. */
     --lgs-timeline-end-marker-color: var(--wa-color-border-normal);
-    /* Timeline action horizontal padding. */
-    --lgs-timeline-action-padding: var(--lgs-gutter-xs, 0.5rem);
-    /* Timeline action minimum visual width. */
-    --lgs-timeline-action-min-width: 8px;
+    /* Timeline video range handle width. */
+    --lgs-timeline-range-handle-width: 10px;
+    /* Timeline video range handle color. */
+    --lgs-timeline-range-handle-color: var(--wa-color-brand);
+    /* Timeline video range handle focus ring. */
+    --lgs-timeline-range-handle-focus-ring: 2px solid var(--wa-color-focus, var(--wa-color-brand));
+    /* Timeline clip horizontal padding. */
+    --lgs-timeline-clip-padding: var(--lgs-gutter-xs, 0.5rem);
+    /* Timeline clip minimum visual width. */
+    --lgs-timeline-clip-min-width: 8px;
+    /* Timeline clip edge handle width. */
+    --lgs-timeline-clip-handle-width: 8px;
+    /* Timeline clip edge handle color. */
+    --lgs-timeline-clip-handle-color: color-mix(in srgb, var(--wa-color-brand) 70%, transparent);
+    /* Timeline clip edge handle hover color. */
+    --lgs-timeline-clip-handle-hover-color: var(--wa-color-brand);
+    /* Timeline clip edge handle focus ring. */
+    --lgs-timeline-clip-handle-focus-ring: 2px solid var(--wa-color-focus, var(--wa-color-brand));
+    /* Timeline track drop indicator color. */
+    --lgs-timeline-track-drop-indicator-color: var(--wa-color-brand);
+    /* Timeline track drop indicator width. */
+    --lgs-timeline-track-drop-indicator-width: 1px;
     /* Timeline popup background. */
     --lgs-timeline-popup-background: var(--wa-color-surface-raised);
     /* Timeline popup border color. */
@@ -89,7 +109,7 @@
         box-shadow: var(--lgs-timeline-shadow);
         backdrop-filter: blur(14px);
 
-        &__container-slot {
+        &__additional-content-slot {
             flex: 0 0 auto;
         }
 
@@ -113,7 +133,14 @@
             margin-bottom: var(--lgs-timeline-gap);
         }
 
-        &__transport {
+        &__header-actions {
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: var(--lgs-timeline-gap);
+        }
+
+        &__playback-controls {
             display: flex;
             align-items: center;
             justify-content: flex-end;
@@ -126,9 +153,9 @@
         }
 
         &__layout {
-            display: grid;
+            position: relative;
+            display: flex;
             flex: 1 1 auto;
-            grid-template-columns: var(--lgs-timeline-legend-width) var(--lgs-timeline-resizer-width) minmax(0, 1fr);
             min-height: var(--lgs-timeline-min-height);
             max-width: 100%;
             margin-top: auto;
@@ -141,9 +168,40 @@
             }
         }
 
+        &__split-panel {
+            flex: 1 1 auto;
+            min-width: 0;
+            min-height: var(--lgs-timeline-min-height);
+
+            &::part(divider) {
+                background: var(--lgs-timeline-quiet-border-color);
+            }
+
+            &:hover::part(divider),
+            &:focus-within::part(divider) {
+                background: var(--wa-color-brand-fill-loud, var(--wa-color-brand));
+            }
+        }
+
+        &__track-drop-indicator {
+            position: absolute;
+            z-index: 8;
+            top: 0;
+            right: 0;
+            left: 0;
+            height: var(--lgs-timeline-track-drop-indicator-width);
+            pointer-events: none;
+            background: var(--lgs-timeline-track-drop-indicator-color);
+            box-shadow: 0 0 0.25rem color-mix(in srgb, var(--lgs-timeline-track-drop-indicator-color) 60%, transparent);
+
+            &[hidden] {
+                display: none;
+            }
+        }
+
         &__legend {
-            width: var(--lgs-timeline-legend-width);
-            min-width: var(--lgs-timeline-legend-width);
+            width: 100%;
+            min-width: 0;
             height: 100%;
             overflow: hidden;
             color: var(--lgs-timeline-quiet-text-color);
@@ -193,6 +251,12 @@
                     border-color: var(--wa-color-brand-border-loud, var(--wa-color-brand-border));
                     box-shadow: var(--wa-shadow-s);
                 }
+
+                &--clip-drop-target {
+                    background: color-mix(in srgb, var(--lgs-timeline-track-drop-indicator-color) 12%, var(--lgs-timeline-surface-color));
+                    outline: 1px solid var(--lgs-timeline-track-drop-indicator-color);
+                    outline-offset: -1px;
+                }
             }
         }
 
@@ -226,22 +290,6 @@
         &__label-editor {
             min-width: 5rem;
             max-width: 12rem;
-        }
-
-        &__resizer {
-            box-sizing: border-box;
-            width: var(--lgs-timeline-resizer-width);
-            min-width: var(--lgs-timeline-resizer-width);
-            height: 100%;
-            cursor: col-resize;
-            background: var(--lgs-timeline-quiet-border-color);
-            border-inline: 1px solid var(--lgs-timeline-border-color);
-
-            &:hover,
-            &:focus-visible {
-                background: var(--wa-color-brand-fill-loud, var(--wa-color-brand));
-                outline: none;
-            }
         }
 
         &__surface {
@@ -332,6 +380,11 @@
             &--hidden {
                 opacity: 0.75;
             }
+
+            &--dragging {
+                outline: 1px solid var(--lgs-timeline-track-drop-indicator-color);
+                outline-offset: -1px;
+            }
         }
 
         &__playhead,
@@ -355,15 +408,47 @@
             opacity: 0.7;
         }
 
-        &__action {
+        &__range-handle {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            z-index: 5;
+            width: var(--lgs-timeline-range-handle-width);
+            transform: translateX(calc(var(--lgs-timeline-range-handle-width) / -2));
+            cursor: ew-resize;
+
+            &::before {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                left: 50%;
+                width: 2px;
+                content: '';
+                background: var(--lgs-timeline-range-handle-color);
+                box-shadow: 0 0 0.35rem color-mix(in srgb, var(--lgs-timeline-range-handle-color) 70%, transparent);
+                transform: translateX(-50%);
+            }
+
+            &:hover::before,
+            &:focus-visible::before {
+                width: 3px;
+            }
+
+            &:focus-visible {
+                outline: var(--lgs-timeline-range-handle-focus-ring);
+                outline-offset: -1px;
+            }
+        }
+
+        &__clip {
             position: absolute;
             top: 0;
             display: flex;
             align-items: center;
             box-sizing: border-box;
-            min-width: var(--lgs-timeline-action-min-width);
+            min-width: var(--lgs-timeline-clip-min-width);
             height: 100%;
-            padding-inline: var(--lgs-timeline-action-padding);
+            padding-inline: var(--lgs-timeline-clip-padding);
             overflow: hidden;
             color: var(--wa-color-on-loud, var(--wa-color-neutral-on-loud));
             background: var(--wa-color-fill-loud, var(--wa-color-neutral-fill-loud));
@@ -371,6 +456,25 @@
             border-radius: var(--wa-border-radius-s);
             font-weight: 600;
             white-space: nowrap;
+
+            &--movable {
+                cursor: grab;
+
+                &:active {
+                    cursor: grabbing;
+                }
+            }
+
+            &--dragging {
+                opacity: 0.75;
+                box-shadow: 0 0 0.35rem color-mix(in srgb, var(--lgs-timeline-clip-handle-hover-color) 65%, transparent);
+            }
+
+            &--clip-drop-target {
+                outline: 1px solid var(--lgs-timeline-track-drop-indicator-color);
+                outline-offset: -1px;
+                background-color: color-mix(in srgb, var(--lgs-timeline-track-drop-indicator-color) 12%, var(--lgs-timeline-surface-color));
+            }
 
             &--hidden {
                 background-color: var(--wa-color-fill-normal, var(--wa-color-neutral-fill-normal)) !important;
@@ -392,6 +496,43 @@
                     min-width: 0;
                     overflow: hidden;
                     text-overflow: ellipsis;
+                }
+            }
+
+            &-handle {
+                position: absolute;
+                z-index: 2;
+                top: 0;
+                bottom: 0;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: var(--lgs-timeline-clip-handle-width);
+                color: var(--lgs-timeline-clip-handle-color);
+                cursor: ew-resize;
+
+                &:hover {
+                    color: var(--lgs-timeline-clip-handle-hover-color);
+                }
+
+                &:focus-visible {
+                    outline: var(--lgs-timeline-clip-handle-focus-ring);
+                    outline-offset: -1px;
+                }
+
+                &--start {
+                    left: 0;
+                }
+
+                &--end {
+                    right: 0;
+                }
+
+                > slot {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100%;
                 }
             }
         }
