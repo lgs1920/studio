@@ -1340,3 +1340,15 @@
 
 - # Conflicts:
 - #	COMMIT_HISTORY.md
+
+## 2026-08-31 — [`feat(replay): extend timeline web component`](https://github.com/lgs1920/studio/commit/b9cc4a791a43c66a6152cf5054b2825b66bdb08f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`docs(replay): document timeline web component`](https://github.com/lgs1920/studio/commit/a304c04f29bf241cd32c67edfe48cf942a77104f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`Merge remote-tracking branch 'origin/add-timeline' into add-timeline`](https://github.com/lgs1920/studio/commit/965b350184030730896825dd6895454c30bb7157)
+
+- Recorded automatically from Git history.
