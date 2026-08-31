@@ -42,6 +42,14 @@ This is the canonical source for the project's AI-agent and development rules.
 - **Shortcuts:** Any introduced UI shortcut must be added to the dedicated shortcuts documentation.
 - **Testing:** Every feature or fix must be accompanied by relevant tests.
 
+### Source file headers
+
+- Source-code file headers must follow the shared WebStorm `Studio LGS1920` copyright profile stored in `.idea/copyright/`.
+- The header must use `studio@lgs1920.fr` as the project email address.
+- `Created on` must use the date of the first Git commit that introduced the file, or the current date for a file that has not been committed yet.
+- `Last modified` must use the date of the current change, or the date of the latest Git commit when the file has no current change.
+- Before completing a change or committing, run `bun run headers:update` for the staged source files, or use WebStorm's `Update copyright` commit check.
+
 ### Technical documentation status
 
 - Keep implementation documentation under `tech-doc/`.
