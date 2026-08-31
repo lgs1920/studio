@@ -45,6 +45,7 @@ This is the canonical source for the project's AI-agent and development rules.
 ### Technical documentation status
 
 - Keep implementation documentation under `tech-doc/`.
+- Documentation must describe implemented behavior and must not cover behavior that is no longer taken into account, unless it is explicitly presented as historical.
 - Put specifications that are proposed, pending validation, explicitly TODO, or describe future implementation work under `tech-doc/todo/`.
 - Put specifications and architecture documents that describe the current implementation under `tech-doc/specs/`.
 - Name `tech-doc` documentation files with uppercase, flat filenames using descriptive module prefixes when relevant, for example `CORE-...`, `JOURNEY_...`, or `HOW_TO_...`
