@@ -1,19 +1,18 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *  
+ *
  * File: theme.css
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-09
- * Last modified: 2026-07-09
+ * Created on: 2024-02-02
+ * Last modified: 2026-08-31
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
-
 
 /* WebAwesome theme contract overrides. */
 :root,
@@ -313,7 +312,7 @@ html {
     --lgs-max-mobile-width: min(var(--lgs-width-unit), calc(100% - var(--left) - var(--top)));
 
     /* Scrollbar colors. Misspelled aliases are kept for existing consumers. */
-    --lgs-scrollbar-track-color: var(--lgs-switch-active-thumb-color);
+    --lgs-scrollbar-track-color: color-mix(in oklab, var(--wa-color-text-quiet) 22%, transparent);
     --lgs-scrollbar-thumb-color: var(--lgs-switch-active-track-color);
     --lgs-scroolbar-track-color: var(--lgs-scrollbar-track-color);
     --lgs-scroolbar-thumb-color: var(--lgs-scrollbar-thumb-color);
@@ -1197,6 +1196,12 @@ wa-card.wa-theme-lgs1920-on-map::part(body) {
             var(--lgs-scrollbar-thumb-color, var(--lgs-slider-thumb-color)) 82%,
             black 18%
     );
+}
+
+.lgs-scrollbars .track-vertical:focus-visible,
+.lgs-scrollbars .track-horizontal:focus-visible {
+    outline: 2px solid var(--wa-color-focus, var(--wa-color-brand));
+    outline-offset: 1px;
 }
 
 @supports (-moz-appearance: none) {
