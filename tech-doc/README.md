@@ -14,6 +14,7 @@ below by engineering domain rather than storage directory.
 
 - [Replay architecture](specs/replay-video/CORE-REPLAY-ARCHITECTURE.md)
 - [Replay timeline preparation implementation](specs/replay-video/CORE-REPLAY-TIMELINE-IMPLEMENTATION.md)
+- [LGS1920 timeline Web Component](specs/replay-video/CORE-LGS1920-TIMELINE-WEBCOMPONENT-SPEC.md)
 - [Replay implementation status](specs/replay-video/CORE-REPLAY-IMPLEMENTATION-STATUS.md)
 - [Replay quality validation](specs/replay-video/CORE-REPLAY-QUALITY-VALIDATION.md)
 - [Replay audit](specs/replay-video/REPLAY-AUDIT.md)
