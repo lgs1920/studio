@@ -282,6 +282,14 @@ export default defineConfig({
         }
     },
 
+    optimizeDeps: {
+        // Pre-bundle lazy timeline dependencies so Vite applies CommonJS interop to their imports.
+        include: [
+            'interactjs',
+            'react-virtualized',
+        ],
+    },
+
     resolve: {
         alias: [
             {
