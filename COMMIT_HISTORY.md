@@ -1324,19 +1324,7 @@
 
 - Recorded automatically from Git history.
 
-## 2026-08-31 — [`docs: clarify documentation status rules`](https://github.com/lgs1920/studio/commit/b0cb99380e9238e0cca0dbc78d862a940ab7dc7f)
-
-- Recorded automatically from Git history.
-
-## 2026-08-31 — [`chore(config): add Web Components Vite alias`](https://github.com/lgs1920/studio/commit/6eee1477c04aa6df78e7845c97ecd4935f98ada2)
-
-- Recorded automatically from Git history.
-
-## 2026-08-31 — [`feat(ui): add resizable side drawers (#507)`](https://github.com/lgs1920/studio/commit/ac26845654de2d80e3a5176c86eefa447e83af2f)
-
-- Recorded automatically from Git history.
-
-## 2026-08-31 — [`Merge remote-tracking branch 'origin/add-timeline' into add-timeline`](https://github.com/lgs1920/studio/commit/abc81587e88097c73a2663b5c7a3a5e251bc889c)
+## 2026-08-30 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/1ffe1053373d733441a11b8a30aa6127736292aa)
 
 - # Conflicts:
 - #	COMMIT_HISTORY.md
