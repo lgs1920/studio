@@ -4,6 +4,14 @@
  *
  * File: layerCredits.js
  *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-18
+ * Last modified: 2026-08-18
+ *
+ *
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 const LAYER_CREDIT_FIELDS = ['credits', 'logo', 'url']

@@ -1,4 +1,19 @@
 // @vitest-environment jsdom
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: map-point-context-menu.test.jsx
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-30
+ * Last modified: 2026-08-30
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
 
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'

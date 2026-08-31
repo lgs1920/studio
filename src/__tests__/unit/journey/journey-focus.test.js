@@ -4,6 +4,13 @@
  *
  * File: journey-focus.test.js
  *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-24
+ * Last modified: 2026-07-24
+ *
+ *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 

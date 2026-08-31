@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: journey-settings-focus.test.jsx
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-19
+ * Last modified: 2026-08-19
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { JourneySettings } from '@Editor/journey/JourneySettings'
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'

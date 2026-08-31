@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: widget-crop-board-reposition.test.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-19
+ * Last modified: 2026-08-28
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { LGS_VISUAL_WIDGET, LGS_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { WidgetCoreControls } from '@Core/ui/widget-manager/WidgetCoreControls'

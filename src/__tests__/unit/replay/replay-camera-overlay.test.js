@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: replay-camera-overlay.test.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-28
+ * Last modified: 2026-08-06
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defaultJourneyReplaySettings } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE } from '@Core/ui/replay/JourneyReplayInternal'

@@ -4,6 +4,14 @@
  *
  * File: rotation-element.test.jsx
  *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-22
+ * Last modified: 2026-08-22
+ *
+ *
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { cleanup, fireEvent, render } from '@testing-library/react'

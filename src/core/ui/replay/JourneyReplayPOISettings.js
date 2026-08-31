@@ -4,6 +4,13 @@
  *
  * File: JourneyReplayPOISettings.js
  *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-06-11
+ * Last modified: 2026-07-03
+ *
+ *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 

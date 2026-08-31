@@ -4,6 +4,13 @@
  *
  * File: welcome-background-media.test.js
  *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-13
+ * Last modified: 2026-08-18
+ *
+ *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 

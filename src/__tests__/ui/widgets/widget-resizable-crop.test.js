@@ -4,6 +4,13 @@
  *
  * File: widget-resizable-crop.test.js
  *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-23
+ * Last modified: 2026-07-23
+ *
+ *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 

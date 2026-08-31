@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: replay-logical-camera-pose.test.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-28
+ * Last modified: 2026-08-04
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import {describe, expect, it} from 'vitest'
 import {
     resolveJourneyReplayLogicalCameraPose,

@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: error-diagnostic-utils.test.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-19
+ * Last modified: 2026-08-19
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { collectErrorDiagnostic, formatErrorDiagnostic, UNKNOWN_DIAGNOSTIC_VALUE } from '@Utils/ErrorDiagnosticUtils'
 

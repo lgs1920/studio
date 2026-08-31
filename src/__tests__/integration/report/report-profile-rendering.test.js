@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: report-profile-rendering.test.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-06-30
+ * Last modified: 2026-07-22
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { describe, expect, it, vi } from 'vitest'
 import { drawProfileDataset } from '@Utils/ExportAsReport/profile'
 

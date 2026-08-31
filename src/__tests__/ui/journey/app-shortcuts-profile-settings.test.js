@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: app-shortcuts-profile-settings.test.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-06-22
+ * Last modified: 2026-07-22
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { SETTINGS_EDITOR_DRAWER } from '@Core/constants'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 

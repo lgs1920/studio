@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: widgets-panel-content.test.jsx
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-18
+ * Last modified: 2026-08-29
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SCENE_WIDGETS, SCENE_WIDGETS_BOARD, SETTINGS_STORE, TEXT_WIDGET } from '@Core/constants'

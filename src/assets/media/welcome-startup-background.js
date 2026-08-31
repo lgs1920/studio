@@ -4,6 +4,13 @@
  *
  * File: welcome-startup-background.js
  *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-18
+ * Last modified: 2026-08-20
+ *
+ *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 

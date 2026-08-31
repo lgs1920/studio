@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: CameraAdjustmentOverlay.jsx
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-27
+ * Last modified: 2026-08-28
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { Widget } from '@Components/MainUI/widgets/Widget'
 import { LGS_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD } from '@Core/constants'
 import {

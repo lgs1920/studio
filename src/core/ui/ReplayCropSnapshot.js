@@ -1,4 +1,20 @@
 /*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: ReplayCropSnapshot.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-20
+ * Last modified: 2026-07-20
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+/*******************************************************************************
  * Capture the current replay canvas inside the configured video crop zone.
  * Replay snapshots intentionally capture Cesium only and never wait for widgets.
  ******************************************************************************/

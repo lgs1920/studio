@@ -4,6 +4,13 @@
  *
  * File: welcome-hero-controls.test.jsx
  *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-13
+ * Last modified: 2026-08-13
+ *
+ *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 

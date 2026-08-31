@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: replay-camera-constraint-binding.test.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-26
+ * Last modified: 2026-08-03
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import {Cartesian3} from 'cesium'
 import {afterEach, describe, expect, it, vi} from 'vitest'
 

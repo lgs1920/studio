@@ -4,6 +4,14 @@
  *
  * File: CropZoneInfoPopup.jsx
  *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-19
+ * Last modified: 2026-07-20
+ *
+ *
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { useEffect, useId, useRef, useState } from 'react'

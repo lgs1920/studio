@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: LGS1920TimelineUtils.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-31
+ * Last modified: 2026-08-31
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 export const TAG_NAME = 'lgs1920-timeline'
 export const MIN_ZOOM = -50
 export const MAX_ZOOM = 500

@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: camera-adjustment-overlay.test.jsx
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-27
+ * Last modified: 2026-08-27
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { act, render, waitFor } from '@testing-library/react'
 import { CameraAdjustmentOverlay } from '@Components/MainUI/CameraAdjustmentOverlay'
 import { afterEach, describe, expect, it, vi } from 'vitest'

@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: replay-logical-clip.test.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-28
+ * Last modified: 2026-08-24
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import {afterEach, describe, expect, it, vi} from 'vitest'
 
 vi.mock('@Components/Toast', () => ({

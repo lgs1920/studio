@@ -4,6 +4,13 @@
  *
  * File: FA2WA.js
  *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-19
+ * Last modified: 2026-08-19
+ *
+ *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 

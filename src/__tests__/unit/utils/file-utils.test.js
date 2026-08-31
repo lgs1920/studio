@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: file-utils.test.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-17
+ * Last modified: 2026-08-17
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { FileUtils } from '@Utils/FileUtils'
 

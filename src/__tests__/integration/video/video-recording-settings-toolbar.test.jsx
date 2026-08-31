@@ -4,6 +4,13 @@
  *
  * File: video-recording-settings-toolbar.test.jsx
  *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-06-05
+ * Last modified: 2026-08-29
+ *
+ *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 

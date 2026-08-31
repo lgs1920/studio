@@ -1,4 +1,19 @@
 // @vitest-environment jsdom
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: LGS1920TimelineReact.test.jsx
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-30
+ * Last modified: 2026-08-31
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
 
 import {cleanup, render} from '@testing-library/react'
 import {afterEach, describe, expect, it, vi} from 'vitest'

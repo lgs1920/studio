@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: camera-adjustment-widget-position.test.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-28
+ * Last modified: 2026-08-28
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { scheduleCameraAdjustmentWidgetCenter } from '@Components/MainUI/cameraAdjustmentWidgetPosition'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 

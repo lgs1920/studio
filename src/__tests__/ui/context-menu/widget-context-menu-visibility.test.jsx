@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: widget-context-menu-visibility.test.jsx
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-29
+ * Last modified: 2026-08-29
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { WidgetContextMenu } from '@Components/MainUI/widgets/WidgetContextMenu'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'

@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: ReplayRecordingMonitorWidget.jsx
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-24
+ * Last modified: 2026-08-28
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import {Widget} from '@Components/MainUI/widgets/Widget'
 import '@Components/MainUI/video/style.css'
 import {captureReplayCropSnapshot} from '@Core/ui/ReplayCropSnapshot'

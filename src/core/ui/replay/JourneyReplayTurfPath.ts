@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: JourneyReplayTurfPath.ts
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-01
+ * Last modified: 2026-08-01
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import along from '@turf/along'
 import { lineString } from '@turf/helpers'
 import length from '@turf/length'

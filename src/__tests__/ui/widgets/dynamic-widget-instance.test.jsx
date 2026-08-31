@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: dynamic-widget-instance.test.jsx
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-29
+ * Last modified: 2026-08-29
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import {cleanup, render, screen, waitFor} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {proxyMap} from 'valtio/utils'
