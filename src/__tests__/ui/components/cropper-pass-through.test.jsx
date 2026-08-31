@@ -9,11 +9,12 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-08-30
+ * Last modified: 2026-08-31
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
+
 import { cleanup, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
