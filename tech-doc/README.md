@@ -82,6 +82,7 @@ below by engineering domain rather than storage directory.
 ### Current
 
 - [Panels](specs/ui-widgets/CORE-UI-PANELS-README.md)
+- [Resizable side drawers](specs/ui-widgets/CORE-UI-DRAWER-RESIZE-SPEC.md)
 - [Context menu](specs/ui-widgets/CORE-UI-CONTEXT-MENU-README.md)
 - [Widget manager](specs/ui-widgets/CORE-WIDGET-MANAGER-README.md)
 - [Widget-to-canvas rendering](specs/ui-widgets/CORE-WIDGET-MANAGER-WIDGET-2-CANVAS-README.md)

@@ -15,7 +15,9 @@
  ******************************************************************************/
 
 import React, { forwardRef }        from 'react'
+import { useCallback, useState }    from 'react'
 import { WaDrawer as WaDrawerBase } from '@web.awesome.me/webawesome-pro/dist/react'
+import { DrawerResizeHandle }       from '@Components/DrawerResizeHandle'
 
 let patched = false
 let pending = false
@@ -29,7 +31,7 @@ const patchWaDrawer = () => {
     if (!DrawerClass) {
         if (!pending && typeof customElements.whenDefined === 'function') {
             pending = true
-            customElements.whenDefined('wa-drawer').then(() => {
+            void customElements.whenDefined('wa-drawer').then(() => {
                 pending = false
                 patchWaDrawer()
             })
@@ -73,9 +75,49 @@ const patchWaDrawer = () => {
     }
 }
 
-const WaDrawerNonModal = forwardRef(function WaDrawerNonModal(props, ref) {
+/**
+ * Assigns a drawer element to either callback or object refs.
+ *
+ * @param {Object|Function|null} ref - Forwarded React ref.
+ * @param {HTMLElement|null} value - Drawer element.
+ * @returns {void}
+ */
+const assignForwardedRef = (ref, value) => {
+    if (typeof ref === 'function') {
+        ref(value)
+    }
+    else if (ref) {
+        ref.current = value
+    }
+}
+
+const WaDrawerNonModal = forwardRef((props, ref) => {
+    const {resize = false, resizeMax, ...drawerProps} = props
+    const [drawer, setDrawer] = useState(null)
+    /**
+     * Stores the drawer element locally and forwards it to the consumer ref.
+     *
+     * @param {HTMLElement|null} element - Drawer custom element.
+     * @returns {void}
+     */
+    const setDrawerElement = useCallback(element => {
+        setDrawer(element)
+        assignForwardedRef(ref, element)
+    }, [ref])
+
     patchWaDrawer()
-    return <WaDrawerBase ref={ref} {...props} />
+
+    return (
+        <>
+            <WaDrawerBase ref={setDrawerElement} {...drawerProps} />
+            {drawer && resize === true && <DrawerResizeHandle
+                drawer={drawer}
+                drawerId={drawerProps.id}
+                placement={drawerProps.placement}
+                resizeMax={resizeMax}
+            />}
+        </>
+    )
 })
 
 export default WaDrawerNonModal

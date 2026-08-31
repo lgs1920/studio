@@ -39,3 +39,23 @@ values.
 | `clean()`             | Resets the `action` state of the drawer manager.                                                                                                  | None                                                                                                                                                  | None                                                             |
 | `openTab(tabName)`    | Opens a specific tab within all tab groups of the currently open drawer.                                                                          | `tabName` (string, optional): The name of the tab panel to open; uses the stored tab if not provided                                                  | None                                                             |
 | `tabActive(tabName)`  | Checks if a specific tab is active for the currently open drawer.                                                                                 | `tabName` (string): The name of the tab to check                                                                                                      | `boolean`: `true` if the tab is active, `false` otherwise        |
+
+## Resizable drawer shortcuts
+
+Drawers opt into resizing with `resize={true}` on `WaDrawerNonModal`. The
+resize handle is keyboard-focusable and uses the following shortcuts:
+
+| Shortcut | Action |
+| --- | --- |
+| `ArrowLeft` / `ArrowRight` | Decrease or increase the drawer width by `16px`. |
+| `Shift` + `ArrowLeft` / `Shift` + `ArrowRight` | Decrease or increase the drawer width by `64px`. |
+| `Home` | Set the drawer to its minimum width. The minimum is the initial drawer width (`448px`). |
+| `End` | Set the drawer to its configured maximum width. |
+| Double-click on the resize handle | Toggle between the minimum and maximum widths. |
+
+The optional `resizeMax` prop sets a drawer-specific maximum in pixels or as a
+viewport dimension such as `80vh`, `80vw`, or `640px`. When it is omitted, the
+shared maximum policy applies.
+
+Side drawers resize horizontally, so the handle uses the `col-resize` cursor.
+The `row-resize` cursor is reserved for a future top or bottom drawer variant.

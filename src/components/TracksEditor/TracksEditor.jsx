@@ -143,6 +143,8 @@ export const TracksEditor = memo(() => {
                         ref={drawerRef}
                         id={JOURNEY_EDITOR_DRAWER}
                         open={true}
+                        resize={true}
+                        resizeMax="80vw"
                         onWaAfterHide={handleRequestClose}
                         onSlAfterHide={closeTracksEditor}
                         placement={drawerPlacement}
