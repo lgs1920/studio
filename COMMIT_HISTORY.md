@@ -1334,3 +1334,77 @@
 
 - # Conflicts:
 - #	COMMIT_HISTORY.md
+
+## 2026-08-31 — [`docs: clarify documentation status rules`](https://github.com/lgs1920/studio/commit/b0cb99380e9238e0cca0dbc78d862a940ab7dc7f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`chore(config): add Web Components Vite alias`](https://github.com/lgs1920/studio/commit/6eee1477c04aa6df78e7845c97ecd4935f98ada2)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`feat(ui): add resizable side drawers (#507)`](https://github.com/lgs1920/studio/commit/ac26845654de2d80e3a5176c86eefa447e83af2f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`Merge remote-tracking branch 'origin/add-timeline' into add-timeline`](https://github.com/lgs1920/studio/commit/abc81587e88097c73a2663b5c7a3a5e251bc889c)
+
+- # Conflicts:
+- #	COMMIT_HISTORY.md
+
+## 2026-08-31 — [`feat(replay): extend timeline web component`](https://github.com/lgs1920/studio/commit/b9cc4a791a43c66a6152cf5054b2825b66bdb08f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`docs(replay): document timeline web component`](https://github.com/lgs1920/studio/commit/a304c04f29bf241cd32c67edfe48cf942a77104f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`Merge remote-tracking branch 'origin/add-timeline' into add-timeline`](https://github.com/lgs1920/studio/commit/965b350184030730896825dd6895454c30bb7157)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`Merge branch 'add-timeline' into 1.0.0`](https://github.com/lgs1920/studio/commit/0e36b2471468d4cabecc37caf5ce217310aa1068)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`fix(replay): pre-bundle timeline dependencies`](https://github.com/lgs1920/studio/commit/e979eb9c708b1d912bfda8d806e0d68798a8b2b4)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`Merge branch 'add-timeline' into 1.0.0`](https://github.com/lgs1920/studio/commit/58002a88e6b65965b609cdeb497fc980fd373cf0)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/6f105b57a0f85546e582dc0ff4ae6707908cd87b)
+
+- # Conflicts:
+- #	COMMIT_HISTORY.md
+
+## 2026-08-31 — [`chore: document source file header policy`](https://github.com/lgs1920/studio/commit/1af411b79f3373e16c74475a7967c095143683d1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`chore: automate source file header updates`](https://github.com/lgs1920/studio/commit/8f41f0465c6b03b7c0283cb0478f15a36c3f359e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`refactor(replay): use timeline Web Component preview`](https://github.com/lgs1920/studio/commit/f8826b6fc1aae01df3342ca2217ae404f4882fa5)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`chore: normalize source file headers`](https://github.com/lgs1920/studio/commit/dddfcc84d4e72ce43dc6364a24f86c27e13372ec)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`fix: report all source header mismatches`](https://github.com/lgs1920/studio/commit/29e26ccae26e4bb1a86513ee47eb3dd60a537950)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`style: normalize cropper test header`](https://github.com/lgs1920/studio/commit/a75b61b43f19d378c3ecd24aae652f9d4a08c66f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`style(ui): align LGS scrollbar with timeline`](https://github.com/lgs1920/studio/commit/a57ee5fc7259ae256f818cd426e71c9f905ce01f)
+
+- Recorded automatically from Git history.
