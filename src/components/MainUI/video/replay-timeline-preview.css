@@ -74,14 +74,16 @@
         min-height: 56px;
     }
 
-    lgs1920-timeline::part(header),
-    lgs1920-timeline::part(playback-controls),
-    lgs1920-timeline::part(controls) {
-        display: none;
+    /* Keep the controlled transport visible in the embedded Replay timeline. */
+    lgs1920-timeline::part(header) {
+        display: flex;
+        position: relative;
+        z-index: 3;
     }
 
-    lgs1920-timeline::part(legend-ruler) {
-        visibility: hidden;
+    /* The numeric clock is intentionally hidden; Replay remains the time authority. */
+    lgs1920-timeline::part(playback-controls) {
+        display: none;
     }
 
     lgs1920-timeline::part(layout) {

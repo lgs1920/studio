@@ -42,7 +42,7 @@ describe('replayTimelineUtils', () => {
 
         expect(REPLAY_TIMELINE_UI.legendWidth).toBe(136)
         expect(REPLAY_TIMELINE_UI.legendMinWidth).toBe(100)
-        expect(REPLAY_TIMELINE_UI.legendMaxWidth).toBe(200)
+        expect(REPLAY_TIMELINE_UI.legendMaxWidth).toBe(230)
         expect(REPLAY_TIMELINE_UI.minWidth).toBe(352)
         expect(REPLAY_TIMELINE_UI.minHeight).toBe(156)
         expect(REPLAY_TIMELINE_UI.minimumVisibleDurationSeconds).toBe(5)
@@ -102,10 +102,10 @@ describe('replayTimelineUtils', () => {
         expect(stepReplayTimelineZoom(500, 1)).toBe(500)
     })
 
-    it('clamps the track legend width between 100 and 200 pixels', () => {
+    it('clamps the track legend width between 100 and 230 pixels', () => {
         expect(clampReplayTimelineLegendWidth(80)).toBe(100)
-        expect(clampReplayTimelineLegendWidth(200)).toBe(200)
-        expect(clampReplayTimelineLegendWidth(420)).toBe(200)
+        expect(clampReplayTimelineLegendWidth(230)).toBe(230)
+        expect(clampReplayTimelineLegendWidth(420)).toBe(230)
         expect(clampReplayTimelineLegendWidth('invalid')).toBe(136)
     })
 })

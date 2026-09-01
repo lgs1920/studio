@@ -263,14 +263,26 @@ export const ReplayTimelinePreview = forwardRef(({onMinimumDimensionsChange}, re
                                && !video.recordingHQ
                                && !video.finalizing
 
-    const projection = useMemo(() => buildReplayPreparationTimeline({
-        videoTimeline: replay.deferredExportPlan?.videoTimeline ?? null,
-        replayDurationMillis: resolveReplayDurationMillis(replay, replaySettings),
-        fps: resolveCaptureFps({fps: video.fps}, replay),
+    const projectionReplay = useMemo(() => ({
+        deferredExportPlan: replay.deferredExportPlan,
+        duration: replay.duration,
+        captureFps: replay.captureFps,
         direction: replay.direction,
-        clips: resolvePreparationClips(replay, journey, replaySettings.clips),
+        clips: replay.clips,
+    }), [replay.deferredExportPlan, replay.duration, replay.captureFps, replay.direction, replay.clips])
+    const projectionReplaySettings = useMemo(() => ({
+        clips: replaySettings.clips,
+        duration: replaySettings.duration,
+    }), [replaySettings.clips, replaySettings.duration])
+
+    const projection = useMemo(() => buildReplayPreparationTimeline({
+        videoTimeline: projectionReplay.deferredExportPlan?.videoTimeline ?? null,
+        replayDurationMillis: resolveReplayDurationMillis(projectionReplay, projectionReplaySettings),
+        fps: resolveCaptureFps({fps: video.fps}, projectionReplay),
+        direction: projectionReplay.direction,
+        clips: resolvePreparationClips(projectionReplay, journey, projectionReplaySettings.clips),
         widgetOrder,
-    }), [journey, replay, replaySettings, video.fps, widgetOrder])
+    }), [journey, projectionReplay, projectionReplaySettings, video.fps, widgetOrder])
     const editorData = useMemo(() => toReplayTimelineEditorData(projection), [projection])
     const minimumDimensions = useMemo(
         () => resolveReplayTimelineMinimumDimensions(editorData.length),
@@ -278,9 +290,12 @@ export const ReplayTimelinePreview = forwardRef(({onMinimumDimensionsChange}, re
     )
     const timeline = useMemo(() => ({
         durationMillis: projection.durationMillis,
+        fps: projection.fps,
+        frameCount: projection.source.frameCount,
+        frameIntervalMillis: projection.source.frameIntervalMs,
         visible: true,
         zoomPercent: 0,
-        legendWidth: REPLAY_TIMELINE_UI.legendMinWidth,
+        legendWidth: REPLAY_TIMELINE_UI.legendWidth,
         legendMinWidth: REPLAY_TIMELINE_UI.legendMinWidth,
         legendMaxWidth: REPLAY_TIMELINE_UI.legendMaxWidth,
         rangeStartMillis: 0,
@@ -289,7 +304,7 @@ export const ReplayTimelinePreview = forwardRef(({onMinimumDimensionsChange}, re
         interactive: true,
         collisionPolicy: 'allow',
         durationPolicy: 'fixed',
-    }), [projection.durationMillis])
+    }), [projection.durationMillis, projection.fps, projection.source.frameCount, projection.source.frameIntervalMs])
     const tracks = useMemo(() => toDisplayTracks(editorData), [editorData])
     const currentTimeMillis = resolveCurrentTimeMillis(replay, projection)
     const isPlaying = replay.playing === true
@@ -315,10 +330,18 @@ export const ReplayTimelinePreview = forwardRef(({onMinimumDimensionsChange}, re
 
         element.timeline = timeline
         element.tracks = tracks
-        element.currentTimeMillis = currentTimeMillis
-        element.playing = isPlaying
         element.clipOptions = []
-    }, [currentTimeMillis, isPlaying, linkedPreparation, timeline, tracks])
+    }, [linkedPreparation, timeline, tracks])
+
+    useEffect(() => {
+        const element = _timeline.current
+        if (linkedPreparation && element) element.currentTimeMillis = currentTimeMillis
+    }, [currentTimeMillis, linkedPreparation])
+
+    useEffect(() => {
+        const element = _timeline.current
+        if (linkedPreparation && element) element.playing = isPlaying
+    }, [isPlaying, linkedPreparation])
 
     useEffect(() => {
         if (linkedPreparation) {
@@ -356,7 +379,9 @@ export const ReplayTimelinePreview = forwardRef(({onMinimumDimensionsChange}, re
                  aria-hidden="true"/>
             <lgs1920-timeline className="lgs-widget-no-drag"
                               ref={_timeline}
-                              aria-label="Replay tracks"/>
+                              aria-label="Replay tracks">
+                <span slot="legend-ruler" aria-hidden="true"/>
+            </lgs1920-timeline>
         </section>
     )
 })

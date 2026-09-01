@@ -104,7 +104,7 @@ describe('ReplayTimelinePreview', () => {
             durationMillis: 4_000,
             editable: true,
             interactive: true,
-            legendWidth: 100,
+            legendWidth: 136,
             rangeStartMillis: 0,
             rangeEndMillis: 4_000,
         })
@@ -113,6 +113,7 @@ describe('ReplayTimelinePreview', () => {
         expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-min-height')).toBe('204px')
         expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-layout-min-height')).toBe('122px')
         expect(container.querySelector('[data-testid="replay-timeline-drag-handle"]')).not.toBeNull()
+        expect(timelineElement.querySelector('[slot="legend-ruler"]')).not.toBeNull()
         expect(timelineElement.playing).toBe(false)
         expect(timelineElement.clipOptions).toEqual([])
         expect(timelineElement.tracks.map(track => track.id)).toEqual([
@@ -143,6 +144,55 @@ describe('ReplayTimelinePreview', () => {
             && clip.resizable === false
         ))).toBe(true)
         expect(globalThis.__.ui.replay.enterReplayPreparation).toHaveBeenCalledTimes(1)
+    })
+
+    it('updates only the current time when the published Replay frame changes', async () => {
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+        const initialTimeline = timelineElement.timeline
+        const initialTracks = timelineElement.tracks
+        const initialClipOptions = timelineElement.clipOptions
+        let currentTimeMillis = timelineElement.currentTimeMillis
+        let timelineAssignments = 0
+        let trackAssignments = 0
+        let clipOptionAssignments = 0
+        Object.defineProperties(timelineElement, {
+            timeline: {
+                configurable: true,
+                get: () => initialTimeline,
+                set: () => {
+                    timelineAssignments += 1
+                },
+            },
+            tracks: {
+                configurable: true,
+                get: () => initialTracks,
+                set: () => {
+                    trackAssignments += 1
+                },
+            },
+            currentTimeMillis: {
+                configurable: true,
+                get: () => currentTimeMillis,
+                set: value => {
+                    currentTimeMillis = value
+                },
+            },
+            clipOptions: {
+                configurable: true,
+                get: () => initialClipOptions,
+                set: () => {
+                    clipOptionAssignments += 1
+                },
+            },
+        })
+
+        globalThis.lgs.stores.replay.dynamicFrameState = {frameTimeMs: 2_000}
+
+        await waitFor(() => expect(currentTimeMillis).toBe(2_000))
+        expect(timelineAssignments).toBe(0)
+        expect(trackAssignments).toBe(0)
+        expect(clipOptionAssignments).toBe(0)
     })
 
     it('coordinates the external widget drag and resize lifecycle with the timeline host', () => {

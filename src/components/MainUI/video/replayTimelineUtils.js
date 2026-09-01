@@ -35,7 +35,7 @@ export const REPLAY_TIMELINE_UI = Object.freeze({
     scaleOffset: 20,
     scrubThrottleMillis: 50,
     legendWidth: 136,
-    legendMaxWidth: 200,
+    legendMaxWidth: 230,
     legendMinWidth: 100,
     rowHeight: 24,
     scaleIntervalMillis: 200,
