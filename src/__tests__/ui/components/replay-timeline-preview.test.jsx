@@ -104,7 +104,6 @@ describe('ReplayTimelinePreview', () => {
             durationMillis: 4_000,
             editable: true,
             interactive: true,
-            legendWidth: 136,
             rangeStartMillis: 0,
             rangeEndMillis: 4_000,
         })

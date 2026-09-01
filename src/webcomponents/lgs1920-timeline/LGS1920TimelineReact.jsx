@@ -20,6 +20,7 @@ import {LGS1920Timeline} from './LGS1920Timeline'
 const EVENT_CALLBACKS = [
     ['play', 'onPlay'],
     ['pause', 'onPause'],
+    ['stop', 'onStop'],
     ['restart', 'onRestart'],
     ['seek', 'onSeek'],
     ['track-visibility-change', 'onTrackVisibilityChange'],
@@ -55,6 +56,7 @@ const EVENT_CALLBACKS = [
  * @param {Array} [props.clipOptions=[]] - Clip insertion options.
  * @param {Function} [props.onPlay] - Play callback receiving event detail.
  * @param {Function} [props.onPause] - Pause callback receiving event detail.
+ * @param {Function} [props.onStop] - Stop callback receiving event detail.
  * @param {Function} [props.onRestart] - Restart callback receiving event detail.
  * @param {Function} [props.onSeek] - Seek callback receiving event detail.
  * @param {Function} [props.onTrackVisibilityChange] - Track visibility callback.
@@ -85,6 +87,7 @@ export const LGS1920TimelineReact = ({
     clipOptions = [],
     onPlay,
     onPause,
+    onStop,
     onRestart,
     onSeek,
     onTrackVisibilityChange,
@@ -113,10 +116,20 @@ export const LGS1920TimelineReact = ({
         if (!element) return
         element.timeline = timeline
         element.tracks = tracks
-        element.currentTimeMillis = currentTimeMillis
-        element.playing = playing
         element.clipOptions = clipOptions
-    }, [clipOptions, currentTimeMillis, playing, timeline, tracks])
+    }, [clipOptions, timeline, tracks])
+
+    useEffect(() => {
+        const element = _element.current
+        if (!element) return
+        element.currentTimeMillis = currentTimeMillis
+    }, [currentTimeMillis])
+
+    useEffect(() => {
+        const element = _element.current
+        if (!element) return
+        element.playing = playing
+    }, [playing])
 
     useEffect(() => {
         const element = _element.current
@@ -124,6 +137,7 @@ export const LGS1920TimelineReact = ({
         const callbacks = {
             onPlay,
             onPause,
+            onStop,
             onRestart,
             onSeek,
             onTrackVisibilityChange,
@@ -150,7 +164,7 @@ export const LGS1920TimelineReact = ({
             return {name, listener}
         })
         return () => listeners.forEach(({name, listener}) => element.removeEventListener(`lgs1920-timeline-${name}`, listener))
-    }, [onAddClip, onAfterDrag, onBeforeDrag, onClipChange, onClipChangeStart, onClipChanging, onClipLabelEditRequest, onClipVisibilityChange, onContextMenuOpen, onDblClick, onDrag, onPause, onPlay, onRangeChange, onRangeChangeStart, onRangeChanging, onReorder, onRestart, onSeek, onTrackLabelChange, onTrackVisibilityChange])
+    }, [onAddClip, onAfterDrag, onBeforeDrag, onClipChange, onClipChangeStart, onClipChanging, onClipLabelEditRequest, onClipVisibilityChange, onContextMenuOpen, onDblClick, onDrag, onPause, onPlay, onRangeChange, onRangeChangeStart, onRangeChanging, onReorder, onRestart, onSeek, onStop, onTrackLabelChange, onTrackVisibilityChange])
 
     return (
         <lgs1920-timeline ref={_element}>

@@ -145,4 +145,16 @@ describe('LGS1920TimelineReact', () => {
         expect(onRangeChanging).toHaveBeenCalledWith(detail, expect.any(CustomEvent))
         expect(onRangeChange).toHaveBeenCalledWith(detail, expect.any(CustomEvent))
     })
+
+    it('maps the stop event to the React callback', () => {
+        const onStop = vi.fn()
+        const {container} = render(
+            <LGS1920TimelineReact timeline={timelineConfig} onStop={onStop}/>,
+        )
+        const element = container.querySelector('lgs1920-timeline')
+        const detail = {source: 'timeline-stop', timeMillis: 1_000}
+        element.dispatchEvent(new CustomEvent('lgs1920-timeline-stop', {detail}))
+
+        expect(onStop).toHaveBeenCalledWith(detail, expect.any(CustomEvent))
+    })
 })

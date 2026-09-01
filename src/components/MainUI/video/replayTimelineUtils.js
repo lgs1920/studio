@@ -34,7 +34,6 @@ export const REPLAY_TIMELINE_UI = Object.freeze({
     legendResizerWidth: 6,
     scaleOffset: 20,
     scrubThrottleMillis: 50,
-    legendWidth: 136,
     legendMaxWidth: 230,
     legendMinWidth: 100,
     rowHeight: 24,
@@ -43,23 +42,6 @@ export const REPLAY_TIMELINE_UI = Object.freeze({
     scaleWidth: 40,
     horizontalScrollDurationRatio: 0.2,
 })
-
-/**
- * Clamp the external track legend width to the supported interaction range.
- *
- * @param {number} width - Requested legend width in pixels.
- * @returns {number} Clamped legend width in pixels.
- */
-export const clampReplayTimelineLegendWidth = width => {
-    const numericWidth = Number(width)
-    const safeWidth = Number.isFinite(numericWidth)
-        ? numericWidth
-        : REPLAY_TIMELINE_UI.legendWidth
-    return Math.min(
-        REPLAY_TIMELINE_UI.legendMaxWidth,
-        Math.max(REPLAY_TIMELINE_UI.legendMinWidth, safeWidth),
-    )
-}
 
 /**
  * Define the supported timeline zoom range and increment.

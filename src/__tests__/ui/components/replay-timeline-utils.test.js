@@ -16,7 +16,6 @@
 
 import {describe, expect, it} from 'vitest'
 import {
-    clampReplayTimelineLegendWidth,
     decorateReplayTimelineEditorData,
     REPLAY_TIMELINE_UI,
     REPLAY_TIMELINE_ZOOM,
@@ -40,7 +39,6 @@ describe('replayTimelineUtils', () => {
             {id: 'replay'},
         ])
 
-        expect(REPLAY_TIMELINE_UI.legendWidth).toBe(136)
         expect(REPLAY_TIMELINE_UI.legendMinWidth).toBe(100)
         expect(REPLAY_TIMELINE_UI.legendMaxWidth).toBe(230)
         expect(REPLAY_TIMELINE_UI.minWidth).toBe(352)
@@ -102,10 +100,4 @@ describe('replayTimelineUtils', () => {
         expect(stepReplayTimelineZoom(500, 1)).toBe(500)
     })
 
-    it('clamps the track legend width between 100 and 230 pixels', () => {
-        expect(clampReplayTimelineLegendWidth(80)).toBe(100)
-        expect(clampReplayTimelineLegendWidth(230)).toBe(230)
-        expect(clampReplayTimelineLegendWidth(420)).toBe(230)
-        expect(clampReplayTimelineLegendWidth('invalid')).toBe(136)
-    })
 })

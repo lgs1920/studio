@@ -295,7 +295,6 @@ export const ReplayTimelinePreview = forwardRef(({onMinimumDimensionsChange}, re
         frameIntervalMillis: projection.source.frameIntervalMs,
         visible: true,
         zoomPercent: 0,
-        legendWidth: REPLAY_TIMELINE_UI.legendWidth,
         legendMinWidth: REPLAY_TIMELINE_UI.legendMinWidth,
         legendMaxWidth: REPLAY_TIMELINE_UI.legendMaxWidth,
         rangeStartMillis: 0,
