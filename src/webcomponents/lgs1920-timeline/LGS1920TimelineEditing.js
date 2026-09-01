@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-31
- * Last modified: 2026-08-31
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -57,7 +57,7 @@ const resolveCollisionPolicy = (timeline, track) => {
  * @returns {boolean} Whether the clip can be placed.
  */
 export const trackAcceptsClip = (track, clip) => {
-    if (!track || track.droppable === false || track.acceptsClips === false) return false
+    if (!track || track.fixed === true || track.droppable === false || track.acceptsClips === false) return false
     if (!Array.isArray(track.accepts) || track.accepts.length === 0) return true
     return track.accepts.includes(clip?.kind)
 }

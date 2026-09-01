@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-08-31
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -94,6 +94,32 @@ describe('LGS1920TimelineReact', () => {
         expect(onClipChangeStart).toHaveBeenCalledWith(detail, expect.any(CustomEvent))
         expect(onClipChanging).toHaveBeenCalledWith(detail, expect.any(CustomEvent))
         expect(onClipChange).toHaveBeenCalledWith(detail, expect.any(CustomEvent))
+    })
+
+    it('maps the track and clip drag lifecycle to React callbacks', () => {
+        const onBeforeDrag = vi.fn()
+        const onDrag = vi.fn()
+        const onAfterDrag = vi.fn()
+        const {container} = render(
+            <LGS1920TimelineReact
+                timeline={timelineConfig}
+                onBeforeDrag={onBeforeDrag}
+                onDrag={onDrag}
+                onAfterDrag={onAfterDrag}/>,
+        )
+        const element = container.querySelector('lgs1920-timeline')
+        const details = [
+            {context: {type: 'piste', pisteId: 'track#one'}},
+            {context: {type: 'clip', pisteId: 'track#one', clipId: 'clip#one'}},
+            {context: {type: 'clip', pisteId: 'track#two', clipId: 'clip#one'}, committed: true},
+        ]
+        element.dispatchEvent(new CustomEvent('lgs1920-timeline-before-drag', {detail: details[0]}))
+        element.dispatchEvent(new CustomEvent('lgs1920-timeline-drag', {detail: details[1]}))
+        element.dispatchEvent(new CustomEvent('lgs1920-timeline-after-drag', {detail: details[2]}))
+
+        expect(onBeforeDrag).toHaveBeenCalledWith(details[0], expect.any(CustomEvent))
+        expect(onDrag).toHaveBeenCalledWith(details[1], expect.any(CustomEvent))
+        expect(onAfterDrag).toHaveBeenCalledWith(details[2], expect.any(CustomEvent))
     })
 
     it('maps global video range events to React callbacks', () => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-31
- * Last modified: 2026-08-31
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,8 +20,9 @@ export const MAX_ZOOM = 500
 export const ZOOM_STEP = 20
 export const START_LEFT = 20
 export const SCALE_WIDTH = 40
-export const MIN_LEGEND_WIDTH = 120
-export const MAX_LEGEND_WIDTH = 300
+export const MIN_VISIBLE_DURATION_SECONDS = 5
+export const MIN_LEGEND_WIDTH = 100
+export const MAX_LEGEND_WIDTH = 200
 export const HEADER_HEIGHT = 42
 export const HORIZONTAL_SCROLLBAR_HEIGHT = 8
 export const MIN_ROW_HEIGHT = 24
@@ -108,6 +109,30 @@ export const formatScale = seconds => {
 }
 
 /**
+ * Format a ruler time using the smallest useful time precision.
+ *
+ * @param {number} seconds - Ruler time in seconds.
+ * @returns {string} Zero-padded ruler label.
+ */
+export const formatRulerTime = seconds => {
+    const totalSeconds = Math.max(0, Math.round(Number(seconds) || 0))
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor(totalSeconds / 60)
+    const remainderSeconds = totalSeconds % 60
+    const paddedHours = `${hours}`
+    const paddedMinutes = `${minutes % 60}`.padStart(2, '0')
+    const paddedSeconds = `${remainderSeconds}`.padStart(2, '0')
+
+    if (totalSeconds >= 3600) {
+        return `${paddedHours}:${paddedMinutes}:${paddedSeconds}`
+    }
+    if (totalSeconds >= 60) {
+        return `${minutes}:${paddedSeconds}`
+    }
+    return `${totalSeconds}`
+}
+
+/**
  * Resolve a human-readable clip label.
  *
  * @param {Object} clip - Timeline clip.
@@ -141,6 +166,53 @@ export const resolveClipIcon = clip => clip?.icon
 export const resolveColorClasses = colorClasses => Array.isArray(colorClasses) && colorClasses.length > 0
     ? colorClasses.join(' ')
     : 'wa-neutral wa-neutral-blue'
+
+const TIMELINE_PALETTE_COLORS = new Set([
+    'red',
+    'orange',
+    'yellow',
+    'green',
+    'cyan',
+    'blue',
+    'indigo',
+    'purple',
+    'pink',
+    'gray',
+])
+
+/**
+ * Resolve the palette name from Web Awesome neutral color classes.
+ *
+ * @param {Array} colorClasses - Web Awesome color classes.
+ * @returns {string} Supported palette color name.
+ */
+export const resolveTimelinePaletteColor = colorClasses => {
+    const colorClass = (Array.isArray(colorClasses) ? colorClasses : [])
+        .find(value => typeof value === 'string' && value.startsWith('wa-neutral-'))
+    const color = colorClass?.slice('wa-neutral-'.length)
+    return TIMELINE_PALETTE_COLORS.has(color) ? color : 'blue'
+}
+
+/**
+ * Apply direct palette tokens to a timeline color surface.
+ *
+ * This keeps colors visible when the timeline is rendered in a Shadow DOM,
+ * where the application's global Web Awesome utility selectors do not match.
+ *
+ * @param {HTMLElement} element - Timeline element receiving the color.
+ * @param {Array} colorClasses - Web Awesome color classes.
+ */
+export const applyTimelinePaletteStyles = (element, colorClasses) => {
+    const color = resolveTimelinePaletteColor(colorClasses)
+    element.style.backgroundColor = `var(--wa-color-${color}-50)`
+    element.style.borderColor = `var(--wa-color-${color}-60)`
+    element.style.color = `var(--wa-color-${color}-on)`
+    element.style.setProperty('--wa-color-fill-loud', `var(--wa-color-${color}-50)`)
+    element.style.setProperty('--wa-color-border-loud', `var(--wa-color-${color}-60)`)
+    element.style.setProperty('--wa-color-on-loud', `var(--wa-color-${color}-on)`)
+    element.style.setProperty('--lgs-timeline-clip-handle-color', `var(--wa-color-${color}-on)`)
+    element.style.setProperty('--lgs-timeline-clip-handle-hover-color', `var(--wa-color-${color}-on)`)
+}
 
 /**
  * Create a stable slot suffix from a user-provided identifier.

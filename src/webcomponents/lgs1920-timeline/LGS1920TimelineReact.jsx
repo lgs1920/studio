@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-08-31
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,6 +33,9 @@ const EVENT_CALLBACKS = [
     ['clip-change-start', 'onClipChangeStart'],
     ['clip-changing', 'onClipChanging'],
     ['clip-change', 'onClipChange'],
+    ['before-drag', 'onBeforeDrag'],
+    ['drag', 'onDrag'],
+    ['after-drag', 'onAfterDrag'],
     ['range-change-start', 'onRangeChangeStart'],
     ['range-changing', 'onRangeChanging'],
     ['range-change', 'onRangeChange'],
@@ -65,6 +68,9 @@ const EVENT_CALLBACKS = [
  * @param {Function} [props.onClipChangeStart] - Clip edit start callback.
  * @param {Function} [props.onClipChanging] - Live clip edit callback.
  * @param {Function} [props.onClipChange] - Committed clip edit callback.
+ * @param {Function} [props.onBeforeDrag] - Drag start callback.
+ * @param {Function} [props.onDrag] - Live drag callback.
+ * @param {Function} [props.onAfterDrag] - Drag completion callback.
  * @param {Function} [props.onRangeChangeStart] - Video range edit start callback.
  * @param {Function} [props.onRangeChanging] - Live video range edit callback.
  * @param {Function} [props.onRangeChange] - Committed video range edit callback.
@@ -92,6 +98,9 @@ export const LGS1920TimelineReact = ({
     onClipChangeStart,
     onClipChanging,
     onClipChange,
+    onBeforeDrag,
+    onDrag,
+    onAfterDrag,
     onRangeChangeStart,
     onRangeChanging,
     onRangeChange,
@@ -128,6 +137,9 @@ export const LGS1920TimelineReact = ({
             onClipChangeStart,
             onClipChanging,
             onClipChange,
+            onBeforeDrag,
+            onDrag,
+            onAfterDrag,
             onRangeChangeStart,
             onRangeChanging,
             onRangeChange,
@@ -138,7 +150,7 @@ export const LGS1920TimelineReact = ({
             return {name, listener}
         })
         return () => listeners.forEach(({name, listener}) => element.removeEventListener(`lgs1920-timeline-${name}`, listener))
-    }, [onAddClip, onClipChange, onClipChangeStart, onClipChanging, onClipLabelEditRequest, onClipVisibilityChange, onContextMenuOpen, onDblClick, onPause, onPlay, onRangeChange, onRangeChangeStart, onRangeChanging, onReorder, onRestart, onSeek, onTrackLabelChange, onTrackVisibilityChange])
+    }, [onAddClip, onAfterDrag, onBeforeDrag, onClipChange, onClipChangeStart, onClipChanging, onClipLabelEditRequest, onClipVisibilityChange, onContextMenuOpen, onDblClick, onDrag, onPause, onPlay, onRangeChange, onRangeChangeStart, onRangeChanging, onReorder, onRestart, onSeek, onTrackLabelChange, onTrackVisibilityChange])
 
     return (
         <lgs1920-timeline ref={_element}>

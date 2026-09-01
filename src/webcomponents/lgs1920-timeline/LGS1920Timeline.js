@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-08-31
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,17 +31,20 @@ import {
     HEADER_HEIGHT,
     HORIZONTAL_SCROLLBAR_HEIGHT,
     MAX_ZOOM,
+    MIN_VISIBLE_DURATION_SECONDS,
     MIN_ROW_HEIGHT,
     MIN_ZOOM,
     SCALE_WIDTH,
     START_LEFT,
     TAG_NAME,
     ZOOM_STEP,
+    applyTimelinePaletteStyles,
     clamp,
     createElement,
     createEvent,
     createIcon,
     formatTime,
+    formatRulerTime,
     resolveClipIcon,
     resolveClipLabel,
     resolveColorClasses,
@@ -50,6 +53,56 @@ import {
     resolveScale,
     slotKey,
 } from './LGS1920TimelineUtils.js'
+
+/**
+ * Native pointing events that must remain local to the timeline surface.
+ */
+const TIMELINE_INPUT_EVENT_TYPES = Object.freeze([
+    'auxclick',
+    'click',
+    'contextmenu',
+    'dblclick',
+    'drag',
+    'dragend',
+    'dragstart',
+    'gotpointercapture',
+    'lostpointercapture',
+    'mousedown',
+    'mouseenter',
+    'mouseleave',
+    'mousemove',
+    'mouseout',
+    'mouseover',
+    'mouseup',
+    'pointercancel',
+    'pointerdown',
+    'pointerenter',
+    'pointerleave',
+    'pointermove',
+    'pointerout',
+    'pointerover',
+    'pointerrawupdate',
+    'pointerup',
+    'touchcancel',
+    'touchend',
+    'touchmove',
+    'touchstart',
+    'wheel',
+])
+
+/**
+ * Continuation events that must reach an already active external gesture.
+ */
+const EXTERNAL_INTERACTION_CONTINUATION_EVENT_TYPES = Object.freeze([
+    'mousemove',
+    'mouseup',
+    'pointercancel',
+    'pointermove',
+    'pointerup',
+    'touchcancel',
+    'touchend',
+    'touchmove',
+])
 
 /**
  * Web Awesome-compatible LGS1920 timeline custom element.
@@ -79,7 +132,15 @@ export class LGS1920Timeline extends HTMLElement {
     #rowHeight = MIN_ROW_HEIGHT
     #menuOpen = false
     #surface = null
+    #tracksViewport = null
     #resizeObserver = null
+    #scrollbarDrag = null
+    #scrollbarDragCleanup = null
+    #scrollbarHideTimer = null
+    #scrollbarsInteractionActive = false
+    #splitPanelDragCleanup = null
+    #pointerCaptureTarget = null
+    #pointerCaptureId = null
     #dragState = null
     #scrubPointerId = null
     #autoScrollFrame = null
@@ -88,6 +149,8 @@ export class LGS1920Timeline extends HTMLElement {
     #editingRowId = null
     #editingLabelValue = ''
     #contextMenuState = null
+    #inputPropagationBlockersInstalled = false
+    #externalInteractionActive = false
     #clipEditor
     #renderer
 
@@ -122,7 +185,9 @@ export class LGS1920Timeline extends HTMLElement {
         this.#renderer = createTimelineRenderer({
             createElement,
             createIcon,
+            formatRulerTime,
             resolveColorClasses,
+            applyTimelinePaletteStyles,
             resolveRowLabel,
             resolveClipLabel,
             resolveClipIcon,
@@ -156,7 +221,7 @@ export class LGS1920Timeline extends HTMLElement {
             moveRangeByKeyboard: (edge, event) => this.#moveRangeByKeyboard(edge, event),
             seek: (clientX, settled) => this.#seek(clientX, settled),
             addPointerListeners: () => this.#addPointerListeners(),
-            updateLegendScroll: () => this.#updateLegendScroll(),
+            capturePointer: event => this.#capturePointer(event),
             handleWheel: event => this.#handleWheel(event),
             handleKeyDown: event => this.#handleKeyDown(event),
             emit: (name, detail) => this.#emit(name, detail),
@@ -183,7 +248,42 @@ export class LGS1920Timeline extends HTMLElement {
     connectedCallback() {
         this.setAttribute('role', 'region')
         if (!this.getAttribute('aria-label')) this.setAttribute('aria-label', 'Timeline')
+        this.#installInputPropagationBlockers()
         this.#render()
+    }
+
+    /**
+     * Stop native pointing events at the Web Component host after internal
+     * timeline listeners have handled them.
+     *
+     * @param {Event} event - Native pointing event.
+     */
+    #stopInputPropagation = event => {
+        if (this.#externalInteractionActive
+            && EXTERNAL_INTERACTION_CONTINUATION_EVENT_TYPES.includes(event.type)) return
+        event.stopPropagation()
+    }
+
+    /**
+     * Install the local input boundary once for the lifetime of the host.
+     */
+    #installInputPropagationBlockers = () => {
+        if (this.#inputPropagationBlockersInstalled) return
+        for (const eventType of TIMELINE_INPUT_EVENT_TYPES) {
+            this.addEventListener(eventType, this.#stopInputPropagation)
+        }
+        this.#inputPropagationBlockersInstalled = true
+    }
+
+    /**
+     * Remove the local input boundary when the host leaves the document.
+     */
+    #removeInputPropagationBlockers = () => {
+        if (!this.#inputPropagationBlockersInstalled) return
+        for (const eventType of TIMELINE_INPUT_EVENT_TYPES) {
+            this.removeEventListener(eventType, this.#stopInputPropagation)
+        }
+        this.#inputPropagationBlockersInstalled = false
     }
 
     /**
@@ -209,6 +309,13 @@ export class LGS1920Timeline extends HTMLElement {
             legendMinWidth: minimum,
             legendMaxWidth: maximum,
         })
+        if (this.#timelineConfig.interactive === false) {
+            this.#menuOpen = false
+            this.#contextMenuState = null
+            this.#dragState = null
+            this.#removePointerListeners()
+            this.#stopAutoScroll()
+        }
         this.#visible = this.#timelineConfig.visible !== false
         this.#syncPublicProps()
     }
@@ -294,8 +401,14 @@ export class LGS1920Timeline extends HTMLElement {
      * Release observers, pointer listeners, and animation frames.
      */
     disconnectedCallback() {
+        this.#removeInputPropagationBlockers()
         this.#resizeObserver?.disconnect()
         this.#removePointerListeners()
+        this.#finishScrollbarDrag()
+        this.#finishSplitPanelDrag()
+        this.#externalInteractionActive = false
+        this.#scrollbarsInteractionActive = false
+        this.#clearScrollbarHideTimer()
         this.#stopAutoScroll()
     }
 
@@ -371,6 +484,33 @@ export class LGS1920Timeline extends HTMLElement {
     setZoom(zoomPercent) {
         this.#zoom = clamp(Number(zoomPercent) || 0, MIN_ZOOM, MAX_ZOOM)
         this.#render()
+    }
+
+    /**
+     * Keep the custom scrollbar rails visible for an external pointer gesture.
+     *
+     * @param {boolean} active - Whether the external gesture is active.
+     */
+    setScrollbarsInteractionActive(active) {
+        this.#scrollbarsInteractionActive = active === true
+        if (this.#scrollbarsInteractionActive) {
+            this.#showScrollbars()
+            return
+        }
+        this.#scheduleScrollbarHide()
+    }
+
+    /**
+     * Preserve an external drag or resize when its pointer crosses the host.
+     *
+     * Starting events remain local to the timeline. Only movement, completion,
+     * and cancellation events cross the host while this state is active.
+     *
+     * @param {boolean} active - Whether an external gesture is active.
+     */
+    setExternalInteractionActive(active) {
+        this.#externalInteractionActive = active === true
+        this.setScrollbarsInteractionActive(this.#externalInteractionActive)
     }
 
     /**
@@ -503,37 +643,67 @@ export class LGS1920Timeline extends HTMLElement {
     #render = () => {
         if (!this.#visible || !this.#projection) {
             this.hidden = true
+            this.#finishScrollbarDrag()
+            this.#finishSplitPanelDrag()
+            this.#externalInteractionActive = false
+            this.#scrollbarsInteractionActive = false
+            this.#clearScrollbarHideTimer()
             this.#root.replaceChildren(this.#root.querySelector('style'))
             this.#surface = null
+            this.#tracksViewport = null
             return
         }
 
         this.hidden = false
+        const previousScrollLeft = this.#surface?.scrollLeft ?? 0
+        const previousScrollTop = this.#tracksViewport?.scrollTop ?? 0
+        this.#finishScrollbarDrag()
         const {majorSeconds, scaleSplitCount} = resolveScale(this.#zoom)
         const durationSeconds = this.#durationSeconds()
         const scaleWidth = this.#numericToken('scale-width', SCALE_WIDTH)
         const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
         const scaleCount = Math.max(
             1,
-            Math.ceil((durationSeconds * 1.2) / majorSeconds),
+            Math.ceil((Math.max(durationSeconds, this.#numericToken('min-visible-duration', MIN_VISIBLE_DURATION_SECONDS)) * 1.2) / majorSeconds),
             Math.ceil(Math.max(0, this.#surfaceWidth) / scaleWidth),
         )
         this.#contentWidth = Math.max(this.#surfaceWidth, scaleOffset + (scaleCount * scaleWidth))
         this.#rowHeight = this.#resolveRowHeight()
         this.#root.replaceChildren(this.#root.querySelector('style'), this.#structure(scaleCount, majorSeconds, scaleSplitCount))
         this.#surface = this.#root.querySelector('[data-surface]')
+        this.#tracksViewport = this.#root.querySelector('[data-tracks-viewport]')
+        if (this.#surface) {
+            this.#surface.scrollLeft = previousScrollLeft
+        }
+        if (this.#tracksViewport) {
+            this.#tracksViewport.scrollTop = previousScrollTop
+        }
         this.#installResizeObserver()
+        this.#updateLegendScroll()
+        this.#updateScrollbars()
+        this.#showScrollbars()
+        this.#scheduleScrollbarHide()
+        const renderedSurface = this.#surface
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(() => {
+                if (this.#surface === renderedSurface) this.#updateScrollbars()
+            })
+        }
         this.#updateDynamicState()
     }
 
     /**
-     * Resolve the row height using the same fixed minimum and available space
-     * rules as the React/package adapter.
+     * Resolve the row height from the actual track layout when available.
+     *
+     * The host can also contain a header area, so using its full height would
+     * make the rows overflow below the timeline surface.
      *
      * @returns {number} Row height in pixels.
      */
     #resolveRowHeight = () => {
-        const height = this.getBoundingClientRect?.().height ?? 0
+        const layoutHeight = this.#root.querySelector('[data-layout]')?.getBoundingClientRect?.().height ?? 0
+        const hostHeight = this.getBoundingClientRect?.().height ?? 0
+        const height = layoutHeight > 0 ? layoutHeight : hostHeight
         const headerHeight = this.#numericToken('header-height', HEADER_HEIGHT)
         const scrollbarHeight = this.#numericToken('scrollbar-height', HORIZONTAL_SCROLLBAR_HEIGHT)
         const minimumRowHeight = this.#numericToken('row-height', MIN_ROW_HEIGHT)
@@ -564,7 +734,10 @@ export class LGS1920Timeline extends HTMLElement {
             createElement('slot', '', {name: 'timeline-actions'}),
             createElement('slot', '', {name: 'header-actions'}),
         )
-        header.append(createElement('slot', '', {name: 'header'}), this.#playbackControls(), headerActions)
+        header.append(createElement('slot', '', {name: 'header'}))
+        const playbackControls = this.#playbackControls()
+        if (playbackControls) header.append(playbackControls)
+        header.append(headerActions)
         top.append(header)
 
         const playback = createElement('div', 'lgs1920-wa-timeline__playback-controls', {part: 'playback-controls', 'aria-label': 'Timeline playback controls'})
@@ -587,7 +760,7 @@ export class LGS1920Timeline extends HTMLElement {
         layout.style.setProperty('--lgs-timeline-row-height', `${this.#rowHeight}px`)
         layout.append(this.#splitPanel(scaleCount, majorSeconds, scaleSplitCount), this.#trackDropIndicator())
         section.append(layout)
-        if (this.#contextMenuState) section.append(this.#contextMenu())
+        if (this.#contextMenuState && this.#timelineConfig.interactive !== false) section.append(this.#contextMenu())
         section.append(createElement('slot', '', {name: 'footer'}))
         return section
     }
@@ -612,10 +785,15 @@ export class LGS1920Timeline extends HTMLElement {
         splitPanel.style.setProperty('--max', `min(${maximum}px, calc(100% - ${minimum}px))`)
         splitPanel.style.setProperty('--divider-width', 'var(--lgs-timeline-resizer-width)')
         splitPanel.style.setProperty('--divider-hit-area', 'var(--lgs-timeline-resizer-hit-area)')
+        splitPanel.addEventListener('pointerdown', event => this.#startSplitPanelDrag(event, splitPanel))
         splitPanel.addEventListener('wa-reposition', event => {
             const width = Number(event.currentTarget?.positionInPixels)
             if (!Number.isFinite(width)) return
             this.#legendWidth = clamp(width, minimum, maximum)
+            this.#root.querySelector('[data-layout]')?.style.setProperty('--lgs-timeline-legend-width', `${this.#legendWidth}px`)
+            this.#showScrollbars()
+            this.#updateScrollbars()
+            if (!this.#scrollbarsInteractionActive) this.#scheduleScrollbarHide()
         })
 
         const legend = this.#legend()
@@ -650,9 +828,10 @@ export class LGS1920Timeline extends HTMLElement {
     /**
      * Create the Web Awesome video timeline playback controls.
      *
-     * @returns {HTMLElement} Button group.
+     * @returns {HTMLElement|null} Button group, or null for display-only timelines.
      */
     #playbackControls = () => {
+        if (this.#timelineConfig.interactive === false) return null
         const controls = createElement('wa-button-group', '', {label: 'Timeline playback controls', part: 'controls'})
         const play = this.#button({
             iconName: this.#playing ? 'pause' : 'play',
@@ -823,15 +1002,14 @@ export class LGS1920Timeline extends HTMLElement {
             this.#menuOpen = !this.#menuOpen
             this.#render()
         })
-        ruler.append(add)
+        if (this.#timelineConfig.interactive !== false) ruler.append(add)
         legend.append(ruler)
-        if (this.#menuOpen) legend.append(this.#menu())
+        if (this.#menuOpen && this.#timelineConfig.interactive !== false) legend.append(this.#menu())
         const viewport = createElement('div', 'lgs1920-wa-timeline__legend-viewport', {part: 'legend-viewport'})
         const rows = createElement('div', 'lgs1920-wa-timeline__legend-rows', {part: 'legend-rows'})
-        rows.style.transform = `translateY(-${this.#surface?.scrollTop ?? 0}px)`
         this.#rows.forEach(row => rows.append(this.#legendRow(row)))
         viewport.append(rows)
-        legend.append(viewport)
+        legend.append(this.#scrollbarShell(viewport, {role: 'legend', horizontal: false, vertical: true}))
         return legend
     }
 
@@ -1050,7 +1228,7 @@ export class LGS1920Timeline extends HTMLElement {
         const rect = this.#surface?.getBoundingClientRect()
         if (!rect) return null
         const headerHeight = this.#numericToken('header-height', HEADER_HEIGHT)
-        const relativeY = clientY - rect.top + (this.#surface?.scrollTop ?? 0) - headerHeight
+        const relativeY = clientY - rect.top + (this.#tracksViewport?.scrollTop ?? 0) - headerHeight
         if (relativeY < 0) return null
         const index = Math.floor(relativeY / Math.max(MIN_ROW_HEIGHT, this.#rowHeight))
         return this.#rows[index] ?? null
@@ -1072,6 +1250,7 @@ export class LGS1920Timeline extends HTMLElement {
         if (mode === 'resize' && (entry.clip.resizable === false || entry.clip.fixed === true)) return
         event.preventDefault()
         event.stopPropagation()
+        this.#capturePointer(event)
         const interval = resolveClipInterval(entry.clip)
         this.#interactionDurationMillis = null
         this.#dragState = {
@@ -1091,6 +1270,11 @@ export class LGS1920Timeline extends HTMLElement {
             lastResult: null,
         }
         this.#addPointerListeners()
+        this.#emit('before-drag', {
+            context: this.#dragContext(this.#dragState),
+            event,
+            data: this.#publicSnapshot(),
+        })
         this.#emit('clip-change-start', this.#clipEditor.changeDetail(this.#dragState, {
             rows: this.#dragState.baseRows,
             durationMillis: Number(this.#projection?.durationMillis) || 0,
@@ -1134,7 +1318,369 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     #surfaceElement = (scaleCount, majorSeconds, scaleSplitCount) => {
-        return this.#renderer.surfaceElement(scaleCount, majorSeconds, scaleSplitCount)
+        const surface = this.#renderer.surfaceElement(scaleCount, majorSeconds, scaleSplitCount)
+        const tracksViewport = surface.querySelector('[data-tracks-viewport]')
+        return this.#scrollbarShell(surface, {role: 'surface', horizontal: true, vertical: true, verticalView: tracksViewport ?? surface})
+    }
+
+    /**
+     * Wrap a timeline view with LGS-style custom scrollbars.
+     *
+     * Native scrollbars are kept functionally active on the view, while the
+     * visual rails and thumbs are rendered in the component shadow tree.
+     *
+     * @param {HTMLElement} view - Scrollable timeline view.
+     * @param {Object} options - Scrollbar axes and synchronization role.
+     * @param {string} options.role - View role used for vertical syncing.
+     * @param {boolean} options.horizontal - Whether to render a horizontal rail.
+     * @param {boolean} options.vertical - Whether to render a vertical rail.
+     * @returns {HTMLElement} Scrollbar shell containing the view.
+     */
+    #scrollbarShell = (view, {role, horizontal, vertical, verticalView = view}) => {
+        view.classList.add('view')
+        view.setAttribute('data-scroll-view', role)
+        const shell = createElement('div', `lgs-scrollbars lgs1920-wa-timeline__scroll-shell lgs1920-wa-timeline__scroll-shell--${role}`, {
+            'data-scrollbar-shell': role,
+        })
+        shell.append(view)
+        if (horizontal) shell.append(this.#scrollbarTrack(view, 'horizontal'))
+        if (vertical) shell.append(this.#scrollbarTrack(verticalView, 'vertical'))
+        shell.addEventListener('pointerenter', this.#showScrollbars)
+        shell.addEventListener('pointerleave', this.#scheduleScrollbarHide)
+        shell.addEventListener('focusin', this.#showScrollbars)
+        shell.addEventListener('focusout', this.#scheduleScrollbarHide)
+        return shell
+    }
+
+    /**
+     * Create one custom scrollbar rail and its draggable thumb.
+     *
+     * @param {HTMLElement} view - Scrollable timeline view.
+     * @param {'horizontal'|'vertical'} axis - Scrollbar axis.
+     * @returns {HTMLElement} Scrollbar rail.
+     */
+    #scrollbarTrack = (view, axis) => {
+        const track = createElement('div', `track-${axis} lgs1920-wa-timeline__scrollbar-track lgs1920-wa-timeline__scrollbar-track--${axis}`, {
+            'data-scrollbar-track': axis,
+            'data-scrollbar-view': view.getAttribute('data-scroll-view'),
+            role: 'scrollbar',
+            'aria-orientation': axis,
+            'aria-valuemin': 0,
+            'aria-valuemax': 0,
+            'aria-valuenow': 0,
+            tabindex: 0,
+        })
+        const thumb = createElement('div', `thumb-${axis} lgs1920-wa-timeline__scrollbar-thumb lgs1920-wa-timeline__scrollbar-thumb--${axis}`, {
+            'data-scrollbar-thumb': axis,
+        })
+        track.append(thumb)
+        view.addEventListener('scroll', () => {
+            this.#showScrollbars()
+            this.#scheduleScrollbarHide()
+            const viewRole = view.getAttribute('data-scroll-view')
+            if (viewRole === 'legend') this.#syncTracksScroll()
+            if (viewRole === 'tracks') this.#updateLegendScroll()
+            else this.#updateScrollbars()
+        })
+        track.addEventListener('pointerdown', event => this.#startScrollbarDrag(event, view, axis, track, thumb))
+        track.addEventListener('keydown', event => this.#handleScrollbarKeyDown(event, view, axis))
+        return track
+    }
+
+    /**
+     * Update every custom rail from its associated native scroll view.
+     */
+    #updateScrollbars = () => {
+        this.#root.querySelectorAll('[data-scrollbar-shell]').forEach(shell => {
+            shell.querySelectorAll('[data-scrollbar-track]').forEach(track => {
+                const axis = track.getAttribute('data-scrollbar-track')
+                const viewRole = track.getAttribute('data-scrollbar-view')
+                const view = shell.querySelector(`[data-scroll-view="${viewRole}"]`)
+                const thumb = track.querySelector('[data-scrollbar-thumb]')
+                if (view && thumb) this.#updateScrollbarGeometry(view, axis, track, thumb)
+            })
+        })
+    }
+
+    /**
+     * Recompute one rail visibility, thumb size, and thumb position.
+     *
+     * @param {HTMLElement} view - Scrollable timeline view.
+     * @param {'horizontal'|'vertical'} axis - Scrollbar axis.
+     * @param {HTMLElement} track - Scrollbar rail.
+     * @param {HTMLElement} thumb - Scrollbar thumb.
+     */
+    #updateScrollbarGeometry = (view, axis, track, thumb) => {
+        const scrollSize = axis === 'vertical' ? view.scrollHeight : view.scrollWidth
+        const clientSize = axis === 'vertical' ? view.clientHeight : view.clientWidth
+        const scrollOffset = axis === 'vertical' ? view.scrollTop : view.scrollLeft
+        track.hidden = false
+        const trackSize = axis === 'vertical' ? track.clientHeight : track.clientWidth
+        const overflowing = scrollSize > clientSize && clientSize > 0 && trackSize > 0
+        track.hidden = !overflowing
+        thumb.hidden = !overflowing
+        if (!overflowing) {
+            thumb.style.transform = axis === 'vertical' ? 'translateY(0px)' : 'translateX(0px)'
+            thumb.style[axis === 'vertical' ? 'height' : 'width'] = '0px'
+            track.setAttribute('aria-valuemax', '0')
+            track.setAttribute('aria-valuenow', '0')
+            return
+        }
+        const minimumSize = this.#numericToken('scrollbar-thumb-min-size', 30)
+        const thumbSize = Math.min(trackSize, Math.max(minimumSize, Math.ceil((clientSize / scrollSize) * trackSize)))
+        const maximumOffset = Math.max(0, trackSize - thumbSize)
+        const maximumScroll = Math.max(1, scrollSize - clientSize)
+        const thumbOffset = clamp((scrollOffset / maximumScroll) * maximumOffset, 0, maximumOffset)
+        thumb.style[axis === 'vertical' ? 'height' : 'width'] = `${thumbSize}px`
+        thumb.style.transform = axis === 'vertical' ? `translateY(${thumbOffset}px)` : `translateX(${thumbOffset}px)`
+        track.setAttribute('aria-valuemax', `${scrollSize - clientSize}`)
+        track.setAttribute('aria-valuenow', `${scrollOffset}`)
+    }
+
+    /**
+     * Begin dragging a custom scrollbar thumb or page to a track position.
+     *
+     * @param {PointerEvent} event - Pointer event.
+     * @param {HTMLElement} view - Scrollable timeline view.
+     * @param {'horizontal'|'vertical'} axis - Scrollbar axis.
+     * @param {HTMLElement} track - Scrollbar rail.
+     * @param {HTMLElement} thumb - Scrollbar thumb.
+     */
+    #startScrollbarDrag = (event, view, axis, track, thumb) => {
+        if (event.button !== 0 || track.hidden) return
+        event.preventDefault()
+        event.stopPropagation()
+        this.#showScrollbars()
+        this.#clearScrollbarHideTimer()
+        const trackRect = track.getBoundingClientRect()
+        const thumbRect = thumb.getBoundingClientRect()
+        const coordinate = axis === 'vertical' ? event.clientY : event.clientX
+        const trackStart = axis === 'vertical' ? trackRect.top : trackRect.left
+        const thumbStart = axis === 'vertical' ? thumbRect.top : thumbRect.left
+        const thumbSize = axis === 'vertical' ? thumbRect.height : thumbRect.width
+        const offset = event.target === thumb || thumb.contains(event.target)
+            ? coordinate - thumbStart
+            : thumbSize / 2
+        if (!(event.target === thumb || thumb.contains(event.target))) {
+            this.#setScrollbarOffset(view, axis, coordinate - trackStart - offset, track)
+        }
+        this.#finishScrollbarDrag()
+        this.#capturePointer(event)
+        this.#scrollbarDrag = {view, axis, track, thumb, offset}
+        this.#scrollbarDragCleanup = () => {
+            window.removeEventListener('pointermove', this.#scrollbarPointerMove, true)
+            window.removeEventListener('pointerup', this.#scrollbarPointerUp, true)
+            window.removeEventListener('pointercancel', this.#scrollbarPointerUp, true)
+        }
+        window.addEventListener('pointermove', this.#scrollbarPointerMove, {passive: false, capture: true})
+        window.addEventListener('pointerup', this.#scrollbarPointerUp, true)
+        window.addEventListener('pointercancel', this.#scrollbarPointerUp, true)
+    }
+
+    /**
+     * Move a view from a pointer position expressed on its scrollbar rail.
+     *
+     * @param {HTMLElement} view - Scrollable timeline view.
+     * @param {'horizontal'|'vertical'} axis - Scrollbar axis.
+     * @param {number} pointerOffset - Pointer offset within the rail.
+     * @param {HTMLElement} track - Scrollbar rail.
+     */
+    #setScrollbarOffset = (view, axis, pointerOffset, track) => {
+        const scrollSize = axis === 'vertical' ? view.scrollHeight : view.scrollWidth
+        const clientSize = axis === 'vertical' ? view.clientHeight : view.clientWidth
+        const trackSize = axis === 'vertical' ? track.clientHeight : track.clientWidth
+        const minimumSize = this.#numericToken('scrollbar-thumb-min-size', 30)
+        const thumbSize = Math.min(trackSize, Math.max(minimumSize, Math.ceil((clientSize / Math.max(scrollSize, 1)) * trackSize)))
+        const maximumOffset = Math.max(0, trackSize - thumbSize)
+        const ratio = maximumOffset > 0 ? clamp(pointerOffset / maximumOffset, 0, 1) : 0
+        const value = ratio * Math.max(0, scrollSize - clientSize)
+        if (axis === 'vertical') view.scrollTop = value
+        else view.scrollLeft = value
+    }
+
+    /**
+     * Keep subsequent pointer events attached to the active gesture target.
+     *
+     * @param {PointerEvent} event - Pointer event that starts the gesture.
+     */
+    #capturePointer = event => {
+        const target = event.currentTarget instanceof Element ? event.currentTarget : event.target
+        if (!target?.setPointerCapture || !Number.isFinite(event.pointerId)) return
+        target.setPointerCapture(event.pointerId)
+        this.#pointerCaptureTarget = target
+        this.#pointerCaptureId = event.pointerId
+    }
+
+    /**
+     * Release the pointer captured by the active gesture, when supported.
+     */
+    #releasePointerCapture = () => {
+        const target = this.#pointerCaptureTarget
+        const pointerId = this.#pointerCaptureId
+        this.#pointerCaptureTarget = null
+        this.#pointerCaptureId = null
+        if (!target?.releasePointerCapture || !Number.isFinite(pointerId)) return
+        target.releasePointerCapture(pointerId)
+    }
+
+    /**
+     * Handle pointer movement while dragging a custom thumb.
+     *
+     * @param {PointerEvent} event - Pointer event.
+     */
+    #scrollbarPointerMove = event => {
+        if (!this.#scrollbarDrag) return
+        event.preventDefault()
+        this.#showScrollbars()
+        const {view, axis, track, offset} = this.#scrollbarDrag
+        const trackRect = track.getBoundingClientRect()
+        const coordinate = axis === 'vertical' ? event.clientY : event.clientX
+        const trackStart = axis === 'vertical' ? trackRect.top : trackRect.left
+        this.#setScrollbarOffset(view, axis, coordinate - trackStart - offset, track)
+    }
+
+    /**
+     * End a custom scrollbar drag and restart the inactivity timer.
+     */
+    #scrollbarPointerUp = () => {
+        this.#finishScrollbarDrag()
+        this.#scheduleScrollbarHide()
+    }
+
+    /**
+     * Begin keeping rails visible while the split-panel divider is dragged.
+     *
+     * @param {PointerEvent} event - Pointer event from the split panel.
+     * @param {HTMLElement} splitPanel - Timeline split panel.
+     */
+    #startSplitPanelDrag = (event, splitPanel) => {
+        if (event.button !== 0 || !this.#isSplitPanelDividerEvent(event, splitPanel)) return
+        this.#finishSplitPanelDrag()
+        this.#capturePointer(event)
+        this.setExternalInteractionActive(true)
+        this.#splitPanelDragCleanup = () => {
+            window.removeEventListener('pointermove', this.#splitPanelPointerMove, true)
+            window.removeEventListener('pointerup', this.#splitPanelPointerUp, true)
+            window.removeEventListener('pointercancel', this.#splitPanelPointerUp, true)
+        }
+        window.addEventListener('pointermove', this.#splitPanelPointerMove, {passive: false, capture: true})
+        window.addEventListener('pointerup', this.#splitPanelPointerUp, true)
+        window.addEventListener('pointercancel', this.#splitPanelPointerUp, true)
+    }
+
+    /**
+     * Check whether a pointer event originated from the split-panel divider.
+     *
+     * @param {PointerEvent} event - Pointer event to inspect.
+     * @param {HTMLElement} splitPanel - Timeline split panel.
+     * @returns {boolean} Whether the event belongs to the divider.
+     */
+    #isSplitPanelDividerEvent = (event, splitPanel) => event.target === splitPanel
+        || event.composedPath().some(target => target?.getAttribute?.('part')?.split(/\s+/).includes('divider'))
+
+    /**
+     * Keep rails visible while the split-panel divider continues moving.
+     */
+    #splitPanelPointerMove = () => {
+        if (!this.#splitPanelDragCleanup) return
+        this.#showScrollbars()
+    }
+
+    /**
+     * End split-panel divider activity and restart the inactivity timer.
+     */
+    #splitPanelPointerUp = () => {
+        const wasDragging = Boolean(this.#splitPanelDragCleanup)
+        this.#finishSplitPanelDrag()
+        this.setExternalInteractionActive(false)
+        if (wasDragging) queueMicrotask(this.#renderAfterSplitPanelDrag)
+    }
+
+    /**
+     * Rebuild width-dependent ruler geometry after the divider gesture ends.
+     */
+    #renderAfterSplitPanelDrag = () => {
+        if (this.isConnected && !this.#splitPanelDragCleanup) this.#render()
+    }
+
+    /**
+     * Remove global split-panel divider listeners.
+     */
+    #finishSplitPanelDrag = () => {
+        this.#splitPanelDragCleanup?.()
+        this.#splitPanelDragCleanup = null
+        this.#releasePointerCapture()
+    }
+
+    /**
+     * Handle keyboard movement on a custom scrollbar rail.
+     *
+     * @param {KeyboardEvent} event - Keyboard event.
+     * @param {HTMLElement} view - Scrollable timeline view.
+     * @param {'horizontal'|'vertical'} axis - Scrollbar axis.
+     */
+    #handleScrollbarKeyDown = (event, view, axis) => {
+        const positive = axis === 'vertical' ? ['ArrowDown', 'PageDown'] : ['ArrowRight', 'PageDown']
+        const negative = axis === 'vertical' ? ['ArrowUp', 'PageUp'] : ['ArrowLeft', 'PageUp']
+        if (![...positive, ...negative].includes(event.key)) return
+        event.preventDefault()
+        const page = axis === 'vertical' ? view.clientHeight : view.clientWidth
+        const delta = positive.includes(event.key) ? page : -page
+        if (axis === 'vertical') view.scrollTop += delta
+        else view.scrollLeft += delta
+    }
+
+    /**
+     * Remove global custom scrollbar drag listeners.
+     */
+    #finishScrollbarDrag = () => {
+        this.#scrollbarDragCleanup?.()
+        this.#scrollbarDragCleanup = null
+        this.#scrollbarDrag = null
+        this.#releasePointerCapture()
+    }
+
+    /**
+     * Read the custom scrollbar auto-hide delay from the host CSS token.
+     *
+     * @returns {number} Auto-hide delay in milliseconds.
+     */
+    #scrollbarAutoHideDelay = () => {
+        const value = globalThis.getComputedStyle?.(this)?.getPropertyValue('--lgs-timeline-scrollbar-auto-hide-delay')?.trim()
+        const amount = Number.parseFloat(value)
+        if (!Number.isFinite(amount) || amount < 0) return 3_000
+        return value.endsWith('ms') ? amount : amount * 1_000
+    }
+
+    /**
+     * Clear the pending custom scrollbar auto-hide timer.
+     */
+    #clearScrollbarHideTimer = () => {
+        if (this.#scrollbarHideTimer !== null) clearTimeout(this.#scrollbarHideTimer)
+        this.#scrollbarHideTimer = null
+    }
+
+    /**
+     * Show all custom rails and cancel their inactivity timer.
+     */
+    #showScrollbars = () => {
+        this.#clearScrollbarHideTimer()
+        this.#root.querySelectorAll('[data-scrollbar-shell]').forEach(shell => shell.classList.remove('lgs1920-wa-timeline__scroll-shell--idle'))
+    }
+
+    /**
+     * Hide all custom rails after the configured inactivity delay.
+     */
+    #scheduleScrollbarHide = () => {
+        this.#clearScrollbarHideTimer()
+        if (this.#scrollbarsInteractionActive) return
+        if (!this.#root.querySelector('[data-scrollbar-shell]')) return
+        const delay = this.#scrollbarAutoHideDelay()
+        if (delay <= 0) return
+        this.#scrollbarHideTimer = setTimeout(() => {
+            this.#root.querySelectorAll('[data-scrollbar-shell]').forEach(shell => shell.classList.add('lgs1920-wa-timeline__scroll-shell--idle'))
+            this.#scrollbarHideTimer = null
+        }, delay)
     }
 
     /**
@@ -1147,6 +1693,7 @@ export class LGS1920Timeline extends HTMLElement {
         if (event.button !== 0 || this.#timelineConfig.editable === false) return
         event.preventDefault()
         event.stopPropagation()
+        this.#capturePointer(event)
         this.#dragState = {
             type: 'range',
             edge,
@@ -1241,8 +1788,15 @@ export class LGS1920Timeline extends HTMLElement {
      * @param {string} rowId - Dragged row identifier.
      */
     #startRowDrag = (event, rowId) => {
-        if (event.button !== 0 || event.target.closest('wa-button')) return
+        const row = this.#rows.find(value => value.id === rowId)
+        if (event.button !== 0
+            || event.target.closest('wa-button')
+            || !row
+            || this.#timelineConfig.editable === false
+            || row.fixed === true
+            || row.movable === false) return
         event.preventDefault()
+        this.#capturePointer(event)
         this.#dragState = {
             type: 'row',
             rowId,
@@ -1251,27 +1805,59 @@ export class LGS1920Timeline extends HTMLElement {
             baseRows: cloneRows(this.#rows),
         }
         this.#addPointerListeners()
+        this.#emit('before-drag', {
+            context: this.#dragContext(this.#dragState),
+            event,
+            data: this.#publicSnapshot(),
+        })
         this.#render()
+    }
+
+    /**
+     * Resolve the public context attached to a row or clip drag.
+     *
+     * @param {Object} state - Active drag state.
+     * @returns {Object} Public drag context.
+     */
+    #dragContext = state => {
+        if (state?.type === 'row') {
+            return {
+                type: 'piste',
+                pisteId: state.rowId,
+                trackId: state.rowId,
+            }
+        }
+        const entry = state?.type === 'clip'
+            ? this.#clipEditor.findClipEntry(this.#rows, state.clipId)
+            : null
+        const pisteId = entry?.row.id ?? state?.targetTrackId ?? state?.sourceTrackId ?? null
+        return {
+            type: 'clip',
+            pisteId,
+            trackId: pisteId,
+            clipId: state?.clipId ?? null,
+        }
     }
 
     /**
      * Install global pointer listeners for scrubbing, resizing, or row drag.
      */
     #addPointerListeners = () => {
-        window.addEventListener('pointermove', this.#pointerMove, {passive: false})
-        window.addEventListener('pointerup', this.#pointerUp)
-        window.addEventListener('pointercancel', this.#pointerUp)
+        window.addEventListener('pointermove', this.#pointerMove, {passive: false, capture: true})
+        window.addEventListener('pointerup', this.#pointerUp, true)
+        window.addEventListener('pointercancel', this.#pointerUp, true)
     }
 
     /**
      * Remove global pointer listeners and reset transient pointer state.
      */
     #removePointerListeners = () => {
-        window.removeEventListener('pointermove', this.#pointerMove)
-        window.removeEventListener('pointerup', this.#pointerUp)
-        window.removeEventListener('pointercancel', this.#pointerUp)
+        window.removeEventListener('pointermove', this.#pointerMove, true)
+        window.removeEventListener('pointerup', this.#pointerUp, true)
+        window.removeEventListener('pointercancel', this.#pointerUp, true)
         this.#dragState = null
         this.#scrubPointerId = null
+        this.#releasePointerCapture()
         this.#stopAutoScroll()
     }
 
@@ -1290,7 +1876,15 @@ export class LGS1920Timeline extends HTMLElement {
         if (this.#dragState?.type === 'clip') {
             if (event.pointerId !== this.#dragState.pointerId) return
             event.preventDefault()
+            const previousResult = this.#dragState.lastResult
             this.#clipEditor.preview(this.#dragState, event)
+            if (this.#dragState.lastResult && this.#dragState.lastResult !== previousResult) {
+                this.#emit('drag', {
+                    context: this.#dragContext(this.#dragState),
+                    event,
+                    data: this.#publicSnapshot(),
+                })
+            }
             return
         }
         if (this.#dragState?.type === 'range') {
@@ -1309,6 +1903,11 @@ export class LGS1920Timeline extends HTMLElement {
             const rowHeight = Math.max(MIN_ROW_HEIGHT, this.#rowHeight)
             const dropIndex = clamp(Math.floor((event.clientY - rect.top + (rowHeight / 2)) / rowHeight), 0, this.#rows.length)
             this.#dragState.dropIndex = dropIndex
+            this.#emit('drag', {
+                context: this.#dragContext(this.#dragState),
+                event,
+                data: this.#publicSnapshot(),
+            })
             const currentIndex = this.#rows.findIndex(row => row.id === this.#dragState?.rowId)
             const targetIndex = clamp(dropIndex > currentIndex ? dropIndex - 1 : dropIndex, 0, Math.max(0, this.#rows.length - 1))
             if (currentIndex < 0 || currentIndex === targetIndex) {
@@ -1352,6 +1951,14 @@ export class LGS1920Timeline extends HTMLElement {
                 trackIds: this.#rows.filter(row => !row.fixed && row.movable !== false).map(row => row.id),
                 tracks: this.#rows.map(row => this.#publicTrack(row)),
                 dropIndex: state.dropIndex,
+            })
+        }
+        if (state?.type === 'row' || state?.type === 'clip') {
+            this.#emit('after-drag', {
+                context: this.#dragContext(state),
+                committed: event.type === 'pointerup' && (state.type === 'row' || Boolean(state.lastResult)),
+                event,
+                data: this.#publicSnapshot(),
             })
         }
         this.#removePointerListeners()
@@ -1411,18 +2018,35 @@ export class LGS1920Timeline extends HTMLElement {
             const width = entries.find(entry => entry.target === this.#surface)?.contentRect.width
             if (Number.isFinite(width) && width !== this.#surfaceWidth) {
                 this.#surfaceWidth = width
+                if (this.#splitPanelDragCleanup) {
+                    this.#updateScrollbars()
+                    return
+                }
                 this.#render()
-            }
+            } else this.#updateScrollbars()
         })
         this.#resizeObserver.observe(this.#surface)
     }
 
     /**
-     * Keep the external legend aligned with the scrollable track surface.
+     * Keep the title and track views aligned on their shared vertical axis.
      */
     #updateLegendScroll = () => {
-        const rows = this.#root.querySelector('.lgs1920-wa-timeline__legend-rows')
-        if (rows) rows.style.transform = `translateY(-${this.#surface?.scrollTop ?? 0}px)`
+        const legend = this.#root.querySelector('[data-scroll-view="legend"]')
+        if (legend && this.#tracksViewport && legend.scrollTop !== this.#tracksViewport.scrollTop) {
+            legend.scrollTop = this.#tracksViewport.scrollTop
+        }
+        this.#updateScrollbars()
+    }
+
+    /**
+     * Push a title-column scroll position into the track surface.
+     */
+    #syncTracksScroll = () => {
+        const legend = this.#root.querySelector('[data-scroll-view="legend"]')
+        if (legend && this.#tracksViewport && this.#tracksViewport.scrollTop !== legend.scrollTop) {
+            this.#tracksViewport.scrollTop = legend.scrollTop
+        }
     }
 
     /**
