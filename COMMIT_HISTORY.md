@@ -1471,3 +1471,43 @@
 ## 2026-09-01 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/c5eba06cfa9ee1b07b0bf32880d4bacfe246980d)
 
 - Recorded automatically from Git history.
+
+## 2026-09-01 — [`chore: require stable fixes`](https://github.com/lgs1920/studio/commit/5cf399d375c9e8404391a529fc2ef8707dd24489)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`feat(timeline): add transport and playhead controls`](https://github.com/lgs1920/studio/commit/b47da0ca5bc2f1850b8385b1ea4b7ddb627e153b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`feat(replay): synchronize timeline preview with Replay`](https://github.com/lgs1920/studio/commit/22d207aa8d92af952450bfc5a54962dc4edc28ac)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`chore: protect uncommitted changes`](https://github.com/lgs1920/studio/commit/d38f05a53eac9cfd68c1d94a2529858a71a6f963)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`docs: clarify Web Awesome usage rules`](https://github.com/lgs1920/studio/commit/2a383f5d3c395ab154f25980281f8041345cad6d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`fix: update replay clip icons and labels`](https://github.com/lgs1920/studio/commit/56c79705d56d358d97a26e2417544a76608a3636)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`fix(timeline): preserve native split during interactions`](https://github.com/lgs1920/studio/commit/44601e8e2509c58cd45f5d21d5b5525e10d634ac)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`refactor(timeline): keep React adapter passive`](https://github.com/lgs1920/studio/commit/9a9206451889d9f79a2a8b4408651a85ab8ab6e9)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`docs(timeline): document native split and menu slots`](https://github.com/lgs1920/studio/commit/67cd228e78fc1bccd63df3bcaecbbc93864ae894)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/19dcb4bd17daf9e71901b53d60ec7b3d5df7f24c)
+
+- Recorded automatically from Git history.
