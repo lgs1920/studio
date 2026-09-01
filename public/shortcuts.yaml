@@ -42,12 +42,53 @@
     - Alt+Shift+W
   scope: Replay mode
 - action: Zoom Replay timeline
-  description: Changes the visible time range of the focused Replay timeline in 20% increments with Ctrl+Wheel or arrow keys.
+  description: Changes the visible time range of the focused Replay timeline in 20% increments with Ctrl+Wheel or the horizontal arrow keys.
   id: replay-timeline-zoom
   keys:
     - Ctrl+Wheel
     - ArrowLeft
     - ArrowRight
+  scope: Replay timeline
+- action: Move Replay playhead
+  description: Moves the focused Replay playhead by keyboardStepSeconds, or ten times that step with Shift. Alt+ArrowRight selects the range minimum and Alt+ArrowLeft selects the range maximum.
+  id: replay-timeline-playhead-keyboard
+  keys:
+    - ArrowLeft
+    - ArrowRight
+    - Shift+ArrowLeft
+    - Shift+ArrowRight
+    - Alt+ArrowLeft
+    - Alt+ArrowRight
+  scope: Replay timeline
+- action: Move Replay range boundary
+  description: Moves the focused Replay range start or end boundary by keyboardStepSeconds, or ten times that step with Shift.
+  id: replay-timeline-range-keyboard
+  keys:
+    - ArrowLeft
+    - ArrowRight
+    - Shift+ArrowLeft
+    - Shift+ArrowRight
+  scope: Replay timeline
+- action: Resize Replay clip edge
+  description: Resizes the focused Replay clip start or end edge by keyboardStepSeconds, or ten times that step with Shift.
+  id: replay-timeline-clip-resize-keyboard
+  keys:
+    - ArrowLeft
+    - ArrowRight
+    - Shift+ArrowLeft
+    - Shift+ArrowRight
+  scope: Replay timeline
+- action: Resize Replay track legend
+  description: Resizes the focused Replay track legend with the native split-panel divider. Arrow keys move it, Shift changes the step, Home and End select the bounds, and Enter collapses or restores the panel.
+  id: replay-timeline-split-keyboard
+  keys:
+    - ArrowLeft
+    - ArrowRight
+    - Shift+ArrowLeft
+    - Shift+ArrowRight
+    - Home
+    - End
+    - Enter
   scope: Replay timeline
 - action: Adjust replay camera heading
   description: Adjusts only the replay camera heading by 1 degree while replay camera preparation is active.

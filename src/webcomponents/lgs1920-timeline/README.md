@@ -369,6 +369,14 @@ playhead has keyboard focus, `ArrowLeft` and `ArrowRight` move it by
 moves it to the range minimum and `Alt+ArrowLeft` moves it to the range
 maximum.
 
+When a range handle has keyboard focus, `ArrowLeft` and `ArrowRight` move the
+selected boundary by `keyboardStepSeconds`; `Shift` multiplies the step by ten.
+When a clip resize handle has focus, the same keys resize the corresponding
+clip edge with the same step rules. The split-panel divider is a native
+Web Awesome separator: its horizontal arrow keys resize the track legend,
+`Shift` changes the step, `Home` and `End` select the minimum and maximum, and
+`Enter` collapses or restores the panel.
+
 ## Track names and controlled editing
 
 Double-click an editable track name to open the inline Web Awesome input.
@@ -423,7 +431,7 @@ the new `tracks` order and `dropIndex`. While the pointer is over a rejected
 locked boundary, the dragged row silhouette uses the Web Awesome `danger`
 colors, follows the pointer in both panes, and remains at its last valid
 position while a translucent placeholder preserves the source slot. A valid
-position restores the `warning` silhouette.
+position uses the Web Awesome `brand` colors.
 
 The component emits `before-drag`, `drag`, and `after-drag` for movable tracks
 and clips. Each detail contains a `context` with the requested public shape:

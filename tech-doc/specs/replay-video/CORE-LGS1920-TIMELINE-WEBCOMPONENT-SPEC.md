@@ -129,9 +129,21 @@ duration. They support pointer and keyboard editing. The default end range
 follows an extended duration until the host explicitly supplies a
 `rangeEndMillis` value or edits the end handle.
 
+When focused, `ArrowLeft` and `ArrowRight` move the selected range boundary by
+`keyboardStepSeconds`; `Shift` multiplies the step by ten.
+
 The global slots `timeline-start-handle` and `timeline-end-handle` customize
 their visible contents. The CSS parts are `timeline-start-handle` and
 `timeline-end-handle`.
+
+## Playhead keyboard controls
+
+When the playhead has focus, `ArrowLeft` and `ArrowRight` move it by
+`keyboardStepSeconds`; `Shift` multiplies the step by ten. `Alt+ArrowRight`
+moves the playhead to the range minimum, while `Alt+ArrowLeft` moves it to the
+range maximum. The focused time surface uses the horizontal arrow keys to
+change the ruler zoom in 20% increments; `Ctrl+Wheel` provides the pointer
+equivalent.
 
 ## Clip editing
 
@@ -153,6 +165,11 @@ The minimum duration is resolved from `clip.minDuration`, then
 `track.minClipDuration`, then `timeline.minClipDuration`. The handles support
 pointer and keyboard editing. `ArrowLeft` and `ArrowRight` use
 `keyboardStepSeconds`; `Shift` applies a ten-times step.
+
+The native split-panel divider is also keyboard accessible. Its horizontal
+arrow keys resize the title column, `Shift` changes the movement step, `Home`
+and `End` select the configured minimum and maximum, and `Enter` collapses or
+restores the panel.
 
 The global slots `clip-start-handle` and `clip-end-handle` provide fallback
 content, while `clip-start-handle-{clipId}` and `clip-end-handle-{clipId}`
