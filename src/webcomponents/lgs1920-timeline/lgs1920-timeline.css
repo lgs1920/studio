@@ -463,9 +463,9 @@
 
     & .lgs1920-wa-timeline__legend-row.lgs1920-wa-timeline__legend-row--dragging {
         cursor: grabbing;
-        color: var(--wa-color-warning-on-normal);
-        background: var(--wa-color-warning-fill-normal);
-        border-color: var(--wa-color-warning-border-normal);
+        color: var(--wa-color-brand-on-normal);
+        background: var(--wa-color-brand-fill-normal);
+        border-color: var(--wa-color-brand-border-normal);
         box-shadow: var(--wa-shadow-s);
     }
 
@@ -778,10 +778,10 @@
     }
 
     & .lgs1920-wa-timeline__track.lgs1920-wa-timeline__track--dragging {
-        color: var(--wa-color-warning-on-normal);
-        background-color: var(--wa-color-warning-fill-normal);
-        border-color: var(--wa-color-warning-border-normal);
-        outline: 1px solid var(--wa-color-warning-border-normal);
+        color: var(--wa-color-brand-on-normal);
+        background-color: var(--wa-color-brand-fill-normal);
+        border-color: var(--wa-color-brand-border-normal);
+        outline: 1px solid var(--wa-color-brand-border-normal);
         outline-offset: -1px;
     }
 
