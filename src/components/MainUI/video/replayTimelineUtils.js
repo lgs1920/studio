@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-08-30
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,11 +21,22 @@
 export const REPLAY_TIMELINE_UI = Object.freeze({
     headerHeight: 42,
     horizontalScrollbarHeight: 8,
+    minWidth: 352,
+    minHeight: 156,
+    maxWidth: 3840,
+    maxHeight: 2160,
+    minimumVisibleDurationSeconds: 5,
+    minimumVisibleTrackCount: 1,
+    maximumVisibleTrackCount: 3,
+    previewTopHeight: 56,
+    outerPadding: 24,
+    outerBorderWidth: 2,
+    legendResizerWidth: 6,
+    scaleOffset: 20,
     scrubThrottleMillis: 50,
     legendWidth: 136,
-    legendMaxWidth: 300,
-    legendMinWidth: 120,
-    minHeight: 66,
+    legendMaxWidth: 200,
+    legendMinWidth: 100,
     rowHeight: 24,
     scaleIntervalMillis: 200,
     scaleSplitCount: 5,
@@ -162,10 +173,47 @@ export const resolveReplayTimelineScale = zoomPercent => {
  * @param {number} rowCount - Number of visible timeline rows.
  * @returns {number} Timeline height in pixels.
  */
-export const resolveReplayTimelineHeight = rowCount => Math.max(
-    REPLAY_TIMELINE_UI.minHeight,
-    REPLAY_TIMELINE_UI.headerHeight + (Math.max(0, Number(rowCount) || 0) * REPLAY_TIMELINE_UI.rowHeight),
-)
+export const resolveReplayTimelineHeight = rowCount => REPLAY_TIMELINE_UI.previewTopHeight
+    + REPLAY_TIMELINE_UI.outerPadding
+    + REPLAY_TIMELINE_UI.outerBorderWidth
+    + resolveReplayTimelineLayoutHeight(rowCount)
+
+/**
+ * Resolve the minimum height of the timeline layout inside its outer host.
+ *
+ * @param {number} rowCount - Number of timeline rows.
+ * @returns {number} Timeline layout height in pixels.
+ */
+export const resolveReplayTimelineLayoutHeight = rowCount => REPLAY_TIMELINE_UI.headerHeight
+    + REPLAY_TIMELINE_UI.horizontalScrollbarHeight
+    + (Math.min(
+        REPLAY_TIMELINE_UI.maximumVisibleTrackCount,
+        Math.max(REPLAY_TIMELINE_UI.minimumVisibleTrackCount, Math.floor(Number(rowCount) || 0)),
+    ) * REPLAY_TIMELINE_UI.rowHeight)
+
+/**
+ * Resolve the minimum outer width required to show five seconds of the ruler.
+ *
+ * @returns {number} Minimum timeline width in pixels.
+ */
+export const resolveReplayTimelineMinimumWidth = () => REPLAY_TIMELINE_UI.legendMinWidth
+    + REPLAY_TIMELINE_UI.legendResizerWidth
+    + REPLAY_TIMELINE_UI.scaleOffset
+    + (REPLAY_TIMELINE_UI.minimumVisibleDurationSeconds * REPLAY_TIMELINE_UI.scaleWidth)
+    + REPLAY_TIMELINE_UI.outerPadding
+    + REPLAY_TIMELINE_UI.outerBorderWidth
+
+/**
+ * Resolve the minimum outer dimensions required by the floating timeline.
+ *
+ * @param {number} rowCount - Number of timeline rows.
+ * @returns {{width: number, height: number, layoutHeight: number}} Minimum dimensions.
+ */
+export const resolveReplayTimelineMinimumDimensions = rowCount => ({
+    width:        resolveReplayTimelineMinimumWidth(),
+    height:       resolveReplayTimelineHeight(rowCount),
+    layoutHeight: resolveReplayTimelineLayoutHeight(rowCount),
+})
 
 /**
  * Resolve the row height used when the timeline receives additional vertical space.
@@ -179,7 +227,7 @@ export const resolveReplayTimelineHeight = rowCount => Math.max(
 export const resolveReplayTimelineRowHeight = ({height, rowCount}) => {
     const safeHeight = Number(height)
     const safeRowCount = Math.max(1, Math.floor(Number(rowCount) || 0))
-    const availableRowsHeight = (Number.isFinite(safeHeight) ? safeHeight : REPLAY_TIMELINE_UI.minHeight)
+    const availableRowsHeight = (Number.isFinite(safeHeight) ? safeHeight : resolveReplayTimelineLayoutHeight(0))
         - REPLAY_TIMELINE_UI.headerHeight
         - REPLAY_TIMELINE_UI.horizontalScrollbarHeight
     return Math.max(

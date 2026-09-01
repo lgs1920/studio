@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-18
- * Last modified: 2026-07-18
+ * Created on: 2025-09-19
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -1088,6 +1088,10 @@ export const Widget = ({
     }, [blockDoubleClick, canReduce, toggleCollapsed])
 
     const openContextMenu = useCallback((event) => {
+        if (hasNoDragInPath(event)) {
+            return
+        }
+
         event?.preventDefault?.()
         event?.stopPropagation?.()
         event?.nativeEvent?.stopImmediatePropagation?.()

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-08-31
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,10 +19,11 @@
  */
 
 import {ReplayTimelinePreview} from '@Components/MainUI/video/ReplayTimelinePreview'
+import {REPLAY_TIMELINE_UI} from '@Components/MainUI/video/replayTimelineUtils'
 import {Widget} from '@Components/MainUI/widgets/Widget'
 import {JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS_BOARD} from '@Core/constants'
 import {constrainWidgetDimensions} from '@Core/ui/widget-manager/widgetResizeUtils'
-import {useEffect, useMemo, useRef} from 'react'
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 
 const REPLAY_TIMELINE_FREE_RATIO = {value: '0x0', aspectRatio: 0, locked: false}
 
@@ -37,6 +38,15 @@ const REPLAY_TIMELINE_FREE_RATIO = {value: '0x0', aspectRatio: 0, locked: false}
 export const ReplayTimelineWidget = ({id, zIndex}) => {
     const container = useMemo(() => lgs.canvas, [])
     const timelinePreviewRef = useRef(null)
+    const [minimumDimensions, setMinimumDimensions] = useState({
+        width:  REPLAY_TIMELINE_UI.minWidth,
+        height: REPLAY_TIMELINE_UI.minHeight,
+    })
+    const handleMinimumDimensionsChange = useCallback((dimensions) => {
+        setMinimumDimensions(current => current.width === dimensions.width && current.height === dimensions.height
+            ? current
+            : {width: dimensions.width, height: dimensions.height})
+    }, [])
 
     useEffect(() => {
         let cancelled = false
@@ -63,6 +73,12 @@ export const ReplayTimelineWidget = ({id, zIndex}) => {
 
             const savedWidth = Number(config.dimensions?.width)
             const savedHeight = Number(config.dimensions?.height)
+            const runtimeConfig = Object.assign({}, config, {
+                min: {
+                    width:  minimumDimensions.width,
+                    height: minimumDimensions.height,
+                },
+            })
 
             element.style.width = ''
             element.style.height = ''
@@ -74,13 +90,14 @@ export const ReplayTimelineWidget = ({id, zIndex}) => {
             }
 
             const dimensions = constrainWidgetDimensions({
-                config,
+                config: runtimeConfig,
                 element,
                 width:  Number.isFinite(savedWidth) && savedWidth > 0 ? savedWidth : rect.width,
                 height: Number.isFinite(savedHeight) && savedHeight > 0 ? savedHeight : rect.height,
             })
             const dimensionsChanged = dimensions.width !== savedWidth || dimensions.height !== savedHeight
 
+            config.min = runtimeConfig.min
             config.dimensions = dimensions
             element.style.width = `${dimensions.width}px`
             element.style.height = `${dimensions.height}px`
@@ -97,7 +114,7 @@ export const ReplayTimelineWidget = ({id, zIndex}) => {
             cancelled = true
             cancelAnimationFrame(frame)
         }
-    }, [id])
+    }, [id, minimumDimensions])
 
     useEffect(() => () => {
         __.ui.widgetManager.invalidateRuntimeById?.(id)
@@ -115,7 +132,7 @@ export const ReplayTimelineWidget = ({id, zIndex}) => {
         top:           '50%',
         left:          '50%',
         attachTo:      'center',
-        handle:        'lgs1920-timeline',
+        handle:        '.replay-timeline-preview__drag-handle',
         type:          LGS_VISUAL_WIDGET,
         group:         JOURNEY_WIDGETS,
         id,
@@ -125,18 +142,19 @@ export const ReplayTimelineWidget = ({id, zIndex}) => {
         transient:     true,
         mandatory:     false,
         draggable:     true,
-        min:           {width: 360, height: 66},
-        max:           {width: 3840, height: 2160},
+        min:           minimumDimensions,
+        max:           {width: REPLAY_TIMELINE_UI.maxWidth, height: REPLAY_TIMELINE_UI.maxHeight},
         resizable:     true,
         scalable:      false,
         snap:          false,
         widgetsBoard:  SCENE_WIDGETS_BOARD,
         zIndex,
-    }), [container, id, zIndex])
+    }), [container, id, minimumDimensions, zIndex])
 
     return (
         <Widget isVisible config={config} childRef={timelinePreviewRef}>
-            <ReplayTimelinePreview ref={timelinePreviewRef}/>
+            <ReplayTimelinePreview onMinimumDimensionsChange={handleMinimumDimensionsChange}
+                                   ref={timelinePreviewRef}/>
         </Widget>
     )
 }

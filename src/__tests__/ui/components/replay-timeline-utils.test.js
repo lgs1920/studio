@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-08-30
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,7 +23,10 @@ import {
     REPLAY_TIMELINE_TIME_UNITS,
     clampReplayTimelineZoom,
     resolveReplayTimelineHeight,
+    resolveReplayTimelineLayoutHeight,
     resolveReplayTimelineLegendTransform,
+    resolveReplayTimelineMinimumDimensions,
+    resolveReplayTimelineMinimumWidth,
     resolveReplayTimelineRowHeight,
     resolveReplayTimelineScaleCount,
     resolveReplayTimelineScale,
@@ -38,13 +41,24 @@ describe('replayTimelineUtils', () => {
         ])
 
         expect(REPLAY_TIMELINE_UI.legendWidth).toBe(136)
-        expect(REPLAY_TIMELINE_UI.legendMinWidth).toBe(120)
-        expect(REPLAY_TIMELINE_UI.legendMaxWidth).toBe(300)
+        expect(REPLAY_TIMELINE_UI.legendMinWidth).toBe(100)
+        expect(REPLAY_TIMELINE_UI.legendMaxWidth).toBe(200)
+        expect(REPLAY_TIMELINE_UI.minWidth).toBe(352)
+        expect(REPLAY_TIMELINE_UI.minHeight).toBe(156)
+        expect(REPLAY_TIMELINE_UI.minimumVisibleDurationSeconds).toBe(5)
+        expect(REPLAY_TIMELINE_UI.minimumVisibleTrackCount).toBe(1)
+        expect(REPLAY_TIMELINE_UI.maximumVisibleTrackCount).toBe(3)
         expect(REPLAY_TIMELINE_UI.scaleWidth).toBe(40)
         expect(REPLAY_TIMELINE_UI.horizontalScrollbarHeight).toBe(8)
         expect(REPLAY_TIMELINE_UI.scrubThrottleMillis).toBe(50)
         expect(REPLAY_TIMELINE_UI.horizontalScrollDurationRatio).toBe(0.2)
-        expect(resolveReplayTimelineHeight(2)).toBe(90)
+        expect(resolveReplayTimelineHeight(1)).toBe(156)
+        expect(resolveReplayTimelineHeight(2)).toBe(180)
+        expect(resolveReplayTimelineHeight(3)).toBe(204)
+        expect(resolveReplayTimelineHeight(5)).toBe(204)
+        expect(resolveReplayTimelineLayoutHeight(2)).toBe(98)
+        expect(resolveReplayTimelineMinimumWidth()).toBe(352)
+        expect(resolveReplayTimelineMinimumDimensions(3)).toEqual({width: 352, height: 204, layoutHeight: 122})
         expect(REPLAY_TIMELINE_UI.scaleIntervalMillis).toBe(200)
         expect(editorData[0].classNames).toEqual(['widget-row', 'replay-timeline-row-index-0'])
         expect(editorData[1].classNames).toEqual(['replay-timeline-row-index-1'])
@@ -88,10 +102,10 @@ describe('replayTimelineUtils', () => {
         expect(stepReplayTimelineZoom(500, 1)).toBe(500)
     })
 
-    it('clamps the track legend width between 120 and 300 pixels', () => {
-        expect(clampReplayTimelineLegendWidth(80)).toBe(120)
-        expect(clampReplayTimelineLegendWidth(300)).toBe(300)
-        expect(clampReplayTimelineLegendWidth(420)).toBe(300)
+    it('clamps the track legend width between 100 and 200 pixels', () => {
+        expect(clampReplayTimelineLegendWidth(80)).toBe(100)
+        expect(clampReplayTimelineLegendWidth(200)).toBe(200)
+        expect(clampReplayTimelineLegendWidth(420)).toBe(200)
         expect(clampReplayTimelineLegendWidth('invalid')).toBe(136)
     })
 })

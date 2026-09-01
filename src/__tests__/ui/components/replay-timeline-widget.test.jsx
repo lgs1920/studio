@@ -8,22 +8,23 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-08-30
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {cleanup, render, screen, waitFor} from '@testing-library/react'
+import {act, cleanup, render, screen, waitFor} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {proxyMap} from 'valtio/utils'
 
 const widgetMocks = vi.hoisted(() => ({
     config: null,
     childRef: null,
+    previewProps: null,
     runtimeConfig: {
         dimensions:       {width: 2160, height: 900},
-        min:              {width: 360, height: 66},
+        min:              {width: 352, height: 156},
         max:              {width: 3840, height: 2160},
         resizeToContent:  undefined,
     },
@@ -38,7 +39,10 @@ vi.mock('@Components/MainUI/widgets/Widget', () => ({
 }))
 
 vi.mock('@Components/MainUI/video/ReplayTimelinePreview', () => ({
-    ReplayTimelinePreview: () => <div className="replay-timeline-preview" data-testid="replay-timeline-preview"/>,
+    ReplayTimelinePreview: props => {
+        widgetMocks.previewProps = props
+        return <div className="replay-timeline-preview" data-testid="replay-timeline-preview"/>
+    },
 }))
 
 import {ReplayTimelineWidget} from '@Components/MainUI/widgets/list/ReplayTimelineWidget'
@@ -47,9 +51,10 @@ describe('ReplayTimelineWidget dimensions', () => {
     beforeEach(() => {
         widgetMocks.config = null
         widgetMocks.childRef = null
+        widgetMocks.previewProps = null
         widgetMocks.runtimeConfig = {
             dimensions:      {width: 2160, height: 900},
-            min:             {width: 360, height: 66},
+            min:             {width: 352, height: 156},
             max:             {width: 3840, height: 2160},
             resizeToContent: undefined,
         }
@@ -104,6 +109,9 @@ describe('ReplayTimelineWidget dimensions', () => {
         expect(widgetMocks.config.height).toBeUndefined()
         expect(widgetMocks.config.persist).toBe(true)
         expect(widgetMocks.config.constrainResizeToContent).toBe(true)
+        expect(widgetMocks.config.min).toEqual({width: 352, height: 156})
+        expect(widgetMocks.config.max).toEqual({width: 3840, height: 2160})
+        expect(widgetMocks.config.handle).toBe('.replay-timeline-preview__drag-handle')
         expect(widgetMocks.config.resizeToContent).toBeUndefined()
         expect(widgetMocks.childRef).toBeDefined()
         await waitFor(() => expect(widgetMocks.runtimeConfig.dimensions).toEqual({width: 2160, height: 900}))
@@ -113,5 +121,38 @@ describe('ReplayTimelineWidget dimensions', () => {
 
         expect(lgs.stores.ui.widget.list.has('replay-timeline-widget')).toBe(true)
         expect(__.ui.widgetManager.invalidateRuntimeById).toHaveBeenCalledWith('replay-timeline-widget')
+    })
+
+    it('clamps persisted dimensions to the readable floating timeline minimum', async () => {
+        widgetMocks.runtimeConfig.dimensions = {width: 320, height: 80}
+        const {unmount} = render(<ReplayTimelineWidget id="replay-timeline-widget"/>)
+        const content = screen.getByTestId('replay-timeline-preview')
+        vi.spyOn(content, 'getBoundingClientRect').mockReturnValue({
+            bottom:  80,
+            height: 80,
+            left:   0,
+            right:  320,
+            top:    0,
+            width:  320,
+            x:      0,
+            y:      0,
+        })
+
+        await waitFor(() => expect(widgetMocks.runtimeConfig.dimensions).toEqual({width: 352, height: 156}))
+        expect(__.ui.widgetManager.saveWidgetPosition).toHaveBeenCalledWith(
+            'replay-timeline-widget',
+            widgetMocks.runtimeConfig,
+        )
+
+        unmount()
+    })
+
+    it('updates the widget minimum height when the track count changes', async () => {
+        render(<ReplayTimelineWidget id="replay-timeline-widget"/>)
+
+        await waitFor(() => expect(widgetMocks.previewProps).not.toBeNull())
+        act(() => widgetMocks.previewProps.onMinimumDimensionsChange({width: 352, height: 204, layoutHeight: 122}))
+
+        await waitFor(() => expect(widgetMocks.config.min).toEqual({width: 352, height: 204}))
     })
 })

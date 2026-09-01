@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-08-31
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,6 +19,7 @@ import {resolve} from 'node:path'
 import {describe, expect, it} from 'vitest'
 
 const styleSource = readFileSync(resolve('src/components/MainUI/video/replay-timeline-preview.css'), 'utf8')
+const webComponentStyleSource = readFileSync(resolve('src/webcomponents/lgs1920-timeline/lgs1920-timeline.css'), 'utf8')
 
 describe('Replay timeline preview styles', () => {
     it('scopes the read-only integration styles at the preview root', () => {
@@ -27,11 +28,21 @@ describe('Replay timeline preview styles', () => {
 
         expect(openBlocks).toBe(closedBlocks)
         expect(styleSource).toContain('lgs1920-timeline {')
-        expect(styleSource).toContain('--lgs-timeline-padding: 0;')
-        expect(styleSource).toContain('--lgs-timeline-radius: 0;')
-        expect(styleSource).toContain('--lgs-timeline-shadow: none;')
-        expect(styleSource).toContain('--lgs-timeline-border-color: transparent;')
+        expect(styleSource).toContain('.replay-timeline-preview__drag-handle')
+        expect(styleSource).toContain('height: 56px;')
+        expect(styleSource).toContain('cursor: grab;')
+        expect(styleSource).toContain('--lgs-timeline-padding: var(--lgs-gutter-s);')
+        expect(styleSource).toContain('--lgs-replay-timeline-min-width: 352px;')
+        expect(styleSource).toContain('--lgs-replay-timeline-min-height: 156px;')
+        expect(styleSource).toContain('--lgs-replay-timeline-layout-min-height: 74px;')
+        expect(styleSource).toContain('--lgs-timeline-radius: var(--wa-border-radius-m);')
+        expect(styleSource).toContain('--lgs-timeline-shadow: var(--wa-shadow-l);')
+        expect(styleSource).toContain('--lgs-timeline-border-color: var(--wa-color-border-normal);')
         expect(styleSource).toContain('--lgs-timeline-scale-offset: 0px;')
+        expect(styleSource).toContain('--lgs-timeline-padding: var(--lgs-gutter-s);')
+        expect(styleSource).toContain('--lgs-timeline-radius: var(--wa-border-radius-m);')
+        expect(styleSource).toContain('--lgs-timeline-scrollbar-track-color:')
+        expect(styleSource).toContain('--lgs-timeline-scrollbar-thumb-color:')
         expect(styleSource).toContain('lgs1920-timeline::part(top)')
         expect(styleSource).toContain('flex: 0 0 56px;')
         expect(styleSource).toContain('height: 56px;')
@@ -45,5 +56,73 @@ describe('Replay timeline preview styles', () => {
         expect(styleSource).toContain('border-radius: 0;')
         expect(styleSource).toContain('lgs1920-timeline::part(timeline-start-handle)')
         expect(styleSource).toContain('pointer-events: none;')
+    })
+
+    it('uses valid nested selectors for the Web Component visual layers', () => {
+        const openBlocks = (webComponentStyleSource.match(/{/g) ?? []).length
+        const closedBlocks = (webComponentStyleSource.match(/}/g) ?? []).length
+        const splitPanelRule = webComponentStyleSource
+            .match(/& \.lgs1920-wa-timeline__split-panel \{([^}]*)}/)?.[1]
+
+        expect(openBlocks).toBe(closedBlocks)
+        expect(webComponentStyleSource).not.toMatch(/&(?:__|--|-[a-z])/)
+        expect(splitPanelRule).toBeDefined()
+        expect(splitPanelRule).not.toContain('display:')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__track {')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__clip {')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__clip-handle::before {')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__playhead > .lgs1920-wa-timeline__playhead-grip,')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__range-handle > .lgs1920-wa-timeline__range-grip {')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__overlay {')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-handle-cap-top:')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-handle-cap-width: 12px;')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-handle-point-size: 7px;')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__legend-ruler {\n        position: relative;\n        z-index: 2;')
+        expect(webComponentStyleSource).not.toContain('--lgs-timeline-ruler-shadow')
+        expect(webComponentStyleSource).not.toContain('--lgs-timeline-handle-shadow')
+        expect(webComponentStyleSource).not.toContain('--lgs-timeline-handle-axis-shadow')
+        expect(webComponentStyleSource).not.toContain('box-shadow: inset')
+        expect(webComponentStyleSource).not.toContain('filter: drop-shadow(0 1px 0 color-mix(in srgb, black 42%, transparent));')
+        expect(webComponentStyleSource).toContain('top: calc(var(--lgs-timeline-handle-cap-top) + var(--lgs-timeline-handle-cap-height));')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-range-end-color: var(--wa-color-red-90, #ffdde0);')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-playhead-color: var(--wa-color-blue-70, #57b8f1);')
+        expect(webComponentStyleSource.match(/box-shadow: var\(--wa-shadow-m\);/g)).toHaveLength(3)
+        expect(webComponentStyleSource.match(/box-shadow: var\(--wa-shadow-s\);/g)).toHaveLength(3)
+        expect(webComponentStyleSource).toContain('opacity: 0.5;')
+        expect(webComponentStyleSource).toContain("slot[name^='drag-trigger-']")
+        expect(webComponentStyleSource).toContain('cursor: grabbing;')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-min-width: 352px;')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-min-height: 156px;')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-layout-min-height: 74px;')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-min-visible-duration: 5;')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-major-tick-height: 0.75rem;')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-minor-tick-height: 0.45rem;')
+        expect(webComponentStyleSource).toContain('height: var(--lgs-timeline-major-tick-height);')
+        expect(webComponentStyleSource).toContain('height: var(--lgs-timeline-minor-tick-height);')
+        expect(webComponentStyleSource).toContain('bottom: 0;')
+        expect(webComponentStyleSource).toContain('transform: translateX(-50%);')
+        expect(webComponentStyleSource).toContain('text-align: center;')
+        expect(webComponentStyleSource).toContain('background-image: linear-gradient')
+        expect(webComponentStyleSource).toContain('.lgs1920-wa-timeline__scrollbar-track.track-horizontal')
+        expect(webComponentStyleSource).toContain('.lgs1920-wa-timeline__scrollbar-track.track-vertical')
+        expect(webComponentStyleSource).toContain("[data-scrollbar-view='tracks'].lgs1920-wa-timeline__scrollbar-track.track-vertical")
+        expect(webComponentStyleSource).toContain('top: calc(var(--lgs-timeline-header-height) + 2px);')
+        expect(webComponentStyleSource).toContain('.lgs1920-wa-timeline__scrollbar-thumb.thumb-horizontal')
+        expect(webComponentStyleSource).toContain('.lgs1920-wa-timeline__scrollbar-thumb.thumb-vertical')
+        expect(webComponentStyleSource).toContain('.lgs1920-wa-timeline__tracks-viewport')
+        expect(webComponentStyleSource).toContain('overflow-y: hidden;')
+        expect(webComponentStyleSource).toContain('overflow-y: auto;')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-scrollbar-thumb-min-size: 30px;')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-scrollbar-auto-hide-delay: 1s;')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-scrollbar-auto-hide-duration: 200ms;')
+        expect(webComponentStyleSource).toContain('lgs1920-wa-timeline__scroll-shell--idle')
+        expect(webComponentStyleSource).toContain('.lgs1920-wa-timeline__scrollbar-track:hover')
+        expect(webComponentStyleSource).not.toContain('.lgs1920-wa-timeline__scroll-shell:hover .lgs1920-wa-timeline__scrollbar-track')
+        expect(webComponentStyleSource).toContain('scrollbar-width: none;')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-legend-min-width: 100px;')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-legend-max-width: 200px;')
+        expect(webComponentStyleSource).toContain('text-overflow: ellipsis;')
+        expect(webComponentStyleSource).toContain('white-space: nowrap;')
+        expect(webComponentStyleSource).not.toContain('.lgs1920-wa-timeline__split-panel::part(divider)')
     })
 })

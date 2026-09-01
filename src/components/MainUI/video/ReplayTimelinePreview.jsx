@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-08-31
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,7 +27,7 @@ import {
     REPLAY_TIMELINE_WIDGET,
     VIDEO_WIDGETS_BOARD,
 } from '@Core/constants'
-import {REPLAY_TIMELINE_UI} from './replayTimelineUtils'
+import {REPLAY_TIMELINE_UI, resolveReplayTimelineMinimumDimensions} from './replayTimelineUtils'
 import {
     buildReplayPreparationTimeline,
     toReplayTimelineEditorData,
@@ -193,10 +193,11 @@ const resolveVideoWidgetOrder = (widgetList, widgetSettings) => Array.from(widge
     })
 
 /**
- * Convert existing Replay editor rows to the public read-only Web Component model.
+ * Convert existing Replay editor rows to the public Web Component model.
  *
- * The source projection remains owned by Replay. Every row and clip is marked
- * fixed so this first integration only presents the existing timeline model.
+ * The source projection remains owned by Replay. Replay's mandatory track
+ * stays fixed while widget tracks expose the capabilities already declared by
+ * the projection.
  *
  * @param {Array} rows - Existing Replay timeline rows.
  * @returns {Array} Public Web Component track definitions.
@@ -208,11 +209,11 @@ const toDisplayTracks = rows => rows.map(row => ({
     icon: row.icon,
     colorClasses: row.colorClasses,
     visible: row.visible,
-    editable: false,
-    canHide: false,
-    movable: false,
-    fixed: true,
-    droppable: false,
+    editable: row.fixed !== true,
+    canHide: row.canHide === true,
+    movable: row.movable !== false && row.fixed !== true,
+    fixed: row.fixed === true,
+    droppable: row.fixed !== true && row.droppable !== false,
     clips: (row.actions ?? []).map(action => ({
         id: action.id,
         kind: action.kind,
@@ -222,9 +223,10 @@ const toDisplayTracks = rows => rows.map(row => ({
         visible: action.visible,
         start: action.start,
         end: action.end,
-        movable: false,
-        resizable: false,
-        fixed: true,
+        editable: row.fixed !== true && action.editable !== false,
+        movable: row.fixed !== true && action.movable !== false,
+        resizable: row.fixed !== true && action.resizable !== false,
+        fixed: row.fixed === true || action.fixed === true,
         metadata: {
             clip: action.clip,
             widgetId: action.widgetId,
@@ -235,13 +237,15 @@ const toDisplayTracks = rows => rows.map(row => ({
 /**
  * Replay Timeline preview component.
  *
- * The Web Component is currently used as a read-only visual adapter. Replay
- * remains the owner of preparation state, playback, and future interaction
- * controllers; no Web Component events are connected in this first step.
+ * Replay remains the owner of preparation state and playback. The Web
+ * Component exposes the local timeline interactions and emits their public
+ * events; application controllers can be connected incrementally.
  *
+ * @param {Object} props - Preview properties.
+ * @param {Function} [props.onMinimumDimensionsChange] - Receives the computed floating minimum dimensions.
  * @returns {JSX.Element|null} Preview surface or null outside linked preparation.
  */
-export const ReplayTimelinePreview = forwardRef((_, ref) => {
+export const ReplayTimelinePreview = forwardRef(({onMinimumDimensionsChange}, ref) => {
     const video = useSnapshot(lgs.stores.ui.video)
     const replay = useSnapshot(lgs.stores.replay)
     const main = useSnapshot(lgs.stores.main)
@@ -268,16 +272,21 @@ export const ReplayTimelinePreview = forwardRef((_, ref) => {
         widgetOrder,
     }), [journey, replay, replaySettings, video.fps, widgetOrder])
     const editorData = useMemo(() => toReplayTimelineEditorData(projection), [projection])
+    const minimumDimensions = useMemo(
+        () => resolveReplayTimelineMinimumDimensions(editorData.length),
+        [editorData.length],
+    )
     const timeline = useMemo(() => ({
         durationMillis: projection.durationMillis,
         visible: true,
         zoomPercent: 0,
-        legendWidth: REPLAY_TIMELINE_UI.legendWidth,
+        legendWidth: REPLAY_TIMELINE_UI.legendMinWidth,
         legendMinWidth: REPLAY_TIMELINE_UI.legendMinWidth,
         legendMaxWidth: REPLAY_TIMELINE_UI.legendMaxWidth,
         rangeStartMillis: 0,
         rangeEndMillis: projection.durationMillis,
-        editable: false,
+        editable: true,
+        interactive: true,
         collisionPolicy: 'allow',
         durationPolicy: 'fixed',
     }), [projection.durationMillis])
@@ -286,7 +295,16 @@ export const ReplayTimelinePreview = forwardRef((_, ref) => {
     const isPlaying = replay.playing === true
 
     useImperativeHandle(ref, () => ({
-        handleResize: () => _timeline.current?.handleResize?.(),
+        handleResize: () => {
+            _timeline.current?.setExternalInteractionActive?.(true)
+            _timeline.current?.handleResize?.()
+        },
+        onDragStart: () => _timeline.current?.setExternalInteractionActive?.(true),
+        handleDrag: () => _timeline.current?.setExternalInteractionActive?.(true),
+        onDragEnd: () => _timeline.current?.setExternalInteractionActive?.(false),
+        onResizeStart: () => _timeline.current?.setExternalInteractionActive?.(true),
+        onResize: () => _timeline.current?.setExternalInteractionActive?.(true),
+        onResizeEnd: () => _timeline.current?.setExternalInteractionActive?.(false),
     }), [])
 
     useEffect(() => {
@@ -301,6 +319,12 @@ export const ReplayTimelinePreview = forwardRef((_, ref) => {
         element.playing = isPlaying
         element.clipOptions = []
     }, [currentTimeMillis, isPlaying, linkedPreparation, timeline, tracks])
+
+    useEffect(() => {
+        if (linkedPreparation) {
+            onMinimumDimensionsChange?.(minimumDimensions)
+        }
+    }, [linkedPreparation, minimumDimensions, onMinimumDimensionsChange])
 
     useEffect(() => {
         if (!linkedPreparation) {
@@ -321,8 +345,17 @@ export const ReplayTimelinePreview = forwardRef((_, ref) => {
     return (
         <section className="replay-timeline-preview wa-theme-lgs1920"
                  data-testid="replay-timeline-preview"
-                 aria-label="Replay tracks">
-            <lgs1920-timeline ref={_timeline}
+                 aria-label="Replay tracks"
+                 style={{
+                     '--lgs-replay-timeline-min-width':        `${minimumDimensions.width}px`,
+                     '--lgs-replay-timeline-min-height':       `${minimumDimensions.height}px`,
+                     '--lgs-replay-timeline-layout-min-height': `${minimumDimensions.layoutHeight}px`,
+                 }}>
+            <div className="replay-timeline-preview__drag-handle"
+                 data-testid="replay-timeline-drag-handle"
+                 aria-hidden="true"/>
+            <lgs1920-timeline className="lgs-widget-no-drag"
+                              ref={_timeline}
                               aria-label="Replay tracks"/>
         </section>
     )

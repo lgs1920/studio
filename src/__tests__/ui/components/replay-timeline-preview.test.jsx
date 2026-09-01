@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-08-31
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {cleanup, render, waitFor} from '@testing-library/react'
+import {createRef} from 'react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {proxy} from 'valtio'
 import {proxyMap} from 'valtio/utils'
@@ -93,19 +94,25 @@ describe('ReplayTimelinePreview', () => {
         globalThis.lgs = undefined
     })
 
-    it('renders the existing Replay projection through the read-only Web Component', () => {
+    it('renders the existing Replay projection with the Web Component interactions enabled', () => {
         const {container} = render(<ReplayTimelinePreview/>)
         const timelineElement = container.querySelector('lgs1920-timeline')
 
         expect(timelineElement).not.toBeNull()
+        expect(timelineElement.className).toBe('lgs-widget-no-drag')
         expect(timelineElement.timeline).toMatchObject({
             durationMillis: 4_000,
-            editable: false,
-            legendWidth: 136,
+            editable: true,
+            interactive: true,
+            legendWidth: 100,
             rangeStartMillis: 0,
             rangeEndMillis: 4_000,
         })
         expect(timelineElement.currentTimeMillis).toBe(1_000)
+        expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-min-width')).toBe('352px')
+        expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-min-height')).toBe('204px')
+        expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-layout-min-height')).toBe('122px')
+        expect(container.querySelector('[data-testid="replay-timeline-drag-handle"]')).not.toBeNull()
         expect(timelineElement.playing).toBe(false)
         expect(timelineElement.clipOptions).toEqual([])
         expect(timelineElement.tracks.map(track => track.id)).toEqual([
@@ -113,19 +120,48 @@ describe('ReplayTimelinePreview', () => {
             'journey-stats-widget',
             'replay',
         ])
-        expect(timelineElement.tracks.every(track => (
-            track.editable === false
-            && track.canHide === false
-            && track.movable === false
-            && track.fixed === true
-            && track.droppable === false
+        expect(timelineElement.tracks.slice(0, 2).every(track => (
+            track.editable === true
+            && track.movable === true
+            && track.fixed === false
+            && track.droppable === true
         ))).toBe(true)
-        expect(timelineElement.tracks.flatMap(track => track.clips).every(clip => (
+        expect(timelineElement.tracks[2]).toMatchObject({
+            editable: false,
+            movable: false,
+            fixed: true,
+            droppable: false,
+        })
+        expect(timelineElement.tracks.slice(0, 2).flatMap(track => track.clips).every(clip => (
+            clip.fixed === false
+            && clip.movable === true
+            && clip.resizable === true
+        ))).toBe(true)
+        expect(timelineElement.tracks[2].clips.every(clip => (
             clip.fixed === true
             && clip.movable === false
             && clip.resizable === false
         ))).toBe(true)
         expect(globalThis.__.ui.replay.enterReplayPreparation).toHaveBeenCalledTimes(1)
+    })
+
+    it('coordinates the external widget drag and resize lifecycle with the timeline host', () => {
+        const _preview = createRef()
+        const {container} = render(<ReplayTimelinePreview ref={_preview}/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+        timelineElement.setExternalInteractionActive = vi.fn()
+        timelineElement.handleResize = vi.fn()
+
+        _preview.current.onResizeStart()
+        _preview.current.handleResize()
+        _preview.current.onResizeEnd()
+        _preview.current.onDragStart()
+        _preview.current.handleDrag()
+        _preview.current.onDragEnd()
+
+        expect(timelineElement.setExternalInteractionActive.mock.calls.map(([active]) => active))
+            .toEqual([true, true, false, true, true, false])
+        expect(timelineElement.handleResize).toHaveBeenCalledOnce()
     })
 
     it('keeps the existing journey clip labels and icons in the displayed model', () => {
@@ -184,7 +220,7 @@ describe('ReplayTimelinePreview', () => {
         })
     })
 
-    it('keeps Logo and Credits above movable widget tracks while displaying all rows as fixed', () => {
+    it('keeps Logo and Credits fixed above movable widget tracks', () => {
         globalThis.lgs.settings.widgets['logo-widget'] = {name: 'Logo', icon: 'image'}
         globalThis.lgs.settings.widgets['credits-widget'] = {name: 'Credits', icon: 'user'}
         globalThis.lgs.stores.ui.widget.list.set('logo-widget', {
@@ -206,7 +242,9 @@ describe('ReplayTimelinePreview', () => {
             'journey-stats-widget',
             'replay',
         ])
-        expect(tracks.every(track => track.fixed === true && track.movable === false)).toBe(true)
+        expect(tracks.slice(0, 2).every(track => track.fixed === true && track.movable === false)).toBe(true)
+        expect(tracks.slice(2, -1).every(track => track.fixed === false && track.movable === true)).toBe(true)
+        expect(tracks.at(-1)).toMatchObject({fixed: true, movable: false})
     })
 
     it('uses the configured text content as the displayed track label', () => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-08-31
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,29 +17,54 @@
 .replay-timeline-preview {
     box-sizing: border-box;
     display: block;
+    position: relative;
     width: 100%;
     height: 100%;
-    min-width: 360px;
-    min-height: 66px;
+    /* Minimum floating timeline width preserving the legend and track surface. */
+    --lgs-replay-timeline-min-width: 352px;
+    /* Minimum floating timeline height preserving the ruler and visible rows. */
+    --lgs-replay-timeline-min-height: 156px;
+    /* Minimum inner layout height matching the visible track count. */
+    --lgs-replay-timeline-layout-min-height: 74px;
+    min-width: var(--lgs-replay-timeline-min-width);
+    min-height: var(--lgs-replay-timeline-min-height);
     overflow: hidden;
+
+    .replay-timeline-preview__drag-handle {
+        position: absolute;
+        z-index: 2;
+        inset: 0 0 auto;
+        height: 56px;
+        cursor: grab;
+    }
 
     lgs1920-timeline {
         display: block;
         width: 100%;
         height: 100%;
-        min-width: 360px;
-        min-height: 66px;
+        min-width: var(--lgs-replay-timeline-min-width);
+        min-height: var(--lgs-replay-timeline-min-height);
 
-        /* Remove the card spacing from the embedded display-only timeline. */
-        --lgs-timeline-padding: 0;
-        /* Remove the card corners from the embedded display-only timeline. */
-        --lgs-timeline-radius: 0;
-        /* Remove the card shadow from the embedded display-only timeline. */
-        --lgs-timeline-shadow: none;
-        /* Keep the preview flush with its widget container. */
-        --lgs-timeline-border-color: transparent;
+        /* Preserve the timeline container spacing around tracks and rails. */
+        --lgs-timeline-padding: var(--lgs-gutter-s);
+        /* Keep the timeline container corners consistent with the LGS card. */
+        --lgs-timeline-radius: var(--wa-border-radius-m);
+        /* Keep the timeline container elevation consistent with the LGS card. */
+        --lgs-timeline-shadow: var(--wa-shadow-l);
+        /* Keep the timeline container edge visible around its internal margin. */
+        --lgs-timeline-border-color: var(--wa-color-border-normal);
+        /* Keep custom scrollbar rails visible when the card border is transparent. */
+        --lgs-timeline-scrollbar-track-color: color-mix(in oklab, var(--wa-color-text-quiet) 24%, transparent);
+        /* Keep custom scrollbar thumbs visible in the embedded preview. */
+        --lgs-timeline-scrollbar-thumb-color: var(--wa-color-brand-fill-loud, var(--wa-color-brand));
         /* Align the first ruler tick and clip with the surface edge. */
         --lgs-timeline-scale-offset: 0px;
+        /* Keep the Web Component minimum width aligned with the floating host. */
+        --lgs-timeline-min-width: var(--lgs-replay-timeline-min-width);
+        /* Keep the Web Component minimum height aligned with the floating host. */
+        --lgs-timeline-min-height: var(--lgs-replay-timeline-min-height);
+        /* Keep the inner timeline layout below the reserved drag area. */
+        --lgs-timeline-layout-min-height: var(--lgs-replay-timeline-layout-min-height);
     }
 
     lgs1920-timeline::part(top) {
