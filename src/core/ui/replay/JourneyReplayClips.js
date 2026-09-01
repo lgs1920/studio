@@ -8,19 +8,33 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-07
- * Last modified: 2026-06-07
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-export const REPLAY_CLIP_SLOT_START = 'start'
-export const REPLAY_CLIP_SLOT_STOP = 'stop'
+export const REPLAY_CLIP_SLOT_PRE_REPLAY = 'pre-replay'
+export const REPLAY_CLIP_SLOT_POST_REPLAY = 'post-replay'
 export const REPLAY_CLIP_SLOT_BOTH = 'both'
 
+/**
+ * Backwards-compatible alias for the pre-Replay slot constant.
+ *
+ * @deprecated Use REPLAY_CLIP_SLOT_PRE_REPLAY.
+ */
+export const REPLAY_CLIP_SLOT_START = REPLAY_CLIP_SLOT_PRE_REPLAY
+
+/**
+ * Backwards-compatible alias for the post-Replay slot constant.
+ *
+ * @deprecated Use REPLAY_CLIP_SLOT_POST_REPLAY.
+ */
+export const REPLAY_CLIP_SLOT_STOP = REPLAY_CLIP_SLOT_POST_REPLAY
+
 export const REPLAY_CLIP_SLOT_VALUES = [
-    REPLAY_CLIP_SLOT_START,
-    REPLAY_CLIP_SLOT_STOP,
+    REPLAY_CLIP_SLOT_PRE_REPLAY,
+    REPLAY_CLIP_SLOT_POST_REPLAY,
 ]
 
 
@@ -53,11 +67,18 @@ const safeClone = value => {
 
 const uniqueId = prefix => `${prefix}-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`
 
+const normalizeSlotValue = slot => {
+    const value = `${slot ?? ''}`.toLowerCase()
+    return value === 'start'
+        ? REPLAY_CLIP_SLOT_PRE_REPLAY
+        : value === 'stop' ? REPLAY_CLIP_SLOT_POST_REPLAY : value
+}
+
 const normalizeSlots = (slots = []) => {
     const values = Array.isArray(slots) ? slots : [slots]
     const normalized = values
-        .map(slot => `${slot ?? ''}`.toLowerCase())
-        .filter(slot => slot === REPLAY_CLIP_SLOT_START || slot === REPLAY_CLIP_SLOT_STOP)
+        .map(normalizeSlotValue)
+        .filter(slot => REPLAY_CLIP_SLOT_VALUES.includes(slot))
     return Array.from(new Set(normalized))
 }
 
@@ -128,7 +149,7 @@ const normalizeParams = (definition, params = {}) => {
 const normalizeInstance = (instance = {}, definition = null, slot = null) => {
     const targetDefinition = definition ?? null
     const clipId = instance.clipId ?? targetDefinition?.id ?? null
-    const resolvedSlot = normalizeSlots([instance.slot ?? slot ?? targetDefinition?.slots?.[0] ?? REPLAY_CLIP_SLOT_START])[0]
+    const resolvedSlot = normalizeSlots([instance.slot ?? slot ?? targetDefinition?.slots?.[0] ?? REPLAY_CLIP_SLOT_PRE_REPLAY])[0]
 
     return {
         id: instance.id ?? uniqueId(clipId ?? 'clip'),
@@ -176,8 +197,8 @@ export const normalizeJourneyReplayClips = (clips = {}) => {
         return normalized
     }
 
-    const start = normalizeList(startList, REPLAY_CLIP_SLOT_START)
-    const stop = normalizeList(stopList, REPLAY_CLIP_SLOT_STOP)
+    const start = normalizeList(startList, REPLAY_CLIP_SLOT_PRE_REPLAY)
+    const stop = normalizeList(stopList, REPLAY_CLIP_SLOT_POST_REPLAY)
 
     return {
         catalog,
@@ -202,12 +223,13 @@ export const createJourneyReplayClipInstance = (clipDefinition, slot, overrides 
     }, definition, slot)
 }
 
-export const replayClipsForSlot = (clips = {}, slot = REPLAY_CLIP_SLOT_START) => {
+export const replayClipsForSlot = (clips = {}, slot = REPLAY_CLIP_SLOT_PRE_REPLAY) => {
     const normalized = normalizeJourneyReplayClips(clips)
-    return Object.values(normalized.catalog).filter(definition => definition.slots.includes(slot) || definition.slots.includes(REPLAY_CLIP_SLOT_BOTH))
+    const normalizedSlot = normalizeSlotValue(slot)
+    return Object.values(normalized.catalog).filter(definition => definition.slots.includes(normalizedSlot) || definition.slots.includes(REPLAY_CLIP_SLOT_BOTH))
 }
 
-export const availableJourneyReplayClipsForSlot = (clips = {}, slot = REPLAY_CLIP_SLOT_START) => {
+export const availableJourneyReplayClipsForSlot = (clips = {}, slot = REPLAY_CLIP_SLOT_PRE_REPLAY) => {
     const definitions = replayClipsForSlot(clips, slot)
     const available = definitions.filter(definition => canAddJourneyReplayClip(clips, definition, slot))
     return available.length > 0 ? available : null
@@ -215,9 +237,10 @@ export const availableJourneyReplayClipsForSlot = (clips = {}, slot = REPLAY_CLI
 
 export const replayClipInstanceCount = (clips = {}, clipId, slot = null) => {
     const normalized = normalizeJourneyReplayClips(clips)
-    const list = slot === REPLAY_CLIP_SLOT_STOP
+    const normalizedSlot = normalizeSlotValue(slot)
+    const list = normalizedSlot === REPLAY_CLIP_SLOT_POST_REPLAY
                  ? normalized.stop
-                 : slot === REPLAY_CLIP_SLOT_START
+                 : normalizedSlot === REPLAY_CLIP_SLOT_PRE_REPLAY
                    ? normalized.start
                    : [...normalized.start, ...normalized.stop]
     const count = list.filter(instance => instance.clipId === clipId).length
@@ -233,11 +256,12 @@ export const canAddJourneyReplayClip = (clips = {}, clipDefinition, slot) => {
         return false
     }
 
+    const normalizedSlot = normalizeSlotValue(slot)
     const allowedSlots = definition.slots.includes(REPLAY_CLIP_SLOT_BOTH)
-                         ? [REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP]
+                         ? [REPLAY_CLIP_SLOT_PRE_REPLAY, REPLAY_CLIP_SLOT_POST_REPLAY]
                          : definition.slots
     const maxInstances = definition.maxInstances
-    if (!allowedSlots.includes(slot)) {
+    if (!allowedSlots.includes(normalizedSlot)) {
         return false
     }
 
@@ -245,7 +269,7 @@ export const canAddJourneyReplayClip = (clips = {}, clipDefinition, slot) => {
         return true
     }
 
-    const count = replayClipInstanceCount(clips, definition.id, slot)
+    const count = replayClipInstanceCount(clips, definition.id, normalizedSlot)
     const result = count < Number(maxInstances)
     return result
 }

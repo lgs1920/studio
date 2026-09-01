@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-01
- * Last modified: 2026-08-31
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,11 +18,11 @@
  * Shared replay timeline used by Draft playback and HQ export.
  *
  * The timeline is deliberately independent from a render owner. It describes
- * the ordered start, replay, and stop phases so every renderer can resolve the
- * same absolute frame clock and local phase clock.
+ * the ordered pre-Replay, Replay, and post-Replay phases so every renderer can
+ * resolve the same absolute frame clock and local phase clock.
  */
 
-import {normalizeJourneyReplayClips, REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP} from './JourneyReplayClips'
+import {normalizeJourneyReplayClips, REPLAY_CLIP_SLOT_POST_REPLAY, REPLAY_CLIP_SLOT_PRE_REPLAY} from './JourneyReplayClips'
 
 const DEFAULT_FPS = 30
 
@@ -166,8 +166,8 @@ export const buildReplayVideoTimeline = ({
         }
 
         pushPhase({
-            kind: REPLAY_CLIP_SLOT_START,
-            slot: REPLAY_CLIP_SLOT_START,
+            kind: REPLAY_CLIP_SLOT_PRE_REPLAY,
+            slot: REPLAY_CLIP_SLOT_PRE_REPLAY,
             clip,
             anchorProgress: safeDirectionValue < 0 ? 1 : 0,
             durationMillis: replayClipDurationMillis(clip),
@@ -188,8 +188,8 @@ export const buildReplayVideoTimeline = ({
         }
 
         pushPhase({
-            kind: REPLAY_CLIP_SLOT_STOP,
-            slot: REPLAY_CLIP_SLOT_STOP,
+            kind: REPLAY_CLIP_SLOT_POST_REPLAY,
+            slot: REPLAY_CLIP_SLOT_POST_REPLAY,
             clip,
             anchorProgress: safeDirectionValue < 0 ? 0 : 1,
             durationMillis: replayClipDurationMillis(clip),

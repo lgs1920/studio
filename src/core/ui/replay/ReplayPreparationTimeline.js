@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-08-31
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,7 @@ import {
     resolveReplayVideoFramePhase,
 } from './ReplayVideoTimeline'
 import {resolveReplayVideoStatsWidgetVisibility} from './ReplayOverlayResolver'
+import {REPLAY_CLIP_SLOT_POST_REPLAY, REPLAY_CLIP_SLOT_PRE_REPLAY} from './JourneyReplayClips'
 
 export const REPLAY_PREPARATION_TIMELINE_VERSION = 1
 export const REPLAY_PREPARATION_TRACK_REPLAY = 'replay'
@@ -233,10 +234,10 @@ const actionFromRange = ({
  * @param {Object} phase - Canonical phase.
  * @returns {string} Phase label.
  */
-const phaseLabel = phase => phase.kind === 'start'
-    ? 'Start'
-    : phase.kind === 'stop'
-      ? 'Stop'
+const phaseLabel = phase => phase.kind === REPLAY_CLIP_SLOT_PRE_REPLAY
+    ? 'Pre-replay'
+    : phase.kind === REPLAY_CLIP_SLOT_POST_REPLAY
+      ? 'Post-replay'
       : 'Replay'
 
 /**
@@ -261,9 +262,9 @@ const buildReplayActions = timeline => timeline.phases
             : timeline.clips?.catalog?.[phase.clip?.clipId]?.icon
               ?? phase.clip?.icon
               ?? null,
-        timelineColor: phase.kind === 'start'
+        timelineColor: phase.kind === REPLAY_CLIP_SLOT_PRE_REPLAY
             ? 'purple'
-            : phase.kind === 'stop' ? 'orange' : DEFAULT_TIMELINE_COLOR,
+            : phase.kind === REPLAY_CLIP_SLOT_POST_REPLAY ? 'orange' : DEFAULT_TIMELINE_COLOR,
     }))
 
 /**

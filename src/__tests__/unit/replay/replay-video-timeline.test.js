@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-01
- * Last modified: 2026-08-02
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -61,7 +61,7 @@ describe('ReplayVideoTimeline', () => {
             clips:                replayClips,
         })
 
-        expect(timeline.phases.map(phase => phase.kind)).toEqual(['start', 'replay', 'stop'])
+        expect(timeline.phases.map(phase => phase.kind)).toEqual(['pre-replay', 'replay', 'post-replay'])
         expect(timeline.phases.map(phase => phase.durationMillis)).toEqual([2000, 4000, 1000])
         expect(timeline.phases.map(phase => [phase.startMillis, phase.endMillis])).toEqual([
             [0, 2000],
@@ -80,7 +80,7 @@ describe('ReplayVideoTimeline', () => {
         })
 
         expect(resolveReplayVideoFramePhase({timeline, frameTimeMs: 0})).toEqual(expect.objectContaining({
-            kind:         'start',
+            kind:         'pre-replay',
             localProgress: 0,
             frameIndex:   0,
             frameCount:   71,
@@ -92,7 +92,7 @@ describe('ReplayVideoTimeline', () => {
             replayFrameIndex: 0,
         }))
         expect(resolveReplayVideoFramePhase({timeline, frameTimeMs: 6000})).toEqual(expect.objectContaining({
-            kind:          'stop',
+            kind:          'post-replay',
             localProgress: 0,
             frameIndex:    60,
         }))
@@ -101,7 +101,7 @@ describe('ReplayVideoTimeline', () => {
             frameTimeMs: 7000,
             isFinalSceneFrame: true,
         })).toEqual(expect.objectContaining({
-            kind:              'stop',
+            kind:              'post-replay',
             localProgress:     1,
             isFinalSceneFrame: true,
             isLastPhaseFrame:  true,
@@ -159,7 +159,7 @@ describe('ReplayVideoTimeline', () => {
             now = 4000
             frames.shift()()
             expect(globalThis.lgs.stores.replay.dynamicFrameState.phase).toEqual(
-                expect.objectContaining({kind: 'stop', frameTimeMs: 6000}),
+                expect.objectContaining({kind: 'post-replay', frameTimeMs: 6000}),
             )
         }
         finally {

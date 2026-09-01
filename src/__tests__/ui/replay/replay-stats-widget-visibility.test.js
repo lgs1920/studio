@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-02
- * Last modified on: 2026-07-02
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -301,8 +301,8 @@ describe('replay stats widget visibility', () => {
         globalThis.lgs.stores.ui.video.recording = true
         globalThis.lgs.stores.replay.clipSequenceActive = true
         globalThis.lgs.stores.replay.replayFramePhase = {
-            kind: 'start',
-            slot: 'start',
+            kind: 'pre-replay',
+            slot: 'pre-replay',
         }
 
         expect(shouldShowVideoStatsWidget({mode: 'dynamic'})).toBe(false)
@@ -310,8 +310,8 @@ describe('replay stats widget visibility', () => {
         expect(resolveVideoOverlayVisibility({widgetId: 'text-widget#1'})).toBe(true)
 
         globalThis.lgs.stores.replay.replayFramePhase = {
-            kind: 'stop',
-            slot: 'stop',
+            kind: 'post-replay',
+            slot: 'post-replay',
         }
 
         expect(shouldShowVideoStatsWidget({mode: 'dynamic'})).toBe(false)
@@ -326,8 +326,8 @@ describe('replay stats widget visibility', () => {
         globalThis.lgs.stores.replay.paused = false
         globalThis.lgs.stores.replay.clipSequenceActive = false
         globalThis.lgs.stores.replay.replayFramePhase = {
-            kind: 'stop',
-            slot: 'stop',
+            kind: 'post-replay',
+            slot: 'post-replay',
         }
 
         expect(shouldShowVideoStatsWidget({mode: 'dynamic'})).toBe(false)

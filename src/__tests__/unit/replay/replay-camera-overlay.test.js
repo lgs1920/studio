@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-08-06
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -102,7 +102,7 @@ describe('replay camera diagnostics overlay', () => {
             stores:   {
                 replay: {
                     recordingSync:     true,
-                    dynamicFrameState: {phase: {kind: 'start', clip: {clipId: 'zoom-in'}}},
+                    dynamicFrameState: {phase: {kind: 'pre-replay', clip: {clipId: 'zoom-in'}}},
                 },
             },
             viewer:   {

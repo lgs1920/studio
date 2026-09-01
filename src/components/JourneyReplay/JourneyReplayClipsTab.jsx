@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-12
- * Last modified: 2026-06-09
+ * Created on: 2026-06-07
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,8 +18,8 @@ import { PopupAnchor }                                             from '@Compon
 import { PopupDrawer }                                             from '@Components/PopupDrawer'
 import {
     createJourneyReplayClipInstance,
-    REPLAY_CLIP_SLOT_START,
-    REPLAY_CLIP_SLOT_STOP,
+    REPLAY_CLIP_SLOT_PRE_REPLAY,
+    REPLAY_CLIP_SLOT_POST_REPLAY,
     availableJourneyReplayClipsForSlot,
     canAddJourneyReplayClip,
     normalizeJourneyReplayClips,
@@ -41,12 +41,12 @@ import { useSnapshot }                                             from 'valtio'
 
 const ADD_POPUP_SUFFIX = 'add-popup-anchor'
 
-const listNameForSlot = slot => (slot === REPLAY_CLIP_SLOT_STOP ? 'stop' : 'start')
+const listNameForSlot = slot => (slot === REPLAY_CLIP_SLOT_POST_REPLAY ? 'stop' : 'start')
 
 const emptyAddState = () => ({
     open:     false,
     anchorId: null,
-    slot:     REPLAY_CLIP_SLOT_START,
+    slot:     REPLAY_CLIP_SLOT_PRE_REPLAY,
 })
 
 const hasCatalogEntries = catalog => Boolean(catalog) && Object.keys(catalog).length > 0
@@ -544,7 +544,7 @@ const ClipList = ({
 }
 
 /**
- * Renders and edits the ordered start and stop Replay clips.
+ * Renders and edits the ordered pre-Replay and post-Replay clips.
  *
  * @param {Object} props - Component properties.
  * @param {Object} props.settings - Replay settings snapshot.
@@ -682,28 +682,28 @@ export const JourneyReplayClipsTab = memo(({settings}) => {
     return (
         <div className="replay-clips-tab">
             <ClipList
-                title="Start"
-                slot={REPLAY_CLIP_SLOT_START}
+                title="Pre-replay"
+                slot={REPLAY_CLIP_SLOT_PRE_REPLAY}
                 clips={currentClips}
                 list={startList}
                 onAdd={openAdd}
                 onRemove={removeClip}
                 onMove={moveClip}
                 onUpdate={updateClip}
-                addAnchorIdPrefix={`${REPLAY_CLIP_SLOT_START}-${ADD_POPUP_SUFFIX}`}
+                addAnchorIdPrefix={`${REPLAY_CLIP_SLOT_PRE_REPLAY}-${ADD_POPUP_SUFFIX}`}
                 openClipIds={openClipIds}
                 setOpenClipIds={setOpenClipIds}
             />
             <ClipList
-                title="Stop"
-                slot={REPLAY_CLIP_SLOT_STOP}
+                title="Post-replay"
+                slot={REPLAY_CLIP_SLOT_POST_REPLAY}
                 clips={currentClips}
                 list={stopList}
                 onAdd={openAdd}
                 onRemove={removeClip}
                 onMove={moveClip}
                 onUpdate={updateClip}
-                addAnchorIdPrefix={`${REPLAY_CLIP_SLOT_STOP}-${ADD_POPUP_SUFFIX}`}
+                addAnchorIdPrefix={`${REPLAY_CLIP_SLOT_POST_REPLAY}-${ADD_POPUP_SUFFIX}`}
                 openClipIds={openClipIds}
                 setOpenClipIds={setOpenClipIds}
             />

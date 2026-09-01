@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-08-29
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -66,9 +66,9 @@ describe('ReplayPreparationTimeline', () => {
         })
 
         expect(projection.tracks[0].actions.map(action => [action.kind, action.startMillis, action.endMillis])).toEqual([
-            ['start', 0, 2000],
+            ['pre-replay', 0, 2000],
             ['replay', 2000, 6000],
-            ['stop', 6000, 7000],
+            ['post-replay', 6000, 7000],
         ])
         expect(projection.totalDurationMillis).toBe(7000)
         expect(projection.tracks[0].actions.map(action => action.colorClasses)).toEqual([
@@ -131,7 +131,7 @@ describe('ReplayPreparationTimeline', () => {
             clips,
         })
 
-        expect(projection.tracks[0].actions.map(action => action.kind)).toEqual(['start', 'replay', 'stop'])
+        expect(projection.tracks[0].actions.map(action => action.kind)).toEqual(['pre-replay', 'replay', 'post-replay'])
         expect(projection.durationMillis).toBe(7000)
     })
 
@@ -175,7 +175,7 @@ describe('ReplayPreparationTimeline', () => {
         const second = buildReplayPreparationTimeline({replayDurationMillis: 4000, fps: 10, clips})
 
         expect(second.signature).toBe(first.signature)
-        expect(second.tracks[0].actions[0].id).toBe('start-intro')
+        expect(second.tracks[0].actions[0].id).toBe('pre-replay-intro')
         expect(second.tracks[0].actions[0].label).toBe('intro')
     })
 })

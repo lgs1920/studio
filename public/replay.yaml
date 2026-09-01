@@ -52,7 +52,7 @@ replay:
         id: zoom-in
         label: ZoomIn
         icon: magnifying-glass-plus
-        slots: [ start ]
+        slots: [ pre-replay ]
         maxInstances: 1
         description: Zoom from a camera point to the replay start.
         defaults:
@@ -104,7 +104,7 @@ replay:
         id: zoom-out
         label: ZoomOut
         icon: magnifying-glass-minus
-        slots: [ stop ]
+        slots: [ post-replay ]
         maxInstances: 1
         description: Zoom from the end of the journey to a camera point.
         defaults:
@@ -156,7 +156,7 @@ replay:
         id: focus
         label: Focus
         icon: crosshairs-simple
-        slots: [ stop ]
+        slots: [ post-replay ]
         maxInstances: 1
         description: Focus on the journey centroid and keep the replay trace visible.
         defaults:
@@ -204,7 +204,7 @@ replay:
         id: landing
         label: Landing
         icon: plane-arrival
-        slots: [ stop ]
+        slots: [ post-replay ]
         maxInstances: 1
         description: Lower the camera to the ground at the last point of the journey.
         defaults:
@@ -220,7 +220,7 @@ replay:
         id: take-off
         label: TakeOff
         icon: plane-departure
-        slots: [ start ]
+        slots: [ pre-replay ]
         maxInstances: 1
         description: Move the camera from the ground to the replay start point.
         defaults:

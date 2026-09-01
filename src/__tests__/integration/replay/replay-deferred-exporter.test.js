@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-07-14
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -39,11 +39,11 @@ describe('isReplayExportFrameSettled', () => {
     it('keeps moving clip frames on the bounded moving budget', () => {
         expect(isReplayExportFrameSettled({
             frame: {isFirst: false, isLast: false},
-            phase: {kind: 'start', localProgress: 0.5, clip: {clipId: 'zoom-in', params: {}}},
+            phase: {kind: 'pre-replay', localProgress: 0.5, clip: {clipId: 'zoom-in', params: {}}},
         })).toBe(false)
         expect(isReplayExportFrameSettled({
             frame: {isFirst: false, isLast: false},
-            phase: {kind: 'start', localProgress: 0, clip: {clipId: 'zoom-in', params: {}}},
+            phase: {kind: 'pre-replay', localProgress: 0, clip: {clipId: 'zoom-in', params: {}}},
         })).toBe(true)
         expect(isReplayExportFrameSettled({
             phase: {kind: 'hold', localProgress: 0.5},
@@ -1008,11 +1008,11 @@ describe('ReplayDeferredExporter', () => {
 
             const phases = renderReplayExportFrame.mock.calls.map(([args]) => args.phase.kind)
             expect(result.plan.manifest.durationMillis).toBe(3000)
-            expect(phases).toContain('start')
+            expect(phases).toContain('pre-replay')
             expect(phases).toContain('replay')
-            expect(phases).toContain('stop')
+            expect(phases).toContain('post-replay')
             expect(renderReplayExportFrame.mock.calls.at(-1)?.[0]?.phase).toMatchObject({
-                kind: 'stop',
+                kind: 'post-replay',
                 localProgress: 1,
                 isFinalSceneFrame: true,
             })

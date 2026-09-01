@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-06
- * Last modified: 2026-06-06
+ * Created on: 2026-06-07
+ * Last modified: 2026-09-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -429,7 +429,7 @@ describe('JourneyReplayClipsTab', () => {
             />,
         )
 
-        const startSection = view.getByText('Start').closest('section')
+        const startSection = view.getByText('Pre-replay').closest('section')
         const list = startSection.querySelector('.replay-clips-list')
         const sortable = globalThis.__replaySortableInstances[0]
 
