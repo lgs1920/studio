@@ -1015,13 +1015,15 @@
         outline-offset: -1px;
     }
 
-    & .lgs1920-wa-timeline__clip.lgs1920-wa-timeline__clip--hidden {
-        background-color: var(--wa-color-fill-normal, var(--wa-color-neutral-fill-normal)) !important;
-        background-image: repeating-linear-gradient(-45deg, color-mix(in oklab, var(--wa-color-fill-normal, var(--wa-color-neutral-fill-normal)) 85%, var(--wa-color-fill-loud, var(--wa-color-neutral-fill-loud)) 15%) 0 4px, var(--wa-color-fill-normal, var(--wa-color-neutral-fill-normal)) 4px 8px) !important;
+    & .lgs1920-wa-timeline__clip:is(.lgs1920-wa-timeline__clip--hidden, .lgs1920-wa-timeline__clip--track-hidden) {
+        color: color-mix(in oklab, var(--wa-color-on-loud, var(--wa-color-neutral-on-loud)) 70%, var(--lgs-timeline-surface-color)) !important;
+        background-color: color-mix(in oklab, var(--wa-color-fill-loud, var(--wa-color-neutral-fill-loud)) 55%, var(--lgs-timeline-surface-color)) !important;
+        background-image: repeating-linear-gradient(-45deg, color-mix(in oklab, var(--wa-color-fill-loud, var(--wa-color-neutral-fill-loud)) 28%, transparent) 0 4px, transparent 4px 8px) !important;
+        border-color: color-mix(in oklab, var(--wa-color-border-loud, var(--wa-color-neutral-border-loud)) 70%, var(--lgs-timeline-surface-color)) !important;
+        opacity: 0.72;
     }
 
     & .lgs1920-wa-timeline__clip.lgs1920-wa-timeline__clip--track-hidden {
-        visibility: hidden;
         pointer-events: none;
     }
 
