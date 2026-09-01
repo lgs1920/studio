@@ -109,6 +109,8 @@ describe('Replay timeline preview styles', () => {
         expect(webComponentStyleSource).toContain('opacity: 0.5;')
         expect(webComponentStyleSource).toContain("slot[name^='drag-trigger-']")
         expect(webComponentStyleSource).toContain('cursor: not-allowed;')
+        expect(webComponentStyleSource).toContain('[data-clip-drop-rejected]')
+        expect(webComponentStyleSource).toContain('lgs1920-wa-timeline__clip--drop-rejected')
         expect(webComponentStyleSource).toContain('cursor: grabbing;')
         expect(webComponentStyleSource).toContain('color: var(--wa-color-brand-on-normal);')
         expect(webComponentStyleSource).toContain('background: var(--wa-color-brand-fill-normal);')

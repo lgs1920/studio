@@ -363,11 +363,34 @@ describe('lgs1920-timeline Web Component', () => {
         expect(listeners['lgs1920-timeline-dblclick']).toHaveBeenCalledOnce()
         expect(timeline.shadowRoot.querySelector('[data-clip-id="clip-one"]')
             .classList.contains('lgs1920-wa-timeline__clip--track-hidden')).toBe(true)
+        expect(timeline.shadowRoot.querySelectorAll('[data-row-id="main#one"] [data-clip-id]')).toHaveLength(1)
         expect(listeners['lgs1920-timeline-dblclick'].mock.calls[0][0].detail.context).toEqual({
             type: 'clip',
             pisteId: 'main#one',
             clipId: 'clip-one',
         })
+    })
+
+    it('marks every clip of a hidden track as track-hidden', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {
+            tracks: [{
+                id: 'hidden-track',
+                label: 'Hidden track',
+                canHide: true,
+                clips: [
+                    {id: 'hidden-one', label: 'One', start: 0, end: 1},
+                    {id: 'hidden-two', label: 'Two', start: 1, end: 2},
+                ],
+            }],
+        })
+        document.body.append(timeline)
+
+        timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-visibility"]').click()
+
+        const clips = [...timeline.shadowRoot.querySelectorAll('[data-row-id="hidden-track"] [data-clip-id]')]
+        expect(clips).toHaveLength(2)
+        expect(clips.every(clip => clip.classList.contains('lgs1920-wa-timeline__clip--track-hidden'))).toBe(true)
     })
 
     it('renders icon transport controls and exposes the FPS slot', () => {
@@ -997,10 +1020,91 @@ describe('lgs1920-timeline Web Component', () => {
         })
     })
 
+    it('trims a moved clip to the available gap without creating an overlap', () => {
+        const timeline = new LGS1920Timeline()
+        const changes = vi.fn()
+        configureTimeline(timeline, {
+            timeline: {collisionPolicy: 'prevent'},
+            tracks: [
+                {id: 'source', label: 'Source', clips: [{id: 'move-me', kind: 'video', start: 1, end: 5}]},
+                {
+                    id: 'target',
+                    label: 'Target',
+                    accepts: ['video'],
+                    clips: [
+                        {id: 'before', kind: 'video', start: 0, end: 2},
+                        {id: 'after', kind: 'video', start: 5, end: 8},
+                    ],
+                },
+            ],
+        })
+        timeline.addEventListener('lgs1920-timeline-clip-change', changes)
+        document.body.append(timeline)
+
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 600, width: 600})
+        const clip = timeline.shadowRoot.querySelector('[data-clip-id="move-me"]')
+        clip.dispatchEvent(createPointerEvent('pointerdown', {clientX: 60, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 220, clientY: 70}))
+        expect(timeline.hasAttribute('data-clip-drop-rejected')).toBe(true)
+        expect(timeline.shadowRoot.querySelector('[part="track"][data-row-id="target"]')
+            .classList.contains('lgs1920-wa-timeline__track--clip-drop-rejected')).toBe(true)
+        expect(clip.classList.contains('lgs1920-wa-timeline__clip--drop-rejected')).toBe(true)
+        expect(clip.parentElement).toBe(timeline.shadowRoot.querySelector('[part="track"][data-row-id="target"]'))
+        expect(clip.style.left).toBe('220px')
+
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 140, clientY: 70}))
+        expect(timeline.hasAttribute('data-clip-drop-rejected')).toBe(false)
+        expect(clip.classList.contains('lgs1920-wa-timeline__clip--drop-rejected')).toBe(false)
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 220, clientY: 70}))
+        expect(timeline.hasAttribute('data-clip-drop-rejected')).toBe(true)
+        expect(clip.style.left).toBe('220px')
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 140, clientY: 70}))
+
+        const detail = changes.mock.calls[0][0].detail
+        const movedClip = detail.tracks.find(track => track.id === 'target').clips.find(value => value.id === 'move-me')
+        expect(movedClip).toMatchObject({start: 3, end: 5})
+        expect(movedClip.end - movedClip.start).toBe(2)
+        expect(detail.tracks.find(track => track.id === 'target').clips)
+            .toEqual(expect.arrayContaining([
+                expect.objectContaining({id: 'before', start: 0, end: 2}),
+                expect.objectContaining({id: 'after', start: 5, end: 8}),
+            ]))
+    })
+
+    it('stops a clip resize at the neighboring clip boundary', () => {
+        const timeline = new LGS1920Timeline()
+        const changes = vi.fn()
+        configureTimeline(timeline, {
+            timeline: {collisionPolicy: 'prevent'},
+            tracks: [{
+                id: 'main',
+                label: 'Main',
+                clips: [
+                    {id: 'resizing', kind: 'video', start: 1, end: 4},
+                    {id: 'next', kind: 'video', start: 5, end: 8},
+                ],
+            }],
+        })
+        timeline.addEventListener('lgs1920-timeline-clip-change', changes)
+        document.body.append(timeline)
+
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 600, width: 600})
+        const endHandle = timeline.shadowRoot.querySelector('[data-clip-id="resizing"] [data-clip-handle="end"]')
+        endHandle.dispatchEvent(createPointerEvent('pointerdown', {clientX: 180, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 260, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 260, clientY: 50}))
+
+        expect(changes).toHaveBeenCalledOnce()
+        expect(changes.mock.calls[0][0].detail.clip).toMatchObject({start: 1, end: 5})
+    })
+
     it('inserts a clip on the configured track from the clip menu', () => {
         const timeline = new LGS1920Timeline()
         const additions = vi.fn()
         configureTimeline(timeline, {
+            timeline: {collisionPolicy: 'allow'},
             currentTimeMillis: 2_000,
             clipOptions: [{group: 'media', key: 'video', id: 'inserted', label: 'Inserted', duration: 3, trackId: 'main#one'}],
         })
@@ -1204,7 +1308,7 @@ describe('lgs1920-timeline Web Component', () => {
         expect(afterDrag.mock.calls[0][0].detail).toMatchObject({committed: false})
     })
 
-    it('opens track and clip context menus with edit and visibility actions', () => {
+    it('opens the track context menu but not a clip context menu', () => {
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline)
         document.body.append(timeline)
@@ -1218,9 +1322,6 @@ describe('lgs1920-timeline Web Component', () => {
 
         const clip = timeline.shadowRoot.querySelector('[data-clip-id="clip-one"]')
         clip.dispatchEvent(new MouseEvent('contextmenu', {bubbles: true, cancelable: true}))
-        expect(timeline.shadowRoot.querySelector('[role="menu"]')).not.toBeNull()
-        const contextMenuItem = timeline.shadowRoot.querySelector('.lgs1920-wa-timeline__context-menu-item')
-        expect(contextMenuItem.textContent).toBe('Edit clip')
-        expect(contextMenuItem.getAttribute('variant')).toBe('brand')
+        expect(timeline.shadowRoot.querySelector('[role="menu"]')).toBeNull()
     })
 })

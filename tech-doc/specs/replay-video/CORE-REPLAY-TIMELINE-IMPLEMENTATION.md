@@ -267,6 +267,7 @@ Delivered:
 - normalized multi-track projection;
 - canonical Replay phase and frame-time reuse;
 - interactive Web Component rendering with compact reference geometry;
+- native clip editing that prevents overlap by default and fits clips to free intervals;
 - movable/resizable transient timeline widget host;
 - HQ export handoff with restoration of preparation state.
 
@@ -274,8 +275,7 @@ Future or not delivered by this implementation:
 
 - persisted `journey.replay.timeline` authoring data;
 - independent editable item timing as a domain command;
-- item trimming, overlap validation, transitions, waits, media tracks, or POI
-  tracks;
+- transitions, waits, media tracks, or POI tracks;
 - replacing the existing pre-Replay/post-Replay clip lists with a complete authoring
   timeline;
 - connecting timeline playback, scrubbing, visibility, ordering, menus, clip

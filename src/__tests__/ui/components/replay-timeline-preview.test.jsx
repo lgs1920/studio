@@ -104,6 +104,7 @@ describe('ReplayTimelinePreview', () => {
             durationMillis: 4_000,
             editable: true,
             interactive: true,
+            collisionPolicy: 'prevent',
             rangeStartMillis: 0,
             rangeEndMillis: 4_000,
         })

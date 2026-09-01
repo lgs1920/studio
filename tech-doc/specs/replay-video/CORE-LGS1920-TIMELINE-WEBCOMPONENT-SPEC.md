@@ -64,7 +64,7 @@ The supported `timeline` fields are:
 | `zoomPercent` | Ruler zoom from `-50` to `500`. |
 | `legendMinWidth` | Minimum track-title width. Defaults to `100`. |
 | `legendMaxWidth` | Maximum track-title width. Defaults to `230`. |
-| `collisionPolicy` | Default clip collision policy: `allow`, `prevent`, or `ripple`. |
+| `collisionPolicy` | Default clip collision policy: `allow`, `prevent`, or `ripple`. Defaults to `prevent`. |
 | `durationPolicy` | `fixed` keeps the duration bounded; `extend` grows it when required. |
 | `defaultTrackId` | Track selected by the clip insertion menu when an option has no `trackId`. |
 | `defaultClipDuration` | Default insertion duration in seconds. Defaults to `1`. |
@@ -188,14 +188,21 @@ The target track resolves its collision policy before applying a clip edit:
 
 | Policy | Rule |
 | --- | --- |
-| `allow` | Existing clips may overlap. |
-| `prevent` | The edit is rejected when it overlaps another clip. |
+| `allow` | Existing clips may overlap. Use only when overlap is explicitly required. |
+| `prevent` | Clips cannot overlap. A moved or inserted clip is fitted to the available gap; a resize stops at the neighboring clip. |
 | `ripple` | Overlapping clips are shifted to the right while preserving their durations and existing gaps. |
 
-Ripple layout applies to insertion, movement, and resizing. If the resulting
-last clip exceeds the current duration, `durationPolicy: 'extend'` increases
-the duration. A fixed timeline rejects the edit instead. Locked or incompatible
-target tracks reject cross-track movement.
+While a clip is dragged over an occupied or otherwise invalid drop zone, it
+continues following the pointer and displays the `not-allowed` cursor. The
+invalid position is not committed on release.
+
+Ripple layout applies to insertion, movement, and resizing. With `prevent`, a
+clip that reaches the next clip is shortened to the free interval. If the
+remaining interval is shorter than the configured minimum duration, the edit
+is rejected. If the resulting last clip exceeds the current duration,
+`durationPolicy: 'extend'` increases the duration. A fixed timeline fits the
+clip to its end instead. Locked or incompatible target tracks reject
+cross-track movement.
 
 ## Clip insertion
 

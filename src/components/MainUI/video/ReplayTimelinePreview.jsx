@@ -301,7 +301,7 @@ export const ReplayTimelinePreview = forwardRef(({onMinimumDimensionsChange}, re
         rangeEndMillis: projection.durationMillis,
         editable: true,
         interactive: true,
-        collisionPolicy: 'allow',
+        collisionPolicy: 'prevent',
         durationPolicy: 'fixed',
     }), [projection.durationMillis, projection.fps, projection.source.frameCount, projection.source.frameIntervalMs])
     const tracks = useMemo(() => toDisplayTracks(editorData), [editorData])

@@ -60,7 +60,7 @@ timeline.timeline = {
     rangeStartMillis: 0,
     rangeEndMillis: 60_000,
     editable: true,
-    collisionPolicy: 'allow',
+    collisionPolicy: 'prevent',
     durationPolicy: 'fixed',
 }
 
@@ -118,7 +118,7 @@ clock integration.
 | `legendMaxWidth` | `number` | Maximum track legend width in pixels. Defaults to `230`. |
 | `editable` | `boolean` | Enables clip editing and track reordering. Defaults to `true`. |
 | `interactive` | `boolean` | Enables playback, scrubbing, editing, menus, and emitted interaction events. Defaults to `true`. |
-| `collisionPolicy` | `'allow' \| 'prevent' \| 'ripple'` | Default clip collision policy for tracks. |
+| `collisionPolicy` | `'allow' \| 'prevent' \| 'ripple'` | Default clip collision policy for tracks. Defaults to `prevent`. |
 | `durationPolicy` | `'fixed' \| 'extend'` | Keeps the duration fixed or extends it when an edit exceeds the end. Defaults to `fixed`. |
 | `defaultTrackId` | `string` | Track used when a clip-menu option does not specify a track. |
 | `minClipDuration` | `number` | Default minimum clip duration in seconds. |
@@ -337,7 +337,6 @@ supports the `drag-trigger`, `visibility`, and `actions` slots.
 | `clip-content` | `clip-content-{clipId}` | Complete clip content. |
 | `clip-start-handle` | `clip-start-handle-{clipId}` | Start resize handle content. |
 | `clip-end-handle` | `clip-end-handle-{clipId}` | End resize handle content. |
-| `clip-context-menu` | — | Additional clip context-menu commands. |
 
 Clip content can be arbitrary HTML or Web Awesome components:
 
@@ -395,7 +394,9 @@ timeline.addEventListener('lgs1920-timeline-track-label-change', event => {
 ```
 
 The same controlled flow applies to track visibility, clip visibility, and
-track reordering.
+track reordering. Clips belonging to a hidden track remain represented in the
+timeline with their original palette softened by a lighter diagonal hatch;
+they are not interactive until the track is shown again.
 
 ## Clip and track editing
 
@@ -413,9 +414,13 @@ Track collision behavior is selected with `collisionPolicy`:
 
 | Policy | Behavior |
 | --- | --- |
-| `allow` | Clips may overlap. |
-| `prevent` | An edit that overlaps another clip is rejected. |
+| `allow` | Clips may overlap. Use only when overlap is explicitly required. |
+| `prevent` | Clips cannot overlap. A moved or inserted clip is fitted to the available gap; a resize stops at the neighboring clip. |
 | `ripple` | Overlapping clips and subsequent clips are shifted to the right while their durations are preserved. |
+
+While a clip is dragged over an occupied or otherwise invalid drop zone, it
+continues following the pointer and displays the `not-allowed` cursor. The
+invalid position is not committed on release.
 
 With `durationPolicy: 'extend'`, a ripple edit can increase the timeline
 duration. The committed event contains the resulting `durationMillis` and the

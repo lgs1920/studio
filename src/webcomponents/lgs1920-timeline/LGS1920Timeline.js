@@ -2414,12 +2414,14 @@ export class LGS1920Timeline extends HTMLElement {
         if (state?.type === 'playhead' && event.type === 'pointerup') {
             this.#seek(event.clientX, true)
         }
-        if (state?.type === 'clip' && state.lastResult) {
-            if (event.type === 'pointerup') this.#emit('clip-change', this.#clipEditor.changeDetail(state, state.lastResult, event))
-            else {
-                this.#rows = state.baseRows
-                this.#interactionDurationMillis = null
-            }
+        if (state?.type === 'clip' && event.type === 'pointerup') {
+            const result = state.lastResult
+            this.#rows = result?.rows ?? state.baseRows
+            this.#interactionDurationMillis = result?.durationMillis ?? null
+            if (result) this.#emit('clip-change', this.#clipEditor.changeDetail(state, result, event))
+        } else if (state?.type === 'clip') {
+            this.#rows = state.baseRows
+            this.#interactionDurationMillis = null
         }
         if (state?.type === 'row' && event.type === 'pointercancel') this.#rows = state.baseRows
         if (state?.type === 'row') {
@@ -2734,6 +2736,7 @@ export class LGS1920Timeline extends HTMLElement {
         const scaleWidth = this.#numericToken('scale-width', SCALE_WIDTH)
         const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
         const dragState = this.#dragState
+        this.toggleAttribute('data-clip-drop-rejected', dragState?.type === 'clip' && dragState.dropRejected === true)
         const clips = new Map([...this.#root.querySelectorAll('[data-clip-id]')]
             .map(element => [String(element.getAttribute('data-clip-id')), element]))
         const tracks = new Map([...this.#root.querySelectorAll('[part="track"]')]
@@ -2753,14 +2756,22 @@ export class LGS1920Timeline extends HTMLElement {
                 element.classList.toggle('lgs1920-wa-timeline__clip--hidden', value.visible === false)
                 element.classList.toggle('lgs1920-wa-timeline__clip--track-hidden', row.visible === false)
                 element.classList.toggle('lgs1920-wa-timeline__clip--dragging', dragState?.type === 'clip' && dragState.clipId === value.id)
+                element.classList.toggle('lgs1920-wa-timeline__clip--drop-rejected', dragState?.type === 'clip'
+                    && dragState.clipId === value.id
+                    && dragState.dropRejected === true)
                 if (track && element.parentElement !== track) track.append(element)
             })
             if (track) {
                 const isClipDropTarget = dragState?.type === 'clip'
                     && dragState.targetTrackId === row.id
                     && dragState.sourceTrackId !== row.id
+                const isClipDropRejected = dragState?.type === 'clip'
+                    && dragState.targetTrackId === row.id
+                    && dragState.dropRejected === true
                 track.classList.toggle('lgs1920-wa-timeline__track--clip-drop-target', isClipDropTarget)
+                track.classList.toggle('lgs1920-wa-timeline__track--clip-drop-rejected', isClipDropRejected)
                 legend?.classList.toggle('lgs1920-wa-timeline__legend-row--clip-drop-target', isClipDropTarget)
+                legend?.classList.toggle('lgs1920-wa-timeline__legend-row--clip-drop-rejected', isClipDropRejected)
             }
         })
         this.#updateDynamicState()
