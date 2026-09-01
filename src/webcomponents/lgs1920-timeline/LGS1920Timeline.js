@@ -95,6 +95,7 @@ const TIMELINE_INPUT_EVENT_TYPES = Object.freeze([
 ])
 
 const TIMELINE_HORIZONTAL_ARROW_KEYS = Object.freeze(['ArrowLeft', 'ArrowRight'])
+const ROW_DRAG_THRESHOLD = 4
 
 /**
  * Continuation events that must reach an already active external gesture.
@@ -2038,8 +2039,37 @@ export class LGS1920Timeline extends HTMLElement {
             || this.#timelineConfig.editable === false
             || row.fixed === true
             || row.movable === false) return
+        const sourceElement = event.currentTarget instanceof Element ? event.currentTarget : event.target
+        if (sourceElement?.getAttribute?.('part') === 'legend-content') {
+            this.#dragState = {
+                type: 'row-pending',
+                rowId,
+                pointerId: event.pointerId,
+                startX: event.clientX,
+                startY: event.clientY,
+                sourceElement,
+            }
+            this.#addPointerListeners()
+            return
+        }
+        this.#activateRowDrag(event, rowId, sourceElement)
+    }
+
+    /**
+     * Activate a row drag after a pointer movement has exceeded the click threshold.
+     *
+     * @param {PointerEvent} event - Pointer event that activates the drag.
+     * @param {string} rowId - Dragged row identifier.
+     * @param {Element|null} sourceElement - Element that received the pointer down.
+     */
+    #activateRowDrag = (event, rowId, sourceElement = null) => {
         event.preventDefault()
-        this.#capturePointer(event)
+        event.stopPropagation()
+        this.#capturePointer({
+            currentTarget: sourceElement,
+            target: sourceElement ?? event.target,
+            pointerId: event.pointerId,
+        })
         this.#dragState = {
             type: 'row',
             rowId,
@@ -2048,6 +2078,7 @@ export class LGS1920Timeline extends HTMLElement {
             dropIndex: this.#rows.findIndex(row => row.id === rowId),
             lastValidDropIndex: this.#rows.findIndex(row => row.id === rowId),
             dropRejected: false,
+            initialTimeMillis: this.#currentTimeMillis,
             baseRows: cloneRows(this.#rows),
         }
         this.#addPointerListeners()
@@ -2305,10 +2336,19 @@ export class LGS1920Timeline extends HTMLElement {
             this.#pinActiveTimeHandle(event)
             return
         }
+        if (this.#dragState?.type === 'row-pending') {
+            if (event.pointerId !== this.#dragState.pointerId) return
+            const distance = Math.hypot(
+                event.clientX - this.#dragState.startX,
+                event.clientY - this.#dragState.startY,
+            )
+            if (distance < ROW_DRAG_THRESHOLD) return
+            this.#activateRowDrag(event, this.#dragState.rowId, this.#dragState.sourceElement)
+        }
         if (this.#dragState?.type === 'row') {
             if (event.pointerId !== this.#dragState.pointerId) return
             event.preventDefault()
-            this.#handleEdgeAutoScroll(event)
+            this.#currentTimeMillis = this.#normalizeTime(this.#dragState.initialTimeMillis)
             this.#dragState.pointerY = event.clientY
             const viewport = this.#root.querySelector('.lgs1920-wa-timeline__legend-viewport')
             const rect = viewport?.getBoundingClientRect()
@@ -2356,6 +2396,10 @@ export class LGS1920Timeline extends HTMLElement {
     #pointerUp = event => {
         if (this.#scrubPointerId !== null) this.#seek(event.clientX, true)
         const state = this.#dragState
+        if (state?.type === 'row-pending') {
+            this.#removePointerListeners()
+            return
+        }
         if (state?.type === 'range' && event.type === 'pointercancel') {
             this.#rangeStartMillis = state.initialStartMillis
             this.#rangeEndMillis = state.initialEndMillis
@@ -2378,6 +2422,10 @@ export class LGS1920Timeline extends HTMLElement {
             }
         }
         if (state?.type === 'row' && event.type === 'pointercancel') this.#rows = state.baseRows
+        if (state?.type === 'row') {
+            this.#currentTimeMillis = this.#normalizeTime(state.initialTimeMillis)
+            this.#updateDynamicState()
+        }
         const rowOrderChanged = state?.type === 'row'
             && this.#rows.some((row, index) => row.id !== state.baseRows[index]?.id)
         if (state?.type === 'row') {

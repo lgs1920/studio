@@ -1073,9 +1073,12 @@ describe('lgs1920-timeline Web Component', () => {
         trigger.dispatchEvent(createPointerEvent('pointerdown', {clientX: 10, clientY: 10}))
         const surface = timeline.shadowRoot.querySelector('[data-scroll-view="surface"]')
         const tracksViewport = timeline.shadowRoot.querySelector('[data-scroll-view="tracks"]')
+        Object.defineProperty(surface, 'scrollLeft', {configurable: true, writable: true, value: 72})
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 100, right: 700, width: 600, top: 0, bottom: 200, height: 200})
         window.dispatchEvent(createPointerEvent('pointermove', {clientX: 10, clientY: 70}))
         expect(timeline.shadowRoot.querySelector('[data-scroll-view="surface"]')).toBe(surface)
         expect(timeline.shadowRoot.querySelector('[data-scroll-view="tracks"]')).toBe(tracksViewport)
+        expect(surface.scrollLeft).toBe(72)
         window.dispatchEvent(createPointerEvent('pointerup', {clientX: 10, clientY: 70}))
 
         expect(reorders).toHaveBeenCalledOnce()
@@ -1090,9 +1093,10 @@ describe('lgs1920-timeline Web Component', () => {
         })
     })
 
-    it('starts a row drag from the full track name area and marks the row warning', () => {
+    it('starts a row drag from the full track name area and marks the row brand', () => {
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline, {
+            currentTimeMillis: 3_500,
             tracks: [
                 {id: 'first', label: 'First', movable: true, clips: []},
                 {id: 'second', label: 'Second', movable: true, clips: []},
@@ -1101,14 +1105,43 @@ describe('lgs1920-timeline Web Component', () => {
         document.body.append(timeline)
 
         const nameArea = timeline.shadowRoot.querySelector('[data-row-id="first"] [part="legend-content"]')
-        nameArea.dispatchEvent(createPointerEvent('pointerdown', {clientX: 10, clientY: 10}))
+        const pointerDown = createPointerEvent('pointerdown', {clientX: 10, clientY: 10})
+        nameArea.dispatchEvent(pointerDown)
+
+        expect(pointerDown.defaultPrevented).toBe(false)
+        expect(timeline.shadowRoot.querySelector('[data-row-id="first"]')
+            .classList.contains('lgs1920-wa-timeline__legend-row--dragging')).toBe(false)
+
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 10, clientY: 30}))
 
         expect(timeline.shadowRoot.querySelector('[data-row-id="first"]')
             .classList.contains('lgs1920-wa-timeline__legend-row--dragging')).toBe(true)
         expect(timeline.shadowRoot.querySelector('[part="track"][data-row-id="first"]')
             .classList.contains('lgs1920-wa-timeline__track--dragging')).toBe(true)
+        expect(timeline.currentTimeMillis).toBe(3_500)
+
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 10, clientY: 30}))
+        expect(timeline.currentTimeMillis).toBe(3_500)
 
         window.dispatchEvent(createPointerEvent('pointerup', {clientX: 10, clientY: 10}))
+        expect(timeline.currentTimeMillis).toBe(3_500)
+    })
+
+    it('keeps a double-click on the track name available for editing', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {
+            tracks: [{id: 'editable', label: 'Editable', editable: true, movable: true, clips: []}],
+        })
+        document.body.append(timeline)
+
+        const labelSlot = timeline.shadowRoot.querySelector('slot[name="track-label-editable"]')
+        labelSlot.dispatchEvent(createPointerEvent('pointerdown', {clientX: 10, clientY: 10}))
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 10, clientY: 10}))
+        labelSlot.dispatchEvent(createPointerEvent('pointerdown', {clientX: 10, clientY: 10}))
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 10, clientY: 10}))
+        labelSlot.dispatchEvent(new MouseEvent('dblclick', {bubbles: true, cancelable: true}))
+
+        expect(timeline.shadowRoot.querySelector('[data-edit-row-id="editable"]')).not.toBeNull()
     })
 
     it.each([
@@ -1148,7 +1181,7 @@ describe('lgs1920-timeline Web Component', () => {
         document.body.append(timeline)
 
         const nameArea = timeline.shadowRoot.querySelector('[data-row-id="moving"] [part="legend-content"]')
-        nameArea.dispatchEvent(createPointerEvent('pointerdown', {clientX: 10, clientY: 10}))
+        nameArea.dispatchEvent(createPointerEvent('pointerdown', {clientX: 10, clientY: 0}))
         window.dispatchEvent(createPointerEvent('pointermove', {clientX: 10, clientY: pointerY}))
 
         expect(timeline.hasAttribute('data-row-drop-rejected')).toBe(true)

@@ -228,15 +228,16 @@ export const createTimelineRenderer = ({
                 if (event.key === 'Enter') commitTrackLabelEdit()
                 if (event.key === 'Escape') cancelTrackLabelEdit()
             })
-        } else if (interactive && row.editable !== false) {
-            labelElement.addEventListener('dblclick', event => {
+        }
+        const trackContent = createElement('span', 'lgs1920-wa-timeline__track-content', {part: 'legend-content'})
+        trackContent.append(iconFrame, labelElement)
+        if (interactive && row.editable !== false) {
+            trackContent.addEventListener('dblclick', event => {
                 event.preventDefault()
                 event.stopPropagation()
                 beginTrackLabelEdit(row)
             })
         }
-        const trackContent = createElement('span', 'lgs1920-wa-timeline__track-content', {part: 'legend-content'})
-        trackContent.append(iconFrame, labelElement)
         if (interactive && movable) {
             trackContent.addEventListener('pointerdown', event => {
                 if (event.button !== 0 || event.target?.closest?.('wa-input')) return
