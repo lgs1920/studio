@@ -1447,3 +1447,27 @@
 ## 2026-09-01 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/e3d24c561a9a71a151765f2d651e68cfc821da6e)
 
 - Recorded automatically from Git history.
+
+## 2026-09-01 — [`feat(ui): extend timeline Web Component interactions`](https://github.com/lgs1920/studio/commit/ce0b7aed5aadc3017684f941955cd6fcbda0dce0)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`refactor(replay): rename Replay clip phases`](https://github.com/lgs1920/studio/commit/c061d698b963a93ee9ba6f09b31dde1f245ace42)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`feat(replay): enable timeline preview interactions`](https://github.com/lgs1920/studio/commit/409018f62b6b94f18b1c99edd88b62b214910d3b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`docs(replay): document timeline Web Component integration`](https://github.com/lgs1920/studio/commit/d2dfb63b90ad69afc4e5b305b6915e2041bba305)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/51aa743b324741d3a72caca98d1e49d423bc9dea)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-09-01 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/c5eba06cfa9ee1b07b0bf32880d4bacfe246980d)
+
+- Recorded automatically from Git history.
