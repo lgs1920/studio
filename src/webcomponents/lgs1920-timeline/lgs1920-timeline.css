@@ -70,12 +70,6 @@
     --lgs-timeline-scrollbar-track-color: var(--lgs-scrollbar-track-color, color-mix(in oklab, var(--lgs-timeline-text-color) 22%, transparent));
     /* Timeline custom scrollbar thumb color. */
     --lgs-timeline-scrollbar-thumb-color: var(--lgs-scrollbar-thumb-color, color-mix(in oklab, var(--lgs-timeline-text-color) 68%, transparent));
-    /* Timeline track legend width. */
-    --lgs-timeline-legend-width: 136px;
-    /* Timeline minimum track legend width. */
-    --lgs-timeline-legend-min-width: 100px;
-    /* Timeline maximum track legend width. */
-    --lgs-timeline-legend-max-width: 230px;
     /* Timeline legend resizer width. */
     --lgs-timeline-resizer-width: 6px;
     /* Timeline legend resizer hit area. */
@@ -141,6 +135,16 @@
 
     &[hidden] {
         display: none;
+    }
+
+    &[data-row-drop-rejected] {
+        cursor: not-allowed;
+
+        & .lgs1920-wa-timeline__legend-row,
+        & .lgs1920-wa-timeline__track,
+        & .lgs1920-wa-timeline__row-drag-silhouette {
+            cursor: not-allowed;
+        }
     }
 
     & .lgs1920-wa-timeline {
@@ -251,12 +255,6 @@
         height: 100%;
         min-width: 0;
         min-height: var(--lgs-timeline-layout-min-height);
-        grid-auto-flow: column;
-        grid-template-columns: clamp(
-            var(--lgs-timeline-legend-min-width),
-            var(--lgs-timeline-legend-width),
-            var(--lgs-timeline-legend-max-width)
-        ) var(--lgs-timeline-resizer-width) minmax(0, 1fr);
     }
 
     & .lgs1920-wa-timeline__split-panel::part(panel) {
@@ -465,8 +463,9 @@
 
     & .lgs1920-wa-timeline__legend-row.lgs1920-wa-timeline__legend-row--dragging {
         cursor: grabbing;
-        background: var(--wa-color-fill-loud, var(--wa-color-neutral-fill-loud));
-        border-color: var(--wa-color-brand-border-loud, var(--wa-color-brand-border));
+        color: var(--wa-color-warning-on-normal);
+        background: var(--wa-color-warning-fill-normal);
+        border-color: var(--wa-color-warning-border-normal);
         box-shadow: var(--wa-shadow-s);
     }
 
@@ -474,6 +473,25 @@
         background: color-mix(in srgb, var(--lgs-timeline-track-drop-indicator-color) 12%, var(--lgs-timeline-surface-color));
         outline: 1px solid var(--lgs-timeline-track-drop-indicator-color);
         outline-offset: -1px;
+    }
+
+    & .lgs1920-wa-timeline__legend-row.lgs1920-wa-timeline__legend-row--dragging.lgs1920-wa-timeline__legend-row--drop-rejected {
+        cursor: not-allowed;
+        color: var(--wa-color-danger-on-normal);
+        background: var(--wa-color-danger-fill-normal);
+        border-color: var(--wa-color-danger-border-normal);
+    }
+
+    & .lgs1920-wa-timeline__legend-row.lgs1920-wa-timeline__legend-row--drag-placeholder,
+    & .lgs1920-wa-timeline__track.lgs1920-wa-timeline__track--drag-placeholder {
+        opacity: 0.38;
+    }
+
+    & .lgs1920-wa-timeline__row-drag-silhouette {
+        position: absolute;
+        z-index: 15;
+        opacity: 0.82;
+        pointer-events: none;
     }
 
     & .lgs1920-wa-timeline__track-content {
@@ -760,8 +778,24 @@
     }
 
     & .lgs1920-wa-timeline__track.lgs1920-wa-timeline__track--dragging {
-        outline: 1px solid var(--lgs-timeline-track-drop-indicator-color);
+        color: var(--wa-color-warning-on-normal);
+        background-color: var(--wa-color-warning-fill-normal);
+        border-color: var(--wa-color-warning-border-normal);
+        outline: 1px solid var(--wa-color-warning-border-normal);
         outline-offset: -1px;
+    }
+
+    & .lgs1920-wa-timeline__track.lgs1920-wa-timeline__track--dragging.lgs1920-wa-timeline__track--drop-rejected {
+        cursor: not-allowed;
+        color: var(--wa-color-danger-on-normal);
+        background-color: var(--wa-color-danger-fill-normal);
+        border-color: var(--wa-color-danger-border-normal);
+        outline-color: var(--wa-color-danger-border-normal);
+    }
+
+    & .lgs1920-wa-timeline__legend-rows,
+    & .lgs1920-wa-timeline__tracks {
+        position: relative;
     }
 
     & :is(.lgs1920-wa-timeline__playhead, .lgs1920-wa-timeline__end-marker) {

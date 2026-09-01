@@ -193,12 +193,16 @@ export const createTimelineRenderer = ({
         const isClipDropTarget = dragState?.type === 'clip'
             && dragState.targetTrackId === row.id
             && dragState.sourceTrackId !== row.id
+        const isRejectedRow = dragState?.type === 'row'
+            && dragState.rowId === row.id
+            && dragState.dropRejected === true
         const element = createElement('div', `lgs1920-wa-timeline__legend-row ${resolveColorClasses(row.colorClasses)}${movable ? ' lgs1920-wa-timeline__legend-row--movable' : ''}${dragState?.rowId === row.id ? ' lgs1920-wa-timeline__legend-row--dragging' : ''}${isClipDropTarget ? ' lgs1920-wa-timeline__legend-row--clip-drop-target' : ''}`, {
             part: 'legend-row',
             id: `lgs1920-timeline-track-${String(row.id ?? '')}`,
             'data-row-id': row.id,
             'aria-label': label,
         })
+        if (isRejectedRow) element.classList.add('lgs1920-wa-timeline__legend-row--drop-rejected')
         element.style.height = 'var(--lgs-timeline-row-height)'
         if (interactive) element.addEventListener('contextmenu', event => openContextMenu('track', row.id, element, event))
         const iconFrame = createElement('span', `lgs1920-wa-timeline__icon-frame ${resolveColorClasses(row.colorClasses)}`, {part: 'legend-icon'})
@@ -233,6 +237,13 @@ export const createTimelineRenderer = ({
         }
         const trackContent = createElement('span', 'lgs1920-wa-timeline__track-content', {part: 'legend-content'})
         trackContent.append(iconFrame, labelElement)
+        if (interactive && movable) {
+            trackContent.addEventListener('pointerdown', event => {
+                if (event.button !== 0 || event.target?.closest?.('wa-input')) return
+                event.stopPropagation()
+                startRowDrag(event, row.id)
+            })
+        }
         const actions = createElement('span', 'lgs1920-wa-timeline__track-actions', {part: 'track-actions'})
         if (interactive) actions.addEventListener('pointerdown', event => event.stopPropagation())
         const dragTrigger = contextualSlot('drag-trigger', row.id, 'drag-trigger', createIcon(movable ? 'grip-dots-vertical' : 'thumbtack', 'solid'))
@@ -308,7 +319,10 @@ export const createTimelineRenderer = ({
             const isClipDropTarget = dragState?.type === 'clip'
                 && dragState.targetTrackId === row.id
                 && dragState.sourceTrackId !== row.id
-            const track = createElement('div', `lgs1920-wa-timeline__track${row.visible === false ? ' lgs1920-wa-timeline__track--hidden' : ''}${dragState?.type === 'row' && dragState.rowId === row.id ? ' lgs1920-wa-timeline__track--dragging' : ''}${isClipDropTarget ? ' lgs1920-wa-timeline__track--clip-drop-target' : ''}`, {part: 'track', 'data-row-id': row.id})
+            const isRejectedRow = dragState?.type === 'row'
+                && dragState.rowId === row.id
+                && dragState.dropRejected === true
+            const track = createElement('div', `lgs1920-wa-timeline__track${row.visible === false ? ' lgs1920-wa-timeline__track--hidden' : ''}${dragState?.type === 'row' && dragState.rowId === row.id ? ' lgs1920-wa-timeline__track--dragging' : ''}${isRejectedRow ? ' lgs1920-wa-timeline__track--drop-rejected' : ''}${isClipDropTarget ? ' lgs1920-wa-timeline__track--clip-drop-target' : ''}`, {part: 'track', 'data-row-id': row.id})
             track.style.height = 'var(--lgs-timeline-row-height)'
             for (const value of row.actions ?? []) {
                 track.append(clip(Object.assign({}, value, {trackId: row.id}), majorSeconds, row.visible !== false))

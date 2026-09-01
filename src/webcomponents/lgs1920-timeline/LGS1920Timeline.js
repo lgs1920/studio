@@ -128,8 +128,6 @@ export class LGS1920Timeline extends HTMLElement {
     #visible = true
     #clipOptions = []
     #zoom = 0
-    #legendWidth = 136
-    #lastLegendWidthProp = null
     #interactionDurationMillis = null
     #rangeStartMillis = 0
     #rangeEndMillis = 0
@@ -189,7 +187,7 @@ export class LGS1920Timeline extends HTMLElement {
                 this.#interactionDurationMillis = value
             },
             emit: (name, detail) => this.#emit(name, detail),
-            render: () => this.#render(),
+            render: () => this.#updateClipInteractionPresentation(),
         })
         this.#renderer = createTimelineRenderer({
             createElement,
@@ -323,19 +321,10 @@ export class LGS1920Timeline extends HTMLElement {
         const config = value && typeof value === 'object' ? Object.assign({}, value) : {}
         this.#rangeEndFollowsDuration = !Number.isFinite(Number(config.rangeEndMillis))
         const {minimum, maximum} = resolveLegendBounds(config)
-        const incomingLegendWidth = Number(config.legendWidth)
-        const hasIncomingLegendWidth = Number.isFinite(incomingLegendWidth)
-        const legendWidthChanged = hasIncomingLegendWidth
-            && (this.#lastLegendWidthProp === null
-                || incomingLegendWidth !== this.#lastLegendWidthProp
-                || this.#legendWidth < minimum
-                || this.#legendWidth > maximum)
-        this.#lastLegendWidthProp = hasIncomingLegendWidth ? incomingLegendWidth : null
         this.#timelineConfig = Object.assign({}, config, {
             legendMinWidth: minimum,
             legendMaxWidth: maximum,
         })
-        if (legendWidthChanged) this.#legendWidth = clamp(incomingLegendWidth, minimum, maximum)
         if (this.#timelineConfig.interactive === false) {
             this.#menuOpen = false
             this.#contextMenuState = null
@@ -402,7 +391,7 @@ export class LGS1920Timeline extends HTMLElement {
      */
     set playing(value) {
         this.#playing = value === true
-        if (this.isConnected) this.#render()
+        this.#updatePlaybackButton()
     }
 
     /**
@@ -456,7 +445,6 @@ export class LGS1920Timeline extends HTMLElement {
             visible: this.#visible,
             clipOptions: this.#clipOptions,
             zoomPercent: this.#timelineConfig.zoomPercent,
-            legendWidth: this.#legendWidth,
             rangeStartMillis: this.#timelineConfig.rangeStartMillis,
             rangeEndMillis: this.#timelineConfig.rangeEndMillis ?? durationMillis,
         })
@@ -474,10 +462,6 @@ export class LGS1920Timeline extends HTMLElement {
         this.#visible = state.visible !== false
         this.#clipOptions = Array.isArray(state.clipOptions) ? state.clipOptions : []
         if (Number.isFinite(Number(state.zoomPercent))) this.#zoom = clamp(Number(state.zoomPercent), MIN_ZOOM, MAX_ZOOM)
-        if (Number.isFinite(Number(state.legendWidth))) {
-            const {minimum, maximum} = resolveLegendBounds(this.#timelineConfig)
-            this.#legendWidth = clamp(Number(state.legendWidth), minimum, maximum)
-        }
         const durationMillis = Number(this.#projection?.durationMillis) || 0
         if (Number.isFinite(Number(state.rangeStartMillis))) {
             this.#rangeStartMillis = clamp(Number(state.rangeStartMillis), 0, durationMillis)
@@ -544,8 +528,7 @@ export class LGS1920Timeline extends HTMLElement {
      * Recompute dimensions after the host container changes size.
      */
     handleResize() {
-        this.#surfaceWidth = this.#surface?.clientWidth ?? 0
-        this.#render()
+        this.#refreshLayoutMetrics()
     }
 
     /**
@@ -572,7 +555,6 @@ export class LGS1920Timeline extends HTMLElement {
             playing: this.#playing,
             visible: this.#visible,
             zoomPercent: this.#zoom,
-            legendWidth: this.#legendWidth,
             rangeStartMillis: this.#rangeStartMillis,
             rangeEndMillis: this.#rangeEndMillis,
         },
@@ -684,6 +666,9 @@ export class LGS1920Timeline extends HTMLElement {
         }
 
         this.hidden = false
+        const currentSplitPanel = this.#root.querySelector('[part="split-panel"]')
+        const preservedSplitPanelPosition = Number(currentSplitPanel?.position)
+        const preservedSplitPanelPixels = Number(currentSplitPanel?.positionInPixels)
         const previousScrollLeft = this.#surface?.scrollLeft ?? 0
         const previousScrollTop = this.#tracksViewport?.scrollTop ?? 0
         this.#finishScrollbarDrag()
@@ -698,15 +683,20 @@ export class LGS1920Timeline extends HTMLElement {
         )
         this.#contentWidth = Math.max(this.#surfaceWidth, scaleOffset + (scaleCount * scaleWidth))
         this.#rowHeight = this.#resolveRowHeight()
-        this.#root.replaceChildren(this.#root.querySelector('style'), this.#structure(scaleCount, majorSeconds, scaleSplitCount))
+        const structure = this.#structure(scaleCount, majorSeconds, scaleSplitCount)
+        this.#reuseSplitPanel(structure)
+        this.#root.replaceChildren(this.#root.querySelector('style'), structure)
         this.#surface = this.#root.querySelector('[data-surface]')
         this.#tracksViewport = this.#root.querySelector('[data-tracks-viewport]')
+        const measuredSurfaceWidth = this.#surface?.clientWidth ?? 0
+        if (measuredSurfaceWidth > 0) this.#surfaceWidth = measuredSurfaceWidth
         if (this.#surface) {
             this.#surface.scrollLeft = previousScrollLeft
         }
         if (this.#tracksViewport) {
             this.#tracksViewport.scrollTop = previousScrollTop
         }
+        this.#positionRejectedRowSilhouette()
         this.#installResizeObserver()
         this.#updateLegendScroll()
         this.#updateScrollbars()
@@ -716,6 +706,17 @@ export class LGS1920Timeline extends HTMLElement {
         if (typeof requestAnimationFrame === 'function') {
             requestAnimationFrame(() => {
                 if (this.#surface === renderedSurface) this.#updateScrollbars()
+                const splitPanel = this.#root.querySelector('[part="split-panel"]')
+                if (splitPanel !== currentSplitPanel) return
+                const restoreSplitPanelPosition = () => {
+                    if (Number.isFinite(preservedSplitPanelPixels) && preservedSplitPanelPixels > 0) {
+                        splitPanel.positionInPixels = preservedSplitPanelPixels
+                    } else if (Number.isFinite(preservedSplitPanelPosition)) {
+                        splitPanel.position = preservedSplitPanelPosition
+                    }
+                }
+                restoreSplitPanelPosition()
+                requestAnimationFrame(restoreSplitPanelPosition)
             })
         }
         this.#updateDynamicState()
@@ -786,7 +787,6 @@ export class LGS1920Timeline extends HTMLElement {
             'data-layout': '',
             'data-capture-exclude': 'true',
         })
-        layout.style.setProperty('--lgs-timeline-legend-width', `${this.#legendWidth}px`)
         layout.style.setProperty('--lgs-timeline-row-height', `${this.#rowHeight}px`)
         layout.append(this.#splitPanel(scaleCount, majorSeconds, scaleSplitCount), this.#trackDropIndicator())
         section.append(layout)
@@ -809,7 +809,6 @@ export class LGS1920Timeline extends HTMLElement {
             part: 'split-panel',
             orientation: 'horizontal',
             primary: 'start',
-            'position-in-pixels': this.#legendWidth,
         })
         splitPanel.style.setProperty('--min', `${minimum}px`)
         splitPanel.style.setProperty('--max', `min(${maximum}px, calc(100% - ${minimum}px))`)
@@ -817,15 +816,6 @@ export class LGS1920Timeline extends HTMLElement {
         splitPanel.style.setProperty('--divider-hit-area', 'var(--lgs-timeline-resizer-hit-area)')
         splitPanel.addEventListener('mousedown', this.#startNativeSplitPanelInteraction)
         splitPanel.addEventListener('touchstart', this.#startNativeSplitPanelInteraction)
-        splitPanel.addEventListener('wa-reposition', event => {
-            const width = Number(event.currentTarget?.positionInPixels)
-            if (!Number.isFinite(width)) return
-            this.#legendWidth = clamp(width, minimum, maximum)
-            this.#root.querySelector('[data-layout]')?.style.setProperty('--lgs-timeline-legend-width', `${this.#legendWidth}px`)
-            this.#showScrollbars()
-            this.#updateScrollbars()
-            if (!this.#scrollbarsInteractionActive) this.#scheduleScrollbarHide()
-        })
 
         const legend = this.#legend()
         legend.slot = 'start'
@@ -946,7 +936,7 @@ export class LGS1920Timeline extends HTMLElement {
             }))
         })
         transportGroup.append(start, previous, play, stop, next, end)
-        controls.append(transportGroup, createElement('slot', '', {name: 'fps-menu'}))
+        controls.append(transportGroup, createElement('slot', '', {name: 'additional-menu'}))
         return controls
     }
 
@@ -1207,6 +1197,7 @@ export class LGS1920Timeline extends HTMLElement {
         this.#clipOptions.forEach(option => {
             const item = createElement('wa-button', 'lgs1920-wa-timeline__menu-item', {
                 appearance: 'plain',
+                variant: 'brand',
                 size: 's',
                 role: 'menuitem',
             })
@@ -1307,6 +1298,7 @@ export class LGS1920Timeline extends HTMLElement {
     #contextMenuItem = (label, value, callback) => {
         const item = createElement('wa-button', 'lgs1920-wa-timeline__context-menu-item', {
             appearance: 'plain',
+            variant: 'brand',
             size: 's',
             role: 'menuitem',
             value,
@@ -1726,29 +1718,6 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
-     * Allow the native split-panel document listeners to receive a divider gesture.
-     *
-     * @param {MouseEvent|TouchEvent} event - Native divider press event.
-     */
-    #startNativeSplitPanelInteraction = event => {
-        if (event.type === 'mousedown' && event.button !== 0) return
-        if (!event.target?.closest?.('[part="divider"]')) return
-        this.#finishNativeSplitPanelInteraction()
-        this.#nativeSplitPanelInteractionActive = true
-        window.addEventListener('pointerup', this.#finishNativeSplitPanelInteraction)
-        window.addEventListener('pointercancel', this.#finishNativeSplitPanelInteraction)
-    }
-
-    /**
-     * Close the event pass-through used by the native split-panel gesture.
-     */
-    #finishNativeSplitPanelInteraction = () => {
-        this.#nativeSplitPanelInteractionActive = false
-        window.removeEventListener('pointerup', this.#finishNativeSplitPanelInteraction)
-        window.removeEventListener('pointercancel', this.#finishNativeSplitPanelInteraction)
-    }
-
-    /**
      * Handle keyboard movement on a custom scrollbar rail.
      *
      * @param {KeyboardEvent} event - Keyboard event.
@@ -1774,6 +1743,70 @@ export class LGS1920Timeline extends HTMLElement {
         this.#scrollbarDragCleanup = null
         this.#scrollbarDrag = null
         this.#releasePointerCapture()
+    }
+
+    /**
+     * Allow the native split-panel document listeners to receive a divider gesture.
+     *
+     * @param {MouseEvent|TouchEvent} event - Native divider press event.
+     */
+    #startNativeSplitPanelInteraction = event => {
+        if (event.type === 'mousedown' && event.button !== 0) return
+        const isDivider = event.composedPath?.().some(target => (
+            target instanceof Element
+            && target.getAttribute('part')?.split(' ').includes('divider')
+        ))
+        if (!isDivider) return
+        this.#finishNativeSplitPanelInteraction()
+        this.#nativeSplitPanelInteractionActive = true
+        window.addEventListener('pointerup', this.#finishNativeSplitPanelInteraction)
+        window.addEventListener('pointercancel', this.#finishNativeSplitPanelInteraction)
+    }
+
+    /**
+     * Close the event pass-through used by the native split-panel gesture.
+     */
+    #finishNativeSplitPanelInteraction = () => {
+        this.#nativeSplitPanelInteractionActive = false
+        window.removeEventListener('pointerup', this.#finishNativeSplitPanelInteraction)
+        window.removeEventListener('pointercancel', this.#finishNativeSplitPanelInteraction)
+    }
+
+    /**
+     * Reuse the native split panel while replacing the timeline contents.
+     *
+     * @param {HTMLElement} structure - Next timeline structure.
+     */
+    #reuseSplitPanel = structure => {
+        const currentSplitPanel = this.#root.querySelector('[part="split-panel"]')
+        const nextSplitPanel = structure.querySelector('[part="split-panel"]')
+        if (!currentSplitPanel || !nextSplitPanel) return
+        ['--min', '--max', '--divider-width', '--divider-hit-area'].forEach(property => {
+            currentSplitPanel.style.setProperty(property, nextSplitPanel.style.getPropertyValue(property))
+        })
+        currentSplitPanel.replaceChildren(...nextSplitPanel.children)
+        nextSplitPanel.replaceWith(currentSplitPanel)
+    }
+
+    /**
+     * Refresh dimensions in place without rebuilding the timeline DOM.
+     */
+    #refreshLayoutMetrics = () => {
+        const surfaceWidth = this.#surface?.clientWidth ?? 0
+        if (Number.isFinite(surfaceWidth) && surfaceWidth > 0) this.#surfaceWidth = surfaceWidth
+        const nextRowHeight = this.#resolveRowHeight()
+        if (nextRowHeight !== this.#rowHeight) {
+            this.#rowHeight = nextRowHeight
+            const layout = this.#root.querySelector('[data-layout]')
+            layout?.style.setProperty('--lgs-timeline-row-height', `${this.#rowHeight}px`)
+            const dropIndex = this.#dragState?.type === 'row' ? this.#dragState.dropIndex : null
+            const indicator = this.#root.querySelector('[data-track-drop-indicator]')
+            if (indicator && Number.isFinite(dropIndex)) {
+                const headerHeight = this.#numericToken('header-height', HEADER_HEIGHT)
+                indicator.style.top = `${headerHeight + (dropIndex * this.#rowHeight)}px`
+            }
+        }
+        this.#updateScrollbars()
     }
 
     /**
@@ -1878,7 +1911,7 @@ export class LGS1920Timeline extends HTMLElement {
         else this.#rangeEndMillis = this.#durationMillis()
         this.#currentTimeMillis = this.#normalizeTime(this.#currentTimeMillis)
         this.#emit('range-change', this.#rangeChangeDetail(event))
-        this.#render()
+        this.#updateDynamicState()
     }
 
     /**
@@ -1903,7 +1936,7 @@ export class LGS1920Timeline extends HTMLElement {
         }
         this.#currentTimeMillis = this.#normalizeTime(this.#currentTimeMillis)
         this.#emit('range-change', this.#rangeChangeDetail(event))
-        this.#render()
+        this.#updateDynamicState()
     }
 
     /**
@@ -2011,7 +2044,10 @@ export class LGS1920Timeline extends HTMLElement {
             type: 'row',
             rowId,
             pointerId: event.pointerId,
+            pointerY: event.clientY,
             dropIndex: this.#rows.findIndex(row => row.id === rowId),
+            lastValidDropIndex: this.#rows.findIndex(row => row.id === rowId),
+            dropRejected: false,
             baseRows: cloneRows(this.#rows),
         }
         this.#addPointerListeners()
@@ -2020,7 +2056,161 @@ export class LGS1920Timeline extends HTMLElement {
             event,
             data: this.#publicSnapshot(),
         })
-        this.#render()
+        this.#updateRowDragPresentation()
+    }
+
+    /**
+     * Position the rejected row silhouette under the pointer in both panes.
+     *
+     * @returns {void}
+     */
+    #positionRejectedRowSilhouette = () => {
+        const state = this.#dragState
+        if (state?.type !== 'row' || state.dropRejected !== true || !Number.isFinite(state.pointerY)) return
+        this.#removeRejectedRowSilhouettes()
+        const rowElements = [...this.#root.querySelectorAll('[part="legend-row"], [part="track"]')]
+            .filter(element => element.dataset.rowId === String(state.rowId))
+        rowElements.forEach(element => {
+            const parent = element.parentElement
+            if (!parent) return
+            const sourceRect = element.getBoundingClientRect()
+            const parentRect = parent.getBoundingClientRect()
+            const height = sourceRect.height || Math.max(MIN_ROW_HEIGHT, this.#rowHeight)
+            const silhouette = element.cloneNode(true)
+            silhouette.removeAttribute('id')
+            silhouette.setAttribute('data-row-drag-silhouette', '')
+            silhouette.setAttribute('aria-hidden', 'true')
+            silhouette.querySelectorAll('[id]').forEach(node => node.removeAttribute('id'))
+            silhouette.classList.add('lgs1920-wa-timeline__row-drag-silhouette')
+            element.classList.add(element.getAttribute('part') === 'track'
+                ? 'lgs1920-wa-timeline__track--drag-placeholder'
+                : 'lgs1920-wa-timeline__legend-row--drag-placeholder')
+            silhouette.style.top = `${state.pointerY - parentRect.top + (parent.scrollTop ?? 0) - (height / 2)}px`
+            silhouette.style.left = `${sourceRect.left - parentRect.left + (parent.scrollLeft ?? 0)}px`
+            silhouette.style.width = sourceRect.width > 0 ? `${sourceRect.width}px` : '100%'
+            silhouette.style.height = `${height}px`
+            parent.append(silhouette)
+        })
+    }
+
+    /**
+     * Remove transient row drag silhouettes before updating the live rows.
+     */
+    #removeRejectedRowSilhouettes = () => {
+        this.#root.querySelectorAll('[data-row-drag-silhouette]').forEach(element => element.remove())
+    }
+
+    /**
+     * Update row drag feedback without rebuilding either scroll view.
+     */
+    #updateRowDragPresentation = () => {
+        const state = this.#dragState
+        if (state?.type !== 'row') return
+        this.#removeRejectedRowSilhouettes()
+        const rejected = state.dropRejected === true
+        this.#root.querySelectorAll('[part="legend-row"], [part="track"]').forEach(element => {
+            const rowId = element.dataset.rowId
+            const isDragged = rowId === String(state.rowId)
+            const isLegendRow = element.getAttribute('part') === 'legend-row'
+            element.classList.toggle(isLegendRow
+                ? 'lgs1920-wa-timeline__legend-row--dragging'
+                : 'lgs1920-wa-timeline__track--dragging', isDragged)
+            element.classList.toggle(isLegendRow
+                ? 'lgs1920-wa-timeline__legend-row--drop-rejected'
+                : 'lgs1920-wa-timeline__track--drop-rejected', isDragged && rejected)
+            element.classList.toggle(isLegendRow
+                ? 'lgs1920-wa-timeline__legend-row--drag-placeholder'
+                : 'lgs1920-wa-timeline__track--drag-placeholder', isDragged && rejected)
+        })
+        const indicator = this.#root.querySelector('[data-track-drop-indicator]')
+        if (indicator) {
+            const dropIndex = rejected ? null : state.dropIndex
+            indicator.hidden = !Number.isFinite(dropIndex)
+            if (Number.isFinite(dropIndex)) {
+                const headerHeight = this.#numericToken('header-height', HEADER_HEIGHT)
+                indicator.style.top = `${headerHeight + (dropIndex * this.#rowHeight)}px`
+            }
+        }
+        if (rejected) this.#positionRejectedRowSilhouette()
+    }
+
+    /**
+     * Clear row drag feedback after the interaction ends.
+     */
+    #clearRowDragPresentation = () => {
+        this.#removeRejectedRowSilhouettes()
+        this.#root.querySelectorAll('[part="legend-row"], [part="track"]').forEach(element => {
+            const isLegendRow = element.getAttribute('part') === 'legend-row'
+            element.classList.remove(isLegendRow
+                ? 'lgs1920-wa-timeline__legend-row--dragging'
+                : 'lgs1920-wa-timeline__track--dragging')
+            element.classList.remove(isLegendRow
+                ? 'lgs1920-wa-timeline__legend-row--drop-rejected'
+                : 'lgs1920-wa-timeline__track--drop-rejected')
+            element.classList.remove(isLegendRow
+                ? 'lgs1920-wa-timeline__legend-row--drag-placeholder'
+                : 'lgs1920-wa-timeline__track--drag-placeholder')
+        })
+        const indicator = this.#root.querySelector('[data-track-drop-indicator]')
+        if (indicator) indicator.hidden = true
+    }
+
+    /**
+     * Reorder the existing legend and track rows in place.
+     */
+    #reorderRenderedRows = () => {
+        const rowContainers = [
+            this.#root.querySelector('.lgs1920-wa-timeline__legend-rows'),
+            this.#root.querySelector('.lgs1920-wa-timeline__tracks'),
+        ]
+        rowContainers.forEach(container => {
+            if (!container) return
+            const rowsById = new Map([...container.children]
+                .filter(element => element.dataset.rowId && !element.hasAttribute('data-row-drag-silhouette'))
+                .map(element => [String(element.dataset.rowId), element]))
+            this.#rows.forEach(row => {
+                const element = rowsById.get(String(row.id))
+                if (element) container.append(element)
+            })
+        })
+    }
+
+    /**
+     * Determine whether a row participates in the locked-order boundaries.
+     *
+     * @param {Object|null} row - Timeline row.
+     * @returns {boolean} Whether the row is locked in the ordering.
+     */
+    #isRowLocked = row => row?.fixed === true || row?.movable === false
+
+    /**
+     * Resolve and validate a row insertion position after removing the dragged row.
+     *
+     * @param {Array} rows - Current row order.
+     * @param {string} rowId - Dragged row identifier.
+     * @param {number} dropIndex - Raw insertion index in the current row order.
+     * @returns {{allowed: boolean, targetIndex: number}|null} Drop resolution.
+     */
+    #resolveRowDrop = (rows, rowId, dropIndex) => {
+        const currentIndex = rows.findIndex(row => row.id === rowId)
+        if (currentIndex < 0) return null
+        const remainingRows = rows.filter(row => row.id !== rowId)
+        const targetIndex = clamp(
+            dropIndex > currentIndex ? dropIndex - 1 : dropIndex,
+            0,
+            remainingRows.length,
+        )
+        if (targetIndex === currentIndex) return {allowed: true, targetIndex}
+
+        const before = remainingRows[targetIndex - 1]
+        const after = remainingRows[targetIndex]
+        const blockedByFirst = targetIndex === 0 && this.#isRowLocked(after)
+        const blockedByLast = targetIndex === remainingRows.length && this.#isRowLocked(before)
+        const blockedByLockedPair = this.#isRowLocked(before) && this.#isRowLocked(after)
+        return {
+            allowed: !blockedByFirst && !blockedByLast && !blockedByLockedPair,
+            targetIndex,
+        }
     }
 
     /**
@@ -2065,6 +2255,7 @@ export class LGS1920Timeline extends HTMLElement {
         window.removeEventListener('pointermove', this.#pointerMove, true)
         window.removeEventListener('pointerup', this.#pointerUp, true)
         window.removeEventListener('pointercancel', this.#pointerUp, true)
+        this.removeAttribute('data-row-drop-rejected')
         this.#dragState = null
         this.#scrubPointerId = null
         this.#releasePointerCapture()
@@ -2118,28 +2309,41 @@ export class LGS1920Timeline extends HTMLElement {
             if (event.pointerId !== this.#dragState.pointerId) return
             event.preventDefault()
             this.#handleEdgeAutoScroll(event)
+            this.#dragState.pointerY = event.clientY
             const viewport = this.#root.querySelector('.lgs1920-wa-timeline__legend-viewport')
             const rect = viewport?.getBoundingClientRect()
             if (!rect) return
             const rowHeight = Math.max(MIN_ROW_HEIGHT, this.#rowHeight)
             const dropIndex = clamp(Math.floor((event.clientY - rect.top + (rowHeight / 2)) / rowHeight), 0, this.#rows.length)
+            const resolution = this.#resolveRowDrop(this.#rows, this.#dragState.rowId, dropIndex)
+            if (!resolution?.allowed) {
+                this.#dragState.dropIndex = null
+                this.#dragState.dropRejected = true
+                this.setAttribute('data-row-drop-rejected', '')
+                this.#updateRowDragPresentation()
+                return
+            }
             this.#dragState.dropIndex = dropIndex
+            this.#dragState.lastValidDropIndex = dropIndex
+            this.#dragState.dropRejected = false
+            this.removeAttribute('data-row-drop-rejected')
             this.#emit('drag', {
                 context: this.#dragContext(this.#dragState),
                 event,
                 data: this.#publicSnapshot(),
             })
             const currentIndex = this.#rows.findIndex(row => row.id === this.#dragState?.rowId)
-            const targetIndex = clamp(dropIndex > currentIndex ? dropIndex - 1 : dropIndex, 0, Math.max(0, this.#rows.length - 1))
+            const targetIndex = resolution.targetIndex
             if (currentIndex < 0 || currentIndex === targetIndex) {
-                this.#render()
+                this.#updateRowDragPresentation()
                 return
             }
             const rows = [...this.#rows]
             const [row] = rows.splice(currentIndex, 1)
             rows.splice(targetIndex, 0, row)
             this.#rows = rows
-            this.#render()
+            this.#reorderRenderedRows()
+            this.#updateRowDragPresentation()
         }
     }
 
@@ -2161,6 +2365,7 @@ export class LGS1920Timeline extends HTMLElement {
         }
         if (state?.type === 'playhead' && event.type === 'pointercancel') {
             this.#currentTimeMillis = this.#normalizeTime(state.initialTimeMillis)
+            this.#updateDynamicState()
         }
         if (state?.type === 'playhead' && event.type === 'pointerup') {
             this.#seek(event.clientX, true)
@@ -2173,23 +2378,32 @@ export class LGS1920Timeline extends HTMLElement {
             }
         }
         if (state?.type === 'row' && event.type === 'pointercancel') this.#rows = state.baseRows
+        const rowOrderChanged = state?.type === 'row'
+            && this.#rows.some((row, index) => row.id !== state.baseRows[index]?.id)
+        if (state?.type === 'row') {
+            this.#reorderRenderedRows()
+            this.#clearRowDragPresentation()
+        }
         if (state?.type === 'row' && event.type === 'pointerup') {
-            this.#emit('reorder', {
-                trackIds: this.#rows.filter(row => !row.fixed && row.movable !== false).map(row => row.id),
-                tracks: this.#rows.map(row => this.#publicTrack(row)),
-                dropIndex: state.dropIndex,
-            })
+            if (rowOrderChanged) {
+                this.#emit('reorder', {
+                    trackIds: this.#rows.filter(row => !row.fixed && row.movable !== false).map(row => row.id),
+                    tracks: this.#rows.map(row => this.#publicTrack(row)),
+                    dropIndex: state.lastValidDropIndex,
+                })
+            }
         }
         if (state?.type === 'row' || state?.type === 'clip') {
             this.#emit('after-drag', {
                 context: this.#dragContext(state),
-                committed: event.type === 'pointerup' && (state.type === 'row' || Boolean(state.lastResult)),
+                committed: event.type === 'pointerup' && (state.type === 'clip' ? Boolean(state.lastResult) : rowOrderChanged),
                 event,
                 data: this.#publicSnapshot(),
             })
         }
         this.#removePointerListeners()
-        if (state?.type === 'row' || state?.type === 'clip' || state?.type === 'range') this.#render()
+        if (state?.type === 'clip') this.#updateClipInteractionPresentation()
+        if (state?.type === 'range') this.#updateDynamicState()
     }
 
     /**
@@ -2344,19 +2558,24 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
-     * Install the surface resize observer.
+     * Install the host resize observer without coupling it to split-panel movement.
+     *
+     * The split panel changes the surface width while its divider is dragged.
+     * Observing that surface would rebuild the component during the native
+     * gesture and invalidate the scroll views. The host size changes only when
+     * the timeline container itself is resized.
      */
     #installResizeObserver = () => {
         this.#resizeObserver?.disconnect()
-        if (typeof ResizeObserver === 'undefined' || !this.#surface) return
-        this.#resizeObserver = new ResizeObserver(entries => {
-            const width = entries.find(entry => entry.target === this.#surface)?.contentRect.width
+        if (typeof ResizeObserver === 'undefined') return
+        this.#resizeObserver = new ResizeObserver(() => {
+            const width = this.#surface?.clientWidth ?? 0
             if (Number.isFinite(width) && width !== this.#surfaceWidth) {
                 this.#surfaceWidth = width
-                this.#render()
-            } else this.#updateScrollbars()
+            }
+            this.#refreshLayoutMetrics()
         })
-        this.#resizeObserver.observe(this.#surface)
+        this.#resizeObserver.observe(this)
     }
 
     /**
@@ -2412,8 +2631,8 @@ export class LGS1920Timeline extends HTMLElement {
     #updateDynamicState = () => {
         const current = this.#root.querySelector('[data-current-time]')
         const total = this.#root.querySelector('[data-total-time]')
-        current?.replaceChildren(document.createTextNode(formatTime(this.#currentTimeMillis / 1000)))
-        total?.replaceChildren(document.createTextNode(formatTime(this.#durationSeconds())))
+        if (current) current.textContent = formatTime(this.#currentTimeMillis / 1000)
+        if (total) total.textContent = formatTime(this.#durationSeconds())
         const duration = this.#durationMillis()
         const ratio = duration > 0 ? clamp(this.#currentTimeMillis / duration, 0, 1) : 0
         const {majorSeconds} = resolveScale(this.#zoom)
@@ -2454,6 +2673,64 @@ export class LGS1920Timeline extends HTMLElement {
             rangeEnd.setAttribute('aria-valuenow', `${this.#rangeEndMillis}`)
             rangeEnd.setAttribute('aria-valuemax', `${this.#durationMillis()}`)
         }
+    }
+
+    /**
+     * Update clip previews in the existing track surface.
+     *
+     * @remarks
+     * Clip drag and resize previews must not rebuild either scroll view.
+     */
+    #updateClipInteractionPresentation = () => {
+        const {majorSeconds} = resolveScale(this.#zoom)
+        const scaleWidth = this.#numericToken('scale-width', SCALE_WIDTH)
+        const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
+        const dragState = this.#dragState
+        const clips = new Map([...this.#root.querySelectorAll('[data-clip-id]')]
+            .map(element => [String(element.getAttribute('data-clip-id')), element]))
+        const tracks = new Map([...this.#root.querySelectorAll('[part="track"]')]
+            .map(element => [String(element.dataset.rowId), element]))
+        const legends = new Map([...this.#root.querySelectorAll('[part="legend-row"]')]
+            .map(element => [String(element.dataset.rowId), element]))
+        this.#rows.forEach(row => {
+            const track = tracks.get(String(row.id))
+            const legend = legends.get(String(row.id))
+            const actions = row.actions ?? []
+            actions.forEach(value => {
+                const element = clips.get(String(value.id))
+                if (!element) return
+                const {start, end} = resolveClipInterval(value)
+                element.style.left = `${scaleOffset + ((start / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
+                element.style.width = `${Math.max(this.#numericToken('clip-min-width', 8), ((end - start) / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
+                element.classList.toggle('lgs1920-wa-timeline__clip--hidden', value.visible === false)
+                element.classList.toggle('lgs1920-wa-timeline__clip--track-hidden', row.visible === false)
+                element.classList.toggle('lgs1920-wa-timeline__clip--dragging', dragState?.type === 'clip' && dragState.clipId === value.id)
+                if (track && element.parentElement !== track) track.append(element)
+            })
+            if (track) {
+                const isClipDropTarget = dragState?.type === 'clip'
+                    && dragState.targetTrackId === row.id
+                    && dragState.sourceTrackId !== row.id
+                track.classList.toggle('lgs1920-wa-timeline__track--clip-drop-target', isClipDropTarget)
+                legend?.classList.toggle('lgs1920-wa-timeline__legend-row--clip-drop-target', isClipDropTarget)
+            }
+        })
+        this.#updateDynamicState()
+    }
+
+    /**
+     * Update the existing play/pause control without rebuilding the timeline.
+     */
+    #updatePlaybackButton = () => {
+        const button = this.#root.querySelector('[data-testid="lgs1920-wa-timeline-play"]')
+        if (!button) return
+        const label = this.#playing ? 'Pause timeline' : 'Play timeline'
+        button.setAttribute('aria-label', label)
+        button.setAttribute('title', label)
+        button.replaceChildren(this.#slotWithFallback(
+            this.#playing ? 'pause-icon' : 'play-icon',
+            createIcon(this.#playing ? 'pause' : 'play', 'solid'),
+        ))
     }
 
     /**
