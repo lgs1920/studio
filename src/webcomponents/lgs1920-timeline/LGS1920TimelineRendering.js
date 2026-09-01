@@ -38,6 +38,7 @@ export const createTimelineRenderer = ({
     setEditingLabelValue,
     getRangeStartMillis,
     getRangeEndMillis,
+    getCurrentTimeMillis,
     getDurationMillis,
     getContentWidth,
     getZoom,
@@ -54,7 +55,10 @@ export const createTimelineRenderer = ({
     startClipInteraction,
     resizeClipByKeyboard,
     startRangeInteraction,
+    setRangeBoundaryToLimit,
     moveRangeByKeyboard,
+    startPlayheadInteraction,
+    movePlayheadByKeyboard,
     seek,
     addPointerListeners,
     capturePointer,
@@ -170,6 +174,7 @@ export const createTimelineRenderer = ({
         if (interactive) {
             handle.addEventListener('pointerdown', event => startRangeInteraction(event, edge))
             handle.addEventListener('keydown', event => moveRangeByKeyboard(edge, event))
+            handle.addEventListener('dblclick', event => setRangeBoundaryToLimit(edge, event))
         }
         return handle
     }
@@ -205,7 +210,7 @@ export const createTimelineRenderer = ({
             ? createElement('wa-input', 'lgs1920-wa-timeline__label-editor', {
                 size: 's',
                 value: getEditingLabelValue(),
-                label: `Edit ${label}`,
+                'aria-label': `Edit ${label}`,
                 'data-edit-row-id': row.id,
             })
             : contextualSlot(labelPrefix, row.id, ['name', 'track-label'], document.createTextNode(label))
@@ -250,9 +255,14 @@ export const createTimelineRenderer = ({
                 toggleTrackVisibility(row, event)
             })
             actions.append(visibility)
+        } else {
+            actions.append(createElement('span', 'lgs1920-wa-timeline__action-placeholder', {
+                part: 'visibility-placeholder',
+                'aria-hidden': 'true',
+            }))
         }
         actions.append(contextualSlot('actions', row.id, 'actions', null))
-        element.append(trackContent, actions)
+        element.append(actions, trackContent)
         return element
     }
 
@@ -266,8 +276,9 @@ export const createTimelineRenderer = ({
      */
     const surfaceElement = (scaleCount, majorSeconds, scaleSplitCount) => {
         const interactive = getTimelineConfig().interactive !== false
-        const surface = createElement('div', 'lgs1920-wa-timeline__surface', {
+        const surface = createElement('wa-card', 'lgs1920-wa-timeline__surface', {
             part: 'surface',
+            appearance: 'plain',
             'data-surface': '',
             tabindex: interactive ? 0 : -1,
             role: 'group',
@@ -310,10 +321,23 @@ export const createTimelineRenderer = ({
             'data-scroll-view': 'tracks',
         })
         tracksViewport.style.width = `${getContentWidth()}px`
-        const playhead = createElement('div', 'lgs1920-wa-timeline__playhead', {part: 'playhead', 'data-playhead': ''})
+        const playhead = createElement('div', 'lgs1920-wa-timeline__playhead', {
+            part: 'playhead',
+            'data-playhead': '',
+            role: 'slider',
+            tabindex: interactive ? 0 : -1,
+            'aria-label': 'Current timeline position',
+            'aria-valuemin': getRangeStartMillis(),
+            'aria-valuemax': getRangeEndMillis(),
+            'aria-valuenow': getCurrentTimeMillis(),
+        })
         const playheadGrip = createElement('span', 'lgs1920-wa-timeline__playhead-grip', {part: 'playhead-grip'})
         playheadGrip.append(createIcon('grip-dots-vertical', 'solid'))
         playhead.append(playheadGrip)
+        if (interactive) {
+            playheadGrip.addEventListener('pointerdown', event => startPlayheadInteraction(event))
+            playhead.addEventListener('keydown', event => movePlayheadByKeyboard(event))
+        }
         const overlay = createElement('div', 'lgs1920-wa-timeline__overlay', {part: 'overlay', 'data-overlay': ''})
         overlay.append(
             rangeHandle('start'),
@@ -325,6 +349,20 @@ export const createTimelineRenderer = ({
         canvas.append(ruler, tracksViewport, overlay)
         surface.append(canvas)
         if (interactive) {
+            surface.addEventListener('pointerdown', event => {
+                if (event.button !== 0 || event.target.closest('.lgs1920-wa-timeline__clip')) return
+                if (event.target.closest('[data-range-handle]')) return
+                const rangeHandle = [...overlay.querySelectorAll('[data-range-handle]')]
+                    .map(handle => ({
+                        handle,
+                        distance: Math.abs(event.clientX - (handle.getBoundingClientRect().left + (handle.getBoundingClientRect().width / 2))),
+                    }))
+                    .sort((left, right) => left.distance - right.distance)[0]
+                if (!rangeHandle || rangeHandle.distance > 8) return
+                event.preventDefault()
+                event.stopImmediatePropagation()
+                startRangeInteraction(event, rangeHandle.handle.getAttribute('data-range-handle'))
+            }, true)
             surface.addEventListener('click', event => {
                 if (!event.target.closest('.lgs1920-wa-timeline__clip')) seek(event.clientX, true)
             })

@@ -16,6 +16,7 @@
 
 import '@web.awesome.me/webawesome-pro/dist/components/button/button.js'
 import '@web.awesome.me/webawesome-pro/dist/components/button-group/button-group.js'
+import '@web.awesome.me/webawesome-pro/dist/components/card/card.js'
 import '@web.awesome.me/webawesome-pro/dist/components/icon/icon.js'
 import '@web.awesome.me/webawesome-pro/dist/components/input/input.js'
 import '@web.awesome.me/webawesome-pro/dist/components/popup/popup.js'
@@ -25,7 +26,9 @@ import {cloneRows, createTimelineClipEditor, resolveClipInterval, trackAcceptsCl
 import {createTimelineRenderer} from './LGS1920TimelineRendering.js'
 import {
     ACCELERATION_INTERVAL,
+    EDGE_TIME_ACCELERATION_INTERVAL,
     EDGE_SCROLL_SPEEDS,
+    EDGE_SCROLL_TIME_STEPS,
     EDGE_TRIGGER_SIZE,
     GLOBAL_SLOTS,
     HEADER_HEIGHT,
@@ -66,6 +69,7 @@ const TIMELINE_INPUT_EVENT_TYPES = Object.freeze([
     'dragend',
     'dragstart',
     'gotpointercapture',
+    'keydown',
     'lostpointercapture',
     'mousedown',
     'mouseenter',
@@ -89,6 +93,8 @@ const TIMELINE_INPUT_EVENT_TYPES = Object.freeze([
     'touchstart',
     'wheel',
 ])
+
+const TIMELINE_HORIZONTAL_ARROW_KEYS = Object.freeze(['ArrowLeft', 'ArrowRight'])
 
 /**
  * Continuation events that must reach an already active external gesture.
@@ -123,6 +129,7 @@ export class LGS1920Timeline extends HTMLElement {
     #clipOptions = []
     #zoom = 0
     #legendWidth = 136
+    #lastLegendWidthProp = null
     #interactionDurationMillis = null
     #rangeStartMillis = 0
     #rangeEndMillis = 0
@@ -138,7 +145,7 @@ export class LGS1920Timeline extends HTMLElement {
     #scrollbarDragCleanup = null
     #scrollbarHideTimer = null
     #scrollbarsInteractionActive = false
-    #splitPanelDragCleanup = null
+    #nativeSplitPanelInteractionActive = false
     #pointerCaptureTarget = null
     #pointerCaptureId = null
     #dragState = null
@@ -146,6 +153,8 @@ export class LGS1920Timeline extends HTMLElement {
     #autoScrollFrame = null
     #edgeDirection = null
     #edgeStartedAt = null
+    #edgeLastStepAt = null
+    #edgePointerEvent = null
     #editingRowId = null
     #editingLabelValue = ''
     #contextMenuState = null
@@ -202,6 +211,7 @@ export class LGS1920Timeline extends HTMLElement {
             },
             getRangeStartMillis: () => this.#rangeStartMillis,
             getRangeEndMillis: () => this.#rangeEndMillis,
+            getCurrentTimeMillis: () => this.#currentTimeMillis,
             getDurationMillis: () => this.#durationMillis(),
             getContentWidth: () => this.#contentWidth,
             getZoom: () => this.#zoom,
@@ -218,7 +228,10 @@ export class LGS1920Timeline extends HTMLElement {
             startClipInteraction: (event, clipId, mode, edge) => this.#startClipInteraction(event, clipId, mode, edge),
             resizeClipByKeyboard: (clipId, edge, event) => this.#clipEditor.resizeByKeyboard(clipId, edge, event),
             startRangeInteraction: (event, edge) => this.#startRangeInteraction(event, edge),
+            setRangeBoundaryToLimit: (edge, event) => this.#setRangeBoundaryToLimit(edge, event),
             moveRangeByKeyboard: (edge, event) => this.#moveRangeByKeyboard(edge, event),
+            startPlayheadInteraction: event => this.#startPlayheadInteraction(event),
+            movePlayheadByKeyboard: event => this.#movePlayheadByKeyboard(event),
             seek: (clientX, settled) => this.#seek(clientX, settled),
             addPointerListeners: () => this.#addPointerListeners(),
             capturePointer: event => this.#capturePointer(event),
@@ -259,9 +272,12 @@ export class LGS1920Timeline extends HTMLElement {
      * @param {Event} event - Native pointing event.
      */
     #stopInputPropagation = event => {
+        if (event.type === 'keydown' && !TIMELINE_HORIZONTAL_ARROW_KEYS.includes(event.key)) return
+        if (this.#nativeSplitPanelInteractionActive
+            && EXTERNAL_INTERACTION_CONTINUATION_EVENT_TYPES.includes(event.type)) return
         if (this.#externalInteractionActive
             && EXTERNAL_INTERACTION_CONTINUATION_EVENT_TYPES.includes(event.type)) return
-        event.stopPropagation()
+        event.stopImmediatePropagation()
     }
 
     /**
@@ -271,6 +287,7 @@ export class LGS1920Timeline extends HTMLElement {
         if (this.#inputPropagationBlockersInstalled) return
         for (const eventType of TIMELINE_INPUT_EVENT_TYPES) {
             this.addEventListener(eventType, this.#stopInputPropagation)
+            this.#root.addEventListener(eventType, this.#stopInputPropagation)
         }
         this.#inputPropagationBlockersInstalled = true
     }
@@ -282,6 +299,7 @@ export class LGS1920Timeline extends HTMLElement {
         if (!this.#inputPropagationBlockersInstalled) return
         for (const eventType of TIMELINE_INPUT_EVENT_TYPES) {
             this.removeEventListener(eventType, this.#stopInputPropagation)
+            this.#root.removeEventListener(eventType, this.#stopInputPropagation)
         }
         this.#inputPropagationBlockersInstalled = false
     }
@@ -305,10 +323,19 @@ export class LGS1920Timeline extends HTMLElement {
         const config = value && typeof value === 'object' ? Object.assign({}, value) : {}
         this.#rangeEndFollowsDuration = !Number.isFinite(Number(config.rangeEndMillis))
         const {minimum, maximum} = resolveLegendBounds(config)
+        const incomingLegendWidth = Number(config.legendWidth)
+        const hasIncomingLegendWidth = Number.isFinite(incomingLegendWidth)
+        const legendWidthChanged = hasIncomingLegendWidth
+            && (this.#lastLegendWidthProp === null
+                || incomingLegendWidth !== this.#lastLegendWidthProp
+                || this.#legendWidth < minimum
+                || this.#legendWidth > maximum)
+        this.#lastLegendWidthProp = hasIncomingLegendWidth ? incomingLegendWidth : null
         this.#timelineConfig = Object.assign({}, config, {
             legendMinWidth: minimum,
             legendMaxWidth: maximum,
         })
+        if (legendWidthChanged) this.#legendWidth = clamp(incomingLegendWidth, minimum, maximum)
         if (this.#timelineConfig.interactive === false) {
             this.#menuOpen = false
             this.#contextMenuState = null
@@ -355,7 +382,7 @@ export class LGS1920Timeline extends HTMLElement {
      * @param {number} value - Time in milliseconds.
      */
     set currentTimeMillis(value) {
-        this.#currentTimeMillis = Math.max(0, Number(value) || 0)
+        this.#currentTimeMillis = this.#normalizeTime(value)
         this.#updateDynamicState()
     }
 
@@ -405,7 +432,7 @@ export class LGS1920Timeline extends HTMLElement {
         this.#resizeObserver?.disconnect()
         this.#removePointerListeners()
         this.#finishScrollbarDrag()
-        this.#finishSplitPanelDrag()
+        this.#finishNativeSplitPanelInteraction()
         this.#externalInteractionActive = false
         this.#scrollbarsInteractionActive = false
         this.#clearScrollbarHideTimer()
@@ -429,7 +456,7 @@ export class LGS1920Timeline extends HTMLElement {
             visible: this.#visible,
             clipOptions: this.#clipOptions,
             zoomPercent: this.#timelineConfig.zoomPercent,
-            legendWidth: this.#timelineConfig.legendWidth,
+            legendWidth: this.#legendWidth,
             rangeStartMillis: this.#timelineConfig.rangeStartMillis,
             rangeEndMillis: this.#timelineConfig.rangeEndMillis ?? durationMillis,
         })
@@ -443,7 +470,6 @@ export class LGS1920Timeline extends HTMLElement {
     #applyState = (state = {}) => {
         this.#projection = state.projection ?? null
         this.#rows = state.editorData ?? state.projection?.editorData ?? state.rows ?? []
-        this.#currentTimeMillis = Math.max(0, Number(state.currentTimeMillis ?? 0) || 0)
         this.#playing = state.playing === true
         this.#visible = state.visible !== false
         this.#clipOptions = Array.isArray(state.clipOptions) ? state.clipOptions : []
@@ -463,6 +489,7 @@ export class LGS1920Timeline extends HTMLElement {
         } else {
             this.#rangeEndMillis = durationMillis
         }
+        this.#currentTimeMillis = this.#normalizeTime(state.currentTimeMillis ?? 0)
         this.#render()
     }
 
@@ -635,7 +662,10 @@ export class LGS1920Timeline extends HTMLElement {
      * @param {number} timeMillis - Requested time in milliseconds.
      * @returns {number} Clamped time in milliseconds.
      */
-    #normalizeTime = timeMillis => clamp(Number(timeMillis) || 0, 0, this.#durationMillis())
+    #normalizeTime = timeMillis => {
+        const maximum = Number.isFinite(this.#rangeEndMillis) ? this.#rangeEndMillis : this.#durationMillis()
+        return clamp(Number(timeMillis) || 0, this.#rangeStartMillis, Math.max(this.#rangeStartMillis, maximum))
+    }
 
     /**
      * Render the empty or active component state.
@@ -644,7 +674,6 @@ export class LGS1920Timeline extends HTMLElement {
         if (!this.#visible || !this.#projection) {
             this.hidden = true
             this.#finishScrollbarDrag()
-            this.#finishSplitPanelDrag()
             this.#externalInteractionActive = false
             this.#scrollbarsInteractionActive = false
             this.#clearScrollbarHideTimer()
@@ -720,10 +749,11 @@ export class LGS1920Timeline extends HTMLElement {
      * @returns {HTMLElement} Rendered section.
      */
     #structure = (scaleCount, majorSeconds, scaleSplitCount) => {
-        const section = createElement('section', 'lgs1920-wa-timeline', {
+        const section = createElement('wa-card', 'lgs1920-wa-timeline', {
             part: 'timeline',
             'data-testid': 'lgs1920-wa-timeline',
             'aria-label': this.getAttribute('aria-label') || 'Video timeline tracks',
+            appearance: 'plain',
         })
         section.append(createElement('slot', 'lgs1920-wa-timeline__additional-content-slot', {name: 'additional-content'}), this.#slotRegistry())
 
@@ -785,7 +815,8 @@ export class LGS1920Timeline extends HTMLElement {
         splitPanel.style.setProperty('--max', `min(${maximum}px, calc(100% - ${minimum}px))`)
         splitPanel.style.setProperty('--divider-width', 'var(--lgs-timeline-resizer-width)')
         splitPanel.style.setProperty('--divider-hit-area', 'var(--lgs-timeline-resizer-hit-area)')
-        splitPanel.addEventListener('pointerdown', event => this.#startSplitPanelDrag(event, splitPanel))
+        splitPanel.addEventListener('mousedown', this.#startNativeSplitPanelInteraction)
+        splitPanel.addEventListener('touchstart', this.#startNativeSplitPanelInteraction)
         splitPanel.addEventListener('wa-reposition', event => {
             const width = Number(event.currentTarget?.positionInPixels)
             if (!Number.isFinite(width)) return
@@ -832,24 +863,90 @@ export class LGS1920Timeline extends HTMLElement {
      */
     #playbackControls = () => {
         if (this.#timelineConfig.interactive === false) return null
-        const controls = createElement('wa-button-group', '', {label: 'Timeline playback controls', part: 'controls'})
+        const controls = createElement('div', 'lgs1920-wa-timeline__transport', {
+            part: 'transport',
+            'aria-label': 'Timeline transport controls',
+        })
+        const transportGroup = createElement('wa-button-group', '', {
+            label: 'Timeline transport controls',
+            part: 'controls',
+        })
+        const start = this.#button({
+            iconName: 'backward-step',
+            label: 'Go to timeline start',
+            testId: 'timeline-restart',
+            iconSlot: 'start-icon',
+            disabled: this.#isAtRangeStart(),
+        })
+        start.addEventListener('click', event => {
+            if (start.hasAttribute('disabled')) return
+            this.#emit('restart', this.#positionDetail({
+                source: 'go-to-start',
+                timeMillis: this.#rangeStartMillis,
+                event,
+            }))
+        })
+        const previous = this.#button({
+            iconName: 'chevron-left',
+            label: 'Previous frame',
+            testId: 'timeline-previous-frame',
+            iconSlot: 'previous-frame-icon',
+            disabled: this.#isAtRangeStart(),
+        })
+        previous.addEventListener('click', event => {
+            if (previous.hasAttribute('disabled')) return
+            this.#emit('seek', this.#frameStepDetail(-1, event))
+        })
         const play = this.#button({
             iconName: this.#playing ? 'pause' : 'play',
             label: this.#playing ? 'Pause timeline' : 'Play timeline',
             testId: 'timeline-play',
             iconSlot: this.#playing ? 'pause-icon' : 'play-icon',
-            labelSlot: this.#playing ? 'pause-label' : 'play-label',
         })
-        play.addEventListener('click', () => this.#emit(this.#playing ? 'pause' : 'play', {}))
-        const restart = this.#button({
-            iconName: 'arrow-rotate-left',
-            label: 'Restart timeline',
-            testId: 'timeline-restart',
-            iconSlot: 'restart-icon',
-            labelSlot: 'restart-label',
+        play.addEventListener('click', event => this.#emit(this.#playing ? 'pause' : 'play', {
+            source: this.#playing ? 'timeline-pause' : 'timeline-play',
+            timeMillis: this.#currentTimeMillis,
+            event,
+        }))
+        const stop = this.#button({
+            iconName: 'stop',
+            label: 'Stop timeline',
+            testId: 'timeline-stop',
+            iconSlot: 'stop-icon',
         })
-        restart.addEventListener('click', () => this.#emit('restart', {}))
-        controls.append(play, restart)
+        stop.addEventListener('click', event => this.#emit('stop', {
+            source: 'timeline-stop',
+            timeMillis: this.#currentTimeMillis,
+            event,
+        }))
+        const next = this.#button({
+            iconName: 'chevron-right',
+            label: 'Next frame',
+            testId: 'timeline-next-frame',
+            iconSlot: 'next-frame-icon',
+            disabled: this.#isAtRangeEnd(),
+        })
+        next.addEventListener('click', event => {
+            if (next.hasAttribute('disabled')) return
+            this.#emit('seek', this.#frameStepDetail(1, event))
+        })
+        const end = this.#button({
+            iconName: 'forward-step',
+            label: 'Go to timeline end',
+            testId: 'timeline-end',
+            iconSlot: 'end-icon',
+            disabled: this.#isAtRangeEnd(),
+        })
+        end.addEventListener('click', event => {
+            if (end.hasAttribute('disabled')) return
+            this.#emit('seek', this.#positionDetail({
+                source: 'go-to-end',
+                timeMillis: this.#rangeEndMillis,
+                event,
+            }))
+        })
+        transportGroup.append(start, previous, play, stop, next, end)
+        controls.append(transportGroup, createElement('slot', '', {name: 'fps-menu'}))
         return controls
     }
 
@@ -859,12 +956,14 @@ export class LGS1920Timeline extends HTMLElement {
      * @param {Object} options - Button options.
      * @returns {HTMLElement} Button element.
      */
-    #button = ({iconName, label, testId, iconSlot, iconSlotElement, labelSlot, variant = 'neutral', appearance = 'plain'}) => {
+    #button = ({iconName, label, testId, iconSlot, iconSlotElement, labelSlot, variant = 'neutral', appearance = 'plain', disabled = false}) => {
         const button = createElement('wa-button', '', {
             appearance,
             size: 's',
             variant,
             'aria-label': label,
+            title: label,
+            disabled,
             'data-testid': `lgs1920-wa-${testId}`,
         })
         if (iconSlotElement) {
@@ -874,6 +973,82 @@ export class LGS1920Timeline extends HTMLElement {
         }
         if (labelSlot) button.append(this.#slotWithFallback(labelSlot, document.createTextNode(label)))
         return button
+    }
+
+    /**
+     * Resolve the Replay FPS configured by the application.
+     *
+     * @returns {number} Positive Replay FPS.
+     */
+    #resolveFps = () => {
+        const fps = Number(this.#timelineConfig.fps)
+        return Number.isFinite(fps) && fps > 0 ? fps : 30
+    }
+
+    /**
+     * Check whether the playhead is at the selected range start.
+     *
+     * @returns {boolean} Whether the start boundary is active.
+     */
+    #isAtRangeStart = () => this.#currentTimeMillis <= this.#rangeStartMillis
+
+    /**
+     * Check whether the playhead is at the selected range end.
+     *
+     * @returns {boolean} Whether the end boundary is active.
+     */
+    #isAtRangeEnd = () => this.#currentTimeMillis >= this.#rangeEndMillis
+
+    /**
+     * Build a controlled seek detail payload.
+     *
+     * @param {Object} options - Seek detail options.
+     * @returns {Object} Seek event detail.
+     */
+    #positionDetail = ({source, timeMillis, event}) => {
+        const duration = this.#durationMillis()
+        const normalizedTime = this.#normalizeTime(timeMillis)
+        return {
+            timeMillis: normalizedTime,
+            progress: duration > 0 ? normalizedTime / duration : 0,
+            settled: true,
+            source,
+            event,
+        }
+    }
+
+    /**
+     * Build a frame-step seek detail from the controlled Replay frame clock.
+     *
+     * @param {number} direction - -1 for previous, 1 for next.
+     * @param {Event} event - Triggering event.
+     * @returns {Object} Frame-step seek detail.
+     */
+    #frameStepDetail = (direction, event) => {
+        const configuredInterval = Number(this.#timelineConfig.frameIntervalMillis)
+        const interval = Number.isFinite(configuredInterval) && configuredInterval > 0
+            ? configuredInterval
+            : 1000 / this.#resolveFps()
+        const configuredIndex = Number(this.#timelineConfig.currentFrameIndex)
+        const currentFrameIndex = Number.isFinite(configuredIndex)
+            ? Math.trunc(configuredIndex)
+            : Math.round(this.#currentTimeMillis / interval)
+        const configuredCount = Number(this.#timelineConfig.frameCount)
+        const frameCount = Number.isFinite(configuredCount) && configuredCount > 0
+            ? Math.trunc(configuredCount)
+            : Math.max(1, Math.ceil(this.#durationMillis() / interval) + 1)
+        const targetFrameIndex = clamp(currentFrameIndex + direction, 0, frameCount - 1)
+        const timeMillis = this.#normalizeTime(targetFrameIndex * interval)
+        return Object.assign(this.#positionDetail({
+            source: direction < 0 ? 'step-backward' : 'step-forward',
+            timeMillis,
+            event,
+        }), {
+            frameIndex: targetFrameIndex,
+            frameCount,
+            frameIntervalMillis: interval,
+            direction,
+        })
     }
 
     /**
@@ -983,8 +1158,8 @@ export class LGS1920Timeline extends HTMLElement {
      * @returns {HTMLElement} Legend element.
      */
     #legend = () => {
-        const legend = createElement('div', 'lgs1920-wa-timeline__legend', {part: 'legend'})
-        const ruler = createElement('div', 'lgs1920-wa-timeline__legend-ruler', {part: 'legend-ruler'})
+        const legend = createElement('wa-card', 'lgs1920-wa-timeline__legend', {part: 'legend', appearance: 'plain'})
+        const ruler = createElement('div', 'lgs1920-wa-timeline__legend-ruler')
         ruler.append(createElement('slot', '', {name: 'timeline-toolbar'}))
         const add = this.#button({
             iconName: 'plus',
@@ -1003,7 +1178,9 @@ export class LGS1920Timeline extends HTMLElement {
             this.#render()
         })
         if (this.#timelineConfig.interactive !== false) ruler.append(add)
-        legend.append(ruler)
+        const rulerSlot = createElement('slot', '', {name: 'legend-ruler'})
+        rulerSlot.append(ruler)
+        legend.append(rulerSlot)
         if (this.#menuOpen && this.#timelineConfig.interactive !== false) legend.append(this.#menu())
         const viewport = createElement('div', 'lgs1920-wa-timeline__legend-viewport', {part: 'legend-viewport'})
         const rows = createElement('div', 'lgs1920-wa-timeline__legend-rows', {part: 'legend-rows'})
@@ -1279,6 +1456,7 @@ export class LGS1920Timeline extends HTMLElement {
             rows: this.#dragState.baseRows,
             durationMillis: Number(this.#projection?.durationMillis) || 0,
         }, event))
+        this.#handleEdgeAutoScroll(event)
     }
     /**
      * Toggle a track visibility state and emit its controlled change event.
@@ -1548,68 +1726,26 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
-     * Begin keeping rails visible while the split-panel divider is dragged.
+     * Allow the native split-panel document listeners to receive a divider gesture.
      *
-     * @param {PointerEvent} event - Pointer event from the split panel.
-     * @param {HTMLElement} splitPanel - Timeline split panel.
+     * @param {MouseEvent|TouchEvent} event - Native divider press event.
      */
-    #startSplitPanelDrag = (event, splitPanel) => {
-        if (event.button !== 0 || !this.#isSplitPanelDividerEvent(event, splitPanel)) return
-        this.#finishSplitPanelDrag()
-        this.#capturePointer(event)
-        this.setExternalInteractionActive(true)
-        this.#splitPanelDragCleanup = () => {
-            window.removeEventListener('pointermove', this.#splitPanelPointerMove, true)
-            window.removeEventListener('pointerup', this.#splitPanelPointerUp, true)
-            window.removeEventListener('pointercancel', this.#splitPanelPointerUp, true)
-        }
-        window.addEventListener('pointermove', this.#splitPanelPointerMove, {passive: false, capture: true})
-        window.addEventListener('pointerup', this.#splitPanelPointerUp, true)
-        window.addEventListener('pointercancel', this.#splitPanelPointerUp, true)
+    #startNativeSplitPanelInteraction = event => {
+        if (event.type === 'mousedown' && event.button !== 0) return
+        if (!event.target?.closest?.('[part="divider"]')) return
+        this.#finishNativeSplitPanelInteraction()
+        this.#nativeSplitPanelInteractionActive = true
+        window.addEventListener('pointerup', this.#finishNativeSplitPanelInteraction)
+        window.addEventListener('pointercancel', this.#finishNativeSplitPanelInteraction)
     }
 
     /**
-     * Check whether a pointer event originated from the split-panel divider.
-     *
-     * @param {PointerEvent} event - Pointer event to inspect.
-     * @param {HTMLElement} splitPanel - Timeline split panel.
-     * @returns {boolean} Whether the event belongs to the divider.
+     * Close the event pass-through used by the native split-panel gesture.
      */
-    #isSplitPanelDividerEvent = (event, splitPanel) => event.target === splitPanel
-        || event.composedPath().some(target => target?.getAttribute?.('part')?.split(/\s+/).includes('divider'))
-
-    /**
-     * Keep rails visible while the split-panel divider continues moving.
-     */
-    #splitPanelPointerMove = () => {
-        if (!this.#splitPanelDragCleanup) return
-        this.#showScrollbars()
-    }
-
-    /**
-     * End split-panel divider activity and restart the inactivity timer.
-     */
-    #splitPanelPointerUp = () => {
-        const wasDragging = Boolean(this.#splitPanelDragCleanup)
-        this.#finishSplitPanelDrag()
-        this.setExternalInteractionActive(false)
-        if (wasDragging) queueMicrotask(this.#renderAfterSplitPanelDrag)
-    }
-
-    /**
-     * Rebuild width-dependent ruler geometry after the divider gesture ends.
-     */
-    #renderAfterSplitPanelDrag = () => {
-        if (this.isConnected && !this.#splitPanelDragCleanup) this.#render()
-    }
-
-    /**
-     * Remove global split-panel divider listeners.
-     */
-    #finishSplitPanelDrag = () => {
-        this.#splitPanelDragCleanup?.()
-        this.#splitPanelDragCleanup = null
-        this.#releasePointerCapture()
+    #finishNativeSplitPanelInteraction = () => {
+        this.#nativeSplitPanelInteractionActive = false
+        window.removeEventListener('pointerup', this.#finishNativeSplitPanelInteraction)
+        window.removeEventListener('pointercancel', this.#finishNativeSplitPanelInteraction)
     }
 
     /**
@@ -1705,6 +1841,7 @@ export class LGS1920Timeline extends HTMLElement {
         this.#rangeEndFollowsDuration = false
         this.#addPointerListeners()
         this.#emit('range-change-start', this.#rangeChangeDetail(event))
+        this.#handleEdgeAutoScroll(event)
     }
 
     /**
@@ -1721,8 +1858,27 @@ export class LGS1920Timeline extends HTMLElement {
         } else {
             this.#rangeEndMillis = Math.max(nextMillis, this.#rangeStartMillis)
         }
+        this.#currentTimeMillis = this.#normalizeTime(this.#currentTimeMillis)
         this.#emit('range-changing', this.#rangeChangeDetail(event))
         this.#updateDynamicState()
+    }
+
+    /**
+     * Move a range boundary to the beginning or end of the timeline.
+     *
+     * @param {'start'|'end'} edge - Range boundary.
+     * @param {MouseEvent} event - Triggering double-click event.
+     */
+    #setRangeBoundaryToLimit = (edge, event) => {
+        if (this.#timelineConfig.editable === false) return
+        event.preventDefault()
+        event.stopPropagation()
+        this.#rangeEndFollowsDuration = false
+        if (edge === 'start') this.#rangeStartMillis = 0
+        else this.#rangeEndMillis = this.#durationMillis()
+        this.#currentTimeMillis = this.#normalizeTime(this.#currentTimeMillis)
+        this.#emit('range-change', this.#rangeChangeDetail(event))
+        this.#render()
     }
 
     /**
@@ -1732,8 +1888,9 @@ export class LGS1920Timeline extends HTMLElement {
      * @param {KeyboardEvent} event - Keyboard event.
      */
     #moveRangeByKeyboard = (edge, event) => {
-        if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return
+        if (!TIMELINE_HORIZONTAL_ARROW_KEYS.includes(event.key)) return
         event.preventDefault()
+        event.stopPropagation()
         const step = Number(this.#timelineConfig.keyboardStepSeconds) > 0
             ? Number(this.#timelineConfig.keyboardStepSeconds) * 1000
             : 100
@@ -1744,8 +1901,61 @@ export class LGS1920Timeline extends HTMLElement {
         } else {
             this.#rangeEndMillis = clamp(this.#rangeEndMillis + delta, this.#rangeStartMillis, this.#durationMillis())
         }
+        this.#currentTimeMillis = this.#normalizeTime(this.#currentTimeMillis)
         this.#emit('range-change', this.#rangeChangeDetail(event))
         this.#render()
+    }
+
+    /**
+     * Start dragging the current playhead.
+     *
+     * @param {PointerEvent} event - Pointer event.
+     */
+    #startPlayheadInteraction = event => {
+        if (event.button !== 0 || this.#timelineConfig.interactive === false) return
+        event.preventDefault()
+        event.stopPropagation()
+        this.#capturePointer(event)
+        this.#dragState = {
+            type: 'playhead',
+            pointerId: event.pointerId,
+            initialTimeMillis: this.#currentTimeMillis,
+        }
+        this.#addPointerListeners()
+        this.#seek(event.clientX, false)
+        this.#handleEdgeAutoScroll(event)
+    }
+
+    /**
+     * Move the playhead with the keyboard inside the selected range.
+     *
+     * Alt+ArrowRight goes to the range minimum and Alt+ArrowLeft goes to its
+     * maximum, matching the timeline's direction-specific shortcut contract.
+     *
+     * @param {KeyboardEvent} event - Keyboard event.
+     */
+    #movePlayheadByKeyboard = event => {
+        if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return
+        event.preventDefault()
+        event.stopPropagation()
+        const minimum = this.#rangeStartMillis
+        const maximum = Math.max(minimum, this.#rangeEndMillis)
+        if (event.altKey) {
+            this.#currentTimeMillis = event.key === 'ArrowRight' ? minimum : maximum
+        } else {
+            const step = Number(this.#timelineConfig.keyboardStepSeconds) > 0
+                ? Number(this.#timelineConfig.keyboardStepSeconds) * 1000
+                : 100
+            const delta = (event.key === 'ArrowRight' ? 1 : -1) * step * (event.shiftKey ? 10 : 1)
+            this.#currentTimeMillis = clamp(this.#currentTimeMillis + delta, minimum, maximum)
+        }
+        this.#emit('seek', {
+            timeMillis: this.#currentTimeMillis,
+            progress: this.#durationMillis() > 0 ? this.#currentTimeMillis / this.#durationMillis() : 0,
+            settled: true,
+            event,
+        })
+        this.#updateDynamicState()
     }
 
     /**
@@ -1873,9 +2083,18 @@ export class LGS1920Timeline extends HTMLElement {
             this.#seek(event.clientX, false)
             return
         }
+        if (this.#dragState?.type === 'playhead') {
+            if (event.pointerId !== this.#dragState.pointerId) return
+            event.preventDefault()
+            this.#seek(event.clientX, false)
+            this.#handleEdgeAutoScroll(event)
+            this.#pinActiveTimeHandle(event)
+            return
+        }
         if (this.#dragState?.type === 'clip') {
             if (event.pointerId !== this.#dragState.pointerId) return
             event.preventDefault()
+            this.#handleEdgeAutoScroll(event)
             const previousResult = this.#dragState.lastResult
             this.#clipEditor.preview(this.#dragState, event)
             if (this.#dragState.lastResult && this.#dragState.lastResult !== previousResult) {
@@ -1891,12 +2110,14 @@ export class LGS1920Timeline extends HTMLElement {
             if (event.pointerId !== this.#dragState.pointerId) return
             event.preventDefault()
             this.#previewRangeInteraction(event)
+            this.#handleEdgeAutoScroll(event)
+            this.#pinActiveTimeHandle(event)
             return
         }
         if (this.#dragState?.type === 'row') {
             if (event.pointerId !== this.#dragState.pointerId) return
             event.preventDefault()
-            this.#handleRowAutoScroll(event.clientX)
+            this.#handleEdgeAutoScroll(event)
             const viewport = this.#root.querySelector('.lgs1920-wa-timeline__legend-viewport')
             const rect = viewport?.getBoundingClientRect()
             if (!rect) return
@@ -1938,6 +2159,12 @@ export class LGS1920Timeline extends HTMLElement {
         if (state?.type === 'range' && event.type === 'pointerup') {
             this.#emit('range-change', this.#rangeChangeDetail(event))
         }
+        if (state?.type === 'playhead' && event.type === 'pointercancel') {
+            this.#currentTimeMillis = this.#normalizeTime(state.initialTimeMillis)
+        }
+        if (state?.type === 'playhead' && event.type === 'pointerup') {
+            this.#seek(event.clientX, true)
+        }
         if (state?.type === 'clip' && state.lastResult) {
             if (event.type === 'pointerup') this.#emit('clip-change', this.#clipEditor.changeDetail(state, state.lastResult, event))
             else {
@@ -1966,36 +2193,116 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
-     * Resolve and start the patched edge auto-scroll behavior.
+     * Resolve and start horizontal edge auto-scroll for an active drag.
      *
-     * @param {number} clientX - Pointer client X coordinate.
+     * The dragged time handle remains under the pointer while the surface
+     * scrolls. Once the drag reaches its logical limit, the animation stops
+     * even if more content remains outside the viewport.
+     *
+     * @param {PointerEvent} event - Latest pointer event.
      */
-    #handleRowAutoScroll = clientX => {
+    #handleEdgeAutoScroll = event => {
         const rect = this.#surface?.getBoundingClientRect()
         if (!rect) return
+        this.#edgePointerEvent = event
         const rightEdge = rect.right - EDGE_TRIGGER_SIZE
         const leftEdge = rect.left + EDGE_TRIGGER_SIZE
-        const direction = clientX >= rightEdge ? 1 : clientX <= leftEdge ? -1 : null
+        const direction = event.clientX >= rightEdge ? 1 : event.clientX <= leftEdge ? -1 : null
         if (direction === null) {
             this.#stopAutoScroll()
             return
         }
         if (this.#edgeDirection !== direction || this.#edgeStartedAt === null) {
+            const now = Date.now()
             this.#edgeDirection = direction
-            this.#edgeStartedAt = Date.now()
+            this.#edgeStartedAt = now
+            this.#edgeLastStepAt = now
+        }
+        if (this.#isEdgeDragLimitReached(direction)) {
+            this.#stopAutoScroll()
+            return
         }
         if (this.#autoScrollFrame !== null) return
         const loop = () => {
-            if (!this.#surface || this.#dragState?.type !== 'row') {
+            const state = this.#dragState
+            const pointerEvent = this.#edgePointerEvent
+            if (!this.#surface || !pointerEvent || !['clip', 'playhead', 'range', 'row'].includes(state?.type)) {
                 this.#stopAutoScroll()
                 return
             }
-            const heldMillis = Math.max(0, Date.now() - (this.#edgeStartedAt ?? Date.now()))
-            const speedIndex = Math.min(EDGE_SCROLL_SPEEDS.length - 1, Math.floor(heldMillis / ACCELERATION_INTERVAL))
-            this.#surface.scrollLeft += this.#edgeDirection * EDGE_SCROLL_SPEEDS[speedIndex]
+            if (this.#isEdgeDragLimitReached(this.#edgeDirection)) {
+                this.#stopAutoScroll()
+                return
+            }
+            const now = Date.now()
+            const heldMillis = Math.max(0, now - (this.#edgeStartedAt ?? now))
+            const previousScrollLeft = this.#surface.scrollLeft
+            if (state.type === 'row') {
+                const speedIndex = Math.min(EDGE_SCROLL_SPEEDS.length - 1, Math.floor(heldMillis / ACCELERATION_INTERVAL))
+                this.#surface.scrollLeft += this.#edgeDirection * EDGE_SCROLL_SPEEDS[speedIndex]
+            } else {
+                if (this.#edgeLastStepAt === null) this.#edgeLastStepAt = now
+                const elapsedSinceStep = Math.max(0, now - this.#edgeLastStepAt)
+                if (elapsedSinceStep < EDGE_TIME_ACCELERATION_INTERVAL) {
+                    this.#autoScrollFrame = requestAnimationFrame(loop)
+                    return
+                }
+                const {majorSeconds} = resolveScale(this.#zoom)
+                const scaleWidth = this.#numericToken('scale-width', SCALE_WIDTH)
+                const stepCount = Math.max(1, Math.floor(elapsedSinceStep / EDGE_TIME_ACCELERATION_INTERVAL))
+                const firstStepAt = this.#edgeLastStepAt
+                const totalStepMillis = Array.from({length: stepCount}, (_, index) => {
+                    const stepHeldMillis = Math.max(0, firstStepAt + ((index + 1) * EDGE_TIME_ACCELERATION_INTERVAL) - (this.#edgeStartedAt ?? firstStepAt))
+                    const speedIndex = Math.min(EDGE_SCROLL_TIME_STEPS.length - 1, Math.floor(stepHeldMillis / EDGE_TIME_ACCELERATION_INTERVAL))
+                    return EDGE_SCROLL_TIME_STEPS[speedIndex]
+                }).reduce((total, stepMillis) => total + stepMillis, 0)
+                const pixelStep = (totalStepMillis / 1000 / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth
+                this.#surface.scrollLeft += this.#edgeDirection * pixelStep
+                this.#edgeLastStepAt += stepCount * EDGE_TIME_ACCELERATION_INTERVAL
+            }
+            if (this.#surface.scrollLeft === previousScrollLeft) {
+                this.#stopAutoScroll()
+                return
+            }
+            if (state.type === 'range') this.#previewRangeInteraction(pointerEvent)
+            else if (state.type === 'playhead') this.#seek(pointerEvent.clientX, false)
+            else if (state.type === 'clip') {
+                const previousResult = state.lastResult
+                this.#clipEditor.preview(state, pointerEvent)
+                if (state.lastResult && state.lastResult !== previousResult) {
+                    this.#emit('drag', {
+                        context: this.#dragContext(state),
+                        event: pointerEvent,
+                        data: this.#publicSnapshot(),
+                    })
+                }
+            }
+            this.#pinActiveTimeHandle(pointerEvent)
+            if (this.#isEdgeDragLimitReached(this.#edgeDirection)) {
+                this.#stopAutoScroll()
+                return
+            }
             this.#autoScrollFrame = requestAnimationFrame(loop)
         }
         this.#autoScrollFrame = requestAnimationFrame(loop)
+    }
+
+    /**
+     * Check whether a time drag has reached the boundary in its scroll direction.
+     *
+     * @param {number} direction - Horizontal direction, either -1 or 1.
+     * @returns {boolean} Whether the active time handle is at its limit.
+     */
+    #isEdgeDragLimitReached = direction => {
+        const state = this.#dragState
+        if (state?.type === 'range') {
+            if (state.edge === 'start') return direction < 0 ? this.#rangeStartMillis <= 0 : this.#rangeStartMillis >= this.#rangeEndMillis
+            return direction < 0 ? this.#rangeEndMillis <= this.#rangeStartMillis : this.#rangeEndMillis >= this.#durationMillis()
+        }
+        if (state?.type === 'playhead') {
+            return direction < 0 ? this.#currentTimeMillis <= this.#rangeStartMillis : this.#currentTimeMillis >= this.#rangeEndMillis
+        }
+        return false
     }
 
     /**
@@ -2006,6 +2313,34 @@ export class LGS1920Timeline extends HTMLElement {
         this.#autoScrollFrame = null
         this.#edgeDirection = null
         this.#edgeStartedAt = null
+        this.#edgeLastStepAt = null
+        this.#edgePointerEvent = null
+    }
+
+    /**
+     * Keep the active time handle visually attached to the pointer.
+     *
+     * The handle is pinned only while it can still move in the current edge
+     * direction. At a logical boundary, the rendered boundary position wins.
+     *
+     * @param {PointerEvent} event - Latest pointer event.
+     */
+    #pinActiveTimeHandle = event => {
+        const state = this.#dragState
+        if (!['playhead', 'range'].includes(state?.type)) return
+        const rect = this.#surface?.getBoundingClientRect()
+        if (!rect) return
+        const handle = state.type === 'playhead'
+            ? this.#root.querySelector('[data-playhead]')
+            : this.#root.querySelector(`[data-range-handle="${state.edge}"]`)
+        if (!handle) return
+        if (this.#edgeDirection && this.#isEdgeDragLimitReached(this.#edgeDirection)) return
+        const pinnedClientX = this.#edgeDirection === 1
+            ? rect.right - 1
+            : this.#edgeDirection === -1
+                ? rect.left + 1
+                : event.clientX
+        handle.style.left = `${pinnedClientX - rect.left + (this.#surface.scrollLeft ?? 0)}px`
     }
 
     /**
@@ -2018,10 +2353,6 @@ export class LGS1920Timeline extends HTMLElement {
             const width = entries.find(entry => entry.target === this.#surface)?.contentRect.width
             if (Number.isFinite(width) && width !== this.#surfaceWidth) {
                 this.#surfaceWidth = width
-                if (this.#splitPanelDragCleanup) {
-                    this.#updateScrollbars()
-                    return
-                }
                 this.#render()
             } else this.#updateScrollbars()
         })
@@ -2067,9 +2398,10 @@ export class LGS1920Timeline extends HTMLElement {
      * @param {KeyboardEvent} event - Keyboard event.
      */
     #handleKeyDown = event => {
-        if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
-        if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return
+        if (!TIMELINE_HORIZONTAL_ARROW_KEYS.includes(event.key)) return
         event.preventDefault()
+        event.stopPropagation()
+        if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
         this.#zoom = clamp(this.#zoom + (event.key === 'ArrowRight' ? ZOOM_STEP : -ZOOM_STEP), MIN_ZOOM, MAX_ZOOM)
         this.#render()
     }
@@ -2092,7 +2424,26 @@ export class LGS1920Timeline extends HTMLElement {
         const end = this.#root.querySelector('[data-end-marker]')
         const rangeStart = this.#root.querySelector('[data-range-handle="start"]')
         const rangeEnd = this.#root.querySelector('[data-range-handle="end"]')
-        if (playhead) playhead.style.left = `${position}px`
+        const startButton = this.#root.querySelector('[data-testid="lgs1920-wa-timeline-restart"]')
+        const previousButton = this.#root.querySelector('[data-testid="lgs1920-wa-timeline-previous-frame"]')
+        const nextButton = this.#root.querySelector('[data-testid="lgs1920-wa-timeline-next-frame"]')
+        const endButton = this.#root.querySelector('[data-testid="lgs1920-wa-timeline-end"]')
+        const transportButtons = [
+            [startButton, this.#isAtRangeStart()],
+            [previousButton, this.#isAtRangeStart()],
+            [nextButton, this.#isAtRangeEnd()],
+            [endButton, this.#isAtRangeEnd()],
+        ]
+        transportButtons.forEach(([button, disabled]) => {
+            if (!button) return
+            button.toggleAttribute('disabled', disabled)
+        })
+        if (playhead) {
+            playhead.style.left = `${position}px`
+            playhead.setAttribute('aria-valuemin', `${this.#rangeStartMillis}`)
+            playhead.setAttribute('aria-valuemax', `${this.#rangeEndMillis}`)
+            playhead.setAttribute('aria-valuenow', `${this.#currentTimeMillis}`)
+        }
         if (end) end.style.left = `${scaleOffset + ((this.#durationSeconds() / majorSeconds) * scaleWidth)}px`
         if (rangeStart) {
             rangeStart.style.left = `${scaleOffset + ((this.#rangeStartMillis / 1000) / majorSeconds * scaleWidth)}px`

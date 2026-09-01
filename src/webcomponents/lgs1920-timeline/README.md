@@ -31,6 +31,8 @@ The component has a compact controlled model:
 - `tracks` describes the tracks and their clips.
 - `currentTimeMillis` controls the playhead.
 - `playing` controls the playback state.
+- `timeline.fps`, `timeline.frameCount`, and `timeline.currentFrameIndex`
+  describe the canonical Replay frame clock used by frame navigation.
 - `clipOptions` supplies entries for the clip menu.
 
 Set `timeline.interactive` to `false` for a display-only projection. The
@@ -47,11 +49,15 @@ const timeline = document.getElementById('timeline')
 
 timeline.timeline = {
     durationMillis: 60_000,
+    fps: 30,
+    frameCount: 1_801,
+    frameIntervalMillis: 1000 / 30,
+    currentFrameIndex: 105,
     visible: true,
     zoomPercent: 0,
     legendWidth: 180,
     legendMinWidth: 100,
-    legendMaxWidth: 200,
+    legendMaxWidth: 230,
     rangeStartMillis: 0,
     rangeEndMillis: 60_000,
     editable: true,
@@ -101,13 +107,17 @@ clock integration.
 | Property | Type | Description |
 | --- | --- | --- |
 | `durationMillis` | `number` | Timeline duration in milliseconds. |
+| `fps` | `number` | Canonical Replay frame rate used by frame navigation. Defaults to `30`. |
+| `frameCount` | `number` | Canonical Replay frame count. Used to clamp previous/next frame requests. |
+| `frameIntervalMillis` | `number` | Canonical interval between Replay frames. Defaults to `1000 / fps`. |
+| `currentFrameIndex` | `number` | Currently published absolute Replay frame index. |
 | `rangeStartMillis` | `number` | Video range start in milliseconds. Defaults to `0`. |
 | `rangeEndMillis` | `number` | Video range end in milliseconds. Defaults to `durationMillis`. |
 | `visible` | `boolean` | Controls timeline visibility. Defaults to `true`. |
 | `zoomPercent` | `number` | Initial ruler zoom from `-50` to `500`. |
 | `legendWidth` | `number` | Initial track legend width in pixels. It is clamped between `legendMinWidth` and `legendMaxWidth`. |
 | `legendMinWidth` | `number` | Minimum track legend width in pixels. Defaults to `100`. |
-| `legendMaxWidth` | `number` | Maximum track legend width in pixels. Defaults to `200`. |
+| `legendMaxWidth` | `number` | Maximum track legend width in pixels. Defaults to `230`. |
 | `editable` | `boolean` | Enables clip editing and track reordering. Defaults to `true`. |
 | `interactive` | `boolean` | Enables playback, scrubbing, editing, menus, and emitted interaction events. Defaults to `true`. |
 | `collisionPolicy` | `'allow' \| 'prevent' \| 'ripple'` | Default clip collision policy for tracks. |
@@ -165,6 +175,19 @@ The controlled playhead position in milliseconds.
 
 The controlled playback state. The component emits `play` and `pause`; the
 host updates this property after applying the requested state.
+
+The icon transport controls are, in order, go to start, previous frame,
+play/pause, stop, next frame, and go to end. The component emits the transport
+request but does not advance the Replay clock itself. Previous and
+next frame details contain `frameIndex`, `frameCount`,
+`frameIntervalMillis`, `timeMillis`, `progress`, `settled`, and a `source`
+value of `step-backward` or `step-forward`. The start and end controls use
+`restart` or `seek` with `source` set to `go-to-start` or `go-to-end`.
+
+The FPS menu is application-owned and must be provided through the `fps-menu`
+slot. The Web Component only exposes the controlled `fps` value used for frame
+navigation; it does not modify the canonical Replay FPS or emit an FPS-change
+event.
 
 ### `clipOptions`
 
@@ -229,6 +252,7 @@ targeted slot takes the form `{slot}-{id}` and overrides the global slot.
 | `playback-total` | Total-time label. |
 | `playback-end` | Content after the total time. |
 | `timeline-toolbar` | Toolbar content beside the clip menu. |
+| `legend-ruler` | Replacement content for the title-column ruler area. The default fallback contains `timeline-toolbar` and the clip-menu button. |
 | `timeline-ruler` | Additional content over the time ruler. |
 | `footer` | Content below the timeline layout. |
 | `empty-state` | Content displayed when the clip menu has no options. |
@@ -262,20 +286,21 @@ wa-drawer lgs1920-timeline,
 | Slot | Description |
 | --- | --- |
 | `play-icon` / `pause-icon` | Play or pause icon. |
-| `restart-icon` | Restart icon. |
+| `start-icon` | Go-to-start icon. |
+| `stop-icon` | Stop icon. |
+| `previous-frame-icon` / `next-frame-icon` | Previous or next frame icon. |
+| `end-icon` | Go-to-end icon. |
+| `fps-menu` | Application-owned Replay FPS menu. |
 | `add-clip-icon` | Clip-menu icon. |
-| `play-label` / `pause-label` | Play or pause label. |
-| `restart-label` | Restart label. |
 | `add-clip-label` | Clip-menu label. |
 
 ```html
 <lgs1920-timeline>
     <wa-icon slot="play-icon" name="circle-play" variant="solid" label=""></wa-icon>
-    <span slot="play-label">Play</span>
     <wa-icon slot="pause-icon" name="circle-pause" variant="solid" label=""></wa-icon>
-    <span slot="pause-label">Pause</span>
-    <wa-icon slot="restart-icon" name="arrow-rotate-left" variant="solid" label=""></wa-icon>
-    <span slot="restart-label">Restart</span>
+    <wa-icon slot="start-icon" name="backward-step" variant="solid" label=""></wa-icon>
+    <wa-icon slot="stop-icon" name="stop" variant="solid" label=""></wa-icon>
+    <wa-icon slot="end-icon" name="forward-step" variant="solid" label=""></wa-icon>
 </lgs1920-timeline>
 ```
 
@@ -333,6 +358,17 @@ For the clip id `intro#001`, the targeted content slot is
 
 The video range handles can be customized with the global
 `timeline-start-handle` and `timeline-end-handle` slots.
+
+The start and end handles can be dragged along the ruler when `editable` is
+enabled. Double-clicking the start handle moves it to `0`; double-clicking the
+end handle moves it to `durationMillis`. The handles never cross and the
+playhead is always constrained between them.
+
+The playhead grip can also be dragged within the selected range. When the
+playhead has keyboard focus, `ArrowLeft` and `ArrowRight` move it by
+`keyboardStepSeconds` (or ten times that amount with `Shift`). `Alt+ArrowRight`
+moves it to the range minimum and `Alt+ArrowLeft` moves it to the range
+maximum.
 
 ## Track names and controlled editing
 
@@ -407,6 +443,7 @@ corresponding `on...` callback.
 | --- | --- | --- | --- |
 | `play` | `lgs1920-timeline-play` | `onPlay` | `{}` |
 | `pause` | `lgs1920-timeline-pause` | `onPause` | `{}` |
+| `stop` | `lgs1920-timeline-stop` | Native component event | `{timeMillis, source, event}` |
 | `restart` | `lgs1920-timeline-restart` | `onRestart` | `{}` |
 | `seek` | `lgs1920-timeline-seek` | `onSeek` | `{timeMillis, progress, settled}` |
 | `track-visibility-change` | `lgs1920-timeline-track-visibility-change` | `onTrackVisibilityChange` | `{trackId, visible, track, event, data}` |
@@ -531,7 +568,7 @@ lgs1920-timeline::part(clip) {
 
 Useful CSS parts include `timeline`, `top`, `header`, `controls`, `header-actions`,
 `playback-controls`,
-`layout`, `legend`, `legend-ruler`, `legend-viewport`, `legend-rows`,
+`layout`, `legend`, `legend-viewport`, `legend-rows`,
 `legend-row`, `legend-icon`, `legend-content`, `track-actions`, `split-panel`,
 `surface`, `canvas`, `ruler`, `tick`, `minor-tick`, `tracks`, `track`, `clip`,
 `tracks-viewport`,

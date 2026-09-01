@@ -19,6 +19,7 @@ import {afterEach, describe, expect, it, vi} from 'vitest'
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/button/button.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/button-group/button-group.js', () => ({}))
+vi.mock('@web.awesome.me/webawesome-pro/dist/components/card/card.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/icon/icon.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/input/input.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/popup/popup.js', () => ({}))
@@ -103,6 +104,7 @@ describe('lgs1920-timeline Web Component', () => {
         document.body.append(timeline)
 
         expect(customElements.get('lgs1920-timeline')).toBe(LGS1920Timeline)
+        expect(timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-timeline"]').tagName).toBe('WA-CARD')
         expect(timeline.shadowRoot.querySelector('slot[name="header"]').assignedElements()).toEqual([heading])
         expect(timeline.shadowRoot.querySelector('slot[name="header-actions"]').assignedElements()).toEqual([headerAction])
         expect(timeline.shadowRoot.querySelector('slot[name="timeline-actions"]').assignedElements()).toEqual([timelineAction])
@@ -120,6 +122,7 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.style.getPropertyValue('--lgs-timeline-playhead-color')).toBe('rebeccapurple')
         expect(timeline.shadowRoot.querySelector('[data-scroll-view="surface"]')).not.toBeNull()
         expect(timeline.shadowRoot.querySelector('[data-scroll-view="legend"]')).not.toBeNull()
+        expect(timeline.shadowRoot.querySelector('[data-scroll-view="surface"]').closest('wa-card')).not.toBeNull()
         expect(timeline.shadowRoot.querySelectorAll('[data-scroll-view="surface"] ~ [data-scrollbar-track]')).toHaveLength(2)
         expect(timeline.shadowRoot.querySelectorAll('[data-scrollbar-shell="legend"] [data-scrollbar-track]')).toHaveLength(1)
         expect(timeline.shadowRoot.querySelector('.lgs1920-wa-timeline__legend-rows').style.transform).toBe('')
@@ -127,7 +130,7 @@ describe('lgs1920-timeline Web Component', () => {
 
     it('synchronizes the title and track vertical scroll views in both directions', () => {
         const timeline = new LGS1920Timeline()
-        configureTimeline(timeline)
+        configureTimeline(timeline, {currentTimeMillis: 1_000})
         document.body.append(timeline)
 
         const surface = timeline.shadowRoot.querySelector('[data-scroll-view="surface"]')
@@ -183,7 +186,7 @@ describe('lgs1920-timeline Web Component', () => {
         }
     })
 
-    it('keeps scrollbar rails visible during external and split-panel gestures', () => {
+    it('keeps scrollbar rails visible during external gestures and split-panel repositioning', () => {
         vi.useFakeTimers()
         try {
             const timeline = new LGS1920Timeline()
@@ -203,11 +206,10 @@ describe('lgs1920-timeline Web Component', () => {
             vi.advanceTimersByTime(250)
             expect(shells.every(shell => shell.classList.contains('lgs1920-wa-timeline__scroll-shell--idle'))).toBe(true)
 
-            splitPanel.dispatchEvent(createPointerEvent('pointerdown'))
-            vi.advanceTimersByTime(1_000)
+            splitPanel.positionInPixels = 180
+            splitPanel.dispatchEvent(new Event('wa-reposition'))
             expect(shells.every(shell => !shell.classList.contains('lgs1920-wa-timeline__scroll-shell--idle'))).toBe(true)
 
-            window.dispatchEvent(createPointerEvent('pointerup'))
             vi.advanceTimersByTime(250)
             expect(shells.every(shell => shell.classList.contains('lgs1920-wa-timeline__scroll-shell--idle'))).toBe(true)
         } finally {
@@ -215,47 +217,18 @@ describe('lgs1920-timeline Web Component', () => {
         }
     })
 
-    it('keeps the split panel stable while applying divider width changes live', async () => {
-        const OriginalResizeObserver = globalThis.ResizeObserver
-        let resizeCallback = null
-        globalThis.ResizeObserver = class {
-            constructor(callback) {
-                resizeCallback = callback
-            }
+    it('applies native split-panel repositioning to the title layout', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {timeline: {legendWidth: 100}})
+        document.body.append(timeline)
 
-            observe = vi.fn()
-            disconnect = vi.fn()
-        }
+        const splitPanel = timeline.shadowRoot.querySelector('[part="split-panel"]')
+        const layout = timeline.shadowRoot.querySelector('[data-layout]')
+        splitPanel.positionInPixels = 180
+        splitPanel.dispatchEvent(new Event('wa-reposition'))
 
-        try {
-            const timeline = new LGS1920Timeline()
-            configureTimeline(timeline)
-            document.body.append(timeline)
-
-            const splitPanel = timeline.shadowRoot.querySelector('[part="split-panel"]')
-            const surface = timeline.shadowRoot.querySelector('[data-surface]')
-            const layout = timeline.shadowRoot.querySelector('[data-layout]')
-            splitPanel.positionInPixels = 180
-
-            expect(splitPanel.style.getPropertyValue('--min')).toBe('100px')
-            expect(splitPanel.style.getPropertyValue('--max')).toBe('min(200px, calc(100% - 100px))')
-
-            splitPanel.dispatchEvent(createPointerEvent('pointerdown'))
-            splitPanel.dispatchEvent(new Event('wa-reposition'))
-            resizeCallback([{target: surface, contentRect: {width: 320}}])
-
-            expect(timeline.shadowRoot.querySelector('[part="split-panel"]')).toBe(splitPanel)
-            expect(layout.style.getPropertyValue('--lgs-timeline-legend-width')).toBe('180px')
-
-            window.dispatchEvent(createPointerEvent('pointerup'))
-            await Promise.resolve()
-
-            const renderedSplitPanel = timeline.shadowRoot.querySelector('[part="split-panel"]')
-            expect(renderedSplitPanel).not.toBe(splitPanel)
-            expect(renderedSplitPanel.getAttribute('position-in-pixels')).toBe('180')
-        } finally {
-            globalThis.ResizeObserver = OriginalResizeObserver
-        }
+        expect(timeline.shadowRoot.querySelector('[part="split-panel"]')).toBe(splitPanel)
+        expect(layout.style.getPropertyValue('--lgs-timeline-legend-width')).toBe('180px')
     })
 
     it('uses configurable minimum and maximum track title widths', () => {
@@ -279,6 +252,38 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.timeline.legendMaxWidth).toBe(240)
     })
 
+    it('exposes the title-column ruler as a replaceable slot with a fallback', () => {
+        const timeline = new LGS1920Timeline()
+        const customRuler = document.createElement('div')
+        customRuler.slot = 'legend-ruler'
+        customRuler.textContent = 'Custom title ruler'
+        timeline.append(customRuler)
+        configureTimeline(timeline)
+        document.body.append(timeline)
+
+        const rulerSlot = timeline.shadowRoot.querySelector('slot[name="legend-ruler"]')
+        expect(rulerSlot.assignedElements()).toEqual([customRuler])
+        expect(timeline.shadowRoot.querySelector('[part="legend-ruler"]')).toBeNull()
+
+        customRuler.remove()
+        expect(rulerSlot.assignedElements()).toEqual([])
+        expect(timeline.shadowRoot.querySelector('.lgs1920-wa-timeline__legend-ruler')).not.toBeNull()
+    })
+
+    it('renders the legend and surface as Web Awesome cards', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline)
+        document.body.append(timeline)
+
+        const splitPanel = timeline.shadowRoot.querySelector('[part="split-panel"]')
+        const legend = splitPanel.querySelector('[slot="start"]')
+        const surface = splitPanel.querySelector('[data-surface]')
+        expect(legend.tagName).toBe('WA-CARD')
+        expect(surface.tagName).toBe('WA-CARD')
+        expect(legend.getAttribute('appearance')).toBe('plain')
+        expect(surface.getAttribute('appearance')).toBe('plain')
+    })
+
     it('fits row heights to the rendered timeline layout instead of the full host', () => {
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline)
@@ -294,7 +299,7 @@ describe('lgs1920-timeline Web Component', () => {
 
     it('emits playback, seeking, track visibility, and clip events', () => {
         const timeline = new LGS1920Timeline()
-        configureTimeline(timeline)
+        configureTimeline(timeline, {currentTimeMillis: 1_000})
         document.body.append(timeline)
         const events = ['play', 'restart', 'seek', 'track-visibility-change', 'dblclick']
             .map(name => `lgs1920-timeline-${name}`)
@@ -323,6 +328,66 @@ describe('lgs1920-timeline Web Component', () => {
         })
     })
 
+    it('renders icon transport controls and exposes the FPS slot', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {
+            timeline: {
+                fps: 30,
+                frameCount: 301,
+                currentFrameIndex: 30,
+            },
+            currentTimeMillis: 1_000,
+        })
+        document.body.append(timeline)
+        const restart = vi.fn()
+        const seek = vi.fn()
+        const play = vi.fn()
+        const pause = vi.fn()
+        const stop = vi.fn()
+        timeline.addEventListener('lgs1920-timeline-restart', restart)
+        timeline.addEventListener('lgs1920-timeline-seek', seek)
+        timeline.addEventListener('lgs1920-timeline-play', play)
+        timeline.addEventListener('lgs1920-timeline-pause', pause)
+        timeline.addEventListener('lgs1920-timeline-stop', stop)
+
+        timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-timeline-restart"]').click()
+        timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-timeline-previous-frame"]').click()
+        timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-timeline-next-frame"]').click()
+        timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-timeline-end"]').click()
+        timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-timeline-play"]').click()
+        timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-timeline-stop"]').click()
+
+        expect(restart.mock.calls[0][0].detail).toMatchObject({
+            source: 'go-to-start',
+            timeMillis: 0,
+            settled: true,
+        })
+        expect(seek.mock.calls.map(([event]) => event.detail.source)).toEqual([
+            'step-backward',
+            'step-forward',
+            'go-to-end',
+        ])
+        expect(seek.mock.calls[0][0].detail).toMatchObject({
+            frameIndex: 29,
+            frameIntervalMillis: 1000 / 30,
+            timeMillis: 29 * (1000 / 30),
+            settled: true,
+        })
+        expect(play).toHaveBeenCalledOnce()
+        expect(pause).not.toHaveBeenCalled()
+        expect(stop.mock.calls[0][0].detail).toMatchObject({
+            source: 'timeline-stop',
+            timeMillis: 1_000,
+        })
+
+        expect(timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-timeline-restart"] wa-icon').getAttribute('name'))
+            .toBe('backward-step')
+        expect(timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-timeline-end"] wa-icon').getAttribute('name'))
+            .toBe('forward-step')
+
+        expect(timeline.shadowRoot.querySelector('slot[name="fps-menu"]')).not.toBeNull()
+    })
+
     it('keeps native mouse and pointer events inside the timeline host', () => {
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline)
@@ -331,6 +396,7 @@ describe('lgs1920-timeline Web Component', () => {
         parent.addEventListener('click', parentListener)
         parent.addEventListener('pointerdown', parentListener)
         parent.addEventListener('contextmenu', parentListener)
+        parent.addEventListener('keydown', parentListener)
         parent.append(timeline)
         document.body.append(parent)
 
@@ -338,8 +404,35 @@ describe('lgs1920-timeline Web Component', () => {
         surface.dispatchEvent(new MouseEvent('click', {bubbles: true, composed: true}))
         surface.dispatchEvent(createPointerEvent('pointerdown', {composed: true}))
         surface.dispatchEvent(new MouseEvent('contextmenu', {bubbles: true, composed: true}))
+        surface.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowLeft', bubbles: true, cancelable: true, composed: true}))
+        surface.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', altKey: true, bubbles: true, cancelable: true, composed: true}))
 
         expect(parentListener).not.toHaveBeenCalled()
+    })
+
+    it('keeps native split-panel pointer continuation events available', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline)
+        document.body.append(timeline)
+
+        const splitPanel = timeline.shadowRoot.querySelector('[part="split-panel"]')
+        const divider = document.createElement('div')
+        divider.setAttribute('part', 'divider')
+        splitPanel.append(divider)
+        const documentListener = vi.fn()
+        document.addEventListener('pointermove', documentListener)
+
+        try {
+            divider.dispatchEvent(new MouseEvent('mousedown', {button: 0, bubbles: true, cancelable: true}))
+            splitPanel.dispatchEvent(createPointerEvent('pointermove', {clientX: 160, bubbles: true, composed: true}))
+            expect(documentListener).toHaveBeenCalledOnce()
+
+            window.dispatchEvent(createPointerEvent('pointerup'))
+            splitPanel.dispatchEvent(createPointerEvent('pointermove', {clientX: 180, bubbles: true, composed: true}))
+            expect(documentListener).toHaveBeenCalledOnce()
+        } finally {
+            document.removeEventListener('pointermove', documentListener)
+        }
     })
 
     it('preserves active external desktop and mobile gestures across the timeline host', () => {
@@ -432,8 +525,13 @@ describe('lgs1920-timeline Web Component', () => {
         expect(row.querySelector('slot[name="track-label-main#one"]').assignedElements()).toEqual([contextualLabel])
         expect(row.querySelector('slot[name="track-icon-main#one"]')).not.toBeNull()
         expect(row.querySelector('[part="track-actions"]')).not.toBeNull()
+        expect(row.firstElementChild).toBe(row.querySelector('[part="track-actions"]'))
         expect(row.querySelector('slot[name="drag-trigger-main#one"]')).not.toBeNull()
         expect(row.querySelector('slot[name="visibility-main#one"]')).not.toBeNull()
+        expect(row.querySelector('[part="visibility-placeholder"]')).toBeNull()
+
+        const fixedRow = timeline.shadowRoot.querySelector('[data-row-id="camera"]')
+        expect(fixedRow.querySelector('[part="visibility-placeholder"]')).not.toBeNull()
     })
 
     it('accepts public timeline, track, clip, and insertion properties', () => {
@@ -451,7 +549,9 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.currentTimeMillis).toBe(2_000)
         expect(timeline.playing).toBe(false)
         timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-add-clip"]').click()
-        expect(timeline.shadowRoot.querySelector('wa-popup').getAttribute('anchor')).toBe('lgs1920-timeline-clip-menu-trigger')
+        const clipMenu = timeline.shadowRoot.querySelector('wa-popup')
+        expect(clipMenu.getAttribute('anchor')).toBe('lgs1920-timeline-clip-menu-trigger')
+        expect(clipMenu.getAttribute('placement')).toBe('right-start')
     })
 
     it('keeps the visual playhead controlled by setTime without emitting seek', () => {
@@ -511,6 +611,234 @@ describe('lgs1920-timeline Web Component', () => {
         expect(rangeChanges.mock.calls[0][0].detail.rangeEndMillis).toBe(6_000)
     })
 
+    it('drags both global range handles and snaps them to the timeline limits', () => {
+        const timeline = new LGS1920Timeline()
+        const rangeChanges = vi.fn()
+        configureTimeline(timeline, {
+            timeline: {
+                rangeStartMillis: 1_000,
+                rangeEndMillis: 8_000,
+            },
+        })
+        timeline.addEventListener('lgs1920-timeline-range-change', rangeChanges)
+        document.body.append(timeline)
+
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 600, width: 600})
+        const startHandle = timeline.shadowRoot.querySelector('[data-range-handle="start"]')
+        startHandle.dispatchEvent(createPointerEvent('pointerdown', {clientX: 60, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 100, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 100, clientY: 50}))
+
+        expect(rangeChanges.mock.calls[0][0].detail.rangeStartMillis).toBe(2_000)
+        const endHandle = timeline.shadowRoot.querySelector('[data-range-handle="end"]')
+        endHandle.dispatchEvent(new MouseEvent('dblclick', {bubbles: true, cancelable: true}))
+        const resetStartHandle = timeline.shadowRoot.querySelector('[data-range-handle="start"]')
+        resetStartHandle.dispatchEvent(new MouseEvent('dblclick', {bubbles: true, cancelable: true}))
+
+        expect(timeline.shadowRoot.querySelector('[data-range-handle="start"]').getAttribute('aria-valuenow')).toBe('0')
+        expect(timeline.shadowRoot.querySelector('[data-range-handle="end"]').getAttribute('aria-valuenow')).toBe('10000')
+        expect(rangeChanges).toHaveBeenCalledTimes(3)
+    })
+
+    it('auto-scrolls the ruler for a range handle with accelerating time steps', () => {
+        const originalRequestAnimationFrame = globalThis.requestAnimationFrame
+        const originalCancelAnimationFrame = globalThis.cancelAnimationFrame
+        const originalWindowRequestAnimationFrame = window.requestAnimationFrame
+        const originalWindowCancelAnimationFrame = window.cancelAnimationFrame
+        const now = vi.spyOn(Date, 'now').mockReturnValue(0)
+        let nextFrame = null
+        globalThis.requestAnimationFrame = callback => {
+            nextFrame = callback
+            return 1
+        }
+        globalThis.cancelAnimationFrame = () => {}
+        window.requestAnimationFrame = globalThis.requestAnimationFrame
+        window.cancelAnimationFrame = globalThis.cancelAnimationFrame
+        try {
+            const timeline = new LGS1920Timeline()
+            configureTimeline(timeline, {
+                timeline: {
+                    durationMillis: 600_000,
+                    rangeStartMillis: 1_000,
+                    rangeEndMillis: 500_000,
+                },
+            })
+            document.body.append(timeline)
+
+            const surface = timeline.shadowRoot.querySelector('[data-surface]')
+            vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 600, width: 600})
+            Object.defineProperty(surface, 'scrollLeft', {configurable: true, writable: true, value: 0})
+            const endHandle = timeline.shadowRoot.querySelector('[data-range-handle="end"]')
+            nextFrame()
+            nextFrame = null
+            endHandle.dispatchEvent(createPointerEvent('pointerdown', {clientX: 580, clientY: 50}))
+            expect(nextFrame).toEqual(expect.any(Function))
+
+            window.dispatchEvent(createPointerEvent('pointermove', {clientX: 580, clientY: 50}))
+            now.mockReturnValue(1_000)
+            nextFrame()
+            const firstStep = surface.scrollLeft
+            now.mockReturnValue(1_500)
+            nextFrame()
+            const secondStep = surface.scrollLeft - firstStep
+            expect(Number.parseFloat(endHandle.style.left) - surface.scrollLeft).toBeCloseTo(599, 5)
+            now.mockReturnValue(3_500)
+            nextFrame()
+            const thirdStep = surface.scrollLeft - firstStep - secondStep
+
+            expect(firstStep).toBeGreaterThan(0)
+            expect(secondStep).toBeGreaterThan(firstStep)
+            expect(thirdStep).toBeGreaterThan(secondStep)
+
+            window.dispatchEvent(createPointerEvent('pointerup', {clientX: 580, clientY: 50}))
+        } finally {
+            globalThis.requestAnimationFrame = originalRequestAnimationFrame
+            globalThis.cancelAnimationFrame = originalCancelAnimationFrame
+            window.requestAnimationFrame = originalWindowRequestAnimationFrame
+            window.cancelAnimationFrame = originalWindowCancelAnimationFrame
+            now.mockRestore()
+        }
+    })
+
+    it('does not auto-scroll beyond the visible minimum or maximum time limit', () => {
+        const originalRequestAnimationFrame = globalThis.requestAnimationFrame
+        const originalCancelAnimationFrame = globalThis.cancelAnimationFrame
+        const originalWindowRequestAnimationFrame = window.requestAnimationFrame
+        const originalWindowCancelAnimationFrame = window.cancelAnimationFrame
+        let frameRequested = false
+        globalThis.requestAnimationFrame = () => {
+            frameRequested = true
+            return 1
+        }
+        globalThis.cancelAnimationFrame = () => {}
+        window.requestAnimationFrame = globalThis.requestAnimationFrame
+        window.cancelAnimationFrame = globalThis.cancelAnimationFrame
+        try {
+            const timeline = new LGS1920Timeline()
+            configureTimeline(timeline, {
+                timeline: {
+                    durationMillis: 60_000,
+                    rangeStartMillis: 0,
+                    rangeEndMillis: 50_000,
+                },
+                currentTimeMillis: 0,
+            })
+            document.body.append(timeline)
+
+            const surface = timeline.shadowRoot.querySelector('[data-surface]')
+            vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 600, width: 600})
+            Object.defineProperty(surface, 'scrollLeft', {configurable: true, writable: true, value: 80})
+            frameRequested = false
+            const startHandle = timeline.shadowRoot.querySelector('[data-range-handle="start"]')
+            startHandle.dispatchEvent(createPointerEvent('pointerdown', {clientX: 1, clientY: 50}))
+
+            expect(frameRequested).toBe(false)
+            expect(surface.scrollLeft).toBe(80)
+        } finally {
+            globalThis.requestAnimationFrame = originalRequestAnimationFrame
+            globalThis.cancelAnimationFrame = originalCancelAnimationFrame
+            window.requestAnimationFrame = originalWindowRequestAnimationFrame
+            window.cancelAnimationFrame = originalWindowCancelAnimationFrame
+        }
+    })
+
+    it('keeps a range handle draggable when its grip overlaps the playhead grip', () => {
+        const timeline = new LGS1920Timeline()
+        const rangeChanges = vi.fn()
+        const seeks = vi.fn()
+        configureTimeline(timeline, {
+            timeline: {
+                rangeStartMillis: 1_000,
+                rangeEndMillis: 8_000,
+            },
+        })
+        timeline.addEventListener('lgs1920-timeline-range-change', rangeChanges)
+        timeline.addEventListener('lgs1920-timeline-seek', seeks)
+        document.body.append(timeline)
+
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 600, width: 600})
+        const startHandle = timeline.shadowRoot.querySelector('[data-range-handle="start"]')
+        const endHandle = timeline.shadowRoot.querySelector('[data-range-handle="end"]')
+        vi.spyOn(startHandle, 'getBoundingClientRect').mockReturnValue({left: 100, width: 10})
+        vi.spyOn(endHandle, 'getBoundingClientRect').mockReturnValue({left: 400, width: 10})
+        const playheadGrip = timeline.shadowRoot.querySelector('.lgs1920-wa-timeline__playhead-grip')
+        playheadGrip.dispatchEvent(createPointerEvent('pointerdown', {clientX: 105, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 140, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 140, clientY: 50}))
+
+        expect(rangeChanges).toHaveBeenCalledOnce()
+        expect(rangeChanges.mock.calls[0][0].detail.rangeStartMillis).toBeGreaterThan(1_000)
+        expect(seeks).not.toHaveBeenCalled()
+    })
+
+    it('keeps range-handle arrow shortcuts local and prevents browser defaults', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {
+            timeline: {
+                rangeStartMillis: 1_000,
+                rangeEndMillis: 8_000,
+            },
+        })
+        const parentListener = vi.fn()
+        const parent = document.createElement('div')
+        parent.addEventListener('keydown', parentListener)
+        parent.append(timeline)
+        document.body.append(parent)
+
+        const startHandle = timeline.shadowRoot.querySelector('[data-range-handle="start"]')
+        const event = new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true, cancelable: true, composed: true})
+        startHandle.dispatchEvent(event)
+
+        expect(event.defaultPrevented).toBe(true)
+        expect(timeline.shadowRoot.querySelector('[data-range-handle="start"]').getAttribute('aria-valuenow')).toBe('1100')
+        expect(parentListener).not.toHaveBeenCalled()
+    })
+
+    it('drags and keys the playhead only within the selected range', () => {
+        const timeline = new LGS1920Timeline()
+        const seeks = vi.fn()
+        configureTimeline(timeline, {
+            timeline: {
+                rangeStartMillis: 2_000,
+                rangeEndMillis: 8_000,
+            },
+            currentTimeMillis: 4_000,
+        })
+        timeline.addEventListener('lgs1920-timeline-seek', seeks)
+        document.body.append(timeline)
+
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 600, width: 600})
+        const playhead = timeline.shadowRoot.querySelector('[data-playhead]')
+        const grip = playhead.querySelector('.lgs1920-wa-timeline__playhead-grip')
+        grip.dispatchEvent(createPointerEvent('pointerdown', {clientX: 180, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 0, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 500, clientY: 50}))
+
+        expect(timeline.currentTimeMillis).toBe(8_000)
+        expect(seeks).toHaveBeenCalled()
+
+        timeline.currentTimeMillis = 9_000
+        expect(timeline.currentTimeMillis).toBe(8_000)
+        timeline.setTime(0)
+        expect(timeline.currentTimeMillis).toBe(2_000)
+
+        playhead.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true, cancelable: true}))
+        expect(timeline.currentTimeMillis).toBe(2_100)
+        playhead.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowLeft', bubbles: true, cancelable: true}))
+        expect(timeline.currentTimeMillis).toBe(2_000)
+        const altMinimum = new KeyboardEvent('keydown', {key: 'ArrowRight', altKey: true, bubbles: true, cancelable: true})
+        playhead.dispatchEvent(altMinimum)
+        expect(timeline.currentTimeMillis).toBe(2_000)
+        const altMaximum = new KeyboardEvent('keydown', {key: 'ArrowLeft', altKey: true, bubbles: true, cancelable: true})
+        playhead.dispatchEvent(altMaximum)
+        expect(timeline.currentTimeMillis).toBe(8_000)
+        expect(altMinimum.defaultPrevented).toBe(true)
+        expect(altMaximum.defaultPrevented).toBe(true)
+    })
+
     it('emits a public snapshot when a track label changes', () => {
         const timeline = new LGS1920Timeline()
         const labelChanges = vi.fn()
@@ -527,6 +855,8 @@ describe('lgs1920-timeline Web Component', () => {
         const labelSlot = timeline.shadowRoot.querySelector('slot[name="track-label-map#main"]')
         labelSlot.dispatchEvent(new MouseEvent('dblclick', {bubbles: true, cancelable: true}))
         const input = timeline.shadowRoot.querySelector('[data-edit-row-id="map#main"]')
+        expect(input.getAttribute('aria-label')).toBe('Edit Map')
+        expect(input.getAttribute('label')).toBeNull()
         input.value = 'Journey map'
         input.dispatchEvent(new Event('input', {bubbles: true}))
         input.dispatchEvent(new Event('change', {bubbles: true}))

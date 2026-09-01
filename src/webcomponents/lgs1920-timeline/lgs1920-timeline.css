@@ -75,7 +75,7 @@
     /* Timeline minimum track legend width. */
     --lgs-timeline-legend-min-width: 100px;
     /* Timeline maximum track legend width. */
-    --lgs-timeline-legend-max-width: 200px;
+    --lgs-timeline-legend-max-width: 230px;
     /* Timeline legend resizer width. */
     --lgs-timeline-resizer-width: 6px;
     /* Timeline legend resizer hit area. */
@@ -158,6 +158,19 @@
         border-radius: var(--lgs-timeline-radius);
         box-shadow: var(--lgs-timeline-shadow);
         backdrop-filter: blur(14px);
+        /* Keep the outer card body flush with the existing timeline layout. */
+        --spacing: 0;
+    }
+
+    & .lgs1920-wa-timeline::part(body) {
+        display: flex;
+        flex: 1 1 auto;
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        min-height: 0;
+        padding: 0;
+        flex-direction: column;
     }
 
     & .lgs1920-wa-timeline__additional-content-slot {
@@ -191,6 +204,19 @@
         gap: var(--lgs-timeline-gap);
     }
 
+    & .lgs1920-wa-timeline__transport {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--lgs-gutter-xs, 0.5rem);
+        min-width: 0;
+    }
+
+    & .lgs1920-wa-timeline__transport wa-button-group {
+        flex: 0 0 auto;
+    }
+
     & .lgs1920-wa-timeline__playback-controls {
         display: flex;
         align-items: center;
@@ -222,8 +248,31 @@
     & .lgs1920-wa-timeline__split-panel {
         flex: 1 1 auto;
         width: 100%;
+        height: 100%;
         min-width: 0;
         min-height: var(--lgs-timeline-layout-min-height);
+        grid-auto-flow: column;
+        grid-template-columns: clamp(
+            var(--lgs-timeline-legend-min-width),
+            var(--lgs-timeline-legend-width),
+            var(--lgs-timeline-legend-max-width)
+        ) var(--lgs-timeline-resizer-width) minmax(0, 1fr);
+    }
+
+    & .lgs1920-wa-timeline__split-panel::part(panel) {
+        box-sizing: border-box;
+        width: 100%;
+        height: 100%;
+        min-width: 0;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    & .lgs1920-wa-timeline__split-panel::part(divider) {
+        box-sizing: border-box;
+        width: var(--lgs-timeline-resizer-width);
+        min-width: var(--lgs-timeline-resizer-width);
+        background-color: var(--lgs-timeline-background);
     }
 
     & .lgs1920-wa-timeline__track-drop-indicator {
@@ -242,12 +291,37 @@
     }
 
     & .lgs1920-wa-timeline__legend {
+        /* Keep the title card body flush with the existing legend layout. */
+        --spacing: 0;
+        /* Use the compact Web Awesome radius for the title panel. */
+        --wa-panel-border-radius: var(--wa-border-radius-s);
+        display: block;
+        box-sizing: border-box;
         width: 100%;
         min-width: 0;
         height: 100%;
+        border-radius: var(--wa-border-radius-s);
         overflow: hidden;
         color: var(--lgs-timeline-quiet-text-color);
         background: var(--lgs-timeline-surface-color);
+    }
+
+    & .lgs1920-wa-timeline__legend::part(body) {
+        box-sizing: border-box;
+        height: 100%;
+        min-width: 0;
+        min-height: 0;
+        padding: 0;
+    }
+
+    & slot[name='legend-ruler'] {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        height: var(--lgs-timeline-header-height);
+        overflow: hidden;
+        background-color: var(--lgs-timeline-surface-color);
+        border-bottom: 1px solid var(--lgs-timeline-quiet-border-color);
     }
 
     & .lgs1920-wa-timeline__legend-ruler {
@@ -261,7 +335,6 @@
         padding-inline: var(--lgs-gutter-xxs, 0.25rem);
         overflow: hidden;
         background: var(--lgs-timeline-surface-color);
-        border-bottom: 1px solid var(--lgs-timeline-quiet-border-color);
         box-shadow: var(--wa-shadow-m);
     }
 
@@ -379,6 +452,7 @@
         min-height: var(--lgs-timeline-row-height);
         padding-inline: var(--lgs-gutter-xxs, 0.25rem);
         overflow: hidden;
+        border-radius: var(--wa-border-radius-s);
         color: var(--lgs-timeline-text-color);
         background: var(--lgs-timeline-surface-color);
         border-bottom: 1px solid var(--lgs-timeline-quiet-border-color);
@@ -407,6 +481,7 @@
         align-items: center;
         gap: var(--lgs-gutter-xxs, 0.25rem);
         min-width: 0;
+        height: 100%;
         flex: 1 1 auto;
         overflow: hidden;
     }
@@ -443,18 +518,50 @@
     & .lgs1920-wa-timeline__track-actions {
         display: flex;
         align-items: center;
-        justify-content: flex-end;
+        justify-content: flex-start;
+        gap: 0;
         align-self: stretch;
         flex: 0 0 auto;
-        margin-inline-start: auto;
+        min-width: calc(1.25rem * 2);
+        margin-inline-end: -3px;
     }
 
     & .lgs1920-wa-timeline__track-actions > slot {
         display: inline-flex;
+        flex: 0 0 1.25rem;
         align-items: center;
         justify-content: center;
+        width: 1.25rem;
         min-width: 1.25rem;
         min-height: 1.25rem;
+    }
+
+    & .lgs1920-wa-timeline__track-actions > wa-button {
+        flex: 0 0 1.25rem;
+        width: 1.25rem;
+        height: 1.25rem;
+        min-height: 1.25rem;
+        margin: 0;
+        padding: 0;
+    }
+
+    & .lgs1920-wa-timeline__track-actions > wa-button::part(button) {
+        box-sizing: border-box;
+        width: 1.25rem;
+        height: 1.25rem;
+        min-height: 1.25rem;
+        margin: 0;
+        padding: 0;
+    }
+
+    & .lgs1920-wa-timeline__action-placeholder {
+        display: inline-flex;
+        flex: 0 0 1.25rem;
+        width: 1.25rem;
+        min-width: 1.25rem;
+        min-height: 1.25rem;
+        pointer-events: none;
+        visibility: hidden;
     }
 
     & .lgs1920-wa-timeline__track-actions > slot[name^='drag-trigger-'] {
@@ -469,19 +576,68 @@
     }
 
     & .lgs1920-wa-timeline__label-editor {
+        display: block;
+        align-self: stretch;
+        flex: 1 1 auto;
         min-width: 5rem;
         max-width: 12rem;
+        height: calc(100% - 4px);
+        min-height: 0;
+        margin-block: 2px;
+        margin-inline: 0;
+        padding: 0;
+        /* Keep the Web Awesome control inside the compact timeline row. */
+        --wa-form-control-height: 100%;
+        --wa-form-control-padding-block: 0px;
+        --wa-form-control-padding-inline: var(--lgs-gutter-xxs, 0.25rem);
+        --wa-form-control-value-line-height: 1;
+    }
+
+    & .lgs1920-wa-timeline__label-editor::part(form-control-label) {
+        display: none;
+    }
+
+    & .lgs1920-wa-timeline__label-editor::part(input-wrapper) {
+        box-sizing: border-box;
+        height: 100%;
+        min-height: 0;
+        margin: 0;
+        padding: 0;
+    }
+
+    & .lgs1920-wa-timeline__label-editor::part(input) {
+        box-sizing: border-box;
+        height: 100%;
+        min-height: 0;
+        margin: 0;
+        padding-block: 0;
+        line-height: 1;
     }
 
     & .lgs1920-wa-timeline__surface {
+        /* Keep the surface card body flush with the existing timeline layout. */
+        --spacing: 0;
+        /* Use the compact Web Awesome radius for the time panel. */
+        --wa-panel-border-radius: var(--wa-border-radius-s);
+        display: block;
+        box-sizing: border-box;
         min-width: 0;
         max-width: 100%;
         height: 100%;
+        border-radius: var(--wa-border-radius-s);
         overflow-x: auto;
         overflow-y: hidden;
         color: var(--lgs-timeline-text-color);
         background: var(--lgs-timeline-surface-color);
         scrollbar-width: none;
+    }
+
+    & .lgs1920-wa-timeline__surface::part(body) {
+        box-sizing: border-box;
+        height: 100%;
+        min-width: 0;
+        min-height: 0;
+        padding: 0;
     }
 
     & .lgs1920-wa-timeline__surface:focus-visible {
@@ -595,6 +751,8 @@
         background-image: linear-gradient(90deg, color-mix(in srgb, var(--lgs-timeline-quiet-border-color) 60%, transparent) 1px, transparent 1px);
         background-size: var(--lgs-timeline-scale-width) 100%;
         border-bottom: 1px solid var(--lgs-timeline-quiet-border-color);
+        border-radius: var(--wa-border-radius-s);
+        overflow: hidden;
     }
 
     & .lgs1920-wa-timeline__track.lgs1920-wa-timeline__track--hidden {
@@ -615,9 +773,16 @@
     }
 
     & .lgs1920-wa-timeline__playhead {
+        z-index: 6;
         width: var(--lgs-timeline-playhead-width);
         overflow: visible;
         background: transparent;
+    }
+
+    & .lgs1920-wa-timeline__playhead-grip {
+        cursor: ew-resize;
+        pointer-events: auto;
+        touch-action: none;
     }
 
     & .lgs1920-wa-timeline__playhead > .lgs1920-wa-timeline__playhead-grip,
@@ -686,6 +851,7 @@
         background: inherit;
         border: inherit;
         border-radius: 2px;
+        box-shadow: var(--wa-shadow-s);
         pointer-events: none;
         transform: translateX(-50%) rotate(45deg);
     }
@@ -700,11 +866,16 @@
         position: absolute;
         top: 0;
         bottom: 0;
-        z-index: 5;
+        z-index: 20;
         width: var(--lgs-timeline-range-handle-width);
         transform: translateX(calc(var(--lgs-timeline-range-handle-width) / -2));
         cursor: ew-resize;
         pointer-events: auto;
+        touch-action: none;
+    }
+
+    & .lgs1920-wa-timeline__range-handle > .lgs1920-wa-timeline__range-grip {
+        z-index: 21;
     }
 
     & .lgs1920-wa-timeline__range-handle::before {

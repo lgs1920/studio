@@ -22,13 +22,15 @@ export const START_LEFT = 20
 export const SCALE_WIDTH = 40
 export const MIN_VISIBLE_DURATION_SECONDS = 5
 export const MIN_LEGEND_WIDTH = 100
-export const MAX_LEGEND_WIDTH = 200
+export const MAX_LEGEND_WIDTH = 230
 export const HEADER_HEIGHT = 42
 export const HORIZONTAL_SCROLLBAR_HEIGHT = 8
 export const MIN_ROW_HEIGHT = 24
 export const EDGE_TRIGGER_SIZE = 24
 export const EDGE_SCROLL_SPEEDS = [8, 16, 32, 64, 128]
 export const ACCELERATION_INTERVAL = 100
+export const EDGE_TIME_ACCELERATION_INTERVAL = 500
+export const EDGE_SCROLL_TIME_STEPS = [10, 100, 500, 1_000, 5_000, 30_000]
 export const GLOBAL_SLOTS = [
     'track-icon',
     'track-label',
