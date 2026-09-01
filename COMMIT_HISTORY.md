@@ -1408,3 +1408,11 @@
 ## 2026-08-31 — [`style(ui): align LGS scrollbar with timeline`](https://github.com/lgs1920/studio/commit/a57ee5fc7259ae256f818cd426e71c9f905ce01f)
 
 - Recorded automatically from Git history.
+
+## 2026-08-31 — [`fix: stabilize lint and shortcut tests`](https://github.com/lgs1920/studio/commit/dff5495bc2de2ed72bd7bf5b1d102ca63bbfef00)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/e3d24c561a9a71a151765f2d651e68cfc821da6e)
+
+- Recorded automatically from Git history.
