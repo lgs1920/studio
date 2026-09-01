@@ -1,5 +1,36 @@
 # Commit History
 
+## 2026-09-01 — `feat(ui): extend timeline Web Component interactions`
+
+- Extend the timeline Web Component with interactive track and clip rendering,
+  visibility controls, title editing, drag lifecycle events, and pointer-event
+  suppression.
+- Align the Web Awesome timeline layout, scrolling, ruler labels, handles,
+  minimum dimensions, themed colors, and elevation tokens.
+- Update the component tests, README, and Web Component specification.
+
+## 2026-09-01 — `refactor(replay): rename Replay clip phases`
+
+- Rename the Replay clip phases from `start` and `stop` to `pre-replay` and
+  `post-replay` across the catalog, normalization, preparation timeline,
+  playback timeline, and overlay visibility rules.
+- Preserve backwards-compatible aliases and normalize legacy slot values.
+- Update Replay clip, exporter, camera-overlay, statistics, and timeline tests.
+
+## 2026-09-01 — `feat(replay): enable timeline preview interactions`
+
+- Replace the read-only preview projection with the interactive timeline Web
+  Component capabilities while keeping Replay as the application state owner.
+- Add compact floating-widget dimensions, continuous external drag/resize
+  handling, track ordering and visibility projection, and matching preview CSS.
+- Update the preview, utility, widget-host, and style coverage.
+
+## 2026-09-01 — `docs(replay): document timeline Web Component integration`
+
+- Document the Web Component public contract, local interactions, layout
+  constraints, scrolling behavior, and remaining controller boundaries.
+- Update the timeline README and replay implementation specifications.
+
 ## 2026-08-31 — `refactor(replay): use timeline Web Component preview`
 
 - Replace the React timeline package rendering in the Replay preparation preview with `lgs1920-timeline`.

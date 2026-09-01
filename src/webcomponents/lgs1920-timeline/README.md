@@ -33,6 +33,11 @@ The component has a compact controlled model:
 - `playing` controls the playback state.
 - `clipOptions` supplies entries for the clip menu.
 
+Set `timeline.interactive` to `false` for a display-only projection. The
+component then renders the controlled ruler, playhead, tracks, and clips
+without playback controls, menus, focusable scrubbing, editing handlers, or
+interaction events.
+
 ```html
 <lgs1920-timeline id="timeline" aria-label="Video timeline"></lgs1920-timeline>
 ```
@@ -45,8 +50,8 @@ timeline.timeline = {
     visible: true,
     zoomPercent: 0,
     legendWidth: 180,
-    legendMinWidth: 120,
-    legendMaxWidth: 300,
+    legendMinWidth: 100,
+    legendMaxWidth: 200,
     rangeStartMillis: 0,
     rangeEndMillis: 60_000,
     editable: true,
@@ -101,9 +106,10 @@ clock integration.
 | `visible` | `boolean` | Controls timeline visibility. Defaults to `true`. |
 | `zoomPercent` | `number` | Initial ruler zoom from `-50` to `500`. |
 | `legendWidth` | `number` | Initial track legend width in pixels. It is clamped between `legendMinWidth` and `legendMaxWidth`. |
-| `legendMinWidth` | `number` | Minimum track legend width in pixels. Defaults to `120`. |
-| `legendMaxWidth` | `number` | Maximum track legend width in pixels. Defaults to `300`. |
+| `legendMinWidth` | `number` | Minimum track legend width in pixels. Defaults to `100`. |
+| `legendMaxWidth` | `number` | Maximum track legend width in pixels. Defaults to `200`. |
 | `editable` | `boolean` | Enables clip editing and track reordering. Defaults to `true`. |
+| `interactive` | `boolean` | Enables playback, scrubbing, editing, menus, and emitted interaction events. Defaults to `true`. |
 | `collisionPolicy` | `'allow' \| 'prevent' \| 'ripple'` | Default clip collision policy for tracks. |
 | `durationPolicy` | `'fixed' \| 'extend'` | Keeps the duration fixed or extends it when an edit exceeds the end. Defaults to `fixed`. |
 | `defaultTrackId` | `string` | Track used when a clip-menu option does not specify a track. |
@@ -378,6 +384,13 @@ time surface follow the same row order, and a one-pixel brand insertion line
 shows the drop position. The committed `reorder` event contains the new
 `tracks` order and `dropIndex`.
 
+The component emits `before-drag`, `drag`, and `after-drag` for movable tracks
+and clips. Each detail contains a `context` with the requested public shape:
+`{type: 'piste', pisteId}` for a track and
+`{type: 'clip', pisteId, clipId}` for a clip. The detail also contains the
+triggering event and the current serializable `data` snapshot. `after-drag`
+adds `committed`, which is `false` for a cancelled or rejected clip move.
+
 The component emits `clip-change-start` when an edit begins, `clip-changing`
 for live previews, and `clip-change` when the pointer or keyboard edit is
 committed. The host applies the resulting `tracks` value to keep the model
@@ -398,11 +411,14 @@ corresponding `on...` callback.
 | `seek` | `lgs1920-timeline-seek` | `onSeek` | `{timeMillis, progress, settled}` |
 | `track-visibility-change` | `lgs1920-timeline-track-visibility-change` | `onTrackVisibilityChange` | `{trackId, visible, track, event, data}` |
 | `track-label-change` | `lgs1920-timeline-track-label-change` | `onTrackLabelChange` | `{trackId, label, previousLabel, tracks, data}` |
-| `dblclick` | `lgs1920-timeline-dblclick` | `onDblClick` | `{clip, event}` |
+| `dblclick` | `lgs1920-timeline-dblclick` | `onDblClick` | `{clip, context, event}` |
 | `add-clip` | `lgs1920-timeline-add-clip` | `onAddClip` | `{group, key, option, clip, trackId, durationMillis, tracks}` |
 | `clip-change-start` | `lgs1920-timeline-clip-change-start` | `onClipChangeStart` | `{type, edge, clipId, fromTrackId, toTrackId, clip, durationMillis, tracks}` |
 | `clip-changing` | `lgs1920-timeline-clip-changing` | `onClipChanging` | `{type, edge, clipId, fromTrackId, toTrackId, clip, durationMillis, tracks}` |
 | `clip-change` | `lgs1920-timeline-clip-change` | `onClipChange` | `{type, edge, clipId, fromTrackId, toTrackId, clip, durationMillis, tracks}` |
+| `before-drag` | `lgs1920-timeline-before-drag` | `onBeforeDrag` | `{context, event, data}` |
+| `drag` | `lgs1920-timeline-drag` | `onDrag` | `{context, event, data}` |
+| `after-drag` | `lgs1920-timeline-after-drag` | `onAfterDrag` | `{context, committed, event, data}` |
 | `range-change-start` | `lgs1920-timeline-range-change-start` | `onRangeChangeStart` | `{rangeStartMillis, rangeEndMillis, durationMillis, event}` |
 | `range-changing` | `lgs1920-timeline-range-changing` | `onRangeChanging` | `{rangeStartMillis, rangeEndMillis, durationMillis, event}` |
 | `range-change` | `lgs1920-timeline-range-change` | `onRangeChange` | `{rangeStartMillis, rangeEndMillis, durationMillis, event}` |
@@ -468,8 +484,16 @@ lgs1920-timeline::part(clip) {
 | `--lgs-timeline-shadow` | Outer shadow. |
 | `--lgs-timeline-gap` | Header and top-section gap. |
 | `--lgs-timeline-header-height` | Header and ruler height. |
+| `--lgs-timeline-min-width` | Minimum host and layout width. |
 | `--lgs-timeline-min-height` | Minimum host and layout height. |
+| `--lgs-timeline-layout-min-height` | Minimum inner layout height. |
 | `--lgs-timeline-scrollbar-height` | Horizontal scrollbar allowance. |
+| `--lgs-timeline-scrollbar-size` | LGS scrollbar rail thickness. |
+| `--lgs-timeline-scrollbar-thumb-min-size` | Minimum LGS scrollbar thumb size. |
+| `--lgs-timeline-scrollbar-auto-hide-delay` | Inactivity timeout before rails hide. Defaults to `1s`, matching `LGSScrollbars`. |
+| `--lgs-timeline-scrollbar-auto-hide-duration` | Fade duration. Defaults to `200ms`, matching `LGSScrollbars`. |
+| `--lgs-timeline-scrollbar-track-color` | LGS scrollbar rail color. |
+| `--lgs-timeline-scrollbar-thumb-color` | LGS scrollbar thumb color. |
 | `--lgs-timeline-legend-width` | Track legend width. |
 | `--lgs-timeline-legend-min-width` | Minimum legend width. |
 | `--lgs-timeline-legend-max-width` | Maximum legend width. |
@@ -477,12 +501,21 @@ lgs1920-timeline::part(clip) {
 | `--lgs-timeline-resizer-hit-area` | Web Awesome split-panel divider hit area. |
 | `--lgs-timeline-row-height` | Minimum track row height. |
 | `--lgs-timeline-scale-width` | Ruler pixels per major unit. |
+| `--lgs-timeline-min-visible-duration` | Minimum duration represented by the initial timeline viewport. |
 | `--lgs-timeline-scale-offset` | Ruler left offset. |
-| `--lgs-timeline-playhead-color` | Playhead color. |
+| `--lgs-timeline-major-tick-height` | Major ruler tick height. |
+| `--lgs-timeline-minor-tick-height` | Minor ruler tick height. |
+| `--lgs-timeline-handle-cap-height` | Height of the start, end, and playhead caps. |
+| `--lgs-timeline-handle-cap-top` | Top offset of the caps relative to the ruler. |
+| `--lgs-timeline-handle-cap-width` | Width of the start, end, and playhead caps. |
+| `--lgs-timeline-handle-point-size` | Size of the rounded bottom point. |
+| `--lgs-timeline-handle-icon-color` | Default grip icon color. |
+| `--lgs-timeline-playhead-color` | Playhead color. Defaults to the Web Awesome blue 70 palette token. |
 | `--lgs-timeline-playhead-width` | Playhead width. |
 | `--lgs-timeline-end-marker-color` | End marker color. |
 | `--lgs-timeline-range-handle-width` | Video range handle width. |
 | `--lgs-timeline-range-handle-color` | Video range handle color. |
+| `--lgs-timeline-range-end-color` | Video range end handle color. |
 | `--lgs-timeline-range-handle-focus-ring` | Video range handle focus ring. |
 | `--lgs-timeline-clip-padding` | Clip horizontal padding. |
 | `--lgs-timeline-clip-min-width` | Minimum clip width. |
@@ -501,9 +534,16 @@ Useful CSS parts include `timeline`, `top`, `header`, `controls`, `header-action
 `layout`, `legend`, `legend-ruler`, `legend-viewport`, `legend-rows`,
 `legend-row`, `legend-icon`, `legend-content`, `track-actions`, `split-panel`,
 `surface`, `canvas`, `ruler`, `tick`, `minor-tick`, `tracks`, `track`, `clip`,
+`tracks-viewport`,
 `clip-preview`, `clip-start-handle`, `clip-end-handle`, `timeline-start-handle`,
 `timeline-end-handle`, `playhead`, `end-marker`,
-`track-drop-indicator`, `popup`, `menu`, `context-popup`, and `context-menu`.
+`track-drop-indicator`, `scroll-shell`, `scrollbar-track`, `scrollbar-thumb`,
+`popup`, `menu`, `context-popup`, and `context-menu`.
+
+The track surface exposes an LGS-style horizontal rail and a vertical rail for
+the tracks viewport. The time ruler remains fixed on the vertical axis. The
+title column exposes its own vertical rail, and both vertical views are
+synchronized bidirectionally so titles and tracks stay aligned while scrolling.
 
 ## Methods
 
@@ -515,6 +555,8 @@ also provides these small imperative helpers:
 | `setTime(timeMillis)` | Move the playhead without emitting `seek`. |
 | `setZoom(zoomPercent)` | Set the ruler zoom from `-50` to `500`. |
 | `handleResize()` | Recompute surface dimensions after an external resize. |
+| `setScrollbarsInteractionActive(active)` | Keep custom rails visible during an external drag or resize gesture. |
+| `setExternalInteractionActive(active)` | Preserve an active external mouse, pointer, or touch gesture when it crosses the timeline host. |
 
 ## Accessibility
 

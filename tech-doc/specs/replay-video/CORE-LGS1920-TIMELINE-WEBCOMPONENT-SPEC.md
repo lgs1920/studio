@@ -63,8 +63,8 @@ The supported `timeline` fields are:
 | `editable` | Enables clip editing and track reordering. Defaults to `true`. |
 | `zoomPercent` | Ruler zoom from `-50` to `500`. |
 | `legendWidth` | Initial track-title width in pixels. |
-| `legendMinWidth` | Minimum track-title width. Defaults to `120`. |
-| `legendMaxWidth` | Maximum track-title width. Defaults to `300`. |
+| `legendMinWidth` | Minimum track-title width. Defaults to `100`. |
+| `legendMaxWidth` | Maximum track-title width. Defaults to `200`. |
 | `collisionPolicy` | Default clip collision policy: `allow`, `prevent`, or `ripple`. |
 | `durationPolicy` | `fixed` keeps the duration bounded; `extend` grows it when required. |
 | `defaultTrackId` | Track selected by the clip insertion menu when an option has no `trackId`. |
@@ -200,6 +200,14 @@ During the gesture, a one-pixel brand-colored horizontal insertion line spans
 the complete title and time-surface area. The committed `reorder` event
 contains the resulting order and `dropIndex`.
 
+Movable tracks and clips emit the `before-drag`, `drag`, and `after-drag`
+lifecycle. Their `detail.context` is `{type: 'piste', pisteId, trackId}` for a
+track and `{type: 'clip', pisteId, trackId, clipId}` for a clip. The aliases
+`trackId` and `clipId` keep the public context compatible with the rest of the
+timeline API while `pisteId` preserves the UI contract. `after-drag` includes
+`committed: false` when the interaction is cancelled or a clip proposal is
+rejected.
+
 ## Contextual content and actions
 
 The component exposes global and identifier-specific slots for:
@@ -230,6 +238,9 @@ the corresponding callback:
 | `clip-change-start` | `onClipChangeStart` | Clip edit start. |
 | `clip-changing` | `onClipChanging` | Live clip edit preview. |
 | `clip-change` | `onClipChange` | Committed movement or resize. |
+| `before-drag` | `onBeforeDrag` | Track or clip drag started. |
+| `drag` | `onDrag` | Track or clip drag preview. |
+| `after-drag` | `onAfterDrag` | Track or clip drag completed or cancelled. |
 | `add-clip` | `onAddClip` | Clip insertion result. |
 | `reorder` | `onReorder` | Track reorder result. |
 | `track-label-change` | `onTrackLabelChange` | Track name change. |
