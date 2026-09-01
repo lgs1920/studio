@@ -55,7 +55,6 @@ timeline.timeline = {
     currentFrameIndex: 105,
     visible: true,
     zoomPercent: 0,
-    legendWidth: 180,
     legendMinWidth: 100,
     legendMaxWidth: 230,
     rangeStartMillis: 0,
@@ -115,7 +114,6 @@ clock integration.
 | `rangeEndMillis` | `number` | Video range end in milliseconds. Defaults to `durationMillis`. |
 | `visible` | `boolean` | Controls timeline visibility. Defaults to `true`. |
 | `zoomPercent` | `number` | Initial ruler zoom from `-50` to `500`. |
-| `legendWidth` | `number` | Initial track legend width in pixels. It is clamped between `legendMinWidth` and `legendMaxWidth`. |
 | `legendMinWidth` | `number` | Minimum track legend width in pixels. Defaults to `100`. |
 | `legendMaxWidth` | `number` | Maximum track legend width in pixels. Defaults to `230`. |
 | `editable` | `boolean` | Enables clip editing and track reordering. Defaults to `true`. |
@@ -184,10 +182,10 @@ next frame details contain `frameIndex`, `frameCount`,
 value of `step-backward` or `step-forward`. The start and end controls use
 `restart` or `seek` with `source` set to `go-to-start` or `go-to-end`.
 
-The FPS menu is application-owned and must be provided through the `fps-menu`
-slot. The Web Component only exposes the controlled `fps` value used for frame
-navigation; it does not modify the canonical Replay FPS or emit an FPS-change
-event.
+The additional menu is application-owned and must be provided through the
+`additional-menu` slot. The Web Component only exposes the controlled `fps`
+value used for frame navigation; it does not modify the canonical Replay FPS
+or emit an FPS-change event.
 
 ### `clipOptions`
 
@@ -252,6 +250,7 @@ targeted slot takes the form `{slot}-{id}` and overrides the global slot.
 | `playback-total` | Total-time label. |
 | `playback-end` | Content after the total time. |
 | `timeline-toolbar` | Toolbar content beside the clip menu. |
+| `additional-menu` | Application-owned menu beside the transport controls. Use Web Awesome controls with `variant="brand"`. |
 | `legend-ruler` | Replacement content for the title-column ruler area. The default fallback contains `timeline-toolbar` and the clip-menu button. |
 | `timeline-ruler` | Additional content over the time ruler. |
 | `footer` | Content below the timeline layout. |
@@ -290,7 +289,7 @@ wa-drawer lgs1920-timeline,
 | `stop-icon` | Stop icon. |
 | `previous-frame-icon` / `next-frame-icon` | Previous or next frame icon. |
 | `end-icon` | Go-to-end icon. |
-| `fps-menu` | Application-owned Replay FPS menu. |
+| `additional-menu` | Application-owned Replay menu, such as the Replay FPS menu. |
 | `add-clip-icon` | Clip-menu icon. |
 | `add-clip-label` | Clip-menu label. |
 
@@ -415,10 +414,16 @@ duration. The committed event contains the resulting `durationMillis` and the
 complete `tracks` snapshot. With `durationPolicy: 'fixed'`, an edit that would
 leave the timeline bounds is rejected.
 
-Track reordering starts from the `drag-trigger` slot. The title area and the
-time surface follow the same row order, and a one-pixel brand insertion line
-shows the drop position. The committed `reorder` event contains the new
-`tracks` order and `dropIndex`.
+Track reordering starts from the `drag-trigger` slot or anywhere in the track
+name area. The title area and the time surface follow the same row order, and
+a one-pixel brand insertion line shows the drop position. Locked rows cannot
+be crossed: insertion is rejected before a locked first row, after a locked
+last row, or between two locked rows. The committed `reorder` event contains
+the new `tracks` order and `dropIndex`. While the pointer is over a rejected
+locked boundary, the dragged row silhouette uses the Web Awesome `danger`
+colors, follows the pointer in both panes, and remains at its last valid
+position while a translucent placeholder preserves the source slot. A valid
+position restores the `warning` silhouette.
 
 The component emits `before-drag`, `drag`, and `after-drag` for movable tracks
 and clips. Each detail contains a `context` with the requested public shape:
@@ -441,11 +446,11 @@ corresponding `on...` callback.
 
 | Event suffix | DOM event | React callback | Detail |
 | --- | --- | --- | --- |
-| `play` | `lgs1920-timeline-play` | `onPlay` | `{}` |
-| `pause` | `lgs1920-timeline-pause` | `onPause` | `{}` |
-| `stop` | `lgs1920-timeline-stop` | Native component event | `{timeMillis, source, event}` |
-| `restart` | `lgs1920-timeline-restart` | `onRestart` | `{}` |
-| `seek` | `lgs1920-timeline-seek` | `onSeek` | `{timeMillis, progress, settled}` |
+| `play` | `lgs1920-timeline-play` | `onPlay` | `{source, timeMillis, event}` |
+| `pause` | `lgs1920-timeline-pause` | `onPause` | `{source, timeMillis, event}` |
+| `stop` | `lgs1920-timeline-stop` | `onStop` | `{timeMillis, source, event}` |
+| `restart` | `lgs1920-timeline-restart` | `onRestart` | `{timeMillis, progress, settled, source, event}` |
+| `seek` | `lgs1920-timeline-seek` | `onSeek` | `{timeMillis, progress, settled, source, event, ...}` |
 | `track-visibility-change` | `lgs1920-timeline-track-visibility-change` | `onTrackVisibilityChange` | `{trackId, visible, track, event, data}` |
 | `track-label-change` | `lgs1920-timeline-track-label-change` | `onTrackLabelChange` | `{trackId, label, previousLabel, tracks, data}` |
 | `dblclick` | `lgs1920-timeline-dblclick` | `onDblClick` | `{clip, context, event}` |
@@ -500,7 +505,6 @@ lgs1920-timeline {
     --lgs-timeline-surface-color: #132941;
     --lgs-timeline-playhead-color: #ffb000;
     --lgs-timeline-row-height: 28px;
-    --lgs-timeline-legend-width: 180px;
 }
 
 lgs1920-timeline::part(clip) {
@@ -531,9 +535,6 @@ lgs1920-timeline::part(clip) {
 | `--lgs-timeline-scrollbar-auto-hide-duration` | Fade duration. Defaults to `200ms`, matching `LGSScrollbars`. |
 | `--lgs-timeline-scrollbar-track-color` | LGS scrollbar rail color. |
 | `--lgs-timeline-scrollbar-thumb-color` | LGS scrollbar thumb color. |
-| `--lgs-timeline-legend-width` | Track legend width. |
-| `--lgs-timeline-legend-min-width` | Minimum legend width. |
-| `--lgs-timeline-legend-max-width` | Maximum legend width. |
 | `--lgs-timeline-resizer-width` | Web Awesome split-panel divider width. |
 | `--lgs-timeline-resizer-hit-area` | Web Awesome split-panel divider hit area. |
 | `--lgs-timeline-row-height` | Minimum track row height. |

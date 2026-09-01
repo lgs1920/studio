@@ -41,7 +41,7 @@ and `tracks` again.
 The public model is split into three clear areas:
 
 - `timeline` contains duration, video range, editing, collision, zoom, and
-  track-title layout configuration.
+  native split-panel bounds configuration.
 - `tracks` contains track definitions and their `clips`.
 - `currentTimeMillis`, `playing`, and `clipOptions` control the playhead,
   playback state, and insertion menu.
@@ -62,9 +62,8 @@ The supported `timeline` fields are:
 | `visible` | Controls component visibility. Defaults to `true`. |
 | `editable` | Enables clip editing and track reordering. Defaults to `true`. |
 | `zoomPercent` | Ruler zoom from `-50` to `500`. |
-| `legendWidth` | Initial track-title width in pixels. |
 | `legendMinWidth` | Minimum track-title width. Defaults to `100`. |
-| `legendMaxWidth` | Maximum track-title width. Defaults to `200`. |
+| `legendMaxWidth` | Maximum track-title width. Defaults to `230`. |
 | `collisionPolicy` | Default clip collision policy: `allow`, `prevent`, or `ripple`. |
 | `durationPolicy` | `fixed` keeps the duration bounded; `extend` grows it when required. |
 | `defaultTrackId` | Track selected by the clip insertion menu when an option has no `trackId`. |
@@ -72,10 +71,13 @@ The supported `timeline` fields are:
 | `minClipDuration` | Default minimum clip duration in seconds. |
 | `keyboardStepSeconds` | Keyboard editing step in seconds. Defaults to `0.1`. |
 
-`legendWidth` is clamped between `legendMinWidth` and `legendMaxWidth`. The
-title/surface split is implemented with Web Awesome `<wa-split-panel>`, using
-`position-in-pixels`, `--min`, `--max`, `--divider-width`, and
-`--divider-hit-area`.
+The title/surface split is implemented with Web Awesome
+`<wa-split-panel>`. The timeline supplies only `--min`, `--max`,
+`--divider-width`, and `--divider-hit-area`; the native component owns the
+current divider position and its interaction lifecycle. When the timeline
+must refresh its internal DOM, it reuses the native split-panel element and
+preserves its pixel position so a track drag or container resize does not
+reset the divider.
 
 ## Track model
 
@@ -217,6 +219,8 @@ The component exposes global and identifier-specific slots for:
 - video range handle content;
 - playback controls, headers, timeline actions, toolbar, ruler, footer, and
   empty states;
+- an application-owned additional menu beside the transport controls; menu
+  controls supplied by the application use the `brand` variant;
 - track and clip context-menu entries.
 
 The `#` character separates a slot prefix and an identifier. For example,
@@ -230,7 +234,7 @@ the corresponding callback:
 
 | Event suffix | React callback | Purpose |
 | --- | --- | --- |
-| `play`, `pause`, `restart` | `onPlay`, `onPause`, `onRestart` | Playback requests. |
+| `play`, `pause`, `stop`, `restart` | `onPlay`, `onPause`, `onStop`, `onRestart` | Playback requests. |
 | `seek` | `onSeek` | Playhead movement. |
 | `range-change-start` | `onRangeChangeStart` | Video range edit start. |
 | `range-changing` | `onRangeChanging` | Live video range preview. |
@@ -265,6 +269,11 @@ video model.
 
 Application actions such as recording, exporting, fullscreen, or closing are
 provided through the `timeline-actions` and `header-actions` slots.
+
+The React adapter is a passive property and event bridge. Its effects only
+assign configuration/tracks, current time, and playback state to the custom
+element, while callbacks only forward custom-event details. It contains no
+timeline, playback, or application business logic.
 
 ## Accessibility and styling
 
