@@ -33,6 +33,9 @@ This is the canonical source for the project's AI-agent and development rules.
 
 - **State Management:** Always use `valtio`. Mapping: `$deepestAttribute` for proxy, `deepestAttribute` for snapshot.
 - **UI:** Strictly use WebAwesome 3 components and FontAwesome. No external CSS libraries.
+- **Web Awesome first:** Prefer Web Awesome components and their React wrappers whenever a suitable component exists.
+- **Native component events:** Use the native events and APIs of Web Awesome components whenever they provide the required behavior.
+- **Custom behavior:** Do not create custom event handlers, helper functions, or non-native behavior that is not explicitly required. When custom handling is required, use it only as a last resort when the available Web Awesome API cannot meet the requirement.
 - **CSS:** Use nested syntax with `&` selector. Every CSS custom property must have an English comment explaining its purpose.
 - **Backend:** Runtime must be **Bun**. Server framework must be **Elysia**.
 - **Vite:** Never run `bun run dev` manually. `vite build` is allowed.
