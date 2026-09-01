@@ -12,6 +12,7 @@ This is the canonical source for the project's AI-agent and development rules.
 - **Depth of analysis:** Explore relevant subtleties, cross-check perspectives, and identify potential blind spots and biases before reaching a conclusion.
 - **Technical verification:** Be especially vigilant with calculations, logic, and overall consistency. If data or reasoning appears anomalous or uncertain, explicitly identify the issue and re-check it step by step.
 - **Stable fixes:** If a fix is not stable, stop using it and find another stable solution before handing it off.
+- **Protection of uncommitted changes:** Never reset code or an uncommitted branch without the user's explicit confirmation.
 - **Direct logging:** When the user explicitly asks for direct logging, use the appropriate built-in console method in the function body (`console.log`, `console.error`, or `console.table`) and do not route it through helper methods or wrappers.
 
 ## 2. Coding Syntax & Style
