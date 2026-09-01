@@ -51,7 +51,7 @@ replay:
       zoom-in:
         id: zoom-in
         label: ZoomIn
-        icon: magnifying-glass-plus
+        icon: circle-plus
         slots: [ pre-replay ]
         maxInstances: 1
         description: Zoom from a camera point to the replay start.
@@ -103,7 +103,7 @@ replay:
       zoom-out:
         id: zoom-out
         label: ZoomOut
-        icon: magnifying-glass-minus
+        icon: circle-minus
         slots: [ post-replay ]
         maxInstances: 1
         description: Zoom from the end of the journey to a camera point.
@@ -202,8 +202,8 @@ replay:
             unit: deg
       landing:
         id: landing
-        label: Landing
-        icon: plane-arrival
+        label: land
+        icon: arrow-down-right
         slots: [ post-replay ]
         maxInstances: 1
         description: Lower the camera to the ground at the last point of the journey.
@@ -218,8 +218,8 @@ replay:
             step: 1
       take-off:
         id: take-off
-        label: TakeOff
-        icon: plane-departure
+        label: Take off
+        icon: arrow-up-right
         slots: [ pre-replay ]
         maxInstances: 1
         description: Move the camera from the ground to the replay start point.
