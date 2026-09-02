@@ -35,7 +35,7 @@ export const SortableWidgetGroupRow = ({group}) => {
                 <div slot="summary" className="widget-ordering-group-summary widget-ordering-group-handle">
                     <WaIcon name="grip-dots-vertical" variant="solid" className="icon-widget"/>&nbsp;
                     <div className="sortable-widget-info">
-                        {group.label ?? group.id}
+                        {group.label ?? group.members[0]?.label ?? 'Widget'}
                     </div>
                 </div>
                 <div className="widget-ordering-group-members">

@@ -670,7 +670,13 @@ export class WidgetManager {
 
             const currentEntry = lgs.stores.ui.widget.list.get(widgetId)
             if (currentEntry) {
-                lgs.stores.ui.widget.list.set(widgetId, {...currentEntry, widgetGroup: groupId})
+                lgs.stores.ui.widget.list.set(widgetId, {
+                    ...currentEntry,
+                    widgetGroup: groupId,
+                    widgetGroupLabel: groupId && currentEntry.widgetGroup === groupId
+                        ? currentEntry.widgetGroupLabel ?? null
+                        : null,
+                })
             }
 
             const cacheEntry = __.ui.widgetCache?.get?.(widgetId)
@@ -683,6 +689,30 @@ export class WidgetManager {
                 await this.saveWidgetPosition(widgetId, {...position, widgetGroup: groupId}, false)
             }
         }))
+    }
+
+    /**
+     * Applies runtime timeline track names to the widget entries in a group.
+     *
+     * @param {Map|Object} widgetGroupLabels - Group IDs mapped to track names.
+     */
+    updateWidgetGroupLabels = widgetGroupLabels => {
+        const labels = widgetGroupLabels instanceof Map
+            ? [...widgetGroupLabels.entries()]
+            : Object.entries(widgetGroupLabels ?? {})
+        const widgetList = lgs.stores.ui.widget.list
+
+        for (const [groupId, label] of labels) {
+            if (!label) {
+                continue
+            }
+            for (const [widgetId, currentEntry] of widgetList.entries()) {
+                if (currentEntry?.widgetGroup !== groupId || currentEntry.widgetGroupLabel === label) {
+                    continue
+                }
+                widgetList.set(widgetId, {...currentEntry, widgetGroupLabel: label})
+            }
+        }
     }
 
     /**

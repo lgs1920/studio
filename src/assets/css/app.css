@@ -1100,7 +1100,7 @@ wa-drawer.drawer-resize-snapping::part(dialog) {
 }
 
 .widget-ordering-group-details:not([open])::part(details) {
-    height: 100%;
+    height: 2rem;
     box-sizing: border-box;
 }
 
@@ -1109,7 +1109,7 @@ wa-drawer.drawer-resize-snapping::part(dialog) {
 }
 
 .widget-ordering-group-details:not([open])::part(header) {
-    height: 100%;
+    height: calc(2rem - 2 * var(--wa-panel-border-width, 1px));
 }
 
 .widget-ordering-group-details:hover {

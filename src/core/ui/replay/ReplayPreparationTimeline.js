@@ -142,6 +142,7 @@ const resolveWidgetTrackDefinitions = widgetOrder => {
             canHide: typeof widget === 'object' && widget?.canHide === true,
             visible: !(typeof widget === 'object' && widget?.visible === false),
             widgetGroup: typeof widget === 'object' ? widget?.widgetGroup ?? null : null,
+            widgetGroupLabel: typeof widget === 'object' ? widget?.widgetGroupLabel ?? null : null,
             fixed: typeof widget === 'object' && widget?.fixed === true,
         }
     }).filter(Boolean)
@@ -155,7 +156,7 @@ const resolveWidgetTrackDefinitions = widgetOrder => {
         return {
             ...widget,
             type: 'widget-group',
-            label: widget.label ?? widget.id,
+            label: widget.label ?? firstMember?.label ?? 'Widget',
             icon: 'layer-group',
             timelineColor: firstMember?.timelineColor ?? DEFAULT_TIMELINE_COLOR,
             canHide: widget.members.some(member => member.canHide),

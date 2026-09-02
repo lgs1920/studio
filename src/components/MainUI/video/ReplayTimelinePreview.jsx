@@ -35,6 +35,7 @@ import {
 import {
     expandTimelineTrackOrder,
     groupWidgetEntries,
+    resolveWidgetGroupLabelsFromTracks,
     resolveWidgetGroupUpdatesFromTracks,
 } from '@Core/ui/widget-manager/WidgetGroupUtils'
 import {useOptionalSnapshot} from '@Utils/ValtioUtils'
@@ -195,6 +196,7 @@ const resolveVideoWidgetOrder = (widgetList, widgetSettings) => {
                      && runtimeConfig?.mandatory !== true,
             visible: entry?.visible !== false && runtimeConfig?.visible !== false,
             widgetGroup: entry?.widgetGroup ?? null,
+            widgetGroupLabel: entry?.widgetGroupLabel ?? null,
             fixed: widgetType === CREDITS_WIDGET || widgetType === LOGO_WIDGET,
         }
     })
@@ -208,7 +210,7 @@ const resolveVideoWidgetOrder = (widgetList, widgetSettings) => {
         return {
             ...widget,
             type: 'widget-group',
-            label: widget.label ?? widget.id,
+            label: widget.label ?? firstMember?.label ?? 'Widget',
             icon: 'layer-group',
             timelineColor: firstMember?.timelineColor,
             canHide: widget.members.some(member => member.canHide),
@@ -358,6 +360,9 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, on
         element.timeline = timeline
         element.tracks = tracks
         element.clipOptions = []
+        __.ui.widgetManager?.updateWidgetGroupLabels?.(
+            resolveWidgetGroupLabelsFromTracks(tracks),
+        )
     }, [linkedPreparation, timeline, tracks])
 
     useEffect(() => {
@@ -367,10 +372,16 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, on
         }
 
         const handleTimelineTracksChange = event => {
-            const updates = resolveWidgetGroupUpdatesFromTracks(event.detail?.tracks, widgetList)
+            const changedTracks = event.detail?.tracks ?? []
+            const updates = resolveWidgetGroupUpdatesFromTracks(changedTracks, widgetList)
+            const labels = resolveWidgetGroupLabelsFromTracks(changedTracks, updates)
+            const widgetManager = __.ui.widgetManager
             if (updates.size > 0) {
-                void __.ui.widgetManager?.updateWidgetGroups?.(updates)
+                void Promise.resolve(widgetManager?.updateWidgetGroups?.(updates))
+                    .then(() => widgetManager?.updateWidgetGroupLabels?.(labels))
+                return
             }
+            widgetManager?.updateWidgetGroupLabels?.(labels)
         }
         const handleTimelineReorder = event => {
             const orderedWidgetIds = expandTimelineTrackOrder(event.detail?.trackIds, widgetList)
@@ -381,11 +392,13 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, on
 
         element.addEventListener('lgs1920-timeline-clip-change', handleTimelineTracksChange)
         element.addEventListener('lgs1920-timeline-add-clip', handleTimelineTracksChange)
+        element.addEventListener('lgs1920-timeline-track-label-change', handleTimelineTracksChange)
         element.addEventListener('lgs1920-timeline-reorder', handleTimelineReorder)
 
         return () => {
             element.removeEventListener('lgs1920-timeline-clip-change', handleTimelineTracksChange)
             element.removeEventListener('lgs1920-timeline-add-clip', handleTimelineTracksChange)
+            element.removeEventListener('lgs1920-timeline-track-label-change', handleTimelineTracksChange)
             element.removeEventListener('lgs1920-timeline-reorder', handleTimelineReorder)
         }
     }, [linkedPreparation, widgetList])

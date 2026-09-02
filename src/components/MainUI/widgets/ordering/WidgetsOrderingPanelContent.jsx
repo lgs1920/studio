@@ -78,6 +78,7 @@ export const WidgetsOrderingPanelContent = ({
                     canHide: _instance.canHide === true || __.ui.widgetManager.getWidgetConfig(id)?.canHide === true,
                     visible: entry?.visible !== false,
                     widgetGroup: entry?.widgetGroup ?? null,
+                    widgetGroupLabel: entry?.widgetGroupLabel ?? null,
                 }
             })
             .filter(Boolean)

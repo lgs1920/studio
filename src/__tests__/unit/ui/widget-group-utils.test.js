@@ -17,6 +17,7 @@
 import {
     expandTimelineTrackOrder,
     groupWidgetEntries,
+    resolveWidgetGroupLabelsFromTracks,
     resolveWidgetGroupUpdatesFromTracks,
 } from '@Core/ui/widget-manager/WidgetGroupUtils'
 import {describe, expect, it} from 'vitest'
@@ -65,6 +66,30 @@ describe('WidgetGroupUtils', () => {
         ], new Map([['text-widget#one', {widgetGroup: 'group#one'}]]))
 
         expect(updates).toEqual(new Map([['text-widget#one', null]]))
+    })
+
+    it('keeps the timeline track name for a grouped track', () => {
+        const updates = resolveWidgetGroupUpdatesFromTracks([
+            {
+                id: 'text-widget#one',
+                label: 'Timeline title',
+                clips: [
+                    {metadata: {widgetId: 'text-widget#one'}},
+                    {metadata: {widgetId: 'text-widget#two'}},
+                ],
+            },
+        ])
+
+        expect(resolveWidgetGroupLabelsFromTracks([
+            {
+                id: 'text-widget#one',
+                label: 'Timeline title',
+                clips: [
+                    {metadata: {widgetId: 'text-widget#one'}},
+                    {metadata: {widgetId: 'text-widget#two'}},
+                ],
+            },
+        ], updates)).toEqual(new Map([['text-widget#one', 'Timeline title']]))
     })
 
     it('expands grouped timeline tracks into widget layer order', () => {

@@ -61,7 +61,8 @@ export const groupWidgetEntries = entries => {
             group = {
                 id: groupId,
                 isGroup: true,
-                label: entry?.id === groupId ? entry?.label ?? null : null,
+                label: entry?.widgetGroupLabel
+                    ?? (entry?.id === groupId ? entry?.label ?? null : null),
                 members: [],
                 widgetGroup: groupId,
             }
@@ -69,7 +70,10 @@ export const groupWidgetEntries = entries => {
             result.push(group)
         }
         group.members.push(entry)
-        if (entry?.id === groupId && entry?.label) {
+        if (entry?.widgetGroupLabel) {
+            group.label = entry.widgetGroupLabel
+        }
+        else if (entry?.id === groupId && entry?.label) {
             group.label = entry.label
         }
     }
@@ -139,6 +143,38 @@ export const resolveWidgetGroupUpdatesFromTracks = (
     }
 
     return updates
+}
+
+/**
+ * Resolve display names carried by grouped timeline tracks.
+ *
+ * Track names are runtime projection data. They are kept outside widget
+ * persistence and are applied to the existing widget entries for display.
+ *
+ * @param {Array} tracks - Public timeline tracks.
+ * @param {Map} widgetGroups - Widget IDs mapped to resolved group IDs.
+ * @returns {Map<string, string>} Group IDs mapped to track names.
+ */
+export const resolveWidgetGroupLabelsFromTracks = (tracks, widgetGroups = new Map()) => {
+    const labels = new Map()
+
+    for (const track of tracks ?? []) {
+        const widgetIds = (track?.clips ?? [])
+            .map(resolveWidgetIdFromClip)
+            .filter(Boolean)
+        if (widgetIds.length < 2 || !track?.label) {
+            continue
+        }
+
+        const groupId = widgetIds.map(widgetId => widgetGroups.get(widgetId)).find(Boolean)
+            ?? track.widgetGroup
+            ?? track.id
+        if (groupId) {
+            labels.set(groupId, track.label)
+        }
+    }
+
+    return labels
 }
 
 /**
