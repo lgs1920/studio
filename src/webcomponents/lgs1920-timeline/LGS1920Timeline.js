@@ -156,6 +156,7 @@ export class LGS1920Timeline extends HTMLElement {
     #edgePointerEvent = null
     #editingRowId = null
     #editingLabelValue = ''
+    #suppressRangeClick = false
     #inputPropagationBlockersInstalled = false
     #externalInteractionActive = false
     #clipEditor
@@ -167,6 +168,15 @@ export class LGS1920Timeline extends HTMLElement {
     constructor() {
         super()
         this.#root = this.attachShadow({mode: 'open'})
+        this.#root.addEventListener('pointerdown', () => {
+            this.#suppressRangeClick = false
+        }, true)
+        this.#root.addEventListener('click', event => {
+            if (!this.#suppressRangeClick) return
+            this.#suppressRangeClick = false
+            event.preventDefault()
+            event.stopImmediatePropagation()
+        }, true)
         const style = document.createElement('style')
         style.textContent = styles
         this.#root.append(style)
@@ -645,6 +655,17 @@ export class LGS1920Timeline extends HTMLElement {
     #normalizeTime = timeMillis => {
         const maximum = Number.isFinite(this.#rangeEndMillis) ? this.#rangeEndMillis : this.#durationMillis()
         return clamp(Number(timeMillis) || 0, this.#rangeStartMillis, Math.max(this.#rangeStartMillis, maximum))
+    }
+
+    /**
+     * Keep the main playhead inside the selected range without moving it when
+     * a range boundary changes around its current position.
+     */
+    #clampCurrentTimeToRange = () => {
+        const minimum = this.#rangeStartMillis
+        const maximum = Math.max(minimum, this.#rangeEndMillis)
+        if (this.#currentTimeMillis < minimum) this.#currentTimeMillis = minimum
+        if (this.#currentTimeMillis > maximum) this.#currentTimeMillis = maximum
     }
 
     /**
@@ -1735,6 +1756,7 @@ export class LGS1920Timeline extends HTMLElement {
         if (event.button !== 0 || this.#timelineConfig.editable === false) return
         event.preventDefault()
         event.stopPropagation()
+        this.#suppressRangeClick = true
         this.#capturePointer(event)
         this.#dragState = {
             type: 'range',
@@ -1764,7 +1786,7 @@ export class LGS1920Timeline extends HTMLElement {
         } else {
             this.#rangeEndMillis = Math.max(nextMillis, this.#rangeStartMillis)
         }
-        this.#currentTimeMillis = this.#normalizeTime(this.#currentTimeMillis)
+        this.#clampCurrentTimeToRange()
         this.#emit('range-changing', this.#rangeChangeDetail(event))
         this.#updateDynamicState()
     }
@@ -1782,7 +1804,7 @@ export class LGS1920Timeline extends HTMLElement {
         this.#rangeEndFollowsDuration = false
         if (edge === 'start') this.#rangeStartMillis = 0
         else this.#rangeEndMillis = this.#durationMillis()
-        this.#currentTimeMillis = this.#normalizeTime(this.#currentTimeMillis)
+        this.#clampCurrentTimeToRange()
         this.#emit('range-change', this.#rangeChangeDetail(event))
         this.#updateDynamicState()
     }
@@ -1807,7 +1829,7 @@ export class LGS1920Timeline extends HTMLElement {
         } else {
             this.#rangeEndMillis = clamp(this.#rangeEndMillis + delta, this.#rangeStartMillis, this.#durationMillis())
         }
-        this.#currentTimeMillis = this.#normalizeTime(this.#currentTimeMillis)
+        this.#clampCurrentTimeToRange()
         this.#emit('range-change', this.#rangeChangeDetail(event))
         this.#updateDynamicState()
     }
@@ -1884,6 +1906,7 @@ export class LGS1920Timeline extends HTMLElement {
      * @param {boolean} settled - Whether the interaction has settled.
      */
     #seek = (clientX, settled) => {
+        if (this.#suppressRangeClick) return
         const rect = this.#surface?.getBoundingClientRect()
         const duration = this.#durationMillis()
         if (!rect || duration <= 0) return
@@ -2275,6 +2298,7 @@ export class LGS1920Timeline extends HTMLElement {
         if (state?.type === 'range' && event.type === 'pointercancel') {
             this.#rangeStartMillis = state.initialStartMillis
             this.#rangeEndMillis = state.initialEndMillis
+            this.#suppressRangeClick = false
         }
         if (state?.type === 'range' && event.type === 'pointerup') {
             this.#emit('range-change', this.#rangeChangeDetail(event))

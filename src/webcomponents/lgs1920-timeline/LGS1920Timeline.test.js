@@ -681,6 +681,42 @@ describe('lgs1920-timeline Web Component', () => {
         expect(rangeChanges.mock.calls[0][0].detail.rangeEndMillis).toBe(6_000)
     })
 
+    it('keeps the playhead in place while range handles move around it', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {
+            timeline: {
+                rangeStartMillis: 1_000,
+                rangeEndMillis: 8_000,
+            },
+            currentTimeMillis: 5_000,
+        })
+        document.body.append(timeline)
+
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 600, width: 600})
+        const playhead = timeline.shadowRoot.querySelector('[data-playhead]')
+        const initialPlayheadPosition = playhead.style.left
+        const startHandle = timeline.shadowRoot.querySelector('[data-range-handle="start"]')
+        startHandle.dispatchEvent(createPointerEvent('pointerdown', {clientX: 60, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 100, clientY: 50}))
+
+        expect(timeline.currentTimeMillis).toBe(5_000)
+        expect(playhead.style.left).toBe(initialPlayheadPosition)
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 100, clientY: 50}))
+        surface.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, clientX: 100, clientY: 50}))
+        expect(timeline.currentTimeMillis).toBe(5_000)
+        expect(playhead.style.left).toBe(initialPlayheadPosition)
+
+        const endHandle = timeline.shadowRoot.querySelector('[data-range-handle="end"]')
+        endHandle.dispatchEvent(createPointerEvent('pointerdown', {clientX: 340, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 180, clientY: 50}))
+
+        expect(timeline.currentTimeMillis).toBe(4_000)
+        expect(playhead.style.left).not.toBe(initialPlayheadPosition)
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 180, clientY: 50}))
+        expect(timeline.currentTimeMillis).toBe(4_000)
+    })
+
     it('drags both global range handles and snaps them to the timeline limits', () => {
         const timeline = new LGS1920Timeline()
         const rangeChanges = vi.fn()
