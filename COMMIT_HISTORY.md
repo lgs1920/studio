@@ -1559,3 +1559,19 @@
 ## 2026-09-02 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/89a6ac0a6bf6daac77ef5dfa9ab420835a899839)
 
 - Recorded automatically from Git history.
+
+## 2026-09-02 — [`feat(timeline): support grouped tracks and adaptive zoom`](https://github.com/lgs1920/studio/commit/88a3b5d2270d521c22347581e866e21bda0a0111)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/a335e7452a982e70eee9d82788be7f5ff4678ead)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-09-02 — [`feat(widget-group): support grouped widgets across timeline and drawer`](https://github.com/lgs1920/studio/commit/471af250031cafdccc85586a1d49923d43c3f3b4)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/1db4db53359d15a5c28ba78878d72fded045d1da)
+
+- Recorded automatically from Git history.
