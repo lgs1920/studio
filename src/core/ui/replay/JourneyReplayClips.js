@@ -112,6 +112,7 @@ const normalizeDefinition = (definition = {}) => {
         icon: definition.icon ?? null,
         description: definition.description ?? '',
         slots,
+        resizable: definition.resizable !== false,
         maxInstances: Number.isFinite(Number(definition.maxInstances))
                       && Number(definition.maxInstances) > 0
                       ? Math.max(1, Math.floor(Number(definition.maxInstances)))
@@ -156,6 +157,7 @@ const normalizeInstance = (instance = {}, definition = null, slot = null) => {
         clipId,
         slot: resolvedSlot,
         enabled: instance.enabled !== false,
+        resizable: instance.resizable ?? targetDefinition?.resizable !== false,
         params: normalizeParams(targetDefinition, instance.params ?? instance.values ?? {}),
     }
 }

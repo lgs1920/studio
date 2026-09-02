@@ -111,6 +111,7 @@ const resolveWidgetTrackDefinitions = widgetOrder => {
             canHide: true,
             visible: true,
             fixed: false,
+            resizable: true,
         }))
     }
 
@@ -144,6 +145,7 @@ const resolveWidgetTrackDefinitions = widgetOrder => {
             widgetGroup: typeof widget === 'object' ? widget?.widgetGroup ?? null : null,
             widgetGroupLabel: typeof widget === 'object' ? widget?.widgetGroupLabel ?? null : null,
             fixed: typeof widget === 'object' && widget?.fixed === true,
+            resizable: typeof widget === 'object' ? widget?.resizable !== false : true,
         }
     }).filter(Boolean)
 
@@ -225,6 +227,7 @@ const actionFromRange = ({
     clip = null,
     icon = null,
     movable = true,
+    resizable = true,
     timelineColor = DEFAULT_TIMELINE_COLOR,
     visible = true,
 }) => ({
@@ -246,6 +249,7 @@ const actionFromRange = ({
     visible,
     locked: !movable,
     movable,
+    resizable,
     flexible: false,
 })
 
@@ -278,6 +282,7 @@ const buildReplayActions = timeline => timeline.phases
         startMillis: phase.startMillis,
         endMillis: phase.endMillis,
         clip: phase.clip,
+        resizable: phase.kind !== 'replay' && phase.clip?.resizable !== false,
         icon: phase.kind === 'replay'
             ? 'route'
             : timeline.clips?.catalog?.[phase.clip?.clipId]?.icon
@@ -427,6 +432,7 @@ const buildWidgetActions = (timeline, frameTimeline, modeDefinition) => {
             endMillis,
             icon: modeDefinition.icon,
             movable: modeDefinition.movable !== false,
+            resizable: modeDefinition.resizable !== false,
             timelineColor: modeDefinition.timelineColor,
             visible: modeDefinition.visible,
         }))
@@ -460,6 +466,7 @@ const buildStaticWidgetActions = (timeline, widgetDefinition) => {
         icon: widgetDefinition.icon,
         timelineColor: widgetDefinition.timelineColor,
         movable: widgetDefinition.fixed !== true,
+        resizable: widgetDefinition.resizable !== false,
         visible: widgetDefinition.visible,
     })]
 }
@@ -485,6 +492,7 @@ const buildTrackWidgetActions = (timeline, frameTimeline, widgetDefinition) => {
             timelineColor: member.timelineColor,
             visible: member.visible,
             movable: !member.fixed,
+            resizable: member.resizable !== false,
         })
         : buildStaticWidgetActions(timeline, member))
 }

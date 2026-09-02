@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-31
- * Last modified: 2026-09-01
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,14 +38,77 @@ export const resolveClipInterval = clip => {
 }
 
 /**
+ * Snap a time value to the nearest ruler unit when it is close enough.
+ *
+ * @param {number} time - Time value in seconds.
+ * @param {Object} options - Snap configuration.
+ * @param {number} options.majorSeconds - Duration of one ruler unit.
+ * @param {number} options.thresholdSeconds - Maximum distance allowed for snapping.
+ * @returns {number} Snapped or unchanged time value.
+ */
+export const snapTimeToMajorUnit = (time, {majorSeconds, thresholdSeconds} = {}) => {
+    const value = Number(time)
+    const unit = Number(majorSeconds)
+    const threshold = Number(thresholdSeconds)
+    if (!Number.isFinite(value) || !Number.isFinite(unit) || unit <= 0 || !Number.isFinite(threshold) || threshold < 0) return value
+    const snapped = Math.round(value / unit) * unit
+    return Math.abs(snapped - value) <= threshold + 1e-9 ? Number(snapped.toFixed(6)) : value
+}
+
+/**
+ * Snap the edited edge, or the closest edge during a move, to a ruler unit.
+ *
+ * @param {Object} options - Clip interval and snap configuration.
+ * @param {number} options.start - Proposed clip start in seconds.
+ * @param {number} options.end - Proposed clip end in seconds.
+ * @param {'move'|'resize'} options.mode - Interaction mode.
+ * @param {'start'|'end'|null} options.edge - Resized edge.
+ * @param {number} options.majorSeconds - Duration of one ruler unit.
+ * @param {number} options.thresholdSeconds - Maximum distance allowed for snapping.
+ * @returns {{start: number, end: number}} Snapped clip interval.
+ */
+export const snapClipToMajorUnits = ({start, end, mode, edge, majorSeconds, thresholdSeconds}) => {
+    const interval = {start: Number(start), end: Number(end)}
+    if (mode === 'resize') {
+        if (edge === 'start') {
+            interval.start = snapTimeToMajorUnit(interval.start, {majorSeconds, thresholdSeconds})
+        } else if (edge === 'end') {
+            interval.end = snapTimeToMajorUnit(interval.end, {majorSeconds, thresholdSeconds})
+        }
+        return interval
+    }
+
+    const duration = interval.end - interval.start
+    const unit = Number(majorSeconds)
+    const threshold = Number(thresholdSeconds)
+    if (!Number.isFinite(unit) || unit <= 0 || !Number.isFinite(threshold) || threshold < 0) return interval
+    const candidates = [
+        {edge: 'start', target: Math.round(interval.start / unit) * unit},
+        {edge: 'end', target: Math.round(interval.end / unit) * unit},
+    ]
+    candidates.forEach(candidate => {
+        candidate.distance = Math.abs(candidate.target - (candidate.edge === 'start' ? interval.start : interval.end))
+    })
+    candidates.sort((left, right) => left.distance - right.distance)
+    const nearest = candidates[0]
+    if (!nearest || nearest.distance > threshold + 1e-9) return interval
+    const target = nearest.target
+    return nearest.edge === 'start'
+        ? {start: target, end: target + duration}
+        : {start: target - duration, end: target}
+}
+
+/**
  * Resolve the collision policy for a track.
  *
  * @param {Object} timeline - Timeline configuration.
  * @param {Object} track - Target track.
  * @returns {'allow'|'prevent'|'ripple'} Collision policy.
  */
-const resolveCollisionPolicy = (timeline, track) => {
-    const policy = track?.collisionPolicy ?? timeline?.collisionPolicy ?? 'prevent'
+const resolveCollisionPolicy = (timeline, track, mode = 'move') => {
+    const policy = mode === 'resize'
+        ? track?.resizeCollisionPolicy ?? timeline?.resizeCollisionPolicy ?? 'ripple'
+        : track?.collisionPolicy ?? timeline?.collisionPolicy ?? 'prevent'
     return ['allow', 'prevent', 'ripple'].includes(policy) ? policy : 'prevent'
 }
 
@@ -95,6 +158,34 @@ const rippleClips = clips => {
             previousEnd = end
             return {...clip, start, end}
         })
+}
+
+/**
+ * Ripple clips on the edited side of a resized clip.
+ *
+ * @param {Object} options - Resize ripple options.
+ * @param {Array} options.clips - Clips on the target track including the edited clip.
+ * @param {Object} options.originalClip - Clip before the resize.
+ * @param {Object} options.proposedClip - Clip after the resize.
+ * @param {'start'|'end'} options.edge - Resized edge.
+ * @returns {Array} Resized and rippled clips.
+ */
+export const rippleResizedClips = ({clips, originalClip, proposedClip, edge}) => {
+    const original = resolveClipInterval(originalClip)
+    const proposed = resolveClipInterval(proposedClip)
+    const delta = edge === 'start'
+        ? proposed.start - original.start
+        : proposed.end - original.end
+
+    return clips.map(value => {
+        if (value.id === proposedClip.id) return proposedClip
+        const interval = resolveClipInterval(value)
+        const isOnEditedSide = edge === 'start'
+            ? interval.end <= original.start
+            : interval.start >= original.end
+        if (!isOnEditedSide) return value
+        return {...value, start: interval.start + delta, end: interval.end + delta}
+    }).sort((left, right) => resolveClipInterval(left).start - resolveClipInterval(right).start)
 }
 
 /**
@@ -153,6 +244,7 @@ export const createTimelineClipEditor = ({
     getRows,
     getTimelineConfig,
     getProjectionDurationMillis,
+    getMajorRulerUnit,
     getTimeAtClientX,
     getTrackAtClientY,
     getRangeEndFollowsDuration,
@@ -191,6 +283,30 @@ export const createTimelineClipEditor = ({
     }
 
     /**
+     * Resolve the magnetic snap configuration for the current ruler.
+     *
+     * @param {Object} [options] - Snap options.
+     * @param {boolean} [options.secondary=false] - Use the secondary ruler unit.
+     * @returns {{majorSeconds: number, thresholdSeconds: number}|null} Snap configuration.
+     */
+    const resolveSnap = ({secondary = false} = {}) => {
+        const timeline = getTimelineConfig()
+        if (timeline.snap === false) return null
+        const unit = getMajorRulerUnit?.()
+        const requestedSeconds = secondary ? Number(unit?.minorSeconds) : Number(unit?.seconds)
+        const requestedPixels = secondary ? Number(unit?.minorPixels) : Number(unit?.pixels)
+        const majorSeconds = requestedSeconds > 0 ? requestedSeconds : Number(unit?.seconds)
+        const pixels = requestedPixels > 0 ? requestedPixels : Number(unit?.pixels)
+        if (!Number.isFinite(majorSeconds) || majorSeconds <= 0 || !Number.isFinite(pixels) || pixels <= 0) return null
+        const configuredPixels = Number(timeline.snapThresholdPixels)
+        const thresholdPixels = Number.isFinite(configuredPixels) && configuredPixels >= 0 ? configuredPixels : 8
+        return {
+            majorSeconds,
+            thresholdSeconds: (thresholdPixels / pixels) * majorSeconds,
+        }
+    }
+
+    /**
      * Place a clip on a track and apply the track collision policy.
      *
      * @param {Object} options - Placement options.
@@ -213,8 +329,9 @@ export const createTimelineClipEditor = ({
             ...row,
             actions: (row.actions ?? []).filter(value => value.id !== clip.id),
         }))
+        const originalClip = target.actions?.find(value => value.id === clip.id) ?? clip
         const targetAfterRemoval = rowsWithoutClip.find(row => row.id === targetTrackId)
-        const policy = previewOnly ? 'allow' : resolveCollisionPolicy(timeline, target)
+        const policy = previewOnly ? 'allow' : resolveCollisionPolicy(timeline, target, mode)
         const minimumDuration = minimumClipDuration(target, clip)
         const durationPolicy = timeline.durationPolicy ?? 'fixed'
         const baseDurationMillis = Number(getProjectionDurationMillis()) || 0
@@ -233,9 +350,17 @@ export const createTimelineClipEditor = ({
         if (!placedClip) return null
         const targetClips = [...(targetAfterRemoval?.actions ?? []), placedClip]
 
-        const laidOutClips = policy === 'ripple'
-            ? rippleClips(targetClips)
+        const laidOutClips = policy === 'ripple' && mode === 'resize'
+            ? rippleResizedClips({
+                clips: targetClips,
+                originalClip,
+                proposedClip: placedClip,
+                edge,
+            })
+            : policy === 'ripple'
+                ? rippleClips(targetClips)
             : targetClips.sort((left, right) => resolveClipInterval(left).start - resolveClipInterval(right).start)
+        if (laidOutClips.some(value => resolveClipInterval(value).start < 0)) return null
         const nextRows = rowsWithoutClip.map(row => row.id === targetTrackId
             ? {...row, actions: laidOutClips}
             : row)
@@ -318,6 +443,23 @@ export const createTimelineClipEditor = ({
             start = Math.max(0, Math.min(state.originalStart + delta, state.originalEnd - minimumDuration))
         } else {
             end = Math.max(state.originalStart + minimumDuration, state.originalEnd + delta)
+            if (durationPolicy !== 'extend') end = Math.min(end, baseDuration)
+        }
+
+        const snap = resolveSnap({secondary: (state.mode === 'move' || state.mode === 'resize') && event.shiftKey === true})
+        if (snap) {
+            const snapped = snapClipToMajorUnits({start, end, mode: state.mode, edge: state.edge, ...snap})
+            start = snapped.start
+            end = snapped.end
+        }
+        if (state.mode === 'move') {
+            start = Math.max(0, start)
+            if (durationPolicy !== 'extend') start = Math.min(start, Math.max(0, baseDuration - duration))
+            end = start + duration
+        } else if (state.edge === 'start') {
+            start = Math.max(0, Math.min(start, state.originalEnd - minimumDuration))
+        } else {
+            end = Math.max(state.originalStart + minimumDuration, end)
             if (durationPolicy !== 'extend') end = Math.min(end, baseDuration)
         }
 

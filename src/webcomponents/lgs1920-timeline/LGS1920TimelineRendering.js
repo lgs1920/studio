@@ -80,7 +80,9 @@ export const createTimelineRenderer = ({
         const start = Math.max(0, Number(value.start) || 0)
         const end = Math.max(start, Number(value.end) || start)
         const dragState = getDragState()
-        const element = createElement('div', `lgs1920-wa-timeline__clip ${resolveColorClasses(value.colorClasses)}${value.visible === false ? ' lgs1920-wa-timeline__clip--hidden' : ''}${trackVisible === false ? ' lgs1920-wa-timeline__clip--track-hidden' : ''}${dragState?.type === 'clip' && dragState.clipId === value.id ? ' lgs1920-wa-timeline__clip--dragging' : ''}`, {
+        const isDragging = dragState?.type === 'clip' && dragState.clipId === value.id
+        const isResizing = isDragging && dragState.mode === 'resize'
+        const element = createElement('div', `lgs1920-wa-timeline__clip ${resolveColorClasses(value.colorClasses)}${value.visible === false ? ' lgs1920-wa-timeline__clip--hidden' : ''}${trackVisible === false ? ' lgs1920-wa-timeline__clip--track-hidden' : ''}${isDragging ? ' lgs1920-wa-timeline__clip--dragging' : ''}${isResizing ? ' lgs1920-wa-timeline__clip--resizing' : ''}`, {
             part: 'clip',
             id: `lgs1920-timeline-clip-${String(value.id ?? '')}`,
             'data-clip-id': value.id,
@@ -306,7 +308,27 @@ export const createTimelineRenderer = ({
             }
             ruler.append(tick)
         }
-        ruler.append(createElement('slot', '', {name: 'timeline-ruler'}))
+        ruler.append(
+            createElement('slot', '', {name: 'timeline-ruler'}),
+            createElement('div', 'lgs1920-wa-timeline__clip-edge-indicator', {
+                part: 'clip-edge-indicator',
+                'data-clip-edge-indicator': '',
+                'aria-hidden': 'true',
+                hidden: true,
+            }),
+            createElement('div', 'lgs1920-wa-timeline__clip-move-endpoint lgs1920-wa-timeline__clip-move-endpoint--start', {
+                part: 'clip-move-start-endpoint',
+                'data-clip-move-endpoint': 'start',
+                'aria-hidden': 'true',
+                hidden: true,
+            }),
+            createElement('div', 'lgs1920-wa-timeline__clip-move-endpoint lgs1920-wa-timeline__clip-move-endpoint--end', {
+                part: 'clip-move-end-endpoint',
+                'data-clip-move-endpoint': 'end',
+                'aria-hidden': 'true',
+                hidden: true,
+            }),
+        )
         const tracks = createElement('div', 'lgs1920-wa-timeline__tracks', {part: 'tracks'})
         tracks.style.width = `${getContentWidth()}px`
         getRows().forEach(row => {

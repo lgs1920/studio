@@ -119,6 +119,7 @@ clock integration.
 | `editable` | `boolean` | Enables clip editing and track reordering. Defaults to `true`. |
 | `interactive` | `boolean` | Enables playback, scrubbing, editing, menus, and emitted interaction events. Defaults to `true`. |
 | `collisionPolicy` | `'allow' \| 'prevent' \| 'ripple'` | Default clip collision policy for tracks. Defaults to `prevent`. |
+| `resizeCollisionPolicy` | `'allow' \| 'prevent' \| 'ripple'` | Default collision policy for clip resizes. Defaults to `ripple`. |
 | `durationPolicy` | `'fixed' \| 'extend'` | Keeps the duration fixed or extends it when an edit exceeds the end. Defaults to `fixed`. |
 | `keyboardZoomActive` | `boolean` | Enables arrow-key zoom when the containing widget is selected. Defaults to `false`. |
 | `defaultTrackId` | `string` | Track used when a clip-menu option does not specify a track. |
@@ -143,6 +144,7 @@ clock integration.
 | `droppable` | `boolean` | Allows clips to be moved or inserted on the track. Defaults to `true`. |
 | `accepts` | `string[]` | Clip kinds accepted by the track. An empty value accepts every kind. |
 | `collisionPolicy` | `'allow' \| 'prevent' \| 'ripple'` | Collision behavior for clip edits on this track. |
+| `resizeCollisionPolicy` | `'allow' \| 'prevent' \| 'ripple'` | Collision behavior for clip resizes on this track. Defaults to `ripple`. |
 | `minClipDuration` | `number` | Minimum duration applied to clips on this track, in seconds. |
 | `clips` | `array` | Clips displayed on the track. |
 
@@ -426,18 +428,38 @@ and end handle on every resizable clip, moves clips horizontally when their
 body is dragged, and accepts a clip on another compatible track while it is
 being dragged. The target track is highlighted during the gesture.
 
-Clip movement preserves its duration. Resizing the start handle changes
+Clip movement preserves its duration and shows a diamond centered on each
+endpoint of the ruler's lower border while the clip is being moved; each marker
+protrudes halfway into the track area. Resizing the start handle changes
 `start` while keeping `end` stable. Resizing the end handle changes `end` while
 keeping `start` stable. Both handles respect the timeline bounds and the
 configured minimum duration.
 
-Track collision behavior is selected with `collisionPolicy`:
+While a clip edge is being resized, a blue diamond follows the edge's current
+time position centered on the ruler's lower border. It is transient and
+disappears when the gesture ends or is cancelled.
+
+During pointer movement and resizing, the edited clip edge snaps to the nearest
+major ruler unit when it enters the eight-pixel magnetic threshold. Holding
+`Shift` while moving or resizing a clip uses the currently rendered secondary
+ruler units instead. A clip move uses whichever of its two edges is closest, so
+the duration remains unchanged when the clip stays on its current track or is
+moved to another compatible track. Set `snap: false` on the timeline
+configuration to disable this behavior.
+
+Track collision behavior for movement and insertion is selected with
+`collisionPolicy`; resize behavior is selected independently with
+`resizeCollisionPolicy`:
 
 | Policy | Behavior |
 | --- | --- |
 | `allow` | Clips may overlap. Use only when overlap is explicitly required. |
 | `prevent` | Clips cannot overlap. A moved or inserted clip is fitted to the available gap; a resize stops at the neighboring clip. |
 | `ripple` | Overlapping clips and subsequent clips are shifted to the right while their durations are preserved. |
+
+Resize ripple shifts all clips on the same track on the edited side: a start
+resize shifts clips to the left of the edited clip, while an end resize shifts
+clips to its right. The clips keep their durations and relative spacing.
 
 While a clip is dragged over an occupied or otherwise invalid drop zone, it
 continues following the pointer and displays the `not-allowed` cursor. The

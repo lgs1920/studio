@@ -104,6 +104,10 @@
     --lgs-timeline-playhead-width: 2px;
     /* Timeline end marker color. */
     --lgs-timeline-end-marker-color: var(--wa-color-border-normal);
+    /* Timeline clip edge indicator color. */
+    --lgs-timeline-clip-edge-indicator-color: var(--wa-color-blue-70, #57b8f1);
+    /* Timeline clip edge indicator diameter. */
+    --lgs-timeline-clip-edge-indicator-size: 6px;
     /* Timeline video range handle width. */
     --lgs-timeline-range-handle-width: 10px;
     /* Timeline video range handle color. */
@@ -891,6 +895,30 @@
         opacity: 0.7;
     }
 
+    & .lgs1920-wa-timeline__clip-edge-indicator {
+        position: absolute;
+        top: var(--lgs-timeline-header-height);
+        left: 0;
+        z-index: 7;
+        width: 0;
+        height: 0;
+        pointer-events: none;
+    }
+
+    & .lgs1920-wa-timeline__clip-edge-indicator::before {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: var(--lgs-timeline-clip-edge-indicator-size);
+        height: var(--lgs-timeline-clip-edge-indicator-size);
+        content: '';
+        background: var(--lgs-timeline-clip-edge-indicator-color);
+        border: 1px solid var(--lgs-timeline-clip-edge-indicator-color);
+        border-radius: 1px;
+        box-shadow: var(--wa-shadow-s);
+        transform: translate(-50%, -50%) rotate(45deg);
+    }
+
     & .lgs1920-wa-timeline__range-handle {
         position: absolute;
         top: 0;
@@ -978,6 +1006,30 @@
 
     & .lgs1920-wa-timeline__clip.lgs1920-wa-timeline__clip--dragging {
         opacity: 0.75;
+    }
+
+    & .lgs1920-wa-timeline__clip-move-endpoint {
+        position: absolute;
+        top: var(--lgs-timeline-header-height);
+        left: 0;
+        z-index: 3;
+        width: 0;
+        height: 0;
+        pointer-events: none;
+    }
+
+    & .lgs1920-wa-timeline__clip-move-endpoint::before {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: var(--lgs-timeline-clip-edge-indicator-size);
+        height: var(--lgs-timeline-clip-edge-indicator-size);
+        background: var(--lgs-timeline-clip-edge-indicator-color);
+        border: 1px solid var(--lgs-timeline-clip-edge-indicator-color);
+        border-radius: 1px;
+        box-shadow: var(--wa-shadow-s);
+        content: '';
+        transform: translate(-50%, -50%) rotate(45deg);
     }
 
     & .lgs1920-wa-timeline__clip.lgs1920-wa-timeline__clip--drop-rejected {

@@ -193,6 +193,17 @@ export class LGS1920Timeline extends HTMLElement {
             getRows: () => this.#rows,
             getTimelineConfig: () => this.#timelineConfig,
             getProjectionDurationMillis: () => this.#projection?.durationMillis ?? 0,
+            getMajorRulerUnit: () => {
+                const {majorSeconds, scaleSplitCount} = resolveScale(this.#zoom)
+                const scaleWidth = this.#scaleWidth()
+                const splitCount = Number(scaleSplitCount)
+                return {
+                    seconds: majorSeconds,
+                    pixels: scaleWidth,
+                    minorSeconds: splitCount > 1 ? majorSeconds / splitCount : null,
+                    minorPixels: splitCount > 1 ? scaleWidth / splitCount : null,
+                }
+            },
             getTimeAtClientX: clientX => this.#timeAtClientX(clientX),
             getTrackAtClientY: clientY => this.#trackAtClientY(clientY),
             getRangeEndFollowsDuration: () => this.#rangeEndFollowsDuration,
@@ -1498,6 +1509,7 @@ export class LGS1920Timeline extends HTMLElement {
             durationMillis: Number(this.#projection?.durationMillis) || 0,
         }, event))
         this.#handleEdgeAutoScroll(event)
+        this.#updateClipInteractionPresentation()
     }
     /**
      * Toggle a track visibility state and emit its controlled change event.
@@ -2825,6 +2837,39 @@ export class LGS1920Timeline extends HTMLElement {
         const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
         const dragState = this.#dragState
         this.toggleAttribute('data-clip-drop-rejected', dragState?.type === 'clip' && dragState.dropRejected === true)
+        const clipEdgeIndicator = this.#root.querySelector('[data-clip-edge-indicator]')
+        const clipMoveEndpoints = [...this.#root.querySelectorAll('[data-clip-move-endpoint]')]
+        const resizingClip = dragState?.type === 'clip' && dragState.mode === 'resize'
+            ? this.#clipEditor.findClipEntry(this.#rows, dragState.clipId)?.clip
+            : null
+        const movingClip = dragState?.type === 'clip' && dragState.mode === 'move'
+            ? this.#clipEditor.findClipEntry(this.#rows, dragState.clipId)?.clip
+            : null
+        if (clipEdgeIndicator) {
+            const edgeTime = resizingClip && dragState.edge === 'start'
+                ? resolveClipInterval(resizingClip).start
+                : resizingClip && dragState.edge === 'end'
+                    ? resolveClipInterval(resizingClip).end
+                    : null
+            const hasEdgeTime = Number.isFinite(edgeTime)
+            clipEdgeIndicator.hidden = !hasEdgeTime
+            if (hasEdgeTime) {
+                clipEdgeIndicator.style.left = `${scaleOffset + ((edgeTime / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
+            }
+        }
+        clipMoveEndpoints.forEach(endpoint => {
+            const edge = endpoint.getAttribute('data-clip-move-endpoint')
+            const endpointTime = movingClip && edge === 'start'
+                ? resolveClipInterval(movingClip).start
+                : movingClip && edge === 'end'
+                    ? resolveClipInterval(movingClip).end
+                    : null
+            const hasEndpointTime = Number.isFinite(endpointTime)
+            endpoint.hidden = !hasEndpointTime
+            if (hasEndpointTime) {
+                endpoint.style.left = `${scaleOffset + ((endpointTime / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
+            }
+        })
         const clips = new Map([...this.#root.querySelectorAll('[data-clip-id]')]
             .map(element => [String(element.getAttribute('data-clip-id')), element]))
         const tracks = new Map([...this.#root.querySelectorAll('[part="track"]')]
@@ -2843,7 +2888,9 @@ export class LGS1920Timeline extends HTMLElement {
                 element.style.width = `${Math.max(this.#numericToken('clip-min-width', 8), ((end - start) / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
                 element.classList.toggle('lgs1920-wa-timeline__clip--hidden', value.visible === false)
                 element.classList.toggle('lgs1920-wa-timeline__clip--track-hidden', row.visible === false)
-                element.classList.toggle('lgs1920-wa-timeline__clip--dragging', dragState?.type === 'clip' && dragState.clipId === value.id)
+                const isDragging = dragState?.type === 'clip' && dragState.clipId === value.id
+                element.classList.toggle('lgs1920-wa-timeline__clip--dragging', isDragging)
+                element.classList.toggle('lgs1920-wa-timeline__clip--resizing', isDragging && dragState.mode === 'resize')
                 element.classList.toggle('lgs1920-wa-timeline__clip--drop-rejected', dragState?.type === 'clip'
                     && dragState.clipId === value.id
                     && dragState.dropRejected === true)

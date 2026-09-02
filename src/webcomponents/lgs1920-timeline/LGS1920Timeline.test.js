@@ -27,6 +27,7 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/components/split-panel/split-panel.
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/tooltip/tooltip.js', () => ({}))
 
 import {LGS1920Timeline} from './LGS1920Timeline'
+import {rippleResizedClips} from './LGS1920TimelineEditing'
 import {formatRulerTime} from './LGS1920TimelineUtils.js'
 
 const timelineState = {
@@ -1172,6 +1173,187 @@ describe('lgs1920-timeline Web Component', () => {
         expect(changes.mock.calls[0][0].detail.clip.end).toBe(5)
     })
 
+    it('honors the public resizable clip setting', () => {
+        const timeline = new LGS1920Timeline()
+        const changes = vi.fn()
+        configureTimeline(timeline, {
+            tracks: [{
+                id: 'locked-size',
+                label: 'Locked size',
+                clips: [{id: 'locked-clip', kind: 'video', start: 1, end: 4, resizable: false}],
+            }],
+        })
+        timeline.addEventListener('lgs1920-timeline-clip-change', changes)
+        document.body.append(timeline)
+
+        const handle = timeline.shadowRoot.querySelector('[data-clip-id="locked-clip"] [data-clip-handle="end"]')
+        expect(handle.getAttribute('tabindex')).toBe('-1')
+        expect(handle.getAttribute('aria-hidden')).toBe('true')
+        handle.dispatchEvent(createPointerEvent('pointerdown', {clientX: 180, clientY: 50}))
+        expect(changes).not.toHaveBeenCalled()
+    })
+
+    it('moves the clips on either side of a resized clip on the same track', () => {
+        const clips = [
+            {id: 'before', start: 1, end: 3},
+            {id: 'target', start: 4, end: 6},
+            {id: 'after', start: 7, end: 9},
+        ]
+
+        expect(rippleResizedClips({
+            clips,
+            originalClip: clips[1],
+            proposedClip: {...clips[1], start: 3},
+            edge: 'start',
+        })).toEqual([
+            {id: 'before', start: 0, end: 2},
+            {id: 'target', start: 3, end: 6},
+            {id: 'after', start: 7, end: 9},
+        ])
+        expect(rippleResizedClips({
+            clips,
+            originalClip: clips[1],
+            proposedClip: {...clips[1], end: 8},
+            edge: 'end',
+        })).toEqual([
+            {id: 'before', start: 1, end: 3},
+            {id: 'target', start: 4, end: 8},
+            {id: 'after', start: 9, end: 11},
+        ])
+    })
+
+    it('shows endpoint diamonds only while a clip is being moved', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline)
+        document.body.append(timeline)
+
+        const clip = timeline.shadowRoot.querySelector('[data-clip-id="clip-one"]')
+        const endpoints = timeline.shadowRoot.querySelectorAll('[data-clip-move-endpoint]')
+        expect(clip.querySelectorAll('[data-clip-endpoint]')).toHaveLength(0)
+        expect(endpoints).toHaveLength(2)
+        expect(endpoints[0].hidden).toBe(true)
+        expect(endpoints[1].hidden).toBe(true)
+
+        clip.dispatchEvent(createPointerEvent('pointerdown', {clientX: 60, clientY: 50}))
+        expect(endpoints[0].hidden).toBe(false)
+        expect(endpoints[1].hidden).toBe(false)
+        expect(endpoints[0].parentElement).toBe(timeline.shadowRoot.querySelector('[part="ruler"]'))
+        expect(endpoints[0].style.left).toBe('60px')
+        expect(endpoints[1].style.left).toBe('180px')
+        expect(endpoints[0].getAttribute('part')).toBe('clip-move-start-endpoint')
+        expect(endpoints[1].getAttribute('part')).toBe('clip-move-end-endpoint')
+
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 60, clientY: 50}))
+        expect(endpoints[0].hidden).toBe(true)
+        expect(endpoints[1].hidden).toBe(true)
+    })
+
+    it('snaps moved and resized clip edges to nearby major ruler units', () => {
+        const timeline = new LGS1920Timeline()
+        const changes = vi.fn()
+        configureTimeline(timeline, {
+            tracks: [{id: 'main', label: 'Main', clips: [{id: 'snap-me', kind: 'video', start: 1, end: 4}]}],
+        })
+        timeline.addEventListener('lgs1920-timeline-clip-change', changes)
+        document.body.append(timeline)
+
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 600, width: 600})
+        const clip = timeline.shadowRoot.querySelector('[data-clip-id="snap-me"]')
+        clip.dispatchEvent(createPointerEvent('pointerdown', {clientX: 60, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 108, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 108, clientY: 50}))
+
+        expect(changes.mock.calls[0][0].detail.clip).toMatchObject({start: 2, end: 5})
+
+        const endHandle = timeline.shadowRoot.querySelector('[data-clip-id="snap-me"] [data-clip-handle="end"]')
+        endHandle.dispatchEvent(createPointerEvent('pointerdown', {clientX: 220, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 228, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 228, clientY: 50}))
+
+        expect(changes.mock.calls[1][0].detail.clip.end).toBe(5)
+    })
+
+    it('snaps a moved clip to secondary ruler units while Shift is held', () => {
+        const timeline = new LGS1920Timeline()
+        const changes = vi.fn()
+        configureTimeline(timeline, {
+            tracks: [{id: 'main', label: 'Main', clips: [{id: 'snap-secondary', kind: 'video', start: 1, end: 4}]}],
+        })
+        timeline.addEventListener('lgs1920-timeline-clip-change', changes)
+        document.body.append(timeline)
+
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 600, width: 600})
+        const clip = timeline.shadowRoot.querySelector('[data-clip-id="snap-secondary"]')
+        clip.dispatchEvent(createPointerEvent('pointerdown', {clientX: 60, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 88, clientY: 50, shiftKey: true}))
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 88, clientY: 50, shiftKey: true}))
+
+        expect(changes.mock.calls[0][0].detail.clip).toMatchObject({start: 1.8, end: 4.8})
+    })
+
+    it('snaps a resized clip edge to secondary ruler units while Shift is held', () => {
+        const timeline = new LGS1920Timeline()
+        const changes = vi.fn()
+        configureTimeline(timeline, {
+            tracks: [{id: 'main', label: 'Main', clips: [{id: 'resize-secondary', kind: 'video', start: 1, end: 4}]}],
+        })
+        timeline.addEventListener('lgs1920-timeline-clip-change', changes)
+        document.body.append(timeline)
+
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 600, width: 600})
+        const endHandle = timeline.shadowRoot.querySelector('[data-clip-id="resize-secondary"] [data-clip-handle="end"]')
+        endHandle.dispatchEvent(createPointerEvent('pointerdown', {clientX: 180, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 188, clientY: 50, shiftKey: true}))
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 188, clientY: 50, shiftKey: true}))
+
+        expect(changes.mock.calls[0][0].detail.clip).toMatchObject({start: 1, end: 4.2})
+    })
+
+    it('shows the resized clip edge position as a bottom diamond marker', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline)
+        document.body.append(timeline)
+
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 600, width: 600})
+        const indicator = timeline.shadowRoot.querySelector('[data-clip-edge-indicator]')
+        const endHandle = timeline.shadowRoot.querySelector('[data-clip-id="clip-one"] [data-clip-handle="end"]')
+        endHandle.dispatchEvent(createPointerEvent('pointerdown', {clientX: 180, clientY: 50}))
+
+        expect(indicator.hidden).toBe(false)
+        expect(indicator.style.left).toBe('180px')
+
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 228, clientY: 50}))
+        expect(indicator.hidden).toBe(false)
+        expect(indicator.style.left).toBe('220px')
+
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 228, clientY: 50}))
+        expect(indicator.hidden).toBe(true)
+    })
+
+    it('preserves local ruler zoom when controlled clip updates replace the tracks', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {timeline: {zoomPercent: 0}})
+        document.body.append(timeline)
+        timeline.setZoom(100)
+        timeline.addEventListener('lgs1920-timeline-clip-change', event => {
+            timeline.timeline = {durationMillis: 10_000, visible: true, zoomPercent: 0}
+            timeline.tracks = event.detail.tracks
+        })
+
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 600, width: 600})
+        const clip = timeline.shadowRoot.querySelector('[data-clip-id="clip-one"]')
+        clip.dispatchEvent(createPointerEvent('pointerdown', {clientX: 60, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 100, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 100, clientY: 50}))
+
+        expect(timeline.shadowRoot.querySelector('[data-surface]').getAttribute('data-zoom-percent')).toBe('100')
+    })
+
     it('moves a clip from one track to another and preserves its duration', () => {
         const timeline = new LGS1920Timeline()
         const changes = vi.fn()
@@ -1193,8 +1375,8 @@ describe('lgs1920-timeline Web Component', () => {
         vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 600, width: 600})
         const clip = timeline.shadowRoot.querySelector('[data-clip-id="move-me"]')
         clip.dispatchEvent(createPointerEvent('pointerdown', {clientX: 60, clientY: 50}))
-        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 100, clientY: 70}))
-        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 100, clientY: 70}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 108, clientY: 70}))
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 108, clientY: 70}))
 
         expect(changes).toHaveBeenCalledOnce()
         expect(changes.mock.calls[0][0].detail.fromTrackId).toBe('source')
@@ -1269,7 +1451,7 @@ describe('lgs1920-timeline Web Component', () => {
             ]))
     })
 
-    it('stops a clip resize at the neighboring clip boundary', () => {
+    it('ripples clips on the edited side when a clip is resized', () => {
         const timeline = new LGS1920Timeline()
         const changes = vi.fn()
         configureTimeline(timeline, {
@@ -1294,7 +1476,11 @@ describe('lgs1920-timeline Web Component', () => {
         window.dispatchEvent(createPointerEvent('pointerup', {clientX: 260, clientY: 50}))
 
         expect(changes).toHaveBeenCalledOnce()
-        expect(changes.mock.calls[0][0].detail.clip).toMatchObject({start: 1, end: 5})
+        const detail = changes.mock.calls[0][0].detail
+        expect(detail.clip).toMatchObject({start: 1, end: 6})
+        expect(detail.tracks[0].clips).toEqual(expect.arrayContaining([
+            expect.objectContaining({id: 'next', start: 7, end: 10}),
+        ]))
     })
 
     it('inserts a clip on the configured track from the clip menu', () => {
