@@ -1551,3 +1551,11 @@
 ## 2026-09-02 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/7ccd7d018278c88919712217cf3cf10a5caa0a72)
 
 - Recorded automatically from Git history.
+
+## 2026-09-02 — [`fix(timeline): preserve playhead after range drag`](https://github.com/lgs1920/studio/commit/0244b7f5691f6f848735b282dcf9d67ebf0e263b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/89a6ac0a6bf6daac77ef5dfa9ab420835a899839)
+
+- Recorded automatically from Git history.
