@@ -1511,3 +1511,19 @@
 ## 2026-09-01 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/19dcb4bd17daf9e71901b53d60ec7b3d5df7f24c)
 
 - Recorded automatically from Git history.
+
+## 2026-09-01 — [`fix(timeline): keep track drag position stable`](https://github.com/lgs1920/studio/commit/67947df838161cda719af2d24c11850ce98e43ee)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`style(timeline): use brand drag feedback`](https://github.com/lgs1920/studio/commit/6f19bbc6099c2a4085dbfa8b52704093250b18c6)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`docs(timeline): document keyboard shortcuts`](https://github.com/lgs1920/studio/commit/0176b8fffec04bcccdd01f09de7cafa8d549917f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/4af5287d838c026fbc230ed69622f140ef133e74)
+
+- Recorded automatically from Git history.
