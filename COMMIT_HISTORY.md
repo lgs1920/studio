@@ -1527,3 +1527,27 @@
 ## 2026-09-01 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/4af5287d838c026fbc230ed69622f140ef133e74)
 
 - Recorded automatically from Git history.
+
+## 2026-09-01 — [`fix(timeline): reject occupied clip drops`](https://github.com/lgs1920/studio/commit/ede1e31b05ca2f29bf392c7c7f101cfe0dbbc861)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`fix(timeline): keep hidden track clips visible`](https://github.com/lgs1920/studio/commit/2b80ea271ffd2f7b328bfb76ee3fac4af550ad68)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`refactor(timeline): simplify track titles and clip menus`](https://github.com/lgs1920/studio/commit/94a5e60d1373b1e6dd05c075f6498f3ed0cb70bb)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`refactor(timeline): remove contextual menus`](https://github.com/lgs1920/studio/commit/0c42d73746b60f867f6779b03c3960d8a18a26cc)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`fix(timeline): use success colors for valid drags`](https://github.com/lgs1920/studio/commit/295bdb05aa63ea728f7b5603ba16dd4b96d92e5e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/7ccd7d018278c88919712217cf3cf10a5caa0a72)
+
+- Recorded automatically from Git history.
