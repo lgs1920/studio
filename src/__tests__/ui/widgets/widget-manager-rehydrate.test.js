@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-25
- * Last modified: 2026-08-29
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -130,5 +130,22 @@ describe('WidgetManager video widget rehydration', () => {
         expect(manager.toggleWidgetVisibility(widgetId)).toBe(true)
         expect(lgs.stores.ui.widget.list.get(widgetId).visible).toBe(true)
         expect(widget.classList.contains('lgs-widget-user-hidden')).toBe(false)
+    })
+
+    it('updates widget group membership in runtime state and persistence', async () => {
+        const widgetId = config.id
+        const position = {left: 0, top: 0, width: 100, height: 50}
+        manager.getWidgetPosition = vi.fn(async () => position)
+        manager.saveWidgetPosition = vi.fn(async () => undefined)
+
+        await manager.updateWidgetGroups(new Map([[widgetId, 'widget-group#one']]))
+
+        expect(config.widgetGroup).toBe('widget-group#one')
+        expect(lgs.stores.ui.widget.list.get(widgetId).widgetGroup).toBe('widget-group#one')
+        expect(manager.saveWidgetPosition).toHaveBeenCalledWith(
+            widgetId,
+            {...position, widgetGroup: 'widget-group#one'},
+            false,
+        )
     })
 })

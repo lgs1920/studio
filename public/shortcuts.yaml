@@ -42,12 +42,16 @@
     - Alt+Shift+W
   scope: Replay mode
 - action: Zoom Replay timeline
-  description: Changes the visible time range of the focused Replay timeline in 20% increments with Ctrl+Wheel or the horizontal arrow keys.
+  description: With the Replay timeline focused or selected, Shift+Wheel or Alt+Wheel changes the track row height from 24 to 64 pixels, Meta/Super+Wheel changes the ruler scale by 20% increments, ArrowUp and ArrowDown change the row height, and ArrowLeft and ArrowRight change the ruler scale. The ruler removes secondary ticks when zoomed out, shows 200 ms ticks at normal zoom, and shows 100 ms ticks at high zoom. Plain Wheel remains scrolling and Ctrl+Wheel remains the browser zoom; the minimum horizontal zoom adapts to the container width so the complete timeline can fit with a small right margin.
   id: replay-timeline-zoom
   keys:
-    - Ctrl+Wheel
+    - Shift+Wheel
+    - Meta+Wheel
+    - ArrowUp
+    - ArrowDown
     - ArrowLeft
     - ArrowRight
+  platform: macOS / Windows / Linux
   scope: Replay timeline
 - action: Move Replay playhead
   description: Moves the focused Replay playhead by keyboardStepSeconds, or ten times that step with Shift. Alt+ArrowRight selects the range minimum and Alt+ArrowLeft selects the range maximum.

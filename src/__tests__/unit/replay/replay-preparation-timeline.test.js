@@ -171,6 +171,27 @@ describe('ReplayPreparationTimeline', () => {
         ])
     })
 
+    it('projects widgets sharing widgetGroup into one track with all widget clips', () => {
+        const projection = buildReplayPreparationTimeline({
+            replayDurationMillis: 4000,
+            fps: 10,
+            widgetOrder: [
+                {id: 'text-widget#one', label: 'First', widgetGroup: 'group#one'},
+                {id: 'text-widget#two', label: 'Second', widgetGroup: 'group#one'},
+            ],
+        })
+
+        expect(projection.tracks.map(track => track.id)).toEqual(['replay', 'group#one'])
+        expect(projection.tracks[1]).toMatchObject({
+            kind: 'widget-group',
+            widgetGroup: 'group#one',
+        })
+        expect(projection.tracks[1].actions.map(action => action.widgetId)).toEqual([
+            'text-widget#one',
+            'text-widget#two',
+        ])
+    })
+
     it('keeps clip action identity stable when instances have no persisted id', () => {
         const first = buildReplayPreparationTimeline({replayDurationMillis: 4000, fps: 10, clips})
         const second = buildReplayPreparationTimeline({replayDurationMillis: 4000, fps: 10, clips})

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -494,6 +494,7 @@ describe('Widget registry ratio resolution', () => {
                 y: 1.25,
             }, {}),
             type: LGS_VISUAL_WIDGET,
+            widgetGroup: 'widget-group#one',
             color: 'pink',
             icon: 'chart-tree-map',
             name: 'Journey Stats',
@@ -513,6 +514,7 @@ describe('Widget registry ratio resolution', () => {
             x: 1.25,
             y: 1.25,
         })
+        expect(positionData.widgetGroup).toBe('widget-group#one')
         expect(positionData).not.toHaveProperty('color')
         expect(positionData).not.toHaveProperty('icon')
         expect(positionData).not.toHaveProperty('name')
@@ -571,10 +573,12 @@ describe('Widget persistence metadata sanitization', () => {
             name:         'Journey Stats',
             timelineColor: 'pink',
             visible:      true,
+            widgetGroup:  'widget-group#one',
             width:        320,
         })).toEqual({
             height:  180,
             visible: true,
+            widgetGroup: 'widget-group#one',
             width:   320,
         })
     })

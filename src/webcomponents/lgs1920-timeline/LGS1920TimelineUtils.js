@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 export const TAG_NAME = 'lgs1920-timeline'
-export const MIN_ZOOM = -50
+export const MIN_ZOOM = -99.9
 export const MAX_ZOOM = 500
 export const ZOOM_STEP = 20
 export const START_LEFT = 20
@@ -25,7 +25,10 @@ export const MIN_LEGEND_WIDTH = 100
 export const MAX_LEGEND_WIDTH = 230
 export const HEADER_HEIGHT = 42
 export const HORIZONTAL_SCROLLBAR_HEIGHT = 8
+export const END_PADDING = 20
 export const MIN_ROW_HEIGHT = 24
+export const MAX_ROW_HEIGHT = 64
+export const ROW_ZOOM_STEP = 4
 export const EDGE_TRIGGER_SIZE = 24
 export const EDGE_SCROLL_SPEEDS = [8, 16, 32, 64, 128]
 export const ACCELERATION_INTERVAL = 100
@@ -253,10 +256,13 @@ export const resolveLegendBounds = (timeline = {}) => {
  */
 export const resolveScale = zoomPercent => {
     const zoom = clamp(Number(zoomPercent) || 0, MIN_ZOOM, MAX_ZOOM)
-    if (zoom <= -21) return {majorSeconds: 0.5, scaleSplitCount: 5}
-    if (zoom <= 100) return {majorSeconds: 1, scaleSplitCount: 5}
-    if (zoom <= 260) return {majorSeconds: 10, scaleSplitCount: 10}
-    if (zoom <= 360) return {majorSeconds: 30, scaleSplitCount: 6}
-    if (zoom <= 440) return {majorSeconds: 60, scaleSplitCount: 6}
-    return {majorSeconds: 300, scaleSplitCount: 10}
+    const pixelsPerSecond = 40 * ((100 + zoom) / 100)
+    if (pixelsPerSecond < 40) {
+        const majorSeconds = [1, 2, 5, 10, 30, 60, 120, 300, 600]
+            .find(seconds => pixelsPerSecond * seconds >= 40)
+            ?? 600
+        return {majorSeconds, scaleSplitCount: 1}
+    }
+    if (pixelsPerSecond < 80) return {majorSeconds: 1, scaleSplitCount: 5}
+    return {majorSeconds: 1, scaleSplitCount: 10}
 }

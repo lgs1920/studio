@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-01
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,6 +23,7 @@ import {REPLAY_TIMELINE_UI} from '@Components/MainUI/video/replayTimelineUtils'
 import {Widget} from '@Components/MainUI/widgets/Widget'
 import {JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS_BOARD} from '@Core/constants'
 import {constrainWidgetDimensions} from '@Core/ui/widget-manager/widgetResizeUtils'
+import {useOptionalSnapshot} from '@Utils/ValtioUtils'
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 
 const REPLAY_TIMELINE_FREE_RATIO = {value: '0x0', aspectRatio: 0, locked: false}
@@ -37,7 +38,9 @@ const REPLAY_TIMELINE_FREE_RATIO = {value: '0x0', aspectRatio: 0, locked: false}
  */
 export const ReplayTimelineWidget = ({id, zIndex}) => {
     const container = useMemo(() => lgs.canvas, [])
+    const widgetState = useOptionalSnapshot(lgs.stores.ui.widget)
     const timelinePreviewRef = useRef(null)
+    const keyboardZoomActive = widgetState.current?.id === id
     const [minimumDimensions, setMinimumDimensions] = useState({
         width:  REPLAY_TIMELINE_UI.minWidth,
         height: REPLAY_TIMELINE_UI.minHeight,
@@ -153,7 +156,8 @@ export const ReplayTimelineWidget = ({id, zIndex}) => {
 
     return (
         <Widget isVisible config={config} childRef={timelinePreviewRef}>
-            <ReplayTimelinePreview onMinimumDimensionsChange={handleMinimumDimensionsChange}
+            <ReplayTimelinePreview keyboardZoomActive={keyboardZoomActive}
+                                   onMinimumDimensionsChange={handleMinimumDimensionsChange}
                                    ref={timelinePreviewRef}/>
         </Widget>
     )

@@ -113,13 +113,14 @@ clock integration.
 | `rangeStartMillis` | `number` | Video range start in milliseconds. Defaults to `0`. |
 | `rangeEndMillis` | `number` | Video range end in milliseconds. Defaults to `durationMillis`. |
 | `visible` | `boolean` | Controls timeline visibility. Defaults to `true`. |
-| `zoomPercent` | `number` | Initial ruler zoom from `-50` to `500`. |
+| `zoomPercent` | `number` | Initial ruler zoom up to `500`; the minimum is calculated from the available surface width, full timeline duration, and right safety margin. |
 | `legendMinWidth` | `number` | Minimum track legend width in pixels. Defaults to `100`. |
 | `legendMaxWidth` | `number` | Maximum track legend width in pixels. Defaults to `230`. |
 | `editable` | `boolean` | Enables clip editing and track reordering. Defaults to `true`. |
 | `interactive` | `boolean` | Enables playback, scrubbing, editing, menus, and emitted interaction events. Defaults to `true`. |
 | `collisionPolicy` | `'allow' \| 'prevent' \| 'ripple'` | Default clip collision policy for tracks. Defaults to `prevent`. |
 | `durationPolicy` | `'fixed' \| 'extend'` | Keeps the duration fixed or extends it when an edit exceeds the end. Defaults to `fixed`. |
+| `keyboardZoomActive` | `boolean` | Enables arrow-key zoom when the containing widget is selected. Defaults to `false`. |
 | `defaultTrackId` | `string` | Track used when a clip-menu option does not specify a track. |
 | `minClipDuration` | `number` | Default minimum clip duration in seconds. |
 | `defaultClipDuration` | `number` | Default duration for a clip-menu insertion in seconds. Defaults to `1`. |
@@ -356,7 +357,8 @@ The video range handles can be customized with the global
 The start and end handles can be dragged along the ruler when `editable` is
 enabled. Double-clicking the start handle moves it to `0`; double-clicking the
 end handle moves it to `durationMillis`. The handles never cross and the
-playhead is always constrained between them.
+playhead keeps its position while it remains between the handles and moves to
+the new boundary only when it would otherwise fall outside the selected range.
 
 The playhead grip can also be dragged within the selected range. When the
 playhead has keyboard focus, `ArrowLeft` and `ArrowRight` move it by
@@ -371,6 +373,19 @@ clip edge with the same step rules. The split-panel divider is a native
 Web Awesome separator: its horizontal arrow keys resize the track legend,
 `Shift` changes the step, `Home` and `End` select the minimum and maximum, and
 `Enter` collapses or restores the panel.
+
+When the time surface has focus, plain wheel scrolling remains native. `Shift`
+or `Alt` plus the wheel changes the track row height by 4 pixels, from 24 to 64 pixels.
+`Meta` (Command on macOS, Super/Windows on Linux and Windows) plus the wheel
+changes the ruler zoom by 20 percent. Unmodified arrow keys change the row
+height vertically and the ruler zoom horizontally. `Ctrl` plus the wheel is
+left untouched so the browser can keep its own zoom behavior. The containing
+widget can also enable these arrow-key shortcuts while selected with
+`keyboardZoomActive`. The ruler has no secondary ticks while zoomed out, uses
+200 ms secondary ticks at normal zoom, and uses 100 ms secondary ticks at high
+zoom. The minimum horizontal zoom adapts to the available surface width so the
+complete timeline can fit without horizontal scrolling, with a small right
+safety margin.
 
 ## Track names and controlled editing
 
@@ -423,8 +438,9 @@ complete `tracks` snapshot. With `durationPolicy: 'fixed'`, an edit that would
 leave the timeline bounds is rejected.
 
 Track reordering starts from the `drag-trigger` slot or anywhere in the track
-name area. The title area and the time surface follow the same row order, and
-a one-pixel brand insertion line shows the drop position. Locked rows cannot
+name area. The title area and the time surface follow the same row order. The
+dragged row silhouette and the translucent source placeholder show the drop
+position. Locked rows cannot
 be crossed: insertion is rejected before a locked first row, after a locked
 last row, or between two locked rows. The committed `reorder` event contains
 the new `tracks` order and `dropIndex`. While the pointer is over a rejected
@@ -566,8 +582,7 @@ lgs1920-timeline::part(clip) {
 | `--lgs-timeline-clip-handle-color` | Clip resize handle color. |
 | `--lgs-timeline-clip-handle-hover-color` | Clip resize handle hover color. |
 | `--lgs-timeline-clip-handle-focus-ring` | Clip resize handle focus ring. |
-| `--lgs-timeline-track-drop-indicator-color` | Track reorder insertion indicator color. |
-| `--lgs-timeline-track-drop-indicator-width` | Track reorder insertion indicator width. |
+| `--lgs-timeline-track-drop-indicator-color` | Drag-target accent color used by track and clip feedback. |
 | `--lgs-timeline-popup-background` | Popup background. |
 | `--lgs-timeline-popup-border-color` | Popup border color. |
 | `--lgs-timeline-popup-shadow` | Popup shadow. |
@@ -580,7 +595,7 @@ Useful CSS parts include `timeline`, `top`, `header`, `controls`, `header-action
 `tracks-viewport`,
 `clip-preview`, `clip-start-handle`, `clip-end-handle`, `timeline-start-handle`,
 `timeline-end-handle`, `playhead`, `end-marker`,
-`track-drop-indicator`, `scroll-shell`, `scrollbar-track`, `scrollbar-thumb`,
+`scroll-shell`, `scrollbar-track`, `scrollbar-thumb`,
 `popup` and `menu`.
 
 The track surface exposes an LGS-style horizontal rail and a vertical rail for
@@ -596,7 +611,7 @@ also provides these small imperative helpers:
 | Method | Description |
 | --- | --- |
 | `setTime(timeMillis)` | Move the playhead without emitting `seek`. |
-| `setZoom(zoomPercent)` | Set the ruler zoom from `-50` to `500`. |
+| `setZoom(zoomPercent)` | Set the ruler zoom up to `500`; the minimum is calculated from the available surface width, full timeline duration, and right safety margin. |
 | `handleResize()` | Recompute surface dimensions after an external resize. |
 | `setScrollbarsInteractionActive(active)` | Keep custom rails visible during an external drag or resize gesture. |
 | `setExternalInteractionActive(active)` | Preserve an active external mouse, pointer, or touch gesture when it crosses the timeline host. |

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-05-02
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -42,6 +42,7 @@ const WIDGET_MOVE_STEP = 2
 const WIDGET_FAST_MOVE_STEP = 20
 const WIDGET_SCALE_STEP = 0.01
 const WIDGET_FAST_SCALE_STEP = 0.1
+const TIMELINE_ARROW_KEYS = Object.freeze(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'])
 const WIDGET_SHORTCUT_EDITABLE_SELECTOR = [
     'input',
     'textarea',
@@ -525,6 +526,22 @@ const selectedWidgetContext = () => {
     return {config, element, widgetId}
 }
 
+const isTimelineKeyboardZoomTarget = event => {
+    if (!TIMELINE_ARROW_KEYS.includes(event?.key)) {
+        return false
+    }
+    if (!lgs.stores?.ui?.widget) {
+        return false
+    }
+    const path = event?.composedPath?.() ?? []
+    if (path.some(target => target?.localName === 'lgs1920-timeline')) {
+        return true
+    }
+
+    const context = selectedWidgetContext()
+    return Boolean(context?.element?.querySelector?.('lgs1920-timeline[data-keyboard-zoom-active]'))
+}
+
 const widgetBoundsRect = config => (config.boundsContainer ?? config.container ?? lgs.canvas)?.getBoundingClientRect?.() ?? null
 
 const isWidgetReduced = config => config.canReduce !== false && config.collapsed
@@ -763,7 +780,9 @@ const installWidgetKeyboardShortcuts = () => {
     }
 
     const listener = event => {
-        const action = replayCameraKeyboardAction(event) ?? widgetKeyboardShortcutAction(event)
+        const action = isTimelineKeyboardZoomTarget(event)
+            ? null
+            : replayCameraKeyboardAction(event) ?? widgetKeyboardShortcutAction(event)
 
         if (!action) {
             return

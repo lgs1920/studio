@@ -30,13 +30,16 @@ import {
     EDGE_SCROLL_SPEEDS,
     EDGE_SCROLL_TIME_STEPS,
     EDGE_TRIGGER_SIZE,
+    END_PADDING,
     GLOBAL_SLOTS,
     HEADER_HEIGHT,
     HORIZONTAL_SCROLLBAR_HEIGHT,
     MAX_ZOOM,
     MIN_VISIBLE_DURATION_SECONDS,
     MIN_ROW_HEIGHT,
+    MAX_ROW_HEIGHT,
     MIN_ZOOM,
+    ROW_ZOOM_STEP,
     SCALE_WIDTH,
     START_LEFT,
     TAG_NAME,
@@ -94,7 +97,9 @@ const TIMELINE_INPUT_EVENT_TYPES = Object.freeze([
     'wheel',
 ])
 
+const TIMELINE_ARROW_KEYS = Object.freeze(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'])
 const TIMELINE_HORIZONTAL_ARROW_KEYS = Object.freeze(['ArrowLeft', 'ArrowRight'])
+const TIMELINE_KEYBOARD_EDITABLE_SELECTOR = 'input, textarea, select, wa-input, wa-textarea, wa-select, [contenteditable=""], [contenteditable="true"], [role="textbox"]'
 const ROW_DRAG_THRESHOLD = 4
 
 /**
@@ -129,6 +134,7 @@ export class LGS1920Timeline extends HTMLElement {
     #visible = true
     #clipOptions = []
     #zoom = 0
+    #verticalZoomRowHeight = null
     #interactionDurationMillis = null
     #rangeStartMillis = 0
     #rangeEndMillis = 0
@@ -243,12 +249,12 @@ export class LGS1920Timeline extends HTMLElement {
             addPointerListeners: () => this.#addPointerListeners(),
             capturePointer: event => this.#capturePointer(event),
             handleWheel: event => this.#handleWheel(event),
-            handleKeyDown: event => this.#handleKeyDown(event),
+            handleKeyDown: event => this.#handleKeyDown(event, true),
             emit: (name, detail) => this.#emit(name, detail),
             setScrubPointerId: value => {
                 this.#scrubPointerId = value
             },
-            scaleWidth: () => this.#numericToken('scale-width', SCALE_WIDTH),
+            scaleWidth: () => this.#scaleWidth(),
             scaleOffset: () => this.#numericToken('scale-offset', START_LEFT),
         })
     }
@@ -269,6 +275,7 @@ export class LGS1920Timeline extends HTMLElement {
         this.setAttribute('role', 'region')
         if (!this.getAttribute('aria-label')) this.setAttribute('aria-label', 'Timeline')
         this.#installInputPropagationBlockers()
+        window.addEventListener('keydown', this.#handleWindowKeyDown, true)
         this.#render()
     }
 
@@ -279,7 +286,7 @@ export class LGS1920Timeline extends HTMLElement {
      * @param {Event} event - Native pointing event.
      */
     #stopInputPropagation = event => {
-        if (event.type === 'keydown' && !TIMELINE_HORIZONTAL_ARROW_KEYS.includes(event.key)) return
+        if (event.type === 'keydown' && !TIMELINE_ARROW_KEYS.includes(event.key)) return
         if (this.#nativeSplitPanelInteractionActive
             && EXTERNAL_INTERACTION_CONTINUATION_EVENT_TYPES.includes(event.type)) return
         if (this.#externalInteractionActive
@@ -334,6 +341,7 @@ export class LGS1920Timeline extends HTMLElement {
             legendMinWidth: minimum,
             legendMaxWidth: maximum,
         })
+        this.toggleAttribute('data-keyboard-zoom-active', this.#timelineConfig.keyboardZoomActive === true)
         if (this.#timelineConfig.interactive === false) {
             this.#menuOpen = false
             this.#dragState = null
@@ -426,6 +434,7 @@ export class LGS1920Timeline extends HTMLElement {
      */
     disconnectedCallback() {
         this.#removeInputPropagationBlockers()
+        window.removeEventListener('keydown', this.#handleWindowKeyDown, true)
         this.#resizeObserver?.disconnect()
         this.#removePointerListeners()
         this.#finishScrollbarDrag()
@@ -469,7 +478,7 @@ export class LGS1920Timeline extends HTMLElement {
         this.#playing = state.playing === true
         this.#visible = state.visible !== false
         this.#clipOptions = Array.isArray(state.clipOptions) ? state.clipOptions : []
-        if (Number.isFinite(Number(state.zoomPercent))) this.#zoom = clamp(Number(state.zoomPercent), MIN_ZOOM, MAX_ZOOM)
+        if (Number.isFinite(Number(state.zoomPercent))) this.#zoom = this.#clampHorizontalZoom(state.zoomPercent)
         const durationMillis = Number(this.#projection?.durationMillis) || 0
         if (Number.isFinite(Number(state.rangeStartMillis))) {
             this.#rangeStartMillis = clamp(Number(state.rangeStartMillis), 0, durationMillis)
@@ -501,7 +510,7 @@ export class LGS1920Timeline extends HTMLElement {
      * @param {number} zoomPercent - Requested zoom percentage.
      */
     setZoom(zoomPercent) {
-        this.#zoom = clamp(Number(zoomPercent) || 0, MIN_ZOOM, MAX_ZOOM)
+        this.#zoom = this.#clampHorizontalZoom(zoomPercent)
         this.#render()
     }
 
@@ -647,6 +656,44 @@ export class LGS1920Timeline extends HTMLElement {
     #durationSeconds = () => this.#durationMillis() / 1000
 
     /**
+     * Resolve the lowest zoom that fits the complete timeline in the surface.
+     *
+     * @returns {number} Container-dependent minimum zoom percentage.
+     */
+    #minimumHorizontalZoom = () => {
+        const durationSeconds = this.#durationSeconds()
+        const surfaceWidth = this.#surface?.clientWidth || this.#surfaceWidth
+        const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
+        const endPadding = this.#numericToken('end-padding', END_PADDING)
+        const baseScaleWidth = this.#numericToken('scale-width', SCALE_WIDTH)
+        const availableWidth = Number(surfaceWidth) - scaleOffset - endPadding
+        if (durationSeconds <= 0 || !Number.isFinite(availableWidth) || availableWidth <= 0) return MIN_ZOOM
+        const minimumFactor = availableWidth / (durationSeconds * baseScaleWidth)
+        const minimumZoom = Number(((minimumFactor - 1) * 100).toFixed(6))
+        return Math.max(MIN_ZOOM, Math.min(0, minimumZoom))
+    }
+
+    /**
+     * Clamp a horizontal zoom against the current container-dependent bound.
+     *
+     * @param {number} zoomPercent - Requested horizontal zoom percentage.
+     * @returns {number} Clamped horizontal zoom percentage.
+     */
+    #clampHorizontalZoom = zoomPercent => clamp(Number(zoomPercent) || 0, this.#minimumHorizontalZoom(), MAX_ZOOM)
+
+    /**
+     * Resolve the pixel width of one major ruler interval at the current zoom.
+     *
+     * @returns {number} Pixel width of one major ruler interval.
+     */
+    #scaleWidth = () => {
+        const {majorSeconds} = resolveScale(this.#zoom)
+        const baseScaleWidth = this.#numericToken('scale-width', SCALE_WIDTH)
+        const zoomFactor = (100 + this.#zoom) / 100
+        return baseScaleWidth * zoomFactor * majorSeconds
+    }
+
+    /**
      * Normalize a time to the controlled projection duration.
      *
      * @param {number} timeMillis - Requested time in milliseconds.
@@ -691,16 +738,21 @@ export class LGS1920Timeline extends HTMLElement {
         const previousScrollLeft = this.#surface?.scrollLeft ?? 0
         const previousScrollTop = this.#tracksViewport?.scrollTop ?? 0
         this.#finishScrollbarDrag()
+        this.#zoom = this.#clampHorizontalZoom(this.#zoom)
         const {majorSeconds, scaleSplitCount} = resolveScale(this.#zoom)
         const durationSeconds = this.#durationSeconds()
-        const scaleWidth = this.#numericToken('scale-width', SCALE_WIDTH)
+        const scaleWidth = this.#scaleWidth()
         const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
+        const endPadding = this.#numericToken('end-padding', END_PADDING)
         const scaleCount = Math.max(
             1,
-            Math.ceil((Math.max(durationSeconds, this.#numericToken('min-visible-duration', MIN_VISIBLE_DURATION_SECONDS)) * 1.2) / majorSeconds),
+            Math.ceil(Math.max(durationSeconds, this.#numericToken('min-visible-duration', MIN_VISIBLE_DURATION_SECONDS)) / majorSeconds),
             Math.ceil(Math.max(0, this.#surfaceWidth) / scaleWidth),
         )
-        this.#contentWidth = Math.max(this.#surfaceWidth, scaleOffset + (scaleCount * scaleWidth))
+        this.#contentWidth = Math.max(
+            this.#surfaceWidth,
+            scaleOffset + ((Math.max(durationSeconds, this.#numericToken('min-visible-duration', MIN_VISIBLE_DURATION_SECONDS)) / majorSeconds) * scaleWidth) + endPadding,
+        )
         this.#rowHeight = this.#resolveRowHeight()
         const structure = this.#structure(scaleCount, majorSeconds, scaleSplitCount)
         this.#reuseSplitPanel(structure)
@@ -708,7 +760,12 @@ export class LGS1920Timeline extends HTMLElement {
         this.#surface = this.#root.querySelector('[data-surface]')
         this.#tracksViewport = this.#root.querySelector('[data-tracks-viewport]')
         const measuredSurfaceWidth = this.#surface?.clientWidth ?? 0
-        if (measuredSurfaceWidth > 0) this.#surfaceWidth = measuredSurfaceWidth
+        const surfaceWidthChanged = measuredSurfaceWidth > 0 && measuredSurfaceWidth !== this.#surfaceWidth
+        if (surfaceWidthChanged) this.#surfaceWidth = measuredSurfaceWidth
+        if (surfaceWidthChanged) {
+            this.#render()
+            return
+        }
         if (this.#surface) {
             this.#surface.scrollLeft = previousScrollLeft
         }
@@ -757,7 +814,11 @@ export class LGS1920Timeline extends HTMLElement {
         const scrollbarHeight = this.#numericToken('scrollbar-height', HORIZONTAL_SCROLLBAR_HEIGHT)
         const minimumRowHeight = this.#numericToken('row-height', MIN_ROW_HEIGHT)
         const available = Number(height) - headerHeight - scrollbarHeight
-        return Math.max(minimumRowHeight, Math.floor(available / Math.max(1, this.#rows.length)))
+        const naturalRowHeight = Math.max(minimumRowHeight, Math.floor(available / Math.max(1, this.#rows.length)))
+        const requestedRowHeight = Number.isFinite(this.#verticalZoomRowHeight)
+            ? this.#verticalZoomRowHeight
+            : naturalRowHeight
+        return clamp(requestedRowHeight, minimumRowHeight, MAX_ROW_HEIGHT)
     }
 
     /**
@@ -807,7 +868,7 @@ export class LGS1920Timeline extends HTMLElement {
             'data-capture-exclude': 'true',
         })
         layout.style.setProperty('--lgs-timeline-row-height', `${this.#rowHeight}px`)
-        layout.append(this.#splitPanel(scaleCount, majorSeconds, scaleSplitCount), this.#trackDropIndicator())
+        layout.append(this.#splitPanel(scaleCount, majorSeconds, scaleSplitCount))
         section.append(layout)
         section.append(createElement('slot', '', {name: 'footer'}))
         return section
@@ -841,27 +902,6 @@ export class LGS1920Timeline extends HTMLElement {
         surface.slot = 'end'
         splitPanel.append(legend, surface)
         return splitPanel
-    }
-
-    /**
-     * Create the horizontal track insertion indicator used during row drag.
-     *
-     * @returns {HTMLElement} Drop indicator element.
-     */
-    #trackDropIndicator = () => {
-        const indicator = createElement('div', 'lgs1920-wa-timeline__track-drop-indicator', {
-            part: 'track-drop-indicator',
-            'data-track-drop-indicator': '',
-            'aria-hidden': 'true',
-        })
-        const dropIndex = this.#dragState?.type === 'row' ? this.#dragState.dropIndex : null
-        if (Number.isFinite(dropIndex)) {
-            const headerHeight = this.#numericToken('header-height', HEADER_HEIGHT)
-            indicator.style.top = `${headerHeight + (dropIndex * this.#rowHeight)}px`
-        } else {
-            indicator.hidden = true
-        }
-        return indicator
     }
 
     /**
@@ -1292,7 +1332,7 @@ export class LGS1920Timeline extends HTMLElement {
         const rect = this.#surface?.getBoundingClientRect()
         if (!rect) return 0
         const {majorSeconds} = resolveScale(this.#zoom)
-        const scaleWidth = this.#numericToken('scale-width', SCALE_WIDTH)
+        const scaleWidth = this.#scaleWidth()
         const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
         const x = Math.max(scaleOffset, clientX - rect.left + (this.#surface?.scrollLeft ?? 0))
         return ((x - scaleOffset) / Math.max(Number.EPSILON, scaleWidth)) * majorSeconds
@@ -1687,18 +1727,16 @@ export class LGS1920Timeline extends HTMLElement {
      */
     #refreshLayoutMetrics = () => {
         const surfaceWidth = this.#surface?.clientWidth ?? 0
-        if (Number.isFinite(surfaceWidth) && surfaceWidth > 0) this.#surfaceWidth = surfaceWidth
+        if (Number.isFinite(surfaceWidth) && surfaceWidth > 0 && surfaceWidth !== this.#surfaceWidth) {
+            this.#surfaceWidth = surfaceWidth
+            this.#render()
+            return
+        }
         const nextRowHeight = this.#resolveRowHeight()
         if (nextRowHeight !== this.#rowHeight) {
             this.#rowHeight = nextRowHeight
             const layout = this.#root.querySelector('[data-layout]')
             layout?.style.setProperty('--lgs-timeline-row-height', `${this.#rowHeight}px`)
-            const dropIndex = this.#dragState?.type === 'row' ? this.#dragState.dropIndex : null
-            const indicator = this.#root.querySelector('[data-track-drop-indicator]')
-            if (indicator && Number.isFinite(dropIndex)) {
-                const headerHeight = this.#numericToken('header-height', HEADER_HEIGHT)
-                indicator.style.top = `${headerHeight + (dropIndex * this.#rowHeight)}px`
-            }
         }
         this.#updateScrollbars()
     }
@@ -1911,7 +1949,7 @@ export class LGS1920Timeline extends HTMLElement {
         const duration = this.#durationMillis()
         if (!rect || duration <= 0) return
         const {majorSeconds} = resolveScale(this.#zoom)
-        const scaleWidth = this.#numericToken('scale-width', SCALE_WIDTH)
+        const scaleWidth = this.#scaleWidth()
         const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
         const x = clamp(clientX - rect.left + (this.#surface?.scrollLeft ?? 0), scaleOffset, this.#contentWidth)
         const timeMillis = this.#normalizeTime(((x - scaleOffset) / scaleWidth) * majorSeconds * 1000)
@@ -2048,15 +2086,6 @@ export class LGS1920Timeline extends HTMLElement {
                 ? 'lgs1920-wa-timeline__legend-row--drag-placeholder'
                 : 'lgs1920-wa-timeline__track--drag-placeholder', isDragged && rejected)
         })
-        const indicator = this.#root.querySelector('[data-track-drop-indicator]')
-        if (indicator) {
-            const dropIndex = rejected ? null : state.dropIndex
-            indicator.hidden = !Number.isFinite(dropIndex)
-            if (Number.isFinite(dropIndex)) {
-                const headerHeight = this.#numericToken('header-height', HEADER_HEIGHT)
-                indicator.style.top = `${headerHeight + (dropIndex * this.#rowHeight)}px`
-            }
-        }
         if (rejected) this.#positionRejectedRowSilhouette()
     }
 
@@ -2077,8 +2106,6 @@ export class LGS1920Timeline extends HTMLElement {
                 ? 'lgs1920-wa-timeline__legend-row--drag-placeholder'
                 : 'lgs1920-wa-timeline__track--drag-placeholder')
         })
-        const indicator = this.#root.querySelector('[data-track-drop-indicator]')
-        if (indicator) indicator.hidden = true
     }
 
     /**
@@ -2408,7 +2435,7 @@ export class LGS1920Timeline extends HTMLElement {
                     return
                 }
                 const {majorSeconds} = resolveScale(this.#zoom)
-                const scaleWidth = this.#numericToken('scale-width', SCALE_WIDTH)
+                const scaleWidth = this.#scaleWidth()
                 const stepCount = Math.max(1, Math.floor(elapsedSinceStep / EDGE_TIME_ACCELERATION_INTERVAL))
                 const firstStepAt = this.#edgeLastStepAt
                 const totalStepMillis = Array.from({length: stepCount}, (_, index) => {
@@ -2546,29 +2573,95 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
-     * Handle Ctrl/Cmd-free zoom gestures from the timeline surface.
+     * Handle modifier-based zoom gestures from the timeline surface.
      *
      * @param {WheelEvent} event - Wheel event.
      */
     #handleWheel = event => {
-        if (!event.ctrlKey || !event.deltaY) return
+        if (event.ctrlKey || !event.deltaY) return
+        if (!event.metaKey && !event.shiftKey && !event.altKey) return
         event.preventDefault()
-        this.#zoom = clamp(this.#zoom + (event.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP), MIN_ZOOM, MAX_ZOOM)
+        const direction = event.deltaY < 0 ? 1 : -1
+        if (event.metaKey) {
+            this.#zoomHorizontal(direction, event.clientX)
+            return
+        }
+        this.#stepVerticalZoom(direction)
+    }
+
+    /**
+     * Handle keyboard zoom gestures from the timeline surface or window.
+     *
+     * @param {KeyboardEvent} event - Keyboard event.
+     * @param {boolean} fromSurface - Whether the event came from the focused surface.
+     */
+    #handleKeyDown = (event, fromSurface = false) => {
+        if (!TIMELINE_ARROW_KEYS.includes(event.key)) return
+        if (fromSurface && event.target !== event.currentTarget) return
+        if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
+        event.preventDefault()
+        event.stopPropagation()
+        if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+            this.#stepVerticalZoom(event.key === 'ArrowUp' ? 1 : -1)
+            return
+        }
+        this.#zoomHorizontal(event.key === 'ArrowRight' ? 1 : -1)
+    }
+
+    /**
+     * Handle arrow-key zoom when the selected timeline widget owns the focus
+     * outside its internal surface.
+     *
+     * @param {KeyboardEvent} event - Keyboard event.
+     */
+    #handleWindowKeyDown = event => {
+        if (event.composedPath?.().includes(this)) return
+        if (this.#timelineConfig.keyboardZoomActive !== true) return
+        if (event.target?.closest?.(TIMELINE_KEYBOARD_EDITABLE_SELECTOR)) return
+        this.#handleKeyDown(event)
+    }
+
+    /**
+     * Move the vertical zoom by one configured increment.
+     *
+     * @param {number} direction - Positive to enlarge rows, negative to reduce them.
+     */
+    #stepVerticalZoom = direction => {
+        const minimumRowHeight = this.#numericToken('row-height', MIN_ROW_HEIGHT)
+        const currentRowHeight = Number.isFinite(this.#verticalZoomRowHeight)
+            ? this.#verticalZoomRowHeight
+            : this.#rowHeight
+        this.#verticalZoomRowHeight = clamp(currentRowHeight + (direction * ROW_ZOOM_STEP), minimumRowHeight, MAX_ROW_HEIGHT)
         this.#render()
     }
 
     /**
-     * Handle keyboard zoom gestures from the focused timeline surface.
+     * Change the horizontal zoom while preserving the time under an anchor.
      *
-     * @param {KeyboardEvent} event - Keyboard event.
+     * @param {number} direction - Positive to zoom in, negative to zoom out.
+     * @param {number} [clientX] - Optional pointer anchor in viewport coordinates.
      */
-    #handleKeyDown = event => {
-        if (!TIMELINE_HORIZONTAL_ARROW_KEYS.includes(event.key)) return
-        event.preventDefault()
-        event.stopPropagation()
-        if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
-        this.#zoom = clamp(this.#zoom + (event.key === 'ArrowRight' ? ZOOM_STEP : -ZOOM_STEP), MIN_ZOOM, MAX_ZOOM)
+    #zoomHorizontal = (direction, clientX = null) => {
+        const surface = this.#surface
+        const rect = surface?.getBoundingClientRect?.()
+        const hasPointerAnchor = rect && Number.isFinite(Number(clientX))
+        const viewportX = hasPointerAnchor
+            ? Number(clientX) - rect.left
+            : (surface?.clientWidth ?? 0) / 2
+        const anchorTimeSeconds = rect
+            ? this.#timeAtClientX(rect.left + viewportX)
+            : null
+
+        this.#zoom = this.#clampHorizontalZoom(this.#zoom + (direction * ZOOM_STEP))
         this.#render()
+
+        if (anchorTimeSeconds === null || !this.#surface) return
+        const {majorSeconds} = resolveScale(this.#zoom)
+        const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
+        const anchorX = scaleOffset + ((anchorTimeSeconds / majorSeconds) * this.#scaleWidth())
+        const maximumScrollLeft = Math.max(0, this.#surface.scrollWidth - this.#surface.clientWidth)
+        this.#surface.scrollLeft = clamp(anchorX - viewportX, 0, maximumScrollLeft)
+        this.#updateScrollbars()
     }
 
     /**
@@ -2582,7 +2675,7 @@ export class LGS1920Timeline extends HTMLElement {
         const duration = this.#durationMillis()
         const ratio = duration > 0 ? clamp(this.#currentTimeMillis / duration, 0, 1) : 0
         const {majorSeconds} = resolveScale(this.#zoom)
-        const scaleWidth = this.#numericToken('scale-width', SCALE_WIDTH)
+        const scaleWidth = this.#scaleWidth()
         const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
         const position = scaleOffset + ((ratio * this.#durationSeconds()) / majorSeconds * scaleWidth)
         const playhead = this.#root.querySelector('[data-playhead]')
@@ -2629,7 +2722,7 @@ export class LGS1920Timeline extends HTMLElement {
      */
     #updateClipInteractionPresentation = () => {
         const {majorSeconds} = resolveScale(this.#zoom)
-        const scaleWidth = this.#numericToken('scale-width', SCALE_WIDTH)
+        const scaleWidth = this.#scaleWidth()
         const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
         const dragState = this.#dragState
         this.toggleAttribute('data-clip-drop-rejected', dragState?.type === 'clip' && dragState.dropRejected === true)

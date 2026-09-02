@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-20
- * Last modified: 2026-06-20
+ * Created on: 2026-02-13
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,7 +26,7 @@ import { useSnapshot }    from 'valtio'
  * * @param {Object} props - Component properties.
  * @param {Object} props.widget - Widget data object.
  */
-export const SortableWidgetRow = ({widget}) => {
+export const SortableWidgetRow = ({widget, draggable = true}) => {
     /** @type {string} Extract widget base type from id */
     const widgetType = widget.id.split('#')[0]
 
@@ -108,8 +108,8 @@ export const SortableWidgetRow = ({widget}) => {
     return (
         <WaCard appearance="outlined"
                 onClick={() => selectWidget(widget.id)}
-                className={`lgs--card-hoverable widget-ordering-row ${widget.fixed ? 'widget-row-fixed' : ''}`}
-                data-id={widget.id}
+                className={`lgs--card-hoverable ${draggable ? 'widget-ordering-row' : 'widget-ordering-child'} ${widget.fixed ? 'widget-row-fixed' : ''}`}
+                data-id={draggable ? widget.id : undefined}
         >
             <WaIcon name="grip-dots-vertical" variant="solid" className="icon-widget"/>&nbsp;
             <WaIcon name={instance.icon} variant="regular" className="icon-widget"/>

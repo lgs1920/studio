@@ -82,6 +82,8 @@
     --lgs-timeline-min-visible-duration: 5;
     /* Timeline ruler left offset matching the React editor. */
     --lgs-timeline-scale-offset: 20px;
+    /* Timeline safety space after the final time position. */
+    --lgs-timeline-end-padding: 20px;
     /* Timeline major tick visual height. */
     --lgs-timeline-major-tick-height: 0.75rem;
     /* Timeline minor tick visual height. */
@@ -122,10 +124,8 @@
     --lgs-timeline-clip-handle-hover-color: var(--wa-color-on-loud, white);
     /* Timeline clip edge handle focus ring. */
     --lgs-timeline-clip-handle-focus-ring: 2px solid var(--wa-color-focus, var(--wa-color-brand));
-    /* Timeline track drop indicator color. */
+    /* Timeline drag target accent color. */
     --lgs-timeline-track-drop-indicator-color: var(--wa-color-brand-fill-loud, var(--wa-color-brand));
-    /* Timeline track drop indicator width. */
-    --lgs-timeline-track-drop-indicator-width: 1px;
     /* Timeline popup background. */
     --lgs-timeline-popup-background: var(--wa-color-surface-raised);
     /* Timeline popup border color. */
@@ -281,21 +281,6 @@
         width: var(--lgs-timeline-resizer-width);
         min-width: var(--lgs-timeline-resizer-width);
         background-color: var(--lgs-timeline-background);
-    }
-
-    & .lgs1920-wa-timeline__track-drop-indicator {
-        position: absolute;
-        z-index: 8;
-        top: 0;
-        right: 0;
-        left: 0;
-        height: var(--lgs-timeline-track-drop-indicator-width);
-        pointer-events: none;
-        background: var(--lgs-timeline-track-drop-indicator-color);
-    }
-
-    & .lgs1920-wa-timeline__track-drop-indicator[hidden] {
-        display: none;
     }
 
     & .lgs1920-wa-timeline__legend {

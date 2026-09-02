@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2025-09-15
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,6 +37,7 @@ import { WidgetPosition }        from './WidgetPosition'
 import { WidgetResizable }       from './WidgetResizable'
 import { WidgetScalable }        from './WidgetScalable'
 import { WidgetTransform }       from './WidgetTransform'
+import { flattenWidgetEntries } from './WidgetGroupUtils'
 
 export class WidgetManager {
     // Singleton instance
@@ -649,6 +650,50 @@ export class WidgetManager {
     }
 
     /**
+     * Updates persisted timeline group membership for widget instances.
+     *
+     * @param {Map|Object} widgetGroups - Widget IDs mapped to group IDs.
+     * @returns {Promise<void>}
+     */
+    updateWidgetGroups = async widgetGroups => {
+        const updates = widgetGroups instanceof Map
+            ? [...widgetGroups.entries()]
+            : Object.entries(widgetGroups ?? {})
+
+        await Promise.all(updates.map(async ([widgetId, widgetGroup]) => {
+            const groupId = widgetGroup || null
+            const config = this.getWidgetConfig(widgetId)
+            if (config) {
+                config.widgetGroup = groupId
+                this.setConfig(widgetId, config)
+            }
+
+            const currentEntry = lgs.stores.ui.widget.list.get(widgetId)
+            if (currentEntry) {
+                lgs.stores.ui.widget.list.set(widgetId, {...currentEntry, widgetGroup: groupId})
+            }
+
+            const cacheEntry = __.ui.widgetCache?.get?.(widgetId)
+            if (cacheEntry) {
+                __.ui.widgetCache.set(widgetId, {...cacheEntry, widgetGroup: groupId})
+            }
+
+            const position = await this.getWidgetPosition(widgetId)
+            if (position) {
+                await this.saveWidgetPosition(widgetId, {...position, widgetGroup: groupId}, false)
+            }
+        }))
+    }
+
+    /**
+     * Applies a top-to-bottom order containing standalone widgets and groups.
+     *
+     * @param {Array} orderedEntries - Ordered widget or group entries.
+     * @returns {Promise<void>}
+     */
+    reorderWidgetLayers = async orderedEntries => this.reorderWidgets(flattenWidgetEntries(orderedEntries))
+
+    /**
      * Refreshes the editor preview background when the edited widget moved.
      * @param {string} widgetId - The widget ID
      */
@@ -1067,6 +1112,7 @@ export class WidgetManager {
 
             config.container = referenceContainer
             config.boundsContainer = referenceContainer
+            config.widgetGroup = saved.widgetGroup ?? config.widgetGroup ?? null
             config.element = element
             config.fromDB = true
             config.fromRuntime = false

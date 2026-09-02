@@ -25,6 +25,7 @@ import {
 } from './ReplayVideoTimeline'
 import {resolveReplayVideoStatsWidgetVisibility} from './ReplayOverlayResolver'
 import {REPLAY_CLIP_SLOT_POST_REPLAY, REPLAY_CLIP_SLOT_PRE_REPLAY} from './JourneyReplayClips'
+import {groupWidgetEntries} from '../widget-manager/WidgetGroupUtils'
 
 export const REPLAY_PREPARATION_TIMELINE_VERSION = 1
 export const REPLAY_PREPARATION_TRACK_REPLAY = 'replay'
@@ -114,7 +115,7 @@ const resolveWidgetTrackDefinitions = widgetOrder => {
     }
 
     const modeByType = new Map(WIDGET_MODES.map(mode => [mode.id, mode]))
-    return widgetOrder.map((widget, index) => {
+    const definitions = widgetOrder.map((widget, index) => {
         const id = typeof widget === 'string' ? widget : widget?.id
         const type = normalizeWidgetType(id)
         const mode = modeByType.get(type)
@@ -140,9 +141,28 @@ const resolveWidgetTrackDefinitions = widgetOrder => {
             ),
             canHide: typeof widget === 'object' && widget?.canHide === true,
             visible: !(typeof widget === 'object' && widget?.visible === false),
+            widgetGroup: typeof widget === 'object' ? widget?.widgetGroup ?? null : null,
             fixed: typeof widget === 'object' && widget?.fixed === true,
         }
     }).filter(Boolean)
+
+    return groupWidgetEntries(definitions).map(widget => {
+        if (!widget.isGroup) {
+            return widget
+        }
+
+        const firstMember = widget.members[0]
+        return {
+            ...widget,
+            type: 'widget-group',
+            label: widget.label ?? widget.id,
+            icon: 'layer-group',
+            timelineColor: firstMember?.timelineColor ?? DEFAULT_TIMELINE_COLOR,
+            canHide: widget.members.some(member => member.canHide),
+            visible: widget.members.every(member => member.visible !== false),
+            fixed: widget.members.every(member => member.fixed === true),
+        }
+    })
 }
 
 /**
@@ -398,7 +418,7 @@ const buildWidgetActions = (timeline, frameTimeline, modeDefinition) => {
         }
 
         ranges.push(actionFromRange({
-            id: `${modeDefinition.id}-${startMillis}`,
+            id: `${modeDefinition.actionId ?? modeDefinition.id}-${startMillis}`,
             kind: modeDefinition.id,
             widgetId: modeDefinition.widgetId,
             label: modeDefinition.label,
@@ -413,7 +433,7 @@ const buildWidgetActions = (timeline, frameTimeline, modeDefinition) => {
 
     return mergeWidgetRanges(ranges).map((range, index) => ({
         ...range,
-        id: `${modeDefinition.id}-${index}`,
+        id: `${modeDefinition.actionId ?? modeDefinition.id}-${index}`,
     }))
 }
 
@@ -441,6 +461,31 @@ const buildStaticWidgetActions = (timeline, widgetDefinition) => {
         movable: widgetDefinition.fixed !== true,
         visible: widgetDefinition.visible,
     })]
+}
+
+/**
+ * Build all actions represented by one widget track definition.
+ *
+ * @param {Object} timeline - Canonical video timeline.
+ * @param {ReplayFrameTimeline} frameTimeline - Canonical frame clock.
+ * @param {Object} widgetDefinition - Widget or widget group definition.
+ * @returns {Array} Widget actions.
+ */
+const buildTrackWidgetActions = (timeline, frameTimeline, widgetDefinition) => {
+    const members = widgetDefinition.isGroup ? widgetDefinition.members : [widgetDefinition]
+    return members.flatMap(member => member.mode
+        ? buildWidgetActions(timeline, frameTimeline, {
+            id: member.type,
+            actionId: member.id,
+            widgetId: member.id,
+            mode: member.mode,
+            label: member.label,
+            icon: member.icon,
+            timelineColor: member.timelineColor,
+            visible: member.visible,
+            movable: !member.fixed,
+        })
+        : buildStaticWidgetActions(timeline, member))
 }
 
 /**
@@ -502,18 +547,8 @@ export const buildReplayPreparationTimeline = (options = {}) => {
         visible: widget.visible,
         colorClasses: timelineColorClasses(widget.timelineColor),
         timelineColor: widget.timelineColor,
-            actions: widget.mode
-            ? buildWidgetActions(timeline, frameTimeline, {
-                id: widget.type,
-                widgetId: widget.id,
-                mode: widget.mode,
-                label: widget.label,
-                icon: widget.icon,
-                timelineColor: widget.timelineColor,
-                visible: widget.visible,
-                movable: !widget.fixed,
-            })
-            : buildStaticWidgetActions(timeline, widget),
+        widgetGroup: widget.widgetGroup ?? null,
+        actions: buildTrackWidgetActions(timeline, frameTimeline, widget),
     })).filter(track => track.actions.length > 0)
     const tracks = [replayTrack, ...widgetTracks]
     const signature = timelineSignature({timeline, tracks})
@@ -525,6 +560,7 @@ export const buildReplayPreparationTimeline = (options = {}) => {
         fixed: track.fixed,
         canHide: track.canHide,
         visible: track.visible,
+        widgetGroup: track.widgetGroup ?? null,
         colorClasses: track.colorClasses,
         classNames: [
             `replay-timeline-row-${track.kind}`,

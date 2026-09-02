@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-01
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -78,6 +78,7 @@ describe('ReplayTimelineWidget dimensions', () => {
             stores: {
                 ui: {
                     widget: {
+                        current: null,
                         list: proxyMap([['replay-timeline-widget', {dimensions: {width: 2160, height: 900}}]]),
                     },
                 },
@@ -154,5 +155,12 @@ describe('ReplayTimelineWidget dimensions', () => {
         act(() => widgetMocks.previewProps.onMinimumDimensionsChange({width: 352, height: 204, layoutHeight: 122}))
 
         await waitFor(() => expect(widgetMocks.config.min).toEqual({width: 352, height: 204}))
+    })
+
+    it('activates timeline keyboard zoom while the widget is selected', async () => {
+        lgs.stores.ui.widget.current = {id: 'replay-timeline-widget'}
+        render(<ReplayTimelineWidget id="replay-timeline-widget"/>)
+
+        await waitFor(() => expect(widgetMocks.previewProps.keyboardZoomActive).toBe(true))
     })
 })

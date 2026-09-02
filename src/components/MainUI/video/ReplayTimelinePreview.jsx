@@ -32,6 +32,11 @@ import {
     buildReplayPreparationTimeline,
     toReplayTimelineEditorData,
 } from '@Core/ui/replay/ReplayPreparationTimeline'
+import {
+    expandTimelineTrackOrder,
+    groupWidgetEntries,
+    resolveWidgetGroupUpdatesFromTracks,
+} from '@Core/ui/widget-manager/WidgetGroupUtils'
 import {useOptionalSnapshot} from '@Utils/ValtioUtils'
 import '../../../webcomponents/lgs1920-timeline/LGS1920Timeline.js'
 import './replay-timeline-preview.css'
@@ -148,7 +153,8 @@ const resolveWidgetLabel = (id, type, definition) => {
  * @param {Object} widgetSettings - Snapshot of widget catalogue settings.
  * @returns {Array} Video widget track definitions.
  */
-const resolveVideoWidgetOrder = (widgetList, widgetSettings) => Array.from(widgetList ?? [])
+const resolveVideoWidgetOrder = (widgetList, widgetSettings) => {
+    const definitions = Array.from(widgetList ?? [])
     .filter(([id, entry]) => {
         const widgetType = id.split('#')[0]
         return entry?.widgetsBoard === VIDEO_WIDGETS_BOARD
@@ -188,9 +194,29 @@ const resolveVideoWidgetOrder = (widgetList, widgetSettings) => Array.from(widge
                      && definition?.mandatory !== true
                      && runtimeConfig?.mandatory !== true,
             visible: entry?.visible !== false && runtimeConfig?.visible !== false,
+            widgetGroup: entry?.widgetGroup ?? null,
             fixed: widgetType === CREDITS_WIDGET || widgetType === LOGO_WIDGET,
         }
     })
+
+    return groupWidgetEntries(definitions).map(widget => {
+        if (!widget.isGroup) {
+            return widget
+        }
+
+        const firstMember = widget.members[0]
+        return {
+            ...widget,
+            type: 'widget-group',
+            label: widget.label ?? widget.id,
+            icon: 'layer-group',
+            timelineColor: firstMember?.timelineColor,
+            canHide: widget.members.some(member => member.canHide),
+            visible: widget.members.every(member => member.visible !== false),
+            fixed: widget.members.every(member => member.fixed === true),
+        }
+    })
+}
 
 /**
  * Convert existing Replay editor rows to the public Web Component model.
@@ -206,6 +232,7 @@ const toDisplayTracks = rows => rows.map(row => ({
     id: row.id,
     kind: row.kind,
     label: row.label,
+    widgetGroup: row.widgetGroup ?? null,
     colorClasses: row.colorClasses,
     visible: row.visible,
     editable: row.fixed !== true,
@@ -242,9 +269,10 @@ const toDisplayTracks = rows => rows.map(row => ({
  *
  * @param {Object} props - Preview properties.
  * @param {Function} [props.onMinimumDimensionsChange] - Receives the computed floating minimum dimensions.
+ * @param {boolean} [props.keyboardZoomActive=false] - Enables selected-widget keyboard zoom.
  * @returns {JSX.Element|null} Preview surface or null outside linked preparation.
  */
-export const ReplayTimelinePreview = forwardRef(({onMinimumDimensionsChange}, ref) => {
+export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, onMinimumDimensionsChange}, ref) => {
     const video = useSnapshot(lgs.stores.ui.video)
     const replay = useSnapshot(lgs.stores.replay)
     const main = useSnapshot(lgs.stores.main)
@@ -302,7 +330,8 @@ export const ReplayTimelinePreview = forwardRef(({onMinimumDimensionsChange}, re
         interactive: true,
         collisionPolicy: 'prevent',
         durationPolicy: 'fixed',
-    }), [projection.durationMillis, projection.fps, projection.source.frameCount, projection.source.frameIntervalMs])
+        keyboardZoomActive,
+    }), [keyboardZoomActive, projection.durationMillis, projection.fps, projection.source.frameCount, projection.source.frameIntervalMs])
     const tracks = useMemo(() => toDisplayTracks(editorData), [editorData])
     const currentTimeMillis = resolveCurrentTimeMillis(replay, projection)
     const isPlaying = replay.playing === true
@@ -330,6 +359,36 @@ export const ReplayTimelinePreview = forwardRef(({onMinimumDimensionsChange}, re
         element.tracks = tracks
         element.clipOptions = []
     }, [linkedPreparation, timeline, tracks])
+
+    useEffect(() => {
+        const element = _timeline.current
+        if (!linkedPreparation || !element) {
+            return
+        }
+
+        const handleTimelineTracksChange = event => {
+            const updates = resolveWidgetGroupUpdatesFromTracks(event.detail?.tracks, widgetList)
+            if (updates.size > 0) {
+                void __.ui.widgetManager?.updateWidgetGroups?.(updates)
+            }
+        }
+        const handleTimelineReorder = event => {
+            const orderedWidgetIds = expandTimelineTrackOrder(event.detail?.trackIds, widgetList)
+            if (orderedWidgetIds.length > 0) {
+                void __.ui.widgetManager?.reorderWidgets?.(orderedWidgetIds)
+            }
+        }
+
+        element.addEventListener('lgs1920-timeline-clip-change', handleTimelineTracksChange)
+        element.addEventListener('lgs1920-timeline-add-clip', handleTimelineTracksChange)
+        element.addEventListener('lgs1920-timeline-reorder', handleTimelineReorder)
+
+        return () => {
+            element.removeEventListener('lgs1920-timeline-clip-change', handleTimelineTracksChange)
+            element.removeEventListener('lgs1920-timeline-add-clip', handleTimelineTracksChange)
+            element.removeEventListener('lgs1920-timeline-reorder', handleTimelineReorder)
+        }
+    }, [linkedPreparation, widgetList])
 
     useEffect(() => {
         const element = _timeline.current

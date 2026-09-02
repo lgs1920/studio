@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2025-11-07
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -57,10 +57,11 @@ export class WidgetCache {
      * @param {Object} options
      */
     set = (key, options) => {
-        const {group, component, mounted, widgetsBoard, zIndex} = options
+        const {group, component, mounted, widgetGroup, widgetsBoard, zIndex} = options
 
         this.#cache.set(key, {
             group:        group ?? null,
+            widgetGroup:  widgetGroup ?? null,
             component: component ?? null,
             mounted:      mounted ?? false,
             widgetsBoard: widgetsBoard ?? null,
@@ -312,12 +313,14 @@ export class WidgetCache {
 
                 this.set(widgetId, {
                     group:        position.group,
+                    widgetGroup:  position.widgetGroup,
                     component: null,
                     widgetsBoard: position.widgetsBoard,
                 })
 
                 $widget.list.set(widgetId, {
                     group:        position.group,
+                    widgetGroup:  position.widgetGroup,
                     visible:      position.visible !== false,
                     widgetsBoard: position.widgetsBoard,
                 })
@@ -342,12 +345,14 @@ export class WidgetCache {
             // Update local cache
             this.set(id, {
                 group:        position.group,
+                widgetGroup:  position.widgetGroup,
                 widgetsBoard: position.widgetsBoard,
                 zIndex:       zIndex,
             })
             // Create  global store
             const item = {
                 group: position.group,
+                widgetGroup: position.widgetGroup,
                 visible: position.visible !== false,
                 widgetsBoard: position.widgetsBoard || this.#defaultBoard,
                 zIndex,

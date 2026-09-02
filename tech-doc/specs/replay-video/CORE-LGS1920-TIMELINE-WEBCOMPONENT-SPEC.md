@@ -61,11 +61,12 @@ The supported `timeline` fields are:
 | `rangeEndMillis` | Editable video range end. Defaults to `durationMillis`. |
 | `visible` | Controls component visibility. Defaults to `true`. |
 | `editable` | Enables clip editing and track reordering. Defaults to `true`. |
-| `zoomPercent` | Ruler zoom from `-50` to `500`. |
+| `zoomPercent` | Ruler zoom up to `500`; its minimum is calculated from the available surface width and full timeline duration. |
 | `legendMinWidth` | Minimum track-title width. Defaults to `100`. |
 | `legendMaxWidth` | Maximum track-title width. Defaults to `230`. |
 | `collisionPolicy` | Default clip collision policy: `allow`, `prevent`, or `ripple`. Defaults to `prevent`. |
 | `durationPolicy` | `fixed` keeps the duration bounded; `extend` grows it when required. |
+| `keyboardZoomActive` | Enables arrow-key zoom while the containing timeline widget is selected. Defaults to `false`. |
 | `defaultTrackId` | Track selected by the clip insertion menu when an option has no `trackId`. |
 | `defaultClipDuration` | Default insertion duration in seconds. Defaults to `1`. |
 | `minClipDuration` | Default minimum clip duration in seconds. |
@@ -129,6 +130,10 @@ duration. They support pointer and keyboard editing. The default end range
 follows an extended duration until the host explicitly supplies a
 `rangeEndMillis` value or edits the end handle.
 
+When a range boundary moves, the playhead keeps its current position while it
+remains inside the new range. It is clamped to the new start or end boundary
+only when it would otherwise fall outside the selected range.
+
 When focused, `ArrowLeft` and `ArrowRight` move the selected range boundary by
 `keyboardStepSeconds`; `Shift` multiplies the step by ten.
 
@@ -141,9 +146,22 @@ their visible contents. The CSS parts are `timeline-start-handle` and
 When the playhead has focus, `ArrowLeft` and `ArrowRight` move it by
 `keyboardStepSeconds`; `Shift` multiplies the step by ten. `Alt+ArrowRight`
 moves the playhead to the range minimum, while `Alt+ArrowLeft` moves it to the
-range maximum. The focused time surface uses the horizontal arrow keys to
-change the ruler zoom in 20% increments; `Ctrl+Wheel` provides the pointer
-equivalent.
+range maximum.
+
+## Timeline zoom controls
+
+Plain wheel input remains native scrolling. `Shift` plus the wheel adjusts the
+track row height by 4 pixels between 24 and 64 pixels. `Alt` is accepted as an
+additional vertical-zoom modifier. `Meta` (Command on
+macOS, Super/Windows on Linux and Windows) plus the wheel adjusts the ruler
+zoom by 20 percent. Unmodified `ArrowUp` and `ArrowDown` adjust row height;
+unmodified `ArrowLeft` and `ArrowRight` adjust ruler zoom. `Ctrl` plus the
+wheel is not intercepted, preserving browser zoom. The selected timeline
+widget enables the window-level arrow behavior through `keyboardZoomActive`.
+The ruler removes secondary ticks while zoomed out, uses 200 ms secondary
+ticks at normal zoom, and uses 100 ms secondary ticks at high zoom. The minimum
+horizontal zoom adapts to the available surface width so the complete timeline
+can fit without horizontal scrolling, with a small right safety margin.
 
 ## Clip editing
 
@@ -222,9 +240,10 @@ Track reordering starts only from the `drag-trigger` slot. The title column and
 the time surface use the same row order, so both move together. Fixed tracks
 and tracks with `movable: false` cannot be reordered.
 
-During the gesture, a one-pixel brand-colored horizontal insertion line spans
-the complete title and time-surface area. The committed `reorder` event
-contains the resulting order and `dropIndex`.
+During the gesture, the dragged row silhouette and the translucent source
+placeholder show the drop position. A valid position uses the Web Awesome
+`success` colors, while a rejected locked boundary uses `danger` colors. The
+committed `reorder` event contains the resulting order and `dropIndex`.
 
 Movable tracks and clips emit the `before-drag`, `drag`, and `after-drag`
 lifecycle. Their `detail.context` is `{type: 'piste', pisteId, trackId}` for a
@@ -309,7 +328,6 @@ parts, including:
 
 - `timeline-start-handle` and `timeline-end-handle`;
 - `clip-start-handle` and `clip-end-handle`;
-- `track-drop-indicator`;
 - `split-panel` and the surrounding timeline layout;
 - tracks, clips, playhead, ruler, menus, and actions.
 

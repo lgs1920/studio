@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-01-29
- * Last modified: 2026-01-29
+ * Created on: 2025-09-15
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -935,6 +935,7 @@ export class WidgetCore {
                 dynamic:               initialConfig.dynamic ?? false,
                 element:               initialConfig.element,
                 group:                 initialConfig.group ?? null,
+                widgetGroup:            initialConfig.widgetGroup ?? null,
                 id:                    elementId,
                 isCropper:              initialConfig.isCropper,
                 isMobile:               initialConfig.isMobile,
@@ -977,6 +978,9 @@ export class WidgetCore {
             }
             if (initialConfig.group !== undefined) {
                 config.group = initialConfig.group
+            }
+            if (initialConfig.widgetGroup !== undefined) {
+                config.widgetGroup = initialConfig.widgetGroup
             }
         }
 
@@ -1038,6 +1042,7 @@ export class WidgetCore {
                     height: savedWidget.height,
                 }
                 config.group = savedWidget.group || config.group
+                config.widgetGroup = savedWidget.widgetGroup ?? config.widgetGroup ?? null
                 config.scale = savedWidget.scale || {x: 1, y: 1}
                 config.rotate = savedWidget.rotate || 0
                 config.ratio = savedWidget.ratio
@@ -1166,6 +1171,7 @@ export class WidgetCore {
         return {
             id:           widgetId,
             group:        config.group || null,
+            widgetGroup:  config.widgetGroup || null,
             widgetsBoard: config.widgetsBoard,
             leftRatio:    leftRatio,  // MODIFICATION: ratio au lieu de left
             topRatio:     topRatio,   // MODIFICATION: ratio au lieu de top

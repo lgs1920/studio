@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-19
- * Last modified: 2026-09-01
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -1539,6 +1539,7 @@ export const Widget = ({
                 expandedInlineDimensions: config.expandedInlineDimensions ?? null,
                 forceEven:      config.forceEven ?? false,
                 group:          config.group ?? null,
+                widgetGroup:    config.widgetGroup ?? null,
                 handle:         config.handle ?? null,
                 icon:           collapsedIcon,
                 id: widgetId,
@@ -1604,6 +1605,7 @@ export const Widget = ({
                         visible:     resolved.visible !== false,
                         icon:        collapsedIcon,
                         locked:      Boolean(resolved.locked),
+                        widgetGroup: resolved.widgetGroup ?? null,
                         widgetsBoard: resolved.widgetsBoard,
                     }
                     if (!resolved.isCropper) {
@@ -1621,6 +1623,7 @@ export const Widget = ({
                         visible:     resolved.visible !== false,
                         icon:        collapsedIcon,
                         locked:      Boolean(resolved.locked),
+                        widgetGroup: resolved.widgetGroup ?? null,
                         widgetsBoard: resolved.widgetsBoard,
                     }
                     if (!resolved.isCropper) {
@@ -1698,6 +1701,7 @@ export const Widget = ({
                 visible:     config.visible !== false,
                 icon:        config.icon ?? collapsedIcon,
                 locked:      Boolean(config.locked),
+                widgetGroup: config.widgetGroup ?? null,
                 widgetsBoard: config.widgetsBoard,
             })
         }

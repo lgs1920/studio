@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-23
- * Last modified: 2026-04-23
+ * Created on: 2026-01-26
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -507,6 +507,7 @@ export class WidgetCoreRegistry {
                 expandedDimensions:     initialConfig.expandedDimensions ?? null,
                 expandedInlineDimensions: initialConfig.expandedInlineDimensions ?? null,
                 group:                  initialConfig.group ?? null,
+                widgetGroup:             initialConfig.widgetGroup ?? null,
                 icon:                   initialConfig.icon ?? null,
                 id:                     elementId,
                 isCropper:              initialConfig.isCropper,
@@ -597,6 +598,9 @@ export class WidgetCoreRegistry {
             }
             if (initialConfig.group !== undefined) {
                 config.group = initialConfig.group
+            }
+            if (initialConfig.widgetGroup !== undefined) {
+                config.widgetGroup = initialConfig.widgetGroup
             }
             if (initialConfig.icon !== undefined) {
                 config.icon = initialConfig.icon
@@ -713,6 +717,7 @@ export class WidgetCoreRegistry {
                 }
 
                 config.group = savedWidget.group || config.group
+                config.widgetGroup = savedWidget.widgetGroup ?? config.widgetGroup ?? null
                 config.visible = savedWidget.visible !== false
                 config.collapsed = Boolean(savedWidget.collapsed)
                 config.locked = Boolean(savedWidget.locked)
@@ -895,6 +900,7 @@ export class WidgetCoreRegistry {
         return {
             id:           widgetId,
             group:        config.group || null,
+            widgetGroup:  config.widgetGroup || null,
             widgetsBoard: config.widgetsBoard,
             left: config.position?.left,
             top:  config.position?.top,

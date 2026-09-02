@@ -33,6 +33,8 @@ describe('ReplayTimelinePreview', () => {
                 },
                 widgetManager: {
                     getWidgetConfig: vi.fn(() => null),
+                    updateWidgetGroups: vi.fn(),
+                    reorderWidgets: vi.fn(),
                 },
             },
         }
@@ -296,6 +298,43 @@ describe('ReplayTimelinePreview', () => {
         expect(tracks.slice(0, 2).every(track => track.fixed === true && track.movable === false)).toBe(true)
         expect(tracks.slice(2, -1).every(track => track.fixed === false && track.movable === true)).toBe(true)
         expect(tracks.at(-1)).toMatchObject({fixed: true, movable: false})
+    })
+
+    it('persists a group when a timeline track contains multiple widget clips', async () => {
+        globalThis.lgs.settings.widgets['text-widget'] = {
+            name: 'Text',
+            icon: 'font',
+        }
+        globalThis.lgs.stores.ui.widget.list.set('text-widget#one', {
+            widgetsBoard: 'video-crop-zone',
+            zIndex: 4002,
+        })
+        globalThis.lgs.stores.ui.widget.list.set('text-widget#two', {
+            widgetsBoard: 'video-crop-zone',
+            zIndex: 4001,
+        })
+
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+        const tracks = timelineElement.tracks.map(track => track.id === 'text-widget#one'
+            ? {
+                ...track,
+                clips: [
+                    ...track.clips,
+                    {...track.clips[0], id: 'text-widget#one-second'},
+                ],
+            }
+            : track)
+
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-clip-change', {
+            detail: {tracks},
+        }))
+
+        await waitFor(() => expect(globalThis.__.ui.widgetManager.updateWidgetGroups).toHaveBeenCalledWith(
+            expect.any(Map),
+        ))
+        const updates = globalThis.__.ui.widgetManager.updateWidgetGroups.mock.calls[0][0]
+        expect(updates.get('text-widget#one')).toBe('text-widget#one')
     })
 
     it('uses the configured text content as the displayed track label', () => {

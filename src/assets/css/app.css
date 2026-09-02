@@ -1,14 +1,14 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *  
+ *
  * File: app.css
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-16
- * Last modified: 2026-07-16
+ * Created on: 2024-02-02
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -1061,12 +1061,82 @@ wa-drawer.drawer-resize-snapping::part(dialog) {
     user-select: none;
 }
 
-.widget-ordering-row::part(body) {
+.widget-ordering-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
+    cursor: grab;
+    user-select: none;
+}
+
+.widget-ordering-group-members {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
+}
+
+.widget-ordering-group-details::part(header),
+.widget-ordering-row::part(body),
+.widget-ordering-child::part(body) {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: var(--lgs-gutter-s);
     gap: var(--lgs-gutter-xs);
+    box-sizing: border-box;
+}
+
+.widget-ordering-group-details {
+    --spacing: var(--lgs-gutter-s);
+    --wa-panel-border-radius: var(--lgs-border-radius-s);
+    border-radius: var(--lgs-border-radius-s);
+    outline: 4px solid transparent;
+    outline-offset: 4px;
+    backface-visibility: hidden;
+}
+
+.widget-ordering-group-details:not([open]) {
+    height: 2rem;
+}
+
+.widget-ordering-group-details:not([open])::part(details) {
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.widget-ordering-group-details::part(header) {
+    min-height: 0;
+}
+
+.widget-ordering-group-details:not([open])::part(header) {
+    height: 100%;
+}
+
+.widget-ordering-group-details:hover {
+    color: var(--wa-color-brand-on-normal) !important;
+    outline: 2px solid var(--wa-color-brand-50);
+    outline-offset: 2px;
+    box-shadow: var(--wa-shadow-l);
+}
+
+.widget-ordering-group-summary {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: var(--lgs-gutter-xs);
+    cursor: grab;
+}
+
+.widget-ordering-child {
+    cursor: default;
+}
+
+.widget-ordering-child wa-icon {
+    width: 1.2rem;
+}
+
+.widget-ordering-child .sortable-widget-info {
+    flex: 1;
 }
 
 .widget-ordering-row wa-icon {

@@ -86,7 +86,7 @@ describe('lgs1920-timeline Web Component', () => {
         configureTimeline(timeline, {timeline: {durationMillis: 1_000}})
         document.body.append(timeline)
 
-        expect(timeline.shadowRoot.querySelector('[data-surface] [part="canvas"]').style.width).toBe('260px')
+        expect(timeline.shadowRoot.querySelector('[data-surface] [part="canvas"]').style.width).toBe('240px')
     })
 
     it('renders inside Shadow DOM with named slots and CSS customization tokens', () => {
@@ -338,7 +338,116 @@ describe('lgs1920-timeline Web Component', () => {
         timeline.handleResize()
 
         const renderedLayout = timeline.shadowRoot.querySelector('[part="layout"]')
-        expect(renderedLayout.style.getPropertyValue('--lgs-timeline-row-height')).toBe('125px')
+        expect(renderedLayout.style.getPropertyValue('--lgs-timeline-row-height')).toBe('64px')
+    })
+
+    it('keeps plain wheel scrolling native and maps modified wheel to timeline zoom', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline)
+        document.body.append(timeline)
+        const initialCanvasWidth = Number.parseFloat(timeline.shadowRoot.querySelector('[part="canvas"]').style.width)
+
+        const plainWheel = new WheelEvent('wheel', {bubbles: true, cancelable: true, deltaY: -100})
+        timeline.shadowRoot.querySelector('[data-surface]').dispatchEvent(plainWheel)
+        expect(plainWheel.defaultPrevented).toBe(false)
+        expect(timeline.shadowRoot.querySelector('[data-layout]').style.getPropertyValue('--lgs-timeline-row-height'))
+            .toBe('24px')
+
+        const verticalWheel = new WheelEvent('wheel', {bubbles: true, cancelable: true, deltaY: -100, shiftKey: true})
+        timeline.shadowRoot.querySelector('[data-surface]').dispatchEvent(verticalWheel)
+        expect(verticalWheel.defaultPrevented).toBe(true)
+        expect(timeline.shadowRoot.querySelector('[data-layout]').style.getPropertyValue('--lgs-timeline-row-height'))
+            .toBe('28px')
+
+        const altVerticalWheel = new WheelEvent('wheel', {bubbles: true, cancelable: true, deltaY: -100, altKey: true})
+        timeline.shadowRoot.querySelector('[data-surface]').dispatchEvent(altVerticalWheel)
+        expect(altVerticalWheel.defaultPrevented).toBe(true)
+        expect(timeline.shadowRoot.querySelector('[data-layout]').style.getPropertyValue('--lgs-timeline-row-height'))
+            .toBe('32px')
+
+        for (let index = 0; index < 20; index += 1) {
+            timeline.shadowRoot.querySelector('[data-surface]').dispatchEvent(new WheelEvent('wheel', {
+                bubbles: true,
+                cancelable: true,
+                deltaY: -100,
+                shiftKey: true,
+            }))
+        }
+        expect(timeline.shadowRoot.querySelector('[data-layout]').style.getPropertyValue('--lgs-timeline-row-height'))
+            .toBe('64px')
+
+        const horizontalWheel = new WheelEvent('wheel', {bubbles: true, cancelable: true, deltaY: -100, metaKey: true})
+        timeline.shadowRoot.querySelector('[data-surface]').dispatchEvent(horizontalWheel)
+        expect(horizontalWheel.defaultPrevented).toBe(true)
+        expect(timeline.shadowRoot.querySelector('[data-surface]').getAttribute('data-zoom-percent')).toBe('20')
+        expect(Number.parseFloat(timeline.shadowRoot.querySelector('[part="canvas"]').style.width)).toBeGreaterThan(initialCanvasWidth)
+
+        const browserWheel = new WheelEvent('wheel', {bubbles: true, cancelable: true, ctrlKey: true, deltaY: -100})
+        timeline.shadowRoot.querySelector('[data-surface]').dispatchEvent(browserWheel)
+        expect(browserWheel.defaultPrevented).toBe(false)
+        expect(timeline.shadowRoot.querySelector('[data-surface]').getAttribute('data-zoom-percent')).toBe('20')
+    })
+
+    it('adapts secondary ruler units and minimum zoom to the surface width', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline)
+        document.body.append(timeline)
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        Object.defineProperty(surface, 'clientWidth', {configurable: true, value: 300})
+
+        const canvasWidthAtNormalZoom = Number.parseFloat(timeline.shadowRoot.querySelector('[part="canvas"]').style.width)
+        expect(timeline.shadowRoot.querySelectorAll('[part="minor-tick"]')).not.toHaveLength(0)
+
+        timeline.setZoom(-20)
+        expect(timeline.shadowRoot.querySelectorAll('[part="minor-tick"]')).toHaveLength(0)
+
+        timeline.setZoom(100)
+        const secondaryTicks = timeline.shadowRoot.querySelectorAll('[part="minor-tick"]')
+        expect(secondaryTicks.length).toBeGreaterThan(0)
+        expect(Number.parseFloat(secondaryTicks[1].style.left) - Number.parseFloat(secondaryTicks[0].style.left)).toBe(8)
+
+        Object.defineProperty(timeline.shadowRoot.querySelector('[data-surface]'), 'clientWidth', {configurable: true, value: 300})
+        timeline.handleResize()
+        timeline.setZoom(-50)
+        expect(timeline.shadowRoot.querySelector('[data-surface]').getAttribute('data-zoom-percent')).toBe('-35')
+        expect(Number.parseFloat(timeline.shadowRoot.querySelector('[part="canvas"]').style.width)).toBe(300)
+        expect(Number.parseFloat(timeline.shadowRoot.querySelector('[part="canvas"]').style.width))
+            .toBeLessThan(canvasWidthAtNormalZoom)
+    })
+
+    it('maps unmodified arrow keys to vertical and horizontal zoom', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline)
+        document.body.append(timeline)
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+
+        surface.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowUp', bubbles: true, cancelable: true}))
+        expect(timeline.shadowRoot.querySelector('[data-layout]').style.getPropertyValue('--lgs-timeline-row-height'))
+            .toBe('28px')
+        surface.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: true, cancelable: true}))
+        expect(timeline.shadowRoot.querySelector('[data-layout]').style.getPropertyValue('--lgs-timeline-row-height'))
+            .toBe('24px')
+        surface.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true, cancelable: true}))
+        expect(timeline.shadowRoot.querySelector('[data-surface]').getAttribute('data-zoom-percent')).toBe('20')
+        surface.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowLeft', bubbles: true, cancelable: true}))
+        expect(timeline.shadowRoot.querySelector('[data-surface]').getAttribute('data-zoom-percent')).toBe('0')
+
+        const modifiedArrow = new KeyboardEvent('keydown', {key: 'ArrowUp', bubbles: true, cancelable: true, shiftKey: true})
+        surface.dispatchEvent(modifiedArrow)
+        expect(modifiedArrow.defaultPrevented).toBe(false)
+        expect(timeline.shadowRoot.querySelector('[data-layout]').style.getPropertyValue('--lgs-timeline-row-height'))
+            .toBe('24px')
+    })
+
+    it('accepts arrow zoom from the window when the timeline widget is selected', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {timeline: {keyboardZoomActive: true}})
+        document.body.append(timeline)
+
+        window.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowUp', bubbles: true, cancelable: true}))
+
+        expect(timeline.shadowRoot.querySelector('[data-layout]').style.getPropertyValue('--lgs-timeline-row-height'))
+            .toBe('28px')
     })
 
     it('emits playback, seeking, track visibility, and clip events', () => {
@@ -1222,12 +1331,12 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.shadowRoot.querySelector('[data-scroll-view="surface"]')).toBe(surface)
         expect(timeline.shadowRoot.querySelector('[data-scroll-view="tracks"]')).toBe(tracksViewport)
         expect(surface.scrollLeft).toBe(72)
+        expect(timeline.shadowRoot.querySelector('[data-track-drop-indicator]')).toBeNull()
         window.dispatchEvent(createPointerEvent('pointerup', {clientX: 10, clientY: 70}))
 
         expect(reorders).toHaveBeenCalledOnce()
         expect(reorders.mock.calls[0][0].detail.dropIndex).toBe(2)
         expect(reorders.mock.calls[0][0].detail.tracks[0].id).toBe('second')
-        expect(timeline.shadowRoot.querySelector('[data-track-drop-indicator]').hidden).toBe(true)
         expect(beforeDrag.mock.calls[0][0].detail.context).toMatchObject({type: 'piste', pisteId: 'first'})
         expect(drag).toHaveBeenCalled()
         expect(afterDrag.mock.calls[0][0].detail).toMatchObject({
