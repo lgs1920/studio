@@ -51,6 +51,7 @@ describe('ReplayPreparationTimeline', () => {
             start: 0,
             end: 4,
             colorClasses: ['wa-neutral', 'wa-neutral-blue'],
+            resizable: false,
         }))
         expect(projection.editorData[0].classNames)
             .toEqual(expect.arrayContaining(['wa-neutral', 'wa-neutral-blue']))
@@ -76,6 +77,27 @@ describe('ReplayPreparationTimeline', () => {
             ['wa-neutral', 'wa-neutral-blue'],
             ['wa-neutral', 'wa-neutral-orange'],
         ])
+    })
+
+    it('takes the clip resize lock from the clip settings input', () => {
+        const projection = buildReplayPreparationTimeline({
+            replayDurationMillis: 4000,
+            fps: 10,
+            clips: {
+                catalog: {
+                    intro: {
+                        id: 'intro',
+                        slots: ['start'],
+                        resizable: false,
+                        defaults: {duration: 2},
+                    },
+                },
+                start: [{clipId: 'intro'}],
+                stop: [],
+            },
+        })
+
+        expect(projection.tracks[0].actions.map(action => action.resizable)).toEqual([false, false])
     })
 
     it('projects clip icons into actions without projecting track icons', () => {
