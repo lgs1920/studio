@@ -99,9 +99,8 @@ export const flattenWidgetEntries = entries => (entries ?? []).flatMap(entry => 
 /**
  * Resolve group membership changes from the current public timeline tracks.
  *
- * A group is created solely when one timeline track contains more than one
- * widget clip. The number of distinct widget instances is intentionally not
- * considered, so several clips of one widget also create a group.
+ * A group is created when one timeline track contains clips from more than
+ * one distinct widget. A track with one remaining widget dissolves its group.
  *
  * @param {Array} tracks - Public timeline tracks.
  * @param {Map|Object} widgetList - Current widget entries keyed by instance ID.
@@ -114,19 +113,30 @@ export const resolveWidgetGroupUpdatesFromTracks = (
     createGroupId = createWidgetGroupId,
 ) => {
     const updates = new Map()
+    const entries = Array.from(widgetList?.entries?.() ?? Object.entries(widgetList ?? {}))
     const getWidgetEntry = widgetId => widgetList?.get?.(widgetId) ?? widgetList?.[widgetId]
+    const groupMembers = groupId => entries
+        .filter(([, entry]) => entry?.widgetGroup === groupId)
+        .map(([widgetId]) => widgetId)
 
     for (const track of tracks ?? []) {
-        const widgetIds = (track?.clips ?? [])
+        const widgetIds = [...new Set((track?.clips ?? [])
             .map(resolveWidgetIdFromClip)
-            .filter(Boolean)
+            .filter(Boolean))]
 
-        if (widgetIds.length === 0) {
-            continue
-        }
+        const existingTrackGroupId = track?.widgetGroup
+            ?? (track?.id && groupMembers(track.id).length > 0 ? track.id : null)
+            ?? (widgetIds.length === 1 ? getWidgetEntry(widgetIds[0])?.widgetGroup : null)
 
-        if (widgetIds.length === 1) {
-            updates.set(widgetIds[0], null)
+        if (widgetIds.length <= 1) {
+            if (!existingTrackGroupId) {
+                continue
+            }
+            const dissolvedMembers = new Set([
+                ...widgetIds,
+                ...(existingTrackGroupId ? groupMembers(existingTrackGroupId) : []),
+            ])
+            dissolvedMembers.forEach(widgetId => updates.set(widgetId, null))
             continue
         }
 
@@ -159,9 +169,9 @@ export const resolveWidgetGroupLabelsFromTracks = (tracks, widgetGroups = new Ma
     const labels = new Map()
 
     for (const track of tracks ?? []) {
-        const widgetIds = (track?.clips ?? [])
+        const widgetIds = [...new Set((track?.clips ?? [])
             .map(resolveWidgetIdFromClip)
-            .filter(Boolean)
+            .filter(Boolean))]
         if (widgetIds.length < 2 || !track?.label) {
             continue
         }

@@ -316,13 +316,53 @@ describe('ReplayTimelinePreview', () => {
 
         const {container} = render(<ReplayTimelinePreview/>)
         const timelineElement = container.querySelector('lgs1920-timeline')
-        const tracks = timelineElement.tracks.map(track => track.id === 'text-widget#one'
+        const widgetTwoTrack = timelineElement.tracks.find(track => track.id === 'text-widget#two')
+        const tracks = timelineElement.tracks.map(track => {
+            if (track.id === 'text-widget#one') {
+                return {
+                    ...track,
+                    clips: [...track.clips, {...widgetTwoTrack.clips[0], id: 'text-widget#two-on-one'}],
+                }
+            }
+            if (track.id === 'text-widget#two') {
+                return {...track, clips: []}
+            }
+            return track
+        })
+
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-clip-change', {
+            detail: {tracks},
+        }))
+
+        await waitFor(() => expect(globalThis.__.ui.widgetManager.updateWidgetGroups).toHaveBeenCalledWith(
+            expect.any(Map),
+        ))
+        const updates = globalThis.__.ui.widgetManager.updateWidgetGroups.mock.calls[0][0]
+        expect(updates.get('text-widget#one')).toBe('text-widget#one')
+    })
+
+    it('replaces a group with standalone widgets when one member loses all clips', async () => {
+        globalThis.lgs.settings.widgets['text-widget'] = {
+            name: 'Text',
+            icon: 'font',
+        }
+        globalThis.lgs.stores.ui.widget.list.set('text-widget#one', {
+            widgetsBoard: 'video-crop-zone',
+            widgetGroup: 'group#one',
+            zIndex: 4002,
+        })
+        globalThis.lgs.stores.ui.widget.list.set('text-widget#two', {
+            widgetsBoard: 'video-crop-zone',
+            widgetGroup: 'group#one',
+            zIndex: 4001,
+        })
+
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+        const tracks = timelineElement.tracks.map(track => track.id === 'group#one'
             ? {
                 ...track,
-                clips: [
-                    ...track.clips,
-                    {...track.clips[0], id: 'text-widget#one-second'},
-                ],
+                clips: track.clips.filter(clip => clip.metadata?.widgetId !== 'text-widget#two'),
             }
             : track)
 
@@ -334,7 +374,8 @@ describe('ReplayTimelinePreview', () => {
             expect.any(Map),
         ))
         const updates = globalThis.__.ui.widgetManager.updateWidgetGroups.mock.calls[0][0]
-        expect(updates.get('text-widget#one')).toBe('text-widget#one')
+        expect(updates.get('text-widget#one')).toBeNull()
+        expect(updates.get('text-widget#two')).toBeNull()
     })
 
     it('uses the configured text content as the displayed track label', () => {

@@ -42,18 +42,25 @@ describe('WidgetGroupUtils', () => {
         ])
     })
 
-    it('creates a group from multiple clips even when every clip belongs to one widget', () => {
+    it('dissolves a group when multiple clips leave one distinct widget', () => {
         const updates = resolveWidgetGroupUpdatesFromTracks([
             {
-                id: 'text-widget#one',
+                id: 'group#one',
+                widgetGroup: 'group#one',
                 clips: [
                     {metadata: {widgetId: 'text-widget#one'}},
                     {metadata: {widgetId: 'text-widget#one'}},
                 ],
             },
-        ], new Map(), () => 'group#created')
+        ], new Map([
+            ['text-widget#one', {widgetGroup: 'group#one'}],
+            ['text-widget#two', {widgetGroup: 'group#one'}],
+        ]))
 
-        expect(updates).toEqual(new Map([['text-widget#one', 'text-widget#one']]))
+        expect(updates).toEqual(new Map([
+            ['text-widget#one', null],
+            ['text-widget#two', null],
+        ]))
     })
 
     it('removes membership when a track contains one widget clip', () => {
