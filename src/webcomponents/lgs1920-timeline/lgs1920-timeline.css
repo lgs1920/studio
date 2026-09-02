@@ -1110,8 +1110,7 @@
         --wa-panel-box-shadow: var(--lgs-timeline-popup-shadow);
     }
 
-    & .lgs1920-wa-timeline__menu,
-    & .lgs1920-wa-timeline__context-menu {
+    & .lgs1920-wa-timeline__menu {
         min-width: 12rem;
         padding: var(--lgs-gutter-xxs, 0.25rem);
         background: var(--lgs-timeline-popup-background);
@@ -1127,18 +1126,9 @@
         overflow-y: auto;
     }
 
-    & :is(.lgs1920-wa-timeline__menu-item, .lgs1920-wa-timeline__context-menu-item) {
+    & .lgs1920-wa-timeline__menu-item {
         justify-content: flex-start;
         width: 100%;
-    }
-
-    & .lgs1920-wa-timeline__context-popup {
-        /* Context menu background token override. */
-        --wa-panel-background-color: var(--lgs-timeline-popup-background);
-        /* Context menu border token override. */
-        --wa-panel-border-color: var(--lgs-timeline-popup-border-color);
-        /* Context menu shadow token override. */
-        --wa-panel-box-shadow: var(--lgs-timeline-popup-shadow);
     }
 
     & wa-icon {

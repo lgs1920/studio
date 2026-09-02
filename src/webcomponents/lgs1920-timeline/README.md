@@ -231,8 +231,8 @@ Callbacks receive `(detail, event)`, where `detail` is the event payload and
 
 ## Slots
 
-Slots customize labels, icons, controls, track actions, clip content, and
-context-menu entries. A global slot is used for every matching element. A
+Slots customize labels, icons, controls, track actions, and clip content. A
+global slot is used for every matching element. A
 targeted slot takes the form `{slot}-{id}` and overrides the global slot.
 
 ### Layout slots
@@ -313,7 +313,6 @@ supports the `drag-trigger`, `visibility`, and `actions` slots.
 | `drag-trigger` | `drag-trigger-{trackId}` | Drag handle content. |
 | `visibility` | `visibility-{trackId}` | Visibility control content. |
 | `actions` | `actions-{trackId}` | Reserved track-specific actions. |
-| `track-context-menu` | — | Additional track context-menu commands. |
 
 ```html
 <lgs1920-timeline>
@@ -377,7 +376,6 @@ Web Awesome separator: its horizontal arrow keys resize the track legend,
 
 Double-click an editable track name to open the inline Web Awesome input.
 Press `Enter` or leave the input to commit the name; press `Escape` to cancel.
-The track context menu provides rename and visibility commands.
 
 The component emits the new name and a serializable public snapshot. The host
 stores the updated track definition and passes the new `tracks` array back.
@@ -475,7 +473,6 @@ corresponding `on...` callback.
 | `range-changing` | `lgs1920-timeline-range-changing` | `onRangeChanging` | `{rangeStartMillis, rangeEndMillis, durationMillis, event}` |
 | `range-change` | `lgs1920-timeline-range-change` | `onRangeChange` | `{rangeStartMillis, rangeEndMillis, durationMillis, event}` |
 | `reorder` | `lgs1920-timeline-reorder` | `onReorder` | `{trackIds, tracks, dropIndex}` |
-| `context-menu-open` | `lgs1920-timeline-context-menu-open` | `onContextMenuOpen` | `{type, identifier, event}` |
 
 ```js
 timeline.addEventListener('lgs1920-timeline-seek', event => {
@@ -584,7 +581,7 @@ Useful CSS parts include `timeline`, `top`, `header`, `controls`, `header-action
 `clip-preview`, `clip-start-handle`, `clip-end-handle`, `timeline-start-handle`,
 `timeline-end-handle`, `playhead`, `end-marker`,
 `track-drop-indicator`, `scroll-shell`, `scrollbar-track`, `scrollbar-thumb`,
-`popup`, `menu`, `context-popup`, and `context-menu`.
+`popup` and `menu`.
 
 The track surface exposes an LGS-style horizontal rail and a vertical rail for
 the tracks viewport. The time ruler remains fixed on the vertical axis. The

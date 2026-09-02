@@ -245,7 +245,6 @@ The component exposes global and identifier-specific slots for:
   empty states;
 - an application-owned additional menu beside the transport controls; menu
   controls supplied by the application use the `brand` variant;
-- track and clip context-menu entries.
 
 The `#` character separates a slot prefix and an identifier. For example,
 `clip-content-intro#001` targets clip `intro#001`.
@@ -275,7 +274,6 @@ the corresponding callback:
 | `track-visibility-change` | `onTrackVisibilityChange` | Track visibility change. |
 | `clip-visibility-change` | `onClipVisibilityChange` | Clip visibility change. |
 | `dblclick` | `onDblClick` | Clip double-click. |
-| `context-menu-open` | `onContextMenuOpen` | Track or clip context menu. |
 | `clip-label-edit-request` | `onClipLabelEditRequest` | Clip label edit request. |
 
 Clip edit details contain `type`, `edge`, `clipId`, `fromTrackId`,

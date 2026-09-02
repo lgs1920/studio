@@ -47,7 +47,6 @@ export const GLOBAL_SLOTS = [
     'scale-label',
     'clip-option-icon',
     'clip-option-label',
-    'track-context-menu',
 ]
 
 /**

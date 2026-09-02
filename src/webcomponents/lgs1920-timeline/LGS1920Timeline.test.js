@@ -1311,20 +1311,17 @@ describe('lgs1920-timeline Web Component', () => {
         expect(afterDrag.mock.calls[0][0].detail).toMatchObject({committed: false})
     })
 
-    it('opens the track context menu but not a clip context menu', () => {
+    it('does not open context menus for tracks or clips', () => {
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline)
         document.body.append(timeline)
 
         const track = timeline.shadowRoot.querySelector('[data-row-id="main#one"]')
         track.dispatchEvent(new MouseEvent('contextmenu', {bubbles: true, cancelable: true}))
-        expect(timeline.shadowRoot.querySelector('[role="menu"]')).not.toBeNull()
-        timeline.shadowRoot.querySelector('.lgs1920-wa-timeline__context-menu-item').click()
-        expect(timeline.shadowRoot.querySelector('[data-edit-row-id="main#one"]')).not.toBeNull()
-        timeline.shadowRoot.querySelector('[data-edit-row-id="main#one"]').dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true}))
+        expect(timeline.shadowRoot.querySelector('.lgs1920-wa-timeline__context-menu')).toBeNull()
 
         const clip = timeline.shadowRoot.querySelector('[data-clip-id="clip-one"]')
         clip.dispatchEvent(new MouseEvent('contextmenu', {bubbles: true, cancelable: true}))
-        expect(timeline.shadowRoot.querySelector('[role="menu"]')).toBeNull()
+        expect(timeline.shadowRoot.querySelector('.lgs1920-wa-timeline__context-menu')).toBeNull()
     })
 })

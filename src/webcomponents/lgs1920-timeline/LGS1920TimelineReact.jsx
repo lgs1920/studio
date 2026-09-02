@@ -28,7 +28,6 @@ const EVENT_CALLBACKS = [
     ['add-clip', 'onAddClip'],
     ['reorder', 'onReorder'],
     ['track-label-change', 'onTrackLabelChange'],
-    ['context-menu-open', 'onContextMenuOpen'],
     ['clip-change-start', 'onClipChangeStart'],
     ['clip-changing', 'onClipChanging'],
     ['clip-change', 'onClipChange'],
@@ -62,7 +61,6 @@ const EVENT_CALLBACKS = [
  * @param {Function} [props.onAddClip] - Clip insertion callback.
  * @param {Function} [props.onReorder] - Track reorder callback.
  * @param {Function} [props.onTrackLabelChange] - Track label callback.
- * @param {Function} [props.onContextMenuOpen] - Context-menu callback.
  * @param {Function} [props.onClipChangeStart] - Clip edit start callback.
  * @param {Function} [props.onClipChanging] - Live clip edit callback.
  * @param {Function} [props.onClipChange] - Committed clip edit callback.
@@ -91,7 +89,6 @@ export const LGS1920TimelineReact = ({
     onAddClip,
     onReorder,
     onTrackLabelChange,
-    onContextMenuOpen,
     onClipChangeStart,
     onClipChanging,
     onClipChange,
@@ -139,7 +136,6 @@ export const LGS1920TimelineReact = ({
             onAddClip,
             onReorder,
             onTrackLabelChange,
-            onContextMenuOpen,
             onClipChangeStart,
             onClipChanging,
             onClipChange,
@@ -156,7 +152,7 @@ export const LGS1920TimelineReact = ({
             return {name, listener}
         })
         return () => listeners.forEach(({name, listener}) => element.removeEventListener(`lgs1920-timeline-${name}`, listener))
-    }, [onAddClip, onAfterDrag, onBeforeDrag, onClipChange, onClipChangeStart, onClipChanging, onContextMenuOpen, onDblClick, onDrag, onPause, onPlay, onRangeChange, onRangeChangeStart, onRangeChanging, onReorder, onRestart, onSeek, onStop, onTrackLabelChange, onTrackVisibilityChange])
+    }, [onAddClip, onAfterDrag, onBeforeDrag, onClipChange, onClipChangeStart, onClipChanging, onDblClick, onDrag, onPause, onPlay, onRangeChange, onRangeChangeStart, onRangeChanging, onReorder, onRestart, onSeek, onStop, onTrackLabelChange, onTrackVisibilityChange])
 
     return (
         <lgs1920-timeline ref={_element}>

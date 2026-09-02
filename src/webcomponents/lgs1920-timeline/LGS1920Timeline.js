@@ -156,7 +156,6 @@ export class LGS1920Timeline extends HTMLElement {
     #edgePointerEvent = null
     #editingRowId = null
     #editingLabelValue = ''
-    #contextMenuState = null
     #inputPropagationBlockersInstalled = false
     #externalInteractionActive = false
     #clipEditor
@@ -218,7 +217,6 @@ export class LGS1920Timeline extends HTMLElement {
             hasContextualSlot: (prefix, identifier) => this.#hasContextualSlot(prefix, identifier),
             globalSlotContent: (name, fallback) => this.#globalSlotContent(name, fallback),
             button: options => this.#button(options),
-            openContextMenu: (type, identifier, anchor, event) => this.#openContextMenu(type, identifier, anchor, event),
             beginTrackLabelEdit: row => this.#beginTrackLabelEdit(row),
             commitTrackLabelEdit: () => this.#commitTrackLabelEdit(),
             cancelTrackLabelEdit: () => this.#cancelTrackLabelEdit(),
@@ -328,7 +326,6 @@ export class LGS1920Timeline extends HTMLElement {
         })
         if (this.#timelineConfig.interactive === false) {
             this.#menuOpen = false
-            this.#contextMenuState = null
             this.#dragState = null
             this.#removePointerListeners()
             this.#stopAutoScroll()
@@ -791,7 +788,6 @@ export class LGS1920Timeline extends HTMLElement {
         layout.style.setProperty('--lgs-timeline-row-height', `${this.#rowHeight}px`)
         layout.append(this.#splitPanel(scaleCount, majorSeconds, scaleSplitCount), this.#trackDropIndicator())
         section.append(layout)
-        if (this.#contextMenuState && this.#timelineConfig.interactive !== false) section.append(this.#contextMenu())
         section.append(createElement('slot', '', {name: 'footer'}))
         return section
     }
@@ -1266,87 +1262,6 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
-     * Open a context menu anchored to a track.
-     *
-     * @param {string} type - Context type.
-     * @param {string} identifier - Track identifier.
-     * @param {HTMLElement} anchor - Anchor element in the shadow tree.
-     * @param {MouseEvent} event - Context-menu event.
-     */
-    #openContextMenu = (type, identifier, anchor, event) => {
-        event.preventDefault()
-        this.#contextMenuState = {type, identifier, anchorId: anchor.id}
-        this.#emit('context-menu-open', {type, identifier, event})
-        this.#render()
-    }
-
-    /**
-     * Close the active context menu and refresh the component.
-     */
-    #closeContextMenu = () => {
-        this.#contextMenuState = null
-        this.#render()
-    }
-
-    /**
-     * Create a Web Awesome menu item for a context menu command.
-     *
-     * @param {string} label - Visible command label.
-     * @param {string} value - Command value.
-     * @param {Function} callback - Command callback.
-     * @returns {HTMLElement} Menu item.
-     */
-    #contextMenuItem = (label, value, callback) => {
-        const item = createElement('wa-button', 'lgs1920-wa-timeline__context-menu-item', {
-            appearance: 'plain',
-            variant: 'brand',
-            size: 's',
-            role: 'menuitem',
-            value,
-        })
-        item.append(document.createTextNode(label))
-        item.addEventListener('click', event => {
-            event.preventDefault()
-            callback(event)
-        })
-        return item
-    }
-
-    /**
-     * Create the context menu for the active track.
-     *
-     * @returns {HTMLElement} Context popup.
-     */
-    #contextMenu = () => {
-        const state = this.#contextMenuState
-        const popup = createElement('wa-popup', 'lgs1920-wa-timeline__context-popup', {
-            placement: 'bottom-start',
-            distance: 4,
-            active: true,
-            anchor: state.anchorId,
-            part: 'context-popup',
-        })
-        const menu = createElement('div', 'lgs1920-wa-timeline__context-menu', {
-            label: 'Track actions',
-            role: 'menu',
-            part: 'context-menu',
-        })
-        const row = this.#rows.find(value => value.id === state.identifier)
-        menu.append(this.#contextMenuItem('Rename track', 'rename-track', () => {
-            this.#closeContextMenu()
-            this.#beginTrackLabelEdit(row)
-        }))
-        if (row?.canHide) {
-            menu.append(this.#contextMenuItem(row.visible === false ? 'Show track' : 'Hide track', 'toggle-track-visibility', event => {
-                this.#toggleTrackVisibility(row, event)
-            }))
-        }
-        menu.append(...this.#globalSlotContent('track-context-menu', null))
-        popup.append(menu)
-        return popup
-    }
-
-    /**
      * Convert a surface client coordinate to timeline seconds.
      *
      * @param {number} clientX - Pointer client coordinate.
@@ -1436,7 +1351,6 @@ export class LGS1920Timeline extends HTMLElement {
         event?.stopPropagation?.()
         const visible = row.visible === false
         this.#rows = this.#rows.map(value => value.id === row.id ? {...value, visible} : value)
-        this.#contextMenuState = null
         this.#emit('track-visibility-change', {trackId: row.id, visible, track: this.#publicTrack(Object.assign({}, row, {visible})), event, data: this.#publicSnapshot()})
         this.#render()
     }

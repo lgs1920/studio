@@ -46,7 +46,6 @@ export const createTimelineRenderer = ({
     hasContextualSlot,
     globalSlotContent,
     button,
-    openContextMenu,
     beginTrackLabelEdit,
     commitTrackLabelEdit,
     cancelTrackLabelEdit,
@@ -203,7 +202,6 @@ export const createTimelineRenderer = ({
         })
         if (isRejectedRow) element.classList.add('lgs1920-wa-timeline__legend-row--drop-rejected')
         element.style.height = 'var(--lgs-timeline-row-height)'
-        if (interactive) element.addEventListener('contextmenu', event => openContextMenu('track', row.id, element, event))
         const labelPrefix = hasContextualSlot('name', row.id) ? 'name' : 'track-label'
         const editing = getEditingRowId() === row.id
         const labelElement = editing
@@ -375,7 +373,8 @@ export const createTimelineRenderer = ({
                 startRangeInteraction(event, rangeHandle.handle.getAttribute('data-range-handle'))
             }, true)
             surface.addEventListener('click', event => {
-                if (!event.target.closest('.lgs1920-wa-timeline__clip')) seek(event.clientX, true)
+                if (event.target.closest('.lgs1920-wa-timeline__clip, [data-range-handle], [data-playhead]')) return
+                seek(event.clientX, true)
             })
             surface.addEventListener('wheel', event => handleWheel(event))
             surface.addEventListener('keydown', event => handleKeyDown(event))
