@@ -182,6 +182,17 @@ next frame details contain `frameIndex`, `frameCount`,
 value of `step-backward` or `step-forward`. The start and end controls use
 `restart` or `seek` with `source` set to `go-to-start` or `go-to-end`.
 
+The header provides two icon-only view buttons with Web Awesome tooltips while
+the timeline is interactive:
+
+- `Fit entire timeline horizontally` toggles between the normal horizontal
+  zoom and the lowest zoom that displays the complete duration.
+- `Show maximum tracks` toggles with `Maximize track size`, using the minimum
+  row height to show as many tracks as possible or the maximum row height.
+
+These commands only change the transient timeline view and do not modify the
+controlled projection.
+
 The additional menu is application-owned and must be provided through the
 `additional-menu` slot. The Web Component only exposes the controlled `fps`
 value used for frame navigation; it does not modify the canonical Replay FPS

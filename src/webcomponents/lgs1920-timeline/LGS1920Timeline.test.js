@@ -24,6 +24,7 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/components/icon/icon.js', () => ({}
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/input/input.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/popup/popup.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/split-panel/split-panel.js', () => ({}))
+vi.mock('@web.awesome.me/webawesome-pro/dist/components/tooltip/tooltip.js', () => ({}))
 
 import {LGS1920Timeline} from './LGS1920Timeline'
 import {formatRulerTime} from './LGS1920TimelineUtils.js'
@@ -231,6 +232,54 @@ describe('lgs1920-timeline Web Component', () => {
         timeline.setZoom(20)
 
         expect(timeline.shadowRoot.querySelector('[part="split-panel"]').position).toBe(35)
+    })
+
+    it('provides icon-only view buttons with Web Awesome tooltips', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline)
+        document.body.append(timeline)
+
+        const tools = timeline.shadowRoot.querySelector('[part="timeline-tools"]')
+        const horizontal = tools.querySelector('[data-testid="lgs1920-wa-tools-horizontal-fit"]')
+        const vertical = tools.querySelector('[data-testid="lgs1920-wa-tools-vertical-zoom"]')
+        const tooltips = tools.querySelectorAll('wa-tooltip')
+        expect(tools).not.toBeNull()
+        expect(tools.querySelectorAll('.lgs1920-wa-timeline__timeline-tool')).toHaveLength(2)
+        expect(tooltips).toHaveLength(2)
+        expect(horizontal.getAttribute('variant')).toBe('brand')
+        expect(vertical.getAttribute('variant')).toBe('brand')
+        expect(horizontal.querySelector('wa-icon')).not.toBeNull()
+        expect(horizontal.querySelector('wa-icon').getAttribute('name'))
+            .toBe('arrow-down-left-and-arrow-up-right-to-center')
+        expect(horizontal.querySelector('wa-icon').style.transform).toBe('rotate(45deg)')
+        expect(horizontal.querySelector('slot')).toBeNull()
+        expect(vertical.querySelector('wa-icon').getAttribute('name'))
+            .toBe('arrow-up-right-and-arrow-down-left-from-center')
+        expect(vertical.querySelector('wa-icon').style.transform).toBe('rotate(-45deg)')
+        expect(tooltips[0].getAttribute('for')).toBe(horizontal.id)
+        expect(tooltips[1].getAttribute('for')).toBe(vertical.id)
+
+        horizontal.click()
+        expect(timeline.shadowRoot.querySelector('[data-surface]').getAttribute('data-zoom-percent')).toBe('-99.9')
+        expect(timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-tools-horizontal-fit"] wa-icon').getAttribute('name'))
+            .toBe('arrow-up-right-and-arrow-down-left-from-center')
+        expect(timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-tools-horizontal-fit"] wa-icon').style.transform)
+            .toBe('rotate(45deg)')
+
+        timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-tools-horizontal-fit"]').click()
+        expect(timeline.shadowRoot.querySelector('[data-surface]').getAttribute('data-zoom-percent')).toBe('0')
+
+        vertical.click()
+        expect(timeline.shadowRoot.querySelector('[data-layout]').style.getPropertyValue('--lgs-timeline-row-height'))
+            .toBe('64px')
+        expect(timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-tools-vertical-zoom"] wa-icon').getAttribute('name'))
+            .toBe('arrow-down-left-and-arrow-up-right-to-center')
+        expect(timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-tools-vertical-zoom"] wa-icon').style.transform)
+            .toBe('rotate(-45deg)')
+
+        timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-tools-vertical-zoom"]').click()
+        expect(timeline.shadowRoot.querySelector('[data-layout]').style.getPropertyValue('--lgs-timeline-row-height'))
+            .toBe('24px')
     })
 
     it('observes the timeline host instead of the split-panel surface', () => {

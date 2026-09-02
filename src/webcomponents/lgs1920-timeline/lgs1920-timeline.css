@@ -1116,6 +1116,51 @@
         width: 100%;
     }
 
+    & .lgs1920-wa-timeline__timeline-tools {
+        display: flex;
+        align-items: center;
+        gap: var(--lgs-gutter-xxs, 0.25rem);
+        cursor: default;
+    }
+
+    & .lgs1920-wa-timeline__timeline-tool {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.75rem;
+        min-width: 1.75rem;
+        height: 1.75rem;
+        min-height: 1.75rem;
+        margin: 0;
+        padding: 0;
+        cursor: pointer;
+    }
+
+    & .lgs1920-wa-timeline__timeline-tool::part(button) {
+        box-sizing: border-box;
+        width: 1.75rem;
+        min-width: 1.75rem;
+        height: 1.75rem;
+        min-height: 1.75rem;
+        margin: 0;
+        padding: 0;
+    }
+
+    & .lgs1920-wa-timeline__timeline-tool::part(label) {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+    }
+
+    & .lgs1920-wa-timeline__timeline-tools > wa-tooltip {
+        display: contents;
+    }
+
+    & .lgs1920-wa-timeline__timeline-tools > wa-tooltip + .lgs1920-wa-timeline__timeline-tool {
+        margin-inline-start: calc(var(--lgs-gutter-xxs, 0.25rem) * -1);
+    }
+
     & wa-icon {
         display: inline-flex;
         align-items: center;

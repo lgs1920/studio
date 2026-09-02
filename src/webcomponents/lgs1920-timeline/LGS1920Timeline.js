@@ -21,6 +21,7 @@ import '@web.awesome.me/webawesome-pro/dist/components/icon/icon.js'
 import '@web.awesome.me/webawesome-pro/dist/components/input/input.js'
 import '@web.awesome.me/webawesome-pro/dist/components/popup/popup.js'
 import '@web.awesome.me/webawesome-pro/dist/components/split-panel/split-panel.js'
+import '@web.awesome.me/webawesome-pro/dist/components/tooltip/tooltip.js'
 import styles from './lgs1920-timeline.css?inline'
 import {cloneRows, createTimelineClipEditor, resolveClipInterval, trackAcceptsClip} from './LGS1920TimelineEditing.js'
 import {createTimelineRenderer} from './LGS1920TimelineRendering.js'
@@ -143,6 +144,8 @@ export class LGS1920Timeline extends HTMLElement {
     #contentWidth = START_LEFT + SCALE_WIDTH
     #rowHeight = MIN_ROW_HEIGHT
     #menuOpen = false
+    #horizontalFitActive = false
+    #lastControlledZoomPercent = null
     #surface = null
     #tracksViewport = null
     #resizeObserver = null
@@ -335,6 +338,10 @@ export class LGS1920Timeline extends HTMLElement {
     set timeline(value) {
         this.#interactionDurationMillis = null
         const config = value && typeof value === 'object' ? Object.assign({}, value) : {}
+        const requestedZoom = Number(config.zoomPercent)
+        const applyControlledZoom = Number.isFinite(requestedZoom)
+            && (this.#lastControlledZoomPercent === null || requestedZoom !== this.#lastControlledZoomPercent)
+        this.#lastControlledZoomPercent = Number.isFinite(requestedZoom) ? requestedZoom : null
         this.#rangeEndFollowsDuration = !Number.isFinite(Number(config.rangeEndMillis))
         const {minimum, maximum} = resolveLegendBounds(config)
         this.#timelineConfig = Object.assign({}, config, {
@@ -349,7 +356,7 @@ export class LGS1920Timeline extends HTMLElement {
             this.#stopAutoScroll()
         }
         this.#visible = this.#timelineConfig.visible !== false
-        this.#syncPublicProps()
+        this.#syncPublicProps({zoomPercent: applyControlledZoom ? requestedZoom : undefined})
     }
 
     /**
@@ -448,7 +455,7 @@ export class LGS1920Timeline extends HTMLElement {
     /**
      * Synchronize the public properties with the internal editor projection.
      */
-    #syncPublicProps = () => {
+    #syncPublicProps = ({zoomPercent} = {}) => {
         const durationMillis = Number(this.#timelineConfig.durationMillis
             ?? (Number(this.#timelineConfig.durationSeconds) * 1000)) || 0
         const editorData = this.#trackDefinitions.map(track => ({
@@ -461,7 +468,7 @@ export class LGS1920Timeline extends HTMLElement {
             playing: this.#playing,
             visible: this.#visible,
             clipOptions: this.#clipOptions,
-            zoomPercent: this.#timelineConfig.zoomPercent,
+            zoomPercent,
             rangeStartMillis: this.#timelineConfig.rangeStartMillis,
             rangeEndMillis: this.#timelineConfig.rangeEndMillis ?? durationMillis,
         })
@@ -478,7 +485,10 @@ export class LGS1920Timeline extends HTMLElement {
         this.#playing = state.playing === true
         this.#visible = state.visible !== false
         this.#clipOptions = Array.isArray(state.clipOptions) ? state.clipOptions : []
-        if (Number.isFinite(Number(state.zoomPercent))) this.#zoom = this.#clampHorizontalZoom(state.zoomPercent)
+        if (Number.isFinite(Number(state.zoomPercent))) {
+            this.#horizontalFitActive = false
+            this.#zoom = this.#clampHorizontalZoom(state.zoomPercent)
+        }
         const durationMillis = Number(this.#projection?.durationMillis) || 0
         if (Number.isFinite(Number(state.rangeStartMillis))) {
             this.#rangeStartMillis = clamp(Number(state.rangeStartMillis), 0, durationMillis)
@@ -510,6 +520,7 @@ export class LGS1920Timeline extends HTMLElement {
      * @param {number} zoomPercent - Requested zoom percentage.
      */
     setZoom(zoomPercent) {
+        this.#horizontalFitActive = false
         this.#zoom = this.#clampHorizontalZoom(zoomPercent)
         this.#render()
     }
@@ -738,7 +749,9 @@ export class LGS1920Timeline extends HTMLElement {
         const previousScrollLeft = this.#surface?.scrollLeft ?? 0
         const previousScrollTop = this.#tracksViewport?.scrollTop ?? 0
         this.#finishScrollbarDrag()
-        this.#zoom = this.#clampHorizontalZoom(this.#zoom)
+        this.#zoom = this.#horizontalFitActive
+            ? this.#minimumHorizontalZoom()
+            : this.#clampHorizontalZoom(this.#zoom)
         const {majorSeconds, scaleSplitCount} = resolveScale(this.#zoom)
         const durationSeconds = this.#durationSeconds()
         const scaleWidth = this.#scaleWidth()
@@ -842,6 +855,7 @@ export class LGS1920Timeline extends HTMLElement {
         const header = createElement('header', 'lgs1920-wa-timeline__header', {part: 'header'})
         const headerActions = createElement('span', 'lgs1920-wa-timeline__header-actions', {part: 'header-actions'})
         headerActions.append(
+            this.#timelineTools(),
             createElement('slot', '', {name: 'timeline-actions'}),
             createElement('slot', '', {name: 'header-actions'}),
         )
@@ -1021,6 +1035,90 @@ export class LGS1920Timeline extends HTMLElement {
         }
         if (labelSlot) button.append(this.#slotWithFallback(labelSlot, document.createTextNode(label)))
         return button
+    }
+
+    /**
+     * Create a Web Awesome tooltip for a timeline view button.
+     *
+     * @param {string} buttonId - ID of the tooltip target button.
+     * @param {string} label - Tooltip and accessible action label.
+     * @returns {HTMLElement} Tooltip element.
+     */
+    #tooltip = (buttonId, label) => {
+        const tooltip = createElement('wa-tooltip', '', {
+            for: buttonId,
+            placement: 'bottom',
+        })
+        tooltip.append(document.createTextNode(label))
+        return tooltip
+    }
+
+    /**
+     * Create the icon-only timeline view controls.
+     *
+     * @returns {HTMLElement} Timeline view controls.
+     */
+    #timelineTools = () => {
+        const tools = createElement('span', 'lgs1920-wa-timeline__timeline-tools', {
+            part: 'timeline-tools',
+            'aria-label': 'Timeline view tools',
+        })
+        const horizontalLabel = this.#horizontalFitActive
+            ? 'Restore normal horizontal view'
+            : 'Fit entire timeline horizontally'
+        const horizontalIcon = createIcon(
+            this.#horizontalFitActive
+                ? 'arrow-up-right-and-arrow-down-left-from-center'
+                : 'arrow-down-left-and-arrow-up-right-to-center',
+            'solid',
+        )
+        horizontalIcon.style.transform = 'rotate(45deg)'
+        const horizontal = this.#button({
+            label: horizontalLabel,
+            testId: 'tools-horizontal-fit',
+            iconSlotElement: horizontalIcon,
+            variant: 'brand',
+        })
+        horizontal.id = 'lgs1920-timeline-tools-horizontal-fit'
+        horizontal.classList.add('lgs1920-wa-timeline__timeline-tool')
+        horizontal.addEventListener('click', () => {
+            this.#horizontalFitActive = !this.#horizontalFitActive
+            this.#zoom = this.#horizontalFitActive
+                ? this.#minimumHorizontalZoom()
+                : this.#clampHorizontalZoom(0)
+            this.#render()
+        })
+
+        const minimumRowHeight = this.#numericToken('row-height', MIN_ROW_HEIGHT)
+        const verticalAtMinimum = this.#rowHeight <= minimumRowHeight
+        const verticalLabel = verticalAtMinimum ? 'Maximize track size' : 'Show maximum tracks'
+        const verticalIcon = createIcon(
+            verticalAtMinimum
+                ? 'arrow-up-right-and-arrow-down-left-from-center'
+                : 'arrow-down-left-and-arrow-up-right-to-center',
+            'solid',
+        )
+        verticalIcon.style.transform = 'rotate(-45deg)'
+        const vertical = this.#button({
+            label: verticalLabel,
+            testId: 'tools-vertical-zoom',
+            iconSlotElement: verticalIcon,
+            variant: 'brand',
+        })
+        vertical.id = 'lgs1920-timeline-tools-vertical-zoom'
+        vertical.classList.add('lgs1920-wa-timeline__timeline-tool')
+        vertical.addEventListener('click', () => {
+            this.#verticalZoomRowHeight = verticalAtMinimum ? MAX_ROW_HEIGHT : minimumRowHeight
+            this.#render()
+        })
+
+        tools.append(
+            horizontal,
+            this.#tooltip(horizontal.id, horizontalLabel),
+            vertical,
+            this.#tooltip(vertical.id, verticalLabel),
+        )
+        return tools
     }
 
     /**
@@ -2652,6 +2750,7 @@ export class LGS1920Timeline extends HTMLElement {
             ? this.#timeAtClientX(rect.left + viewportX)
             : null
 
+        this.#horizontalFitActive = false
         this.#zoom = this.#clampHorizontalZoom(this.#zoom + (direction * ZOOM_STEP))
         this.#render()
 
