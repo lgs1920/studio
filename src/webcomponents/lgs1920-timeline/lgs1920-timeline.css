@@ -207,18 +207,51 @@
     }
 
     & .lgs1920-wa-timeline__header {
-        display: flex;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
         align-items: center;
-        justify-content: space-between;
         gap: var(--lgs-timeline-gap);
         min-height: var(--lgs-timeline-header-height);
         margin-bottom: var(--lgs-timeline-gap);
     }
 
+    & .lgs1920-wa-timeline__header-start {
+        display: inline-flex;
+        align-items: center;
+        justify-self: start;
+        min-width: 0;
+        gap: var(--lgs-timeline-gap);
+    }
+
+    & .lgs1920-wa-timeline__timeline-tools,
+    & slot[name='custom-menu'],
+    & .lgs1920-wa-timeline__transport {
+        box-sizing: border-box;
+        margin: 2px;
+        padding: 2px;
+        border: 1px solid var(--wa-color-brand-border-normal);
+        border-radius: var(--wa-border-radius-s);
+    }
+
+    & .lgs1920-wa-timeline__header-start > slot[name='header'] {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
     & .lgs1920-wa-timeline__header-actions {
         display: inline-flex;
         align-items: center;
-        justify-content: flex-end;
+        justify-content: flex-start;
+        gap: var(--lgs-timeline-gap);
+    }
+
+    & slot[name='custom-menu'] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 0;
         gap: var(--lgs-timeline-gap);
     }
 
@@ -227,11 +260,16 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        justify-self: end;
+        width: max-content;
         gap: var(--lgs-gutter-xs, 0.5rem);
         min-width: 0;
     }
 
-    & .lgs1920-wa-timeline__transport wa-button-group {
+    & .lgs1920-wa-timeline__transport-buttons {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--lgs-gutter-xxs, 0.25rem);
         flex: 0 0 auto;
     }
 
@@ -1226,8 +1264,22 @@
         min-width: 320px;
 
         & .lgs1920-wa-timeline__header {
-            align-items: flex-start;
-            flex-direction: column;
+            grid-template-columns: 1fr;
+            align-items: stretch;
+        }
+
+        & .lgs1920-wa-timeline__header-start,
+        & slot[name='custom-menu'],
+        & .lgs1920-wa-timeline__transport {
+            justify-self: stretch;
+        }
+
+        & slot[name='custom-menu'] {
+            justify-content: center;
+        }
+
+        & .lgs1920-wa-timeline__transport {
+            justify-content: flex-end;
         }
     }
 }

@@ -15,7 +15,6 @@
  ******************************************************************************/
 
 import '@web.awesome.me/webawesome-pro/dist/components/button/button.js'
-import '@web.awesome.me/webawesome-pro/dist/components/button-group/button-group.js'
 import '@web.awesome.me/webawesome-pro/dist/components/card/card.js'
 import '@web.awesome.me/webawesome-pro/dist/components/icon/icon.js'
 import '@web.awesome.me/webawesome-pro/dist/components/input/input.js'
@@ -294,12 +293,27 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
+     * Check whether an input event belongs to an application-provided custom menu.
+     *
+     * Slotted controls own their input lifecycle and must remain interactive even
+     * though the timeline keeps its internal surface events local to the host.
+     *
+     * @param {Event} event - Native input event.
+     * @returns {boolean} Whether the event originated in the custom menu slot.
+     */
+    #isCustomMenuEvent = event => {
+        const composedPath = typeof event.composedPath === 'function' ? event.composedPath() : []
+        return composedPath.some(target => target?.getAttribute?.('slot') === 'custom-menu')
+    }
+
+    /**
      * Stop native pointing events at the Web Component host after internal
      * timeline listeners have handled them.
      *
      * @param {Event} event - Native pointing event.
      */
     #stopInputPropagation = event => {
+        if (this.#isCustomMenuEvent(event)) return
         if (event.type === 'keydown' && !TIMELINE_ARROW_KEYS.includes(event.key)) return
         if (this.#nativeSplitPanelInteractionActive
             && EXTERNAL_INTERACTION_CONTINUATION_EVENT_TYPES.includes(event.type)) return
@@ -864,16 +878,22 @@ export class LGS1920Timeline extends HTMLElement {
 
         const top = createElement('div', 'lgs1920-wa-timeline__top', {part: 'top'})
         const header = createElement('header', 'lgs1920-wa-timeline__header', {part: 'header'})
+        const headerStart = createElement('span', 'lgs1920-wa-timeline__header-start', {part: 'header-start'})
         const headerActions = createElement('span', 'lgs1920-wa-timeline__header-actions', {part: 'header-actions'})
         headerActions.append(
-            this.#timelineTools(),
             createElement('slot', '', {name: 'timeline-actions'}),
             createElement('slot', '', {name: 'header-actions'}),
         )
-        header.append(createElement('slot', '', {name: 'header'}))
+        headerStart.append(this.#timelineTools(), createElement('slot', '', {name: 'header'}), headerActions)
+        header.append(
+            headerStart,
+            createElement('slot', 'lgs1920-wa-timeline__custom-menu', {
+                name: 'custom-menu',
+                part: 'custom-menu',
+            }),
+        )
         const playbackControls = this.#playbackControls()
         if (playbackControls) header.append(playbackControls)
-        header.append(headerActions)
         top.append(header)
 
         const playback = createElement('div', 'lgs1920-wa-timeline__playback-controls', {part: 'playback-controls', 'aria-label': 'Timeline playback controls'})
@@ -932,7 +952,7 @@ export class LGS1920Timeline extends HTMLElement {
     /**
      * Create the Web Awesome video timeline playback controls.
      *
-     * @returns {HTMLElement|null} Button group, or null for display-only timelines.
+     * @returns {HTMLElement|null} Transport toolbar, or null for display-only timelines.
      */
     #playbackControls = () => {
         if (this.#timelineConfig.interactive === false) return null
@@ -940,15 +960,19 @@ export class LGS1920Timeline extends HTMLElement {
             part: 'transport',
             'aria-label': 'Timeline transport controls',
         })
-        const transportGroup = createElement('wa-button-group', '', {
+        const transportButtons = createElement('div', 'lgs1920-wa-timeline__transport-buttons', {
             label: 'Timeline transport controls',
             part: 'controls',
+            role: 'toolbar',
+            'aria-label': 'Timeline transport controls',
         })
         const start = this.#button({
             iconName: 'backward-step',
             label: 'Go to timeline start',
             testId: 'timeline-restart',
             iconSlot: 'start-icon',
+            variant: 'brand',
+            appearance: 'plain',
             disabled: this.#isAtRangeStart(),
         })
         start.addEventListener('click', event => {
@@ -964,6 +988,8 @@ export class LGS1920Timeline extends HTMLElement {
             label: 'Previous frame',
             testId: 'timeline-previous-frame',
             iconSlot: 'previous-frame-icon',
+            variant: 'brand',
+            appearance: 'plain',
             disabled: this.#isAtRangeStart(),
         })
         previous.addEventListener('click', event => {
@@ -975,6 +1001,8 @@ export class LGS1920Timeline extends HTMLElement {
             label: this.#playing ? 'Pause timeline' : 'Play timeline',
             testId: 'timeline-play',
             iconSlot: this.#playing ? 'pause-icon' : 'play-icon',
+            variant: 'brand',
+            appearance: 'plain',
         })
         play.addEventListener('click', event => this.#emit(this.#playing ? 'pause' : 'play', {
             source: this.#playing ? 'timeline-pause' : 'timeline-play',
@@ -986,6 +1014,8 @@ export class LGS1920Timeline extends HTMLElement {
             label: 'Stop timeline',
             testId: 'timeline-stop',
             iconSlot: 'stop-icon',
+            variant: 'brand',
+            appearance: 'plain',
         })
         stop.addEventListener('click', event => this.#emit('stop', {
             source: 'timeline-stop',
@@ -997,6 +1027,8 @@ export class LGS1920Timeline extends HTMLElement {
             label: 'Next frame',
             testId: 'timeline-next-frame',
             iconSlot: 'next-frame-icon',
+            variant: 'brand',
+            appearance: 'plain',
             disabled: this.#isAtRangeEnd(),
         })
         next.addEventListener('click', event => {
@@ -1008,6 +1040,8 @@ export class LGS1920Timeline extends HTMLElement {
             label: 'Go to timeline end',
             testId: 'timeline-end',
             iconSlot: 'end-icon',
+            variant: 'brand',
+            appearance: 'plain',
             disabled: this.#isAtRangeEnd(),
         })
         end.addEventListener('click', event => {
@@ -1018,8 +1052,8 @@ export class LGS1920Timeline extends HTMLElement {
                 event,
             }))
         })
-        transportGroup.append(start, previous, play, stop, next, end)
-        controls.append(transportGroup, createElement('slot', '', {name: 'additional-menu'}))
+        transportButtons.append(start, previous, play, stop, next, end)
+        controls.append(transportButtons)
         return controls
     }
 

@@ -18,7 +18,6 @@
 import {afterEach, describe, expect, it, vi} from 'vitest'
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/button/button.js', () => ({}))
-vi.mock('@web.awesome.me/webawesome-pro/dist/components/button-group/button-group.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/card/card.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/icon/icon.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/input/input.js', () => ({}))
@@ -100,16 +99,29 @@ describe('lgs1920-timeline Web Component', () => {
         headerAction.slot = 'header-actions'
         const timelineAction = document.createElement('wa-button')
         timelineAction.slot = 'timeline-actions'
+        const customMenu = document.createElement('wa-button')
+        customMenu.slot = 'custom-menu'
+        const customMenuParent = document.createElement('div')
+        const customMenuParentClick = vi.fn()
+        customMenuParent.addEventListener('click', customMenuParentClick)
         timeline.append(heading, headerAction, timelineAction)
+        timeline.append(customMenu)
         timeline.style.setProperty('--lgs-timeline-playhead-color', 'rebeccapurple')
         configureTimeline(timeline)
-        document.body.append(timeline)
+        customMenuParent.append(timeline)
+        document.body.append(customMenuParent)
 
         expect(customElements.get('lgs1920-timeline')).toBe(LGS1920Timeline)
         expect(timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-timeline"]').tagName).toBe('WA-CARD')
         expect(timeline.shadowRoot.querySelector('slot[name="header"]').assignedElements()).toEqual([heading])
         expect(timeline.shadowRoot.querySelector('slot[name="header-actions"]').assignedElements()).toEqual([headerAction])
         expect(timeline.shadowRoot.querySelector('slot[name="timeline-actions"]').assignedElements()).toEqual([timelineAction])
+        expect(timeline.shadowRoot.querySelector('slot[name="custom-menu"]').assignedElements()).toEqual([customMenu])
+        const customMenuClick = vi.fn()
+        customMenu.addEventListener('click', customMenuClick)
+        customMenu.dispatchEvent(new MouseEvent('click', {bubbles: true, composed: true}))
+        expect(customMenuClick).toHaveBeenCalledTimes(1)
+        expect(customMenuParentClick).toHaveBeenCalledTimes(1)
         expect(timeline.shadowRoot.querySelector('slot[name="footer"]')).not.toBeNull()
         expect(timeline.shadowRoot.querySelector('.lgs1920-wa-timeline__legend-row.wa-neutral-blue')).not.toBeNull()
         const blueClip = timeline.shadowRoot.querySelector('.lgs1920-wa-timeline__clip.wa-neutral-blue')
@@ -241,10 +253,19 @@ describe('lgs1920-timeline Web Component', () => {
         document.body.append(timeline)
 
         const tools = timeline.shadowRoot.querySelector('[part="timeline-tools"]')
+        const header = timeline.shadowRoot.querySelector('[part="header"]')
+        const headerStart = timeline.shadowRoot.querySelector('[part="header-start"]')
+        const customMenu = timeline.shadowRoot.querySelector('[part="custom-menu"]')
+        const transport = timeline.shadowRoot.querySelector('[part="transport"]')
         const horizontal = tools.querySelector('[data-testid="lgs1920-wa-tools-horizontal-fit"]')
         const vertical = tools.querySelector('[data-testid="lgs1920-wa-tools-vertical-zoom"]')
         const tooltips = tools.querySelectorAll('wa-tooltip')
         expect(tools).not.toBeNull()
+        expect(tools.parentElement).toBe(headerStart)
+        expect(headerStart.contains(tools)).toBe(true)
+        expect(customMenu.parentElement).toBe(header)
+        expect(transport.parentElement).toBe(header)
+        expect([...header.children]).toEqual([headerStart, customMenu, transport])
         expect(tools.querySelectorAll('.lgs1920-wa-timeline__timeline-tool')).toHaveLength(2)
         expect(tooltips).toHaveLength(2)
         expect(horizontal.getAttribute('variant')).toBe('brand')
@@ -586,6 +607,17 @@ describe('lgs1920-timeline Web Component', () => {
         timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-timeline-play"]').click()
         timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-timeline-stop"]').click()
 
+        const transportButtons = timeline.shadowRoot.querySelectorAll('[part="transport"] wa-button')
+        const transportToolbar = timeline.shadowRoot.querySelector('[part="transport"] [part="controls"]')
+        expect(transportButtons).toHaveLength(6)
+        expect(transportToolbar.tagName).toBe('DIV')
+        expect(transportToolbar.getAttribute('role')).toBe('toolbar')
+        expect(timeline.shadowRoot.querySelector('[part="transport"] wa-button-group')).toBeNull()
+        transportButtons.forEach(button => {
+            expect(button.getAttribute('variant')).toBe('brand')
+            expect(button.getAttribute('appearance')).toBe('plain')
+        })
+
         expect(restart.mock.calls[0][0].detail).toMatchObject({
             source: 'go-to-start',
             timeMillis: 0,
@@ -614,7 +646,7 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-timeline-end"] wa-icon').getAttribute('name'))
             .toBe('forward-step')
 
-        expect(timeline.shadowRoot.querySelector('slot[name="additional-menu"]')).not.toBeNull()
+        expect(timeline.shadowRoot.querySelector('slot[name="custom-menu"]')).not.toBeNull()
         expect([...timeline.shadowRoot.querySelectorAll('[role="menuitem"]')]).toHaveLength(0)
     })
 
