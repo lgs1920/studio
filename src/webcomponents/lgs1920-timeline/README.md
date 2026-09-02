@@ -178,11 +178,14 @@ host updates this property after applying the requested state.
 
 The icon transport controls are, in order, go to start, previous frame,
 play/pause, stop, next frame, and go to end. The component emits the transport
-request but does not advance the Replay clock itself. Previous and
+request but does not advance the Replay clock itself. They use the Web Awesome
+`brand` variant with `plain` appearance. Previous and
 next frame details contain `frameIndex`, `frameCount`,
 `frameIntervalMillis`, `timeMillis`, `progress`, `settled`, and a `source`
 value of `step-backward` or `step-forward`. The start and end controls use
 `restart` or `seek` with `source` set to `go-to-start` or `go-to-end`.
+The transport is an accessible toolbar of independent buttons, not a Web
+Awesome button group.
 
 The header provides two icon-only view buttons with Web Awesome tooltips while
 the timeline is interactive:
@@ -195,10 +198,11 @@ the timeline is interactive:
 These commands only change the transient timeline view and do not modify the
 controlled projection.
 
-The additional menu is application-owned and must be provided through the
-`additional-menu` slot. The Web Component only exposes the controlled `fps`
-value used for frame navigation; it does not modify the canonical Replay FPS
-or emit an FPS-change event.
+The header places the view tools on the left, an application-owned menu in the
+center, and the transport controls on the right. The application-owned menu
+must be provided through the `custom-menu` slot. The Web Component only
+exposes the controlled `fps` value used for frame navigation; it does not
+modify the canonical Replay FPS or emit an FPS-change event.
 
 ### `clipOptions`
 
@@ -254,7 +258,8 @@ targeted slot takes the form `{slot}-{id}` and overrides the global slot.
 | Slot | Description |
 | --- | --- |
 | `additional-content` | Content placed inside the component before the header. |
-| `header` | Header content displayed beside the playback controls. |
+| `header` | Header content displayed in the left header area. |
+| `custom-menu` | Application-owned menu displayed in the center of the header. |
 | `header-actions` | General panel actions such as close, settings, or help. |
 | `timeline-actions` | Application actions such as recording or exporting video. |
 | `playback-start` | Content before the current time. |
@@ -263,7 +268,6 @@ targeted slot takes the form `{slot}-{id}` and overrides the global slot.
 | `playback-total` | Total-time label. |
 | `playback-end` | Content after the total time. |
 | `timeline-toolbar` | Toolbar content beside the clip menu. |
-| `additional-menu` | Application-owned menu beside the transport controls. Use Web Awesome controls with `variant="brand"`. |
 | `legend-ruler` | Replacement content for the title-column ruler area. The default fallback contains `timeline-toolbar` and the clip-menu button. |
 | `timeline-ruler` | Additional content over the time ruler. |
 | `footer` | Content below the timeline layout. |
@@ -275,6 +279,7 @@ targeted slot takes the form `{slot}-{id}` and overrides the global slot.
         <wa-badge variant="success">Ready</wa-badge>
     </div>
     <h2 slot="header">Sequence</h2>
+    <wa-button slot="custom-menu" variant="brand" appearance="plain">Custom menu</wa-button>
     <span slot="playback-separator"> of </span>
     <wa-button slot="header-actions" appearance="plain">Close</wa-button>
     <wa-button slot="timeline-actions" variant="brand">Record video</wa-button>
@@ -302,7 +307,6 @@ wa-drawer lgs1920-timeline,
 | `stop-icon` | Stop icon. |
 | `previous-frame-icon` / `next-frame-icon` | Previous or next frame icon. |
 | `end-icon` | Go-to-end icon. |
-| `additional-menu` | Application-owned Replay menu, such as the Replay FPS menu. |
 | `add-clip-icon` | Clip-menu icon. |
 | `add-clip-label` | Clip-menu label. |
 
@@ -627,8 +631,8 @@ lgs1920-timeline::part(clip) {
 | `--lgs-timeline-popup-border-color` | Popup border color. |
 | `--lgs-timeline-popup-shadow` | Popup shadow. |
 
-Useful CSS parts include `timeline`, `top`, `header`, `controls`, `header-actions`,
-`playback-controls`,
+Useful CSS parts include `timeline`, `top`, `header`, `header-start`,
+`custom-menu`, `controls`, `header-actions`, `playback-controls`,
 `layout`, `legend`, `legend-viewport`, `legend-rows`,
 `legend-row`, `legend-content`, `track-actions`, `split-panel`,
 `surface`, `canvas`, `ruler`, `tick`, `minor-tick`, `tracks`, `track`, `clip`,

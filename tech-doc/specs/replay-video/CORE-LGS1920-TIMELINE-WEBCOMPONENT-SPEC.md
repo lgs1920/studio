@@ -66,6 +66,7 @@ dependencies.
 ```html
 <lgs1920-timeline id="video-timeline" aria-label="Video timeline">
     <h2 slot="header">Video sequence</h2>
+    <wa-button slot="custom-menu" variant="brand" appearance="plain">Custom menu</wa-button>
     <wa-button slot="header-actions" appearance="plain">Close</wa-button>
     <wa-button slot="timeline-actions" variant="brand">Export video</wa-button>
 </lgs1920-timeline>
@@ -207,6 +208,7 @@ export const VideoTimelineExample = () => {
             onDblClick={detail => console.log(detail.clip)}
         >
             <h2 slot="header">Video sequence</h2>
+            <wa-button slot="custom-menu" variant="brand" appearance="plain">Custom menu</wa-button>
             <wa-button slot="header-actions" appearance="plain">Close</wa-button>
         </LGS1920TimelineReact>
     )
@@ -455,8 +457,10 @@ The component exposes global and identifier-specific slots for:
 - video range handle content;
 - playback controls, headers, timeline actions, toolbar, ruler, footer, and
   empty states;
-- an application-owned additional menu beside the transport controls; menu
-  controls supplied by the application use the `brand` variant;
+- an independent-button transport toolbar for the Replay controls;
+- an application-owned `custom-menu` centered between the left view tools and
+  right transport controls; menu controls supplied by the application use the
+  `brand` variant with `plain` appearance;
 
 The `#` character separates a slot prefix and an identifier. For example,
 `clip-content-intro#001` targets clip `intro#001`.
@@ -502,7 +506,9 @@ snapshots so the host can connect the result to its own project, journey, or
 video model.
 
 Application actions such as recording, exporting, fullscreen, or closing are
-provided through the `timeline-actions` and `header-actions` slots.
+provided through the `custom-menu`, `timeline-actions`, and `header-actions`
+slots. The header places view tools on the left, the custom menu in the center,
+and transport controls on the right.
 
 The React adapter is a passive property and event bridge. Its effects only
 assign configuration/tracks, current time, and playback state to the custom
