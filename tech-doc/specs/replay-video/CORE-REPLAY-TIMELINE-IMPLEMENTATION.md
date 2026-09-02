@@ -93,7 +93,9 @@ visual row order, so the Replay track remains the lowest canonical row.
 
 Widget rows and clips expose their projected capabilities to the Web Component.
 Logo, Credits, and the mandatory Replay row remain fixed; widget rows can be
-renamed, hidden, and reordered, and their clips can be moved or resized. Future
+renamed, hidden, and reordered, and their clips can be moved or resized. The
+Replay clip itself is size-locked; other clips are resizable by default and can
+opt out through their `resizable` input. Future
 application-side row ordering must continue through `WidgetManager.reorderWidgets`, which updates
 Valtio widget entries, cache z-index values, live DOM z-index, and persisted
 widget positions while excluding Logo and Credits from movement. The ordering
@@ -110,7 +112,9 @@ Static video widgets receive a full-duration action. Logo and Credits are
 fixed, cannot be reordered, and remain represented with their video widget
 metadata. Hidden widget rows retain their action ranges and receive the hidden
 visual state; restoring visibility through timeline events remains a future
-integration.
+integration. When clip deletion leaves only one distinct widget on a grouped
+track, the group membership is cleared and the remaining widget is projected
+as a standalone track.
 
 The projection and its action-boundary logic live in
 [`ReplayPreparationTimeline.js`](../../../src/core/ui/replay/ReplayPreparationTimeline.js#L1-L570).
@@ -151,6 +155,20 @@ Replay application event listeners and timeline controllers are not connected
 in this step. The Web Component itself handles the local controls, title
 editing, visibility actions, track/clip drags, and emits their public events;
 the host still owns persistence and domain commands.
+
+Clip pointer movement and resizing snap the edited edge to the nearest major
+ruler unit inside an eight-pixel magnetic threshold. Holding `Shift` while
+moving or resizing a clip switches the snap unit to the currently rendered
+secondary ruler divisions. The closest edge is used for movement so clip
+duration remains unchanged, including cross-track moves.
+Controlled track updates preserve the timeline's local horizontal zoom; a new
+explicit `zoomPercent` value still applies normally.
+During an active clip-edge resize, a transient blue diamond is centered on the
+ruler's lower border at the edited edge's current time and protrudes halfway
+into the track area. During a clip move, a diamond is shown at each clip
+endpoint with the same ruler-border positioning. Resize
+ripple shifts clips on the same track on the edited side: the start edge shifts
+clips to its left and the end edge shifts clips to its right.
 
 The shared layout constants and projection adapter remain in
 [`replayTimelineUtils.js`](../../../src/components/MainUI/video/replayTimelineUtils.js#L1-L188).

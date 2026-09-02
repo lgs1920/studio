@@ -50,6 +50,169 @@ The host connects the component events to its application model and persistence
 layer. Application-level recording, export, playback-clock, and persistence
 flows consume the timeline model and events.
 
+## Usage examples
+
+The component is controlled by its host. The host assigns the public model and
+applies the serializable snapshots received from interaction events. The
+following examples show the HTML custom element first, followed by JavaScript
+and React integrations.
+
+### HTML
+
+The custom element can contain regular HTML and Web Awesome components in its
+named slots. The module import registers `lgs1920-timeline` and its Web Awesome
+dependencies.
+
+```html
+<lgs1920-timeline id="video-timeline" aria-label="Video timeline">
+    <h2 slot="header">Video sequence</h2>
+    <wa-button slot="header-actions" appearance="plain">Close</wa-button>
+    <wa-button slot="timeline-actions" variant="brand">Export video</wa-button>
+</lgs1920-timeline>
+
+<script type="module">
+    import '/src/webcomponents/lgs1920-timeline/LGS1920Timeline.js'
+</script>
+```
+
+The JavaScript example below selects the element by its `id` and assigns its
+controlled state.
+
+### JavaScript
+
+```js
+const timelineElement = document.getElementById('video-timeline')
+let tracks = [
+    {
+        id: 'video',
+        label: 'Video',
+        icon: 'video',
+        clips: [
+            {id: 'intro', label: 'Intro', kind: 'video', start: 0, end: 8},
+            {id: 'journey', label: 'Journey', kind: 'video', start: 8, end: 48},
+        ],
+    },
+    {
+        id: 'music',
+        label: 'Music',
+        icon: 'music',
+        fixed: true,
+        movable: false,
+        clips: [
+            {id: 'theme', label: 'Opening theme', kind: 'audio', start: 0, end: 48},
+        ],
+    },
+]
+
+timelineElement.addEventListener('lgs1920-timeline-seek', event => {
+    timelineElement.currentTimeMillis = event.detail.timeMillis
+})
+
+timelineElement.addEventListener('lgs1920-timeline-play', () => {
+    timelineElement.playing = true
+})
+
+timelineElement.addEventListener('lgs1920-timeline-pause', () => {
+    timelineElement.playing = false
+})
+
+timelineElement.addEventListener('lgs1920-timeline-stop', event => {
+    timelineElement.playing = false
+    timelineElement.currentTimeMillis = event.detail.timeMillis
+})
+
+timelineElement.addEventListener('lgs1920-timeline-clip-change', event => {
+    tracks = event.detail.tracks
+    timelineElement.tracks = tracks
+})
+
+timelineElement.addEventListener('lgs1920-timeline-track-label-change', event => {
+    tracks = event.detail.tracks
+    timelineElement.tracks = tracks
+})
+
+timelineElement.timeline = {
+    durationMillis: 48_000,
+    rangeStartMillis: 0,
+    rangeEndMillis: 48_000,
+    editable: true,
+    interactive: true,
+    collisionPolicy: 'prevent',
+    durationPolicy: 'fixed',
+    keyboardStepSeconds: 0.1,
+}
+timelineElement.tracks = tracks
+timelineElement.currentTimeMillis = 0
+timelineElement.playing = false
+timelineElement.clipOptions = [
+    {group: 'media', key: 'video', label: 'Video clip', icon: 'film', kind: 'video'},
+]
+```
+
+### React
+
+The React adapter forwards the same controlled model and maps the custom-event
+suffixes to callback props. It passes slotted children to the custom element.
+
+```jsx
+import {useState} from 'react'
+import {LGS1920TimelineReact} from './LGS1920TimelineReact'
+
+const timelineConfig = {
+    durationMillis: 48_000,
+    rangeStartMillis: 0,
+    rangeEndMillis: 48_000,
+    editable: true,
+    interactive: true,
+    collisionPolicy: 'prevent',
+    durationPolicy: 'fixed',
+    keyboardStepSeconds: 0.1,
+}
+
+const initialTracks = [
+    {
+        id: 'video',
+        label: 'Video',
+        icon: 'video',
+        clips: [
+            {id: 'intro', label: 'Intro', kind: 'video', start: 0, end: 8},
+            {id: 'journey', label: 'Journey', kind: 'video', start: 8, end: 48},
+        ],
+    },
+]
+
+export const VideoTimelineExample = () => {
+    const [tracks, setTracks] = useState(initialTracks)
+    const [currentTimeMillis, setCurrentTimeMillis] = useState(0)
+    const [playing, setPlaying] = useState(false)
+
+    return (
+        <LGS1920TimelineReact
+            timeline={timelineConfig}
+            tracks={tracks}
+            currentTimeMillis={currentTimeMillis}
+            playing={playing}
+            clipOptions={[
+                {group: 'media', key: 'video', label: 'Video clip', icon: 'film', kind: 'video'},
+            ]}
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+            onStop={detail => {
+                setPlaying(false)
+                setCurrentTimeMillis(detail.timeMillis)
+            }}
+            onSeek={detail => setCurrentTimeMillis(detail.timeMillis)}
+            onClipChange={detail => setTracks(detail.tracks)}
+            onTrackLabelChange={detail => setTracks(detail.tracks)}
+            onDblClick={detail => console.log(detail.clip)}
+        >
+            <h2 slot="header">Video sequence</h2>
+            <wa-button slot="header-actions" appearance="plain">Close</wa-button>
+        </LGS1920TimelineReact>
+    )
+}
+```
+
 ## Timeline configuration
 
 The supported `timeline` fields are:
@@ -65,6 +228,7 @@ The supported `timeline` fields are:
 | `legendMinWidth` | Minimum track-title width. Defaults to `100`. |
 | `legendMaxWidth` | Maximum track-title width. Defaults to `230`. |
 | `collisionPolicy` | Default clip collision policy: `allow`, `prevent`, or `ripple`. Defaults to `prevent`. |
+| `resizeCollisionPolicy` | Resize collision policy: `ripple` by default; may be `allow` or `prevent`. |
 | `durationPolicy` | `fixed` keeps the duration bounded; `extend` grows it when required. |
 | `keyboardZoomActive` | Enables arrow-key zoom while the containing timeline widget is selected. Defaults to `false`. |
 | `defaultTrackId` | Track selected by the clip insertion menu when an option has no `trackId`. |
@@ -93,6 +257,7 @@ editing-related fields are:
 | `droppable` | Allows clips to be moved or inserted on the track. Defaults to `true`. |
 | `accepts` | Array of accepted clip `kind` values. An empty value accepts every kind. |
 | `collisionPolicy` | Track-level override for `allow`, `prevent`, or `ripple`. |
+| `resizeCollisionPolicy` | Track-level resize override for `allow`, `prevent`, or `ripple`; defaults to `ripple`. |
 | `minClipDuration` | Track-level minimum clip duration in seconds. |
 
 Track visibility, icons, colors, labels, and actions are independently
@@ -158,10 +323,11 @@ zoom by 20 percent. Unmodified `ArrowUp` and `ArrowDown` adjust row height;
 unmodified `ArrowLeft` and `ArrowRight` adjust ruler zoom. `Ctrl` plus the
 wheel is not intercepted, preserving browser zoom. The selected timeline
 widget enables the window-level arrow behavior through `keyboardZoomActive`.
-The ruler removes secondary ticks while zoomed out, uses 200 ms secondary
-ticks at normal zoom, and uses 100 ms secondary ticks at high zoom. The minimum
-horizontal zoom adapts to the available surface width so the complete timeline
-can fit without horizontal scrolling, with a small right safety margin.
+The ruler always renders secondary ticks: it uses five subdivisions per major
+unit below 80 pixels per second and ten subdivisions at higher zoom. The
+minimum horizontal zoom adapts to the available surface width so the complete
+timeline can fit without horizontal scrolling, with a small right safety
+margin.
 
 ## Clip editing
 
@@ -193,6 +359,10 @@ The global slots `clip-start-handle` and `clip-end-handle` provide fallback
 content, while `clip-start-handle-{clipId}` and `clip-end-handle-{clipId}`
 customize individual clips.
 
+The `resizable` clip input controls the size lock. The Replay clip is always
+non-resizable; other clips are resizable by default unless their input sets
+`resizable: false`.
+
 ### Cross-track movement
 
 Dragging a movable clip over a compatible track changes its owning track while
@@ -202,7 +372,9 @@ clip kind in `accepts` is not a valid target.
 
 ### Collision policies
 
-The target track resolves its collision policy before applying a clip edit:
+The target track resolves `collisionPolicy` before applying a move or
+insertion. Resize edits resolve `resizeCollisionPolicy` independently and use
+`ripple` by default:
 
 | Policy | Rule |
 | --- | --- |
@@ -210,17 +382,35 @@ The target track resolves its collision policy before applying a clip edit:
 | `prevent` | Clips cannot overlap. A moved or inserted clip is fitted to the available gap; a resize stops at the neighboring clip. |
 | `ripple` | Overlapping clips are shifted to the right while preserving their durations and existing gaps. |
 
+For a resize ripple, changing the start edge shifts all clips on the same track
+to the left of the edited clip; changing the end edge shifts all clips to its
+right. Shifted clips preserve their duration and relative spacing.
+
 While a clip is dragged over an occupied or otherwise invalid drop zone, it
 continues following the pointer and displays the `not-allowed` cursor. The
 invalid position is not committed on release.
 
-Ripple layout applies to insertion, movement, and resizing. With `prevent`, a
-clip that reaches the next clip is shortened to the free interval. If the
-remaining interval is shorter than the configured minimum duration, the edit
-is rejected. If the resulting last clip exceeds the current duration,
+Ripple layout applies to insertion, movement, and resizing according to the
+resolved policy. With `prevent`, a clip that reaches the next clip is shortened
+to the free interval. If the remaining interval is shorter than the configured
+minimum duration, the edit is rejected. If the resulting last clip exceeds the current duration,
 `durationPolicy: 'extend'` increases the duration. A fixed timeline fits the
 clip to its end instead. Locked or incompatible target tracks reject
 cross-track movement.
+
+While a clip is moved, a diamond is shown at each endpoint centered on the
+ruler's lower border and protruding halfway into the track area. While a clip
+edge is resized, a blue diamond follows the edited edge with the same
+ruler-border positioning. These markers are transient and are removed when the
+gesture ends or is cancelled.
+
+Pointer movement and resizing snap the edited edge to the nearest major ruler
+unit inside an eight-pixel magnetic threshold. Holding `Shift` while moving or
+resizing a clip switches the snap unit to the currently rendered secondary
+ruler divisions. Movement selects the closest of the clip's two edges and
+preserves the clip duration. Set `snap: false` to disable the magnetic behavior.
+Controlled track updates preserve the local ruler zoom unless a new explicit
+`zoomPercent` value is provided.
 
 ## Clip insertion
 
@@ -244,6 +434,9 @@ During the gesture, the dragged row silhouette and the translucent source
 placeholder show the drop position. A valid position uses the Web Awesome
 `success` colors, while a rejected locked boundary uses `danger` colors. The
 committed `reorder` event contains the resulting order and `dropIndex`.
+
+When clip deletion leaves only one distinct widget on a grouped track, the
+group is dissolved and the remaining widget becomes a standalone track.
 
 Movable tracks and clips emit the `before-drag`, `drag`, and `after-drag`
 lifecycle. Their `detail.context` is `{type: 'piste', pisteId, trackId}` for a

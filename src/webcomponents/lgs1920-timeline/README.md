@@ -394,11 +394,11 @@ changes the ruler zoom by 20 percent. Unmodified arrow keys change the row
 height vertically and the ruler zoom horizontally. `Ctrl` plus the wheel is
 left untouched so the browser can keep its own zoom behavior. The containing
 widget can also enable these arrow-key shortcuts while selected with
-`keyboardZoomActive`. The ruler has no secondary ticks while zoomed out, uses
-200 ms secondary ticks at normal zoom, and uses 100 ms secondary ticks at high
-zoom. The minimum horizontal zoom adapts to the available surface width so the
-complete timeline can fit without horizontal scrolling, with a small right
-safety margin.
+`keyboardZoomActive`. The ruler always renders secondary ticks: it uses five
+subdivisions per major unit below 80 pixels per second and ten subdivisions at
+higher zoom. The minimum horizontal zoom adapts to the available surface width
+so the complete timeline can fit without horizontal scrolling, with a small
+right safety margin.
 
 ## Track names and controlled editing
 
@@ -493,6 +493,13 @@ The component emits `clip-change-start` when an edit begins, `clip-changing`
 for live previews, and `clip-change` when the pointer or keyboard edit is
 committed. The host applies the resulting `tracks` value to keep the model
 controlled.
+
+Controlled track updates preserve the local ruler zoom. A new explicit
+`zoomPercent` value still changes the zoom, while applying the same controlled
+configuration after a clip edit does not reset the user's current view.
+
+When deleting clips from a grouped track leaves only one distinct widget, the
+group is dissolved and that widget is displayed as a standalone track again.
 
 ## Events
 
