@@ -29,6 +29,7 @@ describe('Replay timeline preview styles', () => {
         expect(openBlocks).toBe(closedBlocks)
         expect(styleSource).toContain('lgs1920-timeline {')
         expect(styleSource).toContain('.replay-timeline-preview__drag-handle')
+        expect(styleSource).toContain('inset: 0 96px auto 0;')
         expect(styleSource).toContain('height: 56px;')
         expect(styleSource).toContain('cursor: grab;')
         expect(styleSource).toContain('--lgs-timeline-padding: var(--lgs-gutter-s);')
