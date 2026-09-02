@@ -431,7 +431,7 @@ the new `tracks` order and `dropIndex`. While the pointer is over a rejected
 locked boundary, the dragged row silhouette uses the Web Awesome `danger`
 colors, follows the pointer in both panes, and remains at its last valid
 position while a translucent placeholder preserves the source slot. A valid
-position uses the Web Awesome `brand` colors.
+position uses the Web Awesome `success` colors.
 
 The component emits `before-drag`, `drag`, and `after-drag` for movable tracks
 and clips. Each detail contains a `context` with the requested public shape:

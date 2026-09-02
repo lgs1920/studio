@@ -1200,7 +1200,7 @@ describe('lgs1920-timeline Web Component', () => {
         })
     })
 
-    it('starts a row drag from the full track name area and marks the row brand', () => {
+    it('starts a row drag from the full track name area and marks the row success', () => {
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline, {
             currentTimeMillis: 3_500,

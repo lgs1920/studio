@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-01
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -112,9 +112,9 @@ describe('Replay timeline preview styles', () => {
         expect(webComponentStyleSource).toContain('[data-clip-drop-rejected]')
         expect(webComponentStyleSource).toContain('lgs1920-wa-timeline__clip--drop-rejected')
         expect(webComponentStyleSource).toContain('cursor: grabbing;')
-        expect(webComponentStyleSource).toContain('color: var(--wa-color-brand-on-normal);')
-        expect(webComponentStyleSource).toContain('background: var(--wa-color-brand-fill-normal);')
-        expect(webComponentStyleSource).toContain('background-color: var(--wa-color-brand-fill-normal);')
+        expect(webComponentStyleSource).toContain('color: var(--wa-color-success-on-normal);')
+        expect(webComponentStyleSource).toContain('background: var(--wa-color-success-fill-normal);')
+        expect(webComponentStyleSource).toContain('background-color: var(--wa-color-success-fill-normal);')
         expect(webComponentStyleSource).toContain('color: var(--wa-color-danger-on-normal);')
         expect(webComponentStyleSource).toContain('background: var(--wa-color-danger-fill-normal);')
         expect(webComponentStyleSource).toContain('background-color: var(--wa-color-danger-fill-normal);')
