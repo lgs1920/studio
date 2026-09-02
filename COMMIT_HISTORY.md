@@ -1575,3 +1575,63 @@
 ## 2026-09-02 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/1db4db53359d15a5c28ba78878d72fded045d1da)
 
 - Recorded automatically from Git history.
+
+## 2026-09-02 — [`docs(changelog): document dense release link rules`](https://github.com/lgs1920/studio/commit/359e9e5e8437ea55312960faea17254d26364f24)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`feat(timeline): add zoom view controls`](https://github.com/lgs1920/studio/commit/12778fd2f318e889fe8f26864168597fafc003ed)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`feat(timeline): support clip drag and resize`](https://github.com/lgs1920/studio/commit/4a4d07aabdd9163249fc4cd2ec6bf2a996e8fea6)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`test(replay): cover resizable clip lock`](https://github.com/lgs1920/studio/commit/aceab38704d16a679dbbfc774808320f3a7ea783)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`fix(widget-group): dissolve groups with one remaining widget`](https://github.com/lgs1920/studio/commit/5d16658bd9436aeee93171591566124625092d80)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`fix(timeline): keep secondary ruler ticks visible`](https://github.com/lgs1920/studio/commit/d5a6054d6e46e1a0cb5eae4a127c5b8225944c5e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`fix(timeline): reserve preview drag handle space`](https://github.com/lgs1920/studio/commit/38f8ef92b4d54c57d9d588b8e034ff6cc8d6b42d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`test(timeline): cover preview integration styles`](https://github.com/lgs1920/studio/commit/e11cfd61ba65bb3758444d78d9e4dd74418cb7a8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`docs(timeline): document editing and integration behavior`](https://github.com/lgs1920/studio/commit/36af8ee1f369c453e3d6cd5c5ae809087b6a16a5)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`docs(release): update changelog and release workflow`](https://github.com/lgs1920/studio/commit/215baee3af00be8d47cc1c45993e5f8a884fda47)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`chore(rules): update release changelog workflow`](https://github.com/lgs1920/studio/commit/1eb65ccacba473ac482412c5ac5beccbd0c9b331)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`feat(timeline): add custom header menu and transport toolbar`](https://github.com/lgs1920/studio/commit/3640b39ef61c6d7621997a70f543dd01d329fae8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`feat(replay): embed recording settings in timeline preview`](https://github.com/lgs1920/studio/commit/a3ef34ed65edc0313e0793b33e6b054b23847fe9)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`docs(timeline): document custom header layout`](https://github.com/lgs1920/studio/commit/b836eccecf1888a44d598fbaac825d0709fec4c4)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/587ff0d7f2797586cbb3fa81610234c6b418acf0)
+
+- Recorded automatically from Git history.
