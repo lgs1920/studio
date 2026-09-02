@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-31
- * Last modified: 2026-09-01
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,7 +32,6 @@ export const ACCELERATION_INTERVAL = 100
 export const EDGE_TIME_ACCELERATION_INTERVAL = 500
 export const EDGE_SCROLL_TIME_STEPS = [10, 100, 500, 1_000, 5_000, 30_000]
 export const GLOBAL_SLOTS = [
-    'track-icon',
     'track-label',
     'drag-trigger',
     'visibility',
@@ -49,7 +48,6 @@ export const GLOBAL_SLOTS = [
     'clip-option-icon',
     'clip-option-label',
     'track-context-menu',
-    'clip-context-menu',
 ]
 
 /**
@@ -143,14 +141,6 @@ export const formatRulerTime = seconds => {
 export const resolveClipLabel = clip => String(clip?.label ?? clip?.name ?? clip?.kind ?? '')
 
 /**
- * Resolve a human-readable row label.
- *
- * @param {Object} row - Timeline row.
- * @returns {string} Row label.
- */
-export const resolveRowLabel = row => String(row?.label ?? row?.id ?? '')
-
-/**
  * Resolve a Font Awesome icon for a timeline clip.
  *
  * @param {Object} clip - Timeline clip.
@@ -158,6 +148,14 @@ export const resolveRowLabel = row => String(row?.label ?? row?.id ?? '')
  */
 export const resolveClipIcon = clip => clip?.icon
     ?? (clip?.kind === 'start' ? 'play' : clip?.kind === 'stop' ? 'stop' : 'film')
+
+/**
+ * Resolve a human-readable row label.
+ *
+ * @param {Object} row - Timeline row.
+ * @returns {string} Row label.
+ */
+export const resolveRowLabel = row => String(row?.label ?? row?.id ?? '')
 
 /**
  * Join Web Awesome color classes with a safe fallback.

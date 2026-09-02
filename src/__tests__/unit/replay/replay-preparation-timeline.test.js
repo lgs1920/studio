@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-01
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -78,13 +78,14 @@ describe('ReplayPreparationTimeline', () => {
         ])
     })
 
-    it('uses the catalog icon for clip actions and keeps the replay icon', () => {
+    it('projects clip icons into actions without projecting track icons', () => {
         const projection = buildReplayPreparationTimeline({
             replayDurationMillis: 4000,
             fps: 10,
             clips,
         })
 
+        expect(projection.tracks.every(track => !Object.hasOwn(track, 'icon'))).toBe(true)
         expect(projection.tracks[0].actions.map(action => action.icon)).toEqual([
             'plane-departure',
             'route',

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-01
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -214,7 +214,7 @@ describe('ReplayTimelinePreview', () => {
         expect(timelineElement.handleResize).toHaveBeenCalledOnce()
     })
 
-    it('keeps the existing journey clip labels and icons in the displayed model', () => {
+    it('keeps the existing journey clip labels and icons without track icons', () => {
         globalThis.lgs.theJourney = {
             replay: {
                 start: [{clipId: 'intro'}],
@@ -247,6 +247,7 @@ describe('ReplayTimelinePreview', () => {
             'route',
             'plane-arrival',
         ])
+        expect(container.querySelector('lgs1920-timeline').tracks.every(track => !Object.hasOwn(track, 'icon'))).toBe(true)
     })
 
     it('refreshes the displayed model when Replay creates a clip after mount', async () => {
@@ -319,7 +320,7 @@ describe('ReplayTimelinePreview', () => {
             .find(track => track.id === 'text-widget#title')
 
         expect(textTrack.label).toBe('Actual text content')
-        expect(textTrack.icon).toBe('font')
+        expect(textTrack.icon).toBeUndefined()
         expect(textTrack.colorClasses).toEqual(['wa-neutral', 'wa-neutral-pink'])
     })
 

@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-01
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -115,9 +115,11 @@ describe('lgs1920-timeline Web Component', () => {
         expect(blueClip).not.toBeNull()
         expect(blueClip.style.backgroundColor).toBe('var(--wa-color-blue-50)')
         expect(blueClip.style.borderColor).toBe('var(--wa-color-blue-60)')
+        expect(blueClip.querySelector('slot[name="clip-icon-clip-one"]')).not.toBeNull()
+        expect(blueClip.querySelector('slot[name="clip-icon-clip-one"] wa-icon').getAttribute('name')).toBe('film')
         expect(blueClip.style.getPropertyValue('--lgs-timeline-clip-handle-color'))
             .toContain('var(--wa-color-blue-on)')
-        expect(greenLegendIcon.style.backgroundColor).toBe('var(--wa-color-green-50)')
+        expect(greenLegendIcon).toBeNull()
         expect(timeline.shadowRoot.querySelectorAll('[data-clip-handle]')).toHaveLength(4)
         expect(timeline.style.getPropertyValue('--lgs-timeline-playhead-color')).toBe('rebeccapurple')
         expect(timeline.shadowRoot.querySelector('[data-scroll-view="surface"]')).not.toBeNull()
@@ -578,19 +580,19 @@ describe('lgs1920-timeline Web Component', () => {
 
     it('supports global and contextual slots for repeated track and clip content', () => {
         const timeline = new LGS1920Timeline()
-        const globalIcon = document.createElement('wa-icon')
-        globalIcon.slot = 'track-icon'
-        globalIcon.setAttribute('name', 'layer-group')
+        const globalClipIcon = document.createElement('wa-icon')
+        globalClipIcon.slot = 'clip-icon'
+        globalClipIcon.setAttribute('name', 'film')
         const contextualLabel = document.createElement('span')
         contextualLabel.slot = 'track-label-main#one'
         contextualLabel.textContent = 'Custom main track'
-        timeline.append(globalIcon, contextualLabel)
+        timeline.append(globalClipIcon, contextualLabel)
         configureTimeline(timeline)
         document.body.append(timeline)
 
         const row = timeline.shadowRoot.querySelector('[data-row-id="main#one"]')
         expect(row.querySelector('slot[name="track-label-main#one"]').assignedElements()).toEqual([contextualLabel])
-        expect(row.querySelector('slot[name="track-icon-main#one"]')).not.toBeNull()
+        expect(row.querySelector('[part="legend-icon"]')).toBeNull()
         expect(row.querySelector('[part="track-actions"]')).not.toBeNull()
         expect(row.firstElementChild).toBe(row.querySelector('[part="track-actions"]'))
         expect(row.querySelector('slot[name="drag-trigger-main#one"]')).not.toBeNull()
@@ -599,6 +601,7 @@ describe('lgs1920-timeline Web Component', () => {
 
         const fixedRow = timeline.shadowRoot.querySelector('[data-row-id="camera"]')
         expect(fixedRow.querySelector('[part="visibility-placeholder"]')).not.toBeNull()
+        expect(timeline.shadowRoot.querySelector('[data-clip-id="clip-one"] slot[name="clip-icon-clip-one"]')).not.toBeNull()
     })
 
     it('accepts public timeline, track, clip, and insertion properties', () => {

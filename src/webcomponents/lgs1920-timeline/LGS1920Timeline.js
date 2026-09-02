@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-01
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -1073,7 +1073,7 @@ export class LGS1920Timeline extends HTMLElement {
 
     /**
      * Create hidden global slot sources used to clone labels and icons into
-     * repeated track and clip contexts.
+     * repeated track contexts.
      *
      * @returns {HTMLElement} Slot registry.
      */
@@ -1266,10 +1266,10 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
-     * Open a context menu anchored to a track or clip.
+     * Open a context menu anchored to a track.
      *
-     * @param {string} type - Context type: `track` or `clip`.
-     * @param {string} identifier - Track or clip identifier.
+     * @param {string} type - Context type.
+     * @param {string} identifier - Track identifier.
      * @param {HTMLElement} anchor - Anchor element in the shadow tree.
      * @param {MouseEvent} event - Context-menu event.
      */
@@ -1313,7 +1313,7 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
-     * Create the context menu for the active track or clip.
+     * Create the context menu for the active track.
      *
      * @returns {HTMLElement} Context popup.
      */
@@ -1327,49 +1327,23 @@ export class LGS1920Timeline extends HTMLElement {
             part: 'context-popup',
         })
         const menu = createElement('div', 'lgs1920-wa-timeline__context-menu', {
-            label: state.type === 'track' ? 'Track actions' : 'Clip actions',
+            label: 'Track actions',
             role: 'menu',
             part: 'context-menu',
         })
-        if (state.type === 'track') {
-            const row = this.#rows.find(value => value.id === state.identifier)
-            menu.append(this.#contextMenuItem('Rename track', 'rename-track', () => {
-                this.#closeContextMenu()
-                this.#beginTrackLabelEdit(row)
+        const row = this.#rows.find(value => value.id === state.identifier)
+        menu.append(this.#contextMenuItem('Rename track', 'rename-track', () => {
+            this.#closeContextMenu()
+            this.#beginTrackLabelEdit(row)
+        }))
+        if (row?.canHide) {
+            menu.append(this.#contextMenuItem(row.visible === false ? 'Show track' : 'Hide track', 'toggle-track-visibility', event => {
+                this.#toggleTrackVisibility(row, event)
             }))
-            if (row?.canHide) {
-                menu.append(this.#contextMenuItem(row.visible === false ? 'Show track' : 'Hide track', 'toggle-track-visibility', event => {
-                    this.#toggleTrackVisibility(row, event)
-                }))
-            }
-            menu.append(...this.#globalSlotContent('track-context-menu', null))
-        } else {
-            const clip = this.#findClip(state.identifier)
-            menu.append(this.#contextMenuItem('Edit clip', 'edit-clip', event => {
-                this.#emit('clip-label-edit-request', {clip, event})
-                this.#closeContextMenu()
-            }))
-            menu.append(this.#contextMenuItem(clip?.visible === false ? 'Show clip' : 'Hide clip', 'toggle-clip-visibility', event => {
-                this.#toggleClipVisibility(clip, event)
-            }))
-            menu.append(...this.#globalSlotContent('clip-context-menu', null))
         }
+        menu.append(...this.#globalSlotContent('track-context-menu', null))
         popup.append(menu)
         return popup
-    }
-
-    /**
-     * Find a clip by identifier in the current tracks.
-     *
-     * @param {string} identifier - Clip identifier.
-     * @returns {Object|null} Matching clip and its track context.
-     */
-    #findClip = identifier => {
-        for (const row of this.#rows) {
-            const clip = (row.actions ?? []).find(value => value.id === identifier)
-            if (clip) return Object.assign({}, clip, {trackId: row.id})
-        }
-        return null
     }
 
     /**
@@ -1467,22 +1441,6 @@ export class LGS1920Timeline extends HTMLElement {
         this.#render()
     }
 
-    /**
-     * Toggle a clip visibility state and emit its controlled change event.
-     *
-     * @param {Object|null} clip - Clip to toggle.
-     * @param {Event} event - Triggering event.
-     */
-    #toggleClipVisibility = (clip, event) => {
-        if (!clip) return
-        const visible = clip.visible === false
-        this.#rows = this.#rows.map(row => row.id !== clip.trackId
-            ? row
-            : {...row, actions: (row.actions ?? []).map(value => value.id === clip.id ? {...value, visible} : value)})
-        this.#contextMenuState = null
-        this.#emit('clip-visibility-change', {trackId: clip.trackId, clipId: clip.id, visible, clip: Object.assign({}, clip, {visible}), event, data: this.#publicSnapshot()})
-        this.#render()
-    }
 
     #legendRow = row => {
         return this.#renderer.legendRow(row)

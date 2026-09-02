@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-01
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,8 +29,6 @@ const EVENT_CALLBACKS = [
     ['reorder', 'onReorder'],
     ['track-label-change', 'onTrackLabelChange'],
     ['context-menu-open', 'onContextMenuOpen'],
-    ['clip-label-edit-request', 'onClipLabelEditRequest'],
-    ['clip-visibility-change', 'onClipVisibilityChange'],
     ['clip-change-start', 'onClipChangeStart'],
     ['clip-changing', 'onClipChanging'],
     ['clip-change', 'onClipChange'],
@@ -65,8 +63,6 @@ const EVENT_CALLBACKS = [
  * @param {Function} [props.onReorder] - Track reorder callback.
  * @param {Function} [props.onTrackLabelChange] - Track label callback.
  * @param {Function} [props.onContextMenuOpen] - Context-menu callback.
- * @param {Function} [props.onClipLabelEditRequest] - Clip label callback.
- * @param {Function} [props.onClipVisibilityChange] - Clip visibility callback.
  * @param {Function} [props.onClipChangeStart] - Clip edit start callback.
  * @param {Function} [props.onClipChanging] - Live clip edit callback.
  * @param {Function} [props.onClipChange] - Committed clip edit callback.
@@ -96,8 +92,6 @@ export const LGS1920TimelineReact = ({
     onReorder,
     onTrackLabelChange,
     onContextMenuOpen,
-    onClipLabelEditRequest,
-    onClipVisibilityChange,
     onClipChangeStart,
     onClipChanging,
     onClipChange,
@@ -146,8 +140,6 @@ export const LGS1920TimelineReact = ({
             onReorder,
             onTrackLabelChange,
             onContextMenuOpen,
-            onClipLabelEditRequest,
-            onClipVisibilityChange,
             onClipChangeStart,
             onClipChanging,
             onClipChange,
@@ -164,7 +156,7 @@ export const LGS1920TimelineReact = ({
             return {name, listener}
         })
         return () => listeners.forEach(({name, listener}) => element.removeEventListener(`lgs1920-timeline-${name}`, listener))
-    }, [onAddClip, onAfterDrag, onBeforeDrag, onClipChange, onClipChangeStart, onClipChanging, onClipLabelEditRequest, onClipVisibilityChange, onContextMenuOpen, onDblClick, onDrag, onPause, onPlay, onRangeChange, onRangeChangeStart, onRangeChanging, onReorder, onRestart, onSeek, onStop, onTrackLabelChange, onTrackVisibilityChange])
+    }, [onAddClip, onAfterDrag, onBeforeDrag, onClipChange, onClipChangeStart, onClipChanging, onContextMenuOpen, onDblClick, onDrag, onPause, onPlay, onRangeChange, onRangeChangeStart, onRangeChanging, onReorder, onRestart, onSeek, onStop, onTrackLabelChange, onTrackVisibilityChange])
 
     return (
         <lgs1920-timeline ref={_element}>

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-01
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -488,7 +488,6 @@ export const buildReplayPreparationTimeline = (options = {}) => {
         actions: buildReplayActions(timeline),
         movable: false,
         fixed: true,
-        icon: 'route',
         colorClasses: REPLAY_COLOR_CLASSES,
         timelineColor: DEFAULT_TIMELINE_COLOR,
     }
@@ -501,7 +500,6 @@ export const buildReplayPreparationTimeline = (options = {}) => {
         fixed: widget.fixed,
         canHide: widget.canHide,
         visible: widget.visible,
-        icon: widget.icon,
         colorClasses: timelineColorClasses(widget.timelineColor),
         timelineColor: widget.timelineColor,
             actions: widget.mode
@@ -523,7 +521,6 @@ export const buildReplayPreparationTimeline = (options = {}) => {
         id: track.id,
         label: track.label,
         kind: track.kind,
-        icon: track.icon,
         movable: track.movable,
         fixed: track.fixed,
         canHide: track.canHide,

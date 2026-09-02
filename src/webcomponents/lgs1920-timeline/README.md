@@ -2,7 +2,7 @@
 
 `lgs1920-timeline` is a generic video timeline Web Component designed for Web
 Awesome 3 and Font Awesome. It provides a time ruler, a playhead, editable
-track names, track actions, clip rendering, clip context menus, scrubbing,
+track names, track actions, clip rendering, scrubbing,
 reordering, and playback controls.
 
 The implementation is based on `@xzdarcy/react-timeline-editor`. Its React
@@ -134,7 +134,6 @@ clock integration.
 | `id` | `string` | Stable track identifier. `#` is used as the slot identifier separator. |
 | `label` | `string` | Track name shown in the legend. |
 | `editable` | `boolean` | Enables inline track-name editing. Defaults to `true`. |
-| `icon` | `string` | Font Awesome icon name. |
 | `colorClasses` | `string[]` | Web Awesome color classes. |
 | `visible` | `boolean` | Track visibility state. |
 | `canHide` | `boolean` | Enables the track visibility action. |
@@ -310,7 +309,6 @@ supports the `drag-trigger`, `visibility`, and `actions` slots.
 
 | Global slot | Targeted slot | Description |
 | --- | --- | --- |
-| `track-icon` | `track-icon-{trackId}` | Track icon. |
 | `track-label` or `name` | `track-label-{trackId}` or `name-{trackId}` | Track name content. |
 | `drag-trigger` | `drag-trigger-{trackId}` | Drag handle content. |
 | `visibility` | `visibility-{trackId}` | Visibility control content. |
@@ -319,7 +317,6 @@ supports the `drag-trigger`, `visibility`, and `actions` slots.
 
 ```html
 <lgs1920-timeline>
-    <wa-icon slot="track-icon-camera#main" name="video" variant="solid" label=""></wa-icon>
     <span slot="name-camera#main">Main camera</span>
     <wa-icon slot="drag-trigger-camera#main" name="grip-lines-vertical" variant="solid" label=""></wa-icon>
     <wa-button slot="actions-camera#main" appearance="plain" size="s" aria-label="Track settings">
@@ -479,8 +476,6 @@ corresponding `on...` callback.
 | `range-change` | `lgs1920-timeline-range-change` | `onRangeChange` | `{rangeStartMillis, rangeEndMillis, durationMillis, event}` |
 | `reorder` | `lgs1920-timeline-reorder` | `onReorder` | `{trackIds, tracks, dropIndex}` |
 | `context-menu-open` | `lgs1920-timeline-context-menu-open` | `onContextMenuOpen` | `{type, identifier, event}` |
-| `clip-label-edit-request` | `lgs1920-timeline-clip-label-edit-request` | `onClipLabelEditRequest` | `{clip, event}` |
-| `clip-visibility-change` | `lgs1920-timeline-clip-visibility-change` | `onClipVisibilityChange` | `{trackId, clipId, visible, clip, event, data}` |
 
 ```js
 timeline.addEventListener('lgs1920-timeline-seek', event => {
@@ -583,7 +578,7 @@ lgs1920-timeline::part(clip) {
 Useful CSS parts include `timeline`, `top`, `header`, `controls`, `header-actions`,
 `playback-controls`,
 `layout`, `legend`, `legend-viewport`, `legend-rows`,
-`legend-row`, `legend-icon`, `legend-content`, `track-actions`, `split-panel`,
+`legend-row`, `legend-content`, `track-actions`, `split-panel`,
 `surface`, `canvas`, `ruler`, `tick`, `minor-tick`, `tracks`, `track`, `clip`,
 `tracks-viewport`,
 `clip-preview`, `clip-start-handle`, `clip-end-handle`, `timeline-start-handle`,

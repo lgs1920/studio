@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-01
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -206,7 +206,6 @@ const toDisplayTracks = rows => rows.map(row => ({
     id: row.id,
     kind: row.kind,
     label: row.label,
-    icon: row.icon,
     colorClasses: row.colorClasses,
     visible: row.visible,
     editable: row.fixed !== true,

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-31
- * Last modified: 2026-09-01
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -111,7 +111,6 @@ export const createTimelineRenderer = ({
                 if (event.target.closest('[data-clip-handle]')) return
                 startClipInteraction(event, value.id, 'move')
             })
-            element.addEventListener('contextmenu', event => openContextMenu('clip', value.id, element, event))
             element.addEventListener('dblclick', event => {
                 emit('dblclick', {
                     clip: value,
@@ -205,9 +204,6 @@ export const createTimelineRenderer = ({
         if (isRejectedRow) element.classList.add('lgs1920-wa-timeline__legend-row--drop-rejected')
         element.style.height = 'var(--lgs-timeline-row-height)'
         if (interactive) element.addEventListener('contextmenu', event => openContextMenu('track', row.id, element, event))
-        const iconFrame = createElement('span', `lgs1920-wa-timeline__icon-frame ${resolveColorClasses(row.colorClasses)}`, {part: 'legend-icon'})
-        applyTimelinePaletteStyles(iconFrame, row.colorClasses)
-        iconFrame.append(contextualSlot('track-icon', row.id, ['track-icon'], createIcon(row.icon ?? 'layer-group')))
         const labelPrefix = hasContextualSlot('name', row.id) ? 'name' : 'track-label'
         const editing = getEditingRowId() === row.id
         const labelElement = editing
@@ -230,7 +226,7 @@ export const createTimelineRenderer = ({
             })
         }
         const trackContent = createElement('span', 'lgs1920-wa-timeline__track-content', {part: 'legend-content'})
-        trackContent.append(iconFrame, labelElement)
+        trackContent.append(labelElement)
         if (interactive && row.editable !== false) {
             trackContent.addEventListener('dblclick', event => {
                 event.preventDefault()
