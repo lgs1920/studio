@@ -7,8 +7,9 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-21
- * Last modified: 2026-08-19
+ * Created on: 2025-08-20
+ * Last modified: 2026-09-02
+ *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
@@ -29,9 +30,11 @@ const VIDEO_PRESET_POPUP = 'video-preset'
 
 /**
  * VideoRecordingSettingsToolbar renders the horizontal video setup HUD.
+ * @param {Object} props - Toolbar properties.
+ * @param {boolean} [props.mainTheme=false] - Use the main application theme instead of the on-map theme.
  * @component
  */
-export const VideoRecordingSettingsToolbar = memo(() => {
+export const VideoRecordingSettingsToolbar = memo(({mainTheme = false} = {}) => {
     const $video = lgs.stores.ui.video
     const $cropper = $video.cropper
     const replay = useSnapshot(lgs.stores.replay)
@@ -266,7 +269,7 @@ export const VideoRecordingSettingsToolbar = memo(() => {
     ) : null
 
     return (
-        <div className="video-recording-settings-toolbar lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal wa-theme-lgs1920-on-map">
+        <div className={`video-recording-settings-toolbar lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal ${mainTheme ? 'wa-theme-lgs1920' : 'wa-theme-lgs1920-on-map'}`}>
             <div className="video-recording-settings-menu" role="toolbar" aria-label="Video recording settings">
                 <WaButton
                     id="video-ratio-settings-trigger"

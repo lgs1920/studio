@@ -28,6 +28,7 @@ import {
     VIDEO_WIDGETS_BOARD,
 } from '@Core/constants'
 import {REPLAY_TIMELINE_UI, resolveReplayTimelineMinimumDimensions} from './replayTimelineUtils'
+import {VideoRecordingSettingsToolbar} from './toolbox/VideoRecordingSettingsToolbar'
 import {
     buildReplayPreparationTimeline,
     toReplayTimelineEditorData,
@@ -450,6 +451,10 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, on
             <lgs1920-timeline className="lgs-widget-no-drag"
                               ref={_timeline}
                               aria-label="Replay tracks">
+                <span slot="custom-menu"
+                      className="replay-timeline-preview__custom-menu lgs-widget-no-drag">
+                    <VideoRecordingSettingsToolbar mainTheme/>
+                </span>
                 <span slot="legend-ruler" aria-hidden="true"/>
             </lgs1920-timeline>
         </section>

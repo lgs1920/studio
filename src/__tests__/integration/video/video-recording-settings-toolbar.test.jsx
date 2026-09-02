@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-08-29
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -126,6 +126,14 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(screen.getByRole('button', {name: 'Record'})).not.toBeNull()
         expect(screen.getByRole('button', {name: 'Cancel'})).not.toBeNull()
         expect(screen.getByRole('toolbar', {name: 'Video recording settings'})).not.toBeNull()
+    })
+
+    it('uses the main application theme when embedded in the timeline menu', () => {
+        render(<VideoRecordingSettingsToolbar mainTheme/>)
+
+        const toolbar = document.querySelector('.video-recording-settings-toolbar')
+        expect(toolbar.classList).toContain('wa-theme-lgs1920')
+        expect(toolbar.classList).not.toContain('wa-theme-lgs1920-on-map')
     })
 
     it('opens Ratio and Quality/FPS popups above their triggers', () => {

@@ -33,9 +33,15 @@
     .replay-timeline-preview__drag-handle {
         position: absolute;
         z-index: 2;
-        inset: 0 96px auto 0;
-        height: 56px;
+        inset: 0;
+        height: 8px;
         cursor: grab;
+    }
+
+    .replay-timeline-preview__custom-menu {
+        display: inline-flex;
+        min-width: 0;
+        max-width: 100%;
     }
 
     lgs1920-timeline {
@@ -76,7 +82,6 @@
 
     /* Keep the controlled transport visible in the embedded Replay timeline. */
     lgs1920-timeline::part(header) {
-        display: flex;
         position: relative;
         z-index: 3;
     }

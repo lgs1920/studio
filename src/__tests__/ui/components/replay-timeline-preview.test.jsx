@@ -22,6 +22,10 @@ import {proxyMap} from 'valtio/utils'
 
 vi.mock('../../../webcomponents/lgs1920-timeline/LGS1920Timeline.js', () => ({}))
 
+vi.mock('@Components/MainUI/video/toolbox/VideoRecordingSettingsToolbar', () => ({
+    VideoRecordingSettingsToolbar: () => <div data-testid="video-recording-settings-toolbar"/>,
+}))
+
 import {ReplayTimelinePreview} from '@Components/MainUI/video/ReplayTimelinePreview'
 
 describe('ReplayTimelinePreview', () => {
@@ -115,6 +119,7 @@ describe('ReplayTimelinePreview', () => {
         expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-min-height')).toBe('204px')
         expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-layout-min-height')).toBe('122px')
         expect(container.querySelector('[data-testid="replay-timeline-drag-handle"]')).not.toBeNull()
+        expect(container.querySelector('[slot="custom-menu"] [data-testid="video-recording-settings-toolbar"]')).not.toBeNull()
         expect(timelineElement.querySelector('[slot="legend-ruler"]')).not.toBeNull()
         expect(timelineElement.playing).toBe(false)
         expect(timelineElement.clipOptions).toEqual([])

@@ -7,12 +7,13 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2025-08-19
+ * Last modified: 2026-09-02
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
+
 import { CameraAndTargetPanel }     from '@Components/cesium/CameraAndTargetPanel/CameraAndTargetPanel'
 import { VideoRecordingSettingsWidget } from '@Components/MainUI/video/toolbox/VideoRecordingSettingsWidget'
 import { DynamicWidget } from '@Components/MainUI/widgets/DynamicWidget'
@@ -103,7 +104,9 @@ export const ToolsUI = () => {
                              context={$cropper} className="video-cropper"
                              renderRatioWidget={false}
                              options={{infoComponent: <VideoSettingsInfo/>}}/>
-                    <VideoRecordingSettingsWidget id="video-recording-settings-widget"/>
+                    {!(video.timelinePreviewActive === true && replay.recordingSync === true) && (
+                        <VideoRecordingSettingsWidget id="video-recording-settings-widget"/>
+                    )}
                     {video.timelinePreviewActive === true && replay.recordingSync === true && (
                         <DynamicWidget
                             id="replay-timeline-widget"
