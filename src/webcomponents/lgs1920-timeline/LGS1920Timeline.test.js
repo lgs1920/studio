@@ -449,7 +449,10 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.shadowRoot.querySelectorAll('[part="minor-tick"]')).not.toHaveLength(0)
 
         timeline.setZoom(-20)
-        expect(timeline.shadowRoot.querySelectorAll('[part="minor-tick"]')).toHaveLength(0)
+        const lowZoomSecondaryTicks = timeline.shadowRoot.querySelectorAll('[part="minor-tick"]')
+        expect(lowZoomSecondaryTicks.length).toBeGreaterThan(0)
+        expect(Number.parseFloat(lowZoomSecondaryTicks[1].style.left) - Number.parseFloat(lowZoomSecondaryTicks[0].style.left))
+            .toBeCloseTo(12.8)
 
         timeline.setZoom(100)
         const secondaryTicks = timeline.shadowRoot.querySelectorAll('[part="minor-tick"]')

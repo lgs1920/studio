@@ -261,7 +261,7 @@ export const resolveScale = zoomPercent => {
         const majorSeconds = [1, 2, 5, 10, 30, 60, 120, 300, 600]
             .find(seconds => pixelsPerSecond * seconds >= 40)
             ?? 600
-        return {majorSeconds, scaleSplitCount: 1}
+        return {majorSeconds, scaleSplitCount: 5}
     }
     if (pixelsPerSecond < 80) return {majorSeconds: 1, scaleSplitCount: 5}
     return {majorSeconds: 1, scaleSplitCount: 10}
