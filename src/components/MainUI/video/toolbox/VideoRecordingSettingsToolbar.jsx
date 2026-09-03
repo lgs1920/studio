@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-20
- * Last modified: 2026-09-02
+ * Last modified: 2026-09-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -40,7 +40,7 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false} = {}) => 
     const replay = useSnapshot(lgs.stores.replay)
     const video = useSnapshot($video)
     const [openPopup, setOpenPopup] = useState(null)
-    const [popupDirections, setPopupDirections] = useState({ratio: 'top', preset: 'top'})
+    const [popupDirections, setPopupDirections] = useState({ratio: 'bottom', preset: 'bottom'})
     const _cropSyncPromise = useRef(null)
     const shouldShowToolbar = video.editing === true
                               && !video.preRecording
@@ -51,7 +51,7 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false} = {}) => 
                                       && video.timelinePreviewActive === true
 
     const currentRatio = lgs.configuration.videoFormats.find(format => format.value === video.ratio)
-    const currentQuality = ScreenMediaRecorder.QUALITY[video.quality]?.short ?? 'M'
+    const currentQuality = ScreenMediaRecorder.QUALITY[video.quality]?.name?.replace(/\s+Quality$/, '') ?? 'Medium'
     const currentFPS = ScreenMediaRecorder.FPS[video.fps] ?? ScreenMediaRecorder.FPS[ScreenMediaRecorder.DEFAULT_FPS_INDEX]
 
     /**
@@ -290,12 +290,15 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false} = {}) => 
                     active={openPopup === RATIO_POPUP}
                     onRequestClose={() => setOpenPopup(null)}
                     outsideAnchors={['video-quality-fps-settings-trigger']}
-                    placement="top-start"
+                    placement="bottom-end"
                     distance={4}
                     strategy="fixed"
                     onWaReposition={event => handlePopupReposition('ratio', event)}
                 >
-                    <CropRatioEditorToolbar context={$cropper} cropzoneId={VIDEO_CROP_ZONE} embedded/>
+                    <CropRatioEditorToolbar context={$cropper}
+                                             cropzoneId={VIDEO_CROP_ZONE}
+                                             embedded
+                                             mainTheme={mainTheme}/>
                 </LGSPopup>
 
                 <WaButton
@@ -306,8 +309,7 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false} = {}) => 
                 >
                     <WaIcon name="ranking-star" label=""/>
                     <span>
-                        <span className="video-recording-settings-quality-prefix">{'Quality:'}</span>
-                        {` ${currentQuality} · ${currentFPS} FPS`}
+                        {`${currentQuality} · ${currentFPS} FPS`}
                     </span>
                     <WaIcon slot="end" name={getCaretIcon(popupDirections.preset)} variant="solid" label=""/>
                 </WaButton>
@@ -317,13 +319,13 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false} = {}) => 
                     active={openPopup === VIDEO_PRESET_POPUP}
                     onRequestClose={() => setOpenPopup(null)}
                     outsideAnchors={['video-ratio-settings-trigger']}
-                    placement="top-start"
+                    placement="bottom-end"
                     distance={4}
                     strategy="fixed"
                     onWaReposition={event => handlePopupReposition('preset', event)}
                 >
-                    <div className="video-recording-settings-popup lgs-card wa-theme-lgs1920-on-map">
-                        <VideoPresetToolbar embedded/>
+                    <div className={`video-recording-settings-popup lgs-card ${mainTheme ? 'wa-theme-lgs1920' : 'wa-theme-lgs1920-on-map'}`}>
+                        <VideoPresetToolbar embedded mainTheme={mainTheme}/>
                     </div>
                 </LGSPopup>
 

@@ -1,14 +1,14 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *  
+ *
  * File: style.css
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2025-07-10
+ * Last modified: 2026-09-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -108,7 +108,7 @@
 .video-recording-settings-separator {
     align-self: stretch;
     margin-inline: var(--lgs-gutter-xs);
-    border-inline-start: 1px solid var(--lgs-card-on-map-border-color);
+    border-inline-start: 1px solid var(--wa-color-surface-border, var(--lgs-card-on-map-border-color));
 }
 
 .video-recording-settings-popup {
@@ -118,6 +118,14 @@
     padding: var(--lgs-on-map-padding, var(--lgs-gutter-xs));
     gap: var(--lgs-gutter-xs);
     box-shadow: var(--lgs-on-map-floating-shadow, var(--sl-shadow-large));
+}
+
+.video-recording-settings-popup.wa-theme-lgs1920 {
+    color: var(--wa-color-text-normal);
+    border-color: var(--wa-color-surface-border);
+    background-color: var(--wa-color-surface-raised);
+    background-image: none;
+    box-shadow: var(--wa-shadow-m);
 }
 
 .video-recording-settings-popup .video-fps-widget,
@@ -557,6 +565,19 @@
     display: flex;
     flex-direction: column;
     gap: var(--lgs-gutter-xs);
+}
+
+.video-preset-custom.wa-theme-lgs1920 {
+    color: var(--wa-color-text-normal);
+    border-color: var(--wa-color-surface-border);
+    background-color: var(--wa-color-surface-raised);
+    background-image: none;
+    box-shadow: var(--wa-shadow-m);
+}
+
+.video-preset-custom .video-choice-button::part(base) {
+    justify-content: center;
+    text-align: center;
 }
 
 .video-preset-custom .video-fps-widget .buttons-bar-on-map {

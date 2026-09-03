@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2025-11-30
+ * Last modified: 2026-09-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,7 +35,7 @@ import { Fragment, memo, useCallback, useEffect, useRef, useState }        from 
 import { useSnapshot }                                                     from 'valtio'
 import '../style.css'
 
-export const VideoPresetToolbar = memo(({embedded = false}) => {
+export const VideoPresetToolbar = memo(({embedded = false, mainTheme = false}) => {
     const $video = lgs.stores.ui.video
     const $videoSettings = lgs.settings.ui.video
     const video = useSnapshot($video)
@@ -43,8 +43,9 @@ export const VideoPresetToolbar = memo(({embedded = false}) => {
 
     const [preset, setPreset] = useState(null)
     const [open, setOpen] = useState(false)
-    const [popupDirection, setPopupDirection] = useState('top')
+    const [popupDirection, setPopupDirection] = useState('right')
     const _toolbarRef = useRef(null)
+    const themeClass = mainTheme ? 'wa-theme-lgs1920' : 'wa-theme-lgs1920-on-map'
 
     /**
      * Find the preset key matching the current store indexes
@@ -156,15 +157,15 @@ export const VideoPresetToolbar = memo(({embedded = false}) => {
                     anchor={`video-preset-${key}`}
                     active={open}
                     onRequestClose={() => setOpen(false)}
-                    placement="top-end"
+                    placement="right-start"
                     strategy="fixed"
                     distance={4}
                     onWaReposition={handlePopupReposition}
                 >
-                    <div className="video-preset-custom lgs-card wa-theme-lgs1920-on-map"
-                         style={{opacity: toolbars.opacity}}>
-                        <VideoFPSToolbar choicesOnMap/>
-                        <VideoQualityToolbar choicesOnMap/>
+                    <div className={`video-preset-custom lgs-card ${themeClass}`}
+                         style={{opacity: mainTheme ? 1 : toolbars.opacity}}>
+                        <VideoFPSToolbar choicesOnMap={!mainTheme}/>
+                        <VideoQualityToolbar choicesOnMap={!mainTheme}/>
                     </div>
                 </LGSPopup>
             )}
@@ -173,9 +174,11 @@ export const VideoPresetToolbar = memo(({embedded = false}) => {
 
     if (embedded) {
         return (
-            <div className="video-preset-toolbar-embedded">
+            <div className={`video-preset-toolbar-embedded ${themeClass}`}>
                 <div className="video-preset-widget">
-                    <div className="buttons-bar-on-map video-choice-buttons video-choice-buttons-on-map">
+                    <div className={classNames('buttons-bar-on-map video-choice-buttons', {
+                        'video-choice-buttons-on-map': !mainTheme,
+                    })}>
                         {presetButtons}
                     </div>
                 </div>
@@ -184,12 +187,14 @@ export const VideoPresetToolbar = memo(({embedded = false}) => {
     }
 
     return (
-        <div ref={_toolbarRef} className="video-preset-widget-wrapper lgs-card wa-theme-lgs1920-on-map">
-            <div className="video-preset-widget">
-                <div className="buttons-bar-on-map video-choice-buttons video-choice-buttons-on-map">
-                    {presetButtons}
+            <div ref={_toolbarRef} className={`video-preset-widget-wrapper lgs-card ${themeClass}`}>
+                <div className="video-preset-widget">
+                    <div className={classNames('buttons-bar-on-map video-choice-buttons', {
+                        'video-choice-buttons-on-map': !mainTheme,
+                    })}>
+                        {presetButtons}
+                    </div>
                 </div>
-            </div>
         </div>
     )
 })

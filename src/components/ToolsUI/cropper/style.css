@@ -1,14 +1,14 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *  
+ *
  * File: style.css
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-21
- * Last modified: 2026-06-21
+ * Created on: 2025-07-14
+ * Last modified: 2026-09-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -282,6 +282,14 @@
     box-shadow: var(--lgs-on-map-floating-shadow, var(--sl-shadow-large));
 }
 
+.crop-ratio-popup-menu.wa-theme-lgs1920 {
+    color: var(--wa-color-text-normal);
+    border-color: var(--wa-color-surface-border);
+    background-color: var(--wa-color-surface-raised);
+    background-image: none;
+    box-shadow: var(--wa-shadow-m);
+}
+
 .crop-ratio-popup-menu li.crop-ratio-choice-button {
     display: flex;
     align-items: center;
@@ -323,4 +331,26 @@
     background-color: var(--lgs-card-on-map-selected-bg-color) !important;
     background-image: var(--lgs-card-on-map-selected-bg-image) !important;
     background-blend-mode: var(--lgs-card-on-map-selected-bg-blend-mode);
+}
+
+.crop-ratio-popup-menu--main-theme li.crop-ratio-choice-button {
+    color: var(--wa-color-text-normal);
+    border-radius: var(--wa-border-radius-s);
+    outline: none;
+}
+
+.crop-ratio-popup-menu--main-theme li.crop-ratio-choice-button:not(.is-selected):hover {
+    color: var(--wa-color-brand-on-normal);
+    border-color: var(--wa-color-brand-border-normal) !important;
+    outline-color: var(--wa-color-brand-border-normal);
+    background: var(--wa-color-brand-fill-quiet) !important;
+    background-color: var(--wa-color-brand-fill-quiet) !important;
+}
+
+.crop-ratio-popup-menu--main-theme li.crop-ratio-choice-button.is-selected,
+.crop-ratio-popup-menu--main-theme li.crop-ratio-choice-button.is-selected:hover {
+    color: var(--wa-color-brand-on-normal);
+    border-color: var(--wa-color-brand-border-normal);
+    background-color: var(--wa-color-brand-fill-quiet) !important;
+    background-image: none !important;
 }

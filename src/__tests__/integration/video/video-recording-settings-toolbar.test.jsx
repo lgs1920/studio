@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-09-02
+ * Last modified: 2026-09-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,15 +25,15 @@ vi.mock('@Components/JourneyReplay/JourneyReplayButton', () => ({
 }))
 
 vi.mock('@Components/LGSPopup', () => ({
-    LGSPopup: ({active, children}) => active ? <div data-testid="settings-popup">{children}</div> : null,
+    LGSPopup: ({active, children, placement}) => active ? <div data-testid="settings-popup" data-placement={placement}>{children}</div> : null,
 }))
 
 vi.mock('@Components/ToolsUI/cropper/widgets/CropRatioEditorToolbar', () => ({
-    CropRatioEditorToolbar: () => <div data-testid="ratio-popup-content">Ratio choices</div>,
+    CropRatioEditorToolbar: ({mainTheme}) => <div data-testid="ratio-popup-content" data-main-theme={mainTheme}>Ratio choices</div>,
 }))
 
 vi.mock('@Components/MainUI/video/toolbox/VideoPresetToolbar', () => ({
-    VideoPresetToolbar: () => <div data-testid="preset-popup-content">Preset, FPS and quality choices</div>,
+    VideoPresetToolbar: ({mainTheme}) => <div data-testid="preset-popup-content" data-main-theme={mainTheme}>Preset, FPS and quality choices</div>,
 }))
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
@@ -121,8 +121,8 @@ describe('VideoRecordingSettingsToolbar', () => {
 
         expect(prepareVideoEditingUi).toHaveBeenCalledTimes(1)
         expect(screen.getByRole('button', {name: 'Ratio: 16:9'})).not.toBeNull()
-        expect(screen.getByRole('button', {name: 'Quality: H · 30 FPS'})).not.toBeNull()
-        expect(screen.getByRole('button', {name: 'Quality: H · 30 FPS'}).querySelector('[data-icon="ranking-star"]')).not.toBeNull()
+        expect(screen.getByRole('button', {name: 'High · 30 FPS'})).not.toBeNull()
+        expect(screen.getByRole('button', {name: 'High · 30 FPS'}).querySelector('[data-icon="ranking-star"]')).not.toBeNull()
         expect(screen.getByRole('button', {name: 'Record'})).not.toBeNull()
         expect(screen.getByRole('button', {name: 'Cancel'})).not.toBeNull()
         expect(screen.getByRole('toolbar', {name: 'Video recording settings'})).not.toBeNull()
@@ -136,16 +136,33 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(toolbar.classList).not.toContain('wa-theme-lgs1920-on-map')
     })
 
-    it('opens Ratio and Quality/FPS popups above their triggers', () => {
+    it('opens Ratio and Quality/FPS popups at the bottom end of their triggers', () => {
         render(<VideoRecordingSettingsToolbar/>)
+
+        expect(screen.getByRole('button', {name: 'Ratio: 16:9'}).querySelector('[data-icon="chevron-down"]')).not.toBeNull()
+        expect(screen.getByRole('button', {name: 'High · 30 FPS'}).querySelector('[data-icon="chevron-down"]')).not.toBeNull()
 
         fireEvent.click(screen.getByRole('button', {name: 'Ratio: 16:9'}))
         expect(screen.getByTestId('ratio-popup-content')).not.toBeNull()
+        expect(screen.getByTestId('settings-popup').dataset.placement).toBe('bottom-end')
         expect(screen.queryByTestId('fps-popup-content')).toBeNull()
 
-        fireEvent.click(screen.getByRole('button', {name: 'Quality: H · 30 FPS'}))
+        fireEvent.click(screen.getByRole('button', {name: 'High · 30 FPS'}))
         expect(screen.queryByTestId('ratio-popup-content')).toBeNull()
         expect(screen.getByTestId('preset-popup-content')).not.toBeNull()
+        expect(screen.getByTestId('settings-popup').dataset.placement).toBe('bottom-end')
+    })
+
+    it('passes the main application theme to custom-menu submenus', () => {
+        render(<VideoRecordingSettingsToolbar mainTheme/>)
+
+        fireEvent.click(screen.getByRole('button', {name: 'Ratio: 16:9'}))
+        expect(screen.getByTestId('ratio-popup-content').dataset.mainTheme).toBe('true')
+
+        fireEvent.click(screen.getByRole('button', {name: 'High · 30 FPS'}))
+        expect(screen.getByTestId('preset-popup-content').dataset.mainTheme).toBe('true')
+        expect(document.querySelector('.video-recording-settings-popup')?.classList).toContain('wa-theme-lgs1920')
+        expect(document.querySelector('.video-recording-settings-popup')?.classList).not.toContain('wa-theme-lgs1920-on-map')
     })
 
     it('shows the Replay settings sliders only when synchronization is active', () => {
