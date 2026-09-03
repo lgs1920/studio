@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-02
+ * Last modified: 2026-09-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -105,7 +105,8 @@ describe('ReplayTimelinePreview', () => {
         const timelineElement = container.querySelector('lgs1920-timeline')
 
         expect(timelineElement).not.toBeNull()
-        expect(timelineElement.className).toBe('lgs-widget-no-drag')
+        expect(timelineElement.hasAttribute('data-widget-selectable')).toBe(true)
+        expect(timelineElement.className).toBe('')
         expect(timelineElement.timeline).toMatchObject({
             durationMillis: 4_000,
             editable: true,
@@ -118,7 +119,6 @@ describe('ReplayTimelinePreview', () => {
         expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-min-width')).toBe('352px')
         expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-min-height')).toBe('204px')
         expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-layout-min-height')).toBe('122px')
-        expect(container.querySelector('[data-testid="replay-timeline-drag-handle"]')).not.toBeNull()
         expect(container.querySelector('[slot="custom-menu"] [data-testid="video-recording-settings-toolbar"]')).not.toBeNull()
         expect(timelineElement.querySelector('[slot="legend-ruler"]')).not.toBeNull()
         expect(timelineElement.playing).toBe(false)

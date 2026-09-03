@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-18
- * Last modified: 2026-08-30
+ * Last modified: 2026-09-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -189,14 +189,14 @@ const installGlobals = ({grid = {enabled: false, size: 30, snap: true}} = {}) =>
     }
 }
 
-const renderWidget = (config) => render(
+const renderWidget = (config, children = <div>content</div>) => render(
     <Widget isVisible={true} config={{
         id:             'snap-widget',
         group:          'test-widgets',
         showControlBox: true,
         ...config,
     }}>
-        <div>content</div>
+        {children}
     </Widget>,
 )
 
@@ -243,6 +243,23 @@ describe('Widget snap behavior', () => {
 
         const widgetElement = document.querySelector('.lgs-widget')
         expect(latestMoveableProps().dragTarget()).toBe(widgetElement)
+    })
+
+    it('selects a widget from a selectable no-drag timeline surface', () => {
+        installGlobals()
+
+        const {container} = renderWidget({type: LGS_VISUAL_WIDGET}, (
+            <lgs1920-timeline data-widget-selectable="">
+                <div data-testid="timeline-surface"/>
+            </lgs1920-timeline>
+        ))
+        const surface = container.querySelector('[data-testid="timeline-surface"]')
+
+        act(() => {
+            surface.dispatchEvent(new MouseEvent('pointerdown', {bubbles: true, composed: true, button: 0}))
+        })
+
+        expect(lgs.stores.ui.widget.current.id).toBe('snap-widget#test')
     })
 
     it('notifies child content when widget dragging starts and ends', async () => {

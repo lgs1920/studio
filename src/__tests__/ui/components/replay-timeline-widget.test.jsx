@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-02
+ * Last modified: 2026-09-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -112,7 +112,7 @@ describe('ReplayTimelineWidget dimensions', () => {
         expect(widgetMocks.config.constrainResizeToContent).toBe(true)
         expect(widgetMocks.config.min).toEqual({width: 352, height: 156})
         expect(widgetMocks.config.max).toEqual({width: 3840, height: 2160})
-        expect(widgetMocks.config.handle).toBe('.replay-timeline-preview__drag-handle')
+        expect(widgetMocks.config.handle).toBe('lgs1920-timeline')
         expect(widgetMocks.config.resizeToContent).toBeUndefined()
         expect(widgetMocks.childRef).toBeDefined()
         await waitFor(() => expect(widgetMocks.runtimeConfig.dimensions).toEqual({width: 2160, height: 900}))

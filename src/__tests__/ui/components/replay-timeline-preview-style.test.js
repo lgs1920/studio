@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-02
+ * Last modified: 2026-09-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,11 +28,7 @@ describe('Replay timeline preview styles', () => {
 
         expect(openBlocks).toBe(closedBlocks)
         expect(styleSource).toContain('lgs1920-timeline {')
-        expect(styleSource).toContain('.replay-timeline-preview__drag-handle')
-        expect(styleSource).toContain('inset: 0;')
-        expect(styleSource).toContain('height: 8px;')
         expect(styleSource).toContain('.replay-timeline-preview__custom-menu')
-        expect(styleSource).toContain('cursor: grab;')
         expect(styleSource).toContain('--lgs-timeline-padding: var(--lgs-gutter-s);')
         expect(styleSource).toContain('--lgs-replay-timeline-min-width: 352px;')
         expect(styleSource).toContain('--lgs-replay-timeline-min-height: 156px;')

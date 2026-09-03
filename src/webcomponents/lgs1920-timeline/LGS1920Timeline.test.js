@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-02
+ * Last modified: 2026-09-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -670,6 +670,28 @@ describe('lgs1920-timeline Web Component', () => {
         surface.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', altKey: true, bubbles: true, cancelable: true, composed: true}))
 
         expect(parentListener).not.toHaveBeenCalled()
+    })
+
+    it('allows a selectable host to pass widget drag input events', () => {
+        const timeline = new LGS1920Timeline()
+        timeline.setAttribute('data-widget-selectable', '')
+        configureTimeline(timeline)
+        const parentListener = vi.fn()
+        const parent = document.createElement('div')
+        parent.addEventListener('mousedown', parentListener)
+        parent.addEventListener('mousemove', parentListener)
+        parent.addEventListener('mouseup', parentListener)
+        parent.addEventListener('pointerdown', parentListener)
+        parent.append(timeline)
+        document.body.append(parent)
+
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        surface.dispatchEvent(new MouseEvent('mousedown', {bubbles: true, cancelable: true, composed: true, clientX: 100}))
+        surface.dispatchEvent(new MouseEvent('mousemove', {bubbles: true, cancelable: true, composed: true, clientX: 120}))
+        surface.dispatchEvent(new MouseEvent('mouseup', {bubbles: true, cancelable: true, composed: true, clientX: 120}))
+        surface.dispatchEvent(createPointerEvent('pointerdown', {clientX: 100, composed: true}))
+
+        expect(parentListener).toHaveBeenCalledTimes(4)
     })
 
     it('keeps native split-panel pointer continuation events available', () => {

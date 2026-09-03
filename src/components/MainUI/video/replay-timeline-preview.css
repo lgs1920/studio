@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-02
+ * Last modified: 2026-09-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,14 +29,6 @@
     min-width: var(--lgs-replay-timeline-min-width);
     min-height: var(--lgs-replay-timeline-min-height);
     overflow: hidden;
-
-    .replay-timeline-preview__drag-handle {
-        position: absolute;
-        z-index: 2;
-        inset: 0;
-        height: 8px;
-        cursor: grab;
-    }
 
     .replay-timeline-preview__custom-menu {
         display: inline-flex;

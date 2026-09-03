@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-02
+ * Last modified: 2026-09-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -95,6 +95,11 @@ const TIMELINE_INPUT_EVENT_TYPES = Object.freeze([
     'touchmove',
     'touchstart',
     'wheel',
+])
+
+const WIDGET_DRAG_START_EVENT_TYPES = Object.freeze(['mousedown', 'pointerdown', 'touchstart'])
+const WIDGET_DRAG_CONTINUATION_EVENT_TYPES = Object.freeze([
+    'mousemove', 'mouseup', 'pointermove', 'pointerup', 'touchmove', 'touchend',
 ])
 
 const TIMELINE_ARROW_KEYS = Object.freeze(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'])
@@ -314,6 +319,9 @@ export class LGS1920Timeline extends HTMLElement {
      */
     #stopInputPropagation = event => {
         if (this.#isCustomMenuEvent(event)) return
+        if (this.hasAttribute('data-widget-selectable')
+            && (WIDGET_DRAG_START_EVENT_TYPES.includes(event.type)
+                || WIDGET_DRAG_CONTINUATION_EVENT_TYPES.includes(event.type))) return
         if (event.type === 'keydown' && !TIMELINE_ARROW_KEYS.includes(event.key)) return
         if (this.#nativeSplitPanelInteractionActive
             && EXTERNAL_INTERACTION_CONTINUATION_EVENT_TYPES.includes(event.type)) return

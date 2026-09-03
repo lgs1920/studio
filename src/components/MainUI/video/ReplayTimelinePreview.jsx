@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-02
+ * Last modified: 2026-09-03
  *
  *
  * Copyright © 2026 LGS1920
@@ -445,10 +445,7 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, on
                      '--lgs-replay-timeline-min-height':       `${minimumDimensions.height}px`,
                      '--lgs-replay-timeline-layout-min-height': `${minimumDimensions.layoutHeight}px`,
                  }}>
-            <div className="replay-timeline-preview__drag-handle"
-                 data-testid="replay-timeline-drag-handle"
-                 aria-hidden="true"/>
-            <lgs1920-timeline className="lgs-widget-no-drag"
+            <lgs1920-timeline data-widget-selectable=""
                               ref={_timeline}
                               aria-label="Replay tracks">
                 <span slot="custom-menu"
