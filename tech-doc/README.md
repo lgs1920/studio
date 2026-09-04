@@ -60,6 +60,7 @@ below by engineering domain rather than storage directory.
 - [Copernicus Sentinel-2 integration](todo/CORE-COPERNICUS-SENTINEL2-SPEC.md)
 - [Journey time and Cesium lighting](todo/CORE-JOURNEY-CESIUM-TIME-LIGHTING-SPEC.md)
 - [Layer time filtering](todo/CORE-LAYER-TIME-FILTER-SPEC.md)
+- [CesiumJS MVT layers research](todo/CORE-CESIUM-MVT-LAYERS-RESEARCH.md)
 
 ## Journeys, Tracks, and Data
 

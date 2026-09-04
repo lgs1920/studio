@@ -10,6 +10,7 @@ implementation documents. Implemented and historical documents belong under
 - [Copernicus Sentinel-2 integration](CORE-COPERNICUS-SENTINEL2-SPEC.md)
 - [Journey time and Cesium lighting](CORE-JOURNEY-CESIUM-TIME-LIGHTING-SPEC.md)
 - [Layer time filtering](CORE-LAYER-TIME-FILTER-SPEC.md)
+- [CesiumJS MVT layers research](CORE-CESIUM-MVT-LAYERS-RESEARCH.md)
 
 ## Journeys, Tracks, and Data
 
