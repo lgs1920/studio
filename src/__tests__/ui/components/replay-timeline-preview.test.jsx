@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-03
+ * Last modified: 2026-09-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -112,17 +112,20 @@ describe('ReplayTimelinePreview', () => {
             editable: true,
             interactive: true,
             collisionPolicy: 'prevent',
+            legendMinWidth: 50,
+            legendWidth: 150,
+            legendMaxWidth: 250,
             rangeStartMillis: 0,
             rangeEndMillis: 4_000,
         })
         expect(timelineElement.currentTimeMillis).toBe(1_000)
         expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-min-width')).toBe('352px')
-        expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-min-height')).toBe('204px')
-        expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-layout-min-height')).toBe('122px')
+        expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-min-height')).toBe('156px')
+        expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-layout-min-height')).toBe('74px')
         expect(container.querySelector('[slot="custom-menu"] [data-testid="video-recording-settings-toolbar"]')).not.toBeNull()
-        expect(timelineElement.querySelector('[slot="legend-ruler"]')).not.toBeNull()
+        expect(timelineElement.querySelector('[slot="legend-ruler"]')).toBeNull()
         expect(timelineElement.playing).toBe(false)
-        expect(timelineElement.clipOptions).toEqual([])
+        expect(timelineElement.clipOptions).toBeNull()
         expect(timelineElement.tracks.map(track => track.id)).toEqual([
             'dynamic-stats-widget',
             'journey-stats-widget',
@@ -130,25 +133,20 @@ describe('ReplayTimelinePreview', () => {
         ])
         expect(timelineElement.tracks.slice(0, 2).every(track => (
             track.editable === true
-            && track.movable === true
-            && track.fixed === false
+            && !('movable' in track)
+            && !('fixed' in track)
+            && !('locked' in track)
             && track.droppable === true
         ))).toBe(true)
         expect(timelineElement.tracks[2]).toMatchObject({
             editable: false,
-            movable: false,
-            fixed: true,
-            droppable: false,
+            droppable: true,
         })
         expect(timelineElement.tracks.slice(0, 2).flatMap(track => track.clips).every(clip => (
-            clip.fixed === false
-            && clip.movable === true
-            && clip.resizable === true
+            clip.resizable === true
         ))).toBe(true)
         expect(timelineElement.tracks[2].clips.every(clip => (
-            clip.fixed === true
-            && clip.movable === false
-            && clip.resizable === false
+            clip.resizable === false
         ))).toBe(true)
         expect(globalThis.__.ui.replay.enterReplayPreparation).toHaveBeenCalledTimes(1)
     })
@@ -300,9 +298,9 @@ describe('ReplayTimelinePreview', () => {
             'journey-stats-widget',
             'replay',
         ])
-        expect(tracks.slice(0, 2).every(track => track.fixed === true && track.movable === false)).toBe(true)
-        expect(tracks.slice(2, -1).every(track => track.fixed === false && track.movable === true)).toBe(true)
-        expect(tracks.at(-1)).toMatchObject({fixed: true, movable: false})
+        expect(tracks.slice(0, 2).every(track => track.editable === false)).toBe(true)
+        expect(tracks.every(track => !('fixed' in track))).toBe(true)
+        expect(tracks.every(track => !('movable' in track))).toBe(true)
     })
 
     it('persists a group when a timeline track contains multiple widget clips', async () => {

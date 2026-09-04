@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-03
+ * Last modified: 2026-09-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -224,10 +224,12 @@ describe('lgs1920-timeline Web Component', () => {
         }
     })
 
-    it('leaves split-panel repositioning to the native component', () => {
+    it('leaves split-panel repositioning to the native component', async () => {
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline)
         document.body.append(timeline)
+
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
 
         const splitPanel = timeline.shadowRoot.querySelector('[part="split-panel"]')
         const layout = timeline.shadowRoot.querySelector('[data-layout]')
@@ -245,6 +247,7 @@ describe('lgs1920-timeline Web Component', () => {
         timeline.setZoom(20)
 
         expect(timeline.shadowRoot.querySelector('[part="split-panel"]').position).toBe(35)
+        expect(timeline.shadowRoot.querySelector('[part="split-panel"]').positionInPixels).toBe(180)
     })
 
     it('provides icon-only view buttons with Web Awesome tooltips', () => {
@@ -329,6 +332,7 @@ describe('lgs1920-timeline Web Component', () => {
         configureTimeline(timeline, {
             timeline: {
                 legendMinWidth: 160,
+                legendWidth: 180,
                 legendMaxWidth: 240,
             },
         })
@@ -339,8 +343,10 @@ describe('lgs1920-timeline Web Component', () => {
         expect(splitPanel.hasAttribute('position-in-pixels')).toBe(false)
         expect(splitPanel.style.getPropertyValue('--min')).toBe('160px')
         expect(splitPanel.style.getPropertyValue('--max')).toBe('min(240px, calc(100% - 160px))')
+        expect(splitPanel.positionInPixels).toBe(180)
         expect(layout.style.getPropertyValue('--lgs-timeline-legend-width')).toBe('')
         expect(timeline.timeline.legendMinWidth).toBe(160)
+        expect(timeline.timeline.legendWidth).toBe(180)
         expect(timeline.timeline.legendMaxWidth).toBe(240)
     })
 
@@ -399,7 +405,81 @@ describe('lgs1920-timeline Web Component', () => {
         expect(surface.getAttribute('appearance')).toBe('plain')
     })
 
-    it('fits row heights to the rendered timeline layout instead of the full host', () => {
+    it('uses the Web Awesome wag animation while the timeline is building', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline)
+        document.body.append(timeline)
+
+        const icon = timeline.shadowRoot.querySelector('[data-building-overlay] wa-icon')
+        const textSlot = timeline.shadowRoot.querySelector('slot[name="overlay-text"]')
+        expect(icon?.getAttribute('name')).toBe('paintbrush')
+        expect(icon?.getAttribute('animation')).toBe('wag')
+        expect(textSlot).not.toBeNull()
+        expect(textSlot.textContent).toBe('Building...')
+    })
+
+    it('accepts custom building text through the overlay-text slot', () => {
+        const timeline = new LGS1920Timeline()
+        const customText = document.createElement('span')
+        customText.slot = 'overlay-text'
+        customText.textContent = 'Preparing timeline...'
+        timeline.append(customText)
+        configureTimeline(timeline)
+        document.body.append(timeline)
+
+        const textSlot = timeline.shadowRoot.querySelector('slot[name="overlay-text"]')
+        expect(textSlot.assignedElements()).toEqual([customText])
+        expect(textSlot.closest('[role="status"]').hasAttribute('aria-label')).toBe(false)
+    })
+
+    it('can disable the initial building overlay through timeline options', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {timeline: {showBuildingOverlay: false}})
+        document.body.append(timeline)
+
+        expect(timeline.timeline.showBuildingOverlay).toBe(false)
+        expect(timeline.shadowRoot.querySelector('[data-building-overlay]')).toBeNull()
+    })
+
+    it('shows the building overlay only for the initial mount', async () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline)
+        document.body.append(timeline)
+
+        const initialOverlay = timeline.shadowRoot.querySelector('[data-building-overlay]')
+        expect(initialOverlay).not.toBeNull()
+        expect(initialOverlay.parentNode).toBe(timeline.shadowRoot)
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+        expect(timeline.shadowRoot.querySelector('[data-building-overlay]')).toBeNull()
+
+        timeline.setZoom(20)
+        expect(timeline.shadowRoot.querySelector('[data-building-overlay]')).toBeNull()
+
+        const nameArea = timeline.shadowRoot.querySelector('[data-row-id="main#one"] [part="legend-content"]')
+        nameArea.dispatchEvent(createPointerEvent('pointerdown', {clientX: 10, clientY: 10}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 10, clientY: 60}))
+        expect(timeline.shadowRoot.querySelector('[data-building-overlay]')).toBeNull()
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 10, clientY: 60}))
+        expect(timeline.shadowRoot.querySelector('[data-building-overlay]')).toBeNull()
+    })
+
+    it('opens the title panel at 150 pixels within the generic width bounds', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline)
+        document.body.append(timeline)
+
+        const splitPanel = timeline.shadowRoot.querySelector('[part="split-panel"]')
+        expect(splitPanel.style.getPropertyValue('--min')).toBe('50px')
+        expect(splitPanel.style.getPropertyValue('--max')).toBe('min(250px, calc(100% - 50px))')
+        expect(splitPanel.positionInPixels).toBe(150)
+
+        splitPanel.positionInPixels = 50
+        timeline.setZoom(20)
+
+        expect(timeline.shadowRoot.querySelector('[part="split-panel"]').positionInPixels).toBe(150)
+    })
+
+    it('resolves the row height from the rendered layout', () => {
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline)
         document.body.append(timeline)
@@ -571,8 +651,23 @@ describe('lgs1920-timeline Web Component', () => {
         })
         document.body.append(timeline)
 
+        timeline.shadowRoot.querySelector('[data-row-id="hidden-track"] [part="legend-content"]')
+            .dispatchEvent(new MouseEvent('dblclick', {bubbles: true, cancelable: true}))
+        expect(timeline.shadowRoot.querySelector('[data-edit-row-id="hidden-track"]')).not.toBeNull()
         timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-visibility"]').click()
 
+        expect(timeline.shadowRoot.querySelector('[data-row-id="hidden-track"]')
+            .classList.contains('lgs1920-wa-timeline__legend-row--hidden')).toBe(true)
+        expect(timeline.shadowRoot.querySelector('[part="track"][data-row-id="hidden-track"]')
+            .classList.contains('lgs1920-wa-timeline__track--hidden')).toBe(true)
+        const hiddenLegendContent = timeline.shadowRoot.querySelector('[data-row-id="hidden-track"] [part="legend-content"]')
+        expect(hiddenLegendContent.classList.contains('lgs1920-wa-timeline__track-content--title-disabled')).toBe(true)
+        expect(hiddenLegendContent.getAttribute('aria-disabled')).toBe('true')
+        expect(hiddenLegendContent.querySelector('[data-edit-row-id]')).toBeNull()
+        hiddenLegendContent.dispatchEvent(new MouseEvent('dblclick', {bubbles: true, cancelable: true}))
+        expect(timeline.shadowRoot.querySelector('[data-edit-row-id="hidden-track"]')).toBeNull()
+        const hiddenTrackBackground = timeline.shadowRoot.querySelector('[part="track-background"][data-row-id="hidden-track"]')
+        expect(hiddenTrackBackground).not.toBeNull()
         const clips = [...timeline.shadowRoot.querySelectorAll('[data-row-id="hidden-track"] [data-clip-id]')]
         expect(clips).toHaveLength(2)
         expect(clips.every(clip => clip.classList.contains('lgs1920-wa-timeline__clip--track-hidden'))).toBe(true)
@@ -694,6 +789,31 @@ describe('lgs1920-timeline Web Component', () => {
         expect(parentListener).toHaveBeenCalledTimes(4)
     })
 
+    it('keeps split-panel drag starts inside a selectable timeline host', () => {
+        const timeline = new LGS1920Timeline()
+        timeline.setAttribute('data-widget-selectable', '')
+        configureTimeline(timeline)
+        const parent = document.createElement('div')
+        const parentStartListener = vi.fn()
+        parent.addEventListener('mousedown', parentStartListener)
+        parent.addEventListener('pointerdown', parentStartListener)
+        parent.addEventListener('touchstart', parentStartListener)
+        parent.append(timeline)
+        document.body.append(parent)
+
+        const splitPanel = timeline.shadowRoot.querySelector('[part="split-panel"]')
+        const divider = document.createElement('div')
+        divider.setAttribute('part', 'divider')
+        splitPanel.append(divider)
+
+        divider.dispatchEvent(createPointerEvent('pointerdown', {bubbles: true, composed: true}))
+        divider.dispatchEvent(new MouseEvent('mousedown', {button: 0, bubbles: true, cancelable: true, composed: true}))
+        divider.dispatchEvent(new Event('touchstart', {bubbles: true, cancelable: true, composed: true}))
+
+        expect(parentStartListener).not.toHaveBeenCalled()
+        window.dispatchEvent(createPointerEvent('pointerup'))
+    })
+
     it('keeps native split-panel pointer continuation events available', () => {
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline)
@@ -811,7 +931,7 @@ describe('lgs1920-timeline Web Component', () => {
         expect(row.querySelector('[part="legend-icon"]')).toBeNull()
         expect(row.querySelector('[part="track-actions"]')).not.toBeNull()
         expect(row.firstElementChild).toBe(row.querySelector('[part="track-actions"]'))
-        expect(row.querySelector('slot[name="drag-trigger-main#one"]')).not.toBeNull()
+        expect(row.querySelector('slot[name="drag-trigger-main#one"]')).toBeNull()
         expect(row.querySelector('slot[name="visibility-main#one"]')).not.toBeNull()
         expect(row.querySelector('[part="visibility-placeholder"]')).toBeNull()
 
@@ -824,6 +944,7 @@ describe('lgs1920-timeline Web Component', () => {
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline, {
             currentTimeMillis: 2_000,
+            timeline: {showClipMenu: true},
             clipOptions: [{group: 'media', key: 'video', label: 'Video clip'}],
         })
         document.body.append(timeline)
@@ -838,6 +959,369 @@ describe('lgs1920-timeline Web Component', () => {
         const clipMenu = timeline.shadowRoot.querySelector('wa-popup')
         expect(clipMenu.getAttribute('anchor')).toBe('lgs1920-timeline-clip-menu-trigger')
         expect(clipMenu.getAttribute('placement')).toBe('right-start')
+    })
+
+    it('creates numbered generic movable tracks and restarts numbering after all are renamed', () => {
+        const timeline = new LGS1920Timeline()
+        const additions = vi.fn()
+        configureTimeline(timeline, {tracks: []})
+        timeline.addEventListener('lgs1920-timeline-add-track', additions)
+        document.body.append(timeline)
+
+        const addTrack = () => timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-add-track"]').click()
+        addTrack()
+        expect(timeline.shadowRoot.querySelector('.lgs1920-wa-timeline__menu-item')).toBeNull()
+
+        expect(additions).toHaveBeenCalledOnce()
+        expect(additions.mock.calls[0][0].detail.track).toMatchObject({
+            id: 'track-1',
+            label: 'Track 1',
+            clips: [],
+        })
+        expect(additions.mock.calls[0][0].detail.track).not.toHaveProperty('movable')
+        expect(additions.mock.calls[0][0].detail.track).not.toHaveProperty('fixed')
+        expect(additions.mock.calls[0][0].detail.track).not.toHaveProperty('locked')
+        addTrack()
+        addTrack()
+        expect(timeline.tracks.map(track => track.label)).toEqual(['Track 3', 'Track 2', 'Track 1'])
+
+        timeline.shadowRoot.querySelector('[data-row-id="track-1"] [data-testid="lgs1920-wa-remove-track"]').click()
+        addTrack()
+        expect(timeline.tracks.map(track => track.label)).toEqual(['Track 4', 'Track 3', 'Track 2'])
+        expect(timeline.tracks[0].id).toBe('track-4')
+
+        timeline.tracks = timeline.tracks.map(track => ({...track, label: `Renamed ${track.id}`}))
+        addTrack()
+        expect(timeline.tracks[0]).toMatchObject({id: 'track-1', label: 'Track 1', autoNumbered: true})
+    })
+
+    it('restarts labels at Track 1 while keeping ids unique after renaming every generated track', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {tracks: []})
+        document.body.append(timeline)
+
+        const addTrack = () => timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-add-track"]').click()
+        addTrack()
+        addTrack()
+        addTrack()
+        timeline.tracks = timeline.tracks.map(track => ({...track, label: `Renamed ${track.id}`}))
+
+        addTrack()
+
+        expect(timeline.tracks[0]).toMatchObject({id: 'track-1-2', label: 'Track 1', autoNumbered: true})
+    })
+
+    it('stacks generic tracks at the highest editable position between read-only bounds', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {
+            tracks: [
+                {id: 'locked-high', label: 'Locked high', editable: false, clips: []},
+                {id: 'existing', label: 'Existing', clips: []},
+                {id: 'locked-low', label: 'Locked low', editable: false, clips: []},
+            ],
+        })
+        document.body.append(timeline)
+
+        const addTrack = () => timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-add-track"]').click()
+        addTrack()
+        addTrack()
+
+        expect(timeline.tracks.map(track => track.id)).toEqual([
+            'locked-high',
+            'track-2',
+            'track-1',
+            'existing',
+            'locked-low',
+        ])
+    })
+
+    it('does not add a track when the read-only bounds are contiguous', () => {
+        const timeline = new LGS1920Timeline()
+        const additions = vi.fn()
+        configureTimeline(timeline, {
+            tracks: [
+                {id: 'locked-high', label: 'Locked high', editable: false, clips: []},
+                {id: 'locked-low', label: 'Locked low', editable: false, clips: []},
+            ],
+        })
+        timeline.addEventListener('lgs1920-timeline-add-track', additions)
+        document.body.append(timeline)
+
+        const addTrack = timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-add-track"]')
+        expect(addTrack.hasAttribute('disabled')).toBe(true)
+        addTrack.click()
+
+        expect(additions).not.toHaveBeenCalled()
+        expect(timeline.tracks.map(track => track.id)).toEqual([
+            'locked-high',
+            'locked-low',
+        ])
+    })
+
+    it('skips every insertion slot directly between adjacent read-only tracks', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {
+            tracks: [
+                {id: 'locked-first', label: 'Locked first', editable: false, clips: []},
+                {id: 'locked-second', label: 'Locked second', editable: false, clips: []},
+                {id: 'editable', label: 'Editable', editable: true, clips: []},
+                {id: 'locked-last', label: 'Locked last', editable: false, clips: []},
+            ],
+        })
+        document.body.append(timeline)
+
+        timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-add-track"]').click()
+
+        expect(timeline.tracks.map(track => track.id)).toEqual([
+            'locked-first',
+            'locked-second',
+            'track-1',
+            'editable',
+            'locked-last',
+        ])
+    })
+
+    it('ignores legacy track movement flags and uses editable for row bounds', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {
+            tracks: [
+                {id: 'locked-high', label: 'Locked high', locked: true, fixed: true, movable: false, editable: false, clips: []},
+                {id: 'moving', label: 'Moving', movable: false, editable: true, clips: []},
+                {id: 'locked-low', label: 'Locked low', locked: true, fixed: true, movable: false, editable: false, clips: []},
+            ],
+        })
+        document.body.append(timeline)
+
+        const nameArea = timeline.shadowRoot.querySelector('[data-row-id="moving"] [part="legend-content"]')
+        nameArea.dispatchEvent(createPointerEvent('pointerdown', {clientX: 10, clientY: 10}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 10, clientY: -100}))
+
+        expect(timeline.hasAttribute('data-row-drop-rejected')).toBe(true)
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 10, clientY: -100}))
+        expect(timeline.tracks.map(track => track.id)).toEqual(['locked-high', 'moving', 'locked-low'])
+    })
+
+    it('keeps the source rows fixed and shows synchronized ghost and insertion marker during row drag', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {
+            tracks: [
+                {id: 'locked-high', label: 'Locked high', editable: false, clips: []},
+                {id: 'moving', label: 'Moving', editable: true, clips: []},
+                {id: 'existing', label: 'Existing', clips: []},
+                {id: 'locked-low', label: 'Locked low', editable: false, clips: []},
+            ],
+        })
+        document.body.append(timeline)
+
+        const initialOrder = timeline.tracks.map(track => track.id)
+        const nameArea = timeline.shadowRoot.querySelector('[data-row-id="moving"] [part="legend-content"]')
+        nameArea.dispatchEvent(createPointerEvent('pointerdown', {clientX: 10, clientY: 10}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 10, clientY: 36}))
+
+        expect(timeline.tracks.map(track => track.id)).toEqual(initialOrder)
+        expect(timeline.shadowRoot.querySelectorAll('[data-row-drag-ghost]')).toHaveLength(2)
+        expect(timeline.shadowRoot.querySelectorAll('[data-row-drag-marker]')).toHaveLength(2)
+        expect(timeline.shadowRoot.querySelectorAll('.lgs1920-wa-timeline__row-drag-ghost--valid')).toHaveLength(2)
+        const layout = timeline.shadowRoot.querySelector('[data-layout]')
+        const rowHeight = Number.parseFloat(layout
+            .style.getPropertyValue('--lgs-timeline-row-height'))
+        const ghostScreenTopValues = [...timeline.shadowRoot.querySelectorAll('[data-row-drag-ghost]')]
+            .map(element => Number.parseFloat(element.style.top) + layout.getBoundingClientRect().top)
+        expect(new Set(ghostScreenTopValues).size).toBe(1)
+        expect(ghostScreenTopValues[0]).toBeCloseTo(36 - (rowHeight / 2))
+
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 10, clientY: 36}))
+
+        expect(timeline.tracks.map(track => track.id)).toEqual(['locked-high', 'existing', 'moving', 'locked-low'])
+    })
+
+    it('keeps the visual position when a hidden source row is dragged to the second place from the bottom', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {
+            tracks: [
+                {id: 'top', label: 'Top', clips: []},
+                {id: 'moving', label: 'Moving', clips: []},
+                {id: 'second-from-bottom', label: 'Second from bottom', clips: []},
+                {id: 'bottom', label: 'Bottom', clips: []},
+            ],
+        })
+        document.body.append(timeline)
+
+        const nameArea = timeline.shadowRoot.querySelector('[data-row-id="moving"] [part="legend-content"]')
+        nameArea.dispatchEvent(createPointerEvent('pointerdown', {clientX: 10, clientY: 10}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 10, clientY: 36}))
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 10, clientY: 36}))
+
+        expect(timeline.tracks.map(track => track.id)).toEqual([
+            'top',
+            'second-from-bottom',
+            'moving',
+            'bottom',
+        ])
+    })
+
+    it('aligns row ghosts in one shared overlay despite different viewport coordinates', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {
+            tracks: [
+                {id: 'moving', label: 'Moving', editable: true, clips: []},
+                {id: 'existing', label: 'Existing', clips: []},
+            ],
+        })
+        document.body.append(timeline)
+
+        const legendViewport = timeline.shadowRoot.querySelector('[data-scroll-view="legend"]')
+        const tracksViewport = timeline.shadowRoot.querySelector('[data-scroll-view="tracks"]')
+        Object.defineProperty(legendViewport, 'scrollTop', {configurable: true, writable: true, value: 10})
+        Object.defineProperty(tracksViewport, 'scrollTop', {configurable: true, writable: true, value: 14})
+        vi.spyOn(legendViewport, 'getBoundingClientRect').mockReturnValue({top: 100, left: 0, width: 150, height: 100})
+        vi.spyOn(tracksViewport, 'getBoundingClientRect').mockReturnValue({top: 104, left: 150, width: 300, height: 100})
+
+        const nameArea = timeline.shadowRoot.querySelector('[data-row-id="moving"] [part="legend-content"]')
+        nameArea.dispatchEvent(createPointerEvent('pointerdown', {clientX: 10, clientY: 10}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 10, clientY: 60}))
+
+        const ghostLayer = timeline.shadowRoot.querySelector('[data-row-drag-ghost-layer]')
+        const ghosts = [...timeline.shadowRoot.querySelectorAll('[data-row-drag-ghost]')]
+        const ghostScreenTopValues = ghosts.map(element => Number.parseFloat(element.style.top))
+        expect(ghosts.every(element => element.parentElement === ghostLayer)).toBe(true)
+        expect(new Set(ghostScreenTopValues.map(value => value.toFixed(4))).size).toBe(1)
+
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 10, clientY: 60}))
+    })
+
+    it('removes unlocked tracks and emits the complete controlled snapshot', () => {
+        const timeline = new LGS1920Timeline()
+        const removals = vi.fn()
+        configureTimeline(timeline, {
+            tracks: [{id: 'removable', label: 'Removable', clips: []}],
+        })
+        timeline.addEventListener('lgs1920-timeline-remove-track', removals)
+        document.body.append(timeline)
+
+        timeline.shadowRoot.querySelector('[data-row-id="removable"] [data-testid="lgs1920-wa-remove-track"]').click()
+
+        expect(removals).toHaveBeenCalledOnce()
+        expect(removals.mock.calls[0][0].detail.trackId).toBe('removable')
+        expect(removals.mock.calls[0][0].detail.track.label).toBe('Removable')
+        expect(removals.mock.calls[0][0].detail.tracks).toEqual([])
+        expect(timeline.tracks).toEqual([])
+    })
+
+    it('uses editable as the only track removal switch', () => {
+        const timeline = new LGS1920Timeline()
+        const removals = vi.fn()
+        configureTimeline(timeline, {
+            tracks: [
+                {id: 'locked', label: 'Locked', locked: true, editable: false, clips: []},
+                {id: 'fixed', label: 'Fixed', fixed: true, movable: false, editable: true, clips: []},
+            ],
+        })
+        timeline.addEventListener('lgs1920-timeline-remove-track', removals)
+        document.body.append(timeline)
+
+        expect(timeline.shadowRoot.querySelector('[data-row-id="locked"] [data-testid="lgs1920-wa-remove-track"]')).toBeNull()
+        expect(timeline.shadowRoot.querySelector('[data-row-id="fixed"] [data-testid="lgs1920-wa-remove-track"]')).not.toBeNull()
+        timeline.shadowRoot.querySelector('[data-row-id="fixed"] [data-testid="lgs1920-wa-remove-track"]').click()
+
+        expect(timeline.tracks.map(track => track.id)).toEqual(['locked'])
+        expect(removals).toHaveBeenCalledTimes(1)
+    })
+
+    it('uses editable on each track for all track and clip editing actions', () => {
+        const timeline = new LGS1920Timeline()
+        const labelChanges = vi.fn()
+        const clipChanges = vi.fn()
+        configureTimeline(timeline, {
+            tracks: [
+                {id: 'read-only', label: 'Read only', editable: false, clips: [{id: 'read-only-clip', start: 1, end: 3}]},
+                {id: 'editable', label: 'Editable', editable: true, clips: [{id: 'editable-clip', start: 1, end: 3}]},
+            ],
+        })
+        timeline.addEventListener('lgs1920-timeline-track-label-change', labelChanges)
+        timeline.addEventListener('lgs1920-timeline-clip-change', clipChanges)
+        document.body.append(timeline)
+
+        const readOnlyRow = timeline.shadowRoot.querySelector('[data-row-id="read-only"]')
+        const editableRow = timeline.shadowRoot.querySelector('[data-row-id="editable"]')
+        expect(readOnlyRow.classList.contains('lgs1920-wa-timeline__legend-row--movable')).toBe(false)
+        expect(readOnlyRow.classList.contains('lgs1920-wa-timeline__legend-row--read-only')).toBe(true)
+        expect(readOnlyRow.querySelector('[part="legend-content"]')
+            .classList.contains('lgs1920-wa-timeline__track-content--title-disabled')).toBe(true)
+        expect(editableRow.classList.contains('lgs1920-wa-timeline__legend-row--movable')).toBe(true)
+        expect(editableRow.classList.contains('lgs-widget-no-drag')).toBe(true)
+        expect(timeline.shadowRoot.querySelector('[part="track"][data-row-id="read-only"]')
+            .classList.contains('lgs1920-wa-timeline__track--read-only')).toBe(true)
+        expect(timeline.shadowRoot.querySelector('[part="track-background"][data-row-id="read-only"]')
+            .classList.contains('lgs1920-wa-timeline__track-background--read-only')).toBe(true)
+        expect(timeline.shadowRoot.querySelector('[part="track"][data-row-id="editable"]')
+            .classList.contains('lgs1920-wa-timeline__track--read-only')).toBe(false)
+        expect(readOnlyRow.querySelector('wa-icon')).toBeNull()
+        expect(readOnlyRow.querySelector('[data-testid="lgs1920-wa-remove-track"]')).toBeNull()
+        expect(editableRow.querySelector('[data-testid="lgs1920-wa-remove-track"]')).not.toBeNull()
+        expect(readOnlyRow.querySelector('slot[name="actions-read-only"]')).toBeNull()
+        expect(editableRow.querySelector('slot[name="actions-editable"]')).not.toBeNull()
+        expect(timeline.shadowRoot.querySelector('[data-clip-id="read-only-clip"]')
+            .classList.contains('lgs1920-wa-timeline__clip--movable')).toBe(false)
+        expect(timeline.shadowRoot.querySelector('[data-clip-id="editable-clip"]')
+            .classList.contains('lgs1920-wa-timeline__clip--movable')).toBe(true)
+
+        readOnlyRow.querySelector('[part="legend-content"]')
+            .dispatchEvent(new MouseEvent('dblclick', {bubbles: true, cancelable: true}))
+        editableRow.querySelector('[part="legend-content"]')
+            .dispatchEvent(new MouseEvent('dblclick', {bubbles: true, cancelable: true}))
+        expect(timeline.shadowRoot.querySelector('[data-edit-row-id="read-only"]')).toBeNull()
+        expect(timeline.shadowRoot.querySelector('[data-edit-row-id="editable"]')).not.toBeNull()
+
+        timeline.shadowRoot.querySelector('[data-clip-id="read-only-clip"]')
+            .dispatchEvent(createPointerEvent('pointerdown', {clientX: 180, clientY: 50}))
+        expect(clipChanges).not.toHaveBeenCalled()
+        expect(labelChanges).not.toHaveBeenCalled()
+    })
+
+    it('disables every track and clip editing action when editable is false', () => {
+        const timeline = new LGS1920Timeline()
+        const beforeDrag = vi.fn()
+        const labelChanges = vi.fn()
+        const clipChanges = vi.fn()
+        const rangeChanges = vi.fn()
+        configureTimeline(timeline, {
+            timeline: {editable: false, showClipMenu: true},
+            tracks: [{
+                id: 'track',
+                label: 'Track',
+                canHide: true,
+                clips: [{id: 'clip', kind: 'video', start: 1, end: 4}],
+            }],
+        })
+        timeline.addEventListener('lgs1920-timeline-before-drag', beforeDrag)
+        timeline.addEventListener('lgs1920-timeline-track-label-change', labelChanges)
+        timeline.addEventListener('lgs1920-timeline-clip-change', clipChanges)
+        timeline.addEventListener('lgs1920-timeline-range-change', rangeChanges)
+        document.body.append(timeline)
+
+        expect(timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-add-track"]')).toBeNull()
+        expect(timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-add-clip"]')).toBeNull()
+        expect(timeline.shadowRoot.querySelector('[data-row-id="track"] [data-testid="lgs1920-wa-remove-track"]')).toBeNull()
+        expect(timeline.shadowRoot.querySelector('[data-row-id="track"] [data-testid="lgs1920-wa-visibility"]')).toBeNull()
+        expect(timeline.shadowRoot.querySelector('[data-row-id="track"]')
+            .classList.contains('lgs1920-wa-timeline__legend-row--movable')).toBe(false)
+        expect(timeline.shadowRoot.querySelector('[data-clip-id="clip"]')
+            .classList.contains('lgs1920-wa-timeline__clip--movable')).toBe(false)
+        expect(timeline.shadowRoot.querySelector('[data-clip-handle="end"]').getAttribute('tabindex')).toBe('-1')
+
+        timeline.shadowRoot.querySelector('slot[name="track-label-track"]')
+            .dispatchEvent(new MouseEvent('dblclick', {bubbles: true, cancelable: true}))
+        timeline.shadowRoot.querySelector('[data-clip-id="clip"]')
+            .dispatchEvent(createPointerEvent('pointerdown', {clientX: 180, clientY: 50}))
+        timeline.shadowRoot.querySelector('[data-range-handle="end"]')
+            .dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true, cancelable: true}))
+
+        expect(timeline.shadowRoot.querySelector('[data-edit-row-id="track"]')).toBeNull()
+        expect(labelChanges).not.toHaveBeenCalled()
+        expect(clipChanges).not.toHaveBeenCalled()
+        expect(rangeChanges).not.toHaveBeenCalled()
+        expect(beforeDrag).not.toHaveBeenCalled()
     })
 
     it('keeps the visual playhead controlled by setTime without emitting seek', () => {
@@ -1188,6 +1672,22 @@ describe('lgs1920-timeline Web Component', () => {
         expect(labelChanges.mock.calls[0][0].detail.trackId).toBe('map#main')
         expect(labelChanges.mock.calls[0][0].detail.data.tracks[0].label).toBe('Journey map')
         expect(labelChanges.mock.calls[0][0].detail.data.tracks[0].clips[0].id).toBe('map-clip')
+    })
+
+    it('cancels track label editing when the pointer leaves the editor', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {
+            tracks: [{id: 'track', label: 'Track', clips: []}],
+        })
+        document.body.append(timeline)
+
+        timeline.shadowRoot.querySelector('[data-row-id="track"] [part="legend-content"]')
+            .dispatchEvent(new MouseEvent('dblclick', {bubbles: true, cancelable: true}))
+        expect(timeline.shadowRoot.querySelector('[data-edit-row-id="track"]')).not.toBeNull()
+
+        document.body.dispatchEvent(createPointerEvent('pointerdown', {clientX: 600, clientY: 400}))
+
+        expect(timeline.shadowRoot.querySelector('[data-edit-row-id="track"]')).toBeNull()
     })
 
     it('restores the previous track label when an empty edit is committed', () => {
@@ -1544,7 +2044,7 @@ describe('lgs1920-timeline Web Component', () => {
         const timeline = new LGS1920Timeline()
         const additions = vi.fn()
         configureTimeline(timeline, {
-            timeline: {collisionPolicy: 'allow'},
+            timeline: {collisionPolicy: 'allow', showClipMenu: true},
             currentTimeMillis: 2_000,
             clipOptions: [{group: 'media', key: 'video', id: 'inserted', label: 'Inserted', duration: 3, trackId: 'main#one'}],
         })
@@ -1570,6 +2070,7 @@ describe('lgs1920-timeline Web Component', () => {
             timeline: {
                 durationPolicy: 'extend',
                 collisionPolicy: 'ripple',
+                showClipMenu: true,
             },
             tracks: [{
                 id: 'video',
@@ -1594,7 +2095,7 @@ describe('lgs1920-timeline Web Component', () => {
         expect(detail.tracks[0].clips.find(clip => clip.id === 'last')).toMatchObject({start: 5, end: 13})
     })
 
-    it('reorders tracks from the dedicated drag trigger and emits the drop index', () => {
+    it('reorders tracks from the track list and emits the drop index', () => {
         const timeline = new LGS1920Timeline()
         const reorders = vi.fn()
         const beforeDrag = vi.fn()
@@ -1612,19 +2113,19 @@ describe('lgs1920-timeline Web Component', () => {
         timeline.addEventListener('lgs1920-timeline-after-drag', afterDrag)
         document.body.append(timeline)
 
-        const trigger = timeline.shadowRoot.querySelector('slot[name="drag-trigger-first"]')
-        expect(trigger.querySelector('wa-icon').getAttribute('name')).toBe('grip-dots-vertical')
-        trigger.dispatchEvent(createPointerEvent('pointerdown', {clientX: 10, clientY: 10}))
+        const nameArea = timeline.shadowRoot.querySelector('[data-row-id="first"] [part="legend-content"]')
+        expect(timeline.shadowRoot.querySelector('slot[name="drag-trigger-first"]')).toBeNull()
+        nameArea.dispatchEvent(createPointerEvent('pointerdown', {clientX: 10, clientY: 10}))
         const surface = timeline.shadowRoot.querySelector('[data-scroll-view="surface"]')
         const tracksViewport = timeline.shadowRoot.querySelector('[data-scroll-view="tracks"]')
         Object.defineProperty(surface, 'scrollLeft', {configurable: true, writable: true, value: 72})
         vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 100, right: 700, width: 600, top: 0, bottom: 200, height: 200})
-        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 10, clientY: 70}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 10, clientY: 255}))
         expect(timeline.shadowRoot.querySelector('[data-scroll-view="surface"]')).toBe(surface)
         expect(timeline.shadowRoot.querySelector('[data-scroll-view="tracks"]')).toBe(tracksViewport)
         expect(surface.scrollLeft).toBe(72)
         expect(timeline.shadowRoot.querySelector('[data-track-drop-indicator]')).toBeNull()
-        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 10, clientY: 70}))
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 10, clientY: 255}))
 
         expect(reorders).toHaveBeenCalledOnce()
         expect(reorders.mock.calls[0][0].detail.dropIndex).toBe(2)
@@ -1671,10 +2172,10 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.currentTimeMillis).toBe(3_500)
     })
 
-    it('keeps a double-click on the track name available for editing', () => {
+    it('does not edit a track name when the track is not editable', () => {
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline, {
-            tracks: [{id: 'editable', label: 'Editable', editable: true, movable: true, clips: []}],
+            tracks: [{id: 'editable', label: 'Editable', editable: false, movable: false, clips: []}],
         })
         document.body.append(timeline)
 
@@ -1685,7 +2186,7 @@ describe('lgs1920-timeline Web Component', () => {
         window.dispatchEvent(createPointerEvent('pointerup', {clientX: 10, clientY: 10}))
         labelSlot.dispatchEvent(new MouseEvent('dblclick', {bubbles: true, cancelable: true}))
 
-        expect(timeline.shadowRoot.querySelector('[data-edit-row-id="editable"]')).not.toBeNull()
+        expect(timeline.shadowRoot.querySelector('[data-edit-row-id="editable"]')).toBeNull()
     })
 
     it.each([
@@ -1713,9 +2214,9 @@ describe('lgs1920-timeline Web Component', () => {
                 {id: 'moving', label: 'Moving', movable: true, clips: []},
                 {id: 'locked-top', label: 'Locked top', fixed: true, movable: false, clips: []},
             ],
-            pointerY: 100,
+            pointerY: 255,
         },
-    ])('rejects row insertion $name', ({tracks, pointerY}) => {
+    ])('allows row insertion $name', ({tracks, pointerY}) => {
         const timeline = new LGS1920Timeline()
         const reorders = vi.fn()
         const afterDrag = vi.fn()
@@ -1728,24 +2229,13 @@ describe('lgs1920-timeline Web Component', () => {
         nameArea.dispatchEvent(createPointerEvent('pointerdown', {clientX: 10, clientY: 0}))
         window.dispatchEvent(createPointerEvent('pointermove', {clientX: 10, clientY: pointerY}))
 
-        expect(timeline.hasAttribute('data-row-drop-rejected')).toBe(true)
-        expect(timeline.shadowRoot.querySelector('[data-row-id="moving"]')
-            .classList.contains('lgs1920-wa-timeline__legend-row--drop-rejected')).toBe(true)
-        expect(timeline.shadowRoot.querySelector('[part="track"][data-row-id="moving"]')
-            .classList.contains('lgs1920-wa-timeline__track--drop-rejected')).toBe(true)
-        expect(timeline.shadowRoot.querySelector('[data-row-id="moving"][part="legend-row"]')
-            .classList.contains('lgs1920-wa-timeline__legend-row--drag-placeholder')).toBe(true)
-        expect(timeline.shadowRoot.querySelector('[part="legend-row"][data-row-id="moving"][data-row-drag-silhouette]'))
-            .not.toBeNull()
-        expect(timeline.shadowRoot.querySelector('[part="track"][data-row-id="moving"][data-row-drag-silhouette]'))
-            .not.toBeNull()
+        expect(timeline.hasAttribute('data-row-drop-rejected')).toBe(false)
 
         window.dispatchEvent(createPointerEvent('pointerup', {clientX: 10, clientY: pointerY}))
 
-        expect(timeline.hasAttribute('data-row-drop-rejected')).toBe(false)
-        expect(reorders).not.toHaveBeenCalled()
-        expect(timeline.tracks.map(track => track.id)).toEqual(tracks.map(track => track.id))
-        expect(afterDrag.mock.calls[0][0].detail).toMatchObject({committed: false})
+        expect(reorders).toHaveBeenCalledOnce()
+        expect(timeline.tracks.map(track => track.id)).not.toEqual(tracks.map(track => track.id))
+        expect(afterDrag.mock.calls[0][0].detail).toMatchObject({committed: true})
     })
 
     it('does not open context menus for tracks or clips', () => {

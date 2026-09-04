@@ -33,7 +33,15 @@ The component has a compact controlled model:
 - `playing` controls the playback state.
 - `timeline.fps`, `timeline.frameCount`, and `timeline.currentFrameIndex`
   describe the canonical Replay frame clock used by frame navigation.
-- `clipOptions` supplies entries for the clip menu.
+- `clipOptions` supplies entries for the clip menu. Leave it null to expose the
+  generic `Clip` option; set it to an empty array to show an empty menu.
+
+During its initial mount, the component covers the timeline before its first
+layout with an opaque themed overlay and a Web Awesome paintbrush using the
+`wag` animation. The `overlay-text` slot customizes its label and falls back to
+`Building...`. Set `timeline.showBuildingOverlay` to `false` to disable the
+overlay. When enabled, it is removed after the layout settles and is never
+shown again for updates or interactions.
 
 Set `timeline.interactive` to `false` for a display-only projection. The
 component then renders the controlled ruler, playhead, tracks, and clips
@@ -55,11 +63,14 @@ timeline.timeline = {
     currentFrameIndex: 105,
     visible: true,
     zoomPercent: 0,
-    legendMinWidth: 100,
-    legendMaxWidth: 230,
+    legendMinWidth: 50,
+    legendWidth: 150,
+    legendMaxWidth: 250,
     rangeStartMillis: 0,
     rangeEndMillis: 60_000,
     editable: true,
+    showBuildingOverlay: true,
+    showClipMenu: true,
     collisionPolicy: 'prevent',
     durationPolicy: 'fixed',
 }
@@ -79,8 +90,6 @@ timeline.tracks = [
         id: 'music',
         label: 'Music',
         icon: 'music',
-        fixed: true,
-        movable: false,
         clips: [
             {id: 'music#001', label: 'Opening theme', kind: 'audio', start: 0, end: 42},
         ],
@@ -114,18 +123,23 @@ clock integration.
 | `rangeEndMillis` | `number` | Video range end in milliseconds. Defaults to `durationMillis`. |
 | `visible` | `boolean` | Controls timeline visibility. Defaults to `true`. |
 | `zoomPercent` | `number` | Initial ruler zoom up to `500`; the minimum is calculated from the available surface width, full timeline duration, and right safety margin. |
-| `legendMinWidth` | `number` | Minimum track legend width in pixels. Defaults to `100`. |
-| `legendMaxWidth` | `number` | Maximum track legend width in pixels. Defaults to `230`. |
-| `editable` | `boolean` | Enables clip editing and track reordering. Defaults to `true`. |
+| `legendMinWidth` | `number` | Minimum track legend width in pixels. Defaults to `50`. |
+| `legendWidth` | `number` | Initial track legend width in pixels. Defaults to `150`. |
+| `legendMaxWidth` | `number` | Maximum track legend width in pixels. Defaults to `250`. |
+| `editable` | `boolean` | Enables all timeline editing actions: track dragging, title editing, clip insertion and movement, and track removal. When `false`, those actions are unavailable. Defaults to `true`. |
 | `interactive` | `boolean` | Enables playback, scrubbing, editing, menus, and emitted interaction events. Defaults to `true`. |
+| `showBuildingOverlay` | `boolean` | Shows the construction overlay during the initial mount. Defaults to `true`. |
 | `collisionPolicy` | `'allow' \| 'prevent' \| 'ripple'` | Default clip collision policy for tracks. Defaults to `prevent`. |
 | `resizeCollisionPolicy` | `'allow' \| 'prevent' \| 'ripple'` | Default collision policy for clip resizes. Defaults to `ripple`. |
 | `durationPolicy` | `'fixed' \| 'extend'` | Keeps the duration fixed or extends it when an edit exceeds the end. Defaults to `fixed`. |
 | `keyboardZoomActive` | `boolean` | Enables arrow-key zoom when the containing widget is selected. Defaults to `false`. |
+| `showClipMenu` | `boolean` | Displays the optional clip creation action. Defaults to `false`. |
 | `defaultTrackId` | `string` | Track used when a clip-menu option does not specify a track. |
 | `minClipDuration` | `number` | Default minimum clip duration in seconds. |
 | `defaultClipDuration` | `number` | Default duration for a clip-menu insertion in seconds. Defaults to `1`. |
 | `keyboardStepSeconds` | `number` | Keyboard resize step in seconds. Defaults to `0.1`. |
+| `addTrackLabel` | `string` | Track creation button label. Defaults to `Add track`. |
+| `addTrackIcon` | `string` | Track creation button icon. Defaults to `plus`. |
 
 ### `tracks`
 
@@ -135,12 +149,11 @@ clock integration.
 | --- | --- | --- |
 | `id` | `string` | Stable track identifier. `#` is used as the slot identifier separator. |
 | `label` | `string` | Track name shown in the legend. |
-| `editable` | `boolean` | Enables inline track-name editing. Defaults to `true`. |
 | `colorClasses` | `string[]` | Web Awesome color classes. |
 | `visible` | `boolean` | Track visibility state. |
 | `canHide` | `boolean` | Enables the track visibility action. |
-| `fixed` | `boolean` | Prevents track reordering. |
-| `movable` | `boolean` | Enables track reordering. Defaults to `true`. |
+| `editable` | `boolean` | Enables drag, title editing, clip insertion/movement/resizing, and removal for this track. Defaults to `true`. |
+| `autoNumbered` | `boolean` | Internal marker preserved on tracks created by the generic add action so numbering can restart after all generated tracks are renamed or removed. |
 | `droppable` | `boolean` | Allows clips to be moved or inserted on the track. Defaults to `true`. |
 | `accepts` | `string[]` | Clip kinds accepted by the track. An empty value accepts every kind. |
 | `collisionPolicy` | `'allow' \| 'prevent' \| 'ripple'` | Collision behavior for clip edits on this track. |
@@ -161,9 +174,7 @@ Each clip supports:
 | `icon` | `string` | Font Awesome icon name. |
 | `colorClasses` | `string[]` | Web Awesome color classes. |
 | `visible` | `boolean` | Clip visibility state. |
-| `movable` | `boolean` | Allows horizontal and inter-track movement. Defaults to `true`. |
 | `resizable` | `boolean` | Enables the start and end handles. Defaults to `true`. |
-| `fixed` | `boolean` | Disables movement and resizing. |
 | `minDuration` | `number` | Minimum clip duration in seconds. |
 | `metadata` | `object` | Optional application metadata. |
 
@@ -209,6 +220,7 @@ modify the canonical Replay FPS or emit an FPS-change event.
 Options displayed by the clip insertion menu. Each option can contain
 `group`, `key`, `label`, `icon`, `kind`, `trackId`, `start`, `end`, `duration`,
 and a `clip` object containing application fields to copy to the inserted clip.
+When `clipOptions` is null, the menu exposes one generic `Clip` option.
 
 ## React wrapper
 
@@ -268,8 +280,9 @@ targeted slot takes the form `{slot}-{id}` and overrides the global slot.
 | `playback-total` | Total-time label. |
 | `playback-end` | Content after the total time. |
 | `timeline-toolbar` | Toolbar content beside the clip menu. |
-| `legend-ruler` | Replacement content for the title-column ruler area. The default fallback contains `timeline-toolbar` and the clip-menu button. |
+| `legend-ruler` | Replacement content for the title-column ruler area. The default fallback contains `timeline-toolbar`, the direct track button, and the optional clip-menu button. |
 | `timeline-ruler` | Additional content over the time ruler. |
+| `overlay-text` | Initial construction-overlay label. Falls back to `Building...`. |
 | `footer` | Content below the timeline layout. |
 | `empty-state` | Content displayed when the clip menu has no options. |
 
@@ -279,6 +292,7 @@ targeted slot takes the form `{slot}-{id}` and overrides the global slot.
         <wa-badge variant="success">Ready</wa-badge>
     </div>
     <h2 slot="header">Sequence</h2>
+    <span slot="overlay-text">Preparing timeline...</span>
     <wa-button slot="custom-menu" variant="brand" appearance="plain">Custom menu</wa-button>
     <span slot="playback-separator"> of </span>
     <wa-button slot="header-actions" appearance="plain">Close</wa-button>
@@ -309,6 +323,8 @@ wa-drawer lgs1920-timeline,
 | `end-icon` | Go-to-end icon. |
 | `add-clip-icon` | Clip-menu icon. |
 | `add-clip-label` | Clip-menu label. |
+| `add-track-icon` | Track-menu icon. |
+| `add-track-label` | Track-menu label. |
 
 ```html
 <lgs1920-timeline>
@@ -322,20 +338,20 @@ wa-drawer lgs1920-timeline,
 
 ### Track slots
 
-Each track has a legend area and a right-aligned action area. The action area
-supports the `drag-trigger`, `visibility`, and `actions` slots.
+Each track has a legend area and a right-aligned action area. Track reordering
+starts from the legend area itself; the action area supports the `visibility`,
+`remove`, and `actions` slots.
 
 | Global slot | Targeted slot | Description |
 | --- | --- | --- |
 | `track-label` or `name` | `track-label-{trackId}` or `name-{trackId}` | Track name content. |
-| `drag-trigger` | `drag-trigger-{trackId}` | Drag handle content. |
 | `visibility` | `visibility-{trackId}` | Visibility control content. |
+| `remove` | `remove-{trackId}` | Remove action content. |
 | `actions` | `actions-{trackId}` | Reserved track-specific actions. |
 
 ```html
 <lgs1920-timeline>
     <span slot="name-camera#main">Main camera</span>
-    <wa-icon slot="drag-trigger-camera#main" name="grip-lines-vertical" variant="solid" label=""></wa-icon>
     <wa-button slot="actions-camera#main" appearance="plain" size="s" aria-label="Track settings">
         <wa-icon name="gear" variant="solid" label=""></wa-icon>
     </wa-button>
@@ -406,8 +422,9 @@ right safety margin.
 
 ## Track names and controlled editing
 
-Double-click an editable track name to open the inline Web Awesome input.
-Press `Enter` or leave the input to commit the name; press `Escape` to cancel.
+When both the timeline and track `editable` flags are enabled, double-click a
+track name to open the inline Web Awesome input. Press `Enter` or leave the
+input to commit the name; press `Escape` to cancel.
 
 The component emits the new name and a serializable public snapshot. The host
 stores the updated track definition and passes the new `tracks` array back.
@@ -422,8 +439,11 @@ timeline.addEventListener('lgs1920-timeline-track-label-change', event => {
 
 The same controlled flow applies to track visibility, clip visibility, and
 track reordering. Clips belonging to a hidden track remain represented in the
-timeline with their original palette softened by a lighter diagonal hatch;
-they are not interactive until the track is shown again.
+timeline with their original palette muted through grayscale and opacity;
+they are not interactive until the track is shown again. A hidden track keeps
+its title in a disabled visual state and cannot open title editing. It also
+displays one continuous flat grey tint behind the clips. Read-only tracks use
+the corresponding flat branded red tint.
 
 ## Clip and track editing
 
@@ -474,20 +494,17 @@ duration. The committed event contains the resulting `durationMillis` and the
 complete `tracks` snapshot. With `durationPolicy: 'fixed'`, an edit that would
 leave the timeline bounds is rejected.
 
-Track reordering starts from the `drag-trigger` slot or anywhere in the track
-name area. The title area and the time surface follow the same row order. The
-dragged row silhouette and the translucent source placeholder show the drop
-position. Locked rows cannot
-be crossed: insertion is rejected before a locked first row, after a locked
-last row, or between two locked rows. The committed `reorder` event contains
-the new `tracks` order and `dropIndex`. While the pointer is over a rejected
-locked boundary, the dragged row silhouette uses the Web Awesome `danger`
-colors, follows the pointer in both panes, and remains at its last valid
-position while a translucent placeholder preserves the source slot. A valid
-position uses the Web Awesome `success` colors.
+Track reordering starts from anywhere in the track name area when both
+`editable` flags are enabled. Read-only tracks delimit the
+editable area: an editable track cannot be dropped above the highest read-only
+track, below the lowest read-only track, or into a gap with no editable slot.
+The dragged row remains in place while a synchronized legend-and-timeline
+ghost follows the pointer; a branded marker shows the proposed insertion
+position and its valid or rejected state.
+The committed `reorder` event contains the new `tracks` order and `dropIndex`.
 
-The component emits `before-drag`, `drag`, and `after-drag` for movable tracks
-and clips. Each detail contains a `context` with the requested public shape:
+The component emits `before-drag`, `drag`, and `after-drag` for tracks and
+clips while `editable` is enabled. Each detail contains a `context` with the requested public shape:
 `{type: 'piste', pisteId}` for a track and
 `{type: 'clip', pisteId, clipId}` for a clip. The detail also contains the
 triggering event and the current serializable `data` snapshot. `after-drag`
@@ -523,6 +540,8 @@ corresponding `on...` callback.
 | `track-label-change` | `lgs1920-timeline-track-label-change` | `onTrackLabelChange` | `{trackId, label, previousLabel, tracks, data}` |
 | `dblclick` | `lgs1920-timeline-dblclick` | `onDblClick` | `{clip, context, event}` |
 | `add-clip` | `lgs1920-timeline-add-clip` | `onAddClip` | `{group, key, option, clip, trackId, durationMillis, tracks}` |
+| `add-track` | `lgs1920-timeline-add-track` | `onAddTrack` | `{group, key, option, track, trackId, tracks, data}` |
+| `remove-track` | `lgs1920-timeline-remove-track` | `onRemoveTrack` | `{trackId, track, tracks, event, data}` |
 | `clip-change-start` | `lgs1920-timeline-clip-change-start` | `onClipChangeStart` | `{type, edge, clipId, fromTrackId, toTrackId, clip, durationMillis, tracks}` |
 | `clip-changing` | `lgs1920-timeline-clip-changing` | `onClipChanging` | `{type, edge, clipId, fromTrackId, toTrackId, clip, durationMillis, tracks}` |
 | `clip-change` | `lgs1920-timeline-clip-change` | `onClipChange` | `{type, edge, clipId, fromTrackId, toTrackId, clip, durationMillis, tracks}` |
@@ -569,7 +588,7 @@ lgs1920-timeline {
     --lgs-timeline-background: color-mix(in oklab, #102033 92%, transparent);
     --lgs-timeline-surface-color: #132941;
     --lgs-timeline-playhead-color: #ffb000;
-    --lgs-timeline-row-height: 28px;
+    --lgs-timeline-row-height: 24px;
 }
 
 lgs1920-timeline::part(clip) {
@@ -589,6 +608,7 @@ lgs1920-timeline::part(clip) {
 | `--lgs-timeline-radius` | Outer corner radius. |
 | `--lgs-timeline-shadow` | Outer shadow. |
 | `--lgs-timeline-gap` | Header and top-section gap. |
+| `--lgs-timeline-building-overlay-gap` | Space between the initial-overlay icon and text. |
 | `--lgs-timeline-header-height` | Header and ruler height. |
 | `--lgs-timeline-min-width` | Minimum host and layout width. |
 | `--lgs-timeline-min-height` | Minimum host and layout height. |
@@ -631,7 +651,8 @@ lgs1920-timeline::part(clip) {
 | `--lgs-timeline-popup-border-color` | Popup border color. |
 | `--lgs-timeline-popup-shadow` | Popup shadow. |
 
-Useful CSS parts include `timeline`, `top`, `header`, `header-start`,
+Useful CSS parts include `timeline`, `building-overlay`,
+`building-overlay-text`, `top`, `header`, `header-start`,
 `custom-menu`, `controls`, `header-actions`, `playback-controls`,
 `layout`, `legend`, `legend-viewport`, `legend-rows`,
 `legend-row`, `legend-content`, `track-actions`, `split-panel`,

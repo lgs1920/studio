@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-02
+ * Last modified: 2026-09-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,6 +26,8 @@ const EVENT_CALLBACKS = [
     ['track-visibility-change', 'onTrackVisibilityChange'],
     ['dblclick', 'onDblClick'],
     ['add-clip', 'onAddClip'],
+    ['add-track', 'onAddTrack'],
+    ['remove-track', 'onRemoveTrack'],
     ['reorder', 'onReorder'],
     ['track-label-change', 'onTrackLabelChange'],
     ['clip-change-start', 'onClipChangeStart'],
@@ -50,7 +52,7 @@ const EVENT_CALLBACKS = [
  * @param {Array} [props.tracks=[]] - Public track definitions.
  * @param {number} [props.currentTimeMillis=0] - Current logical time.
  * @param {boolean} [props.playing=false] - Whether playback is active.
- * @param {Array} [props.clipOptions=[]] - Clip insertion options.
+ * @param {Array|null} [props.clipOptions=null] - Clip insertion options, or null for the generic option.
  * @param {Function} [props.onPlay] - Play callback receiving event detail.
  * @param {Function} [props.onPause] - Pause callback receiving event detail.
  * @param {Function} [props.onStop] - Stop callback receiving event detail.
@@ -59,6 +61,8 @@ const EVENT_CALLBACKS = [
  * @param {Function} [props.onTrackVisibilityChange] - Track visibility callback.
  * @param {Function} [props.onDblClick] - Clip double-click callback.
  * @param {Function} [props.onAddClip] - Clip insertion callback.
+ * @param {Function} [props.onAddTrack] - Track creation callback.
+ * @param {Function} [props.onRemoveTrack] - Track removal callback.
  * @param {Function} [props.onReorder] - Track reorder callback.
  * @param {Function} [props.onTrackLabelChange] - Track label callback.
  * @param {Function} [props.onClipChangeStart] - Clip edit start callback.
@@ -78,7 +82,7 @@ export const LGS1920TimelineReact = ({
     tracks = [],
     currentTimeMillis = 0,
     playing = false,
-    clipOptions = [],
+    clipOptions = null,
     onPlay,
     onPause,
     onStop,
@@ -87,6 +91,8 @@ export const LGS1920TimelineReact = ({
     onTrackVisibilityChange,
     onDblClick,
     onAddClip,
+    onAddTrack,
+    onRemoveTrack,
     onReorder,
     onTrackLabelChange,
     onClipChangeStart,
@@ -134,6 +140,8 @@ export const LGS1920TimelineReact = ({
             onTrackVisibilityChange,
             onDblClick,
             onAddClip,
+            onAddTrack,
+            onRemoveTrack,
             onReorder,
             onTrackLabelChange,
             onClipChangeStart,
@@ -152,7 +160,7 @@ export const LGS1920TimelineReact = ({
             return {name, listener}
         })
         return () => listeners.forEach(({name, listener}) => element.removeEventListener(`lgs1920-timeline-${name}`, listener))
-    }, [onAddClip, onAfterDrag, onBeforeDrag, onClipChange, onClipChangeStart, onClipChanging, onDblClick, onDrag, onPause, onPlay, onRangeChange, onRangeChangeStart, onRangeChanging, onReorder, onRestart, onSeek, onStop, onTrackLabelChange, onTrackVisibilityChange])
+    }, [onAddClip, onAddTrack, onAfterDrag, onBeforeDrag, onClipChange, onClipChangeStart, onClipChanging, onDblClick, onDrag, onPause, onPlay, onRangeChange, onRangeChangeStart, onRangeChanging, onRemoveTrack, onReorder, onRestart, onSeek, onStop, onTrackLabelChange, onTrackVisibilityChange])
 
     return (
         <lgs1920-timeline ref={_element}>

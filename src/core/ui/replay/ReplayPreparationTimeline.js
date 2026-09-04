@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-02
+ * Last modified: 2026-09-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -110,7 +110,7 @@ const resolveWidgetTrackDefinitions = widgetOrder => {
             timelineColor: normalizeTimelineColor(mode.timelineColor),
             canHide: true,
             visible: true,
-            fixed: false,
+            editable: true,
             resizable: true,
         }))
     }
@@ -144,7 +144,7 @@ const resolveWidgetTrackDefinitions = widgetOrder => {
             visible: !(typeof widget === 'object' && widget?.visible === false),
             widgetGroup: typeof widget === 'object' ? widget?.widgetGroup ?? null : null,
             widgetGroupLabel: typeof widget === 'object' ? widget?.widgetGroupLabel ?? null : null,
-            fixed: typeof widget === 'object' && widget?.fixed === true,
+            editable: typeof widget === 'object' ? widget?.editable !== false : true,
             resizable: typeof widget === 'object' ? widget?.resizable !== false : true,
         }
     }).filter(Boolean)
@@ -163,7 +163,7 @@ const resolveWidgetTrackDefinitions = widgetOrder => {
             timelineColor: firstMember?.timelineColor ?? DEFAULT_TIMELINE_COLOR,
             canHide: widget.members.some(member => member.canHide),
             visible: widget.members.every(member => member.visible !== false),
-            fixed: widget.members.every(member => member.fixed === true),
+            editable: widget.members.every(member => member.editable !== false),
         }
     })
 }
@@ -226,7 +226,6 @@ const actionFromRange = ({
     endMillis,
     clip = null,
     icon = null,
-    movable = true,
     resizable = true,
     timelineColor = DEFAULT_TIMELINE_COLOR,
     visible = true,
@@ -247,8 +246,6 @@ const actionFromRange = ({
     icon,
     colorClasses: timelineColorClasses(timelineColor),
     visible,
-    locked: !movable,
-    movable,
     resizable,
     flexible: false,
 })
@@ -431,7 +428,6 @@ const buildWidgetActions = (timeline, frameTimeline, modeDefinition) => {
             startMillis,
             endMillis,
             icon: modeDefinition.icon,
-            movable: modeDefinition.movable !== false,
             resizable: modeDefinition.resizable !== false,
             timelineColor: modeDefinition.timelineColor,
             visible: modeDefinition.visible,
@@ -465,7 +461,6 @@ const buildStaticWidgetActions = (timeline, widgetDefinition) => {
         endMillis: timeline.durationMillis,
         icon: widgetDefinition.icon,
         timelineColor: widgetDefinition.timelineColor,
-        movable: widgetDefinition.fixed !== true,
         resizable: widgetDefinition.resizable !== false,
         visible: widgetDefinition.visible,
     })]
@@ -491,7 +486,6 @@ const buildTrackWidgetActions = (timeline, frameTimeline, widgetDefinition) => {
             icon: member.icon,
             timelineColor: member.timelineColor,
             visible: member.visible,
-            movable: !member.fixed,
             resizable: member.resizable !== false,
         })
         : buildStaticWidgetActions(timeline, member))
@@ -538,10 +532,8 @@ export const buildReplayPreparationTimeline = (options = {}) => {
         id: REPLAY_PREPARATION_TRACK_REPLAY,
         kind: REPLAY_PREPARATION_TRACK_REPLAY,
         label: 'Replay',
-        locked: true,
+        editable: false,
         actions: buildReplayActions(timeline),
-        movable: false,
-        fixed: true,
         colorClasses: REPLAY_COLOR_CLASSES,
         timelineColor: DEFAULT_TIMELINE_COLOR,
     }
@@ -549,9 +541,7 @@ export const buildReplayPreparationTimeline = (options = {}) => {
         id: widget.id,
         kind: widget.type,
         label: widget.label,
-        locked: widget.fixed,
-        movable: !widget.fixed,
-        fixed: widget.fixed,
+        editable: widget.editable,
         canHide: widget.canHide,
         visible: widget.visible,
         colorClasses: timelineColorClasses(widget.timelineColor),
@@ -565,8 +555,7 @@ export const buildReplayPreparationTimeline = (options = {}) => {
         id: track.id,
         label: track.label,
         kind: track.kind,
-        movable: track.movable,
-        fixed: track.fixed,
+        editable: track.editable !== false,
         canHide: track.canHide,
         visible: track.visible,
         widgetGroup: track.widgetGroup ?? null,
@@ -574,7 +563,7 @@ export const buildReplayPreparationTimeline = (options = {}) => {
         classNames: [
             `replay-timeline-row-${track.kind}`,
             ...(track.colorClasses ?? REPLAY_COLOR_CLASSES),
-            ...(track.fixed ? ['replay-timeline-row-fixed'] : []),
+            ...(track.editable === false ? ['replay-timeline-row-read-only'] : []),
         ],
         actions: track.actions.map(action => ({...action})),
     }))

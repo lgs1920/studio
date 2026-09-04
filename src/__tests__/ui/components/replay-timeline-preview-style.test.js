@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-03
+ * Last modified: 2026-09-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -119,9 +119,9 @@ describe('Replay timeline preview styles', () => {
         expect(webComponentStyleSource).toContain('transform: translate(-50%, -50%) rotate(45deg);')
         expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__clip-move-endpoint {')
         expect(webComponentStyleSource.match(/box-shadow: var\(--wa-shadow-m\);/g)).toHaveLength(3)
-        expect(webComponentStyleSource.match(/box-shadow: var\(--wa-shadow-s\);/g)).toHaveLength(6)
+        expect(webComponentStyleSource.match(/box-shadow: var\(--wa-shadow-s\);/g)).toHaveLength(8)
         expect(webComponentStyleSource).toContain('opacity: 0.5;')
-        expect(webComponentStyleSource).toContain("slot[name^='drag-trigger-']")
+        expect(webComponentStyleSource).not.toContain("slot[name^='drag-trigger-']")
         expect(webComponentStyleSource).toContain('cursor: not-allowed;')
         expect(webComponentStyleSource).toContain('[data-clip-drop-rejected]')
         expect(webComponentStyleSource).toContain('lgs1920-wa-timeline__clip--drop-rejected')
@@ -132,12 +132,16 @@ describe('Replay timeline preview styles', () => {
         expect(webComponentStyleSource).toContain('color: var(--wa-color-danger-on-normal);')
         expect(webComponentStyleSource).toContain('background: var(--wa-color-danger-fill-normal);')
         expect(webComponentStyleSource).toContain('background-color: var(--wa-color-danger-fill-normal);')
-        expect(webComponentStyleSource).toContain('opacity: 0.82;')
+        expect(webComponentStyleSource).toContain('opacity: 0.72;')
         expect(webComponentStyleSource).toContain('pointer-events: none;')
         expect(webComponentStyleSource).toContain('--lgs-timeline-min-width: 352px;')
         expect(webComponentStyleSource).toContain('--lgs-timeline-min-height: 156px;')
         expect(webComponentStyleSource).toContain('--lgs-timeline-layout-min-height: 74px;')
         expect(webComponentStyleSource).toContain('--lgs-timeline-min-visible-duration: 5;')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-building-overlay-gap: var(--lgs-gutter-xs, 0.5rem);')
+        expect(webComponentStyleSource).toContain('gap: var(--lgs-timeline-building-overlay-gap);')
+        expect(webComponentStyleSource).toContain('& > .lgs1920-wa-timeline__building-overlay {')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__building-overlay-text {')
         expect(webComponentStyleSource).toContain('--lgs-timeline-major-tick-height: 0.75rem;')
         expect(webComponentStyleSource).toContain('--lgs-timeline-minor-tick-height: 0.45rem;')
         expect(webComponentStyleSource).toContain('height: var(--lgs-timeline-major-tick-height);')
@@ -146,7 +150,7 @@ describe('Replay timeline preview styles', () => {
         expect(webComponentStyleSource).toContain('transform: translateX(-50%);')
         expect(webComponentStyleSource).toContain('text-align: center;')
         expect(webComponentStyleSource).toContain('background-image: linear-gradient')
-        expect(webComponentStyleSource).toContain('background-image: repeating-linear-gradient')
+        expect(webComponentStyleSource).not.toContain('background-image: repeating-linear-gradient')
         expect(webComponentStyleSource).toContain('color-mix(in oklab, var(--wa-color-fill-loud')
         expect(webComponentStyleSource).toContain('.lgs1920-wa-timeline__clip--track-hidden')
         expect(webComponentStyleSource).toContain('.lgs1920-wa-timeline__scrollbar-track.track-horizontal')
@@ -175,9 +179,10 @@ describe('Replay timeline preview styles', () => {
         expect(webComponentStyleSource).toContain('margin-inline-end: -3px;')
         expect(webComponentStyleSource).toContain('.lgs1920-wa-timeline__action-placeholder')
         expect(webComponentStyleSource).toContain('.lgs1920-wa-timeline__label-editor::part(input-wrapper)')
-        expect(webComponentStyleSource).toContain('--wa-form-control-padding-block: 0px;')
-        expect(webComponentStyleSource).toContain('height: calc(100% - 4px);')
-        expect(webComponentStyleSource).toContain('margin-block: 2px;')
+        expect(webComponentStyleSource).toContain('--wa-form-control-padding-block: var(--lgs-timeline-label-editor-padding-block);')
+        expect(webComponentStyleSource).toContain('--wa-form-control-padding-inline: var(--lgs-timeline-label-editor-padding-inline);')
+        expect(webComponentStyleSource).toContain('height: auto;')
+        expect(webComponentStyleSource).toContain('margin-block: 0;')
         expect(webComponentStyleSource).toContain('.lgs1920-wa-timeline__split-panel::part(divider)')
     })
 })

@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-03
+ * Last modified: 2026-09-04
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {act, cleanup, render, screen, waitFor} from '@testing-library/react'
+import {cleanup, render, screen, waitFor} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {proxyMap} from 'valtio/utils'
 
@@ -124,7 +124,7 @@ describe('ReplayTimelineWidget dimensions', () => {
         expect(__.ui.widgetManager.invalidateRuntimeById).toHaveBeenCalledWith('replay-timeline-widget')
     })
 
-    it('clamps persisted dimensions to the readable floating timeline minimum', async () => {
+    it('keeps persisted dimensions independent from the track count', async () => {
         widgetMocks.runtimeConfig.dimensions = {width: 320, height: 80}
         const {unmount} = render(<ReplayTimelineWidget id="replay-timeline-widget"/>)
         const content = screen.getByTestId('replay-timeline-preview')
@@ -139,22 +139,10 @@ describe('ReplayTimelineWidget dimensions', () => {
             y:      0,
         })
 
-        await waitFor(() => expect(widgetMocks.runtimeConfig.dimensions).toEqual({width: 352, height: 156}))
-        expect(__.ui.widgetManager.saveWidgetPosition).toHaveBeenCalledWith(
-            'replay-timeline-widget',
-            widgetMocks.runtimeConfig,
-        )
+        await waitFor(() => expect(widgetMocks.runtimeConfig.dimensions).toEqual({width: 320, height: 80}))
+        expect(__.ui.widgetManager.saveWidgetPosition).not.toHaveBeenCalled()
 
         unmount()
-    })
-
-    it('updates the widget minimum height when the track count changes', async () => {
-        render(<ReplayTimelineWidget id="replay-timeline-widget"/>)
-
-        await waitFor(() => expect(widgetMocks.previewProps).not.toBeNull())
-        act(() => widgetMocks.previewProps.onMinimumDimensionsChange({width: 352, height: 204, layoutHeight: 122}))
-
-        await waitFor(() => expect(widgetMocks.config.min).toEqual({width: 352, height: 204}))
     })
 
     it('activates timeline keyboard zoom while the widget is selected', async () => {

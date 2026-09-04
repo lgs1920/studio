@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-02
+ * Last modified: 2026-09-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -94,6 +94,25 @@ describe('LGS1920TimelineReact', () => {
         expect(onClipChangeStart).toHaveBeenCalledWith(detail, expect.any(CustomEvent))
         expect(onClipChanging).toHaveBeenCalledWith(detail, expect.any(CustomEvent))
         expect(onClipChange).toHaveBeenCalledWith(detail, expect.any(CustomEvent))
+    })
+
+    it('bridges track creation and removal events', () => {
+        const onAddTrack = vi.fn()
+        const onRemoveTrack = vi.fn()
+        const {container} = render(
+            <LGS1920TimelineReact
+                timeline={timelineConfig}
+                onAddTrack={onAddTrack}
+                onRemoveTrack={onRemoveTrack}/>,
+        )
+        const element = container.querySelector('lgs1920-timeline')
+        const addDetail = {key: 'widget', trackId: 'widget#one'}
+        const removeDetail = {trackId: 'widget#one'}
+        element.dispatchEvent(new CustomEvent('lgs1920-timeline-add-track', {detail: addDetail}))
+        element.dispatchEvent(new CustomEvent('lgs1920-timeline-remove-track', {detail: removeDetail}))
+
+        expect(onAddTrack).toHaveBeenCalledWith(addDetail, expect.any(CustomEvent))
+        expect(onRemoveTrack).toHaveBeenCalledWith(removeDetail, expect.any(CustomEvent))
     })
 
     it('maps the track and clip drag lifecycle to React callbacks', () => {

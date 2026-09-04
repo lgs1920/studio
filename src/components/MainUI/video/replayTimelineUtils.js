@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-01
+ * Last modified: 2026-09-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,6 +23,7 @@ export const REPLAY_TIMELINE_UI = Object.freeze({
     horizontalScrollbarHeight: 8,
     minWidth: 352,
     minHeight: 156,
+    layoutMinHeight: 74,
     maxWidth: 3840,
     maxHeight: 2160,
     minimumVisibleDurationSeconds: 5,
@@ -34,8 +35,9 @@ export const REPLAY_TIMELINE_UI = Object.freeze({
     legendResizerWidth: 6,
     scaleOffset: 20,
     scrubThrottleMillis: 50,
-    legendMaxWidth: 230,
-    legendMinWidth: 100,
+    legendMaxWidth: 250,
+    legendMinWidth: 50,
+    legendWidth: 150,
     rowHeight: 24,
     scaleIntervalMillis: 200,
     scaleSplitCount: 5,
@@ -178,12 +180,7 @@ export const resolveReplayTimelineLayoutHeight = rowCount => REPLAY_TIMELINE_UI.
  *
  * @returns {number} Minimum timeline width in pixels.
  */
-export const resolveReplayTimelineMinimumWidth = () => REPLAY_TIMELINE_UI.legendMinWidth
-    + REPLAY_TIMELINE_UI.legendResizerWidth
-    + REPLAY_TIMELINE_UI.scaleOffset
-    + (REPLAY_TIMELINE_UI.minimumVisibleDurationSeconds * REPLAY_TIMELINE_UI.scaleWidth)
-    + REPLAY_TIMELINE_UI.outerPadding
-    + REPLAY_TIMELINE_UI.outerBorderWidth
+export const resolveReplayTimelineMinimumWidth = () => REPLAY_TIMELINE_UI.minWidth
 
 /**
  * Resolve the minimum outer dimensions required by the floating timeline.
@@ -269,13 +266,12 @@ export const resolveReplayTimelineLegendTransform = scrollTop => {
  *
  * @param {Object} options - Drag relay options.
  * @param {Object|null} options.event - React mouse event from the track legend.
- * @param {Object|null} options.row - Timeline row represented by the legend entry.
  * @param {number} options.rowIndex - Position of the row in the editor data.
  * @param {HTMLElement|null} options.timelineElement - Timeline package root.
  * @returns {boolean} True when the package drag handle received the event.
  */
-export const relayReplayTimelineRowDrag = ({event, row, rowIndex, timelineElement} = {}) => {
-    if (!event || row?.movable === false || row?.fixed === true || event.button !== 0 || !timelineElement) {
+export const relayReplayTimelineRowDrag = ({event, rowIndex, timelineElement} = {}) => {
+    if (!event || event.button !== 0 || !timelineElement) {
         return false
     }
 

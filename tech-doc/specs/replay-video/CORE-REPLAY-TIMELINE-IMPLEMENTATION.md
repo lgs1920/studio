@@ -74,8 +74,12 @@ boundaries.
 
 ### Replay track
 
-The mandatory `replay` track is fixed and locked. Its actions are contiguous
-projections of the canonical phases:
+The mandatory `replay` track is always present in the canonical projection.
+The projection may retain source metadata for classification, but the timeline
+adapter exposes one `editable` capability per track. The global
+`timeline.editable` flag remains the master switch; a track with
+`editable: false` cannot be dragged, renamed, edited, or removed. Its actions
+are contiguous projections of the canonical phases:
 
 - `pre-replay` actions for configured pre-Replay clips;
 - one `replay` action for the journey Replay;
@@ -91,11 +95,14 @@ The projection accepts the video widget stack in bottom-to-top order and
 creates one track per eligible widget. The package adapter reverses only the
 visual row order, so the Replay track remains the lowest canonical row.
 
-Widget rows and clips expose their projected capabilities to the Web Component.
-Logo, Credits, and the mandatory Replay row remain fixed; widget rows can be
-renamed, hidden, and reordered, and their clips can be moved or resized. The
-Replay clip itself is size-locked; other clips are resizable by default and can
-opt out through their `resizable` input. Future
+Widget rows and clips expose their projected data to the Web Component. The
+timeline adapter combines the global `timeline.editable` master switch with
+each track's `editable` capability for track dragging, track-name editing,
+clip editing, and track removal. It does not use per-track `locked`, `movable`,
+or `fixed` flags. The Replay track is read-only through `editable: false`; its
+clips remain size-locked through their projected `resizable` capability. Other
+clips are resizable by default and can opt out through their `resizable` input.
+Future
 application-side row ordering must continue through `WidgetManager.reorderWidgets`, which updates
 Valtio widget entries, cache z-index values, live DOM z-index, and persisted
 widget positions while excluding Logo and Credits from movement. The ordering
@@ -108,9 +115,9 @@ The current modes are:
 - `dynamic-stats-widget` / `Dynamic Stats`;
 - `journey-stats-widget` / `Journey Stats`.
 
-Static video widgets receive a full-duration action. Logo and Credits are
-fixed, cannot be reordered, and remain represented with their video widget
-metadata. Hidden widget rows retain their action ranges and receive the hidden
+Static video widgets receive a full-duration action. Logo and Credits retain
+their canonical projection metadata. Hidden widget rows retain their action
+ranges and receive the hidden
 visual state; restoring visibility through timeline events remains a future
 integration. When clip deletion leaves only one distinct widget on a grouped
 track, the group membership is cleared and the remaining widget is projected
@@ -121,12 +128,26 @@ The projection and its action-boundary logic live in
 Replay-driven visibility delegates to
 [`ReplayOverlayResolver.js`](../../../src/core/ui/replay/ReplayOverlayResolver.js#L185-L205).
 
+The Web Component renders hidden-track tinting on a dedicated background layer
+below the clip elements, so the disabled color remains continuous across the
+whole track instead of being repeated once per clip. A hidden or read-only
+track title is presented as disabled. During track reordering, the source row
+stays in place while synchronized legend and timeline ghosts follow the
+pointer and share the same accepted or rejected insertion marker.
+During the initial mount, an optional persistent opaque themed overlay is
+installed before the timeline structure, with a Web Awesome paintbrush using
+the `wag` animation. `timeline.showBuildingOverlay` defaults to `true` and can
+disable it. Its `overlay-text` slot falls back to `Building...`, while
+`--lgs-timeline-building-overlay-gap` controls the explicit spacing between the
+icon and label. The overlay is removed after the first layout settles and is
+never recreated by controlled updates, resizing, or dragging.
+
 ## Timeline UI
 
 [`ReplayTimelinePreview.jsx`](../../../src/components/MainUI/video/ReplayTimelinePreview.jsx)
 is a controlled adapter around the `lgs1920-timeline` Web Component.
 It keeps Replay as the source of the normalized projection and assigns only
-the public `timeline`, `tracks`, `currentTimeMillis`, `playing`, and empty
+the public `timeline`, `tracks`, `currentTimeMillis`, `playing`, and null
 `clipOptions` properties. It sets `interactive: true` and keeps a dedicated
 blank-area drag handle for the widget host.
 
@@ -135,15 +156,21 @@ rail dedicated to the tracks viewport; the time ruler is excluded from vertical
 scrolling. The title column has a matching vertical rail, and both vertical
 scroll views are synchronized bidirectionally so title rows remain aligned with
 their tracks. The Web Awesome split-panel keeps its standard themed divider,
-constrains the title column between 100 and 200 pixels, truncates overflowing
-track names with an ellipsis, and preserves its live divider instance until the
-resize gesture finishes.
+constrains the title column between 50 and 250 pixels, opens it at 150 pixels,
+truncates overflowing track names with an ellipsis, and preserves its live
+divider instance until the resize gesture finishes.
 The rails auto-hide after the configurable inactivity timeout
 `--lgs-timeline-scrollbar-auto-hide-delay` (one second by default, matching
 `LGSScrollbars`) and stay available while hovered, focused, or actively used.
+Track rows retain their compact, layout-driven height. During row reordering,
+the source legend row and track row are hidden while their synchronized ghosts
+represent the proposed insertion position.
 Native mouse, pointer, touch, wheel, and drag events are stopped at the Web
 Component host after the timeline's own listeners have handled them. The
-continuation and completion events of an external widget drag or resize are
+split-panel divider always keeps its drag-start events inside the timeline, so
+it cannot initiate a parent widget gesture. The native divider's document-level
+continuation events remain available to Web Awesome after that local start.
+The continuation and completion events of an external widget drag or resize are
 allowed through while that gesture is active, so desktop, touch, and pen
 resizing remains continuous when the pointer crosses the timeline surface. The
 preview also marks the timeline host as `lgs-widget-no-drag` so the floating

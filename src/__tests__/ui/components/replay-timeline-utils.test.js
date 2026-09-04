@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-01
+ * Last modified: 2026-09-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -39,13 +39,15 @@ describe('replayTimelineUtils', () => {
             {id: 'replay'},
         ])
 
-        expect(REPLAY_TIMELINE_UI.legendMinWidth).toBe(100)
-        expect(REPLAY_TIMELINE_UI.legendMaxWidth).toBe(230)
+        expect(REPLAY_TIMELINE_UI.legendMinWidth).toBe(50)
+        expect(REPLAY_TIMELINE_UI.legendWidth).toBe(150)
+        expect(REPLAY_TIMELINE_UI.legendMaxWidth).toBe(250)
         expect(REPLAY_TIMELINE_UI.minWidth).toBe(352)
         expect(REPLAY_TIMELINE_UI.minHeight).toBe(156)
         expect(REPLAY_TIMELINE_UI.minimumVisibleDurationSeconds).toBe(5)
         expect(REPLAY_TIMELINE_UI.minimumVisibleTrackCount).toBe(1)
         expect(REPLAY_TIMELINE_UI.maximumVisibleTrackCount).toBe(3)
+        expect(REPLAY_TIMELINE_UI.rowHeight).toBe(24)
         expect(REPLAY_TIMELINE_UI.scaleWidth).toBe(40)
         expect(REPLAY_TIMELINE_UI.horizontalScrollbarHeight).toBe(8)
         expect(REPLAY_TIMELINE_UI.scrubThrottleMillis).toBe(50)

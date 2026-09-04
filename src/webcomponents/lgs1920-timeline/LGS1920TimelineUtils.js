@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-31
- * Last modified: 2026-09-02
+ * Last modified: 2026-09-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,8 +21,9 @@ export const ZOOM_STEP = 20
 export const START_LEFT = 20
 export const SCALE_WIDTH = 40
 export const MIN_VISIBLE_DURATION_SECONDS = 5
-export const MIN_LEGEND_WIDTH = 100
-export const MAX_LEGEND_WIDTH = 230
+export const MIN_LEGEND_WIDTH = 50
+export const DEFAULT_LEGEND_WIDTH = 150
+export const MAX_LEGEND_WIDTH = 250
 export const HEADER_HEIGHT = 42
 export const HORIZONTAL_SCROLLBAR_HEIGHT = 8
 export const END_PADDING = 20
@@ -36,10 +37,10 @@ export const EDGE_TIME_ACCELERATION_INTERVAL = 500
 export const EDGE_SCROLL_TIME_STEPS = [10, 100, 500, 1_000, 5_000, 30_000]
 export const GLOBAL_SLOTS = [
     'track-label',
-    'drag-trigger',
     'visibility',
     'name',
     'actions',
+    'remove',
     'clip-icon',
     'clip-label',
     'clip-content',
@@ -50,6 +51,8 @@ export const GLOBAL_SLOTS = [
     'scale-label',
     'clip-option-icon',
     'clip-option-label',
+    'track-option-icon',
+    'track-option-label',
 ]
 
 /**
@@ -245,7 +248,13 @@ export const resolveLegendBounds = (timeline = {}) => {
     const configuredMaximum = Number(timeline.legendMaxWidth)
     const minimum = Number.isFinite(configuredMinimum) && configuredMinimum > 0 ? configuredMinimum : MIN_LEGEND_WIDTH
     const maximum = Math.max(minimum, Number.isFinite(configuredMaximum) && configuredMaximum > 0 ? configuredMaximum : MAX_LEGEND_WIDTH)
-    return {minimum, maximum}
+    const configuredWidth = Number(timeline.legendWidth)
+    const initial = clamp(
+        Number.isFinite(configuredWidth) ? configuredWidth : DEFAULT_LEGEND_WIDTH,
+        minimum,
+        maximum,
+    )
+    return {minimum, maximum, initial}
 }
 
 /**

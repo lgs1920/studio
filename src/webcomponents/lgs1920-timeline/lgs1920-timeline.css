@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-02
+ * Last modified: 2026-09-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 :host {
     /* Timeline host display mode. */
     display: block;
+    position: relative;
     /* Timeline host minimum width. */
     min-width: var(--lgs-timeline-min-width, 352px);
     /* Timeline host minimum height. */
@@ -48,6 +49,8 @@
     --lgs-timeline-shadow: var(--wa-shadow-l);
     /* Timeline top section gap. */
     --lgs-timeline-gap: var(--lgs-gutter-xs, 0.5rem);
+    /* Space between the initial-overlay icon and text. */
+    --lgs-timeline-building-overlay-gap: var(--lgs-gutter-xs, 0.5rem);
     /* Timeline header height used by row sizing. */
     --lgs-timeline-header-height: 42px;
     /* Timeline minimum width. */
@@ -128,6 +131,14 @@
     --lgs-timeline-clip-handle-hover-color: var(--wa-color-on-loud, white);
     /* Timeline clip edge handle focus ring. */
     --lgs-timeline-clip-handle-focus-ring: 2px solid var(--wa-color-focus, var(--wa-color-brand));
+    /* Horizontal padding for the compact track-title editor. */
+    --lgs-timeline-label-editor-padding-inline: var(--lgs-gutter-xs, 0.5rem);
+    /* Vertical padding for the compact track-title editor. */
+    --lgs-timeline-label-editor-padding-block: 0.125rem;
+    /* Flat branded tint applied to read-only tracks and their title rows. */
+    --lgs-timeline-read-only-background: color-mix(in srgb, var(--wa-color-danger-fill-loud, var(--wa-color-red-60, #d33)) 14%, var(--lgs-timeline-surface-color));
+    /* Flat disabled tint applied to hidden tracks and their title rows. */
+    --lgs-timeline-hidden-background: color-mix(in srgb, var(--wa-color-neutral-fill-loud, var(--lgs-timeline-quiet-border-color)) 16%, var(--lgs-timeline-surface-color));
     /* Timeline drag target accent color. */
     --lgs-timeline-track-drop-indicator-color: var(--wa-color-brand-fill-loud, var(--wa-color-brand));
     /* Timeline popup background. */
@@ -146,7 +157,7 @@
 
         & .lgs1920-wa-timeline__legend-row,
         & .lgs1920-wa-timeline__track,
-        & .lgs1920-wa-timeline__row-drag-silhouette {
+        & .lgs1920-wa-timeline__row-drag-ghost {
             cursor: not-allowed;
         }
     }
@@ -162,6 +173,7 @@
     }
 
     & .lgs1920-wa-timeline {
+        position: relative;
         box-sizing: border-box;
         display: flex;
         flex-direction: column;
@@ -178,6 +190,34 @@
         backdrop-filter: blur(14px);
         /* Keep the outer card body flush with the existing timeline layout. */
         --spacing: 0;
+    }
+
+    & > .lgs1920-wa-timeline__building-overlay {
+        position: absolute;
+        z-index: 100;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--lgs-timeline-building-overlay-gap);
+        box-sizing: border-box;
+        padding: var(--lgs-timeline-padding);
+        color: var(--lgs-timeline-text-color);
+        background: var(--lgs-timeline-background);
+        border-radius: inherit;
+        pointer-events: auto;
+    }
+
+    & .lgs1920-wa-timeline__building-overlay wa-icon {
+        font-size: var(--wa-font-size-xl, 1.5rem);
+        --animation-duration: 1.2s;
+        --wag-angle: 22deg;
+    }
+
+    & .lgs1920-wa-timeline__building-overlay-text {
+        display: inline-flex;
+        align-items: center;
+        min-width: 0;
     }
 
     & .lgs1920-wa-timeline::part(body) {
@@ -498,6 +538,31 @@
         cursor: grab;
     }
 
+    & .lgs1920-wa-timeline__legend-row.lgs1920-wa-timeline__legend-row--read-only {
+        background-color: var(--lgs-timeline-read-only-background);
+        border-bottom-color: color-mix(in oklab, var(--wa-color-danger-border-loud, var(--wa-color-red-60, #d33)) 64%, white);
+    }
+
+    & .lgs1920-wa-timeline__legend-row.lgs1920-wa-timeline__legend-row--hidden {
+        background-color: var(--lgs-timeline-hidden-background);
+        border-bottom-color: color-mix(in oklab, var(--lgs-timeline-quiet-border-color) 82%, white);
+    }
+
+    & .lgs1920-wa-timeline__legend-row.lgs1920-wa-timeline__legend-row--title-disabled {
+        color: var(--lgs-timeline-quiet-text-color);
+    }
+
+    & .lgs1920-wa-timeline__track-content.lgs1920-wa-timeline__track-content--title-disabled {
+        color: var(--lgs-timeline-quiet-text-color);
+        cursor: default;
+        opacity: 0.72;
+    }
+
+    & .lgs1920-wa-timeline__legend-row.lgs1920-wa-timeline__legend-row--dragging,
+    & .lgs1920-wa-timeline__track.lgs1920-wa-timeline__track--dragging {
+        display: none;
+    }
+
     & .lgs1920-wa-timeline__legend-row.lgs1920-wa-timeline__legend-row--dragging {
         cursor: grabbing;
         color: var(--wa-color-success-on-normal);
@@ -529,11 +594,50 @@
         opacity: 0.38;
     }
 
-    & .lgs1920-wa-timeline__row-drag-silhouette {
+    & .lgs1920-wa-timeline__row-drag-ghost {
         position: absolute;
         z-index: 15;
-        opacity: 0.82;
+        opacity: 1;
         pointer-events: none;
+    }
+
+    & .lgs1920-wa-timeline__row-drag-ghost-layer {
+        position: absolute;
+        z-index: 15;
+        inset: 0;
+        overflow: hidden;
+        pointer-events: none;
+    }
+
+    & .lgs1920-wa-timeline__row-drag-ghost.lgs1920-wa-timeline__row-drag-ghost--valid {
+        color: var(--wa-color-success-on-normal);
+        background-color: color-mix(in srgb, var(--wa-color-success-fill-normal) 50%, transparent);
+        border-color: var(--wa-color-success-border-normal);
+        box-shadow: var(--wa-shadow-s);
+    }
+
+    & .lgs1920-wa-timeline__row-drag-ghost.lgs1920-wa-timeline__row-drag-ghost--rejected {
+        color: var(--wa-color-danger-on-normal);
+        background-color: color-mix(in srgb, var(--wa-color-danger-fill-normal) 50%, transparent);
+        border-color: var(--wa-color-danger-border-normal);
+        box-shadow: var(--wa-shadow-s);
+    }
+
+    & .lgs1920-wa-timeline__row-drag-marker {
+        position: absolute;
+        z-index: 14;
+        left: 0;
+        right: 0;
+        height: 3px;
+        transform: translateY(-50%);
+        background: var(--lgs-timeline-track-drop-indicator-color);
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--lgs-timeline-track-drop-indicator-color) 38%, transparent), 0 0 8px color-mix(in srgb, var(--lgs-timeline-track-drop-indicator-color) 72%, transparent);
+        pointer-events: none;
+    }
+
+    & .lgs1920-wa-timeline__row-drag-marker.lgs1920-wa-timeline__row-drag-marker--rejected {
+        background: var(--wa-color-danger-fill-loud, var(--wa-color-danger));
+        box-shadow: 0 0 0 1px color-mix(in srgb, var(--wa-color-danger-fill-loud, var(--wa-color-danger)) 38%, transparent), 0 0 8px color-mix(in srgb, var(--wa-color-danger-fill-loud, var(--wa-color-danger)) 72%, transparent);
     }
 
     & .lgs1920-wa-timeline__track-content {
@@ -613,32 +717,22 @@
         visibility: hidden;
     }
 
-    & .lgs1920-wa-timeline__track-actions > slot[name^='drag-trigger-'] {
-        align-self: stretch;
-        height: 100%;
-        min-height: 100%;
-        cursor: grab;
-    }
-
-    & .lgs1920-wa-timeline__legend-row.lgs1920-wa-timeline__legend-row--dragging .lgs1920-wa-timeline__track-actions > slot[name^='drag-trigger-'] {
-        cursor: grabbing;
-    }
-
     & .lgs1920-wa-timeline__label-editor {
         display: block;
-        align-self: stretch;
+        align-self: center;
         flex: 1 1 auto;
         min-width: 5rem;
         max-width: 12rem;
-        height: calc(100% - 4px);
+        height: auto;
         min-height: 0;
-        margin-block: 2px;
+        margin-block: 0;
         margin-inline: 0;
-        padding: 0;
-        /* Keep the Web Awesome control inside the compact timeline row. */
-        --wa-form-control-height: 100%;
-        --wa-form-control-padding-block: 0px;
-        --wa-form-control-padding-inline: var(--lgs-gutter-xxs, 0.25rem);
+        padding-block: var(--lgs-timeline-label-editor-padding-block);
+        padding-inline: var(--lgs-timeline-label-editor-padding-inline);
+        /* Keep the Web Awesome control compact without coupling it to row height. */
+        --wa-form-control-height: auto;
+        --wa-form-control-padding-block: var(--lgs-timeline-label-editor-padding-block);
+        --wa-form-control-padding-inline: var(--lgs-timeline-label-editor-padding-inline);
         --wa-form-control-value-line-height: 1;
     }
 
@@ -648,7 +742,7 @@
 
     & .lgs1920-wa-timeline__label-editor::part(input-wrapper) {
         box-sizing: border-box;
-        height: 100%;
+        height: auto;
         min-height: 0;
         margin: 0;
         padding: 0;
@@ -656,10 +750,11 @@
 
     & .lgs1920-wa-timeline__label-editor::part(input) {
         box-sizing: border-box;
-        height: 100%;
+        height: auto;
         min-height: 0;
         margin: 0;
-        padding-block: 0;
+        padding-block: var(--lgs-timeline-label-editor-padding-block);
+        padding-inline: var(--lgs-timeline-label-editor-padding-inline);
         line-height: 1;
     }
 
@@ -804,8 +899,30 @@
         overflow: hidden;
     }
 
+    & .lgs1920-wa-timeline__track.lgs1920-wa-timeline__track--read-only {
+        background-color: var(--lgs-timeline-read-only-background);
+        border-bottom-color: color-mix(in oklab, var(--wa-color-danger-border-loud, var(--wa-color-red-60, #d33)) 64%, white);
+    }
+
     & .lgs1920-wa-timeline__track.lgs1920-wa-timeline__track--hidden {
-        opacity: 0.75;
+        background-color: var(--lgs-timeline-hidden-background);
+        border-bottom-color: color-mix(in oklab, var(--lgs-timeline-quiet-border-color) 82%, white);
+    }
+
+    & .lgs1920-wa-timeline__track-background {
+        position: absolute;
+        z-index: 0;
+        inset: 0;
+        pointer-events: none;
+    }
+
+    & .lgs1920-wa-timeline__track-background.lgs1920-wa-timeline__track-background--read-only {
+        background-color: var(--lgs-timeline-read-only-background);
+    }
+
+    & .lgs1920-wa-timeline__track-background.lgs1920-wa-timeline__track-background--hidden {
+        background-color: var(--lgs-timeline-hidden-background);
+        opacity: 0.72;
     }
 
     & .lgs1920-wa-timeline__track.lgs1920-wa-timeline__track--dragging {
@@ -1018,6 +1135,7 @@
 
     & .lgs1920-wa-timeline__clip {
         position: absolute;
+        z-index: 1;
         top: 1px;
         bottom: 1px;
         display: flex;
@@ -1082,12 +1200,15 @@
     & .lgs1920-wa-timeline__clip:is(.lgs1920-wa-timeline__clip--hidden, .lgs1920-wa-timeline__clip--track-hidden) {
         color: color-mix(in oklab, var(--wa-color-on-loud, var(--wa-color-neutral-on-loud)) 70%, var(--lgs-timeline-surface-color)) !important;
         background-color: color-mix(in oklab, var(--wa-color-fill-loud, var(--wa-color-neutral-fill-loud)) 55%, var(--lgs-timeline-surface-color)) !important;
-        background-image: repeating-linear-gradient(-45deg, color-mix(in oklab, var(--wa-color-fill-loud, var(--wa-color-neutral-fill-loud)) 28%, transparent) 0 4px, transparent 4px 8px) !important;
+        background-image: none !important;
         border-color: color-mix(in oklab, var(--wa-color-border-loud, var(--wa-color-neutral-border-loud)) 70%, var(--lgs-timeline-surface-color)) !important;
-        opacity: 0.72;
+        filter: grayscale(0.8);
+        opacity: 0.55;
     }
 
     & .lgs1920-wa-timeline__clip.lgs1920-wa-timeline__clip--track-hidden {
+        filter: grayscale(0.9);
+        opacity: 0.45;
         pointer-events: none;
     }
 
@@ -1149,23 +1270,6 @@
 
     & .lgs1920-wa-timeline__clip-handle > slot {
         display: none;
-    }
-
-    & .lgs1920-wa-timeline__track-drag-icon {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        flex: 0 0 18px;
-        width: 18px;
-        height: 18px;
-    }
-
-    & .lgs1920-wa-timeline__track-drag-icon {
-        color: var(--wa-color-brand);
-    }
-
-    & .lgs1920-wa-timeline__track-drag-icon > slot {
-        display: inline-flex;
     }
 
     & .lgs1920-wa-timeline__legend-row > slot:last-child,

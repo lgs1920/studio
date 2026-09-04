@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-31
- * Last modified: 2026-09-02
+ * Last modified: 2026-09-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -120,7 +120,7 @@ const resolveCollisionPolicy = (timeline, track, mode = 'move') => {
  * @returns {boolean} Whether the clip can be placed.
  */
 export const trackAcceptsClip = (track, clip) => {
-    if (!track || track.fixed === true || track.droppable === false || track.acceptsClips === false) return false
+    if (!track || track.editable === false || track.droppable === false || track.acceptsClips === false) return false
     if (!Array.isArray(track.accepts) || track.accepts.length === 0) return true
     return track.accepts.includes(clip?.kind)
 }
@@ -401,8 +401,13 @@ export const createTimelineClipEditor = ({
             clip,
             durationMillis: result.durationMillis,
             tracks: result.rows.map(row => {
-                const {actions, ...track} = row
-                return {...track, clips: actions ?? []}
+                const track = Object.assign({}, row)
+                const actions = track.actions ?? []
+                delete track.actions
+                delete track.locked
+                delete track.movable
+                delete track.fixed
+                return {...track, clips: actions}
             }),
             event,
         }
@@ -416,7 +421,7 @@ export const createTimelineClipEditor = ({
      */
     const preview = (state, event) => {
         const entry = findClipEntry(state.baseRows, state.clipId)
-        if (!entry) return
+        if (!entry || (state.mode === 'resize' && entry.clip.resizable === false)) return
         const delta = getTimeAtClientX(event.clientX) - state.startTime
         const duration = state.originalEnd - state.originalStart
         const timeline = getTimelineConfig()
@@ -505,11 +510,12 @@ export const createTimelineClipEditor = ({
      */
     const resizeByKeyboard = (clipId, edge, event) => {
         if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return
+        if (getTimelineConfig().editable === false) return
         event.preventDefault()
         event.stopPropagation()
         const rows = getRows()
         const entry = findClipEntry(rows, clipId)
-        if (!entry || entry.clip.resizable === false || entry.clip.fixed === true) return
+        if (!entry) return
         const timeline = getTimelineConfig()
         const configuredStep = Number(timeline.keyboardStepSeconds)
         const step = configuredStep > 0 ? configuredStep : 0.1

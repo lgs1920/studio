@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-03
+ * Last modified: 2026-09-04
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,7 +27,7 @@ import {
     REPLAY_TIMELINE_WIDGET,
     VIDEO_WIDGETS_BOARD,
 } from '@Core/constants'
-import {REPLAY_TIMELINE_UI, resolveReplayTimelineMinimumDimensions} from './replayTimelineUtils'
+import {REPLAY_TIMELINE_UI} from './replayTimelineUtils'
 import {VideoRecordingSettingsToolbar} from './toolbox/VideoRecordingSettingsToolbar'
 import {
     buildReplayPreparationTimeline,
@@ -198,7 +198,11 @@ const resolveVideoWidgetOrder = (widgetList, widgetSettings) => {
             visible: entry?.visible !== false && runtimeConfig?.visible !== false,
             widgetGroup: entry?.widgetGroup ?? null,
             widgetGroupLabel: entry?.widgetGroupLabel ?? null,
-            fixed: widgetType === CREDITS_WIDGET || widgetType === LOGO_WIDGET,
+            editable: widgetType !== CREDITS_WIDGET
+                && widgetType !== LOGO_WIDGET
+                && entry?.editable !== false
+                && runtimeConfig?.editable !== false,
+            widgetId: id,
         }
     })
 
@@ -216,7 +220,8 @@ const resolveVideoWidgetOrder = (widgetList, widgetSettings) => {
             timelineColor: firstMember?.timelineColor,
             canHide: widget.members.some(member => member.canHide),
             visible: widget.members.every(member => member.visible !== false),
-            fixed: widget.members.every(member => member.fixed === true),
+            editable: widget.members.every(member => member.editable !== false),
+            widgetIds: widget.members.map(member => member.id),
         }
     })
 }
@@ -225,8 +230,7 @@ const resolveVideoWidgetOrder = (widgetList, widgetSettings) => {
  * Convert existing Replay editor rows to the public Web Component model.
  *
  * The source projection remains owned by Replay. Replay's mandatory track
- * stays fixed while widget tracks expose the capabilities already declared by
- * the projection.
+ * remains the controlled source for the projected widget tracks.
  *
  * @param {Array} rows - Existing Replay timeline rows.
  * @returns {Array} Public Web Component track definitions.
@@ -236,13 +240,13 @@ const toDisplayTracks = rows => rows.map(row => ({
     kind: row.kind,
     label: row.label,
     widgetGroup: row.widgetGroup ?? null,
+    widgetId: row.widgetId ?? (row.isGroup ? null : row.id),
+    widgetIds: row.widgetIds ?? (row.isGroup ? [] : [row.id]),
     colorClasses: row.colorClasses,
     visible: row.visible,
-    editable: row.fixed !== true,
+    editable: row.editable !== false,
     canHide: row.canHide === true,
-    movable: row.movable !== false && row.fixed !== true,
-    fixed: row.fixed === true,
-    droppable: row.fixed !== true && row.droppable !== false,
+    droppable: row.droppable !== false,
     clips: (row.actions ?? []).map(action => ({
         id: action.id,
         kind: action.kind,
@@ -252,10 +256,7 @@ const toDisplayTracks = rows => rows.map(row => ({
         visible: action.visible,
         start: action.start,
         end: action.end,
-        editable: row.fixed !== true && action.editable !== false,
-        movable: row.fixed !== true && action.movable !== false,
-        resizable: row.fixed !== true && action.resizable !== false,
-        fixed: row.fixed === true || action.fixed === true,
+        resizable: action.resizable !== false,
         metadata: {
             clip: action.clip,
             widgetId: action.widgetId,
@@ -271,11 +272,10 @@ const toDisplayTracks = rows => rows.map(row => ({
  * events; application controllers can be connected incrementally.
  *
  * @param {Object} props - Preview properties.
- * @param {Function} [props.onMinimumDimensionsChange] - Receives the computed floating minimum dimensions.
  * @param {boolean} [props.keyboardZoomActive=false] - Enables selected-widget keyboard zoom.
  * @returns {JSX.Element|null} Preview surface or null outside linked preparation.
  */
-export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, onMinimumDimensionsChange}, ref) => {
+export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false}, ref) => {
     const video = useSnapshot(lgs.stores.ui.video)
     const replay = useSnapshot(lgs.stores.replay)
     const main = useSnapshot(lgs.stores.main)
@@ -314,10 +314,6 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, on
         widgetOrder,
     }), [journey, projectionReplay, projectionReplaySettings, video.fps, widgetOrder])
     const editorData = useMemo(() => toReplayTimelineEditorData(projection), [projection])
-    const minimumDimensions = useMemo(
-        () => resolveReplayTimelineMinimumDimensions(editorData.length),
-        [editorData.length],
-    )
     const timeline = useMemo(() => ({
         durationMillis: projection.durationMillis,
         fps: projection.fps,
@@ -326,6 +322,7 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, on
         visible: true,
         zoomPercent: 0,
         legendMinWidth: REPLAY_TIMELINE_UI.legendMinWidth,
+        legendWidth: REPLAY_TIMELINE_UI.legendWidth,
         legendMaxWidth: REPLAY_TIMELINE_UI.legendMaxWidth,
         rangeStartMillis: 0,
         rangeEndMillis: projection.durationMillis,
@@ -360,7 +357,7 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, on
 
         element.timeline = timeline
         element.tracks = tracks
-        element.clipOptions = []
+        element.clipOptions = null
         __.ui.widgetManager?.updateWidgetGroupLabels?.(
             resolveWidgetGroupLabelsFromTracks(tracks),
         )
@@ -390,7 +387,6 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, on
                 void __.ui.widgetManager?.reorderWidgets?.(orderedWidgetIds)
             }
         }
-
         element.addEventListener('lgs1920-timeline-clip-change', handleTimelineTracksChange)
         element.addEventListener('lgs1920-timeline-add-clip', handleTimelineTracksChange)
         element.addEventListener('lgs1920-timeline-track-label-change', handleTimelineTracksChange)
@@ -402,7 +398,7 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, on
             element.removeEventListener('lgs1920-timeline-track-label-change', handleTimelineTracksChange)
             element.removeEventListener('lgs1920-timeline-reorder', handleTimelineReorder)
         }
-    }, [linkedPreparation, widgetList])
+    }, [linkedPreparation, tracks, widgetList])
 
     useEffect(() => {
         const element = _timeline.current
@@ -413,12 +409,6 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, on
         const element = _timeline.current
         if (linkedPreparation && element) element.playing = isPlaying
     }, [isPlaying, linkedPreparation])
-
-    useEffect(() => {
-        if (linkedPreparation) {
-            onMinimumDimensionsChange?.(minimumDimensions)
-        }
-    }, [linkedPreparation, minimumDimensions, onMinimumDimensionsChange])
 
     useEffect(() => {
         if (!linkedPreparation) {
@@ -441,9 +431,9 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, on
                  data-testid="replay-timeline-preview"
                  aria-label="Replay tracks"
                  style={{
-                     '--lgs-replay-timeline-min-width':        `${minimumDimensions.width}px`,
-                     '--lgs-replay-timeline-min-height':       `${minimumDimensions.height}px`,
-                     '--lgs-replay-timeline-layout-min-height': `${minimumDimensions.layoutHeight}px`,
+                     '--lgs-replay-timeline-min-width':        `${REPLAY_TIMELINE_UI.minWidth}px`,
+                     '--lgs-replay-timeline-min-height':       `${REPLAY_TIMELINE_UI.minHeight}px`,
+                     '--lgs-replay-timeline-layout-min-height': `${REPLAY_TIMELINE_UI.layoutMinHeight}px`,
                  }}>
             <lgs1920-timeline data-widget-selectable=""
                               ref={_timeline}
@@ -452,7 +442,6 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, on
                       className="replay-timeline-preview__custom-menu lgs-widget-no-drag">
                     <VideoRecordingSettingsToolbar mainTheme/>
                 </span>
-                <span slot="legend-ruler" aria-hidden="true"/>
             </lgs1920-timeline>
         </section>
     )
