@@ -1635,3 +1635,23 @@
 ## 2026-09-02 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/587ff0d7f2797586cbb3fa81610234c6b418acf0)
 
 - Recorded automatically from Git history.
+
+## 2026-09-03 — [`fix(video): align timeline menu theme and popup controls`](https://github.com/lgs1920/studio/commit/5aa4972215b9d2e5337642924d150cdbc7c8017f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-03 — [`fix(timeline): preserve widget selection on timeline surface`](https://github.com/lgs1920/studio/commit/d68241e75b129a27e9b3888538cb1af3b866a6cb)
+
+- Recorded automatically from Git history.
+
+## 2026-09-04 — [`docs(cesium): document MVT layer opportunities`](https://github.com/lgs1920/studio/commit/a19022b2ee747370a13657083b829850c8924894)
+
+- Recorded automatically from Git history.
+
+## 2026-09-04 — [`feat(timeline): improve controlled editing and layout`](https://github.com/lgs1920/studio/commit/93bfe35dc5719cfa8d80164a3d51f4509561cc6f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-04 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/7f6f412a38df5479f91639a37ab621f9982f42b8)
+
+- Recorded automatically from Git history.
