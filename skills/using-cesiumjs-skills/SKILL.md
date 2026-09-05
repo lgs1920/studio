@@ -10,9 +10,21 @@ description: Use when starting any conversation involving CesiumJS development -
 For Studio work, follow the autonomy and approval rules in [PROJECT_RULES.md](../../PROJECT_RULES.md#1-core-directives). Preserve the task-specific safeguards below.
 
 
-This plugin provides 14 domain skills covering CesiumJS v1.144 (~551 public symbols). Skills activate passively via description matching — no explicit invocation is required.
+This plugin provides 14 domain skills covering CesiumJS v1.145 (~551 public symbols). Skills activate passively via description matching — no explicit invocation is required.
 
-For every CesiumJS task, verify APIs against the latest official reference documentation before implementation: <https://cesium.com/learn/cesiumjs/ref-doc/>. The current project baseline is CesiumJS 1.144.0. The 1.144 camera-controller change is documented in the [official release notes](https://github.com/CesiumGS/cesium/releases/tag/1.144).
+For every CesiumJS task, verify APIs against the latest official reference documentation before implementation: <https://cesium.com/learn/cesiumjs/ref-doc/>. The current project baseline is CesiumJS 1.145.0. The [CesiumJS 1.145 release notes](https://github.com/CesiumGS/cesium/releases/tag/1.145) document the current baseline.
+
+## Version maintenance
+
+Whenever a new CesiumJS version is installed or selected in a package manifest:
+
+1. Read the installed version from `package.json` and the lockfile.
+2. Review every existing skill under `skills/cesiumjs-*/` against the new
+   version's official release notes and API reference.
+3. Update affected legacy skills and this orientation skill's baseline and
+   release references.
+4. Run the relevant skill validation and tests, and report any unresolved API
+   incompatibility or unavailable verification as follow-up work.
 
 ## Available Skills
 
