@@ -6,8 +6,8 @@ This is the canonical source for the project's AI-agent and development rules.
 
 - **Language:** All conversational responses must be in **French**.
 - **Documentation and issues:** All JSDoc blocks, inline comments, code documentation, project documentation, and issue content must be strictly in **English**.
-- **Autonomy:** If a choice is ambiguous, stop and ask. **Important**: Final decisions are made by the user.
-- **No extrapolation:** Never extrapolate beyond the user's request. If a decision is not explicit, ask the user before acting. User directive: “JE N'EXTRAPOLE JAMAIS LA DEMANDE, JE DEMANDE AU MONSIEUR.”
+- **Autonomy:** Within the requested scope, make routine, reversible implementation choices using repository conventions and available evidence. Ask only when missing information materially affects the requested behavior, scope, external contract, or an explicit approval requirement. Continue independent authorized work while awaiting an answer.
+- **Scope and approval:** Do not add unrelated features. Preserve explicit approval requirements and decisions already made by the user. Reuse authorization already given for the same action and scope; do not request it again unless the scope or relevant conditions materially change.
 - **Nuance and analytical rigor:** Avoid unwarranted certainty. Simplistic or overly categorical analyses can omit relevant context and lead to incorrect conclusions.
 - **Depth of analysis:** Explore relevant subtleties, cross-check perspectives, and identify potential blind spots and biases before reaching a conclusion.
 - **Technical verification:** Be especially vigilant with calculations, logic, and overall consistency. If data or reasoning appears anomalous or uncertain, explicitly identify the issue and re-check it step by step.
@@ -25,9 +25,8 @@ This is the canonical source for the project's AI-agent and development rules.
   - **React Refs:** Must start with `_` and must NOT use "Ref" as a suffix (e.g., `_myElement`).
   - **DOM/Events:** Use full words `element` and `event` (never `el` or `ev`).
   - **Private Members:** Use `#` prefix for private class fields and methods.
-- **Code Structure:** Provide full file content in every response.
-- **File size:** If the file exceeds 1500 lines, divide the code into multiple files, each dedicated to a specific set
-  of responsibilities.
+- **Responses:** Summarize changes, validation, and remaining work with file links. Provide full file contents only when explicitly requested.
+- **File size:** Keep new files focused and below 1500 lines. For an existing file above 1500 lines, split it when necessary for the requested change; otherwise make the targeted correction and report the refactoring opportunity separately.
 
 ## 3. Architecture & Tech Stack
 
@@ -35,7 +34,7 @@ This is the canonical source for the project's AI-agent and development rules.
 - **UI:** Strictly use WebAwesome 3 components and FontAwesome. No external CSS libraries.
 - **Web Awesome first:** Prefer Web Awesome components and their React wrappers whenever a suitable component exists.
 - **Native component events:** Use the native events and APIs of Web Awesome components whenever they provide the required behavior.
-- **Custom behavior:** Do not create custom event handlers, helper functions, or non-native behavior that is not explicitly required. When custom handling is required, use it only as a last resort when the available Web Awesome API cannot meet the requirement.
+- **Custom behavior:** Prefer native Web Awesome APIs. Use minimal custom handling when necessary to implement the requested behavior and the native API is insufficient.
 - **CSS:** Use nested syntax with `&` selector. Every CSS custom property must have an English comment explaining its purpose.
 - **Backend:** Runtime must be **Bun**. Server framework must be **Elysia**.
 - **Vite:** Never run `bun run dev` manually. `vite build` is allowed.
@@ -53,7 +52,7 @@ This is the canonical source for the project's AI-agent and development rules.
 - The header must use `studio@lgs1920.fr` as the project email address.
 - `Created on` must use the date of the first Git commit that introduced the file, or the current date for a file that has not been committed yet.
 - `Last modified` must use the date of the current change, or the date of the latest Git commit when the file has no current change.
-- Before completing a change or committing, run `bun run headers:update` for the staged source files, or use WebStorm's `Update copyright` commit check.
+- Before local handoff, update headers for the changed source files with `bun scripts/update-file-headers.mjs <file-paths>`, without staging. Verify those files with `bun scripts/update-file-headers.mjs --check <file-paths>`. Preserve pre-existing user edits when selecting files. When preparing an explicitly requested commit, use `bun run headers:update` for staged source files or WebStorm's `Update copyright` commit check.
 
 ### Technical documentation status
 
@@ -73,6 +72,7 @@ This is the canonical source for the project's AI-agent and development rules.
 - **Commit Messages:** Must follow the key-based format: `feat`, `fix`, `refactor`, `docs`, `style`, `test`, `chore`.
 - **Commit Logic:** Never create commits automatically. Only create a commit when the user explicitly requests it. Do not stage or commit proactively on your own initiative.
 - **Project rules changes:** Every modification to `PROJECT_RULES.md` must be isolated in a dedicated commit, submitted through a dedicated pull request, and merged into `main`.
+- **Local preparation and delivery:** Complete the authorized local edits and applicable checks before requesting any remaining Git authorization. The required commit, pull request, and merge workflow remains mandatory for delivery, but does not prohibit local preparation. Report local readiness and pending delivery steps accurately. Do not stage, commit, push, or merge unless the applicable authorization is already present.
 - **Dependency inventory:** When a commit changes `package.json` dependencies or dependency-related credits, update `tech-doc/specs/delivery/README_DEPENDENCIES.md` in the same change set if the inventory is still meant to mirror the current package list.
 - **Commit history:** `COMMIT_HISTORY.md` is updated automatically by the `Update commit history` GitHub workflow after pushes to branches.
 - **Commit history entry:** The workflow records every previously undocumented commit with its date, exact commit message, and a GitHub link in the format `https://github.com/lgs1920/studio/commit/<commit-id>`. The generated `docs: update commit history` commit is excluded from its own history update.
@@ -81,6 +81,7 @@ This is the canonical source for the project's AI-agent and development rules.
 
 - **Clarification and validation:** Before creating an issue, ask the user for any missing explanations or clarifications needed to understand and scope the request. Then present the complete proposed issue content for explicit user validation. Do not create the issue until the user has validated the proposal.
 - **Solution and implementation plan:** For every issue, propose a solution and an implementation plan for explicit user validation. Do not create or implement the issue until the proposed solution and plan have been validated.
+- **Validation reuse:** Present the complete issue content, proposed solution, and implementation plan together for explicit validation. Reuse validation already given for the same proposal. Request renewed validation only for material changes to the approved scope, solution, or plan. A request to create an issue does not by itself validate an unseen proposal.
 - **Complete fields:** Every created issue must have all known and applicable fields filled in, including title, description, assignee, labels, type, priority, repository, Project status, and `Target release`. Do not invent a release, label, priority, or other value when the information is not known.
 - **Assignee:** Assign the issue to the user requesting its creation unless the user explicitly specifies another assignee.
 - **Release planning:** Use the Project-level `Target release` field as the source of truth for release planning across repositories. Use `Unplanned` when no approved release has been selected. Add a new target-release option only after the release has been approved.
