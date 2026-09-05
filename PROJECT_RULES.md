@@ -39,6 +39,16 @@ This is the canonical source for the project's AI-agent and development rules.
 - **Backend:** Runtime must be **Bun**. Server framework must be **Elysia**.
 - **Vite:** Never run `bun run dev` manually. `vite build` is allowed.
 
+### CesiumJS version maintenance
+
+- Whenever a new CesiumJS version is installed or selected in a package manifest, verify every existing Cesium skill under `skills/cesiumjs-*/` and `skills/using-cesiumjs-skills/SKILL.md` against the new version's official release notes and API reference.
+- Update each affected Cesium skill and the project's CesiumJS version baseline before handoff. Record unresolved API incompatibilities or unavailable verification as explicit follow-up work; do not claim the upgrade is fully validated without that evidence.
+
+### Web Awesome version maintenance
+
+- Whenever a new Web Awesome or Web Awesome Pro version is installed or selected in a package manifest, verify the existing Web Awesome skills and compatibility copies against the new version's official changelog, component references, design-token documentation, and framework-wrapper APIs.
+- Update each affected skill and the project's Web Awesome version baseline before handoff. Limit the detailed review to components, tokens, wrappers, and patterns affected by the upgrade, and record unresolved compatibility or unavailable verification as explicit follow-up work.
+
 ## 4. Documentation & Quality
 
 - **JSDoc:** Every function or method requires a professional English JSDoc block.
