@@ -7,7 +7,7 @@ description: "CesiumJS viewer setup - Viewer, CesiumWidget, widgets, Ion token, 
 
 ## User intent discipline
 
-Never extrapolate beyond the user's request. If a decision is not explicit, ask the user before acting. User directive: “JE N'EXTRAPOLE JAMAIS LA DEMANDE, JE DEMANDE AU MONSIEUR.”
+For Studio work, follow the autonomy and approval rules in [PROJECT_RULES.md](../../PROJECT_RULES.md#1-core-directives). Preserve the task-specific safeguards below.
 
 
 Reference for bootstrapping CesiumJS applications: Viewer, CesiumWidget, Ion/GoogleMaps/ITwinPlatform configuration, widgets, factory helpers, geocoder services, viewer mixins, Credits, and related enums.

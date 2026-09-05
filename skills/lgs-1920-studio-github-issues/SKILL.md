@@ -7,7 +7,11 @@ description: Manage LGS1920 GitHub issues and Project planning, including triage
 
 Use this skill to keep issue metadata, the organization Project, branches, pull
 requests, and releases aligned with the [GitHub Project release and branch
-workflow specification](../../../tech-doc/specs/delivery/TECH-GITHUB-PROJECT-RELEASE-WORKFLOW-SPEC.md).
+workflow specification](../../tech-doc/specs/delivery/TECH-GITHUB-PROJECT-RELEASE-WORKFLOW-SPEC.md).
+
+If a referenced local document has moved, search for its filename in the
+repository before requesting help. Ask only if the missing information remains
+necessary after discovery.
 
 ## Scope and source of truth
 
@@ -22,24 +26,35 @@ workflow specification](../../../tech-doc/specs/delivery/TECH-GITHUB-PROJECT-REL
 - Read `PROJECT_RULES.md` before creating or changing issues, and preserve
   unrelated working-tree changes.
 
-## Create or update an issue
+## Create an issue
 
-1. Clarify the request and ask for missing information before creating an issue.
-2. Prepare the complete proposed issue and obtain explicit user validation before
-   creating it. Do not create an issue from an unvalidated draft.
-3. Select the repository template:
+1. Ask for missing information only when necessary to understand and scope the request.
+2. Select the repository template:
    - `.github/ISSUE_TEMPLATE/bug_report.md` for a bug or regression
    - `.github/ISSUE_TEMPLATE/feature_request.md` for a feature or improvement
-4. Preserve the hidden issue-type marker in the template body:
+3. Preserve the hidden issue-type marker in the template body:
    `<!-- issue-type: bug -->` or `<!-- issue-type: feature -->`.
-5. Write an English title and body with context, requested behavior, observable
+4. Write an English title and body with context, requested behavior, observable
    acceptance criteria, and technical notes. For bugs, include reproducible
    actions, expected result, actual result, and reproducibility.
-6. Add the issue to the organization Project before editing Project fields.
+5. Present the complete issue content, proposed solution, and implementation plan
+   together for explicit validation under `PROJECT_RULES.md`. Reuse validation
+   already given for the same proposal. Request renewed validation only for
+   material changes to the approved scope, solution, or plan. Do not create an
+   issue from an unvalidated draft.
+6. After validation, create the issue and add it to the organization Project
+   before editing Project fields.
 7. Set only fields that are known or explicitly requested: repository, assignee,
    labels, issue type, priority, target release, milestone, and status.
 8. Re-read the issue and Project item after each mutation and report the final
    values.
+
+## Update an existing issue
+
+Inspect the existing issue and apply the authorized changes without repeating
+the creation workflow. Preserve the approved scope, solution, and plan; request
+renewed validation for material changes to them. Set only known or explicitly
+requested field values, then re-read the affected issue and Project item.
 
 ## Project fields
 

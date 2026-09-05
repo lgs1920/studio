@@ -6,7 +6,7 @@ description: "CesiumJS camera control - Camera, flyTo, lookAt, setView, ScreenSp
 
 ## User intent discipline
 
-Never extrapolate beyond the user's request. If a decision is not explicit, ask the user before acting. User directive: “JE N'EXTRAPOLE JAMAIS LA DEMANDE, JE DEMANDE AU MONSIEUR.”
+For Studio work, follow the autonomy and approval rules in [PROJECT_RULES.md](../../PROJECT_RULES.md#1-core-directives). Preserve the task-specific safeguards below.
 
 
 > **Baseline:** CesiumJS v1.144.0 -- ES module imports (`import { ... } from "cesium";`). Verify camera APIs against the latest official reference documentation: <https://cesium.com/learn/cesiumjs/ref-doc/>.

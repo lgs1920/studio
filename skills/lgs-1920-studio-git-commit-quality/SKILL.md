@@ -13,7 +13,7 @@ Workflow:
 2. Group one coherent topic per commit and inspect staged content before committing.
 3. Use the key format `feat`, `fix`, `refactor`, `docs`, `style`, `test`, or `chore`.
 4. Run relevant tests, lint, and build checks before committing.
-5. Update the required README and `COMMIT_HISTORY.md` documentation when preparing a commit.
+5. Update README documentation when the change requires it. `COMMIT_HISTORY.md` is maintained by the GitHub workflow; do not edit it during routine commit or release preparation.
 6. Report the exact commit scope and remaining working-tree changes.
 
 Never reset, checkout, or discard user changes without explicit authorization. Never commit secrets, generated noise, or unrelated modifications.

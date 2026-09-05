@@ -7,14 +7,18 @@ description: Implement, diagnose, review, or document LGS1920 Studio replay, Dra
 
 Read these documents before changing replay behavior:
 
-1. [`REPLAY-AUDIT.md`](../../../tech-doc/specs/replay-video/REPLAY-AUDIT.md) for historical findings and
+1. [`REPLAY-AUDIT.md`](../../tech-doc/specs/replay-video/REPLAY-AUDIT.md) for historical findings and
    architectural rationale.
-2. [`CORE-REPLAY-ARCHITECTURE.md`](../../../tech-doc/specs/replay-video/CORE-REPLAY-ARCHITECTURE.md)
+2. [`CORE-REPLAY-ARCHITECTURE.md`](../../tech-doc/specs/replay-video/CORE-REPLAY-ARCHITECTURE.md)
    for current authorities and invariants.
-3. [`CORE-REPLAY-IMPLEMENTATION-STATUS.md`](../../../tech-doc/specs/replay-video/CORE-REPLAY-IMPLEMENTATION-STATUS.md)
+3. [`CORE-REPLAY-IMPLEMENTATION-STATUS.md`](../../tech-doc/specs/replay-video/CORE-REPLAY-IMPLEMENTATION-STATUS.md)
    to distinguish implemented, partial, and planned work.
-4. [`CORE-REPLAY-QUALITY-VALIDATION.md`](../../../tech-doc/specs/replay-video/CORE-REPLAY-QUALITY-VALIDATION.md)
+4. [`CORE-REPLAY-QUALITY-VALIDATION.md`](../../tech-doc/specs/replay-video/CORE-REPLAY-QUALITY-VALIDATION.md)
    for the applicable validation matrix.
+
+If a referenced local document has moved, search for its filename in the
+repository before requesting help. Ask only if the missing information remains
+necessary after discovery.
 
 Inspect the current code before relying on line numbers or implementation claims
 from the audit. Treat the audit as rationale, not as a substitute for source
@@ -46,5 +50,10 @@ Preserve these boundaries:
 Add focused tests for every fix or feature. If a change can alter generated
 pixels, camera motion, trace progression, timing, or composition, do not report
 it complete without the real visual validation required by the quality document.
+Perform that validation using available authorized tools and applicable reference
+scenarios. If a prerequisite is unavailable, complete independent implementation
+and automated checks, identify the exact blocked validation and missing
+prerequisite, and request only what is needed to resume. Do not claim completion
+or waive visual validation. Do not run `bun run dev` manually.
 Update architecture or status documentation when ownership, contracts, or
 delivery state changes.
