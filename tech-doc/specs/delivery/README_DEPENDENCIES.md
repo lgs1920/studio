@@ -170,3 +170,4 @@ protobufjs
 - A few tooling packages are currently declared in `dependencies` rather than `devDependencies`; this document reflects
   the repository as it exists today rather than an idealized split.
 - When `package.json` changes, this file should be updated in the same change set.
+- Last synchronized with `package.json`: 2026-09-06.
