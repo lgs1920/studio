@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-18
- * Last modified: 2026-09-03
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 import { proxyMap } from 'valtio/utils'
 import { LGS_TOOLBAR, LGS_VISUAL_WIDGET } from '@Core/constants'
-import { forwardRef, useImperativeHandle } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 
 const moveableState = vi.hoisted(() => ({
     props: [],
@@ -248,10 +248,19 @@ describe('Widget snap behavior', () => {
     it('selects a widget from a selectable no-drag timeline surface', () => {
         installGlobals()
 
+        const SelectableTimeline = () => {
+            const elementRef = useRef(null)
+            useEffect(() => {
+                elementRef.current.timeline = {hostInteraction: 'selectable'}
+            }, [])
+            return (
+                <lgs1920-timeline ref={elementRef}>
+                    <div data-testid="timeline-surface"/>
+                </lgs1920-timeline>
+            )
+        }
         const {container} = renderWidget({type: LGS_VISUAL_WIDGET}, (
-            <lgs1920-timeline data-widget-selectable="">
-                <div data-testid="timeline-surface"/>
-            </lgs1920-timeline>
+            <SelectableTimeline/>
         ))
         const surface = container.querySelector('[data-testid="timeline-surface"]')
 
@@ -260,6 +269,30 @@ describe('Widget snap behavior', () => {
         })
 
         expect(lgs.stores.ui.widget.current.id).toBe('snap-widget#test')
+    })
+
+    it('does not open the widget menu for a no-drag element inside a shadow tree', async () => {
+        installGlobals()
+        const ShadowClip = () => {
+            const hostRef = useRef(null)
+            useEffect(() => {
+                const clip = document.createElement('div')
+                clip.className = 'lgs-widget-no-drag'
+                clip.dataset.testid = 'shadow-clip'
+                hostRef.current.attachShadow({mode: 'open'}).append(clip)
+            }, [])
+            return <div ref={hostRef} data-testid="shadow-clip-host"/>
+        }
+
+        renderWidget({type: LGS_VISUAL_WIDGET}, <ShadowClip/>)
+        await waitFor(() => expect(document.querySelector('[data-testid="shadow-clip-host"]')?.shadowRoot?.querySelector('[data-testid="shadow-clip"]')).not.toBeNull())
+
+        const clip = document.querySelector('[data-testid="shadow-clip-host"]').shadowRoot.querySelector('[data-testid="shadow-clip"]')
+        act(() => {
+            clip.dispatchEvent(new MouseEvent('contextmenu', {bubbles: true, cancelable: true, composed: true}))
+        })
+
+        expect(lgs.stores.ui.contextMenu.visible).toBe(false)
     })
 
     it('notifies child content when widget dragging starts and ends', async () => {

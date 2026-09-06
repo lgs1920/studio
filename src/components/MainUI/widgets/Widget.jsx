@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-19
- * Last modified: 2026-09-02
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -713,7 +713,10 @@ export const Widget = ({
             return false
         }
 
-        const path = event?.composedPath?.() ?? [event?.target]
+        const nativeEvent = event?.nativeEvent ?? event
+        const path = nativeEvent?.composedPath?.()
+            ?? event?.composedPath?.()
+            ?? [event?.target]
         return path.some(target => target instanceof ElementClass && Boolean(target.closest?.('.lgs-widget-no-drag')))
     }
 
