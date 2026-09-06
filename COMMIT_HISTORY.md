@@ -1635,3 +1635,71 @@
 ## 2026-09-02 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/587ff0d7f2797586cbb3fa81610234c6b418acf0)
 
 - Recorded automatically from Git history.
+
+## 2026-09-03 — [`fix(video): align timeline menu theme and popup controls`](https://github.com/lgs1920/studio/commit/5aa4972215b9d2e5337642924d150cdbc7c8017f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-03 — [`fix(timeline): preserve widget selection on timeline surface`](https://github.com/lgs1920/studio/commit/d68241e75b129a27e9b3888538cb1af3b866a6cb)
+
+- Recorded automatically from Git history.
+
+## 2026-09-04 — [`docs(cesium): document MVT layer opportunities`](https://github.com/lgs1920/studio/commit/a19022b2ee747370a13657083b829850c8924894)
+
+- Recorded automatically from Git history.
+
+## 2026-09-04 — [`feat(timeline): improve controlled editing and layout`](https://github.com/lgs1920/studio/commit/93bfe35dc5719cfa8d80164a3d51f4509561cc6f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-04 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/7f6f412a38df5479f91639a37ab621f9982f42b8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-05 — [`docs: clarify project agent rules`](https://github.com/lgs1920/studio/commit/44341091efa741ce7648a8d65db20487a47830bd)
+
+- Recorded automatically from Git history.
+
+## 2026-09-05 — [`docs: align agent skills with project rules`](https://github.com/lgs1920/studio/commit/c505bddcc8a2a027379947c4b1bfead26282aef3)
+
+- Recorded automatically from Git history.
+
+## 2026-09-05 — [`docs: define Cesium and Web Awesome upgrade checks`](https://github.com/lgs1920/studio/commit/034581d4a787ae290cbd41ae239769bc4a494c21)
+
+- Recorded automatically from Git history.
+
+## 2026-09-05 — [`docs: update Cesium and Web Awesome skill baselines`](https://github.com/lgs1920/studio/commit/abb68a0b3e18ef998f6df855dc464175e24bdc4e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-06 — [`feat(timeline): improve controlled editing and interaction`](https://github.com/lgs1920/studio/commit/7682fd2347d888ff08080b7d62eaedde6a79eb59)
+
+- Recorded automatically from Git history.
+
+## 2026-09-06 — [`refactor(replay): isolate timeline application integration`](https://github.com/lgs1920/studio/commit/512b42502ad184a88f37bc858221336a4d1a97df)
+
+- Recorded automatically from Git history.
+
+## 2026-09-06 — [`fix(widget): preserve no-drag events through shadow DOM`](https://github.com/lgs1920/studio/commit/d8d2df84cfbd0387a188a45da603582be59442fa)
+
+- Recorded automatically from Git history.
+
+## 2026-09-06 — [`chore(deps): update development dependencies`](https://github.com/lgs1920/studio/commit/fd984ffe2f6e916955986f9d57f008087755baeb)
+
+- Recorded automatically from Git history.
+
+## 2026-09-06 — [`docs(shortcuts): document replay timeline gestures`](https://github.com/lgs1920/studio/commit/3f7bc1443f0cc666918b7b664f36e2e70ef82341)
+
+- Recorded automatically from Git history.
+
+## 2026-09-06 — [`fix(crop): keep crop board visible during widget masking`](https://github.com/lgs1920/studio/commit/31cbcc3b13e8f6535a95fbd234a98b0034e62ce2)
+
+- Recorded automatically from Git history.
+
+## 2026-09-06 — [`fix(camera): persist focused orbit settings (#516)`](https://github.com/lgs1920/studio/commit/e4f74a787a1afb2cbaecd4ffc896a7bbdd85ae12)
+
+- Recorded automatically from Git history.
+
+## 2026-09-06 — [`docs: define correction workflow in project rules`](https://github.com/lgs1920/studio/commit/d3b6e1d668f74334bc1dbcee53d794028ba899c6)
+
+- Recorded automatically from Git history.
