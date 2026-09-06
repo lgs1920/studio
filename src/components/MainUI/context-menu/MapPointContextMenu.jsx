@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-04-27
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -128,7 +128,7 @@ export const MapPointContextMenu = ({target, menuRef, hideVideoActions = false})
             return
         }
 
-        const orbitSettings = getOrbitSettings(target, 'rotation')
+        const orbitSettings = getOrbitSettings(target, 'rotation', rotateState)
         setOrbitStoreSettings(lgs.stores.ui.mainUI.rotate, orbitSettings)
         lgs.stores.ui.mainUI.rotate.visible = true
 
@@ -146,7 +146,7 @@ export const MapPointContextMenu = ({target, menuRef, hideVideoActions = false})
             target,
         })
         hideMenu()
-    }, [hideMenu, target])
+    }, [hideMenu, rotateState, target])
 
     const startPanoramic = useCallback(async () => {
         if (!target || !panoramaAllowed) {
@@ -158,7 +158,7 @@ export const MapPointContextMenu = ({target, menuRef, hideVideoActions = false})
         }
 
         const panorama = lgs.stores.ui.mainUI.panorama
-        const panoramaSettings = getOrbitSettings(target, 'panorama')
+        const panoramaSettings = getOrbitSettings(target, 'panorama', panoramaState)
         panorama.visible = true
         panorama.target = target
         panorama.heading = lgs.stores.main.components.camera.position.heading ?? 0
@@ -167,7 +167,7 @@ export const MapPointContextMenu = ({target, menuRef, hideVideoActions = false})
         setOrbitStoreSettings(panorama, panoramaSettings)
         panorama.active = true
         hideMenu()
-    }, [hideMenu, panoramaAllowed, target])
+    }, [hideMenu, panoramaAllowed, panoramaState, target])
 
     const stopOrbit = useCallback(async () => {
         await __.ui.poiManager.stopRotationAndSync()

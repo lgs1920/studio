@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 import { DEFAULT_2D_FOCUS_PITCH, FOCUS_CENTROID, FOCUS_LAST, FOCUS_STARTER } from '@Core/constants'
 import {
     buildStartupCameraFocusOptions, cameraPositionWithDefaults, cameraRangeFromStoredPosition, cameraStoreForTarget,
-    configureStartupCamera,
+    configureStartupCamera, getStartupOrbitSettings,
 }                                                    from '@Core/ui/cameraStartup'
 import { focusablePOI }                              from '@Core/ui/POIManager'
 import { describe, expect, it, vi }                  from 'vitest'
@@ -297,6 +297,32 @@ describe('startup camera positioning', () => {
     })
 
     describe('startup focus options', () => {
+        it('uses the persisted target rotation speed before the configured startup fallback', () => {
+            const settings = getStartupOrbitSettings({
+                                                              fallback:        {rpm: 4},
+                                                              focusTarget:     starter,
+                                                              persistedStarter: {rotation: {rpm: 0.7}},
+                                                              starter,
+                                                          })
+
+            expect(settings.rpm).toBe(0.7)
+        })
+
+        it('uses the journey rotation speed when startup focuses its centroid', () => {
+            const focusedJourney = {
+                ...journey,
+                rotation: {rpm: 0.6},
+            }
+            const settings = getStartupOrbitSettings({
+                                                              fallback:        {rpm: 4},
+                                                              focusTarget:     focusedJourney,
+                                                              persistedStarter: {rotation: {rpm: 0.7}},
+                                                              starter,
+                                                          })
+
+            expect(settings.rpm).toBe(0.6)
+        })
+
         it('restores exact saved camera position and keeps stored pitch even without relief', () => {
             const cameraStore = {
                 restoreCameraPosition: true,

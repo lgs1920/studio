@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-04-26
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -746,14 +746,6 @@ export const OrbitWidget = memo(() => {
     void __.ui.poiManager.stopRotationAndSync();
   }, []);
 
-  const updateRPM = useCallback(
-    (event) => {
-      const value = Number(event.target.value);
-      $rotate.rpm = value;
-    },
-    [$rotate]
-  );
-
   const setOrbitRPM = useCallback(
     (value, persist = false) => {
       const rpm = normalizeOrbitRPM(value, $rotate.rpm);
@@ -766,6 +758,22 @@ export const OrbitWidget = memo(() => {
       if (persist) {
         void persistOrbitSettings($rotate.target, "rotation", { rpm });
       }
+    },
+    [$rotate]
+  );
+
+  const updateRPM = useCallback(
+    (event) => {
+      const value = Number(event.target.value);
+      setOrbitRPM(value, true);
+    },
+    [setOrbitRPM]
+  );
+
+  const persistRPM = useCallback(
+    (event) => {
+      const value = Number(event.target.value);
+      void persistOrbitSettings($rotate.target, "rotation", { rpm: value });
     },
     [$rotate]
   );
@@ -792,14 +800,6 @@ export const OrbitWidget = memo(() => {
       }
     },
     [$rotate]
-  );
-
-  const persistRPM = useCallback(
-    (event) => {
-      const value = Number(event.target.value);
-      void persistOrbitSettings(rotate.target, "rotation", { rpm: value });
-    },
-    [rotate.target]
   );
 
   const toggleDirection = useCallback(

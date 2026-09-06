@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-09
- * Last modified: 2026-05-09
+ * Created on: 2025-02-14
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -148,7 +148,7 @@ export const MapPOIContextMenu = ({menuRef, targetId}) => {
         }
         const storedPanorama = {
             ...(currentPoi.panorama ?? {}),
-            ...getOrbitSettings(currentPoi, 'panorama'),
+            ...getOrbitSettings(currentPoi, 'panorama', lgs.stores.ui.mainUI.panorama),
         }
         const panorama = lgs.stores.ui.mainUI.panorama
         panorama.target = {

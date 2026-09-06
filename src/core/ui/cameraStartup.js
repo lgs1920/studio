@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import {
     CURRENT_JOURNEY, DEFAULT_2D_FOCUS_PITCH, FOCUS_CENTROID, FOCUS_LAST, FOCUS_STARTER,
 }                                                                     from '@Core/constants'
 import { MapTarget }                                                  from '@Core/MapTarget'
+import { getOrbitSettings }                                           from '@Core/OrbitSettings'
 import { Cartesian3 }                                                 from 'cesium'
 
 export const finiteCameraNumber = value => {
@@ -122,6 +123,26 @@ export const starterCameraStore = (
     cameraSettings     = {},
     distanceCalculator = cesiumDistance,
 ) => cameraStoreForTarget(starter, {}, cameraSettings, distanceCalculator)
+
+/**
+ * Resolve the rotation settings used by the initial camera focus.
+ *
+ * @param {Object} options - Startup focus and fallback settings.
+ * @param {Object} options.focusTarget - Target selected for the initial focus.
+ * @param {Object} options.starter - Starter target used by startup selection.
+ * @param {Object} [options.persistedStarter] - Persisted starter POI, when available.
+ * @param {Object} [options.fallback] - Settings used when no target value exists.
+ * @returns {{rpm: number, direction: number}} Normalized startup rotation settings.
+ */
+export const getStartupOrbitSettings = ({
+                                           focusTarget,
+                                           starter,
+                                           persistedStarter,
+                                           fallback = {},
+                                       } = {}) => {
+    const target = focusTarget === starter ? (persistedStarter ?? starter) : focusTarget
+    return getOrbitSettings(target, 'rotation', fallback)
+}
 
 export const journeyCentroidCameraStore = async ({
                                                      journey,

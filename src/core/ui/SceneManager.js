@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2024-12-06
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -191,8 +191,14 @@ export class SceneManager {
             && pointId
             && rotateTargetId === pointId,
         )
-        if (options?.target?.element && hasMapCoordinates(options.target)) {
-            lgs.stores.ui.mainUI.rotate.target = options.target
+        if (options?.target?.element && hasMapCoordinates(point)) {
+            lgs.stores.ui.mainUI.rotate.target = options.target instanceof MapTarget
+                                                 && hasMapCoordinates(options.target)
+                ? options.target
+                : new MapTarget(options.target.element, {
+                                    ...point,
+                                    id: options.target.slug ?? options.target.id,
+                                })
         }
         else if (point instanceof MapTarget) {
             lgs.stores.ui.mainUI.rotate.target = point

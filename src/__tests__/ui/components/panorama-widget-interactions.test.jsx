@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-13
- * Last modified: 2026-07-13
+ * Created on: 2026-07-11
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -299,6 +299,27 @@ describe('PanoramaWidget interactions', () => {
         canvas.dispatchEvent(ctrlWheelReverse)
         expect(ctrlWheelReverse.defaultPrevented).toBe(true)
         expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(100)
+    })
+
+    it('persists the RPM changed for a panorama POI', async () => {
+        setupPanoramaGlobals()
+        const poi = {
+            element:  CURRENT_POI,
+            id:       'poi-1',
+            panorama: {},
+        }
+        lgs.stores.main.components.pois.list.set(poi.id, poi)
+        const {PanoramaWidget} = await import('@Components/MainUI/PanoramaWidget')
+
+        const view = render(<PanoramaWidget/>)
+        const slider = view.getByLabelText('RPM')
+        fireEvent.input(slider, {target: {value: '0.6'}})
+        fireEvent.change(slider, {target: {value: '0.6'}})
+
+        expect(__.ui.poiManager.updatePOI).toHaveBeenCalledWith(
+            poi.id,
+            {panorama: {rpm: 0.6}},
+        )
     })
 
     it('maps adjustment overlay wheel events to panorama height steps', async () => {

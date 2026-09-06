@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2025-02-22
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -96,7 +96,7 @@ export const MapPOIEditMenu = memo(({poiId}) => {
         }
         const storedPanorama = {
             ...(pointSnap.panorama ?? {}),
-            ...getOrbitSettings(pointSnap, 'panorama'),
+            ...getOrbitSettings(pointSnap, 'panorama', panoramaState),
         }
         const panorama = lgs.stores.ui.mainUI.panorama
         panorama.target = {
@@ -110,7 +110,7 @@ export const MapPOIEditMenu = memo(({poiId}) => {
         panorama.heightOffset = storedPanorama.heightOffset ?? DEFAULT_PANORAMA_HEIGHT_OFFSET
         setOrbitStoreSettings(panorama, storedPanorama)
         panorama.active = true
-    }, [panoramaAllowed, pointSnap])
+    }, [panoramaAllowed, panoramaState, pointSnap])
 
     const stopPanoramic = useCallback((e) => {
         e?.stopPropagation()

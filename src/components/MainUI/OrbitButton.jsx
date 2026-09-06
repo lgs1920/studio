@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2025-01-29
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -119,7 +119,7 @@ export const OrbitButton = memo(({tooltip = 'top'}) => {
                 return
             }
 
-            const orbitSettings = getOrbitSettings(focusTarget ?? focusPoint, 'rotation')
+            const orbitSettings = getOrbitSettings(focusTarget ?? focusPoint, 'rotation', lgs.stores.ui.mainUI.rotate)
             setOrbitStoreSettings(lgs.stores.ui.mainUI.rotate, orbitSettings)
             await __.ui.sceneManager.focus(focusPoint, {
                 direction: orbitSettings.direction,

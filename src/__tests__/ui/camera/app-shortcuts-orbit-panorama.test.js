@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-14
- * Last modified: 2026-08-31
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { CURRENT_JOURNEY }                               from '@Core/constants'
 import { proxy } from 'valtio'
 
 const SHORTCUTS_YAML = `
@@ -109,6 +110,7 @@ describe('app orbit and panorama shortcuts', () => {
                             active:  false,
                             target:  null,
                             visible: true,
+                            rpm:     1,
                         }),
                         rotate: proxy({
                             direction: 1,
@@ -219,6 +221,69 @@ describe('app orbit and panorama shortcuts', () => {
         globalThis.lgs.stores.ui.mainUI.rotate.running = true
         await callback(event)
         expect(globalThis.__.ui.poiManager.stopRotationAndSync).toHaveBeenCalled()
+    })
+
+    it('reuses the latest mode-specific rotation speed when the target has no stored setting', async () => {
+        const {installAppShortcuts} = await import('@Core/events/appShortcuts')
+        const callbacks = new Map()
+        const shortcutManager = {
+            addShortcut: vi.fn((target, keys, callback) => {
+                callbacks.set(keys.join(','), callback)
+                return vi.fn()
+            }),
+        }
+
+        installedShortcutRemovers = installAppShortcuts(shortcutManager)
+
+        globalThis.lgs.stores.ui.mainUI.rotate.rpm = 1.7
+        globalThis.lgs.stores.ui.mainUI.panorama.rpm = 0.6
+
+        await callbacks.get('Alt+Shift+O')(makeEvent())
+        expect(globalThis.__.ui.sceneManager.focus).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({rpm: 1.7}),
+        )
+
+        await callbacks.get('Alt+Shift+P')(makeEvent())
+        expect(globalThis.lgs.stores.ui.mainUI.panorama.rpm).toBe(0.6)
+    })
+
+    it('uses persisted journey settings when the focused centroid is represented by map coordinates', async () => {
+        const {installAppShortcuts} = await import('@Core/events/appShortcuts')
+        const callbacks = new Map()
+        const shortcutManager = {
+            addShortcut: vi.fn((target, keys, callback) => {
+                callbacks.set(keys.join(','), callback)
+                return vi.fn()
+            }),
+        }
+        const journey = {
+            element:  CURRENT_JOURNEY,
+            slug:     'journey-a',
+            rotation: {rpm: 0.6},
+            panorama: {rpm: 0.7},
+        }
+        globalThis.lgs.theJourney = journey
+        globalThis.lgs.stores.main.components.camera.target = {
+            latitude:  48,
+            longitude: 2,
+            height:    120,
+        }
+        globalThis.__.ui.sceneManager.target = journey
+        installedShortcutRemovers = installAppShortcuts(shortcutManager)
+
+        await callbacks.get('Alt+Shift+O')(makeEvent())
+        expect(globalThis.__.ui.sceneManager.focus.mock.calls[0][1]).toMatchObject({
+                                                                                rpm:    0.6,
+                                                                                target: journey,
+                                                                            })
+
+        await callbacks.get('Alt+Shift+P')(makeEvent())
+        expect(globalThis.lgs.stores.ui.mainUI.panorama.rpm).toBe(0.7)
+        expect(globalThis.lgs.stores.ui.mainUI.panorama.target).toMatchObject({
+                                                                                 element: CURRENT_JOURNEY,
+                                                                                 slug:    journey.slug,
+                                                                             })
     })
 
     it('toggles orbit widget visibility only while orbit is running', async () => {

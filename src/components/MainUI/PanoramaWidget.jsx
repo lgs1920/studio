@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-23
- * Last modified: 2026-05-23
+ * Created on: 2026-04-26
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -667,16 +667,16 @@ export const PanoramaWidget = memo(() => {
 
   const updateRPM = useCallback(
     (event) => {
-      const value = Number(event.target.value);
-      $panorama.rpm = value;
+      setPanoramaRPM(event.target.value, true);
     },
-    [$panorama]
+    [setPanoramaRPM]
   );
 
   const persistRPM = useCallback(
     (event) => {
-      const value = Number(event.target.value);
-      persistPanoramaSettings({ rpm: value });
+      persistPanoramaSettings({
+        rpm: normalizeOrbitRPM(event.target.value, rpmRef.current),
+      });
     },
     [persistPanoramaSettings]
   );

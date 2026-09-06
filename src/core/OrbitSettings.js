@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2026-04-26
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -73,28 +73,44 @@ export const normalizePanoramaPitch = (value, fallback = DEFAULT_PANORAMA_PITCH)
     return clamp(numericValue, PANORAMA_PITCH_MIN, PANORAMA_PITCH_MAX)
 }
 
-export const getOrbitSettings = (target, key) => {
-    const source = target?.[key] ?? {}
+export const getOrbitSettings = (target, key, fallback = {}) => {
+    const entity = resolveOrbitEntity(target)
+    const source = {
+        ...(entity?.[key] ?? {}),
+        ...(target?.[key] ?? {}),
+    }
 
     return {
-        rpm:       normalizeOrbitRPM(source.rpm),
-        direction: normalizeOrbitDirection(source.direction),
+        rpm:       normalizeOrbitRPM(source.rpm ?? fallback.rpm),
+        direction: normalizeOrbitDirection(source.direction ?? fallback.direction),
     }
 }
 
 export const resolveOrbitEntity = (target) => {
-    if (!target?.element) {
+    const app = globalThis.lgs
+    const sceneTarget = globalThis.__?.ui?.sceneManager?.target
+    const resolvedTarget = target?.element
+        ? target
+        : sceneTarget?.element
+            ? sceneTarget
+            : app?.theJourney ?? null
+
+    if (!resolvedTarget?.element) {
         return null
     }
 
-    if (target.element === CURRENT_POI) {
-        const poiId = target.slug ?? target.id
-        return poiId ? lgs.stores.main.components.pois.list.get(poiId) ?? null : null
+    if (resolvedTarget.element === CURRENT_POI) {
+        const poiId = resolvedTarget.slug ?? resolvedTarget.id
+        return poiId ? app?.stores?.main?.components?.pois?.list?.get(poiId) ?? null : null
     }
 
-    if (target.element === CURRENT_JOURNEY) {
-        const journeySlug = target.slug ?? target.id
-        return journeySlug ? lgs.getJourneyBySlug(journeySlug) ?? null : null
+    if (resolvedTarget.element === CURRENT_JOURNEY) {
+        const journeySlug = resolvedTarget.slug ?? resolvedTarget.id
+        if (app?.theJourney && (!journeySlug || app.theJourney.slug === journeySlug)) {
+            return app.theJourney
+        }
+
+        return journeySlug ? app?.getJourneyBySlug?.(journeySlug) ?? null : null
     }
 
     return null

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-08
- * Last modified: 2026-07-08
+ * Created on: 2024-02-02
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -58,6 +58,7 @@ import {
 import {
     buildStartupCameraFocusOptions,
     configureStartupCamera,
+    getStartupOrbitSettings,
 }                       from '@Core/ui/cameraStartup'
 import { runDeferredJourneyDataLoad } from '@Core/ui/deferredJourneyData'
 import {
@@ -330,12 +331,22 @@ export const LGS1920 = () => {
             setInitialFocusReady(true)
         }
 
+        const persistedStarter = __.ui.poiManager.starter
+        const startupFocusTarget = focusTarget === starter ? (persistedStarter ?? focusTarget) : focusTarget
+        const startupOrbitSettings = getStartupOrbitSettings({
+                                                               fallback:        {
+                                                                   rpm: lgs.settings.starter.camera.rpm,
+                                                               },
+                                                               focusTarget,
+                                                               persistedStarter,
+                                                               starter,
+                                                           })
         const focusOptions = buildStartupCameraFocusOptions({
                                                                 cameraStore,
-                                                                focusTarget,
+                                                                focusTarget: startupFocusTarget,
                                                                 noRelief: __.ui.sceneManager.noRelief(),
                                                                 rotate:   lgs.settings.ui.camera.start.rotate.app,
-            rpm:      lgs.settings.starter.camera.rpm,
+            rpm:      startupOrbitSettings.rpm,
             callback: markInitialFocusReady,
         })
         __.ui.sceneManager.focus(cameraStore.target, focusOptions)

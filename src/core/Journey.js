@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-08
- * Last modified: 2026-05-08
+ * Created on: 2024-04-08
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -899,7 +899,7 @@ export class Journey extends MapElement {
 
     focus = (props = {}) => {
         if (props.rotate) {
-            const rotationSettings = getOrbitSettings(this, 'rotation')
+            const rotationSettings = getOrbitSettings(this, 'rotation', lgs.stores.ui.mainUI.rotate)
             props.rpm ??= rotationSettings.rpm
             props.direction ??= rotationSettings.direction
         }

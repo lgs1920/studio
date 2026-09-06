@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-09-02
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -224,17 +224,27 @@ const resolveMapCenterTarget = () => {
 
 const resolvePanoramaFocus = () => {
     const sceneTarget = __.ui.sceneManager?.target
-    const explicitSceneTarget = normalizedFocusPoint(explicitTargetOf(sceneTarget))
+    const cameraTarget = lgs.stores.main.components.camera.target
+    const explicitTarget = explicitTargetOf(sceneTarget)
+    const scenePoint = normalizedFocusPoint(explicitTarget)
+        ?? normalizedFocusPoint(cameraTarget)
+    const explicitSceneTarget = explicitTarget && scenePoint
+        ? {
+            ...scenePoint,
+            element: explicitTarget.element,
+            id:      explicitTarget.id,
+            slug:    explicitTarget.slug ?? explicitTarget.id,
+        }
+        : null
     const currentPoiTarget = normalizedFocusPoint(resolveCurrentPoiTarget())
     const centerTarget = resolveMapCenterTarget()
-    const cameraTarget = lgs.stores.main.components.camera.target
     const rotateTarget = lgs.stores.ui.mainUI.rotate.target
     const panoramaTarget = lgs.stores.ui.mainUI.panorama.target
 
     return [
         currentPoiTarget,
-        centerTarget,
         explicitSceneTarget,
+        centerTarget,
         panoramaTarget,
         rotateTarget,
         cameraTarget,
@@ -406,8 +416,8 @@ const toggleRotation = () => {
             return false
         }
 
-        const settingsTarget = centerTarget ? target : (sceneTarget ?? target)
-        const rotationSettings = getOrbitSettings(settingsTarget, 'rotation')
+        const focusTarget = sceneTarget ?? target
+        const rotationSettings = getOrbitSettings(focusTarget, 'rotation', rotate)
         setOrbitStoreSettings(rotate, rotationSettings)
         await __.ui.sceneManager.focus(target, {
             direction:  rotationSettings.direction,
@@ -417,7 +427,7 @@ const toggleRotation = () => {
             preserveView: true,
             rotate:   true,
             rpm:      rotationSettings.rpm,
-            target,
+            target: focusTarget,
         })
         return true
     })()
@@ -449,7 +459,7 @@ const togglePanorama = () => {
 
         const storedPanorama = {
             ...(focusPoint.panorama ?? {}),
-            ...getOrbitSettings(focusPoint, 'panorama'),
+            ...getOrbitSettings(focusPoint, 'panorama', panorama),
         }
 
         panorama.visible = true
