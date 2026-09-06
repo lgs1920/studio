@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-30
- * Last modified: 2026-09-02
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
     CROP_TOOLS_WIDGETS, JOURNEY_STATS_WIDGET, JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, PROFILE_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD,
+    VIDEO_WIDGETS_BOARD,
     WIDGET_LAYER_START, WIDGETS_STORE,
 }                                               from '../../../core/constants'
 import { WidgetDynamicRenderer }                from '../../../core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
@@ -230,6 +231,29 @@ describe('Widget persistence bootstrap', () => {
         await new WidgetCache().init()
 
         expect(widgetListStore.get(widgetId)).toMatchObject({visible: false})
+    })
+})
+
+describe('Widget cache board visibility', () => {
+    beforeEach(() => {
+        installGlobals()
+        lgs.stores.ui.widget.restrictions = new Map()
+    })
+
+    it('keeps a board host visible when its cached board metadata is stale', () => {
+        const cropElement = document.createElement('div')
+        const sceneElement = document.createElement('div')
+        widgetCacheStore.set('video-crop-zone', {widgetsBoard: SCENE_WIDGETS_BOARD})
+        widgetCacheStore.set('scene-widget', {widgetsBoard: SCENE_WIDGETS_BOARD})
+        __.ui.widgetManager.getElementById = vi.fn(id => ({
+            'video-crop-zone': cropElement,
+            'scene-widget':    sceneElement,
+        }[id] ?? null))
+
+        new WidgetCache().hideAllExceptBoards(VIDEO_WIDGETS_BOARD)
+
+        expect(cropElement.classList.contains('lgs-widget-hidden')).toBe(false)
+        expect(sceneElement.classList.contains('lgs-widget-hidden')).toBe(true)
     })
 })
 

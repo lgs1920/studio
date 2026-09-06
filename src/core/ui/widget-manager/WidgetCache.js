@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-11-07
- * Last modified: 2026-09-02
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -372,8 +372,10 @@ export class WidgetCache {
      */
     getAllExceptBoards = excludedBoardIds => {
         const exclusions = Array.isArray(excludedBoardIds) ? excludedBoardIds : [excludedBoardIds]
-        const filteredEntries = Array.from(this.#cache.entries()).filter(([, entry]) => {
-            return entry.widgetsBoard && !exclusions.includes(entry.widgetsBoard)
+        const filteredEntries = Array.from(this.#cache.entries()).filter(([id, entry]) => {
+            // A board host can carry stale or absent board metadata in the cache.
+            // Preserve the host itself whenever its ID is one of the excluded boards.
+            return !exclusions.includes(id) && entry.widgetsBoard && !exclusions.includes(entry.widgetsBoard)
         })
         return new Map(filteredEntries)
     }
