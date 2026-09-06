@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-04
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,6 +44,24 @@ export const REPLAY_TIMELINE_UI = Object.freeze({
     scaleWidth: 40,
     horizontalScrollDurationRatio: 0.2,
 })
+
+/**
+ * Define the Replay color choices exposed by the application timeline.
+ *
+ * The Web Component consumes this palette but does not own its visual colors.
+ */
+export const REPLAY_TIMELINE_COLOR_SWATCHES = Object.freeze([
+    Object.freeze({color: '#ef4444', label: 'Red', palette: 'red'}),
+    Object.freeze({color: '#f97316', label: 'Orange', palette: 'orange'}),
+    Object.freeze({color: '#eab308', label: 'Yellow', palette: 'yellow'}),
+    Object.freeze({color: '#22c55e', label: 'Green', palette: 'green'}),
+    Object.freeze({color: '#06b6d4', label: 'Cyan', palette: 'cyan'}),
+    Object.freeze({color: '#3b82f6', label: 'Blue', palette: 'blue'}),
+    Object.freeze({color: '#6366f1', label: 'Indigo', palette: 'indigo'}),
+    Object.freeze({color: '#a855f7', label: 'Purple', palette: 'purple'}),
+    Object.freeze({color: '#ec4899', label: 'Pink', palette: 'pink'}),
+    Object.freeze({color: '#6b7280', label: 'Gray', palette: 'gray'}),
+])
 
 /**
  * Define the supported timeline zoom range and increment.

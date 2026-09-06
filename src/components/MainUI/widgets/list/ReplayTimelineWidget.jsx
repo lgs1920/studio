@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-04
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -47,6 +47,7 @@ export const ReplayTimelineWidget = ({id, zIndex}) => {
 
     const config = useMemo(() => ({
         container,
+        captureExclude: ['[data-widget-capture="exclude"]'],
         contextMenu: {
             canReset:    true,
             canEdit:     false,
