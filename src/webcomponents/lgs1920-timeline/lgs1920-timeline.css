@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-04
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -333,12 +333,9 @@
         max-width: 100%;
         margin-top: auto;
         overflow: hidden;
+        contain: layout paint;
         border: 1px solid var(--lgs-timeline-quiet-border-color);
         border-radius: var(--wa-border-radius-s);
-    }
-
-    & .lgs1920-wa-timeline__layout[data-capture-exclude='true'] {
-        contain: layout paint;
     }
 
     & .lgs1920-wa-timeline__split-panel {
@@ -807,12 +804,14 @@
 
     & .lgs1920-wa-timeline__canvas {
         height: 100%;
+        min-width: 100%;
         min-height: 100%;
     }
 
     & .lgs1920-wa-timeline__ruler {
         z-index: 2;
         height: var(--lgs-timeline-header-height);
+        min-width: 100%;
         background: var(--lgs-timeline-surface-color);
         border-bottom: 1px solid var(--lgs-timeline-quiet-border-color);
         box-shadow: var(--wa-shadow-m);
@@ -822,6 +821,7 @@
         position: relative;
         box-sizing: border-box;
         height: calc(100% - var(--lgs-timeline-header-height));
+        min-width: 100%;
         overflow-x: hidden;
         overflow-y: auto;
         scrollbar-width: none;
@@ -890,6 +890,7 @@
     & .lgs1920-wa-timeline__track {
         position: relative;
         box-sizing: border-box;
+        width: 100%;
         min-height: var(--lgs-timeline-row-height);
         background-color: var(--lgs-timeline-surface-color);
         background-image: linear-gradient(90deg, color-mix(in srgb, var(--lgs-timeline-quiet-border-color) 60%, transparent) 1px, transparent 1px);
@@ -950,6 +951,10 @@
     & .lgs1920-wa-timeline__legend-rows,
     & .lgs1920-wa-timeline__tracks {
         position: relative;
+    }
+
+    & .lgs1920-wa-timeline__tracks {
+        min-width: 100%;
     }
 
     & :is(.lgs1920-wa-timeline__playhead, .lgs1920-wa-timeline__end-marker) {
@@ -1164,6 +1169,23 @@
         opacity: 0.75;
     }
 
+    & .lgs1920-wa-timeline__clip-duration-overlay {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        z-index: 4;
+        padding: 0.15rem 0.35rem;
+        color: var(--wa-color-neutral-0, #fff);
+        background: color-mix(in oklab, var(--wa-color-neutral-1000, #000) 78%, transparent);
+        border-radius: var(--wa-border-radius-s);
+        font-size: 0.7rem;
+        font-variant-numeric: tabular-nums;
+        line-height: 1.1;
+        pointer-events: none;
+        transform: translate(-50%, -50%);
+        white-space: nowrap;
+    }
+
     & .lgs1920-wa-timeline__clip-move-endpoint {
         position: absolute;
         top: var(--lgs-timeline-header-height);
@@ -1308,6 +1330,26 @@
     & .lgs1920-wa-timeline__menu-item {
         justify-content: flex-start;
         width: 100%;
+    }
+
+    & .lgs1920-wa-timeline__menu-color-item {
+        display: flex;
+        align-items: center;
+        gap: var(--lgs-gutter-xs, 0.5rem);
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 2rem;
+        padding: 0.25rem 0.5rem;
+        color: var(--lgs-timeline-text-color);
+        border-radius: var(--wa-border-radius-s);
+    }
+
+    & .lgs1920-wa-timeline__menu-color-item:hover {
+        background: var(--wa-color-neutral-fill-quiet);
+    }
+
+    & .lgs1920-wa-timeline__menu-color-item > :last-child {
+        margin-inline-start: auto;
     }
 
     & .lgs1920-wa-timeline__timeline-tools {

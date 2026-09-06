@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-31
- * Last modified: 2026-09-04
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -99,6 +99,30 @@ export const snapClipToMajorUnits = ({start, end, mode, edge, majorSeconds, thre
 }
 
 /**
+ * Snap an edited interval to nearby clip boundaries or the playhead.
+ *
+ * @param {Object} options - Proposed interval, edit mode, targets and tolerance.
+ * @returns {Object|null} Magnetized interval or null outside the tolerance.
+ */
+export const snapClipToTargets = ({start, end, mode, edge, targets, thresholdSeconds}) => {
+    const edges = mode === 'resize' ? [edge] : ['start', 'end']
+    let nearest = null
+    edges.forEach(side => targets.forEach(target => {
+        if (!Number.isFinite(target) || target < 0) return
+        const delta = target - (side === 'start' ? start : end)
+        if (Math.abs(delta) > thresholdSeconds + 1e-9) return
+        if (mode === 'move' && start + delta < 0) return
+        if (nearest === null || Math.abs(delta) < Math.abs(nearest.delta)) nearest = {side, delta}
+    }))
+    if (!nearest) return null
+    const round = value => Number(Number(value).toFixed(6))
+    if (mode !== 'resize') return {start: round(start + nearest.delta), end: round(end + nearest.delta)}
+    return nearest.side === 'start'
+        ? {start: round(start + nearest.delta), end: round(end)}
+        : {start: round(start), end: round(end + nearest.delta)}
+}
+
+/**
  * Resolve the collision policy for a track.
  *
  * @param {Object} timeline - Timeline configuration.
@@ -107,7 +131,7 @@ export const snapClipToMajorUnits = ({start, end, mode, edge, majorSeconds, thre
  */
 const resolveCollisionPolicy = (timeline, track, mode = 'move') => {
     const policy = mode === 'resize'
-        ? track?.resizeCollisionPolicy ?? timeline?.resizeCollisionPolicy ?? 'ripple'
+        ? track?.resizeCollisionPolicy ?? timeline?.resizeCollisionPolicy ?? timeline?.collisionPolicy ?? 'prevent'
         : track?.collisionPolicy ?? timeline?.collisionPolicy ?? 'prevent'
     return ['allow', 'prevent', 'ripple'].includes(policy) ? policy : 'prevent'
 }
@@ -139,25 +163,40 @@ const clipsOverlap = (left, right) => {
 }
 
 /**
+ * Check whether a track layout contains overlapping clips.
+ *
+ * @param {Array} clips - Clips on one track.
+ * @returns {boolean} Whether at least two clips overlap.
+ */
+export const hasClipOverlaps = clips => {
+    const ordered = (clips ?? [])
+        .map(clip => ({clip, interval: resolveClipInterval(clip)}))
+        .sort((left, right) => left.interval.start - right.interval.start)
+    return ordered.some((entry, index) => ordered.slice(index + 1).some(candidate => (
+        entry.interval.end > candidate.interval.start
+        && candidate.interval.end > entry.interval.start
+    )))
+}
+
+/**
  * Shift overlapping clips to the right while preserving their durations.
  *
  * @param {Array} clips - Clips on one track.
+ * @param {Object} proposedClip - Clip anchored at the requested insertion time.
  * @returns {Array} Layout with overlaps resolved by ripple.
  */
-const rippleClips = clips => {
-    let previousEnd = 0
-    return [...clips]
-        .sort((left, right) => {
-            const startDifference = resolveClipInterval(left).start - resolveClipInterval(right).start
-            return startDifference || String(left.id).localeCompare(String(right.id))
-        })
+const rippleClips = (clips, proposedClip) => {
+    let previousEnd = proposedClip.end
+    const shifted = clips.filter(clip => clip.id !== proposedClip.id)
+        .sort((left, right) => left.start - right.start)
         .map(clip => {
-            const interval = resolveClipInterval(clip)
-            const start = Math.max(interval.start, previousEnd)
-            const end = start + interval.duration
+            if (clip.end <= proposedClip.start) return clip
+            const start = Math.max(clip.start, previousEnd)
+            const end = start + (clip.end - clip.start)
             previousEnd = end
             return {...clip, start, end}
         })
+    return [...shifted, proposedClip].sort((left, right) => left.start - right.start)
 }
 
 /**
@@ -186,6 +225,32 @@ export const rippleResizedClips = ({clips, originalClip, proposedClip, edge}) =>
         if (!isOnEditedSide) return value
         return {...value, start: interval.start + delta, end: interval.end + delta}
     }).sort((left, right) => resolveClipInterval(left).start - resolveClipInterval(right).start)
+}
+
+/**
+ * Expand a clip to the free interval between its nearest neighbors.
+ *
+ * @param {Object} options - Clip extension options.
+ * @param {Object} options.clip - Clip to expand.
+ * @param {Array} options.otherClips - Other clips on the same track.
+ * @param {number} options.durationSeconds - Current timeline duration.
+ * @returns {Object} Expanded clip interval.
+ */
+export const resolveClipExtension = ({clip, otherClips, durationSeconds} = {}) => {
+    const current = resolveClipInterval(clip)
+    const timelineEnd = Math.max(0, Number(durationSeconds) || 0)
+    const previousEnd = (Array.isArray(otherClips) ? otherClips : [])
+        .map(resolveClipInterval)
+        .filter(interval => interval.end <= current.start)
+        .reduce((maximum, interval) => Math.max(maximum, interval.end), 0)
+    const nextStart = (Array.isArray(otherClips) ? otherClips : [])
+        .map(resolveClipInterval)
+        .filter(interval => interval.start >= current.end)
+        .reduce((minimum, interval) => Math.min(minimum, interval.start), timelineEnd)
+    return {
+        start: previousEnd,
+        end: Math.max(previousEnd, nextStart),
+    }
 }
 
 /**
@@ -219,17 +284,11 @@ const fitClipToFreeInterval = ({clip, otherClips, mode, edge, minimumDuration, m
         ))
         if (nextClip) end = Math.min(end, nextClip.interval.start)
     } else {
-        const currentBlocker = ordered.find(({interval}) => (
-            interval.start < start && interval.end > start
-        ))
-        if (currentBlocker) return null
-        const nextClip = ordered.find(({interval}) => (
-            interval.start >= start && interval.start < end
-        ))
-        if (nextClip) end = Math.min(end, nextClip.interval.start)
+        // A move never trims media to make it fit a smaller gap.
+        if (proposed.end > maximumEnd || otherClips.some(value => clipsOverlap(value, clip))) return null
     }
 
-    if (end - start < minimumDuration || end <= start) return null
+    if (end - start < minimumDuration - 1e-9 || end <= start) return null
     const fitted = Object.assign({}, clip, {start, end})
     return otherClips.some(value => clipsOverlap(value, fitted)) ? null : fitted
 }
@@ -248,6 +307,8 @@ export const createTimelineClipEditor = ({
     getTimeAtClientX,
     getTrackAtClientY,
     getRangeEndFollowsDuration,
+    getRangeEndMillis,
+    getCurrentTimeMillis,
     setRangeEndMillis,
     setRows,
     setInteractionDurationMillis,
@@ -279,7 +340,7 @@ export const createTimelineClipEditor = ({
     const minimumClipDuration = (track, clip) => {
         const timeline = getTimelineConfig()
         const configured = Number(clip?.minDuration ?? track?.minClipDuration ?? timeline.minClipDuration)
-        return Number.isFinite(configured) && configured > 0 ? configured : 0
+        return Number.isFinite(configured) && configured > 0 ? configured : 1 / (Number(timeline.fps) > 0 ? Number(timeline.fps) : 30)
     }
 
     /**
@@ -323,7 +384,10 @@ export const createTimelineClipEditor = ({
         const target = baseRows.find(row => row.id === targetTrackId)
         if (!target || !trackAcceptsClip(target, clip)) return null
         const {start, end} = resolveClipInterval(clip)
-        if (end <= start) return null
+        if (!Number.isFinite(Number(clip.start)) || !Number.isFinite(Number(clip.end)) || Number(clip.start) < 0 || end <= start) return null
+        const source = findClipEntry(baseRows, clip.id)
+        if (source && (source.row.editable === false || source.clip.editable === false)) return null
+        if (mode === 'resize' && source?.clip.resizable === false) return null
 
         const rowsWithoutClip = baseRows.map(row => ({
             ...row,
@@ -333,9 +397,12 @@ export const createTimelineClipEditor = ({
         const targetAfterRemoval = rowsWithoutClip.find(row => row.id === targetTrackId)
         const policy = previewOnly ? 'allow' : resolveCollisionPolicy(timeline, target, mode)
         const minimumDuration = minimumClipDuration(target, clip)
-        const durationPolicy = timeline.durationPolicy ?? 'fixed'
+        const durationPolicy = timeline.durationPolicy ?? 'extend'
         const baseDurationMillis = Number(getProjectionDurationMillis()) || 0
-        const latestEnd = durationPolicy === 'extend' ? Infinity : baseDurationMillis / 1000
+        const extendsDuration = durationPolicy !== 'fixed'
+            && (mode !== 'resize' || timeline.resizeExtendsDuration !== false)
+        const latestEnd = extendsDuration ? Infinity : baseDurationMillis / 1000
+        if (end - start < minimumDuration - 1e-9) return null
         const proposedClip = Object.assign({}, clip, {start, end})
         const placedClip = policy === 'prevent'
             ? fitClipToFreeInterval({
@@ -358,9 +425,15 @@ export const createTimelineClipEditor = ({
                 edge,
             })
             : policy === 'ripple'
-                ? rippleClips(targetClips)
+                ? rippleClips(targetClips, placedClip)
             : targetClips.sort((left, right) => resolveClipInterval(left).start - resolveClipInterval(right).start)
-        if (laidOutClips.some(value => resolveClipInterval(value).start < 0)) return null
+        // Collision prevention is a hard invariant for committed layouts.
+        if (!previewOnly && hasClipOverlaps(laidOutClips)) return null
+        if (laidOutClips.some(value => value.start < 0)) return null
+        if (laidOutClips.some(value => {
+            const original = target.actions?.find(candidate => candidate.id === value.id)
+            return original?.editable === false && (value.start !== original.start || value.end !== original.end)
+        })) return null
         const nextRows = rowsWithoutClip.map(row => row.id === targetTrackId
             ? {...row, actions: laidOutClips}
             : row)
@@ -368,15 +441,15 @@ export const createTimelineClipEditor = ({
             maximum,
             ...(row.actions ?? []).map(value => resolveClipInterval(value).end),
         ), 0)
-        if (durationPolicy !== 'extend' && maximumEnd * 1000 > baseDurationMillis) return null
-        const durationMillis = durationPolicy === 'extend'
+        if (!extendsDuration && maximumEnd * 1000 > baseDurationMillis) return null
+        const durationMillis = extendsDuration
             ? Math.max(baseDurationMillis, maximumEnd * 1000)
             : baseDurationMillis
-        if (durationMillis > baseDurationMillis && getRangeEndFollowsDuration()) {
-            setRangeEndMillis(durationMillis)
-        }
-
-        return {rows: nextRows, durationMillis}
+        const rangeEnd = Number(getRangeEndMillis?.())
+        const rangeCoversDuration = Number.isFinite(rangeEnd)
+            && rangeEnd >= baseDurationMillis - 1e-9
+        const rangeEndMillis = getRangeEndFollowsDuration() || rangeCoversDuration ? durationMillis : rangeEnd
+        return {rows: nextRows, durationMillis, rangeEndMillis}
     }
 
     /**
@@ -389,17 +462,48 @@ export const createTimelineClipEditor = ({
      */
     const changeDetail = (state, result, event) => {
         const entry = findClipEntry(result.rows, state.clipId)
+        const initialEntry = findClipEntry(state.baseRows, state.clipId)
         const clip = entry ? Object.assign({}, entry.clip, {trackId: entry.row.id}) : null
+        const oldClip = initialEntry
+            ? Object.assign({}, initialEntry.clip, {trackId: initialEntry.row.id})
+            : null
+        const dragStart = state.dragStart ?? null
+        const drag = event
+            ? {
+                clientX: Number(event.clientX) || 0,
+                clientY: Number(event.clientY) || 0,
+                time: Number(state.targetTime ?? state.startTime) || 0,
+                timeMillis: (Number(state.targetTime ?? state.startTime) || 0) * 1000,
+                trackId: entry?.row.id ?? state.targetTrackId ?? null,
+            }
+            : null
         return {
             type: state.mode,
             edge: state.edge ?? null,
+            resizeEdge: state.edge ?? null,
             clipId: state.clipId,
             fromTrackId: state.sourceTrackId,
             toTrackId: entry?.row.id ?? state.targetTrackId,
             start: clip?.start ?? null,
             end: clip?.end ?? null,
             clip,
+            oldClip,
+            oldTimeline: {
+                trackId: state.sourceTrackId,
+                clip: oldClip,
+                start: oldClip?.start ?? null,
+                end: oldClip?.end ?? null,
+            },
+            newTimeline: {
+                trackId: entry?.row.id ?? state.targetTrackId,
+                clip,
+                start: clip?.start ?? null,
+                end: clip?.end ?? null,
+            },
+            dragStart,
+            drag,
             durationMillis: result.durationMillis,
+            rangeEndMillis: result.rangeEndMillis,
             tracks: result.rows.map(row => {
                 const track = Object.assign({}, row)
                 const actions = track.actions ?? []
@@ -421,26 +525,28 @@ export const createTimelineClipEditor = ({
      */
     const preview = (state, event) => {
         const entry = findClipEntry(state.baseRows, state.clipId)
-        if (!entry || (state.mode === 'resize' && entry.clip.resizable === false)) return
+        if (!entry || entry.clip.editable === false || (state.mode === 'resize' && entry.clip.resizable === false)) return
         const delta = getTimeAtClientX(event.clientX) - state.startTime
+        state.targetTime = getTimeAtClientX(event.clientX)
         const duration = state.originalEnd - state.originalStart
         const timeline = getTimelineConfig()
         const baseDuration = (Number(getProjectionDurationMillis()) || 0) / 1000
         const target = state.mode === 'move'
             ? getTrackAtClientY(event.clientY)
             : state.baseRows.find(row => row.id === state.sourceTrackId)
-        const targetTrack = target && trackAcceptsClip(target, entry.clip)
-            ? target
-            : state.baseRows.find(row => row.id === state.sourceTrackId)
+        const targetTrack = target ?? state.baseRows.find(row => row.id === state.sourceTrackId)
+        const invalidTarget = state.mode === 'move' && (!target || !trackAcceptsClip(target, entry.clip))
         const minimumDuration = minimumClipDuration(targetTrack, entry.clip)
-        const durationPolicy = timeline.durationPolicy ?? 'fixed'
+        const durationPolicy = timeline.durationPolicy ?? 'extend'
+        const extendsDuration = durationPolicy !== 'fixed'
+            && (state.mode !== 'resize' || timeline.resizeExtendsDuration !== false)
         let start = state.originalStart
         let end = state.originalEnd
 
         if (state.mode === 'move') {
             start = Math.max(0, state.originalStart + delta)
             end = start + duration
-            if (durationPolicy !== 'extend') {
+            if (!extendsDuration) {
                 start = Math.min(start, Math.max(0, baseDuration - duration))
                 end = start + duration
             }
@@ -448,27 +554,33 @@ export const createTimelineClipEditor = ({
             start = Math.max(0, Math.min(state.originalStart + delta, state.originalEnd - minimumDuration))
         } else {
             end = Math.max(state.originalStart + minimumDuration, state.originalEnd + delta)
-            if (durationPolicy !== 'extend') end = Math.min(end, baseDuration)
+            if (!extendsDuration) end = Math.min(end, baseDuration)
         }
 
         const snap = resolveSnap({secondary: (state.mode === 'move' || state.mode === 'resize') && event.shiftKey === true})
-        if (snap) {
+        if (snap && !event.altKey) {
             const snapped = snapClipToMajorUnits({start, end, mode: state.mode, edge: state.edge, ...snap})
-            start = snapped.start
-            end = snapped.end
+            const targets = [0, Number(getCurrentTimeMillis?.()) / 1000]
+            state.baseRows.forEach(row => (row.actions ?? []).forEach(clip => {
+                if (clip.id !== state.clipId) targets.push(clip.start, clip.end)
+            }))
+            const magnetic = snapClipToTargets({start, end, mode: state.mode, edge: state.edge,
+                targets, thresholdSeconds: snap.thresholdSeconds})
+            start = magnetic?.start ?? snapped.start
+            end = magnetic?.end ?? snapped.end
         }
         if (state.mode === 'move') {
             start = Math.max(0, start)
-            if (durationPolicy !== 'extend') start = Math.min(start, Math.max(0, baseDuration - duration))
+            if (!extendsDuration) start = Math.min(start, Math.max(0, baseDuration - duration))
             end = start + duration
         } else if (state.edge === 'start') {
             start = Math.max(0, Math.min(start, state.originalEnd - minimumDuration))
         } else {
             end = Math.max(state.originalStart + minimumDuration, end)
-            if (durationPolicy !== 'extend') end = Math.min(end, baseDuration)
+            if (!extendsDuration) end = Math.min(end, baseDuration)
         }
 
-        const result = place({
+        const result = invalidTarget ? null : place({
             baseRows: state.baseRows,
             clip: Object.assign({}, entry.clip, {start, end}),
             targetTrackId: targetTrack.id,
@@ -478,24 +590,20 @@ export const createTimelineClipEditor = ({
         state.targetTrackId = targetTrack.id
         if (!result) {
             state.dropRejected = true
-            const previewResult = place({
-                baseRows: state.baseRows,
-                clip: Object.assign({}, entry.clip, {start, end}),
-                targetTrackId: targetTrack.id,
-                mode: state.mode,
-                edge: state.edge,
-                previewOnly: true,
-            })
-            if (previewResult) {
-                setRows(previewResult.rows)
-                setInteractionDurationMillis(previewResult.durationMillis)
-            }
+            state.lastResult = null
+            // Keep the last valid layout visible while the rejected pointer
+            // position is marked on the target track. Invalid overlaps never
+            // enter the transient row state, even during a preview.
+            setRows(state.baseRows)
+            setInteractionDurationMillis(state.initialDurationMillis)
+            if (Number.isFinite(state.initialRangeEndMillis)) setRangeEndMillis(state.initialRangeEndMillis)
             render()
             return
         }
         state.dropRejected = false
         state.lastResult = result
         setRows(result.rows)
+        setRangeEndMillis(result.rangeEndMillis)
         setInteractionDurationMillis(result.durationMillis)
         emit('clip-changing', changeDetail(state, result, event))
         render()
@@ -508,6 +616,30 @@ export const createTimelineClipEditor = ({
      * @param {'start'|'end'} edge - Resized edge.
      * @param {KeyboardEvent} event - Keyboard event.
      */
+    /**
+     * Resolve an extension transaction for one clip.
+     *
+     * @param {string} clipId - Clip identifier.
+     * @returns {{rows: Array, durationMillis: number, rangeEndMillis: number}|null} Extension result.
+     */
+    const extend = clipId => {
+        const rows = cloneRows(getRows())
+        const entry = findClipEntry(rows, clipId)
+        if (!entry || entry.clip.editable === false || entry.row.editable === false) return null
+        const otherClips = (entry.row.actions ?? []).filter(value => value.id !== clipId)
+        const interval = resolveClipExtension({
+            clip: entry.clip,
+            otherClips,
+            durationSeconds: (Number(getProjectionDurationMillis()) || 0) / 1000,
+        })
+        return place({
+            baseRows: rows,
+            clip: {...entry.clip, ...interval},
+            targetTrackId: entry.row.id,
+            mode: 'move',
+        })
+    }
+
     const resizeByKeyboard = (clipId, edge, event) => {
         if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return
         if (getTimelineConfig().editable === false) return
@@ -515,7 +647,7 @@ export const createTimelineClipEditor = ({
         event.stopPropagation()
         const rows = getRows()
         const entry = findClipEntry(rows, clipId)
-        if (!entry) return
+        if (!entry || entry.clip.editable === false || entry.clip.resizable === false) return
         const timeline = getTimelineConfig()
         const configuredStep = Number(timeline.keyboardStepSeconds)
         const step = configuredStep > 0 ? configuredStep : 0.1
@@ -531,6 +663,16 @@ export const createTimelineClipEditor = ({
             clipId,
             sourceTrackId: entry.row.id,
             targetTrackId: entry.row.id,
+            startTime: interval[edge === 'start' ? 'start' : 'end'],
+            targetTime: interval[edge === 'start' ? 'start' : 'end'],
+            baseRows: cloneRows(rows),
+            dragStart: {
+                clientX: Number(event.clientX) || 0,
+                clientY: Number(event.clientY) || 0,
+                time: interval[edge === 'start' ? 'start' : 'end'],
+                timeMillis: interval[edge === 'start' ? 'start' : 'end'] * 1000,
+                trackId: entry.row.id,
+            },
         }
         const result = place({
             baseRows: cloneRows(rows),
@@ -540,11 +682,15 @@ export const createTimelineClipEditor = ({
             edge,
         })
         if (!result) return
+        const detail = changeDetail(state, result, event)
+        if (emit('before-clip-change', detail, {cancelable: true}).defaultPrevented) return
         setRows(result.rows)
+        setRangeEndMillis(result.rangeEndMillis)
         setInteractionDurationMillis(result.durationMillis)
-        emit('clip-change', changeDetail(state, result, event))
+        emit('clip-change', detail)
         render()
+        emit('after-clip-change', detail)
     }
 
-    return {changeDetail, findClipEntry, place, preview, resizeByKeyboard}
+    return {changeDetail, extend, findClipEntry, place, preview, resizeByKeyboard}
 }

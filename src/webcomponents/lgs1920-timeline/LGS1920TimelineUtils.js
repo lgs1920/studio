@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-31
- * Last modified: 2026-09-04
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -87,9 +87,16 @@ export const createIcon = (name, variant = 'regular') => createElement('wa-icon'
  *
  * @param {string} name - Event name.
  * @param {Object} detail - Event detail payload.
+ * @param {Object} [options] - Custom event options.
+ * @param {boolean} [options.cancelable=false] - Whether listeners can cancel the event.
  * @returns {CustomEvent} Composed custom event.
  */
-export const createEvent = (name, detail) => new CustomEvent(name, {bubbles: true, composed: true, detail})
+export const createEvent = (name, detail, options = {}) => new CustomEvent(name, {
+    bubbles: true,
+    cancelable: options.cancelable === true,
+    composed: true,
+    detail,
+})
 
 /**
  * Format elapsed seconds as a compact minute and second label.
@@ -172,30 +179,61 @@ export const resolveColorClasses = colorClasses => Array.isArray(colorClasses) &
     ? colorClasses.join(' ')
     : 'wa-neutral wa-neutral-blue'
 
-const TIMELINE_PALETTE_COLORS = new Set([
-    'red',
-    'orange',
-    'yellow',
-    'green',
-    'cyan',
-    'blue',
-    'indigo',
-    'purple',
-    'pink',
-    'gray',
-])
+/**
+ * Normalize color-picker swatches supplied by the embedding application.
+ *
+ * @param {Array} swatches - Application-owned color swatches.
+ * @returns {Array} Valid color swatches.
+ */
+export const normalizeTimelineColorSwatches = swatches => (Array.isArray(swatches) ? swatches : [])
+    .filter(swatch => swatch
+        && typeof swatch === 'object'
+        && String(swatch.color ?? '').trim()
+        && String(swatch.palette ?? '').trim())
+    .map(swatch => ({
+        ...swatch,
+        color: String(swatch.color).trim().toLowerCase(),
+        palette: String(swatch.palette).trim().toLowerCase(),
+        label: String(swatch.label ?? swatch.palette).trim(),
+    }))
 
 /**
  * Resolve the palette name from Web Awesome neutral color classes.
  *
  * @param {Array} colorClasses - Web Awesome color classes.
- * @returns {string} Supported palette color name.
+ * @param {Array} swatches - Application-owned color swatches.
+ * @returns {string|null} Configured palette color name.
  */
-export const resolveTimelinePaletteColor = colorClasses => {
+export const resolveTimelinePaletteColor = (colorClasses, swatches = []) => {
     const colorClass = (Array.isArray(colorClasses) ? colorClasses : [])
         .find(value => typeof value === 'string' && value.startsWith('wa-neutral-'))
     const color = colorClass?.slice('wa-neutral-'.length)
-    return TIMELINE_PALETTE_COLORS.has(color) ? color : 'blue'
+    return normalizeTimelineColorSwatches(swatches).some(swatch => swatch.palette === color) ? color : null
+}
+
+/**
+ * Resolve a palette name from a color-picker value.
+ *
+ * @param {string} value - Selected color value.
+ * @param {Array} swatches - Application-owned color swatches.
+ * @returns {string|null} Configured palette color name.
+ */
+export const resolveTimelinePaletteFromValue = (value, swatches = []) => {
+    const normalized = String(value ?? '').trim().toLowerCase()
+    return normalizeTimelineColorSwatches(swatches).find(swatch => swatch.color === normalized)?.palette ?? null
+}
+
+/**
+ * Resolve the color-picker value for a timeline palette.
+ *
+ * @param {Array} colorClasses - Web Awesome color classes.
+ * @param {Array} swatches - Application-owned color swatches.
+ * @returns {string|null} Color-picker value.
+ */
+export const resolveTimelineColorValue = (colorClasses, swatches = []) => {
+    const normalizedSwatches = normalizeTimelineColorSwatches(swatches)
+    const palette = resolveTimelinePaletteColor(colorClasses, normalizedSwatches)
+    return normalizedSwatches.find(swatch => swatch.palette === palette)?.color ?? null
 }
 
 /**
@@ -208,7 +246,7 @@ export const resolveTimelinePaletteColor = colorClasses => {
  * @param {Array} colorClasses - Web Awesome color classes.
  */
 export const applyTimelinePaletteStyles = (element, colorClasses) => {
-    const color = resolveTimelinePaletteColor(colorClasses)
+    const color = colorClasses?.find?.(value => typeof value === 'string' && value.startsWith('wa-neutral-'))?.slice('wa-neutral-'.length) ?? 'blue'
     element.style.backgroundColor = `var(--wa-color-${color}-50)`
     element.style.borderColor = `var(--wa-color-${color}-60)`
     element.style.color = `var(--wa-color-${color}-on)`

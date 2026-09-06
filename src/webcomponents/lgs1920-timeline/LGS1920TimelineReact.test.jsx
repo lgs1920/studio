@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-04
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,6 +20,7 @@ import {afterEach, describe, expect, it, vi} from 'vitest'
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/button/button.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/card/card.js', () => ({}))
+vi.mock('@web.awesome.me/webawesome-pro/dist/components/color-picker/color-picker.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/icon/icon.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/input/input.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/popup/popup.js', () => ({}))
@@ -96,6 +97,32 @@ describe('LGS1920TimelineReact', () => {
         expect(onClipChange).toHaveBeenCalledWith(detail, expect.any(CustomEvent))
     })
 
+    it('maps clip context-menu events to React callbacks', () => {
+        const onClipVisibilityChange = vi.fn()
+        const onClipExtend = vi.fn()
+        const onClipColorChange = vi.fn()
+        const {container} = render(
+            <LGS1920TimelineReact
+                timeline={timelineConfig}
+                onClipVisibilityChange={onClipVisibilityChange}
+                onClipExtend={onClipExtend}
+                onClipColorChange={onClipColorChange}/>,
+        )
+        const element = container.querySelector('lgs1920-timeline')
+        const details = {
+            visibility: {clipId: 'clip#001', visible: false},
+            extend: {clipId: 'clip#001', start: 0, end: 2},
+            color: {clipId: 'clip#001', timelineColor: 'red'},
+        }
+        element.dispatchEvent(new CustomEvent('lgs1920-timeline-clip-visibility-change', {detail: details.visibility}))
+        element.dispatchEvent(new CustomEvent('lgs1920-timeline-clip-extend', {detail: details.extend}))
+        element.dispatchEvent(new CustomEvent('lgs1920-timeline-clip-color-change', {detail: details.color}))
+
+        expect(onClipVisibilityChange).toHaveBeenCalledWith(details.visibility, expect.any(CustomEvent))
+        expect(onClipExtend).toHaveBeenCalledWith(details.extend, expect.any(CustomEvent))
+        expect(onClipColorChange).toHaveBeenCalledWith(details.color, expect.any(CustomEvent))
+    })
+
     it('bridges track creation and removal events', () => {
         const onAddTrack = vi.fn()
         const onRemoveTrack = vi.fn()
@@ -115,6 +142,28 @@ describe('LGS1920TimelineReact', () => {
         expect(onRemoveTrack).toHaveBeenCalledWith(removeDetail, expect.any(CustomEvent))
     })
 
+    it('maps clip removal events to React callbacks', () => {
+        const onBeforeRemoveClip = vi.fn()
+        const onRemoveClip = vi.fn()
+        const onAfterRemoveClip = vi.fn()
+        const {container} = render(
+            <LGS1920TimelineReact
+                timeline={timelineConfig}
+                onBeforeRemoveClip={onBeforeRemoveClip}
+                onRemoveClip={onRemoveClip}
+                onAfterRemoveClip={onAfterRemoveClip}/>,
+        )
+        const element = container.querySelector('lgs1920-timeline')
+        const detail = {clipId: 'clip#001', trackId: 'track#one'}
+        element.dispatchEvent(new CustomEvent('lgs1920-timeline-before-remove-clip', {detail}))
+        element.dispatchEvent(new CustomEvent('lgs1920-timeline-remove-clip', {detail}))
+        element.dispatchEvent(new CustomEvent('lgs1920-timeline-after-remove-clip', {detail}))
+
+        expect(onBeforeRemoveClip).toHaveBeenCalledWith(detail, expect.any(CustomEvent))
+        expect(onRemoveClip).toHaveBeenCalledWith(detail, expect.any(CustomEvent))
+        expect(onAfterRemoveClip).toHaveBeenCalledWith(detail, expect.any(CustomEvent))
+    })
+
     it('maps the track and clip drag lifecycle to React callbacks', () => {
         const onBeforeDrag = vi.fn()
         const onDrag = vi.fn()
@@ -128,9 +177,9 @@ describe('LGS1920TimelineReact', () => {
         )
         const element = container.querySelector('lgs1920-timeline')
         const details = [
-            {context: {type: 'piste', pisteId: 'track#one'}},
-            {context: {type: 'clip', pisteId: 'track#one', clipId: 'clip#one'}},
-            {context: {type: 'clip', pisteId: 'track#two', clipId: 'clip#one'}, committed: true},
+            {context: {type: 'track', trackId: 'track#one'}},
+            {context: {type: 'clip', trackId: 'track#one', clipId: 'clip#one'}},
+            {context: {type: 'clip', trackId: 'track#two', clipId: 'clip#one'}, committed: true},
         ]
         element.dispatchEvent(new CustomEvent('lgs1920-timeline-before-drag', {detail: details[0]}))
         element.dispatchEvent(new CustomEvent('lgs1920-timeline-drag', {detail: details[1]}))
@@ -174,5 +223,35 @@ describe('LGS1920TimelineReact', () => {
         element.dispatchEvent(new CustomEvent('lgs1920-timeline-stop', {detail}))
 
         expect(onStop).toHaveBeenCalledWith(detail, expect.any(CustomEvent))
+    })
+
+    it('maps every canonical before and after lifecycle callback', () => {
+        const lifecycle = [
+            ['before-play', 'onBeforePlay'], ['after-play', 'onAfterPlay'],
+            ['before-pause', 'onBeforePause'], ['after-pause', 'onAfterPause'],
+            ['before-stop', 'onBeforeStop'], ['after-stop', 'onAfterStop'],
+            ['before-restart', 'onBeforeRestart'], ['after-restart', 'onAfterRestart'],
+            ['before-seek', 'onBeforeSeek'], ['after-seek', 'onAfterSeek'],
+            ['before-track-visibility-change', 'onBeforeTrackVisibilityChange'],
+            ['after-track-visibility-change', 'onAfterTrackVisibilityChange'],
+            ['before-dblclick', 'onBeforeDblClick'], ['after-dblclick', 'onAfterDblClick'],
+            ['before-add-clip', 'onBeforeAddClip'], ['after-add-clip', 'onAfterAddClip'],
+            ['before-add-track', 'onBeforeAddTrack'], ['after-add-track', 'onAfterAddTrack'],
+            ['before-remove-track', 'onBeforeRemoveTrack'], ['after-remove-track', 'onAfterRemoveTrack'],
+            ['before-reorder', 'onBeforeReorder'], ['after-reorder', 'onAfterReorder'],
+            ['before-track-label-change', 'onBeforeTrackLabelChange'],
+            ['after-track-label-change', 'onAfterTrackLabelChange'],
+            ['before-clip-change', 'onBeforeClipChange'], ['after-clip-change', 'onAfterClipChange'],
+            ['before-range-change', 'onBeforeRangeChange'], ['after-range-change', 'onAfterRangeChange'],
+        ]
+        const callbacks = Object.fromEntries(lifecycle.map(([, propName]) => [propName, vi.fn()]))
+        const {container} = render(<LGS1920TimelineReact timeline={timelineConfig} {...callbacks}/>)
+        const element = container.querySelector('lgs1920-timeline')
+
+        lifecycle.forEach(([name, propName]) => {
+            const detail = {name}
+            element.dispatchEvent(new CustomEvent(`lgs1920-timeline-${name}`, {detail}))
+            expect(callbacks[propName]).toHaveBeenCalledWith(detail, expect.any(CustomEvent))
+        })
     })
 })

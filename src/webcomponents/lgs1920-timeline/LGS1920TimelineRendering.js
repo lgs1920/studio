@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-31
- * Last modified: 2026-09-04
+ * Last modified: 2026-09-06
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,6 +31,7 @@ export const createTimelineRenderer = ({
     resolveClipIcon,
     numericToken,
     getTimelineConfig,
+    allowsHostInteraction,
     getRows,
     getDragState,
     getEditingRowId,
@@ -47,6 +48,8 @@ export const createTimelineRenderer = ({
     globalSlotContent,
     button,
     removeTrack,
+    removeClip,
+    openClipContextMenu,
     beginTrackLabelEdit,
     commitTrackLabelEdit,
     cancelTrackLabelEdit,
@@ -83,7 +86,9 @@ export const createTimelineRenderer = ({
         const dragState = getDragState()
         const isDragging = dragState?.type === 'clip' && dragState.clipId === value.id
         const isResizing = isDragging && dragState.mode === 'resize'
-        const element = createElement('div', `lgs1920-wa-timeline__clip ${resolveColorClasses(value.colorClasses)}${value.visible === false ? ' lgs1920-wa-timeline__clip--hidden' : ''}${trackVisible === false ? ' lgs1920-wa-timeline__clip--track-hidden' : ''}${isDragging ? ' lgs1920-wa-timeline__clip--dragging' : ''}${isResizing ? ' lgs1920-wa-timeline__clip--resizing' : ''}`, {
+        const hostNoDragClass = String(getTimelineConfig().hostNoDragClass ?? '').trim()
+        const hostNoDragClasses = hostNoDragClass ? ` ${hostNoDragClass}` : ''
+        const element = createElement('div', `lgs1920-wa-timeline__clip${hostNoDragClasses} ${resolveColorClasses(value.colorClasses)}${value.visible === false ? ' lgs1920-wa-timeline__clip--hidden' : ''}${trackVisible === false ? ' lgs1920-wa-timeline__clip--track-hidden' : ''}${isDragging ? ' lgs1920-wa-timeline__clip--dragging' : ''}${isResizing ? ' lgs1920-wa-timeline__clip--resizing' : ''}`, {
             part: 'clip',
             id: `lgs1920-timeline-clip-${String(value.id ?? '')}`,
             'data-clip-id': value.id,
@@ -93,10 +98,17 @@ export const createTimelineRenderer = ({
         applyTimelinePaletteStyles(element, value.colorClasses)
         const timeline = getTimelineConfig()
         const interactive = timeline.interactive !== false
-        const editable = timeline.editable !== false && trackEditable !== false
+        const editable = timeline.editable !== false
+            && trackEditable !== false
+            && value.editable !== false
         const movable = interactive && editable
         const resizable = interactive && editable && value.resizable !== false
         if (movable) element.classList.add('lgs1920-wa-timeline__clip--movable')
+        element.setAttribute('tabindex', movable ? '0' : '-1')
+        if (movable) {
+            element.setAttribute('role', 'button')
+            element.setAttribute('aria-keyshortcuts', 'Delete Backspace')
+        }
         element.style.left = `${scaleOffset() + ((start / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth())}px`
         element.style.width = `${Math.max(numericToken('clip-min-width', 8), ((end - start) / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth())}px`
         const preview = createElement('span', 'lgs1920-wa-timeline__clip-preview', {part: 'clip-preview'})
@@ -108,21 +120,92 @@ export const createTimelineRenderer = ({
             clipHandle(value, 'start', resizable),
             contextualSlot('clip-content', value.id, ['clip-content'], preview),
             clipHandle(value, 'end', resizable),
+            createElement('span', 'lgs1920-wa-timeline__clip-duration-overlay', {
+                part: 'clip-duration-overlay',
+                'data-clip-duration-overlay': '',
+                'aria-hidden': 'true',
+                hidden: true,
+            }),
         )
         if (interactive) {
             element.addEventListener('pointerdown', event => {
                 if (event.target.closest('[data-clip-handle]')) return
                 startClipInteraction(event, value.id, 'move')
             })
+            element.addEventListener('contextmenu', event => {
+                if (!movable) return
+                event.preventDefault()
+                event.stopPropagation()
+                openClipContextMenu(value, event)
+            })
             element.addEventListener('dblclick', event => {
-                emit('dblclick', {
+                const detail = {
                     clip: value,
-                    context: {type: 'clip', pisteId: value.trackId ?? null, clipId: value.id},
+                    context: {type: 'clip', trackId: value.trackId ?? null, clipId: value.id},
                     event,
-                })
+                }
+                if (emit('before-dblclick', detail, {cancelable: true}).defaultPrevented) return
+                emit('dblclick', detail)
+                emit('after-dblclick', detail)
+            })
+            element.addEventListener('keydown', event => {
+                if (!movable || !['Backspace', 'Delete'].includes(event.key)) return
+                removeClip(value.id, event)
             })
         }
         return element
+    }
+
+    /**
+     * Create one major ruler unit and its minor subdivisions.
+     *
+     * @param {number} index - Major ruler unit index.
+     * @param {number} majorSeconds - Seconds represented by one major unit.
+     * @param {number} scaleSplitCount - Minor ruler subdivision count.
+     * @returns {DocumentFragment} Ruler unit elements.
+     */
+    const rulerUnit = (index, majorSeconds, scaleSplitCount) => {
+        const fragment = document.createDocumentFragment()
+        for (let split = 1; split < scaleSplitCount; split += 1) {
+            const minor = createElement('span', 'lgs1920-wa-timeline__minor-tick', {
+                part: 'minor-tick',
+                'data-ruler-index': index,
+            })
+            minor.style.left = `${scaleOffset() + ((index + (split / scaleSplitCount)) * scaleWidth())}px`
+            fragment.append(minor)
+        }
+        const tick = createElement('span', `lgs1920-wa-timeline__tick${index === 0 ? ' lgs1920-wa-timeline__tick--origin' : ''}`, {
+            part: 'tick',
+            'data-ruler-index': index,
+        })
+        tick.style.left = `${scaleOffset() + (index * scaleWidth())}px`
+        tick.append(contextualSlot('scale-label', index, 'scale-label', document.createTextNode(formatRulerTime(index * majorSeconds))))
+        fragment.append(tick)
+        return fragment
+    }
+
+    /**
+     * Extend or trim ruler units without replacing the active timeline DOM.
+     *
+     * @param {HTMLElement} ruler - Timeline ruler element.
+     * @param {number} scaleCount - Number of major ruler units.
+     * @param {number} majorSeconds - Seconds represented by one major unit.
+     * @param {number} scaleSplitCount - Minor ruler subdivision count.
+     */
+    const updateRulerDuration = (ruler, scaleCount, majorSeconds, scaleSplitCount) => {
+        if (!ruler) return
+        ruler.querySelectorAll('[part="tick"], [part="minor-tick"]').forEach(element => {
+            if (Number(element.dataset.rulerIndex) > scaleCount) element.remove()
+        })
+        const indexes = [...ruler.querySelectorAll('[part="tick"]')]
+            .map(element => Number(element.dataset.rulerIndex))
+            .filter(Number.isFinite)
+        const currentScaleCount = indexes.length > 0 ? Math.max(...indexes) : -1
+        const insertionPoint = ruler.querySelector('[name="timeline-ruler"]')
+        if (!insertionPoint) return
+        for (let index = currentScaleCount + 1; index <= scaleCount; index += 1) {
+            insertionPoint.before(rulerUnit(index, majorSeconds, scaleSplitCount))
+        }
     }
 
     /**
@@ -202,7 +285,9 @@ export const createTimelineRenderer = ({
         const isRejectedRow = dragState?.type === 'row'
             && dragState.rowId === row.id
             && dragState.dropRejected === true
-        const element = createElement('div', `lgs1920-wa-timeline__legend-row ${resolveColorClasses(row.colorClasses)}${readOnly ? ' lgs1920-wa-timeline__legend-row--read-only' : ' lgs-widget-no-drag'}${row.visible === false ? ' lgs1920-wa-timeline__legend-row--hidden' : ''}${titleDisabled ? ' lgs1920-wa-timeline__legend-row--title-disabled' : ''}${editable ? ' lgs1920-wa-timeline__legend-row--movable' : ''}${dragState?.rowId === row.id ? ' lgs1920-wa-timeline__legend-row--dragging' : ''}${isClipDropTarget ? ' lgs1920-wa-timeline__legend-row--clip-drop-target' : ''}`, {
+        const hostNoDragClass = String(timeline.hostNoDragClass ?? '').trim()
+        const hostNoDragClasses = hostNoDragClass ? ` ${hostNoDragClass}` : ''
+        const element = createElement('div', `lgs1920-wa-timeline__legend-row ${resolveColorClasses(row.colorClasses)}${readOnly ? ' lgs1920-wa-timeline__legend-row--read-only' : hostNoDragClasses}${row.visible === false ? ' lgs1920-wa-timeline__legend-row--hidden' : ''}${titleDisabled ? ' lgs1920-wa-timeline__legend-row--title-disabled' : ''}${editable ? ' lgs1920-wa-timeline__legend-row--movable' : ''}${dragState?.rowId === row.id ? ' lgs1920-wa-timeline__legend-row--dragging' : ''}${isClipDropTarget ? ' lgs1920-wa-timeline__legend-row--clip-drop-target' : ''}`, {
             part: 'legend-row',
             id: `lgs1920-timeline-track-${String(row.id ?? '')}`,
             'data-row-id': row.id,
@@ -224,10 +309,10 @@ export const createTimelineRenderer = ({
             labelElement.addEventListener('input', event => {
                 setEditingLabelValue(event.target.value ?? '')
             })
-            labelElement.addEventListener('change', () => commitTrackLabelEdit())
-            labelElement.addEventListener('blur', () => commitTrackLabelEdit())
+            labelElement.addEventListener('change', event => commitTrackLabelEdit(event))
+            labelElement.addEventListener('blur', event => commitTrackLabelEdit(event))
             labelElement.addEventListener('keydown', event => {
-                if (event.key === 'Enter') commitTrackLabelEdit()
+                if (event.key === 'Enter') commitTrackLabelEdit(event)
                 if (event.key === 'Escape') cancelTrackLabelEdit()
             })
         }
@@ -317,17 +402,7 @@ export const createTimelineRenderer = ({
         canvas.style.width = `${getContentWidth()}px`
         const ruler = createElement('div', 'lgs1920-wa-timeline__ruler', {part: 'ruler'})
         ruler.style.width = `${getContentWidth()}px`
-        for (let index = 0; index <= scaleCount; index += 1) {
-            const tick = createElement('span', `lgs1920-wa-timeline__tick${index === 0 ? ' lgs1920-wa-timeline__tick--origin' : ''}`, {part: 'tick'})
-            tick.style.left = `${scaleOffset() + (index * scaleWidth())}px`
-            tick.append(contextualSlot('scale-label', index, 'scale-label', document.createTextNode(formatRulerTime(index * majorSeconds))))
-            for (let split = 1; split < scaleSplitCount; split += 1) {
-                const minor = createElement('span', 'lgs1920-wa-timeline__minor-tick', {part: 'minor-tick'})
-                minor.style.left = `${scaleOffset() + ((index + (split / scaleSplitCount)) * scaleWidth())}px`
-                ruler.append(minor)
-            }
-            ruler.append(tick)
-        }
+        for (let index = 0; index <= scaleCount; index += 1) ruler.append(rulerUnit(index, majorSeconds, scaleSplitCount))
         ruler.append(
             createElement('slot', '', {name: 'timeline-ruler'}),
             createElement('div', 'lgs1920-wa-timeline__clip-edge-indicator', {
@@ -428,6 +503,7 @@ export const createTimelineRenderer = ({
             surface.addEventListener('keydown', event => handleKeyDown(event))
             surface.addEventListener('pointerdown', event => {
                 if (event.button !== 0 || event.target.closest('.lgs1920-wa-timeline__clip')) return
+                if (allowsHostInteraction()) return
                 setScrubPointerId(event.pointerId)
                 capturePointer(event)
                 addPointerListeners()
@@ -437,5 +513,5 @@ export const createTimelineRenderer = ({
         return surface
     }
 
-    return {clip, clipHandle, legendRow, rangeHandle, surfaceElement}
+    return {clip, clipHandle, legendRow, rangeHandle, surfaceElement, updateRulerDuration}
 }
