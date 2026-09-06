@@ -55,6 +55,7 @@ This is the canonical source for the project's AI-agent and development rules.
 - **Comments:** Production-oriented English comments for critical logic.
 - **Shortcuts:** Any introduced UI shortcut must be added to the dedicated shortcuts documentation.
 - **Testing:** Every feature or fix must be accompanied by relevant tests.
+- **Correction workflow:** Analyze the request and propose a solution first. After explicit validation, implement the solution. Add and refine the relevant tests at the end of the implementation, correcting the code and tests together when required.
 
 ### Source file headers
 
