@@ -82,6 +82,19 @@
     - Shift+ArrowLeft
     - Shift+ArrowRight
   scope: Replay timeline
+- action: Cancel Replay timeline gesture
+  description: Cancels an active clip move, clip resize, track reorder, or range drag and restores the pre-gesture state.
+  id: replay-timeline-cancel-gesture
+  keys:
+    - Escape
+  scope: Replay timeline
+- action: Adjust Replay clip snapping
+  description: During a clip move or resize, Shift selects secondary ruler ticks and Alt temporarily disables snapping to ruler ticks, other clip edges, and the playhead.
+  id: replay-timeline-clip-snapping
+  keys:
+    - Shift+Drag
+    - Alt+Drag
+  scope: Replay timeline
 - action: Resize Replay track legend
   description: Resizes the focused Replay track legend with the native split-panel divider. Arrow keys move it, Shift changes the step, Home and End select the bounds, and Enter collapses or restores the panel.
   id: replay-timeline-split-keyboard
