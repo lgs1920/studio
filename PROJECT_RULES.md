@@ -32,6 +32,7 @@ This is the canonical source for the project's AI-agent and development rules.
 
 - **State Management:** Always use `valtio`. Mapping: `$deepestAttribute` for proxy, `deepestAttribute` for snapshot.
 - **UI:** Strictly use WebAwesome 3 components and FontAwesome. No external CSS libraries.
+- **UI colors:** Whenever a frontend UI color is requested or introduced, use the corresponding color from the Web Awesome palette or design tokens. Do not invent arbitrary color values outside that palette.
 - **Web Awesome first:** Prefer Web Awesome components and their React wrappers whenever a suitable component exists.
 - **Native component events:** Use the native events and APIs of Web Awesome components whenever they provide the required behavior.
 - **Custom behavior:** Prefer native Web Awesome APIs. Use minimal custom handling when necessary to implement the requested behavior and the native API is insufficient.
