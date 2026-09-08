@@ -86,6 +86,7 @@ const STRUCTURAL_CONFIG_KEYS = Object.freeze([
     'legendWidth',
     'hostInteraction',
     'hostNoDragClass',
+    'horizontalFit',
     'colorSwatches',
 ])
 
@@ -353,6 +354,7 @@ export class LGS1920Timeline extends HTMLElement {
         this.#installInputPropagationBlockers()
         window.addEventListener('keydown', this.#handleWindowKeyDown, true)
         this.#render()
+        this.setAttribute('data-ready', '')
     }
 
     /**
@@ -733,7 +735,10 @@ export class LGS1920Timeline extends HTMLElement {
         this.#clipOptions = state.clipOptions === null || state.clipOptions === undefined
             ? null
             : (Array.isArray(state.clipOptions) ? state.clipOptions : [])
-        if (Number.isFinite(Number(state.zoomPercent))) {
+        if (nextProjection?.horizontalFit === true) {
+            this.#horizontalFitActive = true
+        }
+        else if (Number.isFinite(Number(state.zoomPercent))) {
             this.#horizontalFitActive = false
             this.#zoom = this.#clampHorizontalZoom(state.zoomPercent)
         }

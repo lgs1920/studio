@@ -111,6 +111,7 @@ describe('ReplayTimelinePreview', () => {
         expect(container.querySelector('[data-testid="replay-timeline-drag-handle"]')).toBeNull()
         expect(timelineElement.timeline).toMatchObject({
             durationMillis: 4_000,
+            horizontalFit: true,
             editable: true,
             interactive: true,
             collisionPolicy: 'prevent',

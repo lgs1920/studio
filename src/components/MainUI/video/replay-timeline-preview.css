@@ -65,6 +65,10 @@
         --lgs-timeline-layout-min-height: var(--lgs-replay-timeline-layout-min-height);
     }
 
+    lgs1920-timeline:not([data-ready]) {
+        visibility: hidden;
+    }
+
     lgs1920-timeline[data-replay-timeline-debug="host"],
     lgs1920-timeline[data-replay-timeline-debug="surface"] {
         box-sizing: border-box;

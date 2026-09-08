@@ -342,7 +342,7 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false}, r
         frameCount: projection.source.frameCount,
         frameIntervalMillis: projection.source.frameIntervalMs,
         visible: true,
-        zoomPercent: 0,
+        horizontalFit: true,
         legendMinWidth: REPLAY_TIMELINE_UI.legendMinWidth,
         legendWidth: REPLAY_TIMELINE_UI.legendWidth,
         legendMaxWidth: REPLAY_TIMELINE_UI.legendMaxWidth,

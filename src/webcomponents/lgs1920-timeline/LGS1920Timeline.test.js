@@ -116,6 +116,16 @@ describe('lgs1920-timeline Web Component', () => {
         expect(formatRulerTime(3723)).toBe('1:02:03')
     })
 
+    it('opens in controlled horizontal fit mode when requested', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {timeline: {horizontalFit: true}})
+        document.body.append(timeline)
+
+        expect(timeline.shadowRoot.querySelector('[data-surface]').getAttribute('data-zoom-percent')).toBe('-99.9')
+        expect(timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-tools-horizontal-fit"] wa-icon').getAttribute('name'))
+            .toBe('arrow-up-right-and-arrow-down-left-from-center')
+    })
+
     it('emits cancelable before, main, and after events for transport actions', () => {
         const timeline = new LGS1920Timeline()
         const order = []
@@ -546,6 +556,7 @@ describe('lgs1920-timeline Web Component', () => {
         const timeline = new LGS1920Timeline()
         document.body.append(timeline)
 
+        expect(timeline.hasAttribute('data-ready')).toBe(true)
         expect(timeline.hidden).toBe(false)
         expect(timeline.shadowRoot.querySelector('[data-building-overlay]')).not.toBeNull()
 

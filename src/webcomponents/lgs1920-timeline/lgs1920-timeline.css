@@ -29,6 +29,11 @@
     /* Timeline host font size. */
     font-size: var(--wa-font-size-s, 0.875rem);
 
+    /* Hide the host until its first styled layout is installed. */
+    &:not([data-ready]) {
+        visibility: hidden;
+    }
+
     /* Timeline surface background. */
     --lgs-timeline-background: var(--wa-color-surface-raised);
     /* Timeline normal text color. */
