@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-06
+ * Last modified: 2026-09-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -89,6 +89,24 @@ const createPointerEvent = (type, options = {}) => {
 afterEach(() => document.body.replaceChildren())
 
 describe('lgs1920-timeline Web Component', () => {
+    it('applies selectable host interaction before connection', () => {
+        const timeline = new LGS1920Timeline()
+
+        timeline.setAttribute('data-widget-selectable', '')
+
+        expect(timeline.timeline.hostInteraction).toBe('selectable')
+    })
+
+    it('marks click-consuming timeline surfaces as local widget interactions', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline)
+        document.body.append(timeline)
+
+        expect(timeline.shadowRoot.querySelector('[data-surface]').classList.contains('test-no-drag')).toBe(true)
+        expect(timeline.shadowRoot.querySelector('[part="timeline-tools"]').classList.contains('lgs-widget-no-drag')).toBe(true)
+        expect(timeline.shadowRoot.querySelector('[part="transport"]').classList.contains('lgs-widget-no-drag')).toBe(true)
+    })
+
     it('formats ruler labels according to the timeline duration', () => {
         expect(formatRulerTime(0)).toBe('0')
         expect(formatRulerTime(3)).toBe('3')
@@ -524,6 +542,19 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.shadowRoot.querySelector('[data-building-overlay]')).toBeNull()
     })
 
+    it('keeps the host visible while the initial projection is pending', () => {
+        const timeline = new LGS1920Timeline()
+        document.body.append(timeline)
+
+        expect(timeline.hidden).toBe(false)
+        expect(timeline.shadowRoot.querySelector('[data-building-overlay]')).not.toBeNull()
+
+        configureTimeline(timeline)
+
+        expect(timeline.hidden).toBe(false)
+        expect(timeline.shadowRoot.querySelector('[data-building-overlay]')).not.toBeNull()
+    })
+
     it('shows the building overlay only for the initial mount', async () => {
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline)
@@ -671,9 +702,88 @@ describe('lgs1920-timeline Web Component', () => {
 
         const modifiedArrow = new KeyboardEvent('keydown', {key: 'ArrowUp', bubbles: true, cancelable: true, shiftKey: true})
         surface.dispatchEvent(modifiedArrow)
-        expect(modifiedArrow.defaultPrevented).toBe(false)
+        expect(modifiedArrow.defaultPrevented).toBe(true)
         expect(timeline.shadowRoot.querySelector('[data-layout]').style.getPropertyValue('--lgs-timeline-row-height'))
             .toBe('24px')
+    })
+
+    it('uses Shift arrows to jump to range boundaries and track edges', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {
+            timeline: {rangeStartMillis: 2_000, rangeEndMillis: 8_000},
+            currentTimeMillis: 5_000,
+        })
+        document.body.append(timeline)
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        const tracksViewport = timeline.shadowRoot.querySelector('[data-tracks-viewport]')
+        Object.defineProperty(tracksViewport, 'scrollHeight', {configurable: true, value: 600})
+        Object.defineProperty(tracksViewport, 'clientHeight', {configurable: true, value: 200})
+        let scrollTop = 0
+        Object.defineProperty(tracksViewport, 'scrollTop', {
+            configurable: true,
+            get: () => scrollTop,
+            set: value => { scrollTop = value },
+        })
+        expect(tracksViewport.scrollHeight).toBe(600)
+        expect(tracksViewport.clientHeight).toBe(200)
+
+        surface.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowLeft', shiftKey: true, bubbles: true, cancelable: true}))
+        expect(timeline.currentTimeMillis).toBe(2_000)
+        surface.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', shiftKey: true, bubbles: true, cancelable: true}))
+        expect(timeline.currentTimeMillis).toBe(8_000)
+        surface.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowUp', shiftKey: true, bubbles: true, cancelable: true}))
+        expect(tracksViewport.scrollTop).toBe(0)
+        const down = new KeyboardEvent('keydown', {key: 'ArrowDown', shiftKey: true, bubbles: true, cancelable: true})
+        surface.dispatchEvent(down)
+        expect(down.defaultPrevented).toBe(true)
+        expect(tracksViewport.scrollTop).toBe(400)
+    })
+
+    it('handles Shift navigation from the window when the timeline is selected', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {
+            timeline: {
+                keyboardZoomActive: true,
+                rangeStartMillis: 2_000,
+                rangeEndMillis: 8_000,
+            },
+            currentTimeMillis: 5_000,
+        })
+        document.body.append(timeline)
+
+        window.dispatchEvent(new KeyboardEvent('keydown', {
+            key: 'ArrowRight',
+            shiftKey: true,
+            bubbles: true,
+            cancelable: true,
+        }))
+
+        expect(timeline.currentTimeMillis).toBe(8_000)
+    })
+
+    it('applies modifier clicks only on the ruler', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {
+            timeline: {rangeStartMillis: 2_000, rangeEndMillis: 8_000},
+            currentTimeMillis: 5_000,
+        })
+        document.body.append(timeline)
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        const ruler = timeline.shadowRoot.querySelector('[part="ruler"]')
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 1_000, width: 1_000})
+
+        ruler.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, button: 0, clientX: 120}))
+        expect(timeline.currentTimeMillis).toBe(2_500)
+
+        ruler.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, button: 0, clientX: 160, altKey: true}))
+        expect(timeline.timeline.rangeStartMillis).toBe(3_500)
+        ruler.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, button: 0, clientX: 400, altKey: true}))
+        expect(timeline.timeline.rangeStartMillis).toBe(3_500)
+
+        ruler.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, button: 0, clientX: 120, ctrlKey: true}))
+        expect(timeline.timeline.rangeEndMillis).toBe(8_000)
+        ruler.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, button: 0, clientX: 320, ctrlKey: true}))
+        expect(timeline.timeline.rangeEndMillis).toBe(7_500)
     })
 
     it('accepts arrow zoom from the window when the timeline widget is selected', () => {
@@ -1931,7 +2041,7 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.tracks[0].clips).toHaveLength(0)
     })
 
-    it('opens a clip context menu with removal, visibility, extension, and color actions', () => {
+    it('opens a clip context menu with clip management and color actions', () => {
         const timeline = new LGS1920Timeline()
         const visibility = vi.fn()
         const color = vi.fn()
@@ -1952,7 +2062,12 @@ describe('lgs1920-timeline Web Component', () => {
 
         const menu = timeline.shadowRoot.querySelector('[data-testid="lgs1920-timeline-clip-context-menu"]')
         expect(menu).not.toBeNull()
+        expect(menu.hasAttribute('active')).toBe(true)
+        expect(menu.hasAttribute('flip')).toBe(true)
+        expect(menu.hasAttribute('shift')).toBe(true)
         expect(menu.querySelector('[data-testid="lgs1920-wa-clip-menu-remove"]')).not.toBeNull()
+        expect(menu.querySelector('[data-testid="lgs1920-wa-clip-menu-duplicate"]')).not.toBeNull()
+        expect(menu.querySelector('[data-testid="lgs1920-wa-clip-menu-enabled"]')).not.toBeNull()
         expect(menu.querySelector('[data-testid="lgs1920-wa-clip-menu-visibility"]')).not.toBeNull()
         expect(menu.querySelector('[data-testid="lgs1920-wa-clip-menu-extend"]')).not.toBeNull()
         const colorPicker = menu.querySelector('[data-testid="lgs1920-timeline-clip-menu-color"]')
@@ -1969,6 +2084,60 @@ describe('lgs1920-timeline Web Component', () => {
         nextColorPicker.dispatchEvent(new Event('change', {bubbles: true, cancelable: true}))
         expect(color).toHaveBeenCalledOnce()
         expect(timeline.tracks[0].clips[0].colorClasses).toEqual(['wa-neutral', 'wa-neutral-red'])
+    })
+
+    it('applies the standardized keyboard shortcuts to the local timeline', () => {
+        const timeline = new LGS1920Timeline()
+        const play = vi.fn()
+        const pause = vi.fn()
+        const seek = vi.fn()
+        const enabled = vi.fn()
+        configureTimeline(timeline, {
+            currentTimeMillis: 5_000,
+            tracks: [{
+                id: 'main',
+                label: 'Main',
+                clips: [{id: 'clip', label: 'Clip', start: 2, end: 4}],
+            }],
+        })
+        timeline.addEventListener('lgs1920-timeline-play', play)
+        timeline.addEventListener('lgs1920-timeline-pause', pause)
+        timeline.addEventListener('lgs1920-timeline-seek', seek)
+        timeline.addEventListener('lgs1920-timeline-clip-enabled-change', enabled)
+        document.body.append(timeline)
+
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        const space = new KeyboardEvent('keydown', {key: ' ', bubbles: true, cancelable: true})
+        surface.dispatchEvent(space)
+        expect(space.defaultPrevented).toBe(true)
+        expect(timeline.playing).toBe(true)
+        expect(play).toHaveBeenCalledOnce()
+
+        surface.dispatchEvent(new KeyboardEvent('keydown', {key: ' ', bubbles: true, cancelable: true}))
+        expect(timeline.playing).toBe(false)
+        expect(pause).toHaveBeenCalledOnce()
+
+        surface.dispatchEvent(new KeyboardEvent('keydown', {key: 'Home', bubbles: true, cancelable: true}))
+        expect(timeline.currentTimeMillis).toBe(0)
+        surface.dispatchEvent(new KeyboardEvent('keydown', {key: 'End', bubbles: true, cancelable: true}))
+        expect(timeline.currentTimeMillis).toBe(10_000)
+        expect(seek).toHaveBeenCalledTimes(2)
+
+        let clip = timeline.shadowRoot.querySelector('[data-clip-id="clip"]')
+        clip.dispatchEvent(new KeyboardEvent('keydown', {
+            key: 'd',
+            ctrlKey: true,
+            bubbles: true,
+            cancelable: true,
+        }))
+        expect(timeline.tracks[0].clips).toHaveLength(2)
+        expect(timeline.tracks[0].clips[1]).toMatchObject({id: 'clip-copy', start: 4, end: 6})
+
+        clip = timeline.shadowRoot.querySelector('[data-clip-id="clip"]')
+        clip.dispatchEvent(new KeyboardEvent('keydown', {key: 'v', bubbles: true, cancelable: true}))
+        expect(enabled).toHaveBeenCalledOnce()
+        expect(timeline.tracks[0].clips[0].enabled).toBe(false)
+        expect(timeline.shadowRoot.querySelector('[data-clip-id="clip"]').getAttribute('aria-disabled')).toBe('true')
     })
 
     it('extends a clip to the nearest neighbors and timeline boundaries', () => {

@@ -180,6 +180,7 @@ Each clip supports:
 | `icon` | `string` | Font Awesome icon name. |
 | `colorClasses` | `string[]` | Web Awesome color classes. |
 | `visible` | `boolean` | Clip visibility state. |
+| `enabled` | `boolean` | Whether the clip participates in timeline playback. Defaults to `true`. |
 | `editable` | `boolean` | Enables movement and resizing for this clip. Defaults to `true`. |
 | `resizable` | `boolean` | Enables the start and end handles. Defaults to `true`. |
 | `minDuration` | `number` | Minimum clip duration in seconds. |
@@ -482,8 +483,16 @@ configuration to disable this behavior. Hold `Alt` during the gesture to bypass
 all magnets temporarily. `Escape` cancels an active drag or resize and restores
 the original clips, duration, and playback range.
 
-An editable clip can be focused and removed with `Delete` or `Backspace`. The
-component first emits the cancelable `before-remove-clip` event. Calling
+An editable clip can be focused and removed with `Delete` or `Backspace`. Press
+`Mod+D` to duplicate it after its current interval on the same track, or `V` to
+toggle its `enabled` state. A disabled clip remains visible in the editor so it
+can be identified and re-enabled. `Space` toggles local playback when the time
+surface has focus, while `Home` and `End` move the local playhead to the selected
+range boundaries. These keyboard actions update the component projection and
+emit their normal lifecycle events; an embedding application decides whether to
+connect those events to playback or persistence.
+
+The component first emits the cancelable `before-remove-clip` event. Calling
 `event.preventDefault()` from an external listener keeps the clip in place,
 which allows an application to display an asynchronous confirmation dialog.
 After confirmation, the application can apply `event.detail.tracks` to the
@@ -620,6 +629,9 @@ React wrapper maps every suffix to the corresponding `on...` callback.
 | `before-remove-clip` | `lgs1920-timeline-before-remove-clip` | `onBeforeRemoveClip` | Cancelable `{clipId, trackId, clip, tracks, previousTracks, event, data}` |
 | `remove-clip` | `lgs1920-timeline-remove-clip` | `onRemoveClip` | `{clipId, trackId, clip, tracks, previousTracks, event, data}` |
 | `after-remove-clip` | `lgs1920-timeline-after-remove-clip` | `onAfterRemoveClip` | `{clipId, trackId, clip, tracks, previousTracks, event, data}` |
+| `before-clip-enabled-change` | `lgs1920-timeline-before-clip-enabled-change` | `onBeforeClipEnabledChange` | Cancelable `{clipId, trackId, enabled, clip, tracks, previousTracks, event, data}` |
+| `clip-enabled-change` | `lgs1920-timeline-clip-enabled-change` | `onClipEnabledChange` | `{clipId, trackId, enabled, clip, tracks, previousTracks, event, data}` |
+| `after-clip-enabled-change` | `lgs1920-timeline-after-clip-enabled-change` | `onAfterClipEnabledChange` | `{clipId, trackId, enabled, clip, tracks, previousTracks, event, data}` |
 | `before-reorder` | `lgs1920-timeline-before-reorder` | `onBeforeReorder` | Cancelable `{trackIds, tracks, previousTracks, dropIndex, event, data}` |
 | `reorder` | `lgs1920-timeline-reorder` | `onReorder` | `{trackIds, tracks, previousTracks, dropIndex, event, data}` |
 | `after-reorder` | `lgs1920-timeline-after-reorder` | `onAfterReorder` | `{trackIds, tracks, previousTracks, dropIndex, committed, event, data}` |

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-31
- * Last modified: 2026-09-06
+ * Last modified: 2026-09-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -49,6 +49,8 @@ export const createTimelineRenderer = ({
     button,
     removeTrack,
     removeClip,
+    duplicateClip,
+    toggleClipEnabled,
     openClipContextMenu,
     beginTrackLabelEdit,
     commitTrackLabelEdit,
@@ -67,6 +69,7 @@ export const createTimelineRenderer = ({
     capturePointer,
     handleWheel,
     handleKeyDown,
+    handleRulerClick,
     emit,
     setScrubPointerId,
     scaleWidth,
@@ -88,12 +91,13 @@ export const createTimelineRenderer = ({
         const isResizing = isDragging && dragState.mode === 'resize'
         const hostNoDragClass = String(getTimelineConfig().hostNoDragClass ?? '').trim()
         const hostNoDragClasses = hostNoDragClass ? ` ${hostNoDragClass}` : ''
-        const element = createElement('div', `lgs1920-wa-timeline__clip${hostNoDragClasses} ${resolveColorClasses(value.colorClasses)}${value.visible === false ? ' lgs1920-wa-timeline__clip--hidden' : ''}${trackVisible === false ? ' lgs1920-wa-timeline__clip--track-hidden' : ''}${isDragging ? ' lgs1920-wa-timeline__clip--dragging' : ''}${isResizing ? ' lgs1920-wa-timeline__clip--resizing' : ''}`, {
+        const element = createElement('div', `lgs1920-wa-timeline__clip${hostNoDragClasses} ${resolveColorClasses(value.colorClasses)}${value.visible === false ? ' lgs1920-wa-timeline__clip--hidden' : ''}${value.enabled === false ? ' lgs1920-wa-timeline__clip--disabled' : ''}${trackVisible === false ? ' lgs1920-wa-timeline__clip--track-hidden' : ''}${isDragging ? ' lgs1920-wa-timeline__clip--dragging' : ''}${isResizing ? ' lgs1920-wa-timeline__clip--resizing' : ''}`, {
             part: 'clip',
             id: `lgs1920-timeline-clip-${String(value.id ?? '')}`,
             'data-clip-id': value.id,
             'data-clip-kind': value.kind,
             'aria-label': resolveClipLabel(value),
+            'aria-disabled': value.enabled === false ? 'true' : null,
         })
         applyTimelinePaletteStyles(element, value.colorClasses)
         const timeline = getTimelineConfig()
@@ -107,7 +111,7 @@ export const createTimelineRenderer = ({
         element.setAttribute('tabindex', movable ? '0' : '-1')
         if (movable) {
             element.setAttribute('role', 'button')
-            element.setAttribute('aria-keyshortcuts', 'Delete Backspace')
+            element.setAttribute('aria-keyshortcuts', 'Delete Backspace Mod+D V')
         }
         element.style.left = `${scaleOffset() + ((start / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth())}px`
         element.style.width = `${Math.max(numericToken('clip-min-width', 8), ((end - start) / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth())}px`
@@ -149,8 +153,18 @@ export const createTimelineRenderer = ({
                 emit('after-dblclick', detail)
             })
             element.addEventListener('keydown', event => {
-                if (!movable || !['Backspace', 'Delete'].includes(event.key)) return
-                removeClip(value.id, event)
+                if (!movable) return
+                if (['Backspace', 'Delete'].includes(event.key)) {
+                    removeClip(value.id, event)
+                    return
+                }
+                if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'd') {
+                    duplicateClip(value.id, event)
+                    return
+                }
+                if (!event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'v') {
+                    toggleClipEnabled(value.id, event)
+                }
             })
         }
         return element
@@ -389,7 +403,9 @@ export const createTimelineRenderer = ({
      */
     const surfaceElement = (scaleCount, majorSeconds, scaleSplitCount) => {
         const interactive = getTimelineConfig().interactive !== false
-        const surface = createElement('wa-card', 'lgs1920-wa-timeline__surface', {
+        const hostNoDragClass = String(getTimelineConfig().hostNoDragClass ?? '').trim()
+        const hostNoDragClasses = hostNoDragClass ? ` ${hostNoDragClass}` : ''
+        const surface = createElement('wa-card', `lgs1920-wa-timeline__surface${hostNoDragClasses}`, {
             part: 'surface',
             appearance: 'plain',
             'data-surface': '',
@@ -481,6 +497,7 @@ export const createTimelineRenderer = ({
         canvas.append(ruler, tracksViewport, overlay)
         surface.append(canvas)
         if (interactive) {
+            ruler.addEventListener('click', event => handleRulerClick(event))
             surface.addEventListener('pointerdown', event => {
                 if (event.button !== 0 || event.target.closest('.lgs1920-wa-timeline__clip')) return
                 if (event.target.closest('[data-range-handle]')) return

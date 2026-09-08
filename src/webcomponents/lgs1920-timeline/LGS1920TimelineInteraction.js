@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-06
- * Last modified: 2026-09-06
+ * Last modified: 2026-09-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -58,6 +58,19 @@ export const HOST_DRAG_CONTINUATION_EVENT_TYPES = Object.freeze([
 
 export const TIMELINE_ARROW_KEYS = Object.freeze(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'])
 export const TIMELINE_HORIZONTAL_ARROW_KEYS = Object.freeze(['ArrowLeft', 'ArrowRight'])
+export const TIMELINE_KEYBOARD_KEYS = Object.freeze([
+    ...TIMELINE_ARROW_KEYS,
+    'Backspace',
+    'Delete',
+    'End',
+    'Home',
+    'Spacebar',
+    ' ',
+    'd',
+    'D',
+    'v',
+    'V',
+])
 export const TIMELINE_KEYBOARD_EDITABLE_SELECTOR = 'input, textarea, select, wa-input, wa-textarea, wa-select, [contenteditable=""], [contenteditable="true"], [role="textbox"]'
 
 export const EXTERNAL_INTERACTION_CONTINUATION_EVENT_TYPES = Object.freeze([

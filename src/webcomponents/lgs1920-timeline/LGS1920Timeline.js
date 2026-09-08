@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-06
+ * Last modified: 2026-09-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,6 +31,7 @@ import {
     TIMELINE_ARROW_KEYS,
     TIMELINE_HORIZONTAL_ARROW_KEYS,
     TIMELINE_INPUT_EVENT_TYPES,
+    TIMELINE_KEYBOARD_KEYS,
     TIMELINE_KEYBOARD_EDITABLE_SELECTOR,
     HOST_DRAG_CONTINUATION_EVENT_TYPES,
     HOST_DRAG_START_EVENT_TYPES,
@@ -285,6 +286,8 @@ export class LGS1920Timeline extends HTMLElement {
             button: options => this.#button(options),
             removeTrack: (row, event) => this.#removeTrack(row, event),
             removeClip: (clipId, event) => this.#removeClip(clipId, event),
+            duplicateClip: (clipId, event) => this.#duplicateClip(clipId, event),
+            toggleClipEnabled: (clipId, event) => this.#toggleClipEnabled(clipId, event),
             openClipContextMenu: (clip, event) => this.#openClipContextMenu(clip, event),
             beginTrackLabelEdit: row => this.#beginTrackLabelEdit(row),
             commitTrackLabelEdit: event => this.#commitTrackLabelEdit(event),
@@ -303,6 +306,7 @@ export class LGS1920Timeline extends HTMLElement {
             capturePointer: event => this.#capturePointer(event),
             handleWheel: event => this.#handleWheel(event),
             handleKeyDown: event => this.#handleKeyDown(event, true),
+            handleRulerClick: event => this.#handleRulerClick(event),
             emit: (name, detail) => this.#emit(name, detail),
             setScrubPointerId: value => {
                 this.#scrubPointerId = value
@@ -318,7 +322,26 @@ export class LGS1920Timeline extends HTMLElement {
      * @returns {Array<string>} Observed attributes.
      */
     static get observedAttributes() {
-        return []
+        return ['data-widget-selectable']
+    }
+
+    /**
+     * Apply the host interaction mode before React installs external gesture listeners.
+     *
+     * @param {string} name - Changed attribute name.
+     * @param {string|null} previousValue - Previous attribute value.
+     * @param {string|null} value - New attribute value.
+     */
+    attributeChangedCallback(name, previousValue, value) {
+        if (name !== 'data-widget-selectable' || previousValue === value) return
+        const config = {...this.#timelineConfig}
+        if (value === null) delete config.hostInteraction
+        else config.hostInteraction = 'selectable'
+        if (!this.isConnected) {
+            this.#timelineConfig = config
+            return
+        }
+        this.timeline = config
     }
 
     /**
@@ -384,7 +407,10 @@ export class LGS1920Timeline extends HTMLElement {
                 || event.type === 'dragstart'
                 || event.type === 'gotpointercapture'
                 || event.type === 'lostpointercapture')) return
-        if (event.type === 'keydown' && !TIMELINE_ARROW_KEYS.includes(event.key)) return
+        if (event.type === 'keydown') {
+            if (event.target?.closest?.(TIMELINE_KEYBOARD_EDITABLE_SELECTOR)) return
+            if (!TIMELINE_KEYBOARD_KEYS.includes(event.key)) return
+        }
         if (this.#nativeSplitPanelInteractionActive
             && EXTERNAL_INTERACTION_CONTINUATION_EVENT_TYPES.includes(event.type)) return
         if (this.#externalInteractionActive
@@ -1167,9 +1193,12 @@ export class LGS1920Timeline extends HTMLElement {
     #render = () => {
         if (!this.#visible || !this.#projection) {
             this.#cancelBuildingCompletion()
-            this.#building = !this.#initialBuildComplete
+            this.#building = this.#visible
+                && !this.#initialBuildComplete
                 && this.#timelineConfig.showBuildingOverlay !== false
-            this.hidden = true
+            // Keep the host in the layout while the initial projection is pending so
+            // the opaque construction overlay can cover the first incomplete frame.
+            this.hidden = !this.#building && (!this.#visible || !this.#projection)
             this.#finishScrollbarDrag()
             this.#externalInteractionActive = false
             this.#scrollbarsInteractionActive = false
@@ -1497,7 +1526,7 @@ export class LGS1920Timeline extends HTMLElement {
      */
     #playbackControls = () => {
         if (this.#timelineConfig.interactive === false) return null
-        const controls = createElement('div', 'lgs1920-wa-timeline__transport', {
+        const controls = createElement('div', 'lgs1920-wa-timeline__transport lgs-widget-no-drag', {
             part: 'transport',
             'aria-label': 'Timeline transport controls',
         })
@@ -1605,7 +1634,7 @@ export class LGS1920Timeline extends HTMLElement {
      * @returns {HTMLElement} Button element.
      */
     #button = ({iconName, label, testId, iconSlot, iconSlotElement, labelSlot, variant = 'neutral', appearance = 'plain', disabled = false}) => {
-        const button = createElement('wa-button', '', {
+        const button = createElement('wa-button', 'lgs-widget-no-drag', {
             appearance,
             size: 's',
             variant,
@@ -1645,7 +1674,7 @@ export class LGS1920Timeline extends HTMLElement {
      * @returns {HTMLElement} Timeline view controls.
      */
     #timelineTools = () => {
-        const tools = createElement('span', 'lgs1920-wa-timeline__timeline-tools', {
+        const tools = createElement('span', 'lgs1920-wa-timeline__timeline-tools lgs-widget-no-drag', {
             part: 'timeline-tools',
             'aria-label': 'Timeline view tools',
         })
@@ -1948,7 +1977,7 @@ export class LGS1920Timeline extends HTMLElement {
      * @returns {HTMLElement} Popup element.
      */
     #menu = () => {
-        const popup = createElement('wa-popup', 'lgs1920-wa-timeline__popup', {
+        const popup = createElement('wa-popup', 'lgs1920-wa-timeline__popup lgs-widget-no-drag', {
             placement: 'right-start',
             distance: 4,
             active: true,
@@ -1986,12 +2015,16 @@ export class LGS1920Timeline extends HTMLElement {
         if (clipId === null || clipId === undefined) return null
         const entry = this.#clipEditor.findClipEntry(this.#rows, clipId)
         if (!entry || entry.clip.editable === false || !this.#isTrackEditable(entry.row)) return null
-        const popup = createElement('wa-popup', 'lgs1920-wa-timeline__popup lgs1920-wa-timeline__clip-context-menu', {
+        const popup = createElement('wa-popup', 'lgs1920-wa-timeline__popup lgs1920-wa-timeline__clip-context-menu lgs-widget-no-drag', {
             placement: 'right-start',
             distance: 6,
             active: true,
             boundary: 'viewport',
             'data-testid': 'lgs1920-timeline-clip-context-menu',
+            flip: true,
+            shift: true,
+            'flip-fallback-placements': 'left-start bottom-start top-start',
+            'shift-padding': 8,
             part: 'clip-context-menu',
         })
         if (this.#clipContextMenuAnchor) popup.anchor = this.#clipContextMenuAnchor
@@ -2024,6 +2057,18 @@ export class LGS1920Timeline extends HTMLElement {
             label: 'Remove',
             variant: 'danger',
             action: event => this.#removeClip(clipId, event),
+        })
+        addAction({
+            key: 'duplicate',
+            iconName: 'clone',
+            label: 'Duplicate',
+            action: event => this.#duplicateClip(clipId, event),
+        })
+        addAction({
+            key: 'enabled',
+            iconName: entry.clip.enabled === false ? 'toggle-off' : 'toggle-on',
+            label: entry.clip.enabled === false ? 'Enable' : 'Disable',
+            action: event => this.#toggleClipEnabled(clipId, event),
         })
         addAction({
             key: 'visibility',
@@ -2211,6 +2256,53 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
+     * Generate an unused identifier for a duplicated clip.
+     *
+     * @param {string|number} identifier - Original clip identifier.
+     * @returns {string} New clip identifier.
+     */
+    #duplicateClipIdentifier = identifier => {
+        const identifiers = new Set(this.#rows.flatMap(row => (row.actions ?? []).map(clip => String(clip.id))))
+        const base = `${String(identifier)}-copy`
+        let candidate = base
+        let suffix = 2
+        while (identifiers.has(candidate)) {
+            candidate = `${base}-${suffix}`
+            suffix += 1
+        }
+        return candidate
+    }
+
+    /**
+     * Duplicate an editable clip immediately after its current interval.
+     *
+     * @param {string} clipId - Clip identifier.
+     * @param {KeyboardEvent|MouseEvent} event - Triggering interaction event.
+     */
+    #duplicateClip = (clipId, event) => {
+        if (this.#timelineConfig.editable === false) return
+        const entry = this.#clipEditor.findClipEntry(this.#rows, clipId)
+        if (!entry || !this.#isTrackEditable(entry.row) || entry.clip.editable === false) return
+        const {end, duration} = resolveClipInterval(entry.clip)
+        if (duration <= 0) return
+        event?.preventDefault?.()
+        event?.stopPropagation?.()
+        this.#insertClip({
+            key: 'duplicate',
+            label: entry.clip.label ? `Copy of ${entry.clip.label}` : 'Copy',
+            trackId: entry.row.id,
+            start: end,
+            end: end + duration,
+            clip: {
+                ...entry.clip,
+                id: this.#duplicateClipIdentifier(entry.clip.id),
+                start: end,
+                end: end + duration,
+            },
+        }, event)
+    }
+
+    /**
      * Toggle one clip's visibility and emit the controlled change event.
      *
      * @param {string} clipId - Clip identifier.
@@ -2241,6 +2333,39 @@ export class LGS1920Timeline extends HTMLElement {
         this.#emit('clip-visibility-change', {...detail, tracks: this.tracks, data: this.#publicSnapshot()})
         this.#render()
         this.#emitAfter('clip-visibility-change', {...detail, tracks: this.tracks, data: this.#publicSnapshot()})
+    }
+
+    /**
+     * Toggle whether an editable clip participates in timeline playback.
+     *
+     * @param {string} clipId - Clip identifier.
+     * @param {KeyboardEvent|MouseEvent} event - Triggering interaction event.
+     */
+    #toggleClipEnabled = (clipId, event) => {
+        if (this.#timelineConfig.editable === false) return
+        const entry = this.#clipEditor.findClipEntry(this.#rows, clipId)
+        if (!entry || !this.#isTrackEditable(entry.row) || entry.clip.editable === false) return
+        const enabled = entry.clip.enabled === false
+        const clip = {...entry.clip, enabled, trackId: entry.row.id}
+        const nextRows = this.#rows.map(row => row.id === entry.row.id
+            ? {...row, actions: (row.actions ?? []).map(value => value.id === clipId ? {...value, enabled} : value)}
+            : row)
+        const detail = {
+            clipId,
+            trackId: entry.row.id,
+            enabled,
+            clip,
+            tracks: nextRows.map(row => this.#publicTrack(row)),
+            previousTracks: this.tracks,
+            event,
+            data: this.#publicSnapshot(),
+        }
+        if (this.#emitBefore('clip-enabled-change', detail).defaultPrevented) return
+        this.#rows = nextRows
+        this.#localRowsDirty = true
+        this.#emit('clip-enabled-change', {...detail, tracks: this.tracks, data: this.#publicSnapshot()})
+        this.#render()
+        this.#emitAfter('clip-enabled-change', {...detail, tracks: this.tracks, data: this.#publicSnapshot()})
     }
 
     /**
@@ -2557,7 +2682,7 @@ export class LGS1920Timeline extends HTMLElement {
     #scrollbarShell = (view, {role, horizontal, vertical, verticalView = view}) => {
         view.classList.add('view')
         view.setAttribute('data-scroll-view', role)
-        const shell = createElement('div', `lgs-scrollbars lgs1920-wa-timeline__scroll-shell lgs1920-wa-timeline__scroll-shell--${role}`, {
+        const shell = createElement('div', `lgs-scrollbars lgs1920-wa-timeline__scroll-shell lgs1920-wa-timeline__scroll-shell--${role} lgs-widget-no-drag`, {
             'data-scrollbar-shell': role,
         })
         shell.append(view)
@@ -3080,6 +3205,55 @@ export class LGS1920Timeline extends HTMLElement {
         this.#emit('seek', detail)
         this.#updateDynamicState()
         this.#emitAfter('seek', detail)
+    }
+
+    /**
+     * Set one video range boundary from a ruler interaction.
+     *
+     * @param {'start'|'end'} edge - Range boundary to update.
+     * @param {number} timeMillis - Requested boundary position.
+     * @param {MouseEvent} event - Triggering mouse event.
+     */
+    #setRangeBoundaryAtTime = (edge, timeMillis, event) => {
+        if (this.#timelineConfig.editable === false) return
+        const nextStart = edge === 'start'
+            ? Math.min(timeMillis, this.#rangeEndMillis)
+            : this.#rangeStartMillis
+        const nextEnd = edge === 'end'
+            ? Math.max(timeMillis, this.#rangeStartMillis)
+            : this.#rangeEndMillis
+        const detail = this.#rangeChangeDetail(event, nextStart, nextEnd)
+        if (this.#emitBefore('range-change', detail).defaultPrevented) return
+        this.#rangeEndFollowsDuration = false
+        this.#rangeStartMillis = nextStart
+        this.#rangeEndMillis = nextEnd
+        this.#clampCurrentTimeToRange()
+        const committedDetail = this.#rangeChangeDetail(event)
+        this.#emit('range-change', committedDetail)
+        this.#updateDynamicState()
+        this.#emitAfter('range-change', committedDetail)
+    }
+
+    /**
+     * Apply the ruler-only click shortcuts.
+     *
+     * @param {MouseEvent} event - Ruler click event.
+     */
+    #handleRulerClick = event => {
+        if (this.#timelineConfig.interactive === false || event.button !== 0) return
+        event.preventDefault()
+        event.stopPropagation()
+        const durationMillis = this.#durationMillis()
+        const timeMillis = clamp(this.#timeAtClientX(event.clientX) * 1000, 0, durationMillis)
+        if (event.altKey && !event.ctrlKey) {
+            if (timeMillis <= this.#rangeEndMillis) this.#setRangeBoundaryAtTime('start', timeMillis, event)
+            return
+        }
+        if (event.ctrlKey && !event.altKey) {
+            if (timeMillis >= this.#rangeStartMillis) this.#setRangeBoundaryAtTime('end', timeMillis, event)
+            return
+        }
+        if (!event.altKey && !event.ctrlKey) this.#seek(event.clientX, true)
     }
 
     /**
@@ -3891,14 +4065,74 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
+     * Toggle local playback from the canonical Space shortcut.
+     *
+     * @param {KeyboardEvent} event - Triggering keyboard event.
+     * @returns {boolean} Whether the shortcut was handled.
+     */
+    #togglePlayback = event => {
+        if (this.#timelineConfig.interactive === false) return false
+        event.preventDefault()
+        event.stopPropagation()
+        const playing = !this.#playing
+        const action = playing ? 'play' : 'pause'
+        const detail = {
+            source: playing ? 'timeline-keyboard-play' : 'timeline-keyboard-pause',
+            timeMillis: this.#currentTimeMillis,
+            event,
+        }
+        if (!this.#emitAction(action, detail)) return true
+        this.#playing = playing
+        this.#updatePlaybackButton()
+        return true
+    }
+
+    /**
+     * Move the local playhead to one of the selected range boundaries.
+     *
+     * @param {'start'|'end'} boundary - Boundary to select.
+     * @param {KeyboardEvent} event - Triggering keyboard event.
+     * @returns {boolean} Whether the shortcut was handled.
+     */
+    #seekToBoundary = (boundary, event) => {
+        if (this.#timelineConfig.interactive === false) return false
+        event.preventDefault()
+        event.stopPropagation()
+        const timeMillis = boundary === 'start' ? this.#rangeStartMillis : this.#rangeEndMillis
+        const detail = this.#positionDetail({
+            source: boundary === 'start' ? 'timeline-keyboard-home' : 'timeline-keyboard-end',
+            timeMillis,
+            event,
+        })
+        if (this.#emitBefore('seek', detail).defaultPrevented) return true
+        this.#currentTimeMillis = detail.timeMillis
+        this.#emit('seek', detail)
+        this.#updateDynamicState()
+        this.#emitAfter('seek', detail)
+        return true
+    }
+
+    /**
      * Handle keyboard zoom gestures from the timeline surface or window.
      *
      * @param {KeyboardEvent} event - Keyboard event.
      * @param {boolean} fromSurface - Whether the event came from the focused surface.
      */
     #handleKeyDown = (event, fromSurface = false) => {
-        if (!TIMELINE_ARROW_KEYS.includes(event.key)) return
+        if (event.target?.closest?.(TIMELINE_KEYBOARD_EDITABLE_SELECTOR)) return
         if (fromSurface && event.target !== event.currentTarget) return
+        if (!event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+            if (event.key === ' ' || event.key === 'Spacebar') {
+                this.#togglePlayback(event)
+                return
+            }
+            if (event.key === 'Home' || event.key === 'End') {
+                this.#seekToBoundary(event.key === 'Home' ? 'start' : 'end', event)
+                return
+            }
+        }
+        if (!TIMELINE_ARROW_KEYS.includes(event.key)) return
+        if (this.#handleShiftNavigation(event)) return
         if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
         event.preventDefault()
         event.stopPropagation()
@@ -3929,9 +4163,45 @@ export class LGS1920Timeline extends HTMLElement {
             return
         }
         if (event.composedPath?.().includes(this)) return
-        if (this.#timelineConfig.keyboardZoomActive !== true) return
         if (event.target?.closest?.(TIMELINE_KEYBOARD_EDITABLE_SELECTOR)) return
+        if (this.#timelineConfig.keyboardZoomActive !== true) return
+        if (this.#handleShiftNavigation(event)) return
         this.#handleKeyDown(event)
+    }
+
+    /**
+     * Apply Shift-based navigation shortcuts while the timeline owns focus.
+     *
+     * @param {KeyboardEvent} event - Keyboard event.
+     * @returns {boolean} Whether the event was handled.
+     */
+    #handleShiftNavigation = event => {
+        if (!event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) return false
+        if (!TIMELINE_ARROW_KEYS.includes(event.key)) return false
+        event.preventDefault()
+        event.stopPropagation()
+        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+            const timeMillis = event.key === 'ArrowLeft' ? this.#rangeStartMillis : this.#rangeEndMillis
+            const detail = {
+                timeMillis,
+                progress: this.#durationMillis() > 0 ? timeMillis / this.#durationMillis() : 0,
+                settled: true,
+                event,
+            }
+            if (this.#emitBefore('seek', detail).defaultPrevented) return true
+            this.#currentTimeMillis = timeMillis
+            this.#emit('seek', detail)
+            this.#updateDynamicState()
+            this.#emitAfter('seek', detail)
+            return true
+        }
+        if (this.#tracksViewport) {
+            this.#tracksViewport.scrollTop = event.key === 'ArrowUp'
+                ? 0
+                : Math.max(0, this.#tracksViewport.scrollHeight - this.#tracksViewport.clientHeight)
+            this.#updateLegendScroll()
+        }
+        return true
     }
 
     /**

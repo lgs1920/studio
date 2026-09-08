@@ -53,6 +53,39 @@
     - ArrowRight
   platform: macOS / Windows / Linux
   scope: Replay timeline
+- action: Play or pause Replay timeline
+  description: Toggles local timeline playback with the focused Replay timeline. The shortcut changes only the timeline projection until a playback adapter is connected.
+  id: replay-timeline-playback-keyboard
+  keys:
+    - Space
+  scope: Replay timeline
+- action: Go to Replay range boundary
+  description: With the Replay timeline focused, Home moves the local playhead to the range start and End moves it to the range end.
+  id: replay-timeline-boundary-keyboard
+  keys:
+    - Home
+    - End
+  scope: Replay timeline
+- action: Remove focused Replay clip
+  description: Removes the focused editable clip from the local timeline projection.
+  id: replay-timeline-clip-remove-keyboard
+  keys:
+    - Delete
+    - Backspace
+  scope: Replay timeline
+- action: Duplicate focused Replay clip
+  description: Duplicates the focused editable clip after its current interval on the same track when the destination interval is available.
+  id: replay-timeline-clip-duplicate-keyboard
+  keys:
+    - Mod+D
+  platform: macOS / Windows / Linux
+  scope: Replay timeline
+- action: Enable or disable focused Replay clip
+  description: Toggles the enabled state of the focused clip. Disabled clips remain visible for editing but do not participate in timeline playback when an execution adapter is connected.
+  id: replay-timeline-clip-enabled-keyboard
+  keys:
+    - V
+  scope: Replay timeline
 - action: Move Replay playhead
   description: Moves the focused Replay playhead by keyboardStepSeconds, or ten times that step with Shift. Alt+ArrowRight selects the range minimum and Alt+ArrowLeft selects the range maximum.
   id: replay-timeline-playhead-keyboard
@@ -63,6 +96,23 @@
     - Shift+ArrowRight
     - Alt+ArrowLeft
     - Alt+ArrowRight
+  scope: Replay timeline
+- action: Set Replay position from the ruler
+  description: In the ruler only, a click moves the live cursor, Alt+Click moves the range start when it does not pass the stop, and Ctrl+Click moves the range stop when it does not precede the start.
+  id: replay-timeline-ruler-click
+  keys:
+    - Click
+    - Alt+Click
+    - Ctrl+Click
+  scope: Replay timeline
+- action: Jump inside the Replay timeline
+  description: With the timeline focused, Shift+ArrowLeft moves the live cursor to the range start, Shift+ArrowRight moves it to the range stop, Shift+ArrowUp scrolls to the first track, and Shift+ArrowDown scrolls to the last track.
+  id: replay-timeline-shift-navigation
+  keys:
+    - Shift+ArrowLeft
+    - Shift+ArrowRight
+    - Shift+ArrowUp
+    - Shift+ArrowDown
   scope: Replay timeline
 - action: Move Replay range boundary
   description: Moves the focused Replay range start or end boundary by keyboardStepSeconds, or ten times that step with Shift.
