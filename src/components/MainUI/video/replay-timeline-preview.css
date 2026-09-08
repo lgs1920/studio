@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-03
+ * Last modified: 2026-09-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -63,6 +63,24 @@
         --lgs-timeline-min-height: var(--lgs-replay-timeline-min-height);
         /* Keep the inner timeline layout below the reserved drag area. */
         --lgs-timeline-layout-min-height: var(--lgs-replay-timeline-layout-min-height);
+    }
+
+    lgs1920-timeline[data-replay-timeline-debug="host"],
+    lgs1920-timeline[data-replay-timeline-debug="surface"] {
+        box-sizing: border-box;
+        border: 2px dashed var(--wa-color-brand-fill-loud, #2563eb);
+        background: color-mix(in srgb, var(--wa-color-brand-fill-loud, #2563eb) 8%, transparent);
+    }
+
+    .replay-timeline-preview__empty-debug {
+        box-sizing: border-box;
+        display: block;
+        width: 100%;
+        height: 100%;
+        min-width: var(--lgs-replay-timeline-min-width);
+        min-height: var(--lgs-replay-timeline-min-height);
+        border: 2px dashed var(--wa-color-brand-fill-loud, #2563eb);
+        background: color-mix(in srgb, var(--wa-color-brand-fill-loud, #2563eb) 8%, transparent);
     }
 
     lgs1920-timeline::part(top) {

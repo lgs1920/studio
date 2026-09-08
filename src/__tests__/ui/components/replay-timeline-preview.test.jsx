@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-06
+ * Last modified: 2026-09-08
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {cleanup, render, waitFor} from '@testing-library/react'
-import {createRef} from 'react'
+import {createRef, Profiler} from 'react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {proxy} from 'valtio'
 import {proxyMap} from 'valtio/utils'
@@ -105,9 +105,10 @@ describe('ReplayTimelinePreview', () => {
         const timelineElement = container.querySelector('lgs1920-timeline')
 
         expect(timelineElement).not.toBeNull()
-        expect(timelineElement.hasAttribute('data-widget-selectable')).toBe(false)
+        expect(timelineElement.hasAttribute('data-widget-selectable')).toBe(true)
         expect(timelineElement.parentElement.getAttribute('data-widget-capture')).toBe('exclude')
         expect(timelineElement.className).toBe('')
+        expect(container.querySelector('[data-testid="replay-timeline-drag-handle"]')).toBeNull()
         expect(timelineElement.timeline).toMatchObject({
             durationMillis: 4_000,
             editable: true,
@@ -130,7 +131,7 @@ describe('ReplayTimelinePreview', () => {
         expect(container.querySelector('[slot="custom-menu"] [data-testid="video-recording-settings-toolbar"]')).not.toBeNull()
         expect(timelineElement.querySelector('[slot="legend-ruler"]')).toBeNull()
         expect(timelineElement.playing).toBe(false)
-        expect(timelineElement.clipOptions).toBeNull()
+        expect(timelineElement.clipOptions).toBeUndefined()
         expect(timelineElement.tracks.map(track => track.id)).toEqual([
             'dynamic-stats-widget',
             'journey-stats-widget',
@@ -157,8 +158,14 @@ describe('ReplayTimelinePreview', () => {
     })
 
     it('updates only the current time when the published Replay frame changes', async () => {
-        const {container} = render(<ReplayTimelinePreview/>)
+        let commits = 0
+        const {container} = render(
+            <Profiler id="replay-timeline" onRender={() => { commits += 1 }}>
+                <ReplayTimelinePreview/>
+            </Profiler>,
+        )
         const timelineElement = container.querySelector('lgs1920-timeline')
+        const initialCommits = commits
         const initialTimeline = timelineElement.timeline
         const initialTracks = timelineElement.tracks
         const initialClipOptions = timelineElement.clipOptions
@@ -198,8 +205,11 @@ describe('ReplayTimelinePreview', () => {
         })
 
         globalThis.lgs.stores.replay.dynamicFrameState = {frameTimeMs: 2_000}
+        globalThis.lgs.stores.replay.playing = true
 
         await waitFor(() => expect(currentTimeMillis).toBe(2_000))
+        expect(timelineElement.playing).toBe(true)
+        expect(commits).toBe(initialCommits)
         expect(timelineAssignments).toBe(0)
         expect(trackAssignments).toBe(0)
         expect(clipOptionAssignments).toBe(0)
@@ -230,6 +240,7 @@ describe('ReplayTimelinePreview', () => {
         const {container} = render(<ReplayTimelinePreview/>)
         const timelineElement = container.querySelector('lgs1920-timeline')
 
+        timelineElement.currentTimeMillis = 2_500
         timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-seek', {
             bubbles: true,
             detail: {timeMillis: 2_500},
@@ -241,6 +252,43 @@ describe('ReplayTimelinePreview', () => {
         })
 
         await waitFor(() => expect(timelineElement.currentTimeMillis).toBe(2_500))
+    })
+
+    it('does not reassign the timeline when a local track event is emitted', () => {
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+        const initialTimeline = timelineElement.timeline
+        const initialTracks = timelineElement.tracks
+        let timelineAssignments = 0
+        let trackAssignments = 0
+        Object.defineProperties(timelineElement, {
+            timeline: {
+                configurable: true,
+                get: () => initialTimeline,
+                set: () => {
+                    timelineAssignments += 1
+                },
+            },
+            tracks: {
+                configurable: true,
+                get: () => initialTracks,
+                set: () => {
+                    trackAssignments += 1
+                },
+            },
+        })
+
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-after-clip-change', {
+            detail: {tracks: initialTracks, committed: true},
+        }))
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-after-reorder', {
+            detail: {trackIds: initialTracks.map(track => track.id), tracks: initialTracks},
+        }))
+
+        expect(timelineAssignments).toBe(0)
+        expect(trackAssignments).toBe(0)
+        expect(globalThis.__.ui.widgetManager.updateWidgetGroups).not.toHaveBeenCalled()
+        expect(globalThis.__.ui.widgetManager.reorderWidgets).not.toHaveBeenCalled()
     })
 
     it('coordinates the external widget drag and resize lifecycle with the timeline host', () => {
@@ -346,7 +394,7 @@ describe('ReplayTimelinePreview', () => {
         expect(tracks.every(track => !('movable' in track))).toBe(true)
     })
 
-    it('persists a group when a timeline track contains multiple widget clips', async () => {
+    it('does not write widget groups when a timeline track contains multiple widget clips', async () => {
         globalThis.lgs.settings.widgets['text-widget'] = {
             name: 'Text',
             icon: 'font',
@@ -380,14 +428,11 @@ describe('ReplayTimelinePreview', () => {
             detail: {tracks},
         }))
 
-        await waitFor(() => expect(globalThis.__.ui.widgetManager.updateWidgetGroups).toHaveBeenCalledWith(
-            expect.any(Map),
-        ))
-        const updates = globalThis.__.ui.widgetManager.updateWidgetGroups.mock.calls[0][0]
-        expect(updates.get('text-widget#one')).toBe('text-widget#one')
+        await waitFor(() => expect(globalThis.__.ui.widgetManager.updateWidgetGroups).not.toHaveBeenCalled())
+        expect(globalThis.__.ui.widgetManager.reorderWidgets).not.toHaveBeenCalled()
     })
 
-    it('replaces a group with standalone widgets when one member loses all clips', async () => {
+    it('does not replace widget groups when a member loses all clips in the timeline', async () => {
         globalThis.lgs.settings.widgets['text-widget'] = {
             name: 'Text',
             icon: 'font',
@@ -416,12 +461,8 @@ describe('ReplayTimelinePreview', () => {
             detail: {tracks},
         }))
 
-        await waitFor(() => expect(globalThis.__.ui.widgetManager.updateWidgetGroups).toHaveBeenCalledWith(
-            expect.any(Map),
-        ))
-        const updates = globalThis.__.ui.widgetManager.updateWidgetGroups.mock.calls[0][0]
-        expect(updates.get('text-widget#one')).toBeNull()
-        expect(updates.get('text-widget#two')).toBeNull()
+        await waitFor(() => expect(globalThis.__.ui.widgetManager.updateWidgetGroups).not.toHaveBeenCalled())
+        expect(globalThis.__.ui.widgetManager.reorderWidgets).not.toHaveBeenCalled()
     })
 
     it('keeps a clip resize when a new Replay projection is rendered', async () => {
@@ -443,7 +484,8 @@ describe('ReplayTimelinePreview', () => {
         timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-after-clip-change', {
             detail: {tracks: editedTracks, committed: true},
         }))
-        await waitFor(() => expect(timelineElement.tracks.find(track => track.id === 'text-widget#one').clips[0].end).toBe(2))
+        timelineElement.tracks = editedTracks
+        expect(timelineElement.tracks.find(track => track.id === 'text-widget#one').clips[0].end).toBe(2)
 
         globalThis.lgs.stores.replay.dynamicFrameState = {frameTimeMs: 2_000}
         await waitFor(() => expect(timelineElement.tracks.find(track => track.id === 'text-widget#one').clips[0].end).toBe(2))
@@ -466,6 +508,7 @@ describe('ReplayTimelinePreview', () => {
         timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-after-add-track', {
             detail: {tracks: orderedTracks, committed: true},
         }))
+        timelineElement.tracks = orderedTracks
         await waitFor(() => expect(timelineElement.tracks.map(track => track.id)).toEqual([
             'track-1',
             'dynamic-stats-widget',
@@ -476,6 +519,7 @@ describe('ReplayTimelinePreview', () => {
         timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-after-clip-change', {
             detail: {tracks: orderedTracks, committed: true},
         }))
+        timelineElement.tracks = orderedTracks
         globalThis.lgs.stores.replay.dynamicFrameState = {frameTimeMs: 2_000}
 
         await waitFor(() => expect(timelineElement.tracks.map(track => track.id)).toEqual([
@@ -492,6 +536,7 @@ describe('ReplayTimelinePreview', () => {
                 committed: true,
             },
         }))
+        timelineElement.tracks = orderedTracks.slice(1)
         await waitFor(() => expect(timelineElement.tracks.map(track => track.id)).toEqual([
             'dynamic-stats-widget',
             'journey-stats-widget',
@@ -514,6 +559,7 @@ describe('ReplayTimelinePreview', () => {
         timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-add-track', {
             detail: {tracks, track: createdTrack, trackId: createdTrack.id},
         }))
+        timelineElement.tracks = tracks
 
         await waitFor(() => expect(timelineElement.tracks.map(track => track.id)).toEqual([
             'track-1',

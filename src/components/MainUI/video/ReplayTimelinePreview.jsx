@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-06
+ * Last modified: 2026-09-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,10 +16,14 @@
 
 /**
  * Replay Timeline preview for linked video preparation.
+ *
+ * The application provides the initial widget and clip projection. Timeline
+ * edits remain local to the timeline until an explicit output adapter is
+ * introduced.
  */
 
-import {forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState} from 'react'
-import {useSnapshot} from 'valtio'
+import {forwardRef, useEffect, useImperativeHandle, useMemo, useRef} from 'react'
+import {subscribe, useSnapshot} from 'valtio'
 import {
     CREDITS_WIDGET,
     LOGO_WIDGET,
@@ -34,10 +38,7 @@ import {
     toReplayTimelineEditorData,
 } from '@Core/ui/replay/ReplayPreparationTimeline'
 import {
-    expandTimelineTrackOrder,
     groupWidgetEntries,
-    resolveWidgetGroupLabelsFromTracks,
-    resolveWidgetGroupUpdatesFromTracks,
 } from '@Core/ui/widget-manager/WidgetGroupUtils'
 import {useOptionalSnapshot} from '@Utils/ValtioUtils'
 import '../../../webcomponents/lgs1920-timeline/LGS1920Timeline.js'
@@ -45,7 +46,16 @@ import './replay-timeline-preview.css'
 
 const DEFAULT_REPLAY_DURATION_MILLIS = 60_000
 const REPLAY_CAPTURE_FPS = [30, 45, 60, 15]
-const EMPTY_TIMELINE_EDITS = Object.freeze({})
+
+const getReplayTimelineDebugStage = () => {
+    if (typeof window !== 'undefined') {
+        const parameters = new URLSearchParams(window.location.search)
+        if (parameters.get('lgs-empty-timeline') === '1') return 'widget'
+        const requestedStage = parameters.get('lgs-timeline-stage')
+        if (['host', 'surface', 'track', 'clip', 'data', 'full'].includes(requestedStage)) return requestedStage
+    }
+    return 'full'
+}
 
 /**
  * Resolve the clip configuration used by the Replay runtime before playback.
@@ -119,6 +129,15 @@ const resolveCurrentTimeMillis = (replay, projection) => {
     const timeMillis = Number(frame?.frameTimeMs ?? frame?.phase?.frameTimeMs ?? 0)
     return Math.max(0, Math.min(projection.durationMillis, Number.isFinite(timeMillis) ? timeMillis : 0))
 }
+
+/**
+ * Check whether Replay has a published frame that can replace the local time.
+ *
+ * @param {Object} replay - Replay store.
+ * @returns {boolean} Whether a canonical frame is available.
+ */
+const hasPublishedReplayFrame = replay => replay?.dynamicFrameState != null
+    || replay?.resolvedFrameState != null
 
 /**
  * Resolve a widget definition from the loaded settings or registry.
@@ -267,57 +286,6 @@ const toDisplayTracks = rows => rows.map(row => ({
 }))
 
 /**
- * Apply transient timeline edits to the canonical Replay projection.
- *
- * The projection remains the source of truth. These edits only bridge the
- * controlled Web Component until Replay publishes an updated preparation
- * snapshot, preventing a React rebuild from erasing an active edit.
- *
- * @param {Array} baseTracks - Canonical display tracks.
- * @param {Object} edits - Track edits keyed by track identifier.
- * @param {Array|null} [order=null] - Most recent rendered track order.
- * @returns {Array} Display tracks with local edits applied.
- */
-const applyTimelineEdits = (baseTracks, edits, order = null) => {
-    const baseById = new Map(baseTracks.map(track => [track.id, track]))
-    const editedEntries = Object.entries(edits).filter(([trackId, edit]) => (
-        baseById.has(trackId)
-        || edit?.kind === 'track'
-        || edit?.autoNumbered === true
-    ))
-    const editedIds = editedEntries.map(([trackId]) => trackId)
-    const editedById = new Map(editedEntries)
-    const availableIds = new Set([...baseById.keys(), ...editedById.keys()])
-    const requestedOrder = Array.isArray(order) && order.length > 0
-        ? order
-        : [...baseTracks.map(track => track.id), ...editedIds]
-    const merged = []
-    const includedIds = new Set()
-    requestedOrder.forEach(trackId => {
-        if (!availableIds.has(trackId) || includedIds.has(trackId)) return
-        const baseTrack = baseById.get(trackId)
-        const editedTrack = editedById.get(trackId)
-        merged.push(baseTrack && editedTrack ? {...baseTrack, ...editedTrack} : (editedTrack ?? baseTrack))
-        includedIds.add(trackId)
-    })
-    baseTracks.forEach(track => {
-        if (includedIds.has(track.id)) return
-        merged.push(editedById.has(track.id) ? {...track, ...editedById.get(track.id)} : track)
-        includedIds.add(track.id)
-    })
-    editedIds.forEach(trackId => {
-        if (includedIds.has(trackId)) return
-        merged.push(editedById.get(trackId))
-        includedIds.add(trackId)
-    })
-    const fixedIds = new Set(baseTracks.filter(track => track.id === 'replay').map(track => track.id))
-    if (fixedIds.size === 0) return merged
-    const fixed = merged.filter(track => fixedIds.has(track.id))
-    const movable = merged.filter(track => !fixedIds.has(track.id))
-    return [...movable, ...fixed]
-}
-
-/**
  * Replay Timeline preview component.
  *
  * Replay remains the owner of preparation state and playback. The Web
@@ -338,6 +306,7 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false}, r
     const _timeline = useRef(null)
     const journey = main?.theJourney ?? lgs.theJourney
     const widgetOrder = useMemo(() => resolveVideoWidgetOrder(widgetList, widgetSettings), [widgetList, widgetSettings])
+
     const linkedPreparation = video.editing === true
                                && video.timelinePreviewActive === true
                                && replay.recordingSync === true
@@ -367,20 +336,8 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false}, r
         widgetOrder,
     }), [journey, projectionReplay, projectionReplaySettings, video.fps, widgetOrder])
     const editorData = useMemo(() => toReplayTimelineEditorData(projection), [projection])
-    const [timelineState, setTimelineState] = useState(() => ({
-        projectionSignature: projection.signature,
-        durationMillis: projection.durationMillis,
-        edits: {},
-        trackOrder: null,
-    }))
-    const hasCurrentTimelineState = timelineState.projectionSignature === projection.signature
-    const timelineDurationMillis = hasCurrentTimelineState
-        ? timelineState.durationMillis
-        : projection.durationMillis
-    const timelineEdits = hasCurrentTimelineState ? timelineState.edits : EMPTY_TIMELINE_EDITS
-    const timelineTrackOrder = hasCurrentTimelineState ? timelineState.trackOrder : null
     const timeline = useMemo(() => ({
-        durationMillis: Math.max(projection.durationMillis, timelineDurationMillis),
+        durationMillis: projection.durationMillis,
         fps: projection.fps,
         frameCount: projection.source.frameCount,
         frameIntervalMillis: projection.source.frameIntervalMs,
@@ -390,7 +347,7 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false}, r
         legendWidth: REPLAY_TIMELINE_UI.legendWidth,
         legendMaxWidth: REPLAY_TIMELINE_UI.legendMaxWidth,
         rangeStartMillis: 0,
-        rangeEndMillis: Math.max(projection.durationMillis, timelineDurationMillis),
+        rangeEndMillis: projection.durationMillis,
         editable: true,
         interactive: true,
         collisionPolicy: 'prevent',
@@ -401,22 +358,9 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false}, r
         colorSwatches: REPLAY_TIMELINE_COLOR_SWATCHES,
         hostInteraction: 'selectable',
         hostNoDragClass: 'lgs-widget-no-drag',
-    }), [keyboardZoomActive, projection.durationMillis, projection.fps, projection.source.frameCount, projection.source.frameIntervalMs, timelineDurationMillis])
+    }), [keyboardZoomActive, projection.durationMillis, projection.fps, projection.source.frameCount, projection.source.frameIntervalMs])
     const baseTracks = useMemo(() => toDisplayTracks(editorData), [editorData])
-    const tracks = useMemo(
-        () => applyTimelineEdits(baseTracks, timelineEdits, timelineTrackOrder),
-        [baseTracks, timelineEdits, timelineTrackOrder],
-    )
-    const currentTimeMillis = resolveCurrentTimeMillis(replay, projection)
-    const publishedFrameTime = replay?.dynamicFrameState?.frameTimeMs
-        ?? replay?.resolvedFrameState?.frameTimeMs
-        ?? replay?.resolvedFrameState?.phase?.frameTimeMs
-    const hasPublishedFrameTime = Number.isFinite(Number(publishedFrameTime))
-    const [localTimelineTimeMillis, setLocalTimelineTimeMillis] = useState(() => currentTimeMillis)
-    const stableCurrentTimeMillis = hasPublishedFrameTime
-        ? currentTimeMillis
-        : (localTimelineTimeMillis ?? currentTimeMillis)
-    const isPlaying = replay.playing === true
+    const tracks = baseTracks
 
     useImperativeHandle(ref, () => ({
         handleResize: () => {
@@ -433,138 +377,61 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false}, r
 
     useEffect(() => {
         const element = _timeline.current
-        if (!linkedPreparation || !element) {
+        const debugStage = getReplayTimelineDebugStage()
+        if (!linkedPreparation || !element || !['surface', 'track', 'clip', 'data', 'full'].includes(debugStage)) {
             return
         }
 
+        if (['surface', 'track', 'clip', 'data'].includes(debugStage)) {
+            element.timeline = {...timeline, showBuildingOverlay: false}
+            element.tracks = debugStage === 'data'
+                ? tracks
+                : debugStage === 'surface'
+                    ? []
+                    : [{
+                        id:       'debug-track',
+                        label:    'Debug track',
+                        editable: true,
+                        clips:    debugStage === 'clip'
+                            ? [{id: 'debug-clip', kind: 'video', label: 'Debug clip', start: 0, end: 2}]
+                            : [],
+                    }]
+            element.currentTimeMillis = 0
+            return
+        }
+
+        const replayStore = lgs.stores.replay
+        const localTimeMillis = element.currentTimeMillis
         element.timeline = timeline
         element.tracks = tracks
-        element.clipOptions = null
-        __.ui.widgetManager?.updateWidgetGroupLabels?.(
-            resolveWidgetGroupLabelsFromTracks(tracks),
-        )
-    }, [linkedPreparation, timeline, tracks])
+        if (hasPublishedReplayFrame(replayStore)) {
+            element.currentTimeMillis = resolveCurrentTimeMillis(replayStore, projection)
+        } else {
+            element.currentTimeMillis = localTimeMillis
+        }
+    }, [linkedPreparation, projection, timeline, tracks])
 
     useEffect(() => {
         const element = _timeline.current
-        if (!linkedPreparation || !element) {
-            return
-        }
+        if (!linkedPreparation || !element || getReplayTimelineDebugStage() !== 'full') return undefined
+        const projectionDurationMillis = projection.durationMillis
 
-        const handleTimelineTracksChange = event => {
-            const changedTracks = event.detail?.tracks ?? []
-            const changedDuration = Number(event.detail?.durationMillis)
-            setTimelineState(previous => {
-                const base = previous.projectionSignature === projection.signature
-                    ? previous
-                    : {
-                        projectionSignature: projection.signature,
-                        durationMillis: projection.durationMillis,
-                        edits: {},
-                        trackOrder: null,
-                    }
-                const next = {...base}
-                if (Number.isFinite(changedDuration) && changedDuration > 0) {
-                    next.durationMillis = Math.max(base.durationMillis, changedDuration)
-                }
-                if (changedTracks.length > 0 && event.detail?.committed !== false) {
-                    next.trackOrder = changedTracks.map(track => track.id)
-                    next.edits = {...base.edits}
-                    changedTracks.forEach(track => {
-                        next.edits[track.id] = {
-                            ...track,
-                            clips: track.clips ?? [],
-                        }
-                    })
-                    if (event.type.endsWith('after-remove-track')) {
-                        delete next.edits[event.detail?.trackId]
-                    }
-                }
-                return next
-            })
-            const updates = resolveWidgetGroupUpdatesFromTracks(changedTracks, widgetList)
-            const labels = resolveWidgetGroupLabelsFromTracks(changedTracks, updates)
-            const widgetManager = __.ui.widgetManager
-            if (updates.size > 0) {
-                void Promise.resolve(widgetManager?.updateWidgetGroups?.(updates))
-                    .then(() => widgetManager?.updateWidgetGroupLabels?.(labels))
-                return
-            }
-            widgetManager?.updateWidgetGroupLabels?.(labels)
-        }
-        const handleTimelineReorder = event => {
-            const trackIds = event.detail?.trackIds
-            if (Array.isArray(trackIds) && trackIds.length > 0) {
-                setTimelineState(previous => {
-                    const base = previous.projectionSignature === projection.signature
-                        ? previous
-                        : {
-                            projectionSignature: projection.signature,
-                            durationMillis: projection.durationMillis,
-                            edits: {},
-                            trackOrder: null,
-                        }
-                    return {...base, trackOrder: trackIds}
+        const syncPlayback = () => {
+            const replayStore = lgs.stores.replay
+            if (hasPublishedReplayFrame(replayStore)) {
+                element.currentTimeMillis = resolveCurrentTimeMillis(replayStore, {
+                    durationMillis: projectionDurationMillis,
                 })
             }
-            const orderedWidgetIds = expandTimelineTrackOrder(event.detail?.trackIds, widgetList)
-            if (orderedWidgetIds.length > 0) {
-                void __.ui.widgetManager?.reorderWidgets?.(orderedWidgetIds)
-            }
+            element.playing = replayStore.playing === true
         }
-        element.addEventListener('lgs1920-timeline-add-track', handleTimelineTracksChange)
-        element.addEventListener('lgs1920-timeline-after-clip-change', handleTimelineTracksChange)
-        element.addEventListener('lgs1920-timeline-after-remove-clip', handleTimelineTracksChange)
-        element.addEventListener('lgs1920-timeline-after-add-clip', handleTimelineTracksChange)
-        element.addEventListener('lgs1920-timeline-after-clip-extend', handleTimelineTracksChange)
-        element.addEventListener('lgs1920-timeline-after-clip-visibility-change', handleTimelineTracksChange)
-        element.addEventListener('lgs1920-timeline-after-clip-color-change', handleTimelineTracksChange)
-        element.addEventListener('lgs1920-timeline-after-add-track', handleTimelineTracksChange)
-        element.addEventListener('lgs1920-timeline-after-remove-track', handleTimelineTracksChange)
-        element.addEventListener('lgs1920-timeline-after-track-label-change', handleTimelineTracksChange)
-        element.addEventListener('lgs1920-timeline-after-reorder', handleTimelineReorder)
 
-        return () => {
-            element.removeEventListener('lgs1920-timeline-add-track', handleTimelineTracksChange)
-            element.removeEventListener('lgs1920-timeline-after-clip-change', handleTimelineTracksChange)
-            element.removeEventListener('lgs1920-timeline-after-remove-clip', handleTimelineTracksChange)
-            element.removeEventListener('lgs1920-timeline-after-add-clip', handleTimelineTracksChange)
-            element.removeEventListener('lgs1920-timeline-after-clip-extend', handleTimelineTracksChange)
-            element.removeEventListener('lgs1920-timeline-after-clip-visibility-change', handleTimelineTracksChange)
-            element.removeEventListener('lgs1920-timeline-after-clip-color-change', handleTimelineTracksChange)
-            element.removeEventListener('lgs1920-timeline-after-add-track', handleTimelineTracksChange)
-            element.removeEventListener('lgs1920-timeline-after-remove-track', handleTimelineTracksChange)
-            element.removeEventListener('lgs1920-timeline-after-track-label-change', handleTimelineTracksChange)
-            element.removeEventListener('lgs1920-timeline-after-reorder', handleTimelineReorder)
-        }
-    }, [linkedPreparation, projection, tracks, widgetList])
-
-    useEffect(() => {
-        const element = _timeline.current
-        if (!linkedPreparation || !element) return
-        element.currentTimeMillis = stableCurrentTimeMillis
-    }, [linkedPreparation, stableCurrentTimeMillis])
-
-    useEffect(() => {
-        const element = _timeline.current
-        if (!linkedPreparation || !element) return undefined
-        const handleTimelineSeek = event => {
-            const timeMillis = Number(event.detail?.timeMillis)
-            if (Number.isFinite(timeMillis)) {
-                setLocalTimelineTimeMillis(Math.max(0, Math.min(projection.durationMillis, timeMillis)))
-            }
-        }
-        element.addEventListener('lgs1920-timeline-seek', handleTimelineSeek)
-        return () => element.removeEventListener('lgs1920-timeline-seek', handleTimelineSeek)
+        syncPlayback()
+        return subscribe(lgs.stores.replay, syncPlayback)
     }, [linkedPreparation, projection.durationMillis])
 
     useEffect(() => {
-        const element = _timeline.current
-        if (linkedPreparation && element) element.playing = isPlaying
-    }, [isPlaying, linkedPreparation])
-
-    useEffect(() => {
-        if (!linkedPreparation) {
+        if (!linkedPreparation || getReplayTimelineDebugStage() !== 'full') {
             return
         }
 
@@ -589,13 +456,21 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false}, r
                      '--lgs-replay-timeline-min-height':       `${REPLAY_TIMELINE_UI.minHeight}px`,
                      '--lgs-replay-timeline-layout-min-height': `${REPLAY_TIMELINE_UI.layoutMinHeight}px`,
                  }}>
-            <lgs1920-timeline ref={_timeline}
-                              aria-label="Replay tracks">
-                <span slot="custom-menu"
-                      className="replay-timeline-preview__custom-menu lgs-widget-no-drag">
-                    <VideoRecordingSettingsToolbar mainTheme/>
-                </span>
-            </lgs1920-timeline>
+            {getReplayTimelineDebugStage() === 'widget' ? (
+                <div className="replay-timeline-preview__empty-debug"
+                     data-testid="replay-timeline-empty-debug"
+                     aria-hidden="true"/>
+            ) : (
+                <lgs1920-timeline data-widget-selectable=""
+                                  data-replay-timeline-debug={getReplayTimelineDebugStage()}
+                                  ref={_timeline}
+                                  aria-label="Replay tracks">
+                    <span slot="custom-menu"
+                          className="replay-timeline-preview__custom-menu lgs-widget-no-drag">
+                        <VideoRecordingSettingsToolbar mainTheme/>
+                    </span>
+                </lgs1920-timeline>
+            )}
         </section>
     )
 })
