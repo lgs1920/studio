@@ -1703,3 +1703,31 @@
 ## 2026-09-06 — [`docs: define correction workflow in project rules`](https://github.com/lgs1920/studio/commit/d3b6e1d668f74334bc1dbcee53d794028ba899c6)
 
 - Recorded automatically from Git history.
+
+## 2026-09-08 — [`feat(bootstrap): show backend check during startup`](https://github.com/lgs1920/studio/commit/13be4d2f1c9eed6a35379686fb77d0916c26206f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-08 — [`feat(ui): animate startup initialization steps`](https://github.com/lgs1920/studio/commit/7d57652642031a038a837ded5cd79eb0b959308e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-08 — [`fix(widget): restore neutral area selection`](https://github.com/lgs1920/studio/commit/3b04186097a7ce2fcce74cd2e66fbd13cb78c0cf)
+
+- Recorded automatically from Git history.
+
+## 2026-09-08 — [`feat(timeline): complete local editor interactions`](https://github.com/lgs1920/studio/commit/5f53a184b1cd474994bef4786c198d52e3902530)
+
+- Recorded automatically from Git history.
+
+## 2026-09-08 — [`fix(replay): isolate timeline gestures from widget movement`](https://github.com/lgs1920/studio/commit/7837111ae4acddd1c6431af92089c7d5f163a6a6)
+
+- Recorded automatically from Git history.
+
+## 2026-09-08 — [`chore(dev): support WSL mirrored networking`](https://github.com/lgs1920/studio/commit/0dee840ac19618ab932a5e47951dc66eddfdda49)
+
+- Recorded automatically from Git history.
+
+## 2026-09-08 — [`Merge remote-tracking branch 'origin/feature/resize-and-move-clips' into feature/resize-and-move-clips`](https://github.com/lgs1920/studio/commit/b6358e5feba6790d64ab2632c34532085f8803a3)
+
+- Recorded automatically from Git history.
