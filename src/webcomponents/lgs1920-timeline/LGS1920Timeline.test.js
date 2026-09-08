@@ -2404,6 +2404,53 @@ describe('lgs1920-timeline Web Component', () => {
         })
     })
 
+    it('shows a source ghost and a valid placement ghost while moving a clip', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {
+            tracks: [
+                {id: 'source', label: 'Source', clips: [{id: 'move-me', kind: 'video', start: 1, end: 4}]},
+                {id: 'target', label: 'Target', accepts: ['video'], clips: []},
+            ],
+        })
+        document.body.append(timeline)
+
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 600, width: 600})
+        const clip = timeline.shadowRoot.querySelector('[data-clip-id="move-me"]')
+        clip.dispatchEvent(createPointerEvent('pointerdown', {clientX: 60, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 108, clientY: 70}))
+
+        const placementGhost = timeline.shadowRoot.querySelector('[data-clip-id="move-me"]')
+        const sourceGhost = timeline.shadowRoot.querySelector('[data-clip-drag-source]')
+        const sourceTrack = timeline.shadowRoot.querySelector('[data-row-id="source"][part="track"]')
+        const targetTrack = timeline.shadowRoot.querySelector('[data-row-id="target"][part="track"]')
+        expect(placementGhost.parentElement.hasAttribute('data-overlay')).toBe(true)
+        expect(placementGhost.classList.contains('lgs1920-wa-timeline__clip--drag-ghost')).toBe(true)
+        expect(placementGhost.classList.contains('lgs1920-wa-timeline__clip--drop-rejected')).toBe(false)
+        expect(placementGhost.style.left).toBe('108px')
+        expect(placementGhost.style.top).toBe('58px')
+        expect(targetTrack.classList.contains('lgs1920-wa-timeline__track--clip-drop-target')).toBe(true)
+        expect(sourceGhost.parentElement.dataset.rowId).toBe('source')
+        expect(sourceGhost.classList.contains('lgs1920-wa-timeline__clip--drag-source')).toBe(true)
+
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 108, clientY: 50}))
+        expect(sourceTrack.classList.contains('lgs1920-wa-timeline__track--clip-drop-target')).toBe(true)
+        expect(targetTrack.classList.contains('lgs1920-wa-timeline__track--clip-drop-target')).toBe(false)
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 108, clientY: 70}))
+        expect(targetTrack.classList.contains('lgs1920-wa-timeline__track--clip-drop-target')).toBe(true)
+
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 108, clientY: 70}))
+
+        expect(timeline.shadowRoot.querySelector('[data-clip-drag-source]')).toBeNull()
+        expect(timeline.shadowRoot.querySelector('[data-clip-drag-ghost]')).toBeNull()
+        const committedClip = timeline.shadowRoot.querySelector('[data-clip-id="move-me"]')
+        expect(committedClip.parentElement.dataset.rowId).toBe('target')
+        expect(committedClip.classList.contains('lgs1920-wa-timeline__clip--drag-ghost')).toBe(false)
+        expect(committedClip.style.top).toBe('')
+        expect(committedClip.style.bottom).toBe('')
+        expect(committedClip.style.height).toBe('')
+    })
+
     it('rejects a moved clip when the gap cannot contain its complete duration', () => {
         const timeline = new LGS1920Timeline()
         const changes = vi.fn()
@@ -2421,6 +2468,9 @@ describe('lgs1920-timeline Web Component', () => {
         window.dispatchEvent(createPointerEvent('pointermove', {clientX: 140, clientY: 70}))
         expect(timeline.hasAttribute('data-clip-drop-rejected')).toBe(true)
         expect(clip.classList.contains('lgs1920-wa-timeline__clip--drop-rejected')).toBe(true)
+        const rejectedGhost = timeline.shadowRoot.querySelector('[data-clip-drag-ghost]')
+        expect(rejectedGhost).not.toBeNull()
+        expect(rejectedGhost.classList.contains('lgs1920-wa-timeline__clip--drop-rejected')).toBe(true)
         window.dispatchEvent(createPointerEvent('pointerup', {clientX: 140, clientY: 70}))
         expect(changes).not.toHaveBeenCalled()
         expect(timeline.tracks[0].clips[0]).toMatchObject({id: 'move-me', start: 1, end: 5})

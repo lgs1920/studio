@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-31
- * Last modified: 2026-09-06
+ * Last modified: 2026-09-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -526,6 +526,8 @@ export const createTimelineClipEditor = ({
     const preview = (state, event) => {
         const entry = findClipEntry(state.baseRows, state.clipId)
         if (!entry || entry.clip.editable === false || (state.mode === 'resize' && entry.clip.resizable === false)) return
+        state.previewClientX = event.clientX
+        state.previewClientY = event.clientY
         const delta = getTimeAtClientX(event.clientX) - state.startTime
         state.targetTime = getTimeAtClientX(event.clientX)
         const duration = state.originalEnd - state.originalStart
@@ -556,6 +558,8 @@ export const createTimelineClipEditor = ({
             end = Math.max(state.originalStart + minimumDuration, state.originalEnd + delta)
             if (!extendsDuration) end = Math.min(end, baseDuration)
         }
+
+        state.previewClip = Object.assign({}, entry.clip, {start, end})
 
         const snap = resolveSnap({secondary: (state.mode === 'move' || state.mode === 'resize') && event.shiftKey === true})
         if (snap && !event.altKey) {

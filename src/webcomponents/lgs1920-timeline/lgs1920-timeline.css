@@ -949,7 +949,14 @@
 
     & .lgs1920-wa-timeline__track.lgs1920-wa-timeline__track--clip-drop-rejected {
         cursor: not-allowed;
+        background-color: color-mix(in srgb, var(--wa-color-danger-fill-normal) 38%, var(--lgs-timeline-surface-color));
         outline: 1px solid var(--wa-color-danger-border-normal);
+        outline-offset: -1px;
+    }
+
+    & .lgs1920-wa-timeline__track.lgs1920-wa-timeline__track--clip-drop-target {
+        background-color: color-mix(in srgb, var(--wa-color-success-fill-normal) 38%, var(--lgs-timeline-surface-color));
+        outline: 1px solid var(--wa-color-success-border-normal);
         outline-offset: -1px;
     }
 
@@ -1172,6 +1179,28 @@
 
     & .lgs1920-wa-timeline__clip.lgs1920-wa-timeline__clip--dragging {
         opacity: 0.75;
+    }
+
+    & .lgs1920-wa-timeline__clip.lgs1920-wa-timeline__clip--drag-ghost {
+        z-index: 7;
+        pointer-events: none;
+        color: var(--wa-color-success-on-normal);
+        background: color-mix(in srgb, var(--wa-color-success-fill-normal) 42%, transparent);
+        border: 1px dashed var(--wa-color-success-border-normal);
+        box-shadow: var(--wa-shadow-s);
+        opacity: 0.9;
+    }
+
+    & .lgs1920-wa-timeline__clip.lgs1920-wa-timeline__clip--drag-source {
+        z-index: 0;
+        pointer-events: none;
+        opacity: 0.35;
+    }
+
+    & .lgs1920-wa-timeline__clip.lgs1920-wa-timeline__clip--drag-ghost.lgs1920-wa-timeline__clip--drop-rejected {
+        color: var(--wa-color-danger-on-normal);
+        background: color-mix(in srgb, var(--wa-color-danger-fill-normal) 42%, transparent);
+        border-color: var(--wa-color-danger-border-normal);
     }
 
     & .lgs1920-wa-timeline__clip.lgs1920-wa-timeline__clip--disabled {

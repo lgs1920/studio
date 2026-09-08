@@ -468,6 +468,11 @@ protrudes halfway into the track area. Resizing the start handle changes
 keeping `start` stable. Both handles respect the timeline bounds and the
 configured minimum duration.
 
+During a clip move, the source position remains visible as a faint ghost and
+the proposed placement follows the pointer. A valid placement uses a
+translucent Web Awesome success color; a rejected placement uses the
+corresponding danger color.
+
 While a clip edge is being resized, a blue diamond follows the edge's current
 time position centered on the ruler's lower border. It is transient and
 disappears when the gesture ends or is cancelled.

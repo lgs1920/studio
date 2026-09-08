@@ -446,7 +446,6 @@ export const createTimelineRenderer = ({
             const dragState = getDragState()
             const isClipDropTarget = dragState?.type === 'clip'
                 && dragState.targetTrackId === row.id
-                && dragState.sourceTrackId !== row.id
             const isRejectedRow = dragState?.type === 'row'
                 && dragState.rowId === row.id
                 && dragState.dropRejected === true

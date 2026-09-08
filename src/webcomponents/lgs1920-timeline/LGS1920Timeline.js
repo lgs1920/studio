@@ -4317,14 +4317,19 @@ export class LGS1920Timeline extends HTMLElement {
         const scaleWidth = this.#scaleWidth()
         const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
         const dragState = this.#dragState
+        this.#root.querySelectorAll('[data-clip-drag-ghost], [data-clip-drag-source]')
+            .forEach(element => element.remove())
         this.toggleAttribute('data-clip-drop-rejected', dragState?.type === 'clip' && dragState.dropRejected === true)
         const clipEdgeIndicator = this.#root.querySelector('[data-clip-edge-indicator]')
         const clipMoveEndpoints = [...this.#root.querySelectorAll('[data-clip-move-endpoint]')]
         const resizingClip = dragState?.type === 'clip' && dragState.mode === 'resize'
             ? this.#clipEditor.findClipEntry(this.#rows, dragState.clipId)?.clip
             : null
+        const placementClip = dragState?.type === 'clip' && dragState.mode === 'move'
+            ? this.#clipEditor.findClipEntry(this.#rows, dragState.clipId)?.clip ?? dragState.previewClip
+            : null
         const movingClip = dragState?.type === 'clip' && dragState.mode === 'move'
-            ? this.#clipEditor.findClipEntry(this.#rows, dragState.clipId)?.clip
+            ? dragState.previewClip ?? placementClip
             : null
         if (clipEdgeIndicator) {
             const edgeTime = resizingClip && dragState.edge === 'start'
@@ -4367,11 +4372,18 @@ export class LGS1920Timeline extends HTMLElement {
                 const {start, end} = resolveClipInterval(value)
                 element.style.left = `${scaleOffset + ((start / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
                 element.style.width = `${Math.max(this.#numericToken('clip-min-width', 8), ((end - start) / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
+                element.style.top = ''
+                element.style.bottom = ''
+                element.style.height = ''
                 element.classList.toggle('lgs1920-wa-timeline__clip--hidden', value.visible === false)
                 element.classList.toggle('lgs1920-wa-timeline__clip--track-hidden', row.visible === false)
                 const isDragging = dragState?.type === 'clip' && dragState.clipId === value.id
                 element.classList.toggle('lgs1920-wa-timeline__clip--dragging', isDragging)
                 element.classList.toggle('lgs1920-wa-timeline__clip--resizing', isDragging && dragState.mode === 'resize')
+                element.classList.remove(
+                    'lgs1920-wa-timeline__clip--drag-ghost',
+                    'lgs1920-wa-timeline__clip--drag-source',
+                )
                 const durationOverlay = element.querySelector('[data-clip-duration-overlay]')
                 const isResizing = isDragging && dragState.mode === 'resize'
                 if (durationOverlay) {
@@ -4388,7 +4400,6 @@ export class LGS1920Timeline extends HTMLElement {
             if (track) {
                 const isClipDropTarget = dragState?.type === 'clip'
                     && dragState.targetTrackId === row.id
-                    && dragState.sourceTrackId !== row.id
                 const isClipDropRejected = dragState?.type === 'clip'
                     && dragState.targetTrackId === row.id
                     && dragState.dropRejected === true
@@ -4398,6 +4409,65 @@ export class LGS1920Timeline extends HTMLElement {
                 legend?.classList.toggle('lgs1920-wa-timeline__legend-row--clip-drop-rejected', isClipDropRejected)
             }
         })
+        if (dragState?.type === 'clip' && dragState.mode === 'move' && movingClip) {
+            const sourceElement = clips.get(String(dragState.clipId))
+            const overlay = this.#root.querySelector('[data-overlay]')
+            if (sourceElement && overlay) {
+                const accepted = dragState.lastResult !== null && dragState.lastResult !== undefined
+                const ghostClip = movingClip
+                if (ghostClip) {
+                    const {start, end} = resolveClipInterval(ghostClip)
+                    const positionGhost = element => {
+                        const surfaceRect = this.#surface?.getBoundingClientRect?.()
+                        const pointerY = Number(dragState.previewClientY)
+                        const rowHeight = Math.max(MIN_ROW_HEIGHT, this.#rowHeight)
+                        element.style.left = `${scaleOffset + ((start / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
+                        element.style.width = `${Math.max(this.#numericToken('clip-min-width', 8), ((end - start) / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
+                        if (!surfaceRect || !Number.isFinite(pointerY)) return
+                        element.style.top = `${pointerY - surfaceRect.top - (rowHeight / 2)}px`
+                        element.style.bottom = 'auto'
+                        element.style.height = `${rowHeight}px`
+                    }
+                    const configureClone = (clone, kind, clipStart, clipEnd) => {
+                        clone.removeAttribute('id')
+                        clone.removeAttribute('data-clip-id')
+                        clone.setAttribute(`data-clip-drag-${kind}`, '')
+                        clone.setAttribute('aria-hidden', 'true')
+                        clone.setAttribute('tabindex', '-1')
+                        clone.classList.remove(
+                            'lgs1920-wa-timeline__clip--dragging',
+                            'lgs1920-wa-timeline__clip--resizing',
+                            'lgs1920-wa-timeline__clip--drag-ghost',
+                            'lgs1920-wa-timeline__clip--drop-rejected',
+                        )
+                        clone.classList.add(`lgs1920-wa-timeline__clip--drag-${kind}`)
+                        if (!accepted) clone.classList.add('lgs1920-wa-timeline__clip--drop-rejected')
+                        clone.style.left = `${scaleOffset + ((clipStart / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
+                        clone.style.width = `${Math.max(this.#numericToken('clip-min-width', 8), ((clipEnd - clipStart) / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
+                    }
+
+                    if (accepted) {
+                        sourceElement.classList.remove('lgs1920-wa-timeline__clip--dragging')
+                        sourceElement.classList.add('lgs1920-wa-timeline__clip--drag-ghost')
+                        positionGhost(sourceElement)
+                        overlay.append(sourceElement)
+                        const sourceEntry = this.#clipEditor.findClipEntry(dragState.baseRows, dragState.clipId)
+                        const sourceTrack = tracks.get(String(sourceEntry?.row.id))
+                        if (sourceEntry && sourceTrack) {
+                            const sourceClone = sourceElement.cloneNode(true)
+                            const original = resolveClipInterval(sourceEntry.clip)
+                            configureClone(sourceClone, 'source', original.start, original.end)
+                            sourceTrack.append(sourceClone)
+                        }
+                    } else {
+                        const ghost = sourceElement.cloneNode(true)
+                        configureClone(ghost, 'ghost', start, end)
+                        positionGhost(ghost)
+                        overlay.append(ghost)
+                    }
+                }
+            }
+        }
         this.#updateDynamicState()
     }
 
