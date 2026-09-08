@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-19
- * Last modified: 2026-09-06
+ * Last modified: 2026-09-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -720,6 +720,33 @@ export const Widget = ({
         return path.some(target => target instanceof ElementClass && Boolean(target.closest?.('.lgs-widget-no-drag')))
     }
 
+    const selectWidget = useCallback(() => {
+        if (!canInteract) {
+            return
+        }
+        const drawerEntity = typeof drawers.entity === 'string' ? drawers.entity : ''
+        const drawerBase = drawerEntity.split('#')[0],
+              widgetBase = typeof widgetId === 'string' ? widgetId.split('#')[0] : ''
+        if (drawers.open === WIDGETS_EDITOR_DRAWER && drawerBase && drawerBase !== widgetBase) {
+            __.ui.drawerManager.close()
+        }
+        if (drawers.open === WIDGETS_EDITOR_DRAWER && drawerBase && drawerBase === widgetBase && drawers.entity !== widgetId) {
+            lgs.stores.ui.drawers.entity = widgetId
+        }
+        const currentRotation = lgs.stores.ui.widget.current?.id === widgetId
+                                ? Number(lgs.stores.ui.widget.current?.rotate)
+                                : Number.NaN
+        const configRotation = Number(__.ui.widgetManager.getWidgetConfig(widgetId)?.rotate)
+        lgs.stores.ui.widget.current = {
+            ...(lgs.stores.ui.widget.current ?? {}),
+            id: widgetId,
+            rotate: Number.isFinite(currentRotation)
+                    ? currentRotation
+                    : (Number.isFinite(configRotation) ? configRotation : 0),
+        }
+        __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, true, true)
+    }, [widgetId, drawers.entity, drawers.open, canInteract])
+
     /**
      * Updates the reactive widget entry only when a persisted field changes.
      * @param {Object} patch - Reactive fields to merge into the widget entry
@@ -1027,8 +1054,15 @@ export const Widget = ({
     }, [blockDoubleClick, canReduce, openEditorFromDoubleClick, toggleCollapsed])
 
     const handlePointerDownCapture = useCallback((event) => {
+        // Timeline interactive elements are marked no-drag so their own
+        // editor gestures stay local. Neutral areas continue to the widget
+        // pointer handler and can select or move it.
         if (hasNoDragInPath(event)) {
             return
+        }
+
+        if (isPrimaryLeftPointer(event) && !event.ctrlKey) {
+            selectWidget()
         }
 
         if (!canReduce || !isPrimaryLeftPointer(event) || event.ctrlKey) {
@@ -1055,7 +1089,7 @@ export const Widget = ({
 
         blockDoubleClick(event)
         toggleCollapsed()
-    }, [blockDoubleClick, canReduce, toggleCollapsed])
+    }, [blockDoubleClick, canReduce, selectWidget, toggleCollapsed])
 
     const handleDoubleClickCapture = useCallback((event) => {
         if (hasNoDragInPath(event)) {
@@ -1198,33 +1232,6 @@ export const Widget = ({
             lgs.stores.ui.widget.current.rotate = event.lastEvent.rotate
         }
     }, [canRotate])
-
-    const selectWidget = useCallback(() => {
-        if (!canInteract) {
-            return
-        }
-        const drawerEntity = typeof drawers.entity === 'string' ? drawers.entity : ''
-        const drawerBase = drawerEntity.split('#')[0],
-              widgetBase = typeof widgetId === 'string' ? widgetId.split('#')[0] : ''
-        if (drawers.open === WIDGETS_EDITOR_DRAWER && drawerBase && drawerBase !== widgetBase) {
-            __.ui.drawerManager.close()
-        }
-        if (drawers.open === WIDGETS_EDITOR_DRAWER && drawerBase && drawerBase === widgetBase && drawers.entity !== widgetId) {
-            lgs.stores.ui.drawers.entity = widgetId
-        }
-        const currentRotation = lgs.stores.ui.widget.current?.id === widgetId
-                                ? Number(lgs.stores.ui.widget.current?.rotate)
-                                : Number.NaN
-        const configRotation = Number(__.ui.widgetManager.getWidgetConfig(widgetId)?.rotate)
-        lgs.stores.ui.widget.current = {
-            ...(lgs.stores.ui.widget.current ?? {}),
-            id: widgetId,
-            rotate: Number.isFinite(currentRotation)
-                    ? currentRotation
-                    : (Number.isFinite(configRotation) ? configRotation : 0),
-        }
-        __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, true, true)
-    }, [widgetId, drawers.entity, drawers.open, canInteract])
 
     /**
      * Displays the cropper resize handles independently of manager registry state.

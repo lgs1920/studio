@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-18
- * Last modified: 2026-09-06
+ * Last modified: 2026-09-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -269,6 +269,93 @@ describe('Widget snap behavior', () => {
         })
 
         expect(lgs.stores.ui.widget.current.id).toBe('snap-widget#test')
+    })
+
+    it('selects a neutral widget area before a child stops pointer propagation', () => {
+        installGlobals()
+
+        const BlockingTimeline = () => (
+            <div data-testid="blocking-timeline-surface"
+                 onPointerDown={event => event.stopPropagation()}/>
+        )
+        const {container} = renderWidget({type: LGS_VISUAL_WIDGET, draggable: true, resizable: true}, <BlockingTimeline/>)
+        const surface = container.querySelector('[data-testid="blocking-timeline-surface"]')
+
+        act(() => {
+            surface.dispatchEvent(new MouseEvent('pointerdown', {bubbles: true, composed: true, button: 0}))
+        })
+
+        expect(lgs.stores.ui.widget.current.id).toBe('snap-widget#test')
+        expect(latestMoveableProps().draggable).toBe(true)
+        expect(latestMoveableProps().resizable).toBe(true)
+    })
+
+    it('keeps widget selection and movement local to a no-drag timeline child', () => {
+        installGlobals()
+
+        const NoDragTimelineChild = () => (
+            <div className="lgs-widget-no-drag"
+                 data-testid="no-drag-timeline-child"/>
+        )
+        const {container} = renderWidget({type: LGS_VISUAL_WIDGET, draggable: true, resizable: true}, <NoDragTimelineChild/>)
+        const child = container.querySelector('[data-testid="no-drag-timeline-child"]')
+
+        act(() => {
+            child.dispatchEvent(new MouseEvent('pointerdown', {bubbles: true, composed: true, button: 0}))
+        })
+
+        expect(lgs.stores.ui.widget.current.id).toBeNull()
+        expect(latestMoveableProps().draggable).toBe(true)
+        expect(latestMoveableProps().resizable).toBe(true)
+    })
+
+    it('opens the widget context menu from an interactive child surface', () => {
+        installGlobals()
+
+        const {container} = renderWidget({type: LGS_VISUAL_WIDGET}, <div data-testid="widget-surface"/>)
+        const surface = container.querySelector('[data-testid="widget-surface"]')
+
+        act(() => {
+            surface.dispatchEvent(new MouseEvent('contextmenu', {
+                bubbles: true,
+                cancelable: true,
+                composed: true,
+                clientX: 24,
+                clientY: 36,
+            }))
+        })
+
+        expect(lgs.stores.ui.contextMenu).toMatchObject({
+            visible:  true,
+            type:     'widget',
+            targetId: 'snap-widget#test',
+            position: {x: 24, y: 36},
+        })
+    })
+
+    it('keeps the widget context menu closed from a no-drag child of a selectable timeline', () => {
+        installGlobals()
+
+        const SelectableTimeline = () => (
+            <div data-widget-selectable="">
+                <div className="lgs-widget-no-drag"
+                     data-testid="timeline-clip"/>
+            </div>
+        )
+        const {container} = renderWidget({type: LGS_VISUAL_WIDGET}, <SelectableTimeline/>)
+        const clip = container.querySelector('[data-testid="timeline-clip"]')
+
+        act(() => {
+            clip.dispatchEvent(new MouseEvent('contextmenu', {
+                bubbles: true,
+                cancelable: true,
+                composed: true,
+                clientX: 40,
+                clientY: 52,
+            }))
+        })
+
+        expect(lgs.stores.ui.contextMenu.visible).toBe(false)
     })
 
     it('does not open the widget menu for a no-drag element inside a shadow tree', async () => {
