@@ -249,7 +249,7 @@ export default defineConfig({
             'localhost',
             'dev.lgs1920.fr',
         ],
-        host: 'dev.lgs1920.fr',
+        host: '0.0.0.0',
         port: 5173,
         /** Force WebStorm (WSL) as editor for the error overlay */
         // @ts-expect-error Vite accepts this editor integration option at runtime.
