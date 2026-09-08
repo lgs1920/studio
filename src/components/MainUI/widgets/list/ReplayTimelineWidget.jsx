@@ -67,6 +67,7 @@ export const ReplayTimelineWidget = ({id, zIndex}) => {
         persist:       true,
         transient:     true,
         mandatory:     false,
+        canLock:       false,
         draggable:     true,
         min:           {width: REPLAY_TIMELINE_UI.minWidth, height: REPLAY_TIMELINE_UI.minHeight},
         max:           {width: REPLAY_TIMELINE_UI.maxWidth, height: REPLAY_TIMELINE_UI.maxHeight},
