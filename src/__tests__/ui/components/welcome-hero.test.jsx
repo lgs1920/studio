@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-08-29
+ * Last modified: 2026-09-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -122,6 +122,7 @@ describe('WelcomeHero', () => {
                 initializationProgress={{
                     activeStep: 1,
                     steps: [
+                        {id: 'backend', label: 'Checking backend connection'},
                         {id: 'application', label: 'Loading application configuration'},
                         {id: 'services', label: 'Starting application services'},
                         {id: 'data', label: 'Loading terrain and journeys'},
@@ -136,17 +137,19 @@ describe('WelcomeHero', () => {
         expect(screen.getByRole('progressbar', {name: 'Studio initialization: 10%'})
             .getAttribute('aria-valuenow')).toBe('10')
         expect(screen.getByText('preparing studio')).toBeTruthy()
-        expect(document.querySelectorAll('.welcome-initialization-step').length).toBe(6)
-        expect(screen.getByText('Loading application configuration').parentElement
+        expect(document.querySelectorAll('.welcome-initialization-step').length).toBe(7)
+        expect(screen.getByText('Checking backend connection').parentElement
             .classList.contains('is-complete')).toBe(true)
-        expect(screen.getByText('Starting application services').parentElement
+        expect(screen.getByText('Loading application configuration').parentElement
             .classList.contains('is-active')).toBe(true)
+        expect(screen.getByText('Starting application services').parentElement
+            .classList.contains('is-complete')).toBe(false)
         expect(screen.getByText('Loading terrain and journeys').parentElement
             .classList.contains('welcome-initialization-step')).toBe(true)
         expect(screen.getByText('In progress')).toBeTruthy()
     })
 
-    it('hides the initialization progress in development', () => {
+    it('shows the initialization progress in development', () => {
         globalThis.lgs = {
             platform: 'development',
             versions: {studio: '1.0.0'},
@@ -158,6 +161,7 @@ describe('WelcomeHero', () => {
                 initializationProgress={{
                     activeStep: 1,
                     steps: [
+                        {id: 'backend', label: 'Checking backend connection'},
                         {id: 'application', label: 'Loading application configuration'},
                         {id: 'services', label: 'Starting application services'},
                     ],
@@ -165,8 +169,8 @@ describe('WelcomeHero', () => {
             />
         )
 
-        expect(screen.queryByRole('progressbar')).toBeNull()
-        expect(screen.queryByText('Loading application configuration')).toBeNull()
+        expect(screen.getByRole('progressbar')).toBeTruthy()
+        expect(screen.getByText('Loading application configuration')).toBeTruthy()
     })
 
     it('keeps completed initialization steps visible for three seconds', () => {
@@ -183,6 +187,7 @@ describe('WelcomeHero', () => {
                 initializationProgress={{
                     activeStep: 5,
                     steps: [
+                        {id: 'backend', label: 'Checking backend connection'},
                         {id: 'application', label: 'Loading application configuration'},
                         {id: 'services', label: 'Starting application services'},
                         {id: 'data', label: 'Loading terrain and journeys'},
@@ -221,6 +226,7 @@ describe('WelcomeHero', () => {
                 initializationProgress={{
                     activeStep: 4,
                     steps: [
+                        {id: 'backend', label: 'Checking backend connection'},
                         {id: 'application', label: 'Loading application configuration'},
                         {id: 'services', label: 'Starting application services'},
                         {id: 'data', label: 'Loading terrain and journeys'},

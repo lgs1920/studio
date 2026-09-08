@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-30
- * Last modified: 2026-08-25
+ * Last modified: 2026-09-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -152,16 +152,22 @@ describe('AppUtils bootstrap count instrumentation', () => {
     })
 
     it('sends one visit event after a successful bootstrap', async () => {
-        await expect(AppUtils.init()).resolves.toEqual({status: true})
+        const onBackendReady = vi.fn()
+
+        await expect(AppUtils.init({onBackendReady})).resolves.toEqual({status: true})
 
         expect(mocks.sendVisit).toHaveBeenCalledTimes(1)
+        expect(onBackendReady).toHaveBeenCalledTimes(1)
     })
 
     it('does not send a visit event when the backend bootstrap fails', async () => {
         mocks.pingBackend.mockResolvedValueOnce({alive: false})
 
-        await expect(AppUtils.init()).resolves.toMatchObject({status: false})
+        const onBackendReady = vi.fn()
+
+        await expect(AppUtils.init({onBackendReady})).resolves.toMatchObject({status: false})
 
         expect(mocks.sendVisit).not.toHaveBeenCalled()
+        expect(onBackendReady).not.toHaveBeenCalled()
     })
 })

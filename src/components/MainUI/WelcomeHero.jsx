@@ -7,13 +7,16 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
+ * Created on: 2026-08-13
+ * Last modified: 2026-09-08
+ *
+ *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { SloganSvg }                                         from '@Components/MainUI/SloganSvg'
 import { WelcomeHeroControls }                               from '@Components/MainUI/WelcomeHeroControls'
 import { WelcomeHeroRoute }                                  from '@Components/MainUI/WelcomeHeroRoute'
-import { platforms }                                          from '@Core/constants'
 import {
     bannerMediaCatalog,
     getWelcomeBackgroundMedia,
@@ -29,7 +32,7 @@ import { useCallback, useEffect, useRef, useState }            from 'react'
 const WELCOME_BACKGROUND_MEDIA = getWelcomeBackgroundMedia()
 const WELCOME_VIDEO_CROSSFADE_DURATION = 2300
 const WELCOME_VIDEO_CROSSFADE_LEAD_SECONDS = 3
-const INITIALIZATION_PROGRESS_VALUES = [0, 10, 20, 40, 60, 80]
+const INITIALIZATION_PROGRESS_VALUES = [0, 10, 20, 40, 60, 80, 90]
 const INITIALIZATION_COMPLETION_DISPLAY_MS = 3000
 
 /**
@@ -213,8 +216,7 @@ export const WelcomeHero = ({
      * @returns {object|null} Initialization progress or nothing when no progress was provided.
      */
     const renderInitializationProgress = () => {
-        if (lgs.platform === platforms.DEV
-            || initializationSteps.length === 0
+        if (initializationSteps.length === 0
             || (readyToEnter && !showInitializationProgress)) {
             return null
         }

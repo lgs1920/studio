@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-06
+ * Last modified: 2026-09-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -78,6 +78,7 @@ import { useSnapshot } from 'valtio'
 const APP_SURFACE_READY_TIMEOUT = 1500
 const INITIAL_FOCUS_READY_TIMEOUT = 2500
 const INITIALIZATION_STEPS = [
+    {id: 'backend', label: 'Checking backend connection'},
     {id: 'application', label: 'Loading application configuration'},
     {id: 'services', label: 'Starting application services'},
     {id: 'data', label: 'Loading terrain and journeys'},
@@ -211,7 +212,9 @@ export const LGS1920 = () => {
      */
     const initializeApp = async () => {
         try {
-            const initResult = await __.app.init()
+            const initResult = await __.app.init({
+                onBackendReady: () => advanceInitializationStep(1),
+            })
             if (initResult.status) {
                 __.app.setTheme()
             }
@@ -381,7 +384,7 @@ export const LGS1920 = () => {
                     return
                 }
                 // Initialize managers and layers
-                advanceInitializationStep(1)
+                advanceInitializationStep(2)
                 await initializeManagersAndLayers(lgs)
 
                 // Attach drawer events
@@ -391,14 +394,14 @@ export const LGS1920 = () => {
                 document.body.classList.add(lgs.platform)
 
                 // Initialize data (terrain, journeys, POIs)
-                advanceInitializationStep(2)
+                advanceInitializationStep(3)
                 await initializeData(lgs)
 
                 // Set up starter target from settings. It is persisted only if the first view needs it.
                 const starter = await setupStarterPOI(lgs, {persist: false})
 
                 // Configure camera
-                advanceInitializationStep(3)
+                advanceInitializationStep(4)
                 const {focusTarget, cameraStore} = await configureStartupCamera({
                                                                                     context:        lgs,
                                                                                     starter,
@@ -413,7 +416,7 @@ export const LGS1920 = () => {
 
                 // Mark UI as initialized
                 __.app.uiInit = true
-                advanceInitializationStep(4)
+                advanceInitializationStep(5)
                 setInitStatus(true)
 
                 // log starting information
