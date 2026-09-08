@@ -1,14 +1,14 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *  
+ *
  * File: style.css
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-13
- * Last modified: 2026-07-13
+ * Created on: 2024-02-02
+ * Last modified: 2026-09-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -1139,6 +1139,20 @@ body.mobile .orbit-widget-body {
         --track-height: .35rem;
     }
 
+    & .welcome-initialization-steps-frame {
+        display: grid;
+        height: calc((1.25rem * 4) + (.1rem * 3));
+        min-height: 0;
+        grid-template-columns: minmax(0, 1fr) .22rem;
+        gap: var(--lgs-gutter-xs);
+        overflow: hidden;
+    }
+
+    & .welcome-initialization-steps-viewport {
+        min-height: 0;
+        overflow: hidden;
+    }
+
     & .welcome-initialization-steps {
         display: flex;
         flex-direction: column;
@@ -1147,6 +1161,29 @@ body.mobile .orbit-widget-body {
         list-style: none;
         transition: transform 420ms cubic-bezier(.22, 1, .36, 1);
         gap: .1rem;
+        will-change: transform;
+    }
+
+    & .welcome-initialization-scrollbar {
+        position: relative;
+        display: flex;
+        justify-content: center;
+        width: .22rem;
+        border-radius: 999px;
+        background: var(--lgs-scrollbar-track-color);
+    }
+
+    & .welcome-initialization-scrollbar-thumb {
+        position: absolute;
+        inset-inline: 0;
+        top: 0;
+        display: block;
+        width: 100%;
+        min-height: .7rem;
+        border-radius: 999px;
+        background: var(--lgs-scrollbar-thumb-color);
+        box-shadow: 0 0 .35rem color-mix(in srgb, var(--lgs-scrollbar-thumb-color) 60%, transparent);
+        transition: height 420ms cubic-bezier(.22, 1, .36, 1), top 420ms cubic-bezier(.22, 1, .36, 1);
     }
 
     & .welcome-initialization-step {
@@ -1188,6 +1225,13 @@ body.mobile .orbit-widget-body {
         font-size: .68rem;
         white-space: nowrap;
         opacity: .76;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .welcome-initialization-steps,
+    .welcome-initialization-scrollbar-thumb {
+        transition: none !important;
     }
 }
 

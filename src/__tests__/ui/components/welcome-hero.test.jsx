@@ -136,8 +136,12 @@ describe('WelcomeHero', () => {
 
         expect(screen.getByRole('progressbar', {name: 'Studio initialization: 10%'})
             .getAttribute('aria-valuenow')).toBe('10')
-        expect(screen.getByText('preparing studio')).toBeTruthy()
+        expect(screen.getByText('Preparing studio')).toBeTruthy()
         expect(document.querySelectorAll('.welcome-initialization-step').length).toBe(7)
+        expect(document.querySelector('.welcome-initialization-steps-frame')).toBeTruthy()
+        expect(document.querySelector('.welcome-initialization-scrollbar')).toBeTruthy()
+        expect(document.querySelector('.welcome-initialization-steps')?.getAttribute('style'))
+            .toContain('translateY(0rem)')
         expect(screen.getByText('Checking backend connection').parentElement
             .classList.contains('is-complete')).toBe(true)
         expect(screen.getByText('Loading application configuration').parentElement
@@ -200,8 +204,11 @@ describe('WelcomeHero', () => {
         )
 
         expect(screen.getByText('Finalizing Studio launch')).toBeTruthy()
+        expect(screen.getByText('Studio gameplay is ready, enjoy !')).toBeTruthy()
         expect(screen.getByRole('progressbar', {name: 'Studio initialization: 100%'})
             .getAttribute('aria-valuenow')).toBe('100')
+        expect(document.querySelector('.welcome-initialization-scrollbar-thumb')?.getAttribute('style'))
+            .toContain('top: 42.86%')
 
         act(() => {
             vi.advanceTimersByTime(2999)
@@ -240,6 +247,8 @@ describe('WelcomeHero', () => {
 
         expect(screen.getByRole('progressbar', {name: 'Studio initialization: 60%'})
             .getAttribute('aria-valuenow')).toBe('60')
+        expect(document.querySelector('.welcome-initialization-steps')?.getAttribute('style'))
+            .toContain('translateY(-4.05rem)')
     })
 
     it('renders the resolved video and falls back to the resolved image', () => {

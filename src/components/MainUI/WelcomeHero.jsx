@@ -33,6 +33,8 @@ const WELCOME_BACKGROUND_MEDIA = getWelcomeBackgroundMedia()
 const WELCOME_VIDEO_CROSSFADE_DURATION = 2300
 const WELCOME_VIDEO_CROSSFADE_LEAD_SECONDS = 3
 const INITIALIZATION_PROGRESS_VALUES = [0, 10, 20, 40, 60, 80, 90]
+const INITIALIZATION_VISIBLE_STEP_COUNT = 4
+const INITIALIZATION_STEP_PITCH_REM = 1.35
 const INITIALIZATION_COMPLETION_DISPLAY_MS = 3000
 
 /**
@@ -74,6 +76,20 @@ export const WelcomeHero = ({
     const initializationPercentage = readyToEnter
         ? 100
         : INITIALIZATION_PROGRESS_VALUES[activeInitializationStep] ?? 0
+    const initializationScrollRange = Math.max(initializationSteps.length - INITIALIZATION_VISIBLE_STEP_COUNT, 0)
+    const initializationVisibleStart = Math.min(
+        Math.max(activeInitializationStep - 1, 0),
+        initializationScrollRange,
+    )
+    const initializationScrollbarThumbSize = initializationSteps.length > INITIALIZATION_VISIBLE_STEP_COUNT
+        ? Math.max((INITIALIZATION_VISIBLE_STEP_COUNT / initializationSteps.length) * 100, 18)
+        : 100
+    const initializationScrollbarThumbOffset = initializationScrollRange > 0
+        ? (initializationVisibleStart / initializationScrollRange) * (100 - initializationScrollbarThumbSize)
+        : 0
+    const initializationStepsTransform = initializationVisibleStart === 0
+        ? 'translateY(0rem)'
+        : `translateY(-${(initializationVisibleStart * INITIALIZATION_STEP_PITCH_REM).toFixed(2)}rem)`
     const videoReady = videoState === 'ready'
     const imageVisible = !videoReady && imageState === 'ready'
     const studioVersion = lgs.versions?.studio ?? 'Unknown version'
@@ -224,7 +240,7 @@ export const WelcomeHero = ({
         return (
             <div className="welcome-initialization" aria-label="Studio initialization progress" aria-live="polite">
                 <div className="welcome-initialization-header">
-                    <span>{'preparing studio'}</span>
+                    <span>{readyToEnter ? 'Studio gameplay is ready, enjoy !' : 'Preparing studio'}</span>
                     <span>{initializationPercentage}%</span>
                 </div>
                 <WaProgressBar
@@ -232,30 +248,48 @@ export const WelcomeHero = ({
                     value={initializationPercentage}
                     label={`Studio initialization: ${initializationPercentage}%`}
                 />
-                <ol className="welcome-initialization-steps">
-                    {initializationSteps.map((step, index) => {
-                        const isComplete = index < activeInitializationStep
-                        const isActive = index === activeInitializationStep
-                        const status = isComplete ? 'Complete' : isActive ? 'In progress' : 'Waiting'
+                <div className="welcome-initialization-steps-frame">
+                    <div className="welcome-initialization-steps-viewport">
+                        <ol
+                            className="welcome-initialization-steps"
+                            style={{transform: initializationStepsTransform}}
+                        >
+                            {initializationSteps.map((step, index) => {
+                                const isComplete = index < activeInitializationStep
+                                const isActive = index === activeInitializationStep
+                                const status = isComplete ? 'Complete' : isActive ? 'In progress' : 'Waiting'
 
-                        return (
-                            <li
-                                className={`welcome-initialization-step${isComplete ? ' is-complete' : ''}${isActive ? ' is-active' : ''}`}
-                                aria-current={isActive ? 'step' : undefined}
-                                key={step.id}
-                            >
-                                <WaIcon
-                                    name={isComplete ? 'circle-check' : isActive ? 'gear' : 'circle'}
-                                    variant="regular"
-                                    animation={isActive ? 'spin' : ''}
-                                    aria-hidden="true"
-                                />
-                                <span className="welcome-initialization-step-label">{step.label}</span>
-                                <span className="welcome-initialization-step-status">{status}</span>
-                            </li>
-                        )
-                    })}
-                </ol>
+                                return (
+                                    <li
+                                        className={`welcome-initialization-step${isComplete ? ' is-complete' : ''}${isActive ? ' is-active' : ''}`}
+                                        aria-current={isActive ? 'step' : undefined}
+                                        key={step.id}
+                                    >
+                                        <WaIcon
+                                            name={isComplete ? 'circle-check' : isActive ? 'gear' : 'circle'}
+                                            variant="regular"
+                                            animation={isActive ? 'spin' : ''}
+                                            aria-hidden="true"
+                                        />
+                                        <span className="welcome-initialization-step-label">{step.label}</span>
+                                        <span className="welcome-initialization-step-status">{status}</span>
+                                    </li>
+                                )
+                            })}
+                        </ol>
+                    </div>
+                    {initializationSteps.length > INITIALIZATION_VISIBLE_STEP_COUNT && (
+                        <div className="welcome-initialization-scrollbar" aria-hidden="true">
+                            <span
+                                className="welcome-initialization-scrollbar-thumb"
+                                style={{
+                                    height: `${initializationScrollbarThumbSize.toFixed(2)}%`,
+                                    top: `${initializationScrollbarThumbOffset.toFixed(2)}%`,
+                                }}
+                            />
+                        </div>
+                    )}
+                </div>
             </div>
         )
     }
