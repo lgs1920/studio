@@ -7,6 +7,10 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
+ * Created on: 2026-08-31
+ * Last modified: 2026-09-09
+ *
+ *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
@@ -17,9 +21,6 @@ export const DRAWER_RESIZE_MIN_WIDTH = DRAWER_RESIZE_DEFAULT_WIDTH
 export const DRAWER_RESIZE_MAX_WIDTH = 720
 export const DRAWER_RESIZE_MAX_VIEWPORT_RATIO = 0.7
 export const DRAWER_RESIZE_HANDLE_WIDTH = 5
-export const DRAWER_RESIZE_FAST_DISTANCE = 80
-export const DRAWER_RESIZE_FAST_DURATION = 220
-export const DRAWER_RESIZE_FAST_SPEED = 0.5
 export const DRAWER_RESIZE_KEYBOARD_STEP = 16
 export const DRAWER_RESIZE_KEYBOARD_LARGE_STEP = 64
 
@@ -130,34 +131,3 @@ export const clampDrawerWidth = (width, bounds = getDrawerResizeBounds()) => {
 export const getDrawerResizeDelta = (placement, startX, currentX) => placement === START
     ? currentX - startX
     : startX - currentX
-
-/**
- * Calculates the outward distance for a fast side-drawer gesture.
- *
- * @param {string} placement - Web Awesome drawer placement.
- * @param {number} startX - Pointer position when resizing started.
- * @param {number} currentX - Current pointer position.
- * @returns {number} Outward movement in pixels.
- */
-export const getDrawerOutwardDistance = (placement, startX, currentX) => Math.max(
-    0,
-    getDrawerResizeDelta(placement, startX, currentX),
-)
-
-/**
- * Determines whether a pointer gesture qualifies for fast expansion.
- *
- * @param {Object} gesture - Gesture measurements.
- * @param {number} gesture.distance - Outward distance in pixels.
- * @param {number} gesture.duration - Gesture duration in milliseconds.
- * @returns {boolean} Whether the gesture should expand to the maximum width.
- */
-export const qualifiesForFastDrawerExpansion = ({distance, duration} = {}) => {
-    if (!Number.isFinite(distance) || !Number.isFinite(duration) || duration <= 0) {
-        return false
-    }
-
-    return distance >= DRAWER_RESIZE_FAST_DISTANCE
-        && duration <= DRAWER_RESIZE_FAST_DURATION
-        && distance / duration >= DRAWER_RESIZE_FAST_SPEED
-}

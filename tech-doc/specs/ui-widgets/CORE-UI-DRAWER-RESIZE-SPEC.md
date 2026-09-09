@@ -19,7 +19,7 @@ changing the map or the surrounding application layout.
 
 - Allow a desktop side drawer to be resized horizontally with a pointer.
 - Keep the resize interaction independent from the drawer layout geometry.
-- Support both precise resizing and a deliberate fast expansion to the maximum.
+- Keep pointer resizing precise at every gesture speed.
 - Enforce explicit minimum and maximum widths.
 - Preserve the existing drawer opening, stacking, placement, and closing behavior.
 - Provide an equivalent keyboard interaction and an accessible resize control.
@@ -56,20 +56,6 @@ leaves the handle during the drag.
 The implementation must prevent accidental text selection and must restore the
 normal document cursor and pointer behavior when the interaction ends or is
 cancelled.
-
-### Fast expansion
-
-A deliberate fast outward gesture may expand the drawer to its maximum width.
-The gesture must require all of the following:
-
-- movement in the outward direction;
-- a minimum travelled distance;
-- a minimum movement speed over a short gesture window; and
-- pointer release while the gesture is still directed outward.
-
-The fast gesture must animate to the maximum width and must not trigger from a
-small accidental pointer movement. A normal slow drag always takes precedence
-and remains precise.
 
 ### Reset
 
@@ -142,7 +128,7 @@ behavior must remain unchanged.
 - Width never falls below `448px` or exceeds `min(70vw, configured maximum)`.
 - A configured `resizeMax` overrides the shared maximum for that drawer only.
 - Slow dragging provides precise continuous resizing.
-- A qualifying fast outward gesture animates to the maximum width.
+- A fast outward gesture remains proportional to the pointer movement.
 - Double-clicking the handle toggles between the minimum and maximum widths.
 - Left- and right-side drawers apply the correct resize direction.
 - The handle is keyboard accessible with visible focus and the defined keys.
@@ -163,7 +149,7 @@ behavior must remain unchanged.
 2. Add the non-layout resize handle and pointer lifecycle handling for left and
    right placements.
 3. Apply the clamped width to the existing Web Awesome `--size` property.
-4. Add fast-gesture detection, animated expansion, and double-click reset.
-5. Add keyboard semantics, focus styling, and reduced-motion-safe animation.
+4. Add double-click reset.
+5. Add keyboard semantics and focus styling.
 6. Add focused unit and interaction tests for the acceptance criteria.
 7. Keep this document aligned with the implemented drawer behavior.

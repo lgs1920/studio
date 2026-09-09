@@ -7,6 +7,10 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
+ * Created on: 2026-08-31
+ * Last modified: 2026-09-09
+ *
+ *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
@@ -95,8 +99,7 @@ describe('DrawerResizeHandle', () => {
         expect(drawer.style.getPropertyValue('--size')).toBe('640px')
     })
 
-    it('expands to the maximum after a fast outward gesture', () => {
-        vi.useFakeTimers()
+    it('keeps a fast outward gesture at the pointer-derived width', () => {
         render(
             <DrawerResizeHandle drawer={drawer} drawerId="settings-drawer" placement="end"/>,
         )
@@ -104,16 +107,11 @@ describe('DrawerResizeHandle', () => {
         handle.setPointerCapture = vi.fn()
         handle.releasePointerCapture = vi.fn()
 
-        fireEvent.pointerDown(handle, {button: 0, clientX: 500, pointerId: 1, timeStamp: 0})
-        vi.advanceTimersByTime(50)
-        fireEvent.pointerMove(handle, {clientX: 400, pointerId: 1, timeStamp: 50})
-        vi.advanceTimersByTime(50)
-        fireEvent.pointerUp(handle, {clientX: 400, pointerId: 1, timeStamp: 100})
+        fireEvent.pointerDown(handle, {button: 0, clientX: 500, pointerId: 1})
+        fireEvent.pointerMove(handle, {clientX: 400, pointerId: 1})
+        fireEvent.pointerUp(handle, {clientX: 400, pointerId: 1})
 
-        expect(handle.getAttribute('aria-valuenow')).toBe('720')
-        expect(drawer.classList.contains('drawer-resize-snapping')).toBe(true)
-
-        vi.advanceTimersByTime(220)
+        expect(handle.getAttribute('aria-valuenow')).toBe('548')
         expect(drawer.classList.contains('drawer-resize-snapping')).toBe(false)
     })
 

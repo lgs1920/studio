@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-02
+ * Last modified: 2026-09-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -306,16 +306,6 @@ body {
     /* The handle is portaled into Web Awesome's top-layer dialog. */
     box-sizing: border-box;
     outline-offset: -1px;
-}
-
-wa-drawer.drawer-resize-snapping::part(dialog) {
-    transition: width 220ms ease-out;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    wa-drawer.drawer-resize-snapping::part(dialog) {
-        transition: none;
-    }
 }
 
 .drawer-wrapper.horizontal {
