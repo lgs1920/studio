@@ -60,7 +60,7 @@ This is the canonical source for the project's AI-agent and development rules.
 - **JSDoc:** Every function or method requires a professional English JSDoc block.
 - **Comments:** Production-oriented English comments for critical logic.
 - **Shortcuts:** Any introduced UI shortcut must be added to the dedicated shortcuts documentation.
-- **Shortcut catalog readability:** Keep `public/shortcuts.yaml` as one flat YAML list. Organize it with an English project header, blank lines, boxed comment separators, and lighter comment levels for functional sections and subsections. Use comments for readability only; do not introduce YAML document separators (`---`) or nested catalog structures unless the loader and every consumer are updated together. Keep shortcut identifiers and field semantics stable.
+- **Shortcut catalog readability:** Keep `public/shortcuts.yaml` as one flat YAML list. Organize it with an English project header, blank lines, boxed comment separators, and lighter comment levels for functional sections and subsections. Render alternative single-key bindings on one line separated by `|`. When an entry contains a composed binding, render each binding on its own line without `|`. Use comments for readability only; do not introduce YAML document separators (`---`) or nested catalog structures unless the loader and every consumer are updated together. Keep shortcut identifiers and field semantics stable.
 - **Testing:** Every feature or fix must be accompanied by relevant tests.
 - **Correction workflow:** Analyze the request and propose a solution first. After explicit validation, implement the solution. Add and refine the relevant tests at the end of the implementation, correcting the code and tests together when required.
 

@@ -41,6 +41,9 @@ the future editable timeline.
   semantics, and use the existing English project header, boxed section
   separators, blank lines, and lighter subsection comments to distinguish
   Timeline controls from Replay management and camera preparation controls.
+- In the rendered shortcut panel and PDF, keep alternative single-key bindings
+  on one line separated by `|`. If an entry contains any composed binding, put
+  every binding on its own line and omit `|` for that entry.
 - Do not use YAML document separators (`---`) or nested catalog structures for
   Timeline shortcuts unless the loader and every catalog consumer are updated
   together.
