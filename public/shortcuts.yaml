@@ -216,6 +216,15 @@
     - Shift+ArrowLeft
     - Shift+ArrowRight
   scope: Replay timeline
+- action: Move Replay clip
+  description: Moves the selected editable Replay clip by one rendered pixel with ArrowLeft or ArrowRight, or ten rendered pixels with Alt. Existing magnetic snapping takes priority over the requested pixel increment.
+  id: replay-timeline-clip-move-keyboard
+  keys:
+    - ArrowLeft
+    - ArrowRight
+    - Alt+ArrowLeft
+    - Alt+ArrowRight
+  scope: Replay timeline
 - action: Cancel Replay timeline gesture
   description: Cancels an active clip move, clip resize, track reorder, or range drag and restores the pre-gesture state.
   id: replay-timeline-cancel-gesture

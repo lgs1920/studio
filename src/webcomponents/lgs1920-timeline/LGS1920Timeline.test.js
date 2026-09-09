@@ -2336,6 +2336,132 @@ describe('lgs1920-timeline Web Component', () => {
         window.dispatchEvent(createPointerEvent('pointerup', {clientX: 60, clientY: 50}))
     })
 
+    it('moves the selected clip by one pixel or ten pixels with Alt arrows', () => {
+        const timeline = new LGS1920Timeline()
+        const parentKeydown = vi.fn()
+        const wrapper = document.createElement('div')
+        wrapper.addEventListener('keydown', parentKeydown)
+        configureTimeline(timeline, {
+            timeline: {snap: false},
+            tracks: [{id: 'main', label: 'Main', clips: [{id: 'clip', start: 1, end: 4}]}],
+        })
+        wrapper.append(timeline)
+        document.body.append(wrapper)
+
+        const clip = timeline.shadowRoot.querySelector('[data-clip-id="clip"]')
+        clip.dispatchEvent(createPointerEvent('pointerdown', {composed: true, clientX: 60, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 60, clientY: 50}))
+        const initialStart = timeline.tracks[0].clips[0].start
+
+        clip.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true, cancelable: true}))
+        const onePixelDelta = timeline.tracks[0].clips[0].start - initialStart
+        expect(onePixelDelta).toBeGreaterThan(0)
+
+        clip.dispatchEvent(new KeyboardEvent('keydown', {
+            key: 'ArrowRight',
+            altKey: true,
+            bubbles: true,
+            cancelable: true,
+        }))
+        const tenPixelDelta = timeline.tracks[0].clips[0].start - initialStart - onePixelDelta
+        expect(tenPixelDelta).toBeCloseTo(onePixelDelta * 10)
+
+        const beforeHostMove = timeline.tracks[0].clips[0].start
+        timeline.dispatchEvent(new KeyboardEvent('keydown', {
+            key: 'ArrowLeft',
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+        }))
+        expect(timeline.tracks[0].clips[0].start).toBeLessThan(beforeHostMove)
+        expect(parentKeydown).not.toHaveBeenCalled()
+    })
+
+    it('selects a focused clip before moving it with an arrow', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {
+            timeline: {snap: false},
+            tracks: [{id: 'main', label: 'Main', clips: [{id: 'clip', start: 1, end: 4}]}],
+        })
+        document.body.append(timeline)
+
+        const clip = timeline.shadowRoot.querySelector('[data-clip-id="clip"]')
+        clip.focus()
+        const initialStart = timeline.tracks[0].clips[0].start
+        clip.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true, cancelable: true}))
+
+        expect(timeline.selectedClipId).toBe('clip')
+        expect(timeline.tracks[0].clips[0].start).toBeGreaterThan(initialStart)
+        expect(clip.classList.contains('lgs1920-wa-timeline__clip--selected')).toBe(true)
+    })
+
+    it('keeps trapping repeated arrows when snapping is enabled', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {
+            tracks: [{id: 'main', label: 'Main', clips: [{id: 'clip', start: 1, end: 4}]}],
+        })
+        document.body.append(timeline)
+
+        const clip = timeline.shadowRoot.querySelector('[data-clip-id="clip"]')
+        clip.focus()
+        clip.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true, cancelable: true}))
+        const firstStart = timeline.tracks[0].clips[0].start
+        clip.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true, cancelable: true}))
+
+        expect(timeline.tracks[0].clips[0].start).toBeGreaterThan(firstStart)
+    })
+
+    it('keeps trapping arrows after a keyboard move followed by a pointer move', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {
+            timeline: {snap: false},
+            tracks: [{id: 'main', label: 'Main', clips: [{id: 'clip', start: 1, end: 4}]}],
+        })
+        document.body.append(timeline)
+
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 600, width: 600})
+        const clip = timeline.shadowRoot.querySelector('[data-clip-id="clip"]')
+        clip.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true, cancelable: true}))
+        clip.dispatchEvent(createPointerEvent('pointerdown', {clientX: 60, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 100, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 100, clientY: 50}))
+
+        const movedStart = timeline.tracks[0].clips[0].start
+        surface.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true, cancelable: true}))
+        expect(timeline.tracks[0].clips[0].start).toBeGreaterThan(movedStart)
+    })
+
+    it('keeps the keyboard selection after moving a keyboard-edited clip to another track', () => {
+        const timeline = new LGS1920Timeline()
+        const tracks = [
+            {id: 'source', label: 'Source', clips: [{id: 'clip', kind: 'video', start: 1, end: 4}]},
+            {id: 'target', label: 'Target', accepts: ['video'], clips: []},
+        ]
+        configureTimeline(timeline, {timeline: {snap: false}, tracks})
+        timeline.addEventListener('lgs1920-timeline-clip-change', event => {
+            timeline.tracks = event.detail.tracks
+        })
+        document.body.append(timeline)
+
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 600, width: 600})
+        const clip = timeline.shadowRoot.querySelector('[data-clip-id="clip"]')
+        clip.focus()
+        clip.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true, cancelable: true}))
+        expect(timeline.selectedClipId).toBe('clip')
+
+        clip.dispatchEvent(createPointerEvent('pointerdown', {clientX: 60, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 108, clientY: 70}))
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 108, clientY: 70}))
+
+        expect(timeline.selectedClipId).toBe('clip')
+        expect(timeline.shadowRoot.activeElement?.getAttribute('data-clip-id')).toBe('clip')
+        const movedStart = timeline.tracks[1].clips[0].start
+        surface.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true, cancelable: true}))
+        expect(timeline.tracks[1].clips[0].start).toBeGreaterThan(movedStart)
+    })
+
     it('opens the context menu for a stationary touch hold without expanding the clip', () => {
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline, {
@@ -2455,6 +2581,14 @@ describe('lgs1920-timeline Web Component', () => {
         window.dispatchEvent(createPointerEvent('pointerup', {clientX: 100, clientY: 50}))
         expect(timeline.selectedClipId).toBe('clip')
         expect(clip.getAttribute('aria-selected')).toBe('true')
+
+        const movedStart = timeline.tracks[0].clips[0].start
+        timeline.shadowRoot.querySelector('[data-scroll-view="surface"]')
+            .dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true, cancelable: true}))
+        expect(timeline.tracks[0].clips[0].start).toBeGreaterThan(movedStart)
+        const movedAgainStart = timeline.tracks[0].clips[0].start
+        window.dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true, cancelable: true}))
+        expect(timeline.tracks[0].clips[0].start).toBeGreaterThan(movedAgainStart)
     })
 
     it('adds configured custom clip actions to the context menu', () => {
@@ -3109,6 +3243,9 @@ describe('lgs1920-timeline Web Component', () => {
         ]
         configureTimeline(timeline, {tracks})
         timeline.addEventListener('lgs1920-timeline-clip-change', changes)
+        timeline.addEventListener('lgs1920-timeline-clip-change', event => {
+            timeline.tracks = event.detail.tracks
+        })
         timeline.addEventListener('lgs1920-timeline-before-drag', beforeDrag)
         timeline.addEventListener('lgs1920-timeline-drag', drag)
         timeline.addEventListener('lgs1920-timeline-after-drag', afterDrag)
@@ -3121,7 +3258,13 @@ describe('lgs1920-timeline Web Component', () => {
         window.dispatchEvent(createPointerEvent('pointermove', {clientX: 108, clientY: 70}))
         window.dispatchEvent(createPointerEvent('pointerup', {clientX: 108, clientY: 70}))
 
-        expect(changes).toHaveBeenCalledOnce()
+        expect(timeline.selectedClipId).toBe('move-me')
+        const movedStart = timeline.tracks[1].clips[0].start
+        timeline.shadowRoot.querySelector('[data-scroll-view="surface"]')
+            .dispatchEvent(new KeyboardEvent('keydown', {key: 'ArrowRight', bubbles: true, cancelable: true}))
+        expect(timeline.tracks[1].clips[0].start).toBeGreaterThan(movedStart)
+
+        expect(changes).toHaveBeenCalledTimes(2)
         expect(changes.mock.calls[0][0].detail.fromTrackId).toBe('source')
         expect(changes.mock.calls[0][0].detail.toTrackId).toBe('target')
         expect(changes.mock.calls[0][0].detail.clip.start).toBe(2)

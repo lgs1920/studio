@@ -124,13 +124,15 @@ describe('timeline editing transactions', () => {
         ])
     })
 
-    it('blocks a start extension when it reaches the previous clip', () => {
+    it('ripples a start extension into the previous clip', () => {
         const {editor} = setup({resizeCollisionPolicy: 'ripple'})
         const rows = [{id: 'target', actions: [
             {id: 'before', start: 1, end: 3}, {id: 'clip', start: 4, end: 6},
         ]}]
         expect(editor.place({baseRows: rows, clip: {id: 'clip', start: 2, end: 6},
-            targetTrackId: 'target', mode: 'resize', edge: 'start'})).toBeNull()
+            targetTrackId: 'target', mode: 'resize', edge: 'start'}).rows[0].actions).toEqual([
+            {id: 'before', start: 0, end: 2}, {id: 'clip', start: 2, end: 6},
+        ])
     })
 
     it('consumes the free gap before rippling a neighbor on the end edge', () => {
@@ -187,7 +189,7 @@ describe('timeline editing transactions', () => {
         ])
     })
 
-    it('leaves a merely touching neighbor fixed when the clip is shortened', () => {
+    it('ripples a touching neighbor back when the clip is shortened', () => {
         const {editor} = setup({resizeCollisionPolicy: 'ripple'})
         const rows = [{id: 'target', actions: [
             {id: 'clip', start: 1, end: 4}, {id: 'after', start: 4, end: 8},
@@ -195,7 +197,35 @@ describe('timeline editing transactions', () => {
         const shortened = editor.place({baseRows: rows, clip: {id: 'clip', start: 1, end: 3},
             targetTrackId: 'target', mode: 'resize', edge: 'end'})
         expect(shortened.rows[0].actions).toEqual([
-            {id: 'clip', start: 1, end: 3}, {id: 'after', start: 4, end: 8},
+            {id: 'clip', start: 1, end: 3}, {id: 'after', start: 3, end: 7},
+        ])
+    })
+
+    it('ripples a touching previous neighbor when the clip start is shortened', () => {
+        const {editor} = setup({resizeCollisionPolicy: 'ripple'})
+        const rows = [{id: 'target', actions: [
+            {id: 'before', start: 1, end: 4}, {id: 'clip', start: 4, end: 7},
+        ]}]
+        const shortened = editor.place({baseRows: rows, clip: {id: 'clip', start: 5, end: 7},
+            targetTrackId: 'target', mode: 'resize', edge: 'start'})
+        expect(shortened.rows[0].actions).toEqual([
+            {id: 'before', start: 2, end: 5}, {id: 'clip', start: 5, end: 7},
+        ])
+    })
+
+    it('returns a previous neighbor after reversing a start ripple resize', () => {
+        const {editor} = setup({resizeCollisionPolicy: 'ripple'})
+        const rows = [{id: 'target', actions: [
+            {id: 'before', start: 1, end: 3}, {id: 'clip', start: 4, end: 6},
+        ]}]
+        const expanded = editor.place({baseRows: rows, clip: {id: 'clip', start: 2, end: 6},
+            targetTrackId: 'target', mode: 'resize', edge: 'start'})
+        editor.recordResizeResult({baseRows: rows, result: expanded, clipId: 'clip', edge: 'start'})
+
+        const restored = editor.place({baseRows: expanded.rows, clip: {id: 'clip', start: 4, end: 6},
+            targetTrackId: 'target', mode: 'resize', edge: 'start'})
+        expect(restored.rows[0].actions).toEqual([
+            {id: 'before', start: 1, end: 3}, {id: 'clip', start: 4, end: 6},
         ])
     })
 
@@ -231,6 +261,47 @@ describe('timeline editing transactions', () => {
         expect(state.lastResult.rows[1].actions[0].end).toBe(6.25)
         editor.preview(state, {clientX: 3.3, clientY: 1, altKey: true})
         expect(state.lastResult.rows[1].actions[0].end).toBe(6.3)
+    })
+
+    it('moves an editable clip by one or ten rendered pixels from the keyboard', () => {
+        const {editor, getRows} = setup({snap: false})
+        const event = (altKey = false) => ({
+            key: 'ArrowRight',
+            altKey,
+            preventDefault: vi.fn(),
+            stopImmediatePropagation: vi.fn(),
+        })
+
+        editor.moveByKeyboard('clip', event())
+        expect(getRows()[0].actions[0].start).toBeCloseTo(1.025)
+        expect(getRows()[0].actions[0].end).toBeCloseTo(4.025)
+
+        editor.moveByKeyboard('clip', event(true))
+        expect(getRows()[0].actions[0].start).toBeCloseTo(1.275)
+        expect(getRows()[0].actions[0].end).toBeCloseTo(4.275)
+    })
+
+    it('gives magnetic snapping priority over the keyboard pixel increment', () => {
+        const {editor, getRows} = setup()
+        getRows()[0].actions[0].start = 1.975
+        getRows()[0].actions[0].end = 4.975
+        getRows()[1].actions.push({id: 'anchor', start: 5.01, end: 6.01})
+        editor.moveByKeyboard('clip', {
+            key: 'ArrowRight',
+            altKey: false,
+            preventDefault: vi.fn(),
+            stopImmediatePropagation: vi.fn(),
+        })
+
+        expect(getRows()[0].actions[0]).toMatchObject({start: 2.01, end: 5.01})
+
+        editor.moveByKeyboard('clip', {
+            key: 'ArrowRight',
+            altKey: false,
+            preventDefault: vi.fn(),
+            stopImmediatePropagation: vi.fn(),
+        })
+        expect(getRows()[0].actions[0].start).toBeCloseTo(2.035)
     })
 })
 

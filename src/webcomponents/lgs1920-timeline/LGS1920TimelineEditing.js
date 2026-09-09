@@ -274,12 +274,11 @@ const rippleClips = (clips, proposedClip) => {
  * @returns {Array} Resized and rippled clips.
  */
 export const rippleResizedClips = ({clips, originalClip, proposedClip, edge}) => {
-    if (edge === 'start') {
-        return clips.map(value => value.id === proposedClip.id ? proposedClip : value)
-            .sort((left, right) => resolveClipInterval(left).start - resolveClipInterval(right).start)
-    }
     const original = resolveClipInterval(originalClip)
     const proposed = resolveClipInterval(proposedClip)
+    const isShortening = edge === 'start'
+        ? proposed.start > original.start + 1e-9
+        : proposed.end < original.end - 1e-9
     const editedSide = clips
         .filter(value => value.id !== proposedClip.id)
         .map(value => ({value, interval: resolveClipInterval(value)}))
@@ -291,6 +290,16 @@ export const rippleResizedClips = ({clips, originalClip, proposedClip, edge}) =>
             : left.interval.start - right.interval.start)
     let boundary = edge === 'start' ? proposed.start : proposed.end
     const rippled = editedSide.map(({value, interval}) => {
+        const touchesOriginalBoundary = edge === 'start'
+            ? Math.abs(interval.end - original.start) <= 1e-9
+            : Math.abs(interval.start - original.end) <= 1e-9
+        if (isShortening && touchesOriginalBoundary) {
+            const duration = interval.duration
+            const end = edge === 'start' ? boundary : boundary + duration
+            const start = edge === 'start' ? end - duration : boundary
+            boundary = edge === 'start' ? start : end
+            return {...value, start, end}
+        }
         const touchesBoundary = edge === 'start'
             ? interval.end <= boundary + 1e-9
             : interval.start >= boundary - 1e-9
@@ -431,7 +440,7 @@ export const createTimelineClipEditor = ({
      * @param {'start'|'end'} options.edge - Resized edge.
      */
     const recordResizeResult = ({baseRows, result, clipId, edge}) => {
-        if (!result || edge !== 'end') return
+        if (!result) return
         const before = findClipEntry(baseRows, clipId)
         const after = findClipEntry(result.rows, clipId)
         if (!before || !after || before.row.id !== after.row.id) return
@@ -885,7 +894,7 @@ export const createTimelineClipEditor = ({
         if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return
         if (getTimelineConfig().editable === false) return
         event.preventDefault()
-        event.stopPropagation()
+        event.stopImmediatePropagation()
         const rows = getRows()
         const entry = findClipEntry(rows, clipId)
         if (!entry || entry.clip.editable === false || entry.clip.resizable === false) return
@@ -934,5 +943,132 @@ export const createTimelineClipEditor = ({
         emit('after-clip-change', detail)
     }
 
-    return {changeDetail, extend, findClipEntry, place, preview, recordResizeResult, resizeByKeyboard}
+    /**
+     * Move an editable clip by a rendered pixel increment from the keyboard.
+     *
+     * @param {string} clipId - Clip identifier.
+     * @param {KeyboardEvent} event - Keyboard event.
+     */
+    const moveByKeyboard = (clipId, event) => {
+        if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return
+        if (getTimelineConfig().editable === false) return
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        const rows = getRows()
+        const entry = findClipEntry(rows, clipId)
+        if (!entry || entry.clip.editable === false || entry.row.editable === false) return
+
+        const ruler = getMajorRulerUnit?.()
+        const pixelsPerSecond = Number(ruler?.pixels) / Number(ruler?.seconds)
+        if (!Number.isFinite(pixelsPerSecond) || pixelsPerSecond <= 0) return
+        const pixelStep = event.altKey ? 10 : 1
+        const direction = event.key === 'ArrowRight' ? 1 : -1
+        const interval = resolveClipInterval(entry.clip)
+        const duration = interval.duration
+        const delta = direction * pixelStep / pixelsPerSecond
+        const unsnappedInterval = {
+            start: Math.max(0, interval.start + delta),
+            end: Math.max(0, interval.start + delta) + duration,
+        }
+        const timeline = getTimelineConfig()
+        const baseDuration = (Number(getProjectionDurationMillis()) || 0) / 1000
+        const extendsDuration = timeline.durationPolicy !== 'fixed'
+        if (!extendsDuration && unsnappedInterval.end > baseDuration) {
+            unsnappedInterval.end = baseDuration
+            unsnappedInterval.start = Math.max(0, baseDuration - duration)
+        }
+
+        let snapped = null
+        let magnetic = null
+        const snap = resolveSnap({secondary: false})
+        if (snap) {
+            snapped = snapClipToMajorUnits({
+                ...unsnappedInterval,
+                mode: 'move',
+                edge: null,
+                ...snap,
+            })
+            const snapDelta = Number(snapped?.start) - interval.start
+            if (!Number.isFinite(snapDelta)
+                || Math.abs(snapDelta) <= 1e-9
+                || direction * snapDelta < 0) {
+                snapped = null
+            }
+            const targets = [0, {time: Number(getCurrentTimeMillis?.()) / 1000}]
+            rows.forEach(row => (row.actions ?? []).forEach(clip => {
+                if (String(clip.id) === String(clipId)) return
+                const targetInterval = resolveClipInterval(clip)
+                targets.push(
+                    {time: targetInterval.start, clipId: clip.id, edge: 'start'},
+                    {time: targetInterval.end, clipId: clip.id, edge: 'end'},
+                )
+            }))
+            magnetic = resolveClipTargetSnap({
+                ...unsnappedInterval,
+                mode: 'move',
+                edge: null,
+                targets,
+                thresholdPixels: snap.thresholdPixels,
+                pixelsPerSecond: snap.pixelsPerSecond,
+                thresholdSeconds: snap.thresholdSeconds,
+                isValid: candidate => {
+                    const candidateResult = place({
+                        baseRows: rows,
+                        clip: Object.assign({}, entry.clip, candidate),
+                        targetTrackId: entry.row.id,
+                        mode: 'move',
+                    })
+                    return Boolean(candidateResult)
+                },
+            })
+            const magneticDelta = Number(magnetic?.start) - interval.start
+            if (!Number.isFinite(magneticDelta)
+                || Math.abs(magneticDelta) <= 1e-9
+                || direction * magneticDelta < 0) {
+                magnetic = null
+            }
+        }
+
+        const candidates = [magnetic, snapped, unsnappedInterval].filter(Boolean)
+        let result = null
+        for (const candidate of candidates) {
+            result = place({
+                baseRows: cloneRows(rows),
+                clip: Object.assign({}, entry.clip, candidate),
+                targetTrackId: entry.row.id,
+                mode: 'move',
+            })
+            if (result) break
+        }
+        if (!result) return
+
+        const state = {
+            mode: 'move',
+            edge: null,
+            clipId,
+            sourceTrackId: entry.row.id,
+            targetTrackId: entry.row.id,
+            startTime: interval.start,
+            targetTime: result.rows.find(row => row.id === entry.row.id)?.actions
+                ?.find(clip => clip.id === clipId)?.start ?? interval.start,
+            baseRows: cloneRows(rows),
+            dragStart: {
+                clientX: Number(event.clientX) || 0,
+                clientY: Number(event.clientY) || 0,
+                time: interval.start,
+                timeMillis: interval.start * 1000,
+                trackId: entry.row.id,
+            },
+        }
+        const detail = changeDetail(state, result, event)
+        if (emit('before-clip-change', detail, {cancelable: true}).defaultPrevented) return
+        setRows(result.rows)
+        setRangeEndMillis(result.rangeEndMillis)
+        setInteractionDurationMillis(result.durationMillis)
+        emit('clip-change', detail)
+        render()
+        emit('after-clip-change', detail)
+    }
+
+    return {changeDetail, extend, findClipEntry, moveByKeyboard, place, preview, recordResizeResult, resizeByKeyboard}
 }

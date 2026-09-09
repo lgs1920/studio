@@ -64,6 +64,7 @@ export const createTimelineRenderer = ({
     handleClipDragLeave,
     handleClipDrop,
     startClipInteraction,
+    moveClipByKeyboard,
     resizeClipByKeyboard,
     startRangeInteraction,
     setRangeBoundaryToLimit,
@@ -120,7 +121,7 @@ export const createTimelineRenderer = ({
         element.setAttribute('tabindex', movable ? '0' : '-1')
         if (movable) {
             element.setAttribute('role', 'button')
-            element.setAttribute('aria-keyshortcuts', 'Delete Backspace Mod+C Mod+D M V')
+            element.setAttribute('aria-keyshortcuts', 'ArrowLeft ArrowRight Alt+ArrowLeft Alt+ArrowRight Delete Backspace Mod+C Mod+D M V')
         }
         element.style.left = `${scaleOffset() + ((start / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth())}px`
         element.style.width = `${Math.max(numericToken('clip-min-width', 8), ((end - start) / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth())}px`
@@ -169,6 +170,12 @@ export const createTimelineRenderer = ({
             })
             element.addEventListener('keydown', event => {
                 if (!movable) return
+                if (!event.ctrlKey && !event.metaKey && !event.shiftKey
+                    && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+                    if (!isClipSelected(value)) selectClip(value, event, element)
+                    moveClipByKeyboard(value.id, event)
+                    return
+                }
                 if (['Backspace', 'Delete'].includes(event.key)) {
                     removeClip(value.id, event)
                     return

@@ -317,6 +317,7 @@ export class LGS1920Timeline extends HTMLElement {
             handleClipDragLeave: (event, track) => this.#handleClipDragLeave(event, track),
             handleClipDrop: (event, rowId, track) => this.#handleClipDrop(event, rowId, track),
             startClipInteraction: (event, clipId, mode, edge, wasSelected) => this.#startClipInteraction(event, clipId, mode, edge, wasSelected),
+            moveClipByKeyboard: (clipId, event) => this.#clipEditor.moveByKeyboard(clipId, event),
             resizeClipByKeyboard: (clipId, edge, event) => this.#clipEditor.resizeByKeyboard(clipId, edge, event),
             startRangeInteraction: (event, edge) => this.#startRangeInteraction(event, edge),
             setRangeBoundaryToLimit: (edge, event) => this.#setRangeBoundaryToLimit(edge, event),
@@ -424,6 +425,21 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
+     * Restore focus to the selected clip after a committed pointer move.
+     *
+     * @returns {void}
+     */
+    #focusSelectedClip = () => {
+        if (this.#selectedClipKey === null) return
+        const element = [...this.#root.querySelectorAll('[data-clip-id]')]
+            .find(value => this.#selectedClipKey === this.#clipSelectionKey(
+                value.getAttribute('data-clip-track-id'),
+                value.getAttribute('data-clip-id'),
+            ))
+        element?.focus?.({preventScroll: true})
+    }
+
+    /**
      * Select a clip and keep the native pointer event inside the timeline.
      *
      * @param {Object} clip - Clip to select.
@@ -494,17 +510,27 @@ export class LGS1920Timeline extends HTMLElement {
      * Clear selection and context-menu state when their clips disappear.
      */
     #reconcileClipSelection = () => {
-        const selectedClipExists = this.#selectedClipKey === null
+        const selectedKey = this.#selectedClipKey
+        const selectedClipExists = selectedKey === null
             || [...this.#root.querySelectorAll('[data-clip-id]')].some(element => (
-                this.#selectedClipKey === this.#clipSelectionKey(
+                selectedKey === this.#clipSelectionKey(
                     element.getAttribute('data-clip-track-id'),
                     element.getAttribute('data-clip-id'),
                 )
             ))
             || this.#rows.some(row => (row.actions ?? []).some(clip => (
-                this.#selectedClipKey === this.#clipSelectionKey(row.id, clip.id)
+                selectedKey === this.#clipSelectionKey(row.id, clip.id)
             )))
-        if (!selectedClipExists) this.#selectedClipKey = null
+        if (!selectedClipExists && selectedKey !== null) {
+            const separatorIndex = selectedKey.indexOf('\u0000')
+            const selectedClipId = separatorIndex < 0 ? null : selectedKey.slice(separatorIndex + 1)
+            const movedClip = this.#rows
+                .flatMap(row => (row.actions ?? []).map(clip => ({row, clip})))
+                .find(({clip}) => String(clip.id) === String(selectedClipId))
+            this.#selectedClipKey = movedClip
+                ? this.#clipSelectionKey(movedClip.row.id, movedClip.clip.id)
+                : null
+        }
         if (this.#clipContextMenuClipId === null) return
         const menuEntry = this.#clipEditor.findClipEntry(this.#rows, this.#clipContextMenuClipId)
         if (menuEntry) return
@@ -4817,6 +4843,7 @@ export class LGS1920Timeline extends HTMLElement {
         if (state?.type === 'clip') {
             this.#refreshDurationGeometry()
             this.#updateClipInteractionPresentation()
+            if (event.type === 'pointerup') this.#focusSelectedClip()
         }
         if (state?.type === 'range') this.#updateDynamicState()
         if (pendingControlledState) this.#applyState(pendingControlledState)
@@ -5097,6 +5124,12 @@ export class LGS1920Timeline extends HTMLElement {
     #handleKeyDown = (event, fromSurface = false) => {
         if (event.target?.closest?.(TIMELINE_KEYBOARD_EDITABLE_SELECTOR)) return
         if (fromSurface && event.target !== event.currentTarget) return
+        if (this.#selectedClipKey !== null
+            && !event.ctrlKey && !event.metaKey && !event.shiftKey
+            && TIMELINE_HORIZONTAL_ARROW_KEYS.includes(event.key)) {
+            this.#clipEditor.moveByKeyboard(this.selectedClipId, event)
+            return
+        }
         if (!event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
             if (event.key === ' ' || event.key === 'Spacebar') {
                 this.#togglePlayback(event)
@@ -5152,8 +5185,14 @@ export class LGS1920Timeline extends HTMLElement {
             this.#clearClipSelection(event)
             return
         }
-        if (event.composedPath?.().includes(this)) return
+        if (event.composedPath?.().includes(this) && event.target !== this) return
         if (event.target?.closest?.(TIMELINE_KEYBOARD_EDITABLE_SELECTOR)) return
+        if (this.#selectedClipKey !== null
+            && !event.ctrlKey && !event.metaKey && !event.shiftKey
+            && TIMELINE_HORIZONTAL_ARROW_KEYS.includes(event.key)) {
+            this.#clipEditor.moveByKeyboard(this.selectedClipId, event)
+            return
+        }
         if (this.#timelineConfig.keyboardZoomActive !== true) return
         if (this.#handleShiftNavigation(event)) return
         this.#handleKeyDown(event)

@@ -98,6 +98,8 @@ describe('Replay timeline preview styles', () => {
         expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__clip {')
         expect(webComponentStyleSource).toContain('.lgs1920-wa-timeline__clip--selected {')
         expect(webComponentStyleSource).toContain('border: 2px dashed currentColor;')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__clip:focus-visible {')
+        expect(webComponentStyleSource).toContain('outline: none;')
         expect(webComponentStyleSource).toContain('grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);')
         expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__header-start {')
         expect(webComponentStyleSource).toContain('& slot[name=\'custom-menu\'] {')

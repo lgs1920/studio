@@ -1222,6 +1222,11 @@
         border: 2px dashed currentColor;
     }
 
+    & .lgs1920-wa-timeline__clip:focus-visible {
+        border: 2px dashed currentColor;
+        outline: none;
+    }
+
     & .lgs1920-wa-timeline__clip.lgs1920-wa-timeline__clip--dragging {
         opacity: 0.75;
     }
