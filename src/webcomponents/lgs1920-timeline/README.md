@@ -140,6 +140,7 @@ clock integration.
 | `hostNoDragClass` | `string` | Optional class supplied by the embedding host and applied to clips and editable track rows so the host can exclude them from its own drag handling. |
 | `colorSwatches` | `Array<{color, label, palette}>` | Application-owned color choices for the clip color menu. The color menu is omitted when no swatches are supplied. |
 | `showClipMenu` | `boolean` | Displays the optional clip creation action. Defaults to `false`. |
+| `clipActions` | `Array<{key, label, icon?, variant?, disabled?}>` | Adds application-defined actions to every editable clip context menu. The action emits the `clip-action` event and is configured globally on the timeline. `clipContextMenuActions` is accepted as a compatibility alias. |
 | `defaultTrackId` | `string` | Track used when a clip-menu option does not specify a track. |
 | `minClipDuration` | `number` | Default minimum clip duration in seconds. Defaults to one frame at `fps`. |
 | `defaultClipDuration` | `number` | Default duration for a clip-menu insertion in seconds. Defaults to `1`. |
@@ -166,6 +167,9 @@ clock integration.
 | `resizeCollisionPolicy` | `'allow' \| 'prevent' \| 'ripple'` | Collision behavior for clip resizes on this track. Defaults to `prevent`. |
 | `minClipDuration` | `number` | Minimum duration applied to clips on this track, in seconds. |
 | `clips` | `array` | Clips displayed on the track. |
+
+The track removal action is displayed only for editable tracks that contain no
+clips. A track with clips must be emptied before it can be removed.
 
 Each clip supports:
 
@@ -228,7 +232,11 @@ modify the application's frame rate or emit an FPS-change event.
 Options displayed by the clip insertion menu. Each option can contain
 `group`, `key`, `label`, `icon`, `kind`, `trackId`, `start`, `end`, `duration`,
 and a `clip` object containing application fields to copy to the inserted clip.
-When `clipOptions` is null, the menu exposes one generic `Clip` option.
+When `clipOptions` is null, the menu exposes one generic `Clip` option. Every
+option can be dragged from the menu and dropped on a compatible editable track;
+the drop position becomes the clip start instead of the current playhead. The
+component always assigns an unused clip identifier when an insertion option
+reuses an existing identifier.
 
 ## React wrapper
 
@@ -459,7 +467,12 @@ the corresponding flat branded red tint.
 The timeline supports controlled clip editing. The component renders a start
 and end handle on every resizable clip, moves clips horizontally when their
 body is dragged, and accepts a clip on another compatible track while it is
-being dragged. The target track is highlighted during the gesture.
+being dragged. A clip is selected by clicking it or starting its drag, and the
+selection stays inside the timeline. Clicking the selected clip without moving
+deselects it, while dragging keeps it selected. The selected clip receives a
+normal 2px dashed border in the clip text color and keyboard focus. Clip options from the insertion menu can also be
+dragged onto a track. The target track is highlighted during the gesture. The
+context menu does not expose `Extend max` when `resizable` is `false`.
 
 Clip movement preserves its duration and shows a diamond centered on each
 endpoint of the ruler's lower border while the clip is being moved; each marker
@@ -483,19 +496,44 @@ boundaries on any track and the playhead take precedence over ruler ticks. Holdi
 `Shift` while moving or resizing a clip uses the currently rendered secondary
 ruler units instead. A clip move uses whichever of its two edges is closest, so
 the duration remains unchanged when the clip stays on its current track or is
-moved to another compatible track. Set `snap: false` on the timeline
+moved to another compatible track. The moving ghost follows the pointer freely
+vertically while its horizontal position follows the magnetic alignment. A
+vertical alignment guide identifies the target clip edge during the gesture and
+remains visible for two seconds after release. Set `snap: false` on the timeline
 configuration to disable this behavior. Hold `Alt` during the gesture to bypass
 all magnets temporarily. `Escape` cancels an active drag or resize and restores
 the original clips, duration, and playback range.
 
 An editable clip can be focused and removed with `Delete` or `Backspace`. Press
-`Mod+D` to duplicate it after its current interval on the same track, or `V` to
-toggle its `enabled` state. A disabled clip remains visible in the editor so it
-can be identified and re-enabled. `Space` toggles local playback when the time
-surface has focus, while `Home` and `End` move the local playhead to the selected
-range boundaries. These keyboard actions update the component projection and
-emit their normal lifecycle events; an embedding application decides whether to
-connect those events to playback or persistence.
+`Mod+C` to create an accentuated copy-placement ghost just after the source
+clip. Move the pointer to the desired track and time, then press the pointer
+button to commit it; `Escape` cancels the placement. `M` masks the focused
+clip. `Mod+D` remains available as an immediate duplicate alias, while `V` toggles
+the `enabled` state. Clicking a neutral area, track label, or empty track
+deselects the clip; `Escape` also clears the selection. The context
+menu provides Copy, Delete, Mask, Extend max, and any
+actions configured through `timeline.clipActions`. A disabled clip remains
+visible in the editor so it can be identified and re-enabled. `Space` toggles
+local playback when the time surface has focus, while `Home` and `End` move the
+local playhead to the selected range boundaries. These keyboard actions update
+the component projection and emit their normal lifecycle events; an embedding
+application decides whether to connect those events to playback or persistence.
+
+Custom context actions use the following shape:
+
+```js
+timeline.timeline = {
+    ...timeline.timeline,
+    clipActions: [
+        {key: 'split', label: 'Split', icon: 'scissors'},
+        {key: 'open-editor', label: 'Open editor', icon: 'pen-to-square'},
+    ],
+}
+
+timeline.addEventListener('lgs1920-timeline-clip-action', event => {
+    if (event.detail.key === 'split') openClipEditor(event.detail.clip)
+})
+```
 
 The component first emits the cancelable `before-remove-clip` event. Calling
 `event.preventDefault()` from an external listener keeps the clip in place,
@@ -637,6 +675,10 @@ React wrapper maps every suffix to the corresponding `on...` callback.
 | `before-clip-enabled-change` | `lgs1920-timeline-before-clip-enabled-change` | `onBeforeClipEnabledChange` | Cancelable `{clipId, trackId, enabled, clip, tracks, previousTracks, event, data}` |
 | `clip-enabled-change` | `lgs1920-timeline-clip-enabled-change` | `onClipEnabledChange` | `{clipId, trackId, enabled, clip, tracks, previousTracks, event, data}` |
 | `after-clip-enabled-change` | `lgs1920-timeline-after-clip-enabled-change` | `onAfterClipEnabledChange` | `{clipId, trackId, enabled, clip, tracks, previousTracks, event, data}` |
+| `clip-select` | `lgs1920-timeline-clip-select` | `onClipSelect` | `{selected, clipId, trackId, clip, event, data}` |
+| `before-clip-action` | `lgs1920-timeline-before-clip-action` | `onBeforeClipAction` | Cancelable `{action, key, clipId, trackId, clip, tracks, previousTracks, event, data}` |
+| `clip-action` | `lgs1920-timeline-clip-action` | `onClipAction` | `{action, key, clipId, trackId, clip, tracks, previousTracks, event, data}` |
+| `after-clip-action` | `lgs1920-timeline-after-clip-action` | `onAfterClipAction` | `{action, key, clipId, trackId, clip, tracks, previousTracks, event, data}` |
 | `before-reorder` | `lgs1920-timeline-before-reorder` | `onBeforeReorder` | Cancelable `{trackIds, tracks, previousTracks, dropIndex, event, data}` |
 | `reorder` | `lgs1920-timeline-reorder` | `onReorder` | `{trackIds, tracks, previousTracks, dropIndex, event, data}` |
 | `after-reorder` | `lgs1920-timeline-after-reorder` | `onAfterReorder` | `{trackIds, tracks, previousTracks, dropIndex, committed, event, data}` |
