@@ -36,6 +36,13 @@ the future editable timeline.
 - The timeline is transient preparation UI and is excluded from captured
   output with `data-capture-exclude`. Do not persist timeline editor state as a
   second domain model.
+- Timeline changes must remain hermetic with respect to the external
+  environment. Do not mutate unrelated application state, create a competing
+  clock, or leak listeners, timers, DOM effects, capture effects, or persistence
+  outside the explicit Timeline lifecycle.
+- Any interaction with Replay, editors, stores, persistence, or external
+  services must use an explicit canonical interface with clear ownership and
+  teardown. Do not rely on implicit globals or untracked external mutations.
 
 ## Main workflow
 

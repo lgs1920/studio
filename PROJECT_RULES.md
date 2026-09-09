@@ -40,6 +40,11 @@ This is the canonical source for the project's AI-agent and development rules.
 - **Backend:** Runtime must be **Bun**. Server framework must be **Elysia**.
 - **Vite:** Never run `bun run dev` manually. `vite build` is allowed.
 
+### Timeline isolation
+
+- **Hermetic Timeline boundary:** Changes made within the Timeline must remain isolated from the external environment. Timeline code must not mutate unrelated application state, create a competing clock, persist a second domain model, or leak listeners, timers, DOM effects, or capture effects outside its explicit lifecycle.
+- **Explicit integration only:** Any Timeline interaction with Replay, editors, stores, persistence, or external services must pass through an explicit canonical interface, with ownership, teardown, and side effects documented and tested. Changes to Timeline behavior must not rely on implicit globals or untracked external mutations.
+
 ### CesiumJS version maintenance
 
 - Whenever a new CesiumJS version is installed or selected in a package manifest, verify every existing Cesium skill under `skills/cesiumjs-*/` and `skills/using-cesiumjs-skills/SKILL.md` against the new version's official release notes and API reference.
