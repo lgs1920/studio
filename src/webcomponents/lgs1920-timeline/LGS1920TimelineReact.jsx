@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-06
+ * Last modified: 2026-09-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -71,6 +71,10 @@ const EVENT_CALLBACKS = [
     ['before-clip-color-change', 'onBeforeClipColorChange'],
     ['clip-color-change', 'onClipColorChange'],
     ['after-clip-color-change', 'onAfterClipColorChange'],
+    ['clip-select', 'onClipSelect'],
+    ['before-clip-action', 'onBeforeClipAction'],
+    ['clip-action', 'onClipAction'],
+    ['after-clip-action', 'onAfterClipAction'],
     ['before-drag', 'onBeforeDrag'],
     ['drag', 'onDrag'],
     ['after-drag', 'onAfterDrag'],
@@ -146,6 +150,10 @@ const EVENT_CALLBACKS = [
  * @param {Function} [props.onBeforeClipColorChange] - Cancelable clip color callback.
  * @param {Function} [props.onClipColorChange] - Clip color callback.
  * @param {Function} [props.onAfterClipColorChange] - Clip color completion callback.
+ * @param {Function} [props.onClipSelect] - Clip selection callback.
+ * @param {Function} [props.onBeforeClipAction] - Cancelable custom clip action callback.
+ * @param {Function} [props.onClipAction] - Custom clip action callback.
+ * @param {Function} [props.onAfterClipAction] - Custom clip action completion callback.
  * @param {Function} [props.onBeforeDrag] - Drag start callback.
  * @param {Function} [props.onDrag] - Live drag callback.
  * @param {Function} [props.onAfterDrag] - Drag completion callback.
@@ -216,6 +224,10 @@ export const LGS1920TimelineReact = ({
     onBeforeClipColorChange,
     onClipColorChange,
     onAfterClipColorChange,
+    onClipSelect,
+    onBeforeClipAction,
+    onClipAction,
+    onAfterClipAction,
     onBeforeDrag,
     onDrag,
     onAfterDrag,
@@ -305,6 +317,10 @@ export const LGS1920TimelineReact = ({
             onBeforeClipColorChange,
             onClipColorChange,
             onAfterClipColorChange,
+            onClipSelect,
+            onBeforeClipAction,
+            onClipAction,
+            onAfterClipAction,
             onBeforeDrag,
             onDrag,
             onAfterDrag,
@@ -320,7 +336,7 @@ export const LGS1920TimelineReact = ({
             return {name, listener}
         })
         return () => listeners.forEach(({name, listener}) => element.removeEventListener(`lgs1920-timeline-${name}`, listener))
-    }, [onAddClip, onAddTrack, onAfterAddClip, onAfterAddTrack, onAfterClipChange, onAfterClipColorChange, onAfterClipExtend, onAfterClipVisibilityChange, onAfterDblClick, onAfterDrag, onAfterPause, onAfterPlay, onAfterRemoveClip, onAfterRemoveTrack, onAfterReorder, onAfterRestart, onAfterRangeChange, onAfterSeek, onAfterStop, onAfterTrackLabelChange, onAfterTrackVisibilityChange, onBeforeAddClip, onBeforeAddTrack, onBeforeClipChange, onBeforeClipColorChange, onBeforeClipExtend, onBeforeClipVisibilityChange, onBeforeDblClick, onBeforeDrag, onBeforePause, onBeforePlay, onBeforeRemoveClip, onBeforeRemoveTrack, onBeforeReorder, onBeforeRestart, onBeforeSeek, onBeforeStop, onBeforeTrackLabelChange, onBeforeTrackVisibilityChange, onBeforeRangeChange, onClipChange, onClipChangeStart, onClipChanging, onClipColorChange, onClipExtend, onClipVisibilityChange, onDblClick, onDrag, onPause, onPlay, onRangeChange, onRangeChangeStart, onRangeChanging, onRemoveClip, onRemoveTrack, onReorder, onRestart, onSeek, onStop, onTrackLabelChange, onTrackVisibilityChange])
+    }, [onAddClip, onAddTrack, onAfterAddClip, onAfterAddTrack, onAfterClipAction, onAfterClipChange, onAfterClipColorChange, onAfterClipExtend, onAfterClipVisibilityChange, onAfterDblClick, onAfterDrag, onAfterPause, onAfterPlay, onAfterRemoveClip, onAfterRemoveTrack, onAfterReorder, onAfterRestart, onAfterRangeChange, onAfterSeek, onAfterStop, onAfterTrackLabelChange, onAfterTrackVisibilityChange, onBeforeAddClip, onBeforeAddTrack, onBeforeClipAction, onBeforeClipChange, onBeforeClipColorChange, onBeforeClipExtend, onBeforeClipVisibilityChange, onBeforeDblClick, onBeforeDrag, onBeforePause, onBeforePlay, onBeforeRemoveClip, onBeforeRemoveTrack, onBeforeReorder, onBeforeRestart, onBeforeSeek, onBeforeStop, onBeforeTrackLabelChange, onBeforeTrackVisibilityChange, onBeforeRangeChange, onClipAction, onClipChange, onClipChangeStart, onClipChanging, onClipColorChange, onClipExtend, onClipSelect, onClipVisibilityChange, onDblClick, onDrag, onPause, onPlay, onRangeChange, onRangeChangeStart, onRangeChanging, onRemoveClip, onRemoveTrack, onReorder, onRestart, onSeek, onStop, onTrackLabelChange, onTrackVisibilityChange])
 
     return (
         <lgs1920-timeline ref={_element}>

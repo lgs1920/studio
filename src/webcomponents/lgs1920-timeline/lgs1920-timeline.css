@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-08
+ * Last modified: 2026-09-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -114,6 +114,8 @@
     --lgs-timeline-end-marker-color: var(--wa-color-border-normal);
     /* Timeline clip edge indicator color. */
     --lgs-timeline-clip-edge-indicator-color: var(--wa-color-blue-70, #57b8f1);
+    /* Timeline clip snap guide color. */
+    --lgs-timeline-clip-snap-guide-color: var(--lgs-timeline-track-drop-indicator-color);
     /* Timeline clip edge indicator diameter. */
     --lgs-timeline-clip-edge-indicator-size: 6px;
     /* Timeline video range handle width. */
@@ -208,7 +210,7 @@
         box-sizing: border-box;
         padding: var(--lgs-timeline-padding);
         color: var(--lgs-timeline-text-color);
-        background: var(--lgs-timeline-background);
+        background: var(--wa-color-surface-raised, var(--wa-color-surface-default, #fff));
         border-radius: inherit;
         pointer-events: auto;
     }
@@ -529,7 +531,7 @@
         min-height: var(--lgs-timeline-row-height);
         padding-inline: var(--lgs-gutter-xxs, 0.25rem);
         overflow: hidden;
-        border-radius: var(--wa-border-radius-s);
+        border-radius: 0;
         color: var(--lgs-timeline-text-color);
         background: var(--lgs-timeline-surface-color);
         border-bottom: 1px solid var(--lgs-timeline-quiet-border-color);
@@ -542,7 +544,6 @@
 
     & .lgs1920-wa-timeline__legend-row.lgs1920-wa-timeline__legend-row--read-only {
         background-color: var(--lgs-timeline-read-only-background);
-        border-bottom-color: color-mix(in oklab, var(--wa-color-danger-border-loud, var(--wa-color-red-60, #d33)) 64%, white);
     }
 
     & .lgs1920-wa-timeline__legend-row.lgs1920-wa-timeline__legend-row--hidden {
@@ -763,8 +764,11 @@
     & .lgs1920-wa-timeline__surface {
         /* Keep the surface card body flush with the existing timeline layout. */
         --spacing: 0;
+        /* Keep a small gutter around the currently visible horizontal viewport. */
+        --lgs-timeline-viewport-margin: max(var(--lgs-timeline-scale-offset), var(--lgs-timeline-end-padding));
         /* Use the compact Web Awesome radius for the time panel. */
         --wa-panel-border-radius: var(--wa-border-radius-s);
+        position: relative;
         display: block;
         box-sizing: border-box;
         min-width: 0;
@@ -776,6 +780,26 @@
         color: var(--lgs-timeline-text-color);
         background: var(--lgs-timeline-surface-color);
         scrollbar-width: none;
+    }
+
+    & .lgs1920-wa-timeline__surface[data-viewport-margin-left]::before,
+    & .lgs1920-wa-timeline__surface[data-viewport-margin-right]::after {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        z-index: 3;
+        width: var(--lgs-timeline-viewport-margin);
+        content: '';
+        background: var(--lgs-timeline-surface-color);
+        pointer-events: none;
+    }
+
+    & .lgs1920-wa-timeline__surface[data-viewport-margin-left]::before {
+        left: 0;
+    }
+
+    & .lgs1920-wa-timeline__surface[data-viewport-margin-right]::after {
+        right: 0;
     }
 
     & .lgs1920-wa-timeline__surface::part(body) {
@@ -845,6 +869,18 @@
         pointer-events: none;
     }
 
+    & .lgs1920-wa-timeline__clip-snap-guide {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        z-index: 12;
+        display: block;
+        width: 1px;
+        background-color: var(--lgs-timeline-clip-snap-guide-color);
+        box-shadow: var(--wa-shadow-s);
+        pointer-events: none;
+    }
+
     & .lgs1920-wa-timeline__tick {
         position: absolute;
         top: 0;
@@ -900,25 +936,26 @@
         background-color: var(--lgs-timeline-surface-color);
         background-image: linear-gradient(90deg, color-mix(in srgb, var(--lgs-timeline-quiet-border-color) 60%, transparent) 1px, transparent 1px);
         background-size: var(--lgs-timeline-scale-width) 100%;
-        border-bottom: 1px solid var(--lgs-timeline-quiet-border-color);
-        border-radius: var(--wa-border-radius-s);
+        border-block: 1px solid var(--lgs-timeline-quiet-border-color);
+        border-radius: 0;
         overflow: hidden;
     }
 
     & .lgs1920-wa-timeline__track.lgs1920-wa-timeline__track--read-only {
         background-color: var(--lgs-timeline-read-only-background);
-        border-bottom-color: color-mix(in oklab, var(--wa-color-danger-border-loud, var(--wa-color-red-60, #d33)) 64%, white);
     }
 
     & .lgs1920-wa-timeline__track.lgs1920-wa-timeline__track--hidden {
         background-color: var(--lgs-timeline-hidden-background);
-        border-bottom-color: color-mix(in oklab, var(--lgs-timeline-quiet-border-color) 82%, white);
+        border-block-color: color-mix(in oklab, var(--lgs-timeline-quiet-border-color) 82%, white);
     }
 
     & .lgs1920-wa-timeline__track-background {
         position: absolute;
         z-index: 0;
         inset: 0;
+        width: 100%;
+        min-width: 100%;
         pointer-events: none;
     }
 
@@ -929,6 +966,10 @@
     & .lgs1920-wa-timeline__track-background.lgs1920-wa-timeline__track-background--hidden {
         background-color: var(--lgs-timeline-hidden-background);
         opacity: 0.72;
+    }
+
+    & .lgs1920-wa-timeline__track-background.lgs1920-wa-timeline__track-background--clip-drop-rejected {
+        background-color: color-mix(in srgb, var(--wa-color-danger-fill-normal) 56%, var(--lgs-timeline-surface-color));
     }
 
     & .lgs1920-wa-timeline__track.lgs1920-wa-timeline__track--dragging {
@@ -949,7 +990,7 @@
 
     & .lgs1920-wa-timeline__track.lgs1920-wa-timeline__track--clip-drop-rejected {
         cursor: not-allowed;
-        background-color: color-mix(in srgb, var(--wa-color-danger-fill-normal) 38%, var(--lgs-timeline-surface-color));
+        background-color: color-mix(in srgb, var(--wa-color-danger-fill-normal) 56%, var(--lgs-timeline-surface-color));
         outline: 1px solid var(--wa-color-danger-border-normal);
         outline-offset: -1px;
     }
@@ -1177,6 +1218,10 @@
         cursor: grabbing;
     }
 
+    & .lgs1920-wa-timeline__clip.lgs1920-wa-timeline__clip--selected {
+        border: 2px dashed currentColor;
+    }
+
     & .lgs1920-wa-timeline__clip.lgs1920-wa-timeline__clip--dragging {
         opacity: 0.75;
     }
@@ -1191,16 +1236,38 @@
         opacity: 0.9;
     }
 
+    & .lgs1920-wa-timeline__clip.lgs1920-wa-timeline__clip--copy-ghost {
+        background: color-mix(in srgb, var(--wa-color-fill-loud, var(--wa-color-neutral-fill-loud)) 86%, white);
+        border: 2px solid var(--wa-color-border-loud, var(--wa-color-neutral-border-loud));
+        filter: saturate(1.45) brightness(1.08);
+        opacity: 0.96;
+    }
+
     & .lgs1920-wa-timeline__clip.lgs1920-wa-timeline__clip--drag-source {
         z-index: 0;
         pointer-events: none;
         opacity: 0.35;
     }
 
+    & .lgs1920-wa-timeline__clip.lgs1920-wa-timeline__clip--drag-source-rejected {
+        z-index: 1;
+        pointer-events: none;
+        outline: 1px dashed var(--wa-color-neutral-border-normal);
+        outline-offset: -1px;
+        filter: grayscale(0.7);
+        opacity: 0.68;
+    }
+
     & .lgs1920-wa-timeline__clip.lgs1920-wa-timeline__clip--drag-ghost.lgs1920-wa-timeline__clip--drop-rejected {
-        color: var(--wa-color-danger-on-normal);
-        background: color-mix(in srgb, var(--wa-color-danger-fill-normal) 42%, transparent);
-        border-color: var(--wa-color-danger-border-normal);
+        color: var(--wa-color-neutral-on-normal);
+        background:
+            repeating-linear-gradient(135deg,
+                color-mix(in srgb, var(--wa-color-neutral-fill-loud) 46%, transparent) 0 5px,
+                transparent 5px 10px),
+            color-mix(in srgb, var(--wa-color-neutral-fill-normal) 72%, transparent);
+        border-color: var(--wa-color-neutral-border-normal);
+        filter: grayscale(0.85);
+        opacity: 0.82;
     }
 
     & .lgs1920-wa-timeline__clip.lgs1920-wa-timeline__clip--disabled {

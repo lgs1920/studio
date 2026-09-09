@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-08
+ * Last modified: 2026-09-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,7 +24,7 @@ import '@web.awesome.me/webawesome-pro/dist/components/split-panel/split-panel.j
 import '@web.awesome.me/webawesome-pro/dist/components/tooltip/tooltip.js'
 import styles from './lgs1920-timeline.css?inline'
 import {createTimelineClipScroll} from './LGS1920TimelineClipScroll.js'
-import {cloneRows, createTimelineClipEditor, resolveClipInterval, trackAcceptsClip} from './LGS1920TimelineEditing.js'
+import {cloneRows, createTimelineClipEditor, normalizeClipLayout, resolveClipInterval, trackAcceptsClip} from './LGS1920TimelineEditing.js'
 import {
     allowsHostInteraction,
     EXTERNAL_INTERACTION_CONTINUATION_EVENT_TYPES,
@@ -77,6 +77,7 @@ import {
 } from './LGS1920TimelineUtils.js'
 
 const ROW_DRAG_THRESHOLD = 4
+const CLIP_OPTION_DRAG_MIME = 'application/x-lgs1920-timeline-clip'
 const STRUCTURAL_CONFIG_KEYS = Object.freeze([
     'interactive',
     'editable',
@@ -88,6 +89,8 @@ const STRUCTURAL_CONFIG_KEYS = Object.freeze([
     'hostNoDragClass',
     'horizontalFit',
     'colorSwatches',
+    'clipActions',
+    'clipContextMenuActions',
 ])
 
 /**
@@ -121,10 +124,16 @@ export class LGS1920Timeline extends HTMLElement {
     #legendWidth = null
     #building = true
     #buildingFrame = null
+    #buildingLayoutSignature = null
     #initialBuildComplete = false
     #menuOpen = false
+    #draggedClipOption = null
+    #generatedClipIdentifiers = new Set()
     #clipContextMenuClipId = null
     #clipContextMenuAnchor = null
+    #selectedClipKey = null
+    #clipCopyState = null
+    #clipCopyPresentationFrame = null
     #trackNumber = 0
     #horizontalFitActive = false
     #lastControlledZoomPercent = null
@@ -139,6 +148,8 @@ export class LGS1920Timeline extends HTMLElement {
     #pointerCaptureTarget = null
     #pointerCaptureId = null
     #dragState = null
+    #clipSnapGuide = null
+    #clipSnapGuideTimer = null
     #scrubPointerId = null
     #autoScrollFrame = null
     #edgeDirection = null
@@ -281,6 +292,7 @@ export class LGS1920Timeline extends HTMLElement {
             getDurationMillis: () => this.#durationMillis(),
             getContentWidth: () => this.#contentWidth,
             getZoom: () => this.#zoom,
+            isClipSelected: clip => this.#isClipSelected(clip),
             contextualSlot: (prefix, identifier, globalName, fallback) => this.#contextualSlot(prefix, identifier, globalName, fallback),
             hasContextualSlot: (prefix, identifier) => this.#hasContextualSlot(prefix, identifier),
             globalSlotContent: (name, fallback) => this.#globalSlotContent(name, fallback),
@@ -289,13 +301,18 @@ export class LGS1920Timeline extends HTMLElement {
             removeClip: (clipId, event) => this.#removeClip(clipId, event),
             duplicateClip: (clipId, event) => this.#duplicateClip(clipId, event),
             toggleClipEnabled: (clipId, event) => this.#toggleClipEnabled(clipId, event),
+            toggleClipVisibility: (clipId, event) => this.#toggleClipVisibility(clipId, event),
+            selectClip: (clip, event, element) => this.#selectClip(clip, event, element),
             openClipContextMenu: (clip, event) => this.#openClipContextMenu(clip, event),
             beginTrackLabelEdit: row => this.#beginTrackLabelEdit(row),
             commitTrackLabelEdit: event => this.#commitTrackLabelEdit(event),
             cancelTrackLabelEdit: () => this.#cancelTrackLabelEdit(),
             startRowDrag: (event, rowId) => this.#startRowDrag(event, rowId),
             toggleTrackVisibility: (row, event) => this.#toggleTrackVisibility(row, event),
-            startClipInteraction: (event, clipId, mode, edge) => this.#startClipInteraction(event, clipId, mode, edge),
+            handleClipDragOver: (event, rowId, track) => this.#handleClipDragOver(event, rowId, track),
+            handleClipDragLeave: (event, track) => this.#handleClipDragLeave(event, track),
+            handleClipDrop: (event, rowId, track) => this.#handleClipDrop(event, rowId, track),
+            startClipInteraction: (event, clipId, mode, edge, wasSelected) => this.#startClipInteraction(event, clipId, mode, edge, wasSelected),
             resizeClipByKeyboard: (clipId, edge, event) => this.#clipEditor.resizeByKeyboard(clipId, edge, event),
             startRangeInteraction: (event, edge) => this.#startRangeInteraction(event, edge),
             setRangeBoundaryToLimit: (edge, event) => this.#setRangeBoundaryToLimit(edge, event),
@@ -372,6 +389,127 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
+     * Resolve a stable key for one clip selection.
+     *
+     * @param {string|number|null} trackId - Track identifier.
+     * @param {string|number|null} clipId - Clip identifier.
+     * @returns {string} Selection key.
+     */
+    #clipSelectionKey = (trackId, clipId) => `${String(trackId ?? '')}\u0000${String(clipId ?? '')}`
+
+    /**
+     * Test whether a clip is the current selection.
+     *
+     * @param {Object} clip - Clip to inspect.
+     * @returns {boolean} Whether the clip is selected.
+     */
+    #isClipSelected = clip => this.#selectedClipKey === this.#clipSelectionKey(clip?.trackId, clip?.id)
+
+    /**
+     * Update the selected state on rendered clips without rebuilding the timeline.
+     */
+    #updateClipSelectionPresentation = () => {
+        this.#root.querySelectorAll('[data-clip-id]').forEach(element => {
+            const selected = this.#selectedClipKey === this.#clipSelectionKey(
+                element.getAttribute('data-clip-track-id'),
+                element.getAttribute('data-clip-id'),
+            )
+            element.classList.toggle('lgs1920-wa-timeline__clip--selected', selected)
+            element.setAttribute('aria-selected', selected ? 'true' : 'false')
+        })
+    }
+
+    /**
+     * Select a clip and keep the native pointer event inside the timeline.
+     *
+     * @param {Object} clip - Clip to select.
+     * @param {Event} event - Triggering pointer or context-menu event.
+     * @param {HTMLElement|null} element - Rendered clip element to focus.
+     */
+    #selectClip = (clip, event, element = null) => {
+        const trackId = clip?.trackId ?? this.#rows.find(row => (row.actions ?? []).some(value => value.id === clip?.id))?.id
+        if (trackId === undefined || clip?.id === undefined || clip?.id === null) return
+        const previousSelectionKey = this.#selectedClipKey
+        this.#selectedClipKey = this.#clipSelectionKey(trackId, clip.id)
+        event?.stopPropagation?.()
+        element?.focus?.({preventScroll: true})
+        this.#updateClipSelectionPresentation()
+        if (previousSelectionKey === this.#selectedClipKey) return
+        this.#emit('clip-select', {
+            selected: true,
+            clipId: clip.id,
+            trackId,
+            clip: Object.assign({}, clip, {trackId}),
+            event,
+            data: this.#publicSnapshot(),
+        })
+    }
+
+    /**
+     * Clear the current clip selection and notify the host.
+     *
+     * @param {Event} event - Triggering pointer or keyboard event.
+     * @returns {boolean} Whether a selection was cleared.
+     */
+    #clearClipSelection = event => {
+        if (this.#selectedClipKey === null) return false
+        const selectedKey = this.#selectedClipKey
+        const entry = this.#rows
+            .flatMap(row => (row.actions ?? []).map(clip => ({row, clip})))
+            .find(({row, clip}) => selectedKey === this.#clipSelectionKey(row.id, clip.id))
+        this.#selectedClipKey = null
+        this.#updateClipSelectionPresentation()
+        if (entry) {
+            this.#emit('clip-select', {
+                selected: false,
+                clipId: entry.clip.id,
+                trackId: entry.row.id,
+                clip: Object.assign({}, entry.clip, {trackId: entry.row.id}),
+                event,
+                data: this.#publicSnapshot(),
+            })
+        }
+        return true
+    }
+
+    /**
+     * Clear a clip selection when pointer input lands outside every clip.
+     *
+     * @param {PointerEvent} event - Pointer event inside the timeline shadow root.
+     */
+    #handleClipSelectionPointerDown = event => {
+        if (this.#selectedClipKey === null) return
+        const path = event.composedPath?.() ?? []
+        if (path.some(target => target?.closest?.('[data-clip-id]'))) return
+        const menu = this.#root.querySelector('[data-testid="lgs1920-timeline-clip-context-menu"]')
+        if (menu && path.includes(menu)) return
+        this.#clearClipSelection(event)
+    }
+
+    /**
+     * Clear selection and context-menu state when their clips disappear.
+     */
+    #reconcileClipSelection = () => {
+        const selectedClipExists = this.#selectedClipKey === null
+            || [...this.#root.querySelectorAll('[data-clip-id]')].some(element => (
+                this.#selectedClipKey === this.#clipSelectionKey(
+                    element.getAttribute('data-clip-track-id'),
+                    element.getAttribute('data-clip-id'),
+                )
+            ))
+            || this.#rows.some(row => (row.actions ?? []).some(clip => (
+                this.#selectedClipKey === this.#clipSelectionKey(row.id, clip.id)
+            )))
+        if (!selectedClipExists) this.#selectedClipKey = null
+        if (this.#clipContextMenuClipId === null) return
+        const menuEntry = this.#clipEditor.findClipEntry(this.#rows, this.#clipContextMenuClipId)
+        if (menuEntry) return
+        this.#clipContextMenuClipId = null
+        this.#clipContextMenuAnchor = null
+        window.removeEventListener('pointerdown', this.#handleClipContextMenuOutsidePointerDown, true)
+    }
+
+    /**
      * Check whether an input event originated from the split-panel divider.
      *
      * @param {Event} event - Native input event.
@@ -429,6 +567,7 @@ export class LGS1920Timeline extends HTMLElement {
             this.addEventListener(eventType, this.#stopInputPropagation)
             this.#root.addEventListener(eventType, this.#stopInputPropagation)
         }
+        this.#root.addEventListener('pointerdown', this.#handleClipSelectionPointerDown, true)
         this.#inputPropagationBlockersInstalled = true
     }
 
@@ -441,6 +580,7 @@ export class LGS1920Timeline extends HTMLElement {
             this.removeEventListener(eventType, this.#stopInputPropagation)
             this.#root.removeEventListener(eventType, this.#stopInputPropagation)
         }
+        this.#root.removeEventListener('pointerdown', this.#handleClipSelectionPointerDown, true)
         this.#inputPropagationBlockersInstalled = false
     }
 
@@ -513,13 +653,42 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
+     * Get the identifier of the selected clip.
+     *
+     * @returns {string|number|null} Selected clip identifier.
+     */
+    get selectedClipId() {
+        if (this.#selectedClipKey === null) return null
+        const separatorIndex = this.#selectedClipKey.indexOf('\u0000')
+        return separatorIndex < 0 ? null : this.#selectedClipKey.slice(separatorIndex + 1)
+    }
+
+    /**
+     * Select a clip by its identifier, or clear the selection.
+     *
+     * @param {string|number|null} value - Clip identifier.
+     */
+    set selectedClipId(value) {
+        if (value === null || value === undefined) {
+            this.#selectedClipKey = null
+        } else {
+            const entry = this.#clipEditor.findClipEntry(this.#rows, value)
+            this.#selectedClipKey = entry ? this.#clipSelectionKey(entry.row.id, entry.clip.id) : null
+        }
+        this.#updateClipSelectionPresentation()
+    }
+
+    /**
      * Set the public track definitions.
      *
      * @param {Array} value - Track definitions.
      */
     set tracks(value) {
         if (!this.#localDurationDirty) this.#interactionDurationMillis = null
-        const incoming = Array.isArray(value) ? value : []
+        const incoming = (Array.isArray(value) ? value : []).map(row => {
+            const {actions, ...track} = row ?? {}
+            return {...track, clips: normalizeClipLayout(track.clips ?? actions)}
+        })
         const controlledRowsChanged = this.#rowSignature(incoming) !== this.#rowSignature(this.#trackDefinitions)
         const localPlacementChanged = this.#placementSignature(this.#rows) !== this.#placementSignature(this.#trackDefinitions)
         const baselineIds = this.#trackDefinitions.map(row => row.id)
@@ -623,7 +792,9 @@ export class LGS1920Timeline extends HTMLElement {
         this.#externalInteractionActive = false
         this.#scrollbarsInteractionActive = false
         this.#clearScrollbarHideTimer()
+        this.#clearClipSnapGuide()
         this.#stopAutoScroll()
+        this.#cancelClipCopy()
         this.#closeClipContextMenu()
     }
 
@@ -635,6 +806,7 @@ export class LGS1920Timeline extends HTMLElement {
      */
     #openClipContextMenu = (clip, event) => {
         if (this.#timelineConfig.editable === false || clip?.editable === false) return
+        this.#selectClip(clip, event, event?.currentTarget)
         const rect = {
             x: Number(event.clientX) || 0,
             y: Number(event.clientY) || 0,
@@ -648,10 +820,63 @@ export class LGS1920Timeline extends HTMLElement {
         this.#clipContextMenuClipId = clip.id
         this.#clipContextMenuAnchor = {
             getBoundingClientRect: () => rect,
-            contextElement: this,
         }
         window.addEventListener('pointerdown', this.#handleClipContextMenuOutsidePointerDown, true)
         this.#render()
+    }
+
+    /**
+     * Resolve custom actions configured for the clip context menu.
+     *
+     * @returns {Array} Valid custom clip actions.
+     */
+    #resolvedClipActions = () => {
+        const configured = this.#timelineConfig.clipActions
+            ?? this.#timelineConfig.clipContextMenuActions
+        return (Array.isArray(configured) ? configured : [])
+            .filter(action => action && typeof action === 'object' && String(action.key ?? '').trim() && String(action.label ?? '').trim())
+            .map(action => ({
+                ...action,
+                key: String(action.key).trim(),
+                label: String(action.label).trim(),
+            }))
+    }
+
+    /**
+     * Resolve a safe DOM identifier for a custom menu action.
+     *
+     * @param {string} key - Action key.
+     * @returns {string} Safe identifier.
+     */
+    #clipActionKey = key => String(key).trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-')
+
+    /**
+     * Emit a configured custom action for the selected clip.
+     *
+     * @param {string} clipId - Clip identifier.
+     * @param {Object} action - Configured action.
+     * @param {Event} event - Triggering menu event.
+     */
+    #runClipAction = (clipId, action, event) => {
+        if (action?.disabled === true || this.#timelineConfig.editable === false) return
+        const entry = this.#clipEditor.findClipEntry(this.#rows, clipId)
+        if (!entry || !this.#isTrackEditable(entry.row) || entry.clip.editable === false) return
+        event?.preventDefault?.()
+        event?.stopPropagation?.()
+        const detail = {
+            action,
+            key: action.key,
+            clipId,
+            trackId: entry.row.id,
+            clip: Object.assign({}, entry.clip, {trackId: entry.row.id}),
+            tracks: this.tracks,
+            previousTracks: this.tracks,
+            event,
+            data: this.#publicSnapshot(),
+        }
+        if (this.#emitBefore('clip-action', detail).defaultPrevented) return
+        this.#emit('clip-action', detail)
+        this.#emitAfter('clip-action', detail)
     }
 
     /**
@@ -671,7 +896,8 @@ export class LGS1920Timeline extends HTMLElement {
      */
     #handleClipContextMenuOutsidePointerDown = event => {
         const path = event.composedPath?.() ?? []
-        if (path.includes(this)) return
+        const menu = this.#root.querySelector('[data-testid="lgs1920-timeline-clip-context-menu"]')
+        if (menu && path.includes(menu)) return
         this.#closeClipContextMenu()
     }
 
@@ -1196,6 +1422,7 @@ export class LGS1920Timeline extends HTMLElement {
      * Render the empty or active component state.
      */
     #render = () => {
+        this.#reconcileClipSelection()
         if (!this.#visible || !this.#projection) {
             this.#cancelBuildingCompletion()
             this.#building = this.#visible
@@ -1287,6 +1514,7 @@ export class LGS1920Timeline extends HTMLElement {
                 this.#surface.scrollLeft = clamp(previousScrollLeft, 0, maximumScrollLeft)
             }
         }
+        this.#updateTimelineViewportMargins(this.#surface)
         if (this.#tracksViewport) {
             this.#tracksViewport.scrollTop = previousScrollTop
         }
@@ -1303,6 +1531,10 @@ export class LGS1920Timeline extends HTMLElement {
             })
         }
         this.#updateDynamicState()
+        this.#updateClipSelectionPresentation()
+        this.#updateClipCopyPresentation()
+        this.#scheduleClipCopyPresentation()
+        this.#updateClipSnapGuidePresentation()
         if (!this.#initialBuildComplete && this.isConnected) {
             if (initialOverlayEnabled) this.#scheduleBuildingCompletion()
             else this.#initialBuildComplete = true
@@ -1317,6 +1549,31 @@ export class LGS1920Timeline extends HTMLElement {
     #startBuilding = () => {
         this.#cancelBuildingCompletion()
         this.#building = true
+        this.#buildingLayoutSignature = null
+    }
+
+    /**
+     * Capture the measurable layout state used to release the building overlay.
+     *
+     * @returns {string} Stable layout signature.
+     */
+    #buildingLayout = () => {
+        const surface = this.#surface
+        const canvas = this.#root.querySelector('[part="canvas"]')
+        const tracks = this.#root.querySelector('[part="tracks"]')
+        const surfaceRect = surface?.getBoundingClientRect?.() ?? {}
+        const canvasRect = canvas?.getBoundingClientRect?.() ?? {}
+        return [
+            surface?.clientWidth ?? 0,
+            surface?.clientHeight ?? 0,
+            surface?.scrollWidth ?? 0,
+            surfaceRect.width ?? 0,
+            surfaceRect.height ?? 0,
+            canvas?.style.width ?? '',
+            canvasRect.width ?? 0,
+            canvasRect.height ?? 0,
+            tracks?.style.width ?? '',
+        ].join('|')
     }
 
     /**
@@ -1327,8 +1584,23 @@ export class LGS1920Timeline extends HTMLElement {
     #scheduleBuildingCompletion = () => {
         const complete = () => {
             this.#buildingFrame = null
+            const surfaceWidth = this.#surface?.clientWidth ?? 0
+            const layoutMeasured = this.#surfaceWidth > 0 || surfaceWidth > 0
+            const layoutSignature = this.#buildingLayout()
+            const layoutStable = layoutSignature === this.#buildingLayoutSignature
+            if (typeof requestAnimationFrame === 'function'
+                && typeof ResizeObserver !== 'undefined'
+                && this.#projection
+                && (!layoutMeasured || !layoutStable)) {
+                this.#buildingLayoutSignature = layoutSignature
+                this.#buildingFrame = requestAnimationFrame(() => {
+                    this.#buildingFrame = requestAnimationFrame(complete)
+                })
+                return
+            }
             this.#building = false
             this.#initialBuildComplete = true
+            this.#buildingLayoutSignature = null
             this.#root.querySelector('[data-building-overlay]')?.remove()
             this.#root.querySelector('[data-building]')?.removeAttribute('data-building')
         }
@@ -1996,9 +2268,12 @@ export class LGS1920Timeline extends HTMLElement {
                 variant: 'brand',
                 size: 's',
                 role: 'menuitem',
+                draggable: 'true',
             })
             item.append(...this.#globalSlotContent('clip-option-icon', createIcon(option.icon ?? 'film')))
             item.append(...this.#globalSlotContent('clip-option-label', document.createTextNode(option.label ?? option.key ?? 'Clip')))
+            item.addEventListener('dragstart', event => this.#startClipOptionDrag(option, event))
+            item.addEventListener('dragend', event => this.#endClipOptionDrag(event))
             item.addEventListener('click', event => {
                 this.#menuOpen = false
                 this.#insertClip(option, event)
@@ -2021,14 +2296,14 @@ export class LGS1920Timeline extends HTMLElement {
         const entry = this.#clipEditor.findClipEntry(this.#rows, clipId)
         if (!entry || entry.clip.editable === false || !this.#isTrackEditable(entry.row)) return null
         const popup = createElement('wa-popup', 'lgs1920-wa-timeline__popup lgs1920-wa-timeline__clip-context-menu lgs-widget-no-drag', {
-            placement: 'right-start',
+            placement: 'bottom-start',
             distance: 6,
             active: true,
             boundary: 'viewport',
             'data-testid': 'lgs1920-timeline-clip-context-menu',
             flip: true,
             shift: true,
-            'flip-fallback-placements': 'left-start bottom-start top-start',
+            'flip-fallback-placements': 'top-start right-start left-start',
             'shift-padding': 8,
             part: 'clip-context-menu',
         })
@@ -2037,18 +2312,21 @@ export class LGS1920Timeline extends HTMLElement {
             role: 'menu',
             part: 'clip-menu',
         })
-        const addAction = ({key, iconName, label, variant = 'neutral', action}) => {
+        const addAction = ({key, testId = key, iconName, label, variant = 'neutral', disabled = false, action}) => {
             const item = this.#button({
                 iconName,
                 label,
-                testId: `clip-menu-${key}`,
+                testId: `clip-menu-${testId}`,
                 iconSlotElement: createIcon(iconName, 'solid'),
                 variant,
                 appearance: 'plain',
+                disabled,
             })
             item.append(document.createTextNode(label))
             item.setAttribute('role', 'menuitem')
+            item.setAttribute('data-clip-action', key)
             item.addEventListener('click', event => {
+                if (disabled) return
                 event.stopPropagation()
                 this.#closeClipContextMenu()
                 action(event)
@@ -2059,14 +2337,15 @@ export class LGS1920Timeline extends HTMLElement {
         addAction({
             key: 'remove',
             iconName: 'trash-can',
-            label: 'Remove',
+            label: 'Delete',
             variant: 'danger',
             action: event => this.#removeClip(clipId, event),
         })
         addAction({
-            key: 'duplicate',
+            key: 'copy',
+            testId: 'duplicate',
             iconName: 'clone',
-            label: 'Duplicate',
+            label: 'Copy',
             action: event => this.#duplicateClip(clipId, event),
         })
         addAction({
@@ -2078,15 +2357,27 @@ export class LGS1920Timeline extends HTMLElement {
         addAction({
             key: 'visibility',
             iconName: entry.clip.visible === false ? 'eye' : 'eye-slash',
-            label: entry.clip.visible === false ? 'Show' : 'Hide',
+            label: entry.clip.visible === false ? 'Show' : 'Mask',
             action: event => this.#toggleClipVisibility(clipId, event),
         })
-        addAction({
-            key: 'extend',
-            iconName: 'arrows-left-right',
-            label: 'Extend',
-            action: event => this.#extendClip(clipId, event),
-        })
+        if (entry.clip.resizable !== false) {
+            addAction({
+                key: 'extend',
+                iconName: 'arrows-left-right',
+                label: 'Extend max',
+                action: event => this.#extendClip(clipId, event),
+            })
+        }
+
+        this.#resolvedClipActions().forEach(action => addAction({
+            key: action.key,
+            testId: `clip-custom-${this.#clipActionKey(action.key)}`,
+            iconName: action.icon ?? 'bolt',
+            label: action.label,
+            variant: action.variant ?? 'neutral',
+            disabled: action.disabled === true,
+            action: event => this.#runClipAction(clipId, action, event),
+        }))
 
         popup.append(menu)
         const colorSwatches = normalizeTimelineColorSwatches(this.#timelineConfig.colorSwatches)
@@ -2197,6 +2488,7 @@ export class LGS1920Timeline extends HTMLElement {
     #removeTrack = (row, event) => {
         const current = this.#rows.find(value => value.id === row?.id)
         if (!this.#isTrackEditable(current)) return
+        if ((current.actions ?? current.clips ?? []).length > 0) return
         const nextRows = this.#rows.filter(value => value.id !== current.id)
         const detail = {
             trackId: current.id,
@@ -2247,6 +2539,12 @@ export class LGS1920Timeline extends HTMLElement {
         if (request.defaultPrevented) return
         this.#rows = nextRows
         this.#localRowsDirty = true
+        if (this.#isClipSelected(clip)) this.#selectedClipKey = null
+        if (this.#clipContextMenuClipId === clipId) {
+            this.#clipContextMenuClipId = null
+            this.#clipContextMenuAnchor = null
+            window.removeEventListener('pointerdown', this.#handleClipContextMenuOutsidePointerDown, true)
+        }
         this.#emit('remove-clip', {
             ...detail,
             tracks: this.tracks,
@@ -2267,7 +2565,10 @@ export class LGS1920Timeline extends HTMLElement {
      * @returns {string} New clip identifier.
      */
     #duplicateClipIdentifier = identifier => {
-        const identifiers = new Set(this.#rows.flatMap(row => (row.actions ?? []).map(clip => String(clip.id))))
+        const identifiers = new Set([
+            ...this.#rows.flatMap(row => (row.actions ?? []).map(clip => String(clip.id))),
+            ...this.#generatedClipIdentifiers,
+        ])
         const base = `${String(identifier)}-copy`
         let candidate = base
         let suffix = 2
@@ -2279,12 +2580,308 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
-     * Duplicate an editable clip immediately after its current interval.
+     * Generate an identifier that is not used by any current clip.
+     *
+     * @param {string|number} identifier - Preferred clip identifier.
+     * @returns {string} Unused clip identifier.
+     */
+    #uniqueClipIdentifier = identifier => {
+        const identifiers = new Set([
+            ...this.#rows.flatMap(row => (row.actions ?? []).map(clip => String(clip.id))),
+            ...this.#generatedClipIdentifiers,
+        ])
+        const base = String(identifier ?? 'clip').trim() || 'clip'
+        let candidate = base
+        let suffix = 2
+        while (identifiers.has(candidate)) {
+            candidate = `${base}-${suffix}`
+            suffix += 1
+        }
+        return candidate
+    }
+
+    /**
+     * Remove the transient copy-placement ghost from the timeline surface.
+     */
+    #removeClipCopyPresentation = () => {
+        this.#root.querySelectorAll('[data-clip-copy-ghost]').forEach(element => element.remove())
+    }
+
+    /**
+     * Remove the listeners and state used by a pending clip copy.
+     */
+    #cancelClipCopy = () => {
+        window.removeEventListener('pointermove', this.#handleClipCopyPointerMove, true)
+        window.removeEventListener('pointerdown', this.#handleClipCopyPointerDown, true)
+        if (this.#clipCopyPresentationFrame !== null) {
+            cancelAnimationFrame(this.#clipCopyPresentationFrame)
+            this.#clipCopyPresentationFrame = null
+        }
+        this.#clipCopyState = null
+        this.#removeClipCopyPresentation()
+    }
+
+    /**
+     * Preview a copied clip under the current pointer position.
+     *
+     * @param {PointerEvent} event - Pointer movement event.
+     */
+    #previewClipCopy = event => {
+        const state = this.#clipCopyState
+        if (!state) return
+        const targetTrack = this.#trackAtClientY(event.clientY)
+        const duration = state.originalEnd - state.originalStart
+        const targetTime = this.#timeAtClientX(event.clientX)
+        const start = Math.max(0, targetTime - (duration / 2))
+        const proposedClip = Object.assign({}, state.clip, {
+            start,
+            end: start + duration,
+            trackId: targetTrack?.id ?? state.targetTrackId,
+        })
+        const result = targetTrack
+            ? this.#clipEditor.place({
+                baseRows: state.baseRows,
+                clip: proposedClip,
+                targetTrackId: targetTrack.id,
+                mode: 'move',
+            })
+            : null
+        const placedEntry = result ? this.#clipEditor.findClipEntry(result.rows, state.clip.id) : null
+        state.previewClientX = event.clientX
+        state.previewClientY = event.clientY
+        state.targetTrackId = targetTrack?.id ?? state.targetTrackId
+        state.previewClip = placedEntry
+            ? Object.assign({}, placedEntry.clip, {trackId: placedEntry.row.id})
+            : proposedClip
+        state.lastResult = result
+        state.dropRejected = !result
+        this.#updateClipCopyPresentation()
+    }
+
+    /**
+     * Render the transient copied clip without adding it to controlled rows.
+     */
+    #updateClipCopyPresentation = () => {
+        this.#removeClipCopyPresentation()
+        const state = this.#clipCopyState
+        if (!state) return
+        const sourceElement = [...this.#root.querySelectorAll('[data-clip-id]')]
+            .find(element => String(element.getAttribute('data-clip-id')) === String(state.sourceClipId))
+        if (!sourceElement) return
+        const ghost = sourceElement.cloneNode(true)
+        const clip = state.previewClip ?? state.clip
+        const {start, end} = resolveClipInterval(clip)
+        const {majorSeconds} = resolveScale(this.#zoom)
+        const scaleWidth = this.#scaleWidth()
+        const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
+        ghost.removeAttribute('id')
+        ghost.removeAttribute('data-clip-id')
+        ghost.setAttribute('data-clip-copy-ghost', '')
+        ghost.setAttribute('aria-hidden', 'true')
+        ghost.setAttribute('tabindex', '-1')
+        ghost.classList.remove(
+            'lgs1920-wa-timeline__clip--selected',
+            'lgs1920-wa-timeline__clip--dragging',
+            'lgs1920-wa-timeline__clip--resizing',
+            'lgs1920-wa-timeline__clip--drop-rejected',
+        )
+        ghost.classList.add(
+            'lgs1920-wa-timeline__clip--drag-ghost',
+            'lgs1920-wa-timeline__clip--copy-ghost',
+        )
+        if (state.dropRejected) ghost.classList.add('lgs1920-wa-timeline__clip--drop-rejected')
+        ghost.style.left = `${scaleOffset + ((start / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
+        ghost.style.width = `${Math.max(this.#numericToken('clip-min-width', 8), ((end - start) / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
+        const surfaceRect = this.#surface?.getBoundingClientRect?.()
+        const overlay = this.#root.querySelector('[data-overlay]')
+        const track = [...this.#root.querySelectorAll('[part="track"]')]
+            .find(element => String(element.dataset.rowId) === String(state.targetTrackId))
+        const trackRect = track?.getBoundingClientRect?.()
+        const sourceRect = sourceElement.getBoundingClientRect?.()
+        const previewClientY = Number.isFinite(state.previewClientY)
+            ? state.previewClientY
+            : trackRect?.height > 0
+                ? trackRect.top + (trackRect.height / 2)
+                : sourceRect?.height > 0
+                    ? sourceRect.top + (sourceRect.height / 2)
+                    : null
+        if (overlay && surfaceRect && Number.isFinite(previewClientY)) {
+            const rowHeight = Math.max(MIN_ROW_HEIGHT, this.#rowHeight)
+            ghost.style.top = `${previewClientY - surfaceRect.top - (rowHeight / 2)}px`
+            ghost.style.bottom = 'auto'
+            ghost.style.height = `${rowHeight}px`
+            ghost.style.zIndex = '8'
+            overlay.append(ghost)
+            return
+        }
+        if (track) track.append(ghost)
+    }
+
+    /**
+     * Scroll the horizontal surface just enough to reveal the initial copy ghost.
+     */
+    #revealInitialClipCopy = () => {
+        const state = this.#clipCopyState
+        const surface = this.#surface
+        const ghost = this.#root.querySelector('[data-clip-copy-ghost]')
+        if (!state || state.previewClientX !== null || !surface || !ghost) return
+        const left = Number.parseFloat(ghost.style.left)
+        const width = Number.parseFloat(ghost.style.width)
+        const viewportWidth = surface.clientWidth
+        if (!Number.isFinite(left) || !Number.isFinite(width) || viewportWidth <= 0) return
+        const right = left + width
+        const padding = 8
+        const viewportLeft = surface.scrollLeft
+        const viewportRight = viewportLeft + viewportWidth
+        if (left < viewportLeft + padding) {
+            surface.scrollLeft = Math.max(0, left - padding)
+        } else if (right > viewportRight - padding) {
+            surface.scrollLeft = Math.min(
+                Math.max(0, surface.scrollWidth - viewportWidth),
+                right - viewportWidth + padding,
+            )
+        }
+    }
+
+    /**
+     * Reapply the initial copy presentation after the layout has measured the surface.
+     */
+    #scheduleClipCopyPresentation = () => {
+        if (!this.#clipCopyState) return
+        if (typeof requestAnimationFrame !== 'function') {
+            this.#revealInitialClipCopy()
+            return
+        }
+        if (this.#clipCopyPresentationFrame !== null) {
+            cancelAnimationFrame(this.#clipCopyPresentationFrame)
+        }
+        this.#clipCopyPresentationFrame = requestAnimationFrame(() => {
+            this.#clipCopyPresentationFrame = requestAnimationFrame(() => {
+                this.#clipCopyPresentationFrame = null
+                if (!this.#clipCopyState) return
+                this.#updateClipCopyPresentation()
+                this.#revealInitialClipCopy()
+            })
+        })
+    }
+
+    /**
+     * Track pointer movement while a copied clip awaits placement.
+     *
+     * @param {PointerEvent} event - Pointer movement event.
+     */
+    #handleClipCopyPointerMove = event => {
+        const eventBelongsToTimeline = event.composedPath?.().includes(this)
+            || event.target === this
+            || this.#root.contains(event.target)
+        if (!this.#clipCopyState || !eventBelongsToTimeline) return
+        event.preventDefault()
+        event.stopPropagation()
+        this.#previewClipCopy(event)
+    }
+
+    /**
+     * Commit a pending copy when the user clicks a timeline track.
+     *
+     * @param {PointerEvent} event - Pointer press event.
+     */
+    #handleClipCopyPointerDown = event => {
+        const eventBelongsToTimeline = event.composedPath?.().includes(this)
+            || event.target === this
+            || this.#root.contains(event.target)
+        if (!this.#clipCopyState || !eventBelongsToTimeline) return
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        this.#previewClipCopy(event)
+        const state = this.#clipCopyState
+        if (!state || state.dropRejected || !state.lastResult || !state.previewClip) return
+        const option = {
+            key: 'copy',
+            label: state.clip.label ? `Copy of ${state.clip.label}` : 'Copy',
+            trackId: state.targetTrackId,
+            duration: state.originalEnd - state.originalStart,
+            end: state.previewClip.end,
+            clip: Object.assign({}, state.clip, {
+                start: state.previewClip.start,
+                end: state.previewClip.end,
+            }),
+        }
+        const placement = {
+            trackId: state.targetTrackId,
+            start: state.previewClip.start,
+        }
+        this.#cancelClipCopy()
+        this.#insertClip(option, event, placement)
+    }
+
+    /**
+     * Start placing a copied clip as a transient ghost.
+     *
+     * @param {string} clipId - Source clip identifier.
+     * @param {KeyboardEvent|MouseEvent} event - Triggering interaction event.
+     */
+    #startClipCopy = (clipId, event) => {
+        if (this.#timelineConfig.editable === false) return
+        const entry = this.#clipEditor.findClipEntry(this.#rows, clipId)
+        if (!entry || !this.#isTrackEditable(entry.row) || entry.clip.editable === false) return
+        const {start, end} = resolveClipInterval(entry.clip)
+        if (end <= start) return
+        const copyId = this.#duplicateClipIdentifier(entry.clip.id)
+        const duration = end - start
+        const copyClip = Object.assign({}, entry.clip, {
+            id: copyId,
+            start: end,
+            end: end + duration,
+        })
+        event?.preventDefault?.()
+        event?.stopPropagation?.()
+        this.#cancelClipCopy()
+        this.#clipCopyState = {
+            baseRows: cloneRows(this.#rows),
+            clip: copyClip,
+            sourceClipId: entry.clip.id,
+            originalStart: start,
+            originalEnd: end,
+            targetTrackId: entry.row.id,
+            previewClip: Object.assign({}, copyClip, {trackId: entry.row.id}),
+            previewClientX: null,
+            previewClientY: null,
+            lastResult: this.#clipEditor.place({
+                baseRows: cloneRows(this.#rows),
+                clip: copyClip,
+                targetTrackId: entry.row.id,
+                mode: 'move',
+            }),
+            dropRejected: false,
+        }
+        window.addEventListener('pointermove', this.#handleClipCopyPointerMove, true)
+        window.addEventListener('pointerdown', this.#handleClipCopyPointerDown, true)
+        this.#render()
+        this.#revealInitialClipCopy()
+    }
+
+    /**
+     * Copy a clip into a transient placement ghost, or keep the legacy
+     * immediate duplicate shortcut for Mod+D.
      *
      * @param {string} clipId - Clip identifier.
      * @param {KeyboardEvent|MouseEvent} event - Triggering interaction event.
      */
     #duplicateClip = (clipId, event) => {
+        if (event?.key?.toLowerCase?.() === 'd') {
+            this.#duplicateClipImmediately(clipId, event)
+            return
+        }
+        this.#startClipCopy(clipId, event)
+    }
+
+    /**
+     * Duplicate an editable clip immediately after its current interval.
+     *
+     * @param {string} clipId - Clip identifier.
+     * @param {KeyboardEvent} event - Triggering keyboard event.
+     */
+    #duplicateClipImmediately = (clipId, event) => {
         if (this.#timelineConfig.editable === false) return
         const entry = this.#clipEditor.findClipEntry(this.#rows, clipId)
         if (!entry || !this.#isTrackEditable(entry.row) || entry.clip.editable === false) return
@@ -2298,6 +2895,7 @@ export class LGS1920Timeline extends HTMLElement {
             trackId: entry.row.id,
             start: end,
             end: end + duration,
+            duration,
             clip: {
                 ...entry.clip,
                 id: this.#duplicateClipIdentifier(entry.clip.id),
@@ -2382,7 +2980,7 @@ export class LGS1920Timeline extends HTMLElement {
     #extendClip = (clipId, event) => {
         if (this.#timelineConfig.editable === false) return
         const entry = this.#clipEditor.findClipEntry(this.#rows, clipId)
-        if (!entry || !this.#isTrackEditable(entry.row) || entry.clip.editable === false) return
+        if (!entry || !this.#isTrackEditable(entry.row) || entry.clip.editable === false || entry.clip.resizable === false) return
         const result = this.#clipEditor.extend(clipId)
         if (!result) return
         const updatedEntry = this.#clipEditor.findClipEntry(result.rows, clipId)
@@ -2458,18 +3056,20 @@ export class LGS1920Timeline extends HTMLElement {
      * Insert a clip from a clip-menu option at the current playhead.
      *
      * @param {Object} option - Clip insertion option.
-     * @param {Event} event - Triggering click event.
+     * @param {Event} event - Triggering click or drop event.
+     * @param {{trackId?: string, start?: number}} [placement] - Optional drop placement.
      */
-    #insertClip = (option, event) => {
+    #insertClip = (option, event, placement = {}) => {
         if (this.#timelineConfig.editable === false) return
-        const requestedTrackId = option?.trackId ?? this.#timelineConfig.defaultTrackId
+        const requestedTrackId = placement.trackId ?? option?.trackId ?? this.#timelineConfig.defaultTrackId
         const target = this.#rows.find(row => row.id === requestedTrackId && this.#isTrackEditable(row))
             ?? this.#rows.find(row => this.#isTrackEditable(row) && trackAcceptsClip(row, {kind: option?.kind ?? option?.key}))
-        const start = Math.max(0, Number(option?.start ?? (this.#currentTimeMillis / 1000)) || 0)
+        const start = Math.max(0, Number(placement.start ?? option?.start ?? (this.#currentTimeMillis / 1000)) || 0)
         const duration = Math.max(0, Number(option?.duration ?? this.#timelineConfig.defaultClipDuration ?? 1) || 0)
-        const id = option?.clip?.id
+        const requestedId = option?.clip?.id
             ?? option?.id
             ?? `${option?.key ?? 'clip'}-${Date.now()}`
+        const id = this.#uniqueClipIdentifier(requestedId)
         const clip = {
             ...(option?.clip ?? {}),
             id,
@@ -2512,14 +3112,124 @@ export class LGS1920Timeline extends HTMLElement {
             data: this.#publicSnapshot(),
         }
         if (this.#emitBefore('add-clip', detail).defaultPrevented) return
+        this.#generatedClipIdentifiers.add(id)
         this.#rows = result.rows
         this.#localRowsDirty = true
         this.#localDurationDirty = true
+        if (addedClip) this.#selectedClipKey = this.#clipSelectionKey(addedClip.trackId, addedClip.id)
         this.#interactionDurationMillis = result.durationMillis
         this.#rangeEndMillis = result.rangeEndMillis
         this.#emit('add-clip', {...detail, tracks: this.tracks, data: this.#publicSnapshot()})
         this.#render()
         this.#emitAfter('add-clip', {...detail, tracks: this.tracks, data: this.#publicSnapshot()})
+    }
+
+    /**
+     * Store a clip option in the native drag payload.
+     *
+     * @param {Object} option - Clip insertion option.
+     * @param {DragEvent} event - Native drag event.
+     */
+    #startClipOptionDrag = (option, event) => {
+        this.#draggedClipOption = option
+        const transfer = event.dataTransfer
+        if (!transfer) return
+        transfer.effectAllowed = 'copy'
+        try {
+            transfer.setData(CLIP_OPTION_DRAG_MIME, JSON.stringify(option))
+        } catch {
+            transfer.setData('text/plain', String(option?.label ?? option?.key ?? 'Clip'))
+        }
+    }
+
+    /**
+     * Clear the internal clip option drag state after a native drag ends.
+     *
+     * @param {DragEvent} event - Native drag event.
+     */
+    #endClipOptionDrag = event => {
+        event.stopPropagation()
+        this.#draggedClipOption = null
+        this.#root.querySelectorAll('[part="track"].lgs1920-wa-timeline__track--clip-drop-target')
+            .forEach(track => track.classList.remove('lgs1920-wa-timeline__track--clip-drop-target'))
+    }
+
+    /**
+     * Read a clip option from a native drag payload.
+     *
+     * @param {DragEvent} event - Native drag event.
+     * @returns {Object|null} Dragged clip option.
+     */
+    #clipOptionFromDragEvent = event => {
+        const raw = event.dataTransfer?.getData?.(CLIP_OPTION_DRAG_MIME)
+        if (raw) {
+            try {
+                return JSON.parse(raw)
+            } catch {
+                return this.#draggedClipOption
+            }
+        }
+        return this.#draggedClipOption
+    }
+
+    /**
+     * Check whether a new clip option can be inserted on a track.
+     *
+     * @param {Object|null} option - Clip insertion option.
+     * @param {string} rowId - Target track identifier.
+     * @returns {boolean} Whether the drop is accepted.
+     */
+    #canDropClipOption = (option, rowId) => {
+        if (!option || this.#timelineConfig.editable === false) return false
+        const row = this.#rows.find(value => value.id === rowId)
+        if (!row || !this.#isTrackEditable(row)) return false
+        return trackAcceptsClip(row, {kind: option?.clip?.kind ?? option?.kind ?? option?.key})
+    }
+
+    /**
+     * Accept drag-over events for new clip insertion.
+     *
+     * @param {DragEvent} event - Native drag event.
+     * @param {string} rowId - Target track identifier.
+     * @param {HTMLElement} track - Target track element.
+     */
+    #handleClipDragOver = (event, rowId, track) => {
+        const option = this.#clipOptionFromDragEvent(event)
+        if (!this.#canDropClipOption(option, rowId)) return
+        event.preventDefault()
+        event.stopPropagation()
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'
+        track.classList.add('lgs1920-wa-timeline__track--clip-drop-target')
+    }
+
+    /**
+     * Remove the insertion target state when a dragged option leaves a track.
+     *
+     * @param {DragEvent} event - Native drag event.
+     * @param {HTMLElement} track - Target track element.
+     */
+    #handleClipDragLeave = (event, track) => {
+        if (event.relatedTarget && track.contains(event.relatedTarget)) return
+        track.classList.remove('lgs1920-wa-timeline__track--clip-drop-target')
+    }
+
+    /**
+     * Insert a new clip at the horizontal drop position.
+     *
+     * @param {DragEvent} event - Native drop event.
+     * @param {string} rowId - Target track identifier.
+     * @param {HTMLElement} track - Target track element.
+     */
+    #handleClipDrop = (event, rowId, track) => {
+        const option = this.#clipOptionFromDragEvent(event)
+        track.classList.remove('lgs1920-wa-timeline__track--clip-drop-target')
+        if (!this.#canDropClipOption(option, rowId)) return
+        event.preventDefault()
+        event.stopPropagation()
+        this.#insertClip(option, event, {
+            trackId: rowId,
+            start: this.#timeAtClientX(event.clientX),
+        })
     }
 
     /**
@@ -2561,8 +3271,9 @@ export class LGS1920Timeline extends HTMLElement {
      * @param {string} clipId - Clip identifier.
      * @param {'move'|'resize'} mode - Interaction mode.
      * @param {'start'|'end'|null} edge - Resized edge.
+     * @param {boolean} wasSelected - Whether the clip was selected before the pointer down.
      */
-    #startClipInteraction = (event, clipId, mode, edge = null) => {
+    #startClipInteraction = (event, clipId, mode, edge = null, wasSelected = false) => {
         if (event.button !== 0) return
         const entry = this.#clipEditor.findClipEntry(this.#rows, clipId)
         if (!entry || !this.#isTrackEditable(entry.row) || entry.clip.editable === false) return
@@ -2588,6 +3299,7 @@ export class LGS1920Timeline extends HTMLElement {
             originalEnd: interval.end,
             initialDurationMillis,
             initialRangeEndMillis: this.#rangeEndMillis,
+            wasSelected: wasSelected === true,
             baseRows: cloneRows(this.#rows),
             lastResult: null,
             dragStart: {
@@ -2726,6 +3438,7 @@ export class LGS1920Timeline extends HTMLElement {
             this.#showScrollbars()
             this.#scheduleScrollbarHide()
             const viewRole = view.getAttribute('data-scroll-view')
+            if (viewRole === 'surface') this.#updateTimelineViewportMargins(view)
             if (viewRole === 'legend') this.#syncTracksScroll()
             if (viewRole === 'tracks') this.#updateLegendScroll()
             else this.#updateScrollbars()
@@ -2733,6 +3446,18 @@ export class LGS1920Timeline extends HTMLElement {
         track.addEventListener('pointerdown', event => this.#startScrollbarDrag(event, view, axis, track, thumb))
         track.addEventListener('keydown', event => this.#handleScrollbarKeyDown(event, view, axis))
         return track
+    }
+
+    /**
+     * Keep viewport edge margins visible only while horizontal content overflows.
+     *
+     * @param {HTMLElement|null} view - Horizontal timeline surface.
+     */
+    #updateTimelineViewportMargins = view => {
+        if (!view || view.getAttribute('data-scroll-view') !== 'surface') return
+        const maximumScrollLeft = Math.max(0, view.scrollWidth - view.clientWidth)
+        view.toggleAttribute('data-viewport-margin-left', view.scrollLeft > 0.5)
+        view.toggleAttribute('data-viewport-margin-right', view.scrollLeft < maximumScrollLeft - 0.5)
     }
 
     /**
@@ -3587,6 +4312,62 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
+     * Cancel the timer used to hide the last clip snap guide.
+     */
+    #clearClipSnapGuideTimer = () => {
+        if (this.#clipSnapGuideTimer !== null) clearTimeout(this.#clipSnapGuideTimer)
+        this.#clipSnapGuideTimer = null
+    }
+
+    /**
+     * Hide the clip snap guide and cancel its delayed cleanup.
+     */
+    #clearClipSnapGuide = () => {
+        this.#clearClipSnapGuideTimer()
+        this.#clipSnapGuide = null
+    }
+
+    /**
+     * Keep a clip snap guide visible for a short period after a drag ends.
+     *
+     * @param {Object} guide - Snap guide metadata.
+     */
+    #showClipSnapGuide = guide => {
+        this.#clearClipSnapGuideTimer()
+        this.#clipSnapGuide = guide
+        this.#clipSnapGuideTimer = setTimeout(() => {
+            this.#clipSnapGuide = null
+            this.#clipSnapGuideTimer = null
+            this.#updateClipSnapGuidePresentation()
+        }, 2000)
+    }
+
+    /**
+     * Update the vertical clip alignment guide in the current timeline surface.
+     *
+     * @param {Object|null} [activeGuide=null] - Guide shown during an active drag.
+     */
+    #updateClipSnapGuidePresentation = (activeGuide = null) => {
+        const element = this.#root.querySelector('[data-clip-snap-guide]')
+        if (!element) return
+        const guide = activeGuide ?? this.#clipSnapGuide
+        const {majorSeconds} = resolveScale(this.#zoom)
+        const scaleWidth = this.#scaleWidth()
+        const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
+        const time = Number(guide?.time)
+        const visible = Number.isFinite(time) && time >= 0
+        element.hidden = !visible
+        element.style.display = visible ? 'block' : 'none'
+        if (!visible) return
+        element.style.left = `${scaleOffset + ((time / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
+        element.dataset.clipSnapTargetId = String(guide.clipId ?? '')
+        element.dataset.clipSnapTargetEdge = String(guide.edge ?? '')
+        element.setAttribute('aria-label', guide.clipId === null || guide.clipId === undefined
+            ? 'Snap alignment'
+            : `Snap alignment with clip ${String(guide.clipId)}`)
+    }
+
+    /**
      * Install global pointer listeners for scrubbing, resizing, or row drag.
      */
     #addPointerListeners = () => {
@@ -3718,6 +4499,12 @@ export class LGS1920Timeline extends HTMLElement {
         if (activePointerId !== null && activePointerId !== undefined && event.pointerId !== activePointerId) return
         if (this.#scrubPointerId !== null && event.type === 'pointerup') this.#seek(event.clientX, true)
         const state = this.#dragState
+        const wasSimpleClick = state?.type === 'clip'
+            && state.mode === 'move'
+            && state.wasSelected === true
+            && event.type === 'pointerup'
+            && event.clientX === state.startX
+            && event.clientY === state.startY
         if (state?.type === 'row-pending') {
             this.#removePointerListeners()
             return
@@ -3749,6 +4536,14 @@ export class LGS1920Timeline extends HTMLElement {
                 this.#clipEditor.preview(state, event)
             }
             const result = state.dropRejected ? null : state.lastResult
+            if (result && state.mode === 'resize') {
+                this.#clipEditor.recordResizeResult({
+                    baseRows: state.baseRows,
+                    result,
+                    clipId: state.clipId,
+                    edge: state.edge,
+                })
+            }
             this.#rows = result?.rows ?? state.baseRows
             if (result) this.#localRowsDirty = true
             if (result) this.#localDurationDirty = true
@@ -3839,6 +4634,20 @@ export class LGS1920Timeline extends HTMLElement {
                 event,
                 data: this.#publicSnapshot(),
             })
+            if (wasSimpleClick) this.#clearClipSelection(event)
+        }
+        if (state?.type === 'clip' && event.type === 'pointerup') {
+            if (state.snapTargetTime !== null
+                && state.snapTargetTime !== undefined
+                && Number.isFinite(Number(state.snapTargetTime))) {
+                this.#showClipSnapGuide({
+                    time: state.snapTargetTime,
+                    clipId: state.snapTargetClipId,
+                    edge: state.snapTargetEdge,
+                })
+            } else {
+                this.#clearClipSnapGuide()
+            }
         }
         const pendingControlledState = this.#pendingControlledState
         this.#pendingControlledState = null
@@ -4023,7 +4832,7 @@ export class LGS1920Timeline extends HTMLElement {
         if (typeof ResizeObserver === 'undefined') return
         this.#resizeObserver = new ResizeObserver(() => {
             const width = this.#surface?.clientWidth ?? 0
-            if (Number.isFinite(width) && width !== this.#surfaceWidth) {
+            if (Number.isFinite(width) && width > 0 && width !== this.#surfaceWidth) {
                 this.#surfaceWidth = width
             }
             this.#refreshLayoutMetrics()
@@ -4155,6 +4964,12 @@ export class LGS1920Timeline extends HTMLElement {
      * @param {KeyboardEvent} event - Keyboard event.
      */
     #handleWindowKeyDown = event => {
+        if (event.key === 'Escape' && this.#clipCopyState) {
+            event.preventDefault()
+            event.stopImmediatePropagation()
+            this.#cancelClipCopy()
+            return
+        }
         if (event.key === 'Escape' && this.#dragState) {
             event.preventDefault()
             event.stopImmediatePropagation()
@@ -4165,6 +4980,14 @@ export class LGS1920Timeline extends HTMLElement {
             event.preventDefault()
             event.stopImmediatePropagation()
             this.#closeClipContextMenu()
+            return
+        }
+        if (event.key === 'Escape'
+            && this.#selectedClipKey !== null
+            && !event.target?.closest?.(TIMELINE_KEYBOARD_EDITABLE_SELECTOR)) {
+            event.preventDefault()
+            event.stopImmediatePropagation()
+            this.#clearClipSelection(event)
             return
         }
         if (event.composedPath?.().includes(this)) return
@@ -4313,15 +5136,31 @@ export class LGS1920Timeline extends HTMLElement {
      * Clip drag and resize previews must not rebuild either scroll view.
      */
     #updateClipInteractionPresentation = () => {
+        this.#reconcileClipSelection()
+        this.#updateClipSelectionPresentation()
         const {majorSeconds} = resolveScale(this.#zoom)
         const scaleWidth = this.#scaleWidth()
         const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
         const dragState = this.#dragState
+        const activeSnapGuide = dragState?.type === 'clip'
+            && dragState.snapTargetTime !== null
+            && dragState.snapTargetTime !== undefined
+            && Number.isFinite(Number(dragState.snapTargetTime))
+            ? {
+                time: dragState.snapTargetTime,
+                clipId: dragState.snapTargetClipId,
+                edge: dragState.snapTargetEdge,
+            }
+            : null
+        if (dragState?.type === 'clip' && !activeSnapGuide) this.#clearClipSnapGuide()
+        this.#updateClipSnapGuidePresentation(activeSnapGuide)
         this.#root.querySelectorAll('[data-clip-drag-ghost], [data-clip-drag-source]')
             .forEach(element => element.remove())
         this.toggleAttribute('data-clip-drop-rejected', dragState?.type === 'clip' && dragState.dropRejected === true)
         const clipEdgeIndicator = this.#root.querySelector('[data-clip-edge-indicator]')
         const clipMoveEndpoints = [...this.#root.querySelectorAll('[data-clip-move-endpoint]')]
+        const clips = new Map([...this.#root.querySelectorAll('[data-clip-id]')]
+            .map(element => [String(element.getAttribute('data-clip-id')), element]))
         const resizingClip = dragState?.type === 'clip' && dragState.mode === 'resize'
             ? this.#clipEditor.findClipEntry(this.#rows, dragState.clipId)?.clip
             : null
@@ -4331,24 +5170,24 @@ export class LGS1920Timeline extends HTMLElement {
         const movingClip = dragState?.type === 'clip' && dragState.mode === 'move'
             ? dragState.previewClip ?? placementClip
             : null
+        const markerClip = dragState?.type === 'clip'
+            ? dragState.mode === 'move'
+                ? movingClip
+                : dragState.previewClip ?? resizingClip
+            : null
+        const markerSource = clips.get(String(dragState?.clipId))
+        const markerColor = markerSource?.style.borderColor ?? ''
+        const markerElements = [clipEdgeIndicator, ...clipMoveEndpoints].filter(Boolean)
+        markerElements.forEach(element => element.style.setProperty('--lgs-timeline-clip-edge-indicator-color', markerColor))
         if (clipEdgeIndicator) {
-            const edgeTime = resizingClip && dragState.edge === 'start'
-                ? resolveClipInterval(resizingClip).start
-                : resizingClip && dragState.edge === 'end'
-                    ? resolveClipInterval(resizingClip).end
-                    : null
-            const hasEdgeTime = Number.isFinite(edgeTime)
-            clipEdgeIndicator.hidden = !hasEdgeTime
-            if (hasEdgeTime) {
-                clipEdgeIndicator.style.left = `${scaleOffset + ((edgeTime / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
-            }
+            clipEdgeIndicator.hidden = true
         }
         clipMoveEndpoints.forEach(endpoint => {
             const edge = endpoint.getAttribute('data-clip-move-endpoint')
-            const endpointTime = movingClip && edge === 'start'
-                ? resolveClipInterval(movingClip).start
-                : movingClip && edge === 'end'
-                    ? resolveClipInterval(movingClip).end
+            const endpointTime = markerClip && edge === 'start'
+                ? resolveClipInterval(markerClip).start
+                : markerClip && edge === 'end'
+                    ? resolveClipInterval(markerClip).end
                     : null
             const hasEndpointTime = Number.isFinite(endpointTime)
             endpoint.hidden = !hasEndpointTime
@@ -4356,8 +5195,6 @@ export class LGS1920Timeline extends HTMLElement {
                 endpoint.style.left = `${scaleOffset + ((endpointTime / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
             }
         })
-        const clips = new Map([...this.#root.querySelectorAll('[data-clip-id]')]
-            .map(element => [String(element.getAttribute('data-clip-id')), element]))
         const tracks = new Map([...this.#root.querySelectorAll('[part="track"]')]
             .map(element => [String(element.dataset.rowId), element]))
         const legends = new Map([...this.#root.querySelectorAll('[part="legend-row"]')]
@@ -4383,6 +5220,7 @@ export class LGS1920Timeline extends HTMLElement {
                 element.classList.remove(
                     'lgs1920-wa-timeline__clip--drag-ghost',
                     'lgs1920-wa-timeline__clip--drag-source',
+                    'lgs1920-wa-timeline__clip--drag-source-rejected',
                 )
                 const durationOverlay = element.querySelector('[data-clip-duration-overlay]')
                 const isResizing = isDragging && dragState.mode === 'resize'
@@ -4395,6 +5233,8 @@ export class LGS1920Timeline extends HTMLElement {
                 element.classList.toggle('lgs1920-wa-timeline__clip--drop-rejected', dragState?.type === 'clip'
                     && dragState.clipId === value.id
                     && dragState.dropRejected === true)
+                element.classList.toggle('lgs1920-wa-timeline__clip--drag-source-rejected', isDragging
+                    && dragState.dropRejected === true)
                 if (track && element.parentElement !== track) track.append(element)
             })
             if (track) {
@@ -4403,8 +5243,10 @@ export class LGS1920Timeline extends HTMLElement {
                 const isClipDropRejected = dragState?.type === 'clip'
                     && dragState.targetTrackId === row.id
                     && dragState.dropRejected === true
+                const trackBackground = track.querySelector('[part="track-background"]')
                 track.classList.toggle('lgs1920-wa-timeline__track--clip-drop-target', isClipDropTarget)
                 track.classList.toggle('lgs1920-wa-timeline__track--clip-drop-rejected', isClipDropRejected)
+                trackBackground?.classList.toggle('lgs1920-wa-timeline__track-background--clip-drop-rejected', isClipDropRejected)
                 legend?.classList.toggle('lgs1920-wa-timeline__legend-row--clip-drop-target', isClipDropTarget)
                 legend?.classList.toggle('lgs1920-wa-timeline__legend-row--clip-drop-rejected', isClipDropRejected)
             }
@@ -4469,6 +5311,7 @@ export class LGS1920Timeline extends HTMLElement {
             }
         }
         this.#updateDynamicState()
+        this.#updateClipCopyPresentation()
     }
 
     /**

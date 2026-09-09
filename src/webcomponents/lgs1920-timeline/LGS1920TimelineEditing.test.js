@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-06
- * Last modified: 2026-09-06
+ * Last modified: 2026-09-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -101,16 +101,18 @@ describe('timeline editing transactions', () => {
         expect(editor.place({baseRows: rows, clip: {id: 'clip', start: 2, end: 5}, targetTrackId: 'target'})).toBeNull()
     })
 
-    it('rejects a start ripple that would move another clip before zero', () => {
+    it('keeps a start extension valid while it consumes the free gap', () => {
         const {editor} = setup({resizeCollisionPolicy: 'ripple'})
         const rows = [{id: 'target', actions: [
             {id: 'before', start: 0, end: 2}, {id: 'clip', start: 4, end: 6},
         ]}]
         expect(editor.place({baseRows: rows, clip: {id: 'clip', start: 3, end: 6},
-            targetTrackId: 'target', mode: 'resize', edge: 'start'})).toBeNull()
+            targetTrackId: 'target', mode: 'resize', edge: 'start'}).rows[0].actions).toEqual([
+            {id: 'before', start: 0, end: 2}, {id: 'clip', start: 3, end: 6},
+        ])
     })
 
-    it('moves clips left when a start extension has enough room', () => {
+    it('keeps the previous clip fixed when a start extension has enough room', () => {
         const {editor} = setup({resizeCollisionPolicy: 'ripple'})
         const rows = [{id: 'target', actions: [
             {id: 'before', start: 1, end: 2}, {id: 'clip', start: 3, end: 6},
@@ -118,35 +120,82 @@ describe('timeline editing transactions', () => {
         const result = editor.place({baseRows: rows, clip: {id: 'clip', start: 2, end: 6},
             targetTrackId: 'target', mode: 'resize', edge: 'start'})
         expect(result.rows[0].actions).toEqual([
-            {id: 'before', start: 0, end: 1}, {id: 'clip', start: 2, end: 6},
+            {id: 'before', start: 1, end: 2}, {id: 'clip', start: 2, end: 6},
         ])
     })
 
-    it('ripples neighbors when a clip is shortened on either edge', () => {
+    it('blocks a start extension when it reaches the previous clip', () => {
+        const {editor} = setup({resizeCollisionPolicy: 'ripple'})
+        const rows = [{id: 'target', actions: [
+            {id: 'before', start: 1, end: 3}, {id: 'clip', start: 4, end: 6},
+        ]}]
+        expect(editor.place({baseRows: rows, clip: {id: 'clip', start: 2, end: 6},
+            targetTrackId: 'target', mode: 'resize', edge: 'start'})).toBeNull()
+    })
+
+    it('consumes the free gap before rippling a neighbor on the end edge', () => {
         const clips = [
-            {id: 'before', start: 0, end: 2},
-            {id: 'clip', start: 3, end: 6},
-            {id: 'after', start: 7, end: 10},
+            {id: 'before', start: 2, end: 3},
+            {id: 'clip', start: 4, end: 7},
+            {id: 'after', start: 8, end: 11},
         ]
         expect(rippleResizedClips({
             clips,
             originalClip: clips[1],
-            proposedClip: {...clips[1], start: 4},
+            proposedClip: {...clips[1], start: 3},
             edge: 'start',
         })).toEqual([
-            {id: 'before', start: 1, end: 3},
-            {id: 'clip', start: 4, end: 6},
-            {id: 'after', start: 7, end: 10},
+            {id: 'before', start: 2, end: 3},
+            {id: 'clip', start: 3, end: 7},
+            {id: 'after', start: 8, end: 11},
         ])
         expect(rippleResizedClips({
             clips,
             originalClip: clips[1],
-            proposedClip: {...clips[1], end: 5},
+            proposedClip: {...clips[1], end: 7.5},
             edge: 'end',
         })).toEqual([
-            {id: 'before', start: 0, end: 2},
-            {id: 'clip', start: 3, end: 5},
-            {id: 'after', start: 6, end: 9},
+            {id: 'before', start: 2, end: 3},
+            {id: 'clip', start: 4, end: 7.5},
+            {id: 'after', start: 8, end: 11},
+        ])
+        expect(rippleResizedClips({
+            clips,
+            originalClip: clips[1],
+            proposedClip: {...clips[1], end: 9},
+            edge: 'end',
+        })).toEqual([
+            {id: 'before', start: 2, end: 3},
+            {id: 'clip', start: 4, end: 9},
+            {id: 'after', start: 9, end: 12},
+        ])
+    })
+
+    it('returns a neighbor to its previous position after reversing a ripple resize', () => {
+        const {editor} = setup({resizeCollisionPolicy: 'ripple'})
+        const rows = [{id: 'target', actions: [
+            {id: 'clip', start: 1, end: 4}, {id: 'after', start: 5, end: 8},
+        ]}]
+        const expanded = editor.place({baseRows: rows, clip: {id: 'clip', start: 1, end: 6},
+            targetTrackId: 'target', mode: 'resize', edge: 'end'})
+        editor.recordResizeResult({baseRows: rows, result: expanded, clipId: 'clip', edge: 'end'})
+
+        const shortened = editor.place({baseRows: expanded.rows, clip: {id: 'clip', start: 1, end: 4},
+            targetTrackId: 'target', mode: 'resize', edge: 'end'})
+        expect(shortened.rows[0].actions).toEqual([
+            {id: 'clip', start: 1, end: 4}, {id: 'after', start: 5, end: 8},
+        ])
+    })
+
+    it('leaves a merely touching neighbor fixed when the clip is shortened', () => {
+        const {editor} = setup({resizeCollisionPolicy: 'ripple'})
+        const rows = [{id: 'target', actions: [
+            {id: 'clip', start: 1, end: 4}, {id: 'after', start: 4, end: 8},
+        ]}]
+        const shortened = editor.place({baseRows: rows, clip: {id: 'clip', start: 1, end: 3},
+            targetTrackId: 'target', mode: 'resize', edge: 'end'})
+        expect(shortened.rows[0].actions).toEqual([
+            {id: 'clip', start: 1, end: 3}, {id: 'after', start: 4, end: 8},
         ])
     })
 
@@ -186,6 +235,22 @@ describe('timeline editing transactions', () => {
 })
 
 describe('timeline edge magnets', () => {
+    it('uses an eight pixel snap zone on both sides while preserving duration', () => {
+        const snapOptions = {
+            mode: 'move',
+            targets: [1],
+            thresholdPixels: 8,
+            pixelsPerSecond: 40,
+            thresholdSeconds: 0.2,
+        }
+        expect(snapClipToTargets({...snapOptions, start: 1.2, end: 4.2}))
+            .toEqual({start: 1, end: 4})
+        expect(snapClipToTargets({...snapOptions, start: 0.8, end: 3.8}))
+            .toEqual({start: 1, end: 4})
+        expect(snapClipToTargets({...snapOptions, start: 1.225, end: 4.225}))
+            .toBeNull()
+    })
+
     it('snaps the nearest moving edge without changing duration', () => {
         const result = snapClipToTargets({start: 1.15, end: 4.15, mode: 'move', targets: [1, 4.2], thresholdSeconds: 0.2})
         expect(result.start).toBeCloseTo(1.2)
@@ -207,5 +272,15 @@ describe('timeline edge magnets', () => {
             thresholdSeconds: 0.1,
         })
         expect(result).toEqual({start: 3, end: 5})
+    })
+
+    it('normalizes clip boundaries supplied as strings', () => {
+        expect(snapClipToTargets({
+            start: 2.94,
+            end: 4.94,
+            mode: 'move',
+            targets: ['3', '7.5'],
+            thresholdSeconds: 0.1,
+        })).toEqual({start: 3, end: 5})
     })
 })

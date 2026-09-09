@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-31
- * Last modified: 2026-09-08
+ * Last modified: 2026-09-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -43,6 +43,7 @@ export const createTimelineRenderer = ({
     getDurationMillis,
     getContentWidth,
     getZoom,
+    isClipSelected,
     contextualSlot,
     hasContextualSlot,
     globalSlotContent,
@@ -51,12 +52,17 @@ export const createTimelineRenderer = ({
     removeClip,
     duplicateClip,
     toggleClipEnabled,
+    toggleClipVisibility,
+    selectClip,
     openClipContextMenu,
     beginTrackLabelEdit,
     commitTrackLabelEdit,
     cancelTrackLabelEdit,
     startRowDrag,
     toggleTrackVisibility,
+    handleClipDragOver,
+    handleClipDragLeave,
+    handleClipDrop,
     startClipInteraction,
     resizeClipByKeyboard,
     startRangeInteraction,
@@ -91,13 +97,16 @@ export const createTimelineRenderer = ({
         const isResizing = isDragging && dragState.mode === 'resize'
         const hostNoDragClass = String(getTimelineConfig().hostNoDragClass ?? '').trim()
         const hostNoDragClasses = hostNoDragClass ? ` ${hostNoDragClass}` : ''
-        const element = createElement('div', `lgs1920-wa-timeline__clip${hostNoDragClasses} ${resolveColorClasses(value.colorClasses)}${value.visible === false ? ' lgs1920-wa-timeline__clip--hidden' : ''}${value.enabled === false ? ' lgs1920-wa-timeline__clip--disabled' : ''}${trackVisible === false ? ' lgs1920-wa-timeline__clip--track-hidden' : ''}${isDragging ? ' lgs1920-wa-timeline__clip--dragging' : ''}${isResizing ? ' lgs1920-wa-timeline__clip--resizing' : ''}`, {
+        const selected = isClipSelected(value)
+        const element = createElement('div', `lgs1920-wa-timeline__clip${hostNoDragClasses} ${resolveColorClasses(value.colorClasses)}${value.visible === false ? ' lgs1920-wa-timeline__clip--hidden' : ''}${value.enabled === false ? ' lgs1920-wa-timeline__clip--disabled' : ''}${trackVisible === false ? ' lgs1920-wa-timeline__clip--track-hidden' : ''}${selected ? ' lgs1920-wa-timeline__clip--selected' : ''}${isDragging ? ' lgs1920-wa-timeline__clip--dragging' : ''}${isResizing ? ' lgs1920-wa-timeline__clip--resizing' : ''}`, {
             part: 'clip',
             id: `lgs1920-timeline-clip-${String(value.id ?? '')}`,
             'data-clip-id': value.id,
+            'data-clip-track-id': value.trackId,
             'data-clip-kind': value.kind,
             'aria-label': resolveClipLabel(value),
             'aria-disabled': value.enabled === false ? 'true' : null,
+            'aria-selected': selected ? 'true' : 'false',
         })
         applyTimelinePaletteStyles(element, value.colorClasses)
         const timeline = getTimelineConfig()
@@ -111,7 +120,7 @@ export const createTimelineRenderer = ({
         element.setAttribute('tabindex', movable ? '0' : '-1')
         if (movable) {
             element.setAttribute('role', 'button')
-            element.setAttribute('aria-keyshortcuts', 'Delete Backspace Mod+D V')
+            element.setAttribute('aria-keyshortcuts', 'Delete Backspace Mod+C Mod+D M V')
         }
         element.style.left = `${scaleOffset() + ((start / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth())}px`
         element.style.width = `${Math.max(numericToken('clip-min-width', 8), ((end - start) / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth())}px`
@@ -121,9 +130,9 @@ export const createTimelineRenderer = ({
             contextualSlot('clip-label', value.id, 'clip-label', document.createTextNode(resolveClipLabel(value))),
         )
         element.append(
-            clipHandle(value, 'start', resizable),
+            clipHandle(value, 'start', resizable, start, end),
             contextualSlot('clip-content', value.id, ['clip-content'], preview),
-            clipHandle(value, 'end', resizable),
+            clipHandle(value, 'end', resizable, start, end),
             createElement('span', 'lgs1920-wa-timeline__clip-duration-overlay', {
                 part: 'clip-duration-overlay',
                 'data-clip-duration-overlay': '',
@@ -134,12 +143,18 @@ export const createTimelineRenderer = ({
         if (interactive) {
             element.addEventListener('pointerdown', event => {
                 if (event.target.closest('[data-clip-handle]')) return
-                startClipInteraction(event, value.id, 'move')
+                const wasSelected = isClipSelected(value)
+                selectClip(value, event, element)
+                startClipInteraction(event, value.id, 'move', null, wasSelected)
+            })
+            element.addEventListener('click', event => {
+                event.stopPropagation()
             })
             element.addEventListener('contextmenu', event => {
                 if (!movable) return
                 event.preventDefault()
                 event.stopPropagation()
+                selectClip(value, event, element)
                 openClipContextMenu(value, event)
             })
             element.addEventListener('dblclick', event => {
@@ -158,8 +173,13 @@ export const createTimelineRenderer = ({
                     removeClip(value.id, event)
                     return
                 }
-                if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'd') {
+                if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey
+                    && ['c', 'd'].includes(event.key.toLowerCase())) {
                     duplicateClip(value.id, event)
+                    return
+                }
+                if (!event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'm') {
+                    toggleClipVisibility(value.id, event)
                     return
                 }
                 if (!event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'v') {
@@ -228,9 +248,15 @@ export const createTimelineRenderer = ({
      * @param {Object} value - Timeline clip.
      * @param {'start'|'end'} edge - Clip edge.
      * @param {boolean} enabled - Whether resizing is enabled.
+     * @param {number} start - Normalized clip start in seconds.
+     * @param {number} end - Normalized clip end in seconds.
      * @returns {HTMLElement} Clip handle.
      */
-    const clipHandle = (value, edge, enabled) => {
+    const clipHandle = (value, edge, enabled, start, end) => {
+        const startMillis = Math.max(0, start * 1000)
+        const endMillis = Math.max(startMillis, end * 1000)
+        const durationMillis = Math.max(endMillis, Number(getDurationMillis()) || 0)
+        const isStart = edge === 'start'
         const handle = createElement('span', `lgs1920-wa-timeline__clip-handle lgs1920-wa-timeline__clip-handle--${edge}`, {
             part: `clip-${edge}-handle`,
             'data-clip-handle': edge,
@@ -238,10 +264,17 @@ export const createTimelineRenderer = ({
             role: 'slider',
             tabindex: enabled ? 0 : -1,
             'aria-hidden': enabled ? null : 'true',
+            'aria-valuemin': isStart ? 0 : startMillis,
+            'aria-valuemax': isStart ? endMillis : durationMillis,
+            'aria-valuenow': isStart ? startMillis : endMillis,
+            'aria-keyshortcuts': enabled ? 'ArrowLeft ArrowRight Shift+ArrowLeft Shift+ArrowRight' : null,
         })
         handle.append(contextualSlot(`clip-${edge}-handle`, value.id, `clip-${edge}-handle`, createIcon('grip-lines-vertical', 'solid')))
         if (enabled) {
-            handle.addEventListener('pointerdown', event => startClipInteraction(event, value.id, 'resize', edge))
+            handle.addEventListener('pointerdown', event => {
+                selectClip(value, event, handle.closest('[data-clip-id]'))
+                startClipInteraction(event, value.id, 'resize', edge)
+            })
             handle.addEventListener('keydown', event => resizeClipByKeyboard(value.id, edge, event))
         }
         return handle
@@ -350,6 +383,7 @@ export const createTimelineRenderer = ({
             })
         }
         const actions = createElement('span', 'lgs1920-wa-timeline__track-actions', {part: 'track-actions'})
+        const hasClips = (row.actions ?? row.clips ?? []).length > 0
         if (interactive) actions.addEventListener('pointerdown', event => event.stopPropagation())
         if (editable && row.canHide) {
             const visibility = button({
@@ -369,7 +403,7 @@ export const createTimelineRenderer = ({
                 'aria-hidden': 'true',
             }))
         }
-        if (editable) {
+        if (editable && !hasClips) {
             const remove = button({
                 iconName: 'trash-can',
                 label: `Remove ${label}`,
@@ -446,12 +480,13 @@ export const createTimelineRenderer = ({
             const dragState = getDragState()
             const isClipDropTarget = dragState?.type === 'clip'
                 && dragState.targetTrackId === row.id
+            const isClipDropRejected = isClipDropTarget && dragState.dropRejected === true
             const isRejectedRow = dragState?.type === 'row'
                 && dragState.rowId === row.id
                 && dragState.dropRejected === true
             const track = createElement('div', `lgs1920-wa-timeline__track${row.editable === false ? ' lgs1920-wa-timeline__track--read-only' : ''}${row.visible === false ? ' lgs1920-wa-timeline__track--hidden' : ''}${dragState?.type === 'row' && dragState.rowId === row.id ? ' lgs1920-wa-timeline__track--dragging' : ''}${isRejectedRow ? ' lgs1920-wa-timeline__track--drop-rejected' : ''}${isClipDropTarget ? ' lgs1920-wa-timeline__track--clip-drop-target' : ''}`, {part: 'track', 'data-row-id': row.id})
             track.style.height = 'var(--lgs-timeline-row-height)'
-            const trackBackground = createElement('div', `lgs1920-wa-timeline__track-background${row.editable === false ? ' lgs1920-wa-timeline__track-background--read-only' : ''}${row.visible === false ? ' lgs1920-wa-timeline__track-background--hidden' : ''}`, {
+            const trackBackground = createElement('div', `lgs1920-wa-timeline__track-background${row.editable === false ? ' lgs1920-wa-timeline__track-background--read-only' : ''}${row.visible === false ? ' lgs1920-wa-timeline__track-background--hidden' : ''}${isClipDropRejected ? ' lgs1920-wa-timeline__track-background--clip-drop-rejected' : ''}`, {
                 part: 'track-background',
                 'data-row-id': row.id,
                 'aria-hidden': 'true',
@@ -460,6 +495,9 @@ export const createTimelineRenderer = ({
             for (const value of row.actions ?? []) {
                 track.append(clip(Object.assign({}, value, {trackId: row.id}), majorSeconds, row.visible !== false, row.editable !== false))
             }
+            track.addEventListener('dragover', event => handleClipDragOver(event, row.id, track))
+            track.addEventListener('dragleave', event => handleClipDragLeave(event, track))
+            track.addEventListener('drop', event => handleClipDrop(event, row.id, track))
             tracks.append(track)
         })
         const tracksViewport = createElement('div', 'lgs1920-wa-timeline__tracks-viewport', {
@@ -487,6 +525,12 @@ export const createTimelineRenderer = ({
         }
         const overlay = createElement('div', 'lgs1920-wa-timeline__overlay', {part: 'overlay', 'data-overlay': ''})
         overlay.append(
+            createElement('div', 'lgs1920-wa-timeline__clip-snap-guide', {
+                part: 'clip-snap-guide',
+                'data-clip-snap-guide': '',
+                'aria-hidden': 'true',
+                hidden: true,
+            }),
             rangeHandle('start'),
             rangeHandle('end'),
             playhead,

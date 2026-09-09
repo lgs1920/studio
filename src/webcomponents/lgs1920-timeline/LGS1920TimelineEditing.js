@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-31
- * Last modified: 2026-09-08
+ * Last modified: 2026-09-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -102,24 +102,66 @@ export const snapClipToMajorUnits = ({start, end, mode, edge, majorSeconds, thre
  * Snap an edited interval to nearby clip boundaries or the playhead.
  *
  * @param {Object} options - Proposed interval, edit mode, targets and tolerance.
+ * @param {(interval: Object, target: Object) => boolean} [options.isValid] - Optional candidate validator.
+ * @param {number} [options.thresholdPixels] - Maximum pixel distance allowed for snapping.
+ * @param {number} [options.pixelsPerSecond] - Current timeline scale in pixels per second.
  * @returns {Object|null} Magnetized interval or null outside the tolerance.
  */
-export const snapClipToTargets = ({start, end, mode, edge, targets, thresholdSeconds}) => {
+const resolveClipTargetSnap = ({start, end, mode, edge, targets, thresholdSeconds, thresholdPixels, pixelsPerSecond, isValid}) => {
+    const intervalStart = Number(start)
+    const intervalEnd = Number(end)
+    const threshold = Number(thresholdSeconds)
+    if (!Number.isFinite(intervalStart) || !Number.isFinite(intervalEnd) || !Number.isFinite(threshold) || threshold < 0) return null
     const edges = mode === 'resize' ? [edge] : ['start', 'end']
     let nearest = null
     edges.forEach(side => targets.forEach(target => {
-        if (!Number.isFinite(target) || target < 0) return
-        const delta = target - (side === 'start' ? start : end)
-        if (Math.abs(delta) > thresholdSeconds + 1e-9) return
-        if (mode === 'move' && start + delta < 0) return
-        if (nearest === null || Math.abs(delta) < Math.abs(nearest.delta)) nearest = {side, delta}
+        const numericTarget = Number(target && typeof target === 'object' ? target.time : target)
+        if (!Number.isFinite(numericTarget) || numericTarget < 0) return
+        const delta = numericTarget - (side === 'start' ? intervalStart : intervalEnd)
+        const distancePixels = Math.abs(delta) * Number(pixelsPerSecond)
+        const withinPixelThreshold = Number.isFinite(Number(thresholdPixels))
+            && Number.isFinite(distancePixels)
+            && distancePixels <= Number(thresholdPixels) + 1e-9
+        if (withinPixelThreshold === false && Math.abs(delta) > threshold + 1e-9) return
+        if (mode === 'move' && intervalStart + delta < 0) return
+        const round = value => Number(Number(value).toFixed(6))
+        const interval = mode !== 'resize'
+            ? {start: round(intervalStart + delta), end: round(intervalEnd + delta)}
+            : side === 'start'
+                ? {start: round(intervalStart + delta), end: round(intervalEnd)}
+                : {start: round(intervalStart), end: round(intervalEnd + delta)}
+        const targetMetadata = {
+            side,
+            delta,
+            targetTime: numericTarget,
+            targetClipId: target && typeof target === 'object' ? target.clipId ?? null : null,
+            targetEdge: target && typeof target === 'object' ? target.edge ?? null : null,
+        }
+        if (typeof isValid === 'function' && !isValid(interval, targetMetadata)) return
+        if (nearest === null || Math.abs(delta) < Math.abs(nearest.delta)) {
+            nearest = targetMetadata
+        }
     }))
     if (!nearest) return null
     const round = value => Number(Number(value).toFixed(6))
-    if (mode !== 'resize') return {start: round(start + nearest.delta), end: round(end + nearest.delta)}
-    return nearest.side === 'start'
-        ? {start: round(start + nearest.delta), end: round(end)}
-        : {start: round(start), end: round(end + nearest.delta)}
+    const interval = mode !== 'resize'
+        ? {start: round(intervalStart + nearest.delta), end: round(intervalEnd + nearest.delta)}
+        : nearest.side === 'start'
+            ? {start: round(intervalStart + nearest.delta), end: round(intervalEnd)}
+            : {start: round(intervalStart), end: round(intervalEnd + nearest.delta)}
+    return {...interval, ...nearest}
+}
+
+/**
+ * Snap an edited interval to nearby clip boundaries or the playhead.
+ *
+ * @param {Object} options - Proposed interval, edit mode, targets and tolerance.
+ * @returns {Object|null} Magnetized interval or null outside the tolerance.
+ */
+export const snapClipToTargets = options => {
+    const result = resolveClipTargetSnap(options)
+    if (!result) return null
+    return {start: result.start, end: result.end}
 }
 
 /**
@@ -179,6 +221,28 @@ export const hasClipOverlaps = clips => {
 }
 
 /**
+ * Normalize one track layout by shifting overlapping clips to the right.
+ *
+ * @param {Array} clips - Clips on one track.
+ * @returns {Array} Non-overlapping clips with preserved durations.
+ */
+export const normalizeClipLayout = clips => {
+    const ordered = (Array.isArray(clips) ? clips : [])
+        .map((clip, index) => ({clip, index, interval: resolveClipInterval(clip)}))
+        .sort((left, right) => left.interval.start - right.interval.start || left.index - right.index)
+    let previousEnd = 0
+    const normalized = ordered.map(({clip, interval}) => {
+        const start = Math.max(interval.start, previousEnd)
+        const end = start + interval.duration
+        previousEnd = Math.max(previousEnd, end)
+        return start === interval.start && end === interval.end
+            ? clip
+            : {...clip, start, end}
+    })
+    return normalized.sort((left, right) => resolveClipInterval(left).start - resolveClipInterval(right).start)
+}
+
+/**
  * Shift overlapping clips to the right while preserving their durations.
  *
  * @param {Array} clips - Clips on one track.
@@ -200,7 +264,7 @@ const rippleClips = (clips, proposedClip) => {
 }
 
 /**
- * Ripple clips on the edited side of a resized clip.
+ * Ripple clips after the edited clip when its end edge is resized.
  *
  * @param {Object} options - Resize ripple options.
  * @param {Array} options.clips - Clips on the target track including the edited clip.
@@ -210,21 +274,41 @@ const rippleClips = (clips, proposedClip) => {
  * @returns {Array} Resized and rippled clips.
  */
 export const rippleResizedClips = ({clips, originalClip, proposedClip, edge}) => {
+    if (edge === 'start') {
+        return clips.map(value => value.id === proposedClip.id ? proposedClip : value)
+            .sort((left, right) => resolveClipInterval(left).start - resolveClipInterval(right).start)
+    }
     const original = resolveClipInterval(originalClip)
     const proposed = resolveClipInterval(proposedClip)
-    const delta = edge === 'start'
-        ? proposed.start - original.start
-        : proposed.end - original.end
-
-    return clips.map(value => {
-        if (value.id === proposedClip.id) return proposedClip
-        const interval = resolveClipInterval(value)
-        const isOnEditedSide = edge === 'start'
+    const editedSide = clips
+        .filter(value => value.id !== proposedClip.id)
+        .map(value => ({value, interval: resolveClipInterval(value)}))
+        .filter(({interval}) => edge === 'start'
             ? interval.end <= original.start
-            : interval.start >= original.end
-        if (!isOnEditedSide) return value
-        return {...value, start: interval.start + delta, end: interval.end + delta}
-    }).sort((left, right) => resolveClipInterval(left).start - resolveClipInterval(right).start)
+            : interval.start >= original.end)
+        .sort((left, right) => edge === 'start'
+            ? right.interval.end - left.interval.end
+            : left.interval.start - right.interval.start)
+    let boundary = edge === 'start' ? proposed.start : proposed.end
+    const rippled = editedSide.map(({value, interval}) => {
+        const touchesBoundary = edge === 'start'
+            ? interval.end <= boundary + 1e-9
+            : interval.start >= boundary - 1e-9
+        if (touchesBoundary) {
+            boundary = edge === 'start' ? interval.start : interval.end
+            return value
+        }
+        const duration = interval.duration
+        const end = edge === 'start' ? boundary : boundary + duration
+        const start = edge === 'start' ? end - duration : boundary
+        boundary = edge === 'start' ? start : end
+        return {...value, start, end}
+    })
+    const rippledById = new Map(rippled.map(value => [value.id, value]))
+    return clips.map(value => value.id === proposedClip.id
+        ? proposedClip
+        : rippledById.get(value.id) ?? value)
+        .sort((left, right) => resolveClipInterval(left).start - resolveClipInterval(right).start)
 }
 
 /**
@@ -315,6 +399,59 @@ export const createTimelineClipEditor = ({
     emit,
     render,
 }) => {
+    const resizeRippleHistory = new Map()
+
+    /**
+     * Build a stable signature for clip placement on one track.
+     *
+     * @param {Array} clips - Track clips.
+     * @returns {string} Placement signature.
+     */
+    const clipLayoutSignature = clips => JSON.stringify((clips ?? [])
+        .map(clip => [String(clip.id), Number(clip.start), Number(clip.end)])
+        .sort((left, right) => left[0].localeCompare(right[0])))
+
+    /**
+     * Build the key used to retain one resize ripple history.
+     *
+     * @param {string} trackId - Track identifier.
+     * @param {string} clipId - Resized clip identifier.
+     * @param {'start'|'end'} edge - Resized edge.
+     * @returns {string} History key.
+     */
+    const resizeRippleHistoryKey = (trackId, clipId, edge) => `${String(trackId)}:${String(clipId)}:${edge}`
+
+    /**
+     * Retain a committed resize layout for a possible reverse resize.
+     *
+     * @param {Object} options - Resize result options.
+     * @param {Array} options.baseRows - Rows before the committed resize.
+     * @param {Object} options.result - Committed resize result.
+     * @param {string} options.clipId - Resized clip identifier.
+     * @param {'start'|'end'} options.edge - Resized edge.
+     */
+    const recordResizeResult = ({baseRows, result, clipId, edge}) => {
+        if (!result || edge !== 'end') return
+        const before = findClipEntry(baseRows, clipId)
+        const after = findClipEntry(result.rows, clipId)
+        if (!before || !after || before.row.id !== after.row.id) return
+        if (resolveCollisionPolicy(getTimelineConfig(), before.row, 'resize') !== 'ripple') return
+        const key = resizeRippleHistoryKey(before.row.id, clipId, edge)
+        const currentSignature = clipLayoutSignature(before.row.actions)
+        const previous = resizeRippleHistory.get(key)
+        const baseline = previous?.resultSignature === currentSignature
+            ? previous
+            : {
+                baselineClips: cloneRows([{actions: before.row.actions}])[0].actions,
+                baselineClip: Object.assign({}, before.clip),
+            }
+        resizeRippleHistory.set(key, {
+            baselineClips: baseline.baselineClips,
+            baselineClip: baseline.baselineClip,
+            resultSignature: clipLayoutSignature(after.row.actions),
+        })
+    }
+
     /**
      * Find a clip and its owning track in a row collection.
      *
@@ -348,7 +485,7 @@ export const createTimelineClipEditor = ({
      *
      * @param {Object} [options] - Snap options.
      * @param {boolean} [options.secondary=false] - Use the secondary ruler unit.
-     * @returns {{majorSeconds: number, thresholdSeconds: number}|null} Snap configuration.
+ * @returns {{majorSeconds: number, thresholdPixels: number, pixelsPerSecond: number, thresholdSeconds: number}|null} Snap configuration.
      */
     const resolveSnap = ({secondary = false} = {}) => {
         const timeline = getTimelineConfig()
@@ -363,6 +500,8 @@ export const createTimelineClipEditor = ({
         const thresholdPixels = Number.isFinite(configuredPixels) && configuredPixels >= 0 ? configuredPixels : 8
         return {
             majorSeconds,
+            thresholdPixels,
+            pixelsPerSecond: pixels / majorSeconds,
             thresholdSeconds: (thresholdPixels / pixels) * majorSeconds,
         }
     }
@@ -416,11 +555,29 @@ export const createTimelineClipEditor = ({
             : proposedClip
         if (!placedClip) return null
         const targetClips = [...(targetAfterRemoval?.actions ?? []), placedClip]
+        const historyKey = resizeRippleHistoryKey(targetTrackId, clip.id, edge)
+        const resizeHistory = mode === 'resize' && policy === 'ripple'
+            ? resizeRippleHistory.get(historyKey)
+            : null
+        const useResizeHistory = Boolean(resizeHistory
+            && resizeHistory.resultSignature === clipLayoutSignature(target.actions))
+        const historicalClips = useResizeHistory
+            ? resizeHistory.baselineClips.map(value => {
+                const current = targetClips.find(candidate => candidate.id === value.id)
+                return current ? {...current, start: value.start, end: value.end} : value
+            })
+            : targetClips
+        const historicalOriginalClip = useResizeHistory
+            ? Object.assign({}, originalClip, {
+                start: resizeHistory.baselineClip.start,
+                end: resizeHistory.baselineClip.end,
+            })
+            : originalClip
 
         const laidOutClips = policy === 'ripple' && mode === 'resize'
             ? rippleResizedClips({
-                clips: targetClips,
-                originalClip,
+                clips: historicalClips,
+                originalClip: historicalOriginalClip,
                 proposedClip: placedClip,
                 edge,
             })
@@ -528,6 +685,9 @@ export const createTimelineClipEditor = ({
         if (!entry || entry.clip.editable === false || (state.mode === 'resize' && entry.clip.resizable === false)) return
         state.previewClientX = event.clientX
         state.previewClientY = event.clientY
+        state.snapTargetTime = null
+        state.snapTargetClipId = null
+        state.snapTargetEdge = null
         const delta = getTimeAtClientX(event.clientX) - state.startTime
         state.targetTime = getTimeAtClientX(event.clientX)
         const duration = state.originalEnd - state.originalStart
@@ -559,19 +719,47 @@ export const createTimelineClipEditor = ({
             if (!extendsDuration) end = Math.min(end, baseDuration)
         }
 
+        const unsnappedInterval = {start, end}
+        let magnetic = null
+        let snapped = null
         state.previewClip = Object.assign({}, entry.clip, {start, end})
 
         const snap = resolveSnap({secondary: (state.mode === 'move' || state.mode === 'resize') && event.shiftKey === true})
         if (snap && !event.altKey) {
-            const snapped = snapClipToMajorUnits({start, end, mode: state.mode, edge: state.edge, ...snap})
-            const targets = [0, Number(getCurrentTimeMillis?.()) / 1000]
+            snapped = snapClipToMajorUnits({start, end, mode: state.mode, edge: state.edge, ...snap})
+            const targets = [0, {time: Number(getCurrentTimeMillis?.()) / 1000}]
             state.baseRows.forEach(row => (row.actions ?? []).forEach(clip => {
-                if (clip.id !== state.clipId) targets.push(clip.start, clip.end)
+                if (String(clip.id) === String(state.clipId)) return
+                const interval = resolveClipInterval(clip)
+                targets.push(
+                    {time: interval.start, clipId: clip.id, edge: 'start'},
+                    {time: interval.end, clipId: clip.id, edge: 'end'},
+                )
             }))
-            const magnetic = snapClipToTargets({start, end, mode: state.mode, edge: state.edge,
-                targets, thresholdSeconds: snap.thresholdSeconds})
-            start = magnetic?.start ?? snapped.start
-            end = magnetic?.end ?? snapped.end
+            magnetic = resolveClipTargetSnap({start, end, mode: state.mode, edge: state.edge,
+                targets,
+                thresholdPixels: snap.thresholdPixels,
+                pixelsPerSecond: snap.pixelsPerSecond,
+                thresholdSeconds: snap.thresholdSeconds,
+                isValid: !invalidTarget ? interval => {
+                    const candidateResult = place({
+                        baseRows: state.baseRows,
+                        clip: Object.assign({}, entry.clip, interval),
+                        targetTrackId: targetTrack.id,
+                        mode: state.mode,
+                        edge: state.edge,
+                    })
+                    if (!candidateResult) return false
+                    const candidateEntry = findClipEntry(candidateResult.rows, state.clipId)
+                    if (!candidateEntry) return false
+                    const candidateInterval = resolveClipInterval(candidateEntry.clip)
+                    return Math.abs(candidateInterval.start - interval.start) <= 1e-9
+                        && Math.abs(candidateInterval.end - interval.end) <= 1e-9
+                } : undefined,
+            })
+            const preferred = magnetic ?? snapped
+            start = preferred.start
+            end = preferred.end
         }
         if (state.mode === 'move') {
             start = Math.max(0, start)
@@ -584,13 +772,62 @@ export const createTimelineClipEditor = ({
             if (!extendsDuration) end = Math.min(end, baseDuration)
         }
 
-        const result = invalidTarget ? null : place({
-            baseRows: state.baseRows,
-            clip: Object.assign({}, entry.clip, {start, end}),
-            targetTrackId: targetTrack.id,
-            mode: state.mode,
-            edge: state.edge,
-        })
+        const preferredInterval = {start, end}
+        const candidates = [preferredInterval]
+        if (snapped && !candidates.some(candidate => candidate.start === snapped.start && candidate.end === snapped.end)) {
+            candidates.push(snapped)
+        }
+        if (!candidates.some(candidate => candidate.start === unsnappedInterval.start && candidate.end === unsnappedInterval.end)) {
+            candidates.push(unsnappedInterval)
+        }
+        let result = null
+        let committedInterval = null
+        for (const candidate of candidates) {
+            const candidateResult = invalidTarget ? null : place({
+                baseRows: state.baseRows,
+                clip: Object.assign({}, entry.clip, candidate),
+                targetTrackId: targetTrack.id,
+                mode: state.mode,
+                edge: state.edge,
+            })
+            if (!candidateResult) continue
+            result = candidateResult
+            const committedEntry = findClipEntry(candidateResult.rows, state.clipId)
+            const committedClip = committedEntry?.clip
+            committedInterval = committedClip ? resolveClipInterval(committedClip) : candidate
+            break
+        }
+        start = committedInterval?.start ?? preferredInterval.start
+        end = committedInterval?.end ?? preferredInterval.end
+        const magneticApplied = Boolean(magnetic
+            && committedInterval
+            && committedInterval.start === magnetic.start
+            && committedInterval.end === magnetic.end)
+        const rulerSnapApplied = Boolean(snapped
+            && committedInterval
+            && (state.mode === 'resize'
+                ? state.edge === 'start'
+                    ? snapped.start !== unsnappedInterval.start
+                    : snapped.end !== unsnappedInterval.end
+                : snapped.start !== unsnappedInterval.start || snapped.end !== unsnappedInterval.end)
+            && committedInterval.start === snapped.start
+            && committedInterval.end === snapped.end)
+        if (magneticApplied) {
+            state.snapTargetTime = magnetic.targetTime
+            state.snapTargetClipId = magnetic.targetClipId
+            state.snapTargetEdge = magnetic.targetEdge
+        } else if (rulerSnapApplied) {
+            state.snapTargetTime = state.mode === 'resize'
+                ? state.edge === 'start' ? snapped.start : snapped.end
+                : snapped.start !== unsnappedInterval.start ? snapped.start : snapped.end
+            state.snapTargetClipId = null
+            state.snapTargetEdge = null
+        } else {
+            state.snapTargetTime = null
+            state.snapTargetClipId = null
+            state.snapTargetEdge = null
+        }
+        state.previewClip = Object.assign({}, entry.clip, {start, end})
         state.targetTrackId = targetTrack.id
         if (!result) {
             state.dropRejected = true
@@ -686,6 +923,7 @@ export const createTimelineClipEditor = ({
             edge,
         })
         if (!result) return
+        recordResizeResult({baseRows: rows, result, clipId, edge})
         const detail = changeDetail(state, result, event)
         if (emit('before-clip-change', detail, {cancelable: true}).defaultPrevented) return
         setRows(result.rows)
@@ -696,5 +934,5 @@ export const createTimelineClipEditor = ({
         emit('after-clip-change', detail)
     }
 
-    return {changeDetail, extend, findClipEntry, place, preview, resizeByKeyboard}
+    return {changeDetail, extend, findClipEntry, place, preview, recordResizeResult, resizeByKeyboard}
 }

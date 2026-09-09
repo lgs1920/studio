@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-06
- * Last modified: 2026-09-08
+ * Last modified: 2026-09-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,8 +23,12 @@ export const TIMELINE_INPUT_EVENT_TYPES = Object.freeze([
     'contextmenu',
     'dblclick',
     'drag',
+    'dragenter',
     'dragend',
+    'dragleave',
+    'dragover',
     'dragstart',
+    'drop',
     'gotpointercapture',
     'keydown',
     'lostpointercapture',
@@ -62,8 +66,12 @@ export const TIMELINE_KEYBOARD_KEYS = Object.freeze([
     ...TIMELINE_ARROW_KEYS,
     'Backspace',
     'Delete',
+    'c',
+    'C',
     'End',
     'Home',
+    'm',
+    'M',
     'Spacebar',
     ' ',
     'd',
