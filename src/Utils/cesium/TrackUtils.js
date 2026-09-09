@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-09
- * Last modified: 2026-05-09
+ * Created on: 2024-02-03
+ * Last modified: 2026-09-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -810,7 +810,7 @@ export class TrackUtils {
             width:                    image.width,
             height:                   image.height,
             heightReference:          __.ui.sceneManager.noRelief() ? HeightReference.NONE : HeightReference.CLAMP_TO_GROUND,
-            disableDepthTestDistance: __.ui.sceneManager.is2D ? 0 : 1.2742018E7,
+            disableDepthTestDistance: 0,
             horizontalOrigin:         HorizontalOrigin.CENTER,
             verticalOrigin:           VerticalOrigin.CENTER,
         }
