@@ -36,6 +36,14 @@ the future editable timeline.
 - The timeline is transient preparation UI and is excluded from captured
   output with `data-capture-exclude`. Do not persist timeline editor state as a
   second domain model.
+- When adding or updating Timeline shortcut entries in `public/shortcuts.yaml`,
+  keep the catalog as one flat YAML list. Preserve stable identifiers and field
+  semantics, and use the existing English project header, boxed section
+  separators, blank lines, and lighter subsection comments to distinguish
+  Timeline controls from Replay management and camera preparation controls.
+- Do not use YAML document separators (`---`) or nested catalog structures for
+  Timeline shortcuts unless the loader and every catalog consumer are updated
+  together.
 - Timeline changes must remain hermetic with respect to the external
   environment. Do not mutate unrelated application state, create a competing
   clock, or leak listeners, timers, DOM effects, capture effects, or persistence
