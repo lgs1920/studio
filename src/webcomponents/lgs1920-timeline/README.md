@@ -133,6 +133,8 @@ clock integration.
 | `showBuildingOverlay` | `boolean` | Shows the construction overlay during the initial mount. Defaults to `true`. |
 | `collisionPolicy` | `'allow' \| 'prevent' \| 'ripple'` | Default clip collision policy for tracks. Defaults to `prevent`. |
 | `resizeCollisionPolicy` | `'allow' \| 'prevent' \| 'ripple'` | Default collision policy for clip resizes. Defaults to `prevent`. |
+| `snapThresholdPixels` | `number` | Distance from a ruler or clip edge at which snapping starts. Defaults to `8`. |
+| `snapReleaseThresholdPixels` | `number` | Distance at which an active snap is released. Defaults to the start threshold plus four pixels. |
 | `resizeExtendsDuration` | `boolean` | Allows an end resize to increase the timeline duration when it reaches the current end. Defaults to `true`. Set to `false` to keep the duration fixed for end resizes. |
 | `durationPolicy` | `'fixed' \| 'extend'` | Keeps the duration fixed or extends it when an edit exceeds the end. Defaults to `extend`. |
 | `keyboardZoomActive` | `boolean` | Enables arrow-key zoom when the containing widget is selected. Defaults to `false`. |
@@ -468,7 +470,8 @@ The timeline supports controlled clip editing. The component renders a start
 and end handle on every resizable clip, moves clips horizontally when their
 body is dragged, and accepts a clip on another compatible track while it is
 being dragged. A clip is selected by clicking it or starting its drag, and the
-selection stays inside the timeline. Clicking the selected clip without moving
+selection stays inside the timeline. Read-only clips on locked tracks remain
+selectable, but their editing actions stay disabled. Clicking the selected clip without moving
 deselects it, while dragging keeps it selected. The selected clip receives a
 normal 2px dashed border in the clip text color and keyboard focus. Clip options from the insertion menu can also be
 dragged onto a track. The target track is highlighted during the gesture. The
@@ -491,7 +494,7 @@ time position centered on the ruler's lower border. It is transient and
 disappears when the gesture ends or is cancelled.
 
 During pointer movement and resizing, the edited clip edge snaps to the nearest
-major ruler unit when it enters the eight-pixel magnetic threshold. Nearby clip
+major ruler unit when it enters the configured magnetic threshold. Nearby clip
 boundaries on any track and the playhead take precedence over ruler ticks. Holding
 `Shift` while moving or resizing a clip uses the currently rendered secondary
 ruler units instead. A clip move uses whichever of its two edges is closest, so
@@ -501,7 +504,9 @@ vertically while its horizontal position follows the magnetic alignment. A
 vertical alignment guide identifies the target clip edge during the gesture and
 remains visible for two seconds after release. Set `snap: false` on the timeline
 configuration to disable this behavior. Hold `Alt` during the gesture to bypass
-all magnets temporarily. `Escape` cancels an active drag or resize and restores
+all magnets temporarily. Once a snap is acquired, it remains magnetized until
+the clip passes `snapReleaseThresholdPixels`, which prevents jitter at the
+boundary. `Escape` cancels an active drag or resize and restores
 the original clips, duration, and playback range.
 
 An editable clip can be focused and removed with `Delete` or `Backspace`. A clip

@@ -118,10 +118,10 @@ export const createTimelineRenderer = ({
         const movable = interactive && editable
         const resizable = interactive && editable && value.resizable !== false
         if (movable) element.classList.add('lgs1920-wa-timeline__clip--movable')
-        element.setAttribute('tabindex', movable ? '0' : '-1')
-        if (movable) {
+        element.setAttribute('tabindex', interactive ? '0' : '-1')
+        if (interactive) {
             element.setAttribute('role', 'button')
-            element.setAttribute('aria-keyshortcuts', 'ArrowLeft ArrowRight Alt+ArrowLeft Alt+ArrowRight Delete Backspace Mod+C Mod+D M V')
+            if (movable) element.setAttribute('aria-keyshortcuts', 'ArrowLeft ArrowRight Alt+ArrowLeft Alt+ArrowRight Delete Backspace Mod+C Mod+D M V')
         }
         element.style.left = `${scaleOffset() + ((start / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth())}px`
         element.style.width = `${Math.max(numericToken('clip-min-width', 8), ((end - start) / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth())}px`
@@ -169,7 +169,13 @@ export const createTimelineRenderer = ({
                 emit('after-dblclick', detail)
             })
             element.addEventListener('keydown', event => {
-                if (!movable) return
+                if (!movable) {
+                    if (['Enter', ' '].includes(event.key)) {
+                        event.preventDefault()
+                        selectClip(value, event, element)
+                    }
+                    return
+                }
                 if (!event.ctrlKey && !event.metaKey && !event.shiftKey
                     && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
                     if (!isClipSelected(value)) selectClip(value, event, element)

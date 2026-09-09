@@ -234,6 +234,8 @@ The supported `timeline` fields are:
 | `legendMaxWidth` | Maximum track-title width. Defaults to `230`. |
 | `collisionPolicy` | Default clip collision policy: `allow`, `prevent`, or `ripple`. Defaults to `prevent`. |
 | `resizeCollisionPolicy` | Resize collision policy: `ripple` by default; may be `allow` or `prevent`. |
+| `snapThresholdPixels` | Distance from a ruler or clip edge at which snapping starts. Defaults to `8`. |
+| `snapReleaseThresholdPixels` | Distance at which an active snap is released. Defaults to the start threshold plus four pixels. |
 | `durationPolicy` | `fixed` keeps the duration bounded; `extend` grows it when required. |
 | `swatches` | Color choices for the clip color menu as `{color, label, palette}` objects. Defaults to the ten Web Awesome neutral palette colors; an empty array hides the color action. |
 | `clipActions` | Adds `{key, label, icon?, variant?, disabled?}` actions to every editable clip context menu and emits `clip-action` events. |
@@ -412,10 +414,12 @@ ruler-border positioning. These markers are transient and are removed when the
 gesture ends or is cancelled.
 
 Pointer movement and resizing snap the edited edge to the nearest major ruler
-unit inside an eight-pixel magnetic threshold. Holding `Shift` while moving or
+unit inside the configured magnetic threshold. Holding `Shift` while moving or
 resizing a clip switches the snap unit to the currently rendered secondary
 ruler divisions. Movement selects the closest of the clip's two edges and
 preserves the clip duration. Set `snap: false` to disable the magnetic behavior.
+After a snap is acquired, the clip remains magnetized until it passes the
+configured release threshold, preventing jitter around a contact or alignment.
 Controlled track updates preserve the local ruler zoom unless a new explicit
 `zoomPercent` value is provided.
 
@@ -431,7 +435,8 @@ track collision policy is applied immediately. `add-clip` returns the created
 clip, the target track, the resulting duration, and the complete tracks
 snapshot.
 
-Editable clips are selected by click or drag start. A clip drag starts only
+Clips are selected by click or drag start, including clips on read-only tracks.
+Read-only clips remain selectable while their editing actions stay disabled. A clip drag starts only
 after the pointer moves beyond the click tolerance, so a stationary press keeps
 the click behavior. On touch devices, a stationary long press can still open the
 clip context menu. Clicking the selected clip without moving deselects it, while

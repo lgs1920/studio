@@ -494,7 +494,7 @@ export const createTimelineClipEditor = ({
      *
      * @param {Object} [options] - Snap options.
      * @param {boolean} [options.secondary=false] - Use the secondary ruler unit.
- * @returns {{majorSeconds: number, thresholdPixels: number, pixelsPerSecond: number, thresholdSeconds: number}|null} Snap configuration.
+     * @returns {{majorSeconds: number, thresholdPixels: number, releaseThresholdPixels: number, pixelsPerSecond: number, thresholdSeconds: number, releaseThresholdSeconds: number}|null} Snap configuration.
      */
     const resolveSnap = ({secondary = false} = {}) => {
         const timeline = getTimelineConfig()
@@ -507,11 +507,17 @@ export const createTimelineClipEditor = ({
         if (!Number.isFinite(majorSeconds) || majorSeconds <= 0 || !Number.isFinite(pixels) || pixels <= 0) return null
         const configuredPixels = Number(timeline.snapThresholdPixels)
         const thresholdPixels = Number.isFinite(configuredPixels) && configuredPixels >= 0 ? configuredPixels : 8
+        const configuredReleasePixels = Number(timeline.snapReleaseThresholdPixels)
+        const releaseThresholdPixels = Number.isFinite(configuredReleasePixels) && configuredReleasePixels >= thresholdPixels
+            ? configuredReleasePixels
+            : Math.max(thresholdPixels + 4, thresholdPixels * 1.5)
         return {
             majorSeconds,
             thresholdPixels,
+            releaseThresholdPixels,
             pixelsPerSecond: pixels / majorSeconds,
             thresholdSeconds: (thresholdPixels / pixels) * majorSeconds,
+            releaseThresholdSeconds: (releaseThresholdPixels / pixels) * majorSeconds,
         }
     }
 
@@ -692,6 +698,13 @@ export const createTimelineClipEditor = ({
     const preview = (state, event) => {
         const entry = findClipEntry(state.baseRows, state.clipId)
         if (!entry || entry.clip.editable === false || (state.mode === 'resize' && entry.clip.resizable === false)) return
+        const previousSnap = {
+            time: Number(state.snapTargetTime),
+            clipId: state.snapTargetClipId,
+            edge: state.snapTargetEdge,
+            kind: state.snapTargetKind,
+        }
+        const hasPreviousSnap = Number.isFinite(previousSnap.time)
         state.previewClientX = event.clientX
         state.previewClientY = event.clientY
         state.snapTargetTime = null
@@ -735,7 +748,13 @@ export const createTimelineClipEditor = ({
 
         const snap = resolveSnap({secondary: (state.mode === 'move' || state.mode === 'resize') && event.shiftKey === true})
         if (snap && !event.altKey) {
-            snapped = snapClipToMajorUnits({start, end, mode: state.mode, edge: state.edge, ...snap})
+            const rulerThresholdSeconds = previousSnap.kind === 'ruler'
+                ? snap.releaseThresholdSeconds
+                : snap.thresholdSeconds
+            snapped = snapClipToMajorUnits({start, end, mode: state.mode, edge: state.edge,
+                ...snap,
+                thresholdSeconds: rulerThresholdSeconds,
+            })
             const targets = [0, {time: Number(getCurrentTimeMillis?.()) / 1000}]
             state.baseRows.forEach(row => (row.actions ?? []).forEach(clip => {
                 if (String(clip.id) === String(state.clipId)) return
@@ -745,9 +764,17 @@ export const createTimelineClipEditor = ({
                     {time: interval.end, clipId: clip.id, edge: 'end'},
                 )
             }))
+            const hasPreviousClipSnap = hasPreviousSnap
+                && previousSnap.kind === 'clip'
+                && previousSnap.clipId !== null
+                && previousSnap.clipId !== undefined
+            const magneticTargets = hasPreviousClipSnap
+                ? targets.filter(target => String(target.clipId) === String(previousSnap.clipId)
+                    && target.edge === previousSnap.edge)
+                : targets
             magnetic = resolveClipTargetSnap({start, end, mode: state.mode, edge: state.edge,
-                targets,
-                thresholdPixels: snap.thresholdPixels,
+                targets: magneticTargets,
+                thresholdPixels: hasPreviousClipSnap ? snap.releaseThresholdPixels : snap.thresholdPixels,
                 pixelsPerSecond: snap.pixelsPerSecond,
                 thresholdSeconds: snap.thresholdSeconds,
                 isValid: !invalidTarget ? interval => {
@@ -825,16 +852,19 @@ export const createTimelineClipEditor = ({
             state.snapTargetTime = magnetic.targetTime
             state.snapTargetClipId = magnetic.targetClipId
             state.snapTargetEdge = magnetic.targetEdge
+            state.snapTargetKind = magnetic.targetClipId === null || magnetic.targetClipId === undefined ? 'target' : 'clip'
         } else if (rulerSnapApplied) {
             state.snapTargetTime = state.mode === 'resize'
                 ? state.edge === 'start' ? snapped.start : snapped.end
                 : snapped.start !== unsnappedInterval.start ? snapped.start : snapped.end
             state.snapTargetClipId = null
             state.snapTargetEdge = null
+            state.snapTargetKind = 'ruler'
         } else {
             state.snapTargetTime = null
             state.snapTargetClipId = null
             state.snapTargetEdge = null
+            state.snapTargetKind = null
         }
         state.previewClip = Object.assign({}, entry.clip, {start, end})
         state.targetTrackId = targetTrack.id

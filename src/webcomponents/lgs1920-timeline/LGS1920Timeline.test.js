@@ -701,12 +701,29 @@ describe('lgs1920-timeline Web Component', () => {
             const surface = timeline.shadowRoot.querySelector('[data-surface]')
             Object.defineProperty(surface, 'clientWidth', {configurable: true, value: 600})
             resizeCallback()
+            expect(timeline.shadowRoot.querySelector('[data-surface]')).not.toBe(surface)
             await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)))))
 
             expect(timeline.shadowRoot.querySelector('[data-building-overlay]')).toBeNull()
         } finally {
             vi.unstubAllGlobals()
         }
+    })
+
+    it('shows the building overlay again when the timeline is attached a second time', async () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline)
+        document.body.append(timeline)
+
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+        expect(timeline.shadowRoot.querySelector('[data-building-overlay]')).toBeNull()
+
+        timeline.remove()
+        document.body.append(timeline)
+
+        expect(timeline.shadowRoot.querySelector('[data-building-overlay]')).not.toBeNull()
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+        expect(timeline.shadowRoot.querySelector('[data-building-overlay]')).toBeNull()
     })
 
     it('opens the title panel at 150 pixels within the generic width bounds', () => {
@@ -1599,6 +1616,7 @@ describe('lgs1920-timeline Web Component', () => {
         const timeline = new LGS1920Timeline()
         const labelChanges = vi.fn()
         const clipChanges = vi.fn()
+        const selections = vi.fn()
         configureTimeline(timeline, {
             tracks: [
                 {id: 'read-only', label: 'Read only', editable: false, clips: [{id: 'read-only-clip', start: 1, end: 3}]},
@@ -1607,6 +1625,7 @@ describe('lgs1920-timeline Web Component', () => {
         })
         timeline.addEventListener('lgs1920-timeline-track-label-change', labelChanges)
         timeline.addEventListener('lgs1920-timeline-clip-change', clipChanges)
+        timeline.addEventListener('lgs1920-timeline-clip-select', selections)
         document.body.append(timeline)
 
         const readOnlyRow = timeline.shadowRoot.querySelector('[data-row-id="read-only"]')
@@ -1630,6 +1649,8 @@ describe('lgs1920-timeline Web Component', () => {
         expect(editableRow.querySelector('slot[name="actions-editable"]')).not.toBeNull()
         expect(timeline.shadowRoot.querySelector('[data-clip-id="read-only-clip"]')
             .classList.contains('lgs1920-wa-timeline__clip--movable')).toBe(false)
+        expect(timeline.shadowRoot.querySelector('[data-clip-id="read-only-clip"]').getAttribute('tabindex')).toBe('0')
+        expect(timeline.shadowRoot.querySelector('[data-clip-id="read-only-clip"]').getAttribute('role')).toBe('button')
         expect(timeline.shadowRoot.querySelector('[data-clip-id="editable-clip"]')
             .classList.contains('lgs1920-wa-timeline__clip--movable')).toBe(true)
 
@@ -1642,6 +1663,8 @@ describe('lgs1920-timeline Web Component', () => {
 
         timeline.shadowRoot.querySelector('[data-clip-id="read-only-clip"]')
             .dispatchEvent(createPointerEvent('pointerdown', {clientX: 180, clientY: 50}))
+        expect(timeline.selectedClipId).toBe('read-only-clip')
+        expect(selections).toHaveBeenCalledWith(expect.objectContaining({detail: expect.objectContaining({selected: true, clipId: 'read-only-clip'})}))
         expect(clipChanges).not.toHaveBeenCalled()
         expect(labelChanges).not.toHaveBeenCalled()
     })
@@ -3028,6 +3051,76 @@ describe('lgs1920-timeline Web Component', () => {
         window.dispatchEvent(createPointerEvent('pointerup', {clientX: 104, clientY: 50}))
 
         expect(changes.mock.calls[0][0].detail.clip).toMatchObject({start: 2.15, end: 5.15})
+    })
+
+    it('keeps the snap guide when a moved clip touches an existing clip', () => {
+        const timeline = new LGS1920Timeline()
+        const changes = vi.fn()
+        configureTimeline(timeline, {
+            tracks: [{
+                id: 'main',
+                label: 'Main',
+                clips: [
+                    {id: 'touch-anchor', kind: 'video', start: 5, end: 7},
+                    {id: 'moving-touch', kind: 'video', start: 8, end: 11},
+                ],
+            }],
+        })
+        timeline.addEventListener('lgs1920-timeline-clip-change', changes)
+        document.body.append(timeline)
+
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 600, width: 600})
+        const overlay = timeline.shadowRoot.querySelector('[data-overlay]')
+        vi.spyOn(overlay, 'getBoundingClientRect').mockReturnValue({left: 100, top: 0, right: 600, width: 500})
+        const anchor = timeline.shadowRoot.querySelector('[data-clip-id="touch-anchor"]')
+        vi.spyOn(anchor, 'getBoundingClientRect').mockReturnValue({left: 410, top: 0, right: 510, width: 100})
+        const clip = timeline.shadowRoot.querySelector('[data-clip-id="moving-touch"]')
+        clip.dispatchEvent(createPointerEvent('pointerdown', {clientX: 340, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 302, clientY: 50}))
+
+        const guide = timeline.shadowRoot.querySelector('[data-clip-snap-guide]')
+        expect(timeline.hasAttribute('data-clip-drop-rejected')).toBe(false)
+        expect(guide.hidden).toBe(false)
+        expect(guide.style.left).toBe('410px')
+        expect(guide.dataset.clipSnapTargetId).toBe('touch-anchor')
+        expect(guide.dataset.clipSnapTargetEdge).toBe('end')
+
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 302, clientY: 50}))
+
+        expect(changes.mock.calls[0][0].detail.clip).toMatchObject({start: 7, end: 10})
+    })
+
+    it('requires extra movement to release a clip edge snap', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {
+            tracks: [{
+                id: 'main',
+                label: 'Main',
+                clips: [
+                    {id: 'release-anchor', kind: 'video', start: 5, end: 7},
+                    {id: 'release-moving', kind: 'video', start: 8, end: 11},
+                ],
+            }],
+        })
+        document.body.append(timeline)
+
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 600, width: 600})
+        const clip = timeline.shadowRoot.querySelector('[data-clip-id="release-moving"]')
+        clip.dispatchEvent(createPointerEvent('pointerdown', {clientX: 340, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 302, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 294, clientY: 50}))
+
+        const guide = timeline.shadowRoot.querySelector('[data-clip-snap-guide]')
+        expect(guide.hidden).toBe(false)
+        expect(timeline.shadowRoot.querySelector('[data-clip-id="release-moving"]').style.left).toBe('300px')
+
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 286, clientY: 50}))
+
+        expect(guide.hidden).toBe(true)
+        expect(timeline.hasAttribute('data-clip-drop-rejected')).toBe(true)
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 286, clientY: 50}))
     })
 
     it('accepts the valid edge snap when the nearest edge would overlap', () => {

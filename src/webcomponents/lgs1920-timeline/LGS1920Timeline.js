@@ -371,6 +371,13 @@ export class LGS1920Timeline extends HTMLElement {
      * Render the component when it is attached to the document.
      */
     connectedCallback() {
+        this.#initialBuildComplete = false
+        this.#building = this.#timelineConfig.showBuildingOverlay !== false
+        this.#buildingLayoutSignature = null
+        this.#surfaceWidth = 0
+        this.#contentWidth = START_LEFT + SCALE_WIDTH
+        this.#clipWorkspaceWidth = 0
+        this.#cancelBuildingCompletion()
         this.setAttribute('role', 'region')
         if (!this.getAttribute('aria-label')) this.setAttribute('aria-label', 'Timeline')
         this.#installInputPropagationBlockers()
@@ -3437,6 +3444,7 @@ export class LGS1920Timeline extends HTMLElement {
             wasSelected: wasSelected === true,
             baseRows: cloneRows(this.#rows),
             lastResult: null,
+            snapTargetKind: null,
             dragStart: {
                 clientX: Number(event.clientX) || 0,
                 clientY: Number(event.clientY) || 0,
@@ -4515,11 +4523,28 @@ export class LGS1920Timeline extends HTMLElement {
         const scaleWidth = this.#scaleWidth()
         const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
         const time = Number(guide?.time)
-        const visible = Number.isFinite(time) && time >= 0
+        const targetClipId = guide?.clipId
+        const targetElement = targetClipId === null || targetClipId === undefined
+            ? null
+            : [...this.#root.querySelectorAll('[data-clip-id]')]
+                .find(value => String(value.getAttribute('data-clip-id')) === String(targetClipId))
+        const overlayRect = element.parentElement?.getBoundingClientRect?.()
+        const targetRect = targetElement?.getBoundingClientRect?.()
+        const targetEdge = guide?.edge === 'end' ? targetRect?.right : targetRect?.left
+        const hasTargetGeometry = Number.isFinite(Number(targetEdge))
+            && Number.isFinite(Number(overlayRect?.left))
+            && Number(targetRect?.width) > 0
+            && Number(overlayRect?.width) > 0
+        const visible = Number.isFinite(time)
+            && time >= 0
+            && (targetClipId === null || targetClipId === undefined || Boolean(targetElement))
         element.hidden = !visible
         element.style.display = visible ? 'block' : 'none'
         if (!visible) return
-        element.style.left = `${scaleOffset + ((time / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
+        const left = hasTargetGeometry
+            ? Number(targetEdge) - Number(overlayRect.left)
+            : scaleOffset + ((time / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)
+        element.style.left = `${left}px`
         element.dataset.clipSnapTargetId = String(guide.clipId ?? '')
         element.dataset.clipSnapTargetEdge = String(guide.edge ?? '')
         element.setAttribute('aria-label', guide.clipId === null || guide.clipId === undefined
@@ -5020,10 +5045,6 @@ export class LGS1920Timeline extends HTMLElement {
         this.#resizeObserver?.disconnect()
         if (typeof ResizeObserver === 'undefined') return
         this.#resizeObserver = new ResizeObserver(() => {
-            const width = this.#surface?.clientWidth ?? 0
-            if (Number.isFinite(width) && width > 0 && width !== this.#surfaceWidth) {
-                this.#surfaceWidth = width
-            }
             this.#refreshLayoutMetrics()
         })
         this.#resizeObserver.observe(this)
