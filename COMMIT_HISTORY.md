@@ -1731,3 +1731,23 @@
 ## 2026-09-08 — [`Merge remote-tracking branch 'origin/feature/resize-and-move-clips' into feature/resize-and-move-clips`](https://github.com/lgs1920/studio/commit/b6358e5feba6790d64ab2632c34532085f8803a3)
 
 - Recorded automatically from Git history.
+
+## 2026-09-08 — [`docs: require Web Awesome UI colors`](https://github.com/lgs1920/studio/commit/97333e1bcb3fed3d79d02ec77c15372fdba8e54c)
+
+- Recorded automatically from Git history.
+
+## 2026-09-08 — [`fix(replay): keep timeline widget interactable`](https://github.com/lgs1920/studio/commit/b9c0ab895d0acda7550af24da6ba8b904fb67dce)
+
+- Recorded automatically from Git history.
+
+## 2026-09-08 — [`fix(replay): fit timeline before first paint`](https://github.com/lgs1920/studio/commit/f3edec7200a0d762b2c8780f999c8d6731bbb7d7)
+
+- Recorded automatically from Git history.
+
+## 2026-09-08 — [`feat(timeline): show clip placement ghosts`](https://github.com/lgs1920/studio/commit/cb28e7b731f1f1e16860d3e938426afc9426439f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-08 — [`Merge remote-tracking branch 'origin/feature/resize-and-move-clips' into feature/resize-and-move-clips`](https://github.com/lgs1920/studio/commit/73c77684191ead0bbbb76022d00471e907bfa0f3)
+
+- Recorded automatically from Git history.
