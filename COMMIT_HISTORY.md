@@ -1787,3 +1787,35 @@
 ## 2026-09-09 — [`Merge remote-tracking branch 'origin/feature/resize-and-move-clips' into feature/resize-and-move-clips`](https://github.com/lgs1920/studio/commit/af8ac07b7bdadafa4c7b4f25315764835e74022e)
 
 - Recorded automatically from Git history.
+
+## 2026-09-09 — [`docs(timeline): specify generic media plugin`](https://github.com/lgs1920/studio/commit/05870e72a80fb2a3aebc1abcc377a4bffcbe2269)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`fix(timeline): refine clip interaction and color menu`](https://github.com/lgs1920/studio/commit/0f52404f732305900a27a3b1e99563f0e9b0c43e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`fix(timeline): preserve context menu gestures`](https://github.com/lgs1920/studio/commit/ce45e74c12552569417b4e775a39cfb0cde5eb4e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`docs(timeline): document interaction and color options`](https://github.com/lgs1920/studio/commit/fbbe4a57b69228ea227511bb8386a52ef13c6f79)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`fix(timeline): accept color picker event payload`](https://github.com/lgs1920/studio/commit/9ee17fd9a70a1beef8ad267e3bd7d4d673c096c6)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`fix(timeline): restore pointer interaction with clip color swatches`](https://github.com/lgs1920/studio/commit/6bac237179cb8a169d18e7374caadd2909cc50df)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`fix(timeline): keep keyboard clip movement after drag`](https://github.com/lgs1920/studio/commit/3384490660585daafbb79c9cc1f37c92ea3af69a)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`Merge remote-tracking branch 'origin/feature/resize-and-move-clips' into feature/resize-and-move-clips`](https://github.com/lgs1920/studio/commit/32b99e9ab00e53e16b952a48531aa2cd3f17ddf2)
+
+- Recorded automatically from Git history.
