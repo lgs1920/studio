@@ -142,7 +142,7 @@
     - Backspace
   scope: Replay timeline
 - action: Copy focused Replay clip
-  description: Starts a copy-placement ghost for the focused editable clip; move it to the desired track and time, then click to commit.
+  description: Starts a copy-placement ghost for the focused editable clip; move it to the desired track and time, then click the primary pointer button to commit. Escape, a click outside the timeline, or a secondary-button/context-menu gesture cancels the placement.
   id: replay-timeline-clip-copy-keyboard
   keys:
     - Mod+C

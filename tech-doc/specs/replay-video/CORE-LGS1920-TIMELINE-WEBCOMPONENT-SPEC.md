@@ -235,6 +235,7 @@ The supported `timeline` fields are:
 | `collisionPolicy` | Default clip collision policy: `allow`, `prevent`, or `ripple`. Defaults to `prevent`. |
 | `resizeCollisionPolicy` | Resize collision policy: `ripple` by default; may be `allow` or `prevent`. |
 | `durationPolicy` | `fixed` keeps the duration bounded; `extend` grows it when required. |
+| `swatches` | Color choices for the clip color menu as `{color, label, palette}` objects. Defaults to the ten Web Awesome neutral palette colors; an empty array hides the color action. |
 | `clipActions` | Adds `{key, label, icon?, variant?, disabled?}` actions to every editable clip context menu and emits `clip-action` events. |
 | `keyboardZoomActive` | Enables arrow-key zoom while the containing timeline widget is selected. Defaults to `false`. |
 | `defaultTrackId` | Track selected by the clip insertion menu when an option has no `trackId`. |
@@ -430,18 +431,23 @@ track collision policy is applied immediately. `add-clip` returns the created
 clip, the target track, the resulting duration, and the complete tracks
 snapshot.
 
-Editable clips are selected by click or drag start. Clicking the selected clip
-without moving deselects it, while dragging keeps it selected. The selection
+Editable clips are selected by click or drag start. A clip drag starts only
+after the pointer moves beyond the click tolerance, so a stationary press keeps
+the click behavior. On touch devices, a stationary long press can still open the
+clip context menu. Clicking the selected clip without moving deselects it, while
+dragging keeps it selected. The selection
 remains local to the timeline, receives a normal 2px dashed border in the clip
 text color, and receives keyboard focus. Clicking a neutral area, track label,
 or empty track clears the selection, as does Escape.
 Native pointer, click, and context-menu input is stopped at the timeline host.
 The built-in clip context menu provides Copy, Delete, Mask, and Extend max.
-Copy creates an accentuated transient placement ghost just after the source
-clip; the user positions it with the pointer and commits it with a pointer
-press, while Escape cancels the copy. The context menu opens through
-`wa-popup` with a bottom-start default and flips or shifts to remain visible
-near the timeline and viewport edges. Clicking elsewhere closes it.
+Copy creates an accentuated transient placement ghost under the source clip,
+shifted half a clip height down and to the left; the user positions it with the
+pointer and commits it with the primary pointer button. Escape, a click outside
+the timeline, or a secondary-button/context-menu gesture cancels the copy. The
+context menu opens through `wa-popup` with a bottom-start default and flips or
+shifts to remain visible near the timeline and viewport edges. Clicking
+elsewhere closes it.
 Custom actions come from `timeline.clipActions`, so they are configured once
 for the timeline instead of being stored on individual clips. Each custom
 action emits cancelable `before-clip-action`, `clip-action`, and

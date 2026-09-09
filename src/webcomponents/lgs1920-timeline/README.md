@@ -138,7 +138,7 @@ clock integration.
 | `keyboardZoomActive` | `boolean` | Enables arrow-key zoom when the containing widget is selected. Defaults to `false`. |
 | `hostInteraction` | `'selectable'` | Allows the embedding host to receive the timeline's selection and drag input. Omit it to keep input local to the component. |
 | `hostNoDragClass` | `string` | Optional class supplied by the embedding host and applied to clips and editable track rows so the host can exclude them from its own drag handling. |
-| `colorSwatches` | `Array<{color, label, palette}>` | Application-owned color choices for the clip color menu. The color menu is omitted when no swatches are supplied. |
+| `swatches` | `Array<{color, label, palette}>` | Color choices for the clip color menu. Defaults to the ten Web Awesome neutral palette colors. Pass an empty array to hide the color action. |
 | `showClipMenu` | `boolean` | Displays the optional clip creation action. Defaults to `false`. |
 | `clipActions` | `Array<{key, label, icon?, variant?, disabled?}>` | Adds application-defined actions to every editable clip context menu. The action emits the `clip-action` event and is configured globally on the timeline. `clipContextMenuActions` is accepted as a compatibility alias. |
 | `defaultTrackId` | `string` | Track used when a clip-menu option does not specify a track. |
@@ -504,10 +504,15 @@ configuration to disable this behavior. Hold `Alt` during the gesture to bypass
 all magnets temporarily. `Escape` cancels an active drag or resize and restores
 the original clips, duration, and playback range.
 
-An editable clip can be focused and removed with `Delete` or `Backspace`. Press
-`Mod+C` to create an accentuated copy-placement ghost just after the source
-clip. Move the pointer to the desired track and time, then press the pointer
-button to commit it; `Escape` cancels the placement. `M` masks the focused
+An editable clip can be focused and removed with `Delete` or `Backspace`. A clip
+drag starts only after the pointer moves beyond the click tolerance, so holding
+a clip without moving it does not start a drag. On touch devices, a stationary
+long press can still open the clip context menu. Press
+`Mod+C` to create an accentuated copy-placement ghost under the source clip,
+shifted half a clip height down and to the left. Move the pointer to the
+desired track and time, then press the primary pointer button to commit it;
+`Escape`, a click outside the timeline, or a secondary-button/context-menu
+gesture cancels the placement. `M` masks the focused
 clip. `Mod+D` remains available as an immediate duplicate alias, while `V` toggles
 the `enabled` state. Clicking a neutral area, track label, or empty track
 deselects the clip; `Escape` also clears the selection. The context
