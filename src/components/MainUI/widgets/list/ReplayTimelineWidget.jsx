@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-08
+ * Last modified: 2026-09-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -43,6 +43,14 @@ export const ReplayTimelineWidget = ({id, zIndex}) => {
 
     useEffect(() => () => {
         __.ui.widgetManager.invalidateRuntimeById?.(id)
+    }, [id])
+
+    useEffect(() => {
+        const frame = requestAnimationFrame(() => {
+            timelinePreviewRef.current?.handleResize?.()
+        })
+
+        return () => cancelAnimationFrame(frame)
     }, [id])
 
     const config = useMemo(() => ({
