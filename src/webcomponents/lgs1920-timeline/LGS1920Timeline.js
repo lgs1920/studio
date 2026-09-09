@@ -92,6 +92,7 @@ const STRUCTURAL_CONFIG_KEYS = Object.freeze([
     'hostNoDragClass',
     'horizontalFit',
     'swatches',
+    'colorSwatches',
     'clipActions',
     'clipContextMenuActions',
 ])
@@ -628,7 +629,7 @@ export class LGS1920Timeline extends HTMLElement {
             legendMinWidth: minimum,
             legendMaxWidth: maximum,
             legendWidth: initial,
-            swatches: config.swatches ?? DEFAULT_TIMELINE_COLOR_SWATCHES,
+            swatches: config.swatches ?? config.colorSwatches ?? DEFAULT_TIMELINE_COLOR_SWATCHES,
         })
         this.toggleAttribute('data-keyboard-zoom-active', this.#timelineConfig.keyboardZoomActive === true)
         if (this.#timelineConfig.interactive === false || this.#timelineConfig.editable === false) {
@@ -810,6 +811,15 @@ export class LGS1920Timeline extends HTMLElement {
      */
     #openClipContextMenu = (clip, event) => {
         if (this.#timelineConfig.editable === false || clip?.editable === false) return
+        if (this.#dragState?.type === 'clip') {
+            const state = this.#dragState
+            this.#pointerUp({
+                type: 'pointercancel',
+                pointerId: state.pointerId,
+                clientX: state.startX,
+                clientY: state.startY,
+            })
+        }
         this.#selectClip(clip, event, event?.currentTarget)
         const rect = {
             x: Number(event.clientX) || 0,
@@ -2442,10 +2452,14 @@ export class LGS1920Timeline extends HTMLElement {
         let colorCommitted = false
         const commitColor = event => {
             if (colorCommitted) return
+            const value = event.detail?.value
+                ?? event.currentTarget?.value
+                ?? event.target?.value
+                ?? colorPicker.value
+            if (!this.#changeClipColor(clipId, value, event)) return
             colorCommitted = true
             event.stopPropagation()
             this.#closeClipContextMenu({render: false})
-            this.#changeClipColor(clipId, colorPicker.value, event)
         }
         colorPicker.addEventListener('input', commitColor)
         colorPicker.addEventListener('change', commitColor)
@@ -3109,13 +3123,15 @@ export class LGS1920Timeline extends HTMLElement {
      * @param {Event} event - Triggering color-picker event.
      */
     #changeClipColor = (clipId, value, event) => {
-        if (this.#timelineConfig.editable === false) return
+        if (this.#timelineConfig.editable === false) return false
         const entry = this.#clipEditor.findClipEntry(this.#rows, clipId)
-        if (!entry || !this.#isTrackEditable(entry.row) || entry.clip.editable === false) return
+        if (!entry || !this.#isTrackEditable(entry.row) || entry.clip.editable === false) return false
         const colorSwatches = normalizeTimelineColorSwatches(this.#timelineConfig.swatches)
-        const selectedSwatch = colorSwatches.find(swatch => swatch.color === String(value ?? '').trim().toLowerCase())
-        if (!selectedSwatch) return
-        const timelineColor = resolveTimelinePaletteFromValue(value, colorSwatches)
+        const normalizedValue = String(value ?? '').trim().toLowerCase()
+        const selectedSwatch = colorSwatches.find(swatch => swatch.color === normalizedValue || swatch.palette === normalizedValue)
+        if (!selectedSwatch) return false
+        const selectedValue = selectedSwatch.color
+        const timelineColor = selectedSwatch.palette ?? resolveTimelinePaletteFromValue(selectedValue, colorSwatches)
         const colorClasses = Array.isArray(selectedSwatch.colorClasses)
             ? selectedSwatch.colorClasses
             : ['wa-neutral', `wa-neutral-${timelineColor}`]
@@ -3126,7 +3142,7 @@ export class LGS1920Timeline extends HTMLElement {
         const detail = {
             clipId,
             trackId: entry.row.id,
-            color: value,
+            color: selectedValue,
             colorClasses,
             timelineColor,
             clip,
@@ -3135,12 +3151,13 @@ export class LGS1920Timeline extends HTMLElement {
             event,
             data: this.#publicSnapshot(),
         }
-        if (this.#emitBefore('clip-color-change', detail).defaultPrevented) return
+        if (this.#emitBefore('clip-color-change', detail).defaultPrevented) return false
         this.#rows = nextRows
         this.#localRowsDirty = true
         this.#emit('clip-color-change', {...detail, tracks: this.tracks, data: this.#publicSnapshot()})
         this.#updateClipColorPresentation(clipId, colorClasses)
         this.#emitAfter('clip-color-change', {...detail, tracks: this.tracks, data: this.#publicSnapshot()})
+        return true
     }
 
     /**

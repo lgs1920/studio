@@ -2268,8 +2268,21 @@ describe('lgs1920-timeline Web Component', () => {
         timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-clip-menu-color"]').click()
         const nextColorPicker = timeline.shadowRoot.querySelector('[data-testid="lgs1920-timeline-clip-menu-color"]')
         const clipBeforeColor = timeline.shadowRoot.querySelector('[data-clip-id="clip"]')
+        nextColorPicker.value = ''
+        nextColorPicker.dispatchEvent(new CustomEvent('input', {
+            bubbles: true,
+            cancelable: true,
+            detail: {value: ''},
+        }))
+        expect(color).not.toHaveBeenCalled()
+        expect(timeline.shadowRoot.querySelector('[data-testid="lgs1920-timeline-clip-context-menu"]')).not.toBeNull()
+
         nextColorPicker.value = '#ef4444'
-        nextColorPicker.dispatchEvent(new Event('input', {bubbles: true, cancelable: true}))
+        nextColorPicker.dispatchEvent(new CustomEvent('input', {
+            bubbles: true,
+            cancelable: true,
+            detail: {value: '#ef4444'},
+        }))
         expect(color).toHaveBeenCalledOnce()
         expect(timeline.tracks[0].clips[0].colorClasses).toEqual(['wa-neutral', 'wa-neutral-red'])
         expect(timeline.shadowRoot.querySelector('[data-clip-id="clip"]')).toBe(clipBeforeColor)
@@ -2322,7 +2335,7 @@ describe('lgs1920-timeline Web Component', () => {
         window.dispatchEvent(createPointerEvent('pointerup', {clientX: 60, clientY: 50}))
     })
 
-    it('treats a stationary touch hold as a click without expanding the clip', () => {
+    it('opens the context menu for a stationary touch hold without expanding the clip', () => {
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline, {
             tracks: [{id: 'main', label: 'Main', clips: [{id: 'clip', start: 1, end: 4}]}],
@@ -2345,11 +2358,6 @@ describe('lgs1920-timeline Web Component', () => {
         expect(clip.style.top).toBe('')
         expect(timeline.shadowRoot.querySelector('[data-clip-drag-ghost]')).toBeNull()
 
-        window.dispatchEvent(createPointerEvent('pointerup', {
-            pointerType: 'touch',
-            clientX: 62,
-            clientY: 52,
-        }))
         clip.dispatchEvent(createPointerEvent('contextmenu', {
             pointerType: 'touch',
             clientX: 62,
@@ -2357,7 +2365,31 @@ describe('lgs1920-timeline Web Component', () => {
         }))
 
         expect(timeline.selectedClipId).toBe('clip')
-        expect(timeline.shadowRoot.querySelector('[data-testid="lgs1920-timeline-clip-context-menu"]')).toBeNull()
+        expect(timeline.shadowRoot.querySelector('[data-testid="lgs1920-timeline-clip-context-menu"]')).not.toBeNull()
+    })
+
+    it('cancels a touch resize before opening the clip context menu', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {
+            tracks: [{id: 'main', label: 'Main', clips: [{id: 'clip', start: 1, end: 4}]}],
+        })
+        document.body.append(timeline)
+
+        const clip = timeline.shadowRoot.querySelector('[data-clip-id="clip"]')
+        const handle = clip.querySelector('[data-clip-handle="end"]')
+        handle.dispatchEvent(createPointerEvent('pointerdown', {
+            pointerType: 'touch',
+            clientX: 180,
+            clientY: 50,
+        }))
+        handle.dispatchEvent(createPointerEvent('contextmenu', {
+            pointerType: 'touch',
+            clientX: 180,
+            clientY: 50,
+        }))
+
+        expect(clip.style.height).toBe('')
+        expect(timeline.shadowRoot.querySelector('[data-testid="lgs1920-timeline-clip-context-menu"]')).not.toBeNull()
     })
 
     it('clears the clip selection from neutral timeline areas and Escape', () => {

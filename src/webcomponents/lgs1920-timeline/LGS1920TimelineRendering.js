@@ -154,7 +154,6 @@ export const createTimelineRenderer = ({
                 if (!movable) return
                 event.preventDefault()
                 event.stopPropagation()
-                if (event.pointerType === 'touch') return
                 selectClip(value, event, element)
                 openClipContextMenu(value, event)
             })
