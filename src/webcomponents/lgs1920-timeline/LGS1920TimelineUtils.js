@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-31
- * Last modified: 2026-09-06
+ * Last modified: 2026-09-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,6 +35,18 @@ export const EDGE_SCROLL_SPEEDS = [8, 16, 32, 64, 128]
 export const ACCELERATION_INTERVAL = 100
 export const EDGE_TIME_ACCELERATION_INTERVAL = 500
 export const EDGE_SCROLL_TIME_STEPS = [10, 100, 500, 1_000, 5_000, 30_000]
+export const DEFAULT_TIMELINE_COLOR_SWATCHES = Object.freeze([
+    {color: '#ef4444', label: 'Red', palette: 'red'},
+    {color: '#f97316', label: 'Orange', palette: 'orange'},
+    {color: '#eab308', label: 'Yellow', palette: 'yellow'},
+    {color: '#22c55e', label: 'Green', palette: 'green'},
+    {color: '#06b6d4', label: 'Cyan', palette: 'cyan'},
+    {color: '#3b82f6', label: 'Blue', palette: 'blue'},
+    {color: '#6366f1', label: 'Indigo', palette: 'indigo'},
+    {color: '#a855f7', label: 'Purple', palette: 'purple'},
+    {color: '#ec4899', label: 'Pink', palette: 'pink'},
+    {color: '#6b7280', label: 'Gray', palette: 'gray'},
+])
 export const GLOBAL_SLOTS = [
     'track-label',
     'visibility',

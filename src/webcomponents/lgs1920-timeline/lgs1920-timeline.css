@@ -1438,29 +1438,56 @@
         overflow-y: auto;
     }
 
+    & .lgs1920-wa-timeline__clip-context-menu .lgs1920-wa-timeline__menu {
+        width: max-content;
+        min-width: 0;
+        max-width: min(90vw, 30rem);
+    }
+
     & .lgs1920-wa-timeline__menu-item {
         justify-content: flex-start;
         width: 100%;
     }
 
-    & .lgs1920-wa-timeline__menu-color-item {
-        display: flex;
-        align-items: center;
-        gap: var(--lgs-gutter-xs, 0.5rem);
-        box-sizing: border-box;
+    & .lgs1920-wa-timeline__clip-context-menu .lgs1920-wa-timeline__menu-item {
+        display: block;
+        min-width: 0;
+        text-align: start;
+    }
+
+    & .lgs1920-wa-timeline__clip-context-menu .lgs1920-wa-timeline__menu-item::part(base) {
+        justify-content: flex-start;
         width: 100%;
-        min-height: 2rem;
-        padding: 0.25rem 0.5rem;
-        color: var(--lgs-timeline-text-color);
-        border-radius: var(--wa-border-radius-s);
+        min-width: 0;
+        text-align: start;
     }
 
-    & .lgs1920-wa-timeline__menu-color-item:hover {
-        background: var(--wa-color-neutral-fill-quiet);
+    & .lgs1920-wa-timeline__clip-context-menu .lgs1920-wa-timeline__menu-icon {
+        display: inline-flex;
+        flex: 0 0 1.25rem;
+        align-items: center;
+        justify-content: center;
+        width: 1.25rem;
+        min-width: 1.25rem;
+        margin-inline-end: var(--lgs-gutter-xs, 0.5rem);
     }
 
-    & .lgs1920-wa-timeline__menu-color-item > :last-child {
-        margin-inline-start: auto;
+    & .lgs1920-wa-timeline__clip-context-menu .lgs1920-wa-timeline__menu-label {
+        min-width: 0;
+        white-space: nowrap;
+    }
+
+    & .lgs1920-wa-timeline__clip-context-menu .lgs1920-wa-timeline__menu {
+        position: relative;
+    }
+
+    & .lgs1920-wa-timeline__clip-color-picker--menu-trigger {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        pointer-events: none;
     }
 
     & .lgs1920-wa-timeline__timeline-tools {

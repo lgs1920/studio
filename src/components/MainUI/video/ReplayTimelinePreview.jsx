@@ -356,7 +356,7 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false}, r
         resizeExtendsDuration: true,
         durationPolicy: 'extend',
         keyboardZoomActive,
-        colorSwatches: REPLAY_TIMELINE_COLOR_SWATCHES,
+        swatches: REPLAY_TIMELINE_COLOR_SWATCHES,
         hostInteraction: 'selectable',
         hostNoDragClass: 'lgs-widget-no-drag',
     }), [keyboardZoomActive, projection.durationMillis, projection.fps, projection.source.frameCount, projection.source.frameIntervalMs])

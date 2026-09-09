@@ -39,6 +39,7 @@ import {
 import {createTimelineRenderer} from './LGS1920TimelineRendering.js'
 import {
     ACCELERATION_INTERVAL,
+    DEFAULT_TIMELINE_COLOR_SWATCHES,
     EDGE_TIME_ACCELERATION_INTERVAL,
     EDGE_SCROLL_SPEEDS,
     EDGE_SCROLL_TIME_STEPS,
@@ -77,6 +78,8 @@ import {
 } from './LGS1920TimelineUtils.js'
 
 const ROW_DRAG_THRESHOLD = 4
+const CLIP_DRAG_THRESHOLD = 4
+const TOUCH_CLIP_DRAG_THRESHOLD = 8
 const CLIP_OPTION_DRAG_MIME = 'application/x-lgs1920-timeline-clip'
 const STRUCTURAL_CONFIG_KEYS = Object.freeze([
     'interactive',
@@ -88,7 +91,7 @@ const STRUCTURAL_CONFIG_KEYS = Object.freeze([
     'hostInteraction',
     'hostNoDragClass',
     'horizontalFit',
-    'colorSwatches',
+    'swatches',
     'clipActions',
     'clipContextMenuActions',
 ])
@@ -625,6 +628,7 @@ export class LGS1920Timeline extends HTMLElement {
             legendMinWidth: minimum,
             legendMaxWidth: maximum,
             legendWidth: initial,
+            swatches: config.swatches ?? DEFAULT_TIMELINE_COLOR_SWATCHES,
         })
         this.toggleAttribute('data-keyboard-zoom-active', this.#timelineConfig.keyboardZoomActive === true)
         if (this.#timelineConfig.interactive === false || this.#timelineConfig.editable === false) {
@@ -881,12 +885,16 @@ export class LGS1920Timeline extends HTMLElement {
 
     /**
      * Close the clip contextual menu and remove its outside-pointer listener.
+     *
+     * @param {Object} [options={}] - Close behavior options.
+     * @param {boolean} [options.render=true] - Whether to rebuild the timeline.
      */
-    #closeClipContextMenu = () => {
+    #closeClipContextMenu = ({render = true} = {}) => {
         this.#clipContextMenuClipId = null
         this.#clipContextMenuAnchor = null
         window.removeEventListener('pointerdown', this.#handleClipContextMenuOutsidePointerDown, true)
-        if (this.isConnected && this.#menuOpen === false) this.#render()
+        if (render && this.isConnected && this.#menuOpen === false) this.#render()
+        if (!render) this.#root.querySelector('[data-testid="lgs1920-timeline-clip-context-menu"]')?.remove()
     }
 
     /**
@@ -1448,7 +1456,12 @@ export class LGS1920Timeline extends HTMLElement {
         }
 
         const initialOverlayEnabled = this.#timelineConfig.showBuildingOverlay !== false
-        if (!this.#initialBuildComplete && initialOverlayEnabled) this.#startBuilding()
+        if (!this.#initialBuildComplete && initialOverlayEnabled) {
+            // A copy preview rerenders the timeline while the initial layout is
+            // settling. Keep that completion alive so the preview cannot reset
+            // the construction overlay.
+            if (!this.#building) this.#startBuilding()
+        }
         else {
             this.#cancelBuildingCompletion()
             this.#building = false
@@ -1582,6 +1595,7 @@ export class LGS1920Timeline extends HTMLElement {
      * @returns {void}
      */
     #scheduleBuildingCompletion = () => {
+        if (this.#clipCopyState && this.#buildingFrame !== null) return
         const complete = () => {
             this.#buildingFrame = null
             const surfaceWidth = this.#surface?.clientWidth ?? 0
@@ -2312,17 +2326,28 @@ export class LGS1920Timeline extends HTMLElement {
             role: 'menu',
             part: 'clip-menu',
         })
+        const menuIcon = iconName => {
+            const icon = createElement('span', 'lgs1920-wa-timeline__menu-icon', {
+                slot: 'start',
+                'aria-hidden': 'true',
+            })
+            icon.append(createIcon(iconName, 'solid'))
+            return icon
+        }
         const addAction = ({key, testId = key, iconName, label, variant = 'neutral', disabled = false, action}) => {
             const item = this.#button({
                 iconName,
                 label,
                 testId: `clip-menu-${testId}`,
-                iconSlotElement: createIcon(iconName, 'solid'),
+                iconSlotElement: menuIcon(iconName),
                 variant,
                 appearance: 'plain',
                 disabled,
             })
-            item.append(document.createTextNode(label))
+            item.classList.add('lgs1920-wa-timeline__menu-item')
+            const labelElement = createElement('span', 'lgs1920-wa-timeline__menu-label')
+            labelElement.append(document.createTextNode(label))
+            item.append(labelElement)
             item.setAttribute('role', 'menuitem')
             item.setAttribute('data-clip-action', key)
             item.addEventListener('click', event => {
@@ -2379,16 +2404,13 @@ export class LGS1920Timeline extends HTMLElement {
             action: event => this.#runClipAction(clipId, action, event),
         }))
 
-        popup.append(menu)
-        const colorSwatches = normalizeTimelineColorSwatches(this.#timelineConfig.colorSwatches)
-        if (colorSwatches.length === 0) return popup
+        const colorSwatches = normalizeTimelineColorSwatches(this.#timelineConfig.swatches)
+        if (colorSwatches.length === 0) {
+            popup.append(menu)
+            return popup
+        }
 
-        const colorItem = createElement('div', 'lgs1920-wa-timeline__menu-color-item', {
-            role: 'menuitem',
-            'aria-label': 'Color',
-        })
-        colorItem.append(createIcon('palette', 'solid'), document.createTextNode('Color'))
-        const colorPicker = createElement('wa-color-picker', 'lgs1920-wa-timeline__clip-color-picker', {
+        const colorPicker = createElement('wa-color-picker', 'lgs1920-wa-timeline__clip-color-picker lgs1920-wa-timeline__clip-color-picker--menu-trigger', {
             size: 's',
             label: 'Color',
             'without-format-toggle': '',
@@ -2397,18 +2419,38 @@ export class LGS1920Timeline extends HTMLElement {
         })
         colorPicker.swatches = colorSwatches
         colorPicker.value = resolveTimelineColorValue(entry.clip.colorClasses, colorSwatches) ?? colorSwatches[0].color
+
+        const colorItem = this.#button({
+            iconName: 'palette',
+            label: 'Color',
+            testId: 'clip-menu-color',
+            iconSlotElement: menuIcon('palette'),
+            appearance: 'plain',
+        })
+        colorItem.classList.add('lgs1920-wa-timeline__menu-item')
+        const colorLabel = createElement('span', 'lgs1920-wa-timeline__menu-label')
+        colorLabel.append(document.createTextNode('Color'))
+        colorItem.append(colorLabel)
+        colorItem.setAttribute('role', 'menuitem')
+        colorItem.setAttribute('aria-haspopup', 'dialog')
+        colorItem.setAttribute('aria-expanded', 'false')
+        colorItem.addEventListener('click', event => {
+            event.stopPropagation()
+            colorPicker.open = true
+            colorPicker.show?.()
+        })
         let colorCommitted = false
         const commitColor = event => {
             if (colorCommitted) return
             colorCommitted = true
             event.stopPropagation()
-            this.#closeClipContextMenu()
-            this.#changeClipColor(clipId, event.target?.value, event)
+            this.#closeClipContextMenu({render: false})
+            this.#changeClipColor(clipId, colorPicker.value, event)
         }
         colorPicker.addEventListener('input', commitColor)
         colorPicker.addEventListener('change', commitColor)
-        colorItem.append(colorPicker)
-        menu.append(colorItem)
+        menu.append(colorItem, colorPicker)
+        popup.append(menu)
         return popup
     }
 
@@ -2613,6 +2655,7 @@ export class LGS1920Timeline extends HTMLElement {
     #cancelClipCopy = () => {
         window.removeEventListener('pointermove', this.#handleClipCopyPointerMove, true)
         window.removeEventListener('pointerdown', this.#handleClipCopyPointerDown, true)
+        window.removeEventListener('contextmenu', this.#handleClipCopyContextMenu, true)
         if (this.#clipCopyPresentationFrame !== null) {
             cancelAnimationFrame(this.#clipCopyPresentationFrame)
             this.#clipCopyPresentationFrame = null
@@ -2671,9 +2714,15 @@ export class LGS1920Timeline extends HTMLElement {
         const ghost = sourceElement.cloneNode(true)
         const clip = state.previewClip ?? state.clip
         const {start, end} = resolveClipInterval(clip)
+        const isInitialCopy = state.previewClientX === null
+        const presentationStart = isInitialCopy ? state.originalStart : start
+        const presentationEnd = presentationStart + (end - start)
         const {majorSeconds} = resolveScale(this.#zoom)
         const scaleWidth = this.#scaleWidth()
         const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
+        const copyOffset = isInitialCopy
+            ? Math.max(MIN_ROW_HEIGHT, this.#rowHeight) / 2
+            : 0
         ghost.removeAttribute('id')
         ghost.removeAttribute('data-clip-id')
         ghost.setAttribute('data-clip-copy-ghost', '')
@@ -2690,8 +2739,11 @@ export class LGS1920Timeline extends HTMLElement {
             'lgs1920-wa-timeline__clip--copy-ghost',
         )
         if (state.dropRejected) ghost.classList.add('lgs1920-wa-timeline__clip--drop-rejected')
-        ghost.style.left = `${scaleOffset + ((start / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
-        ghost.style.width = `${Math.max(this.#numericToken('clip-min-width', 8), ((end - start) / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
+        ghost.style.left = `${scaleOffset + ((presentationStart / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
+        ghost.style.width = `${Math.max(this.#numericToken('clip-min-width', 8), ((presentationEnd - presentationStart) / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
+        ghost.style.transform = copyOffset > 0
+            ? `translate(${-copyOffset}px, ${copyOffset}px)`
+            : ''
         const surfaceRect = this.#surface?.getBoundingClientRect?.()
         const overlay = this.#root.querySelector('[data-overlay]')
         const track = [...this.#root.querySelectorAll('[part="track"]')]
@@ -2789,7 +2841,16 @@ export class LGS1920Timeline extends HTMLElement {
         const eventBelongsToTimeline = event.composedPath?.().includes(this)
             || event.target === this
             || this.#root.contains(event.target)
-        if (!this.#clipCopyState || !eventBelongsToTimeline) return
+        if (!this.#clipCopyState) return
+        if (!eventBelongsToTimeline) {
+            this.#cancelClipCopy()
+            return
+        }
+        if (event.button !== 0) {
+            event.preventDefault()
+            event.stopImmediatePropagation()
+            return
+        }
         event.preventDefault()
         event.stopImmediatePropagation()
         this.#previewClipCopy(event)
@@ -2812,6 +2873,18 @@ export class LGS1920Timeline extends HTMLElement {
         }
         this.#cancelClipCopy()
         this.#insertClip(option, event, placement)
+    }
+
+    /**
+     * Cancel a pending copy when the mouse context menu is requested.
+     *
+     * @param {MouseEvent|PointerEvent} event - Context-menu event.
+     */
+    #handleClipCopyContextMenu = event => {
+        if (!this.#clipCopyState) return
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        this.#cancelClipCopy()
     }
 
     /**
@@ -2856,6 +2929,7 @@ export class LGS1920Timeline extends HTMLElement {
         }
         window.addEventListener('pointermove', this.#handleClipCopyPointerMove, true)
         window.addEventListener('pointerdown', this.#handleClipCopyPointerDown, true)
+        window.addEventListener('contextmenu', this.#handleClipCopyContextMenu, true)
         this.#render()
         this.#revealInitialClipCopy()
     }
@@ -3011,6 +3085,23 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
+     * Update the rendered clip color without rebuilding the timeline structure.
+     *
+     * @param {string} clipId - Clip identifier.
+     * @param {Array} colorClasses - Web Awesome color classes.
+     */
+    #updateClipColorPresentation = (clipId, colorClasses) => {
+        const element = [...this.#root.querySelectorAll('[data-clip-id]')]
+            .find(value => String(value.getAttribute('data-clip-id')) === String(clipId))
+        if (!element) return
+        const paletteClasses = [...element.classList]
+            .filter(value => value === 'wa-neutral' || value.startsWith('wa-neutral-'))
+        element.classList.remove(...paletteClasses)
+        element.classList.add(...colorClasses)
+        applyTimelinePaletteStyles(element, colorClasses)
+    }
+
+    /**
      * Apply a Web Awesome palette color to one clip.
      *
      * @param {string} clipId - Clip identifier.
@@ -3021,7 +3112,7 @@ export class LGS1920Timeline extends HTMLElement {
         if (this.#timelineConfig.editable === false) return
         const entry = this.#clipEditor.findClipEntry(this.#rows, clipId)
         if (!entry || !this.#isTrackEditable(entry.row) || entry.clip.editable === false) return
-        const colorSwatches = normalizeTimelineColorSwatches(this.#timelineConfig.colorSwatches)
+        const colorSwatches = normalizeTimelineColorSwatches(this.#timelineConfig.swatches)
         const selectedSwatch = colorSwatches.find(swatch => swatch.color === String(value ?? '').trim().toLowerCase())
         if (!selectedSwatch) return
         const timelineColor = resolveTimelinePaletteFromValue(value, colorSwatches)
@@ -3048,7 +3139,7 @@ export class LGS1920Timeline extends HTMLElement {
         this.#rows = nextRows
         this.#localRowsDirty = true
         this.#emit('clip-color-change', {...detail, tracks: this.tracks, data: this.#publicSnapshot()})
-        this.#render()
+        this.#updateClipColorPresentation(clipId, colorClasses)
         this.#emitAfter('clip-color-change', {...detail, tracks: this.tracks, data: this.#publicSnapshot()})
     }
 
@@ -3277,14 +3368,12 @@ export class LGS1920Timeline extends HTMLElement {
         if (event.button !== 0) return
         const entry = this.#clipEditor.findClipEntry(this.#rows, clipId)
         if (!entry || !this.#isTrackEditable(entry.row) || entry.clip.editable === false) return
-        event.preventDefault()
-        event.stopPropagation()
-        this.#capturePointer(event)
         const interval = resolveClipInterval(entry.clip)
         const startTime = this.#timeAtClientX(event.clientX)
         const initialDurationMillis = this.#durationMillis()
         this.#dragState = {
             type: 'clip',
+            pending: mode === 'move',
             mode,
             edge,
             clipId,
@@ -3293,6 +3382,8 @@ export class LGS1920Timeline extends HTMLElement {
             startX: event.clientX,
             startY: event.clientY,
             pointerId: event.pointerId,
+            pointerType: event.pointerType,
+            sourceElement: event.currentTarget instanceof Element ? event.currentTarget : event.target,
             startTime,
             targetTime: startTime,
             originalStart: interval.start,
@@ -3310,9 +3401,35 @@ export class LGS1920Timeline extends HTMLElement {
                 trackId: entry.row.id,
             },
         }
+        if (mode === 'move') {
+            this.#addPointerListeners()
+            return
+        }
+        this.#activateClipInteraction(event)
+        if (this.#dragState?.type !== 'clip' || this.#dragState.pending === true) return
+        this.#addPointerListeners()
+    }
+
+    /**
+     * Activate a pending clip gesture after the pointer moves far enough.
+     *
+     * @param {PointerEvent} event - Pointer movement that activates the drag.
+     */
+    #activateClipInteraction = event => {
+        const state = this.#dragState
+        if (state?.type !== 'clip' || state.activated === true) return
+        state.pending = false
+        state.activated = true
+        event.preventDefault()
+        event.stopPropagation()
+        this.#capturePointer({
+            currentTarget: state.sourceElement,
+            target: state.sourceElement,
+            pointerId: state.pointerId,
+        })
         const changeDetail = this.#clipEditor.changeDetail(this.#dragState, {
             rows: this.#dragState.baseRows,
-            durationMillis: initialDurationMillis,
+            durationMillis: state.initialDurationMillis,
         }, event)
         const dragDetail = {
             context: this.#dragContext(this.#dragState),
@@ -3323,18 +3440,17 @@ export class LGS1920Timeline extends HTMLElement {
         const beforeClipChange = this.#emitBefore('clip-change', changeDetail)
         if (beforeClipChange.defaultPrevented) {
             this.#dragState = null
-            this.#interactionDurationMillis = initialDurationMillis
+            this.#interactionDurationMillis = state.initialDurationMillis
             this.#releasePointerCapture()
             return
         }
         const beforeDrag = this.#emitBefore('drag', dragDetail)
         if (beforeDrag.defaultPrevented) {
             this.#dragState = null
-            this.#interactionDurationMillis = initialDurationMillis
+            this.#interactionDurationMillis = state.initialDurationMillis
             this.#releasePointerCapture()
             return
         }
-        this.#addPointerListeners()
         this.#emit('clip-change-start', changeDetail)
         this.#handleEdgeAutoScroll(event)
         this.#updateClipInteractionPresentation()
@@ -4414,6 +4530,18 @@ export class LGS1920Timeline extends HTMLElement {
         }
         if (this.#dragState?.type === 'clip') {
             if (event.pointerId !== this.#dragState.pointerId) return
+            if (this.#dragState.pending === true) {
+                const distance = Math.hypot(
+                    event.clientX - this.#dragState.startX,
+                    event.clientY - this.#dragState.startY,
+                )
+                const threshold = this.#dragState.pointerType === 'touch'
+                    ? TOUCH_CLIP_DRAG_THRESHOLD
+                    : CLIP_DRAG_THRESHOLD
+                if (distance < threshold) return
+                this.#activateClipInteraction(event)
+                if (this.#dragState?.type !== 'clip' || this.#dragState.pending === true) return
+            }
             event.preventDefault()
             this.#handleEdgeAutoScroll(event)
             this.#clipEditor.preview(this.#dragState, event)
@@ -4508,6 +4636,22 @@ export class LGS1920Timeline extends HTMLElement {
         if (state?.type === 'row-pending') {
             this.#removePointerListeners()
             return
+        }
+        if (state?.type === 'clip' && state.pending === true) {
+            const distance = Math.hypot(
+                event.clientX - state.startX,
+                event.clientY - state.startY,
+            )
+            const threshold = state.pointerType === 'touch'
+                ? TOUCH_CLIP_DRAG_THRESHOLD
+                : CLIP_DRAG_THRESHOLD
+            if (distance < threshold || event.type !== 'pointerup') {
+                this.#removePointerListeners()
+                if (wasSimpleClick) this.#clearClipSelection(event)
+                return
+            }
+            this.#activateClipInteraction(event)
+            if (this.#dragState?.type !== 'clip' || this.#dragState.pending === true) return
         }
         if (state?.type === 'range' && event.type === 'pointercancel') {
             this.#rangeStartMillis = state.initialStartMillis
@@ -5214,7 +5358,7 @@ export class LGS1920Timeline extends HTMLElement {
                 element.style.height = ''
                 element.classList.toggle('lgs1920-wa-timeline__clip--hidden', value.visible === false)
                 element.classList.toggle('lgs1920-wa-timeline__clip--track-hidden', row.visible === false)
-                const isDragging = dragState?.type === 'clip' && dragState.clipId === value.id
+                const isDragging = dragState?.type === 'clip' && dragState.pending !== true && dragState.clipId === value.id
                 element.classList.toggle('lgs1920-wa-timeline__clip--dragging', isDragging)
                 element.classList.toggle('lgs1920-wa-timeline__clip--resizing', isDragging && dragState.mode === 'resize')
                 element.classList.remove(

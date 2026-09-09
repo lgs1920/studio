@@ -93,7 +93,7 @@ export const createTimelineRenderer = ({
         const start = Math.max(0, Number(value.start) || 0)
         const end = Math.max(start, Number(value.end) || start)
         const dragState = getDragState()
-        const isDragging = dragState?.type === 'clip' && dragState.clipId === value.id
+        const isDragging = dragState?.type === 'clip' && dragState.pending !== true && dragState.clipId === value.id
         const isResizing = isDragging && dragState.mode === 'resize'
         const hostNoDragClass = String(getTimelineConfig().hostNoDragClass ?? '').trim()
         const hostNoDragClasses = hostNoDragClass ? ` ${hostNoDragClass}` : ''
@@ -154,6 +154,7 @@ export const createTimelineRenderer = ({
                 if (!movable) return
                 event.preventDefault()
                 event.stopPropagation()
+                if (event.pointerType === 'touch') return
                 selectClip(value, event, element)
                 openClipContextMenu(value, event)
             })
