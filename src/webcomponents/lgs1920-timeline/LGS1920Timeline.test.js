@@ -2287,6 +2287,7 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.tracks[0].clips[0].colorClasses).toEqual(['wa-neutral', 'wa-neutral-red'])
         expect(timeline.shadowRoot.querySelector('[data-clip-id="clip"]')).toBe(clipBeforeColor)
         expect(clipBeforeColor.classList).toContain('wa-neutral-red')
+        expect(clipBeforeColor.style.backgroundColor).toBe('var(--wa-color-red-50)')
         expect(timeline.shadowRoot.querySelector('[data-testid="lgs1920-timeline-clip-context-menu"]')).toBeNull()
     })
 

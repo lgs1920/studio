@@ -22,6 +22,19 @@ const styleSource = readFileSync(resolve('src/components/MainUI/video/replay-tim
 const webComponentStyleSource = readFileSync(resolve('src/webcomponents/lgs1920-timeline/lgs1920-timeline.css'), 'utf8')
 
 describe('Replay timeline preview styles', () => {
+    it('keeps color swatches clickable while hiding only the duplicate picker trigger', () => {
+        const pickerRule = webComponentStyleSource
+            .match(/& \.lgs1920-wa-timeline__clip-color-picker--menu-trigger \{([^}]*)}/)?.[1]
+        const popupRule = webComponentStyleSource
+            .match(/& \.lgs1920-wa-timeline__clip-color-picker--menu-trigger::part\(color-picker\) \{([^}]*)}/)?.[1]
+        const triggerRule = webComponentStyleSource
+            .match(/& \.lgs1920-wa-timeline__clip-color-picker--menu-trigger::part\(trigger\) \{([^}]*)}/)?.[1]
+
+        expect(pickerRule).not.toMatch(/opacity:\s*0/)
+        expect(popupRule).toContain('pointer-events: auto;')
+        expect(triggerRule).toContain('opacity: 0;')
+    })
+
     it('scopes the read-only integration styles at the preview root', () => {
         const openBlocks = (styleSource.match(/{/g) ?? []).length
         const closedBlocks = (styleSource.match(/}/g) ?? []).length

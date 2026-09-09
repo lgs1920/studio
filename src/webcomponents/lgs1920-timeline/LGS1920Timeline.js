@@ -3138,7 +3138,7 @@ export class LGS1920Timeline extends HTMLElement {
             : ['wa-neutral', `wa-neutral-${timelineColor}`]
         const clip = {...entry.clip, colorClasses, timelineColor, trackId: entry.row.id}
         const nextRows = this.#rows.map(row => row.id === entry.row.id
-            ? {...row, actions: (row.actions ?? []).map(item => item.id === clipId ? {...item, colorClasses, timelineColor} : item)}
+            ? {...row, actions: (row.actions ?? row.clips ?? []).map(item => item.id === clipId ? {...item, colorClasses, timelineColor} : item)}
             : row)
         const detail = {
             clipId,
