@@ -1751,3 +1751,39 @@
 ## 2026-09-08 — [`Merge remote-tracking branch 'origin/feature/resize-and-move-clips' into feature/resize-and-move-clips`](https://github.com/lgs1920/studio/commit/73c77684191ead0bbbb76022d00471e907bfa0f3)
 
 - Recorded automatically from Git history.
+
+## 2026-09-09 — [`docs: isolate timeline changes from external environment`](https://github.com/lgs1920/studio/commit/d67407555e9f523e2119de2d91d1c789a62c0252)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`docs: document shortcut catalog conventions`](https://github.com/lgs1920/studio/commit/c630050ef4011624f5e3388bb9d1164230ee9e80)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`docs: organize shortcut catalog`](https://github.com/lgs1920/studio/commit/978d0dd1c929df94bc24e821447c8f0eac48aaa7)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/ecdc62577cfed9ee6c76f7701304d13ecbc8ec24)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-09-09 — [`fix(map): hide distant journey marker behind terrain`](https://github.com/lgs1920/studio/commit/bf3d91eb4e45d3b390fe84f637f19aed8bbc565f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`feat(timeline): extend local clip editing interactions`](https://github.com/lgs1920/studio/commit/56f163d8a6668a56796525dea9e424f18b91ad57)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`fix(replay): align timeline preview interaction bounds`](https://github.com/lgs1920/studio/commit/5d1c1ef136b4e1282a69c4780557a8d01b8c0639)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`docs(timeline): document clip editing interactions`](https://github.com/lgs1920/studio/commit/0a418c4ad7eba3309ed2098ccf129de97ecd6337)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`Merge remote-tracking branch 'origin/feature/resize-and-move-clips' into feature/resize-and-move-clips`](https://github.com/lgs1920/studio/commit/af8ac07b7bdadafa4c7b4f25315764835e74022e)
+
+- Recorded automatically from Git history.
