@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-06
- * Last modified: 2026-05-06
+ * Last modified: 2026-09-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,6 +36,7 @@ const KEY_PADDING_X = 2.1
 const KEY_GAP = 1.2
 const COMBO_GAP = 1.6
 const COMBO_LINE_GAP = 1.1
+const ALTERNATIVE_GAP = 1.6
 const KEY_FONT_SIZE = 8.2
 const TEXT_FONT_SIZE = 8.9
 const COLUMN_DEFS = [
@@ -150,8 +151,44 @@ const measureCombo = (doc, combo, maxWidth) => {
     return lines * KEY_HEIGHT + (lines - 1) * COMBO_LINE_GAP
 }
 
+const comboSingleLineWidth = (doc, combo) => {
+    const tokens = shortcutTokens(combo)
+    if (tokens.length === 0) {
+        return 0
+    }
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(KEY_FONT_SIZE)
+    const plusWidth = doc.getTextWidth('+')
+
+    return tokens.reduce((width, token, index) => {
+        const tokenWidth = keyWidth(doc, keyLabel(token))
+        return width + tokenWidth + (index > 0 ? plusWidth + KEY_GAP * 2 : 0)
+    }, 0)
+}
+
+const canDrawAlternativesInline = (doc, keys, maxWidth) => {
+    const combos = keys?.length ? keys : ['']
+    if (combos.length < 2 || combos.some(combo => shortcutTokens(combo).length > 1)) {
+        return false
+    }
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(KEY_FONT_SIZE)
+    const separatorWidth = doc.getTextWidth('|')
+    const totalWidth = combos.reduce((width, combo, index) => (
+        width + comboSingleLineWidth(doc, combo) + (index > 0 ? separatorWidth + ALTERNATIVE_GAP * 2 : 0)
+    ), 0)
+
+    return totalWidth <= maxWidth
+}
+
 const measureKeyCombos = (doc, keys, maxWidth) => {
     const combos = keys?.length ? keys : ['']
+    if (canDrawAlternativesInline(doc, combos, maxWidth)) {
+        return KEY_HEIGHT
+    }
+
     return combos.reduce((height, combo, index) => (
         height + measureCombo(doc, combo, maxWidth) + (index > 0 ? COMBO_GAP : 0)
     ), 0)
@@ -212,7 +249,29 @@ const drawCombo = (doc, palette, combo, x, y, maxWidth) => {
 }
 
 const drawKeyCombos = (doc, palette, keys, x, y, maxWidth) => {
-    const combos = keys ?? []
+    const combos = keys?.length ? keys : ['']
+    if (canDrawAlternativesInline(doc, combos, maxWidth)) {
+        doc.setFont('helvetica', 'normal')
+        doc.setFontSize(KEY_FONT_SIZE)
+        const separatorWidth = doc.getTextWidth('|')
+        let cursorX = x
+
+        combos.forEach((combo, index) => {
+            if (index > 0) {
+                applyTextStyle(doc, palette, {color: palette.muted, size: KEY_FONT_SIZE, style: 'bold'})
+                doc.text('|', cursorX + ALTERNATIVE_GAP, y + KEY_HEIGHT / 2, {
+                    align:    'center',
+                    baseline: 'middle',
+                })
+                cursorX += separatorWidth + ALTERNATIVE_GAP * 2
+            }
+
+            drawCombo(doc, palette, combo, cursorX, y, comboSingleLineWidth(doc, combo))
+            cursorX += comboSingleLineWidth(doc, combo)
+        })
+        return
+    }
+
     let cursorY = y
     combos.forEach((combo, index) => {
         if (index > 0) {

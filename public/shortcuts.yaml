@@ -35,6 +35,9 @@
 # - Use `+` to join keys in one combination.
 # - Use `Mod` for Meta on macOS or Ctrl on Windows/Linux.
 # - Reuse the existing keyboard, mouse, touch, and wheel tokens.
+# - Render single-key alternatives on one line separated by `|`.
+# - If any alternative uses a composed binding, render every alternative on
+#   its own line without `|`.
 #
 # Maintenance rules:
 #
@@ -104,152 +107,224 @@
     - Alt+Shift+W
   scope: Replay mode
 
-## Timeline zoom and playback
+## Timeline controls
 
-- action: Zoom Replay timeline
-  description: With the Replay timeline focused or selected, Shift+Wheel or Alt+Wheel changes the track row height from 24 to 64 pixels, Meta/Super+Wheel changes the ruler scale by 20% increments, ArrowUp and ArrowDown change the row height, and ArrowLeft and ArrowRight change the ruler scale. The ruler removes secondary ticks when zoomed out, shows 200 ms ticks at normal zoom, and shows 100 ms ticks at high zoom. Plain Wheel remains scrolling and Ctrl+Wheel remains the browser zoom; the minimum horizontal zoom adapts to the container width so the complete timeline can fit with a small right margin.
+- action: Resize Replay track rows
+  description: With the timeline surface focused, or its widget selected with keyboard zoom enabled, changes the track row height by 4 pixels.
   id: replay-timeline-zoom
   keys:
-    - Shift+Wheel
-    - Meta+Wheel
     - ArrowUp
     - ArrowDown
+  platform: macOS / Windows / Linux
+  scope: Replay timeline
+- action: Zoom Replay ruler
+  description: With no clip selected, changes the ruler zoom when the timeline surface is focused or its widget is selected with keyboard zoom enabled.
+  id: replay-timeline-ruler-zoom
+  keys:
     - ArrowLeft
     - ArrowRight
   platform: macOS / Windows / Linux
   scope: Replay timeline
+- action: Resize Replay track rows with the wheel
+  description: With the timeline surface focused, Shift+Wheel or Alt+Wheel changes the track row height from 24 to 64 pixels.
+  id: replay-timeline-wheel-row-zoom
+  keys:
+    - Shift+Wheel
+    - Alt+Wheel
+  platform: macOS / Windows / Linux
+  scope: Replay timeline
+- action: Zoom Replay ruler with the wheel
+  description: With the timeline surface focused, Meta+Wheel changes the ruler zoom by 20 percent. Ctrl+Wheel remains available for browser zoom.
+  id: replay-timeline-wheel-ruler-zoom
+  keys:
+    - Meta+Wheel
+  platform: macOS / Windows / Linux
+  scope: Replay timeline
 - action: Play or pause Replay timeline
-  description: Toggles local timeline playback with the focused Replay timeline. The shortcut changes only the timeline projection until a playback adapter is connected.
+  description: With the timeline surface focused, starts or pauses local Replay timeline playback.
   id: replay-timeline-playback-keyboard
   keys:
     - Space
   scope: Replay timeline
 - action: Go to Replay range boundary
-  description: With the Replay timeline focused, Home moves the local playhead to the range start and End moves it to the range end.
+  description: With the timeline surface focused, Home moves the playhead to the range start and End to the range end.
   id: replay-timeline-boundary-keyboard
   keys:
     - Home
     - End
   scope: Replay timeline
-
-## Timeline clip editing
-
-- action: Remove focused Replay clip
-  description: Removes the focused editable clip from the local timeline projection.
-  id: replay-timeline-clip-remove-keyboard
-  keys:
-    - Delete
-    - Backspace
-  scope: Replay timeline
-- action: Copy focused Replay clip
-  description: Starts a copy-placement ghost for the focused editable clip; move it to the desired track and time, then click the primary pointer button to commit. Escape, a click outside the timeline, or a secondary-button/context-menu gesture cancels the placement.
-  id: replay-timeline-clip-copy-keyboard
-  keys:
-    - Mod+C
-  platform: macOS / Windows / Linux
-  scope: Replay timeline
-- action: Duplicate focused Replay clip
-  description: Keeps the legacy duplicate shortcut and inserts the focused editable clip immediately after its current interval.
-  id: replay-timeline-clip-duplicate-keyboard
-  keys:
-    - Mod+D
-  platform: macOS / Windows / Linux
-  scope: Replay timeline
-- action: Enable or disable focused Replay clip
-  description: Toggles the enabled state of the focused clip. Disabled clips remain visible for editing but do not participate in timeline playback when an execution adapter is connected.
-  id: replay-timeline-clip-enabled-keyboard
-  keys:
-    - V
-  scope: Replay timeline
-- action: Mask or show focused Replay clip
-  description: Toggles visibility of the focused clip in the Replay timeline.
-  id: replay-timeline-clip-mask-keyboard
-  keys:
-    - M
-  scope: Replay timeline
-- action: Move Replay playhead
-  description: Moves the focused Replay playhead by keyboardStepSeconds, or ten times that step with Shift. Alt+ArrowRight selects the range minimum and Alt+ArrowLeft selects the range maximum.
-  id: replay-timeline-playhead-keyboard
-  keys:
-    - ArrowLeft
-    - ArrowRight
-    - Shift+ArrowLeft
-    - Shift+ArrowRight
-    - Alt+ArrowLeft
-    - Alt+ArrowRight
-  scope: Replay timeline
-
-## Timeline navigation and range controls
-
 - action: Set Replay position from the ruler
-  description: In the ruler only, a click moves the live cursor, Alt+Click moves the range start when it does not pass the stop, and Ctrl+Click moves the range stop when it does not precede the start.
+  description: Click to move the playhead, Alt+Click to set the range start, or Ctrl+Click to set the range end.
   id: replay-timeline-ruler-click
   keys:
     - Click
     - Alt+Click
     - Ctrl+Click
   scope: Replay timeline
-- action: Jump inside the Replay timeline
-  description: With the timeline focused, Shift+ArrowLeft moves the live cursor to the range start, Shift+ArrowRight moves it to the range stop, Shift+ArrowUp scrolls to the first track, and Shift+ArrowDown scrolls to the last track.
-  id: replay-timeline-shift-navigation
-  keys:
-    - Shift+ArrowLeft
-    - Shift+ArrowRight
-    - Shift+ArrowUp
-    - Shift+ArrowDown
-  scope: Replay timeline
-- action: Move Replay range boundary
-  description: Moves the focused Replay range start or end boundary by keyboardStepSeconds, or ten times that step with Shift.
-  id: replay-timeline-range-keyboard
-  keys:
-    - ArrowLeft
-    - ArrowRight
-    - Shift+ArrowLeft
-    - Shift+ArrowRight
-  scope: Replay timeline
-- action: Resize Replay clip edge
-  description: Resizes the focused Replay clip start or end edge by keyboardStepSeconds, or ten times that step with Shift.
-  id: replay-timeline-clip-resize-keyboard
-  keys:
-    - ArrowLeft
-    - ArrowRight
-    - Shift+ArrowLeft
-    - Shift+ArrowRight
-  scope: Replay timeline
-- action: Move Replay clip
-  description: Moves the selected editable Replay clip by one rendered pixel with ArrowLeft or ArrowRight, or ten rendered pixels with Alt. Existing magnetic snapping takes priority over the requested pixel increment.
-  id: replay-timeline-clip-move-keyboard
-  keys:
-    - ArrowLeft
-    - ArrowRight
-    - Alt+ArrowLeft
-    - Alt+ArrowRight
-  scope: Replay timeline
 - action: Cancel Replay timeline gesture
-  description: Cancels an active clip move, clip resize, track reorder, or range drag and restores the pre-gesture state.
+  description: Restores the state from before the active timeline gesture.
   id: replay-timeline-cancel-gesture
   keys:
     - Escape
   scope: Replay timeline
-- action: Adjust Replay clip snapping
-  description: During a clip move or resize, Shift selects secondary ruler ticks and Alt temporarily disables snapping to ruler ticks, other clip edges, and the playhead.
-  id: replay-timeline-clip-snapping
+
+## Timeline navigation
+
+- action: Move Replay playhead
+  description: With the playhead focused, moves it by one keyboard step.
+  id: replay-timeline-playhead-keyboard
   keys:
-    - Shift+Drag
-    - Alt+Drag
+    - ArrowLeft
+    - ArrowRight
   scope: Replay timeline
+- action: Move Replay playhead faster
+  description: With the playhead focused, moves it by ten keyboard steps.
+  id: replay-timeline-playhead-fast-keyboard
+  keys:
+    - Shift+ArrowLeft
+    - Shift+ArrowRight
+  scope: Replay timeline
+- action: Set Replay playhead to a range boundary
+  description: With the playhead focused, Alt+ArrowRight moves it to the range start and Alt+ArrowLeft to the range end.
+  id: replay-timeline-playhead-boundary-keyboard
+  keys:
+    - Alt+ArrowLeft
+    - Alt+ArrowRight
+  scope: Replay timeline
+- action: Jump Replay playhead to a range boundary
+  description: With the timeline surface focused, moves the playhead to the range start or end.
+  id: replay-timeline-shift-navigation
+  keys:
+    - Shift+ArrowLeft
+    - Shift+ArrowRight
+  scope: Replay timeline
+- action: Jump to a Replay track boundary
+  description: With the timeline surface focused, scrolls to the first or last track.
+  id: replay-timeline-shift-track-navigation
+  keys:
+    - Shift+ArrowUp
+    - Shift+ArrowDown
+  scope: Replay timeline
+- action: Move Replay range boundary
+  description: With a range handle focused, moves it by one keyboard step.
+  id: replay-timeline-range-keyboard
+  keys:
+    - ArrowLeft
+    - ArrowRight
+  scope: Replay timeline
+- action: Move Replay range boundary faster
+  description: With a range handle focused, moves it by ten keyboard steps.
+  id: replay-timeline-range-fast-keyboard
+  keys:
+    - Shift+ArrowLeft
+    - Shift+ArrowRight
+  scope: Replay timeline
+
+## Timeline tracks
+
 - action: Resize Replay track legend
-  description: Resizes the focused Replay track legend with the native split-panel divider. Arrow keys move it, Shift changes the step, Home and End select the bounds, and Enter collapses or restores the panel.
+  description: With the track legend divider focused, changes its width by one keyboard step.
   id: replay-timeline-split-keyboard
   keys:
     - ArrowLeft
     - ArrowRight
+  scope: Replay timeline tracks
+- action: Resize Replay track legend faster
+  description: With the track legend divider focused, changes its width by the larger keyboard step.
+  id: replay-timeline-split-fast-keyboard
+  keys:
     - Shift+ArrowLeft
     - Shift+ArrowRight
+  scope: Replay timeline tracks
+- action: Set Replay track legend width
+  description: With the track legend divider focused, sets its width to the minimum or maximum.
+  id: replay-timeline-split-boundary-keyboard
+  keys:
     - Home
     - End
+  scope: Replay timeline tracks
+- action: Collapse or restore Replay track legend
+  description: With the track legend divider focused, collapses or restores the track legend.
+  id: replay-timeline-split-toggle-keyboard
+  keys:
     - Enter
-  scope: Replay timeline
+  scope: Replay timeline tracks
+
+## Timeline clips
+
+- action: Remove focused Replay clip
+  description: With an editable clip focused, removes it.
+  id: replay-timeline-clip-remove-keyboard
+  keys:
+    - Delete
+    - Backspace
+  scope: Replay timeline clips
+- action: Copy focused Replay clip
+  description: With an editable clip focused, starts a copy-placement ghost.
+  id: replay-timeline-clip-copy-keyboard
+  keys:
+    - Mod+C
+  platform: macOS / Windows / Linux
+  scope: Replay timeline clips
+- action: Duplicate focused Replay clip
+  description: With an editable clip focused, inserts a copy immediately after it.
+  id: replay-timeline-clip-duplicate-keyboard
+  keys:
+    - Mod+D
+  platform: macOS / Windows / Linux
+  scope: Replay timeline clips
+- action: Enable or disable focused Replay clip
+  description: With an editable clip focused, toggles its enabled state.
+  id: replay-timeline-clip-enabled-keyboard
+  keys:
+    - V
+  scope: Replay timeline clips
+- action: Mask or show focused Replay clip
+  description: With an editable clip focused, toggles its visibility.
+  id: replay-timeline-clip-mask-keyboard
+  keys:
+    - M
+  scope: Replay timeline clips
+- action: Resize Replay clip edge
+  description: With a clip edge focused, resizes it by one keyboard step.
+  id: replay-timeline-clip-resize-keyboard
+  keys:
+    - ArrowLeft
+    - ArrowRight
+  scope: Replay timeline clips
+- action: Resize Replay clip edge faster
+  description: With a clip edge focused, resizes it by ten keyboard steps.
+  id: replay-timeline-clip-resize-fast-keyboard
+  keys:
+    - Shift+ArrowLeft
+    - Shift+ArrowRight
+  scope: Replay timeline clips
+- action: Move Replay clip
+  description: With an editable clip selected and the clip or timeline surface focused, moves it by one rendered pixel.
+  id: replay-timeline-clip-move-keyboard
+  keys:
+    - ArrowLeft
+    - ArrowRight
+  scope: Replay timeline clips
+- action: Move Replay clip faster
+  description: With an editable clip selected and the clip or timeline surface focused, moves it by ten rendered pixels.
+  id: replay-timeline-clip-move-fast-keyboard
+  keys:
+    - Alt+ArrowLeft
+    - Alt+ArrowRight
+  scope: Replay timeline clips
+- action: Adjust Replay clip snapping with Shift
+  description: Uses secondary ruler divisions during a clip move or resize.
+  id: replay-timeline-clip-snapping
+  keys:
+    - Shift+Drag
+  scope: Replay timeline clips
+- action: Disable Replay clip snapping with Alt
+  description: Temporarily disables magnetic snapping during a clip move or resize. Alt takes precedence if Shift is also held.
+  id: replay-timeline-clip-snap-disable
+  keys:
+    - Alt+Drag
+  scope: Replay timeline clips
 
 ########################################
 # Replay camera preparation
