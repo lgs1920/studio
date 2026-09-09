@@ -1,3 +1,55 @@
+################################################################################
+# LGS1920 Studio shortcut catalog
+#
+# Purpose:
+#
+# - User-facing reference for application shortcuts and pointer gestures.
+# - Flat YAML list loaded by `src/core/events/appShortcuts.js`.
+# - Documentation and runtime catalog for the same shortcut entries.
+#
+# Entry structure:
+#
+# 1. `action`
+# 2. `description`
+# 3. `id`
+# 4. `keys`
+# 5. `platform` when needed
+# 6. `reference` when needed
+# 7. `scope`
+#
+# Field rules:
+#
+# - `action`: Short English user-facing action name.
+# - `description`: English explanation of the action and its active context.
+# - `id`: Stable kebab-case identifier. Reuse it when updating an entry.
+# - `scope`: Exact English interaction context used to group the catalog.
+# - `platform`: Use values such as `macOS`, `Windows / Linux`, or
+#   `macOS / Windows / Linux` when the binding differs by operating system.
+# - `reference`: Set to `true` for gestures primarily documented as
+#   interaction references or owned by a dedicated system. Omit it for
+#   ordinary application shortcuts.
+#
+# Key rules:
+#
+# - `keys`: YAML list of alternative bindings.
+# - Use `+` to join keys in one combination.
+# - Use `Mod` for Meta on macOS or Ctrl on Windows/Linux.
+# - Reuse the existing keyboard, mouse, touch, and wheel tokens.
+#
+# Maintenance rules:
+#
+# - Keep each `id` stable.
+# - Keep the field order shown above.
+# - Add new values only when the loader, shortcut manager, or owning
+#   interaction system already supports them.
+################################################################################
+
+########################################
+# Application commands
+########################################
+
+## Journey and profile
+
 - action: Import journey
   description: Opens the journey import dialog.
   id: journey-import
@@ -29,18 +81,31 @@
   keys:
     - Alt+Shift+G
   scope: App
+
+## Video
+
 - action: Video recording
   description: Opens video setup, then starts recording when setup is already open.
   id: video-recording
   keys:
     - Alt+Shift+V
   scope: App
+
+########################################
+# Replay controls
+########################################
+
+## Replay management
+
 - action: Show Replay controls
   description: Opens the Replay management drawer.
   id: replay-management-show
   keys:
     - Alt+Shift+W
   scope: Replay mode
+
+## Timeline zoom and playback
+
 - action: Zoom Replay timeline
   description: With the Replay timeline focused or selected, Shift+Wheel or Alt+Wheel changes the track row height from 24 to 64 pixels, Meta/Super+Wheel changes the ruler scale by 20% increments, ArrowUp and ArrowDown change the row height, and ArrowLeft and ArrowRight change the ruler scale. The ruler removes secondary ticks when zoomed out, shows 200 ms ticks at normal zoom, and shows 100 ms ticks at high zoom. Plain Wheel remains scrolling and Ctrl+Wheel remains the browser zoom; the minimum horizontal zoom adapts to the container width so the complete timeline can fit with a small right margin.
   id: replay-timeline-zoom
@@ -66,6 +131,9 @@
     - Home
     - End
   scope: Replay timeline
+
+## Timeline clip editing
+
 - action: Remove focused Replay clip
   description: Removes the focused editable clip from the local timeline projection.
   id: replay-timeline-clip-remove-keyboard
@@ -73,8 +141,15 @@
     - Delete
     - Backspace
   scope: Replay timeline
+- action: Copy focused Replay clip
+  description: Starts a copy-placement ghost for the focused editable clip; move it to the desired track and time, then click to commit.
+  id: replay-timeline-clip-copy-keyboard
+  keys:
+    - Mod+C
+  platform: macOS / Windows / Linux
+  scope: Replay timeline
 - action: Duplicate focused Replay clip
-  description: Duplicates the focused editable clip after its current interval on the same track when the destination interval is available.
+  description: Keeps the legacy duplicate shortcut and inserts the focused editable clip immediately after its current interval.
   id: replay-timeline-clip-duplicate-keyboard
   keys:
     - Mod+D
@@ -85,6 +160,12 @@
   id: replay-timeline-clip-enabled-keyboard
   keys:
     - V
+  scope: Replay timeline
+- action: Mask or show focused Replay clip
+  description: Toggles visibility of the focused clip in the Replay timeline.
+  id: replay-timeline-clip-mask-keyboard
+  keys:
+    - M
   scope: Replay timeline
 - action: Move Replay playhead
   description: Moves the focused Replay playhead by keyboardStepSeconds, or ten times that step with Shift. Alt+ArrowRight selects the range minimum and Alt+ArrowLeft selects the range maximum.
@@ -97,6 +178,9 @@
     - Alt+ArrowLeft
     - Alt+ArrowRight
   scope: Replay timeline
+
+## Timeline navigation and range controls
+
 - action: Set Replay position from the ruler
   description: In the ruler only, a click moves the live cursor, Alt+Click moves the range start when it does not pass the stop, and Ctrl+Click moves the range stop when it does not precede the start.
   id: replay-timeline-ruler-click
@@ -157,6 +241,13 @@
     - End
     - Enter
   scope: Replay timeline
+
+########################################
+# Replay camera preparation
+########################################
+
+## Camera adjustments
+
 - action: Adjust replay camera heading
   description: Adjusts only the replay camera heading by 1 degree while replay camera preparation is active.
   id: replay-camera-heading-keyboard
@@ -171,6 +262,13 @@
     - ArrowLeft
     - ArrowRight
   scope: Replay camera setup
+
+########################################
+# Application and panel commands
+########################################
+
+## Mode and widget launch commands
+
 - action: Manage widgets
   description: Opens the widget management drawer for the current board.
   id: widget-management-show
@@ -201,6 +299,9 @@
   keys:
     - Alt+P
   scope: Panorama mode
+
+## Panel and drawer controls
+
 - action: Close active panel
   description: Closes the active drawer, popup, or dialog when supported by the current view.
   id: app-close-active-panel
@@ -227,6 +328,13 @@
     - Double click
   reference: true
   scope: Resizable drawer
+
+########################################
+# Selected widget commands
+########################################
+
+## Keyboard editing commands
+
 - action: Edit selected widget
   description: Opens the editor for the selected widget.
   id: widget-edit
@@ -272,6 +380,13 @@
     - Ctrl+ArrowLeft
     - Ctrl+ArrowRight
   scope: Selected widget
+
+########################################
+# Widget interaction reference gestures
+########################################
+
+## Pointer and touch gestures
+
 - action: Select widget
   description: Selects an interactive on-map widget.
   id: widget-select-pointer
@@ -317,6 +432,13 @@
     - Long tap
   reference: true
   scope: Widget interaction
+
+########################################
+# Map object reference gestures
+########################################
+
+## Point of interest gestures
+
 - action: Toggle POI expansion
   description: Expands or shrinks a point of interest on the map.
   id: poi-toggle-expansion
@@ -341,6 +463,9 @@
     - Long tap
   reference: true
   scope: Map objects
+
+## Map points and track marker gestures
+
 - action: Open map point menu
   description: Opens the context menu at the clicked map position.
   id: map-point-context-menu
@@ -365,6 +490,13 @@
     - Double tap
   reference: true
   scope: Map objects
+
+########################################
+# Orbit reference gestures
+########################################
+
+## Pointer and wheel controls
+
 - action: Adjust angle
   description: Use Cesium default rotate, tilt, and look controls while Orbit is active.
   id: rotation-angle
@@ -403,6 +535,9 @@
   platform: macOS / Windows / Linux
   reference: true
   scope: Orbit
+
+## Keyboard camera controls
+
 - action: Adjust height
   description: Change the orbit camera height by 100 m while Orbit is active.
   id: rotation-height-keyboard
@@ -427,6 +562,9 @@
     - Ctrl+ArrowDown
   reference: true
   scope: Orbit
+
+## Speed and direction controls
+
 - action: Adjust RPM
   description: Increase or decrease rotation speed by 0.1 RPM.
   id: rotation-rpm-keyboard
@@ -443,6 +581,13 @@
     - ArrowRight
   reference: true
   scope: Orbit
+
+########################################
+# Panorama reference gestures
+########################################
+
+## Pointer and wheel controls
+
 - action: Adjust angle
   description: Drag on the globe while panorama mode is active.
   id: panorama-angle
@@ -451,6 +596,7 @@
   platform: macOS / Windows / Linux
   reference: true
   scope: Panorama mode
+
 - action: Adjust height
   description: Change the panorama camera altitude by 100 m.
   id: panorama-height-macos
@@ -519,6 +665,9 @@
   platform: Windows / Linux
   reference: true
   scope: Panorama mode
+
+## Keyboard camera controls
+
 - action: Adjust height
   description: Change the panorama camera altitude by 100 m.
   id: panorama-height-keyboard
@@ -543,6 +692,9 @@
     - Ctrl+ArrowDown
   reference: true
   scope: Panorama mode
+
+## Speed and direction controls
+
 - action: Adjust RPM
   description: Increase or decrease panorama speed by 0.1 RPM.
   id: panorama-rpm-keyboard
@@ -559,6 +711,13 @@
     - ArrowRight
   reference: true
   scope: Panorama mode
+
+########################################
+# Cesium navigation reference gestures
+########################################
+
+## Standard camera gestures
+
 - action: Rotate or pan
   description: "Cesium default: rotate the camera in 3D, or pan the map in 2D."
   id: cesium-rotate-pan
