@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-08
+ * Last modified: 2026-09-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -115,6 +115,7 @@ describe('ReplayTimelinePreview', () => {
             editable: true,
             interactive: true,
             collisionPolicy: 'prevent',
+            snapThresholdPixels: 8,
             legendMinWidth: 50,
             legendWidth: 150,
             legendMaxWidth: 250,

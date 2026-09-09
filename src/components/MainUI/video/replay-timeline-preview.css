@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-08
+ * Last modified: 2026-09-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -55,8 +55,10 @@
         --lgs-timeline-scrollbar-track-color: color-mix(in oklab, var(--wa-color-text-quiet) 24%, transparent);
         /* Keep custom scrollbar thumbs visible in the embedded preview. */
         --lgs-timeline-scrollbar-thumb-color: var(--wa-color-brand-fill-loud, var(--wa-color-brand));
-        /* Align the first ruler tick and clip with the surface edge. */
-        --lgs-timeline-scale-offset: 0px;
+        /* Keep the start range handle fully visible inside the surface. */
+        --lgs-timeline-scale-offset: 8px;
+        /* Keep the end range handle fully visible inside the surface. */
+        --lgs-timeline-end-padding: 8px;
         /* Keep the Web Component minimum width aligned with the floating host. */
         --lgs-timeline-min-width: var(--lgs-replay-timeline-min-width);
         /* Keep the Web Component minimum height aligned with the floating host. */

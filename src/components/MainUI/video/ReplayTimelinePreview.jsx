@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-08
+ * Last modified: 2026-09-09
  *
  *
  * Copyright © 2026 LGS1920
@@ -352,6 +352,7 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false}, r
         interactive: true,
         collisionPolicy: 'prevent',
         resizeCollisionPolicy: 'ripple',
+        snapThresholdPixels: 8,
         resizeExtendsDuration: true,
         durationPolicy: 'extend',
         keyboardZoomActive,
