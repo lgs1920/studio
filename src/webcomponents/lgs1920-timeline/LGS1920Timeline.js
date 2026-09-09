@@ -2452,7 +2452,8 @@ export class LGS1920Timeline extends HTMLElement {
         let colorCommitted = false
         const commitColor = event => {
             if (colorCommitted) return
-            const value = event.detail?.value
+            const value = event.detail?.color
+                ?? event.detail?.value
                 ?? event.currentTarget?.value
                 ?? event.target?.value
                 ?? colorPicker.value
