@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-08
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -76,16 +76,14 @@ export const WelcomeHero = ({
     const initializationPercentage = readyToEnter
         ? 100
         : INITIALIZATION_PROGRESS_VALUES[activeInitializationStep] ?? 0
+    const initializationProgressRatio = initializationPercentage / 100
     const initializationScrollRange = Math.max(initializationSteps.length - INITIALIZATION_VISIBLE_STEP_COUNT, 0)
-    const initializationVisibleStart = Math.min(
-        Math.max(activeInitializationStep - 1, 0),
-        initializationScrollRange,
-    )
+    const initializationVisibleStart = initializationScrollRange * initializationProgressRatio
     const initializationScrollbarThumbSize = initializationSteps.length > INITIALIZATION_VISIBLE_STEP_COUNT
         ? Math.max((INITIALIZATION_VISIBLE_STEP_COUNT / initializationSteps.length) * 100, 18)
         : 100
     const initializationScrollbarThumbOffset = initializationScrollRange > 0
-        ? (initializationVisibleStart / initializationScrollRange) * (100 - initializationScrollbarThumbSize)
+        ? initializationProgressRatio * (100 - initializationScrollbarThumbSize)
         : 0
     const initializationStepsTransform = initializationVisibleStart === 0
         ? 'translateY(0rem)'

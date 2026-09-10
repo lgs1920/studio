@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-08
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -141,7 +141,9 @@ describe('WelcomeHero', () => {
         expect(document.querySelector('.welcome-initialization-steps-frame')).toBeTruthy()
         expect(document.querySelector('.welcome-initialization-scrollbar')).toBeTruthy()
         expect(document.querySelector('.welcome-initialization-steps')?.getAttribute('style'))
-            .toContain('translateY(0rem)')
+            .toContain('translateY(-0.41rem)')
+        expect(document.querySelector('.welcome-initialization-scrollbar-thumb')?.getAttribute('style'))
+            .toContain('top: 4.29%')
         expect(screen.getByText('Checking backend connection').parentElement
             .classList.contains('is-complete')).toBe(true)
         expect(screen.getByText('Loading application configuration').parentElement
@@ -248,7 +250,9 @@ describe('WelcomeHero', () => {
         expect(screen.getByRole('progressbar', {name: 'Studio initialization: 60%'})
             .getAttribute('aria-valuenow')).toBe('60')
         expect(document.querySelector('.welcome-initialization-steps')?.getAttribute('style'))
-            .toContain('translateY(-4.05rem)')
+            .toContain('translateY(-2.43rem)')
+        expect(document.querySelector('.welcome-initialization-scrollbar-thumb')?.getAttribute('style'))
+            .toContain('top: 25.71%')
     })
 
     it('renders the resolved video and falls back to the resolved image', () => {
