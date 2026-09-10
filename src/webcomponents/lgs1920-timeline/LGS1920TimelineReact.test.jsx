@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-06
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -72,6 +72,21 @@ describe('LGS1920TimelineReact', () => {
 
         expect(onDblClick).toHaveBeenCalledOnce()
         expect(onDblClick.mock.calls[0][0].clip.id).toBe('clip#001')
+    })
+
+    it('forwards clip double-click events to the React callback', () => {
+        const onClipDoubleClick = vi.fn()
+        const {container} = render(
+            <LGS1920TimelineReact
+                timeline={timelineConfig}
+                onClipDoubleClick={onClipDoubleClick}/>,
+        )
+        const element = container.querySelector('lgs1920-timeline')
+        const detail = {clip: {id: 'clip#001'}, context: {type: 'clip', clipId: 'clip#001'}}
+        const event = new CustomEvent('lgs1920-timeline-dblclick', {detail})
+        element.dispatchEvent(event)
+
+        expect(onClipDoubleClick).toHaveBeenCalledWith(detail, event)
     })
 
     it('maps clip editing events to React callbacks', () => {

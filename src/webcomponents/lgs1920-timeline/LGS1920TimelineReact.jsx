@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-09
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -116,6 +116,7 @@ const EVENT_CALLBACKS = [
  * @param {Function} [props.onBeforeTrackVisibilityChange] - Cancelable track visibility callback.
  * @param {Function} [props.onAfterTrackVisibilityChange] - Track visibility completion callback.
  * @param {Function} [props.onDblClick] - Clip double-click callback.
+ * @param {Function} [props.onClipDoubleClick] - Clip double-click callback receiving event detail and the native custom event.
  * @param {Function} [props.onBeforeDblClick] - Cancelable clip double-click callback.
  * @param {Function} [props.onAfterDblClick] - Clip double-click completion callback.
  * @param {Function} [props.onAddClip] - Clip insertion callback.
@@ -192,6 +193,7 @@ export const LGS1920TimelineReact = ({
     onBeforeDblClick,
     onDblClick,
     onAfterDblClick,
+    onClipDoubleClick,
     onBeforeAddClip,
     onAddClip,
     onAfterAddClip,
@@ -335,8 +337,11 @@ export const LGS1920TimelineReact = ({
             element.addEventListener(`lgs1920-timeline-${name}`, listener)
             return {name, listener}
         })
+        const clipDoubleClickListener = event => onClipDoubleClick?.(event.detail, event)
+        element.addEventListener('lgs1920-timeline-dblclick', clipDoubleClickListener)
+        listeners.push({name: 'dblclick', listener: clipDoubleClickListener})
         return () => listeners.forEach(({name, listener}) => element.removeEventListener(`lgs1920-timeline-${name}`, listener))
-    }, [onAddClip, onAddTrack, onAfterAddClip, onAfterAddTrack, onAfterClipAction, onAfterClipChange, onAfterClipColorChange, onAfterClipExtend, onAfterClipVisibilityChange, onAfterDblClick, onAfterDrag, onAfterPause, onAfterPlay, onAfterRemoveClip, onAfterRemoveTrack, onAfterReorder, onAfterRestart, onAfterRangeChange, onAfterSeek, onAfterStop, onAfterTrackLabelChange, onAfterTrackVisibilityChange, onBeforeAddClip, onBeforeAddTrack, onBeforeClipAction, onBeforeClipChange, onBeforeClipColorChange, onBeforeClipExtend, onBeforeClipVisibilityChange, onBeforeDblClick, onBeforeDrag, onBeforePause, onBeforePlay, onBeforeRemoveClip, onBeforeRemoveTrack, onBeforeReorder, onBeforeRestart, onBeforeSeek, onBeforeStop, onBeforeTrackLabelChange, onBeforeTrackVisibilityChange, onBeforeRangeChange, onClipAction, onClipChange, onClipChangeStart, onClipChanging, onClipColorChange, onClipExtend, onClipSelect, onClipVisibilityChange, onDblClick, onDrag, onPause, onPlay, onRangeChange, onRangeChangeStart, onRangeChanging, onRemoveClip, onRemoveTrack, onReorder, onRestart, onSeek, onStop, onTrackLabelChange, onTrackVisibilityChange])
+    }, [onAddClip, onAddTrack, onAfterAddClip, onAfterAddTrack, onAfterClipAction, onAfterClipChange, onAfterClipColorChange, onAfterClipExtend, onAfterClipVisibilityChange, onAfterDblClick, onAfterDrag, onAfterPause, onAfterPlay, onAfterRemoveClip, onAfterRemoveTrack, onAfterReorder, onAfterRestart, onAfterRangeChange, onAfterSeek, onAfterStop, onAfterTrackLabelChange, onAfterTrackVisibilityChange, onBeforeAddClip, onBeforeAddTrack, onBeforeClipAction, onBeforeClipChange, onBeforeClipColorChange, onBeforeClipExtend, onBeforeClipVisibilityChange, onBeforeDblClick, onBeforeDrag, onBeforePause, onBeforePlay, onBeforeRemoveClip, onBeforeRemoveTrack, onBeforeReorder, onBeforeRestart, onBeforeSeek, onBeforeStop, onBeforeTrackLabelChange, onBeforeTrackVisibilityChange, onBeforeRangeChange, onClipAction, onClipChange, onClipChangeStart, onClipChanging, onClipColorChange, onClipDoubleClick, onClipExtend, onClipSelect, onClipVisibilityChange, onDblClick, onDrag, onPause, onPlay, onRangeChange, onRangeChangeStart, onRangeChanging, onRemoveClip, onRemoveTrack, onReorder, onRestart, onSeek, onStop, onTrackLabelChange, onTrackVisibilityChange])
 
     return (
         <lgs1920-timeline ref={_element}>

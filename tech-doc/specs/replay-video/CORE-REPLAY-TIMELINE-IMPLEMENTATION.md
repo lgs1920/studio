@@ -237,6 +237,10 @@ The timeline does not introduce a second clip store. The preview resolves
 journey clip instances first, then transient Replay clip state, while the
 settings catalog supplies definitions and icons.
 
+Clip double-clicks have no default editing action. Web Component integrations
+listen for `lgs1920-timeline-dblclick`; the React adapter exposes the same
+interaction as the `onClipDoubleClick` callback.
+
 Each clip detail receives a stable `replay-clip-<instance-id>` anchor. The
 future interactive adapter will send a navigation request for the `clips` tab
 on action double-click.

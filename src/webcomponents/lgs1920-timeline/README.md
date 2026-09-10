@@ -444,6 +444,11 @@ When both the timeline and track `editable` flags are enabled, double-click a
 track name to open the inline Web Awesome input. Press `Enter` or leave the
 input to commit the name; press `Escape` to cancel.
 
+Double-clicking a clip has no default editing behavior. Web Component users can
+listen for `lgs1920-timeline-dblclick` to trigger an application action such as
+opening clip editing. The `before-dblclick` and `after-dblclick` lifecycle events
+remain available for cancelable and completion handling.
+
 The component emits the new name and a serializable public snapshot. The host
 stores the updated track definition and passes the new `tracks` array back.
 
@@ -716,7 +721,8 @@ timeline.addEventListener('lgs1920-timeline-dblclick', event => {
 })
 ```
 
-The React equivalent uses the event suffix directly in the callback name:
+The React wrapper keeps `onDblClick` for the lifecycle event and also exposes
+`onClipDoubleClick` as the direct clip callback:
 
 ```jsx
 <LGS1920TimelineReact
@@ -724,7 +730,7 @@ The React equivalent uses the event suffix directly in the callback name:
     tracks={tracks}
     currentTimeMillis={currentTimeMillis}
     onSeek={detail => setCurrentTimeMillis(detail.timeMillis)}
-    onDblClick={detail => console.log(detail.clip)}
+    onClipDoubleClick={detail => console.log(detail.clip)}
     onAfterClipChange={detail => onTracksChange(detail.tracks)}
     onAfterTrackLabelChange={handleTrackLabelChange}
 />

@@ -444,6 +444,10 @@ dragging keeps it selected. The selection
 remains local to the timeline, receives a normal 2px dashed border in the clip
 text color, and receives keyboard focus. Clicking a neutral area, track label,
 or empty track clears the selection, as does Escape.
+Double-clicking a clip has no default editing behavior. Web Component users can
+listen for `lgs1920-timeline-dblclick` to open a clip editor or perform another
+application action. The `before-dblclick` and `after-dblclick` lifecycle events
+remain available for cancelable and completion handling.
 Native pointer, click, and context-menu input is stopped at the timeline host.
 The built-in clip context menu provides Copy, Delete, Mask, and Extend max.
 Copy creates an accentuated transient placement ghost under the source clip,
