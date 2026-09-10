@@ -16,7 +16,7 @@
  ******************************************************************************/
 
 import {cleanup, render} from '@testing-library/react'
-import {afterEach, describe, expect, it, vi} from 'vitest'
+import {afterAll, afterEach, beforeAll, describe, expect, it, vi} from 'vitest'
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/button/button.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/card/card.js', () => ({}))
@@ -34,6 +34,28 @@ const timelineConfig = {
 }
 
 const tracks = []
+
+const attachInternals = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'attachInternals')?.value
+
+beforeAll(() => {
+    if (typeof attachInternals !== 'function') return
+
+    HTMLElement.prototype.attachInternals = function patchedAttachInternals() {
+        const internals = attachInternals.call(this)
+        if (typeof internals.setValidity !== 'function') internals.setValidity = () => {}
+        if (typeof internals.setFormValue !== 'function') internals.setFormValue = () => {}
+        if (typeof internals.checkValidity !== 'function') internals.checkValidity = () => true
+        if (typeof internals.reportValidity !== 'function') internals.reportValidity = () => true
+        if (internals.validity === undefined) {
+            Object.defineProperty(internals, 'validity', {configurable: true, value: {valid: true}})
+        }
+        return internals
+    }
+})
+
+afterAll(() => {
+    HTMLElement.prototype.attachInternals = attachInternals
+})
 
 afterEach(() => cleanup())
 

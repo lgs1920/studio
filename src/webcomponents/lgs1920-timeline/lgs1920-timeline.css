@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-09
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -238,8 +238,31 @@
         flex-direction: column;
     }
 
-    & .lgs1920-wa-timeline__additional-content-slot {
-        flex: 0 0 auto;
+    & .lgs1920-wa-timeline__additional-content {
+        display: contents;
+        min-width: 0;
+    }
+
+    & .lgs1920-wa-timeline__additional-content-panel {
+        width: 100%;
+        min-width: 0;
+        /* Keep the top drawer compact while allowing its controls to wrap. */
+        --size: min(12rem, 70vh);
+    }
+
+    & .lgs1920-wa-timeline__additional-content-panel::part(body) {
+        display: flex;
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        max-height: 12rem;
+        overflow: auto;
+    }
+
+    & slot[name='additional-content'] {
+        display: block;
+        width: 100%;
+        min-width: 0;
     }
 
     & .lgs1920-wa-timeline__slot-registry {
@@ -266,6 +289,17 @@
         display: inline-flex;
         align-items: center;
         justify-self: start;
+        width: 100%;
+        min-width: 0;
+        gap: var(--lgs-timeline-gap);
+    }
+
+    & .lgs1920-wa-timeline__header-end {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        justify-self: end;
+        width: 100%;
         min-width: 0;
         gap: var(--lgs-timeline-gap);
     }
@@ -289,8 +323,9 @@
 
     & .lgs1920-wa-timeline__header-actions {
         display: inline-flex;
+        flex: 0 0 auto;
         align-items: center;
-        justify-content: flex-start;
+        justify-content: flex-end;
         gap: var(--lgs-timeline-gap);
     }
 
@@ -1569,6 +1604,7 @@
         }
 
         & .lgs1920-wa-timeline__header-start,
+        & .lgs1920-wa-timeline__header-end,
         & slot[name='custom-menu'],
         & .lgs1920-wa-timeline__transport {
             justify-self: stretch;

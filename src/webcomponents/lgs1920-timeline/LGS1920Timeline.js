@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-09
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import '@web.awesome.me/webawesome-pro/dist/components/button/button.js'
 import '@web.awesome.me/webawesome-pro/dist/components/card/card.js'
 import '@web.awesome.me/webawesome-pro/dist/components/color-picker/color-picker.js'
+import '@web.awesome.me/webawesome-pro/dist/components/drawer/drawer.js'
 import '@web.awesome.me/webawesome-pro/dist/components/icon/icon.js'
 import '@web.awesome.me/webawesome-pro/dist/components/input/input.js'
 import '@web.awesome.me/webawesome-pro/dist/components/popup/popup.js'
@@ -81,6 +82,7 @@ const ROW_DRAG_THRESHOLD = 4
 const CLIP_DRAG_THRESHOLD = 4
 const TOUCH_CLIP_DRAG_THRESHOLD = 8
 const CLIP_OPTION_DRAG_MIME = 'application/x-lgs1920-timeline-clip'
+let timelineAdditionalContentInstance = 0
 const STRUCTURAL_CONFIG_KEYS = Object.freeze([
     'interactive',
     'editable',
@@ -130,6 +132,9 @@ export class LGS1920Timeline extends HTMLElement {
     #buildingFrame = null
     #buildingLayoutSignature = null
     #initialBuildComplete = false
+    #additionalContentOpen = false
+    #additionalContentPanelId = `lgs1920-timeline-additional-content-${++timelineAdditionalContentInstance}`
+    #additionalContentToggle = null
     #menuOpen = false
     #draggedClipOption = null
     #generatedClipIdentifiers = new Set()
@@ -387,17 +392,86 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
-     * Check whether an input event belongs to an application-provided custom menu.
+     * Check whether an input event belongs to application-provided slotted content.
      *
      * Slotted controls own their input lifecycle and must remain interactive even
      * though the timeline keeps its internal surface events local to the host.
      *
      * @param {Event} event - Native input event.
-     * @returns {boolean} Whether the event originated in the custom menu slot.
+     * @returns {boolean} Whether the event originated in an application slot.
      */
-    #isCustomMenuEvent = event => {
+    #isApplicationSlotEvent = event => {
         const composedPath = typeof event.composedPath === 'function' ? event.composedPath() : []
-        return composedPath.some(target => target?.getAttribute?.('slot') === 'custom-menu')
+        return composedPath.some(target => ['custom-menu', 'additional-content'].includes(target?.getAttribute?.('slot')))
+    }
+
+    /**
+     * Check whether an event came from the application-owned additional-content trigger.
+     *
+     * @param {Event} event - Native input event.
+     * @returns {boolean} Whether the event originated in the trigger.
+     */
+    #isAdditionalContentToggleEvent = event => {
+        const composedPath = typeof event.composedPath === 'function' ? event.composedPath() : []
+        return composedPath.some(target => target?.hasAttribute?.('data-additional-content-toggle'))
+            || Boolean(event.target?.closest?.('[data-additional-content-toggle]'))
+    }
+
+    /**
+     * Update the disclosure state of the generic additional-content panel.
+     *
+     * @returns {void}
+     */
+    #updateAdditionalContentPresentation = () => {
+        const panel = this.#root.querySelector('[part="additional-content-panel"]')
+        const toggle = this.querySelector('[data-additional-content-toggle]')
+        if (toggle !== this.#additionalContentToggle) {
+            this.#additionalContentToggle?.removeEventListener('click', this.#toggleAdditionalContent)
+            this.#additionalContentToggle = toggle
+            toggle?.addEventListener('click', this.#toggleAdditionalContent)
+        }
+        if (!panel || !toggle) return
+        if (this.#additionalContentOpen) panel.setAttribute('open', '')
+        else panel.removeAttribute('open')
+        toggle.setAttribute('aria-controls', this.#additionalContentPanelId)
+        toggle.setAttribute('aria-expanded', `${this.#additionalContentOpen}`)
+        toggle.setAttribute('data-open', `${this.#additionalContentOpen}`)
+    }
+
+    /**
+     * Synchronize the generic drawer state after it has opened itself.
+     */
+    #handleAdditionalContentShow = () => {
+        this.#additionalContentOpen = true
+        this.#updateAdditionalContentPresentation()
+    }
+
+    /**
+     * Synchronize the generic drawer state after it has requested to close.
+     */
+    #handleAdditionalContentHide = () => {
+        this.#additionalContentOpen = false
+        this.#updateAdditionalContentPresentation()
+        this.#refreshLayoutMetrics()
+    }
+
+    /**
+     * Toggle the generic additional-content panel without rebuilding the timeline.
+     *
+     * @param {Event} event - Triggering button event.
+     */
+    #toggleAdditionalContent = event => {
+        event.preventDefault()
+        event.stopPropagation()
+        const panel = this.#root.querySelector('[part="additional-content-panel"]')
+        if (!panel) return
+        const panelIsOpen = panel.open === true
+            || (typeof panel.open === 'undefined' && this.#additionalContentOpen)
+        const nextOpen = !panelIsOpen
+        this.#additionalContentOpen = nextOpen
+        if ('open' in panel || typeof panel.open === 'boolean') panel.open = nextOpen
+        this.#updateAdditionalContentPresentation()
+        this.#refreshLayoutMetrics()
     }
 
     /**
@@ -567,7 +641,11 @@ export class LGS1920Timeline extends HTMLElement {
      * @param {Event} event - Native pointing event.
      */
     #stopInputPropagation = event => {
-        if (this.#isCustomMenuEvent(event)) return
+        if (event.type === 'click' && this.#isAdditionalContentToggleEvent(event)) {
+            this.#toggleAdditionalContent(event)
+            return
+        }
+        if (this.#isApplicationSlotEvent(event)) return
         if (HOST_DRAG_START_EVENT_TYPES.includes(event.type)
             && this.#isSplitPanelDividerEvent(event)) {
             event.stopImmediatePropagation()
@@ -821,6 +899,8 @@ export class LGS1920Timeline extends HTMLElement {
     disconnectedCallback() {
         this.#cancelBuildingCompletion()
         this.#removeInputPropagationBlockers()
+        this.#additionalContentToggle?.removeEventListener('click', this.#toggleAdditionalContent)
+        this.#additionalContentToggle = null
         window.removeEventListener('keydown', this.#handleWindowKeyDown, true)
         window.removeEventListener('pointerdown', this.#handleTrackLabelOutsidePointerDown, true)
         this.#resizeObserver?.disconnect()
@@ -1538,6 +1618,7 @@ export class LGS1920Timeline extends HTMLElement {
             structure,
             ...(initialOverlay ? [initialOverlay] : []),
         )
+        this.#updateAdditionalContentPresentation()
         this.#applyLegendWidth(this.#root.querySelector('[part="split-panel"]'), {
             minimum: legendMinimum,
             maximum: legendMaximum,
@@ -1705,6 +1786,45 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
+     * Create the generic expandable panel for application-provided content.
+     *
+     * @returns {HTMLElement|null} Additional-content panel, or null when empty.
+     */
+    #additionalContent = () => {
+        const hasContent = [...this.children].some(element => element.slot === 'additional-content')
+        if (!hasContent) return null
+
+        const container = createElement('div', 'lgs1920-wa-timeline__additional-content', {
+            part: 'additional-content',
+        })
+        const labelContent = this.#globalSlotContent('additional-content-label', document.createTextNode('Additional content'))
+        const labelText = labelContent.map(node => node.textContent ?? '').join('').trim() || 'Additional content'
+        const drawer = createElement('wa-drawer', 'lgs1920-wa-timeline__additional-content-panel', {
+            'aria-label': labelText,
+            'data-testid': 'lgs1920-timeline-additional-content-drawer',
+            'light-dismiss': true,
+            open: this.#additionalContentOpen,
+            part: 'additional-content-panel',
+            placement: 'top',
+            'without-header': true,
+        })
+        const drawerLabel = createElement('span', '', {slot: 'label'})
+        labelContent.forEach(node => {
+            if (node.nodeType === Node.ELEMENT_NODE) node.removeAttribute('slot')
+            drawerLabel.append(node)
+        })
+        drawer.append(
+            drawerLabel,
+            createElement('slot', 'lgs1920-wa-timeline__additional-content-slot', {name: 'additional-content'}),
+        )
+        drawer.addEventListener('wa-show', this.#handleAdditionalContentShow)
+        drawer.addEventListener('wa-hide', this.#handleAdditionalContentHide)
+        drawer.id = this.#additionalContentPanelId
+        container.append(drawer)
+        return container
+    }
+
+    /**
      * Create the component structure for one render pass.
      *
      * @param {number} scaleCount - Number of major ruler units.
@@ -1720,7 +1840,9 @@ export class LGS1920Timeline extends HTMLElement {
             appearance: 'plain',
         })
         if (this.#building) section.setAttribute('data-building', '')
-        section.append(createElement('slot', 'lgs1920-wa-timeline__additional-content-slot', {name: 'additional-content'}), this.#slotRegistry())
+        const additionalContent = this.#additionalContent()
+        if (additionalContent) section.append(additionalContent)
+        section.append(this.#slotRegistry())
 
         const top = createElement('div', 'lgs1920-wa-timeline__top', {part: 'top'})
         const header = createElement('header', 'lgs1920-wa-timeline__header', {part: 'header'})
@@ -1730,16 +1852,19 @@ export class LGS1920Timeline extends HTMLElement {
             createElement('slot', '', {name: 'timeline-actions'}),
             createElement('slot', '', {name: 'header-actions'}),
         )
-        headerStart.append(this.#timelineTools(), createElement('slot', '', {name: 'header'}), headerActions)
+        headerStart.append(this.#timelineTools(), createElement('slot', '', {name: 'header'}))
+        const headerEnd = createElement('span', 'lgs1920-wa-timeline__header-end', {part: 'header-end'})
+        const playbackControls = this.#playbackControls()
+        if (playbackControls) headerEnd.append(playbackControls)
+        headerEnd.append(headerActions)
         header.append(
             headerStart,
             createElement('slot', 'lgs1920-wa-timeline__custom-menu', {
                 name: 'custom-menu',
                 part: 'custom-menu',
             }),
+            headerEnd,
         )
-        const playbackControls = this.#playbackControls()
-        if (playbackControls) header.append(playbackControls)
         top.append(header)
 
         const playback = createElement('div', 'lgs1920-wa-timeline__playback-controls', {part: 'playback-controls', 'aria-label': 'Timeline playback controls'})

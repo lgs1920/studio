@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-09
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,6 +20,7 @@ import {afterEach, describe, expect, it, vi} from 'vitest'
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/button/button.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/card/card.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/color-picker/color-picker.js', () => ({}))
+vi.mock('@web.awesome.me/webawesome-pro/dist/components/drawer/drawer.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/icon/icon.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/input/input.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/popup/popup.js', () => ({}))
@@ -214,6 +215,9 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.shadowRoot.querySelector('slot[name="header-actions"]').assignedElements()).toEqual([headerAction])
         expect(timeline.shadowRoot.querySelector('slot[name="timeline-actions"]').assignedElements()).toEqual([timelineAction])
         expect(timeline.shadowRoot.querySelector('slot[name="custom-menu"]').assignedElements()).toEqual([customMenu])
+        const headerEnd = timeline.shadowRoot.querySelector('.lgs1920-wa-timeline__header-end')
+        expect(headerEnd.querySelector('slot[name="header-actions"]')).not.toBeNull()
+        expect(headerEnd.querySelector('.lgs1920-wa-timeline__transport')).not.toBeNull()
         const customMenuClick = vi.fn()
         customMenu.addEventListener('click', customMenuClick)
         customMenu.dispatchEvent(new MouseEvent('click', {bubbles: true, composed: true}))
@@ -250,6 +254,62 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.shadowRoot.querySelectorAll('[data-scroll-view="surface"] ~ [data-scrollbar-track]')).toHaveLength(2)
         expect(timeline.shadowRoot.querySelectorAll('[data-scrollbar-shell="legend"] [data-scrollbar-track]')).toHaveLength(1)
         expect(timeline.shadowRoot.querySelector('.lgs1920-wa-timeline__legend-rows').style.transform).toBe('')
+    })
+
+    it('renders and toggles the generic additional-content drawer', () => {
+        const timeline = new LGS1920Timeline()
+        const label = document.createElement('span')
+        label.slot = 'additional-content-label'
+        label.textContent = 'Video settings'
+        const toggle = document.createElement('button')
+        toggle.type = 'button'
+        toggle.slot = 'custom-menu'
+        toggle.dataset.additionalContentToggle = ''
+        toggle.textContent = 'Video settings'
+        const content = document.createElement('div')
+        content.slot = 'additional-content'
+        const contentButton = document.createElement('button')
+        const contentButtonClick = vi.fn()
+        contentButton.type = 'button'
+        contentButton.textContent = 'Settings content'
+        contentButton.addEventListener('click', contentButtonClick)
+        content.append(contentButton)
+        timeline.append(label, toggle, content)
+        configureTimeline(timeline)
+        document.body.append(timeline)
+
+        const drawer = timeline.shadowRoot.querySelector('[part="additional-content-panel"]')
+        const contentSlot = drawer.querySelector('slot[name="additional-content"]')
+
+        expect(toggle).not.toBeNull()
+        expect(toggle.textContent).toContain('Video settings')
+        expect(toggle.getAttribute('aria-expanded')).toBe('false')
+        expect(drawer.tagName).toBe('WA-DRAWER')
+        expect(drawer.getAttribute('aria-label')).toBe('Video settings')
+        expect(drawer.hasAttribute('without-header')).toBe(true)
+        expect(drawer.hasAttribute('open')).toBe(false)
+        expect(contentSlot.assignedElements()).toEqual([content])
+
+        contentButton.dispatchEvent(new MouseEvent('click', {bubbles: true, composed: true}))
+        expect(contentButtonClick).toHaveBeenCalledTimes(1)
+
+        toggle.click()
+
+        expect(toggle.getAttribute('aria-expanded')).toBe('true')
+        expect(drawer.hasAttribute('open')).toBe(true)
+
+        timeline.currentTimeMillis = 1_000
+        expect(timeline.shadowRoot.querySelector('[part="additional-content-panel"]').hasAttribute('open')).toBe(true)
+
+        toggle.click()
+
+        expect(toggle.getAttribute('aria-expanded')).toBe('false')
+        expect(drawer.hasAttribute('open')).toBe(false)
+
+        toggle.click()
+
+        expect(toggle.getAttribute('aria-expanded')).toBe('true')
+        expect(drawer.hasAttribute('open')).toBe(true)
     })
 
     it('synchronizes the title and track vertical scroll views in both directions', () => {
@@ -367,6 +427,7 @@ describe('lgs1920-timeline Web Component', () => {
         const tools = timeline.shadowRoot.querySelector('[part="timeline-tools"]')
         const header = timeline.shadowRoot.querySelector('[part="header"]')
         const headerStart = timeline.shadowRoot.querySelector('[part="header-start"]')
+        const headerEnd = timeline.shadowRoot.querySelector('[part="header-end"]')
         const customMenu = timeline.shadowRoot.querySelector('[part="custom-menu"]')
         const transport = timeline.shadowRoot.querySelector('[part="transport"]')
         const horizontal = tools.querySelector('[data-testid="lgs1920-wa-tools-horizontal-fit"]')
@@ -376,8 +437,8 @@ describe('lgs1920-timeline Web Component', () => {
         expect(tools.parentElement).toBe(headerStart)
         expect(headerStart.contains(tools)).toBe(true)
         expect(customMenu.parentElement).toBe(header)
-        expect(transport.parentElement).toBe(header)
-        expect([...header.children]).toEqual([headerStart, customMenu, transport])
+        expect(transport.parentElement).toBe(headerEnd)
+        expect([...header.children]).toEqual([headerStart, customMenu, headerEnd])
         expect(tools.querySelectorAll('.lgs1920-wa-timeline__timeline-tool')).toHaveLength(2)
         expect(tooltips).toHaveLength(2)
         expect(horizontal.getAttribute('variant')).toBe('brand')
@@ -1344,7 +1405,7 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.tracks[0]).toMatchObject({id: 'track-1', label: 'Track 1', autoNumbered: true})
     })
 
-    it('keeps a locally created track when a parent replays the previous controlled snapshot', () => {
+    it('keeps a locally created track when a parent reapplies the previous controlled snapshot', () => {
         const timeline = new LGS1920Timeline()
         const controlledTracks = [{id: 'base', label: 'Base', clips: []}]
         configureTimeline(timeline, {tracks: controlledTracks})
@@ -3661,7 +3722,7 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.timeline.rangeEndMillis).toBe(16_000)
     })
 
-    it('keeps an extended duration when a stale controlled projection is replayed', () => {
+    it('keeps an extended duration when a stale controlled projection is reapplied', () => {
         const timeline = new LGS1920Timeline()
         const originalTracks = [{id: 'main', label: 'Main', clips: [{id: 'moving', start: 4, end: 8}]}]
         configureTimeline(timeline, {

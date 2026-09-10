@@ -32,7 +32,7 @@ The component has a compact controlled model:
 - `currentTimeMillis` controls the playhead.
 - `playing` controls the playback state.
 - `timeline.fps`, `timeline.frameCount`, and `timeline.currentFrameIndex`
-  describe the canonical Replay frame clock used by frame navigation.
+  describe the canonical frame clock used by frame navigation.
 - `clipOptions` supplies entries for the clip menu. Leave it null to expose the
   generic `Clip` option; set it to an empty array to show an empty menu.
 
@@ -117,10 +117,10 @@ clock integration.
 | Property | Type | Description |
 | --- | --- | --- |
 | `durationMillis` | `number` | Timeline duration in milliseconds. |
-| `fps` | `number` | Canonical Replay frame rate used by frame navigation. Defaults to `30`. |
-| `frameCount` | `number` | Canonical Replay frame count. Used to clamp previous/next frame requests. |
-| `frameIntervalMillis` | `number` | Canonical interval between Replay frames. Defaults to `1000 / fps`. |
-| `currentFrameIndex` | `number` | Currently published absolute Replay frame index. |
+| `fps` | `number` | Canonical frame rate used by frame navigation. Defaults to `30`. |
+| `frameCount` | `number` | Canonical frame count. Used to clamp previous/next frame requests. |
+| `frameIntervalMillis` | `number` | Canonical interval between frames. Defaults to `1000 / fps`. |
+| `currentFrameIndex` | `number` | Currently published absolute frame index. |
 | `rangeStartMillis` | `number` | Video range start in milliseconds. Defaults to `0`. |
 | `rangeEndMillis` | `number` | Video range end in milliseconds. Defaults to `durationMillis`. |
 | `visible` | `boolean` | Controls timeline visibility. Defaults to `true`. |
@@ -287,10 +287,11 @@ targeted slot takes the form `{slot}-{id}` and overrides the global slot.
 
 | Slot | Description |
 | --- | --- |
-| `additional-content` | Content placed inside the component before the header. |
+| `additional-content` | Application content displayed in an expandable `wa-drawer` above the header. |
+| `additional-content-label` | Accessible label associated with the additional-content drawer. |
 | `header` | Header content displayed in the left header area. |
 | `custom-menu` | Application-owned menu displayed in the center of the header. |
-| `header-actions` | General panel actions such as close, settings, or help. |
+| `header-actions` | Application actions such as settings, help, or host controls. |
 | `timeline-actions` | Application actions such as recording or exporting video. |
 | `playback-start` | Content before the current time. |
 | `playback-current` | Current-time label. |
@@ -306,18 +307,24 @@ targeted slot takes the form `{slot}-{id}` and overrides the global slot.
 
 ```html
 <lgs1920-timeline>
+    <span slot="additional-content-label">Timeline settings</span>
     <div slot="additional-content">
         <wa-badge variant="success">Ready</wa-badge>
     </div>
     <h2 slot="header">Sequence</h2>
     <span slot="overlay-text">Preparing timeline...</span>
-    <wa-button slot="custom-menu" variant="brand" appearance="plain">Custom menu</wa-button>
+    <wa-button slot="custom-menu" variant="brand" appearance="plain" data-additional-content-toggle>Video settings</wa-button>
     <span slot="playback-separator"> of </span>
-    <wa-button slot="header-actions" appearance="plain">Close</wa-button>
+    <wa-button slot="header-actions" appearance="plain">Settings</wa-button>
     <wa-button slot="timeline-actions" variant="brand">Record video</wa-button>
     <wa-button slot="timeline-toolbar" appearance="plain">Markers</wa-button>
 </lgs1920-timeline>
 ```
+
+The additional-content drawer has no built-in close button. Add an application
+owned control to `custom-menu` with the `data-additional-content-toggle`
+attribute to open and close it from the timeline header. The timeline keeps
+that control's `aria-expanded` and `aria-controls` attributes synchronized.
 
 The custom element is its own layout container. When placed in a Web Awesome
 drawer or another host panel, size the custom element from the outside:
@@ -810,7 +817,8 @@ lgs1920-timeline::part(clip) {
 | `--lgs-timeline-popup-border-color` | Popup border color. |
 | `--lgs-timeline-popup-shadow` | Popup shadow. |
 
-Useful CSS parts include `timeline`, `building-overlay`,
+Useful CSS parts include `timeline`, `additional-content`,
+`additional-content-panel`, `building-overlay`,
 `building-overlay-text`, `top`, `header`, `header-start`,
 `custom-menu`, `controls`, `header-actions`, `playback-controls`,
 `layout`, `legend`, `legend-viewport`, `legend-rows`,

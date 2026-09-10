@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-31
- * Last modified: 2026-09-09
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -65,6 +65,7 @@ export const GLOBAL_SLOTS = [
     'clip-option-label',
     'track-option-icon',
     'track-option-label',
+    'additional-content-label',
 ]
 
 /**
