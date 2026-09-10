@@ -1867,3 +1867,32 @@
 ## 2026-09-10 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/3906918d0f46cb8a3f5f0e0c07ffdf657cf3a544)
 
 - Recorded automatically from Git history.
+
+## 2026-09-10 — [`docs: define commit granularity rule`](https://github.com/lgs1920/studio/commit/08191fdcc0b05a8bd0ab671393700153245b4f1b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`fix(ui): anchor welcome initialization popup`](https://github.com/lgs1920/studio/commit/7a2b2e464b2e61447693ffb8d939100747a5315b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`fix(ui): restore detached widget card actions`](https://github.com/lgs1920/studio/commit/5a65387b244b96c5591c40fd5c97beae6e8f8537)
+
+- Resolve detached widget titles from the catalog definition and preserve capability checks when runtime context menu data is incomplete. Keep the PiP card vertical and expose its header actions consistently, with regression coverage for the configured title, orientation, and actions.
+
+## 2026-09-10 — [`fix(ui): bootstrap detached widget windows`](https://github.com/lgs1920/studio/commit/7000b12d45bf15118000adcbc2b0d56317b95a35)
+
+- Load the Web Awesome and timeline custom elements in the external document so PiP cards, icons, and Replay Timeline render in their own window. Align detached widget props with the drawer host and use concise Undock and Attach actions.
+
+## 2026-09-10 — [`fix(ui): render detached timeline content`](https://github.com/lgs1920/studio/commit/26333fe6960145255d7d7da0344410e2813bf53f)
+
+- Keep detached Replay Timeline content visible while its external document settles, instead of leaving the construction overlay over the entire PiP surface. Restore the shared Web Awesome icon usage and cover the detached rendering mode with regression tests.
+
+## 2026-09-10 — [`fix(ui): rehydrate detached replay timeline`](https://github.com/lgs1920/studio/commit/c89e1af9c882238c8da0cc8e8d77122b402333b9)
+
+- Wait for the external document custom-element registry before assigning the controlled Replay timeline state. React can mount the PiP portal before lgs1920-timeline is upgraded, which discarded the initial timeline and track properties during custom-element construction.
+- Keep the construction overlay enabled for detached previews and apply the initial playback state after the timeline structure has been installed.
+
+## 2026-09-10 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/845a076904b883a190acbb7963dfccfab89a7d37)
+
+- Recorded automatically from Git history.
