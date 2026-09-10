@@ -140,6 +140,32 @@ const hasPublishedReplayFrame = replay => replay?.dynamicFrameState != null
     || replay?.resolvedFrameState != null
 
 /**
+ * Wait until a timeline element created in an external document has upgraded.
+ *
+ * React renders the PiP portal before the external window bootstrap module can
+ * register the custom element. The element therefore needs one registry and
+ * one animation frame from its owning document before controlled properties
+ * are assigned.
+ *
+ * @param {HTMLElement} element - Timeline host to await.
+ * @returns {Promise<void>} Promise resolved after the element is ready.
+ */
+const waitForTimelineElementReady = async element => {
+    const view = element?.ownerDocument?.defaultView
+    const registry = view?.customElements
+    if (typeof registry?.whenDefined === 'function') {
+        await registry.whenDefined('lgs1920-timeline')
+    }
+    await new Promise(resolve => {
+        if (typeof view?.requestAnimationFrame === 'function') {
+            view.requestAnimationFrame(resolve)
+            return
+        }
+        resolve()
+    })
+}
+
+/**
  * Resolve a widget definition from the loaded settings or registry.
  *
  * @param {string} type - Widget base type.
@@ -294,7 +320,7 @@ const toDisplayTracks = rows => rows.map(row => ({
  *
  * @param {Object} props - Preview properties.
  * @param {boolean} [props.keyboardZoomActive=false] - Enables selected-widget keyboard zoom.
- * @param {boolean} [props.detached=false] - Disables the blocking construction overlay in an external window.
+ * @param {boolean} [props.detached=false] - Waits for the external custom-element registry before applying state.
  * @returns {JSX.Element|null} Preview surface or null outside linked preparation.
  */
 export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, detached = false}, ref) => {
@@ -357,7 +383,7 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, de
         resizeExtendsDuration: true,
         durationPolicy: 'extend',
         keyboardZoomActive,
-        showBuildingOverlay: !detached,
+        showBuildingOverlay: true,
         swatches: REPLAY_TIMELINE_COLOR_SWATCHES,
         hostInteraction: 'selectable',
         hostNoDragClass: 'lgs-widget-no-drag',
@@ -379,40 +405,60 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, de
     }), [])
 
     useEffect(() => {
-        const element = _timeline.current
         const debugStage = getReplayTimelineDebugStage()
-        if (!linkedPreparation || !element || !['surface', 'track', 'clip', 'data', 'full'].includes(debugStage)) {
-            return
+        if (!linkedPreparation || !['surface', 'track', 'clip', 'data', 'full'].includes(debugStage)) return undefined
+        let cancelled = false
+
+        /**
+         * Apply the controlled projection after the host custom element is ready.
+         *
+         * @returns {Promise<void>} Promise resolved after state application.
+         */
+        const applyControlledState = async () => {
+            const initialElement = _timeline.current
+            if (!initialElement) return
+            if (detached && !initialElement.hasAttribute('data-ready')) {
+                await waitForTimelineElementReady(initialElement)
+            }
+            if (cancelled) return
+            const element = _timeline.current
+            if (!element || !element.isConnected) return
+
+            if (['surface', 'track', 'clip', 'data'].includes(debugStage)) {
+                element.timeline = {...timeline, showBuildingOverlay: true}
+                element.tracks = debugStage === 'data'
+                    ? tracks
+                    : debugStage === 'surface'
+                        ? []
+                        : [{
+                            id:       'debug-track',
+                            label:    'Debug track',
+                            editable: true,
+                            clips:    debugStage === 'clip'
+                                ? [{id: 'debug-clip', kind: 'video', label: 'Debug clip', start: 0, end: 2}]
+                                : [],
+                        }]
+                element.currentTimeMillis = 0
+                return
+            }
+
+            const replayStore = lgs.stores.replay
+            const localTimeMillis = element.currentTimeMillis
+            element.timeline = timeline
+            element.tracks = tracks
+            element.playing = replayStore.playing === true
+            if (hasPublishedReplayFrame(replayStore)) {
+                element.currentTimeMillis = resolveCurrentTimeMillis(replayStore, projection)
+            } else {
+                element.currentTimeMillis = localTimeMillis
+            }
         }
 
-        if (['surface', 'track', 'clip', 'data'].includes(debugStage)) {
-            element.timeline = {...timeline, showBuildingOverlay: false}
-            element.tracks = debugStage === 'data'
-                ? tracks
-                : debugStage === 'surface'
-                    ? []
-                    : [{
-                        id:       'debug-track',
-                        label:    'Debug track',
-                        editable: true,
-                        clips:    debugStage === 'clip'
-                            ? [{id: 'debug-clip', kind: 'video', label: 'Debug clip', start: 0, end: 2}]
-                            : [],
-                    }]
-            element.currentTimeMillis = 0
-            return
+        void applyControlledState()
+        return () => {
+            cancelled = true
         }
-
-        const replayStore = lgs.stores.replay
-        const localTimeMillis = element.currentTimeMillis
-        element.timeline = timeline
-        element.tracks = tracks
-        if (hasPublishedReplayFrame(replayStore)) {
-            element.currentTimeMillis = resolveCurrentTimeMillis(replayStore, projection)
-        } else {
-            element.currentTimeMillis = localTimeMillis
-        }
-    }, [linkedPreparation, projection, timeline, tracks])
+    }, [detached, linkedPreparation, projection, timeline, tracks])
 
     useEffect(() => {
         const element = _timeline.current
