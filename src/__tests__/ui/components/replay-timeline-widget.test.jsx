@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {cleanup, render, screen, waitFor} from '@testing-library/react'
+import {cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {proxyMap} from 'valtio/utils'
 
@@ -30,6 +30,10 @@ const widgetMocks = vi.hoisted(() => ({
     },
 }))
 
+const cleanupMocks = vi.hoisted(() => ({
+    cancelVideoEditing: vi.fn(),
+}))
+
 vi.mock('@Components/MainUI/widgets/Widget', () => ({
     Widget: ({children, childRef, config}) => {
         widgetMocks.config = config
@@ -41,9 +45,21 @@ vi.mock('@Components/MainUI/widgets/Widget', () => ({
 vi.mock('@Components/MainUI/video/ReplayTimelinePreview', () => ({
     ReplayTimelinePreview: props => {
         widgetMocks.previewProps = props
-        return <div className="replay-timeline-preview" data-testid="replay-timeline-preview"/>
+        return (
+            <div className="replay-timeline-preview" data-testid="replay-timeline-preview">
+                {props.headerActions}
+            </div>
+        )
     },
 }))
+
+vi.mock('@Components/MainUI/widgets/WidgetWindowActionButton', () => ({
+    WidgetWindowActionButton: ({icon, label, onClick}) => (
+        <button type="button" data-icon={icon} aria-label={label} onClick={onClick}>{label}</button>
+    ),
+}))
+
+vi.mock('@Components/MainUI/video/videoEditingCleanup', () => cleanupMocks)
 
 import {ReplayTimelineWidget} from '@Components/MainUI/widgets/list/ReplayTimelineWidget'
 import {ReplayTimelineContent} from '@Components/MainUI/widgets/list/ReplayTimelineContent'
@@ -68,6 +84,10 @@ describe('ReplayTimelineWidget dimensions', () => {
                     saveWidgetPosition: vi.fn(),
                     setConfig:      vi.fn(),
                     invalidateRuntimeById: vi.fn(),
+                },
+                widgetWindowManager: {
+                    canDetachWidget: vi.fn(() => true),
+                    detachWidget:    vi.fn(async () => true),
                 },
                 widgetCache: {
                     unmount: vi.fn(),
@@ -161,6 +181,9 @@ describe('ReplayTimelineWidget dimensions', () => {
         expect(document.querySelector('.lgs-detached-widget-host')).toBeDefined()
         expect(screen.getByTestId('replay-timeline-preview')).toBeDefined()
         expect(widgetMocks.previewProps.detached).toBe(true)
+        expect(screen.getByRole('button', {name: 'Reattach to widget'})).toBeTruthy()
+        expect(screen.getByRole('button', {name: 'Close timeline'})).toBeTruthy()
+        expect(screen.queryByRole('button', {name: 'Show widget frame'})).toBeNull()
     })
 
     it('activates timeline keyboard zoom while the widget is selected', async () => {
@@ -168,5 +191,26 @@ describe('ReplayTimelineWidget dimensions', () => {
         render(<ReplayTimelineWidget id="replay-timeline-widget"/>)
 
         await waitFor(() => expect(widgetMocks.previewProps.keyboardZoomActive).toBe(true))
+    })
+
+    it('injects host actions and selects the widget frame from the timeline header', () => {
+        widgetMocks.runtimeConfig.contextMenu = {canDockable: true, canDetach: true}
+        render(<ReplayTimelineWidget id="replay-timeline-widget"/>)
+
+        expect(screen.getByRole('button', {name: 'Show widget frame'})).toBeTruthy()
+        expect(screen.getByRole('button', {name: 'Open in Picture-in-Picture'})).toBeTruthy()
+        expect(screen.getByRole('button', {name: 'Open in drawer'})).toBeTruthy()
+        expect(screen.getByRole('button', {name: 'Close timeline'})).toBeTruthy()
+
+        fireEvent.click(screen.getByRole('button', {name: 'Open in Picture-in-Picture'}))
+        expect(__.ui.widgetWindowManager.detachWidget).toHaveBeenCalledWith('replay-timeline-widget')
+        fireEvent.click(screen.getByRole('button', {name: 'Open in drawer'}))
+
+        fireEvent.click(screen.getByRole('button', {name: 'Show widget frame'}))
+        fireEvent.click(screen.getByRole('button', {name: 'Close timeline'}))
+
+        expect(lgs.stores.ui.widget.current.id).toBe('replay-timeline-widget')
+        expect(lgs.stores.ui.widget.current.keyboardUpdate).toBe(1)
+        expect(cleanupMocks.cancelVideoEditing).toHaveBeenCalledOnce()
     })
 })

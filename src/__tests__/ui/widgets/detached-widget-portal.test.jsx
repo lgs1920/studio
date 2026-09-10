@@ -15,7 +15,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {cleanup, fireEvent, render, screen} from '@testing-library/react'
+import {cleanup, render, screen} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {proxy} from 'valtio'
 
@@ -80,8 +80,6 @@ describe('DetachedWidgetPortal', () => {
                         container,
                         mode: portalMocks.mode,
                     })),
-                    reattachWidget: vi.fn(),
-                    attachWidgetToDrawer: vi.fn(),
                 },
             },
         }
@@ -94,35 +92,24 @@ describe('DetachedWidgetPortal', () => {
         globalThis.lgs = undefined
     })
 
-    it('renders the card actions in Document Picture-in-Picture', () => {
+    it('leaves the detached card header available to the hosted timeline', () => {
         portalMocks.mode = 'pip'
 
         render(<DetachedWidgetPortal/>)
 
         expect(screen.getByTestId('detached-widget')).toBeTruthy()
         expect(screen.getByTestId('detached-card').getAttribute('orientation')).toBe('vertical')
-        expect(screen.getByTestId('detached-card').getAttribute('data-with-header-actions')).toBe('true')
+        expect(screen.getByTestId('detached-card').getAttribute('data-with-header-actions')).toBe('false')
         expect(screen.getByText('Replay Timeline')).toBeTruthy()
-        expect(screen.getByRole('button', {name: 'Undock'})).toBeTruthy()
-        expect(screen.getByRole('button', {name: 'Attach'})).toBeTruthy()
-        expect(screen.getByTestId('icon-arrow-up-from-bracket')).toBeTruthy()
-        expect(screen.getByTestId('icon-arrow-down-to-bracket')).toBeTruthy()
-        expect(screen.getByTestId('icon-arrow-up-from-bracket').getAttribute('data-library')).toBeNull()
-        expect(screen.getByTestId('icon-arrow-down-to-bracket').getAttribute('data-library')).toBeNull()
-
-        fireEvent.click(screen.getByRole('button', {name: 'Undock'}))
-        fireEvent.click(screen.getByRole('button', {name: 'Attach'}))
-        expect(__.ui.widgetWindowManager.reattachWidget).toHaveBeenCalled()
-        expect(__.ui.widgetWindowManager.attachWidgetToDrawer).toHaveBeenCalled()
+        expect(screen.queryByRole('button')).toBeNull()
     })
 
-    it('renders the same card actions in a popup window', () => {
+    it('keeps the popup card free of duplicate actions', () => {
         portalMocks.mode = 'window'
 
         render(<DetachedWidgetPortal/>)
 
-        expect(screen.getByRole('button', {name: 'Undock'})).toBeTruthy()
-        expect(screen.getByRole('button', {name: 'Attach'})).toBeTruthy()
+        expect(screen.queryByRole('button')).toBeNull()
     })
 
     it('does not expose actions disabled by widget capabilities', () => {
@@ -141,7 +128,6 @@ describe('DetachedWidgetPortal', () => {
 
         render(<DetachedWidgetPortal/>)
 
-        expect(screen.queryByRole('button', {name: 'Undock'})).toBeNull()
-        expect(screen.queryByRole('button', {name: 'Attach'})).toBeNull()
+        expect(screen.queryByRole('button')).toBeNull()
     })
 })

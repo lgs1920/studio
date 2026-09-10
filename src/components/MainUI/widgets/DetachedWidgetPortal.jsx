@@ -15,9 +15,7 @@
  ******************************************************************************/
 
 import { DynamicWidget } from '@Components/MainUI/widgets/DynamicWidget'
-import { WidgetWindowActionButton } from '@Components/MainUI/widgets/WidgetWindowActionButton'
 import { JOURNEY_WIDGETS, SCENE_WIDGETS_BOARD } from '@Core/constants'
-import { canDockWidget, isDockableWidgetId } from '@Core/ui/widget-manager/WidgetDockManager'
 import { WaCard } from '@web.awesome.me/webawesome-pro/dist/react'
 import { createPortal } from 'react-dom'
 import { useSnapshot } from 'valtio'
@@ -45,24 +43,6 @@ export const DetachedWidgetPortal = () => {
     const widget = useSnapshot(lgs.stores.ui.widget)
     const widgetId = widget.undocked?.id ?? null
     const portalState = __.ui.widgetWindowManager?.getPortalState(widgetId)
-    /**
-     * Request reattachment from the external window.
-     *
-     * @returns {void}
-     */
-    const unlock = () => {
-        void __.ui.widgetWindowManager?.reattachWidget()
-    }
-
-    /**
-     * Attach the detached widget to the bottom drawer.
-     *
-     * @returns {void}
-     */
-    const attachToDrawer = () => {
-        void __.ui.widgetWindowManager?.attachWidgetToDrawer?.()
-    }
-
     const widgetEntry = widgetId ? widget.list?.get(widgetId) : null
     const widgetConfig = widgetId ? __.ui.widgetManager?.getWidgetConfig?.(widgetId) : null
     const widgetDefinition = resolveWidgetDefinition(widgetId, widgetConfig, widgetEntry)
@@ -71,19 +51,6 @@ export const DetachedWidgetPortal = () => {
                        ?? widgetDefinition?.name
                        ?? widgetId?.split('#')[0]
                        ?? 'Detached widget'
-    const canDetach = (widgetConfig?.contextMenu?.canDetach === true
-                       || widgetConfig?.canDetach === true
-                       || widgetDefinition?.canDetach === true)
-                      && widgetConfig?.mandatory !== true
-                      && widgetDefinition?.mandatory !== true
-    const canDock = Boolean(widgetId
-                            && (widgetConfig?.contextMenu?.canDockable === true
-                                || widgetConfig?.canDockable === true
-                                || widgetDefinition?.canDockable === true)
-                            && widgetConfig?.mandatory !== true
-                            && widgetDefinition?.mandatory !== true
-                            && isDockableWidgetId(widgetId)
-                            && canDockWidget(widgetId))
     const entry = widgetEntry ?? {
         group:        JOURNEY_WIDGETS,
         widgetsBoard: SCENE_WIDGETS_BOARD,
@@ -103,18 +70,8 @@ export const DetachedWidgetPortal = () => {
     }
 
     return createPortal(
-        <WaCard className="lgs-detached-window-card" appearance="filled" orientation="vertical"
-                withHeaderActions>
+        <WaCard className="lgs-detached-window-card" appearance="filled" orientation="vertical">
             <span slot="header">{widgetTitle}</span>
-            <div slot="header-actions" className="lgs-detached-window-actions" data-widget-capture="exclude">
-                {canDetach && (
-                    <WidgetWindowActionButton icon="arrow-up-from-bracket" label="Undock" onClick={unlock}/>
-                )}
-                {canDock && (
-                    <WidgetWindowActionButton icon="arrow-down-to-bracket" label="Attach"
-                                              onClick={attachToDrawer}/>
-                )}
-            </div>
             <div className="lgs-detached-window-content">
                 <DynamicWidget key={`detached-${widgetId}`} id={widgetId} props={detachedProps}/>
             </div>

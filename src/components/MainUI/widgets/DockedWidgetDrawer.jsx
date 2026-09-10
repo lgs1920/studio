@@ -19,10 +19,11 @@ import {DynamicWidget} from '@Components/MainUI/widgets/DynamicWidget'
 import {DockedWidgetResizeHandle} from '@Components/MainUI/widgets/DockedWidgetResizeHandle'
 import {DockedWidgetContainerContext} from '@Components/MainUI/widgets/WidgetDockContext'
 import {WidgetWindowActionButton} from '@Components/MainUI/widgets/WidgetWindowActionButton'
+import {cancelVideoEditing} from '@Components/MainUI/video/videoEditingCleanup'
 import {JOURNEY_WIDGETS, REPLAY_TIMELINE_WIDGET, SCENE_WIDGETS_BOARD} from '@Core/constants'
 import {
-    hydrateDockedWidget,
     getDockedWidgetDimensions,
+    hydrateDockedWidget,
     setDockSize,
     undockWidget,
 } from '@Core/ui/widget-manager/WidgetDockManager'
@@ -81,24 +82,17 @@ export const DockedWidgetDrawer = () => {
     }, [dockedId])
 
     /**
-     * Open the docked widget in the external PiP or popup window.
+     * Move the docked widget into Picture-in-Picture using its pre-dock size.
      *
      * @returns {void}
      */
     const handleDetach = useCallback(() => {
-        if (!dockedId) {
-            return
-        }
-
-        const windowManager = __.ui.widgetWindowManager
-        if (!windowManager?.canDetachWidget?.(dockedId)) {
-            return
-        }
-
+        if (!dockedId || !__.ui.widgetWindowManager?.canDetachWidget?.(dockedId)) return
         const dimensions = getDockedWidgetDimensions(dockedId)
-        undockWidget(dockedId)
-        void windowManager.detachWidget(dockedId, {dimensions, useConfigDimensions: true})
+        if (!undockWidget(dockedId)) return
+        void __.ui.widgetWindowManager.detachWidget(dockedId, {dimensions, useConfigDimensions: true})
     }, [dockedId])
+
     if (!dockedId || dockedId.split('#')[0] !== REPLAY_TIMELINE_WIDGET) {
         return null
     }
@@ -125,8 +119,11 @@ export const DockedWidgetDrawer = () => {
         >
             <div slot="label" className="widget-dock-bottom-drawer-title">{'Replay Timeline'}</div>
             <div slot="header-actions" className="widget-dock-bottom-drawer-actions">
-                <WidgetWindowActionButton icon="arrow-up-from-bracket" label="Undock" onClick={handleUndock}/>
-                <WidgetWindowActionButton icon="picture-in-picture" label="Attach" onClick={handleDetach}/>
+                <WidgetWindowActionButton icon="arrow-up-from-bracket" label="Reattach to widget" onClick={handleUndock}/>
+                {__.ui.widgetWindowManager?.canDetachWidget?.(dockedId) && (
+                    <WidgetWindowActionButton icon="picture-in-picture" label="Open in Picture-in-Picture" onClick={handleDetach}/>
+                )}
+                <WidgetWindowActionButton icon="xmark" label="Close timeline" onClick={cancelVideoEditing}/>
             </div>
             <div className="widget-dock-surface" ref={setSurface}>
                 {surface && (
