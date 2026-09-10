@@ -25,7 +25,7 @@ import {
 }                                                               from '@Assets/media/welcome-background-media'
 import { formatBuildInfo }                                    from '@Utils/BuildInfoUtils'
 import {
-    WaButton, WaFormatDate, WaIcon, WaProgressBar,
+    WaButton, WaFormatDate, WaIcon, WaPopup, WaProgressBar,
 }                                                               from '@web.awesome.me/webawesome-pro/dist/react'
 import { useCallback, useEffect, useRef, useState }            from 'react'
 
@@ -236,59 +236,70 @@ export const WelcomeHero = ({
         }
 
         return (
-            <div className="welcome-initialization" aria-label="Studio initialization progress" aria-live="polite">
-                <div className="welcome-initialization-header">
-                    <span>{readyToEnter ? 'Studio gameplay is ready, enjoy !' : 'Preparing studio'}</span>
-                    <span>{initializationPercentage}%</span>
-                </div>
-                <WaProgressBar
-                    className="welcome-initialization-progress"
-                    value={initializationPercentage}
-                    label={`Studio initialization: ${initializationPercentage}%`}
-                />
-                <div className="welcome-initialization-steps-frame">
-                    <div className="welcome-initialization-steps-viewport">
-                        <ol
-                            className="welcome-initialization-steps"
-                            style={{transform: initializationStepsTransform}}
-                        >
-                            {initializationSteps.map((step, index) => {
-                                const isComplete = index < activeInitializationStep
-                                const isActive = index === activeInitializationStep
-                                const status = isComplete ? 'Complete' : isActive ? 'In progress' : 'Waiting'
-
-                                return (
-                                    <li
-                                        className={`welcome-initialization-step${isComplete ? ' is-complete' : ''}${isActive ? ' is-active' : ''}`}
-                                        aria-current={isActive ? 'step' : undefined}
-                                        key={step.id}
-                                    >
-                                        <WaIcon
-                                            name={isComplete ? 'circle-check' : isActive ? 'gear' : 'circle'}
-                                            variant="regular"
-                                            animation={isActive ? 'spin' : ''}
-                                            aria-hidden="true"
-                                        />
-                                        <span className="welcome-initialization-step-label">{step.label}</span>
-                                        <span className="welcome-initialization-step-status">{status}</span>
-                                    </li>
-                                )
-                            })}
-                        </ol>
+            <WaPopup
+                className="welcome-initialization-popup"
+                active
+                anchor="welcome-enter-call-for-action"
+                placement="bottom-start"
+                distance={8}
+                flip
+                shift
+                sync="width"
+            >
+                <div className="welcome-initialization" aria-label="Studio initialization progress" aria-live="polite">
+                    <div className="welcome-initialization-header">
+                        <span>{readyToEnter ? 'Studio gameplay is ready, enjoy !' : 'Preparing studio'}</span>
+                        <span>{initializationPercentage}%</span>
                     </div>
-                    {initializationSteps.length > INITIALIZATION_VISIBLE_STEP_COUNT && (
-                        <div className="welcome-initialization-scrollbar" aria-hidden="true">
-                            <span
-                                className="welcome-initialization-scrollbar-thumb"
-                                style={{
-                                    height: `${initializationScrollbarThumbSize.toFixed(2)}%`,
-                                    top: `${initializationScrollbarThumbOffset.toFixed(2)}%`,
-                                }}
-                            />
+                    <WaProgressBar
+                        className="welcome-initialization-progress"
+                        value={initializationPercentage}
+                        label={`Studio initialization: ${initializationPercentage}%`}
+                    />
+                    <div className="welcome-initialization-steps-frame">
+                        <div className="welcome-initialization-steps-viewport">
+                            <ol
+                                className="welcome-initialization-steps"
+                                style={{transform: initializationStepsTransform}}
+                            >
+                                {initializationSteps.map((step, index) => {
+                                    const isComplete = index < activeInitializationStep
+                                    const isActive = index === activeInitializationStep
+                                    const status = isComplete ? 'Complete' : isActive ? 'In progress' : 'Waiting'
+
+                                    return (
+                                        <li
+                                            className={`welcome-initialization-step${isComplete ? ' is-complete' : ''}${isActive ? ' is-active' : ''}`}
+                                            aria-current={isActive ? 'step' : undefined}
+                                            key={step.id}
+                                        >
+                                            <WaIcon
+                                                name={isComplete ? 'circle-check' : isActive ? 'gear' : 'circle'}
+                                                variant="regular"
+                                                animation={isActive ? 'spin' : ''}
+                                                aria-hidden="true"
+                                            />
+                                            <span className="welcome-initialization-step-label">{step.label}</span>
+                                            <span className="welcome-initialization-step-status">{status}</span>
+                                        </li>
+                                    )
+                                })}
+                            </ol>
                         </div>
-                    )}
+                        {initializationSteps.length > INITIALIZATION_VISIBLE_STEP_COUNT && (
+                            <div className="welcome-initialization-scrollbar" aria-hidden="true">
+                                <span
+                                    className="welcome-initialization-scrollbar-thumb"
+                                    style={{
+                                        height: `${initializationScrollbarThumbSize.toFixed(2)}%`,
+                                        top: `${initializationScrollbarThumbOffset.toFixed(2)}%`,
+                                    }}
+                                />
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </div>
+            </WaPopup>
         )
     }
 
@@ -389,7 +400,7 @@ export const WelcomeHero = ({
                     </picture>
                     <SloganSvg className="welcome-slogan"/>
 
-                    <div className="welcome-enter-call-for-action">
+                    <div id="welcome-enter-call-for-action" className="welcome-enter-call-for-action">
                         <WaButton
                             className="welcome-site-button"
                             appearance="outlined"

@@ -35,6 +35,21 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
         : <button {...props}>{children}</button>,
     WaFormatDate: ({date, ...props}) => <time {...props}>{date}</time>,
     WaIcon: () => null,
+    WaPopup: ({children, active, anchor, placement, distance, flip, shift, sync, ...props}) => (
+        <div
+            data-testid="welcome-initialization-popup"
+            data-active={active}
+            data-anchor={anchor}
+            data-placement={placement}
+            data-distance={distance}
+            data-flip={flip}
+            data-shift={shift}
+            data-sync={sync}
+            {...props}
+        >
+            {children}
+        </div>
+    ),
     WaProgressBar: ({children, label, value, ...props}) => (
         <div role="progressbar" aria-label={label} aria-valuenow={value} {...props}>{children}</div>
     ),
@@ -137,6 +152,18 @@ describe('WelcomeHero', () => {
         expect(screen.getByRole('progressbar', {name: 'Studio initialization: 10%'})
             .getAttribute('aria-valuenow')).toBe('10')
         expect(screen.getByText('Preparing studio')).toBeTruthy()
+        expect(screen.getByTestId('welcome-initialization-popup')).toMatchObject({
+            dataset: {
+                active:    'true',
+                anchor:    'welcome-enter-call-for-action',
+                placement: 'bottom-start',
+                distance:  '8',
+                flip:      'true',
+                shift:     'true',
+                sync:      'width',
+            },
+        })
+        expect(document.querySelector('#welcome-enter-call-for-action')).toBeTruthy()
         expect(document.querySelectorAll('.welcome-initialization-step').length).toBe(7)
         expect(document.querySelector('.welcome-initialization-steps-frame')).toBeTruthy()
         expect(document.querySelector('.welcome-initialization-scrollbar')).toBeTruthy()
@@ -221,6 +248,7 @@ describe('WelcomeHero', () => {
             vi.advanceTimersByTime(1)
         })
         expect(screen.queryByText('Finalizing Studio launch')).toBeNull()
+        expect(screen.queryByTestId('welcome-initialization-popup')).toBeNull()
     })
 
     it('keeps the progress at 60 percent until Studio is ready', () => {
