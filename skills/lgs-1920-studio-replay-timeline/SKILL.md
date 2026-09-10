@@ -51,6 +51,13 @@ the future editable timeline.
   environment. Do not mutate unrelated application state, create a competing
   clock, or leak listeners, timers, DOM effects, capture effects, or persistence
   outside the explicit Timeline lifecycle.
+- Every file under `src/webcomponents/lgs1920-timeline/` must remain completely
+  domain-agnostic. It must not contain Replay-specific words, identifiers,
+  methods, classes, filenames, imports, comments, documentation, tests, or
+  behavior. Generic timeline mechanisms belong inside Timeline and must use
+  generic names. Replay projection, state, playback, and application
+  integration remain outside the Web Component, in the React or application
+  adapter.
 - Keep `onClipDoubleClick` exclusively as a React wrapper callback. The Web
   Component exposes clip double-click behavior through its
   `lgs1920-timeline-*` DOM events and must not define an equivalent callback
