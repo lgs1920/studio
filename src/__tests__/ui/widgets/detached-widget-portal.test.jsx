@@ -35,7 +35,7 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
         </section>
     ),
     WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
-    WaIcon: ({name}) => <span data-testid={`icon-${name}`}/>,
+    WaIcon: ({name, library}) => <span data-testid={`icon-${name}`} data-library={library}/>,
 }))
 
 import {DetachedWidgetPortal} from '@Components/MainUI/widgets/DetachedWidgetPortal'
@@ -103,13 +103,15 @@ describe('DetachedWidgetPortal', () => {
         expect(screen.getByTestId('detached-card').getAttribute('orientation')).toBe('vertical')
         expect(screen.getByTestId('detached-card').getAttribute('data-with-header-actions')).toBe('true')
         expect(screen.getByText('Replay Timeline')).toBeTruthy()
-        expect(screen.getByRole('button', {name: 'Unlock widget'})).toBeTruthy()
-        expect(screen.getByRole('button', {name: 'Attach widget to drawer'})).toBeTruthy()
-        expect(screen.getByTestId('icon-lock-open')).toBeTruthy()
+        expect(screen.getByRole('button', {name: 'Undock'})).toBeTruthy()
+        expect(screen.getByRole('button', {name: 'Attach'})).toBeTruthy()
+        expect(screen.getByTestId('icon-arrow-up-from-bracket')).toBeTruthy()
         expect(screen.getByTestId('icon-arrow-down-to-bracket')).toBeTruthy()
+        expect(screen.getByTestId('icon-arrow-up-from-bracket').getAttribute('data-library')).toBe('system')
+        expect(screen.getByTestId('icon-arrow-down-to-bracket').getAttribute('data-library')).toBe('system')
 
-        fireEvent.click(screen.getByRole('button', {name: 'Unlock widget'}))
-        fireEvent.click(screen.getByRole('button', {name: 'Attach widget to drawer'}))
+        fireEvent.click(screen.getByRole('button', {name: 'Undock'}))
+        fireEvent.click(screen.getByRole('button', {name: 'Attach'}))
         expect(__.ui.widgetWindowManager.reattachWidget).toHaveBeenCalled()
         expect(__.ui.widgetWindowManager.attachWidgetToDrawer).toHaveBeenCalled()
     })
@@ -119,8 +121,8 @@ describe('DetachedWidgetPortal', () => {
 
         render(<DetachedWidgetPortal/>)
 
-        expect(screen.getByRole('button', {name: 'Unlock widget'})).toBeTruthy()
-        expect(screen.getByRole('button', {name: 'Attach widget to drawer'})).toBeTruthy()
+        expect(screen.getByRole('button', {name: 'Undock'})).toBeTruthy()
+        expect(screen.getByRole('button', {name: 'Attach'})).toBeTruthy()
     })
 
     it('does not expose actions disabled by widget capabilities', () => {
@@ -139,7 +141,7 @@ describe('DetachedWidgetPortal', () => {
 
         render(<DetachedWidgetPortal/>)
 
-        expect(screen.queryByRole('button', {name: 'Unlock widget'})).toBeNull()
-        expect(screen.queryByRole('button', {name: 'Attach widget to drawer'})).toBeNull()
+        expect(screen.queryByRole('button', {name: 'Undock'})).toBeNull()
+        expect(screen.queryByRole('button', {name: 'Attach'})).toBeNull()
     })
 })

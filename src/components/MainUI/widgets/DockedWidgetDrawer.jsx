@@ -125,8 +125,8 @@ export const DockedWidgetDrawer = () => {
         >
             <div slot="label" className="widget-dock-bottom-drawer-title">{'Replay Timeline'}</div>
             <div slot="header-actions" className="widget-dock-bottom-drawer-actions">
-                <WidgetWindowActionButton icon="arrow-up-from-bracket" label="Undock widget" onClick={handleUndock}/>
-                <WidgetWindowActionButton icon="picture-in-picture" label="Detach widget to PiP" onClick={handleDetach}/>
+                <WidgetWindowActionButton icon="arrow-up-from-bracket" label="Undock" onClick={handleUndock}/>
+                <WidgetWindowActionButton icon="picture-in-picture" label="Attach" onClick={handleDetach}/>
             </div>
             <div className="widget-dock-surface" ref={setSurface}>
                 {surface && (

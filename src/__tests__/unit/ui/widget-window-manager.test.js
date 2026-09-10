@@ -98,6 +98,8 @@ describe('WidgetWindowManager', () => {
         const container = externalWindow.document.querySelector(`[data-widget-window="${widgetId}"]`)
         expect(container).not.toBeNull()
         expect(container.className).toBe('lgs-detached-window-container')
+        expect(externalWindow.document.querySelector('script[type="module"]')?.src)
+            .toContain('/src/external-window-bootstrap.js')
         expect(window.open).toHaveBeenCalledWith(
             '',
             'lgs1920-detached-widget',

@@ -24,6 +24,9 @@ const DETACHED_WINDOW_MIN_HEIGHT = 160
 const DETACHED_WINDOW_MAX_WIDTH = 1920
 const DETACHED_WINDOW_MAX_HEIGHT = 1080
 const DETACHED_WINDOW_POLL_DELAY = 250
+const EXTERNAL_WINDOW_BOOTSTRAP_URL = import.meta.env.DEV
+    ? `${import.meta.env.BASE_URL}src/external-window-bootstrap.js`
+    : `${import.meta.env.BASE_URL}assets/js/external-window-bootstrap.js`
 const DETACHED_CONFIG_KEYS = [
     'attachTo',
     'centerRatio',
@@ -440,6 +443,11 @@ export class WidgetWindowManager {
         const base = externalDocument.createElement('base')
         base.href = document.baseURI
         externalDocument.head.appendChild(base)
+
+        const bootstrap = externalDocument.createElement('script')
+        bootstrap.type = 'module'
+        bootstrap.src = EXTERNAL_WINDOW_BOOTSTRAP_URL
+        externalDocument.head.appendChild(bootstrap)
 
         document.head.querySelectorAll('link[rel="stylesheet"], style').forEach(source => {
             externalDocument.head.appendChild(source.cloneNode(true))

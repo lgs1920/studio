@@ -16,7 +16,8 @@
 
 import { DynamicWidget } from '@Components/MainUI/widgets/DynamicWidget'
 import { WidgetWindowActionButton } from '@Components/MainUI/widgets/WidgetWindowActionButton'
-import { isDockableWidgetId, canDockWidget } from '@Core/ui/widget-manager/WidgetDockManager'
+import { JOURNEY_WIDGETS, SCENE_WIDGETS_BOARD } from '@Core/constants'
+import { canDockWidget, isDockableWidgetId } from '@Core/ui/widget-manager/WidgetDockManager'
 import { WaCard } from '@web.awesome.me/webawesome-pro/dist/react'
 import { createPortal } from 'react-dom'
 import { useSnapshot } from 'valtio'
@@ -83,11 +84,15 @@ export const DetachedWidgetPortal = () => {
                             && widgetDefinition?.mandatory !== true
                             && isDockableWidgetId(widgetId)
                             && canDockWidget(widgetId))
+    const entry = widgetEntry ?? {
+        group:        JOURNEY_WIDGETS,
+        widgetsBoard: SCENE_WIDGETS_BOARD,
+    }
     const detachedProps = {
-        ...widgetEntry,
-        group:        widgetEntry?.group ?? widgetConfig?.group,
-        widgetsBoard: widgetEntry?.widgetsBoard ?? widgetConfig?.widgetsBoard,
-        zIndex:       widgetEntry?.zIndex ?? widgetConfig?.zIndex,
+        ...entry,
+        group:        entry.group ?? widgetConfig?.group ?? JOURNEY_WIDGETS,
+        widgetsBoard: SCENE_WIDGETS_BOARD,
+        zIndex:       entry.zIndex ?? widgetConfig?.zIndex,
         detached:     true,
     }
 
@@ -103,15 +108,15 @@ export const DetachedWidgetPortal = () => {
             <span slot="header">{widgetTitle}</span>
             <div slot="header-actions" className="lgs-detached-window-actions" data-widget-capture="exclude">
                 {canDetach && (
-                    <WidgetWindowActionButton icon="lock-open" label="Unlock widget" onClick={unlock}/>
+                    <WidgetWindowActionButton icon="arrow-up-from-bracket" label="Undock" onClick={unlock}/>
                 )}
                 {canDock && (
-                    <WidgetWindowActionButton icon="arrow-down-to-bracket" label="Attach widget to drawer"
+                    <WidgetWindowActionButton icon="arrow-down-to-bracket" label="Attach"
                                               onClick={attachToDrawer}/>
                 )}
             </div>
             <div className="lgs-detached-window-content">
-                <DynamicWidget id={widgetId} props={detachedProps}/>
+                <DynamicWidget key={`detached-${widgetId}`} id={widgetId} props={detachedProps}/>
             </div>
         </WaCard>,
         portalState.container,

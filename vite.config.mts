@@ -269,9 +269,15 @@ export default defineConfig({
         chunkSizeWarningLimit: 500000,
         outDir: `./dist/${version}`,
         rollupOptions: {
+            input: {
+                index:                      path.resolve(PROJECT_ROOT, 'index.html'),
+                'external-window-bootstrap': path.resolve(PROJECT_ROOT, 'src/external-window-bootstrap.js'),
+            },
             output: {
                 chunkFileNames: 'assets/js/[name]-[hash].js',
-                entryFileNames: 'assets/js/[name]-[hash].js',
+                entryFileNames: chunk => chunk.name === 'external-window-bootstrap'
+                    ? 'assets/js/external-window-bootstrap.js'
+                    : 'assets/js/[name]-[hash].js',
                 assetFileNames: ({name}) => {
                     if (name?.endsWith('.css')) {
                         return 'assets/css/[name]-[hash][extname]'
