@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-19
- * Last modified: 2026-09-08
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -134,6 +134,20 @@ const buildWidgetCenterGuidelines = widgetElements => widgetElements.reduce((res
 }, {verticalGuidelines: [], horizontalGuidelines: []})
 
 export const WidgetPreviewContext = createContext(false)
+export const WidgetContentOnlyContext = createContext(false)
+
+/**
+ * Render widget content in the external-window host without scene controls.
+ *
+ * @param {Object} props - Widget host properties.
+ * @param {React.ReactNode} props.children - Widget visual content.
+ * @returns {JSX.Element} Detached widget host.
+ */
+const DetachedWidgetHost = ({children}) => (
+    <div className="lgs-detached-widget-host">
+        {children}
+    </div>
+)
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 
@@ -343,6 +357,25 @@ const createWidgetSnapshot = (sourceCanvas, canvasRect, widgetRect, previewerRec
 }
 
 /**
+ * Render only the widget content when the surrounding renderer requests it.
+ *
+ * @param {Object} props - Widget properties.
+ * @param {React.ReactNode} props.children - Widget visual content.
+ * @returns {JSX.Element|null} Widget host or content-only output.
+ */
+export const Widget = props => {
+    const renderContext = useContext(WidgetContentOnlyContext)
+    if (renderContext?.detached) {
+        return <DetachedWidgetHost>{props.children}</DetachedWidgetHost>
+    }
+    if (renderContext?.contentOnly || renderContext === true) {
+        return props.children ?? null
+    }
+
+    return <WidgetHost {...props}/>
+}
+
+/**
  * Draggable, resizable and scalable widget with full pointer interaction support.
  * Synchronized with Valtio store for reactive zIndex and state management.
  *
@@ -358,7 +391,7 @@ const createWidgetSnapshot = (sourceCanvas, canvasRect, widgetRect, previewerRec
  * @param {number} [props.selectionRequestKey=0]    - Changes request cropper selection
  * @returns {JSX.Element|null}
  */
-export const Widget = ({
+const WidgetHost = ({
     isVisible,
     className = '',
     moveableClassName = '',
@@ -426,10 +459,13 @@ export const Widget = ({
                        || Boolean(config.isCropper
                                   && typeof selectedId === 'string'
                                   && selectedId.split('#')[0] === widgetId?.split('#')[0])
+    const reattachSelection = widget.reattachSelection
+    const shouldRestoreSelection = reattachSelection?.id === widgetId
     const keyboardUpdate = widget.current?.keyboardUpdate ?? 0
     const widgetTypeId = widgetId?.split('#')[0] ?? widgetId
     const isReplayRecordingMonitor = widgetId === REPLAY_RECORDING_MONITOR_WIDGET_ID
-    const isTargetingBoard = Boolean(config.widgetsBoard && config.widgetsBoard !== SCENE_WIDGETS_BOARD)
+    const isDocked = config.docked === true
+    const isTargetingBoard = Boolean(!isDocked && config.widgetsBoard && config.widgetsBoard !== SCENE_WIDGETS_BOARD)
     const sceneContainer = useMemo(() => {
         return isTargetingBoard
                ? null
@@ -455,7 +491,7 @@ export const Widget = ({
     const effectiveLocked = canLock && locked
     const suppressLockedOverlay = widgetId === ORBIT_CAMERA_ADJUSTMENT_WIDGET
     const isCollapsedToolbar = effectiveCollapsed && config.type === LGS_TOOLBAR
-    const isOnMapWidget = !isTargetingBoard
+    const isOnMapWidget = !isTargetingBoard && !isDocked
     const showLockedOverlay = effectiveLocked && showLockedHint && !suppressLockedOverlay
     const liveOpacity = config.type === LGS_TOOLBAR
                         ? (effectiveCollapsed ? 1 : (toolbars.opacity ?? config.opacity ?? 1))
@@ -1133,7 +1169,8 @@ export const Widget = ({
         event?.stopPropagation?.()
         event?.nativeEvent?.stopImmediatePropagation?.()
         event?.stopImmediatePropagation?.()
-        if (interactionLocked && !isReplayRecordingMonitor) {
+        if ((config.docked === true || lgs.stores.ui.widget.undocked?.id === widgetId)
+            || (interactionLocked && !isReplayRecordingMonitor)) {
             return
         }
         const clientX = event.clientX ?? event.touches?.[0]?.clientX ?? 0
@@ -1142,7 +1179,7 @@ export const Widget = ({
         lgs.stores.ui.contextMenu.type = 'widget'
         lgs.stores.ui.contextMenu.targetId = widgetId
         lgs.stores.ui.contextMenu.position = {x: clientX, y: clientY}
-    }, [interactionLocked, isReplayRecordingMonitor, widgetId])
+    }, [config.docked, interactionLocked, isReplayRecordingMonitor, widgetId])
 
     const pointerInteractionsRef = usePointerInteractions({
                                                               onDoubleTap:           handleDoubleClick,
@@ -1507,7 +1544,7 @@ export const Widget = ({
             return
         }
 
-        const isTargetingBoard = config.widgetsBoard && config.widgetsBoard !== SCENE_WIDGETS_BOARD
+        const isTargetingBoard = !config.docked && config.widgetsBoard && config.widgetsBoard !== SCENE_WIDGETS_BOARD
         if (isTargetingBoard && !actualContainer) {
             return
         }
@@ -1738,6 +1775,35 @@ export const Widget = ({
     }, [isVisible, config, widgetId, actualContainer])
 
     useEffect(() => {
+        if (!isVisible || !shouldRestoreSelection) {
+            return undefined
+        }
+
+        const frame = requestAnimationFrame(() => {
+            if (lgs.stores.ui.widget.undocked?.id) {
+                return
+            }
+
+            const runtimeConfig = __.ui.widgetManager.getWidgetConfig(widgetId)
+            const rotation = Number(runtimeConfig?.rotate)
+            lgs.stores.ui.widget.current = {
+                ...(lgs.stores.ui.widget.current ?? {}),
+                id:     widgetId,
+                rotate: Number.isFinite(rotation) ? rotation : 0,
+            }
+            __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, true, true)
+
+            const currentRequest = lgs.stores.ui.widget.reattachSelection
+            if (currentRequest?.id === reattachSelection.id
+                && currentRequest.request === reattachSelection.request) {
+                lgs.stores.ui.widget.reattachSelection = {id: null, request: 0}
+            }
+        })
+
+        return () => cancelAnimationFrame(frame)
+    }, [isVisible, reattachSelection?.id, reattachSelection?.request, shouldRestoreSelection, widgetId])
+
+    useEffect(() => {
         if (!_initialized.current || !_widget.current) {
             return
         }
@@ -1792,6 +1858,7 @@ export const Widget = ({
                     'recording-locked': inputBlocked,
                     'lgs-widget-preview-only': previewOnly,
                     'lgs-widget-user-hidden': !isWidgetVisible,
+                    'lgs-widget-docked': isDocked,
                 })}
                 ref={(el) => {
                     _widget.current = el

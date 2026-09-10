@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2025-12-13
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,7 +26,7 @@ import { useSnapshot }   from 'valtio'
 export const SceneWidgetsRenderer = () => {
     const $widget = lgs.stores.ui.widget
     const $video = lgs.stores.ui.video
-    const {list} = useSnapshot($widget)
+    const {list, docked} = useSnapshot($widget)
     const video = useSnapshot($video)
 
     const isVideoSceneActive = video.editing || video.preRecording || video.recording || video.snapshot || video.finalizing
@@ -34,7 +34,8 @@ export const SceneWidgetsRenderer = () => {
     const sceneWidgets = useMemo(() => {
         return Array.from(list.entries()).filter(([, props]) => props?.widgetsBoard === SCENE_WIDGETS_BOARD)
             .filter(([id]) => id.split('#')[0] !== REPLAY_TIMELINE_WIDGET)
-    }, [list])
+            .filter(([id]) => id !== docked?.id)
+    }, [docked?.id, list])
 
     if (isVideoSceneActive) {
         return null

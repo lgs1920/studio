@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-08
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -46,6 +46,7 @@ vi.mock('@Components/MainUI/video/ReplayTimelinePreview', () => ({
 }))
 
 import {ReplayTimelineWidget} from '@Components/MainUI/widgets/list/ReplayTimelineWidget'
+import {ReplayTimelineContent} from '@Components/MainUI/widgets/list/ReplayTimelineContent'
 
 describe('ReplayTimelineWidget dimensions', () => {
     beforeEach(() => {
@@ -144,6 +145,21 @@ describe('ReplayTimelineWidget dimensions', () => {
         expect(__.ui.widgetManager.saveWidgetPosition).not.toHaveBeenCalled()
 
         unmount()
+    })
+
+    it('renders the timeline content without the movable widget host', () => {
+        render(<ReplayTimelineContent id="replay-timeline-widget"/>)
+
+        expect(screen.queryByTestId('replay-timeline-widget-host')).toBeNull()
+        expect(screen.getByTestId('replay-timeline-preview')).toBeDefined()
+    })
+
+    it('renders only the timeline content when detached', () => {
+        render(<ReplayTimelineWidget id="replay-timeline-widget" detached/>)
+
+        expect(screen.queryByTestId('replay-timeline-widget-host')).toBeNull()
+        expect(document.querySelector('.lgs-detached-widget-host')).toBeDefined()
+        expect(screen.getByTestId('replay-timeline-preview')).toBeDefined()
     })
 
     it('activates timeline keyboard zoom while the widget is selected', async () => {

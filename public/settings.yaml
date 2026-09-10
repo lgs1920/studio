@@ -370,6 +370,9 @@ ui:
       enabled: false
       size: 30
       snap: true
+    dock:
+      id: null
+      size: 320
 
   ## Profile
   profile:

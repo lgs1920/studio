@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-09
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -117,6 +117,80 @@ body {
     bottom: calc(-1 * var(--bottom));
     left: calc(-1 * var(--left));
     pointer-events: none;
+}
+
+/**
+ * Layout for content rendered in a Document Picture-in-Picture or popup window.
+ */
+.lgs-detached-window-container {
+    display: block;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.lgs-detached-window-content {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+}
+
+.lgs-detached-window-content > * {
+    width: 100%;
+    height: 100%;
+}
+
+.lgs-detached-window-card {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    --spacing: var(--lgs-gutter-s);
+}
+
+.lgs-detached-window-card::part(header) {
+    flex: 0 0 auto;
+}
+
+.lgs-detached-window-card::part(header-actions) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xxs);
+}
+
+.lgs-detached-window-card::part(body) {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.lgs-detached-widget-host,
+.lgs-replay-timeline-content {
+    display: block;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.lgs-detached-widget-host > * {
+    width: 100%;
+    height: 100%;
 }
 
 #cesium-viewer {
@@ -968,6 +1042,76 @@ body {
     display: flex;
     align-items: center;
     gap: var(--lgs-gutter-s);
+}
+
+.widget-dock-bottom-drawer {
+    --size: 320px; /* Current dock height, updated by the resize handle. */
+    --widget-dock-min-size: 180px; /* Absolute minimum height allowed for the dock. */
+}
+
+.widget-dock-bottom-drawer::part(close-button) {
+    display: none;
+}
+
+.widget-dock-bottom-drawer::part(dialog) {
+    top: auto !important;
+    right: auto !important;
+    bottom: 0 !important;
+    left: var(--widget-dock-horizontal-left, 0px) !important;
+    width: var(--widget-dock-horizontal-width, 100%) !important;
+    height: min(90dvh, max(var(--widget-dock-min-size), var(--size))) !important;
+    min-height: var(--widget-dock-min-size) !important;
+    max-width: 100% !important;
+    max-height: 90dvh !important;
+}
+
+.widget-dock-bottom-drawer::part(body) {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+}
+
+.widget-dock-bottom-drawer-title {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
+}
+
+.widget-dock-bottom-drawer-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xxs);
+}
+
+.widget-dock-surface {
+    position: relative;
+    box-sizing: border-box;
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    height: auto;
+    overflow: hidden;
+}
+
+.widget-dock-surface .lgs-widget-container {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.widget-dock-surface .lgs-widget-docked {
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0;
+    min-height: 0;
+    margin: 0 !important;
+    transform: translate(0, 0) rotate(0deg) scale(1) !important;
+    transform-origin: top left;
+    opacity: 1;
 }
 
 .widget-group-management {
