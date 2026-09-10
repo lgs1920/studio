@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-10
- * Last modified: 2026-09-03
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -61,6 +61,20 @@
     max-width: max-content;
 }
 
+.video-recording-settings-toolbar--timeline-drawer {
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.video-recording-settings-toolbar--timeline-drawer .video-recording-settings-menu {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+}
+
 .video-recording-settings-menu wa-button::part(base) {
     gap: var(--lgs-gutter-xxs);
     white-space: nowrap;
@@ -103,6 +117,22 @@
     justify-content: center;
     padding-block: 0;
     padding-inline: var(--lgs-gutter-xs);
+}
+
+@container (max-width: 640px) {
+    .video-recording-settings-toolbar--timeline-drawer .video-recording-settings-menu {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .video-recording-settings-toolbar--timeline-drawer .video-recording-settings-menu #video-ratio-settings-trigger,
+    .video-recording-settings-toolbar--timeline-drawer .video-recording-settings-menu #video-quality-fps-settings-trigger {
+        width: 100%;
+    }
+
+    .video-recording-settings-toolbar--timeline-drawer .video-recording-settings-separator {
+        display: none;
+    }
 }
 
 .video-recording-settings-separator {

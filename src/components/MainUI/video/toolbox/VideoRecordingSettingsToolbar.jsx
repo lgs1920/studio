@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-20
- * Last modified: 2026-09-03
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,9 +32,11 @@ const VIDEO_PRESET_POPUP = 'video-preset'
  * VideoRecordingSettingsToolbar renders the horizontal video setup HUD.
  * @param {Object} props - Toolbar properties.
  * @param {boolean} [props.mainTheme=false] - Use the main application theme instead of the on-map theme.
+ * @param {string} [props.layout='default'] - Presentation layout context.
+ * @param {'all'|'actions'|'video-options'} [props.mode='all'] - Controls rendered by the toolbar.
  * @component
  */
-export const VideoRecordingSettingsToolbar = memo(({mainTheme = false} = {}) => {
+export const VideoRecordingSettingsToolbar = memo(({mainTheme = false, layout = 'default', mode = 'all'} = {}) => {
     const $video = lgs.stores.ui.video
     const $cropper = $video.cropper
     const replay = useSnapshot(lgs.stores.replay)
@@ -49,6 +51,8 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false} = {}) => 
                               && !video.finalizing
     const linkedTimelinePreparation = replay.recordingSync === true
                                       && video.timelinePreviewActive === true
+    const showVideoOptions = mode !== 'actions'
+    const showActions = mode !== 'video-options'
 
     const currentRatio = lgs.configuration.videoFormats.find(format => format.value === video.ratio)
     const currentQuality = ScreenMediaRecorder.QUALITY[video.quality]?.name?.replace(/\s+Quality$/, '') ?? 'Medium'
@@ -269,9 +273,9 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false} = {}) => 
     ) : null
 
     return (
-        <div className={`video-recording-settings-toolbar lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal ${mainTheme ? 'wa-theme-lgs1920' : 'wa-theme-lgs1920-on-map'}`}>
+        <div className={`video-recording-settings-toolbar lgs-toolbar-content lgs-toolbar lgs-toolbar-horizontal ${mainTheme ? 'wa-theme-lgs1920' : 'wa-theme-lgs1920-on-map'}${layout === 'timeline-drawer' ? ' video-recording-settings-toolbar--timeline-drawer' : ''}`}>
             <div className="video-recording-settings-menu" role="toolbar" aria-label="Video recording settings">
-                <WaButton
+                {showVideoOptions ? <WaButton
                     id="video-ratio-settings-trigger"
                     size="s"
                     appearance={openPopup === RATIO_POPUP ? 'outlined' : 'plain'}
@@ -283,9 +287,9 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false} = {}) => 
                         {` ${currentRatio?.label ?? video.ratio}`}
                     </span>
                     <WaIcon slot="end" name={getCaretIcon(popupDirections.ratio)} variant="solid" label=""/>
-                </WaButton>
+                </WaButton> : null}
 
-                <LGSPopup
+                {showVideoOptions ? <LGSPopup
                     anchor="video-ratio-settings-trigger"
                     active={openPopup === RATIO_POPUP}
                     onRequestClose={() => setOpenPopup(null)}
@@ -299,9 +303,9 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false} = {}) => 
                                              cropzoneId={VIDEO_CROP_ZONE}
                                              embedded
                                              mainTheme={mainTheme}/>
-                </LGSPopup>
+                </LGSPopup> : null}
 
-                <WaButton
+                {showVideoOptions ? <WaButton
                     id="video-quality-fps-settings-trigger"
                     size="s"
                     appearance={openPopup === VIDEO_PRESET_POPUP ? 'outlined' : 'plain'}
@@ -312,9 +316,9 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false} = {}) => 
                         {`${currentQuality} · ${currentFPS} FPS`}
                     </span>
                     <WaIcon slot="end" name={getCaretIcon(popupDirections.preset)} variant="solid" label=""/>
-                </WaButton>
+                </WaButton> : null}
 
-                <LGSPopup
+                {showVideoOptions ? <LGSPopup
                     anchor="video-quality-fps-settings-trigger"
                     active={openPopup === VIDEO_PRESET_POPUP}
                     onRequestClose={() => setOpenPopup(null)}
@@ -327,11 +331,11 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false} = {}) => 
                     <div className={`video-recording-settings-popup lgs-card ${mainTheme ? 'wa-theme-lgs1920' : 'wa-theme-lgs1920-on-map'}`}>
                         <VideoPresetToolbar embedded mainTheme={mainTheme}/>
                     </div>
-                </LGSPopup>
+                </LGSPopup> : null}
 
-                {replaySettingsAction}
+                {showActions ? replaySettingsAction : null}
 
-                {linkedTimelinePreparation ? (
+                {showActions && linkedTimelinePreparation ? (
                     <WaButton
                         id="video-start-hq-export"
                         size="s"
@@ -344,7 +348,7 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false} = {}) => 
                         <WaIcon name="clapperboard-play" label=""/>
                         <span>{'Create HQ'}</span>
                     </WaButton>
-                ) : (
+                ) : showActions ? (
                     <WaButton
                         id="video-start-recording"
                         size="s"
@@ -357,11 +361,11 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false} = {}) => 
                         <WaIcon name="clapperboard-play" label=""/>
                         <span>{'Record'}</span>
                     </WaButton>
-                )}
+                ) : null}
 
-                <span className="video-recording-settings-separator" aria-hidden="true"/>
+                {showActions ? <span className="video-recording-settings-separator" aria-hidden="true"/> : null}
 
-                <WaButton
+                {showActions ? <WaButton
                     id="video-cancel-editing"
                     size="s"
                     appearance="plain"
@@ -371,7 +375,7 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false} = {}) => 
                 >
                     <WaIcon name="xmark" label=""/>
                     <span>{'Cancel'}</span>
-                </WaButton>
+                </WaButton> : null}
             </div>
         </div>
     )

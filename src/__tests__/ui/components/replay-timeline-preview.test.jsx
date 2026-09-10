@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-09
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,6 +21,11 @@ import {proxy} from 'valtio'
 import {proxyMap} from 'valtio/utils'
 
 vi.mock('../../../webcomponents/lgs1920-timeline/LGS1920Timeline.js', () => ({}))
+
+vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
+    WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
+    WaIcon: props => <span {...props}/>,
+}))
 
 vi.mock('@Components/MainUI/video/toolbox/VideoRecordingSettingsToolbar', () => ({
     VideoRecordingSettingsToolbar: () => <div data-testid="video-recording-settings-toolbar"/>,
@@ -131,6 +136,9 @@ describe('ReplayTimelinePreview', () => {
         expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-min-height')).toBe('156px')
         expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-layout-min-height')).toBe('74px')
         expect(container.querySelector('[slot="custom-menu"] [data-testid="video-recording-settings-toolbar"]')).not.toBeNull()
+        expect(container.querySelector('[slot="custom-menu"] [data-additional-content-toggle]')).not.toBeNull()
+        expect(container.querySelector('[slot="additional-content"] [data-testid="video-recording-settings-toolbar"]')).not.toBeNull()
+        expect(container.querySelector('[slot="additional-content-label"]')?.textContent).toBe('Video settings')
         expect(timelineElement.querySelector('[slot="legend-ruler"]')).toBeNull()
         expect(timelineElement.playing).toBe(false)
         expect(timelineElement.clipOptions).toBeUndefined()
@@ -157,6 +165,16 @@ describe('ReplayTimelinePreview', () => {
             clip.editable === false && clip.resizable === false
         ))).toBe(true)
         expect(globalThis.__.ui.replay.enterReplayPreparation).toHaveBeenCalledTimes(1)
+    })
+
+    it('assigns application actions to the generic timeline header', () => {
+        const headerActions = <button type="button">Open in drawer</button>
+        const {container} = render(<ReplayTimelinePreview headerActions={headerActions}/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+
+        expect(timelineElement.querySelector('[slot="header-actions"]')).toMatchObject({
+            dataset: {widgetCapture: 'exclude'},
+        })
     })
 
     it('updates only the current time when the published Replay frame changes', async () => {

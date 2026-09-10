@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-09-03
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -134,6 +134,27 @@ describe('VideoRecordingSettingsToolbar', () => {
         const toolbar = document.querySelector('.video-recording-settings-toolbar')
         expect(toolbar.classList).toContain('wa-theme-lgs1920')
         expect(toolbar.classList).not.toContain('wa-theme-lgs1920-on-map')
+    })
+
+    it('renders only ratio and quality controls in the timeline drawer mode', () => {
+        render(<VideoRecordingSettingsToolbar mainTheme layout="timeline-drawer" mode="video-options"/>)
+
+        expect(screen.getByRole('button', {name: 'Ratio: 16:9'})).not.toBeNull()
+        expect(screen.getByRole('button', {name: 'High · 30 FPS'})).not.toBeNull()
+        expect(screen.queryByRole('button', {name: 'Journey Replay Settings'})).toBeNull()
+        expect(screen.queryByRole('button', {name: 'Record'})).toBeNull()
+        expect(screen.queryByRole('button', {name: 'Cancel'})).toBeNull()
+    })
+
+    it('keeps the settings and replay actions outside the timeline drawer controls', () => {
+        globalThis.lgs.stores.replay.recordingSync = true
+        render(<VideoRecordingSettingsToolbar mainTheme mode="actions"/>)
+
+        expect(screen.queryByRole('button', {name: 'Ratio: 16:9'})).toBeNull()
+        expect(screen.queryByRole('button', {name: 'High · 30 FPS'})).toBeNull()
+        expect(screen.getByRole('button', {name: 'Journey Replay Settings'})).not.toBeNull()
+        expect(screen.getByRole('button', {name: 'Record'})).not.toBeNull()
+        expect(screen.getByRole('button', {name: 'Cancel'})).not.toBeNull()
     })
 
     it('opens Ratio and Quality/FPS popups at the bottom end of their triggers', () => {

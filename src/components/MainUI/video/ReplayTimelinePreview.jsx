@@ -24,6 +24,7 @@
 
 import {forwardRef, useEffect, useImperativeHandle, useMemo, useRef} from 'react'
 import {subscribe, useSnapshot} from 'valtio'
+import {WaButton, WaIcon} from '@web.awesome.me/webawesome-pro/dist/react'
 import {
     CREDITS_WIDGET,
     LOGO_WIDGET,
@@ -46,6 +47,21 @@ import './replay-timeline-preview.css'
 
 const DEFAULT_REPLAY_DURATION_MILLIS = 60_000
 const REPLAY_CAPTURE_FPS = [30, 45, 60, 15]
+const REPLAY_TIMELINE_EDIT_EVENTS = [
+    'add-track',
+    'remove-track',
+    'track-label-change',
+    'add-clip',
+    'remove-clip',
+    'clip-change',
+    'clip-visibility-change',
+    'clip-enabled-change',
+    'clip-extend',
+    'clip-color-change',
+    'track-visibility-change',
+    'reorder',
+    'range-change',
+]
 
 const getReplayTimelineDebugStage = () => {
     if (typeof window !== 'undefined') {
@@ -138,6 +154,57 @@ const resolveCurrentTimeMillis = (replay, projection) => {
  */
 const hasPublishedReplayFrame = replay => replay?.dynamicFrameState != null
     || replay?.resolvedFrameState != null
+
+/**
+ * Clone the serializable track state emitted by the timeline custom element.
+ *
+ * @param {Array} tracks - Public timeline tracks.
+ * @returns {Array} Detached track snapshot.
+ */
+const cloneReplayTimelineTracks = tracks => (Array.isArray(tracks) ? tracks : []).map(track => ({
+    ...track,
+    clips: (Array.isArray(track?.clips) ? track.clips : []).map(clip => ({...clip})),
+}))
+
+/**
+ * Build the shared Replay edit state from a Timeline event.
+ *
+ * The Web Component remains unaware of Replay, widgets, drawers, and PiP
+ * windows. This adapter stores only the public serializable state required to
+ * rehydrate another Timeline host.
+ *
+ * @param {CustomEvent} event - Timeline edit event.
+ * @param {HTMLElement} element - Timeline custom element.
+ * @param {string} sourceSignature - Base projection signature.
+ * @returns {Object|null} Shared preparation state or null when no tracks exist.
+ */
+const buildReplayTimelineEditState = (event, element, sourceSignature) => {
+    const detail = event?.detail ?? {}
+    const dataTimeline = detail.data?.timeline ?? {}
+    const currentTimeline = element?.timeline ?? {}
+    const tracks = detail.tracks ?? detail.data?.tracks ?? element?.tracks
+    if (!Array.isArray(tracks)) return null
+
+    const durationMillis = Number(detail.durationMillis
+        ?? dataTimeline.durationMillis
+        ?? currentTimeline.durationMillis)
+    const rangeStartMillis = Number(detail.rangeStartMillis
+        ?? dataTimeline.rangeStartMillis
+        ?? currentTimeline.rangeStartMillis)
+    const rangeEndMillis = Number(detail.rangeEndMillis
+        ?? dataTimeline.rangeEndMillis
+        ?? currentTimeline.rangeEndMillis)
+
+    return {
+        sourceSignature,
+        timeline: {
+            durationMillis: Number.isFinite(durationMillis) ? durationMillis : currentTimeline.durationMillis,
+            rangeStartMillis: Number.isFinite(rangeStartMillis) ? rangeStartMillis : 0,
+            rangeEndMillis: Number.isFinite(rangeEndMillis) ? rangeEndMillis : currentTimeline.rangeEndMillis,
+        },
+        tracks: cloneReplayTimelineTracks(tracks),
+    }
+}
 
 /**
  * Wait until a timeline element created in an external document has upgraded.
@@ -321,9 +388,14 @@ const toDisplayTracks = rows => rows.map(row => ({
  * @param {Object} props - Preview properties.
  * @param {boolean} [props.keyboardZoomActive=false] - Enables selected-widget keyboard zoom.
  * @param {boolean} [props.detached=false] - Waits for the external custom-element registry before applying state.
+ * @param {React.ReactNode} [props.headerActions=null] - Application actions assigned to the timeline header.
  * @returns {JSX.Element|null} Preview surface or null outside linked preparation.
  */
-export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, detached = false}, ref) => {
+export const ReplayTimelinePreview = forwardRef(({
+    keyboardZoomActive = false,
+    detached = false,
+    headerActions = null,
+}, ref) => {
     const video = useSnapshot(lgs.stores.ui.video)
     const replay = useSnapshot(lgs.stores.replay)
     const main = useSnapshot(lgs.stores.main)
@@ -363,8 +435,12 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, de
         widgetOrder,
     }), [journey, projectionReplay, projectionReplaySettings, video.fps, widgetOrder])
     const editorData = useMemo(() => toReplayTimelineEditorData(projection), [projection])
+    const preparationTimeline = replay.preparationTimeline
+    const preparedTimeline = preparationTimeline?.timeline ?? null
     const timeline = useMemo(() => ({
-        durationMillis: projection.durationMillis,
+        durationMillis: Number(preparedTimeline?.durationMillis) > 0
+            ? Number(preparedTimeline.durationMillis)
+            : projection.durationMillis,
         fps: projection.fps,
         frameCount: projection.source.frameCount,
         frameIntervalMillis: projection.source.frameIntervalMs,
@@ -373,8 +449,12 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, de
         legendMinWidth: REPLAY_TIMELINE_UI.legendMinWidth,
         legendWidth: REPLAY_TIMELINE_UI.legendWidth,
         legendMaxWidth: REPLAY_TIMELINE_UI.legendMaxWidth,
-        rangeStartMillis: 0,
-        rangeEndMillis: projection.durationMillis,
+        rangeStartMillis: Number.isFinite(Number(preparedTimeline?.rangeStartMillis))
+            ? Number(preparedTimeline.rangeStartMillis)
+            : 0,
+        rangeEndMillis: Number.isFinite(Number(preparedTimeline?.rangeEndMillis))
+            ? Number(preparedTimeline.rangeEndMillis)
+            : projection.durationMillis,
         editable: true,
         interactive: true,
         collisionPolicy: 'prevent',
@@ -387,9 +467,11 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, de
         swatches: REPLAY_TIMELINE_COLOR_SWATCHES,
         hostInteraction: 'selectable',
         hostNoDragClass: 'lgs-widget-no-drag',
-    }), [detached, keyboardZoomActive, projection.durationMillis, projection.fps, projection.source.frameCount, projection.source.frameIntervalMs])
+    }), [detached, keyboardZoomActive, preparedTimeline, projection.durationMillis, projection.fps, projection.source.frameCount, projection.source.frameIntervalMs])
     const baseTracks = useMemo(() => toDisplayTracks(editorData), [editorData])
-    const tracks = baseTracks
+    const tracks = Array.isArray(preparationTimeline?.tracks)
+        ? preparationTimeline.tracks
+        : baseTracks
 
     useImperativeHandle(ref, () => ({
         handleResize: () => {
@@ -448,7 +530,9 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, de
             element.tracks = tracks
             element.playing = replayStore.playing === true
             if (hasPublishedReplayFrame(replayStore)) {
-                element.currentTimeMillis = resolveCurrentTimeMillis(replayStore, projection)
+                element.currentTimeMillis = resolveCurrentTimeMillis(replayStore, {
+                    durationMillis: timeline.durationMillis,
+                })
             } else {
                 element.currentTimeMillis = localTimeMillis
             }
@@ -459,6 +543,22 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, de
             cancelled = true
         }
     }, [detached, linkedPreparation, projection, timeline, tracks])
+
+    useEffect(() => {
+        const element = _timeline.current
+        if (!linkedPreparation || !element || getReplayTimelineDebugStage() !== 'full') return undefined
+
+        const persistTimelineEdit = event => {
+            const editState = buildReplayTimelineEditState(event, element, projection.signature)
+            if (editState) lgs.stores.replay.preparationTimeline = editState
+        }
+        const eventNames = REPLAY_TIMELINE_EDIT_EVENTS.map(name => `lgs1920-timeline-${name}`)
+        eventNames.forEach(name => element.addEventListener(name, persistTimelineEdit))
+
+        return () => {
+            eventNames.forEach(name => element.removeEventListener(name, persistTimelineEdit))
+        }
+    }, [linkedPreparation, projection.signature])
 
     useEffect(() => {
         const element = _timeline.current
@@ -514,10 +614,30 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, de
                                   data-replay-timeline-debug={getReplayTimelineDebugStage()}
                                   ref={_timeline}
                                   aria-label="Replay tracks">
+                    {headerActions && (
+                        <span slot="header-actions"
+                              className="replay-timeline-preview__header-actions lgs-widget-no-drag"
+                              data-widget-capture="exclude">
+                            {headerActions}
+                        </span>
+                    )}
                     <span slot="custom-menu"
                           className="replay-timeline-preview__custom-menu lgs-widget-no-drag">
-                        <VideoRecordingSettingsToolbar mainTheme/>
+                        <WaButton appearance="plain"
+                                  aria-label="Video settings"
+                                  data-additional-content-toggle=""
+                                  size="s"
+                                  title="Video settings"
+                                  variant="brand">
+                            <WaIcon name="video" variant="regular" label=""/>
+                        </WaButton>
+                        <VideoRecordingSettingsToolbar mainTheme mode="actions"/>
                     </span>
+                    <span slot="additional-content-label">Video settings</span>
+                    <div slot="additional-content"
+                         className="replay-timeline-preview__additional-content lgs-widget-no-drag">
+                        <VideoRecordingSettingsToolbar mainTheme layout="timeline-drawer" mode="video-options"/>
+                    </div>
                 </lgs1920-timeline>
             )}
         </section>
