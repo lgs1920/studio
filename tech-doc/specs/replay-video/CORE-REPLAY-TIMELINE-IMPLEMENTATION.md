@@ -178,6 +178,14 @@ widget's capture-phase drag, collapse, and context-menu handlers ignore the
 timeline surface; the dedicated blank top-area handle remains available for
 moving the widget.
 
+The timeline accepts generic `additional-content` and
+`additional-content-label` slots. It renders that content in a local
+expandable `wa-drawer` above the header, preserving the timeline's generic
+API. The Replay preview uses this drawer for the ratio and quality/FPS
+controls, while the Settings, Replay, recording, and cancel actions remain in
+the header toolbar. The drawer controls use a horizontal layout that becomes
+vertical when the drawer is narrow.
+
 Replay application event listeners and timeline controllers are not connected
 in this step. The Web Component itself handles the local controls, title
 editing, visibility actions, track/clip drags, and emits their public events;
@@ -223,6 +231,13 @@ The catalog entry is
 [`public/widgets.yaml`](../../../public/widgets.yaml#L190-L205). It declares
 the `replay-timeline-widget` component, scene-board availability, journey
 requirement, one-instance limit, and timeline color.
+
+The host actions keep the same timeline instance while changing its surface:
+the scene widget exposes Picture-in-Picture and drawer actions, the PIP window
+can reattach to the scene widget or move into the drawer, and the drawer can
+reattach to the scene widget or open Picture-in-Picture. These transitions use
+the widget window and dock managers, so they preserve the existing widget
+configuration and dock dimensions.
 
 The component registry maps the catalog component name in
 [`src/core/constants.js`](../../../src/core/constants.js#L480-L535). The
