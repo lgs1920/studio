@@ -1839,3 +1839,31 @@
 ## 2026-09-09 — [`docs(shortcuts): document alternative binding layout`](https://github.com/lgs1920/studio/commit/be4972fbf9e6dcfd6c3a1c0b728c44217436caff)
 
 - Recorded automatically from Git history.
+
+## 2026-09-10 — [`docs(timeline): define React callback boundary`](https://github.com/lgs1920/studio/commit/2e47e0995812dee6db16eae9c8d3b7e2ddd3393e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`feat(timeline): expose clip double-click callback in React`](https://github.com/lgs1920/studio/commit/767ad668118d114f694a24ef185c9138300ea6f8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`fix(ui): synchronize welcome initialization progress`](https://github.com/lgs1920/studio/commit/89644f7b23272ebf916958c47e57033b5c83924e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`feat(ui): dock widgets in a resizable bottom drawer`](https://github.com/lgs1920/studio/commit/eef373cceb6f26a7214e54639aba0900e971b0c7)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`feat(ui): detach widgets into PiP windows`](https://github.com/lgs1920/studio/commit/db4244572af8f33f1dbfa9d89ac3fd0ca6fa442d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`docs(ui): document docked and detached widgets`](https://github.com/lgs1920/studio/commit/ed9036486338d5b92a0b12c6c0f678fe18df7fe7)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/3906918d0f46cb8a3f5f0e0c07ffdf657cf3a544)
+
+- Recorded automatically from Git history.
