@@ -28,7 +28,12 @@ vi.mock('@Components/MainUI/widgets/DynamicWidget', () => ({
 }))
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
-    WaCard: ({children, ...props}) => <section {...props}>{children}</section>,
+    WaCard: ({children, withHeaderActions, ...props}) => (
+        <section data-testid="detached-card" data-with-header-actions={withHeaderActions ? 'true' : 'false'}
+                 {...props}>
+            {children}
+        </section>
+    ),
     WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
     WaIcon: ({name}) => <span data-testid={`icon-${name}`}/>,
 }))
@@ -52,6 +57,17 @@ describe('DetachedWidgetPortal', () => {
             },
         }
         globalThis.__ = {
+            widgets: new Map([
+                ['journey-widgets', {
+                    widgets: new Map([
+                        ['replay-timeline-widget', {
+                            name:        'Replay Timeline',
+                            canDetach:   true,
+                            canDockable: true,
+                        }],
+                    ]),
+                }],
+            ]),
             ui: {
                 widgetManager: {
                     getWidgetConfig: vi.fn(() => ({
@@ -84,6 +100,9 @@ describe('DetachedWidgetPortal', () => {
         render(<DetachedWidgetPortal/>)
 
         expect(screen.getByTestId('detached-widget')).toBeTruthy()
+        expect(screen.getByTestId('detached-card').getAttribute('orientation')).toBe('vertical')
+        expect(screen.getByTestId('detached-card').getAttribute('data-with-header-actions')).toBe('true')
+        expect(screen.getByText('Replay Timeline')).toBeTruthy()
         expect(screen.getByRole('button', {name: 'Unlock widget'})).toBeTruthy()
         expect(screen.getByRole('button', {name: 'Attach widget to drawer'})).toBeTruthy()
         expect(screen.getByTestId('icon-lock-open')).toBeTruthy()
@@ -105,6 +124,14 @@ describe('DetachedWidgetPortal', () => {
     })
 
     it('does not expose actions disabled by widget capabilities', () => {
+        __.widgets = new Map([
+            ['journey-widgets', {
+                widgets: new Map([['replay-timeline-widget', {
+                    canDetach:   false,
+                    canDockable: false,
+                }]]),
+            }],
+        ])
         __.ui.widgetManager.getWidgetConfig.mockReturnValue({
             contextMenu: {canDetach: false, canDockable: false},
             group: 'journey-widgets',

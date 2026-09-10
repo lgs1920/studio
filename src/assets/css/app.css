@@ -149,6 +149,7 @@ body {
 
 .lgs-detached-window-card {
     display: flex;
+    flex-direction: column;
     width: 100%;
     height: 100%;
     min-width: 0;
@@ -160,7 +161,7 @@ body {
     flex: 0 0 auto;
 }
 
-.lgs-detached-window-card::part(header-actions) {
+.lgs-detached-window-actions {
     display: inline-flex;
     align-items: center;
     gap: var(--lgs-gutter-xxs);

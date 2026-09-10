@@ -91,7 +91,12 @@ export class WidgetWindowManager {
         }
 
         const config = __.ui.widgetManager.getWidgetConfig(widgetId)
-        return Boolean(config?.contextMenu?.canDetach && !config.mandatory)
+        const baseId = typeof widgetId === 'string' ? widgetId.split('#')[0] : widgetId
+        const definition = globalThis.__?.widgets?.get?.(config?.group)?.widgets?.get?.(baseId)
+        const canDetach = config?.contextMenu?.canDetach === true
+                       || config?.canDetach === true
+                       || definition?.canDetach === true
+        return Boolean(canDetach && !config?.mandatory && !definition?.mandatory)
     }
 
     /**

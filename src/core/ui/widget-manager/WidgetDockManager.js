@@ -24,6 +24,18 @@ const DOCKED_WIDGET_MAX_VIEWPORT_RATIO = 0.9
 const DOCKABLE_WIDGET_IDS = new Set([REPLAY_TIMELINE_WIDGET])
 
 /**
+ * Resolve the catalog definition for a widget instance.
+ *
+ * @param {string|null|undefined} widgetId - Widget instance identifier.
+ * @param {Object|null|undefined} widgetConfig - Runtime widget configuration.
+ * @returns {Object|null} Catalog definition or null when it cannot be resolved.
+ */
+const resolveWidgetDefinition = (widgetId, widgetConfig) => {
+    const baseId = typeof widgetId === 'string' ? widgetId.split('#')[0] : widgetId
+    return globalThis.__?.widgets?.get?.(widgetConfig?.group)?.widgets?.get?.(baseId) ?? null
+}
+
+/**
  * Return the persisted dock settings, creating the default structure when needed.
  *
  * @returns {Object|null} Mutable dock settings or null when settings are unavailable.
@@ -179,7 +191,11 @@ export const canDockWidget = widgetId => {
     }
 
     const config = __?.ui?.widgetManager?.getWidgetConfig?.(widgetId)
-    return Boolean(config?.contextMenu?.canDockable === true && !config.mandatory)
+    const definition = resolveWidgetDefinition(widgetId, config)
+    const canDockable = config?.contextMenu?.canDockable === true
+                       || config?.canDockable === true
+                       || definition?.canDockable === true
+    return Boolean(canDockable && !config?.mandatory && !definition?.mandatory)
 }
 
 /**

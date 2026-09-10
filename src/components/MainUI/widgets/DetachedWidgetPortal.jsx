@@ -22,6 +22,20 @@ import { createPortal } from 'react-dom'
 import { useSnapshot } from 'valtio'
 
 /**
+ * Resolve the catalog definition for a widget instance.
+ *
+ * @param {string|null|undefined} widgetId - Widget instance identifier.
+ * @param {Object|null|undefined} widgetConfig - Runtime widget configuration.
+ * @param {Object|null|undefined} widgetEntry - Persisted widget entry.
+ * @returns {Object|null} Catalog definition or null when it cannot be resolved.
+ */
+const resolveWidgetDefinition = (widgetId, widgetConfig, widgetEntry) => {
+    const baseId = typeof widgetId === 'string' ? widgetId.split('#')[0] : widgetId
+    const groupId = widgetConfig?.group ?? widgetEntry?.group
+    return globalThis.__?.widgets?.get?.(groupId)?.widgets?.get?.(baseId) ?? null
+}
+
+/**
  * Render the detached widget into the document owned by its external window.
  *
  * @returns {JSX.Element|null} The external-window portal, when one is active.
@@ -50,11 +64,23 @@ export const DetachedWidgetPortal = () => {
 
     const widgetEntry = widgetId ? widget.list?.get(widgetId) : null
     const widgetConfig = widgetId ? __.ui.widgetManager?.getWidgetConfig?.(widgetId) : null
-    const widgetTitle = widgetConfig?.name ?? widgetEntry?.name ?? widgetId?.split('#')[0] ?? 'Detached widget'
-    const canDetach = widgetConfig?.contextMenu?.canDetach === true && widgetConfig?.mandatory !== true
+    const widgetDefinition = resolveWidgetDefinition(widgetId, widgetConfig, widgetEntry)
+    const widgetTitle = widgetConfig?.name
+                       ?? widgetEntry?.name
+                       ?? widgetDefinition?.name
+                       ?? widgetId?.split('#')[0]
+                       ?? 'Detached widget'
+    const canDetach = (widgetConfig?.contextMenu?.canDetach === true
+                       || widgetConfig?.canDetach === true
+                       || widgetDefinition?.canDetach === true)
+                      && widgetConfig?.mandatory !== true
+                      && widgetDefinition?.mandatory !== true
     const canDock = Boolean(widgetId
-                            && widgetConfig?.contextMenu?.canDockable === true
+                            && (widgetConfig?.contextMenu?.canDockable === true
+                                || widgetConfig?.canDockable === true
+                                || widgetDefinition?.canDockable === true)
                             && widgetConfig?.mandatory !== true
+                            && widgetDefinition?.mandatory !== true
                             && isDockableWidgetId(widgetId)
                             && canDockWidget(widgetId))
     const detachedProps = {
