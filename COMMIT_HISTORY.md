@@ -1819,3 +1819,23 @@
 ## 2026-09-09 — [`Merge remote-tracking branch 'origin/feature/resize-and-move-clips' into feature/resize-and-move-clips`](https://github.com/lgs1920/studio/commit/32b99e9ab00e53e16b952a48531aa2cd3f17ddf2)
 
 - Recorded automatically from Git history.
+
+## 2026-09-09 — [`fix(timeline): improve snap guides and locked clip selection`](https://github.com/lgs1920/studio/commit/d951a81f8c9a83fb2b1493f1d3ea2eb60b12b91f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`fix(ui): keep drawer resizing proportional`](https://github.com/lgs1920/studio/commit/46f464032f233c21ce2bb774d074fcc25a7060d4)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`feat(ui): improve shortcut catalog navigation`](https://github.com/lgs1920/studio/commit/da9cc5d5df9d333e799ba0d6dd8f1d1ac14925fd)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`fix(replay): refresh timeline preview after mount`](https://github.com/lgs1920/studio/commit/595978cc58f1f6a11fdaaf4b13b6af290215e7ca)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`docs(shortcuts): document alternative binding layout`](https://github.com/lgs1920/studio/commit/be4972fbf9e6dcfd6c3a1c0b728c44217436caff)
+
+- Recorded automatically from Git history.
