@@ -89,6 +89,7 @@ below by engineering domain rather than storage directory.
 - [Widget manager](specs/ui-widgets/CORE-WIDGET-MANAGER-README.md)
 - [Widget-to-canvas rendering](specs/ui-widgets/CORE-WIDGET-MANAGER-WIDGET-2-CANVAS-README.md)
 - [Dynamic widget rendering](specs/ui-widgets/CORE-WIDGET-MANAGER-DYNAMIC-RENDER-README.md)
+- [Detached widget windows](specs/ui-widgets/CORE-UI-DETACHED-WIDGET-WINDOW-SPEC.md)
 - [CSS assets](specs/ui-widgets/ASSETS-README-CSS.md)
 - [Flags](specs/ui-widgets/PUBLIC-FLAGS-README.md)
 - [Logos](specs/ui-widgets/PUBLIC-LOGO-README.md)
