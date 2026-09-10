@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-01
- * Last modified: 2026-04-01
+ * Created on: 2024-02-03
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,6 +32,7 @@ import { POIManager }          from '@Core/ui/POIManager'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { WidgetCache }         from '@Core/ui/widget-manager/WidgetCache'
 import { WidgetManager }       from '@Core/ui/widget-manager/WidgetManager'
+import { WidgetWindowManager } from '@Core/ui/widget-manager/WidgetWindowManager'
 import { AppUtils }            from '@Utils/AppUtils'
 import { MouseUtils }          from '@Utils/cesium/MouseUtils'
 import { CSSUtils }            from '@Utils/CSSUtils'
@@ -418,6 +419,8 @@ export class LGS1920Context {
         __.ui.menuManager = new MenuManager()
         __.ui.widgetManager = new WidgetManager()
         __.ui.widgetCache = new WidgetCache()
+        __.ui.widgetWindowManager = new WidgetWindowManager()
+        __.ui.widgetWindowManager.initialize()
         __.ui.ionTokenManager = ionTokenManager
 
         __.ui.poiManager = new POIManager()

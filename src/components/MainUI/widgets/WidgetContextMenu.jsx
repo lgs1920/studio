@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2025-10-21
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,8 +17,9 @@
 import {
     EDIT_WIDGET_ICON, REPLAY_RECORDING_MONITOR_WIDGET_ID, WIDGETS_CAPABILITIES, WIDGETS_EDITOR_DRAWER,
 } from '@Core/constants'
+import {canDockWidget, dockWidget, undockWidget} from '@Core/ui/widget-manager/WidgetDockManager'
 import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useSnapshot }           from 'valtio'
 
 const PERCENTAGE = 0.1
@@ -68,6 +69,12 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
     const isLocked = canLock && Boolean(config?.locked)
     const canHide = config?.canHide === true
     const isVisible = widget.list.get(targetId)?.visible !== false
+    const isDocked = widget.docked?.id === targetId
+    const isDetached = widget.undocked?.id === targetId
+    const canDockable = config?.contextMenu?.canDockable === true
+    const canDock = canDockable && !isDocked && canDockWidget(targetId)
+    const canDetach = config?.contextMenu?.canDetach === true
+    const canDetachWidget = canDetach && Boolean(__.ui.widgetWindowManager?.canDetachWidget?.(targetId))
 
     // Memoized capabilities for performance
     const capabilities = useMemo(() => {
@@ -78,20 +85,30 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                 canEdit:     false,
                 canRemove:   false,
                 canPosition: false,
+                canDockable: false,
+                canDetach:   false,
             }
         }
         return {
-            hasAny:      canLock || canHide || __.ui.widgetManager.hasCapabilities(config.contextMenu, WIDGETS_CAPABILITIES),
+            hasAny:      canLock || canHide || canDockable || canDetach || __.ui.widgetManager.hasCapabilities(config.contextMenu, WIDGETS_CAPABILITIES),
             canReset:    config.contextMenu.canReset,
             canEdit:     config.contextMenu.canEdit,
             canRemove:   config.contextMenu.canRemove,
-            canPosition: config.contextMenu.canPosition,
+            canPosition: config.contextMenu.canPosition && !isDocked,
             canSnapshot: config.contextMenu.canSnapshot,
+            canDockable,
+            canDetach,
         }
-    }, [canHide, canLock, config])
+    }, [canDetach, canDockable, canHide, canLock, config, isDocked])
+
+    useEffect(() => {
+        if ((isDocked || isDetached) && lgs.stores.ui.contextMenu?.visible) {
+            __.ui.contextMenu.hide()
+        }
+    }, [isDetached, isDocked])
 
     // Early return if widget is invalid
-    if (!element || !config || !capabilities.hasAny) {
+    if (!element || !config || isDocked || isDetached || !capabilities.hasAny) {
         return null
     }
 
@@ -151,6 +168,21 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
     const toggleVisibility = () => {
         __.ui.widgetManager.toggleWidgetVisibility(targetId)
         closeMenu()
+    }
+
+    const toggleDock = () => {
+        const changed = isDocked ? undockWidget(targetId) : dockWidget(targetId)
+        if (changed) {
+            closeMenu()
+        }
+    }
+
+    const detachWidget = () => {
+        if (!canDetachWidget) {
+            return
+        }
+
+        void __.ui.widgetWindowManager.detachWidget(targetId).finally(closeMenu)
     }
 
     /**
@@ -255,6 +287,28 @@ export const WidgetContextMenu = ({targetId, menuRef}) => {
                     <li onClick={toggleVisibility}>
                         <WaIcon name={isVisible ? 'eye-slash' : 'eye'} variant="regular"/>
                         <span>{isVisible ? 'Hide' : 'Show'}</span>
+                    </li>
+                )}
+
+                {capabilities.canDockable && (
+                    <li
+                        className={!isDocked && !canDock ? 'widget-context-menu-action-disabled' : ''}
+                        aria-disabled={!isDocked && !canDock}
+                        onClick={toggleDock}
+                    >
+                        <WaIcon name={isDocked ? 'arrow-up-from-bracket' : 'arrow-down-to-bracket'} variant="regular"/>
+                        <span>{isDocked ? 'Undock' : 'Dock to bottom'}</span>
+                    </li>
+                )}
+
+                {capabilities.canDetach && (
+                    <li
+                        className={canDetachWidget ? '' : 'widget-context-menu-action-disabled'}
+                        aria-disabled={!canDetachWidget}
+                        onClick={detachWidget}
+                    >
+                        <WaIcon name="picture-in-picture" variant="regular"/>
+                        <span>{'Detach into window'}</span>
                     </li>
                 )}
 

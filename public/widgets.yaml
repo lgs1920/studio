@@ -192,6 +192,8 @@ widgets:
     name: "Replay Timeline"
     description: "Locked Replay preparation timeline"
     icon: "timeline"
+    canDockable: true
+    canDetach: true
     timelineColor: "blue"
     mandatory: false
     canHide: true

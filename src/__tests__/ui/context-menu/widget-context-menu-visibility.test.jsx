@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-08-29
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -39,6 +39,9 @@ describe('WidgetContextMenu visibility', () => {
                         open: null,
                         entity: null,
                     },
+                    contextMenu: {
+                        visible: true,
+                    },
                     widget: {
                         list: new Map([[widgetId, {visible: true}]]),
                     },
@@ -59,6 +62,10 @@ describe('WidgetContextMenu visibility', () => {
                     })),
                     hasCapabilities: vi.fn(() => false),
                     toggleWidgetVisibility: vi.fn(),
+                },
+                widgetWindowManager: {
+                    canDetachWidget: vi.fn(() => false),
+                    detachWidget: vi.fn(),
                 },
             },
         }
@@ -90,5 +97,67 @@ describe('WidgetContextMenu visibility', () => {
 
         expect(screen.queryByText('Hide')).toBeNull()
         expect(screen.queryByText('Show')).toBeNull()
+    })
+
+    it('renders the top docking action for the dockable Replay Timeline', () => {
+        const timelineId = 'replay-timeline-widget#1'
+        lgs.stores.ui.widget.list.set(timelineId, {visible: true})
+        __.ui.widgetManager.getWidgetConfig.mockReturnValue({
+            canHide: false,
+            canLock: false,
+            contextMenu: {canDockable: true},
+        })
+
+        render(<WidgetContextMenu targetId={timelineId} menuRef={{current: null}}/>)
+        fireEvent.click(screen.getByText('Dock to bottom'))
+
+        expect(lgs.stores.ui.widget.docked.id).toBe(timelineId)
+        expect(__.ui.contextMenu.hide).toHaveBeenCalled()
+    })
+
+    it('renders and delegates the detach action when the widget capability is enabled', () => {
+        __.ui.widgetManager.getWidgetConfig.mockReturnValue({
+            canHide: false,
+            canLock: false,
+            contextMenu: {canDetach: true},
+        })
+        __.ui.widgetManager.hasCapabilities.mockReturnValue(true)
+        __.ui.widgetWindowManager = {
+            canDetachWidget: vi.fn(() => true),
+            detachWidget:    vi.fn(() => Promise.resolve(true)),
+        }
+
+        render(<WidgetContextMenu targetId={widgetId} menuRef={{current: null}}/>)
+        fireEvent.click(screen.getByText('Detach into window'))
+
+        expect(__.ui.widgetWindowManager.detachWidget).toHaveBeenCalledWith(widgetId)
+    })
+
+    it('does not render for a docked widget', () => {
+        lgs.stores.ui.widget.docked = {id: widgetId, size: 320}
+        __.ui.widgetManager.getWidgetConfig.mockReturnValue({
+            canHide: false,
+            canLock: false,
+            contextMenu: {canDockable: true},
+        })
+
+        render(<WidgetContextMenu targetId={widgetId} menuRef={{current: null}}/>)
+
+        expect(screen.queryByText('Dock to bottom')).toBeNull()
+        expect(__.ui.contextMenu.hide).toHaveBeenCalled()
+    })
+
+    it('does not render for a detached widget', () => {
+        lgs.stores.ui.widget.undocked = {id: widgetId, mode: 'window'}
+        __.ui.widgetManager.getWidgetConfig.mockReturnValue({
+            canHide: false,
+            canLock: false,
+            contextMenu: {canDetach: true},
+        })
+
+        render(<WidgetContextMenu targetId={widgetId} menuRef={{current: null}}/>)
+
+        expect(screen.queryByText('Detach into window')).toBeNull()
+        expect(__.ui.contextMenu.hide).toHaveBeenCalled()
     })
 })

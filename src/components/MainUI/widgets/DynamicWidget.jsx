@@ -7,15 +7,17 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2025-11-07
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WidgetDynamicRenderer }         from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+import { WidgetContentOnlyContext } from '@Components/MainUI/widgets/Widget'
 import { WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { Suspense, useEffect, useState } from 'react'
 
 /**
@@ -48,11 +50,14 @@ const resolveWidgetInstanceId = (id, widgetsBoard = null) => {
  * @returns {JSX.Element|null} Suspense-wrapped widget or null if not registered
  */
 export const DynamicWidget = ({id, context, props = {}}) => {
+    const widgetStore = useOptionalSnapshot(lgs.stores.ui.widget)
+    const resolvedWidgetId = resolveWidgetInstanceId(id, props.widgetsBoard)
     const [widgetState, setWidgetState] = useState(() => ({
         component: __.ui.widgetCache.get(id)?.component ?? null,
-        widgetId:  resolveWidgetInstanceId(id, props.widgetsBoard),
+        widgetId:  resolvedWidgetId,
     }))
     const LazyWidget = widgetState.component
+    const reattachSelection = widgetStore.reattachSelection
 
     useEffect(() => {
         let cancelled = false
@@ -77,6 +82,40 @@ export const DynamicWidget = ({id, context, props = {}}) => {
         }
     }, [id, LazyWidget, props])
 
+    useEffect(() => {
+        const requestMatches = reattachSelection?.id === widgetState.widgetId
+                              || reattachSelection?.id === id
+        if (props.detached || !LazyWidget || !requestMatches) {
+            return undefined
+        }
+
+        const frame = requestAnimationFrame(() => {
+            if (lgs.stores.ui.widget.undocked?.id) {
+                return
+            }
+
+            const config = __.ui.widgetManager.getWidgetConfig(widgetState.widgetId)
+            const rotation = Number(config?.rotate)
+            lgs.stores.ui.widget.current = {
+                ...(lgs.stores.ui.widget.current ?? {}),
+                id:     widgetState.widgetId,
+                rotate: Number.isFinite(rotation) ? rotation : 0,
+            }
+
+            const currentRequest = lgs.stores.ui.widget.reattachSelection
+            if (currentRequest?.id === reattachSelection.id
+                && currentRequest.request === reattachSelection.request) {
+                lgs.stores.ui.widget.reattachSelection = {id: null, request: 0}
+            }
+        })
+
+        return () => cancelAnimationFrame(frame)
+    }, [LazyWidget, id, props.detached, reattachSelection?.id, reattachSelection?.request, widgetState.widgetId])
+
+    if (!props.detached && widgetStore.undocked?.id === widgetState.widgetId) {
+        return null
+    }
+
     if (!LazyWidget) {
         return null
     }
@@ -85,9 +124,11 @@ export const DynamicWidget = ({id, context, props = {}}) => {
     const Component = LazyWidget
 
     return (
-        <Suspense fallback={<WaSpinner style={{fontSize: '2rem'}}/>}>
-            <Component id={widgetState.widgetId} {...props} context={context || props}/>
-        </Suspense>
+        <WidgetContentOnlyContext.Provider value={{detached: Boolean(props.detached)}}>
+            <Suspense fallback={<WaSpinner style={{fontSize: '2rem'}}/>}>
+                <Component id={widgetState.widgetId} {...props} context={context || props}/>
+            </Suspense>
+        </WidgetContentOnlyContext.Provider>
     )
 }
 

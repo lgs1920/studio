@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2025-07-14
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,11 +30,11 @@ const COMPASS_WIDGET_CONTEXT_FALLBACK = {widgetEditor: false, widgetsBoard: ''}
  * @param {Object} props.context - Valtio proxy context containing widgetsBoard and widgetEditor
  * @returns {JSX.Element|null} The compass widget or null if not in editor mode or container is not ready
  */
-export const CompassWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsBoard}) => {
+export const CompassWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsBoard, detached = false}) => {
     // Get snapshot of context
     const contextState = useOptionalSnapshot(context, COMPASS_WIDGET_CONTEXT_FALLBACK)
     const video = useSnapshot(lgs.stores.ui.video)
-    const widgetEditor = contextState.widgetEditor
+    const widgetEditor = contextState.widgetEditor || detached
     const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
     const showDuringVideoCapture = widgetsBoard === VIDEO_WIDGETS_BOARD
         && (video.preRecording || video.recording || video.recordingHQ || video.finalizing)
@@ -49,6 +49,7 @@ export const CompassWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
                 canPosition: true,
                 canRemove:   true,
                 canEdit:     true,
+                canDetach:   true,
             },
             top:          '0px',
             left:         '100%',

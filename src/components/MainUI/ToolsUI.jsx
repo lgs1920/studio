@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-19
- * Last modified: 2026-09-02
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,10 +19,14 @@ import { VideoRecordingSettingsWidget } from '@Components/MainUI/video/toolbox/V
 import { DynamicWidget } from '@Components/MainUI/widgets/DynamicWidget'
 import { VideoSettingsInfo }    from '@Components/MainUI/video/VideoSettingsInfo'
 import { SceneWidgetsRenderer } from '@Components/MainUI/widgets/SceneWidgetsRenderer'
+import { DockedWidgetDrawer } from '@Components/MainUI/widgets/DockedWidgetDrawer'
+import { DetachedWidgetPortal } from '@Components/MainUI/widgets/DetachedWidgetPortal'
 import { WidgetContextMenu }    from '@Components/MainUI/widgets/WidgetContextMenu'
 import { Cropper }           from '@Components/ToolsUI/cropper/Cropper'
 import { VideoRecordingScreenArea } from '@Components/MainUI/video/VideoRecordingScreenArea'
-import { JOURNEY_TOOLBAR_WIDGET, JOURNEY_WIDGETS, SCENE_WIDGETS_BOARD } from '@Core/constants'
+import {
+    JOURNEY_TOOLBAR_WIDGET, JOURNEY_WIDGETS, REPLAY_TIMELINE_WIDGET, SCENE_WIDGETS_BOARD,
+} from '@Core/constants'
 import { JourneyToolbarWidget }     from '@Editor/JourneyToolbarWidget'
 import { useEffect, useRef }        from 'react'
 import { useSnapshot }              from 'valtio/index'
@@ -31,6 +35,7 @@ export const ToolsUI = () => {
     const {usage} = useSnapshot(lgs.settings.ui.journeyToolbar)
     const {video} = useSnapshot(lgs.stores.ui)
     const replay = useSnapshot(lgs.stores.replay)
+    const widget = useSnapshot(lgs.stores.ui.widget)
     const $cropper = lgs.stores.ui.video.cropper
     const _journeyToolbarHiddenByVideoEditor = useRef(false)
     const _replayPreparationActive = useRef(false)
@@ -107,7 +112,8 @@ export const ToolsUI = () => {
                     {!(video.timelinePreviewActive === true && replay.recordingSync === true) && (
                         <VideoRecordingSettingsWidget id="video-recording-settings-widget"/>
                     )}
-                    {video.timelinePreviewActive === true && replay.recordingSync === true && (
+                    {video.timelinePreviewActive === true && replay.recordingSync === true
+                     && widget.docked?.id?.split('#')[0] !== REPLAY_TIMELINE_WIDGET && (
                         <DynamicWidget
                             id="replay-timeline-widget"
                             props={{
@@ -129,6 +135,8 @@ export const ToolsUI = () => {
              )}
 
             <SceneWidgetsRenderer/>
+            <DockedWidgetDrawer/>
+            <DetachedWidgetPortal/>
         </div>
     )
 }

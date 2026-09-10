@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2024-10-18
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -494,6 +494,8 @@ export const WIDGETS_CAPABILITIES   = [
            'canPosition',
            'canEdit',
            'canSnapshot',
+           'canDockable',
+           'canDetach',
        ],
              WIDGETS_CONFIGURATION  = new Map([
                                                   [

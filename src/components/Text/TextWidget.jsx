@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-14
- * Last modified: 2026-06-14
+ * Created on: 2025-12-13
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,9 +20,9 @@ import { JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD 
 import React, { useEffect, useMemo, useState } from 'react'
 import './style.css'
 
-export const TextWidget = ({id, context, zIndex}) => {
+export const TextWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsBoard}) => {
     // Destructure context properties used as dependencies
-    const {widgetsBoard} = context ?? {}
+    const widgetsBoard = context?.widgetsBoard ?? persistedWidgetsBoard ?? SCENE_WIDGETS_BOARD
 
     /**
      * State for the container element where the widget should attach.
@@ -63,6 +63,7 @@ export const TextWidget = ({id, context, zIndex}) => {
                 canEdit:     true,
                 canRemove:   true,
                 canPosition: true,
+                canDetach:   true,
             },
             top:             context?.top ?? '20%',
             type:            LGS_VISUAL_WIDGET,

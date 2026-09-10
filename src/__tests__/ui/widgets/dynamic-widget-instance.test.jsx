@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-08-29
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -57,6 +57,9 @@ describe('DynamicWidget instance identity', () => {
         }
         globalThis.__ = {
             ui: {
+                widgetManager: {
+                    getWidgetConfig: vi.fn(() => ({rotate: 18})),
+                },
                 widgetCache: {
                     get: vi.fn(() => null),
                     set: vi.fn(),
@@ -77,5 +80,18 @@ describe('DynamicWidget instance identity', () => {
         await waitFor(() => {
             expect(screen.getByTestId('dynamic-widget').getAttribute('data-widget-id')).toBe('replay-timeline-widget#instance')
         })
+    })
+
+    it('reselects a reattached widget after the concrete instance is mounted', async () => {
+        lgs.stores.ui.widget.current = {id: 'profile-widget#1'}
+        lgs.stores.ui.widget.reattachSelection = {
+            id:      'replay-timeline-widget#instance',
+            request: 1,
+        }
+
+        render(<DynamicWidget id="replay-timeline-widget" props={{group: 'journey-widgets', widgetsBoard: 'scene'}}/>)
+
+        await waitFor(() => expect(lgs.stores.ui.widget.current.id).toBe('replay-timeline-widget#instance'))
+        expect(lgs.stores.ui.widget.current.rotate).toBe(18)
     })
 })

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-08-31
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -1471,6 +1471,17 @@ wa-tab-panel wa-details.lgs--details-hoverable {
     color: var(--lgs-card-on-map-hover-color, inherit);
     border-color: var(--lgs-card-on-map-hover-border-color);
     background: var(--lgs-hover-context-menu-bg-color);
+}
+
+.lgs-context-menu li.widget-context-menu-action-disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.lgs-context-menu li.widget-context-menu-action-disabled:hover {
+    color: inherit;
+    border-color: transparent;
+    background: transparent;
 }
 
 .lgs-context-menu wa-divider {
