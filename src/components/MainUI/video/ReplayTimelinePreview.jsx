@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-09
+ * Last modified: 2026-09-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -294,9 +294,10 @@ const toDisplayTracks = rows => rows.map(row => ({
  *
  * @param {Object} props - Preview properties.
  * @param {boolean} [props.keyboardZoomActive=false] - Enables selected-widget keyboard zoom.
+ * @param {boolean} [props.detached=false] - Disables the blocking construction overlay in an external window.
  * @returns {JSX.Element|null} Preview surface or null outside linked preparation.
  */
-export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false}, ref) => {
+export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false, detached = false}, ref) => {
     const video = useSnapshot(lgs.stores.ui.video)
     const replay = useSnapshot(lgs.stores.replay)
     const main = useSnapshot(lgs.stores.main)
@@ -356,10 +357,11 @@ export const ReplayTimelinePreview = forwardRef(({keyboardZoomActive = false}, r
         resizeExtendsDuration: true,
         durationPolicy: 'extend',
         keyboardZoomActive,
+        showBuildingOverlay: !detached,
         swatches: REPLAY_TIMELINE_COLOR_SWATCHES,
         hostInteraction: 'selectable',
         hostNoDragClass: 'lgs-widget-no-drag',
-    }), [keyboardZoomActive, projection.durationMillis, projection.fps, projection.source.frameCount, projection.source.frameIntervalMs])
+    }), [detached, keyboardZoomActive, projection.durationMillis, projection.fps, projection.source.frameCount, projection.source.frameIntervalMs])
     const baseTracks = useMemo(() => toDisplayTracks(editorData), [editorData])
     const tracks = baseTracks
 

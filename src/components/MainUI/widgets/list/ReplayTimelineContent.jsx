@@ -24,9 +24,10 @@ import {useEffect, useRef} from 'react'
  * @param {Object} props - Timeline properties.
  * @param {string} props.id - Widget instance identifier.
  * @param {React.MutableRefObject|null} [props.previewRef=null] - Optional preview imperative ref.
+ * @param {boolean} [props.detached=false] - Whether the content is rendered in an external window.
  * @returns {JSX.Element} Replay Timeline content.
  */
-export const ReplayTimelineContent = ({id, previewRef = null}) => {
+export const ReplayTimelineContent = ({id, previewRef = null, detached = false}) => {
     const widgetState = useOptionalSnapshot(lgs.stores.ui.widget)
     const localPreviewRef = useRef(null)
     const contentElementRef = useRef(null)
@@ -60,7 +61,7 @@ export const ReplayTimelineContent = ({id, previewRef = null}) => {
 
     return (
         <div ref={contentElementRef} className="lgs-replay-timeline-content">
-            <ReplayTimelinePreview keyboardZoomActive={keyboardZoomActive} ref={timelinePreviewRef}/>
+            <ReplayTimelinePreview keyboardZoomActive={keyboardZoomActive} detached={detached} ref={timelinePreviewRef}/>
         </div>
     )
 }

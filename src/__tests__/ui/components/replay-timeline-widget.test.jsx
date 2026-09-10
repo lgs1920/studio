@@ -160,6 +160,7 @@ describe('ReplayTimelineWidget dimensions', () => {
         expect(screen.queryByTestId('replay-timeline-widget-host')).toBeNull()
         expect(document.querySelector('.lgs-detached-widget-host')).toBeDefined()
         expect(screen.getByTestId('replay-timeline-preview')).toBeDefined()
+        expect(widgetMocks.previewProps.detached).toBe(true)
     })
 
     it('activates timeline keyboard zoom while the widget is selected', async () => {

@@ -107,8 +107,8 @@ describe('DetachedWidgetPortal', () => {
         expect(screen.getByRole('button', {name: 'Attach'})).toBeTruthy()
         expect(screen.getByTestId('icon-arrow-up-from-bracket')).toBeTruthy()
         expect(screen.getByTestId('icon-arrow-down-to-bracket')).toBeTruthy()
-        expect(screen.getByTestId('icon-arrow-up-from-bracket').getAttribute('data-library')).toBe('system')
-        expect(screen.getByTestId('icon-arrow-down-to-bracket').getAttribute('data-library')).toBe('system')
+        expect(screen.getByTestId('icon-arrow-up-from-bracket').getAttribute('data-library')).toBeNull()
+        expect(screen.getByTestId('icon-arrow-down-to-bracket').getAttribute('data-library')).toBeNull()
 
         fireEvent.click(screen.getByRole('button', {name: 'Undock'}))
         fireEvent.click(screen.getByRole('button', {name: 'Attach'}))

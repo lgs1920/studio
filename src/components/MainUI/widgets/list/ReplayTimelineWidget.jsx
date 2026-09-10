@@ -93,7 +93,7 @@ const HostedReplayTimelineWidget = ({id, zIndex, docked, detached}) => {
         showControlBox: !docked,
     }), [container, dockContainer, docked, id, zIndex])
 
-    const content = <ReplayTimelineContent id={id} previewRef={timelinePreviewRef}/>
+    const content = <ReplayTimelineContent id={id} previewRef={timelinePreviewRef} detached={detached}/>
     if (detached) {
         return <div className="lgs-detached-widget-host">{content}</div>
     }
