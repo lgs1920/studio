@@ -44,6 +44,7 @@ This is the canonical source for the project's AI-agent and development rules.
 
 - **Hermetic Timeline boundary:** Changes made within the Timeline must remain isolated from the external environment. Timeline code must not mutate unrelated application state, create a competing clock, persist a second domain model, or leak listeners, timers, DOM effects, or capture effects outside its explicit lifecycle.
 - **Explicit integration only:** Any Timeline interaction with Replay, editors, stores, persistence, or external services must pass through an explicit canonical interface, with ownership, teardown, and side effects documented and tested. Changes to Timeline behavior must not rely on implicit globals or untracked external mutations.
+- **React and Web Component callback boundaries:** Keep `onClipDoubleClick` as a React wrapper callback API. The Web Component must expose clip double-click behavior through its `lgs1920-timeline-*` DOM events and must not define an equivalent callback property.
 
 ### CesiumJS version maintenance
 

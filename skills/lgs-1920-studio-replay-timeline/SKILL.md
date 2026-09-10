@@ -51,6 +51,10 @@ the future editable timeline.
   environment. Do not mutate unrelated application state, create a competing
   clock, or leak listeners, timers, DOM effects, capture effects, or persistence
   outside the explicit Timeline lifecycle.
+- Keep `onClipDoubleClick` exclusively as a React wrapper callback. The Web
+  Component exposes clip double-click behavior through its
+  `lgs1920-timeline-*` DOM events and must not define an equivalent callback
+  property.
 - Any interaction with Replay, editors, stores, persistence, or external
   services must use an explicit canonical interface with clear ownership and
   teardown. Do not rely on implicit globals or untracked external mutations.
