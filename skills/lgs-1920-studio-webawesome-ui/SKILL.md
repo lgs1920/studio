@@ -24,4 +24,21 @@ Workflow:
 5. Use FontAwesome icons through the existing integration and add shortcut documentation when introducing shortcuts.
 6. Test the component at narrow and wide layouts and in light or dark theme contexts when relevant.
 
+## Icons
+
+Use the native Web Awesome icon component or its React wrapper for all UI icons. Use the
+Font Awesome `iconName` in kebab case as the public `name`, such as `camera-sliders`. Do not
+expose JavaScript export names such as `faCameraSliders` or Font Awesome definition prefixes
+such as `fak` and `fakd` in component props.
+
+Omit `family` for the default `classic` family. Specify `family` for `duotone`, `brands`,
+`sharp`, or another non-default family, and specify `variant` when the selected icon depends
+on a style. Custom kit imports belong in `src/Utils/FA2WA.js` and must be registered once at
+application initialization. The resolver uses the requested family and variant, keeps the
+first matching definition from the ordered kit list, and delegates missing icons to Web
+Awesome's default resolver.
+
+See [the icon system specification](../../tech-doc/specs/ui-widgets/CORE-UI-ICONS-SPEC.md)
+for the complete contract and extension rules.
+
 Do not introduce another component library, generic utility CSS, or inaccessible icon-only controls. Add focused interaction tests.

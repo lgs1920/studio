@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-08-04
- * Last modified: 2026-08-04
+ * Created on: 2026-05-04
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -51,7 +51,6 @@ import {
 import { normalizeJourneyReplayClips } from '@Core/ui/replay/JourneyReplayClips'
 import { normalizeJourneyReplayPOISettings } from '@Core/ui/replay/JourneyReplayPOISettings'
 import { isJourneyReplayCameraActive } from '@Core/ui/replay/JourneyReplayRuntime'
-import { FA_CAMERA_SLIDERS_SRC } from '@Utils/FA2WA'
 import { ELEVATION_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import {
     WaBadge, WaButton, WaColorPicker, WaDetails, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider,
@@ -1326,7 +1325,7 @@ export const JourneyReplayDrawer = memo(() => {
                                     aria-label={advancedCameraSetupLabel}
                                     onClick={() => setAdvancedCameraPopupOpen(!advancedCameraPopupOpen)}
                                 >
-                                    <WaIcon size="l" src={FA_CAMERA_SLIDERS_SRC}/>
+                                    <WaIcon name="camera-sliders" size="l"/>
                                 </WaButton>
                             </>
                         )}

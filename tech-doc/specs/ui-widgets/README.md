@@ -1,5 +1,6 @@
 # User Interface, Widgets, and Assets
 
+- [Icon system](CORE-UI-ICONS-SPEC.md)
 - [Panels](CORE-UI-PANELS-README.md)
 - [Context menu](CORE-UI-CONTEXT-MENU-README.md)
 - [Widget manager](CORE-WIDGET-MANAGER-README.md)

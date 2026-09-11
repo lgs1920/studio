@@ -83,6 +83,7 @@ below by engineering domain rather than storage directory.
 
 ### Current
 
+- [Icon system](specs/ui-widgets/CORE-UI-ICONS-SPEC.md)
 - [Panels](specs/ui-widgets/CORE-UI-PANELS-README.md)
 - [Resizable side drawers](specs/ui-widgets/CORE-UI-DRAWER-RESIZE-SPEC.md)
 - [Context menu](specs/ui-widgets/CORE-UI-CONTEXT-MENU-README.md)

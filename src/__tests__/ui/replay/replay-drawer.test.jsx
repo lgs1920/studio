@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-01
- * Last modified: 2026-06-01
+ * Created on: 2026-06-02
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -422,7 +422,8 @@ describe('JourneyReplayDrawer', () => {
         expect(view.getByTestId('replay-advanced-camera-popup').getAttribute('data-placement')).toBe('bottom')
         const setupButton = view.getByTestId('panel-actions').querySelector('button')
         expect(setupButton).toBeTruthy()
-        expect(setupButton.querySelector('[src^="data:image/svg+xml,"]')).toBeTruthy()
+        const setupIcon = setupButton.querySelector('[data-icon="camera-sliders"]')
+        expect(setupIcon).toBeTruthy()
         expect(view.getByLabelText('Camera position')).toBeTruthy()
         expect(view.getByLabelText('Camera angle')).toBeTruthy()
         expect(view.getByLabelText('Camera angle').value).toBe('-15')

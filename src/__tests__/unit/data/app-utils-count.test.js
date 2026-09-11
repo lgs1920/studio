@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-30
- * Last modified: 2026-09-08
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => ({
     axiosGet:  vi.fn(async () => ({data: {}})),
     sendVisit: vi.fn(async () => true),
     pingBackend: vi.fn(async () => ({alive: true})),
+    registerLGS1920IconLibrary: vi.fn(),
 }))
 
 vi.mock('@Utils/CountApi', () => ({
@@ -83,6 +84,10 @@ vi.mock('@Utils/FA2SL', () => ({
     FA2SL: {
         registerFontAwesomeInShoelace: vi.fn(),
     },
+}))
+
+vi.mock('@Utils/FA2WA', () => ({
+    registerLGS1920IconLibrary: mocks.registerLGS1920IconLibrary,
 }))
 
 import { AppUtils } from '@Utils/AppUtils'
@@ -157,6 +162,7 @@ describe('AppUtils bootstrap count instrumentation', () => {
         await expect(AppUtils.init({onBackendReady})).resolves.toEqual({status: true})
 
         expect(mocks.sendVisit).toHaveBeenCalledTimes(1)
+        expect(mocks.registerLGS1920IconLibrary).toHaveBeenCalledOnce()
         expect(onBackendReady).toHaveBeenCalledTimes(1)
     })
 

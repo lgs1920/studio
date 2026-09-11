@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-08
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,6 +28,7 @@ import YAML                         from 'yaml'
 import { EventEmitter }             from '../assets/libs/EventEmitter/EventEmitter'
 import { FA2SL }                    from './FA2SL'
 import { CountApi }                  from './CountApi'
+import { registerLGS1920IconLibrary } from './FA2WA'
 import { IonLayerUtils }             from './cesium/IonLayerUtils'
 
 export class AppUtils {
@@ -361,8 +362,9 @@ export class AppUtils {
 
         lgs.setDefaultPOIConfiguration()
 
-        // Register Font Awesome icons in ShoeLace
+        // Register Font Awesome icons in Shoelace and Web Awesome
         FA2SL.registerFontAwesomeInShoelace('fa')
+        registerLGS1920IconLibrary()
 
         lgs.colors = {}
         // Default colors (defined in theme.css)
