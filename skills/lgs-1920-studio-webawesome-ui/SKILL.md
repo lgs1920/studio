@@ -34,7 +34,7 @@ such as `fak` and `fakd` in component props.
 Omit `family` for the default `classic` family. Specify `family` for `duotone`, `brands`,
 `sharp`, or another non-default family, and specify `variant` when the selected icon depends
 on a style. Custom kit imports belong in the application bootstrap and must be passed to the
-generic resolver in `src/Utils/useWebAWesomeKits.js` once at application initialization. The resolver uses
+generic resolver in `src/Utils/useWebAwesomeKits.js` once at application initialization. The resolver uses
 the requested family and variant, keeps the first matching definition from the ordered kit list,
 and delegates missing icons to Web Awesome's default resolver.
 

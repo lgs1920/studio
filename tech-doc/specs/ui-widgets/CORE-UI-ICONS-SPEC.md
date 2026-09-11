@@ -86,7 +86,7 @@ and Font Awesome then uses the definition prefix while generating the SVG.
 
 ## Registration architecture
 
-The generic resolver is implemented in [`src/Utils/useWebAWesomeKits.js`](../../../src/Utils/useWebAWesomeKits.js). The
+The generic resolver is implemented in [`src/Utils/useWebAwesomeKits.js`](../../../src/Utils/useWebAwesomeKits.js). The
 application bootstrap imports the concrete kit modules and passes them to the resolver.
 
 The application imports the custom kit modules once, at the application bootstrap boundary:
@@ -167,6 +167,26 @@ present. The definition prefix provides the family fallback for supported Font A
 New kit modules must be imported by the application bootstrap and passed to
 `registerIconLibraryFromKits()`. A UI component should only consume the Web Awesome icon
 component and its public name, family, and variant properties.
+
+### Separate browser documents
+
+A popup or Document Picture-in-Picture window owns a separate `Window` and `Document`. Its
+`customElements` registry and Web Awesome icon-library registry are also separate from the main
+application document. Rendering a React portal into that document moves the DOM nodes, but it does
+not copy the Web Awesome element definition or the registered icon libraries.
+
+The external-window bootstrap must therefore load the `wa-icon` definition and register the custom
+kit in the external browser context. Components rendered there must select the named custom library
+explicitly when they use a kit icon:
+
+```jsx
+<WaIcon library="my-library" name="picture-in-picture-out" variant="regular" />
+```
+
+If the external context has not registered the kit, the custom definition cannot be resolved and
+`wa-icon` can remain on its initial empty 16-by-16 SVG placeholder. The bootstrap registers the
+library in that context, while the explicit `library` property removes ambiguity when the icon is
+rendered in the detached window.
 
 ## Accessibility
 
