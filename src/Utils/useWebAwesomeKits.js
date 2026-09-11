@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: useWebAWesomeKits.js
+ * File: useWebAwesomeKits.js
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr

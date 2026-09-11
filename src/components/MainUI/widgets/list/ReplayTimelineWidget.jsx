@@ -28,7 +28,7 @@ import {
     canDockWidget,
     dockWidget,
 } from '@Core/ui/widget-manager/WidgetDockManager'
-import {LGS1920_ICON_LIBRARY} from '@Utils/useWebAWesomeKits'
+import {LGS1920_ICON_LIBRARY} from '@Utils/useWebAwesomeKits'
 import {useCallback, useContext, useMemo, useRef} from 'react'
 import {ReplayTimelineContent} from './ReplayTimelineContent'
 

@@ -38,14 +38,14 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/components/icon/library.js', () => 
     getIconLibrary: mocks.getIconLibrary,
 }))
 
-import { LGS1920_ICON_LIBRARY, registerIconLibraryFromKits } from '@Utils/useWebAWesomeKits'
+import { LGS1920_ICON_LIBRARY, registerIconLibraryFromKits } from '@Utils/useWebAwesomeKits'
 
 const testKits = [
     {family: 'classic', icons: kitIcons},
     {family: 'duotone', icons: kitDuotoneIcons},
 ]
 
-describe('useWebAWesomeKits', () => {
+describe('useWebAwesomeKits', () => {
     beforeEach(() => {
         vi.clearAllMocks()
     })
