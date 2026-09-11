@@ -20,7 +20,7 @@ const mocks = vi.hoisted(() => ({
     axiosGet:  vi.fn(async () => ({data: {}})),
     sendVisit: vi.fn(async () => true),
     pingBackend: vi.fn(async () => ({alive: true})),
-    registerLGS1920IconLibrary: vi.fn(),
+    registerIconLibraryFromKits: vi.fn(),
 }))
 
 vi.mock('@Utils/CountApi', () => ({
@@ -87,7 +87,8 @@ vi.mock('@Utils/FA2SL', () => ({
 }))
 
 vi.mock('@Utils/FA2WA', () => ({
-    registerLGS1920IconLibrary: mocks.registerLGS1920IconLibrary,
+    LGS1920_ICON_LIBRARY: 'lgs1920',
+    registerIconLibraryFromKits: mocks.registerIconLibraryFromKits,
 }))
 
 import { AppUtils } from '@Utils/AppUtils'
@@ -162,7 +163,9 @@ describe('AppUtils bootstrap count instrumentation', () => {
         await expect(AppUtils.init({onBackendReady})).resolves.toEqual({status: true})
 
         expect(mocks.sendVisit).toHaveBeenCalledTimes(1)
-        expect(mocks.registerLGS1920IconLibrary).toHaveBeenCalledOnce()
+        expect(mocks.registerIconLibraryFromKits).toHaveBeenCalledOnce()
+        expect(mocks.registerIconLibraryFromKits.mock.calls[0][0]).toBe('lgs1920')
+        expect(mocks.registerIconLibraryFromKits.mock.calls[0][1]).toHaveLength(2)
         expect(onBackendReady).toHaveBeenCalledTimes(1)
     })
 

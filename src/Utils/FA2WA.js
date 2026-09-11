@@ -15,17 +15,10 @@
  ******************************************************************************/
 
 import { icon as renderFontAwesomeIcon } from '@fortawesome/fontawesome-svg-core'
-import * as kitIcons from '@awesome.me/kit-eb5c406148/icons/kit/custom'
-import * as kitDuotoneIcons from '@awesome.me/kit-eb5c406148/icons/kit-duotone/custom'
 import { registerIconLibrary } from '@web.awesome.me/webawesome-pro'
 import { getIconLibrary } from '@web.awesome.me/webawesome-pro/dist/components/icon/library.js'
 
 export const LGS1920_ICON_LIBRARY = 'lgs1920'
-
-const defaultKits = [
-    {family: 'classic', icons: kitIcons},
-    {family: 'duotone', icons: kitDuotoneIcons},
-]
 
 const FAMILY_BY_PREFIX = {
     fab: 'brands',
@@ -42,7 +35,7 @@ const defaultIconLibrary = getIconLibrary('default')
  * Build an ordered definition registry from Font Awesome kit registrations.
  *
  * @param {Array<Object>} kits - Ordered kit registrations or modules.
- * @returns {Map<string, Object>} First definition found for each icon name.
+ * @returns {Map<string, Object>} First definition found for each family, variant, and icon name.
  */
 const buildIconDefinitions = kits => {
     const definitions = new Map()
@@ -124,20 +117,29 @@ const createDefaultIconResolver = definitions => {
 }
 
 /**
- * Register the LGS1920 Font Awesome kits as a Web Awesome icon library.
+ * Register Font Awesome kits as a Web Awesome icon library.
  *
- * @param {Array<Object>} [kits=defaultKits] - Ordered Font Awesome kit registrations or modules.
+ * @param {string} libraryName - Name of the Web Awesome icon library to register.
+ * @param {Array<Object>} kits - Ordered Font Awesome kit registrations or modules.
  * @returns {void}
  */
-export const registerLGS1920IconLibrary = (kits = defaultKits) => {
+export const registerIconLibraryFromKits = (libraryName, kits) => {
     if (!defaultIconLibrary) {
         throw new Error('Web Awesome default icon library is not registered')
+    }
+
+    if (!libraryName) {
+        throw new Error('Web Awesome icon library name is required')
+    }
+
+    if (!Array.isArray(kits)) {
+        throw new Error('Web Awesome icon library kits must be an array')
     }
 
     const definitions = buildIconDefinitions(kits)
     const resolveIcon = createIconResolver(definitions)
 
-    registerIconLibrary(LGS1920_ICON_LIBRARY, {
+    registerIconLibrary(libraryName, {
         resolver: resolveIcon,
     })
 

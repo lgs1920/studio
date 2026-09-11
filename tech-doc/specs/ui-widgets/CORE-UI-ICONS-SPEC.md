@@ -86,9 +86,10 @@ and Font Awesome then uses the definition prefix while generating the SVG.
 
 ## Registration architecture
 
-The integration is implemented in [`src/Utils/FA2WA.js`](../../../src/Utils/FA2WA.js).
+The generic resolver is implemented in [`src/Utils/FA2WA.js`](../../../src/Utils/FA2WA.js). The
+application bootstrap imports the concrete kit modules and passes them to the resolver.
 
-The application imports the custom kit modules once:
+The application imports the custom kit modules once, at the application bootstrap boundary:
 
 ```js
 import * as kitIcons from '@awesome.me/kit-eb5c406148/icons/kit/custom'
@@ -98,15 +99,18 @@ import * as kitDuotoneIcons from '@awesome.me/kit-eb5c406148/icons/kit-duotone/c
 The default ordered registrations associate each module with a Web Awesome family:
 
 ```js
-const defaultKits = [
+const LGS1920_ICON_KITS = [
     {family: 'classic', icons: kitIcons},
     {family: 'duotone', icons: kitDuotoneIcons},
 ]
+
+registerIconLibraryFromKits('lgs1920', LGS1920_ICON_KITS)
 ```
 
-`registerLGS1920IconLibrary()` performs two registrations during application initialization:
+`registerIconLibraryFromKits(libraryName, kits)` performs two registrations during application
+initialization:
 
-1. It registers the named `lgs1920` library for explicit selection.
+1. It registers the supplied `libraryName` for explicit selection.
 2. It replaces the Web Awesome `default` resolver with a resolver that checks the LGS1920
    definitions first and delegates missing icons to the original resolver.
 
@@ -143,11 +147,12 @@ controls which kit is searched.
 
 ## Kit ordering and extension
 
-`registerLGS1920IconLibrary()` accepts an ordered array of kit registrations. The first matching
-definition for an identical family, variant, and public name is retained.
+`registerIconLibraryFromKits(libraryName, kits)` accepts a library name and an ordered array of
+kit registrations. The first matching definition for an identical family, variant, and public
+name is retained.
 
 ```js
-registerLGS1920IconLibrary([
+registerIconLibraryFromKits('lgs1920', [
     {family: 'classic', variant: 'regular', icons: classicRegularIcons},
     {family: 'classic', variant: 'solid', icons: classicSolidIcons},
     {family: 'duotone', icons: duotoneIcons},
@@ -159,8 +164,9 @@ definitions in that module share one style. When the registration does not provi
 the resolver derives `thin`, `light`, `regular`, or `solid` from the generated icon name when
 present. The definition prefix provides the family fallback for supported Font Awesome prefixes.
 
-New kit modules must be imported and added in `FA2WA.js`. A UI component should only consume the
-Web Awesome icon component and its public name, family, and variant properties.
+New kit modules must be imported by the application bootstrap and passed to
+`registerIconLibraryFromKits()`. A UI component should only consume the Web Awesome icon
+component and its public name, family, and variant properties.
 
 ## Accessibility
 

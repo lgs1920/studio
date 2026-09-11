@@ -33,10 +33,10 @@ such as `fak` and `fakd` in component props.
 
 Omit `family` for the default `classic` family. Specify `family` for `duotone`, `brands`,
 `sharp`, or another non-default family, and specify `variant` when the selected icon depends
-on a style. Custom kit imports belong in `src/Utils/FA2WA.js` and must be registered once at
-application initialization. The resolver uses the requested family and variant, keeps the
-first matching definition from the ordered kit list, and delegates missing icons to Web
-Awesome's default resolver.
+on a style. Custom kit imports belong in the application bootstrap and must be passed to the
+generic resolver in `src/Utils/FA2WA.js` once at application initialization. The resolver uses
+the requested family and variant, keeps the first matching definition from the ordered kit list,
+and delegates missing icons to Web Awesome's default resolver.
 
 See [the icon system specification](../../tech-doc/specs/ui-widgets/CORE-UI-ICONS-SPEC.md)
 for the complete contract and extension rules.

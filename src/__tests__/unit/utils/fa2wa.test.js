@@ -15,6 +15,8 @@
  ******************************************************************************/
 
 import { icon as renderFontAwesomeIcon } from '@fortawesome/fontawesome-svg-core'
+import * as kitIcons from '@awesome.me/kit-eb5c406148/icons/kit/custom'
+import * as kitDuotoneIcons from '@awesome.me/kit-eb5c406148/icons/kit-duotone/custom'
 import { faCameraSliders, faRegularCaveInMountains } from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -36,7 +38,12 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/components/icon/library.js', () => 
     getIconLibrary: mocks.getIconLibrary,
 }))
 
-import { LGS1920_ICON_LIBRARY, registerLGS1920IconLibrary } from '@Utils/FA2WA'
+import { LGS1920_ICON_LIBRARY, registerIconLibraryFromKits } from '@Utils/FA2WA'
+
+const testKits = [
+    {family: 'classic', icons: kitIcons},
+    {family: 'duotone', icons: kitDuotoneIcons},
+]
 
 describe('FA2WA', () => {
     beforeEach(() => {
@@ -44,7 +51,7 @@ describe('FA2WA', () => {
     })
 
     it('registers the LGS1920 library and resolves kit icons by their icon name', () => {
-        registerLGS1920IconLibrary()
+        registerIconLibraryFromKits(LGS1920_ICON_LIBRARY, testKits)
 
         const customRegistration = mocks.registerIconLibrary.mock.calls.find(
             ([libraryName]) => libraryName === LGS1920_ICON_LIBRARY,
@@ -57,7 +64,7 @@ describe('FA2WA', () => {
     })
 
     it('resolves icons from the kit duotone exports', () => {
-        registerLGS1920IconLibrary()
+        registerIconLibraryFromKits(LGS1920_ICON_LIBRARY, testKits)
 
         const [, options] = mocks.registerIconLibrary.mock.calls.find(
             ([libraryName]) => libraryName === LGS1920_ICON_LIBRARY,
@@ -70,7 +77,7 @@ describe('FA2WA', () => {
     it('uses the first matching definition from an ordered kit list', () => {
         const firstDefinition = {...faRegularCaveInMountains, iconName: 'camera-sliders'}
 
-        registerLGS1920IconLibrary([
+        registerIconLibraryFromKits(LGS1920_ICON_LIBRARY, [
             {family: 'classic', variant: 'regular', icons: {faCameraSliders: firstDefinition}},
             {family: 'classic', variant: 'regular', icons: {faCameraSliders}},
         ])
@@ -86,7 +93,7 @@ describe('FA2WA', () => {
     })
 
     it('uses the kit resolver automatically when no library is specified', () => {
-        registerLGS1920IconLibrary()
+        registerIconLibraryFromKits(LGS1920_ICON_LIBRARY, testKits)
 
         const [, options] = mocks.registerIconLibrary.mock.calls.find(
             ([libraryName]) => libraryName === 'default',
@@ -100,12 +107,17 @@ describe('FA2WA', () => {
     })
 
     it('rejects unknown LGS1920 icon names', () => {
-        registerLGS1920IconLibrary()
+        registerIconLibraryFromKits('custom-icons', testKits)
 
         const [, options] = mocks.registerIconLibrary.mock.calls.find(
-            ([libraryName]) => libraryName === LGS1920_ICON_LIBRARY,
+            ([libraryName]) => libraryName === 'custom-icons',
         )
 
         expect(() => options.resolver('faCameraSliders')).toThrow('Unknown LGS1920 icon')
+    })
+
+    it('requires a library name and an ordered kit list', () => {
+        expect(() => registerIconLibraryFromKits('', testKits)).toThrow('library name is required')
+        expect(() => registerIconLibraryFromKits(LGS1920_ICON_LIBRARY)).toThrow('kits must be an array')
     })
 })
