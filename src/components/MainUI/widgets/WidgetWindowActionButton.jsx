@@ -29,6 +29,6 @@ import {WaButton, WaIcon} from '@web.awesome.me/webawesome-pro/dist/react'
 export const WidgetWindowActionButton = ({icon, library, label, onClick}) => (
     <WaButton size="s" appearance="plain" variant="neutral"
               aria-label={label} title={label} onClick={onClick}>
-        <WaIcon library={library} name={icon} variant="regular"/>
+        <WaIcon {...(library ? {library} : {})} name={icon} variant="regular"/>
     </WaButton>
 )
