@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-10
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,6 +25,7 @@ vi.mock('../../../webcomponents/lgs1920-timeline/LGS1920Timeline.js', () => ({})
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
     WaIcon: props => <span {...props}/>,
+    WaTooltip: ({children, ...props}) => <span data-tooltip {...props}>{children}</span>,
 }))
 
 vi.mock('@Components/MainUI/video/toolbox/VideoRecordingSettingsToolbar', () => ({

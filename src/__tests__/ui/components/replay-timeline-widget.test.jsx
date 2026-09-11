@@ -16,6 +16,7 @@
 
 import {cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
+import {proxy} from 'valtio'
 import {proxyMap} from 'valtio/utils'
 
 const widgetMocks = vi.hoisted(() => ({
@@ -28,10 +29,6 @@ const widgetMocks = vi.hoisted(() => ({
         max:              {width: 3840, height: 2160},
         resizeToContent:  undefined,
     },
-}))
-
-const cleanupMocks = vi.hoisted(() => ({
-    cancelVideoEditing: vi.fn(),
 }))
 
 vi.mock('@Components/MainUI/widgets/Widget', () => ({
@@ -54,12 +51,10 @@ vi.mock('@Components/MainUI/video/ReplayTimelinePreview', () => ({
 }))
 
 vi.mock('@Components/MainUI/widgets/WidgetWindowActionButton', () => ({
-    WidgetWindowActionButton: ({icon, library, label, onClick}) => (
-        <button type="button" data-icon={icon} data-library={library} aria-label={label} onClick={onClick}>{label}</button>
+    WidgetWindowActionButton: ({icon, library, label, onClick, size}) => (
+        <button type="button" data-icon={icon} data-library={library} data-size={size} aria-label={label} onClick={onClick}>{label}</button>
     ),
 }))
-
-vi.mock('@Components/MainUI/video/videoEditingCleanup', () => cleanupMocks)
 
 import {ReplayTimelineWidget} from '@Components/MainUI/widgets/list/ReplayTimelineWidget'
 import {ReplayTimelineContent} from '@Components/MainUI/widgets/list/ReplayTimelineContent'
@@ -98,10 +93,12 @@ describe('ReplayTimelineWidget dimensions', () => {
             canvas: document.createElement('div'),
             stores: {
                 ui: {
-                    widget: {
+                    widget: proxy({
                         current: null,
+                        docked: {id: null},
+                        undocked: {id: null},
                         list: proxyMap([['replay-timeline-widget', {dimensions: {width: 2160, height: 900}}]]),
-                    },
+                    }),
                 },
             },
         }
@@ -184,8 +181,11 @@ describe('ReplayTimelineWidget dimensions', () => {
         const reattachButton = screen.getByRole('button', {name: 'Reattach to widget'})
         expect(reattachButton.getAttribute('data-icon')).toBe('picture-in-picture-out')
         expect(reattachButton.getAttribute('data-library')).toBe('lgs1920')
-        expect(screen.getByRole('button', {name: 'Close timeline'})).toBeTruthy()
+        expect(reattachButton.getAttribute('data-size')).toBe('m')
+        expect(screen.getByRole('button', {name: 'Open in drawer'}).getAttribute('data-icon')).toBe('arrow-down-to-bracket')
+        expect(screen.getByRole('button', {name: 'Open in drawer'}).getAttribute('data-size')).toBe('m')
         expect(screen.queryByRole('button', {name: 'Show widget frame'})).toBeNull()
+        expect(screen.queryByRole('button', {name: 'Close timeline'})).toBeNull()
     })
 
     it('activates timeline keyboard zoom while the widget is selected', async () => {
@@ -195,24 +195,24 @@ describe('ReplayTimelineWidget dimensions', () => {
         await waitFor(() => expect(widgetMocks.previewProps.keyboardZoomActive).toBe(true))
     })
 
-    it('injects host actions and selects the widget frame from the timeline header', () => {
+    it('injects host window and drawer actions from the first timeline render', () => {
         widgetMocks.runtimeConfig.contextMenu = {canDockable: true, canDetach: true}
         render(<ReplayTimelineWidget id="replay-timeline-widget"/>)
 
-        expect(screen.getByRole('button', {name: 'Show widget frame'})).toBeTruthy()
         expect(screen.getByRole('button', {name: 'Open in Picture-in-Picture'})).toBeTruthy()
         expect(screen.getByRole('button', {name: 'Open in drawer'})).toBeTruthy()
-        expect(screen.getByRole('button', {name: 'Close timeline'})).toBeTruthy()
+        expect(screen.queryByRole('button', {name: 'Show widget frame'})).toBeNull()
+        expect(screen.queryByRole('button', {name: 'Close timeline'})).toBeNull()
 
         fireEvent.click(screen.getByRole('button', {name: 'Open in Picture-in-Picture'}))
         expect(__.ui.widgetWindowManager.detachWidget).toHaveBeenCalledWith('replay-timeline-widget')
         fireEvent.click(screen.getByRole('button', {name: 'Open in drawer'}))
+    })
 
-        fireEvent.click(screen.getByRole('button', {name: 'Show widget frame'}))
-        fireEvent.click(screen.getByRole('button', {name: 'Close timeline'}))
+    it('keeps the docked timeline actions inside the timeline header', () => {
+        render(<ReplayTimelineWidget id="replay-timeline-widget" docked/>)
 
-        expect(lgs.stores.ui.widget.current.id).toBe('replay-timeline-widget')
-        expect(lgs.stores.ui.widget.current.keyboardUpdate).toBe(1)
-        expect(cleanupMocks.cancelVideoEditing).toHaveBeenCalledOnce()
+        expect(screen.getByRole('button', {name: 'Reattach to widget'}).getAttribute('data-icon')).toBe('arrow-up-from-bracket')
+        expect(screen.getByRole('button', {name: 'Open in Picture-in-Picture'}).getAttribute('data-icon')).toBe('picture-in-picture')
     })
 })

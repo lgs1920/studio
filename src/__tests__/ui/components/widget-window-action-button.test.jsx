@@ -19,8 +19,9 @@ import {render} from '@testing-library/react'
 import {describe, expect, it, vi} from 'vitest'
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
-    WaButton: ({children, ...props}) => <button type="button" {...props}>{children}</button>,
+    WaButton: ({children, size, ...props}) => <button type="button" data-size={size} {...props}>{children}</button>,
     WaIcon: ({name, ...props}) => <span data-icon={name} {...props}/>,
+    WaTooltip: ({children, ...props}) => <span data-tooltip {...props}>{children}</span>,
 }))
 
 import {WidgetWindowActionButton} from '@Components/MainUI/widgets/WidgetWindowActionButton'
@@ -34,6 +35,9 @@ describe('WidgetWindowActionButton', () => {
         const icon = container.querySelector('[data-icon="picture-in-picture"]')
         expect(icon?.getAttribute('data-icon')).toBe('picture-in-picture')
         expect(icon?.hasAttribute('library')).toBe(false)
+        expect(container.querySelector('button')?.getAttribute('title')).toBeNull()
+        expect(container.querySelector('button')?.style.fontSize).toBe('14px')
+        expect(container.querySelector('[data-tooltip]')?.textContent).toBe('Open in Picture-in-Picture')
     })
 
     it('passes an explicit library for custom kit icons', () => {
@@ -43,5 +47,6 @@ describe('WidgetWindowActionButton', () => {
         )
 
         expect(container.querySelector('[data-icon="picture-in-picture-out"]')?.getAttribute('library')).toBe('lgs1920')
+        expect(container.querySelector('button')?.getAttribute('data-size')).toBe('m')
     })
 })

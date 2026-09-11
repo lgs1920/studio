@@ -9,26 +9,21 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-10
- * Last modified: 2026-09-10
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {cleanup, fireEvent, render, screen} from '@testing-library/react'
+import {cleanup, render, screen} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {proxy} from 'valtio'
 import {proxyMap} from 'valtio/utils'
 
 const dockManager = vi.hoisted(() => ({
-    getDockedWidgetDimensions: vi.fn(() => ({width: 510, height: 270})),
     hydrateDockedWidget: vi.fn(),
     setDockSize: vi.fn(),
     undockWidget: vi.fn(() => true),
-}))
-
-const cleanupMocks = vi.hoisted(() => ({
-    cancelVideoEditing: vi.fn(),
 }))
 
 vi.mock('@Components/WaDrawerNonModal', () => ({
@@ -43,16 +38,11 @@ vi.mock('@Components/MainUI/widgets/DockedWidgetResizeHandle', () => ({
     DockedWidgetResizeHandle: () => null,
 }))
 
-vi.mock('@Components/MainUI/widgets/WidgetWindowActionButton', () => ({
-    WidgetWindowActionButton: ({label, onClick}) => <button type="button" onClick={onClick}>{label}</button>,
-}))
-
 vi.mock('@Core/ui/widget-manager/WidgetDockManager', () => dockManager)
-vi.mock('@Components/MainUI/video/videoEditingCleanup', () => cleanupMocks)
 
 import {DockedWidgetDrawer} from '@Components/MainUI/widgets/DockedWidgetDrawer'
 
-describe('DockedWidgetDrawer host actions', () => {
+describe('DockedWidgetDrawer', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         globalThis.__ = {
@@ -84,20 +74,13 @@ describe('DockedWidgetDrawer host actions', () => {
         globalThis.lgs = undefined
     })
 
-    it('offers reattach and Picture-in-Picture actions from the drawer', () => {
+    it('leaves the drawer header empty so actions stay inside the timeline', () => {
         render(<DockedWidgetDrawer/>)
 
-        fireEvent.click(screen.getByRole('button', {name: 'Reattach to widget'}))
-        expect(dockManager.undockWidget).toHaveBeenCalledWith('replay-timeline-widget#1')
-
-        fireEvent.click(screen.getByRole('button', {name: 'Open in Picture-in-Picture'}))
-        expect(dockManager.getDockedWidgetDimensions).toHaveBeenCalledWith('replay-timeline-widget#1')
-        expect(globalThis.__.ui.widgetWindowManager.detachWidget).toHaveBeenCalledWith(
-            'replay-timeline-widget#1',
-            {dimensions: {width: 510, height: 270}, useConfigDimensions: true},
-        )
-
-        fireEvent.click(screen.getByRole('button', {name: 'Close timeline'}))
-        expect(cleanupMocks.cancelVideoEditing).toHaveBeenCalledOnce()
+        expect(screen.queryByText('Replay Timeline')).toBeNull()
+        expect(document.querySelector('[slot="header-actions"]')).toBeNull()
+        expect(screen.queryByRole('button', {name: 'Reattach to widget'})).toBeNull()
+        expect(screen.queryByRole('button', {name: 'Open in Picture-in-Picture'})).toBeNull()
+        expect(screen.queryByRole('button', {name: 'Close timeline'})).toBeNull()
     })
 })

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-10
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,9 +22,9 @@
  * introduced.
  */
 
-import {forwardRef, useEffect, useImperativeHandle, useMemo, useRef} from 'react'
+import {forwardRef, useEffect, useId, useImperativeHandle, useMemo, useRef} from 'react'
 import {subscribe, useSnapshot} from 'valtio'
-import {WaButton, WaIcon} from '@web.awesome.me/webawesome-pro/dist/react'
+import {WaButton, WaIcon, WaTooltip} from '@web.awesome.me/webawesome-pro/dist/react'
 import {
     CREDITS_WIDGET,
     LOGO_WIDGET,
@@ -403,6 +403,7 @@ export const ReplayTimelinePreview = forwardRef(({
     const widgetSettings = useOptionalSnapshot(lgs.settings?.widgets, {})
     const replaySettings = useOptionalSnapshot(lgs.settings?.ui?.replay, {})
     const _timeline = useRef(null)
+    const videoSettingsButtonId = `replay-timeline-video-settings-${useId().replaceAll(':', '')}`
     const journey = main?.theJourney ?? lgs.theJourney
     const widgetOrder = useMemo(() => resolveVideoWidgetOrder(widgetList, widgetSettings), [widgetList, widgetSettings])
 
@@ -467,7 +468,7 @@ export const ReplayTimelinePreview = forwardRef(({
         swatches: REPLAY_TIMELINE_COLOR_SWATCHES,
         hostInteraction: 'selectable',
         hostNoDragClass: 'lgs-widget-no-drag',
-    }), [detached, keyboardZoomActive, preparedTimeline, projection.durationMillis, projection.fps, projection.source.frameCount, projection.source.frameIntervalMs])
+    }), [keyboardZoomActive, preparedTimeline, projection.durationMillis, projection.fps, projection.source.frameCount, projection.source.frameIntervalMs])
     const baseTracks = useMemo(() => toDisplayTracks(editorData), [editorData])
     const tracks = Array.isArray(preparationTimeline?.tracks)
         ? preparationTimeline.tracks
@@ -624,13 +625,14 @@ export const ReplayTimelinePreview = forwardRef(({
                     <span slot="custom-menu"
                           className="replay-timeline-preview__custom-menu lgs-widget-no-drag">
                         <WaButton appearance="plain"
+                                  id={videoSettingsButtonId}
                                   aria-label="Video settings"
                                   data-additional-content-toggle=""
                                   size="s"
-                                  title="Video settings"
                                   variant="brand">
                             <WaIcon name="video" variant="regular" label=""/>
                         </WaButton>
+                        <WaTooltip for={videoSettingsButtonId} placement="bottom">{'Video settings'}</WaTooltip>
                         <VideoRecordingSettingsToolbar mainTheme mode="actions"/>
                     </span>
                     <span slot="additional-content-label">Video settings</span>

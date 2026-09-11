@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-10
- * Last modified: 2026-09-10
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,11 +18,8 @@ import WaDrawer from '@Components/WaDrawerNonModal'
 import {DynamicWidget} from '@Components/MainUI/widgets/DynamicWidget'
 import {DockedWidgetResizeHandle} from '@Components/MainUI/widgets/DockedWidgetResizeHandle'
 import {DockedWidgetContainerContext} from '@Components/MainUI/widgets/WidgetDockContext'
-import {WidgetWindowActionButton} from '@Components/MainUI/widgets/WidgetWindowActionButton'
-import {cancelVideoEditing} from '@Components/MainUI/video/videoEditingCleanup'
 import {JOURNEY_WIDGETS, REPLAY_TIMELINE_WIDGET, SCENE_WIDGETS_BOARD} from '@Core/constants'
 import {
-    getDockedWidgetDimensions,
     hydrateDockedWidget,
     setDockSize,
     undockWidget,
@@ -70,29 +67,6 @@ export const DockedWidgetDrawer = () => {
      */
     const setDrawerElement = useCallback(element => setDrawer(element), [])
 
-    /**
-     * Return the docked widget to the scene.
-     *
-     * @returns {void}
-     */
-    const handleUndock = useCallback(() => {
-        if (dockedId) {
-            undockWidget(dockedId)
-        }
-    }, [dockedId])
-
-    /**
-     * Move the docked widget into Picture-in-Picture using its pre-dock size.
-     *
-     * @returns {void}
-     */
-    const handleDetach = useCallback(() => {
-        if (!dockedId || !__.ui.widgetWindowManager?.canDetachWidget?.(dockedId)) return
-        const dimensions = getDockedWidgetDimensions(dockedId)
-        if (!undockWidget(dockedId)) return
-        void __.ui.widgetWindowManager.detachWidget(dockedId, {dimensions, useConfigDimensions: true})
-    }, [dockedId])
-
     if (!dockedId || dockedId.split('#')[0] !== REPLAY_TIMELINE_WIDGET) {
         return null
     }
@@ -117,14 +91,6 @@ export const DockedWidgetDrawer = () => {
             style={drawerStyle}
             onWaAfterHide={event => handleAfterHide(event, dockedId)}
         >
-            <div slot="label" className="widget-dock-bottom-drawer-title">{'Replay Timeline'}</div>
-            <div slot="header-actions" className="widget-dock-bottom-drawer-actions">
-                <WidgetWindowActionButton icon="arrow-up-from-bracket" label="Reattach to widget" onClick={handleUndock}/>
-                {__.ui.widgetWindowManager?.canDetachWidget?.(dockedId) && (
-                    <WidgetWindowActionButton icon="picture-in-picture" label="Open in Picture-in-Picture" onClick={handleDetach}/>
-                )}
-                <WidgetWindowActionButton icon="xmark" label="Close timeline" onClick={cancelVideoEditing}/>
-            </div>
             <div className="widget-dock-surface" ref={setSurface}>
                 {surface && (
                     <DockedWidgetContainerContext.Provider value={surface}>

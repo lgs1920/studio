@@ -22,14 +22,15 @@ import {REPLAY_TIMELINE_UI} from '@Components/MainUI/video/replayTimelineUtils'
 import {Widget} from '@Components/MainUI/widgets/Widget'
 import {WidgetWindowActionButton} from '@Components/MainUI/widgets/WidgetWindowActionButton'
 import {DockedWidgetContainerContext} from '@Components/MainUI/widgets/WidgetDockContext'
-import {cancelVideoEditing} from '@Components/MainUI/video/videoEditingCleanup'
 import {JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS_BOARD} from '@Core/constants'
 import {
-    canDockWidget,
     dockWidget,
+    getDockedWidgetDimensions,
+    undockWidget,
 } from '@Core/ui/widget-manager/WidgetDockManager'
 import {LGS1920_ICON_LIBRARY} from '@Utils/useWebAwesomeKits'
 import {useCallback, useContext, useMemo, useRef} from 'react'
+import {useSnapshot} from 'valtio'
 import {ReplayTimelineContent} from './ReplayTimelineContent'
 
 const REPLAY_TIMELINE_FREE_RATIO = {value: '0x0', aspectRatio: 0, locked: false}
@@ -41,25 +42,16 @@ const REPLAY_TIMELINE_FREE_RATIO = {value: '0x0', aspectRatio: 0, locked: false}
  * @param {string} props.id - Widget instance identifier.
  * @param {boolean} props.docked - Whether the widget is in the drawer.
  * @param {boolean} props.detached - Whether the widget is in an external window.
- * @param {Function} props.onClose - Close action callback.
  * @returns {JSX.Element} Header actions.
  */
-const TimelineWidgetHeaderActions = ({id, docked, detached, onClose}) => {
+const TimelineWidgetHeaderActions = ({id, docked, detached}) => {
     const windowManager = __.ui.widgetWindowManager
-    const canDetach = !detached && Boolean(windowManager?.canDetachWidget?.(id))
-    const canDock = Boolean(id && canDockWidget(id))
-
-    const selectWidgetFrame = useCallback(() => {
-        if (docked || detached) return
-        const current = lgs.stores.ui.widget.current ?? {}
-        const rotation = Number(__.ui.widgetManager.getWidgetConfig(id)?.rotate)
-        lgs.stores.ui.widget.current = {
-            ...current,
-            id,
-            rotate: Number.isFinite(rotation) ? rotation : (Number(current.rotate) || 0),
-            keyboardUpdate: (Number(current.keyboardUpdate) || 0) + 1,
-        }
-    }, [detached, docked, id])
+    const widget = useSnapshot(lgs.stores.ui.widget)
+    const hasDetachedWidget = Boolean(widget.undocked?.id)
+    const hasDockedWidget = Boolean(widget.docked?.id)
+    const canDetach = !detached && !hasDetachedWidget
+    const canDock = !docked && !hasDockedWidget
+    const canUndock = docked && !detached
 
     const moveToDrawer = useCallback(() => {
         if (detached) {
@@ -71,31 +63,39 @@ const TimelineWidgetHeaderActions = ({id, docked, detached, onClose}) => {
 
     const moveToExternalWindow = useCallback(() => {
         if (!windowManager?.canDetachWidget?.(id)) return
+        if (docked) {
+            const dimensions = getDockedWidgetDimensions(id)
+            if (!undockWidget(id)) return
+            void windowManager.detachWidget(id, {dimensions, useConfigDimensions: true})
+            return
+        }
         void windowManager.detachWidget(id)
-    }, [id, windowManager])
+    }, [docked, id, windowManager])
+
+    const moveToWidget = useCallback(() => {
+        undockWidget(id)
+    }, [id])
 
     const returnToWidget = useCallback(() => {
         void windowManager?.reattachWidget?.()
     }, [windowManager])
 
-    if (docked) return null
-
     return (
         <>
-            {!detached && (
-                <WidgetWindowActionButton icon="crosshairs-simple" label="Show widget frame" onClick={selectWidgetFrame}/>
+            {canUndock && (
+                <WidgetWindowActionButton icon="arrow-up-from-bracket" label="Reattach to widget" onClick={moveToWidget}/>
             )}
             {canDetach && (
                 <WidgetWindowActionButton icon="picture-in-picture" label="Open in Picture-in-Picture" onClick={moveToExternalWindow}/>
             )}
             {canDock && (
-                <WidgetWindowActionButton icon="arrow-down-to-bracket" label="Open in drawer" onClick={moveToDrawer}/>
+                <WidgetWindowActionButton icon="arrow-down-to-bracket" label="Open in drawer"
+                                          size="m" onClick={moveToDrawer}/>
             )}
             {detached && (
                 <WidgetWindowActionButton icon="picture-in-picture-out" library={LGS1920_ICON_LIBRARY}
-                                          label="Reattach to widget" onClick={returnToWidget}/>
+                                          label="Reattach to widget" size="m" onClick={returnToWidget}/>
             )}
-            <WidgetWindowActionButton icon="xmark" label="Close timeline" onClick={onClose}/>
         </>
     )
 }
@@ -166,16 +166,9 @@ const HostedReplayTimelineWidget = ({id, zIndex, docked, detached}) => {
         showControlBox: !docked,
     }), [container, dockContainer, docked, id, zIndex])
 
-    const handleClose = useCallback(async () => {
-        if (detached) {
-            await __.ui.widgetWindowManager?.reattachWidget?.()
-        }
-        cancelVideoEditing()
-    }, [detached])
     const headerActions = <TimelineWidgetHeaderActions id={id}
                                                        docked={docked}
-                                                       detached={detached}
-                                                       onClose={handleClose}/>
+                                                       detached={detached}/>
     const content = <ReplayTimelineContent id={id}
                                            previewRef={timelinePreviewRef}
                                            detached={detached}

@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-08
- * Last modified: 2026-09-08
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -64,7 +64,9 @@ vi.mock('@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder', () => ({
 }))
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
+    WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
     WaIcon: ({name}) => <span data-icon={name}/>,
+    WaTooltip: ({children, ...props}) => <span data-tooltip {...props}>{children}</span>,
 }))
 
 vi.mock('@Components/MainUI/video/toolbox/VideoRecordingSettingsToolbar', () => ({
@@ -74,6 +76,7 @@ vi.mock('@Components/MainUI/video/toolbox/VideoRecordingSettingsToolbar', () => 
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/button/button.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/card/card.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/color-picker/color-picker.js', () => ({}))
+vi.mock('@web.awesome.me/webawesome-pro/dist/components/drawer/drawer.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/icon/icon.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/input/input.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/popup/popup.js', () => ({}))

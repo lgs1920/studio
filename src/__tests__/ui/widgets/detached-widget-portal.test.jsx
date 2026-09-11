@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-10
- * Last modified: 2026-09-10
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -92,7 +92,7 @@ describe('DetachedWidgetPortal', () => {
         globalThis.lgs = undefined
     })
 
-    it('leaves the detached card header available to the hosted timeline', () => {
+    it('leaves the detached card without a duplicate header', () => {
         portalMocks.mode = 'pip'
 
         render(<DetachedWidgetPortal/>)
@@ -100,7 +100,7 @@ describe('DetachedWidgetPortal', () => {
         expect(screen.getByTestId('detached-widget')).toBeTruthy()
         expect(screen.getByTestId('detached-card').getAttribute('orientation')).toBe('vertical')
         expect(screen.getByTestId('detached-card').getAttribute('data-with-header-actions')).toBe('false')
-        expect(screen.getByText('Replay Timeline')).toBeTruthy()
+        expect(screen.queryByText('Replay Timeline')).toBeNull()
         expect(screen.queryByRole('button')).toBeNull()
     })
 
