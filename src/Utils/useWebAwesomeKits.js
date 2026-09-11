@@ -7,7 +7,7 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-11
+ * Created on: 2026-08-19
  * Last modified: 2026-09-11
  *
  *
@@ -15,8 +15,10 @@
  ******************************************************************************/
 
 import { icon as renderFontAwesomeIcon } from '@fortawesome/fontawesome-svg-core'
-import { registerIconLibrary } from '@web.awesome.me/webawesome-pro'
-import { getIconLibrary } from '@web.awesome.me/webawesome-pro/dist/components/icon/library.js'
+import {
+    getIconLibrary,
+    registerIconLibrary,
+} from '@web.awesome.me/webawesome-pro/dist/components/icon/library.js'
 
 export const LGS1920_ICON_LIBRARY = 'lgs1920'
 

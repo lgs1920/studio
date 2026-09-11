@@ -30,12 +30,9 @@ const mocks = vi.hoisted(() => ({
     registerIconLibrary: vi.fn(),
 }))
 
-vi.mock('@web.awesome.me/webawesome-pro', () => ({
-    registerIconLibrary: mocks.registerIconLibrary,
-}))
-
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/icon/library.js', () => ({
     getIconLibrary: mocks.getIconLibrary,
+    registerIconLibrary: mocks.registerIconLibrary,
 }))
 
 import { LGS1920_ICON_LIBRARY, registerIconLibraryFromKits } from '@Utils/useWebAwesomeKits'
