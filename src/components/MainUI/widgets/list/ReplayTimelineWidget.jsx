@@ -90,11 +90,11 @@ const TimelineWidgetHeaderActions = ({id, docked, detached}) => {
             )}
             {canDock && (
                 <WidgetWindowActionButton icon="arrow-down-to-bracket" label="Open in drawer"
-                                          size="m" onClick={moveToDrawer}/>
+                                          onClick={moveToDrawer}/>
             )}
             {detached && (
                 <WidgetWindowActionButton icon="picture-in-picture-out" library={LGS1920_ICON_LIBRARY}
-                                          label="Reattach to widget" size="m" onClick={returnToWidget}/>
+                                          label="Reattach to widget" onClick={returnToWidget}/>
             )}
         </>
     )

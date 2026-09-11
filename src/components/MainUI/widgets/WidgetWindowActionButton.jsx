@@ -17,7 +17,7 @@
 import {WaButton, WaIcon, WaTooltip} from '@web.awesome.me/webawesome-pro/dist/react'
 import {useId} from 'react'
 
-const WIDGET_WINDOW_ACTION_FONT_SIZE = '14px'
+const WIDGET_WINDOW_ACTION_FONT_SIZE = 'var(--wa-font-size-m)'
 
 /**
  * Render a consistent icon-only action for docked and detached widget frames.

@@ -51,7 +51,7 @@ vi.mock('@Components/MainUI/video/ReplayTimelinePreview', () => ({
 }))
 
 vi.mock('@Components/MainUI/widgets/WidgetWindowActionButton', () => ({
-    WidgetWindowActionButton: ({icon, library, label, onClick, size}) => (
+    WidgetWindowActionButton: ({icon, library, label, onClick, size = 'm'}) => (
         <button type="button" data-icon={icon} data-library={library} data-size={size} aria-label={label} onClick={onClick}>{label}</button>
     ),
 }))

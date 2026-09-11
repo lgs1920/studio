@@ -36,7 +36,7 @@ describe('WidgetWindowActionButton', () => {
         expect(icon?.getAttribute('data-icon')).toBe('picture-in-picture')
         expect(icon?.hasAttribute('library')).toBe(false)
         expect(container.querySelector('button')?.getAttribute('title')).toBeNull()
-        expect(container.querySelector('button')?.style.fontSize).toBe('14px')
+        expect(container.querySelector('button')?.style.fontSize).toBe('var(--wa-font-size-m)')
         expect(container.querySelector('[data-tooltip]')?.textContent).toBe('Open in Picture-in-Picture')
     })
 
