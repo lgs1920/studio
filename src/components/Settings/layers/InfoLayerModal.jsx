@@ -7,21 +7,18 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-09
- * Last modified: 2026-07-09
+ * Created on: 2024-11-07
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
-import { faCheck }                    from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlDialog, SlIcon }            from '@shoelace-style/shoelace/dist/react'
-import { WaButton, WaDialog, WaDivider, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaDialog, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import React, { useEffect, useState }            from 'react'
 import { default as ReactMarkdown }   from 'react-markdown'
 import { useSnapshot }                from 'valtio'
-import { FA2SL }         from '@Utils/FA2SL'
 import infoText from './info-layer.md?raw'
 
 export const InfoLayerModal = () => {

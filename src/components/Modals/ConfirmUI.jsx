@@ -7,20 +7,16 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-06
- * Last modified: 2026-04-02
+ * Created on: 2024-02-28
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { faXmark }                    from '@fortawesome/pro-regular-svg-icons'
-import { faCheck }                    from '@fortawesome/pro-solid-svg-icons'
-import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
 import { WaButton, WaDialog, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import parse                          from 'html-react-parser'
 import { useState }                   from 'react'
-import { FA2SL } from '@Utils/FA2SL'
 
 /**
  * Confirm Dialog

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-02-11
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,9 +21,6 @@
  * File: JourneyMetricsInput.jsx
  ******************************************************************************/
 
-import { SlInput, SlIconButton } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                 from '@Utils/FA2SL'
-import { faArrowRotateLeft }     from '@fortawesome/pro-solid-svg-icons'
 import { UnitUtils }                 from '@Utils/UnitUtils'
 import { WaButton, WaIcon, WaInput } from '@web.awesome.me/webawesome-pro/dist/react'
 import React, { useMemo }            from 'react'

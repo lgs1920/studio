@@ -7,20 +7,17 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-22
+ * Created on: 2024-06-04
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { faXmark }                    from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
 import { WaButton, WaDialog, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import { default as ReactMarkdown }   from 'react-markdown'
 import { useSnapshot }                from 'valtio'
 import { markdown as support } from '../../../src/assets/modals/support.md'
-import { FA2SL } from '@Utils/FA2SL'
 
 
 export const SupportUI = () => {
