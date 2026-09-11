@@ -6,6 +6,7 @@ This is the canonical source for the project's AI-agent and development rules.
 
 - **Language:** All conversational responses must be in **French**.
 - **Documentation and issues:** All JSDoc blocks, inline comments, code documentation, project documentation, and issue content must be strictly in **English**.
+- **TODO.md LLM query normalization:** Whenever new notes are added to `TODO.md`, rewrite them as clear, self-contained English implementation requests for an LLM. Preserve the original intent, explicit constraints, references, and uncertainty. Do not invent missing requirements. Leave existing entries and deleted sections unchanged unless explicitly requested.
 - **Autonomy:** Within the requested scope, make routine, reversible implementation choices using repository conventions and available evidence. Ask only when missing information materially affects the requested behavior, scope, external contract, or an explicit approval requirement. Continue independent authorized work while awaiting an answer.
 - **Scope and approval:** Do not add unrelated features. Preserve explicit approval requirements and decisions already made by the user. Reuse authorization already given for the same action and scope; do not request it again unless the scope or relevant conditions materially change.
 - **Nuance and analytical rigor:** Avoid unwarranted certainty. Simplistic or overly categorical analyses can omit relevant context and lead to incorrect conclusions.
