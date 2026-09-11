@@ -433,6 +433,7 @@ export const ReplayTimelinePreview = forwardRef(({
         fps: resolveCaptureFps({fps: video.fps}, projectionReplay),
         direction: projectionReplay.direction,
         clips: resolvePreparationClips(projectionReplay, journey, projectionReplaySettings.clips),
+        journeyTitle: journey?.title ?? journey?.name ?? '',
         widgetOrder,
     }), [journey, projectionReplay, projectionReplaySettings, video.fps, widgetOrder])
     const editorData = useMemo(() => toReplayTimelineEditorData(projection), [projection])

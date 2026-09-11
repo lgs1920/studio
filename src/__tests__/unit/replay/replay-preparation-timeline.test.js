@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-02
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -57,6 +57,16 @@ describe('ReplayPreparationTimeline', () => {
             .toEqual(expect.arrayContaining(['wa-neutral', 'wa-neutral-blue']))
         expect(projection.durationMillis).toBe(4000)
         expect(projection.playhead.endMillis).toBe(4000)
+    })
+
+    it('uses the journey title for the replay clip label', () => {
+        const projection = buildReplayPreparationTimeline({
+            replayDurationMillis: 4000,
+            journeyTitle: 'Mont Blanc',
+            clips: {catalog: {}, start: [], stop: []},
+        })
+
+        expect(projection.tracks[0].actions[0].label).toBe('Mont Blanc')
     })
 
     it('keeps start, replay, and stop phases contiguous', () => {

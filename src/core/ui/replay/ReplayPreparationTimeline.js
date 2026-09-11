@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-04
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -254,28 +254,30 @@ const actionFromRange = ({
  * Resolve a user-facing label for a replay phase.
  *
  * @param {Object} phase - Canonical phase.
+ * @param {string} [journeyTitle] - Current journey title.
  * @returns {string} Phase label.
  */
-const phaseLabel = phase => phase.kind === REPLAY_CLIP_SLOT_PRE_REPLAY
+const phaseLabel = (phase, journeyTitle = '') => phase.kind === REPLAY_CLIP_SLOT_PRE_REPLAY
     ? 'Pre-replay'
     : phase.kind === REPLAY_CLIP_SLOT_POST_REPLAY
       ? 'Post-replay'
-      : 'Replay'
+      : String(journeyTitle).trim() || 'Replay'
 
 /**
  * Convert canonical phases into the Replay row actions.
  *
  * @param {Object} timeline - Canonical video timeline.
+ * @param {string} [journeyTitle] - Current journey title.
  * @returns {Array} Replay row actions.
  */
-const buildReplayActions = timeline => timeline.phases
+const buildReplayActions = (timeline, journeyTitle = '') => timeline.phases
     .filter(phase => phase.endMillis > phase.startMillis || phase.kind === 'replay')
     .map((phase, index) => actionFromRange({
         id: `${phase.kind}-${phase.clip?.clipId ?? phase.clip?.id ?? index}`,
         kind: phase.kind,
         label: timeline.clips?.catalog?.[phase.clip?.clipId]?.label
             ?? phase.clip?.label
-            ?? phaseLabel(phase),
+            ?? phaseLabel(phase, journeyTitle),
         startMillis: phase.startMillis,
         endMillis: phase.endMillis,
         clip: phase.clip,
@@ -518,6 +520,7 @@ const timelineSignature = ({timeline, tracks}) => JSON.stringify({
  * @param {number} options.fps - Capture frame rate when no timeline is supplied.
  * @param {number} options.direction - Replay direction when no timeline is supplied.
  * @param {Object|null} options.clips - Replay clip configuration when no timeline is supplied.
+ * @param {string} [options.journeyTitle] - Current journey title for the Replay clip label.
  * @param {Array} [options.widgetOrder] - Video widget instances ordered bottom to top.
  * @returns {Object} Normalized preparation timeline projection.
  */
@@ -533,7 +536,7 @@ export const buildReplayPreparationTimeline = (options = {}) => {
         kind: REPLAY_PREPARATION_TRACK_REPLAY,
         label: 'Replay',
         editable: false,
-        actions: buildReplayActions(timeline),
+        actions: buildReplayActions(timeline, options.journeyTitle),
         colorClasses: REPLAY_COLOR_CLASSES,
         timelineColor: DEFAULT_TIMELINE_COLOR,
     }

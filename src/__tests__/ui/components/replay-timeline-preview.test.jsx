@@ -333,6 +333,7 @@ describe('ReplayTimelinePreview', () => {
 
     it('keeps the existing journey clip labels and icons without track icons', () => {
         globalThis.lgs.theJourney = {
+            title: 'Mont Blanc',
             replay: {
                 start: [{clipId: 'intro'}],
                 stop: [{clipId: 'outro'}],
@@ -358,7 +359,7 @@ describe('ReplayTimelinePreview', () => {
         const {container} = render(<ReplayTimelinePreview/>)
         const replayTrack = container.querySelector('lgs1920-timeline').tracks.find(track => track.id === 'replay')
 
-        expect(replayTrack.clips.map(clip => clip.label)).toEqual(['Intro', 'Replay', 'Outro'])
+        expect(replayTrack.clips.map(clip => clip.label)).toEqual(['Intro', 'Mont Blanc', 'Outro'])
         expect(replayTrack.clips.map(clip => clip.icon)).toEqual([
             'plane-departure',
             'route',
