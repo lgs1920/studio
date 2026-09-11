@@ -1,16 +1,16 @@
-# LGS1920 Studio Icon System
+# Web Awesome Icon System
 
 ## Status
 
-This document describes the implemented icon integration used by LGS1920 Studio. It is the
+This document describes the implemented icon integration used by the application. It is the
 reference for selecting, registering, extending, and testing Web Awesome and Font Awesome
-icons in the application.
+icons.
 
 ## Purpose
 
 The application uses Web Awesome's `wa-icon` component as the UI icon surface and Font Awesome
-as the icon definition and SVG rendering source. The integration supports the custom Font
-Awesome kits used by LGS1920 while preserving Web Awesome's normal icon library behavior.
+as the icon definition and SVG rendering source. The integration supports custom Font Awesome
+kits while preserving Web Awesome's normal icon library behavior.
 
 The integration provides these properties:
 
@@ -19,7 +19,7 @@ The integration provides these properties:
 - `family` and `variant` select the relevant custom kit definition.
 - The `classic` family remains the default and does not need to be specified.
 - Custom kit imports are centralized and are not repeated in UI components.
-- Icons absent from the LGS1920 kits continue through Web Awesome's default resolver.
+- Icons absent from the custom kits continue through Web Awesome's default resolver.
 
 ## Public component contract
 
@@ -56,13 +56,12 @@ Specify `family` when selecting another family:
 `family` and `variant` are icon properties. They are independent from a button's appearance or
 variant.
 
-The `library` property is optional for LGS1920 kit icons because the integration extends the
-Web Awesome `default` library. It can be provided when the LGS1920 library must be selected
-explicitly:
+The `library` property is optional for custom kit icons because the integration extends the Web
+Awesome `default` library. It can be provided when the custom library must be selected explicitly:
 
 ```jsx
 <WaIcon
-    library="lgs1920"
+    library="my-library"
     name="camera-sliders"
     variant="solid"
 />
@@ -75,8 +74,8 @@ prefix is required by Font Awesome's renderer and remains in the definition:
 
 | Definition prefix | Web Awesome family | Meaning |
 | --- | --- | --- |
-| `fak` | `classic` | Custom icon from the LGS1920 kit |
-| `fakd` | `duotone` | Custom icon from the LGS1920 duotone kit |
+| `fak` | `classic` | Custom icon from a classic kit |
+| `fakd` | `duotone` | Custom icon from a duotone kit |
 | `fab` | `brands` | Font Awesome brand definition |
 | `fas`, `far`, and related prefixes | `classic` or another Font Awesome family | Font Awesome style definition |
 
@@ -99,19 +98,19 @@ import * as kitDuotoneIcons from '@awesome.me/kit-########/icons/kit-duotone/cus
 The default ordered registrations associate each module with a Web Awesome family:
 
 ```js
-const LGS1920_ICON_KITS = [
+const MY_LIBRARY_KITS = [
     {family: 'classic', icons: kitIcons},
     {family: 'duotone', icons: kitDuotoneIcons},
 ]
 
-registerIconLibraryFromKits('lgs1920', LGS1920_ICON_KITS)
+registerIconLibraryFromKits('my-library', MY_LIBRARY_KITS)
 ```
 
 `registerIconLibraryFromKits(libraryName, kits)` performs two registrations during application
 initialization:
 
 1. It registers the supplied `libraryName` for explicit selection.
-2. It replaces the Web Awesome `default` resolver with a resolver that checks the LGS1920
+2. It replaces the Web Awesome `default` resolver with a resolver that checks the custom kit
    definitions first and delegates missing icons to the original resolver.
 
 The existing default library mutator and sprite sheet are preserved when the default resolver
@@ -152,7 +151,7 @@ kit registrations. The first matching definition for an identical family, varian
 name is retained.
 
 ```js
-registerIconLibraryFromKits('lgs1920', [
+registerIconLibraryFromKits('my-library', [
     {family: 'classic', variant: 'regular', icons: classicRegularIcons},
     {family: 'classic', variant: 'solid', icons: classicSolidIcons},
     {family: 'duotone', icons: duotoneIcons},
@@ -181,7 +180,7 @@ not be used as a replacement for control semantics.
 
 ## Failure behavior
 
-The named `lgs1920` resolver throws an error when an explicitly requested custom icon is not
+The named custom resolver throws an error when an explicitly requested custom icon is not
 available in the registered kits or cannot be rendered. The extended `default` resolver uses
 Web Awesome's original behavior for missing custom names, which allows standard Web Awesome and
 Font Awesome icons to continue working.
