@@ -1896,3 +1896,31 @@
 ## 2026-09-10 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/845a076904b883a190acbb7963dfccfab89a7d37)
 
 - Recorded automatically from Git history.
+
+## 2026-09-10 — [`docs: define timeline domain isolation rule`](https://github.com/lgs1920/studio/commit/9b9ed7e7f032aab90469416dd13249aea492e7ae)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`docs: document timeline domain boundary`](https://github.com/lgs1920/studio/commit/7b8c8721873d44634218613a95896bc13ba5aca5)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`feat: extend generic timeline header and content`](https://github.com/lgs1920/studio/commit/d8c5d21aa9e2e9606e7d3b9d83d9f47113d6eeae)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`feat: integrate timeline preparation controls`](https://github.com/lgs1920/studio/commit/30a51878c72afe3ac36134a5ee94aa459b5f09d8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`feat: place timeline actions in each host header`](https://github.com/lgs1920/studio/commit/7eb80b6e77a15ae8017bbc1a1f490eba39211bb5)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`docs: document timeline host integration`](https://github.com/lgs1920/studio/commit/b12a410000487af32b6489ed3f769f245469bd3d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/27234fed9b39ada6a280cd9dff59e95a20e8f8f8)
+
+- Recorded automatically from Git history.
