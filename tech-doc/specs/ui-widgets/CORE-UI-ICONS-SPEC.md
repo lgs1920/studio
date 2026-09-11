@@ -57,7 +57,8 @@ Specify `family` when selecting another family:
 variant.
 
 The `library` property is optional for custom kit icons because the integration extends the Web
-Awesome `default` library. It can be provided when the custom library must be selected explicitly:
+Awesome `default` library. It can be provided when the custom library must be selected explicitly,
+including icons rendered in a separate browser document such as a Picture-in-Picture window:
 
 ```jsx
 <WaIcon
@@ -85,7 +86,7 @@ and Font Awesome then uses the definition prefix while generating the SVG.
 
 ## Registration architecture
 
-The generic resolver is implemented in [`src/Utils/FA2WA.js`](../../../src/Utils/FA2WA.js). The
+The generic resolver is implemented in [`src/Utils/useWebAWesomeKits.js`](../../../src/Utils/useWebAWesomeKits.js). The
 application bootstrap imports the concrete kit modules and passes them to the resolver.
 
 The application imports the custom kit modules once, at the application bootstrap boundary:
@@ -198,7 +199,7 @@ Use `name="camera-sliders"` instead.
 
 The integration is covered by:
 
-- [`src/__tests__/unit/utils/fa2wa.test.js`](../../../src/__tests__/unit/utils/fa2wa.test.js),
+- [`src/__tests__/unit/utils/use-web-awesome-kits.test.js`](../../../src/__tests__/unit/utils/use-web-awesome-kits.test.js),
   which tests classic, duotone, family and variant selection, kit ordering, default fallback,
   and rejection of JavaScript export names.
 - [`src/__tests__/ui/replay/replay-drawer.test.jsx`](../../../src/__tests__/ui/replay/replay-drawer.test.jsx),
@@ -210,7 +211,7 @@ Run the focused tests with:
 
 ```bash
 bunx --bun vitest run \
-    src/__tests__/unit/utils/fa2wa.test.js \
+    src/__tests__/unit/utils/use-web-awesome-kits.test.js \
     src/__tests__/ui/replay/replay-drawer.test.jsx \
     src/__tests__/unit/data/app-utils-count.test.js
 ```
