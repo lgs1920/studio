@@ -92,8 +92,8 @@ application bootstrap imports the concrete kit modules and passes them to the re
 The application imports the custom kit modules once, at the application bootstrap boundary:
 
 ```js
-import * as kitIcons from '@awesome.me/kit-eb5c406148/icons/kit/custom'
-import * as kitDuotoneIcons from '@awesome.me/kit-eb5c406148/icons/kit-duotone/custom'
+import * as kitIcons from '@awesome.me/kit-########/icons/kit/custom'
+import * as kitDuotoneIcons from '@awesome.me/kit-########/icons/kit-duotone/custom'
 ```
 
 The default ordered registrations associate each module with a Web Awesome family:
