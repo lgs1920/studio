@@ -7,19 +7,18 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2024-06-07
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { ProfileButton }                                               from '@Components/Profile/ProfileButton'
-import { faEllipsisVertical }                                          from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL } from '@Utils/FA2SL.js'
+import { SlButton, SlDropdown, SlMenu, SlMenuItem, SlTooltip }           from '@shoelace-style/shoelace/dist/react'
+import { WaIcon }                                                        from '@web.awesome.me/webawesome-pro/dist/react'
 import { JourneyLoaderButton }                           from '../FileLoader/JourneyLoaderButton'
-import { SnapshotButton, SnapshotMenu, SnapshotTrigger } from './Snapshot'
+import { SnapshotMenu, SnapshotTrigger } from './Snapshot'
 
 export const DropdownToolbar = (props) => {
 
@@ -30,7 +29,7 @@ export const DropdownToolbar = (props) => {
                 <div slot="trigger">
                     <SlTooltip hoist placement={props.tooltip} content="Toolbar">
                         <SlButton size={'small'} className={'square-button'}>
-                            <SlIcon slot="prefix" library="fa" name={FA2SL.set(faEllipsisVertical)}></SlIcon>
+                            <WaIcon slot="prefix" name="ellipsis-vertical" variant="regular"/>
                         </SlButton>
                     </SlTooltip>
                 </div>
@@ -60,4 +59,3 @@ export const DropdownToolbar = (props) => {
         </div>
     )
 }
-

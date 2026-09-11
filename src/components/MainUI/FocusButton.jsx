@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-03-09
- * Last modified: 2026-03-09
+ * Created on: 2024-11-14
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,9 +16,8 @@
 
 import { REFRESH_DRAWING, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
 import { Utils }                                    from '@Editor/Utils'
-import { faCrosshairsSimple }                       from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlIcon, SlTooltip }              from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                    from '@Utils/FA2SL.js'
+import { SlButton, SlTooltip }                      from '@shoelace-style/shoelace/dist/react'
+import { WaIcon }                                   from '@web.awesome.me/webawesome-pro/dist/react'
 import { useSnapshot }                              from 'valtio'
 
 
@@ -47,7 +46,7 @@ export const FocusButton = (props) => {
             <SlTooltip hoist placement={placement} content={'Reset the Focus'}>
                 <SlButton size={'small'} className="square-button" id={'focus-on-current-journey'}
                           onClick={focusOnJourney}>
-                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faCrosshairsSimple)}/>
+                    <WaIcon slot="prefix" name="crosshairs-simple" variant="regular"/>
                 </SlButton>
             </SlTooltip>
         </>

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified on: 2026-07-03
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -47,7 +47,10 @@ vi.mock('@Components/MainUI/widgets/useWidgetScaleCorrection', () => ({
 
 vi.mock('@shoelace-style/shoelace/dist/react', () => ({
     SlDivider: () => <hr />,
-    SlIcon: () => <span />,
+}))
+
+vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
+    WaIcon: ({name}) => <span data-icon={name}/>,
 }))
 
 import { JourneyStats } from '@Components/Stats/JourneyStats'

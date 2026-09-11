@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-08-28
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,10 +21,8 @@ import {
     REPLAY_CAMERA_POSITION_BEHIND,
     REPLAY_CAMERA_POSITION_SYSTEM,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
-import { faAngle, faMagnifyingGlassLocation, faVideo } from '@fortawesome/pro-regular-svg-icons'
 import { foot, meter, UnitUtils } from '@Utils/UnitUtils'
 import { cameraViewToSlippyLevel } from '@Utils/cesium/CameraLevel'
-import { FA2SL } from '@Utils/FA2SL'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import { Math as CesiumMath } from 'cesium'
@@ -266,22 +264,22 @@ export const CameraAdjustmentOverlay = memo(({
         >
             <div className="camera-adjustment-overlay" onWheel={onWheel}>
                 <span className="camera-adjustment-metric">
-                    <sl-icon library="fa" name={FA2SL.set(faVideo)}/>
+                    <WaIcon name="video" variant="regular"/>
                     <strong>{displayedValues.height}</strong>
                 </span>
                 <span className="camera-adjustment-metric">
-                    <sl-icon library="fa" name={FA2SL.set(faAngle)}/>
+                    <WaIcon name="angle" variant="regular"/>
                     <strong>{displayedValues.pitch}</strong>
                 </span>
                 {displayedValues.level !== null && displayedValues.level !== undefined && (
                     <span className="camera-adjustment-metric">
-                        <sl-icon library="fa" name={FA2SL.set(faMagnifyingGlassLocation)}/>
+                        <WaIcon name="magnifying-glass-location" variant="regular"/>
                         <strong>{displayedValues.level}</strong>
                     </span>
                 )}
                 {hasReplayCameraAngle && (
                     <span className="camera-adjustment-metric" aria-label="Replay camera angle">
-                        <sl-icon library="fa" name={FA2SL.set(faVideo)}/>
+                        <WaIcon name="video" variant="regular"/>
                         <strong>{`${Math.round(-Number(replayCamera.headingOffset))}°`}</strong>
                         {replayCameraDirection && (
                             <WaIcon

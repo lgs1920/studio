@@ -80,12 +80,6 @@ vi.mock('@Core/ui/replay/JourneyReplayProgressionStyle', () => ({
     ensureJourneyReplaySettings: vi.fn(() => ({})),
 }))
 
-vi.mock('@Utils/FA2SL', () => ({
-    FA2SL: {
-        registerFontAwesomeInShoelace: vi.fn(),
-    },
-}))
-
 vi.mock('@Utils/LGS1920IconLibrary', () => ({
     registerLGS1920IconLibrary: mocks.registerIconLibraryFromKits,
 }))

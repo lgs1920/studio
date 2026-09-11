@@ -7,16 +7,15 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2024-09-22
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { faTriangleExclamation }     from '@fortawesome/pro-regular-svg-icons'
-import { SlAlert, SlDialog, SlIcon } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                     from '@Utils/FA2SL'
+import { SlAlert, SlDialog }         from '@shoelace-style/shoelace/dist/react'
+import { WaIcon }                    from '@web.awesome.me/webawesome-pro/dist/react'
 import { useSnapshot }               from 'valtio'
 
 
@@ -28,7 +27,7 @@ import { useSnapshot }               from 'valtio'
  *
  * @return {JSX.Element}
  */
-export const RestartBackend = (props) => {
+export const RestartBackend = () => {
 
     const handleRequestClose = (event) => {
         if (event.detail.source === 'overlay') {
@@ -47,7 +46,7 @@ export const RestartBackend = (props) => {
                   style={{'--body-spacing': 0}}
         >
             <SlAlert variant="warning" open>
-                <SlIcon slot="icon" library="fa" name={FA2SL.set(faTriangleExclamation)}/>
+                <WaIcon slot="icon" name="triangle-exclamation" variant="regular"/>
                 {'Restarting the backend...'}
             </SlAlert>
         </SlDialog>

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-08-27
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,12 +31,6 @@ vi.mock('@Components/MainUI/widgets/Widget', () => ({
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaIcon: ({name, ...props}) => <span data-icon={name} {...props}/>,
-}))
-
-vi.mock('@Utils/FA2SL', () => ({
-    FA2SL: {
-        set: icon => icon?.iconName ?? `${icon ?? ''}`,
-    },
 }))
 
 afterEach(() => {
@@ -76,7 +70,8 @@ describe('CameraAdjustmentOverlay', () => {
         expect(view.getByText('L12')).toBeTruthy()
         const angleMetric = view.getByLabelText('Replay camera angle')
         expect(angleMetric.textContent).toContain('30°')
-        expect([...angleMetric.children].map(element => element.tagName)).toEqual(['SL-ICON', 'STRONG', 'SPAN'])
+        expect([...angleMetric.children].map(element => element.tagName)).toEqual(['SPAN', 'STRONG', 'SPAN'])
+        expect(angleMetric.querySelector('[data-icon="video"]')).not.toBeNull()
         const direction = view.container.querySelector('.camera-adjustment-angle-direction')
         expect(direction?.dataset.direction).toBe('behind')
         expect(direction?.dataset.icon).toBe('caret-up')

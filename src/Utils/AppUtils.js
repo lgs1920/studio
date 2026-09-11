@@ -26,7 +26,6 @@ import { ensureJourneyReplaySettings } from '@Core/ui/replay/JourneyReplayProgre
 import axios                        from 'axios'
 import YAML                         from 'yaml'
 import { EventEmitter }             from '../assets/libs/EventEmitter/EventEmitter'
-import { FA2SL }                    from './FA2SL'
 import { CountApi }                  from './CountApi'
 import { IonLayerUtils }             from './cesium/IonLayerUtils'
 import {registerLGS1920IconLibrary} from './LGS1920IconLibrary'
@@ -362,8 +361,7 @@ export class AppUtils {
 
         lgs.setDefaultPOIConfiguration()
 
-        // Register Font Awesome icons in Shoelace and Web Awesome
-        FA2SL.registerFontAwesomeInShoelace('fa')
+        // Register the application icon library in Web Awesome
         registerLGS1920IconLibrary()
 
         lgs.colors = {}

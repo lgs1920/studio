@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-19
- * Last modified: 2026-08-19
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,6 +21,7 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
     WaCopyButton: () => null,
     WaDetails: ({children}) => <div>{children}</div>,
+    WaIcon: ({name, ...props}) => <span data-icon={name} {...props}/>,
     WaTextarea: () => null,
 }))
 
@@ -32,11 +33,6 @@ vi.mock('@shoelace-style/shoelace/dist/react', () => ({
     SlAlert: ({children}) => <div>{children}</div>,
     SlButton: ({children, ...props}) => <button {...props}>{children}</button>,
     SlDialog: ({children, className, style}) => <div className={className} role="dialog" style={style}>{children}</div>,
-    SlIcon: () => null,
-}))
-
-vi.mock('@Utils/FA2SL', () => ({
-    FA2SL: {set: value => value},
 }))
 
 import { WidgetMountErrorDialog } from '@Components/MainUI/video/WidgetMountErrorDialog'

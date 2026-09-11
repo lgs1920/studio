@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-11
- * Last modified: 2026-09-06
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -52,12 +52,6 @@ vi.mock('@Utils/UnitUtils', () => ({
     meter:     {symbol: 'm'},
     UnitUtils: {
         formatMetric: value => ({full: `${Math.round(Number(value) || 0)} m`}),
-    },
-}))
-
-vi.mock('@Utils/FA2SL', () => ({
-    FA2SL: {
-        set: icon => icon?.iconName ?? `${icon ?? ''}`,
     },
 }))
 

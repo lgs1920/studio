@@ -1,14 +1,14 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *  
+ *
  * File: style.css
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-01-31
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -164,13 +164,13 @@
     --margin: 1.5rem;
 }
 
-.journey-stats-value sl-icon {
+.journey-stats-value wa-icon {
     font-size: 16px;
     align-self: center;
     width: var(--margin);
 }
 
-.journey-stats-value:not(:has(sl-icon)) {
+.journey-stats-value:not(:has(wa-icon)) {
     padding-left: calc(var(--margin) + 0.5rem);
 }
 

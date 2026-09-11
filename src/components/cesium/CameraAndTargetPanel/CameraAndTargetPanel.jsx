@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2024-10-02
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,10 +19,9 @@ import { Widget }      from '@Components/MainUI/widgets/Widget'
 import {
     CAMERA_INFORMATION_WIDGET, LGS_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD,
 }                      from '@Core/constants'
-import { faAngle, faArrowsToCircle, faMountains, faVideo } from '@fortawesome/pro-regular-svg-icons'
 import { CameraUtils }                                       from '@Utils/cesium/CameraUtils'
-import { FA2SL }       from '@Utils/FA2SL'
 import { foot, meter, UnitUtils }                            from '@Utils/UnitUtils'
+import { WaIcon }                                            from '@web.awesome.me/webawesome-pro/dist/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { snapshot, useSnapshot }                             from 'valtio'
 
@@ -69,14 +68,14 @@ const liveCameraOptions = continuousMove => {
 /**
  * Renders one camera information line with the icon used by the previous banners.
  * @param {Object} props - Component props
- * @param {Object} props.icon - FontAwesome icon for the line
+ * @param {string} props.icon - Font Awesome icon name for the line
  * @param {React.ReactNode} props.children - Content to display inside the line
  * @param {Function} props.onDoubleClick - Handler for double-click event
  * @returns {JSX.Element} Camera information line
  */
 const CameraDataLine = ({icon, children, onDoubleClick}) => (
     <div className="camera-information-line" onDoubleClick={onDoubleClick}>
-        <sl-icon library="fa" name={FA2SL.set(icon)}/>
+        <WaIcon name={icon} variant="regular"/>
         <div className="camera-information-values">{children}</div>
     </div>
 )
@@ -368,7 +367,7 @@ export const CameraAndTargetPanel = () => {
             <div id="camera-information-widget" className="camera-information-panel lgs-card wa-theme-lgs1920-on-map">
                 {showTargetPosition && (
                     <CameraDataLine
-                        icon={faArrowsToCircle}
+                        icon="arrows-to-circle"
                         onDoubleClick={() => ($ui.camera.showTargetPosition = false)}
                     >
                         <>
@@ -377,7 +376,7 @@ export const CameraAndTargetPanel = () => {
                             <span ref={bindLiveRef('targetLongitude')}>{targetLongitude ?? ''}</span>
                             {targetHeight !== null && (
                                 <>
-                                    <sl-icon library="fa" name={FA2SL.set(faMountains)}/>
+                                    <WaIcon name="mountains" variant="regular"/>
                                     <CameraMetric
                                         bindLiveRef={bindLiveRef}
                                         metricKey="targetHeight"
@@ -390,7 +389,7 @@ export const CameraAndTargetPanel = () => {
                             )}
                             {is2D && positionHeight !== null && (
                                 <>
-                                    <sl-icon library="fa" name={FA2SL.set(faVideo)}/>
+                                    <WaIcon name="video" variant="regular"/>
                                     <CameraMetric
                                         bindLiveRef={bindLiveRef}
                                         metricKey="targetPositionHeight"
@@ -407,7 +406,7 @@ export const CameraAndTargetPanel = () => {
 
                 {showCameraPosition && (
                     <CameraDataLine
-                        icon={faVideo}
+                        icon="video"
                         onDoubleClick={() => ($ui.camera.showPosition = false)}
                     >
                         <>
@@ -416,7 +415,7 @@ export const CameraAndTargetPanel = () => {
                             <span ref={bindLiveRef('positionLongitude')}>{positionLongitude ?? ''}</span>
                             {positionHeight !== null && (
                                 <>
-                                    <sl-icon library="fa" name={FA2SL.set(faMountains)}/>
+                                    <WaIcon name="mountains" variant="regular"/>
                                     <CameraMetric
                                         bindLiveRef={bindLiveRef}
                                         metricKey="positionHeight"
@@ -433,7 +432,7 @@ export const CameraAndTargetPanel = () => {
 
                 {showCameraHPR && (
                     <CameraDataLine
-                        icon={faAngle}
+                        icon="angle"
                         onDoubleClick={() => ($ui.camera.showHPR = false)}
                     >
                         <>

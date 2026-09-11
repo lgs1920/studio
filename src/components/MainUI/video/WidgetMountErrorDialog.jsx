@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-01-28
- * Last modified: 2026-01-28
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,9 +16,8 @@
 
 import { ErrorDiagnosticDetails } from '@Components/Modals/ErrorDiagnosticDetails'
 import { collectErrorDiagnostic, formatErrorDiagnostic } from '@Utils/ErrorDiagnosticUtils'
-import { faXmark, faClapperboardPlay, faImagePolaroid } from '@fortawesome/pro-regular-svg-icons'
-import { SlAlert, SlButton, SlDialog, SlIcon }          from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                        from '@Utils/FA2SL'
+import { SlAlert, SlButton, SlDialog }                   from '@shoelace-style/shoelace/dist/react'
+import { WaIcon }                                        from '@web.awesome.me/webawesome-pro/dist/react'
 import React                                            from 'react'
 import './style.css'
 
@@ -62,12 +61,11 @@ export const WidgetMountErrorDialog = ({open, error, action, onConfirm, onCancel
             <div slot="footer">
                 <div className="buttons-bar">
                     <SlButton variant="default" onClick={onCancel}>
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}></SlIcon>
+                        <WaIcon slot="prefix" name="xmark" variant="regular"/>
                         {'Cancel'}
                     </SlButton>
                     <SlButton variant="primary" onClick={onConfirm}>
-                        <SlIcon slot="prefix" library="fa"
-                                name={FA2SL.set(action === 'record' ? faClapperboardPlay : faImagePolaroid)}/>
+                        <WaIcon slot="prefix" name={action === 'record' ? 'clapperboard-play' : 'image-polaroid'} variant="regular"/>
                         {`${action === 'record' ? 'Record' : 'Snap it'} anyway`}
                     </SlButton>
                 </div>

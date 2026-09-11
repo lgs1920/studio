@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-03-09
- * Last modified: 2026-03-09
+ * Created on: 2025-02-08
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,9 +16,8 @@
 
 import { UPDATE_JOURNEY_SILENTLY }     from '@Core/constants'
 import { Utils }                       from '@Editor/Utils'
-import { faEye, faEyeSlash }           from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlIcon, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                       from '@Utils/FA2SL.js'
+import { SlButton, SlTooltip }         from '@shoelace-style/shoelace/dist/react'
+import { WaIcon }                      from '@web.awesome.me/webawesome-pro/dist/react'
 import React                           from 'react'
 import { useSnapshot }                 from 'valtio'
 
@@ -40,10 +39,10 @@ export const JourneyVisibilityButton = (props) => {
                 <SlButton size={'small'} className="square-button" id={'focus-on-current-journey'}
                           onClick={setJourneyVisibility}>
                     {!snap.journey.visible &&
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faEye)}/>
+                        <WaIcon slot="prefix" name="eye" variant="regular"/>
                     }
                     {snap.journey.visible &&
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faEyeSlash)}/>
+                        <WaIcon slot="prefix" name="eye-slash" variant="regular"/>
                     }
                 </SlButton>
             </SlTooltip>

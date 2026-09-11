@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-02-03
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,11 +36,10 @@ import {
     resolveDynamicJourneyReplayStatsSample,
 }                                                       from '@Components/Stats/replayStatsWidgetUtils'
 import { WIDGET_RADIUS }                                from '@Core/constants'
-import { faArrowDownToLine, faArrowUpToLine }           from '@fortawesome/pro-regular-svg-icons'
-import { SlDivider, SlIcon }                            from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                        from '@Utils/FA2SL'
+import { SlDivider }                                    from '@shoelace-style/shoelace/dist/react'
 import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import { useOptionalSnapshot }                          from '@Utils/ValtioUtils'
+import { WaIcon }                                       from '@web.awesome.me/webawesome-pro/dist/react'
 import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                  from 'valtio'
 
@@ -702,7 +701,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                              ? placeholder
                              : displayMetrics.minHeight > 0 &&
                                 <>
-                                    <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowDownToLine)}/>
+                                    <WaIcon name="arrow-down-to-line" variant="regular"/>
                                     <NameValueUnit value={displayMetrics.minHeight} units={ELEVATION_UNITS} noUnit
                                                    precision="0"/>
                                 </>
@@ -713,7 +712,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                              ? placeholder
                              : displayMetrics.maxHeight > 0 &&
                                 <>
-                                    <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowUpToLine)}/>
+                                    <WaIcon name="arrow-up-to-line" variant="regular"/>
                                     <NameValueUnit value={displayMetrics.maxHeight} units={ELEVATION_UNITS} noUnit
                                                    precision="0"/>
                                 </>
@@ -737,7 +736,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                              ? placeholder
                              : displayMetrics.maxSpeed > 0 &&
                                 <>
-                                    <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowUpToLine)}/>
+                                    <WaIcon name="arrow-up-to-line" variant="regular"/>
                                     <NameValueUnit value={displayMetrics.maxSpeed} units={SPEED_UNITS} noUnit/>
                                 </>
                             }
@@ -756,7 +755,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                              ? placeholder
                              : paceValues.min &&
                                 <>
-                                    <SlIcon variant="primary" library="fa" name={FA2SL.set(faArrowUpToLine)}/>
+                                    <WaIcon name="arrow-up-to-line" variant="regular"/>
                                     {paceValues.min}
                                 </>
                             }

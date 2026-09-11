@@ -7,16 +7,14 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2024-10-12
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { faArrowsToCircle }   from '@fortawesome/pro-regular-svg-icons'
-import { SlIcon }             from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }              from '@Utils/FA2SL'
+import { WaIcon }             from '@web.awesome.me/webawesome-pro/dist/react'
 import { useEffect, useRef }  from 'react'
 import { proxy, useSnapshot } from 'valtio/index'
 
@@ -48,7 +46,7 @@ export const CameraTarget = () => {
                 color:      camera.targetIcon.color,
                 background: camera.targetIcon.background,
             }}>
-            <SlIcon library="fa" name={FA2SL.set(faArrowsToCircle)}></SlIcon>
+            <WaIcon name="arrows-to-circle" variant="regular"/>
         </div>
     )
 }

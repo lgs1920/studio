@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-08
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -569,7 +569,7 @@ body.mobile .orbit-widget-body {
     gap: var(--lgs-gutter-xs);
 }
 
-.camera-adjustment-metric sl-icon {
+.camera-adjustment-metric wa-icon {
     font-size: var(--lgs-font-size-m);
 }
 

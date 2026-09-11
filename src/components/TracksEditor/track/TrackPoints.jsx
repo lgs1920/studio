@@ -7,21 +7,20 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2024-04-26
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { faTriangleExclamation } from '@fortawesome/pro-regular-svg-icons'
-import { SlAlert, SlIcon }       from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                 from '@Utils/FA2SL'
+import { SlAlert }               from '@shoelace-style/shoelace/dist/react'
+import { WaIcon }                from '@web.awesome.me/webawesome-pro/dist/react'
 
 export const TrackPoints = function TrackPoints() {
     return (<div className="track-points">
         <SlAlert variant="warning" open>
-            <SlIcon slot="icon" library="fa" name={FA2SL.set(faTriangleExclamation)}/>
+            <WaIcon slot="icon" name="triangle-exclamation" variant="regular"/>
             <strong>Not Yet!</strong><br/>
             In a future version, it will be possible<br/>to view and edit points.
         </SlAlert>

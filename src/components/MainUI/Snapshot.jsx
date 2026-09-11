@@ -7,32 +7,29 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2024-05-08
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { faRegularCameraCircleArrowDown } from '@awesome.me/kit-eb5c406148/icons/kit/custom'
-import { faImage, faVectorSquare }                                     from '@fortawesome/pro-regular-svg-icons'
-import { SlButton, SlDropdown, SlIcon, SlMenu, SlMenuItem, SlTooltip } from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                                       from '@Utils/FA2SL'
-import { useSnapshot }                                                 from 'valtio'
+import { SlButton, SlDropdown, SlMenu, SlMenuItem, SlTooltip }           from '@shoelace-style/shoelace/dist/react'
+import { WaIcon }                                                        from '@web.awesome.me/webawesome-pro/dist/react'
 
 export const SnapshotMenu = (props) => {
     return(
         <SlMenu>
             {props.snapshot?.png &&
                 <SlMenuItem onClick={props.snapshot.png}>
-                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faImage)}></SlIcon>
+                    <WaIcon slot="prefix" name="image" variant="regular"/>
                     {'Image'}
                 </SlMenuItem>
             }
 
             {props.snapshot?.svg &&
                 <SlMenuItem onClick={props.snapshot.svg}>
-                    <SlIcon slot="prefix" library="fa" name={FA2SL.set(faVectorSquare)}></SlIcon>
+                    <WaIcon slot="prefix" name="vector-square" variant="regular"/>
                     {'Vector'}
                 </SlMenuItem>
             }
@@ -43,9 +40,7 @@ export const SnapshotMenu = (props) => {
 export const SnapshotTrigger = (props=> {
     return (<SlTooltip hoist placement={props.tooltip} content="Snapshot">
         <SlButton size={'small'} className={'square-button snapshot'}>
-            <SlIcon slot="prefix" library="fa"
-                    name={FA2SL.set(faRegularCameraCircleArrowDown)}>
-            </SlIcon>
+            <WaIcon slot="prefix" name="camera-circle-arrow-down" variant="regular"/>
         </SlButton>
     </SlTooltip>)
 })

@@ -108,6 +108,7 @@ describe('useWebAwesomeKits', () => {
         )
 
         expect(options.resolver('camera-sliders')).toMatch(/^data:image\/svg\+xml,/)
+        expect(options.resolver('camera-circle-arrow-down', 'classic', 'regular')).toMatch(/^data:image\/svg\+xml,/)
         expect(options.resolver('cave-in-mountains', 'duotone', 'regular')).toMatch(/^data:image\/svg\+xml,/)
         expect(options.resolver('cave-in-mountains', 'classic', 'regular')).toMatch(/^data:image\/svg\+xml,/)
         expect(options.resolver('house', 'classic', 'solid', false)).toBe('default:house')
