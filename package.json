@@ -25,7 +25,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@awesome.me/kit-eb5c406148": "^1.0.94",
+    "@awesome.me/kit-eb5c406148": "^1.0.95",
     "@fortawesome/duotone-light-svg-icons": "^7.3.1",
     "@fortawesome/duotone-regular-svg-icons": "^7.3.1",
     "@fortawesome/duotone-thin-svg-icons": "^7.3.1",

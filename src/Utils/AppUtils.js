@@ -25,18 +25,11 @@ import { ionTokenManager }          from '@Core/ui/IonTokenManager'
 import { ensureJourneyReplaySettings } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import axios                        from 'axios'
 import YAML                         from 'yaml'
-import * as kitIcons                from '@awesome.me/kit-eb5c406148/icons/kit/custom'
-import * as kitDuotoneIcons         from '@awesome.me/kit-eb5c406148/icons/kit-duotone/custom'
 import { EventEmitter }             from '../assets/libs/EventEmitter/EventEmitter'
 import { FA2SL }                    from './FA2SL'
 import { CountApi }                  from './CountApi'
-import { LGS1920_ICON_LIBRARY, registerIconLibraryFromKits } from './FA2WA'
 import { IonLayerUtils }             from './cesium/IonLayerUtils'
-
-const LGS1920_ICON_KITS = [
-    {family: 'classic', icons: kitIcons},
-    {family: 'duotone', icons: kitDuotoneIcons},
-]
+import {registerLGS1920IconLibrary} from './LGS1920IconLibrary'
 
 export class AppUtils {
     static THEME_STORAGE_KEY = 'theme'
@@ -371,7 +364,7 @@ export class AppUtils {
 
         // Register Font Awesome icons in Shoelace and Web Awesome
         FA2SL.registerFontAwesomeInShoelace('fa')
-        registerIconLibraryFromKits(LGS1920_ICON_LIBRARY, LGS1920_ICON_KITS)
+        registerLGS1920IconLibrary()
 
         lgs.colors = {}
         // Default colors (defined in theme.css)

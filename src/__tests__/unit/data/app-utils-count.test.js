@@ -86,9 +86,8 @@ vi.mock('@Utils/FA2SL', () => ({
     },
 }))
 
-vi.mock('@Utils/FA2WA', () => ({
-    LGS1920_ICON_LIBRARY: 'lgs1920',
-    registerIconLibraryFromKits: mocks.registerIconLibraryFromKits,
+vi.mock('@Utils/LGS1920IconLibrary', () => ({
+    registerLGS1920IconLibrary: mocks.registerIconLibraryFromKits,
 }))
 
 import { AppUtils } from '@Utils/AppUtils'
@@ -164,8 +163,6 @@ describe('AppUtils bootstrap count instrumentation', () => {
 
         expect(mocks.sendVisit).toHaveBeenCalledTimes(1)
         expect(mocks.registerIconLibraryFromKits).toHaveBeenCalledOnce()
-        expect(mocks.registerIconLibraryFromKits.mock.calls[0][0]).toBe('lgs1920')
-        expect(mocks.registerIconLibraryFromKits.mock.calls[0][1]).toHaveLength(2)
         expect(onBackendReady).toHaveBeenCalledTimes(1)
     })
 

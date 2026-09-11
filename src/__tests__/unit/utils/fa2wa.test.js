@@ -63,6 +63,17 @@ describe('FA2WA', () => {
         expect(decodeURIComponent(source.slice('data:image/svg+xml,'.length))).toContain('<svg')
     })
 
+    it('resolves the Picture-in-Picture reattach icon from the custom kit', () => {
+        registerIconLibraryFromKits(LGS1920_ICON_LIBRARY, testKits)
+
+        const [, options] = mocks.registerIconLibrary.mock.calls.find(
+            ([libraryName]) => libraryName === LGS1920_ICON_LIBRARY,
+        )
+        const source = options.resolver('picture-in-picture-out', 'classic', 'regular')
+
+        expect(source).toMatch(/^data:image\/svg\+xml,/)
+    })
+
     it('resolves icons from the kit duotone exports', () => {
         registerIconLibraryFromKits(LGS1920_ICON_LIBRARY, testKits)
 
