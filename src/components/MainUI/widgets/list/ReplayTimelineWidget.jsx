@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-10
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,6 +28,7 @@ import {
     canDockWidget,
     dockWidget,
 } from '@Core/ui/widget-manager/WidgetDockManager'
+import {LGS1920_ICON_LIBRARY} from '@Utils/useWebAWesomeKits'
 import {useCallback, useContext, useMemo, useRef} from 'react'
 import {ReplayTimelineContent} from './ReplayTimelineContent'
 
@@ -91,7 +92,8 @@ const TimelineWidgetHeaderActions = ({id, docked, detached, onClose}) => {
                 <WidgetWindowActionButton icon="arrow-down-to-bracket" label="Open in drawer" onClick={moveToDrawer}/>
             )}
             {detached && (
-                <WidgetWindowActionButton icon="arrow-up-from-bracket" label="Reattach to widget" onClick={returnToWidget}/>
+                <WidgetWindowActionButton icon="picture-in-picture-out" library={LGS1920_ICON_LIBRARY}
+                                          label="Reattach to widget" onClick={returnToWidget}/>
             )}
             <WidgetWindowActionButton icon="xmark" label="Close timeline" onClick={onClose}/>
         </>

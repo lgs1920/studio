@@ -2,7 +2,7 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: fa2wa.test.js
+ * File: use-web-awesome-kits.test.js
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
@@ -38,14 +38,14 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/components/icon/library.js', () => 
     getIconLibrary: mocks.getIconLibrary,
 }))
 
-import { LGS1920_ICON_LIBRARY, registerIconLibraryFromKits } from '@Utils/FA2WA'
+import { LGS1920_ICON_LIBRARY, registerIconLibraryFromKits } from '@Utils/useWebAWesomeKits'
 
 const testKits = [
     {family: 'classic', icons: kitIcons},
     {family: 'duotone', icons: kitDuotoneIcons},
 ]
 
-describe('FA2WA', () => {
+describe('useWebAWesomeKits', () => {
     beforeEach(() => {
         vi.clearAllMocks()
     })

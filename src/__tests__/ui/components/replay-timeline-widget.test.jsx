@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-10
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -54,8 +54,8 @@ vi.mock('@Components/MainUI/video/ReplayTimelinePreview', () => ({
 }))
 
 vi.mock('@Components/MainUI/widgets/WidgetWindowActionButton', () => ({
-    WidgetWindowActionButton: ({icon, label, onClick}) => (
-        <button type="button" data-icon={icon} aria-label={label} onClick={onClick}>{label}</button>
+    WidgetWindowActionButton: ({icon, library, label, onClick}) => (
+        <button type="button" data-icon={icon} data-library={library} aria-label={label} onClick={onClick}>{label}</button>
     ),
 }))
 
@@ -181,7 +181,9 @@ describe('ReplayTimelineWidget dimensions', () => {
         expect(document.querySelector('.lgs-detached-widget-host')).toBeDefined()
         expect(screen.getByTestId('replay-timeline-preview')).toBeDefined()
         expect(widgetMocks.previewProps.detached).toBe(true)
-        expect(screen.getByRole('button', {name: 'Reattach to widget'})).toBeTruthy()
+        const reattachButton = screen.getByRole('button', {name: 'Reattach to widget'})
+        expect(reattachButton.getAttribute('data-icon')).toBe('picture-in-picture-out')
+        expect(reattachButton.getAttribute('data-library')).toBe('lgs1920')
         expect(screen.getByRole('button', {name: 'Close timeline'})).toBeTruthy()
         expect(screen.queryByRole('button', {name: 'Show widget frame'})).toBeNull()
     })

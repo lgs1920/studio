@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-10
- * Last modified: 2026-09-10
+ * Last modified: 2026-09-11
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,13 +21,14 @@ import {WaButton, WaIcon} from '@web.awesome.me/webawesome-pro/dist/react'
  *
  * @param {Object} props - Action properties.
  * @param {string} props.icon - Font Awesome icon name.
+ * @param {string} [props.library] - Optional Web Awesome icon library name.
  * @param {string} props.label - Accessible and visible tooltip label.
  * @param {() => void} props.onClick - Action callback.
  * @returns {JSX.Element} Widget window action button.
  */
-export const WidgetWindowActionButton = ({icon, label, onClick}) => (
+export const WidgetWindowActionButton = ({icon, library, label, onClick}) => (
     <WaButton size="s" appearance="plain" variant="neutral"
               aria-label={label} title={label} onClick={onClick}>
-        <WaIcon name={icon} variant="regular"/>
+        <WaIcon library={library} name={icon} variant="regular"/>
     </WaButton>
 )

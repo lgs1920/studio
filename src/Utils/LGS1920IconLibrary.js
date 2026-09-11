@@ -16,7 +16,7 @@
 
 import * as kitIcons from '@awesome.me/kit-eb5c406148/icons/kit/custom'
 import * as kitDuotoneIcons from '@awesome.me/kit-eb5c406148/icons/kit-duotone/custom'
-import {LGS1920_ICON_LIBRARY, registerIconLibraryFromKits} from './FA2WA'
+import {LGS1920_ICON_LIBRARY, registerIconLibraryFromKits} from './useWebAWesomeKits'
 
 export const LGS1920_ICON_KITS = [
     {family: 'classic', icons: kitIcons},

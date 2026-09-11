@@ -2,12 +2,12 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: FA2WA.js
+ * File: useWebAWesomeKits.js
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-08-19
+ * Created on: 2026-09-11
  * Last modified: 2026-09-11
  *
  *
