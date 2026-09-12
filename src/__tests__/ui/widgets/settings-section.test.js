@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-05
- * Last modified: 2026-06-05
+ * Created on: 2026-05-02
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,15 @@ import { SettingsSection }                                 from '@Core/settings/
 import { Track }                                           from '@Core/Track'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const waitForSubscription = () => new Promise(resolve => globalThis.setTimeout(resolve, 0))
+/**
+ * Let the Valtio subscription queue flush without waiting on wall-clock time.
+ *
+ * @returns {Promise<void>} Promise resolved after the subscription microtasks.
+ */
+const waitForSubscription = async () => {
+    await Promise.resolve()
+    await Promise.resolve()
+}
 
 vi.mock('@Utils/UIToast', () => ({
     UIToast: {
@@ -303,6 +311,36 @@ describe('SettingsSection', () => {
             enabled: true,
             size:    50,
             snap:    false,
+        })
+    })
+
+    it('preserves the widget dock presentation when the UI template changes', () => {
+        const section = new SettingsSection('ui')
+        const merged = section.update(
+            {
+                widgets: {
+                    dock: {
+                        id:         'replay-timeline-widget',
+                        size:       540,
+                        dimensions: {width: 620, height: 280},
+                    },
+                },
+            },
+            {
+                widgets: {
+                    dock: {
+                        id:   null,
+                        mode: 'scene',
+                        size: 320,
+                    },
+                },
+            },
+        )
+
+        expect(merged.widgets.dock).toEqual({
+            id:         'replay-timeline-widget',
+            size:       540,
+            dimensions: {width: 620, height: 280},
         })
     })
 

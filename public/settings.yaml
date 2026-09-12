@@ -372,6 +372,7 @@ ui:
       snap: true
     dock:
       id: null
+      mode: scene
       size: 320
 
   ## Profile

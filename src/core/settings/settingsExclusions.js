@@ -7,14 +7,14 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-07
- * Last modified: 2026-06-07
+ * Created on: 2025-12-21
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-    // List of settings exclusions (ie we keep the user choice)
+// List of settings exclusions (ie we keep the user choice)
     // This array is then sorted alphabetically by object depth.
 export const SETTING_EXCLUSIONS = [
         'layers.base', 'layers.base3d', 'layers.tiles3d', 'layers.terrain', 'layers.overlay',
@@ -24,7 +24,7 @@ export const SETTING_EXCLUSIONS = [
         'ui.camera', 'swatches.current',
         'ui.menu', 'ui.poi.rotate', 'ui.poi.focusOnEdit', 'ui.journeyToolbar',
         'ui.compass.mode', 'ui.video.fps', 'ui.video.quality', 'ui.video.ratio', 'ui.pwa',
-        'ui.widgets.grid',
+        'ui.widgets.dock', 'ui.widgets.grid',
         'ui.replay',
         'widgets',
     ].sort((a, b) => {

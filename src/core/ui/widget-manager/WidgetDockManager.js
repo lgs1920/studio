@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-10
- * Last modified: 2026-09-10
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,6 +22,7 @@ export const DOCKED_WIDGET_MAX_SIZE = 720
 const DOCKED_WIDGET_MAX_VIEWPORT_RATIO = 0.9
 
 const DOCKABLE_WIDGET_IDS = new Set([REPLAY_TIMELINE_WIDGET])
+const WIDGET_PRESENTATION_MODES = new Set(['drawer', 'pip', 'scene', 'window'])
 
 /**
  * Resolve the catalog definition for a widget instance.
@@ -49,11 +50,58 @@ const getDockSettings = () => {
     if (!widgetsSettings.dock) {
         widgetsSettings.dock = {
             id:   null,
+            mode: 'scene',
             size: DOCKED_WIDGET_DEFAULT_SIZE,
         }
     }
 
     return widgetsSettings.dock
+}
+
+/**
+ * Normalize the persisted host mode for the timeline widget.
+ *
+ * @param {*} mode - Persisted host mode.
+ * @param {string|null} widgetId - Persisted widget identifier.
+ * @returns {'drawer'|'pip'|'scene'|'window'} Safe host mode.
+ */
+const normalizeWidgetPresentationMode = (mode, widgetId = null) => {
+    if (WIDGET_PRESENTATION_MODES.has(mode) && (mode === 'scene' || isDockableWidgetId(widgetId))) {
+        return mode
+    }
+
+    return isDockableWidgetId(widgetId) ? 'drawer' : 'scene'
+}
+
+/**
+ * Read the persisted host mode for the widget presentation.
+ *
+ * @returns {{id: string|null, mode: 'drawer'|'pip'|'scene'|'window'} } Persisted presentation.
+ */
+export const getPersistedWidgetPresentation = () => {
+    const settings = getDockSettings()
+    const id = isDockableWidgetId(settings?.id) ? settings.id : null
+    return {
+        id,
+        mode: normalizeWidgetPresentationMode(settings?.mode, settings?.id),
+    }
+}
+
+/**
+ * Persist the current widget host mode without touching its runtime host.
+ *
+ * @param {string|null} widgetId - Widget instance identifier.
+ * @param {'drawer'|'pip'|'scene'|'window'} mode - Host mode.
+ * @returns {void}
+ */
+export const setPersistedWidgetPresentation = (widgetId, mode) => {
+    const settings = getDockSettings()
+    if (!settings) {
+        return
+    }
+
+    settings.id = isDockableWidgetId(widgetId) ? widgetId : null
+    settings.mode = normalizeWidgetPresentationMode(mode, settings.id)
 }
 
 /**
@@ -219,6 +267,7 @@ export const dockWidget = widgetId => {
     lgs.stores.ui.widget.docked = docked
     if (settings) {
         settings.id = widgetId
+        settings.mode = 'drawer'
         settings.size = size
         if (dimensions) {
             Object.assign(settings, dimensions)
@@ -243,7 +292,8 @@ export const undockWidget = (widgetId = getDockedWidgetId()) => {
     const size = normalizeDockSize(lgs.stores.ui.widget.docked?.size ?? settings?.size)
     lgs.stores.ui.widget.docked = {id: null, size}
     if (settings) {
-        settings.id = null
+        settings.id = widgetId
+        settings.mode = 'scene'
         settings.size = size
         delete settings.dimensions
         delete settings.scale
@@ -269,30 +319,25 @@ export const setDockSize = value => {
 }
 
 /**
- * Restore a supported docked widget from persisted settings.
+ * Restore the persisted drawer host for the timeline widget.
  *
  * @returns {string|null} Restored widget identifier or null.
  */
 export const hydrateDockedWidget = () => {
     const settings = getDockSettings()
-    if (!settings || !isDockableWidgetId(settings.id)) {
-        if (settings) {
-            settings.id = null
-            settings.size = normalizeDockSize(settings.size)
-            delete settings.dimensions
-            delete settings.scale
-        }
-        lgs.stores.ui.widget.docked = {id: null, size: normalizeDockSize(settings?.size)}
-        return null
+    const mode = normalizeWidgetPresentationMode(settings?.mode, settings?.id)
+    const widgetId = isDockableWidgetId(settings?.id) ? settings.id : null
+    const size = normalizeDockSize(settings?.size)
+    if (settings) {
+        settings.id = widgetId
+        settings.mode = mode
+        settings.size = size
     }
-
-    const size = normalizeDockSize(settings.size)
-    settings.size = size
-    const dimensions = normalizeWidgetDimensions(settings.dimensions, settings.scale)
-    const docked = {id: settings.id, size}
-    if (dimensions) {
+    const dimensions = mode === 'drawer' ? normalizeWidgetDimensions(settings?.dimensions, settings?.scale) : null
+    const docked = mode === 'drawer' && widgetId ? {id: widgetId, size} : {id: null, size}
+    if (dimensions && docked.id) {
         Object.assign(docked, dimensions)
     }
     lgs.stores.ui.widget.docked = docked
-    return settings.id
+    return docked.id
 }

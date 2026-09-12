@@ -8,14 +8,19 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-10
- * Last modified: 2026-09-10
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { UIToast } from '@Utils/UIToast'
-import {canDockWidget, dockWidget} from './WidgetDockManager'
+import {
+    canDockWidget,
+    dockWidget,
+    getPersistedWidgetPresentation,
+    setPersistedWidgetPresentation,
+} from './WidgetDockManager'
 
 const DETACHED_WINDOW_WIDTH = 480
 const DETACHED_WINDOW_HEIGHT = 320
@@ -160,6 +165,7 @@ export class WidgetWindowManager {
                 snapshot,
             }
             lgs.stores.ui.widget.undocked = {id: widgetId, mode: opened.mode}
+            setPersistedWidgetPresentation(widgetId, opened.mode)
             this.#watchWindow()
             return true
         }
@@ -190,12 +196,32 @@ export class WidgetWindowManager {
             request: (selectionRequest?.request ?? 0) + 1,
         }
         lgs.stores.ui.widget.undocked = {id: null, mode: null}
+        setPersistedWidgetPresentation(state.id, 'scene')
         this.#selectWidgetWhenMounted(state.id)
 
         if (closeWindow) {
             await this.#closeWindow(state.window, state.mode)
         }
         return true
+    }
+
+    /**
+     * Restore a persisted external host when the widget is mounted again.
+     *
+     * Browsers may reject automatic PiP or popup creation without a user
+     * gesture. In that case the widget remains in the scene and the saved
+     * presentation is kept for the next explicit action.
+     *
+     * @param {string|null|undefined} widgetId - Widget identifier.
+     * @returns {Promise<boolean>} True when the external host was restored.
+     */
+    restorePersistedWidget = async (widgetId) => {
+        const presentation = getPersistedWidgetPresentation()
+        if (presentation.id !== widgetId || !['pip', 'window'].includes(presentation.mode)) {
+            return false
+        }
+
+        return this.detachWidget(widgetId, {useConfigDimensions: true})
     }
 
     /**

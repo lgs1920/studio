@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-10
- * Last modified: 2026-09-10
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,7 +33,7 @@ describe('WidgetDockManager', () => {
     beforeEach(() => {
         Object.defineProperty(window, 'innerHeight', {configurable: true, value: 800})
         globalThis.lgs = {
-            settings: proxy({ui: {widgets: {dock: {id: null, size: 320}}}}),
+            settings: proxy({ui: {widgets: {dock: {id: null, mode: 'scene', size: 320}}}}),
             stores: {
                 ui: {
                     widget: proxy({
@@ -75,6 +75,7 @@ describe('WidgetDockManager', () => {
         expect(dockWidget(timelineId)).toBe(true)
         expect(lgs.stores.ui.widget.docked.id).toBe(timelineId)
         expect(lgs.settings.ui.widgets.dock.id).toBe(timelineId)
+        expect(lgs.settings.ui.widgets.dock.mode).toBe('drawer')
         expect(getDockedWidgetDimensions(timelineId)).toEqual({width: 480, height: 220})
         expect(setDockSize(500)).toBe(500)
         expect(lgs.stores.ui.widget.docked.size).toBe(500)
@@ -83,23 +84,29 @@ describe('WidgetDockManager', () => {
 
         expect(undockWidget(timelineId)).toBe(true)
         expect(lgs.stores.ui.widget.docked.id).toBeNull()
-        expect(lgs.settings.ui.widgets.dock.id).toBeNull()
+        expect(lgs.settings.ui.widgets.dock.id).toBe(timelineId)
+        expect(lgs.settings.ui.widgets.dock.mode).toBe('scene')
         expect(lgs.stores.ui.widget.current.id).toBe(timelineId)
     })
 
-    it('restores only a supported docked widget from settings', () => {
+    it('restores the persisted drawer placement and size at startup', () => {
         lgs.settings.ui.widgets.dock = {
             id:         timelineId,
+            mode:       'drawer',
             size:       999,
             dimensions: {width: 400, height: 200},
             scale:      {x: 1.2, y: 1.1},
         }
         expect(hydrateDockedWidget()).toBe(timelineId)
+        expect(lgs.stores.ui.widget.docked.id).toBe(timelineId)
+        expect(lgs.settings.ui.widgets.dock).toMatchObject({id: timelineId, mode: 'drawer', size: 720})
+        expect(canDockWidget(timelineId)).toBe(false)
         expect(lgs.stores.ui.widget.docked.size).toBe(720)
         expect(getDockedWidgetDimensions(timelineId)).toEqual({width: 480, height: 220})
 
-        lgs.settings.ui.widgets.dock = {id: 'text-widget#1', size: 320}
+        lgs.settings.ui.widgets.dock = {id: 'text-widget#1', mode: 'drawer', size: 320}
         expect(hydrateDockedWidget()).toBeNull()
         expect(lgs.stores.ui.widget.docked.id).toBeNull()
+        expect(lgs.settings.ui.widgets.dock.mode).toBe('scene')
     })
 })

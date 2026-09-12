@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-10
- * Last modified: 2026-09-10
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -46,6 +46,7 @@ describe('WidgetWindowManager', () => {
         }
         window.open = vi.fn(() => externalWindow)
         globalThis.lgs = {
+            settings: proxy({ui: {widgets: {dock: {id: null, mode: 'scene', size: 320}}}}),
             stores: {
                 ui: {
                     widget: proxy({
@@ -95,6 +96,7 @@ describe('WidgetWindowManager', () => {
     it('opens one fallback window and restores the runtime layout on reattach', async () => {
         expect(await manager.detachWidget(widgetId)).toBe(true)
         expect(lgs.stores.ui.widget.undocked).toEqual({id: widgetId, mode: 'window'})
+        expect(lgs.settings.ui.widgets.dock).toMatchObject({id: widgetId, mode: 'window'})
         const container = externalWindow.document.querySelector(`[data-widget-window="${widgetId}"]`)
         expect(container).not.toBeNull()
         expect(container.className).toBe('lgs-detached-window-container')
@@ -116,6 +118,7 @@ describe('WidgetWindowManager', () => {
         await new Promise(resolve => window.requestAnimationFrame(resolve))
 
         expect(lgs.stores.ui.widget.undocked).toEqual({id: null, mode: null})
+        expect(lgs.settings.ui.widgets.dock.mode).toBe('scene')
         expect(__.ui.widgetManager.getWidgetConfig(widgetId).position).toEqual({left: 42, top: 84})
         expect(__.ui.widgetManager.getWidgetConfig(widgetId).width).toBe(400)
         expect(__.ui.widgetManager.getWidgetConfig(widgetId).height).toBe(200)
@@ -188,7 +191,22 @@ describe('WidgetWindowManager', () => {
         expect(await manager.detachWidget(widgetId)).toBe(true)
         expect(globalThis.documentPictureInPicture.requestWindow).toHaveBeenCalledWith({height: 280, width: 620})
         expect(lgs.stores.ui.widget.undocked.mode).toBe('pip')
+        expect(lgs.settings.ui.widgets.dock).toMatchObject({id: widgetId, mode: 'pip'})
 
         await manager.reattachWidget()
+    })
+
+    it('restores a persisted external placement when the widget is mounted', async () => {
+        lgs.settings.ui.widgets.dock = {id: widgetId, mode: 'window', size: 320}
+
+        expect(await manager.restorePersistedWidget(widgetId)).toBe(true)
+        expect(window.open).toHaveBeenCalledWith(
+            '',
+            'lgs1920-detached-widget',
+            expect.stringContaining('width=480,height=240'),
+        )
+
+        await manager.reattachWidget()
+        expect(lgs.settings.ui.widgets.dock.mode).toBe('scene')
     })
 })
