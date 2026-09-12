@@ -2060,3 +2060,11 @@
 ## 2026-09-12 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/db5ddce4c4dfff9293b7367ae156cb2903fd408a)
 
 - Recorded automatically from Git history.
+
+## 2026-09-12 — [`ci: configure private registry credentials`](https://github.com/lgs1920/studio/commit/c07250557928839b2bc102d413146665a9e883a5)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/47ab9cb0f2debf5c2533f3a6c94328eceb5fa500)
+
+- Recorded automatically from Git history.
