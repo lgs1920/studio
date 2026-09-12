@@ -2076,3 +2076,11 @@
 ## 2026-09-12 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/27b31edefd7fe2b2350897702ab88cf0b8200445)
 
 - Recorded automatically from Git history.
+
+## 2026-09-12 — [`ci: install dependencies with Bun config`](https://github.com/lgs1920/studio/commit/208938bc5af66b280458841b17975ca835842b89)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/13995380d2b869f18e214a7c363134c6d705eb53)
+
+- Recorded automatically from Git history.
