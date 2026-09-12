@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-15
- * Last modified: 2026-07-15
+ * Created on: 2026-07-16
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -116,7 +116,7 @@ describe('VideoRecordingScreenArea start flow', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         globalThis.requestAnimationFrame = vi.fn(callback => {
-            setTimeout(callback, 0)
+            queueMicrotask(() => callback(globalThis.performance?.now?.() ?? 0))
             return 1
         })
         globalThis.cancelAnimationFrame = vi.fn()

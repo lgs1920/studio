@@ -20,7 +20,10 @@
     "preview": "bunx --bun vite preview",
     "test": "vitest run && bun run test:lint-config",
     "test:lint-config": "bun scripts/oxlint-migration-test.mjs",
-    "test:stores": "vitest run src/__tests__/unit/data/store-proxy-contracts.test.js",
+    "test:unit": "vitest run --project unit",
+    "test:ui": "vitest run --project ui",
+    "test:integration": "vitest run --project integration",
+    "test:stores": "vitest run --project unit src/__tests__/unit/data/store-proxy-contracts.test.js",
     "typecheck": "tsc --noEmit",
     "test:watch": "vitest"
   },

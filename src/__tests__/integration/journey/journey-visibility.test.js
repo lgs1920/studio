@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-30
- * Last modified on: 2026-06-30
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -107,8 +107,12 @@ describe('journey visibility policy', () => {
     })
 
     it('refreshes journeys sequentially in centroid order', async () => {
+        vi.spyOn(globalThis, 'setTimeout').mockImplementation(callback => {
+            callback()
+            return 0
+        })
         const started = []
-        let releaseFirst = null
+        let journeyBCompleted = false
         vi.spyOn(SceneUtils, 'getJourneyCentroid').mockImplementation(async journey => {
             const centroids = {
                 'journey-a': {longitude: 10, latitude: 0, height: 0},
@@ -122,24 +126,18 @@ describe('journey visibility policy', () => {
         })
         journeyB.draw = vi.fn(async () => {
             started.push('journey-b')
-            await new Promise(resolve => {
-                releaseFirst = resolve
-            })
+            await Promise.resolve()
+            journeyBCompleted = true
         })
         journeyC.draw = vi.fn(async () => {
+            expect(journeyBCompleted).toBe(true)
             started.push('journey-c')
         })
 
-        const promise = refreshJourneyVisibility({
+        await refreshJourneyVisibility({
             hideOtherJourneys: true,
             currentJourney:    journeyB,
         })
-
-        await new Promise(resolve => setTimeout(resolve, 0))
-        expect(started).toEqual(['journey-b'])
-
-        releaseFirst()
-        await promise
 
         expect(started).toEqual(['journey-b', 'journey-c', 'journey-a'])
         expect(globalThis.lgs.scene.requestRender).toHaveBeenCalledOnce()

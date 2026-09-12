@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-11
- * Last modified: 2026-09-11
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -185,7 +185,7 @@ describe('OrbitWidget interactions', () => {
         cleanup()
         window.matchMedia = makeMatchMedia(true)
         vi.spyOn(window, 'requestAnimationFrame').mockImplementation(callback => (
-            window.setTimeout(() => callback(performance.now()), 0)
+            queueMicrotask(() => callback(performance.now()))
         ))
         vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(id => window.clearTimeout(id))
         vi.spyOn(console, 'debug').mockImplementation(() => undefined)

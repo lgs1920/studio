@@ -94,6 +94,7 @@ describe('WidgetWindowManager', () => {
     })
 
     it('opens one fallback window and restores the runtime layout on reattach', async () => {
+        vi.useFakeTimers()
         expect(await manager.detachWidget(widgetId)).toBe(true)
         expect(lgs.stores.ui.widget.undocked).toEqual({id: widgetId, mode: 'window'})
         expect(lgs.settings.ui.widgets.dock).toMatchObject({id: widgetId, mode: 'window'})
@@ -114,8 +115,7 @@ describe('WidgetWindowManager', () => {
         config.dimensions = {width: 980, height: 700}
         lgs.stores.ui.widget.current = {id: 'profile-widget#1'}
         await manager.reattachWidget()
-        await new Promise(resolve => window.requestAnimationFrame(resolve))
-        await new Promise(resolve => window.requestAnimationFrame(resolve))
+        await vi.runAllTimersAsync()
 
         expect(lgs.stores.ui.widget.undocked).toEqual({id: null, mode: null})
         expect(lgs.settings.ui.widgets.dock.mode).toBe('scene')

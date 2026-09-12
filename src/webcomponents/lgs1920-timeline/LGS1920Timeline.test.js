@@ -108,7 +108,20 @@ const createDragEvent = (type, dataTransfer, options = {}) => {
     return event
 }
 
-afterEach(() => document.body.replaceChildren())
+/**
+ * Advance the fake browser clock by a requested number of animation frames.
+ *
+ * @param {number} frameCount Number of frames to advance.
+ * @returns {Promise<void>} Promise resolved after the frames have run.
+ */
+const advanceAnimationFrames = async (frameCount = 1) => {
+    await vi.advanceTimersByTimeAsync(Math.max(0, frameCount) * 16)
+}
+
+afterEach(() => {
+    vi.useRealTimers()
+    document.body.replaceChildren()
+})
 
 describe('lgs1920-timeline Web Component', () => {
     it('applies selectable host interaction before connection', () => {
@@ -394,11 +407,12 @@ describe('lgs1920-timeline Web Component', () => {
     })
 
     it('leaves split-panel repositioning to the native component', async () => {
+        vi.useFakeTimers()
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline)
         document.body.append(timeline)
 
-        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+        await advanceAnimationFrames(2)
 
         const splitPanel = timeline.shadowRoot.querySelector('[part="split-panel"]')
         const layout = timeline.shadowRoot.querySelector('[data-layout]')
@@ -723,6 +737,7 @@ describe('lgs1920-timeline Web Component', () => {
     })
 
     it('shows the building overlay only for the initial mount', async () => {
+        vi.useFakeTimers()
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline)
         document.body.append(timeline)
@@ -730,7 +745,7 @@ describe('lgs1920-timeline Web Component', () => {
         const initialOverlay = timeline.shadowRoot.querySelector('[data-building-overlay]')
         expect(initialOverlay).not.toBeNull()
         expect(initialOverlay.parentNode).toBe(timeline.shadowRoot)
-        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+        await advanceAnimationFrames(2)
         expect(timeline.shadowRoot.querySelector('[data-building-overlay]')).toBeNull()
 
         timeline.setZoom(20)
@@ -745,6 +760,7 @@ describe('lgs1920-timeline Web Component', () => {
     })
 
     it('keeps the initial building overlay until the surface has a measured width', async () => {
+        vi.useFakeTimers()
         let resizeCallback = null
         class ResizeObserverMock {
             /**
@@ -772,14 +788,14 @@ describe('lgs1920-timeline Web Component', () => {
             configureTimeline(timeline, {timeline: {horizontalFit: true}})
             document.body.append(timeline)
 
-            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+            await advanceAnimationFrames(2)
             expect(timeline.shadowRoot.querySelector('[data-building-overlay]')).not.toBeNull()
 
             const surface = timeline.shadowRoot.querySelector('[data-surface]')
             Object.defineProperty(surface, 'clientWidth', {configurable: true, value: 600})
             resizeCallback()
             expect(timeline.shadowRoot.querySelector('[data-surface]')).not.toBe(surface)
-            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)))))
+            await advanceAnimationFrames(4)
 
             expect(timeline.shadowRoot.querySelector('[data-building-overlay]')).toBeNull()
         } finally {
@@ -2839,6 +2855,7 @@ describe('lgs1920-timeline Web Component', () => {
     })
 
     it('shows the copy ghost immediately from the clip context menu', async () => {
+        vi.useFakeTimers()
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline, {
             tracks: [{id: 'main', label: 'Main', clips: [{id: 'clip', start: 1, end: 4}]}],
@@ -2858,7 +2875,7 @@ describe('lgs1920-timeline Web Component', () => {
         timeline.dispatchEvent(createPointerEvent('pointermove', {clientX: 240, clientY: 80, composed: true}))
         expect(timeline.shadowRoot.querySelector('[data-clip-copy-ghost]').style.transform).toBe('')
 
-        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+        await advanceAnimationFrames(2)
         expect(timeline.shadowRoot.querySelector('[data-building-overlay]')).toBeNull()
     })
 

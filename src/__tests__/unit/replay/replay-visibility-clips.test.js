@@ -2,13 +2,13 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: replay-phase1.test.js
+ * File: replay-visibility-clips.test.js
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-01
- * Last modified: 2026-07-01
+ * Created on: 2026-07-22
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -885,6 +885,7 @@ describe('replay visibility and clips', () => {
     })
 
     it('closes POIs opened by replay before running stop clips', async () => {
+        vi.useFakeTimers()
         const journey = makeJourney([
             makeTrack({
                 slug:        'track#journey#gpx#main',
@@ -1063,21 +1064,23 @@ describe('replay visibility and clips', () => {
                 sample:   sampler.atProgress(1),
                 progress: 1,
             })
-            await new Promise(resolve => setTimeout(resolve, 0))
+            await vi.runAllTimersAsync()
 
             expect(journey.focus).toHaveBeenCalledWith(expect.objectContaining({rotate: false}))
 
-            await new Promise(resolve => setTimeout(resolve, 0))
+            await Promise.resolve()
 
             expect(poiA.expanded).toBe(true)
         }
         finally {
+            vi.useRealTimers()
             globalThis.lgs = previousLgs
             globalThis.__ = previous__
         }
     })
 
     it('starts the replay after the take-off start clip completes without extra delay', async () => {
+        vi.useFakeTimers()
         const journey = makeJourney([
                                         makeTrack({
                                                       slug:        'track#journey#gpx#main',
@@ -1223,17 +1226,18 @@ describe('replay visibility and clips', () => {
             expect(controllerStartSpy).not.toHaveBeenCalled()
 
             expect(setViewCalls).toHaveLength(1)
-            await new Promise(resolve => setTimeout(resolve, 1000))
-            await new Promise(resolve => setTimeout(resolve, 0))
+            await vi.advanceTimersByTimeAsync(1000)
 
             expect(controllerStartSpy).toHaveBeenCalledTimes(1)
         }
         finally {
+            vi.useRealTimers()
             globalThis.lgs = previousLgs
         }
     })
 
     it('starts the replay immediately after a zoom-in start clip finishes', async () => {
+        vi.useFakeTimers()
         const journey = makeJourney([
                                         makeTrack({
                                                       slug:        'track#journey#gpx#main',
@@ -1373,12 +1377,12 @@ describe('replay visibility and clips', () => {
             await Promise.resolve()
             expect(controllerStartSpy).not.toHaveBeenCalled()
             expect(setViewCalls).toHaveLength(1)
-            await new Promise(resolve => setTimeout(resolve, 250))
-            await new Promise(resolve => setTimeout(resolve, 0))
+            await vi.advanceTimersByTimeAsync(250)
 
             expect(controllerStartSpy).toHaveBeenCalledTimes(1)
         }
         finally {
+            vi.useRealTimers()
             globalThis.lgs = previousLgs
         }
     })

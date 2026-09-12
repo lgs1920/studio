@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-18
- * Last modified: 2026-08-18
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -56,7 +56,10 @@ describe('AppUpdateManager webapp updates', () => {
         await Promise.resolve()
         await Promise.resolve()
         serviceWorkerListeners.get('message')({data: {type: 'NEW_VERSION'}})
-        await new Promise(resolve => setTimeout(resolve, 0))
+        await Promise.resolve()
+        await Promise.resolve()
+        await Promise.resolve()
+        await Promise.resolve()
 
         expect(waitingWorker.postMessage).toHaveBeenCalledWith({type: 'SKIP_WAITING'})
     })

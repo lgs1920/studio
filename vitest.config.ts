@@ -7,17 +7,45 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2025-05-04
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {defineConfig} from 'vitest/config';
-import react from '@vitejs/plugin-react';
-import mdPlugin, {Mode} from 'vite-plugin-markdown';
-import {fileURLToPath} from 'url';
+import {defineConfig} from 'vitest/config'
+import react from '@vitejs/plugin-react'
+import mdPlugin, {Mode} from 'vite-plugin-markdown'
+import {fileURLToPath} from 'url'
+
+const domUnitTestFiles = [
+    'src/__tests__/unit/assets/welcome-background-media.test.js',
+    'src/__tests__/unit/camera/camera-manager-orbit.test.js',
+    'src/__tests__/unit/data/app-utils-count.test.js',
+    'src/__tests__/unit/data/database-sync-manager.test.js',
+    'src/__tests__/unit/data/deferred-journey-data.test.js',
+    'src/__tests__/unit/data/metrics.test.js',
+    'src/__tests__/unit/dom/canvas-context.test.js',
+    'src/__tests__/unit/events/canvas-event-manager.test.js',
+    'src/__tests__/unit/events/native-context-menu-blocker.test.js',
+    'src/__tests__/unit/replay/replay-camera-angle-guide.test.js',
+    'src/__tests__/unit/replay/replay-camera-overlay.test.js',
+    'src/__tests__/unit/replay/replay-recording-monitor.test.js',
+    'src/__tests__/unit/replay/replay-duplicate-samples.test.js',
+    'src/__tests__/unit/replay/replay-sampler.test.js',
+    'src/__tests__/unit/replay/replay-video-overlay-composer.test.js',
+    'src/__tests__/unit/replay/replay-visibility-clips.test.js',
+    'src/__tests__/unit/ui/app-update-manager.test.js',
+    'src/__tests__/unit/ui/widget-dock-manager.test.js',
+    'src/__tests__/unit/ui/widget-window-manager.test.js',
+    'src/__tests__/unit/utils/managed-stylesheet.test.jsx',
+    'src/__tests__/unit/utils/tiles3d-error-labels.test.js',
+    'src/__tests__/unit/widgets/camera-adjustment-widget-position.test.js',
+    'src/__tests__/unit/widgets/widget-preview-rotation.test.js',
+    'src/__tests__/unit/journey/journey-gpx.test.js',
+    'src/core/ui/panels/drawerResize.test.js',
+]
 
 export default defineConfig({
     plugins: [
@@ -25,14 +53,48 @@ export default defineConfig({
         mdPlugin({mode: [Mode.HTML, Mode.MARKDOWN]}),
     ],
     test: {
-        environment: 'jsdom',
         globals: true,
-        include: [
-            '**/__tests__/**/*.{test,spec}.{js,jsx,ts,tsx}',
-            'src/webcomponents/**/*.test.{js,jsx,ts,tsx}',
-        ],
-        setupFiles: ['./src/__tests__/setup.js'],
         exclude: ['node_modules', 'dist', '.idea', '.git', '.cache'],
+        projects: [
+            {
+                extends: true,
+                test: {
+                    name: 'unit',
+                    environment: 'node',
+                    include: [
+                        'src/__tests__/unit/**/*.{test,spec}.{js,jsx,ts,tsx}',
+                        'deployment/__tests__/**/*.{test,spec}.{js,jsx,ts,tsx}',
+                        'src/core/**/*.test.{js,jsx,ts,tsx}',
+                    ],
+                    exclude: domUnitTestFiles,
+                },
+            },
+            {
+                extends: true,
+                test: {
+                    name: 'ui',
+                    environment: 'jsdom',
+                    include: [
+                        'src/__tests__/ui/**/*.{test,spec}.{js,jsx,ts,tsx}',
+                        'src/components/**/*.test.{js,jsx,ts,tsx}',
+                        'src/webcomponents/**/*.test.{js,jsx,ts,tsx}',
+                        ...domUnitTestFiles,
+                    ],
+                    setupFiles: ['./src/__tests__/setup.js'],
+                },
+            },
+            {
+                extends: true,
+                test: {
+                    name: 'integration',
+                    environment: 'jsdom',
+                    include: [
+                        'src/__tests__/integration/**/*.{test,spec}.{js,jsx,ts,tsx}',
+                    ],
+                    setupFiles: ['./src/__tests__/setup.js'],
+                },
+            },
+        ],
     },
     resolve: {
         alias: {
@@ -51,4 +113,4 @@ export default defineConfig({
             '@Database': fileURLToPath(new URL('./src/core/db', import.meta.url)),
         },
     },
-});
+})
