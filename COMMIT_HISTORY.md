@@ -2068,3 +2068,11 @@
 ## 2026-09-12 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/47ab9cb0f2debf5c2533f3a6c94328eceb5fa500)
 
 - Recorded automatically from Git history.
+
+## 2026-09-12 — [`ci: pass Bun registry configuration correctly`](https://github.com/lgs1920/studio/commit/c75b44110a8533183883166f8988f5bf103e29f8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/27b31edefd7fe2b2350897702ab88cf0b8200445)
+
+- Recorded automatically from Git history.
