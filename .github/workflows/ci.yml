@@ -31,8 +31,31 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
 
+      - name: Configure private package registries
+        env:
+          FONTAWESOME_NPM_TOKEN: ${{ secrets.FONTAWESOME_NPM_TOKEN }}
+          WEBAWESOME_NPM_TOKEN: ${{ secrets.WEBAWESOME_NPM_TOKEN }}
+        run: |
+          node <<'NODE'
+          const {writeFileSync} = require('node:fs')
+          const {env} = process
+
+          if (!env.FONTAWESOME_NPM_TOKEN || !env.WEBAWESOME_NPM_TOKEN) {
+              console.error('Missing FONTAWESOME_NPM_TOKEN or WEBAWESOME_NPM_TOKEN repository secret')
+              process.exit(1)
+          }
+
+          const quote = value => JSON.stringify(value)
+          const config = `[install.scopes]\n` +
+              `"@fortawesome" = { token = ${quote(env.FONTAWESOME_NPM_TOKEN)}, url = "https://npm.fontawesome.com/" }\n` +
+              `"@awesome.me" = { token = ${quote(env.FONTAWESOME_NPM_TOKEN)}, url = "https://npm.fontawesome.com/" }\n` +
+              `"@web.awesome.me" = { token = ${quote(env.WEBAWESOME_NPM_TOKEN)}, url = "https://npm.cloudsmith.io/fortawesome/webawesome-pro/" }\n`
+
+          writeFileSync(`${env.RUNNER_TEMP}/bunfig.toml`, config)
+          NODE
+
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install --config "$RUNNER_TEMP/bunfig.toml" --frozen-lockfile
 
       - name: Run the test projects
         run: bun run test
