@@ -1968,3 +1968,95 @@
 ## 2026-09-11 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/e9b157a7f2e2ce9b775cedbd666ea9f4bff67011)
 
 - Recorded automatically from Git history.
+
+## 2026-09-11 — [`fix: select custom library for detached icon`](https://github.com/lgs1920/studio/commit/5360635c5535edc79cc139e3acccb8e29ad64c2a)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`docs: update Web Awesome kit resolver references`](https://github.com/lgs1920/studio/commit/9170bc51653adb3eefb7ecfedba55ca038151755)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`docs: update icon resolver project rule`](https://github.com/lgs1920/studio/commit/95aec37b3951255a03b5e97cd817925d5337e172)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`refactor: rename Web Awesome kit module`](https://github.com/lgs1920/studio/commit/2cc90148dfd211e430bb6829a599ad0df5bfc4fc)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`docs: explain icon registration in detached windows`](https://github.com/lgs1920/studio/commit/f3983b162df95be9260a492e2c50b6d81f0b02ee)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`docs: correct icon resolver module name`](https://github.com/lgs1920/studio/commit/1b1ee374bdd6bb68fec3fc891d0623d7b8750b8e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`fix: preserve default Web Awesome icon library`](https://github.com/lgs1920/studio/commit/3d2e0c96a8b0fdc6241531f16a9ff9435be29e14)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`fix: share Web Awesome icon registry`](https://github.com/lgs1920/studio/commit/2b0069e9c239c2042b9ada2b1e82487c33b33682)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`chore: update frontend dependencies`](https://github.com/lgs1920/studio/commit/30339b1931c2aeecc519a2c8791a924733305631)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`refactor: remove obsolete Shoelace imports`](https://github.com/lgs1920/studio/commit/ce4788427230fe9f762ed1191b542a3d0cc92199)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`refactor: centralize timeline widget actions`](https://github.com/lgs1920/studio/commit/022c5abda800d843c9d7f065b3814aeaa332a15b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`fix: align timeline action button sizing`](https://github.com/lgs1920/studio/commit/835d1f06a8e5acf1e7c4a09b17f58c3d005b2594)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`refactor: migrate remaining icons to Web Awesome`](https://github.com/lgs1920/studio/commit/af5222b48bfa14c56bb624884a2d4ce185371fb4)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`fix: rename replay clip after journey title`](https://github.com/lgs1920/studio/commit/a0a2ceea72f4691b6b29c0f6e8c7eff63ddb076f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`refactor: extract reusable video settings menus`](https://github.com/lgs1920/studio/commit/acc756d94d36a607d7fd6c180df5cc1c1046f280)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`fix: render replay timeline in Web Awesome drawer`](https://github.com/lgs1920/studio/commit/e8958b4e0817d9233dbd8ecdd13b2f216ff88097)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`feat: persist replay timeline presentation mode`](https://github.com/lgs1920/studio/commit/9c999487387db208a02bde4c09f3ee51dbb1a66d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`ci: add GitHub quality workflow`](https://github.com/lgs1920/studio/commit/4d4c57be3fd393125f18ca7d004b91dc74af5fc7)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`docs: document deterministic Vitest workflow`](https://github.com/lgs1920/studio/commit/29304e9fc50f3870ec2bf8ce3611ced85717f904)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`test: split Vitest projects and stabilize async tests`](https://github.com/lgs1920/studio/commit/ea69a5049e4f754436ac0ca18d75569e29731c25)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`test: stabilize timeline attachment timing`](https://github.com/lgs1920/studio/commit/a2ca10c21ce7757ab7ae53024db91347614e4e95)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`chore: update yaml dependency`](https://github.com/lgs1920/studio/commit/539b036eec2685631e7ad36a5c1f53ad968555bc)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/db5ddce4c4dfff9293b7367ae156cb2903fd408a)
+
+- Recorded automatically from Git history.
