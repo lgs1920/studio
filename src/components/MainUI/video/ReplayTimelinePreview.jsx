@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-11
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,18 +22,20 @@
  * introduced.
  */
 
-import {forwardRef, useEffect, useId, useImperativeHandle, useMemo, useRef} from 'react'
+import {forwardRef, useCallback, useEffect, useId, useImperativeHandle, useMemo, useRef} from 'react'
 import {subscribe, useSnapshot} from 'valtio'
-import {WaButton, WaIcon, WaTooltip} from '@web.awesome.me/webawesome-pro/dist/react'
+import {WaButton, WaIcon, WaSlider, WaTooltip} from '@web.awesome.me/webawesome-pro/dist/react'
 import {
     CREDITS_WIDGET,
     LOGO_WIDGET,
     REPLAY_RECORDING_MONITOR_WIDGET_ID,
     REPLAY_TIMELINE_WIDGET,
+    VIDEO_CROP_ZONE,
     VIDEO_WIDGETS_BOARD,
 } from '@Core/constants'
 import {REPLAY_TIMELINE_COLOR_SWATCHES, REPLAY_TIMELINE_UI} from './replayTimelineUtils'
 import {VideoRecordingSettingsToolbar} from './toolbox/VideoRecordingSettingsToolbar'
+import {VideoRecordingSettingsMenus} from './toolbox/VideoRecordingSettingsMenus'
 import {
     buildReplayPreparationTimeline,
     toReplayTimelineEditorData,
@@ -41,6 +43,7 @@ import {
 import {
     groupWidgetEntries,
 } from '@Core/ui/widget-manager/WidgetGroupUtils'
+import {createReplayScrubScheduler} from '@Core/ui/replay/ReplayScrubScheduler'
 import {useOptionalSnapshot} from '@Utils/ValtioUtils'
 import '../../../webcomponents/lgs1920-timeline/LGS1920Timeline.js'
 import './replay-timeline-preview.css'
@@ -474,6 +477,80 @@ export const ReplayTimelinePreview = forwardRef(({
     const tracks = Array.isArray(preparationTimeline?.tracks)
         ? preparationTimeline.tracks
         : baseTracks
+    const sliderMinMillis = Number.isFinite(Number(timeline.rangeStartMillis))
+        ? Number(timeline.rangeStartMillis)
+        : 0
+    const sliderMaxMillis = Number.isFinite(Number(timeline.rangeEndMillis))
+        ? Math.max(sliderMinMillis, Number(timeline.rangeEndMillis))
+        : timeline.durationMillis
+    // Keep the live frame out of render-time snapshot tracking. Playback updates
+    // the slider imperatively through the subscription effect below.
+    const initialTimelineTimeMillis = 0
+    const normalizeTimelineTime = useCallback(value => {
+        const requestedTime = Number(value)
+        const safeTime = Number.isFinite(requestedTime) ? requestedTime : sliderMinMillis
+        return Math.max(sliderMinMillis, Math.min(sliderMaxMillis, safeTime))
+    }, [sliderMaxMillis, sliderMinMillis])
+
+    const applyReplayScrub = useCallback(({progress, settled, signal, requestId}) => __.ui.replay?.seek?.(progress, {
+        qualifyScene: true,
+        settled,
+        signal,
+        requestId,
+        source: 'timeline-scrub',
+    }), [])
+    const _scrubScheduler = useRef(null)
+    const _slider = useRef(null)
+
+    const syncSliderTime = useCallback(value => {
+        const slider = _slider.current
+        if (!slider) return
+        const timeMillis = normalizeTimelineTime(value)
+        if (Number(slider.value) !== timeMillis) {
+            slider.value = timeMillis
+        }
+    }, [normalizeTimelineTime])
+
+    useEffect(() => {
+        const scheduler = createReplayScrubScheduler({apply: applyReplayScrub})
+        _scrubScheduler.current = scheduler
+
+        return () => {
+            scheduler.dispose()
+            if (_scrubScheduler.current === scheduler) {
+                _scrubScheduler.current = null
+            }
+        }
+    }, [applyReplayScrub])
+
+    const updateTimelineTime = useCallback((value, settled = false) => {
+        const timeMillis = normalizeTimelineTime(value)
+        const durationMillis = Number(timeline.durationMillis)
+        const progress = durationMillis > 0 ? timeMillis / durationMillis : 0
+        syncSliderTime(timeMillis)
+        if (_timeline.current) {
+            _timeline.current.currentTimeMillis = timeMillis
+        }
+        if (settled) {
+            void _scrubScheduler.current?.settle(progress)
+        }
+        else {
+            _scrubScheduler.current?.request(progress)
+        }
+    }, [normalizeTimelineTime, timeline.durationMillis])
+
+    const handleTimelineSeek = useCallback(event => {
+        const detail = event?.detail ?? {}
+        updateTimelineTime(detail.timeMillis, detail.settled === true)
+    }, [updateTimelineTime])
+
+    const handleSliderInput = useCallback(event => {
+        updateTimelineTime(event.target.value)
+    }, [updateTimelineTime])
+
+    const handleSliderChange = useCallback(event => {
+        updateTimelineTime(event.target.value, true)
+    }, [updateTimelineTime])
 
     useImperativeHandle(ref, () => ({
         handleResize: () => {
@@ -523,6 +600,7 @@ export const ReplayTimelinePreview = forwardRef(({
                                 : [],
                         }]
                 element.currentTimeMillis = 0
+                syncSliderTime(0)
                 return
             }
 
@@ -532,11 +610,14 @@ export const ReplayTimelinePreview = forwardRef(({
             element.tracks = tracks
             element.playing = replayStore.playing === true
             if (hasPublishedReplayFrame(replayStore)) {
-                element.currentTimeMillis = resolveCurrentTimeMillis(replayStore, {
+                const currentTimeMillis = resolveCurrentTimeMillis(replayStore, {
                     durationMillis: timeline.durationMillis,
                 })
+                element.currentTimeMillis = currentTimeMillis
+                syncSliderTime(currentTimeMillis)
             } else {
                 element.currentTimeMillis = localTimeMillis
+                syncSliderTime(localTimeMillis)
             }
         }
 
@@ -544,7 +625,7 @@ export const ReplayTimelinePreview = forwardRef(({
         return () => {
             cancelled = true
         }
-    }, [detached, linkedPreparation, projection, timeline, tracks])
+    }, [detached, linkedPreparation, projection, syncSliderTime, timeline, tracks])
 
     useEffect(() => {
         const element = _timeline.current
@@ -565,21 +646,31 @@ export const ReplayTimelinePreview = forwardRef(({
     useEffect(() => {
         const element = _timeline.current
         if (!linkedPreparation || !element || getReplayTimelineDebugStage() !== 'full') return undefined
+
+        element.addEventListener('lgs1920-timeline-seek', handleTimelineSeek)
+        return () => element.removeEventListener('lgs1920-timeline-seek', handleTimelineSeek)
+    }, [handleTimelineSeek, linkedPreparation])
+
+    useEffect(() => {
+        const element = _timeline.current
+        if (!linkedPreparation || !element || getReplayTimelineDebugStage() !== 'full') return undefined
         const projectionDurationMillis = projection.durationMillis
 
         const syncPlayback = () => {
             const replayStore = lgs.stores.replay
             if (hasPublishedReplayFrame(replayStore)) {
-                element.currentTimeMillis = resolveCurrentTimeMillis(replayStore, {
+                const currentTimeMillis = resolveCurrentTimeMillis(replayStore, {
                     durationMillis: projectionDurationMillis,
                 })
+                element.currentTimeMillis = currentTimeMillis
+                syncSliderTime(currentTimeMillis)
             }
             element.playing = replayStore.playing === true
         }
 
         syncPlayback()
         return subscribe(lgs.stores.replay, syncPlayback)
-    }, [linkedPreparation, projection.durationMillis])
+    }, [linkedPreparation, projection.durationMillis, syncSliderTime])
 
     useEffect(() => {
         if (!linkedPreparation || getReplayTimelineDebugStage() !== 'full') {
@@ -616,6 +707,21 @@ export const ReplayTimelinePreview = forwardRef(({
                                   data-replay-timeline-debug={getReplayTimelineDebugStage()}
                                   ref={_timeline}
                                   aria-label="Replay tracks">
+                    <span slot="timeline-ruler"
+                          className="replay-timeline-preview__scrubber lgs-widget-no-drag"
+                          data-widget-capture="exclude"
+                          onClick={event => event.stopPropagation()}>
+                        <WaSlider label="Replay position"
+                                  ref={_slider}
+                                  size="s"
+                                  variant="brand"
+                                  min={sliderMinMillis}
+                                  max={sliderMaxMillis}
+                                  step={Math.max(1, Number(timeline.frameIntervalMillis) || 1)}
+                                  defaultValue={initialTimelineTimeMillis}
+                                  onInput={handleSliderInput}
+                                  onChange={handleSliderChange}/>
+                    </span>
                     {headerActions && (
                         <span slot="header-actions"
                               className="replay-timeline-preview__header-actions lgs-widget-no-drag"
@@ -637,10 +743,11 @@ export const ReplayTimelinePreview = forwardRef(({
                         <VideoRecordingSettingsToolbar mainTheme mode="actions"/>
                     </span>
                     <span slot="additional-content-label">Video settings</span>
-                    <div slot="additional-content"
-                         className="replay-timeline-preview__additional-content lgs-widget-no-drag">
-                        <VideoRecordingSettingsToolbar mainTheme layout="timeline-drawer" mode="video-options"/>
-                    </div>
+                    <VideoRecordingSettingsMenus slot="additional-content"
+                                                 className="replay-timeline-preview__additional-content lgs-widget-no-drag"
+                                                 context={lgs.stores.ui.video.cropper}
+                                                 cropzoneId={VIDEO_CROP_ZONE}
+                                                 mainTheme/>
                 </lgs1920-timeline>
             )}
         </section>

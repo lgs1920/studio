@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-31
- * Last modified: 2026-09-09
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -248,7 +248,7 @@ export const createTimelineRenderer = ({
             .map(element => Number(element.dataset.rulerIndex))
             .filter(Number.isFinite)
         const currentScaleCount = indexes.length > 0 ? Math.max(...indexes) : -1
-        const insertionPoint = ruler.querySelector('[name="timeline-ruler"]')
+        const insertionPoint = ruler.querySelector('[data-timeline-ruler-insertion-point]')
         if (!insertionPoint) return
         for (let index = currentScaleCount + 1; index <= scaleCount; index += 1) {
             insertionPoint.before(rulerUnit(index, majorSeconds, scaleSplitCount))
@@ -467,7 +467,10 @@ export const createTimelineRenderer = ({
         ruler.style.width = `${getContentWidth()}px`
         for (let index = 0; index <= scaleCount; index += 1) ruler.append(rulerUnit(index, majorSeconds, scaleSplitCount))
         ruler.append(
-            createElement('slot', '', {name: 'timeline-ruler'}),
+            createElement('span', '', {
+                'data-timeline-ruler-insertion-point': '',
+                'aria-hidden': 'true',
+            }),
             createElement('div', 'lgs1920-wa-timeline__clip-edge-indicator', {
                 part: 'clip-edge-indicator',
                 'data-clip-edge-indicator': '',
@@ -551,7 +554,7 @@ export const createTimelineRenderer = ({
         )
         tracksViewport.append(tracks)
         canvas.append(ruler, tracksViewport, overlay)
-        surface.append(canvas)
+        surface.append(createElement('slot', '', {name: 'timeline-ruler'}), canvas)
         if (interactive) {
             ruler.addEventListener('click', event => handleRulerClick(event))
             surface.addEventListener('pointerdown', event => {

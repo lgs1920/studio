@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-10
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -654,6 +654,22 @@ describe('lgs1920-timeline Web Component', () => {
         expect(surface.tagName).toBe('WA-CARD')
         expect(legend.getAttribute('appearance')).toBe('plain')
         expect(surface.getAttribute('appearance')).toBe('plain')
+    })
+
+    it('keeps the timeline ruler slot on the visible surface', () => {
+        const timeline = new LGS1920Timeline()
+        const rulerContent = document.createElement('div')
+        rulerContent.slot = 'timeline-ruler'
+        timeline.append(rulerContent)
+        configureTimeline(timeline)
+        document.body.append(timeline)
+
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        const rulerSlot = surface.querySelector('slot[name="timeline-ruler"]')
+
+        expect(rulerSlot).not.toBeNull()
+        expect(rulerSlot.assignedElements()).toEqual([rulerContent])
+        expect(timeline.shadowRoot.querySelector('[part="ruler"] slot[name="timeline-ruler"]')).toBeNull()
     })
 
     it('uses the Web Awesome wag animation while the timeline is building', () => {

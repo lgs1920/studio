@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-08
- * Last modified: 2026-09-11
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -66,11 +66,16 @@ vi.mock('@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder', () => ({
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
     WaIcon: ({name}) => <span data-icon={name}/>,
+    WaSlider: forwardRef((props, ref) => <input ref={ref} {...props}/>),
     WaTooltip: ({children, ...props}) => <span data-tooltip {...props}>{children}</span>,
 }))
 
 vi.mock('@Components/MainUI/video/toolbox/VideoRecordingSettingsToolbar', () => ({
     VideoRecordingSettingsToolbar: () => <div data-testid="video-recording-settings-toolbar"/>,
+}))
+
+vi.mock('@Components/MainUI/video/toolbox/VideoRecordingSettingsMenus', () => ({
+    VideoRecordingSettingsMenus: () => <div data-testid="video-recording-settings-menu-content"/>,
 }))
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/button/button.js', () => ({}))

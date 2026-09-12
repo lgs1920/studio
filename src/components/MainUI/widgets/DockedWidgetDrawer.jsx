@@ -8,23 +8,21 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-10
- * Last modified: 2026-09-11
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import WaDrawer from '@Components/WaDrawerNonModal'
-import {DynamicWidget} from '@Components/MainUI/widgets/DynamicWidget'
 import {DockedWidgetResizeHandle} from '@Components/MainUI/widgets/DockedWidgetResizeHandle'
-import {DockedWidgetContainerContext} from '@Components/MainUI/widgets/WidgetDockContext'
-import {JOURNEY_WIDGETS, REPLAY_TIMELINE_WIDGET, SCENE_WIDGETS_BOARD} from '@Core/constants'
+import {ReplayTimelineWidget} from '@Components/MainUI/widgets/list/ReplayTimelineWidget'
+import {REPLAY_TIMELINE_WIDGET} from '@Core/constants'
 import {
-    hydrateDockedWidget,
     setDockSize,
     undockWidget,
 } from '@Core/ui/widget-manager/WidgetDockManager'
-import {useCallback, useEffect, useState} from 'react'
+import {useCallback, useState} from 'react'
 import {createPortal} from 'react-dom'
 import {useSnapshot} from 'valtio'
 
@@ -36,7 +34,7 @@ import {useSnapshot} from 'valtio'
  * @returns {void}
  */
 const handleAfterHide = (event, widgetId) => {
-    if (event?.target?.tagName === 'WA-DRAWER') {
+    if (event.target === event.currentTarget && !event.currentTarget.open) {
         undockWidget(widgetId)
     }
 }
@@ -49,15 +47,14 @@ const handleAfterHide = (event, widgetId) => {
 export const DockedWidgetDrawer = () => {
     const widget = useSnapshot(lgs.stores.ui.widget)
     const drawers = useSnapshot(lgs.stores.ui.drawers)
+    const video = useSnapshot(lgs.stores.ui.video)
+    const replay = useSnapshot(lgs.stores.replay)
     const drawerRoot = __.ui.drawerManager?.drawerRoot
-    const [drawer, setDrawer] = useState(null)
-    const [surface, setSurface] = useState(null)
-
-    useEffect(() => {
-        hydrateDockedWidget()
-    }, [])
-
     const dockedId = widget.docked?.id
+    const supportedDockedId = dockedId && dockedId.split('#')[0] === REPLAY_TIMELINE_WIDGET
+        ? dockedId
+        : null
+    const [drawer, setDrawer] = useState(null)
 
     /**
      * Store the Web Awesome drawer element used by the resize handle.
@@ -67,44 +64,35 @@ export const DockedWidgetDrawer = () => {
      */
     const setDrawerElement = useCallback(element => setDrawer(element), [])
 
-    if (!dockedId || dockedId.split('#')[0] !== REPLAY_TIMELINE_WIDGET) {
-        return null
-    }
-
-    const entry = widget.list.get(dockedId) ?? {
-        group:        JOURNEY_WIDGETS,
-        widgetsBoard: SCENE_WIDGETS_BOARD,
-    }
     const size = Number(widget.docked?.size) || 320
+    const timelinePreparationActive = video.editing === true
+        && video.timelinePreviewActive === true
+        && replay.recordingSync === true
     const drawerStyle = {
         '--widget-dock-horizontal-left': drawers.open !== null ? 'var(--lgs-horizontal-panel-left)' : '0px',
         '--widget-dock-horizontal-width': drawers.open !== null ? 'var(--lgs-horizontal-panel-width)' : '100%',
     }
+
+    if (!supportedDockedId || !timelinePreparationActive) {
+        return null
+    }
+
     const content = (
         <WaDrawer
             ref={setDrawerElement}
             id="widget-dock-bottom-drawer"
-            open={true}
-            modal={false}
+            open
+            label="Replay timeline"
+            withoutHeader
             placement="bottom"
             className="widget-dock-bottom-drawer lgs-theme"
             style={drawerStyle}
-            onWaAfterHide={event => handleAfterHide(event, dockedId)}
+            onWaAfterHide={event => handleAfterHide(event, supportedDockedId)}
         >
-            <div className="widget-dock-surface" ref={setSurface}>
-                {surface && (
-                    <DockedWidgetContainerContext.Provider value={surface}>
-                        <DynamicWidget
-                            key={`docked-${dockedId}`}
-                            id={dockedId}
-                            props={{
-                                ...entry,
-                                docked:       true,
-                                widgetsBoard: SCENE_WIDGETS_BOARD,
-                            }}
-                        />
-                    </DockedWidgetContainerContext.Provider>
-                )}
+            <div className="widget-dock-surface">
+                <ReplayTimelineWidget key={`docked-${supportedDockedId}`}
+                                      id={supportedDockedId}
+                                      docked/>
             </div>
             <DockedWidgetResizeHandle drawer={drawer} size={size} onSizeChange={setDockSize}/>
         </WaDrawer>

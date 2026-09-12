@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-11
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -1048,14 +1048,6 @@ body {
 .widget-dock-bottom-drawer {
     --size: 320px; /* Current dock height, updated by the resize handle. */
     --widget-dock-min-size: 180px; /* Absolute minimum height allowed for the dock. */
-}
-
-.widget-dock-bottom-drawer::part(close-button) {
-    display: none;
-}
-
-.widget-dock-bottom-drawer::part(header) {
-    display: none;
 }
 
 .widget-dock-bottom-drawer::part(dialog) {

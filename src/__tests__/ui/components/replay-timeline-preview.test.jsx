@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-11
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {cleanup, render, waitFor} from '@testing-library/react'
-import {createRef, Profiler} from 'react'
+import {cleanup, fireEvent, render, waitFor} from '@testing-library/react'
+import {createRef, forwardRef, Profiler} from 'react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {proxy} from 'valtio'
 import {proxyMap} from 'valtio/utils'
@@ -25,11 +25,22 @@ vi.mock('../../../webcomponents/lgs1920-timeline/LGS1920Timeline.js', () => ({})
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
     WaIcon: props => <span {...props}/>,
+    WaSlider: forwardRef(({size, variant, ...props}, ref) => <input ref={ref}
+                                                                      data-testid="replay-timeline-slider"
+                                                                      data-size={size}
+                                                                      data-variant={variant}
+                                                                      {...props}/>),
     WaTooltip: ({children, ...props}) => <span data-tooltip {...props}>{children}</span>,
 }))
 
 vi.mock('@Components/MainUI/video/toolbox/VideoRecordingSettingsToolbar', () => ({
     VideoRecordingSettingsToolbar: () => <div data-testid="video-recording-settings-toolbar"/>,
+}))
+
+vi.mock('@Components/MainUI/video/toolbox/VideoRecordingSettingsMenus', () => ({
+    VideoRecordingSettingsMenus: ({slot, className}) => <div data-testid="video-recording-settings-menu-content"
+                                                            slot={slot}
+                                                            className={className}/>,
 }))
 
 import {ReplayTimelinePreview} from '@Components/MainUI/video/ReplayTimelinePreview'
@@ -40,6 +51,7 @@ describe('ReplayTimelinePreview', () => {
             ui: {
                 replay: {
                     enterReplayPreparation: vi.fn(async () => true),
+                    seek: vi.fn(),
                 },
                 widgetManager: {
                     getWidgetConfig: vi.fn(() => null),
@@ -133,12 +145,19 @@ describe('ReplayTimelinePreview', () => {
             resizeExtendsDuration: true,
         })
         expect(timelineElement.currentTimeMillis).toBe(1_000)
+        const slider = container.querySelector('[data-testid="replay-timeline-slider"]')
+        expect(slider.closest('[slot="timeline-ruler"]')).not.toBeNull()
+        expect(slider.getAttribute('min')).toBe('0')
+        expect(slider.getAttribute('max')).toBe('4000')
+        expect(slider.value).toBe('1000')
+        expect(slider.getAttribute('data-size')).toBe('s')
+        expect(slider.getAttribute('data-variant')).toBe('brand')
         expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-min-width')).toBe('352px')
         expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-min-height')).toBe('156px')
         expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-layout-min-height')).toBe('74px')
         expect(container.querySelector('[slot="custom-menu"] [data-testid="video-recording-settings-toolbar"]')).not.toBeNull()
         expect(container.querySelector('[slot="custom-menu"] [data-additional-content-toggle]')).not.toBeNull()
-        expect(container.querySelector('[slot="additional-content"] [data-testid="video-recording-settings-toolbar"]')).not.toBeNull()
+        expect(container.querySelector('[slot="additional-content"][data-testid="video-recording-settings-menu-content"]')).not.toBeNull()
         expect(container.querySelector('[slot="additional-content-label"]')?.textContent).toBe('Video settings')
         expect(timelineElement.querySelector('[slot="legend-ruler"]')).toBeNull()
         expect(timelineElement.playing).toBe(false)
@@ -166,6 +185,29 @@ describe('ReplayTimelinePreview', () => {
             clip.editable === false && clip.resizable === false
         ))).toBe(true)
         expect(globalThis.__.ui.replay.enterReplayPreparation).toHaveBeenCalledTimes(1)
+    })
+
+    it('keeps the branded full-width slider synchronized with the timeline playhead', async () => {
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+        const slider = container.querySelector('[data-testid="replay-timeline-slider"]')
+
+        fireEvent.input(slider, {target: {value: '2500'}})
+
+        await waitFor(() => expect(timelineElement.currentTimeMillis).toBe(2_500))
+        expect(slider.value).toBe('2500')
+
+        timelineElement.currentTimeMillis = 3_000
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-seek', {
+            bubbles: true,
+            detail: {timeMillis: 3_000, settled: true},
+        }))
+
+        await waitFor(() => expect(slider.value).toBe('3000'))
+        expect(globalThis.__.ui.replay.seek).toHaveBeenCalledWith(0.75, expect.objectContaining({
+            settled: true,
+            source: 'timeline-scrub',
+        }))
     })
 
     it('assigns application actions to the generic timeline header', () => {

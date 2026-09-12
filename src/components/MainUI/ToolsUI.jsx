@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-19
- * Last modified: 2026-09-10
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,6 +27,7 @@ import { VideoRecordingScreenArea } from '@Components/MainUI/video/VideoRecordin
 import {
     JOURNEY_TOOLBAR_WIDGET, JOURNEY_WIDGETS, REPLAY_TIMELINE_WIDGET, SCENE_WIDGETS_BOARD,
 } from '@Core/constants'
+import {hydrateDockedWidget} from '@Core/ui/widget-manager/WidgetDockManager'
 import { JourneyToolbarWidget }     from '@Editor/JourneyToolbarWidget'
 import { useEffect, useRef }        from 'react'
 import { useSnapshot }              from 'valtio/index'
@@ -39,6 +40,10 @@ export const ToolsUI = () => {
     const $cropper = lgs.stores.ui.video.cropper
     const _journeyToolbarHiddenByVideoEditor = useRef(false)
     const _replayPreparationActive = useRef(false)
+    const renderLinkedTimeline = video.editing === true
+        && video.timelinePreviewActive === true
+        && replay.recordingSync === true
+        && widget.docked?.id?.split('#')[0] !== REPLAY_TIMELINE_WIDGET
 
     useEffect(() => {
         const linkedReplay = replay.recordingSync === true
@@ -58,6 +63,12 @@ export const ToolsUI = () => {
             _journeyToolbarHiddenByVideoEditor.current = false
         }
     }, [replay.active, replay.paused, replay.playing, replay.recordingSync, video.editing])
+
+    useEffect(() => {
+        if (renderLinkedTimeline) {
+            hydrateDockedWidget()
+        }
+    }, [renderLinkedTimeline])
 
     useEffect(() => {
         const captureActive = video.preRecording || video.recording || video.snapshot || video.finalizing
@@ -112,8 +123,7 @@ export const ToolsUI = () => {
                     {!(video.timelinePreviewActive === true && replay.recordingSync === true) && (
                         <VideoRecordingSettingsWidget id="video-recording-settings-widget"/>
                     )}
-                    {video.timelinePreviewActive === true && replay.recordingSync === true
-                     && widget.docked?.id?.split('#')[0] !== REPLAY_TIMELINE_WIDGET && (
+                    {renderLinkedTimeline && (
                         <DynamicWidget
                             id="replay-timeline-widget"
                             props={{

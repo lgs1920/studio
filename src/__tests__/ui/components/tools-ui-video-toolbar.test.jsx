@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-08-28
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,6 +31,18 @@ vi.mock('@Components/MainUI/video/toolbox/VideoRecordingSettingsWidget', () => (
     VideoRecordingSettingsWidget: () => null,
 }))
 
+vi.mock('@Components/MainUI/widgets/DynamicWidget', () => ({
+    DynamicWidget: ({id}) => <div data-testid={`dynamic-widget-${id}`}/>,
+}))
+
+vi.mock('@Components/MainUI/widgets/DockedWidgetDrawer', () => ({
+    DockedWidgetDrawer: () => null,
+}))
+
+vi.mock('@Components/MainUI/widgets/DetachedWidgetPortal', () => ({
+    DetachedWidgetPortal: () => null,
+}))
+
 vi.mock('@Components/MainUI/video/VideoSettingsInfo', () => ({
     VideoSettingsInfo: () => null,
 }))
@@ -51,7 +63,8 @@ vi.mock('@Components/ToolsUI/cropper/Cropper', () => ({
     Cropper: () => null,
 }))
 
-vi.mock('@Core/constants', () => ({
+vi.mock('@Core/constants', async importOriginal => ({
+    ...(await importOriginal()),
     JOURNEY_TOOLBAR_WIDGET: 'journey-toolbar-widget',
 }))
 
@@ -80,6 +93,9 @@ describe('ToolsUI linked replay video editing', () => {
             settings: {
                 ui: {
                     journeyToolbar: proxy({show: true, usage: true}),
+                    widgets: {
+                        dock: {id: null, mode: 'scene', size: 320},
+                    },
                 },
             },
             stores: {
@@ -90,9 +106,14 @@ describe('ToolsUI linked replay video editing', () => {
                     recordingSync:  true,
                 }),
                 ui: proxy({
+                    drawers: proxy({open: null}),
                     video: proxy({
                         editing: false,
                         cropper: proxy({}),
+                    }),
+                    widget: proxy({
+                        docked:   {id: null},
+                        undocked: {id: null},
                     }),
                 }),
             },
@@ -139,5 +160,38 @@ describe('ToolsUI linked replay video editing', () => {
             shouldApply: expect.any(Function),
         })))
         expect(enterReplayPreparation.mock.calls[0][0].shouldApply()).toBe(true)
+    })
+
+    it('mounts the persisted external timeline host only when the timeline is opened', async () => {
+        globalThis.lgs.settings.ui.widgets = {
+            dock: {
+                id:   'replay-timeline-widget',
+                mode: 'window',
+                size: 320,
+            },
+        }
+
+        const {queryByTestId, getByTestId} = render(<ToolsUI/>)
+        expect(queryByTestId('dynamic-widget-replay-timeline-widget')).toBeNull()
+
+        globalThis.lgs.stores.ui.video.editing = true
+        globalThis.lgs.stores.ui.video.timelinePreviewActive = true
+
+        await waitFor(() => expect(getByTestId('dynamic-widget-replay-timeline-widget')).toBeTruthy())
+    })
+
+    it('hydrates a persisted drawer when the timeline is opened', async () => {
+        globalThis.lgs.settings.ui.widgets.dock = {
+            id:   'replay-timeline-widget',
+            mode: 'drawer',
+            size: 420,
+        }
+        globalThis.lgs.stores.ui.video.editing = true
+        globalThis.lgs.stores.ui.video.timelinePreviewActive = true
+
+        render(<ToolsUI/>)
+
+        await waitFor(() => expect(lgs.stores.ui.widget.docked.id).toBe('replay-timeline-widget'))
+        expect(lgs.stores.ui.widget.docked.size).toBe(420)
     })
 })

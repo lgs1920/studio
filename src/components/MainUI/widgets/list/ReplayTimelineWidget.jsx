@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-11
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,7 +21,6 @@
 import {REPLAY_TIMELINE_UI} from '@Components/MainUI/video/replayTimelineUtils'
 import {Widget} from '@Components/MainUI/widgets/Widget'
 import {WidgetWindowActionButton} from '@Components/MainUI/widgets/WidgetWindowActionButton'
-import {DockedWidgetContainerContext} from '@Components/MainUI/widgets/WidgetDockContext'
 import {JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS_BOARD} from '@Core/constants'
 import {
     dockWidget,
@@ -29,7 +28,7 @@ import {
     undockWidget,
 } from '@Core/ui/widget-manager/WidgetDockManager'
 import {LGS1920_ICON_LIBRARY} from '@Utils/useWebAwesomeKits'
-import {useCallback, useContext, useMemo, useRef} from 'react'
+import {useCallback, useEffect, useMemo, useRef} from 'react'
 import {useSnapshot} from 'valtio'
 import {ReplayTimelineContent} from './ReplayTimelineContent'
 
@@ -126,11 +125,44 @@ export const ReplayTimelineWidget = ({id, zIndex, docked = false, detached = fal
  */
 const HostedReplayTimelineWidget = ({id, zIndex, docked, detached}) => {
     const container = useMemo(() => lgs.canvas, [])
-    const dockContainer = useContext(DockedWidgetContainerContext)
     const timelinePreviewRef = useRef(null)
 
+    useEffect(() => {
+        if (docked || detached) {
+            return
+        }
+
+        let cancelled = false
+        let frame = null
+        let attempts = 0
+
+        const restorePersistedHost = () => {
+            if (cancelled) {
+                return
+            }
+
+            const widgetManager = globalThis.__?.ui?.widgetManager
+            const windowManager = globalThis.__?.ui?.widgetWindowManager
+            if (!widgetManager?.getWidgetConfig?.(id) && attempts < 60) {
+                attempts += 1
+                frame = requestAnimationFrame(restorePersistedHost)
+                return
+            }
+
+            void windowManager?.restorePersistedWidget?.(id)
+        }
+
+        frame = requestAnimationFrame(restorePersistedHost)
+        return () => {
+            cancelled = true
+            if (frame) {
+                cancelAnimationFrame(frame)
+            }
+        }
+    }, [detached, docked, id])
+
     const config = useMemo(() => ({
-        container: docked ? dockContainer : container,
+        container,
         docked,
         captureExclude: ['[data-widget-capture="exclude"]'],
         contextMenu: {
@@ -164,7 +196,7 @@ const HostedReplayTimelineWidget = ({id, zIndex, docked, detached}) => {
         widgetsBoard:  SCENE_WIDGETS_BOARD,
         zIndex,
         showControlBox: !docked,
-    }), [container, dockContainer, docked, id, zIndex])
+    }), [container, docked, id, zIndex])
 
     const headerActions = <TimelineWidgetHeaderActions id={id}
                                                        docked={docked}
@@ -175,6 +207,9 @@ const HostedReplayTimelineWidget = ({id, zIndex, docked, detached}) => {
                                            headerActions={headerActions}/>
     if (detached) {
         return <div className="lgs-detached-widget-host">{content}</div>
+    }
+    if (docked) {
+        return content
     }
 
     return <Widget isVisible config={config} childRef={timelinePreviewRef}>{content}</Widget>

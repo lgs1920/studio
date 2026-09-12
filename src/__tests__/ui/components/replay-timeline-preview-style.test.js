@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-10
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -41,7 +41,16 @@ describe('Replay timeline preview styles', () => {
 
         expect(openBlocks).toBe(closedBlocks)
         expect(styleSource).toContain('lgs1920-timeline {')
-        expect(styleSource).toContain('.replay-timeline-preview__additional-content')
+        expect(styleSource).toContain('.replay-timeline-preview__custom-menu')
+        expect(styleSource).toContain('.replay-timeline-preview__scrubber')
+        expect(styleSource).toContain('width: 100%;')
+        expect(styleSource).toContain('inset-block-start: 0;')
+        expect(styleSource).toContain('z-index: 8;')
+        expect(styleSource).toContain('.replay-timeline-preview__scrubber wa-slider')
+        expect(styleSource).toContain('margin-block-start: 0;')
+        expect(styleSource).toContain('--lgs-timeline-header-height: 72px;')
+        expect(styleSource).toContain('lgs1920-timeline::part(tick)')
+        expect(styleSource).toContain('align-items: flex-end;')
         expect(styleSource).toContain('container-type: inline-size;')
         expect(styleSource).toContain('--lgs-timeline-padding: var(--lgs-gutter-s);')
         expect(styleSource).toContain('--lgs-replay-timeline-min-width: 352px;')
@@ -94,6 +103,7 @@ describe('Replay timeline preview styles', () => {
         expect(readOnlyLegendRowRule).not.toContain('border-bottom-color:')
         expect(readOnlyTrackRule).not.toContain('border-block-color:')
         expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__track {')
+        expect(webComponentStyleSource).toContain('[data-timeline-ruler-insertion-point]')
         expect(webComponentStyleSource).toContain('border-block: 1px solid var(--lgs-timeline-quiet-border-color);')
         expect(webComponentStyleSource).toContain('border-radius: 0;')
         expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__clip {')

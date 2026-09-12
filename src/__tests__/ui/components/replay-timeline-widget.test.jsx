@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-11
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -91,6 +91,13 @@ describe('ReplayTimelineWidget dimensions', () => {
         }
         globalThis.lgs = {
             canvas: document.createElement('div'),
+            settings: {
+                ui: {
+                    widgets: {
+                        dock: {id: null, mode: 'scene', size: 320},
+                    },
+                },
+            },
             stores: {
                 ui: {
                     widget: proxy({
