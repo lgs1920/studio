@@ -1924,3 +1924,47 @@
 ## 2026-09-10 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/27234fed9b39ada6a280cd9dff59e95a20e8f8f8)
 
 - Recorded automatically from Git history.
+
+## 2026-09-11 — [`docs: define TODO LLM query normalization`](https://github.com/lgs1920/studio/commit/652cf24e740164c6e089bb7dec7d6893d0442ea2)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`fix: release occupied development ports`](https://github.com/lgs1920/studio/commit/6b628ad900a767c89444d9cfe82bd21b5ca37152)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`chore: configure TODO normalization watcher`](https://github.com/lgs1920/studio/commit/55052d2862afdd033e400b19693b962396db6aa9)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`docs: define Web Awesome icon usage rules`](https://github.com/lgs1920/studio/commit/af4c7fd3445f31d7e1d581b019189f32ffc64c03)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`fix: integrate custom kit icons with Web Awesome`](https://github.com/lgs1920/studio/commit/4c210911cd6ae1ff463cafd57193cf2fe6390492)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`docs: clarify configurable icon kit registration`](https://github.com/lgs1920/studio/commit/6a2015cb0555ed591e165444b2e5dfaec8db076a)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`refactor: make icon kit registration configurable`](https://github.com/lgs1920/studio/commit/50d36f148e31a3328bddda1dd93769c9f1dfcce4)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`docs: redact icon kit identifier`](https://github.com/lgs1920/studio/commit/c3016469ad96ff9fc000304bfe721af8e8550e2d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`docs: generalize icon library examples`](https://github.com/lgs1920/studio/commit/1837f53f7e9d7b4607b8c8cffda11ba4510e4c13)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`fix: register custom icons in detached windows`](https://github.com/lgs1920/studio/commit/9eb896404c2803fe67464a564d43a62b29e017a8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/e9b157a7f2e2ce9b775cedbd666ea9f4bff67011)
+
+- Recorded automatically from Git history.
