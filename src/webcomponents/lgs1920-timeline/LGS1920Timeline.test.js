@@ -804,18 +804,19 @@ describe('lgs1920-timeline Web Component', () => {
     })
 
     it('shows the building overlay again when the timeline is attached a second time', async () => {
+        vi.useFakeTimers()
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline)
         document.body.append(timeline)
 
-        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+        await advanceAnimationFrames(2)
         expect(timeline.shadowRoot.querySelector('[data-building-overlay]')).toBeNull()
 
         timeline.remove()
         document.body.append(timeline)
 
         expect(timeline.shadowRoot.querySelector('[data-building-overlay]')).not.toBeNull()
-        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+        await advanceAnimationFrames(2)
         expect(timeline.shadowRoot.querySelector('[data-building-overlay]')).toBeNull()
     })
 
