@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-10
- * Last modified: 2026-09-10
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -75,6 +75,54 @@
     flex-wrap: wrap;
 }
 
+.replay-timeline-preview__additional-content {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    container-type: inline-size;
+}
+
+.replay-timeline-preview__additional-content .video-recording-settings-menu {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    width: 100%;
+    min-width: 0;
+    gap: var(--lgs-gutter-s);
+}
+
+.replay-timeline-preview__additional-content .video-recording-settings-menu > section {
+    display: flex;
+    flex: 1 1 14rem;
+    flex-direction: column;
+    min-width: 12rem;
+    gap: var(--lgs-gutter-xxs);
+}
+
+.replay-timeline-preview__additional-content .video-recording-settings-menu h3 {
+    margin: 0;
+    color: var(--wa-color-text-normal);
+    font-size: var(--lgs-font-size-s);
+    font-weight: var(--wa-font-weight-semibold);
+}
+
+.replay-timeline-preview__additional-content .video-preset-toolbar-embedded,
+.replay-timeline-preview__additional-content .video-preset-toolbar-embedded .video-preset-widget,
+.replay-timeline-preview__additional-content .video-preset-toolbar-embedded .video-choice-buttons {
+    width: 100%;
+}
+
+.replay-timeline-preview__additional-content .video-choice-button::part(base) {
+    justify-content: space-between;
+}
+
+.replay-timeline-preview__additional-content .video-preset-custom--inline {
+    box-sizing: border-box;
+    width: 100%;
+    padding: var(--lgs-gutter-xxs);
+    border-block-start: 1px solid var(--wa-color-border-normal);
+}
+
 .video-recording-settings-menu wa-button::part(base) {
     gap: var(--lgs-gutter-xxs);
     white-space: nowrap;
@@ -120,6 +168,15 @@
 }
 
 @container (max-width: 640px) {
+    .replay-timeline-preview__additional-content .video-recording-settings-menu {
+        flex-direction: column;
+    }
+
+    .replay-timeline-preview__additional-content .video-recording-settings-menu > section {
+        width: 100%;
+        min-width: 0;
+    }
+
     .video-recording-settings-toolbar--timeline-drawer .video-recording-settings-menu {
         align-items: stretch;
         flex-direction: column;

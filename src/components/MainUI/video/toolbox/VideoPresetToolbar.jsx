@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-11-30
- * Last modified: 2026-09-03
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,7 +35,12 @@ import { Fragment, memo, useCallback, useEffect, useRef, useState }        from 
 import { useSnapshot }                                                     from 'valtio'
 import '../style.css'
 
-export const VideoPresetToolbar = memo(({embedded = false, mainTheme = false}) => {
+export const VideoPresetToolbar = memo(({
+    embedded = false,
+    idPrefix = 'video-preset',
+    inlineCustom = false,
+    mainTheme = false,
+}) => {
     const $video = lgs.stores.ui.video
     const $videoSettings = lgs.settings.ui.video
     const video = useSnapshot($video)
@@ -143,7 +148,7 @@ export const VideoPresetToolbar = memo(({embedded = false, mainTheme = false}) =
                 size="s"
                 variant="neutral"
                 appearance={key === preset ? 'outlined' : 'plain'}
-                id={`video-preset-${key}`}
+                id={`${idPrefix}-${key}`}
                 onClick={event => handleChangePreset(key, event)}
             >
                 {value.name}
@@ -152,9 +157,14 @@ export const VideoPresetToolbar = memo(({embedded = false, mainTheme = false}) =
                 )}
             </WaButton>
 
-            {value.submenu && (
+            {value.submenu && inlineCustom && key === 'custom' && open ? (
+                <div className={`video-preset-custom video-preset-custom--inline ${themeClass}`}>
+                    <VideoFPSToolbar choicesOnMap={!mainTheme}/>
+                    <VideoQualityToolbar choicesOnMap={!mainTheme}/>
+                </div>
+            ) : value.submenu && (
                 <LGSPopup
-                    anchor={`video-preset-${key}`}
+                    anchor={`${idPrefix}-${key}`}
                     active={open}
                     onRequestClose={() => setOpen(false)}
                     placement="right-start"

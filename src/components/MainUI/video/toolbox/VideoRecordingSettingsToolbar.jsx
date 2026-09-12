@@ -8,21 +8,20 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-20
- * Last modified: 2026-09-10
+ * Last modified: 2026-09-12
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { LGSPopup } from '@Components/LGSPopup'
-import { CropRatioEditorToolbar } from '@Components/ToolsUI/cropper/widgets/CropRatioEditorToolbar'
-import { VideoPresetToolbar } from '@Components/MainUI/video/toolbox/VideoPresetToolbar'
 import { cancelVideoEditing, prepareVideoCaptureUi, prepareVideoEditingUi } from '@Components/MainUI/video/videoEditingCleanup'
 import { REPLAY_DRAWER, VIDEO_CROP_ZONE } from '@Core/constants'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot } from 'valtio'
+import { VideoRecordingSettingsMenuContent } from './VideoRecordingSettingsMenus'
 import '../style.css'
 
 const RATIO_POPUP = 'ratio'
@@ -299,10 +298,10 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false, layout = 
                     strategy="fixed"
                     onWaReposition={event => handlePopupReposition('ratio', event)}
                 >
-                    <CropRatioEditorToolbar context={$cropper}
-                                             cropzoneId={VIDEO_CROP_ZONE}
-                                             embedded
-                                             mainTheme={mainTheme}/>
+                    <VideoRecordingSettingsMenuContent menu="ratio"
+                                                       context={$cropper}
+                                                       cropzoneId={VIDEO_CROP_ZONE}
+                                                       mainTheme={mainTheme}/>
                 </LGSPopup> : null}
 
                 {showVideoOptions ? <WaButton
@@ -329,7 +328,10 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false, layout = 
                     onWaReposition={event => handlePopupReposition('preset', event)}
                 >
                     <div className={`video-recording-settings-popup lgs-card ${mainTheme ? 'wa-theme-lgs1920' : 'wa-theme-lgs1920-on-map'}`}>
-                        <VideoPresetToolbar embedded mainTheme={mainTheme}/>
+                        <VideoRecordingSettingsMenuContent menu="preset"
+                                                           context={$cropper}
+                                                           cropzoneId={VIDEO_CROP_ZONE}
+                                                           mainTheme={mainTheme}/>
                     </div>
                 </LGSPopup> : null}
 
