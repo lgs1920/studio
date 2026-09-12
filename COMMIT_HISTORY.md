@@ -2084,3 +2084,7 @@
 ## 2026-09-12 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/13995380d2b869f18e214a7c363134c6d705eb53)
 
 - Recorded automatically from Git history.
+
+## 2026-09-12 — [`ci: update checkout action runtime`](https://github.com/lgs1920/studio/commit/0a7c2e202c1519b432e5bd58c11a1fe9273d42ea)
+
+- Recorded automatically from Git history.
