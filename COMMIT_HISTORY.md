@@ -2336,3 +2336,11 @@
 ## 2026-09-13 — [`merge: integrate 1.0.0 into main`](https://github.com/lgs1920/studio/commit/5333847775d8811e118632b3e45aa0bb6aa591b3)
 
 - Recorded automatically from Git history.
+
+## 2026-09-13 — [`feat(deployment): add GitHub Actions deployment workflows`](https://github.com/lgs1920/studio/commit/b6ff848bee872f857b8d3f1a9de1727edfc5881f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`merge: integrate deployment workflows`](https://github.com/lgs1920/studio/commit/8d86f175e40f1efc395c1109fc67b41614c2f2df)
+
+- Recorded automatically from Git history.
