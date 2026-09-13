@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2024-09-19
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,15 +19,17 @@ import path           from 'path'
 import process        from 'node:process'
 import { Deployment } from './deployment/Deployment.js'
 
-const platforms = {production: 'production', staging: 'staging', test: 'test'}
+// Keep the platform values centralized so CLI flags and deployment configuration
+// always use the same identifiers.
+const platforms = {production: 'production', staging: 'staging', nightly: 'nightly', test: 'test'}
 
 /*******************************************************************************
- * Read/manage arguments
+ * Parse command-line arguments
  */
 const parser = new argparse.ArgumentParser(
     {
         description: 'LGS1920 products deployment script',
-        usage:       'deploy --prod|-p, --staging|-s, --test|-t or --help|-h',
+        usage:       'deploy --prod|-p, --staging|-s, --nightly|-n, --test|-t or --help|-h',
     },
 )
 
@@ -41,18 +43,36 @@ parser.add_argument('--staging', '-s', {
     help:   'Deploy to staging platform',
 })
 
+parser.add_argument('--nightly', '-n', {
+    action: 'store_true',
+    help:   'Deploy to nightly platform',
+})
+
 parser.add_argument('--test', '-t', {
     action: 'store_true',
     help:   'Deploy to test platform',
 })
+
+parser.add_argument('--ci', {
+    action: 'store_true',
+    help:   'Run in CI mode without mutating Git branches or tags',
+})
 const args = parser.parse_args()
+
+// The product is inferred by Deployment from the current directory name.
+// When no platform flag is provided, the script intentionally falls back to test.
 const deployment = new Deployment(
     {
-        local:    path.dirname(process.cwd()),
-        platform: args.prod ? platforms.production : args.staging ? platforms.staging : platforms.test,
-        product:  path.basename(process.cwd()),
+        ci:           args.ci,
+        local:        path.dirname(process.cwd()),
+        platform:     args.prod ? platforms.production : args.staging ? platforms.staging : args.nightly ? platforms.nightly : platforms.test,
+        product:      path.basename(process.cwd()),
+        sourceBranch: process.env.LGS1920_SOURCE_BRANCH || process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME,
+        sourceRef:    process.env.LGS1920_SOURCE_REF || process.env.GITHUB_SHA,
     })
 
+// Deployment exposes a promise so the CLI exits with a meaningful status code:
+// zero for success and one for any build, transfer, or remote deployment error.
 deployment.done
     .then(() => process.exit(0))
     .catch(() => process.exit(1))

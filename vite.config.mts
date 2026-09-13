@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-23
- * Last modified: 2026-06-23
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -181,7 +181,7 @@ function serveProxyPhpDev(): Plugin {
     }
 }
 
-const version = data.studio
+const version = process.env.LGS_RELEASE_VERSION || data.studio
 
 export default defineConfig({
     plugins: [

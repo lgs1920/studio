@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-03-07
- * Last modified: 2026-03-07
+ * Created on: 2024-09-21
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,6 +31,7 @@ import {
     resolveBackendRegistrationFile,
 } from './DeploymentCommands.js'
 
+const DEFAULT_PUSH_ATTEMPTS = 3
 const STUDIO_APP_NAME = 'LGS1920 Studio Development'
 const STUDIO_HTACCESS_CONTENT = `<IfModule mod_headers.c>
     <FilesMatch ".+-[A-Za-z0-9_-]{8,}\\.(css|js|mjs|map|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|otf|eot|wasm)$">
@@ -46,7 +47,124 @@ const STUDIO_HTACCESS_CONTENT = `<IfModule mod_headers.c>
 `
 
 /**
- * Manages the deployment of applications to various platforms (production, staging, test).
+ * Returns a readable message from an unknown Git error value.
+ *
+ * @param {unknown} error - The error returned by the Git client.
+ * @returns {string} The error message.
+ */
+const getGitErrorMessage = (error) => error instanceof Error ? error.message : String(error)
+
+/**
+ * Determines whether a push failed because the remote branch advanced first.
+ *
+ * @param {unknown} error - The error returned by the Git client.
+ * @returns {boolean} Whether the error is recoverable by a fast-forward pull.
+ */
+const isNonFastForwardPushError = (error) => /fetch first|non-fast-forward|non fast-forward/i.test(getGitErrorMessage(error))
+
+/**
+ * Determines whether a remote tag was already absent during cleanup.
+ *
+ * @param {unknown} error - The error returned by the Git client.
+ * @returns {boolean} Whether the remote tag does not exist.
+ */
+const isMissingRemoteTagError = (error) => /remote ref does not exist|unable to delete .*remote ref/i.test(getGitErrorMessage(error))
+
+/**
+ * Pushes a branch and retries when an automatic remote commit wins a race.
+ *
+ * Only fast-forward synchronization is allowed. A real branch divergence is
+ * left for the operator to resolve instead of being merged by the deployment.
+ *
+ * @param {Object} params - Push options.
+ * @param {Object} params.git - The configured simple-git instance.
+ * @param {string} [params.remote='origin'] - The Git remote name.
+ * @param {string} params.branch - The branch to push.
+ * @param {number} [params.maxAttempts=3] - Maximum number of push attempts.
+ * @returns {Promise<Object>} The successful Git push result.
+ * @throws {Error} If the push fails for another reason or cannot be fast-forwarded.
+ */
+export const pushBranchWithRetry = async ({
+    git,
+    remote = 'origin',
+    branch,
+    maxAttempts = DEFAULT_PUSH_ATTEMPTS,
+}) => {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            return await git.push(remote, branch)
+        }
+        catch (error) {
+            if (!isNonFastForwardPushError(error) || attempt === maxAttempts) {
+                throw error
+            }
+
+            console.warn(`    > Remote branch ${branch} advanced during deployment, synchronizing before retry ${attempt + 1}/${maxAttempts}`)
+            await git.pull(remote, branch, ['--ff-only'])
+        }
+    }
+}
+
+/**
+ * Deletes a Git tag locally and remotely when the remote tag exists.
+ *
+ * @param {Object} params - Tag deletion options.
+ * @param {Object} params.git - The configured simple-git instance.
+ * @param {string} [params.remote='origin'] - The Git remote name.
+ * @param {string} params.tagName - The tag to delete.
+ * @returns {Promise<boolean>} Whether the remote tag was deleted.
+ * @throws {Error} If tag deletion fails for a reason other than a missing remote tag.
+ */
+export const deleteGitTag = async ({git, remote = 'origin', tagName}) => {
+    await git.tag(['-d', tagName])
+
+    try {
+        await git.push(remote, `:${tagName}`)
+        return true
+    }
+    catch (error) {
+        if (isMissingRemoteTagError(error)) {
+            return false
+        }
+
+        throw error
+    }
+}
+
+/**
+ * Normalize and validate a release version supplied by a CI release event.
+ *
+ * @param {string} value - Candidate semantic release version.
+ * @returns {string} The normalized release version without a leading `v`.
+ * @throws {TypeError} If the release version is invalid.
+ */
+export const normalizeReleaseVersion = (value) => {
+    const normalized = String(value ?? '').trim().replace(/^v/, '')
+    if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/.test(normalized)) {
+        throw new TypeError(`Invalid release version: ${value}`)
+    }
+    return normalized
+}
+
+/**
+ * Create the identifier embedded in deployment metadata and service-worker caches.
+ *
+ * @param {Object} options - Deployment identifier options.
+ * @param {boolean} [options.ci=false] - Whether the identifier is created in CI mode.
+ * @param {string} options.date - Deployment timestamp.
+ * @param {string} options.platform - Deployment platform.
+ * @param {string} options.sourceRef - Source commit reference.
+ * @param {string} options.version - Application version.
+ * @param {string} options.branch - Source branch or release reference.
+ * @returns {string} Deployment identifier.
+ */
+export const createDeploymentIdentifier = ({ci = false, date, platform, sourceRef, version, branch}) => {
+    const sourceSuffix = ci && sourceRef ? `-${String(sourceRef).slice(0, 12)}` : ''
+    return `${platform}-${version}-${branch}-${date}${sourceSuffix}`
+}
+
+/**
+ * Manages the deployment of applications to various platforms (production, staging, nightly, test).
  * Handles building, zipping, copying, deploying, and Git tag management.
  *
  * @class
@@ -57,7 +175,7 @@ export class Deployment {
      * Supported platforms for deployment.
      * @type {Object<string, string>}
      */
-    platforms = {production: 'production', staging: 'staging', test: 'test'}
+    platforms = {production: 'production', staging: 'staging', nightly: 'nightly', test: 'test'}
 
     /**
      * Supported products for deployment.
@@ -80,13 +198,19 @@ export class Deployment {
      *
      * @param {Object} params - Deployment parameters.
      * @param {string} params.product - The product to deploy ('studio' or 'backend').
-     * @param {string} params.platform - The target platform ('production', 'staging', or 'test').
+     * @param {string} params.platform - The target platform ('production', 'staging', 'nightly', or 'test').
      * @param {string} params.local - The local base path for deployment files.
+     * @param {boolean} [params.ci=false] - Whether to avoid Git mutations in CI mode.
+     * @param {string} [params.sourceBranch] - Branch or release reference supplied by CI.
+     * @param {string} [params.sourceRef] - Immutable source reference supplied by CI.
      */
     constructor(params) {
+        this.ci = params.ci === true
         this.product = params.product
         this.platform = params.platform
         this.local = params.local
+        this.sourceBranch = params.sourceBranch
+        this.sourceRef = params.sourceRef
         this.done = this.configure().then(() => this.launch())
     }
 
@@ -118,9 +242,9 @@ export class Deployment {
 
         // Initialize Git with GitHub token authentication
         this.git = simpleGit({
-                                 config: [
-                                     `http.extraHeader=Authorization: ${this.github_token}`,
-                                 ],
+                                 config: this.github_token
+                                     ? [`http.extraHeader=Authorization: ${this.github_token}`]
+                                     : [],
                              })
 
         // Configure SSH connection settings
@@ -158,7 +282,7 @@ export class Deployment {
             .slice(0, 15)
 
         // Retrieve current Git branch
-        this.branch = (await this.git.status()).current
+        this.branch = this.sourceBranch || (await this.git.status()).current || 'detached'
     }
 
     /**
@@ -169,6 +293,10 @@ export class Deployment {
      * @private
      */
     getVersion = async () => {
+        if (process.env.LGS_RELEASE_VERSION) {
+            return normalizeReleaseVersion(process.env.LGS_RELEASE_VERSION)
+        }
+
         switch (this.product) {
             case 'studio': {
                 return JSON.parse(fs.readFileSync('./public/version.json', 'utf8')).studio
@@ -206,7 +334,12 @@ export class Deployment {
     link = async (connection) => {
         return new Promise((resolve, reject) => {
             console.log('    > Creating symbolic link...')
-            connection.exec(`ln -sfn ${this.remoteReleasePath}/${this.version} ${this.remotePath}/${this.current} && rm ${this.remoteReleasePath}/${this.version}.zip`, (err, stream) => {
+            const releasePath = quoteShellArgument(`${this.remoteReleasePath}/${this.version}`)
+            const currentPath = quoteShellArgument(`${this.remotePath}/${this.current}`)
+            const temporaryCurrentPath = quoteShellArgument(`${this.remotePath}/.${this.current}-${this.version}-${this.date}`)
+            const archivePath = quoteShellArgument(`${this.remoteReleasePath}/${this.version}.zip`)
+            const command = `ln -sfn ${releasePath} ${temporaryCurrentPath} && mv -Tf ${temporaryCurrentPath} ${currentPath} && rm ${archivePath}`
+            connection.exec(command, (err, stream) => {
                 if (err) {
                     console.error(`${this.red}Link creation failed: ${err}${this.reset}`)
                     reject(err)
@@ -395,7 +528,10 @@ export class Deployment {
                     break
                 }
             }
-            exec(buildCommand, (error) => {
+            const buildEnvironment = this.product === this.products.studio
+                ? {...process.env, LGS_DEPLOYMENT_TAG: this.tagName, LGS_RELEASE_VERSION: this.version}
+                : process.env
+            exec(buildCommand, {env: buildEnvironment}, (error) => {
                 if (error) {
                     console.error(`${this.red}Build error: ${error.message}${this.reset}`)
                     reject(`${this.red}Build error: ${error.message}${this.reset}`)
@@ -482,7 +618,7 @@ export class Deployment {
             return remotes.find(remote => remote.name === target)
         }
         catch (error) {
-            console.error(`${this.red}Error retrieving remotes: ${error}${this.reset}`)
+            console.error(`${this.red}Error retrieving remotes: ${getGitErrorMessage(error)}${this.reset}`)
             process.exit(1)
         }
     }
@@ -494,7 +630,18 @@ export class Deployment {
      * @private
      */
     gitTag = async () => {
-        this.tagName = `${this.platform}-${this.version}-${this.branch}-${this.date}`
+        this.tagName = createDeploymentIdentifier({
+            branch:    this.branch,
+            ci:        this.ci,
+            date:      this.date,
+            platform:  this.platform,
+            sourceRef: this.sourceRef,
+            version:   this.version,
+        })
+        if (this.ci) {
+            console.log(`    > Using CI deployment identifier: ${this.tagName}`)
+            return
+        }
         const message = `Branch ${this.branch} deployed on ${this.tagName}!`
         console.log(`    > Creating Git tag: ${this.tagName}`)
         await this.git.commit(message)
@@ -509,8 +656,14 @@ export class Deployment {
      * @private
      */
     pushTag = async () => {
+        if (this.ci) {
+            return
+        }
         console.log(`    > Pushing Git tag on branch ${this.branch}`)
-        await this.git.push('origin', this.branch)
+        await pushBranchWithRetry({
+            git:    this.git,
+            branch: this.branch,
+        })
         await this.git.pushTags('origin')
         console.log(`    > ${this.green}Tag ${this.yellow}${this.tagName}${this.green} pushed to remote repository${this.reset}`)
     }
@@ -522,15 +675,18 @@ export class Deployment {
      * @private
      */
     deleteTag = async () => {
-        if (!this.tagName) {
+        if (this.ci || !this.tagName) {
             return
         }
 
         console.log(`    > Deleting Git tag: ${this.tagName}`)
         try {
-            await this.git.removeTag(this.tagName)
-            await this.git.push('origin', `:${this.tagName}`)
-            console.log(`    > ${this.green}Tag ${this.tagName} deleted locally and remotely${this.reset}`)
+            const remoteTagDeleted = await deleteGitTag({
+                git:     this.git,
+                tagName: this.tagName,
+            })
+            const remoteStatus = remoteTagDeleted ? ' and remotely' : ' locally (remote tag was not present)'
+            console.log(`    > ${this.green}Tag ${this.tagName} deleted${remoteStatus}${this.reset}`)
         }
         catch (error) {
             console.error(`    > ${this.red}Failed to delete tag ${this.tagName}: ${error.message}${this.reset}`)
@@ -606,10 +762,14 @@ export class Deployment {
                 let failure = null
 
                 try {
+                    // Keep the release activation atomic: upload and unpack first,
+                    // then switch the stable `current` link only after preparation succeeds.
                     await this.unzip(connection)
                     await this.uploadBackendEnvironment(connection)
                     console.log('    > Deploying release...')
                     await this.link(connection)
+                    // Restarting the backend is deliberately performed after the link switch
+                    // so PM2 always starts the newly activated release.
                     await this.postDeployment(connection)
                     await this.pushTag()
                     console.log('\n---')
@@ -632,7 +792,7 @@ export class Deployment {
     }
 
     /**
-     * Prepares files and creates a Git tag before deployment.
+     * Prepares files after the deployment Git tag has been created.
      * For 'studio', updates service-worker-pwa.js and manifest.webmanifest.
      * For 'backend', copies PM2 configuration and renames files.
      *
@@ -641,8 +801,6 @@ export class Deployment {
      */
     preDeployment = async () => {
         console.log('--- Pre-deployment tasks')
-        // Create Git tag locally
-        await this.gitTag()
         console.log('    > Preparing files')
         switch (this.product) {
             case 'studio': {
@@ -661,10 +819,14 @@ export class Deployment {
                     let serviceWorkerContent = fs.readFileSync(serviceWorkerPath, 'utf8')
                     serviceWorkerContent = replaceServiceWorkerPlaceholder(serviceWorkerContent, '__BUILD_TIME__', this.date)
                     serviceWorkerContent = replaceServiceWorkerPlaceholder(serviceWorkerContent, '__VERSION__', this.version)
+                    serviceWorkerContent = replaceServiceWorkerPlaceholder(serviceWorkerContent, '__TAG__', this.tagName)
                     serviceWorkerContent = replaceServiceWorkerPlaceholder(serviceWorkerContent, '__BRANCH__', this.branch)
 
                     fs.writeFileSync(serviceWorkerPath, serviceWorkerContent, 'utf8')
                     console.log(`    > Service Worker configured`)
+                }
+                else {
+                    throw new Error(`Service Worker missing from build output: ${serviceWorkerPath}`)
                 }
 
                 // Update manifest.webmanifest for studio
@@ -682,6 +844,11 @@ export class Deployment {
                     console.warn(`    > ${this.yellow}manifest.webmanifest not found in ${this.localDistPath}${this.reset}`)
                 }
 
+                const versionPath = path.join(this.localDistPath, 'version.json')
+                if (fs.existsSync(versionPath)) {
+                    fs.writeFileSync(versionPath, JSON.stringify({studio: this.version}, null, 2), 'utf8')
+                }
+
                 break
             }
             case 'backend': {
@@ -694,16 +861,19 @@ export class Deployment {
         }
         const backendRoot = path.join(this.configuration.remote[this.platform].path, this.platform, 'backend')
         if (this.product === this.products.backend) {
-            // Load the shared backend-only environment remotely so SMTP credentials never enter Studio releases.
+            // Keep backend credentials in shared storage so they never enter a versioned release archive.
             const where = path.join(backendRoot, this.current)
             const environmentFile = path.join(backendRoot, this.pm2.environmentFile)
             this.configuration.backend[this.platform].pm2.command = createBackendPm2Command({
                 backendPath:     where,
                 environmentFile,
                 pm2Bin:           this.pm2.bin,
+                pm2App:           `backend-${this.platform}`,
+                platform:         this.platform,
+                backendPort:      this.configuration.backend[this.platform].port,
             })
         }
-        // Configure server paths. Registration data lives outside versioned releases.
+        // Resolve persistent server paths outside versioned releases.
         this.configuration.backend[this.platform].registrationFile = resolveBackendRegistrationFile({
             remoteBackendRoot: backendRoot,
             registrationFile:   this.configuration.backend[this.platform].registrationFile,
@@ -720,7 +890,7 @@ export class Deployment {
             'studio',
             this.configuration.remote.current
         )
-        // Save server configuration to servers.json
+        // Store the resolved runtime endpoints in the release for the client application.
         fs.writeFileSync(`${this.localDistPath}/servers.json`, JSON.stringify({
                                                                                   platform: this.platform,
                                                                                   backend:  this.configuration.backend[this.platform],
@@ -728,12 +898,12 @@ export class Deployment {
                                                                                   site:     this.configuration.site[this.platform],
                                                                               }), 'utf8')
         console.log(`    > ${this.yellow}Server configuration saved to servers.json${this.reset}`)
-        // Save build date to build.json
+        // Store build metadata separately from the application source files.
         fs.writeFileSync(`${this.localDistPath}/build.json`, JSON.stringify({date: Date.now()}))
         console.log(`    > ${this.yellow}Build date saved to build.json${this.reset}`)
-        // Save branch information
+        // Preserve the source branch used to create this release.
         await this.saveBranchInfo()
-        // Zip the distribution
+        // Archive the fully prepared release, including generated deployment metadata.
         await this.zip()
     }
 
@@ -746,6 +916,8 @@ export class Deployment {
      */
     launch = async () => {
         try {
+            // Create the deployment tag before building so it is included in the service worker fingerprint.
+            await this.gitTag()
             await this.build()
             await this.preDeployment()
             console.log(`\n--- Starting deployment of ${this.yellow}${this.localDistPath}.zip${this.reset} to ${this.yellow}${this.remoteReleasePath}${this.reset}`)
@@ -754,7 +926,7 @@ export class Deployment {
             await this.runRemoteDeployment()
         }
         catch (error) {
-            console.error(`${this.red}Error: ${error}${this.reset}`)
+            console.error(`${this.red}Error: ${getGitErrorMessage(error)}${this.reset}`)
             await this.deleteTag()
             throw error
         }
