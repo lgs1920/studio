@@ -823,3 +823,7 @@
 ## 2026-08-13 — [`merge: sync main with origin`](https://github.com/lgs1920/studio/commit/93807769aa81fa23ae8ca96c6216cb99b8aa2afb)
 
 - Recorded automatically from Git history.
+
+## 2026-09-13 — [`feat(deployment): add GitHub Actions deployment workflows`](https://github.com/lgs1920/studio/commit/1b6dff056d63ba54370311f49fa05bf58e9190e5)
+
+- Recorded automatically from Git history.
