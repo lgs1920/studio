@@ -895,3 +895,1444 @@
 ## 2026-09-13 — [`Merge remote-tracking branch 'origin/main'`](https://github.com/lgs1920/studio/commit/461ecd7a8b907af453c8ea444f1efac46874b39a)
 
 - Recorded automatically from Git history.
+
+## 2026-08-13 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/8ecd3821a5ed81af5bdb8d811322c5eb32bcf582)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`feat: show welcome build info`](https://github.com/lgs1920/studio/commit/c0ae51f2e9fc909ccc55df348acfc3aabe2ba553)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/537a9a75922824b7d9efd69648e8e662e747f685)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`fix: align welcome hero halo with site`](https://github.com/lgs1920/studio/commit/f4b414079624c7ecd7329fc1a587bc0fdb8c2a80)
+
+- Recorded automatically from Git history.
+
+## 2026-08-14 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/35bc3436b10bc7ed5812bbceeccf3c68b86f477e)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-08-14 — [`feat: update Studio slogan`](https://github.com/lgs1920/studio/commit/681165af469e6fbfad966171b6814fe05bb68739)
+
+- Recorded automatically from Git history.
+
+## 2026-08-14 — [`feat: crossfade welcome hero videos`](https://github.com/lgs1920/studio/commit/83969121587aa0bb3e0012844637dc27a236263a)
+
+- Recorded automatically from Git history.
+
+## 2026-08-14 — [`fix: smooth welcome hero video transitions`](https://github.com/lgs1920/studio/commit/f8cd9d167bf4e655c37d2e3e7f747fbd9899a848)
+
+- Recorded automatically from Git history.
+
+## 2026-08-14 — [`fix: remove initial welcome hero video fade`](https://github.com/lgs1920/studio/commit/0c46716dfdcb4de2ba9fb768c1fe9a6e11afaf49)
+
+- Recorded automatically from Git history.
+
+## 2026-08-14 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/db20ccb8e51f93c3aae824f51db30a88cc5cf970)
+
+- Recorded automatically from Git history.
+
+## 2026-08-14 — [`style: make IGN logo white`](https://github.com/lgs1920/studio/commit/fc503f43163b375a387467b157bbdfc0aa790a0e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-15 — [`docs: update 1.0.0 changelog draft`](https://github.com/lgs1920/studio/commit/b52e1c6b4a06aaed0269f1f71738debe5b34a534)
+
+- Recorded automatically from Git history.
+
+## 2026-08-15 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/c41f9cf9107944d6fd9d2009fd7c687bfc6dfcc5)
+
+- Recorded automatically from Git history.
+
+## 2026-08-17 — [`perf(capture): improve SnapDOM font precaching`](https://github.com/lgs1920/studio/commit/49ca3b0da906b82e2a42ad02a0c805f7ba02dae0)
+
+- Recorded automatically from Git history.
+
+## 2026-08-17 — [`fix(ui): update welcome hero loading state`](https://github.com/lgs1920/studio/commit/f6e7e7d6fc5c51d9734e0aa71a77b69efca96ecc)
+
+- Recorded automatically from Git history.
+
+## 2026-08-17 — [`docs: document Bun migration study`](https://github.com/lgs1920/studio/commit/b3d201d7f24a6ce66c7253d659f2489f7e53e23b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-17 — [`fix: handle local file reading errors`](https://github.com/lgs1920/studio/commit/67dce8bf4cf3bdcf744027ac7fe5431a31b91463)
+
+- Recorded automatically from Git history.
+
+## 2026-08-17 — [`fix(replay): continue HQ export after tile timeout`](https://github.com/lgs1920/studio/commit/bb12a862b7ff0d7f93092d89e7f27b9fcd443092)
+
+- Recorded automatically from Git history.
+
+## 2026-08-17 — [`perf(replay): retain Cesium tiles during HQ export`](https://github.com/lgs1920/studio/commit/ea4426a9e852cd77929b4938a7e353650ba2d730)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/37dee8ed2234902a90a300ce595e6ddbcba9d72b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: stabilize PWA update flow`](https://github.com/lgs1920/studio/commit/7a47d113ce53194663fa431564f40bd655d929b1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: fingerprint PWA releases reliably`](https://github.com/lgs1920/studio/commit/c5a4777abb396ec8a2c5b507b05c1be072d4f763)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: hide boot splash in webapp`](https://github.com/lgs1920/studio/commit/1d80dbdbf3198bfb3a3cb8d08936c09a6312cbac)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`feat: support layer-specific map credits`](https://github.com/lgs1920/studio/commit/8678f3217417d444da3e1b66cbaef7ca6ae343d4)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`feat: add internal Google Maps attribution`](https://github.com/lgs1920/studio/commit/8eed89e343e2996600ef601a0ae42b4d2e61498e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: remove webapp startup flash`](https://github.com/lgs1920/studio/commit/b8d2f62398d7012b8d3d22a6b955059c8bd1409f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: improve PWA icon masks`](https://github.com/lgs1920/studio/commit/f1c3875ba51052396ac5010839a49295a84d9e68)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`docs: enforce explicit user intent`](https://github.com/lgs1920/studio/commit/6325b0170728ce9d4ff31750bacba38d6c80f26b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/2a1edda379e2864f05499f70905aa758f14ffa2d)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: add Google Maps attribution to photorealistic 3D tiles`](https://github.com/lgs1920/studio/commit/7879f068dbb40f41990896001cb319dc24ad9346)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/d6ce39a5c477d651028130652a4cb6b9581674be)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`style: refine credits bar spacing`](https://github.com/lgs1920/studio/commit/97c235b9e79f1c5f68ff8305d37fc87fd7368895)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: prevent stale Esri credit with Google 3D`](https://github.com/lgs1920/studio/commit/4e33456a5f637ab1cbff28d697f4a393a57b754c)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`style: refine widget credit spacing`](https://github.com/lgs1920/studio/commit/555b06fcc91fd53222dbf2a748eff3cd54d8d43a)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`docs: document PWA installation and updates`](https://github.com/lgs1920/studio/commit/c9d6838c2a79b4381fde5684813c21b191a3982e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/375464835bc8f601e16205d3e725c2a50e369dad)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix: align boot splash image with welcome video`](https://github.com/lgs1920/studio/commit/a6b69145d431c9424dfd1b2dfff2122a748d6ba9)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`fix global label-at-start hint layout`](https://github.com/lgs1920/studio/commit/86957a0e7a327cefddf16ee6408074382f3e9240)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`feat replay tile readiness settings`](https://github.com/lgs1920/studio/commit/bf66876d4d65c2a90812aa0516a84bd78c1a6f51)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`feat coordinate replay scene tile readiness`](https://github.com/lgs1920/studio/commit/907f6a5a5aaf2baa7ae2de20737457a274a2fba9)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`feat prepare replay tiles before HQ capture`](https://github.com/lgs1920/studio/commit/1a611a0d92cd3a0e4fbaabf705cb4d4907e6868c)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`feat expose replay tile readiness controls`](https://github.com/lgs1920/studio/commit/01ff65ad1ad8508a5212ecce71abd8f06ab2167a)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`docs document replay tile readiness`](https://github.com/lgs1920/studio/commit/11eb13a6a558164712f23ff6941fbac81803b4d7)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`docs research Cesium cloud resources`](https://github.com/lgs1920/studio/commit/c01e63b3ee9afec8bf76753f8d01c677998033ba)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`docs specify journey Cesium lighting`](https://github.com/lgs1920/studio/commit/ced92860cbbac3abbce9ab127a9cc1e7d914b65a)
+
+- Recorded automatically from Git history.
+
+## 2026-08-18 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/9e27496dae4f49b7b2c4971dd9d60b4c4e3ad0c3)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`fix: stabilize replay select values`](https://github.com/lgs1920/studio/commit/5c58fe64d28023f0dbe41cd3e360e3dbce47f2fa)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`fix: keep crop zone centered during viewport resize (#470)`](https://github.com/lgs1920/studio/commit/c30793bf2d3b418cb0b26a8fd8c258aec080128a)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`fix: render replay setup icon from fontawesome kit`](https://github.com/lgs1920/studio/commit/bd71d48d0df15d54449eb438587d7c800439bf79)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`fix: add diagnostic details to error dialogs (#472)`](https://github.com/lgs1920/studio/commit/46dbbdb292d1cb28641288192e25c8e6117eaf20)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`fix: keep replay popup toggle anchored`](https://github.com/lgs1920/studio/commit/38885c30701a27ac90b2a63d1733194876b55cf0)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/df073f0901ebbb101bc59d1bc7eb211c4780c6c1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`fix: add separate journey focus control (#445)`](https://github.com/lgs1920/studio/commit/c309e4480742709fd62088515089e2d0c9744289)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/b224453fa98179dfbcca38be7b4f2ab7c3061532)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`fix: add journey metadata to recordings`](https://github.com/lgs1920/studio/commit/bf8794cda390c856d68236105c54b90358a7fc79)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`fix: preserve metadata in HQ exports`](https://github.com/lgs1920/studio/commit/59ae000967eadd7a537a1f2fb46a402010c56a33)
+
+- Fixes #467
+
+## 2026-08-19 — [`Merge branch 'fix/replay-video-stats-overlay' into 1.0.0`](https://github.com/lgs1920/studio/commit/6afb4f6c3d0ba043bc59f8a1052b20fd49f03212)
+
+- Recorded automatically from Git history.
+
+## 2026-08-19 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/951a2c19b52e5909b7d8f536f2ebf510922cb914)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/5b5217d70904c363e3ce2142e65938fbb91f7bd1)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-08-20 — [`feat(video): consolidate recording HUD settings`](https://github.com/lgs1920/studio/commit/bd13f5db6a5bb1ea16e7635d88505c2f604b594f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`fix(widgets): normalize on-map bounds and margins`](https://github.com/lgs1920/studio/commit/869f65105f6abc0eb6030901b94663d3a3b67fb3)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`feat(video): refine recording HUD controls`](https://github.com/lgs1920/studio/commit/cb5117915d63bb2658961f4601805d4f4fe23d40)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`fix(video): adapt recording HUD for mobile`](https://github.com/lgs1920/studio/commit/7e787344b7256adb4ec74e275c49aaa279e7b6af)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/742fe379dd406e8fda3d4d7c53fcd5ce7517bb4c)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`docs: synchronize branch documentation`](https://github.com/lgs1920/studio/commit/73acf296785a7b0910815347589b850b1ef9b135)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/2b4679ca5a6817f5967527297599a5e58aef825c)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`fix(launch): enhance transition in webapp splash screen`](https://github.com/lgs1920/studio/commit/aa90dadbbbd884337e1694bb11676488bc7a7572)
+
+- Recorded automatically from Git history.
+
+## 2026-08-20 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/6023ccb64539a5356e74a7d91ec107e9169262b9)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: gate Cesium input during synchronized recording`](https://github.com/lgs1920/studio/commit/77321b5671b797affd742751f047e8bce8e8a198)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: align video HUD and recording controls`](https://github.com/lgs1920/studio/commit/a2887899df0a576c66c9dc6331e3721127acc672)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: route crop interactions to Cesium`](https://github.com/lgs1920/studio/commit/39a95b9f11860ce5b0b5e98c6891da0ccdc7b238)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: stabilize replay widget composition`](https://github.com/lgs1920/studio/commit/45040f34fc75cb2d6c01ca922d4a7f554434f7a5)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: keep crop pass-through outside Cesium widgets`](https://github.com/lgs1920/studio/commit/29bdc97750b035faf49a4c4124b0dff00fe0ae9b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: enlarge HQ replay HUD actions`](https://github.com/lgs1920/studio/commit/fc02e1f6f2b400a49005b6047c63317a7899dfdb)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/c0e6d55779c01c2c982fb491a82caae7a3fbe542)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`chore: keep Cesium skills up to date`](https://github.com/lgs1920/studio/commit/28b254a2e54c451763a9baa0561d87931bccabe9)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: reload after service worker activation`](https://github.com/lgs1920/studio/commit/02a3efbb60610495c80ebea6ff7a6156f0f9b59b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/d992910585aed21ab6f291fd82993b2162efc003)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-08-22 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/71e2cc5fa656a3fd6efb2d082599081396d207fa)
+
+- Recorded automatically from Git history.
+
+## 2026-08-22 — [`fix: improve journey report exports`](https://github.com/lgs1920/studio/commit/622116c9a0e7e147a9d12baf15f0196c32f9db57)
+
+- Recorded automatically from Git history.
+
+## 2026-08-23 — [`docs: add replay quality audit`](https://github.com/lgs1920/studio/commit/ba67ead883b07ce7f729d874ca7578b5e3fb87c9)
+
+- Recorded automatically from Git history.
+
+## 2026-08-23 — [`Merge remote-tracking branch 'origin/fix/replay-video-stats-overlay' into fix/replay-video-stats-overlay`](https://github.com/lgs1920/studio/commit/07a8d5e066d33796529d76ddabcfd79ed1b5d846)
+
+- Recorded automatically from Git history.
+
+## 2026-08-24 — [`refactor: establish canonical replay frame pipeline`](https://github.com/lgs1920/studio/commit/29a3c0dcf99b4cbd7a0dcf2b2ec7b662a66ec6e9)
+
+- Recorded automatically from Git history.
+
+## 2026-08-24 — [`refactor: resolve replay frames lazily`](https://github.com/lgs1920/studio/commit/99833b8d5c37cfa991f26e8b672a926c427e3739)
+
+- Recorded automatically from Git history.
+
+## 2026-08-24 — [`refactor: canonicalize replay camera intent`](https://github.com/lgs1920/studio/commit/bad9c27c60f3020697af1e29ad26ab00be95fcf1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-24 — [`refactor: apply canonical replay camera commands`](https://github.com/lgs1920/studio/commit/1081e7359aa44706913403fe47d62efa61c3e976)
+
+- Recorded automatically from Git history.
+
+## 2026-08-24 — [`docs: update dependency inventory path`](https://github.com/lgs1920/studio/commit/3765661395de797d028ef3a73b5c5eb037f0660f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-24 — [`docs: reorganize technical documentation`](https://github.com/lgs1920/studio/commit/b58295c4518e70850ab7322b9749dfffe4085213)
+
+- Recorded automatically from Git history.
+
+## 2026-08-24 — [`fix: update information pane dependency source`](https://github.com/lgs1920/studio/commit/dcf9fbfeb5d26fb29fb1e896b62c5b4f37c5aa96)
+
+- Recorded automatically from Git history.
+
+## 2026-08-24 — [`refactor: isolate replay HQ rendering`](https://github.com/lgs1920/studio/commit/e1f7e1b90efcfb01d3f78599fedd4d3c77314143)
+
+- Recorded automatically from Git history.
+
+## 2026-08-24 — [`feat: complete replay recording integration`](https://github.com/lgs1920/studio/commit/498541d16ffb2b7b04d3e46bc02856a29f69a1c6)
+
+- Recorded automatically from Git history.
+
+## 2026-08-24 — [`docs: update replay architecture and status`](https://github.com/lgs1920/studio/commit/00b629a17095637db6f8efe0049aa82df54e0bf2)
+
+- Recorded automatically from Git history.
+
+## 2026-08-24 — [`Merge branch 'refactor/replay-architecture' into 1.0.0`](https://github.com/lgs1920/studio/commit/8c738656eb593a6ece2c8af373f4c64f9211811a)
+
+- # Conflicts:
+- #	COMMIT_HISTORY.md
+
+## 2026-08-24 — [`docs: analyze parallel replay workspace execution`](https://github.com/lgs1920/studio/commit/2cf24f770a9f20ee397d90d789b7ebab6b561012)
+
+- Recorded automatically from Git history.
+
+## 2026-08-25 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/e479470595528f3343a05b063fa87f514790ade9)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-08-25 — [`fix: make Cesium Ion optional and provider-scoped (#483)`](https://github.com/lgs1920/studio/commit/6883ea049eeb5850c5ea6deecd74866b6ac27ccd)
+
+- Recorded automatically from Git history.
+
+## 2026-08-25 — [`refactor: remove obsolete FFmpeg conversion integration`](https://github.com/lgs1920/studio/commit/6acd6a252cbc8da9145a75177319470edfd9555e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-25 — [`feat: add backend deployment monitoring`](https://github.com/lgs1920/studio/commit/ca4cfe535afaa1961dd6601cb6029f97494dcc0c)
+
+- Recorded automatically from Git history.
+
+## 2026-08-25 — [`fix: expose Bun to PM2 module installation`](https://github.com/lgs1920/studio/commit/7306e12a59d363470a6a821d497fd03875025cb1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-25 — [`docs: update 1.0.0 release changelog`](https://github.com/lgs1920/studio/commit/627a1853072a493073491f2bd76be0e995c179dd)
+
+- Recorded automatically from Git history.
+
+## 2026-08-25 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/47e3894e2f48aba8bfd84170f0be35543ac87492)
+
+- Recorded automatically from Git history.
+
+## 2026-08-25 — [`docs: split Replay Timeline preview from editor specification`](https://github.com/lgs1920/studio/commit/3a2b9b9c4f199f2eb446cf9b284969ecd378602d)
+
+- Recorded automatically from Git history.
+
+## 2026-08-25 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/077f47711d4aa57fba7260fbaead95b59cfd5530)
+
+- Recorded automatically from Git history.
+
+## 2026-08-25 — [`fix: remove HQ camera selector from video dialog`](https://github.com/lgs1920/studio/commit/e6cda9ddbc3e4f2311304ba36a0edb074f5fdfdb)
+
+- Recorded automatically from Git history.
+
+## 2026-08-26 — [`fix(replay): stabilize preparation camera and live angle editing (#457)`](https://github.com/lgs1920/studio/commit/48c963fe158a2432bc0e6e78b6ca7f1301af74f5)
+
+- Fixes #457
+
+## 2026-08-26 — [`docs: update documentation paths`](https://github.com/lgs1920/studio/commit/32775487783cf1dc259ed3b61292c0d4804d22c7)
+
+- Recorded automatically from Git history.
+
+## 2026-08-26 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/0fcc656410f258727683f4677c2b9b92bb486781)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`fix: unify camera adjustment overlay`](https://github.com/lgs1920/studio/commit/bd6c758da94d99775239e5bb54dc037ec68c7845)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/b0f0fd01dbe7e2a05117140b701b5a19ca2ec888)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`fix(camera): prevent camera from moving below terrain`](https://github.com/lgs1920/studio/commit/672b9689505cbd5a822693bf170dfc3e72e90954)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/53c9e44cbf54e7207bc63985fee755bd4b8288be)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`fix: use SnapDOM geometry for replay widgets`](https://github.com/lgs1920/studio/commit/514cf43bf722d3260216b5a71ac9e4bb5e242ebe)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`fix: synchronize replay journey visibility settings`](https://github.com/lgs1920/studio/commit/92ee4134282c262ee326731f36d2c782455497ae)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/4be52e18433e62128ab4687d498714e667110ebd)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`chore(events): remove canvas event trace logs`](https://github.com/lgs1920/studio/commit/0223534ab2b697858e90fe91a1c94766083e0e2d)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/d3e84d2040a123984469cfe97e43f23b8c6e9696)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`fix: handle deployment Git synchronization`](https://github.com/lgs1920/studio/commit/7148f4f7966514fbe2bf5ca5aa721483de425a79)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`docs: clarify deployment workflow`](https://github.com/lgs1920/studio/commit/fbcb300687145cbda7e84da794211df3afe17b86)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`fix: preserve camera overlay during widget drag`](https://github.com/lgs1920/studio/commit/38d20ce7f9ab3b75c05ff75243ddfc2a96a559f7)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`docs: add analytical rigor rules`](https://github.com/lgs1920/studio/commit/4470341dac68300c4cdb7b2bc845eef29fd0a2f7)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`chore: centralize project skills`](https://github.com/lgs1920/studio/commit/aa83fcd4ec61c7fef51b67c6d302a3b8ece62de1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/3c3a1ff96706fd7520fa5cab9609f3cd4c67bc3d)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`fix: repair replay camera angle guide (#495)`](https://github.com/lgs1920/studio/commit/8f97c3aa2962eb81433a439695882dd9ce8d1566)
+
+- Recorded automatically from Git history.
+
+## 2026-08-28 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/736e9cb6d14be040e5b469be3c5de966ed199e96)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-08-28 — [`fix: preserve widget capture geometry`](https://github.com/lgs1920/studio/commit/bc4191ab6f9f0ccd0c35b13b6f44a06a0d370562)
+
+- Recorded automatically from Git history.
+
+## 2026-08-28 — [`fix: stabilize default widget placement`](https://github.com/lgs1920/studio/commit/7e9abd4bee477cc6d82b24921c286eb6a51ef9e2)
+
+- Recorded automatically from Git history.
+
+## 2026-08-28 — [`fix: rebuild replay camera angle guide`](https://github.com/lgs1920/studio/commit/8da62ee93b22c5dbc3bcd2a7c096d4dd2363b818)
+
+- Recorded automatically from Git history.
+
+## 2026-08-28 — [`fix: refresh video stats canvas`](https://github.com/lgs1920/studio/commit/568dd1d324ad0957a22cc08cb723af8b18d426d1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-28 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/1043af13d6abfbc47abab2c86824a426c764db39)
+
+- Recorded automatically from Git history.
+
+## 2026-08-28 — [`fix: centralize replay preparation return`](https://github.com/lgs1920/studio/commit/085733b4f2a7ed94c7b4753c368ef576924c21e5)
+
+- Recorded automatically from Git history.
+
+## 2026-08-28 — [`test: enable canvas support in jsdom`](https://github.com/lgs1920/studio/commit/782c40bdf56b929f9ff32244a896c6e9583de4e1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-28 — [`fix(video): separate standard and replay entry points (#498)`](https://github.com/lgs1920/studio/commit/fa3ae9b5c84453914ba33753b39cb9784636a4cc)
+
+- Recorded automatically from Git history.
+
+## 2026-08-28 — [`test(replay): align current camera and smoothing contracts`](https://github.com/lgs1920/studio/commit/b94b96b8c89bb5a52d512492e0c0c46a1db3add8)
+
+- Recorded automatically from Git history.
+
+## 2026-08-28 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/903949b9f024fe9388a91e84160d3dd42d0a0cd8)
+
+- Recorded automatically from Git history.
+
+## 2026-08-28 — [`fix(replay): use sliders icon in drawer title`](https://github.com/lgs1920/studio/commit/e6cb129432d15d8ecc48c17314c48804f9933a44)
+
+- Recorded automatically from Git history.
+
+## 2026-08-28 — [`fix(replay): restore main-scene pivot after preparation`](https://github.com/lgs1920/studio/commit/cdccb0a1f8d01917ad0d40aed48d3d4e1346267b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-28 — [`feat(ui): display Studio initialization progress (#501)`](https://github.com/lgs1920/studio/commit/579320acc6db23db627b9d93a1d257ad1441f61f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-29 — [`fix(ui): refine initialization welcome layout`](https://github.com/lgs1920/studio/commit/e3bf77deb30baa4931c1a4d37e8d6d45ac4e7fa2)
+
+- Recorded automatically from Git history.
+
+## 2026-08-29 — [`fix(pwa): defer update dialog until studio entry`](https://github.com/lgs1920/studio/commit/989e08750135e275398196c7e22dcbc5060f3c2b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-29 — [`test: use LGS1920 fixture for journey metrics`](https://github.com/lgs1920/studio/commit/f5cd128ea81219418da07be5c1c403743992f956)
+
+- Recorded automatically from Git history.
+
+## 2026-08-29 — [`feat(replay): add preparation timeline`](https://github.com/lgs1920/studio/commit/d9da1fa3b7a9915292ae2c39fa3bfcfa3d701d82)
+
+- Recorded automatically from Git history.
+
+## 2026-08-29 — [`fix(widget): preserve profile and timeline dimensions`](https://github.com/lgs1920/studio/commit/a016c18dc46fb48be3d64cbb0b11e372364f5923)
+
+- Recorded automatically from Git history.
+
+## 2026-08-29 — [`fix(crop): restore crop zone selection`](https://github.com/lgs1920/studio/commit/4a9a3449a0b6fead83f24f0bdcff96a24ffee1f4)
+
+- Recorded automatically from Git history.
+
+## 2026-08-29 — [`fix(ui): stabilize widget stacking and editor controls`](https://github.com/lgs1920/studio/commit/8bbc0faf8bf54110adfc761e7b690700b11a1a13)
+
+- Recorded automatically from Git history.
+
+## 2026-08-29 — [`docs(replay): document preparation timeline changes`](https://github.com/lgs1920/studio/commit/097207f89d330627401f9a003fecd7b911f5a1ae)
+
+- Recorded automatically from Git history.
+
+## 2026-08-29 — [`feat(widget): add hide and show controls (#505)`](https://github.com/lgs1920/studio/commit/609e5a73071cd8276ab56b3e5215471c7ca71f32)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(replay): simplify timeline action previews`](https://github.com/lgs1920/studio/commit/b6aafd47cf0035aa75e5ab28403e85438dd99691)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`feat(ui): support link mode for ToggleStateIcon`](https://github.com/lgs1920/studio/commit/004820ae74079cf370e4217e13452d61151df037)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(replay): align timeline track controls`](https://github.com/lgs1920/studio/commit/84f6d9e1fab3072e5207e0471338c5f3300f3395)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(ui): align widget menu theming`](https://github.com/lgs1920/studio/commit/bcde2dfeb35d07ddbd757fb43d5977382e6a3283)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`chore: update project skills`](https://github.com/lgs1920/studio/commit/e9f2134cc14cf4a5eb786c5119d72c7a5043bc4d)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`Merge remote-tracking branch 'origin/add-timeline' into add-timeline`](https://github.com/lgs1920/studio/commit/b291a8c69f2ba6ba776785386a65c6668a879540)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(widget): refresh catalog metadata from yaml`](https://github.com/lgs1920/studio/commit/a9bbbb2a89fed1c4e42f4c8aa79cd1c52d8b88ec)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(crop): add video resize context action`](https://github.com/lgs1920/studio/commit/94397284ba571e59305e15f9327daf7efc334048)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`feat(replay): open editors from timeline actions`](https://github.com/lgs1920/studio/commit/c48a032a6677ed4a4c77aa84eeef0677270a71b1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`feat(ui): add hierarchical drawer navigation engine`](https://github.com/lgs1920/studio/commit/3551b66ab3ef8dc356c42e471a8cf6bbe0d58f89)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(replay): toggle timeline drawer targets`](https://github.com/lgs1920/studio/commit/b9a5be3f6ef019bb5b3278d1090b6ea4f7fa1d91)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`chore: add replay timeline skill`](https://github.com/lgs1920/studio/commit/f4cc4b4cb64f2c7edba96253d8eddb4db99d8676)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(ui): prevent native menus and text selection`](https://github.com/lgs1920/studio/commit/55111ac1864e99d6279f417be6ddd13fcc18570d)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(widget): reduce stats widget minimum width`](https://github.com/lgs1920/studio/commit/3f37dac1240b5744ae4420ed0d8bdcb5a5145011)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(replay): stabilize timeline editor layout`](https://github.com/lgs1920/studio/commit/7ada6db995f53e23f889869bbb0cdc02220b72fc)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(replay): accelerate timeline edge scrolling`](https://github.com/lgs1920/studio/commit/56b8f3c5c8ab23027fba508295bcb56b87065d9b)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(replay): improve timeline edge scrolling`](https://github.com/lgs1920/studio/commit/e76dbecacbdb989886a5f4b0d85f2ea3cf4ca349)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(replay): throttle timeline scrubbing`](https://github.com/lgs1920/studio/commit/b589fbee70fd37f489c8ecd5853305189510c395)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`fix(replay): lighten hidden timeline hatching`](https://github.com/lgs1920/studio/commit/33fb55801db7b0cbd53c61c27d9487a1919671dc)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`feat(ui): add LGS1920 Web Component timeline`](https://github.com/lgs1920/studio/commit/047c5b4d56b5f5abdfcdf9d9e971277c3be9605e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-30 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/1ffe1053373d733441a11b8a30aa6127736292aa)
+
+- # Conflicts:
+- #	COMMIT_HISTORY.md
+
+## 2026-08-31 — [`docs: clarify documentation status rules`](https://github.com/lgs1920/studio/commit/b0cb99380e9238e0cca0dbc78d862a940ab7dc7f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`chore(config): add Web Components Vite alias`](https://github.com/lgs1920/studio/commit/6eee1477c04aa6df78e7845c97ecd4935f98ada2)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`feat(ui): add resizable side drawers (#507)`](https://github.com/lgs1920/studio/commit/ac26845654de2d80e3a5176c86eefa447e83af2f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`Merge remote-tracking branch 'origin/add-timeline' into add-timeline`](https://github.com/lgs1920/studio/commit/abc81587e88097c73a2663b5c7a3a5e251bc889c)
+
+- # Conflicts:
+- #	COMMIT_HISTORY.md
+
+## 2026-08-31 — [`feat(replay): extend timeline web component`](https://github.com/lgs1920/studio/commit/b9cc4a791a43c66a6152cf5054b2825b66bdb08f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`docs(replay): document timeline web component`](https://github.com/lgs1920/studio/commit/a304c04f29bf241cd32c67edfe48cf942a77104f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`Merge remote-tracking branch 'origin/add-timeline' into add-timeline`](https://github.com/lgs1920/studio/commit/965b350184030730896825dd6895454c30bb7157)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`Merge branch 'add-timeline' into 1.0.0`](https://github.com/lgs1920/studio/commit/0e36b2471468d4cabecc37caf5ce217310aa1068)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`fix(replay): pre-bundle timeline dependencies`](https://github.com/lgs1920/studio/commit/e979eb9c708b1d912bfda8d806e0d68798a8b2b4)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`Merge branch 'add-timeline' into 1.0.0`](https://github.com/lgs1920/studio/commit/58002a88e6b65965b609cdeb497fc980fd373cf0)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/6f105b57a0f85546e582dc0ff4ae6707908cd87b)
+
+- # Conflicts:
+- #	COMMIT_HISTORY.md
+
+## 2026-08-31 — [`chore: document source file header policy`](https://github.com/lgs1920/studio/commit/1af411b79f3373e16c74475a7967c095143683d1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`chore: automate source file header updates`](https://github.com/lgs1920/studio/commit/8f41f0465c6b03b7c0283cb0478f15a36c3f359e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`refactor(replay): use timeline Web Component preview`](https://github.com/lgs1920/studio/commit/f8826b6fc1aae01df3342ca2217ae404f4882fa5)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`chore: normalize source file headers`](https://github.com/lgs1920/studio/commit/dddfcc84d4e72ce43dc6364a24f86c27e13372ec)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`fix: report all source header mismatches`](https://github.com/lgs1920/studio/commit/29e26ccae26e4bb1a86513ee47eb3dd60a537950)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`style: normalize cropper test header`](https://github.com/lgs1920/studio/commit/a75b61b43f19d378c3ecd24aae652f9d4a08c66f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`style(ui): align LGS scrollbar with timeline`](https://github.com/lgs1920/studio/commit/a57ee5fc7259ae256f818cd426e71c9f905ce01f)
+
+- Recorded automatically from Git history.
+
+## 2026-08-31 — [`fix: stabilize lint and shortcut tests`](https://github.com/lgs1920/studio/commit/dff5495bc2de2ed72bd7bf5b1d102ca63bbfef00)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/e3d24c561a9a71a151765f2d651e68cfc821da6e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`feat(ui): extend timeline Web Component interactions`](https://github.com/lgs1920/studio/commit/ce0b7aed5aadc3017684f941955cd6fcbda0dce0)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`refactor(replay): rename Replay clip phases`](https://github.com/lgs1920/studio/commit/c061d698b963a93ee9ba6f09b31dde1f245ace42)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`feat(replay): enable timeline preview interactions`](https://github.com/lgs1920/studio/commit/409018f62b6b94f18b1c99edd88b62b214910d3b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`docs(replay): document timeline Web Component integration`](https://github.com/lgs1920/studio/commit/d2dfb63b90ad69afc4e5b305b6915e2041bba305)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/51aa743b324741d3a72caca98d1e49d423bc9dea)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-09-01 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/c5eba06cfa9ee1b07b0bf32880d4bacfe246980d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`chore: require stable fixes`](https://github.com/lgs1920/studio/commit/5cf399d375c9e8404391a529fc2ef8707dd24489)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`feat(timeline): add transport and playhead controls`](https://github.com/lgs1920/studio/commit/b47da0ca5bc2f1850b8385b1ea4b7ddb627e153b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`feat(replay): synchronize timeline preview with Replay`](https://github.com/lgs1920/studio/commit/22d207aa8d92af952450bfc5a54962dc4edc28ac)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`chore: protect uncommitted changes`](https://github.com/lgs1920/studio/commit/d38f05a53eac9cfd68c1d94a2529858a71a6f963)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`docs: clarify Web Awesome usage rules`](https://github.com/lgs1920/studio/commit/2a383f5d3c395ab154f25980281f8041345cad6d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`fix: update replay clip icons and labels`](https://github.com/lgs1920/studio/commit/56c79705d56d358d97a26e2417544a76608a3636)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`fix(timeline): preserve native split during interactions`](https://github.com/lgs1920/studio/commit/44601e8e2509c58cd45f5d21d5b5525e10d634ac)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`refactor(timeline): keep React adapter passive`](https://github.com/lgs1920/studio/commit/9a9206451889d9f79a2a8b4408651a85ab8ab6e9)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`docs(timeline): document native split and menu slots`](https://github.com/lgs1920/studio/commit/67cd228e78fc1bccd63df3bcaecbbc93864ae894)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/19dcb4bd17daf9e71901b53d60ec7b3d5df7f24c)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`fix(timeline): keep track drag position stable`](https://github.com/lgs1920/studio/commit/67947df838161cda719af2d24c11850ce98e43ee)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`style(timeline): use brand drag feedback`](https://github.com/lgs1920/studio/commit/6f19bbc6099c2a4085dbfa8b52704093250b18c6)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`docs(timeline): document keyboard shortcuts`](https://github.com/lgs1920/studio/commit/0176b8fffec04bcccdd01f09de7cafa8d549917f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/4af5287d838c026fbc230ed69622f140ef133e74)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`fix(timeline): reject occupied clip drops`](https://github.com/lgs1920/studio/commit/ede1e31b05ca2f29bf392c7c7f101cfe0dbbc861)
+
+- Recorded automatically from Git history.
+
+## 2026-09-01 — [`fix(timeline): keep hidden track clips visible`](https://github.com/lgs1920/studio/commit/2b80ea271ffd2f7b328bfb76ee3fac4af550ad68)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`refactor(timeline): simplify track titles and clip menus`](https://github.com/lgs1920/studio/commit/94a5e60d1373b1e6dd05c075f6498f3ed0cb70bb)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`refactor(timeline): remove contextual menus`](https://github.com/lgs1920/studio/commit/0c42d73746b60f867f6779b03c3960d8a18a26cc)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`fix(timeline): use success colors for valid drags`](https://github.com/lgs1920/studio/commit/295bdb05aa63ea728f7b5603ba16dd4b96d92e5e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/7ccd7d018278c88919712217cf3cf10a5caa0a72)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`fix(timeline): preserve playhead after range drag`](https://github.com/lgs1920/studio/commit/0244b7f5691f6f848735b282dcf9d67ebf0e263b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/89a6ac0a6bf6daac77ef5dfa9ab420835a899839)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`feat(timeline): support grouped tracks and adaptive zoom`](https://github.com/lgs1920/studio/commit/88a3b5d2270d521c22347581e866e21bda0a0111)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/a335e7452a982e70eee9d82788be7f5ff4678ead)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-09-02 — [`feat(widget-group): support grouped widgets across timeline and drawer`](https://github.com/lgs1920/studio/commit/471af250031cafdccc85586a1d49923d43c3f3b4)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/1db4db53359d15a5c28ba78878d72fded045d1da)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`docs(changelog): document dense release link rules`](https://github.com/lgs1920/studio/commit/359e9e5e8437ea55312960faea17254d26364f24)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`feat(timeline): add zoom view controls`](https://github.com/lgs1920/studio/commit/12778fd2f318e889fe8f26864168597fafc003ed)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`feat(timeline): support clip drag and resize`](https://github.com/lgs1920/studio/commit/4a4d07aabdd9163249fc4cd2ec6bf2a996e8fea6)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`test(replay): cover resizable clip lock`](https://github.com/lgs1920/studio/commit/aceab38704d16a679dbbfc774808320f3a7ea783)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`fix(widget-group): dissolve groups with one remaining widget`](https://github.com/lgs1920/studio/commit/5d16658bd9436aeee93171591566124625092d80)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`fix(timeline): keep secondary ruler ticks visible`](https://github.com/lgs1920/studio/commit/d5a6054d6e46e1a0cb5eae4a127c5b8225944c5e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`fix(timeline): reserve preview drag handle space`](https://github.com/lgs1920/studio/commit/38f8ef92b4d54c57d9d588b8e034ff6cc8d6b42d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`test(timeline): cover preview integration styles`](https://github.com/lgs1920/studio/commit/e11cfd61ba65bb3758444d78d9e4dd74418cb7a8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`docs(timeline): document editing and integration behavior`](https://github.com/lgs1920/studio/commit/36af8ee1f369c453e3d6cd5c5ae809087b6a16a5)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`docs(release): update changelog and release workflow`](https://github.com/lgs1920/studio/commit/215baee3af00be8d47cc1c45993e5f8a884fda47)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`chore(rules): update release changelog workflow`](https://github.com/lgs1920/studio/commit/1eb65ccacba473ac482412c5ac5beccbd0c9b331)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`feat(timeline): add custom header menu and transport toolbar`](https://github.com/lgs1920/studio/commit/3640b39ef61c6d7621997a70f543dd01d329fae8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`feat(replay): embed recording settings in timeline preview`](https://github.com/lgs1920/studio/commit/a3ef34ed65edc0313e0793b33e6b054b23847fe9)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`docs(timeline): document custom header layout`](https://github.com/lgs1920/studio/commit/b836eccecf1888a44d598fbaac825d0709fec4c4)
+
+- Recorded automatically from Git history.
+
+## 2026-09-02 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/587ff0d7f2797586cbb3fa81610234c6b418acf0)
+
+- Recorded automatically from Git history.
+
+## 2026-09-03 — [`fix(video): align timeline menu theme and popup controls`](https://github.com/lgs1920/studio/commit/5aa4972215b9d2e5337642924d150cdbc7c8017f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-03 — [`fix(timeline): preserve widget selection on timeline surface`](https://github.com/lgs1920/studio/commit/d68241e75b129a27e9b3888538cb1af3b866a6cb)
+
+- Recorded automatically from Git history.
+
+## 2026-09-04 — [`docs(cesium): document MVT layer opportunities`](https://github.com/lgs1920/studio/commit/a19022b2ee747370a13657083b829850c8924894)
+
+- Recorded automatically from Git history.
+
+## 2026-09-04 — [`feat(timeline): improve controlled editing and layout`](https://github.com/lgs1920/studio/commit/93bfe35dc5719cfa8d80164a3d51f4509561cc6f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-04 — [`Merge remote-tracking branch 'origin/feature/timeline-webcomponent' into feature/timeline-webcomponent`](https://github.com/lgs1920/studio/commit/7f6f412a38df5479f91639a37ab621f9982f42b8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-05 — [`docs: clarify project agent rules`](https://github.com/lgs1920/studio/commit/44341091efa741ce7648a8d65db20487a47830bd)
+
+- Recorded automatically from Git history.
+
+## 2026-09-05 — [`docs: align agent skills with project rules`](https://github.com/lgs1920/studio/commit/c505bddcc8a2a027379947c4b1bfead26282aef3)
+
+- Recorded automatically from Git history.
+
+## 2026-09-05 — [`docs: define Cesium and Web Awesome upgrade checks`](https://github.com/lgs1920/studio/commit/034581d4a787ae290cbd41ae239769bc4a494c21)
+
+- Recorded automatically from Git history.
+
+## 2026-09-05 — [`docs: update Cesium and Web Awesome skill baselines`](https://github.com/lgs1920/studio/commit/abb68a0b3e18ef998f6df855dc464175e24bdc4e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-06 — [`feat(timeline): improve controlled editing and interaction`](https://github.com/lgs1920/studio/commit/7682fd2347d888ff08080b7d62eaedde6a79eb59)
+
+- Recorded automatically from Git history.
+
+## 2026-09-06 — [`refactor(replay): isolate timeline application integration`](https://github.com/lgs1920/studio/commit/512b42502ad184a88f37bc858221336a4d1a97df)
+
+- Recorded automatically from Git history.
+
+## 2026-09-06 — [`fix(widget): preserve no-drag events through shadow DOM`](https://github.com/lgs1920/studio/commit/d8d2df84cfbd0387a188a45da603582be59442fa)
+
+- Recorded automatically from Git history.
+
+## 2026-09-06 — [`chore(deps): update development dependencies`](https://github.com/lgs1920/studio/commit/fd984ffe2f6e916955986f9d57f008087755baeb)
+
+- Recorded automatically from Git history.
+
+## 2026-09-06 — [`docs(shortcuts): document replay timeline gestures`](https://github.com/lgs1920/studio/commit/3f7bc1443f0cc666918b7b664f36e2e70ef82341)
+
+- Recorded automatically from Git history.
+
+## 2026-09-06 — [`fix(crop): keep crop board visible during widget masking`](https://github.com/lgs1920/studio/commit/31cbcc3b13e8f6535a95fbd234a98b0034e62ce2)
+
+- Recorded automatically from Git history.
+
+## 2026-09-06 — [`fix(camera): persist focused orbit settings (#516)`](https://github.com/lgs1920/studio/commit/e4f74a787a1afb2cbaecd4ffc896a7bbdd85ae12)
+
+- Recorded automatically from Git history.
+
+## 2026-09-06 — [`docs: define correction workflow in project rules`](https://github.com/lgs1920/studio/commit/d3b6e1d668f74334bc1dbcee53d794028ba899c6)
+
+- Recorded automatically from Git history.
+
+## 2026-09-08 — [`feat(bootstrap): show backend check during startup`](https://github.com/lgs1920/studio/commit/13be4d2f1c9eed6a35379686fb77d0916c26206f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-08 — [`feat(ui): animate startup initialization steps`](https://github.com/lgs1920/studio/commit/7d57652642031a038a837ded5cd79eb0b959308e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-08 — [`fix(widget): restore neutral area selection`](https://github.com/lgs1920/studio/commit/3b04186097a7ce2fcce74cd2e66fbd13cb78c0cf)
+
+- Recorded automatically from Git history.
+
+## 2026-09-08 — [`feat(timeline): complete local editor interactions`](https://github.com/lgs1920/studio/commit/5f53a184b1cd474994bef4786c198d52e3902530)
+
+- Recorded automatically from Git history.
+
+## 2026-09-08 — [`fix(replay): isolate timeline gestures from widget movement`](https://github.com/lgs1920/studio/commit/7837111ae4acddd1c6431af92089c7d5f163a6a6)
+
+- Recorded automatically from Git history.
+
+## 2026-09-08 — [`chore(dev): support WSL mirrored networking`](https://github.com/lgs1920/studio/commit/0dee840ac19618ab932a5e47951dc66eddfdda49)
+
+- Recorded automatically from Git history.
+
+## 2026-09-08 — [`Merge remote-tracking branch 'origin/feature/resize-and-move-clips' into feature/resize-and-move-clips`](https://github.com/lgs1920/studio/commit/b6358e5feba6790d64ab2632c34532085f8803a3)
+
+- Recorded automatically from Git history.
+
+## 2026-09-08 — [`docs: require Web Awesome UI colors`](https://github.com/lgs1920/studio/commit/97333e1bcb3fed3d79d02ec77c15372fdba8e54c)
+
+- Recorded automatically from Git history.
+
+## 2026-09-08 — [`fix(replay): keep timeline widget interactable`](https://github.com/lgs1920/studio/commit/b9c0ab895d0acda7550af24da6ba8b904fb67dce)
+
+- Recorded automatically from Git history.
+
+## 2026-09-08 — [`fix(replay): fit timeline before first paint`](https://github.com/lgs1920/studio/commit/f3edec7200a0d762b2c8780f999c8d6731bbb7d7)
+
+- Recorded automatically from Git history.
+
+## 2026-09-08 — [`feat(timeline): show clip placement ghosts`](https://github.com/lgs1920/studio/commit/cb28e7b731f1f1e16860d3e938426afc9426439f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-08 — [`Merge remote-tracking branch 'origin/feature/resize-and-move-clips' into feature/resize-and-move-clips`](https://github.com/lgs1920/studio/commit/73c77684191ead0bbbb76022d00471e907bfa0f3)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`docs: isolate timeline changes from external environment`](https://github.com/lgs1920/studio/commit/d67407555e9f523e2119de2d91d1c789a62c0252)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`docs: document shortcut catalog conventions`](https://github.com/lgs1920/studio/commit/c630050ef4011624f5e3388bb9d1164230ee9e80)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`docs: organize shortcut catalog`](https://github.com/lgs1920/studio/commit/978d0dd1c929df94bc24e821447c8f0eac48aaa7)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/ecdc62577cfed9ee6c76f7701304d13ecbc8ec24)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-09-09 — [`fix(map): hide distant journey marker behind terrain`](https://github.com/lgs1920/studio/commit/bf3d91eb4e45d3b390fe84f637f19aed8bbc565f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`feat(timeline): extend local clip editing interactions`](https://github.com/lgs1920/studio/commit/56f163d8a6668a56796525dea9e424f18b91ad57)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`fix(replay): align timeline preview interaction bounds`](https://github.com/lgs1920/studio/commit/5d1c1ef136b4e1282a69c4780557a8d01b8c0639)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`docs(timeline): document clip editing interactions`](https://github.com/lgs1920/studio/commit/0a418c4ad7eba3309ed2098ccf129de97ecd6337)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`Merge remote-tracking branch 'origin/feature/resize-and-move-clips' into feature/resize-and-move-clips`](https://github.com/lgs1920/studio/commit/af8ac07b7bdadafa4c7b4f25315764835e74022e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`docs(timeline): specify generic media plugin`](https://github.com/lgs1920/studio/commit/05870e72a80fb2a3aebc1abcc377a4bffcbe2269)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`fix(timeline): refine clip interaction and color menu`](https://github.com/lgs1920/studio/commit/0f52404f732305900a27a3b1e99563f0e9b0c43e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`fix(timeline): preserve context menu gestures`](https://github.com/lgs1920/studio/commit/ce45e74c12552569417b4e775a39cfb0cde5eb4e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`docs(timeline): document interaction and color options`](https://github.com/lgs1920/studio/commit/fbbe4a57b69228ea227511bb8386a52ef13c6f79)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`fix(timeline): accept color picker event payload`](https://github.com/lgs1920/studio/commit/9ee17fd9a70a1beef8ad267e3bd7d4d673c096c6)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`fix(timeline): restore pointer interaction with clip color swatches`](https://github.com/lgs1920/studio/commit/6bac237179cb8a169d18e7374caadd2909cc50df)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`fix(timeline): keep keyboard clip movement after drag`](https://github.com/lgs1920/studio/commit/3384490660585daafbb79c9cc1f37c92ea3af69a)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`Merge remote-tracking branch 'origin/feature/resize-and-move-clips' into feature/resize-and-move-clips`](https://github.com/lgs1920/studio/commit/32b99e9ab00e53e16b952a48531aa2cd3f17ddf2)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`fix(timeline): improve snap guides and locked clip selection`](https://github.com/lgs1920/studio/commit/d951a81f8c9a83fb2b1493f1d3ea2eb60b12b91f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`fix(ui): keep drawer resizing proportional`](https://github.com/lgs1920/studio/commit/46f464032f233c21ce2bb774d074fcc25a7060d4)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`feat(ui): improve shortcut catalog navigation`](https://github.com/lgs1920/studio/commit/da9cc5d5df9d333e799ba0d6dd8f1d1ac14925fd)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`fix(replay): refresh timeline preview after mount`](https://github.com/lgs1920/studio/commit/595978cc58f1f6a11fdaaf4b13b6af290215e7ca)
+
+- Recorded automatically from Git history.
+
+## 2026-09-09 — [`docs(shortcuts): document alternative binding layout`](https://github.com/lgs1920/studio/commit/be4972fbf9e6dcfd6c3a1c0b728c44217436caff)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`docs(timeline): define React callback boundary`](https://github.com/lgs1920/studio/commit/2e47e0995812dee6db16eae9c8d3b7e2ddd3393e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`feat(timeline): expose clip double-click callback in React`](https://github.com/lgs1920/studio/commit/767ad668118d114f694a24ef185c9138300ea6f8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`fix(ui): synchronize welcome initialization progress`](https://github.com/lgs1920/studio/commit/89644f7b23272ebf916958c47e57033b5c83924e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`feat(ui): dock widgets in a resizable bottom drawer`](https://github.com/lgs1920/studio/commit/eef373cceb6f26a7214e54639aba0900e971b0c7)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`feat(ui): detach widgets into PiP windows`](https://github.com/lgs1920/studio/commit/db4244572af8f33f1dbfa9d89ac3fd0ca6fa442d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`docs(ui): document docked and detached widgets`](https://github.com/lgs1920/studio/commit/ed9036486338d5b92a0b12c6c0f678fe18df7fe7)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/3906918d0f46cb8a3f5f0e0c07ffdf657cf3a544)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`docs: define commit granularity rule`](https://github.com/lgs1920/studio/commit/08191fdcc0b05a8bd0ab671393700153245b4f1b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`fix(ui): anchor welcome initialization popup`](https://github.com/lgs1920/studio/commit/7a2b2e464b2e61447693ffb8d939100747a5315b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`fix(ui): restore detached widget card actions`](https://github.com/lgs1920/studio/commit/5a65387b244b96c5591c40fd5c97beae6e8f8537)
+
+- Resolve detached widget titles from the catalog definition and preserve capability checks when runtime context menu data is incomplete. Keep the PiP card vertical and expose its header actions consistently, with regression coverage for the configured title, orientation, and actions.
+
+## 2026-09-10 — [`fix(ui): bootstrap detached widget windows`](https://github.com/lgs1920/studio/commit/7000b12d45bf15118000adcbc2b0d56317b95a35)
+
+- Load the Web Awesome and timeline custom elements in the external document so PiP cards, icons, and Replay Timeline render in their own window. Align detached widget props with the drawer host and use concise Undock and Attach actions.
+
+## 2026-09-10 — [`fix(ui): render detached timeline content`](https://github.com/lgs1920/studio/commit/26333fe6960145255d7d7da0344410e2813bf53f)
+
+- Keep detached Replay Timeline content visible while its external document settles, instead of leaving the construction overlay over the entire PiP surface. Restore the shared Web Awesome icon usage and cover the detached rendering mode with regression tests.
+
+## 2026-09-10 — [`fix(ui): rehydrate detached replay timeline`](https://github.com/lgs1920/studio/commit/c89e1af9c882238c8da0cc8e8d77122b402333b9)
+
+- Wait for the external document custom-element registry before assigning the controlled Replay timeline state. React can mount the PiP portal before lgs1920-timeline is upgraded, which discarded the initial timeline and track properties during custom-element construction.
+- Keep the construction overlay enabled for detached previews and apply the initial playback state after the timeline structure has been installed.
+
+## 2026-09-10 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/845a076904b883a190acbb7963dfccfab89a7d37)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`docs: define timeline domain isolation rule`](https://github.com/lgs1920/studio/commit/9b9ed7e7f032aab90469416dd13249aea492e7ae)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`docs: document timeline domain boundary`](https://github.com/lgs1920/studio/commit/7b8c8721873d44634218613a95896bc13ba5aca5)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`feat: extend generic timeline header and content`](https://github.com/lgs1920/studio/commit/d8c5d21aa9e2e9606e7d3b9d83d9f47113d6eeae)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`feat: integrate timeline preparation controls`](https://github.com/lgs1920/studio/commit/30a51878c72afe3ac36134a5ee94aa459b5f09d8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`feat: place timeline actions in each host header`](https://github.com/lgs1920/studio/commit/7eb80b6e77a15ae8017bbc1a1f490eba39211bb5)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`docs: document timeline host integration`](https://github.com/lgs1920/studio/commit/b12a410000487af32b6489ed3f769f245469bd3d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-10 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/27234fed9b39ada6a280cd9dff59e95a20e8f8f8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`docs: define TODO LLM query normalization`](https://github.com/lgs1920/studio/commit/652cf24e740164c6e089bb7dec7d6893d0442ea2)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`fix: release occupied development ports`](https://github.com/lgs1920/studio/commit/6b628ad900a767c89444d9cfe82bd21b5ca37152)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`chore: configure TODO normalization watcher`](https://github.com/lgs1920/studio/commit/55052d2862afdd033e400b19693b962396db6aa9)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`docs: define Web Awesome icon usage rules`](https://github.com/lgs1920/studio/commit/af4c7fd3445f31d7e1d581b019189f32ffc64c03)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`fix: integrate custom kit icons with Web Awesome`](https://github.com/lgs1920/studio/commit/4c210911cd6ae1ff463cafd57193cf2fe6390492)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`docs: clarify configurable icon kit registration`](https://github.com/lgs1920/studio/commit/6a2015cb0555ed591e165444b2e5dfaec8db076a)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`refactor: make icon kit registration configurable`](https://github.com/lgs1920/studio/commit/50d36f148e31a3328bddda1dd93769c9f1dfcce4)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`docs: redact icon kit identifier`](https://github.com/lgs1920/studio/commit/c3016469ad96ff9fc000304bfe721af8e8550e2d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`docs: generalize icon library examples`](https://github.com/lgs1920/studio/commit/1837f53f7e9d7b4607b8c8cffda11ba4510e4c13)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`fix: register custom icons in detached windows`](https://github.com/lgs1920/studio/commit/9eb896404c2803fe67464a564d43a62b29e017a8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/e9b157a7f2e2ce9b775cedbd666ea9f4bff67011)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`fix: select custom library for detached icon`](https://github.com/lgs1920/studio/commit/5360635c5535edc79cc139e3acccb8e29ad64c2a)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`docs: update Web Awesome kit resolver references`](https://github.com/lgs1920/studio/commit/9170bc51653adb3eefb7ecfedba55ca038151755)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`docs: update icon resolver project rule`](https://github.com/lgs1920/studio/commit/95aec37b3951255a03b5e97cd817925d5337e172)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`refactor: rename Web Awesome kit module`](https://github.com/lgs1920/studio/commit/2cc90148dfd211e430bb6829a599ad0df5bfc4fc)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`docs: explain icon registration in detached windows`](https://github.com/lgs1920/studio/commit/f3983b162df95be9260a492e2c50b6d81f0b02ee)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`docs: correct icon resolver module name`](https://github.com/lgs1920/studio/commit/1b1ee374bdd6bb68fec3fc891d0623d7b8750b8e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`fix: preserve default Web Awesome icon library`](https://github.com/lgs1920/studio/commit/3d2e0c96a8b0fdc6241531f16a9ff9435be29e14)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`fix: share Web Awesome icon registry`](https://github.com/lgs1920/studio/commit/2b0069e9c239c2042b9ada2b1e82487c33b33682)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`chore: update frontend dependencies`](https://github.com/lgs1920/studio/commit/30339b1931c2aeecc519a2c8791a924733305631)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`refactor: remove obsolete Shoelace imports`](https://github.com/lgs1920/studio/commit/ce4788427230fe9f762ed1191b542a3d0cc92199)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`refactor: centralize timeline widget actions`](https://github.com/lgs1920/studio/commit/022c5abda800d843c9d7f065b3814aeaa332a15b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`fix: align timeline action button sizing`](https://github.com/lgs1920/studio/commit/835d1f06a8e5acf1e7c4a09b17f58c3d005b2594)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`refactor: migrate remaining icons to Web Awesome`](https://github.com/lgs1920/studio/commit/af5222b48bfa14c56bb624884a2d4ce185371fb4)
+
+- Recorded automatically from Git history.
+
+## 2026-09-11 — [`fix: rename replay clip after journey title`](https://github.com/lgs1920/studio/commit/a0a2ceea72f4691b6b29c0f6e8c7eff63ddb076f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`refactor: extract reusable video settings menus`](https://github.com/lgs1920/studio/commit/acc756d94d36a607d7fd6c180df5cc1c1046f280)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`fix: render replay timeline in Web Awesome drawer`](https://github.com/lgs1920/studio/commit/e8958b4e0817d9233dbd8ecdd13b2f216ff88097)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`feat: persist replay timeline presentation mode`](https://github.com/lgs1920/studio/commit/9c999487387db208a02bde4c09f3ee51dbb1a66d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`ci: add GitHub quality workflow`](https://github.com/lgs1920/studio/commit/4d4c57be3fd393125f18ca7d004b91dc74af5fc7)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`docs: document deterministic Vitest workflow`](https://github.com/lgs1920/studio/commit/29304e9fc50f3870ec2bf8ce3611ced85717f904)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`test: split Vitest projects and stabilize async tests`](https://github.com/lgs1920/studio/commit/ea69a5049e4f754436ac0ca18d75569e29731c25)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`test: stabilize timeline attachment timing`](https://github.com/lgs1920/studio/commit/a2ca10c21ce7757ab7ae53024db91347614e4e95)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`chore: update yaml dependency`](https://github.com/lgs1920/studio/commit/539b036eec2685631e7ad36a5c1f53ad968555bc)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/db5ddce4c4dfff9293b7367ae156cb2903fd408a)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`ci: configure private registry credentials`](https://github.com/lgs1920/studio/commit/c07250557928839b2bc102d413146665a9e883a5)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/47ab9cb0f2debf5c2533f3a6c94328eceb5fa500)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`ci: pass Bun registry configuration correctly`](https://github.com/lgs1920/studio/commit/c75b44110a8533183883166f8988f5bf103e29f8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/27b31edefd7fe2b2350897702ab88cf0b8200445)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`ci: install dependencies with Bun config`](https://github.com/lgs1920/studio/commit/208938bc5af66b280458841b17975ca835842b89)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/13995380d2b869f18e214a7c363134c6d705eb53)
+
+- Recorded automatically from Git history.
+
+## 2026-09-12 — [`ci: update checkout action runtime`](https://github.com/lgs1920/studio/commit/0a7c2e202c1519b432e5bd58c11a1fe9273d42ea)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`test: add coverage and cross-browser test infrastructure`](https://github.com/lgs1920/studio/commit/f9b4e86ecac2e1627e2869b5e76c0f2489a4adfa)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`ci: run coverage and cross-browser tests`](https://github.com/lgs1920/studio/commit/e9a8c5c0ef842bbe30ddeaf6d48fa143f61d2026)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`docs: document coverage and browser validation`](https://github.com/lgs1920/studio/commit/35f10ca075b26439fa9f96dc1dfe665d0e04fc15)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`feat(deployment): add Studio GitHub Actions deployments`](https://github.com/lgs1920/studio/commit/05b18a9387fad1dc7d33f56b9fdd7d5218cb5891)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`feat(replay): extend timeline web component`](https://github.com/lgs1920/studio/commit/f1f916f2f7fbde2e31b3d681ddb9f3a77f3a157c)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`feat(replay): add timeline zoom persistence`](https://github.com/lgs1920/studio/commit/c9f5346f7bbc0780602c1de5b53f72cb7563ed04)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`docs(replay): update timeline todo`](https://github.com/lgs1920/studio/commit/8732422099b843ce287c4eb23b3248c04eec7ed9)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/8a87d37b4604c1aa45e7bd3b279ab5a19cefea20)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`style(core): normalize context imports and headers`](https://github.com/lgs1920/studio/commit/5ddd3aeb98ad0a5a6a1891fffdf60708e83ebdea)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`docs(replay): add timeline performance audit`](https://github.com/lgs1920/studio/commit/232adc029505f789a7bf255d69caa5767bb020d7)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/02688c80e5107630b4a33ce3b6e3e9f304481249)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`merge: integrate 1.0.0 into main`](https://github.com/lgs1920/studio/commit/5333847775d8811e118632b3e45aa0bb6aa591b3)
+
+- Recorded automatically from Git history.
