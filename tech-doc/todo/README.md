@@ -21,6 +21,7 @@ implementation documents. Implemented and historical documents belong under
 
 ## Replay and Video
 
+- [Replay Timeline performance audit and improvement proposals](CORE-REPLAY-TIMELINE-PERFORMANCE-AUDIT.md)
 - [Parallel HQ workspace execution analysis](REPLAY-PARALLEL-WORKSPACE-EXECUTION-ANALYSIS.md)
 
 ## User Interface, Widgets, and Branding
