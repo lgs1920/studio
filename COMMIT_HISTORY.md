@@ -879,3 +879,11 @@
 ## 2026-09-13 — [`fix(deployment): support keyboard-interactive SSH auth`](https://github.com/lgs1920/studio/commit/15ee6efb8e44e274a8ca126155a42df68bf8b922)
 
 - Recorded automatically from Git history.
+
+## 2026-09-13 — [`fix(deployment): use OpenSSH for CI Studio commands`](https://github.com/lgs1920/studio/commit/1619f1cffd1bd8c81be9490121162962d5f93f55)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`Merge remote-tracking branch 'origin/main'`](https://github.com/lgs1920/studio/commit/82e30cb65185ce92ba8a0fa585acccdc85a4d9b1)
+
+- Recorded automatically from Git history.
