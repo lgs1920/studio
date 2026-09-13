@@ -699,6 +699,9 @@ export const ReplayTimelinePreview = forwardRef(({
         const element = _timeline.current
         if (!linkedPreparation || !element || getReplayTimelineDebugStage() !== 'full') return undefined
         const projectionDurationMillis = projection.durationMillis
+        let playbackSyncScheduled = false
+        let scheduledFrameId = null
+        let scheduledWithAnimationFrame = false
 
         const syncPlayback = () => {
             const replayStore = lgs.stores.replay
@@ -711,15 +714,44 @@ export const ReplayTimelinePreview = forwardRef(({
             }
             element.playing = replayStore.playing === true
         }
+        const runScheduledPlaybackSync = () => {
+            playbackSyncScheduled = false
+            scheduledFrameId = null
+            syncPlayback()
+        }
+        const schedulePlaybackSync = () => {
+            if (playbackSyncScheduled) return
+            playbackSyncScheduled = true
+            if (typeof globalThis.requestAnimationFrame === 'function') {
+                scheduledWithAnimationFrame = true
+                scheduledFrameId = globalThis.requestAnimationFrame(runScheduledPlaybackSync)
+            }
+            else {
+                scheduledWithAnimationFrame = false
+                scheduledFrameId = globalThis.setTimeout(runScheduledPlaybackSync, 0)
+            }
+        }
 
         syncPlayback()
         const replayStore = lgs.stores.replay
         const unsubscribers = [
-            subscribeKey(replayStore, 'dynamicFrameState', syncPlayback),
-            subscribeKey(replayStore, 'resolvedFrameState', syncPlayback),
-            subscribeKey(replayStore, 'playing', syncPlayback),
+            subscribeKey(replayStore, 'dynamicFrameState', schedulePlaybackSync),
+            subscribeKey(replayStore, 'resolvedFrameState', schedulePlaybackSync),
+            subscribeKey(replayStore, 'playing', schedulePlaybackSync),
         ]
-        return () => unsubscribers.forEach(unsubscribe => unsubscribe())
+        return () => {
+            unsubscribers.forEach(unsubscribe => unsubscribe())
+            if (scheduledFrameId !== null) {
+                if (scheduledWithAnimationFrame) {
+                    globalThis.cancelAnimationFrame?.(scheduledFrameId)
+                }
+                else {
+                    globalThis.clearTimeout(scheduledFrameId)
+                }
+            }
+            playbackSyncScheduled = false
+            scheduledFrameId = null
+        }
     }, [linkedPreparation, projection.durationMillis, syncSliderTime])
 
     useEffect(() => {

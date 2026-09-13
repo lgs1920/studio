@@ -343,6 +343,45 @@ describe('ReplayTimelinePreview', () => {
         expect(currentTimeMillis).toBe(1_000)
     })
 
+    it('coalesces multiple published frames into one animation-frame update', async () => {
+        const scheduledCallbacks = []
+        const requestAnimationFrame = vi.fn(callback => {
+            scheduledCallbacks.push(callback)
+            return scheduledCallbacks.length
+        })
+        const cancelAnimationFrame = vi.fn()
+        vi.stubGlobal('requestAnimationFrame', requestAnimationFrame)
+        vi.stubGlobal('cancelAnimationFrame', cancelAnimationFrame)
+
+        try {
+            const {container} = render(<ReplayTimelinePreview/>)
+            const timelineElement = container.querySelector('lgs1920-timeline')
+            let currentTimeMillis = timelineElement.currentTimeMillis
+            const setCurrentTime = vi.fn(value => {
+                currentTimeMillis = value
+            })
+            Object.defineProperty(timelineElement, 'currentTimeMillis', {
+                configurable: true,
+                get: () => currentTimeMillis,
+                set: setCurrentTime,
+            })
+
+            globalThis.lgs.stores.replay.dynamicFrameState = {frameTimeMs: 2_000}
+            globalThis.lgs.stores.replay.dynamicFrameState = {frameTimeMs: 3_000}
+
+            await Promise.resolve()
+            expect(requestAnimationFrame).toHaveBeenCalledOnce()
+            expect(setCurrentTime).not.toHaveBeenCalled()
+
+            scheduledCallbacks[0](16)
+            expect(setCurrentTime).toHaveBeenCalledOnce()
+            expect(currentTimeMillis).toBe(3_000)
+        }
+        finally {
+            vi.unstubAllGlobals()
+        }
+    })
+
     it('keeps the current time while widget changes rebuild the preparation state', async () => {
         const enterReplayPreparation = globalThis.__.ui.replay.enterReplayPreparation
         enterReplayPreparation.mockImplementation(async () => {
