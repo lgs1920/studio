@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2025-10-12
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -149,6 +149,7 @@ export class WidgetDraggable {
 
         config.element = event.target
         config.runtimeReady = true
+        this.#widgetManager.constrainSceneWidgetToBounds?.(config, event.target)
         // Use the updated position from config after commitTranslateToPosition
         const left = config.position.left
         const top = config.position.top

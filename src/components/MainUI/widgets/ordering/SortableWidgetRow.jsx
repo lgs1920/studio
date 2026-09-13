@@ -7,13 +7,14 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-20
- * Last modified: 2026-06-20
+ * Created on: 2026-02-13
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { ToggleStateIcon }                    from '@Components/ToggleStateIcon'
 import { EDIT_WIDGET_ICON }                   from '@Core/constants'
 import { WaButton, WaCard, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useMemo }                             from 'react'
@@ -25,7 +26,7 @@ import { useSnapshot }    from 'valtio'
  * * @param {Object} props - Component properties.
  * @param {Object} props.widget - Widget data object.
  */
-export const SortableWidgetRow = ({widget}) => {
+export const SortableWidgetRow = ({widget, draggable = true}) => {
     /** @type {string} Extract widget base type from id */
     const widgetType = widget.id.split('#')[0]
 
@@ -51,6 +52,18 @@ export const SortableWidgetRow = ({widget}) => {
 
         return rawName.length > 25 ? `${rawName.slice(0, 25)}...` : rawName
     }, [elementConfig?.text?.content, instance?.name, widget.type])
+
+    /**
+     * Toggles the visibility of the current widget through the shared manager action.
+     *
+     * @param {boolean} nextVisible - Requested visibility state
+     * @param {Event} event - Toggle button event
+     */
+    const toggleVisibility = (nextVisible, event) => {
+        event?.preventDefault?.()
+        event?.stopPropagation?.()
+        __.ui.widgetManager.toggleWidgetVisibility(widget.id, nextVisible)
+    }
 
     /**
      * Updates global UI state and forces Moveable refresh.
@@ -95,8 +108,8 @@ export const SortableWidgetRow = ({widget}) => {
     return (
         <WaCard appearance="outlined"
                 onClick={() => selectWidget(widget.id)}
-                className={`lgs--card-hoverable widget-ordering-row ${widget.fixed ? 'widget-row-fixed' : ''}`}
-                data-id={widget.id}
+                className={`lgs--card-hoverable ${draggable ? 'widget-ordering-row' : 'widget-ordering-child'} ${widget.fixed ? 'widget-row-fixed' : ''}`}
+                data-id={draggable ? widget.id : undefined}
         >
             <WaIcon name="grip-dots-vertical" variant="solid" className="icon-widget"/>&nbsp;
             <WaIcon name={instance.icon} variant="regular" className="icon-widget"/>
@@ -104,6 +117,18 @@ export const SortableWidgetRow = ({widget}) => {
                 {displayName}
             </div>
             <div className="widget-ordering-actions">
+                {widget.canHide && (
+                    <div onClick={event => event.stopPropagation()}>
+                        <ToggleStateIcon
+                            initial={widget.visible}
+                            size="s"
+                            appearance="plain"
+                            buttonVariant="neutral"
+                            aria-label={widget.visible ? 'Hide widget' : 'Show widget'}
+                            onChange={toggleVisibility}
+                        />
+                    </div>
+                )}
                 <WaTooltip placement="top" for={`center-widget-${widget.id}`}>{'Recenter'}</WaTooltip>
                 <WaButton
                     id={`center-widget-${widget.id}`}

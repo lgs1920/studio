@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-06-02
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -220,15 +220,10 @@ export class JourneyReplayVideoSync {
                 if (this.#resetToStart && this.#replay?.running) {
                     this.#replay.stop?.({emit: false})
                 }
-                replayVideoTraceDebug('draft.replay.camera.restore.start', {
-                    generation: startGeneration,
-                    hasRestoreCameraState: typeof this.#replay?.restoreCameraState === 'function',
-                })
-                this.#replay?.restoreCameraState?.({clear: false})
                 await waitForAnimationFrame()
-                replayVideoTraceDebug('draft.replay.camera.restore.end', {
+                replayVideoTraceDebug('draft.replay.camera.prepared', {
                     generation: startGeneration,
-                    hasRestoreCameraState: typeof this.#replay?.restoreCameraState === 'function',
+                    hasPrepareReplayCamera: typeof this.#replay?.prepareReplayCamera === 'function',
                 })
                 if (!this.#armed || startGeneration !== this.#captureGeneration) {
                     return

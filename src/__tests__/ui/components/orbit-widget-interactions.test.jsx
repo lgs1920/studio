@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-11
- * Last modified: 2026-07-11
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
+import { CURRENT_JOURNEY } from '@Core/constants'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 import { proxyMap } from 'valtio/utils'
@@ -52,12 +53,6 @@ vi.mock('@Utils/UnitUtils', () => ({
     },
 }))
 
-vi.mock('@Utils/FA2SL', () => ({
-    FA2SL: {
-        set: icon => icon?.iconName ?? `${icon ?? ''}`,
-    },
-}))
-
 vi.mock('cesium', async importOriginal => {
     const actual = await importOriginal()
     return {
@@ -91,7 +86,7 @@ const makeMatchMedia = matches => vi.fn(() => ({
     removeEventListener: vi.fn(),
 }))
 
-const setupOrbitGlobals = ({showMovementWidget = false} = {}) => {
+const setupOrbitGlobals = ({showMovementWidget = false, journey = null, rpm = 1} = {}) => {
     const canvas = document.createElement('canvas')
     document.body.appendChild(canvas)
     document.body.classList.add('lgs-app-visible')
@@ -146,7 +141,7 @@ const setupOrbitGlobals = ({showMovementWidget = false} = {}) => {
                     rotate: proxy({
                         direction:    1,
                         heightOffset: 0,
-                        rpm:          1,
+                        rpm,
                         running:      true,
                         target:       {
                             element:   'map-point',
@@ -163,6 +158,7 @@ const setupOrbitGlobals = ({showMovementWidget = false} = {}) => {
                 }),
             },
         },
+        theJourney: journey,
         viewer: {
             canvas,
         },
@@ -189,7 +185,7 @@ describe('OrbitWidget interactions', () => {
         cleanup()
         window.matchMedia = makeMatchMedia(true)
         vi.spyOn(window, 'requestAnimationFrame').mockImplementation(callback => (
-            window.setTimeout(() => callback(performance.now()), 0)
+            queueMicrotask(() => callback(performance.now()))
         ))
         vi.spyOn(window, 'cancelAnimationFrame').mockImplementation(id => window.clearTimeout(id))
         vi.spyOn(console, 'debug').mockImplementation(() => undefined)
@@ -426,6 +422,29 @@ describe('OrbitWidget interactions', () => {
         expect(lgs.stores.ui.mainUI.rotate.rpm).toBe(1)
     })
 
+    it('persists the RPM changed for a journey centroid', async () => {
+        const journey = {
+            element:          CURRENT_JOURNEY,
+            slug:             'journey-a',
+            rotation:         {},
+            persistToDatabase: vi.fn(async () => undefined),
+        }
+        setupOrbitGlobals({journey, rpm: 3})
+        lgs.stores.ui.mainUI.rotate.target = {
+            element: CURRENT_JOURNEY,
+            slug:    journey.slug,
+        }
+        const {OrbitWidget} = await import('@Components/MainUI/OrbitWidget')
+
+        const view = render(<OrbitWidget/>)
+        const slider = view.getByLabelText('RPM')
+        fireEvent.input(slider, {target: {value: '1'}})
+        fireEvent.change(slider, {target: {value: '1'}})
+
+        expect(journey.rotation.rpm).toBe(1)
+        expect(journey.persistToDatabase).toHaveBeenCalled()
+    })
+
     it('keeps interaction hints hidden by default and toggles them from orbit', async () => {
         setupOrbitGlobals()
         const {OrbitWidget} = await import('@Components/MainUI/OrbitWidget')
@@ -459,7 +478,7 @@ describe('OrbitWidget interactions', () => {
 
         await waitFor(() => {
             expect(
-                view.container.querySelector('.panorama-adjustment-widget-shell.adjustment-visible'),
+                view.container.querySelector('.camera-adjustment-widget-shell.adjustment-visible'),
             ).not.toBeNull()
         })
     })

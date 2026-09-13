@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2024-10-18
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 import { CESIUM_EVENTS as $CESIUM_EVENTS } from '@Core/events/cesiumEvents'
 
 
-export const SLOGAN = 'Replay the World Outdoors!'
+export const SLOGAN = 'Replay Your World Outdoors.'
 /*******************************************************************************
  * Time and duration constants in seconds
  */
@@ -470,6 +470,7 @@ export const LGS_WIDGET_SCALE_FACTOR = LGS_WIDGET_SCALE_EFFECTIVE
 export const WIDGET_MOUNT_TIMEOUT = 15000
 
 export const VIDEO_CROP_ZONE = 'video-crop-zone'
+export const REPLAY_RECORDING_MONITOR_WIDGET_ID = 'replay-recording-monitor-widget'
 export const VIDEO_TOOLS_WIDGETS   = 'video-tools-widgets',
              CROP_TOOLS_WIDGETS    = 'crop-tools-widgets',
              MULTI_PURPOSE_WIDGETS = 'multi-purpose-widgets',
@@ -483,7 +484,8 @@ export const COMPASS_WIDGET       = 'compass-widget',
              JOURNEY_TOOLBAR_WIDGET = 'journey-toolbar-widget',
              PROFILE_WIDGET       = 'profile-widget',
              TEXT_WIDGET          = 'text-widget',
-             JOURNEY_STATS_WIDGET = 'journey-stats-widget'
+             JOURNEY_STATS_WIDGET = 'journey-stats-widget',
+             REPLAY_TIMELINE_WIDGET = 'replay-timeline-widget'
 
 export const WIDGETS_CAPABILITIES   = [
            'canRemove',
@@ -492,6 +494,8 @@ export const WIDGETS_CAPABILITIES   = [
            'canPosition',
            'canEdit',
            'canSnapshot',
+           'canDockable',
+           'canDetach',
        ],
              WIDGETS_CONFIGURATION  = new Map([
                                                   [
@@ -523,6 +527,11 @@ export const WIDGETS_CAPABILITIES   = [
                                                   [
                                                       TEXT_WIDGET, {
                                                       component: 'TextWidget',
+                                                  },
+                                                  ],
+                                                  [
+                                                      REPLAY_TIMELINE_WIDGET, {
+                                                      component: 'ReplayTimelineWidget',
                                                   },
                                                   ],
                                               ]),

@@ -4,7 +4,12 @@ description: "CesiumJS terrain, globe, and environment - TerrainProvider, Globe,
 ---
 # CesiumJS Terrain, Globe & Environment
 
-Version baseline: CesiumJS v1.143 | ES module imports (`import { ... } from "cesium";`)
+## User intent discipline
+
+For Studio work, follow the autonomy and approval rules in [PROJECT_RULES.md](../../PROJECT_RULES.md#1-core-directives). Preserve the task-specific safeguards below.
+
+
+Version baseline: CesiumJS v1.144 | ES module imports (`import { ... } from "cesium";`)
 
 ## Terrain Providers
 

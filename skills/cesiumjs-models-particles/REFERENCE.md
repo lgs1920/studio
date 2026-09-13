@@ -1,6 +1,6 @@
 # glTF Compatibility Reference
 
-Updated for CesiumJS 1.143. Read this reference when loading compressed glTF,
+Version baseline: CesiumJS 1.144. Read this reference when loading compressed glTF,
 CAD/design-model content, or glTF embedded in 3D Tiles. These features are
 asset-driven and use CesiumJS's built-in model pipeline; they do not require
 custom shaders or decoder setup.
@@ -48,14 +48,14 @@ assets at authoring time; the fallback is resilience, not validation.
 
 ## CAD and Design-Model Extensions
 
-| Extension | CesiumJS 1.143 behavior | Agent action |
+| Extension | CesiumJS 1.144 compatibility | Agent action |
 |---|---|---|
 | `EXT_mesh_primitive_restart` | Loads primitive-restart line/index data | No runtime option |
 | `EXT_mesh_primitive_edge_visibility` | Reconstructs hidden, hard, silhouette, and repeated-hard edges with stable quad rendering | Select `EdgeDisplayMode`; edges are hidden by default |
 | `BENTLEY_materials_line_style` | Honors screen-pixel `width` and 16-bit dash `pattern` for lines and visible edges | Author values in the glTF material |
 | `BENTLEY_materials_point_style` | Honors point `diameter` in CSS pixels; color comes from the material | Author values in the glTF material |
 | `EXT_textureInfo_constant_lod` | Generates and blends texture coordinates to maintain a roughly constant on-screen texture scale | Use seamless textures and author real-world scale, offset, and blend distances |
-| `BENTLEY_materials_planar_fill` | Not supported in 1.143; announced as upcoming | Do not emit this as a working 1.143 feature |
+| `BENTLEY_materials_planar_fill` | Supported in 1.144; unavailable in 1.143 | Emit only when the runtime baseline is 1.144+; keep a fallback for older runtimes |
 
 Prefer the built-in extension path over recreating edges, dash masks, point
 sizing, or constant-LOD sampling in a `CustomShader`. The built-in path batches

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-05-02
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,7 +22,11 @@ import { hasActiveAppShortcutBlocker }                  from '@Core/events/short
 import { MapTarget }                                    from '@Core/MapTarget'
 import { getOrbitSettings, setOrbitStoreSettings }      from '@Core/OrbitSettings'
 import { getGlobalHideOtherJourneys, setGlobalHideOtherJourneys } from '@Core/ui/JourneyVisibility'
-import { REPLAY_MARKER_MODE_TRACE, normalizeJourneyReplayMarker } from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import {
+    REPLAY_MARKER_MODE_TRACE,
+    normalizeJourneyReplayMarker,
+    replayCameraSettingsFromArrowKey,
+} from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {
     hasManageableWidgets,
     openWidgetManagementDrawer,
@@ -38,6 +42,7 @@ const WIDGET_MOVE_STEP = 2
 const WIDGET_FAST_MOVE_STEP = 20
 const WIDGET_SCALE_STEP = 0.01
 const WIDGET_FAST_SCALE_STEP = 0.1
+const TIMELINE_ARROW_KEYS = Object.freeze(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'])
 const WIDGET_SHORTCUT_EDITABLE_SELECTOR = [
     'input',
     'textarea',
@@ -62,6 +67,51 @@ const finiteNumber = value => {
 const isWidgetShortcutEditableTarget = target => {
     const ElementClass = globalThis.Element
     return ElementClass && target instanceof ElementClass && Boolean(target.closest(WIDGET_SHORTCUT_EDITABLE_SELECTOR))
+}
+
+/**
+ * Check whether replay camera preparation owns the arrow keys.
+ *
+ * @returns {boolean} Whether replay camera preparation is active.
+ */
+const isReplayCameraPreparationActive = () => {
+    const video = lgs.stores.ui?.video
+    const replay = lgs.stores.replay
+    const replayPlaybackActive = Boolean(replay?.playing || replay?.paused)
+    if (replayPlaybackActive) {
+        return false
+    }
+
+    const videoPreparationActive = video?.editing === true
+        && !video.preRecording
+        && !video.recording
+        && !video.snapshot
+        && !video.finalizing
+    const replayDrawerOpen = lgs.stores.ui?.drawers?.open === REPLAY_DRAWER
+    return videoPreparationActive || replayDrawerOpen
+}
+
+/**
+ * Normalize a native or legacy arrow-key event for replay camera preparation.
+ *
+ * @param {KeyboardEvent} event - Browser keyboard event.
+ * @returns {string|null} Canonical arrow key or null when unrelated.
+ */
+const replayCameraArrowKeyFrom = event => {
+    const supportedKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
+    if (supportedKeys.includes(event?.key)) {
+        return event.key
+    }
+    if (supportedKeys.includes(event?.code)) {
+        return event.code
+    }
+
+    return {
+        37: 'ArrowLeft',
+        38: 'ArrowUp',
+        39: 'ArrowRight',
+        40: 'ArrowDown',
+    }[event?.keyCode] ?? null
 }
 
 const mapTargetHeight = value => {
@@ -174,17 +224,27 @@ const resolveMapCenterTarget = () => {
 
 const resolvePanoramaFocus = () => {
     const sceneTarget = __.ui.sceneManager?.target
-    const explicitSceneTarget = normalizedFocusPoint(explicitTargetOf(sceneTarget))
+    const cameraTarget = lgs.stores.main.components.camera.target
+    const explicitTarget = explicitTargetOf(sceneTarget)
+    const scenePoint = normalizedFocusPoint(explicitTarget)
+        ?? normalizedFocusPoint(cameraTarget)
+    const explicitSceneTarget = explicitTarget && scenePoint
+        ? {
+            ...scenePoint,
+            element: explicitTarget.element,
+            id:      explicitTarget.id,
+            slug:    explicitTarget.slug ?? explicitTarget.id,
+        }
+        : null
     const currentPoiTarget = normalizedFocusPoint(resolveCurrentPoiTarget())
     const centerTarget = resolveMapCenterTarget()
-    const cameraTarget = lgs.stores.main.components.camera.target
     const rotateTarget = lgs.stores.ui.mainUI.rotate.target
     const panoramaTarget = lgs.stores.ui.mainUI.panorama.target
 
     return [
         currentPoiTarget,
-        centerTarget,
         explicitSceneTarget,
+        centerTarget,
         panoramaTarget,
         rotateTarget,
         cameraTarget,
@@ -356,8 +416,8 @@ const toggleRotation = () => {
             return false
         }
 
-        const settingsTarget = centerTarget ? target : (sceneTarget ?? target)
-        const rotationSettings = getOrbitSettings(settingsTarget, 'rotation')
+        const focusTarget = sceneTarget ?? target
+        const rotationSettings = getOrbitSettings(focusTarget, 'rotation', rotate)
         setOrbitStoreSettings(rotate, rotationSettings)
         await __.ui.sceneManager.focus(target, {
             direction:  rotationSettings.direction,
@@ -367,7 +427,7 @@ const toggleRotation = () => {
             preserveView: true,
             rotate:   true,
             rpm:      rotationSettings.rpm,
-            target,
+            target: focusTarget,
         })
         return true
     })()
@@ -399,7 +459,7 @@ const togglePanorama = () => {
 
         const storedPanorama = {
             ...(focusPoint.panorama ?? {}),
-            ...getOrbitSettings(focusPoint, 'panorama'),
+            ...getOrbitSettings(focusPoint, 'panorama', panorama),
         }
 
         panorama.visible = true
@@ -474,6 +534,22 @@ const selectedWidgetContext = () => {
     }
 
     return {config, element, widgetId}
+}
+
+const isTimelineKeyboardZoomTarget = event => {
+    if (!TIMELINE_ARROW_KEYS.includes(event?.key)) {
+        return false
+    }
+    if (!lgs.stores?.ui?.widget) {
+        return false
+    }
+    const path = event?.composedPath?.() ?? []
+    if (path.some(target => target?.localName === 'lgs1920-timeline')) {
+        return true
+    }
+
+    const context = selectedWidgetContext()
+    return Boolean(context?.element?.querySelector?.('lgs1920-timeline[data-keyboard-zoom-active]'))
 }
 
 const widgetBoundsRect = config => (config.boundsContainer ?? config.container ?? lgs.canvas)?.getBoundingClientRect?.() ?? null
@@ -657,6 +733,54 @@ const widgetKeyboardShortcutAction = event => {
     return null
 }
 
+/**
+ * Build the replay-camera keyboard action when the Cesium map owns focus.
+ *
+ * @param {KeyboardEvent} event - Browser keyboard event.
+ * @returns {Function|null} Replay action, no-op blocker, or null when unrelated.
+ */
+const replayCameraKeyboardAction = event => {
+    const key = replayCameraArrowKeyFrom(event)
+    if (!key
+        || event.altKey
+        || event.ctrlKey
+        || event.metaKey
+        || event.shiftKey
+        || hasActiveAppShortcutBlocker()) {
+        return null
+    }
+
+    if (!isReplayCameraPreparationActive()) {
+        return null
+    }
+
+    const replaySettings = lgs.settings?.ui?.replay
+    if (!replaySettings?.camera) {
+        return () => {
+        }
+    }
+
+    const nextCamera = replayCameraSettingsFromArrowKey(replaySettings.camera, key)
+    if (!nextCamera) {
+        return () => {
+        }
+    }
+
+    return () => {
+        lgs.settings.ui.replay.camera = nextCamera
+        if (lgs.stores.replay) {
+            lgs.stores.replay.camera = nextCamera
+            lgs.stores.replay.cameraUpdateSource = 'keyboard'
+            lgs.stores.replay.cameraUserAdjusted = true
+        }
+        return __.ui.replay?.refreshCamera?.({
+            preparation:        true,
+            suppressMoveEvents: true,
+            source:             'keyboard',
+        })
+    }
+}
+
 const installWidgetKeyboardShortcuts = () => {
     const target = APP_SHORTCUT_TARGET()
 
@@ -666,7 +790,9 @@ const installWidgetKeyboardShortcuts = () => {
     }
 
     const listener = event => {
-        const action = widgetKeyboardShortcutAction(event)
+        const action = isTimelineKeyboardZoomTarget(event)
+            ? null
+            : replayCameraKeyboardAction(event) ?? widgetKeyboardShortcutAction(event)
 
         if (!action) {
             return

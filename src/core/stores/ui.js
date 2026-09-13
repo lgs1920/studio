@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2025-06-30
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,6 +34,8 @@ export const ui = {
         over:                false,
         action:              null,
         entity:              null,
+        options:             null,
+        navigation:          null,
         suppressFocusOnOpen: false,
     },
 
@@ -87,7 +89,9 @@ export const ui = {
         captureMode: 'speed',
         url:     null,
         editing:         false,
+        timelinePreviewActive: false,
         recording:       false,
+        recordingHQ:     false,
         preRecording: false,
         snapshot: false,
         paused:          false,
@@ -107,25 +111,6 @@ export const ui = {
             forceEven: true,
             id:        'video-crop-zone',
         },
-        conversion: {
-            videoUrl:          null,
-            convertedVideoUrl: null,
-            isDialogOpen:      false,
-            metadata:          null,
-            finalFilename:     '',
-            duration:          0,
-            convertedTime:     0,
-            doConversion:      false,
-            isConverting:      false,
-            isConverted:       false,
-            inputFormat:       null,
-            progress:          {
-                percentage: 0,
-                time:       0,
-
-            },
-            errorMessage:      null,
-        },
     },
 
     widget: {
@@ -135,6 +120,18 @@ export const ui = {
         list:    new proxyMap(),
         cache: new proxyMap(),
         restrictions: new proxyMap(),
+        docked: {
+            id:   null,
+            size: 320,
+        },
+        undocked: {
+            id:   null,
+            mode: null,
+        },
+        reattachSelection: {
+            id:      null,
+            request: 0,
+        },
     },
 
     journeyGroups: {
@@ -146,6 +143,12 @@ export const ui = {
     appUpdate: {
         isInstallPromptAvailable: false,
         isUpdateAvailable:        false,
+        isUpdateApplying:         false,
+        updateApplyError:         null,
+        isAutomaticUpdateInProgress: false,
+        isUpdateCheckPending:     false,
+        automaticUpdateError:     null,
+        tag:                      null,
         version:                  null,
         build:                    null,
         installOutcome:           null,

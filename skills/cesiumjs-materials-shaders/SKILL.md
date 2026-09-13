@@ -4,7 +4,12 @@ description: "CesiumJS materials and post-processing — Material, Fabric JSON, 
 ---
 # CesiumJS Materials, Shaders & Post-Processing
 
-Version baseline: CesiumJS 1.143 (July 2026). All imports use ES module style.
+## User intent discipline
+
+For Studio work, follow the autonomy and approval rules in [PROJECT_RULES.md](../../PROJECT_RULES.md#1-core-directives). Preserve the task-specific safeguards below.
+
+
+Version baseline: CesiumJS 1.144 (August 2026). All imports use ES module style.
 
 ## Material System (Fabric JSON)
 

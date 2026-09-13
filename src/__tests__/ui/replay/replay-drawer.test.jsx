@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-01
- * Last modified: 2026-06-01
+ * Created on: 2026-06-02
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,8 @@ import { useState }                                        from 'react'
 import { REPLAY_DRAWER }                               from '@Core/constants'
 import {
     defaultJourneyReplaySettings, REPLAY_CAMERA_PRESET_ULTRA_SMOOTH, REPLAY_MARKER_MODE_HYSTERESIS,
-    REPLAY_EFFECT_GLOW, REPLAY_EFFECT_NONE, REPLAY_EFFECT_NEON, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
+    REPLAY_EFFECT_GLOW, REPLAY_EFFECT_NONE, REPLAY_EFFECT_NEON,
+    REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE, REPLAY_READINESS_POLICY_ADAPTIVE,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { createJourneyReplayClipInstance }                          from '@Core/ui/replay/JourneyReplayClips'
 import { JourneyReplayDrawer }                                from '@Components/JourneyReplay/JourneyReplayDrawer'
@@ -38,6 +39,25 @@ vi.mock('@Components/JourneyReplay/JourneyReplayProgressBar', () => ({
 
 vi.mock('@Components/MainUI/LGSScrollbars', () => ({
     LGSScrollbars: ({children}) => <div>{children}</div>,
+}))
+
+vi.mock('@Components/PopupAnchor', () => ({
+    PopupAnchor: ({id}) => <hr id={id}/>,
+}))
+
+vi.mock('@Components/PopupDrawer', () => ({
+    PopupDrawer: ({active, anchor, children, header, headerActions, className, popupProps}) => active ? (
+        <div
+            data-testid="replay-advanced-camera-popup"
+            data-anchor={anchor}
+            data-placement={popupProps?.placement}
+            className={className}
+        >
+            {header}
+            {headerActions}
+            {children}
+        </div>
+    ) : null,
 }))
 
 vi.mock('@Components/PanelsActions', () => ({
@@ -64,7 +84,7 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => {
     const WaCard = ({children, ...props}) => <div {...props}>{children}</div>
     const WaColorPicker = props => <input data-testid={props['aria-label'] ?? 'color'} {...props} />
     const WaDivider = () => <hr/>
-    const WaIcon = () => <span/>
+    const WaIcon = ({name, ...props}) => <span data-icon={name} {...props}/>
     const WaDetails = ({children, ...props}) => <div {...props}>{children}</div>
     const WaNumberInput = ({label, onInput, value, ...props}) => (
         <label>
@@ -273,34 +293,6 @@ describe('JourneyReplayDrawer', () => {
                     refreshCamera: vi.fn(),
                     stop:          vi.fn(),
                     setHideOtherJourneys: vi.fn(),
-                    getAnglePreviewPoiIds: vi.fn(() => {
-                        const journey = globalThis.lgs?.stores?.main?.theJourney
-                        const tracks = Array.from(journey?.tracks?.values?.() ?? [])
-                        if (tracks.length === 0) {
-                            return []
-                        }
-
-                        return Array.from(new Set([
-                            tracks[0]?.flags?.start,
-                            tracks[tracks.length - 1]?.flags?.stop,
-                        ].filter(Boolean)))
-                    }),
-                    showCameraAnglePreview: vi.fn(() => {
-                        for (const poiId of globalThis.__.ui.replay.getAnglePreviewPoiIds()) {
-                            const poi = poiEntities.get(poiId)
-                            if (poi) {
-                                poi.show = false
-                            }
-                        }
-                    }),
-                    hideCameraAnglePreview: vi.fn(() => {
-                        for (const poiId of globalThis.__.ui.replay.getAnglePreviewPoiIds()) {
-                            const poi = poiEntities.get(poiId)
-                            if (poi) {
-                                poi.show = true
-                            }
-                        }
-                    }),
                 },
             },
         }
@@ -311,6 +303,16 @@ describe('JourneyReplayDrawer', () => {
         globalThis.lgs = undefined
         globalThis.__ = undefined
         vi.unstubAllGlobals()
+    })
+
+    it('keeps the drawer limited to Replay configuration', () => {
+        const view = render(<JourneyReplayDrawer/>)
+
+        expect(document.body.querySelector('.replay-drawer-title [data-icon="sliders"]')).not.toBeNull()
+        expect(view.queryByTestId('replay-progress')).toBeNull()
+        expect(view.queryByText('Sync with Video')).toBeNull()
+        expect(view.queryByRole('button', {name: 'Start Journey Replay'})).toBeNull()
+        expect(view.queryByRole('button', {name: 'Pause Journey Replay'})).toBeNull()
     })
 
     it('commits pitch edits while typing', async () => {
@@ -412,8 +414,16 @@ describe('JourneyReplayDrawer', () => {
         globalThis.lgs.settings.ui.replay.camera.headingOffset = 15
 
         const view = render(<JourneyReplayDrawer/>)
+        fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
 
-        expect(view.getByText('Advanced camera setup')).toBeTruthy()
+        expect(view.getByTestId('replay-advanced-camera-popup').getAttribute('data-anchor')).toBe(
+            'replay-advanced-camera-popup-anchor',
+        )
+        expect(view.getByTestId('replay-advanced-camera-popup').getAttribute('data-placement')).toBe('bottom')
+        const setupButton = view.getByTestId('panel-actions').querySelector('button')
+        expect(setupButton).toBeTruthy()
+        const setupIcon = setupButton.querySelector('[data-icon="camera-sliders"]')
+        expect(setupIcon).toBeTruthy()
         expect(view.getByLabelText('Camera position')).toBeTruthy()
         expect(view.getByLabelText('Camera angle')).toBeTruthy()
         expect(view.getByLabelText('Camera angle').value).toBe('-15')
@@ -422,15 +432,101 @@ describe('JourneyReplayDrawer', () => {
         expect(view.getByLabelText('Pitch (deg)')).toBeTruthy()
         expect(view.getByLabelText('Heading (deg)')).toBeTruthy()
         expect(view.getByLabelText('Camera feel')).toBeTruthy()
+        expect(view.getByLabelText('Wait for visible tiles')).toBeTruthy()
+        expect(view.getByLabelText('Readiness policy')).toBeTruthy()
+        expect(view.getByLabelText('Camera tile preloading')).toBeTruthy()
         expect(view.getByRole('heading', {name: 'Position', level: 4})).toBeTruthy()
         expect(view.getByRole('heading', {name: 'Framing', level: 4})).toBeTruthy()
         expect(view.getByRole('heading', {name: 'Motion', level: 4})).toBeTruthy()
         expect(view.getByRole('heading', {name: 'Recenter', level: 4})).toBeTruthy()
         expect(view.getByRole('heading', {name: 'Diagnostics', level: 4})).toBeTruthy()
+
+        fireEvent.click(view.getByTestId('panel-actions').querySelector('button'))
+        expect(view.queryByTestId('replay-advanced-camera-popup')).toBeNull()
+    })
+
+    it('persists readiness and camera preloading controls', async () => {
+        const view = render(<JourneyReplayDrawer/>)
+        fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
+        const readinessSwitch = view.getByLabelText('Wait for visible tiles')
+        const readinessPolicy = view.getByLabelText('Readiness policy')
+        const tilePreloading = view.getByLabelText('Camera tile preloading')
+        expect(readinessPolicy.value).toBe(REPLAY_READINESS_POLICY_ADAPTIVE)
+        expect(tilePreloading.value).toBe(String(defaultJourneyReplaySettings().camera.playback.tilePreloadHorizonMs))
+
+        fireEvent.click(readinessSwitch)
+        await waitFor(() => {
+            expect(view.queryByLabelText('Readiness policy')).toBeNull()
+            expect(view.queryByLabelText('Camera tile preloading')).toBeNull()
+        })
+
+        fireEvent.click(readinessSwitch)
+        await waitFor(() => {
+            expect(view.getByLabelText('Readiness policy')).toBeTruthy()
+            expect(view.getByLabelText('Camera tile preloading')).toBeTruthy()
+        })
+        fireEvent.change(view.getByLabelText('Readiness policy'), {target: {value: 'strict'}})
+        fireEvent.change(view.getByLabelText('Camera tile preloading'), {target: {value: '2000'}})
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.replay.readiness.enabled).toBe(true)
+            expect(globalThis.lgs.settings.ui.replay.readiness.policy).toBe('strict')
+            expect(globalThis.lgs.stores.replay.readiness.policy).toBe('strict')
+            expect(globalThis.lgs.settings.ui.replay.camera.playback.tilePreloadHorizonMs).toBe(2000)
+            expect(globalThis.lgs.stores.replay.camera.playback.tilePreloadHorizonMs).toBe(2000)
+            expect(view.getByLabelText('Readiness policy').value).toBe('strict')
+            expect(view.getByLabelText('Camera tile preloading').value).toBe('2000')
+        })
+    })
+
+    it('styles custom readiness wait fields with hints', async () => {
+        const view = render(<JourneyReplayDrawer/>)
+        fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
+
+        fireEvent.change(view.getByLabelText('Readiness policy'), {target: {value: 'custom'}})
+
+        await waitFor(() => {
+            const movingWait = view.getByLabelText('Moving wait (ms)')
+            const settledWait = view.getByLabelText('Settled wait (ms)')
+            const waitFields = movingWait.closest('.replay-style-field-grid')
+
+            expect(movingWait.className).toContain('half-width')
+            expect(movingWait.getAttribute('hint')).toBe('Maximum tile wait while the camera is moving.')
+            expect(settledWait.className).toContain('half-width')
+            expect(settledWait.getAttribute('hint')).toBe('Maximum tile wait after the camera settles.')
+            expect(waitFields.className).toContain('is-single')
+        })
+    })
+
+    it('turns the master switch off when both tile features are off and restores defaults when re-enabled', async () => {
+        const view = render(<JourneyReplayDrawer/>)
+        fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
+        const readinessSwitch = view.getByLabelText('Wait for visible tiles')
+
+        fireEvent.change(view.getByLabelText('Readiness policy'), {target: {value: 'off'}})
+        fireEvent.change(view.getByLabelText('Camera tile preloading'), {target: {value: '0'}})
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.replay.readiness.enabled).toBe(false)
+            expect(readinessSwitch.checked).toBe(false)
+        })
+
+        fireEvent.click(readinessSwitch)
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.replay.readiness.enabled).toBe(true)
+            expect(globalThis.lgs.settings.ui.replay.readiness.policy).toBe(REPLAY_READINESS_POLICY_ADAPTIVE)
+            expect(globalThis.lgs.settings.ui.replay.camera.playback.tilePreloadHorizonMs).toBe(1000)
+            expect(view.getByLabelText('Readiness policy').value).toBe(REPLAY_READINESS_POLICY_ADAPTIVE)
+            expect(view.getByLabelText('Camera tile preloading').value).toBe(String(
+                defaultJourneyReplaySettings().camera.playback.tilePreloadHorizonMs,
+            ))
+        })
     })
 
     it('shows and persists capability-specific camera sensitivities', async () => {
         const view = render(<JourneyReplayDrawer/>)
+        fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
 
         expect(view.getAllByRole('slider')).toHaveLength(3)
         expect(view.getByText('Add drift')).toBeTruthy()
@@ -454,13 +550,9 @@ describe('JourneyReplayDrawer', () => {
         })
     })
 
-    it('shows the debug camera switch only for video-linked replay and keeps it disabled by default', async () => {
+    it('shows the debug camera switch as a Replay setting and keeps it disabled by default', async () => {
         const view = render(<JourneyReplayDrawer/>)
-
-        expect(view.queryByLabelText('Debug camera')).toBeNull()
-
-        globalThis.lgs.settings.ui.replay.recordingSync = true
-        globalThis.lgs.stores.replay.recordingSync = true
+        fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
 
         const debugSwitch = await view.findByLabelText('Debug camera')
         expect(debugSwitch.checked).toBe(false)
@@ -473,7 +565,7 @@ describe('JourneyReplayDrawer', () => {
         })
     })
 
-    it('inverts the camera angle slider without showing the runtime preview while editing', async () => {
+    it('applies the camera angle slider without mutating the Cesium scene', async () => {
         const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
         globalThis.lgs.stores.replay.camera.positionMode = 'behind'
         globalThis.lgs.settings.ui.replay.camera.positionMode = 'behind'
@@ -508,21 +600,21 @@ describe('JourneyReplayDrawer', () => {
         const angleInput = view.getByLabelText('Camera angle')
 
         fireEvent.focus(angleInput)
-        expect(globalThis.__.ui.replay.showCameraAnglePreview).not.toHaveBeenCalled()
         expect(globalThis.lgs.viewer.entities.getById('journey-start').show).toBe(true)
         expect(globalThis.lgs.viewer.entities.getById('journey-stop').show).toBe(true)
+        globalThis.__.ui.replay.refreshCamera.mockClear()
         fireEvent.input(angleInput, {target: {value: '20'}})
+        fireEvent.input(angleInput, {target: {value: '40'}})
 
         await waitFor(() => {
-            expect(globalThis.lgs.settings.ui.replay.camera.headingOffset).toBe(-20)
-            expect(globalThis.lgs.stores.replay.camera.headingOffset).toBe(-20)
+            expect(globalThis.lgs.settings.ui.replay.camera.headingOffset).toBe(-40)
+            expect(globalThis.lgs.stores.replay.camera.headingOffset).toBe(-40)
         })
+        expect(globalThis.__.ui.replay.refreshCamera).toHaveBeenCalledTimes(2)
 
-        expect(globalThis.__.ui.replay.showCameraAnglePreview).not.toHaveBeenCalled()
         expect(setTimeoutSpy).not.toHaveBeenCalledWith(expect.any(Function), 5000)
 
         fireEvent.blur(angleInput)
-        expect(globalThis.__.ui.replay.hideCameraAnglePreview).not.toHaveBeenCalled()
         expect(globalThis.lgs.viewer.entities.getById('journey-start').show).toBe(true)
         expect(globalThis.lgs.viewer.entities.getById('journey-stop').show).toBe(true)
         setTimeoutSpy.mockRestore()
@@ -751,6 +843,7 @@ describe('JourneyReplayDrawer', () => {
         globalThis.lgs.settings.ui.replay.marker.mode = REPLAY_MARKER_MODE_HYSTERESIS
 
         const view = render(<JourneyReplayDrawer/>)
+        fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
         const presetSelect = view.getByLabelText('Camera feel')
 
         fireEvent.change(presetSelect, {target: {value: REPLAY_CAMERA_PRESET_ULTRA_SMOOTH}})
@@ -775,6 +868,7 @@ describe('JourneyReplayDrawer', () => {
             expect(globalThis.lgs.stores.replay.hideOtherJourneys).toBe(true)
             expect(__.ui.replay.setHideOtherJourneys).toHaveBeenCalledWith(true)
             expect(globalThis.lgs.settings.ui.replay.hideOtherJourneys).toBe(true)
+            expect(hideOtherJourneysSwitch.checked).toBe(true)
         })
     })
 

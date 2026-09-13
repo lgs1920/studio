@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-14
- * Last modified: 2026-06-14
+ * Created on: 2025-12-13
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,6 +25,8 @@ import { ProfileChart }                                                         
 import './style.css'
 
 const PROFILE_WIDGET_CONTEXT_FALLBACK = {widgetEditor: false, widgetsBoard: ''}
+const PROFILE_WIDGET_FREE_RATIO = {value: '0x0', aspectRatio: 0, locked: false}
+const PROFILE_WIDGET_DEFAULT_DIMENSIONS = {width: 500, height: 200}
 
 /**
  * The Profile Widget component displays the elevation profile chart and handles widget configuration.
@@ -127,13 +129,19 @@ export const ProfileWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
                 canRemove:   true,
                 canPosition: true,
                 canSnapshot: true,
+                canDetach:   true,
             },
             top:         '100%',
             left:        '0px',
             type:        LGS_VISUAL_WIDGET,
             group:        widgetsBoard === SCENE_WIDGETS_BOARD ? SCENE_WIDGETS : JOURNEY_WIDGETS,
             attachTo:    'bottom',
-            scalable:    true,
+            width:       PROFILE_WIDGET_DEFAULT_DIMENSIONS.width,
+            height:      PROFILE_WIDGET_DEFAULT_DIMENSIONS.height,
+            ratio:       PROFILE_WIDGET_FREE_RATIO,
+            constrainResizeToContent: false,
+            resizable:   true,
+            scalable:    false,
             id,
             min:         {width: 150},
             max:         {width: 900},
@@ -157,9 +165,9 @@ export const ProfileWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
             {data &&
                 <ProfileChart data={data}
                               id={id}
-                              height={profile.height}
+                              height="100%"
                               locked={isLocked}
-                              width={profile.width}
+                              width="100%"
                 />
             }
         </Widget>

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-02-20
- * Last modified: 2026-02-20
+ * Created on: 2025-11-07
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -52,7 +52,7 @@ export const WidgetsPanel = ({id, context, groups}) => {
             transient:   true,
             dynamic:     true,
             ttl:         HOUR,
-            margin:      0,
+            margin:      lgs.gutter?.xs ?? 5,
         }
     }, [])
 

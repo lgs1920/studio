@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: replay-render-mode-contract.test.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-28
+ * Last modified: 2026-09-13
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import {describe, expect, it} from 'vitest'
 import {
     createReplayRenderContext, createReplayRenderModeContract, REPLAY_RENDER_MODE_DRAFT,
@@ -42,6 +58,8 @@ describe('Replay render mode contract', () => {
         expect(draft.cameraPose).toEqual(hq.cameraPose)
         expect(draft.cameraPose.roll).toBeCloseTo(0.35, 8)
         expect(draft.trackPath).toEqual(hq.trackPath)
+        expect(draft.trackPath).toBe(common.trackPath)
+        expect(hq.trackPath).toBe(common.trackPath)
         expect(draft.renderSpec).toEqual(hq.renderSpec)
         expect(draft.initialCameraState).toEqual(hq.initialCameraState)
         expect(draft.scheduling).toEqual({realtime: true, frameByFrame: false})
@@ -105,5 +123,8 @@ describe('Replay render mode contract', () => {
         }))
         expect(contract.logicalFrame).toEqual(expect.objectContaining(logicalFrame))
         expect(store.dynamicFrameState.renderContract).toEqual(contract)
+        expect(store.dynamicFrameState.intentResolved).toBe(true)
+        expect(store.resolvedFrameState).toBe(store.dynamicFrameState)
+        expect(store.resolvedFrameState.intent.scene.cameraPose).toEqual(logicalFrame.cameraPose)
     })
 })

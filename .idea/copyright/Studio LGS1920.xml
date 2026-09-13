@@ -1,0 +1,6 @@
+<component name="CopyrightManager">
+  <copyright>
+    <option name="notice" value="&#10;This file is part of the LGS1920/&amp;#36;project.name project.&#10; &#10;File: &amp;#36;file.fileName&#10;&#10;Author : LGS1920 Team&#10;email: studio@lgs1920.fr&#10;&#10;Created on: &amp;#36;today.format(&quot;yyyy-MM-dd&quot;)&#10;Last modified: &amp;#36;file.lastModified.format(&quot;yyyy-MM-dd&quot;)&#10;&#10;&#10;Copyright © &amp;#36;today.year LGS1920" />
+    <option name="myName" value="Studio LGS1920" />
+  </copyright>
+</component>

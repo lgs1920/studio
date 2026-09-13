@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-18
- * Last modified: 2026-06-18
+ * Created on: 2026-04-14
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -46,7 +46,7 @@ export const TypefaceElement = ({id}) => {
             className="lgs--text-widget-typeface-trigger"
             onChange={handleFontChange}
         >
-            <WaIcon slot="start" variant="regular" name="text"/>
+            <WaIcon slot="start" variant="regular" name="font"/>
             {WIDGET_FONT_FAMILIES.map(font => (
                 <WaOption key={font} value={font.replace(/\s/g, '_')}>
                     <span style={{fontFamily: font === 'System' ? WIDGET_SYSTEM_FONT_STACK : font}}>Typeface</span>

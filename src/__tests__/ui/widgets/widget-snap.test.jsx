@@ -1,21 +1,41 @@
-import { cleanup, render, waitFor } from '@testing-library/react'
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: widget-snap.test.jsx
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-18
+ * Last modified: 2026-09-13
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+import { act, cleanup, render, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 import { proxyMap } from 'valtio/utils'
 import { LGS_TOOLBAR, LGS_VISUAL_WIDGET } from '@Core/constants'
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 
 const moveableState = vi.hoisted(() => ({
     props: [],
 }))
 
+const widgetCanvasState = vi.hoisted(() => ({
+    init:      () => Promise.resolve(),
+    instances: [],
+}))
+
 vi.mock('react-moveable', () => ({
-    default: vi.fn((props) => {
+    default: forwardRef((props, ref) => {
+        useImperativeHandle(ref, () => ({
+            updateRect: vi.fn(),
+        }), [])
         moveableState.props.push(props)
-        if (props.ref && typeof props.ref === 'object') {
-            props.ref.current = {
-                updateRect: vi.fn(),
-            }
-        }
         return <div data-testid="moveable"/>
     }),
 }))
@@ -24,9 +44,25 @@ vi.mock('@Components/MainUI/context-menu/usePointerInteractions', () => ({
     usePointerInteractions: () => () => {},
 }))
 
-vi.mock('@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas', () => ({
-    Widget2Canvas: vi.fn(),
-}))
+vi.mock('@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas', () => {
+    class Widget2CanvasMock {
+        /**
+         * Creates a controllable widget canvas mirror for lifecycle tests.
+         */
+        constructor() {
+            const canvas = document.createElement('canvas')
+            const instance = {
+                destroy:   vi.fn(),
+                getCanvas: vi.fn(() => canvas),
+                init:      vi.fn(() => widgetCanvasState.init()),
+            }
+            widgetCanvasState.instances.push(instance)
+            return instance
+        }
+    }
+
+    return {Widget2Canvas: vi.fn(Widget2CanvasMock)}
+})
 
 vi.mock('@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder', () => ({
     ScreenMediaRecorder: {
@@ -75,6 +111,7 @@ const installGlobals = ({grid = {enabled: false, size: 30, snap: true}} = {}) =>
             },
         },
         stores: {
+            replay: proxy({recordingSync: false}),
             ui: proxy({
                 contextMenu: {
                     visible:  false,
@@ -126,6 +163,10 @@ const installGlobals = ({grid = {enabled: false, size: 30, snap: true}} = {}) =>
                     ratio: {locked: false},
                 })),
                 manageControlBox: vi.fn(),
+                onDrag: vi.fn(),
+                onDragEnd: vi.fn(),
+                onDragStart: vi.fn(),
+                onRotate: vi.fn(),
                 refreshEditorPreviewSnapshot: vi.fn(),
                 resolveWidgetsBoardContainer: vi.fn(() => canvas),
                 resolveWidgetsBoardReferenceContainer: vi.fn(() => canvas),
@@ -133,8 +174,14 @@ const installGlobals = ({grid = {enabled: false, size: 30, snap: true}} = {}) =>
                 retrieveElementId: vi.fn(element => element?.id),
                 setBoundStatus: vi.fn(),
                 setConfig: vi.fn(),
-                setupElement: vi.fn(async (element, config) => {
+                setupElement: vi.fn(async (element, config, setBounds, setPosition, moveable) => {
                     element.id = config.id
+                    if (moveable) {
+                        moveable.current = {
+                            ...(moveable.current ?? {}),
+                            target: element,
+                        }
+                    }
                     return true
                 }),
             },
@@ -142,14 +189,14 @@ const installGlobals = ({grid = {enabled: false, size: 30, snap: true}} = {}) =>
     }
 }
 
-const renderWidget = (config) => render(
+const renderWidget = (config, children = <div>content</div>) => render(
     <Widget isVisible={true} config={{
         id:             'snap-widget',
         group:          'test-widgets',
         showControlBox: true,
         ...config,
     }}>
-        <div>content</div>
+        {children}
     </Widget>,
 )
 
@@ -158,6 +205,8 @@ const latestMoveableProps = () => moveableState.props.at(-1)
 describe('Widget snap behavior', () => {
     beforeEach(() => {
         moveableState.props = []
+        widgetCanvasState.init = () => Promise.resolve()
+        widgetCanvasState.instances = []
     })
 
     afterEach(() => {
@@ -185,6 +234,205 @@ describe('Widget snap behavior', () => {
         })
         await waitFor(() => expect(__.ui.widgetManager.retrieveConfig).toHaveBeenCalled())
         expect(__.ui.widgetManager.retrieveConfig.mock.calls[0][1].snappable).toBe(false)
+    })
+
+    it('resolves a configured drag handle inside the widget and falls back safely', () => {
+        installGlobals()
+
+        renderWidget({handle: '.missing-drag-handle'})
+
+        const widgetElement = document.querySelector('.lgs-widget')
+        expect(latestMoveableProps().dragTarget()).toBe(widgetElement)
+    })
+
+    it('selects a widget from a selectable no-drag timeline surface', () => {
+        installGlobals()
+
+        const SelectableTimeline = () => {
+            const elementRef = useRef(null)
+            useEffect(() => {
+                elementRef.current.timeline = {hostInteraction: 'selectable'}
+            }, [])
+            return (
+                <lgs1920-timeline ref={elementRef}>
+                    <div data-testid="timeline-surface"/>
+                </lgs1920-timeline>
+            )
+        }
+        const {container} = renderWidget({type: LGS_VISUAL_WIDGET}, (
+            <SelectableTimeline/>
+        ))
+        const surface = container.querySelector('[data-testid="timeline-surface"]')
+
+        act(() => {
+            surface.dispatchEvent(new MouseEvent('pointerdown', {bubbles: true, composed: true, button: 0}))
+        })
+
+        expect(lgs.stores.ui.widget.current.id).toBe('snap-widget#test')
+    })
+
+    it('selects a neutral widget area before a child stops pointer propagation', () => {
+        installGlobals()
+
+        const BlockingTimeline = () => (
+            <div data-testid="blocking-timeline-surface"
+                 onPointerDown={event => event.stopPropagation()}/>
+        )
+        const {container} = renderWidget({type: LGS_VISUAL_WIDGET, draggable: true, resizable: true}, <BlockingTimeline/>)
+        const surface = container.querySelector('[data-testid="blocking-timeline-surface"]')
+
+        act(() => {
+            surface.dispatchEvent(new MouseEvent('pointerdown', {bubbles: true, composed: true, button: 0}))
+        })
+
+        expect(lgs.stores.ui.widget.current.id).toBe('snap-widget#test')
+        expect(latestMoveableProps().draggable).toBe(true)
+        expect(latestMoveableProps().resizable).toBe(true)
+    })
+
+    it('keeps widget selection and movement local to a no-drag timeline child', () => {
+        installGlobals()
+
+        const NoDragTimelineChild = () => (
+            <div className="lgs-widget-no-drag"
+                 data-testid="no-drag-timeline-child"/>
+        )
+        const {container} = renderWidget({type: LGS_VISUAL_WIDGET, draggable: true, resizable: true}, <NoDragTimelineChild/>)
+        const child = container.querySelector('[data-testid="no-drag-timeline-child"]')
+
+        act(() => {
+            child.dispatchEvent(new MouseEvent('pointerdown', {bubbles: true, composed: true, button: 0}))
+        })
+
+        expect(lgs.stores.ui.widget.current.id).toBeNull()
+        expect(latestMoveableProps().draggable).toBe(true)
+        expect(latestMoveableProps().resizable).toBe(true)
+    })
+
+    it('opens the widget context menu from an interactive child surface', () => {
+        installGlobals()
+
+        const {container} = renderWidget({type: LGS_VISUAL_WIDGET}, <div data-testid="widget-surface"/>)
+        const surface = container.querySelector('[data-testid="widget-surface"]')
+
+        act(() => {
+            surface.dispatchEvent(new MouseEvent('contextmenu', {
+                bubbles: true,
+                cancelable: true,
+                composed: true,
+                clientX: 24,
+                clientY: 36,
+            }))
+        })
+
+        expect(lgs.stores.ui.contextMenu).toMatchObject({
+            visible:  true,
+            type:     'widget',
+            targetId: 'snap-widget#test',
+            position: {x: 24, y: 36},
+        })
+    })
+
+    it('keeps the widget context menu closed from a no-drag child of a selectable timeline', () => {
+        installGlobals()
+
+        const SelectableTimeline = () => (
+            <div data-widget-selectable="">
+                <div className="lgs-widget-no-drag"
+                     data-testid="timeline-clip"/>
+            </div>
+        )
+        const {container} = renderWidget({type: LGS_VISUAL_WIDGET}, <SelectableTimeline/>)
+        const clip = container.querySelector('[data-testid="timeline-clip"]')
+
+        act(() => {
+            clip.dispatchEvent(new MouseEvent('contextmenu', {
+                bubbles: true,
+                cancelable: true,
+                composed: true,
+                clientX: 40,
+                clientY: 52,
+            }))
+        })
+
+        expect(lgs.stores.ui.contextMenu.visible).toBe(false)
+    })
+
+    it('does not open the widget menu for a no-drag element inside a shadow tree', async () => {
+        installGlobals()
+        const ShadowClip = () => {
+            const hostRef = useRef(null)
+            useEffect(() => {
+                const clip = document.createElement('div')
+                clip.className = 'lgs-widget-no-drag'
+                clip.dataset.testid = 'shadow-clip'
+                hostRef.current.attachShadow({mode: 'open'}).append(clip)
+            }, [])
+            return <div ref={hostRef} data-testid="shadow-clip-host"/>
+        }
+
+        renderWidget({type: LGS_VISUAL_WIDGET}, <ShadowClip/>)
+        await waitFor(() => expect(document.querySelector('[data-testid="shadow-clip-host"]')?.shadowRoot?.querySelector('[data-testid="shadow-clip"]')).not.toBeNull())
+
+        const clip = document.querySelector('[data-testid="shadow-clip-host"]').shadowRoot.querySelector('[data-testid="shadow-clip"]')
+        act(() => {
+            clip.dispatchEvent(new MouseEvent('contextmenu', {bubbles: true, cancelable: true, composed: true}))
+        })
+
+        expect(lgs.stores.ui.contextMenu.visible).toBe(false)
+    })
+
+    it('notifies child content when widget dragging starts and ends', async () => {
+        installGlobals()
+        const onDragStart = vi.fn()
+        const onDragEnd = vi.fn()
+        const childRef = {current: {onDragStart, onDragEnd}}
+
+        render(
+            <Widget
+                isVisible={true}
+                childRef={childRef}
+                config={{
+                    id:             'snap-widget',
+                    group:          'test-widgets',
+                    showControlBox: true,
+                }}
+            >
+                <div>content</div>
+            </Widget>,
+        )
+
+        const dragStartEvent = {
+            composedPath: () => [],
+            inputEvent: {
+                clientX:      0,
+                clientY:      0,
+                composedPath: () => [],
+                pointerType:  'mouse',
+            },
+            stopDrag: vi.fn(),
+        }
+        const dragEndEvent = {target: document.createElement('div')}
+
+        await act(async () => latestMoveableProps().onDragStart(dragStartEvent))
+        await act(async () => latestMoveableProps().onDragEnd(dragEndEvent))
+
+        expect(onDragStart).toHaveBeenCalledWith(dragStartEvent)
+        expect(onDragEnd).toHaveBeenCalledWith(dragEndEvent)
+    })
+
+    it('keeps rotation updates continuous for every widget preview', async () => {
+        installGlobals()
+
+        renderWidget({type: LGS_VISUAL_WIDGET, rotatable: true})
+
+        await waitFor(() => expect(__.ui.widgetManager.retrieveConfig).toHaveBeenCalled())
+
+        expect(latestMoveableProps().throttleRotate).toBe(0)
+
+        latestMoveableProps().onRotate({rotate: 12.345})
+
+        expect(lgs.stores.ui.widget.current.rotate).toBe(12.345)
     })
 
     it('keeps center snap enabled for visual widgets when grid snap is disabled', async () => {
@@ -281,6 +529,155 @@ describe('Widget snap behavior', () => {
         })
 
         expect(container.querySelector('.lgs-widget-container')?.style.pointerEvents).toBe('none')
+        expect(container.querySelector('.lgs-widget')?.classList.contains('crop-pass-through')).toBe(true)
+    })
+
+    it('keeps an unselected cropper transparent while editing the video frame', () => {
+        installGlobals()
+
+        const {container} = renderWidget({
+            id:        'video-crop-zone',
+            type:      LGS_VISUAL_WIDGET,
+            isCropper: true,
+        })
+
+        expect(container.querySelector('.lgs-widget-container')?.style.pointerEvents).toBe('none')
+        expect(container.querySelector('.lgs-widget')?.classList.contains('crop-pass-through')).toBe(true)
+        expect(latestMoveableProps().style).toEqual({opacity: 0, pointerEvents: 'none'})
+    })
+
+    it('locks visual widget input only during synchronized recording', () => {
+        installGlobals()
+        lgs.stores.ui.video.preRecording = true
+
+        const view = renderWidget({type: LGS_VISUAL_WIDGET})
+
+        expect(view.container.querySelector('.lgs-widget')?.classList.contains('recording-locked')).toBe(false)
+
+        lgs.stores.ui.video.preRecording = false
+        lgs.stores.ui.video.recording = true
+        view.rerender(
+            <Widget isVisible={true} config={{
+                id:             'snap-widget',
+                group:          'test-widgets',
+                showControlBox: true,
+                type:           LGS_VISUAL_WIDGET,
+            }}>
+                <div>content</div>
+            </Widget>,
+        )
+        expect(view.container.querySelector('.lgs-widget')?.classList.contains('recording-locked')).toBe(false)
+
+        lgs.stores.replay.recordingSync = true
+        view.rerender(
+            <Widget isVisible={true} config={{
+                id:             'snap-widget',
+                group:          'test-widgets',
+                showControlBox: true,
+                type:           LGS_VISUAL_WIDGET,
+            }}>
+                <div>content</div>
+            </Widget>,
+        )
+        expect(view.container.querySelector('.lgs-widget')?.classList.contains('recording-locked')).toBe(true)
+    })
+
+    it('keeps the selected cropper content transparent while preserving its moveable handles', () => {
+        installGlobals()
+        lgs.stores.ui.widget.current = {id: 'video-crop-zone#test', rotate: 0}
+
+        const {container} = renderWidget({
+            id:        'video-crop-zone',
+            type:      LGS_VISUAL_WIDGET,
+            isCropper: true,
+        })
+
+        expect(container.querySelector('.lgs-widget-container')?.style.pointerEvents).toBe('none')
+        expect(container.querySelector('.lgs-widget')?.classList.contains('crop-pass-through')).toBe(true)
+        expect(latestMoveableProps().style).toEqual({opacity: 1, pointerEvents: 'auto'})
+    })
+
+    it('recognizes the cropper base identifier while its runtime identifier is being resolved', () => {
+        installGlobals()
+        lgs.stores.ui.widget.current = {id: 'video-crop-zone', rotate: 0}
+
+        renderWidget({
+            id:        'video-crop-zone',
+            type:      LGS_VISUAL_WIDGET,
+            isCropper: true,
+        })
+
+        expect(latestMoveableProps().style).toEqual({opacity: 1, pointerEvents: 'auto'})
+        expect(latestMoveableProps().renderDirections).toEqual(['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'])
+        expect(latestMoveableProps().zoom).toBe(1)
+    })
+
+    it('selects a cropper when a selection request is received', async () => {
+        installGlobals()
+
+        render(
+            <Widget
+                isVisible={true}
+                selectionRequestKey={1}
+                config={{
+                    id:            'video-crop-zone',
+                    group:         'test-widgets',
+                    showControlBox: true,
+                    type:          LGS_VISUAL_WIDGET,
+                    isCropper:     true,
+                    resizable:     true,
+                }}>
+                <div>content</div>
+            </Widget>,
+        )
+
+        await waitFor(() => expect(lgs.stores.ui.widget.current.id).toBe('video-crop-zone#test'))
+        await waitFor(() => expect(latestMoveableProps().renderDirections).toEqual(['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']))
+        expect(latestMoveableProps().zoom).toBe(1)
+        expect(latestMoveableProps().resizable).toBe(true)
+        expect(__.ui.widgetManager.manageControlBox).toHaveBeenCalled()
+    })
+
+    it('cancels an in-flight canvas mirror initialization when the widget unmounts', async () => {
+        installGlobals()
+        lgs.stores.ui.video.preRecording = true
+
+        let resolveInitialization = null
+        widgetCanvasState.init = () => new Promise(resolve => {
+            resolveInitialization = resolve
+        })
+
+        const {unmount} = renderWidget({
+            type:         LGS_VISUAL_WIDGET,
+            widgetsBoard: 'video-crop-zone',
+        })
+
+        await waitFor(() => expect(widgetCanvasState.instances).toHaveLength(1))
+        const mirror = widgetCanvasState.instances[0]
+
+        unmount()
+        expect(mirror.destroy).toHaveBeenCalledTimes(1)
+
+        resolveInitialization()
+        await waitFor(() => expect(mirror.destroy).toHaveBeenCalledTimes(2))
+        expect(mirror.getCanvas).not.toHaveBeenCalled()
+    })
+
+    it('cleans up a canvas mirror whose asynchronous initialization is aborted', async () => {
+        installGlobals()
+        lgs.stores.ui.video.preRecording = true
+        widgetCanvasState.init = () => Promise.reject(new DOMException('Capture aborted', 'AbortError'))
+
+        renderWidget({
+            type:         LGS_VISUAL_WIDGET,
+            widgetsBoard: 'video-crop-zone',
+        })
+
+        await waitFor(() => expect(widgetCanvasState.instances).toHaveLength(1))
+        const mirror = widgetCanvasState.instances[0]
+        await waitFor(() => expect(mirror.destroy).toHaveBeenCalledTimes(1))
+
+        expect(mirror.getCanvas).not.toHaveBeenCalled()
     })
 
     it('does not snap a visual widget to widgets on another board', async () => {

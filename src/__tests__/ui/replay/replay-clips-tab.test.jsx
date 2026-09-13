@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-06
- * Last modified: 2026-06-06
+ * Created on: 2026-06-07
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -121,6 +121,15 @@ describe('JourneyReplayClipsTab', () => {
         globalThis.lgs = undefined
         globalThis.__replaySortableInstances = []
         vi.unstubAllGlobals()
+    })
+
+    it('uses the requested labels and icons for the built-in clips', () => {
+        const catalog = globalThis.lgs.settings.ui.replay.clips.catalog
+
+        expect(catalog['zoom-out']).toMatchObject({label: 'ZoomOut', icon: 'circle-minus'})
+        expect(catalog['zoom-in']).toMatchObject({label: 'ZoomIn', icon: 'circle-plus'})
+        expect(catalog['take-off']).toMatchObject({label: 'Take off', icon: 'arrow-up-right'})
+        expect(catalog.landing).toMatchObject({label: 'land', icon: 'arrow-down-right'})
     })
 
     it('adds a clip from the add popup and updates the lists', async () => {
@@ -264,6 +273,24 @@ describe('JourneyReplayClipsTab', () => {
         })
     })
 
+    it('renders a stable internal anchor for every clip instance', () => {
+        const replay = globalThis.lgs.settings.ui.replay
+        const takeOff = createJourneyReplayClipInstance(replay.clips.catalog['take-off'], 'start', {
+            params: {
+                duration: 2,
+                altitude: 300,
+                pitch: -35,
+            },
+        })
+
+        globalThis.lgs.theJourney.replay.start = [takeOff]
+        globalThis.lgs.stores.replay.clips.start = [takeOff]
+
+        const view = render(<JourneyReplayClipsTab settings={replay}/>)
+
+        expect(view.container.querySelector(`#replay-clip-${takeOff.id}`)).not.toBeNull()
+    })
+
     it('removes a clip from the list', async () => {
         const replay = globalThis.lgs.settings.ui.replay
         const takeOff = createJourneyReplayClipInstance(replay.clips.catalog['take-off'], 'start', {
@@ -319,7 +346,7 @@ describe('JourneyReplayClipsTab', () => {
 
         expect(popup.queryByText('ZoomOut')).toBeNull()
         expect(popup.getByText('Focus')).toBeTruthy()
-        expect(popup.getByText('Landing')).toBeTruthy()
+        expect(popup.getByText('land')).toBeTruthy()
     })
 
     it('filters add options from the current runtime clips, not only from settings', async () => {
@@ -347,7 +374,7 @@ describe('JourneyReplayClipsTab', () => {
 
         const popup = within(view.getByTestId('popup-body'))
         expect(popup.queryByText('ZoomIn')).toBeNull()
-        expect(popup.getByText('TakeOff')).toBeTruthy()
+        expect(popup.getByText('Take off')).toBeTruthy()
     })
 
     it('removes the add clip button when no clip is available for the slot', () => {
@@ -411,12 +438,12 @@ describe('JourneyReplayClipsTab', () => {
             />,
         )
 
-        const startSection = view.getByText('Start').closest('section')
+        const startSection = view.getByText('Pre-replay').closest('section')
         const list = startSection.querySelector('.replay-clips-list')
         const sortable = globalThis.__replaySortableInstances[0]
 
         expect(list.querySelectorAll('.replay-clip-details')).toHaveLength(2)
-        expect(list.querySelectorAll('.replay-clip-details')[0].textContent).toContain('TakeOff')
+        expect(list.querySelectorAll('.replay-clip-details')[0].textContent).toContain('Take off')
         expect(list.querySelectorAll('.replay-clip-details')[1].textContent).toContain('ZoomIn')
 
         list.insertBefore(list.children[1], list.children[0])
@@ -425,7 +452,7 @@ describe('JourneyReplayClipsTab', () => {
         await waitFor(() => {
             const rows = list.querySelectorAll('.replay-clip-details')
             expect(rows[0].textContent).toContain('ZoomIn')
-            expect(rows[1].textContent).toContain('TakeOff')
+            expect(rows[1].textContent).toContain('Take off')
             expect(rows[0].querySelector('[aria-label="Move clip up"]').disabled).toBe(true)
             expect(rows[0].querySelector('[aria-label="Move clip down"]').disabled).toBe(false)
             expect(rows[1].querySelector('[aria-label="Move clip up"]').disabled).toBe(false)

@@ -56,6 +56,9 @@ providers:
         image: sample-layer.png     # `public/assets/images/layers/thumbnails/sample-layer.png`
         doc: 'https://provider.example/docs/layers/sample-layer'
         credits: 'Credits Sample Layer'
+        logo: '/assets/images/layers/logos/sample.svg'
+        logoText: ''                # Optional text rendered beside a cropped logo icon.
+        url: 'https://provider.example'
         countries: [ FR ]
 
         ## Common layer fields

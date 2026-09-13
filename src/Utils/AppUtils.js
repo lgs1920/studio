@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-07
- * Last modified: 2026-06-07
+ * Created on: 2024-02-02
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,11 +24,11 @@ import { SettingsSection }          from '@Core/settings/SettingsSection'
 import { ionTokenManager }          from '@Core/ui/IonTokenManager'
 import { ensureJourneyReplaySettings } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import axios                        from 'axios'
-import * as Cesium                  from 'cesium'
 import YAML                         from 'yaml'
 import { EventEmitter }             from '../assets/libs/EventEmitter/EventEmitter'
-import { FA2SL }                    from './FA2SL'
 import { CountApi }                  from './CountApi'
+import { IonLayerUtils }             from './cesium/IonLayerUtils'
+import {registerLGS1920IconLibrary} from './LGS1920IconLibrary'
 
 export class AppUtils {
     static THEME_STORAGE_KEY = 'theme'
@@ -248,16 +248,39 @@ export class AppUtils {
             .toLowerCase()
     }
     /**
-     * LGS1920Context initialisation
+     * Initialize the Studio application and verify its backend dependency.
      *
-     * @return {Promise<void>}
+     * @param {object} [options] Initialization options.
+     * @param {() => void} [options.onBackendReady] Callback invoked after the backend liveness check succeeds.
+     * @return {Promise<{status: boolean, error?: Error}>} The initialization result.
      */
-    static init = async () => {
+    static init = async ({onBackendReady} = {}) => {
         // Read App configuration
         const appConfig = await fetch(CONFIGURATION, {cache: 'no-store'})
             .then(res => res.text())
             .then(text => YAML.parse(text),
             )
+
+        // Resolve the backend endpoint before loading the remaining application services.
+        lgs.servers = await fetch(SERVERS, {cache: 'no-store'}).then(
+            res => res.json(),
+        )
+        lgs.platform = lgs.servers.platform
+        lgs.BACKEND_API = `${lgs.servers.studio.proxy}${lgs.servers.backend.protocol}://${lgs.servers.backend.domain}:${lgs.servers.backend.port}`
+        lgs.axios = axios.create()
+
+        const server = await __.app.pingBackend()
+
+        if (!server.alive) {
+            const info = __.app.isDevelopment() ? `'<br/>Try "bun run dev" to restart the application!` : ''
+            return {
+                status: false,
+                error: new Error(`${appConfig.applicationName} Backend server seems to be unreachable!${info}`),
+            }
+        }
+
+        onBackendReady?.()
+
         // Read Settings
         let settings
         settings = await fetch(SETTINGS, {cache: 'no-store'})
@@ -330,29 +353,16 @@ export class AppUtils {
                   },
             )
 
-        // Read servers
-        lgs.servers = await fetch(SERVERS, {cache: 'no-store'}).then(
-            res => res.json(),
-        )
-
         lgs.build = await fetch(BUILD, {cache: 'no-store'}).then(
             res => res.json(),
         )
-
-        lgs.platform = lgs.servers.platform
 
         lgs.createDB()
 
         lgs.setDefaultPOIConfiguration()
 
-        // Register Font Awesome icons in ShoeLace
-        FA2SL.registerFontAwesomeInShoelace('fa')
-
-        // Backend
-        lgs.BACKEND_API = `${lgs.servers.studio.proxy}${lgs.servers.backend.protocol}://${lgs.servers.backend.domain}:${lgs.servers.backend.port}`
-
-        // Create an Axios instance
-        lgs.axios = axios.create()
+        // Register the application icon library in Web Awesome
+        registerLGS1920IconLibrary()
 
         lgs.colors = {}
         // Default colors (defined in theme.css)
@@ -417,7 +427,7 @@ export class AppUtils {
                     continue
                 }
 
-                if (layer.usage.type !== FREE_ANONYMOUS_ACCESS) {
+                if (layer.usage.type !== FREE_ANONYMOUS_ACCESS && !IonLayerUtils.isIonDependentLayer(layer)) {
                     const token = await lgs.db.vault.get(layer.id, VAULT_STORE)
                     // We get a token, let's use it now
                     if (token) {
@@ -447,57 +457,41 @@ export class AppUtils {
         }
 
 
-        // Ping server
-        const server = await __.app.pingBackend()
-
-        if (server.alive) {
+        try {
+            // Versions
             try {
-                // Versions
-                try {
-                    const response = await lgs.axios.get([lgs.BACKEND_API, 'versions'].join('/'))
-                    lgs.versions = response.data
-                }
-                catch (error) {
-                    console.error(error)
-                }
-
-                lgs.events = new EventEmitter()
-
-                // Cesium ION auth
-                Cesium.Ion.defaultAccessToken = lgs.stores.ion.token || ionTokenManager.sharedToken
-
-
-                // Shoelace needs to avoid bubbling events. Here's an helper
-                window.isOK = (event) => {
-                    return event.eventPhase === Event.AT_TARGET
-                }
-
-                // Update last visit
-                lgs.settings.app.lastVisit = Date.now()
-
-                // Changelog metadata and content are loaded lazily when the drawer is displayed.
-                lgs.changelog = {
-                    files:  null,
-                    toRead: [],
-                }
-
-                // Set Elevation servers
-                lgs.elevationServers = ElevationServer.SERVERS
-
-                void CountApi.sendVisit()
-
-                return {status: true}
+                const response = await lgs.axios.get([lgs.BACKEND_API, 'versions'].join('/'))
+                lgs.versions = response.data
             }
             catch (error) {
-                return {status: false, error: error}
+                console.error(error)
             }
+
+            lgs.events = new EventEmitter()
+
+            // Shoelace needs to avoid bubbling events. Here's an helper
+            window.isOK = (event) => {
+                return event.eventPhase === Event.AT_TARGET
+            }
+
+            // Update last visit
+            lgs.settings.app.lastVisit = Date.now()
+
+            // Changelog metadata and content are loaded lazily when the drawer is displayed.
+            lgs.changelog = {
+                files:  null,
+                toRead: [],
+            }
+
+            // Set Elevation servers
+            lgs.elevationServers = ElevationServer.SERVERS
+
+            void CountApi.sendVisit()
+
+            return {status: true}
         }
-        else {
-            const info = __.app.isDevelopment() ? `'<br/>Try "bun run dev" to restart the application!` : ''
-            return {
-                status: false,
-                error: new Error(`${lgs.settings.applicationName} Backend server seems to be unreachable!${info}`),
-            }
+        catch (error) {
+            return {status: false, error: error}
         }
 
 

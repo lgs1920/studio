@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-09
- * Last modified: 2026-06-09
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,6 +37,8 @@ vi.mock('@Utils/cesium/trackRenderStyle', () => ({
 }))
 
 vi.mock('@Utils/cesium/trackRenderSmoothing', () => ({
+    TRACK_RENDER_SMOOTHING_MAX_STEP: 6,
+    TRACK_RENDER_SMOOTHING_MIN_STEP: 1,
     getTrackRenderContent: track => track.__renderGeometry
                                    ? {geometry: track.__renderGeometry}
                                    : null,

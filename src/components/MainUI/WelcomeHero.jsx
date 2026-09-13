@@ -7,6 +7,10 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
+ * Created on: 2026-08-13
+ * Last modified: 2026-09-13
+ *
+ *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
@@ -14,13 +18,24 @@ import { SloganSvg }                                         from '@Components/M
 import { WelcomeHeroControls }                               from '@Components/MainUI/WelcomeHeroControls'
 import { WelcomeHeroRoute }                                  from '@Components/MainUI/WelcomeHeroRoute'
 import {
+    bannerMediaCatalog,
     getWelcomeBackgroundMedia,
+    getBannerMediaSource,
     WELCOME_BACKGROUND_PLAYBACK_RATE,
 }                                                               from '@Assets/media/welcome-background-media'
-import { WaButton, WaIcon }                                  from '@web.awesome.me/webawesome-pro/dist/react'
+import { formatBuildInfo }                                    from '@Utils/BuildInfoUtils'
+import {
+    WaButton, WaFormatDate, WaIcon, WaPopup, WaProgressBar,
+}                                                               from '@web.awesome.me/webawesome-pro/dist/react'
 import { useCallback, useEffect, useRef, useState }            from 'react'
 
 const WELCOME_BACKGROUND_MEDIA = getWelcomeBackgroundMedia()
+const WELCOME_VIDEO_CROSSFADE_DURATION = 2300
+const WELCOME_VIDEO_CROSSFADE_LEAD_SECONDS = 3
+const INITIALIZATION_PROGRESS_VALUES = [0, 10, 20, 40, 60, 80, 90]
+const INITIALIZATION_VISIBLE_STEP_COUNT = 4
+const INITIALIZATION_STEP_PITCH_REM = 1.35
+const INITIALIZATION_COMPLETION_DISPLAY_MS = 3000
 
 /**
  * Renders the persistent Studio welcome hero.
@@ -33,17 +48,162 @@ export const WelcomeHero = ({
                              appReady = false,
                              onEnter,
                              backgroundMedia = WELCOME_BACKGROUND_MEDIA,
+                             initializationProgress = null,
                          }) => {
     const _welcomeVideo = useRef(null)
+    const _incomingWelcomeVideo = useRef(null)
+    const _crossfadeTimer = useRef(null)
+    const _initializationCompletionTimer = useRef(null)
+    const [activeVideoSlot, setActiveVideoSlot] = useState('primary')
+    const [primaryVideoChoice, setPrimaryVideoChoice] = useState(() => backgroundMedia.id
+        ? bannerMediaCatalog.outdoor.find(choice => choice.id === backgroundMedia.id)
+        : null)
+    const [secondaryVideoChoice, setSecondaryVideoChoice] = useState(null)
+    const [videoTransitioning, setVideoTransitioning] = useState(false)
+    const [incomingVideoReady, setIncomingVideoReady] = useState(false)
     const [videoState, setVideoState] = useState(
         backgroundMedia.videoSources.length > 0 ? 'loading' : 'unavailable'
     )
     const [imageState, setImageState] = useState(
-        backgroundMedia.imageSources.length > 0 ? 'loading' : 'unavailable'
+        backgroundMedia.imageSources.length > 0 ? 'ready' : 'unavailable'
     )
+    const [showInitializationProgress, setShowInitializationProgress] = useState(true)
     const readyToEnter = initComplete && appReady
+    const initializationSteps = initializationProgress?.steps ?? []
+    const activeInitializationStep = readyToEnter
+        ? initializationSteps.length
+        : Math.min(Math.max(initializationProgress?.activeStep ?? 0, 0), initializationSteps.length)
+    const initializationPercentage = readyToEnter
+        ? 100
+        : INITIALIZATION_PROGRESS_VALUES[activeInitializationStep] ?? 0
+    const initializationProgressRatio = initializationPercentage / 100
+    const initializationScrollRange = Math.max(initializationSteps.length - INITIALIZATION_VISIBLE_STEP_COUNT, 0)
+    const initializationVisibleStart = initializationScrollRange * initializationProgressRatio
+    const initializationScrollbarThumbSize = initializationSteps.length > INITIALIZATION_VISIBLE_STEP_COUNT
+        ? Math.max((INITIALIZATION_VISIBLE_STEP_COUNT / initializationSteps.length) * 100, 18)
+        : 100
+    const initializationScrollbarThumbOffset = initializationScrollRange > 0
+        ? initializationProgressRatio * (100 - initializationScrollbarThumbSize)
+        : 0
+    const initializationStepsTransform = initializationVisibleStart === 0
+        ? 'translateY(0rem)'
+        : `translateY(-${(initializationVisibleStart * INITIALIZATION_STEP_PITCH_REM).toFixed(2)}rem)`
     const videoReady = videoState === 'ready'
     const imageVisible = !videoReady && imageState === 'ready'
+    const studioVersion = lgs.versions?.studio ?? 'Unknown version'
+    const buildDate = lgs.build?.date ?? lgs.build?.buildTime
+    const buildInfo = formatBuildInfo(lgs.build)
+    const videoChoices = bannerMediaCatalog.outdoor.filter(choice => choice.type === 'video')
+    const activeVideoChoice = activeVideoSlot === 'primary' ? primaryVideoChoice : secondaryVideoChoice
+    const incomingVideoChoice = activeVideoSlot === 'primary' ? secondaryVideoChoice : primaryVideoChoice
+    const currentVideoSource = activeVideoChoice
+        ? getBannerMediaSource(activeVideoChoice)
+        : backgroundMedia.videoSources[0]?.src
+    const primaryVideoSource = activeVideoSlot === 'primary'
+        ? currentVideoSource
+        : getBannerMediaSource(primaryVideoChoice)
+    const secondaryVideoSource = activeVideoSlot === 'secondary'
+        ? currentVideoSource
+        : getBannerMediaSource(secondaryVideoChoice)
+    const canChangeVideo = videoChoices.length > 1 && Boolean(activeVideoChoice)
+
+    const changeWelcomeVideo = useCallback(() => {
+        if (!canChangeVideo || incomingVideoChoice) {
+            const activeVideo = activeVideoSlot === 'primary'
+                ? _welcomeVideo.current
+                : _incomingWelcomeVideo.current
+            activeVideo?.play()
+            return
+        }
+
+        const currentIndex = videoChoices.findIndex(choice => choice.id === activeVideoChoice.id)
+        const nextChoice = videoChoices[(currentIndex + 1) % videoChoices.length]
+        if (activeVideoSlot === 'primary') {
+            setSecondaryVideoChoice(nextChoice)
+        } else {
+            setPrimaryVideoChoice(nextChoice)
+        }
+        setIncomingVideoReady(false)
+    }, [activeVideoChoice, activeVideoSlot, canChangeVideo, incomingVideoChoice, videoChoices])
+
+    const handleWelcomeVideoTimeUpdate = useCallback(event => {
+        const videoElement = event.currentTarget
+        const remainingDuration = videoElement.duration - videoElement.currentTime
+        if (Number.isFinite(videoElement.duration)
+            && videoElement.duration > WELCOME_VIDEO_CROSSFADE_LEAD_SECONDS
+            && remainingDuration > 0
+            && remainingDuration <= WELCOME_VIDEO_CROSSFADE_LEAD_SECONDS) {
+            changeWelcomeVideo()
+        }
+    }, [changeWelcomeVideo])
+
+    const startWelcomeVideoCrossfade = useCallback(event => {
+        if (_crossfadeTimer.current || !incomingVideoChoice) {
+            return
+        }
+
+        setIncomingVideoReady(true)
+        setVideoTransitioning(true)
+        event.currentTarget.playbackRate = WELCOME_BACKGROUND_PLAYBACK_RATE
+        event.currentTarget.currentTime = 0
+        event.currentTarget.play().catch(() => {})
+        _crossfadeTimer.current = window.setTimeout(() => {
+            if (activeVideoSlot === 'primary') {
+                setPrimaryVideoChoice(null)
+            } else {
+                setSecondaryVideoChoice(null)
+            }
+            setActiveVideoSlot(activeVideoSlot === 'primary' ? 'secondary' : 'primary')
+            setIncomingVideoReady(false)
+            setVideoTransitioning(false)
+            _crossfadeTimer.current = null
+        }, WELCOME_VIDEO_CROSSFADE_DURATION)
+    }, [activeVideoSlot, incomingVideoChoice])
+
+    useEffect(() => {
+        if (!incomingVideoChoice) {
+            return
+        }
+
+        const incomingVideo = activeVideoSlot === 'primary'
+            ? _incomingWelcomeVideo.current
+            : _welcomeVideo.current
+        try {
+            incomingVideo?.load()
+        }
+        catch {
+            // jsdom and a few embedded browsers do not implement media loading.
+        }
+    }, [activeVideoSlot, incomingVideoChoice])
+
+    useEffect(() => () => {
+        if (_crossfadeTimer.current) {
+            window.clearTimeout(_crossfadeTimer.current)
+        }
+    }, [])
+
+    useEffect(() => {
+        if (_initializationCompletionTimer.current) {
+            window.clearTimeout(_initializationCompletionTimer.current)
+            _initializationCompletionTimer.current = null
+        }
+
+        if (!readyToEnter) {
+            return
+        }
+
+        _initializationCompletionTimer.current = window.setTimeout(() => {
+            setShowInitializationProgress(false)
+            _initializationCompletionTimer.current = null
+        }, INITIALIZATION_COMPLETION_DISPLAY_MS)
+
+        return () => {
+            if (_initializationCompletionTimer.current) {
+                window.clearTimeout(_initializationCompletionTimer.current)
+                _initializationCompletionTimer.current = null
+            }
+        }
+    }, [readyToEnter])
 
     useEffect(() => {
         if (_welcomeVideo.current) {
@@ -64,9 +224,88 @@ export const WelcomeHero = ({
         onEnter?.()
     }, [onEnter, readyToEnter])
 
+    /**
+     * Renders the initialization progress shown while Studio is becoming ready.
+     *
+     * @returns {object|null} Initialization progress or nothing when no progress was provided.
+     */
+    const renderInitializationProgress = () => {
+        if (initializationSteps.length === 0
+            || (readyToEnter && !showInitializationProgress)) {
+            return null
+        }
+
+        return (
+            <WaPopup
+                className="welcome-initialization-popup"
+                active
+                anchor="welcome-enter-call-for-action"
+                placement="bottom-start"
+                distance={8}
+                flip
+                shift
+                sync="width"
+            >
+                <div className="welcome-initialization" aria-label="Studio initialization progress" aria-live="polite">
+                    <div className="welcome-initialization-header">
+                        <span>{readyToEnter ? 'Studio gameplay is ready, enjoy !' : 'Preparing studio'}</span>
+                        <span>{initializationPercentage}%</span>
+                    </div>
+                    <WaProgressBar
+                        className="welcome-initialization-progress"
+                        value={initializationPercentage}
+                        label={`Studio initialization: ${initializationPercentage}%`}
+                    />
+                    <div className="welcome-initialization-steps-frame">
+                        <div className="welcome-initialization-steps-viewport">
+                            <ol
+                                className="welcome-initialization-steps"
+                                style={{transform: initializationStepsTransform}}
+                            >
+                                {initializationSteps.map((step, index) => {
+                                    const isComplete = index < activeInitializationStep
+                                    const isActive = index === activeInitializationStep
+                                    const status = isComplete ? 'Complete' : isActive ? 'In progress' : 'Waiting'
+
+                                    return (
+                                        <li
+                                            className={`welcome-initialization-step${isComplete ? ' is-complete' : ''}${isActive ? ' is-active' : ''}`}
+                                            aria-current={isActive ? 'step' : undefined}
+                                            key={step.id}
+                                        >
+                                            <WaIcon
+                                                name={isComplete ? 'circle-check' : isActive ? 'gear' : 'circle'}
+                                                variant="regular"
+                                                animation={isActive ? 'spin' : ''}
+                                                aria-hidden="true"
+                                            />
+                                            <span className="welcome-initialization-step-label">{step.label}</span>
+                                            <span className="welcome-initialization-step-status">{status}</span>
+                                        </li>
+                                    )
+                                })}
+                            </ol>
+                        </div>
+                        {initializationSteps.length > INITIALIZATION_VISIBLE_STEP_COUNT && (
+                            <div className="welcome-initialization-scrollbar" aria-hidden="true">
+                                <span
+                                    className="welcome-initialization-scrollbar-thumb"
+                                    style={{
+                                        height: `${initializationScrollbarThumbSize.toFixed(2)}%`,
+                                        top: `${initializationScrollbarThumbOffset.toFixed(2)}%`,
+                                    }}
+                                />
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </WaPopup>
+        )
+    }
+
     return (
         <div id="welcome-hero"
-             className={`lgs-theme${videoReady ? ' welcome-hero-video-ready' : ''}${imageVisible ? ' welcome-hero-image-visible' : ''}`}
+             className={`lgs-theme${videoReady ? ' welcome-hero-video-ready' : ''}${imageVisible ? ' welcome-hero-image-visible' : ''}${videoTransitioning ? ' welcome-hero-video-transitioning' : ''}${incomingVideoReady ? ' welcome-hero-video-crossfade-ready' : ''}`}
              aria-busy={!readyToEnter}>
             <div className="welcome-hero-media"
                  style={{backgroundColor: backgroundMedia.fallbackColor}}
@@ -81,23 +320,42 @@ export const WelcomeHero = ({
                     />
                 )}
                 {backgroundMedia.videoSources.length > 0 && (
+                    <>
                     <video
                         ref={_welcomeVideo}
-                        className="welcome-hero-video"
-                        autoPlay
+                        className={`welcome-hero-video ${activeVideoSlot === 'primary' ? 'welcome-hero-video-active' : 'welcome-hero-video-incoming'}`}
+                        autoPlay={activeVideoSlot === 'primary'}
                         muted
-                        loop
+                        loop={!canChangeVideo}
                         playsInline
                         preload="auto"
-                        onLoadedData={() => setVideoState('ready')}
-                        onCanPlay={() => setVideoState('ready')}
-                        onPlaying={() => setVideoState('ready')}
-                        onError={() => setVideoState('failed')}
+                        onEnded={activeVideoSlot === 'primary' ? changeWelcomeVideo : undefined}
+                        onTimeUpdate={activeVideoSlot === 'primary' ? handleWelcomeVideoTimeUpdate : undefined}
+                        onLoadedData={activeVideoSlot === 'primary' ? () => setVideoState('ready') : startWelcomeVideoCrossfade}
+                        onCanPlay={activeVideoSlot === 'primary' ? () => setVideoState('ready') : startWelcomeVideoCrossfade}
+                        onPlaying={activeVideoSlot === 'primary' ? () => setVideoState('ready') : undefined}
+                        onError={activeVideoSlot === 'primary' ? () => setVideoState('failed') : undefined}
                     >
-                        {backgroundMedia.videoSources.map(source => (
-                            <source key={`${source.type}:${source.src}`} src={source.src} type={source.type}/>
-                        ))}
+                        {primaryVideoSource && <source src={primaryVideoSource} type="video/mp4"/>}
                     </video>
+                    <video
+                        ref={_incomingWelcomeVideo}
+                        className={`welcome-hero-video ${activeVideoSlot === 'secondary' ? 'welcome-hero-video-active' : 'welcome-hero-video-incoming'}`}
+                        autoPlay={activeVideoSlot === 'secondary'}
+                        muted
+                        loop={!canChangeVideo}
+                        playsInline
+                        preload="auto"
+                        onEnded={activeVideoSlot === 'secondary' ? changeWelcomeVideo : undefined}
+                        onTimeUpdate={activeVideoSlot === 'secondary' ? handleWelcomeVideoTimeUpdate : undefined}
+                        onLoadedData={activeVideoSlot === 'secondary' ? () => setVideoState('ready') : startWelcomeVideoCrossfade}
+                        onCanPlay={activeVideoSlot === 'secondary' ? () => setVideoState('ready') : startWelcomeVideoCrossfade}
+                        onPlaying={activeVideoSlot === 'secondary' ? () => setVideoState('ready') : undefined}
+                        onError={activeVideoSlot === 'secondary' ? () => setVideoState('failed') : undefined}
+                    >
+                        {secondaryVideoSource && <source src={secondaryVideoSource} type="video/mp4"/>}
+                    </video>
+                    </>
                 )}
             </div>
             {backgroundMedia.credit?.label && backgroundMedia.credit?.url && (
@@ -111,6 +369,25 @@ export const WelcomeHero = ({
                     </a>
                 </div>
             )}
+            <div
+                className="welcome-hero-build-info"
+                aria-label={`Studio version ${studioVersion}, build ${buildInfo}`}
+            >
+                <WaIcon name="code-branch" variant="regular" aria-hidden="true"/>
+                <span>{studioVersion}</span>
+                <span aria-hidden="true">·</span>
+                <WaIcon name="calendar-days" variant="regular" aria-hidden="true"/>
+                {buildDate ? (
+                    <WaFormatDate
+                        date={buildDate}
+                        year="numeric"
+                        month="short"
+                        day="numeric"
+                    />
+                ) : (
+                    <span>{buildInfo}</span>
+                )}
+            </div>
             <WelcomeHeroRoute/>
             <div className="welcome-hero-scrim" aria-hidden="true"/>
             <WelcomeHeroControls/>
@@ -123,7 +400,7 @@ export const WelcomeHero = ({
                     </picture>
                     <SloganSvg className="welcome-slogan"/>
 
-                    <div className="welcome-enter-call-for-action">
+                    <div id="welcome-enter-call-for-action" className="welcome-enter-call-for-action">
                         <WaButton
                             className="welcome-site-button"
                             appearance="outlined"
@@ -143,10 +420,17 @@ export const WelcomeHero = ({
                             disabled={!readyToEnter}
                             onClick={enterStudio}
                         >
-                            <WaIcon slot="start" name="mountains" variant="regular"/>
+                            <WaIcon
+                                slot="start"
+                                name={readyToEnter ? 'clapperboard-play' : 'gear'}
+                                variant="regular"
+                                animation={readyToEnter ? '' : 'spin'}
+                                aria-hidden="true"
+                            />
                             {'Enter Studio'}
                         </WaButton>
                     </div>
+                    {renderInitializationProgress()}
                 </section>
             </div>
         </div>

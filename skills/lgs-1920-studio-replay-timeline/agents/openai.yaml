@@ -1,0 +1,4 @@
+interface:
+  display_name: "Replay Timeline"
+  short_description: "Maintain the LGS1920 Replay timeline"
+  default_prompt: "Use $lgs-1920-studio-replay-timeline to implement or diagnose the LGS1920 Replay preparation timeline."

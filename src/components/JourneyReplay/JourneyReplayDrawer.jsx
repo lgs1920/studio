@@ -7,27 +7,26 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-08-04
- * Last modified: 2026-08-04
+ * Created on: 2026-05-04
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import DrawerFooter from '@Components/DrawerFooter'
-import { JourneyReplayProgressBar } from '@Components/JourneyReplay/JourneyReplayProgressBar'
 import { JourneyReplayClipsTab } from '@Components/JourneyReplay/JourneyReplayClipsTab'
 import { LGSScrollbars } from '@Components/MainUI/LGSScrollbars'
 import { openPOIEditor }                  from '@Components/MainUI/MapPOI/openPOIEditor'
-import { VideoButton } from '@Components/MainUI/video/VideoButton'
 import { formatSliderPercent } from '@Components/MainUI/widgets/editor/elements/sliderUtils'
 import PanelActions from '@Components/PanelsActions'
+import { PopupAnchor } from '@Components/PopupAnchor'
+import { PopupDrawer } from '@Components/PopupDrawer'
 import WaDrawer     from '@Components/WaDrawerNonModal'
 import { REPLAY_DRAWER } from '@Core/constants'
 import classNames from 'classnames'
-import { getJourneyReplayHideOtherJourneys } from '@Core/ui/JourneyVisibility'
 import {
-    clampJourneyReplayNumber, DEFAULT_REPLAY_SCOPE, ensureJourneyReplaySettings, REPLAY_CAMERA_ALTITUDE_CONSTANT,
+    clampJourneyReplayNumber, DEFAULT_REPLAY_CAMERA, DEFAULT_REPLAY_SCOPE, ensureJourneyReplaySettings, REPLAY_CAMERA_ALTITUDE_CONSTANT,
     REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET, REPLAY_CAMERA_POSITION_AHEAD, REPLAY_CAMERA_POSITION_BEHIND,
     REPLAY_CAMERA_HEADING_OFFSET_MAX, REPLAY_CAMERA_HEADING_OFFSET_MIN, REPLAY_CAMERA_POSITION_SYSTEM,
     REPLAY_LABEL, REPLAY_MARKER_MODE_HYSTERESIS,
@@ -40,17 +39,21 @@ import {
     REPLAY_HYSTERESIS_EASING_MIN,
     REPLAY_HYSTERESIS_MARGIN_RATIO_MAX, REPLAY_HYSTERESIS_MARGIN_RATIO_MIN,
     REPLAY_CAMERA_SENSITIVITY_MAX, REPLAY_CAMERA_SENSITIVITY_MIN,
+    REPLAY_CAMERA_TILE_PRELOAD_HORIZON_MAX_MS, REPLAY_CAMERA_TILE_PRELOAD_HORIZON_MIN_MS,
+    REPLAY_READINESS_POLICY_ADAPTIVE, REPLAY_READINESS_POLICY_CUSTOM, REPLAY_READINESS_POLICY_OFF,
+    REPLAY_READINESS_POLICY_STRICT,
     REPLAY_EFFECT_GLOW, REPLAY_EFFECT_NEON, REPLAY_EFFECT_NONE,
     REPLAY_SMOOTHING_MAX_STEP, REPLAY_SMOOTHING_MIN_STEP,
     getJourneyReplayCameraPresetKey, getJourneyReplayCameraPresetUpdates, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplayProfileInfo,
     normalizeJourneyReplayProgressionStyle, normalizeJourneyReplaySmoothing, normalizeJourneyReplayTrace,
+    normalizeJourneyReplayReadiness,
 }                 from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { normalizeJourneyReplayClips } from '@Core/ui/replay/JourneyReplayClips'
 import { normalizeJourneyReplayPOISettings } from '@Core/ui/replay/JourneyReplayPOISettings'
 import { isJourneyReplayCameraActive } from '@Core/ui/replay/JourneyReplayRuntime'
 import { ELEVATION_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import {
-    WaBadge, WaButton, WaCard, WaColorPicker, WaDetails, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider,
+    WaBadge, WaButton, WaColorPicker, WaDetails, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider,
     WaSwitch, WaTab, WaTooltip,
     WaTabGroup,
     WaTabPanel,
@@ -62,7 +65,6 @@ import { createPortal }      from 'react-dom'
 import { useSnapshot }       from 'valtio'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import './style.css'
-
 
 const clampDuration = value => {
     const duration = Number(value)
@@ -170,6 +172,10 @@ const mergeSmoothing = (current, updates) => normalizeJourneyReplaySmoothing({
 const mergeCamera = (current, updates) => normalizeJourneyReplayCamera({
                                                                         ...current,
                                                                         ...updates,
+                                                                        playback: {
+                                                                            ...(current?.playback ?? {}),
+                                                                            ...(updates?.playback ?? {}),
+                                                                        },
                                                                         hysteresis: {
                                                                             ...(current?.hysteresis ?? {}),
                                                                             ...(updates?.hysteresis ?? {}),
@@ -389,16 +395,19 @@ const REPLAY_POI_HIDDEN_FIELDS = [
 ]
 const REPLAY_TAB_RUNNER = 'runner'
 const REPLAY_TAB_STYLE = 'style'
+const REPLAY_TAB_CLIPS = 'clips'
 const REPLAY_TAB_POIS = 'pois'
+const REPLAY_ADVANCED_CAMERA_POPUP_ANCHOR_ID = 'replay-advanced-camera-popup-anchor'
+const REPLAY_ADVANCED_CAMERA_SETUP_BUTTON_ID = 'replay-advanced-camera-setup-button'
 
 export const JourneyReplayDrawer = memo(() => {
-    const {drawers: {open: drawerOpen}} = useSnapshot(lgs.stores.ui)
+    const {drawers: {open: drawerOpen, navigation: drawerNavigation}} = useSnapshot(lgs.stores.ui)
     const {theJourney: currentJourney} = useSnapshot(lgs.stores.main)
     const poiList = lgs.stores.main.components.pois.list
     const replayState = useSnapshot(lgs.stores.replay)
     ensureJourneyReplaySettings()
     const replaySettings = useSnapshot(lgs.settings.ui.replay)
-    useOptionalSnapshot(lgs.settings.journey)
+    const journeySettings = useOptionalSnapshot(lgs.settings.journey, {hideOtherJourneys: false})
     const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
     const {drawer: drawerPlacement} = useSnapshot(lgs.editorSettingsProxy.menu)
     const swatches = useOptionalSnapshot(lgs.settings.swatches, {list: []}).list.join(';')
@@ -433,7 +442,10 @@ export const JourneyReplayDrawer = memo(() => {
     const remainingUseDefinedTrackStyle = trace.remaining.useDefinedTrackStyle !== false
     const remainingColor = toOpaqueColorValue(trace.remaining.color)
     const camera = normalizeJourneyReplayCamera(replaySettings.camera)
+    const readiness = normalizeJourneyReplayReadiness(replaySettings.readiness)
     const [activeTab, setActiveTab] = useState(REPLAY_TAB_RUNNER)
+    const [advancedCameraPopupOpen, setAdvancedCameraPopupOpen] = useState(false)
+    const advancedCameraSetupLabel = advancedCameraPopupOpen ? 'Close advanced camera setup' : 'Advanced camera setup'
     const [effectPreviewBackground, setEffectPreviewBackground] = useState(null)
     const nearbyPOIs = useMemo(() => {
         if (activeTab !== REPLAY_TAB_POIS) {
@@ -465,9 +477,10 @@ export const JourneyReplayDrawer = memo(() => {
     const animateAllPoisDuringJourneyReplay = replaySettings.animateAllPoisDuringJourneyReplay === true
     const cameraPresetKey = getJourneyReplayCameraPresetKey(camera)
     const marker = normalizeJourneyReplayMarker(replaySettings.marker)
-    const hideOtherJourneys = getJourneyReplayHideOtherJourneys()
+    const hideOtherJourneys = replayState.inheritHideOtherJourneys === false
+                               ? replayState.hideOtherJourneys === true
+                               : replayState.hideOtherJourneys === true || journeySettings.hideOtherJourneys === true
     const durationLocked = replayState.active || replayState.playing || replayState.paused
-    const syncWithVideo = replayState.recordingSync === true
     const [poiVisibilityOverrides, setPoiVisibilityOverrides] = useState({})
     const [, setPoiRevision] = useState(0)
     const [cameraDrafts, setCameraDrafts] = useState({
@@ -512,11 +525,12 @@ export const JourneyReplayDrawer = memo(() => {
         replayRuntime.smoothing = normalizeJourneyReplaySmoothing(replaySettings.smoothing)
         replayRuntime.marker = normalizeJourneyReplayMarker(replaySettings.marker)
         replayRuntime.camera = normalizeJourneyReplayCamera(replaySettings.camera)
+        replayRuntime.readiness = normalizeJourneyReplayReadiness(replaySettings.readiness)
         replayRuntime.hideAllPoisDuringJourneyReplay = replaySettings.hideAllPoisDuringJourneyReplay === true
         replayRuntime.animateAllPoisDuringJourneyReplay = replaySettings.animateAllPoisDuringJourneyReplay === true
         replayRuntime.clips = clips
-        replayRuntime.hideOtherJourneys = replayState.hideOtherJourneys === true
-        replayRuntime.inheritHideOtherJourneys = replayState.inheritHideOtherJourneys !== false
+        replayRuntime.hideOtherJourneys = replaySettings.hideOtherJourneys === true
+        replayRuntime.inheritHideOtherJourneys = replaySettings.inheritHideOtherJourneys !== false
 
         if (journeyChanged) {
             replayRuntime.progress = 0
@@ -535,11 +549,12 @@ export const JourneyReplayDrawer = memo(() => {
         replaySettings.trace,
         replaySettings.marker,
         replaySettings.camera,
+        replaySettings.readiness,
         replaySettings.hideAllPoisDuringJourneyReplay,
         replaySettings.animateAllPoisDuringJourneyReplay,
+        replaySettings.hideOtherJourneys,
+        replaySettings.inheritHideOtherJourneys,
         replaySettings.clips,
-        replayState.hideOtherJourneys,
-        replayState.inheritHideOtherJourneys,
         clips,
         currentJourney?.replay?.start,
         currentJourney?.replay?.stop,
@@ -547,19 +562,16 @@ export const JourneyReplayDrawer = memo(() => {
     ])
 
     useEffect(() => {
-        if (drawerOpen !== REPLAY_DRAWER || !hasJourney) {
-            return
+        if (drawerOpen === REPLAY_DRAWER) {
+            setActiveTab(drawerNavigation?.tab ?? REPLAY_TAB_RUNNER)
         }
-
-        const replayRuntime = lgs.stores.replay
-        replayRuntime.toolbarVisible = true
-    }, [drawerOpen, hasJourney])
+    }, [drawerOpen, drawerNavigation?.tab, journeySlug])
 
     useEffect(() => {
-        if (drawerOpen === REPLAY_DRAWER) {
-            setActiveTab(REPLAY_TAB_RUNNER)
+        if (drawerOpen !== REPLAY_DRAWER || activeTab !== REPLAY_TAB_RUNNER) {
+            setAdvancedCameraPopupOpen(false)
         }
-    }, [drawerOpen, journeySlug])
+    }, [activeTab, drawerOpen])
 
     useEffect(() => {
         if (drawerOpen !== REPLAY_DRAWER || activeTab !== REPLAY_TAB_STYLE) {
@@ -640,7 +652,7 @@ export const JourneyReplayDrawer = memo(() => {
         const replayMarker = normalizeJourneyReplayMarker(lgs.settings.ui.replay.marker)
         const rotationRunning = lgs.stores.ui?.mainUI?.rotate?.running === true
         const effectiveMode = mode ?? replayMarker.mode
-        if (rotationRunning && effectiveMode !== REPLAY_MARKER_MODE_TRACE) {
+        if (rotationRunning && (mode === null || effectiveMode !== REPLAY_MARKER_MODE_TRACE)) {
             await __.ui.cameraManager?.stopRotate?.()
         }
     }, [])
@@ -681,8 +693,10 @@ export const JourneyReplayDrawer = memo(() => {
         stopRotateIfNeeded,
     ])
 
-    const updateCamera = useCallback(async (updates, {syncCamera = true} = {}) => {
-        await stopRotateIfNeeded()
+    const updateCamera = useCallback(async (updates, {syncCamera = true, immediate = false} = {}) => {
+        if (!immediate || lgs.stores.ui?.mainUI?.rotate?.running === true) {
+            await stopRotateIfNeeded()
+        }
         const nextCamera = mergeCamera(lgs.settings.ui.replay.camera, updates)
         lgs.settings.ui.replay.camera = nextCamera
         lgs.stores.replay.camera = nextCamera
@@ -710,6 +724,57 @@ export const JourneyReplayDrawer = memo(() => {
             })
         }
     }, [replayState.active, replayState.paused, replayState.playing, replayState.sample, refreshJourneyReplay, stopRotateIfNeeded])
+
+    const updateReadiness = useCallback((updates, {refresh = false} = {}) => {
+        const currentReadiness = normalizeJourneyReplayReadiness(lgs.settings.ui.replay.readiness)
+        const currentPreloadHorizon = Number(normalizeJourneyReplayCamera(lgs.settings.ui.replay.camera).playback.tilePreloadHorizonMs)
+        const enablingWithNoActivePolicy = updates.enabled === true
+            && currentReadiness.policy === REPLAY_READINESS_POLICY_OFF
+            && currentPreloadHorizon <= REPLAY_CAMERA_TILE_PRELOAD_HORIZON_MIN_MS
+        const requestedReadiness = enablingWithNoActivePolicy
+            ? {
+                ...updates,
+                enabled: true,
+                policy: REPLAY_READINESS_POLICY_ADAPTIVE,
+            }
+            : updates
+        const nextReadiness = mergeReadiness(currentReadiness, requestedReadiness)
+        if (updates.enabled !== true
+            && nextReadiness.policy === REPLAY_READINESS_POLICY_OFF
+            && currentPreloadHorizon <= REPLAY_CAMERA_TILE_PRELOAD_HORIZON_MIN_MS) {
+            nextReadiness.enabled = false
+        }
+        lgs.settings.ui.replay.readiness = nextReadiness
+        lgs.stores.replay.readiness = nextReadiness
+        if (enablingWithNoActivePolicy) {
+            void updateCamera({
+                playback: {
+                    tilePreloadHorizonMs: DEFAULT_REPLAY_CAMERA.playback.tilePreloadHorizonMs,
+                },
+            }, {syncCamera: false})
+        }
+        if (refresh) {
+            refreshJourneyReplay(false)
+        }
+    }, [refreshJourneyReplay, updateCamera])
+
+    const updateCameraTilePreloadHorizon = useCallback(event => {
+        const nextHorizon = Number(event.target.value)
+        const currentReadiness = normalizeJourneyReplayReadiness(lgs.settings.ui.replay.readiness)
+        if (nextHorizon <= REPLAY_CAMERA_TILE_PRELOAD_HORIZON_MIN_MS
+            && currentReadiness.policy === REPLAY_READINESS_POLICY_OFF) {
+            updateReadiness({enabled: false})
+        }
+        updateCamera({
+            playback: {
+                tilePreloadHorizonMs: nextHorizon,
+            },
+            }, {syncCamera: false})
+    }, [updateCamera, updateReadiness])
+
+    const updateReadinessEnabled = useCallback(event => {
+        updateReadiness({enabled: getChecked(event)})
+    }, [updateReadiness])
 
     const updateDebugCamera = useCallback(event => {
         updateCamera({debug: getChecked(event)})
@@ -963,19 +1028,6 @@ export const JourneyReplayDrawer = memo(() => {
     const pitchDisplayValue = cameraDrafts.pitch ?? String(camera.pitch)
     const headingDisplayValue = cameraDrafts.heading ?? String(camera.heading ?? 0)
 
-    const updateSyncWithVideo = useCallback((event) => {
-        const enabled = Boolean(event?.target?.checked)
-        if (enabled) {
-            __.ui.replayVideoSync?.arm({
-                autoStopRecording: true,
-                resetToStart:      true,
-            })
-        }
-        else {
-            __.ui.replayVideoSync?.disarm()
-        }
-    }, [])
-
     const updateActiveTab = useCallback((event) => {
         setActiveTab(event?.detail?.name ?? REPLAY_TAB_RUNNER)
     }, [])
@@ -1157,7 +1209,7 @@ export const JourneyReplayDrawer = memo(() => {
                              REPLAY_CAMERA_HEADING_OFFSET_MIN,
                              REPLAY_CAMERA_HEADING_OFFSET_MAX,
                          ),
-                     })
+                     }, {immediate: true})
     }, [camera.headingOffset, updateCamera])
 
     const updateCameraPreset = useCallback((event) => {
@@ -1255,42 +1307,36 @@ export const JourneyReplayDrawer = memo(() => {
                     className={classNames('replay-drawer', {'drawer-is-stacked': isStacked})}
                 >
                     <span slot="label" className="replay-drawer-title">
-                        <WaIcon name="drone" variant="regular"/>
+                        <WaIcon name="sliders" variant="regular"/>
                         {REPLAY_LABEL}
                     </span>
-                    <PanelActions stackedPanel={isStacked} onBack={isStacked ? closeDrawerWithManager : null}/>
+                    <PanelActions stackedPanel={isStacked} onBack={isStacked ? closeDrawerWithManager : null}>
+                        {hasJourney && (
+                            <>
+                                <WaTooltip for={REPLAY_ADVANCED_CAMERA_SETUP_BUTTON_ID} placement="bottom">
+                                    {advancedCameraSetupLabel}
+                                </WaTooltip>
+                                <WaButton
+                                    id={REPLAY_ADVANCED_CAMERA_SETUP_BUTTON_ID}
+                                    className="replay-advanced-camera-button"
+                                    size="l"
+                                    appearance="plain"
+                                    variant="brand"
+                                    aria-label={advancedCameraSetupLabel}
+                                    onClick={() => setAdvancedCameraPopupOpen(!advancedCameraPopupOpen)}
+                                >
+                                    <WaIcon name="camera-sliders" size="l"/>
+                                </WaButton>
+                            </>
+                        )}
+                    </PanelActions>
 
                     <div className="replay-drawer-content">
+                        <PopupAnchor id={REPLAY_ADVANCED_CAMERA_POPUP_ANCHOR_ID}/>
                         {!hasJourney ? (
                             <p className="replay-empty-state">{`Import or select a journey to use ${REPLAY_LABEL}.`}</p>
                         ) : (
                              <>
-                                 <WaCard appearance="outlined" className="replay-progress-card-in-drawer">
-                                     <JourneyReplayProgressBar
-                                         className="replay-progress-bar-in-drawer"
-                                         disabled={syncWithVideo}
-                                     />
-                                 </WaCard>
-                                 <div className="replay-sync-row">
-                                     <WaSwitch
-                                         label-at-start
-                                         size="xs"
-                                         className="replay-sync-switch half-width"
-                                         checked={syncWithVideo}
-                                         onChange={updateSyncWithVideo}
-                                     >
-                                         {'Sync with Video'}
-                                     </WaSwitch>
-                                     {syncWithVideo &&
-                                         <VideoButton
-                                             id="launch-the-video-editor-replay"
-                                             tooltip="left"
-                                             className="replay-sync-video-button square-button"
-                                             variant="brand"
-                                             appearance="plain"
-                                         />
-                                     }
-                                 </div>
                                  <WaSwitch
                                      label-at-start
                                      size="xs"
@@ -1405,14 +1451,12 @@ export const JourneyReplayDrawer = memo(() => {
                                                                 size="s"
                                                                 min={REPLAY_CAMERA_HEADING_OFFSET_MIN}
                                                                 max={REPLAY_CAMERA_HEADING_OFFSET_MAX}
-                                                                step="5"
+                                                                step="1"
                                                                 value={cameraAngleDisplayOffset}
                                                                 withTooltip
                                                                 label-at-start half-width
                                                                 valueFormatter={value => `${Math.round(Number(value) || 0)}°`}
-                                                                onInput={event => {
-                                                                    updateCameraHeadingOffset(event)
-                                                                }}
+                                                                onInput={updateCameraHeadingOffset}
                                                             />
                                                         </JourneyReplayStyleField>
                                                     }
@@ -1525,21 +1569,129 @@ export const JourneyReplayDrawer = memo(() => {
                                                     </div>
                                                 </div>
                                                 </section>
-                                                 <WaDetails small className="lgs--details-hoverable">
-                                                    <span slot="summary">{'Advanced camera setup'}</span>
-                                                    <div className="replay-fieldset">
+                                                 {advancedCameraPopupOpen && (
+                                                     <PopupDrawer
+                                                         active={advancedCameraPopupOpen}
+                                                         anchor={REPLAY_ADVANCED_CAMERA_POPUP_ANCHOR_ID}
+                                                         outsideAnchors={[REPLAY_ADVANCED_CAMERA_SETUP_BUTTON_ID]}
+                                                         onRequestClose={() => setAdvancedCameraPopupOpen(false)}
+                                                         popupProps={{
+                                                             placement:       'bottom',
+                                                             distance:        0,
+                                                             flip:            false,
+                                                             shift:           false,
+                                                             boundary:        'scroll',
+                                                             autoSize:        'vertical',
+                                                             autoSizePadding: 0,
+                                                         }}
+                                                         header={(
+                                                             <>
+                                                                 <WaIcon name="sliders" variant="regular"/>
+                                                                 <span>{'Advanced camera setup'}</span>
+                                                             </>
+                                                         )}
+                                                         headerActions={(
+                                                             <WaButton
+                                                                 appearance="plain"
+                                                                 aria-label="Close advanced camera setup"
+                                                                 slot="header-actions"
+                                                                 onClick={() => setAdvancedCameraPopupOpen(false)}
+                                                             >
+                                                                 <WaIcon size="s" name="xmark" variant="regular"/>
+                                                             </WaButton>
+                                                         )}
+                                                         appearance="filled"
+                                                         className="replay-advanced-camera-popup"
+                                                     >
+                                                         <div className="replay-advanced-camera-scrollbars">
+                                                             <LGSScrollbars autoHide={false}>
+                                                                 <div className="replay-fieldset">
                                                         <WaDivider/>
                                                         <h4 className="replay-style-subtitle">{'Diagnostics'}</h4>
-                                                        {syncWithVideo && (
-                                                            <WaSwitch
-                                                                className="replay-debug-camera-switch half-width"
-                                                                size="xs"
-                                                                label-at-start
-                                                                checked={camera.debug === true}
-                                                                onChange={updateDebugCamera}
-                                                            >
-                                                                {'Debug camera'}
-                                                            </WaSwitch>
+                                                        <WaSwitch
+                                                            className="replay-debug-camera-switch half-width"
+                                                            size="xs"
+                                                            label-at-start
+                                                            checked={camera.debug === true}
+                                                            onChange={updateDebugCamera}
+                                                        >
+                                                            {'Debug camera'}
+                                                        </WaSwitch>
+                                                        <WaDivider/>
+                                                        <h4 className="replay-style-subtitle">{'Tile readiness'}</h4>
+                                                        <WaSwitch
+                                                            className="replay-readiness-switch half-width"
+                                                            size="xs"
+                                                            label-at-start
+                                                            checked={readiness.enabled}
+                                                            onChange={updateReadinessEnabled}
+                                                        >
+                                                            {'Wait for visible tiles'}
+                                                        </WaSwitch>
+                                                        {readiness.enabled && (
+                                                            <>
+                                                                <WaSelect
+                                                                    appearance="filled"
+                                                                    label="Readiness policy"
+                                                                    hint="Adaptive uses shorter budgets while the camera is moving."
+                                                                    label-at-start
+                                                                    size="s"
+                                                                    value={String(readiness.policy)}
+                                                                    onChange={event => updateReadiness({policy: event.target.value})}
+                                                                    className="half-width"
+                                                                >
+                                                                    <WaOption value={REPLAY_READINESS_POLICY_ADAPTIVE}>{'Adaptive'}</WaOption>
+                                                                    <WaOption value={REPLAY_READINESS_POLICY_STRICT}>{'Strict'}</WaOption>
+                                                                    <WaOption value={REPLAY_READINESS_POLICY_CUSTOM}>{'Custom'}</WaOption>
+                                                                    <WaOption value={REPLAY_READINESS_POLICY_OFF}>{'Off'}</WaOption>
+                                                                </WaSelect>
+                                                                {readiness.policy === REPLAY_READINESS_POLICY_CUSTOM && (
+                                                                    <div className="replay-style-field-grid is-single">
+                                                                        <WaNumberInput
+                                                                            label="Moving wait (ms)"
+                                                                            hint="Maximum tile wait while the camera is moving."
+                                                                            className="half-width"
+                                                                            size="s"
+                                                                            appearance="filled"
+                                                                            min="0"
+                                                                            max="5000"
+                                                                            step="50"
+                                                                            value={readiness.movingTimeoutMs}
+                                                                            onInput={event => updateReadiness({movingTimeoutMs: event.target.value})}
+                                                                            label-at-start
+                                                                        />
+                                                                        <WaNumberInput
+                                                                            label="Settled wait (ms)"
+                                                                            hint="Maximum tile wait after the camera settles."
+                                                                            className="half-width"
+                                                                            size="s"
+                                                                            appearance="filled"
+                                                                            min="0"
+                                                                            max="10000"
+                                                                            step="100"
+                                                                            value={readiness.settledTimeoutMs}
+                                                                            onInput={event => updateReadiness({settledTimeoutMs: event.target.value})}
+                                                                            label-at-start
+                                                                        />
+                                                                    </div>
+                                                                )}
+                                                                <WaSelect
+                                                                    appearance="filled"
+                                                                    label="Camera tile preloading"
+                                                                    hint="Preload initial camera views before HQ export starts."
+                                                                    label-at-start
+                                                                    size="s"
+                                                                    value={String(camera.playback.tilePreloadHorizonMs)}
+                                                                    onChange={updateCameraTilePreloadHorizon}
+                                                                    className="half-width"
+                                                                >
+                                                                    <WaOption value={String(REPLAY_CAMERA_TILE_PRELOAD_HORIZON_MIN_MS)}>{'Off'}</WaOption>
+                                                                    <WaOption value="500">{'500 ms'}</WaOption>
+                                                                    <WaOption value="1000">{'1 s'}</WaOption>
+                                                                    <WaOption value="2000">{'2 s'}</WaOption>
+                                                                    <WaOption value={String(REPLAY_CAMERA_TILE_PRELOAD_HORIZON_MAX_MS)}>{'3 s'}</WaOption>
+                                                                </WaSelect>
+                                                            </>
                                                         )}
                                                         <WaDivider/>
                                                         <h4 className="replay-style-subtitle">{'Motion'}</h4>
@@ -1671,8 +1823,11 @@ export const JourneyReplayDrawer = memo(() => {
                                                                 onInput={updateHysteresisEasing}
                                                                 label-at-start className="half-width"/>
                                                         </JourneyReplayStyleField>
-                                                    </div>
-                                                </WaDetails>
+                                                                 </div>
+                                                             </LGSScrollbars>
+                                                         </div>
+                                                     </PopupDrawer>
+                                                 )}
                                              </div>
                                          </LGSScrollbars>
                                      </WaTabPanel>
@@ -1814,7 +1969,7 @@ export const JourneyReplayDrawer = memo(() => {
                                          </LGSScrollbars>
                                      </WaTabPanel>
 
-                                     <WaTabPanel name="clips">
+                                     <WaTabPanel name={REPLAY_TAB_CLIPS}>
                                          <LGSScrollbars>
                                              <div className="replay-tab-panel">
                                                  <JourneyReplayClipsTab
@@ -2036,3 +2191,8 @@ export const JourneyReplayDrawer = memo(() => {
 
     return drawerRoot ? createPortal(content, drawerRoot) : content
 })
+
+const mergeReadiness = (current, updates) => normalizeJourneyReplayReadiness({
+                                                                                    ...current,
+                                                                                    ...updates,
+                                                                                })

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2025-09-15
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,8 +19,10 @@
  * Delegates functionality to specialized classes.
  */
 import {
-    CAMERA_INFORMATION_WIDGET, JOURNEY_EDITOR_DRAWER, JOURNEY_TOOLBAR_WIDGET, PROFILE_WIDGET, SCENE_WIDGETS_BOARD,
-    VIDEO_WIDGETS_BOARD, WIDGET_EDITOR_POST_RENDER_EVENT, WIDGET_EDITOR_PRE_RENDER_EVENT, WIDGETS_EDITOR_DRAWER,
+    CAMERA_INFORMATION_WIDGET, CREDITS_WIDGET, JOURNEY_EDITOR_DRAWER, JOURNEY_TOOLBAR_WIDGET, LOGO_WIDGET, PROFILE_WIDGET,
+    SCENE_WIDGETS_BOARD,
+    VIDEO_WIDGETS_BOARD, WIDGET_EDITOR_POST_RENDER_EVENT, WIDGET_EDITOR_PRE_RENDER_EVENT, WIDGET_LAYER_START,
+    WIDGET_LAYER_STEP, WIDGETS_EDITOR_DRAWER,
 }                                from '@Core/constants'
 import { Export }                from '@Core/ui/Export'
 import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
@@ -35,6 +37,7 @@ import { WidgetPosition }        from './WidgetPosition'
 import { WidgetResizable }       from './WidgetResizable'
 import { WidgetScalable }        from './WidgetScalable'
 import { WidgetTransform }       from './WidgetTransform'
+import { flattenWidgetEntries } from './WidgetGroupUtils'
 
 export class WidgetManager {
     // Singleton instance
@@ -346,6 +349,51 @@ export class WidgetManager {
     setConfig = (elementId, config) => this.#registry.setConfig(elementId, config)
 
     /**
+     * Toggles the user-controlled visibility of a hideable widget.
+     *
+     * @param {string|null|undefined} widgetId - Widget identifier
+     * @param {boolean|undefined} [visible] - Explicit visibility, or the inverse of the current state
+     * @returns {boolean|null} The resulting visibility, or null when the widget cannot be hidden
+     */
+    toggleWidgetVisibility = (widgetId, visible) => {
+        if (!widgetId) {
+            return null
+        }
+
+        const config = this.getWidgetConfig(widgetId)
+        if (!config?.canHide || config.mandatory) {
+            return null
+        }
+
+        const currentEntry = lgs.stores.ui.widget.list.get(widgetId) ?? {}
+        const currentVisible = currentEntry.visible !== false && config.visible !== false
+        const nextVisible = visible === undefined ? !currentVisible : Boolean(visible)
+        const element = this.getElementById(widgetId)
+
+        config.visible = nextVisible
+        this.setConfig(widgetId, config)
+        lgs.stores.ui.widget.list.set(widgetId, {...currentEntry, visible: nextVisible})
+        element?.classList.toggle('lgs-widget-user-hidden', !nextVisible)
+
+        if (!nextVisible && lgs.stores.ui.widget.current?.id === widgetId) {
+            lgs.stores.ui.widget.current = {id: null}
+        }
+
+        if (config.persist) {
+            void this.saveWidgetPosition(widgetId, config)
+        }
+
+        return nextVisible
+    }
+
+    /**
+     * Invalidates one widget runtime while preserving its persisted position.
+     * @param {string} elementId - Widget identifier.
+     * @returns {boolean} Whether a runtime configuration was invalidated.
+     */
+    invalidateRuntimeById = elementId => this.#registry.invalidateRuntimeById(elementId)
+
+    /**
      * Retrieves widget configurations by group ID.
      * @param {string} groupId - The group identifier
      * @returns {Object[]} Array of widget configurations
@@ -555,6 +603,127 @@ export class WidgetManager {
     }
 
     /**
+     * Applies a video widget stack order and persists every affected layer.
+     *
+     * The input follows the visual order used by the widget management panel:
+     * first item is topmost, last item is bottommost.
+     *
+     * @param {Array<string>} orderedWidgetIds - Widget instance IDs, top to bottom.
+     * @returns {Promise<void>}
+     */
+    reorderWidgets = async orderedWidgetIds => {
+        const ids = [...new Set(orderedWidgetIds ?? [])]
+            .filter(Boolean)
+            .filter(id => ![CREDITS_WIDGET, LOGO_WIDGET].includes(id.split('#')[0]))
+        const $list = lgs.stores.ui.widget.list
+        const updates = ids.map((id, index) => {
+            const current = $list.get(id)
+            if (!current) {
+                return null
+            }
+
+            return {
+                id,
+                zIndex: WIDGET_LAYER_START + ((ids.length - 1 - index) * WIDGET_LAYER_STEP),
+                current,
+            }
+        }).filter(Boolean)
+
+        for (const update of updates) {
+            $list.set(update.id, {...update.current, zIndex: update.zIndex})
+            const cacheEntry = __.ui.widgetCache?.get?.(update.id) ?? {}
+            __.ui.widgetCache?.set?.(update.id, {...cacheEntry, zIndex: update.zIndex})
+            const element = typeof document !== 'undefined'
+                ? document.querySelector(`.lgs-widget-container[data-widget="${update.id}"]`)
+                : null
+            if (element) {
+                element.style.zIndex = update.zIndex
+            }
+        }
+
+        await Promise.all(updates.map(async update => {
+            const position = await this.getWidgetPosition(update.id)
+            if (position) {
+                await this.saveWidgetPosition(update.id, {...position, zIndex: update.zIndex}, false)
+            }
+        }))
+    }
+
+    /**
+     * Updates persisted timeline group membership for widget instances.
+     *
+     * @param {Map|Object} widgetGroups - Widget IDs mapped to group IDs.
+     * @returns {Promise<void>}
+     */
+    updateWidgetGroups = async widgetGroups => {
+        const updates = widgetGroups instanceof Map
+            ? [...widgetGroups.entries()]
+            : Object.entries(widgetGroups ?? {})
+
+        await Promise.all(updates.map(async ([widgetId, widgetGroup]) => {
+            const groupId = widgetGroup || null
+            const config = this.getWidgetConfig(widgetId)
+            if (config) {
+                config.widgetGroup = groupId
+                this.setConfig(widgetId, config)
+            }
+
+            const currentEntry = lgs.stores.ui.widget.list.get(widgetId)
+            if (currentEntry) {
+                lgs.stores.ui.widget.list.set(widgetId, {
+                    ...currentEntry,
+                    widgetGroup: groupId,
+                    widgetGroupLabel: groupId && currentEntry.widgetGroup === groupId
+                        ? currentEntry.widgetGroupLabel ?? null
+                        : null,
+                })
+            }
+
+            const cacheEntry = __.ui.widgetCache?.get?.(widgetId)
+            if (cacheEntry) {
+                __.ui.widgetCache.set(widgetId, {...cacheEntry, widgetGroup: groupId})
+            }
+
+            const position = await this.getWidgetPosition(widgetId)
+            if (position) {
+                await this.saveWidgetPosition(widgetId, {...position, widgetGroup: groupId}, false)
+            }
+        }))
+    }
+
+    /**
+     * Applies runtime timeline track names to the widget entries in a group.
+     *
+     * @param {Map|Object} widgetGroupLabels - Group IDs mapped to track names.
+     */
+    updateWidgetGroupLabels = widgetGroupLabels => {
+        const labels = widgetGroupLabels instanceof Map
+            ? [...widgetGroupLabels.entries()]
+            : Object.entries(widgetGroupLabels ?? {})
+        const widgetList = lgs.stores.ui.widget.list
+
+        for (const [groupId, label] of labels) {
+            if (!label) {
+                continue
+            }
+            for (const [widgetId, currentEntry] of widgetList.entries()) {
+                if (currentEntry?.widgetGroup !== groupId || currentEntry.widgetGroupLabel === label) {
+                    continue
+                }
+                widgetList.set(widgetId, {...currentEntry, widgetGroupLabel: label})
+            }
+        }
+    }
+
+    /**
+     * Applies a top-to-bottom order containing standalone widgets and groups.
+     *
+     * @param {Array} orderedEntries - Ordered widget or group entries.
+     * @returns {Promise<void>}
+     */
+    reorderWidgetLayers = async orderedEntries => this.reorderWidgets(flattenWidgetEntries(orderedEntries))
+
+    /**
      * Refreshes the editor preview background when the edited widget moved.
      * @param {string} widgetId - The widget ID
      */
@@ -716,6 +885,8 @@ export class WidgetManager {
         }
 
         const element = this.getElementById(widgetId)
+        const config = this.getWidgetConfig(widgetId)
+        const onRemove = config?.onRemove
         const type = widgetId.split('#')[0]
 
         WidgetDynamicRenderer.instance.destroyWidget(widgetId)
@@ -752,6 +923,8 @@ export class WidgetManager {
         if (lgs.stores?.ui?.contextMenu?.targetId === widgetId) {
             __.ui.contextMenu?.hide?.()
         }
+
+        onRemove?.()
 
         return true
     }
@@ -805,6 +978,15 @@ export class WidgetManager {
      * @returns {Object} New position object
      */
     toTop = (element, margin = 0) => this.#position.toTop(element, margin)
+
+    /**
+     * Positions a widget horizontally centered at a percentage of the container height.
+     * @param {HTMLElement} element - The DOM element to position
+     * @param {number} topRatio - Vertical position as a percentage of the container height
+     * @param {number} [margin=0] - Additional margin from the requested vertical position
+     * @returns {Object} New position object
+     */
+    toTopPercentage = (element, topRatio, margin = 0) => this.#position.toTopPercentage(element, topRatio, margin)
 
     /**
      * Positions the widget at the left of its container.
@@ -960,6 +1142,7 @@ export class WidgetManager {
 
             config.container = referenceContainer
             config.boundsContainer = referenceContainer
+            config.widgetGroup = saved.widgetGroup ?? config.widgetGroup ?? null
             config.element = element
             config.fromDB = true
             config.fromRuntime = false
@@ -995,6 +1178,10 @@ export class WidgetManager {
             if (config.isCropper) {
                 this.#cropper.applyCropToOverlay(config)
             }
+
+            // Rehydration invalidates the runtime cache before restoring the
+            // element. Keep the already-rendered widget eligible for capture.
+            __.ui.widgetCache?.mount?.(widgetId)
 
             lgs.stores.ui.widget.list.set(widgetId, {
                 ...entry,
@@ -1063,6 +1250,15 @@ export class WidgetManager {
      * @return {{left: *, top: *}}
      */
     adaptPositionToContainer = (config, container) => this.#controls.adaptPositionToContainer(config, container)
+
+    /**
+     * Keeps a scene widget inside its resolved bounds after an interaction.
+     * @param {Object} config - Widget configuration.
+     * @param {HTMLElement} [element=config.element] - Rendered widget element.
+     * @returns {{positionChanged: boolean, scaleChanged: boolean}} Applied changes.
+     */
+    constrainSceneWidgetToBounds = (config, element = config?.element) =>
+        this.#controls.constrainSceneWidgetToBounds(config, element)
 
     /**
      * Adapts widget size to container size. It provides a new scale value.

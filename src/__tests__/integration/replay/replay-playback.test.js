@@ -2,13 +2,13 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: replay-phase1.test.js
+ * File: replay-playback.test.js
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-01
- * Last modified: 2026-07-01
+ * Created on: 2026-07-22
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -159,6 +159,11 @@ describe('replay phase 1 playback controller', () => {
                 frameTimeMs:     0,
                 frameIntervalMs: 1000 / 30,
                 source:          'controller',
+                intentResolved:  false,
+                intent: expect.objectContaining({
+                    resolved: false,
+                    renderMode: 'draft',
+                }),
                 renderContract: expect.objectContaining({
                     renderMode: 'draft',
                     logicalFrame: expect.objectContaining({progress: 0}),
@@ -1251,7 +1256,8 @@ describe('replay phase 1 playback controller', () => {
                 progress: 1,
             })
 
-            await new Promise(resolve => setTimeout(resolve, 0))
+            await Promise.resolve()
+            await Promise.resolve()
 
             expect(journey.focus).toHaveBeenCalled()
             expect(globalThis.lgs.settings.ui.replay.camera.altitudeMode).toBe(REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET)
@@ -1365,7 +1371,8 @@ describe('replay phase 1 playback controller', () => {
                 progress: 1,
             })
 
-            await new Promise(resolve => setTimeout(resolve, 0))
+            await Promise.resolve()
+            await Promise.resolve()
 
             expect(journey.focus).toHaveBeenCalled()
             expect(globalThis.lgs.settings.ui.replay.camera.altitudeMode).toBe(REPLAY_CAMERA_ALTITUDE_CONSTANT)

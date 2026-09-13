@@ -5,6 +5,11 @@ description: Safely prepare, verify, and send emails without requesting, display
 
 # Safe Email Sending
 
+## User intent discipline
+
+For Studio work, follow the autonomy and approval rules in [PROJECT_RULES.md](../../PROJECT_RULES.md#1-core-directives). Preserve the task-specific safeguards below.
+
+
 ## Overview
 
 This skill governs email drafting and sending with the minimum necessary data. It protects authentication information, requires a final preview before sending, and falls back to a draft when no authorized mail connector is available.

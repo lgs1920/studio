@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-14
- * Last modified: 2026-06-14
+ * Created on: 2025-12-13
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,18 +18,11 @@ import { Widget }                                                               
 import { EditableText }                                                           from '@Components/Text/EditableText'
 import { JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD } from '@Core/constants'
 import React, { useEffect, useMemo, useState } from 'react'
-import { useSnapshot }                         from 'valtio'
 import './style.css'
 
-export const TextWidget = ({id, context, zIndex}) => {
+export const TextWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsBoard}) => {
     // Destructure context properties used as dependencies
-    const {widgetEditor, widgetsBoard} = context
-
-    /**
-     * Snapshot of the video state (included for completeness).
-     * @type {object}
-     */
-    const video = useSnapshot(lgs.stores.ui.video)
+    const widgetsBoard = context?.widgetsBoard ?? persistedWidgetsBoard ?? SCENE_WIDGETS_BOARD
 
     /**
      * State for the container element where the widget should attach.
@@ -70,13 +63,14 @@ export const TextWidget = ({id, context, zIndex}) => {
                 canEdit:     true,
                 canRemove:   true,
                 canPosition: true,
+                canDetach:   true,
             },
-            top:             '50%',
-            left:            '50%',
+            top:             context?.top ?? '20%',
             type:            LGS_VISUAL_WIDGET,
             group:           widgetsBoard === SCENE_WIDGETS_BOARD ? SCENE_WIDGETS : JOURNEY_WIDGETS,
-            margin:          5,
-            attachTo: 'center',
+            margin:          context?.margin ?? 0,
+            attachTo:        context?.attachTo ?? 'top-left',
+            left:            context?.left ?? '20%',
             scalable:        true,
             rotatable:       true,
             id,
@@ -90,7 +84,7 @@ export const TextWidget = ({id, context, zIndex}) => {
             widgetsBoard:    widgetsBoard,
             zIndex: zIndex,
         }
-    }, [widgetEditor, container, widgetsBoard, id, zIndex]) // Include all dependencies to ensure accurate recalculation
+    }, [context?.attachTo, context?.left, context?.margin, context?.top, container, widgetsBoard, id, zIndex]) // Include all dependencies to ensure accurate recalculation
 
     // Safety check: if the board is missing or the config generation failed, return null.
     // We check Object.keys(config).length for cases where config returned {} inside useMemo.

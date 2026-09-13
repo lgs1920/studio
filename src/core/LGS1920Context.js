@@ -7,55 +7,67 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-01
- * Last modified: 2026-04-01
+ * Created on: 2024-02-03
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { CacheManager }        from '@Core/cache/CacheManager'
 import {
-    APP_KEY, CONFIGURATION, CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, GLOBAL_PARENT, JOURNEY_GROUPS_STORE, JOURNEYS_STORE,
-    ORIGIN_STORE, platforms, POIS_STORE, SERVERS, SETTINGS_STORE, VAULT_STORE, WIDGETS_STORE,
-}                              from '@Core/constants'
-import { StoresManager }       from '@Core/stores/StoresManager'
-import { installAppShortcuts } from '@Core/events/appShortcuts'
-import { ShortcutManager }     from '@Core/events/ShortcutManager'
-import { AppToolsManager }     from '@Core/ui/AppToolsManager'
-import { AppUpdateManager }    from '@Core/ui/AppUpdateManager'
-import { ContextMenu }         from '@Core/ui/context-menu/ContextMenu'
-import { DeviceManager }       from '@Core/ui/DeviceManager'
-import { Geocoder }            from '@Core/ui/Geocoder'
-import { JourneyGroupManager }  from '@Core/ui/JourneyGroupManager'
-import { MenuManager }         from '@Core/ui/MenuManager'
-import { POIManager }          from '@Core/ui/POIManager'
-import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
-import { WidgetCache }         from '@Core/ui/widget-manager/WidgetCache'
-import { WidgetManager }       from '@Core/ui/widget-manager/WidgetManager'
-import { AppUtils }            from '@Utils/AppUtils'
-import { MouseUtils }          from '@Utils/cesium/MouseUtils'
-import { IonLayerUtils }       from '@Utils/cesium/IonLayerUtils'
-import { CSSUtils }            from '@Utils/CSSUtils'
-import { UIToast }             from '@Utils/UIToast'
-import { UIUtils }             from '@Utils/UIUtils'
-import { UnitUtils }           from '@Utils/UnitUtils'
-import { proxy }               from 'valtio'
-import { DatabaseSyncManager } from './db/DatabaseSyncManager'
-import { LocalDB }             from './db/LocalDB'
-import { MouseEventHandler }   from './MouseEventHandler'
-import { editorSettings }      from './stores/editorSettings'
-import { main }                from './stores/main'
-import { theJourneyEditor }    from './stores/theJourneyEditor'
-import { CameraManager }       from './ui/CameraManager'
-import { ionTokenManager }     from './ui/IonTokenManager'
-import { JourneyEditor }       from './ui/JourneyEditor'
-import { PanelManager }        from './ui/panels/PanelManager'
-import { Profiler }            from './ui/Profiler'
-import { SceneManager }        from './ui/SceneManager'
-import { JourneyReplayRunner }    from './ui/JourneyReplayRunner'
-import { JourneyReplayMode }      from './ui/replay/JourneyReplayMode'
-import { JourneyReplayVideoSync } from './ui/replay/JourneyReplayVideoSync'
+    APP_KEY,
+    CONFIGURATION,
+    CURRENT_JOURNEY,
+    CURRENT_STORE,
+    CURRENT_TRACK,
+    GLOBAL_PARENT,
+    JOURNEY_GROUPS_STORE,
+    JOURNEYS_STORE,
+    ORIGIN_STORE,
+    platforms,
+    POIS_STORE,
+    SERVERS,
+    SETTINGS_STORE,
+    VAULT_STORE,
+    WIDGETS_STORE,
+} from '@Core/constants'
+import {StoresManager} from '@Core/stores/StoresManager'
+import {installAppShortcuts} from '@Core/events/appShortcuts'
+import {ShortcutManager} from '@Core/events/ShortcutManager'
+import {AppToolsManager} from '@Core/ui/AppToolsManager'
+import {AppUpdateManager} from '@Core/ui/AppUpdateManager'
+import {ContextMenu} from '@Core/ui/context-menu/ContextMenu'
+import {DeviceManager} from '@Core/ui/DeviceManager'
+import {Geocoder} from '@Core/ui/Geocoder'
+import {JourneyGroupManager} from '@Core/ui/JourneyGroupManager'
+import {MenuManager} from '@Core/ui/MenuManager'
+import {POIManager} from '@Core/ui/POIManager'
+import {ScreenMediaRecorder} from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import {WidgetCache} from '@Core/ui/widget-manager/WidgetCache'
+import {WidgetManager} from '@Core/ui/widget-manager/WidgetManager'
+import {WidgetWindowManager} from '@Core/ui/widget-manager/WidgetWindowManager'
+import {AppUtils} from '@Utils/AppUtils'
+import {MouseUtils} from '@Utils/cesium/MouseUtils'
+import {CSSUtils} from '@Utils/CSSUtils'
+import {UIToast} from '@Utils/UIToast'
+import {UIUtils} from '@Utils/UIUtils'
+import {UnitUtils} from '@Utils/UnitUtils'
+import {proxy} from 'valtio'
+import {DatabaseSyncManager} from './db/DatabaseSyncManager'
+import {LocalDB} from './db/LocalDB'
+import {MouseEventHandler} from './MouseEventHandler'
+import {editorSettings} from './stores/editorSettings'
+import {main} from './stores/main'
+import {theJourneyEditor} from './stores/theJourneyEditor'
+import {CameraManager} from './ui/CameraManager'
+import {ionTokenManager} from './ui/IonTokenManager'
+import {JourneyEditor} from './ui/JourneyEditor'
+import {PanelManager} from './ui/panels/PanelManager'
+import {Profiler} from './ui/Profiler'
+import {SceneManager} from './ui/SceneManager'
+import {JourneyReplayRunner} from './ui/JourneyReplayRunner'
+import {JourneyReplayMode} from './ui/replay/JourneyReplayMode'
+import {JourneyReplayVideoSync} from './ui/replay/JourneyReplayVideoSync'
 
 export class LGS1920Context {
     /** @type {Proxy} */
@@ -89,6 +101,8 @@ export class LGS1920Context {
 
         // Progressive web app ?
         this.pwa = window.matchMedia('(display-mode: standalone)').matches
+        // Expose the context before managers resolve the global application state.
+        window.lgs = this
 
         // lang
         this.#lang = 'en'
@@ -401,10 +415,6 @@ export class LGS1920Context {
             window.setTimeout(() => UIToast.warning(syncStartupWarning), 0)
         }
 
-        if (!__.app.cesiumCache) {
-            __.app.cesiumCache = new CacheManager(IonLayerUtils.tokenCacheName(), 500 * 1024 * 1024)
-        }
-
         //startCacheMonitoring()
 
         __.ui.profiler = new Profiler(this)
@@ -422,6 +432,8 @@ export class LGS1920Context {
         __.ui.menuManager = new MenuManager()
         __.ui.widgetManager = new WidgetManager()
         __.ui.widgetCache = new WidgetCache()
+        __.ui.widgetWindowManager = new WidgetWindowManager()
+        __.ui.widgetWindowManager.initialize()
         __.ui.ionTokenManager = ionTokenManager
 
         __.ui.poiManager = new POIManager()

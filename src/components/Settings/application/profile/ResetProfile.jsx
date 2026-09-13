@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-22
- * Last modified: 2026-06-22
+ * Created on: 2024-11-17
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,7 +36,6 @@ export const ResetProfile = () => {
     const reset = async () => {
         if (await confirmReset()) {
             await lgs.databaseSyncManager?.unlinkPersistentDirectory?.()
-            await __.ui.ionTokenManager?.resetIntroSeen?.()
             await __.ui.ionTokenManager?.clear?.()
 
             if (account.reset.lgs1920) {

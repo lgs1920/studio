@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-03
- * Last modified: 2026-07-03
+ * Created on: 2025-01-19
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,19 +20,20 @@ import { useSnapshot }                 from 'valtio'
 
 export const VideoButton = (props) => {
     const $video = lgs.stores.ui.video
-    const replay = useSnapshot(lgs.stores.replay)
     const video = useSnapshot($video)
-    const syncWithJourneyReplay = replay.recordingSync === true
     const {
         id = 'launch-the-video-editor',
         className = 'square-button',
         tooltip = 'right',
-        tooltipText = 'Record a new video',
-        variant = syncWithJourneyReplay ? 'warning' : 'brand',
+        tooltipText = 'Record a standard video',
+        variant = 'brand',
         appearance = 'Filled',
     } = props ?? {}
 
     const handleClick = () => {
+        if (!$video.editing) {
+            __.ui.replayVideoSync?.disarm?.()
+        }
         $video.editing = !$video.editing
     }
     return (
@@ -46,7 +47,7 @@ export const VideoButton = (props) => {
                               onClick={handleClick}
                               variant={variant}
                               appearance={appearance}>
-                        <WaIcon name="clapperboard-play" variant="regular"/>
+                        <WaIcon name="video" variant="regular"/>
                     </WaButton>
                 </>
             }

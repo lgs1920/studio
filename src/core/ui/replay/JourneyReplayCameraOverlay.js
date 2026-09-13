@@ -1,29 +1,43 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: JourneyReplayCameraOverlay.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-22
+ * Last modified: 2026-09-13
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 /**
  * Replay camera Overlay behavior.
  */
 
 
-import {ArcType, Cartesian2, Cartesian3, Cartographic, CatmullRomSpline, Color, ExtrapolationType, JulianDate, EasingFunction, HeightReference, HorizontalOrigin, LinearApproximation, Matrix4, PolylineDashMaterialProperty, SampledPositionProperty, SceneTransforms, Transforms, VerticalOrigin, Math as CesiumMath} from 'cesium'
+import {Cartographic, CatmullRomSpline, Color, ExtrapolationType, JulianDate, EasingFunction, LinearApproximation, SampledPositionProperty, SceneTransforms, Math as CesiumMath} from 'cesium'
 import {REPLAY_DRAWER, VIDEO_CROP_ZONE} from '@Core/constants'
 import {Journey} from '@Core/Journey'
 import {CameraUtils} from '@Utils/cesium/CameraUtils'
 import {cameraViewToSlippyLevel} from '@Utils/cesium/CameraLevel'
 import {POIUtils} from '@Utils/cesium/POIUtils'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
-import {faCamera} from '@fortawesome/pro-solid-svg-icons'
-import {faPersonHiking} from '@fortawesome/pro-regular-svg-icons'
 import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
 import {finiteNumber, replayStore} from './JourneyReplayRuntime'
 import {
     clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForPositionMode, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
 } from './JourneyReplayCameraMath'
 import {
-    REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET, REPLAY_CAMERA_POSITION_AHEAD,
-    REPLAY_CAMERA_HEADING_OFFSET_MAX, REPLAY_CAMERA_HEADING_OFFSET_MIN, REPLAY_CAMERA_POSITION_SYSTEM,
+    REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
     getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker,
 } from './JourneyReplayProgressionStyle'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
+import {replayRenderTargetFor} from './ReplayRenderTarget'
 
 import {
     REPLAY_HEADING_TRANSITION_DURATION_SECONDS,
@@ -50,17 +64,12 @@ import {
     CAMERA_REDIRECT_RENDERED_DEPTH_CLEARANCE_METERS,
     REPLAY_TOLERANCE_RECENTER_REPLACE_DELAY_MS,
     REPLAY_TRACKING_DYNAMIC_LOOKAHEAD_FACTOR,
-    CAMERA_ANGLE_PREVIEW_AXIS_LENGTH,
-    CAMERA_ANGLE_PREVIEW_OFFSET_LENGTH,
-    CAMERA_ANGLE_PREVIEW_ICON_SIZE,
     REPLAY_JOURNEY_TOOLBAR_VISIBILITY_EVENT,
     REPLAY_EVENT_STOP_CLIPS_COMPLETE,
     CAMERA_REDIRECT_CANDIDATES,
     isUsableCartesian3,
     safeCartesian3Normalize,
     safeCartesian3Lerp,
-    makeFontAwesomeIconDataUri,
-    resolveJourneyActivityIcon,
 } from './JourneyReplayCameraShared'
 import {
     headingBetweenPoints,
@@ -352,7 +361,7 @@ const isReplayVideoLinked = () => globalThis.lgs?.stores?.replay?.recordingSync 
 export const refreshReplayDiagnosticsOverlay = mode => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-    const viewer = globalThis.lgs?.viewer
+    const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
     const canvas = state.toleranceZoneOverlayCanvas
     if (!state.toleranceZoneOverlayVisible || !(canvas instanceof HTMLCanvasElement) || !viewer) {
         return false
@@ -373,7 +382,7 @@ export const refreshReplayDiagnosticsOverlay = mode => {
         canvas,
         ...geometry,
         camera: viewer.camera ?? null,
-        scene: viewer.scene ?? globalThis.lgs?.scene ?? null,
+        scene: viewer?.scene ?? call.cesiumScene?.() ?? globalThis.lgs?.scene ?? null,
     })
     return true
 }
@@ -386,7 +395,8 @@ export const refreshReplayDiagnosticsOverlay = mode => {
  */
 const ensureReplayDiagnosticsCameraSync = mode => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const camera = globalThis.lgs?.viewer?.camera
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const camera = (call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera
     if (state.toleranceZoneOverlayCameraChangedRemove || !camera?.changed?.addEventListener) {
         return
     }
@@ -455,244 +465,6 @@ export const setToleranceZoneOverlayVisible = (mode, visible = true) => {
         return true
     }
 
-export const cameraAnglePreviewEntityCollection = (mode) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-    return globalThis.lgs?.viewer?.entities ?? null
-}
-
-export const removeCameraAnglePreviewOverlay = (mode) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-
-        const entities = state.cameraAnglePreviewEntities
-        const collection = call.cameraAnglePreviewEntityCollection()
-        if (entities && collection) {
-            collection.remove?.(entities.axis)
-            collection.remove?.(entities.axisEndIcon)
-            collection.remove?.(entities.angle)
-            collection.remove?.(entities.cameraIcon)
-        }
-        state.cameraAnglePreviewEntities = null
-    }
-
-export const cameraAnglePreviewPOIIds = (mode) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-
-        const journey = state.sampler?.journey ?? globalThis.lgs?.theJourney ?? null
-        const tracks = Array.from(journey?.tracks?.values?.() ?? [])
-        if (tracks.length === 0) {
-            return []
-        }
-
-        const firstTrack = tracks[0]
-        const lastTrack = tracks[tracks.length - 1]
-        return Array.from(new Set([
-            firstTrack?.flags?.start,
-            lastTrack?.flags?.stop,
-        ].filter(Boolean)))
-    }
-
-export const cameraAnglePreviewPOIForId = (mode, poiId) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-    return globalThis.lgs?.stores?.main?.components?.pois?.list?.get?.(poiId)
-        ?? globalThis.__?.ui?.poiManager?.get?.(poiId)
-        ?? null
-}
-
-export const hideCameraAnglePreviewPOIs = (mode) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-
-        for (const poiId of call.cameraAnglePreviewPOIIds()) {
-            const poi = call.cameraAnglePreviewPOIForId(poiId)
-            if (!poi?.id) {
-                continue
-            }
-
-            if (!state.cameraAnglePreviewPOIVisibilityState.has(poi.id)) {
-                state.cameraAnglePreviewPOIVisibilityState.set(poi.id, {
-                    visible: call.isPOIVisibleBeforePlayback(poi),
-                })
-            }
-
-            poi.visible = false
-            call.setPOIEntityVisibility(poi, false)
-        }
-    }
-
-export const restoreCameraAnglePreviewPOIs = (mode) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-
-        for (const [poiId, poiState] of state.cameraAnglePreviewPOIVisibilityState.entries()) {
-            const poi = call.cameraAnglePreviewPOIForId(poiId)
-            if (!poi?.id) {
-                continue
-            }
-
-            poi.visible = poiState?.visible === true
-            call.setPOIEntityVisibility(poi, poiState?.visible === true)
-        }
-
-        state.cameraAnglePreviewPOIVisibilityState.clear()
-    }
-
-export const cameraAnglePreviewStartHeading = (mode) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-
-        const sampler = state.sampler
-        if (!sampler?.hasSamples) {
-            return 0
-        }
-
-        const previewSamples = sampler?.samples?.slice?.(0, 6) ?? []
-        if (previewSamples.length < 2) {
-            return 0
-        }
-
-        const current = previewSamples[0]
-        const future = previewSamples[previewSamples.length - 1]
-        const heading = call.headingBetweenPoints(current, future)
-        return Number.isFinite(heading) ? heading : 0
-    }
-
-export const showCameraAnglePreviewOverlay = (mode, {
-                                          displayOffset = 0,
-                                          positionMode = REPLAY_CAMERA_POSITION_SYSTEM,
-                                          fillColor = null,
-                                          borderColor = null,
-                                      } = {}) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-
-        call.removeCameraAnglePreviewOverlay()
-        const viewer = globalThis.lgs?.viewer
-        const sampler = state.sampler
-        const entities = viewer?.entities ?? null
-        if (!viewer || !entities || positionMode === REPLAY_CAMERA_POSITION_SYSTEM || !sampler?.hasSamples) {
-            return
-        }
-
-        const sample = sampler.atProgress?.(0)
-        const anchor = safeCartesianFromLonLat(sample)
-        if (!anchor) {
-            return
-        }
-
-        const traceHeading = call.cameraAnglePreviewStartHeading()
-        const baseHeading = positionMode === REPLAY_CAMERA_POSITION_AHEAD
-                            ? traceHeading
-                            : traceHeading + Math.PI
-        const localTransform = Transforms.eastNorthUpToFixedFrame(anchor)
-        const offsetDegrees = clamp(finiteNumber(displayOffset) ?? 0, REPLAY_CAMERA_HEADING_OFFSET_MIN, REPLAY_CAMERA_HEADING_OFFSET_MAX)
-        const offsetRadians = CesiumMath.toRadians(offsetDegrees)
-        const axisHeading = baseHeading
-        const angleHeading = baseHeading + (finiteNumber(offsetRadians) ?? 0)
-        const axisEnd = Matrix4.multiplyByPoint(localTransform, new Cartesian3(
-            Math.sin(axisHeading) * CAMERA_ANGLE_PREVIEW_AXIS_LENGTH,
-            Math.cos(axisHeading) * CAMERA_ANGLE_PREVIEW_AXIS_LENGTH,
-            0,
-        ), new Cartesian3())
-        const angleEnd = Matrix4.multiplyByPoint(localTransform, new Cartesian3(
-            Math.sin(angleHeading) * CAMERA_ANGLE_PREVIEW_OFFSET_LENGTH,
-            Math.cos(angleHeading) * CAMERA_ANGLE_PREVIEW_OFFSET_LENGTH,
-            0,
-        ), new Cartesian3())
-        const followTerrain = true
-        const markerColorCss = globalThis.lgs?.theTrack?.marker?.foregroundColor
-                               ?? globalThis.lgs?.theTrack?.marker?.color
-                               ?? normalizeJourneyReplayProgressionStyle(
-                                   globalThis.lgs?.stores?.replay?.progression ?? getJourneyReplaySettings()?.progression,
-                               ).fill.color
-                               ?? fillColor
-                               ?? borderColor
-                               ?? '#4f7cff'
-        const markerColor = Color.fromCssColorString(markerColorCss) ?? Color.WHITE
-        const axis = entities.add({
-            id:       `replay-camera-angle-preview-axis-${state.sampler?.journey?.slug ?? 'current'}`,
-            name:     'JourneyReplay camera angle axis',
-            polyline: {
-                positions:     [anchor, axisEnd],
-                width:         4,
-                material:      markerColor,
-                clampToGround: followTerrain,
-                arcType:       followTerrain ? ArcType.GEODESIC : ArcType.NONE,
-            },
-            show: true,
-        })
-        const axisEndIcon = entities.add({
-            id:       `replay-camera-angle-preview-axis-end-${state.sampler?.journey?.slug ?? 'current'}`,
-            name:     'JourneyReplay journey axis end',
-            position: axisEnd,
-            billboard: {
-                image:            makeFontAwesomeIconDataUri(resolveJourneyActivityIcon(state.sampler?.journey), markerColorCss, CAMERA_ANGLE_PREVIEW_ICON_SIZE),
-                width:            CAMERA_ANGLE_PREVIEW_ICON_SIZE,
-                height:           CAMERA_ANGLE_PREVIEW_ICON_SIZE,
-                horizontalOrigin: HorizontalOrigin.CENTER,
-                verticalOrigin:   VerticalOrigin.CENTER,
-                disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                heightReference:  followTerrain ? HeightReference.CLAMP_TO_GROUND : HeightReference.NONE,
-                pixelOffset:      new Cartesian2(18, 0),
-            },
-            show: true,
-        })
-        const angle = entities.add({
-            id:       `replay-camera-angle-preview-angle-${state.sampler?.journey?.slug ?? 'current'}`,
-            name:     'JourneyReplay camera angle offset',
-            polyline: {
-                positions:     [anchor, angleEnd],
-                width:         1.5,
-                material:      new PolylineDashMaterialProperty({
-                    color:       markerColor,
-                    gapColor:    Color.TRANSPARENT,
-                    dashLength:  18,
-                    dashPattern: 255,
-                }),
-                clampToGround: followTerrain,
-                arcType:       followTerrain ? ArcType.GEODESIC : ArcType.NONE,
-            },
-            show: true,
-        })
-        const cameraIcon = Math.abs(offsetDegrees) > 0.0001
-            ? entities.add({
-                id:       `replay-camera-angle-preview-camera-${state.sampler?.journey?.slug ?? 'current'}`,
-                name:     'JourneyReplay camera angle camera',
-                position: angleEnd,
-                billboard: {
-                    image:            makeFontAwesomeIconDataUri(faCamera, markerColorCss, CAMERA_ANGLE_PREVIEW_ICON_SIZE),
-                    width:            CAMERA_ANGLE_PREVIEW_ICON_SIZE,
-                    height:           CAMERA_ANGLE_PREVIEW_ICON_SIZE,
-                    horizontalOrigin: HorizontalOrigin.CENTER,
-                    verticalOrigin:   VerticalOrigin.CENTER,
-                    disableDepthTestDistance: Number.POSITIVE_INFINITY,
-                    heightReference: followTerrain ? HeightReference.CLAMP_TO_GROUND : HeightReference.NONE,
-                    pixelOffset:      new Cartesian2(18, 0),
-                },
-                show: true,
-            })
-            : null
-        state.cameraAnglePreviewEntities = {
-            axis,
-            axisEndIcon,
-            angle,
-            cameraIcon,
-        }
-        globalThis.lgs?.scene?.requestRender?.()
-        call.hideCameraAnglePreviewPOIs()
-    }
-
-export const hideCameraAnglePreviewOverlay = (mode) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-
-        call.removeCameraAnglePreviewOverlay()
-        call.restoreCameraAnglePreviewPOIs()
-    }
-
 export const videoCropRect = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -727,13 +499,35 @@ export const viewportRectForCesiumSurface = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
+        const target = replayRenderTargetFor(mode)
+        const targetCanvas = target?.canvas ?? target?.scene?.canvas ?? target?.viewer?.canvas ?? null
+        if (targetCanvas) {
+            const targetRect = targetCanvas.getBoundingClientRect?.()
+            const width = finiteNumber(targetRect?.width)
+                          ?? finiteNumber(targetCanvas.clientWidth)
+                          ?? finiteNumber(targetCanvas.width)
+                          ?? 0
+            const height = finiteNumber(targetRect?.height)
+                           ?? finiteNumber(targetCanvas.clientHeight)
+                           ?? finiteNumber(targetCanvas.height)
+                           ?? 0
+            return {
+                left: 0,
+                top: 0,
+                width,
+                height,
+                canvasWidth: finiteNumber(targetCanvas.width) ?? width,
+                canvasHeight: finiteNumber(targetCanvas.height) ?? height,
+            }
+        }
+
         const cropRect = call.videoCropRect()
         if (cropRect) {
             return cropRect
         }
 
-        const viewer = globalThis.lgs?.viewer
-        const scene = call.cesiumScene()
+        const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
+        const scene = call.cesiumScene?.() ?? globalThis.lgs?.scene ?? viewer?.scene
         const canvas = viewer?.canvas ?? scene?.canvas ?? globalThis.lgs?.canvas
         const rect = canvas?.getBoundingClientRect?.()
         return {
@@ -759,8 +553,8 @@ export const updateToleranceZoneOverlay =  (mode, hysteresis) => {
     state.lastToleranceZoneHysteresis = hysteresis
     state.toleranceZoneOverlay?.remove?.()
     state.toleranceZoneOverlay = null
-    const viewer = globalThis.lgs?.viewer
-    const container = viewer?.container ?? globalThis.document?.body ?? null
+    const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
+    const container = globalThis.lgs?.viewer?.container ?? globalThis.document?.body ?? null
     if (!viewer || !container || !hysteresis) {
         return
     }
@@ -824,7 +618,7 @@ export const updateToleranceZoneOverlay =  (mode, hysteresis) => {
             canvas: diagnosticsCanvas,
             ...geometry,
             camera: viewer?.camera ?? null,
-            scene: viewer?.scene ?? globalThis.lgs?.scene ?? null,
+            scene: viewer?.scene ?? call.cesiumScene?.() ?? globalThis.lgs?.scene ?? null,
         })
         ensureReplayDiagnosticsCameraSync(mode)
     }

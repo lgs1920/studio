@@ -4,7 +4,12 @@ description: "CesiumJS spatial math - Cartesian3, Cartographic, Matrix4, Quatern
 ---
 # CesiumJS Spatial Math & Transforms
 
-Version baseline: CesiumJS v1.143 (2026-07-01)
+## User intent discipline
+
+For Studio work, follow the autonomy and approval rules in [PROJECT_RULES.md](../../PROJECT_RULES.md#1-core-directives). Preserve the task-specific safeguards below.
+
+
+Version baseline: CesiumJS v1.144 (2026-08-03)
 
 Mathematical foundation for every CesiumJS application: coordinate types, unit conversions, ellipsoid geometry, reference frame transforms, bounding volumes, intersection tests, and projections.
 

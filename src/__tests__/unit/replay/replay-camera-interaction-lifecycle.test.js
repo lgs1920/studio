@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: replay-camera-interaction-lifecycle.test.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-28
+ * Last modified: 2026-09-13
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import {Cartesian3} from 'cesium'
 import {defaultJourneyReplaySettings, REPLAY_MARKER_MODE_HYSTERESIS} from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {bindMarkerInteractions} from '@Core/ui/replay/JourneyReplayCameraBinding'
@@ -165,6 +181,7 @@ describe('JourneyReplay camera interaction lifecycle', () => {
 
     it('protects an automatically applied frame from delayed Cesium synchronization', () => {
         const setView = vi.fn()
+        const hqSetView = vi.fn()
         const call = {
             now: () => 1000,
         }
@@ -177,8 +194,11 @@ describe('JourneyReplay camera interaction lifecycle', () => {
             [JOURNEY_REPLAY_INTERNAL_STATE]: state,
         }
         globalThis.lgs = {
+            camera: {
+                setView,
+            },
             viewer: {
-                camera: {setView},
+                camera: {setView: hqSetView},
             },
         }
 
@@ -190,6 +210,7 @@ describe('JourneyReplay camera interaction lifecycle', () => {
 
         expect(applied).toBe(true)
         expect(setView).toHaveBeenCalledOnce()
+        expect(hqSetView).not.toHaveBeenCalled()
         expect(state.cameraAutoTrackingIgnoreUntil).toBe(1250)
         expect(state.cameraApplyingView).toBe(false)
     })
@@ -228,6 +249,38 @@ describe('JourneyReplay camera interaction lifecycle', () => {
         updateCameraFromCesiumControls(mode, {userInteraction: true})
 
         expect(markPlaybackCameraUserAdjusted).toHaveBeenCalledOnce()
+        expect(syncCameraFromCesiumControls).toHaveBeenCalledOnce()
+    })
+
+    it('allows mouse synchronization after a keyboard camera adjustment', () => {
+        const syncCameraFromCesiumControls = vi.fn()
+        const call = {
+            markPlaybackCameraUserAdjusted: vi.fn(),
+            now: () => 2000,
+        }
+        const state = {
+            cameraApplyingView:            false,
+            cameraAutoTrackingIgnoreUntil: 0,
+            cameraPointerActive:            true,
+            cameraUserAdjusting:            true,
+            suppressPlaybackCameraSync:     false,
+        }
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_CALL]:  call,
+            [JOURNEY_REPLAY_INTERNAL_STATE]: state,
+            syncCameraFromCesiumControls,
+        }
+        globalThis.lgs = {
+            stores: {
+                replay: {
+                    cameraUpdateSource: 'keyboard',
+                },
+            },
+        }
+
+        updateCameraFromCesiumControls(mode)
+
+        expect(globalThis.lgs.stores.replay.cameraUpdateSource).toBeNull()
         expect(syncCameraFromCesiumControls).toHaveBeenCalledOnce()
     })
 

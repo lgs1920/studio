@@ -4,7 +4,12 @@ description: "CesiumJS imagery layers - ImageryProvider, ImageryLayer, ImageryLa
 ---
 # CesiumJS Imagery Layers
 
-> CesiumJS v1.143 -- Imagery providers supply raster tile data rendered on the Globe
+## User intent discipline
+
+For Studio work, follow the autonomy and approval rules in [PROJECT_RULES.md](../../PROJECT_RULES.md#1-core-directives). Preserve the task-specific safeguards below.
+
+
+> **Version baseline:** CesiumJS v1.144 -- Imagery providers supply raster tile data rendered on the Globe
 > or draped over a Cesium3DTileset. The three core abstractions are **ImageryProvider**
 > (fetches tiles), **ImageryLayer** (display settings), and
 > **ImageryLayerCollection** (ordered stack on the globe).
@@ -18,6 +23,12 @@ ImageryProvider        (abstract -- fetches tile images)
 
 Layers render bottom-to-top. Index 0 is the **base layer**, stretched to fill
 the globe even if its rectangle does not cover the entire world.
+
+## CesiumJS 1.144 Metadata Picking
+
+WMTS imagery metadata can be picked when the imagery layer is draped over a
+3D Tiles scene. Preserve the provider metadata configuration and verify picking
+against the actual draped target when implementing this workflow.
 
 ## Quick Start and ImageryLayer Factories
 

@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: JourneyReplayLogicalFrame.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-28
+ * Last modified: 2026-09-13
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 /**
  * Renderer-independent replay frame helpers.
  */
@@ -26,6 +42,7 @@ export const createJourneyReplayLogicalFrame = ({
                                                      frameTimeMs = null,
                                                      frameIntervalMs = null,
                                                      cameraPose = null,
+                                                     cameraCommand = null,
                                                      cameraFrame = null,
                                                      phase = null,
                                                      source = 'replay',
@@ -44,6 +61,7 @@ export const createJourneyReplayLogicalFrame = ({
         frameTimeMs:     resolvedFrameTimeMs,
         frameIntervalMs: finiteNumber(frameIntervalMs),
         cameraPose:      cameraPose ?? null,
+        cameraCommand:   cameraCommand ?? null,
         cameraFrame:     cameraFrame ?? null,
         phase:           phase ?? null,
         source,

@@ -1,9 +1,26 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: app-utils-count.test.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-30
+ * Last modified: 2026-09-13
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
     axiosGet:  vi.fn(async () => ({data: {}})),
     sendVisit: vi.fn(async () => true),
     pingBackend: vi.fn(async () => ({alive: true})),
+    registerIconLibraryFromKits: vi.fn(),
 }))
 
 vi.mock('@Utils/CountApi', () => ({
@@ -56,7 +73,6 @@ vi.mock('@Core/settings/SettingsSection', () => ({
 vi.mock('@Core/ui/IonTokenManager', () => ({
     ionTokenManager: {
         load:         vi.fn(async () => undefined),
-        sharedToken:  'shared-token',
     },
 }))
 
@@ -64,10 +80,8 @@ vi.mock('@Core/ui/replay/JourneyReplayProgressionStyle', () => ({
     ensureJourneyReplaySettings: vi.fn(() => ({})),
 }))
 
-vi.mock('@Utils/FA2SL', () => ({
-    FA2SL: {
-        registerFontAwesomeInShoelace: vi.fn(),
-    },
+vi.mock('@Utils/LGS1920IconLibrary', () => ({
+    registerLGS1920IconLibrary: mocks.registerIconLibraryFromKits,
 }))
 
 import { AppUtils } from '@Utils/AppUtils'
@@ -137,16 +151,23 @@ describe('AppUtils bootstrap count instrumentation', () => {
     })
 
     it('sends one visit event after a successful bootstrap', async () => {
-        await expect(AppUtils.init()).resolves.toEqual({status: true})
+        const onBackendReady = vi.fn()
+
+        await expect(AppUtils.init({onBackendReady})).resolves.toEqual({status: true})
 
         expect(mocks.sendVisit).toHaveBeenCalledTimes(1)
+        expect(mocks.registerIconLibraryFromKits).toHaveBeenCalledOnce()
+        expect(onBackendReady).toHaveBeenCalledTimes(1)
     })
 
     it('does not send a visit event when the backend bootstrap fails', async () => {
         mocks.pingBackend.mockResolvedValueOnce({alive: false})
 
-        await expect(AppUtils.init()).resolves.toMatchObject({status: false})
+        const onBackendReady = vi.fn()
+
+        await expect(AppUtils.init({onBackendReady})).resolves.toMatchObject({status: false})
 
         expect(mocks.sendVisit).not.toHaveBeenCalled()
+        expect(onBackendReady).not.toHaveBeenCalled()
     })
 })

@@ -8,6 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-13
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,6 +28,22 @@ const indexLayersById = config => new Map(
 )
 
 describe('layers-terrains configuration', () => {
+    it('uses non-Ion defaults for a new profile', () => {
+        const config = loadLayersTerrains()
+
+        expect(config.base).toBe('arcgis-normal')
+        expect(config.terrain).toBe('reearth-world')
+    })
+
+    it('classifies Ion-dependent layers as freemium and the ellipsoid as free', () => {
+        const layersById = indexLayersById(loadLayersTerrains())
+
+        expect(layersById.get('cesium-world').usage.type).toBe('freemium')
+        expect(layersById.get('google-photorealistic-3d').usage.type).toBe('freemium')
+        expect(layersById.get('google-maps-2d-satellite').usage.type).toBe('freemium')
+        expect(layersById.get('cesium-ellipsoid').usage.type).toBe('free')
+    })
+
     it('keeps active layer ids resolvable', () => {
         const config = loadLayersTerrains()
         const layersById = indexLayersById(config)
@@ -72,5 +89,31 @@ describe('layers-terrains configuration', () => {
 
         expect(layersById.has('ign-plan-lidar-terrain')).toBe(false)
         expect(layersById.has('ign-plan-lidar-sursol')).toBe(false)
+    })
+
+    it('declares dedicated Google Maps credits for both Google 2D imagery layers', () => {
+        const config = loadLayersTerrains()
+        const layersById = indexLayersById(config)
+        const expectedCredit = {
+            credits:  'Google Maps',
+            logo:     '/assets/images/layers/logos/google-maps.png',
+            logoText: 'Google Maps',
+            url:      'https://www.google.com/maps',
+        }
+
+        expect(layersById.get('google-maps-2d-satellite')).toMatchObject(expectedCredit)
+        expect(layersById.get('google-maps-2d-satellite-labels')).toMatchObject(expectedCredit)
+    })
+
+    it('declares a Google Maps credit for Google Photorealistic 3D Tiles', () => {
+        const config = loadLayersTerrains()
+        const layersById = indexLayersById(config)
+
+        expect(layersById.get('google-photorealistic-3d')).toMatchObject({
+            credits:  'Google Maps',
+            logo:     '/assets/images/layers/logos/google-maps.png',
+            logoText: 'Google Maps',
+            url:      'https://www.google.com/maps',
+        })
     })
 })

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified on: 2026-07-03
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,14 @@ import { cleanup, render, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
+
+const widgetCanvasRefresh = vi.hoisted(() => vi.fn())
+
+vi.mock('@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas', () => ({
+    Widget2Canvas: {
+        refresh: widgetCanvasRefresh,
+    },
+}))
 
 vi.mock('@Components/DataDisplay/NameValueUnit', () => ({
     NameValueUnit: ({value}) => <span>{String(value)}</span>,
@@ -39,7 +47,10 @@ vi.mock('@Components/MainUI/widgets/useWidgetScaleCorrection', () => ({
 
 vi.mock('@shoelace-style/shoelace/dist/react', () => ({
     SlDivider: () => <hr />,
-    SlIcon: () => <span />,
+}))
+
+vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
+    WaIcon: ({name}) => <span data-icon={name}/>,
 }))
 
 import { JourneyStats } from '@Components/Stats/JourneyStats'
@@ -51,6 +62,7 @@ describe('JourneyStats', () => {
 
     beforeEach(() => {
         updateRect = vi.fn()
+        widgetCanvasRefresh.mockClear()
         originalDescriptors = {
             offsetWidth:  Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth'),
             offsetHeight: Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight'),
@@ -169,6 +181,7 @@ describe('JourneyStats', () => {
             },
             widgets: new Map(),
         }
+
     })
 
     afterEach(() => {
@@ -278,6 +291,7 @@ describe('JourneyStats', () => {
         expect(widget.dataset.videoOverlayVisible).toBe('true')
         expect(widget.textContent).toContain('120')
         expect(widget.querySelector('.journey-stats-placeholder')).toBeNull()
+        await waitFor(() => expect(widgetCanvasRefresh).toHaveBeenCalledWith('journey-stats-widget#1'))
     })
 
     it('uses placeholder values for dynamic stats on the video board before recording starts', async () => {
@@ -316,6 +330,65 @@ describe('JourneyStats', () => {
         expect(widget.textContent).toContain('00')
         expect(widget.querySelector('.journey-stats-placeholder')).not.toBeNull()
         expect(widget.textContent).not.toContain('120')
+        expect(widgetCanvasRefresh).not.toHaveBeenCalled()
+        await waitFor(() => expect(widgetCanvasRefresh).toHaveBeenCalledWith('journey-stats-widget#1'))
+
+        globalThis.lgs.stores.ui.video.recording = true
+
+        await waitFor(() => expect(widget.textContent).toContain('120'))
+        await waitFor(() => expect(widgetCanvasRefresh).toHaveBeenCalledTimes(2))
+    })
+
+    it('updates dynamic stats when the replay frame sample changes', async () => {
+        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.replay.dynamicFrameState = {
+            active: true,
+            playing: true,
+            paused: false,
+            progress: 0.2,
+            sample: {
+                distanceFromStart: 120,
+                cumulativeElevationGain: 87,
+                journeyElapsedMillis: 4000,
+            },
+        }
+
+        const {container} = render(
+            <JourneyStats
+                id="dynamic-stats-widget#1"
+                metrics={{
+                    distance: 120,
+                    positive: {elevation: 87},
+                    duration: 4,
+                }}
+                units={{
+                    elevation: 'm',
+                    distance:  'm',
+                    pace:     'min/km',
+                    speed:    'km/h',
+                }}
+                mode="dynamic"
+                widgetKey="journey-stats-widget"
+                widgetsBoard={VIDEO_WIDGETS_BOARD}
+            />,
+        )
+
+        await waitFor(() => expect(container.textContent).toContain('120'))
+
+        globalThis.lgs.stores.replay.dynamicFrameState = {
+            ...globalThis.lgs.stores.replay.dynamicFrameState,
+            progress: 0.4,
+            sample: {
+                distanceFromStart: 222,
+                cumulativeElevationGain: 99,
+                journeyElapsedMillis: 7000,
+            },
+        }
+
+        await waitFor(() => {
+            expect(container.textContent).toContain('222')
+            expect(container.textContent).toContain('99')
+        })
     })
 
     it('hides the journey stats widget on the video board while recording is active and the replay is not near the end', async () => {

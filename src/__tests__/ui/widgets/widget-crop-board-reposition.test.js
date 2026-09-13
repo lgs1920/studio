@@ -1,7 +1,24 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: widget-crop-board-reposition.test.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-19
+ * Last modified: 2026-09-13
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { LGS_VISUAL_WIDGET, LGS_WIDGET, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { LGS_VISUAL_WIDGET, LGS_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { WidgetCoreControls } from '@Core/ui/widget-manager/WidgetCoreControls'
 import { WidgetCoreRegistry } from '@Core/ui/widget-manager/WidgetCoreRegistry'
+import { WidgetPosition } from '@Core/ui/widget-manager/WidgetPosition'
 
 describe('crop board widget repositioning', () => {
     let registry
@@ -121,6 +138,97 @@ describe('crop board widget repositioning', () => {
 
         expect(changed).toBe(0)
         expect(manager.saveWidgetPosition).not.toHaveBeenCalled()
+    })
+
+    it('clamps persisted scene widgets inside the scene bounds on initialization', () => {
+        const config = {
+            id:             'menu#scene-offscreen',
+            type:           LGS_WIDGET,
+            widgetsBoard:   SCENE_WIDGETS_BOARD,
+            container:      board,
+            boundsContainer: board,
+            fromDB:         true,
+            position:       {left: -120, top: -80},
+            dimensions:     {width: 200, height: 100},
+            scale:          {x: 1, y: 1},
+            margin:         5,
+        }
+
+        const position = controls.computeInitialPosition(config, widget)
+
+        expect(position).toEqual({left: 5, top: 5})
+    })
+
+    it('keeps the same margin when clamping scene widgets from the right or bottom', () => {
+        widget.style.margin = '5px'
+        const config = {
+            id:             'menu#scene-bottom-right',
+            type:           LGS_WIDGET,
+            widgetsBoard:   SCENE_WIDGETS_BOARD,
+            container:      board,
+            boundsContainer: board,
+            fromDB:         true,
+            position:       {left: 580, top: 390},
+            dimensions:     {width: 200, height: 100},
+            scale:          {x: 1, y: 1},
+            margin:         5,
+        }
+
+        const position = controls.computeInitialPosition(config, widget)
+
+        expect(position).toEqual({left: 385, top: 285})
+    })
+
+    it('keeps anchor-based bottom-right positioning inside the same margin', () => {
+        widget.style.margin = '5px'
+        const config = {
+            id:             'menu#scene-anchor-bottom-right',
+            type:           LGS_WIDGET,
+            container:      board,
+            boundsContainer: board,
+            element:        widget,
+            dimensions:     {width: 200, height: 100},
+            scale:          {x: 1, y: 1},
+            margin:         5,
+            position:       {left: 0, top: 0},
+        }
+        const positionManager = new WidgetPosition({
+            getIdFromElement: vi.fn(() => config.id),
+            getWidgetConfig: vi.fn(() => config),
+            getMoveable: vi.fn(() => null),
+            refreshEditorPreviewSnapshot: vi.fn(),
+            saveWidgetPosition: vi.fn(),
+        })
+
+        const position = positionManager.toBottomRight(widget, 5)
+
+        expect(position).toEqual({left: 385, top: 285})
+    })
+
+    it('centers a widget horizontally at a percentage of the container height', () => {
+        const config = {
+            id: 'camera-adjustment-widget',
+            type: LGS_WIDGET,
+            container: board,
+            boundsContainer: board,
+            element: widget,
+            dimensions: {width: 200, height: 100},
+            scale: {x: 1, y: 1},
+            margin: 0,
+            position: {left: 0, top: 0},
+        }
+        const positionManager = new WidgetPosition({
+            getIdFromElement: vi.fn(() => config.id),
+            getWidgetConfig: vi.fn(() => config),
+            getMoveable: vi.fn(() => null),
+            refreshEditorPreviewSnapshot: vi.fn(),
+            saveWidgetPosition: vi.fn(),
+        })
+
+        const position = positionManager.toTopPercentage(widget, 10, 0)
+
+        expect(position).toEqual({left: 200, top: 40})
+        expect(config.attachTo).toBe('top')
     })
 
     it('converts local crop coordinates to the screen board only once', () => {
@@ -335,6 +443,173 @@ describe('crop board widget repositioning', () => {
             if (config.windowResizeHandler) {
                 window.removeEventListener('resize', config.windowResizeHandler)
             }
+            globalThis.ResizeObserver = originalResizeObserver
+        }
+    })
+
+    it('fits an oversized and out-of-bounds crop during initialization', () => {
+        const originalResizeObserver = globalThis.ResizeObserver
+        globalThis.ResizeObserver = class {
+            observe = vi.fn()
+            unobserve = vi.fn()
+            disconnect = vi.fn()
+        }
+        board.getBoundingClientRect = vi.fn(() => ({
+            left: 0, top: 0, width: 400, height: 300, right: 400, bottom: 300,
+        }))
+        widget.setAttribute('data-widget-id', VIDEO_CROP_ZONE)
+        const config = {
+            id: VIDEO_CROP_ZONE,
+            isCropper: true,
+            container: board,
+            boundsContainer: board,
+            bounds: {left: 0, top: 0, right: 0, bottom: 0},
+            position: {left: -100, top: -80},
+            cropDimensions: {left: -100, top: -80, width: 600, height: 600},
+            ratio: {value: '16x9', aspectRatio: 16 / 9, locked: true},
+            margin: 8,
+            persist: true,
+        }
+        const setBounds = vi.fn()
+        const setPosition = vi.fn()
+        registry.setConfig(config.id, config)
+        manager.getWidgetConfig.mockReturnValue(config)
+
+        try {
+            controls.monitorContainerResize(config, setBounds, {current: null}, widget, setPosition)
+
+            expect(config.cropDimensions.width).toBeCloseTo(384)
+            expect(config.cropDimensions.height).toBeCloseTo(216)
+            expect(config.cropDimensions.left).toBeCloseTo(8)
+            expect(config.cropDimensions.top).toBeCloseTo(42)
+            expect(config.position).toEqual({left: config.cropDimensions.left, top: config.cropDimensions.top})
+            expect(widget.style.left).toBe('8px')
+            expect(widget.style.top).toBe('42px')
+            expect(widget.style.width).toBe('384px')
+            expect(widget.style.height).toBe('216px')
+            expect(manager.dispatchCropUpdate).toHaveBeenCalledWith(config, 'resize')
+            expect(manager.saveWidgetPosition).toHaveBeenCalledWith(config.id, config)
+        }
+        finally {
+            config.observer?.disconnect()
+            if (config.windowResizeHandler) {
+                window.removeEventListener('resize', config.windowResizeHandler)
+            }
+            globalThis.ResizeObserver = originalResizeObserver
+        }
+    })
+
+    it('shrinks the crop while preserving its width and height percentages', () => {
+        const originalResizeObserver = globalThis.ResizeObserver
+        const performanceNow = vi.spyOn(performance, 'now').mockReturnValue(1000)
+        globalThis.ResizeObserver = class {
+            observe = vi.fn()
+            unobserve = vi.fn()
+            disconnect = vi.fn()
+        }
+        let boardRect = {left: 0, top: 0, width: 800, height: 600, right: 800, bottom: 600}
+        board.getBoundingClientRect = vi.fn(() => boardRect)
+        widget.setAttribute('data-widget-id', VIDEO_CROP_ZONE)
+        const config = {
+            id: VIDEO_CROP_ZONE,
+            isCropper: true,
+            container: board,
+            boundsContainer: board,
+            bounds: {left: 0, top: 0, right: 0, bottom: 0},
+            position: {left: 500, top: 250},
+            cropDimensions: {left: 500, top: 250, width: 250, height: 150},
+            ratio: {value: '5x3', aspectRatio: 5 / 3, locked: true},
+            margin: 0,
+            persist: false,
+        }
+        const setBounds = vi.fn()
+        const setPosition = vi.fn()
+        registry.setConfig(config.id, config)
+        manager.getWidgetConfig.mockReturnValue(config)
+
+        try {
+            controls.monitorContainerResize(config, setBounds, {current: null}, widget, setPosition)
+            boardRect = {left: 0, top: 0, width: 400, height: 300, right: 400, bottom: 300}
+            performanceNow.mockReturnValue(1200)
+            config.windowResizeHandler()
+
+            expect(config.cropDimensions).toEqual({
+                left: 137.5,
+                top: 112.5,
+                width: 125,
+                height: 75,
+            })
+
+            boardRect = {left: 0, top: 0, width: 200, height: 150, right: 200, bottom: 150}
+            performanceNow.mockReturnValue(1400)
+            config.windowResizeHandler()
+
+            expect(config.cropDimensions.width).toBeCloseTo(62.5)
+            expect(config.cropDimensions.height).toBeCloseTo(37.5)
+            expect(config.cropDimensions.left).toBeCloseTo(68.75)
+            expect(config.cropDimensions.top).toBeCloseTo(56.25)
+            expect(widget.style.left).toBe('68.75px')
+            expect(widget.style.top).toBe('56.25px')
+        }
+        finally {
+            config.observer?.disconnect()
+            if (config.windowResizeHandler) {
+                window.removeEventListener('resize', config.windowResizeHandler)
+            }
+            performanceNow.mockRestore()
+            globalThis.ResizeObserver = originalResizeObserver
+        }
+    })
+
+    it('grows the crop while preserving its width and height percentages', () => {
+        const originalResizeObserver = globalThis.ResizeObserver
+        const performanceNow = vi.spyOn(performance, 'now').mockReturnValue(1000)
+        globalThis.ResizeObserver = class {
+            observe = vi.fn()
+            unobserve = vi.fn()
+            disconnect = vi.fn()
+        }
+        let boardRect = {left: 0, top: 0, width: 400, height: 300, right: 400, bottom: 300}
+        board.getBoundingClientRect = vi.fn(() => boardRect)
+        widget.setAttribute('data-widget-id', VIDEO_CROP_ZONE)
+        const config = {
+            id: VIDEO_CROP_ZONE,
+            isCropper: true,
+            container: board,
+            boundsContainer: board,
+            bounds: {left: 0, top: 0, right: 0, bottom: 0},
+            position: {left: 40, top: 30},
+            cropDimensions: {left: 40, top: 30, width: 200, height: 150},
+            ratio: {value: '4x3', aspectRatio: 4 / 3, locked: true},
+            margin: 0,
+            persist: false,
+        }
+        const setBounds = vi.fn()
+        const setPosition = vi.fn()
+        registry.setConfig(config.id, config)
+        manager.getWidgetConfig.mockReturnValue(config)
+
+        try {
+            controls.monitorContainerResize(config, setBounds, {current: null}, widget, setPosition)
+            boardRect = {left: 0, top: 0, width: 800, height: 600, right: 800, bottom: 600}
+            performanceNow.mockReturnValue(1200)
+            config.windowResizeHandler()
+
+            expect(config.cropDimensions).toEqual({
+                left: 200,
+                top: 150,
+                width: 400,
+                height: 300,
+            })
+            expect(config.cropDimensions.width / boardRect.width).toBe(0.5)
+            expect(config.cropDimensions.height / boardRect.height).toBe(0.5)
+        }
+        finally {
+            config.observer?.disconnect()
+            if (config.windowResizeHandler) {
+                window.removeEventListener('resize', config.windowResizeHandler)
+            }
+            performanceNow.mockRestore()
             globalThis.ResizeObserver = originalResizeObserver
         }
     })

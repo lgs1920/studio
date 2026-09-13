@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-25
- * Last modified on: 2026-06-25
+ * Created on: 2026-06-26
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,7 +28,7 @@ export const Tiles3DLayer = () => {
     const layer = layerId ? manager.getEntityProxy(layerId) : null
 
     useEffect(() => {
-        if (!lgs.viewer || lgs.viewer.isDestroyed() || !layer || layer.type !== TILES3D_ENTITY || (IonLayerUtils.isPersonalLayer(layer) && ion.source !== 'user')) {
+        if (!lgs.viewer || lgs.viewer.isDestroyed() || !layer || layer.type !== TILES3D_ENTITY || (IonLayerUtils.isIonDependentLayer(layer) && ion.source !== 'user')) {
             if (lgs.stores.main.theTiles3DLayer?.id) {
                 removeTiles3DErrorLabels(lgs.viewer, lgs.stores.main.theTiles3DLayer.id)
             }

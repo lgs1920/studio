@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-23
- * Last modified: 2026-05-23
+ * Created on: 2026-04-26
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,9 +38,8 @@ import {
   normalizePanoramaPitch,
 } from "@Core/OrbitSettings";
 import { Widget } from "@Components/MainUI/widgets/Widget";
+import { CameraAdjustmentOverlay } from "./CameraAdjustmentOverlay";
 import { OrbitInteractionHintsToggleButton } from "@Components/MainUI/OrbitInteractionHintsWidget";
-import { faAngle, faMagnifyingGlassLocation, faVideo } from "@fortawesome/pro-regular-svg-icons";
-import { FA2SL } from "@Utils/FA2SL";
 import { foot, meter, UnitUtils } from "@Utils/UnitUtils";
 import { cameraViewToSlippyLevel } from "@Utils/cesium/CameraLevel";
 import {
@@ -68,7 +67,7 @@ const KEYBOARD_FAST_HEIGHT_STEP_METERS = 10;
 const KEYBOARD_FINE_HEIGHT_STEP_METERS = 1;
 const INTERACTION_PERSIST_DELAY = 400;
 const ADJUSTMENT_OVERLAY_DELAY = 2000;
-const PANORAMA_ADJUSTMENT_WIDGET = "panorama-adjustment-widget";
+const CAMERA_ADJUSTMENT_WIDGET = "camera-adjustment-widget";
 const EDITABLE_SELECTOR = [
   "input",
   "textarea",
@@ -231,6 +230,7 @@ export const PanoramaWidget = memo(() => {
   const controllerStateRef = useRef(null);
   const interactionPersistTimerRef = useRef(null);
   const adjustmentOverlayTimerRef = useRef(null);
+  const _adjustmentOverlayDragging = useRef(false);
   const centerAdjustmentCancelRef = useRef(null);
   const [adjustmentVisible, setAdjustmentVisible] = useState(false);
   const [adjustmentValues, setAdjustmentValues] = useState(() => ({
@@ -249,14 +249,14 @@ export const PanoramaWidget = memo(() => {
   );
   const adjustmentConfig = useMemo(
     () => ({
-      attachTo: "center",
+      attachTo: "top",
       contextMenu: {
         canRemove: false,
       },
       draggable: true,
       dynamic: true,
       group: SCENE_WIDGETS,
-      id: PANORAMA_ADJUSTMENT_WIDGET,
+      id: CAMERA_ADJUSTMENT_WIDGET,
       left: "50%",
       margin: 0,
       opacity: 1,
@@ -266,7 +266,7 @@ export const PanoramaWidget = memo(() => {
       scalable: false,
       snappable: true,
       stopPropagation: true,
-      top: "50%",
+      top: "10%",
       transient: true,
       type: LGS_WIDGET,
       widgetsBoard: SCENE_WIDGETS_BOARD,
@@ -285,7 +285,7 @@ export const PanoramaWidget = memo(() => {
   const centerAdjustmentWidget = useCallback(() => {
     centerAdjustmentCancelRef.current?.();
     centerAdjustmentCancelRef.current = scheduleCameraAdjustmentWidgetCenter(
-      PANORAMA_ADJUSTMENT_WIDGET
+      CAMERA_ADJUSTMENT_WIDGET
     );
   }, []);
 
@@ -377,7 +377,7 @@ export const PanoramaWidget = memo(() => {
 
   const hideAdjustmentOverlay = useCallback(() => {
     setAdjustmentVisible(false);
-    if (lgs.stores.ui.widget.current?.id === PANORAMA_ADJUSTMENT_WIDGET) {
+    if (lgs.stores.ui.widget.current?.id === CAMERA_ADJUSTMENT_WIDGET) {
       lgs.stores.ui.widget.current = { id: null };
     }
   }, []);
@@ -391,13 +391,41 @@ export const PanoramaWidget = memo(() => {
         window.clearTimeout(adjustmentOverlayTimerRef.current);
       }
 
-      adjustmentOverlayTimerRef.current = window.setTimeout(() => {
-        hideAdjustmentOverlay();
-        adjustmentOverlayTimerRef.current = null;
-      }, ADJUSTMENT_OVERLAY_DELAY);
+      if (!_adjustmentOverlayDragging.current) {
+        adjustmentOverlayTimerRef.current = window.setTimeout(() => {
+          hideAdjustmentOverlay();
+          adjustmentOverlayTimerRef.current = null;
+        }, ADJUSTMENT_OVERLAY_DELAY);
+      }
     },
     [hideAdjustmentOverlay]
   );
+
+  /**
+   * Pauses the panorama adjustment overlay expiration while its widget is dragged.
+   */
+  const pauseAdjustmentOverlayTimer = useCallback(() => {
+    _adjustmentOverlayDragging.current = true;
+    if (adjustmentOverlayTimerRef.current) {
+      window.clearTimeout(adjustmentOverlayTimerRef.current);
+      adjustmentOverlayTimerRef.current = null;
+    }
+  }, []);
+
+  /**
+   * Restarts the panorama adjustment overlay expiration after the widget is released.
+   */
+  const resumeAdjustmentOverlayTimer = useCallback(() => {
+    _adjustmentOverlayDragging.current = false;
+    if (!adjustmentVisible || adjustmentOverlayTimerRef.current) {
+      return;
+    }
+
+    adjustmentOverlayTimerRef.current = window.setTimeout(() => {
+      hideAdjustmentOverlay();
+      adjustmentOverlayTimerRef.current = null;
+    }, ADJUSTMENT_OVERLAY_DELAY);
+  }, [adjustmentVisible, hideAdjustmentOverlay]);
 
   const showAdjustmentOverlay = useCallback(
     (heightOffset, pitch) => {
@@ -639,16 +667,16 @@ export const PanoramaWidget = memo(() => {
 
   const updateRPM = useCallback(
     (event) => {
-      const value = Number(event.target.value);
-      $panorama.rpm = value;
+      setPanoramaRPM(event.target.value, true);
     },
-    [$panorama]
+    [setPanoramaRPM]
   );
 
   const persistRPM = useCallback(
     (event) => {
-      const value = Number(event.target.value);
-      persistPanoramaSettings({ rpm: value });
+      persistPanoramaSettings({
+        rpm: normalizeOrbitRPM(event.target.value, rpmRef.current),
+      });
     },
     [persistPanoramaSettings]
   );
@@ -1023,6 +1051,23 @@ export const PanoramaWidget = memo(() => {
         __.ui.cameraManager.endFlight?.();
       }
     };
+    /**
+     * Stop the panorama transfer and its continuous rotation without waiting
+     * for React to run the effect cleanup after the active state changes.
+     *
+     * @returns {void}
+     */
+    const cancelPanoramaMotion = () => {
+      cameraPathCancel?.();
+      cameraPathCancel = null;
+      if (animationRef.current) {
+        window.cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+      endFlight();
+    };
+    const unregisterPanoramicCancel =
+      __.ui.cameraManager.setPanoramicCancel?.(cancelPanoramaMotion);
     const startPanoramaRotation = () => {
       endFlight();
       if (!$panorama.active) {
@@ -1097,13 +1142,8 @@ export const PanoramaWidget = memo(() => {
     }
 
     return () => {
-      cameraPathCancel?.();
-      cameraPathCancel = null;
-      endFlight();
-      if (animationRef.current) {
-        window.cancelAnimationFrame(animationRef.current);
-        animationRef.current = null;
-      }
+      unregisterPanoramicCancel?.();
+      cancelPanoramaMotion();
 
       const nextController = lgs.scene?.screenSpaceCameraController;
       if (nextController && controllerStateRef.current) {
@@ -1287,33 +1327,15 @@ export const PanoramaWidget = memo(() => {
         </WaCard>
       </Widget>
 
-      <Widget
-        isVisible={adjustmentWidgetMounted}
+      <CameraAdjustmentOverlay
+        isVisible={!rotate.running}
         config={adjustmentConfig}
-        className={`panorama-adjustment-widget-shell${
-          adjustmentVisible ? " adjustment-visible" : ""
-        }`}
-      >
-        <div
-          className="panorama-adjustment-overlay"
-          onWheel={handleAdjustmentWheel}
-        >
-          <span className="panorama-adjustment-metric">
-            <sl-icon library="fa" name={FA2SL.set(faVideo)} />
-            <strong>{adjustmentValues.height}</strong>
-          </span>
-          <span className="panorama-adjustment-metric">
-            <sl-icon library="fa" name={FA2SL.set(faAngle)} />
-            <strong>{adjustmentValues.pitch}</strong>
-          </span>
-          {adjustmentValues.level !== null && (
-            <span className="panorama-adjustment-metric">
-              <sl-icon library="fa" name={FA2SL.set(faMagnifyingGlassLocation)} />
-              <strong>{adjustmentValues.level}</strong>
-            </span>
-          )}
-        </div>
-      </Widget>
+        visible={adjustmentVisible}
+        values={adjustmentValues}
+        onWheel={handleAdjustmentWheel}
+        onDragStart={pauseAdjustmentOverlayTimer}
+        onDragEnd={resumeAdjustmentOverlayTimer}
+      />
     </div>
   );
 });

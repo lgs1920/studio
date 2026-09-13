@@ -1,0 +1,207 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: replay-timeline-preview.css
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-09-13
+ * Last modified: 2026-09-13
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+.replay-timeline-preview {
+    box-sizing: border-box;
+    display: block;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    /* Minimum floating timeline width preserving the legend and track surface. */
+    --lgs-replay-timeline-min-width: 352px;
+    /* Minimum floating timeline height preserving the ruler and visible rows. */
+    --lgs-replay-timeline-min-height: 156px;
+    /* Minimum inner layout height matching the visible track count. */
+    --lgs-replay-timeline-layout-min-height: 74px;
+    min-width: var(--lgs-replay-timeline-min-width);
+    min-height: var(--lgs-replay-timeline-min-height);
+    overflow: hidden;
+
+    .replay-timeline-preview__custom-menu {
+        display: inline-flex;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .replay-timeline-preview__scrubber {
+        position: absolute;
+        z-index: 8;
+        inset-block-start: 0;
+        inset-inline-start: 0;
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        height: var(--lgs-timeline-header-height, 72px);
+        min-height: 0;
+        transform: translateX(var(--lgs-timeline-ruler-scroll-offset, 0px));
+        padding: 0;
+        pointer-events: none;
+        background: transparent;
+    }
+
+    .replay-timeline-preview__scrubber-control {
+        position: absolute;
+        inset-block-start: 0;
+        inset-inline: 0;
+        display: flex;
+        align-items: center;
+        width: 100%;
+        min-width: 0;
+        padding-block: 2px;
+        padding-inline: var(--lgs-gutter-s);
+        gap: var(--lgs-gutter-xs);
+        pointer-events: auto;
+    }
+
+    .replay-timeline-preview__scrubber wa-slider {
+        flex: 1 1 auto;
+        min-width: 0;
+        width: 100%;
+        --track-size: 0.25rem;
+    }
+
+    .replay-timeline-preview__scrubber wa-slider[label-at-start][width-auto] {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .replay-timeline-preview__scrubber wa-slider::part(slider) {
+        margin-block-start: 0;
+    }
+
+    .replay-timeline-preview__zoom {
+        display: flex;
+        flex: 1 1 auto;
+        align-items: center;
+        box-sizing: border-box;
+        width: auto;
+        min-width: 0;
+        gap: var(--lgs-gutter-xs);
+        background: var(--lgs-timeline-surface-color, var(--wa-color-surface-default));
+    }
+
+    .replay-timeline-preview__zoom-slider {
+        display: block;
+        flex: 1 1 auto;
+        width: auto;
+        min-width: 0;
+        --track-size: 0.25rem;
+    }
+
+    .replay-timeline-preview__zoom-icon {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+    }
+
+    .replay-timeline-preview__additional-content {
+        display: flex;
+        width: 100%;
+        min-width: 0;
+        container-type: inline-size;
+    }
+
+    lgs1920-timeline {
+        display: block;
+        width: 100%;
+        height: 100%;
+        min-width: var(--lgs-replay-timeline-min-width);
+        min-height: var(--lgs-replay-timeline-min-height);
+
+        /* Preserve the timeline container spacing around tracks and rails. */
+        --lgs-timeline-padding: var(--lgs-gutter-s);
+        /* Keep the timeline container corners consistent with the LGS card. */
+        --lgs-timeline-radius: var(--wa-border-radius-m);
+        /* Keep the timeline container elevation consistent with the LGS card. */
+        --lgs-timeline-shadow: var(--wa-shadow-l);
+        /* Keep the timeline container edge visible around its internal margin. */
+        --lgs-timeline-border-color: var(--wa-color-border-normal);
+        /* Keep custom scrollbar rails visible when the card border is transparent. */
+        --lgs-timeline-scrollbar-track-color: color-mix(in oklab, var(--wa-color-text-quiet) 24%, transparent);
+        /* Keep custom scrollbar thumbs visible in the embedded preview. */
+        --lgs-timeline-scrollbar-thumb-color: var(--wa-color-brand-fill-loud, var(--wa-color-brand));
+        /* Keep the start range handle fully visible inside the surface. */
+        --lgs-timeline-scale-offset: 8px;
+        /* Keep the end range handle fully visible inside the surface. */
+        --lgs-timeline-end-padding: 8px;
+        /* Keep the Web Component minimum width aligned with the floating host. */
+        --lgs-timeline-min-width: var(--lgs-replay-timeline-min-width);
+        /* Keep the Web Component minimum height aligned with the floating host. */
+        --lgs-timeline-min-height: var(--lgs-replay-timeline-min-height);
+        /* Keep the inner timeline layout below the reserved drag area. */
+        --lgs-timeline-layout-min-height: var(--lgs-replay-timeline-layout-min-height);
+        /* Reserve the upper ruler band for the visible Replay scrubber. */
+        --lgs-timeline-header-height: 72px;
+    }
+
+    lgs1920-timeline::part(tick) {
+        box-sizing: border-box;
+        align-items: flex-end;
+        padding-block-end: var(--lgs-gutter-xxs);
+    }
+
+    lgs1920-timeline:not([data-ready]) {
+        visibility: hidden;
+    }
+
+    lgs1920-timeline[data-replay-timeline-debug="host"],
+    lgs1920-timeline[data-replay-timeline-debug="surface"] {
+        box-sizing: border-box;
+        border: 2px dashed var(--wa-color-brand-fill-loud, #2563eb);
+        background: color-mix(in srgb, var(--wa-color-brand-fill-loud, #2563eb) 8%, transparent);
+    }
+
+    .replay-timeline-preview__empty-debug {
+        box-sizing: border-box;
+        display: block;
+        width: 100%;
+        height: 100%;
+        min-width: var(--lgs-replay-timeline-min-width);
+        min-height: var(--lgs-replay-timeline-min-height);
+        border: 2px dashed var(--wa-color-brand-fill-loud, #2563eb);
+        background: color-mix(in srgb, var(--wa-color-brand-fill-loud, #2563eb) 8%, transparent);
+    }
+
+    lgs1920-timeline::part(top) {
+        display: flex;
+        flex: 0 0 auto;
+        height: auto;
+        min-height: 0;
+    }
+
+    /* Keep the controlled transport visible in the embedded Replay timeline. */
+    lgs1920-timeline::part(header) {
+        position: relative;
+        z-index: 3;
+    }
+
+    /* The numeric clock is intentionally hidden; Replay remains the time authority. */
+    lgs1920-timeline::part(playback-controls) {
+        display: none;
+    }
+
+    lgs1920-timeline::part(layout) {
+        border: 0;
+        border-radius: 0;
+    }
+
+    lgs1920-timeline::part(timeline-start-handle),
+    lgs1920-timeline::part(timeline-end-handle) {
+        pointer-events: none;
+    }
+}

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified on: 2026-06-02
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -215,8 +215,38 @@ describe('video recording relaunch regression', () => {
         render(<VideoSceneWidgetsPortal context={lgs.stores.ui.video.cropper}/>)
 
         expect(screen.getByTestId('dynamic-widget')).not.toBeNull()
+        const portal = document.querySelector('.video-scene-widgets-portal')
+        const widgetLayer = portal?.firstElementChild
+
+        expect(portal?.style.pointerEvents).toBe('none')
+        expect(portal?.classList.contains('video-scene-widgets-portal-capture')).toBe(true)
+        expect(portal?.classList.contains('video-scene-widgets-portal-input-blocked')).toBe(false)
+        expect(widgetLayer?.style.pointerEvents).toBe('auto')
         await waitFor(() => {
             expect(widgetManager.rehydrateWidgetsByBoard).toHaveBeenCalledWith(VIDEO_WIDGETS_BOARD)
+        })
+    })
+
+    it('blocks video widget input only during synchronized recording', async () => {
+        globalThis.lgs.stores.ui.video.editing = false
+        globalThis.lgs.stores.ui.video.preRecording = false
+        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.replay.recordingSync = true
+
+        const view = render(<VideoSceneWidgetsPortal context={lgs.stores.ui.video.cropper}/>)
+        let portal = document.querySelector('.video-scene-widgets-portal')
+
+        expect(portal?.classList.contains('video-scene-widgets-portal-input-blocked')).toBe(true)
+        expect(portal?.firstElementChild?.style.pointerEvents).toBe('none')
+
+        act(() => {
+            globalThis.lgs.stores.replay.recordingSync = false
+        })
+        view.rerender(<VideoSceneWidgetsPortal context={lgs.stores.ui.video.cropper}/>)
+        await waitFor(() => {
+            portal = document.querySelector('.video-scene-widgets-portal')
+            expect(portal?.classList.contains('video-scene-widgets-portal-input-blocked')).toBe(false)
+            expect(portal?.firstElementChild?.style.pointerEvents).toBe('auto')
         })
     })
 
@@ -275,7 +305,7 @@ describe('video recording relaunch regression', () => {
         view.unmount()
     })
 
-    it('shows replay progression in the recorder toolbar when the sync link is active', () => {
+    it('does not show a Replay toolbar in the recorder widget', () => {
         globalThis.lgs.stores.ui.video.recording = true
         globalThis.lgs.stores.replay.recordingSync = true
         globalThis.lgs.stores.replay.active = true
@@ -291,13 +321,12 @@ describe('video recording relaunch regression', () => {
 
         render(<VideoRecorderToolbar/>)
 
-        expect(screen.getByText('00:01 / 00:02')).not.toBeNull()
-        expect(screen.getByText('50.0 / 100.0 km')).not.toBeNull()
-        expect(screen.getByText('50%')).not.toBeNull()
-        expect(screen.queryByText(/fps/i)).toBeNull()
+        expect(document.querySelector('.video-recorder-widget-recording')).not.toBeNull()
+        expect(document.querySelector('.video-recorder-spacer')).not.toBeNull()
+        expect(document.querySelector('.video-recorder-replay-progress')).toBeNull()
     })
 
-    it('uses the draft video timeline for replay percent while clips are recording', async () => {
+    it('does not expose Replay progress while clips are recording', async () => {
         globalThis.lgs.stores.ui.video.recording = true
         globalThis.lgs.stores.replay.recordingSync = true
         globalThis.lgs.stores.replay.clipSequenceActive = true
@@ -318,13 +347,10 @@ describe('video recording relaunch regression', () => {
             }))
         })
 
-        await waitFor(() => {
-            expect(screen.getByText('15%')).not.toBeNull()
-        })
-        expect(screen.queryByText('50%')).toBeNull()
+        await waitFor(() => expect(document.querySelector('.video-recorder-replay-progress')).toBeNull())
     })
 
-    it('uses the configured replay duration and clips before the export plan is ready', async () => {
+    it('does not expose configured Replay progress before the export plan is ready', async () => {
         globalThis.lgs.stores.ui.video.preRecording = false
         globalThis.lgs.stores.ui.video.recording = true
         globalThis.lgs.stores.replay.recordingSync = true
@@ -346,12 +372,10 @@ describe('video recording relaunch regression', () => {
             }))
         })
 
-        await waitFor(() => {
-            expect(screen.getByText('50%')).not.toBeNull()
-        })
+        await waitFor(() => expect(document.querySelector('.video-recorder-replay-progress')).toBeNull())
     })
 
-    it('starts Draft progress at zero while the recorder is preparing', () => {
+    it('does not show Replay progress while the recorder is preparing', () => {
         globalThis.lgs.stores.ui.video.preRecording = true
         globalThis.lgs.stores.replay.recordingSync = true
         globalThis.lgs.stores.replay.active = true
@@ -364,11 +388,10 @@ describe('video recording relaunch regression', () => {
 
         render(<VideoRecorderToolbar/>)
 
-        expect(screen.getByText('0%')).not.toBeNull()
-        expect(screen.queryByText('90%')).toBeNull()
+        expect(document.querySelector('.video-recorder-replay-progress')).toBeNull()
     })
 
-    it('keeps Draft replay progress monotonic and reaches 100 percent on stop', async () => {
+    it('keeps recorder lifecycle handling independent from Replay progress', async () => {
         globalThis.lgs.stores.ui.video.recording = true
         globalThis.lgs.stores.replay.recordingSync = true
         globalThis.lgs.stores.replay.deferredExportPlan = {
@@ -379,7 +402,7 @@ describe('video recording relaunch regression', () => {
 
         render(<VideoRecorderToolbar/>)
 
-        expect(screen.getByText('0%')).not.toBeNull()
+        expect(document.querySelector('.video-recorder-replay-progress')).toBeNull()
 
         act(() => {
             recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.INFO, {
@@ -396,10 +419,7 @@ describe('video recording relaunch regression', () => {
             }))
         })
 
-        await waitFor(() => {
-            expect(screen.getByText('75%')).not.toBeNull()
-        })
-        expect(screen.queryByText('50%')).toBeNull()
+        await waitFor(() => expect(screen.getByText('1s')).not.toBeNull())
 
         act(() => {
             recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.STOP, {
@@ -410,12 +430,10 @@ describe('video recording relaunch regression', () => {
             }))
         })
 
-        await waitFor(() => {
-            expect(screen.getByText('100%')).not.toBeNull()
-        })
+        await waitFor(() => expect(document.querySelector('.video-recorder-replay-progress')).toBeNull())
     })
 
-    it('shows a compact mobile replay summary without totals', () => {
+    it('does not show a mobile Replay summary', () => {
         globalThis.__.device.isMobile = true
         globalThis.lgs.stores.ui.video.recording = true
         globalThis.lgs.stores.replay.recordingSync = true
@@ -436,10 +454,10 @@ describe('video recording relaunch regression', () => {
         expect(screen.queryByText('50.0 km')).toBeNull()
         expect(screen.queryByText('00:01 / 00:02')).toBeNull()
         expect(screen.queryByText('50.0 / 100.0 km')).toBeNull()
-        expect(screen.getByText('50%')).not.toBeNull()
+        expect(document.querySelector('.video-recorder-replay-progress')).toBeNull()
     })
 
-    it('keeps the mobile replay summary rendered inline', () => {
+    it('does not render an inline mobile Replay toolbar', () => {
         globalThis.__.device.isMobile = true
         globalThis.lgs.stores.ui.video.recording = true
         globalThis.lgs.stores.replay.recordingSync = true
@@ -456,9 +474,7 @@ describe('video recording relaunch regression', () => {
 
         render(<VideoRecorderToolbar/>)
 
-        const percent = screen.getByText('50%')
-        expect(percent.closest('.video-recorder-replay-progress')).not.toBeNull()
-        expect(percent.closest('.video-recorder-widget')).not.toBeNull()
+        expect(document.querySelector('.video-recorder-replay-progress')).toBeNull()
     })
 
     it('keeps the stop action available while recording is paused', () => {
@@ -499,7 +515,7 @@ describe('video recording relaunch regression', () => {
 
         expect(document.getElementById('video-recorder-play-pause')?.getAttribute('appearance')).toBe('plain')
         expect(document.getElementById('video-recorder-stop')?.getAttribute('appearance')).toBe('plain')
-        expect(document.querySelector('[id$="-snapshot"]')?.getAttribute('appearance')).toBe('plain')
+        expect(document.querySelector('[id$="-snapshot"]')).toBeNull()
         expect(document.getElementById('video-recorder-cancel')?.getAttribute('appearance')).toBe('plain')
 
         act(() => {

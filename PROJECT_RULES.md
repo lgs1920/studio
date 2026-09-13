@@ -6,10 +6,14 @@ This is the canonical source for the project's AI-agent and development rules.
 
 - **Language:** All conversational responses must be in **French**.
 - **Documentation and issues:** All JSDoc blocks, inline comments, code documentation, project documentation, and issue content must be strictly in **English**.
-- **Autonomy:** If a choice is ambiguous, stop and ask. **Important**: Final decisions are made by the user.
+- **TODO.md LLM query normalization:** Whenever new notes are added to `TODO.md`, rewrite them as clear, self-contained English implementation requests for an LLM. Preserve the original intent, explicit constraints, references, and uncertainty. Do not invent missing requirements. Leave existing entries and deleted sections unchanged unless explicitly requested.
+- **Autonomy:** Within the requested scope, make routine, reversible implementation choices using repository conventions and available evidence. Ask only when missing information materially affects the requested behavior, scope, external contract, or an explicit approval requirement. Continue independent authorized work while awaiting an answer.
+- **Scope and approval:** Do not add unrelated features. Preserve explicit approval requirements and decisions already made by the user. Reuse authorization already given for the same action and scope; do not request it again unless the scope or relevant conditions materially change.
 - **Nuance and analytical rigor:** Avoid unwarranted certainty. Simplistic or overly categorical analyses can omit relevant context and lead to incorrect conclusions.
 - **Depth of analysis:** Explore relevant subtleties, cross-check perspectives, and identify potential blind spots and biases before reaching a conclusion.
 - **Technical verification:** Be especially vigilant with calculations, logic, and overall consistency. If data or reasoning appears anomalous or uncertain, explicitly identify the issue and re-check it step by step.
+- **Stable fixes:** If a fix is not stable, stop using it and find another stable solution before handing it off.
+- **Protection of uncommitted changes:** Never reset code or an uncommitted branch without the user's explicit confirmation.
 - **Direct logging:** When the user explicitly asks for direct logging, use the appropriate built-in console method in the function body (`console.log`, `console.error`, or `console.table`) and do not route it through helper methods or wrappers.
 
 ## 2. Coding Syntax & Style
@@ -22,28 +26,63 @@ This is the canonical source for the project's AI-agent and development rules.
   - **React Refs:** Must start with `_` and must NOT use "Ref" as a suffix (e.g., `_myElement`).
   - **DOM/Events:** Use full words `element` and `event` (never `el` or `ev`).
   - **Private Members:** Use `#` prefix for private class fields and methods.
-- **Code Structure:** Provide full file content in every response.
-- **File size:** If the file exceeds 1500 lines, divide the code into multiple files, each dedicated to a specific set
-  of responsibilities.
+- **Responses:** Summarize changes, validation, and remaining work with file links. Provide full file contents only when explicitly requested.
+- **File size:** Keep new files focused and below 1500 lines. For an existing file above 1500 lines, split it when necessary for the requested change; otherwise make the targeted correction and report the refactoring opportunity separately.
 
 ## 3. Architecture & Tech Stack
 
 - **State Management:** Always use `valtio`. Mapping: `$deepestAttribute` for proxy, `deepestAttribute` for snapshot.
 - **UI:** Strictly use WebAwesome 3 components and FontAwesome. No external CSS libraries.
+- **UI colors:** Whenever a frontend UI color is requested or introduced, use the corresponding color from the Web Awesome palette or design tokens. Do not invent arbitrary color values outside that palette.
+- **Web Awesome first:** Prefer Web Awesome components and their React wrappers whenever a suitable component exists.
+- **Icons:** Use `wa-icon` and its React wrapper directly. Public icon names must use the Font Awesome `iconName` in kebab case, never JavaScript export names such as `faCameraSliders` or internal prefixes such as `fak` and `fakd`. Omit `family` for the default `classic` family and provide it for other families. Keep the generic resolver in `src/Utils/useWebAwesomeKits.js` and pass kit imports into it from the application bootstrap.
+- **Native component events:** Use the native events and APIs of Web Awesome components whenever they provide the required behavior.
+- **Custom behavior:** Prefer native Web Awesome APIs. Use minimal custom handling when necessary to implement the requested behavior and the native API is insufficient.
 - **CSS:** Use nested syntax with `&` selector. Every CSS custom property must have an English comment explaining its purpose.
 - **Backend:** Runtime must be **Bun**. Server framework must be **Elysia**.
 - **Vite:** Never run `bun run dev` manually. `vite build` is allowed.
+
+### Timeline isolation
+
+- **Hermetic Timeline boundary:** Changes made within the Timeline must remain isolated from the external environment. Timeline code must not mutate unrelated application state, create a competing clock, persist a second domain model, or leak listeners, timers, DOM effects, or capture effects outside its explicit lifecycle.
+- **Explicit integration only:** Any Timeline interaction with Replay, editors, stores, persistence, or external services must pass through an explicit canonical interface, with ownership, teardown, and side effects documented and tested. Changes to Timeline behavior must not rely on implicit globals or untracked external mutations.
+- **Domain-neutral Web Component:** Every file under `src/webcomponents/lgs1920-timeline/` must remain completely domain-agnostic. It must not contain Replay-specific words, identifiers, methods, classes, filenames, imports, comments, documentation, tests, or behavior. Generic timeline mechanisms belong inside Timeline and must use generic names. Replay projection, state, playback, and application integration remain outside the Web Component, in the React or application adapter.
+- **React and Web Component callback boundaries:** Keep `onClipDoubleClick` as a React wrapper callback API. The Web Component must expose clip double-click behavior through its `lgs1920-timeline-*` DOM events and must not define an equivalent callback property.
+
+### CesiumJS version maintenance
+
+- Whenever a new CesiumJS version is installed or selected in a package manifest, verify every existing Cesium skill under `skills/cesiumjs-*/` and `skills/using-cesiumjs-skills/SKILL.md` against the new version's official release notes and API reference.
+- Update each affected Cesium skill and the project's CesiumJS version baseline before handoff. Record unresolved API incompatibilities or unavailable verification as explicit follow-up work; do not claim the upgrade is fully validated without that evidence.
+
+### Web Awesome version maintenance
+
+- Whenever a new Web Awesome or Web Awesome Pro version is installed or selected in a package manifest, verify the existing Web Awesome skills and compatibility copies against the new version's official changelog, component references, design-token documentation, and framework-wrapper APIs.
+- Update each affected skill and the project's Web Awesome version baseline before handoff. Limit the detailed review to components, tokens, wrappers, and patterns affected by the upgrade, and record unresolved compatibility or unavailable verification as explicit follow-up work.
 
 ## 4. Documentation & Quality
 
 - **JSDoc:** Every function or method requires a professional English JSDoc block.
 - **Comments:** Production-oriented English comments for critical logic.
 - **Shortcuts:** Any introduced UI shortcut must be added to the dedicated shortcuts documentation.
-- **Testing:** Every feature or fix must be accompanied by relevant tests.
+- **Shortcut catalog readability:** Keep `public/shortcuts.yaml` as one flat YAML list. Organize it with an English project header, blank lines, boxed comment separators, and lighter comment levels for functional sections and subsections. Render alternative single-key bindings on one line separated by `|`. When an entry contains a composed binding, render each binding on its own line without `|`. Use comments for readability only; do not introduce YAML document separators (`---`) or nested catalog structures unless the loader and every consumer are updated together. Keep shortcut identifiers and field semantics stable.
+- **Testing:** Every feature or fix must be accompanied by relevant tests. Classify each test in the matching Vitest project (`unit`, `ui`, or `integration`) and keep the project include and exclude rules explicit.
+- **Deterministic asynchronous tests:** Do not use arbitrary wall-clock sleeps or chained `requestAnimationFrame` waits to synchronize tests. Prefer observable completion signals, microtasks for synchronous callbacks, and fake timers only when the behavior under test depends on a controlled clock or scheduler.
+- **Test isolation:** Tests that change timers, globals, browser APIs, observers, event listeners, or module mocks must restore them during cleanup. A test that passes only when file parallelism is disabled indicates an isolation defect that must be diagnosed before using sequential execution as a permanent workaround.
+- **Test validation:** Validate focused tests first, then the affected Vitest project with the same parallelism used by CI. Run `bun run lint`, `bun run typecheck`, `bun run build`, and `bun run test:lint-config` when the change affects shared configuration, test infrastructure, or build behavior.
+- **Correction workflow:** Analyze the request and propose a solution first. After explicit validation, implement the solution. Add and refine the relevant tests at the end of the implementation, correcting the code and tests together when required.
+
+### Source file headers
+
+- Source-code file headers must follow the shared WebStorm `Studio LGS1920` copyright profile stored in `.idea/copyright/`.
+- The header must use `studio@lgs1920.fr` as the project email address.
+- `Created on` must use the date of the first Git commit that introduced the file, or the current date for a file that has not been committed yet.
+- `Last modified` must use the date of the current change, or the date of the latest Git commit when the file has no current change.
+- Before local handoff, update headers for the changed source files with `bun scripts/update-file-headers.mjs <file-paths>`, without staging. Verify those files with `bun scripts/update-file-headers.mjs --check <file-paths>`. Preserve pre-existing user edits when selecting files. When preparing an explicitly requested commit, use `bun run headers:update` for staged source files or WebStorm's `Update copyright` commit check.
 
 ### Technical documentation status
 
 - Keep implementation documentation under `tech-doc/`.
+- Documentation must describe implemented behavior and must not cover behavior that is no longer taken into account, unless it is explicitly presented as historical.
 - Put specifications that are proposed, pending validation, explicitly TODO, or describe future implementation work under `tech-doc/todo/`.
 - Put specifications and architecture documents that describe the current implementation under `tech-doc/specs/`.
 - Name `tech-doc` documentation files with uppercase, flat filenames using descriptive module prefixes when relevant, for example `CORE-...`, `JOURNEY_...`, or `HOW_TO_...`
@@ -57,8 +96,10 @@ This is the canonical source for the project's AI-agent and development rules.
 
 - **Commit Messages:** Must follow the key-based format: `feat`, `fix`, `refactor`, `docs`, `style`, `test`, `chore`.
 - **Commit Logic:** Never create commits automatically. Only create a commit when the user explicitly requests it. Do not stage or commit proactively on your own initiative.
+- **Commit Granularity:** Before creating commits, always review the pending changes and group them by coherent theme. Each commit must cover one focused topic to preserve a fine-grained, reviewable history.
 - **Project rules changes:** Every modification to `PROJECT_RULES.md` must be isolated in a dedicated commit, submitted through a dedicated pull request, and merged into `main`.
-- **Dependency inventory:** When a commit changes `package.json` dependencies or dependency-related credits, update `tech-doc/specs/README_DEPENDENCIES.md` in the same change set if the inventory is still meant to mirror the current package list.
+- **Local preparation and delivery:** Complete the authorized local edits and applicable checks before requesting any remaining Git authorization. The required commit, pull request, and merge workflow remains mandatory for delivery, but does not prohibit local preparation. Report local readiness and pending delivery steps accurately. Do not stage, commit, push, or merge unless the applicable authorization is already present.
+- **Dependency inventory:** When a commit changes `package.json` dependencies or dependency-related credits, update `tech-doc/specs/delivery/README_DEPENDENCIES.md` in the same change set if the inventory is still meant to mirror the current package list.
 - **Commit history:** `COMMIT_HISTORY.md` is updated automatically by the `Update commit history` GitHub workflow after pushes to branches.
 - **Commit history entry:** The workflow records every previously undocumented commit with its date, exact commit message, and a GitHub link in the format `https://github.com/lgs1920/studio/commit/<commit-id>`. The generated `docs: update commit history` commit is excluded from its own history update.
 
@@ -66,6 +107,7 @@ This is the canonical source for the project's AI-agent and development rules.
 
 - **Clarification and validation:** Before creating an issue, ask the user for any missing explanations or clarifications needed to understand and scope the request. Then present the complete proposed issue content for explicit user validation. Do not create the issue until the user has validated the proposal.
 - **Solution and implementation plan:** For every issue, propose a solution and an implementation plan for explicit user validation. Do not create or implement the issue until the proposed solution and plan have been validated.
+- **Validation reuse:** Present the complete issue content, proposed solution, and implementation plan together for explicit validation. Reuse validation already given for the same proposal. Request renewed validation only for material changes to the approved scope, solution, or plan. A request to create an issue does not by itself validate an unseen proposal.
 - **Complete fields:** Every created issue must have all known and applicable fields filled in, including title, description, assignee, labels, type, priority, repository, Project status, and `Target release`. Do not invent a release, label, priority, or other value when the information is not known.
 - **Assignee:** Assign the issue to the user requesting its creation unless the user explicitly specifies another assignee.
 - **Release planning:** Use the Project-level `Target release` field as the source of truth for release planning across repositories. Use `Unplanned` when no approved release has been selected. Add a new target-release option only after the release has been approved.
@@ -104,15 +146,18 @@ Keep one shared Project across releases. Do not create a Project or a workflow s
 
 ## 7. Release Changelog Workflow
 
-- Changelogs are stored in `public/assets/changelog/` and use the filename `YYYYMMDD-<version>.md`, where `YYYYMMDD` is the release date and `<version>` is the exact package/release version, including prerelease suffixes such as `1.0.0-beta.3`.
+- Changelogs are stored in `public/assets/changelog/` and use the filename `YYYYMMDD-<version>.md`, where `YYYYMMDD` is always the execution date for the current draft and `<version>` is the exact package/release version, including prerelease suffixes such as `1.0.0-beta.3`.
+- At every changelog creation or draft update, set the draft date and every applicable current-release date field to today's execution date. Rename the current draft to today's `YYYYMMDD-<version>.md` filename when necessary. Never change dates in published historical changelogs.
 - When the target changelog does not exist, create it automatically using today's date and the naming/header convention of the closest existing changelog for the same release line. Never overwrite an existing changelog merely to normalize its historical formatting.
 - Keep only the current draft for each release line. Once a newer draft is created, delete the previous draft changelog; do not retain multiple draft files. Published release changelogs must not be deleted.
-- Each changelog must identify the application releases covered by the document: `Studio <version>`, `Backend <version>`, and `Site <date>`, because Site does not use a version number. The `Site` date is the date of the latest commit included for the site's evolutions. Include only applications with at least one evolution in the release, and omit an application entirely when it has no evolution to report.
+- Each changelog must identify the application releases covered by the document: `Studio <version>`, `Backend <version>`, and `Site <date>`, because Site does not use a version number. For the current draft, the `Site` date is today's execution date. Include only applications with at least one evolution in the release, and omit an application entirely when it has no evolution to report.
 - Every release changelog must contain these four sections, in this order: `New Features and Improvements`, `Closed Issues`, `Remaining Bugs`, and `Remaining Features`.
 - Within each section, group entries under the owning application/repository headings `studio`, `backend`, and `site`, in that order. Omit an application heading only when it has no entry in that section.
 - The `New Features and Improvements` section describes the user-visible novelties and improvements delivered by each application. It must not replace the detailed list of closed issues.
-- The `Closed Issues` section lists every issue closed for the release and keeps each issue under its owning application/repository.
-- For `site` and `backend`, include every issue closed on or after the date of the latest previous Studio release, even when the issue has no matching Project `Target release` or milestone. Use the date in the latest previous Studio changelog filename as the boundary, and keep each issue under its owning repository.
+- When an application has more than 10 entries in `New Features and Improvements`, keep the complete list and add a repository-specific GitHub compare link to the previous release reference. Use the actual previous and current version tags, commit references, or release references available for that repository; never invent a reference. For Site, which has no version number, use the corresponding verified commit or release references.
+- The `Closed Issues` section lists at most the 10 latest issues for each application, keeps each issue under its owning application/repository, and sorts those displayed issues by descending issue number.
+- When an application has more than 10 closed issues for the release, display only its 10 latest issues and add a repository-specific GitHub issues search link listing the issues closed since the previous release version. Use the verified previous-release boundary and repository ownership filter. When an application has 10 or fewer closed issues, display all of them without this additional link.
+- For `site` and `backend`, include every issue closed on or after the date of the latest previous Studio release in the release dataset, even when the issue has no matching Project `Target release` or milestone. Use the date in the latest previous Studio changelog filename as the boundary, keep each issue under its owning repository, display only the 10 latest issues when required by the display cap, and use the GitHub link to expose the complete dataset.
 - The `Remaining Bugs` and `Remaining Features` sections must not list individual open issues. Instead, provide an external GitHub search link that displays the current open issues of the relevant type, grouped under the owning application/repository. Omit an application heading when its filtered GitHub search has no matching issue. These sections replace the previous global `Known Issues` and `Feature Backlog` entries in the main changelog content.
 - Keep issue links pointing to the owning repository. Do not add links to mirror issues.
 - Do not invent issue numbers, release versions, dates, fixes, features, or known issues. The application-specific GitHub links in `Remaining Bugs` and `Remaining Features` are the source of truth for current open items. Do not duplicate these links in a separate global `Resources` section.

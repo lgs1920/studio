@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-11
- * Last modified: 2026-06-11
+ * Created on: 2024-02-20
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -143,6 +143,8 @@ export const TracksEditor = memo(() => {
                         ref={drawerRef}
                         id={JOURNEY_EDITOR_DRAWER}
                         open={true}
+                        resize={true}
+                        resizeMax="80vw"
                         onWaAfterHide={handleRequestClose}
                         onSlAfterHide={closeTracksEditor}
                         placement={drawerPlacement}

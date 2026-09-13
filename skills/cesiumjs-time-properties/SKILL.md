@@ -4,7 +4,12 @@ description: "CesiumJS time, properties, and animation - Clock, JulianDate, Time
 ---
 # CesiumJS Time, Properties & Animation
 
-Version baseline: CesiumJS v1.143
+## User intent discipline
+
+For Studio work, follow the autonomy and approval rules in [PROJECT_RULES.md](../../PROJECT_RULES.md#1-core-directives). Preserve the task-specific safeguards below.
+
+
+Version baseline: CesiumJS v1.144
 
 Covers the temporal data-binding layer: Clock/JulianDate time system, the Property hierarchy that makes entity attributes change over time, interpolation algorithms, splines, and material properties. Properties live here (not with Entities) because SampledProperty and CallbackProperty are meaningless without Clock/JulianDate. The Material class (Fabric) belongs in cesiumjs-materials-shaders.
 

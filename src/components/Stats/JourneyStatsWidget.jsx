@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-01-31
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -81,18 +81,19 @@ export const JourneyStatsWidget = ({
                 canRemove:   true,
                 canPosition: true,
                 canSnapshot: true,
+                canDetach:   true,
             },
             width:           400,
             top:             '0%',
             left:            '50%',
             type:            LGS_VISUAL_WIDGET,
             group:           widgetsBoard === SCENE_WIDGETS_BOARD ? SCENE_WIDGETS : JOURNEY_WIDGETS,
-            margin:          5,
+            margin:          lgs.gutter?.xs ?? 5,
             attachTo:        'top',
             scalable:        true,
             rotatable:       true,
             id,
-            min: {width: 150},
+            min: {width: 50},
             max: {width: 1000},
             persist:         true,
             transient:       true,
@@ -100,7 +101,8 @@ export const JourneyStatsWidget = ({
             stopPropagation: false,
             snap:            false,
             captureWholeWidget: true,
-            refreshMode:     mode === 'dynamic' ? 'both' : undefined,
+            // Dynamic Stats refreshes are scheduled by JourneyStats after its layout pass.
+            refreshMode:     mode === 'dynamic' ? 'manual' : undefined,
             widgetsBoard:    widgetsBoard,
             zIndex: zIndex,
         }

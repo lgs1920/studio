@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified on: 2026-07-14
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -68,6 +68,12 @@ describe('ReplayVideoRenderSession', () => {
         expect(frames[0].progress).toBe(0)
         expect(frames.at(-1).progress).toBe(1)
         expect(frames.at(-1).sample.marker).toBe(1000)
+        expect(frames[0].intent).toEqual(expect.objectContaining({
+            planId: session.renderPlan.id,
+            renderMode: 'hq',
+        }))
+        expect(session.renderPlan.materializedFrameCount).toBe(0)
+        expect(session.frameResolver.resolutionCount).toBe(11)
         expect(frames[0].renderContract).toEqual(expect.objectContaining({
             renderMode: 'hq',
             logicalFrame: expect.objectContaining({progress: 0}),

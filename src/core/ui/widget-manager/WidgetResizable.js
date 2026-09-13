@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2025-10-12
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,49 @@
  * Singleton class that manages resizable functionality for widgets.
  */
 import { LGS_ANIMATION_RESIZING } from '@Core/constants'
+import { constrainWidgetDimensions } from './widgetResizeUtils'
+
+/**
+ * Resolve the maximum dimensions allowed by the active widget bounds for one
+ * resize direction.
+ *
+ * @param {Object} options - Resize geometry options.
+ * @param {Object} options.config - Widget runtime configuration.
+ * @param {Array<number>} options.direction - Moveable resize direction.
+ * @param {number} options.left - Current absolute left position.
+ * @param {number} options.top - Current absolute top position.
+ * @param {number} options.width - Current widget width.
+ * @param {number} options.height - Current widget height.
+ * @returns {{maxWidth?: number, maxHeight?: number}} Directional bounds.
+ */
+const resolveDirectionalResizeBounds = ({config, direction, left, top, width, height}) => {
+    const bounds = config?.bounds
+    if (!bounds) {
+        return {}
+    }
+
+    const [directionX, directionY] = direction
+    const margin = Math.max(0, Number(config.margin) || 0)
+    const leftBound = Number(bounds.left) + margin
+    const rightBound = Number(bounds.right) - margin
+    const topBound = Number(bounds.top) + margin
+    const bottomBound = Number(bounds.bottom) - margin
+    const result = {}
+
+    if (directionX !== 0 && Number.isFinite(leftBound) && Number.isFinite(rightBound)) {
+        result.maxWidth = directionX < 0
+            ? (left + width) - leftBound
+            : rightBound - left
+    }
+
+    if (directionY !== 0 && Number.isFinite(topBound) && Number.isFinite(bottomBound)) {
+        result.maxHeight = directionY < 0
+            ? (top + height) - topBound
+            : bottomBound - top
+    }
+
+    return result
+}
 
 export class WidgetResizable {
     // Singleton instance
@@ -111,14 +154,46 @@ export class WidgetResizable {
             return
         }
         this.#widgetManager.isResizing = true
-        const width = Math.round(event.width)
-        const height = Math.round(event.height)
         const config = this.#widgetManager.getWidgetConfig(this.#widgetManager.retrieveElementId(target))
-        const prevCropDimensions = config.isCropper ? {...config.cropDimensions} : {}
+        if (!config) {
+            this.#widgetManager.isResizing = false
+            return
+        }
+
+        const direction = Array.isArray(event.direction) ? event.direction : [1, 1]
+        const requestedWidth = Math.round(event.width)
+        const requestedHeight = Math.round(event.height)
         const baseLeft = __.app.parsePx(target.style.left || '0')
         const baseTop = __.app.parsePx(target.style.top || '0')
-        const currentWidth = config.isCropper ? prevCropDimensions?.width || width : __.app.parsePx(target.style.width || '0') || width
-        const currentHeight = config.isCropper ? prevCropDimensions?.height || height : __.app.parsePx(target.style.height || '0') || height
+        const currentWidth = config.isCropper
+            ? config.cropDimensions?.width || requestedWidth
+            : __.app.parsePx(target.style.width || '0') || requestedWidth
+        const currentHeight = config.isCropper
+            ? config.cropDimensions?.height || requestedHeight
+            : __.app.parsePx(target.style.height || '0') || requestedHeight
+        const directionalBounds = resolveDirectionalResizeBounds({
+            config,
+            direction,
+            left:   baseLeft,
+            top:    baseTop,
+            width:  currentWidth,
+            height: currentHeight,
+        })
+        const preferredAxis = direction[0] === 0 && direction[1] !== 0 ? 'height' : 'width'
+        const constrainedDimensions = config.isCropper
+            ? {width: requestedWidth, height: requestedHeight}
+            : constrainWidgetDimensions({
+                config,
+                element: target,
+                width: requestedWidth,
+                height: requestedHeight,
+                preferredAxis,
+                maxWidth: directionalBounds.maxWidth,
+                maxHeight: directionalBounds.maxHeight,
+            })
+        const width = Math.round(constrainedDimensions.width)
+        const height = Math.round(constrainedDimensions.height)
+        const prevCropDimensions = config.isCropper ? {...config.cropDimensions} : {}
         const resizeOffsetX = Number.isFinite(event?.drag?.beforeDist?.[0]) ? Math.round(event.drag.beforeDist[0]) : null
         const resizeOffsetY = Number.isFinite(event?.drag?.beforeDist?.[1]) ? Math.round(event.drag.beforeDist[1]) : null
         let finalLeft
@@ -144,7 +219,7 @@ export class WidgetResizable {
             }
         }
         else {
-            const [dx, dy] = event.direction
+            const [dx, dy] = direction
             const directionMap = {
                 '1,1':   {left: baseLeft, top: baseTop},
                 '1,-1':  {left: baseLeft, top: baseTop + (currentHeight - height)},
@@ -267,6 +342,17 @@ export class WidgetResizable {
             const width = __.app.parsePx(event.target.style.width || '0') || event.target.getBoundingClientRect().width || config.dimensions?.width || 0
             const height = __.app.parsePx(event.target.style.height || '0') || event.target.getBoundingClientRect().height || config.dimensions?.height || 0
             config.dimensions = {width, height}
+        }
+
+        const widgetList = globalThis.lgs?.stores?.ui?.widget?.list
+        if (!config.isCropper && widgetList?.get && widgetList?.set) {
+            const entry = widgetList.get(config.id) ?? {}
+            const nextEntry = {
+                ...entry,
+                dimensions: config.dimensions,
+                position:   config.position,
+            }
+            widgetList.set(config.id, nextEntry)
         }
 
         if (config.persist) {

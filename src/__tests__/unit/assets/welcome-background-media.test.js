@@ -4,10 +4,18 @@
  *
  * File: welcome-background-media.test.js
  *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-13
+ * Last modified: 2026-09-13
+ *
+ *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
+    applyWelcomeBackgroundToImage,
     applyWelcomeBackgroundToVideo,
     bannerMediaCatalog,
     getWelcomeBackgroundMedia,
@@ -23,6 +31,10 @@ import {afterEach, describe, expect, it, vi} from 'vitest'
 describe('welcome background media catalog', () => {
     afterEach(() => {
         vi.restoreAllMocks()
+    })
+
+    it('uses the same restrained slow-motion rate as the public site hero', () => {
+        expect(WELCOME_BACKGROUND_PLAYBACK_RATE).toBe(0.75)
     })
 
     it('uses all videos from the shared outdoor catalog', () => {
@@ -116,6 +128,23 @@ describe('welcome background media catalog', () => {
         expect(videoElement.playbackRate).toBe(WELCOME_BACKGROUND_PLAYBACK_RATE)
         expect(videoElement.querySelector('source')?.src).toContain('/assets/media/20260812-15404528-3840x2160.mp4')
         expect(videoElement.hidden).toBe(false)
+    })
+
+    it('applies the resolved fallback image to the boot splash', () => {
+        const imageElement = document.createElement('img')
+
+        expect(applyWelcomeBackgroundToImage(imageElement, {
+            imageSources: [{src: '/assets/media/fallback.webp', type: 'image/webp'}],
+        })).toBe(true)
+        expect(imageElement.src).toContain('/assets/media/fallback.webp')
+        expect(imageElement.hidden).toBe(false)
+    })
+
+    it('hides the fallback image when the selection has no image source', () => {
+        const imageElement = document.createElement('img')
+
+        expect(applyWelcomeBackgroundToImage(imageElement, {imageSources: []})).toBe(false)
+        expect(imageElement.hidden).toBe(true)
     })
 
     it('exposes the supported catalog dimensions for future additions', () => {

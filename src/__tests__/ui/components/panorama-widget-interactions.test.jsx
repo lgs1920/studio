@@ -7,14 +7,14 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-13
- * Last modified: 2026-07-13
+ * Created on: 2026-07-11
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { cleanup, fireEvent, render } from '@testing-library/react'
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { CURRENT_POI } from '@Core/constants'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
@@ -52,12 +52,6 @@ vi.mock('@Utils/UnitUtils', () => ({
     meter:     {symbol: 'm'},
     UnitUtils: {
         formatMetric: value => ({full: `${Math.round(Number(value) || 0)} m`}),
-    },
-}))
-
-vi.mock('@Utils/FA2SL', () => ({
-    FA2SL: {
-        set: icon => icon?.iconName ?? `${icon ?? ''}`,
     },
 }))
 
@@ -100,7 +94,7 @@ const makeMatchMedia = matches => vi.fn(() => ({
     removeEventListener: vi.fn(),
 }))
 
-const setupPanoramaGlobals = () => {
+const setupPanoramaGlobals = ({panoramaActive = true} = {}) => {
     const canvas = document.createElement('canvas')
     document.body.appendChild(canvas)
 
@@ -165,7 +159,7 @@ const setupPanoramaGlobals = () => {
                         running: false,
                     }),
                     panorama: proxy({
-                        active:       true,
+                        active:       panoramaActive,
                         direction:    1,
                         heading:      0,
                         heightOffset: 100,
@@ -206,6 +200,7 @@ const setupPanoramaGlobals = () => {
                 optimizeContinuousCameraRender: vi.fn(),
                 raiseUpdateEvent:               vi.fn(() => undefined),
                 restoreContinuousCameraRender:  vi.fn(),
+                setPanoramicCancel:             vi.fn(() => vi.fn()),
             },
             poiManager: {
                 updatePOI: vi.fn(),
@@ -300,12 +295,33 @@ describe('PanoramaWidget interactions', () => {
         expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(100)
     })
 
+    it('persists the RPM changed for a panorama POI', async () => {
+        setupPanoramaGlobals()
+        const poi = {
+            element:  CURRENT_POI,
+            id:       'poi-1',
+            panorama: {},
+        }
+        lgs.stores.main.components.pois.list.set(poi.id, poi)
+        const {PanoramaWidget} = await import('@Components/MainUI/PanoramaWidget')
+
+        const view = render(<PanoramaWidget/>)
+        const slider = view.getByLabelText('RPM')
+        fireEvent.input(slider, {target: {value: '0.6'}})
+        fireEvent.change(slider, {target: {value: '0.6'}})
+
+        expect(__.ui.poiManager.updatePOI).toHaveBeenCalledWith(
+            poi.id,
+            {panorama: {rpm: 0.6}},
+        )
+    })
+
     it('maps adjustment overlay wheel events to panorama height steps', async () => {
         setupPanoramaGlobals()
         const {PanoramaWidget} = await import('@Components/MainUI/PanoramaWidget')
 
         const {container} = render(<PanoramaWidget/>)
-        const overlay = container.querySelector('.panorama-adjustment-overlay')
+        const overlay = container.querySelector('.camera-adjustment-overlay')
 
         fireEvent.wheel(overlay, {deltaY: 1})
         expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(200)
@@ -324,6 +340,26 @@ describe('PanoramaWidget interactions', () => {
 
         fireEvent.wheel(overlay, {ctrlKey: true, deltaY: -1})
         expect(lgs.stores.ui.mainUI.panorama.heightOffset).toBe(100)
+    })
+
+    it('shows the camera overlay when changing the camera', async () => {
+        const cameraChangedListeners = []
+        setupPanoramaGlobals({panoramaActive: false})
+        lgs.camera.changed.addEventListener = vi.fn(listener => {
+            cameraChangedListeners.push(listener)
+            return vi.fn()
+        })
+        const {PanoramaWidget} = await import('@Components/MainUI/PanoramaWidget')
+
+        const view = render(<PanoramaWidget/>)
+        expect(view.container.querySelector('.camera-adjustment-widget-shell.adjustment-visible')).toBeNull()
+
+        lgs.camera.positionCartographic.height = 1300
+        cameraChangedListeners[0]()
+
+        await waitFor(() => {
+            expect(view.container.querySelector('.camera-adjustment-widget-shell.adjustment-visible')).not.toBeNull()
+        })
     })
 
     it('maps arrow keys to panorama height steps', async () => {
@@ -430,5 +466,23 @@ describe('PanoramaWidget interactions', () => {
         }))
         expect(pathFlyTo.mock.calls[0][0].target).toBeUndefined()
         expect(lgs.camera.flyTo).not.toHaveBeenCalled()
+    })
+
+    it('registers an immediate cancellation callback for panorama motion', async () => {
+        setupPanoramaGlobals()
+        const pathCancel = vi.fn()
+        CameraPath.buildCameraTransferPath.mockReturnValue({
+            flyTo: vi.fn(() => pathCancel),
+            sampleAt: vi.fn(),
+        })
+        const {PanoramaWidget} = await import('@Components/MainUI/PanoramaWidget')
+
+        render(<PanoramaWidget/>)
+
+        const register = __.ui.cameraManager.setPanoramicCancel
+        expect(register).toHaveBeenCalledWith(expect.any(Function))
+        register.mock.calls[0][0]()
+
+        expect(pathCancel).toHaveBeenCalledOnce()
     })
 })

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-07-16
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -51,7 +51,7 @@ export const LogoWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsB
         [widgetsBoard],
     )
     const siteUrl = __.app.buildUrl(lgs?.configuration?.website || 'https://lgs1920.fr')
-    const logoWidgetMargin = lgs.gutter?.s ?? 8
+    const logoWidgetMargin = lgs.gutter?.xs ?? 5
 
     const config = useMemo(() => {
         return {

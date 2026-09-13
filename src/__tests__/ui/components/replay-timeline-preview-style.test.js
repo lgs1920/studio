@@ -1,0 +1,271 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: replay-timeline-preview-style.test.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-09-13
+ * Last modified: 2026-09-13
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+import {readFileSync} from 'node:fs'
+import {resolve} from 'node:path'
+import {describe, expect, it} from 'vitest'
+
+const styleSource = readFileSync(resolve('src/components/MainUI/video/replay-timeline-preview.css'), 'utf8')
+const webComponentStyleSource = readFileSync(resolve('src/webcomponents/lgs1920-timeline/lgs1920-timeline.css'), 'utf8')
+
+describe('Replay timeline preview styles', () => {
+    it('keeps color swatches clickable while hiding only the duplicate picker trigger', () => {
+        const pickerRule = webComponentStyleSource
+            .match(/& \.lgs1920-wa-timeline__clip-color-picker--menu-trigger \{([^}]*)}/)?.[1]
+        const popupRule = webComponentStyleSource
+            .match(/& \.lgs1920-wa-timeline__clip-color-picker--menu-trigger::part\(color-picker\) \{([^}]*)}/)?.[1]
+        const triggerRule = webComponentStyleSource
+            .match(/& \.lgs1920-wa-timeline__clip-color-picker--menu-trigger::part\(trigger\) \{([^}]*)}/)?.[1]
+
+        expect(pickerRule).not.toMatch(/opacity:\s*0/)
+        expect(popupRule).toContain('pointer-events: auto;')
+        expect(triggerRule).toContain('opacity: 0;')
+    })
+
+    it('scopes the read-only integration styles at the preview root', () => {
+        const openBlocks = (styleSource.match(/{/g) ?? []).length
+        const closedBlocks = (styleSource.match(/}/g) ?? []).length
+
+        expect(openBlocks).toBe(closedBlocks)
+        expect(styleSource).toContain('lgs1920-timeline {')
+        expect(styleSource).toContain('.replay-timeline-preview__custom-menu')
+        expect(styleSource).toContain('.replay-timeline-preview__scrubber')
+        expect(styleSource).toContain('width: 100%;')
+        expect(styleSource).toContain('inset-block-start: 0;')
+        expect(styleSource).toContain('z-index: 8;')
+        expect(styleSource).toContain('padding-inline: var(--lgs-gutter-s);')
+        const scrubberRule = styleSource.match(/\.replay-timeline-preview__scrubber \{([^}]*)}/)?.[1] ?? ''
+        expect(scrubberRule).toContain('background: transparent;')
+        expect(scrubberRule).toContain('pointer-events: none;')
+        expect(styleSource).toContain('.replay-timeline-preview__scrubber-control')
+        const scrubberControlRule = styleSource.match(/\.replay-timeline-preview__scrubber-control \{([^}]*)}/)?.[1] ?? ''
+        expect(scrubberControlRule).toContain('pointer-events: auto;')
+        const scrubberSliderRule = styleSource.match(/\.replay-timeline-preview__scrubber wa-slider \{([^}]*)}/)?.[1] ?? ''
+        expect(scrubberSliderRule).not.toContain('display: block;')
+        expect(styleSource).toContain('wa-slider[label-at-start][width-auto]')
+        expect(styleSource).toContain('grid-template-columns: auto minmax(0, 1fr);')
+        expect(styleSource).toContain('.replay-timeline-preview__scrubber wa-slider')
+        expect(styleSource).toContain('margin-block-start: 0;')
+        expect(scrubberSliderRule).toContain('--track-size: 0.25rem;')
+        expect(styleSource).toContain('.replay-timeline-preview__zoom')
+        expect(styleSource).toContain('.replay-timeline-preview__zoom-slider')
+        expect(styleSource).toContain('.replay-timeline-preview__zoom-icon')
+        const zoomRule = styleSource.match(/\.replay-timeline-preview__zoom \{([^}]*)}/)?.[1] ?? ''
+        expect(zoomRule).toContain('background: var(--lgs-timeline-surface-color, var(--wa-color-surface-default));')
+        expect(styleSource).toContain('--track-size: 0.25rem;')
+        expect(styleSource).toContain('line-height: 1;')
+        expect(styleSource).toContain('align-items: center;')
+        expect(styleSource).toContain('justify-content: center;')
+        expect(styleSource).toContain('height: var(--lgs-timeline-header-height, 72px);')
+        expect(styleSource).toContain('--lgs-timeline-header-height: 72px;')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__surface-controls {')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__surface-controls > .lgs1920-wa-timeline__timeline-tools {')
+        expect(webComponentStyleSource).toContain('inset-block-end: 0;')
+        expect(webComponentStyleSource).toContain('height: calc(100% - var(--lgs-timeline-controls-height));')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-controls-height: 2.5rem;')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__legend-controls-spacer {')
+        expect(webComponentStyleSource).toContain("[data-scrollbar-view='tracks'].lgs1920-wa-timeline__scrollbar-track.track-vertical")
+        expect(webComponentStyleSource).toContain('bottom: calc(var(--lgs-timeline-controls-height) + 2px);')
+        expect(styleSource).toContain('lgs1920-timeline::part(tick)')
+        expect(styleSource).toContain('align-items: flex-end;')
+        expect(styleSource).toContain('container-type: inline-size;')
+        expect(styleSource).toContain('--lgs-timeline-padding: var(--lgs-gutter-s);')
+        expect(styleSource).toContain('--lgs-replay-timeline-min-width: 352px;')
+        expect(styleSource).toContain('--lgs-replay-timeline-min-height: 156px;')
+        expect(styleSource).toContain('--lgs-replay-timeline-layout-min-height: 74px;')
+        expect(styleSource).toContain('--lgs-timeline-radius: var(--wa-border-radius-m);')
+        expect(styleSource).toContain('--lgs-timeline-shadow: var(--wa-shadow-l);')
+        expect(styleSource).toContain('--lgs-timeline-border-color: var(--wa-color-border-normal);')
+        expect(styleSource).toContain('--lgs-timeline-scale-offset: 8px;')
+        expect(styleSource).toContain('--lgs-timeline-end-padding: 8px;')
+        expect(styleSource).toContain('--lgs-timeline-padding: var(--lgs-gutter-s);')
+        expect(styleSource).toContain('--lgs-timeline-radius: var(--wa-border-radius-m);')
+        expect(styleSource).toContain('--lgs-timeline-scrollbar-track-color:')
+        expect(styleSource).toContain('--lgs-timeline-scrollbar-thumb-color:')
+        expect(styleSource).toContain('lgs1920-timeline::part(top)')
+        expect(styleSource).toContain('flex: 0 0 auto;')
+        expect(styleSource).toContain('height: auto;')
+        expect(styleSource).toContain('min-height: 0;')
+        expect(styleSource).toContain('lgs1920-timeline::part(header)')
+        expect(styleSource).toContain('position: relative;')
+        expect(styleSource).toContain('lgs1920-timeline::part(playback-controls)')
+        expect(styleSource).toContain('display: none;')
+        expect(styleSource).toContain('lgs1920-timeline::part(layout)')
+        expect(styleSource).toContain('border-radius: 0;')
+        expect(styleSource).toContain('lgs1920-timeline::part(timeline-start-handle)')
+        expect(styleSource).toContain('pointer-events: none;')
+    })
+
+    it('uses valid nested selectors for the Web Component visual layers', () => {
+        const openBlocks = (webComponentStyleSource.match(/{/g) ?? []).length
+        const closedBlocks = (webComponentStyleSource.match(/}/g) ?? []).length
+        const splitPanelRule = webComponentStyleSource
+            .match(/& \.lgs1920-wa-timeline__split-panel \{([^}]*)}/)?.[1]
+        const legendRulerSlotRule = webComponentStyleSource
+            .match(/& slot\[name='legend-ruler'\] \{([^}]*)}/)?.[1]
+        const legendRowRule = webComponentStyleSource
+            .match(/& \.lgs1920-wa-timeline__legend-row \{([^}]*)}/)?.[1]
+        const readOnlyLegendRowRule = webComponentStyleSource
+            .match(/& \.lgs1920-wa-timeline__legend-row\.lgs1920-wa-timeline__legend-row--read-only \{([^}]*)}/)?.[1]
+        const readOnlyTrackRule = webComponentStyleSource
+            .match(/& \.lgs1920-wa-timeline__track\.lgs1920-wa-timeline__track--read-only \{([^}]*)}/)?.[1]
+
+        expect(openBlocks).toBe(closedBlocks)
+        expect(webComponentStyleSource).not.toMatch(/&(?:__|--|-[a-z])/)
+        expect(splitPanelRule).toBeDefined()
+        expect(splitPanelRule).not.toContain('display:')
+        expect(splitPanelRule).toContain('height: 100%;')
+        expect(splitPanelRule).not.toContain('grid-auto-flow:')
+        expect(splitPanelRule).not.toContain('grid-template-columns:')
+        expect(legendRowRule).toContain('border-radius: 0;')
+        expect(readOnlyLegendRowRule).not.toContain('border-bottom-color:')
+        expect(readOnlyTrackRule).not.toContain('border-block-color:')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__track {')
+        expect(webComponentStyleSource).toContain('[data-timeline-ruler-insertion-point]')
+        expect(webComponentStyleSource).toContain('border-block: 1px solid var(--lgs-timeline-quiet-border-color);')
+        expect(webComponentStyleSource).toContain('border-radius: 0;')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__clip {')
+        expect(webComponentStyleSource).toContain('.lgs1920-wa-timeline__clip--selected {')
+        expect(webComponentStyleSource).toContain('border: 2px dashed currentColor;')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__clip:focus-visible {')
+        expect(webComponentStyleSource).toContain('outline: none;')
+        expect(webComponentStyleSource).toContain('grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__header-start {')
+        expect(webComponentStyleSource).toContain('& slot[name=\'custom-menu\'] {')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__additional-content {')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__additional-content-panel::part(body) {')
+        expect(webComponentStyleSource).toContain('justify-self: end;')
+        expect(webComponentStyleSource).toContain('border: 1px solid var(--wa-color-brand-border-normal);')
+        expect(webComponentStyleSource).toContain('border-radius: var(--wa-border-radius-s);')
+        expect(webComponentStyleSource).toContain('margin: 2px;')
+        expect(webComponentStyleSource).toContain('width: max-content;')
+        expect(webComponentStyleSource).toContain('cursor: pointer;')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__timeline-tools {')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__timeline-tools > wa-tooltip {')
+        const timelineToolsRule = webComponentStyleSource
+            .match(/& \.lgs1920-wa-timeline__timeline-tools \{([^}]*)}/)?.[1] ?? ''
+        expect(timelineToolsRule).toContain('border: 0;')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__clip-handle::before {')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__playhead > .lgs1920-wa-timeline__playhead-grip,')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__range-handle > .lgs1920-wa-timeline__range-grip {')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__overlay {')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__split-panel::part(divider) {')
+        expect(webComponentStyleSource).toContain('width: var(--lgs-timeline-resizer-width);')
+        expect(webComponentStyleSource).toContain('min-width: var(--lgs-timeline-resizer-width);')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__split-panel::part(panel) {')
+        expect(webComponentStyleSource).toContain('width: 100%;')
+        expect(webComponentStyleSource).toContain('height: 100%;')
+        expect(webComponentStyleSource).toContain('background-color: var(--lgs-timeline-background);')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline::part(body) {')
+        expect(webComponentStyleSource).toContain('--wa-panel-border-radius: var(--wa-border-radius-s);')
+        expect(webComponentStyleSource).toContain('border-radius: var(--wa-border-radius-s);')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-handle-cap-top:')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-handle-cap-width: 12px;')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-handle-point-size: 7px;')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__legend-ruler {\n        position: relative;\n        z-index: 2;')
+        expect(legendRulerSlotRule).toContain('background-color: var(--lgs-timeline-surface-color);')
+        expect(legendRulerSlotRule).toContain('border-bottom: 1px solid var(--lgs-timeline-quiet-border-color);')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__playhead {\n        z-index: 6;')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__range-handle {\n        position: absolute;\n        top: 0;\n        bottom: 0;\n        z-index: 20;')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__range-handle > .lgs1920-wa-timeline__range-grip {\n        z-index: 21;')
+        expect(webComponentStyleSource).not.toContain('--lgs-timeline-ruler-shadow')
+        expect(webComponentStyleSource).not.toContain('--lgs-timeline-handle-shadow')
+        expect(webComponentStyleSource).not.toContain('--lgs-timeline-handle-axis-shadow')
+        expect(webComponentStyleSource).not.toContain('box-shadow: inset')
+        expect(webComponentStyleSource).not.toContain('filter: drop-shadow(0 1px 0 color-mix(in srgb, black 42%, transparent));')
+        expect(webComponentStyleSource).toContain('top: calc(var(--lgs-timeline-handle-cap-top) + var(--lgs-timeline-handle-cap-height));')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-range-end-color: var(--wa-color-red-90, #ffdde0);')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-playhead-color: var(--wa-color-blue-70, #57b8f1);')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-clip-edge-indicator-color: var(--wa-color-blue-70, #57b8f1);')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-clip-edge-indicator-size: 6px;')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__clip-edge-indicator {')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__clip-snap-guide {')
+        expect(webComponentStyleSource).toContain('z-index: 12;')
+        expect(webComponentStyleSource).toContain('width: 1px;')
+        expect(webComponentStyleSource).toContain('box-shadow: var(--wa-shadow-s);')
+        expect(webComponentStyleSource).toContain('transform: translate(-50%, -50%) rotate(45deg);')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__clip-move-endpoint {')
+        expect(webComponentStyleSource.match(/box-shadow: var\(--wa-shadow-m\);/g)).toHaveLength(3)
+        expect(webComponentStyleSource.match(/box-shadow: var\(--wa-shadow-s\);/g)).toHaveLength(10)
+        expect(webComponentStyleSource).toContain('opacity: 0.5;')
+        expect(webComponentStyleSource).not.toContain("slot[name^='drag-trigger-']")
+        expect(webComponentStyleSource).toContain('cursor: not-allowed;')
+        expect(webComponentStyleSource).toContain('[data-clip-drop-rejected]')
+        expect(webComponentStyleSource).toContain('lgs1920-wa-timeline__clip--drop-rejected')
+        expect(webComponentStyleSource).toContain('var(--wa-color-danger-fill-normal) 56%, var(--lgs-timeline-surface-color)')
+        expect(webComponentStyleSource).toContain('cursor: grabbing;')
+        expect(webComponentStyleSource).toContain('color: var(--wa-color-success-on-normal);')
+        expect(webComponentStyleSource).toContain('background: var(--wa-color-success-fill-normal);')
+        expect(webComponentStyleSource).toContain('background-color: var(--wa-color-success-fill-normal);')
+        expect(webComponentStyleSource).toContain('color: var(--wa-color-danger-on-normal);')
+        expect(webComponentStyleSource).toContain('background: var(--wa-color-danger-fill-normal);')
+        expect(webComponentStyleSource).toContain('background-color: var(--wa-color-danger-fill-normal);')
+        expect(webComponentStyleSource).toContain('opacity: 0.72;')
+        expect(webComponentStyleSource).toContain('pointer-events: none;')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-min-width: 352px;')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-min-height: 156px;')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-layout-min-height: 74px;')
+        expect(webComponentStyleSource).toContain('min-width: 100%;\n        pointer-events: none;')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-min-visible-duration: 5;')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-building-overlay-gap: var(--lgs-gutter-xs, 0.5rem);')
+        expect(webComponentStyleSource).toContain('gap: var(--lgs-timeline-building-overlay-gap);')
+        expect(webComponentStyleSource).toContain('& > .lgs1920-wa-timeline__building-overlay {')
+        expect(webComponentStyleSource).toContain('background: var(--wa-color-surface-raised, var(--wa-color-surface-default, #fff));')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__building-overlay-text {')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-major-tick-height: 0.75rem;')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-minor-tick-height: 0.45rem;')
+        expect(webComponentStyleSource).toContain('height: var(--lgs-timeline-major-tick-height);')
+        expect(webComponentStyleSource).toContain('height: var(--lgs-timeline-minor-tick-height);')
+        expect(webComponentStyleSource).toContain('bottom: 0;')
+        expect(webComponentStyleSource).toContain('transform: translateX(-50%);')
+        expect(webComponentStyleSource).toContain('text-align: center;')
+        expect(webComponentStyleSource).toContain('background-image: linear-gradient')
+        expect(webComponentStyleSource).not.toContain('background-image: repeating-linear-gradient')
+        expect(webComponentStyleSource).toContain('color-mix(in oklab, var(--wa-color-fill-loud')
+        expect(webComponentStyleSource).toContain('.lgs1920-wa-timeline__clip--track-hidden')
+        expect(webComponentStyleSource).toContain('.lgs1920-wa-timeline__scrollbar-track.track-horizontal')
+        expect(webComponentStyleSource).toContain('.lgs1920-wa-timeline__scrollbar-track.track-vertical')
+        expect(webComponentStyleSource).toContain("[data-scrollbar-view='tracks'].lgs1920-wa-timeline__scrollbar-track.track-vertical")
+        expect(webComponentStyleSource).toContain('top: calc(var(--lgs-timeline-header-height) + 2px);')
+        expect(webComponentStyleSource).toContain('.lgs1920-wa-timeline__scrollbar-thumb.thumb-horizontal')
+        expect(webComponentStyleSource).toContain('.lgs1920-wa-timeline__scrollbar-thumb.thumb-vertical')
+        expect(webComponentStyleSource).toContain('.lgs1920-wa-timeline__tracks-viewport')
+        expect(webComponentStyleSource).toContain('overflow-y: hidden;')
+        expect(webComponentStyleSource).toContain('overflow-y: auto;')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-scrollbar-thumb-min-size: 30px;')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-scrollbar-auto-hide-delay: 1s;')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-scrollbar-auto-hide-duration: 200ms;')
+        expect(webComponentStyleSource).toContain('lgs1920-wa-timeline__scroll-shell--idle')
+        expect(webComponentStyleSource).toContain('.lgs1920-wa-timeline__scrollbar-track:hover')
+        expect(webComponentStyleSource).not.toContain('.lgs1920-wa-timeline__scroll-shell:hover .lgs1920-wa-timeline__scrollbar-track')
+        expect(webComponentStyleSource).toContain('scrollbar-width: none;')
+        expect(webComponentStyleSource).toContain("slot[name='legend-ruler']")
+        expect(webComponentStyleSource).toContain('background: var(--lgs-timeline-surface-color);')
+        expect(webComponentStyleSource).toContain('text-overflow: ellipsis;')
+        expect(webComponentStyleSource).toContain('white-space: nowrap;')
+        expect(webComponentStyleSource).toContain('justify-content: flex-start;')
+        expect(webComponentStyleSource).toContain('gap: 0;')
+        expect(webComponentStyleSource).toContain('min-width: calc(1.25rem * 2);')
+        expect(webComponentStyleSource).toContain('margin-inline-end: -3px;')
+        expect(webComponentStyleSource).toContain('.lgs1920-wa-timeline__action-placeholder')
+        expect(webComponentStyleSource).toContain('.lgs1920-wa-timeline__label-editor::part(input-wrapper)')
+        expect(webComponentStyleSource).toContain('--wa-form-control-padding-block: var(--lgs-timeline-label-editor-padding-block);')
+        expect(webComponentStyleSource).toContain('--wa-form-control-padding-inline: var(--lgs-timeline-label-editor-padding-inline);')
+        expect(webComponentStyleSource).toContain('height: auto;')
+        expect(webComponentStyleSource).toContain('margin-block: 0;')
+        expect(webComponentStyleSource).toContain('.lgs1920-wa-timeline__split-panel::part(divider)')
+    })
+})

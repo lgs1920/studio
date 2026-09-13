@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-18
- * Last modified: 2026-06-18
+ * Created on: 2026-02-19
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -74,13 +74,9 @@ export const TextWidgetPreview = memo(({entity}) => {
     }
 
     /**
-     * Priority to live Valtio store if selected, otherwise use persisted configuration rotation.
+     * Uses the persisted rotation to calculate the initial scale of the preview content.
      */
-    const isSelected = widget.current?.id === entity
     const rotation = Number(element?.rotate ?? 0)
-    const activeRotation = isSelected && widget.current?.rotate !== undefined
-                           ? Number(widget.current.rotate)
-                           : rotation
 
     const dynamicVars = element?.text ? _textWidgetManager.generateCSSVariables(element, currentSnapshotImage, WIDGET_SYSTEM_FONT_STACK, {
         correction: scaleCorrection,
@@ -101,7 +97,7 @@ export const TextWidgetPreview = memo(({entity}) => {
         height: Math.max(previewSize.height || 0, Number(widgetConfig?.dimensions?.height) || 0),
     }
 
-    const previewRotation = Number.isFinite(Number(activeRotation)) ? Number(activeRotation) : 0
+    const previewRotation = Number.isFinite(rotation) ? rotation : 0
 
     const updatePreviewScale = useCallback(() => {
         if (!textScaled) {
@@ -215,7 +211,7 @@ export const TextWidgetPreview = memo(({entity}) => {
         boxShadow:       'var(--lgs-bg-elevation)',
         overflow:        'hidden',
         opacity:         element.opacity ?? 1,
-        transform:       `rotate(${activeRotation}deg) scale(${widgetVisualScale * previewScale})`,
+        transform:       `scale(${widgetVisualScale * previewScale})`,
         transformOrigin: 'center center',
     }
     const textStyles = {

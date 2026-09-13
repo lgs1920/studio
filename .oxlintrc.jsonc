@@ -18,6 +18,7 @@
     "dist/**",
     "dev-dist/**",
     "dist-ssr/**",
+    "artifacts/camera-hpr-sphere-preview/**",
     "scripts/fixtures/oxlint/**",
     "**/.eslintrc.cjs"
   ],

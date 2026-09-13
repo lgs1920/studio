@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: JourneyReplayCameraGuide.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-22
+ * Last modified: 2026-09-13
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 /**
  * Replay camera Guide behavior.
  */
@@ -9,8 +25,6 @@ import {Journey} from '@Core/Journey'
 import {CameraUtils} from '@Utils/cesium/CameraUtils'
 import {POIUtils} from '@Utils/cesium/POIUtils'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
-import {faCamera} from '@fortawesome/pro-solid-svg-icons'
-import {faPersonHiking} from '@fortawesome/pro-regular-svg-icons'
 import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
 import {finiteNumber, replayStore} from './JourneyReplayRuntime'
 import {
@@ -53,17 +67,12 @@ import {
     CAMERA_REDIRECT_RENDERED_DEPTH_CLEARANCE_METERS,
     REPLAY_TOLERANCE_RECENTER_REPLACE_DELAY_MS,
     REPLAY_TRACKING_DYNAMIC_LOOKAHEAD_FACTOR,
-    CAMERA_ANGLE_PREVIEW_AXIS_LENGTH,
-    CAMERA_ANGLE_PREVIEW_OFFSET_LENGTH,
-    CAMERA_ANGLE_PREVIEW_ICON_SIZE,
     REPLAY_JOURNEY_TOOLBAR_VISIBILITY_EVENT,
     REPLAY_EVENT_STOP_CLIPS_COMPLETE,
     CAMERA_REDIRECT_CANDIDATES,
     isUsableCartesian3,
     safeCartesian3Normalize,
     safeCartesian3Lerp,
-    makeFontAwesomeIconDataUri,
-    resolveJourneyActivityIcon,
 } from './JourneyReplayCameraShared'
 import {
     rememberNominalCameraView,
@@ -121,15 +130,6 @@ import {
 import {
     removeToleranceZoneOverlay,
     setToleranceZoneOverlayVisible,
-    cameraAnglePreviewEntityCollection,
-    removeCameraAnglePreviewOverlay,
-    cameraAnglePreviewPOIIds,
-    cameraAnglePreviewPOIForId,
-    hideCameraAnglePreviewPOIs,
-    restoreCameraAnglePreviewPOIs,
-    cameraAnglePreviewStartHeading,
-    showCameraAnglePreviewOverlay,
-    hideCameraAnglePreviewOverlay,
     videoCropRect,
     viewportRectForCesiumSurface,
     updateToleranceZoneOverlay,
@@ -820,7 +820,10 @@ export const cameraViewForSample = (mode, {
         }
 
         const computeView = () => {
-            const immediateSource = source === 'drawer' || source === 'refresh'
+            const immediateSource = source === 'drawer'
+                                    || source === 'keyboard'
+                                    || source === 'preparation'
+                                    || source === 'refresh'
             const normalizedPitch = finiteNumber(cameraSettings?.pitch) ?? -65
             const pitch = immediateSource
                           ? degreesToRadians(normalizedPitch)
@@ -837,7 +840,7 @@ export const cameraViewForSample = (mode, {
                 }
                 else {
                     desiredHeading = finiteNumber(previousHeading)
-                        ?? finiteNumber(globalThis.lgs?.viewer?.camera?.heading)
+                        ?? finiteNumber((call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera?.heading)
                         ?? 0
                 }
             }

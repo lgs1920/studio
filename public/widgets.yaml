@@ -26,7 +26,9 @@ widgets:
     name: "Compass"
     description: "A compass widget"
     icon: "compass"
+    timelineColor: "green"
     mandatory: false
+    canHide: true
     max: 1
     component: "CompassWidget"
     type: "lgs-visual-widget"
@@ -78,6 +80,7 @@ widgets:
     name: "Credits"
     description: "Map credits"
     icon: "user"
+    timelineColor: "gray"
     mandatory: true
     component: "CreditsWidget"
     type: "lgs-visual-widget"
@@ -91,6 +94,7 @@ widgets:
     name: "Logo"
     description: "LGS1920 logo"
     icon: "image"
+    timelineColor: "gray"
     mandatory: true
     max: 1
     component: "LogoWidget"
@@ -105,12 +109,14 @@ widgets:
     name: "Elevation Profile"
     description: "Journey elevation profile"
     icon: "chart-fft"
+    timelineColor: "indigo"
     mandatory: false
+    canHide: true
     max: 1
     component: "ProfileWidget"
     type: "lgs-visual-widget"
     path: "@Components/Profile"
-    ratio: "16x9"
+    ratio: "0x0"
     groups:
       - "journey-widgets"
       - "scene-widgets"
@@ -181,12 +187,36 @@ widgets:
       user:
       elements:
 
+  replay-timeline-widget:
+    id: "replay-timeline-widget"
+    name: "Replay Timeline"
+    description: "Locked Replay preparation timeline"
+    icon: "timeline"
+    canDockable: true
+    canDetach: true
+    timelineColor: "blue"
+    mandatory: false
+    canHide: true
+    max: 1
+    component: "ReplayTimelineWidget"
+    type: "lgs-visual-widget"
+    alwaysOnTop: true
+    groups:
+      - "journey-widgets"
+    availability:
+      boards:
+        - "scene"
+      requires:
+        - "hasJourney"
+
   text-widget:
     id: "text-widget"
     name: "Text"
     description: "Text widget"
     icon: "text"
+    timelineColor: "blue"
     mandatory: false
+    canHide: true
     component: "TextWidget"
     type: "lgs-visual-widget"
     path: "@Components/Text"
@@ -247,8 +277,10 @@ widgets:
     id: "journey-stats-widget"
     name: "Journey Stats"
     description: "Journey Stats"
-    icon: "route"
+    icon: "chart-tree-map"
+    timelineColor: "pink"
     mandatory: false
+    canHide: true
     max: 1
     component: "JourneyStatsWidget"
     type: "lgs-visual-widget"
@@ -318,8 +350,10 @@ widgets:
     id: "dynamic-stats-widget"
     name: "Dynamic Stats"
     description: "Live replay stats"
-    icon: "route"
+    icon: "chart-tree-map"
+    timelineColor: "indigo"
     mandatory: false
+    canHide: true
     max: 1
     component: "DynamicStatsWidget"
     type: "lgs-visual-widget"

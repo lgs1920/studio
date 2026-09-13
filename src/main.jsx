@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2024-02-02
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,11 +22,15 @@ import './assets/css/themes/wa-lgs1920.css'
 import './assets/css/animations.css'
 import { UIUtils } from '@Utils/UIUtils'
 import { AppUtils } from '@Utils/AppUtils'
+import { installNativeContextMenuBlocker } from '@Core/events/NativeContextMenuBlocker'
 import {
+    applyWelcomeBackgroundToImage,
     applyWelcomeBackgroundToVideo,
     getWelcomeBackgroundMedia,
     preloadWelcomeBackgroundMedia,
 }                                                               from '@Assets/media/welcome-background-media'
+
+installNativeContextMenuBlocker()
 
 
 /**
@@ -44,13 +48,55 @@ ResizeObserver.prototype.unobserve = function (target) {
  * Load Google Fonts once at startup
  */
 const bootstrap = () => {
+    const isStandalonePwa = window.matchMedia('(display-mode: standalone)').matches
     const welcomeBackgroundMedia = getWelcomeBackgroundMedia()
     preloadWelcomeBackgroundMedia(welcomeBackgroundMedia)
-    applyWelcomeBackgroundToVideo(
-        document.querySelector('#lgs-boot-splash video'),
-        welcomeBackgroundMedia,
-    )
-    document.body.classList.add('lgs-app-booting')
+    const splashElement = document.querySelector('#lgs-boot-splash')
+    const splashVideo = document.querySelector('#lgs-boot-splash video')
+    const splashImage = document.querySelector('#lgs-boot-splash .lgs-boot-splash-background-image')
+    const hasVideo = applyWelcomeBackgroundToVideo(splashVideo, welcomeBackgroundMedia)
+    applyWelcomeBackgroundToImage(splashImage, welcomeBackgroundMedia)
+
+    if (hasVideo && splashElement && splashVideo) {
+        let videoReady = false
+        const revealVideo = () => {
+            if (videoReady) {
+                return
+            }
+
+            let playPromise
+            try {
+                playPromise = splashVideo.play()
+            }
+            catch {
+                return
+            }
+            if (playPromise?.then) {
+                void playPromise.then(() => {
+                    videoReady = true
+                    splashElement.classList.add('lgs-boot-splash-video-ready')
+                }).catch(() => {
+                })
+                return
+            }
+
+            videoReady = true
+            splashElement.classList.add('lgs-boot-splash-video-ready')
+        }
+
+        splashVideo.addEventListener('canplay', revealVideo, {once: true})
+        splashVideo.addEventListener('loadeddata', revealVideo, {once: true})
+        splashVideo.addEventListener('error', () => {
+            splashElement.classList.remove('lgs-boot-splash-video-ready')
+        })
+
+        if (splashVideo.readyState >= 3) {
+            revealVideo()
+        }
+    }
+
+    document.body.classList.toggle('lgs-app-booting', isStandalonePwa)
+    document.body.classList.toggle('lgs-app-visible', !isStandalonePwa)
     AppUtils.setTheme(localStorage.getItem('theme') || 'system')
 
     if (!window.lgs) {

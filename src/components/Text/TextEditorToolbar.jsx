@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-01-10
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -241,7 +241,7 @@ export const TextEditorToolbar = ({id, fonts = false, color = true, align = true
                                 '--sl-input-font-family': appliedFontStack,
                             }}
                         >
-                            <WaIcon slot="start" variant="regular" name="text"/>
+                            <WaIcon slot="start" variant="regular" name="font"/>
                             {WIDGET_FONT_FAMILIES.map(font => (
                                 <WaOption key={font} value={font.replace(/\s/g, '_')}>
                                 <span

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-04-27
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import {
     CURRENT_MAP_POINT, POI_STANDARD_TYPE, POIS_EDITOR_DRAWER, ROTATION_ICON, SCENE_MODE_2D, SCENE_WIDGETS_BOARD,
+    VIDEO_CROP_ZONE,
 } from '@Core/constants'
 import { openPOIEditor } from '@Components/MainUI/MapPOI/openPOIEditor'
 import {
@@ -32,11 +33,12 @@ import { useSnapshot }                                                          
 
 const DEFAULT_POI_TITLE = 'Point Of Interest'
 
-export const MapPointContextMenu = ({target, menuRef}) => {
+export const MapPointContextMenu = ({target, menuRef, hideVideoActions = false}) => {
     const toolbars = useSnapshot(lgs.settings.ui.toolbars)
     const rotateState = useSnapshot(lgs.stores.ui.mainUI.rotate)
     const panoramaState = useSnapshot(lgs.stores.ui.mainUI.panorama)
     const widget = useSnapshot(lgs.stores.ui.widget)
+    const video = useSnapshot(lgs.stores.ui.video)
     const sceneMode = useSnapshot(lgs.settings.scene.mode)
     const coordinateSystem = lgs.settings.coordinateSystem.current
     const unitSystem = lgs.settings.unitSystem.current
@@ -45,6 +47,7 @@ export const MapPointContextMenu = ({target, menuRef}) => {
         () => getManageableWidgets(SCENE_WIDGETS_BOARD, widget.list).length > 0,
         [widget.list],
     )
+    const canResizeVideo = video.editing === true && video.preRecording !== true
 
     const hideMenu = useCallback(() => __.ui.contextMenu.hide(), [])
     const openEditDrawer = useCallback(async (poiId) => {
@@ -125,7 +128,7 @@ export const MapPointContextMenu = ({target, menuRef}) => {
             return
         }
 
-        const orbitSettings = getOrbitSettings(target, 'rotation')
+        const orbitSettings = getOrbitSettings(target, 'rotation', rotateState)
         setOrbitStoreSettings(lgs.stores.ui.mainUI.rotate, orbitSettings)
         lgs.stores.ui.mainUI.rotate.visible = true
 
@@ -143,7 +146,7 @@ export const MapPointContextMenu = ({target, menuRef}) => {
             target,
         })
         hideMenu()
-    }, [hideMenu, target])
+    }, [hideMenu, rotateState, target])
 
     const startPanoramic = useCallback(async () => {
         if (!target || !panoramaAllowed) {
@@ -155,7 +158,7 @@ export const MapPointContextMenu = ({target, menuRef}) => {
         }
 
         const panorama = lgs.stores.ui.mainUI.panorama
-        const panoramaSettings = getOrbitSettings(target, 'panorama')
+        const panoramaSettings = getOrbitSettings(target, 'panorama', panoramaState)
         panorama.visible = true
         panorama.target = target
         panorama.heading = lgs.stores.main.components.camera.position.heading ?? 0
@@ -164,12 +167,40 @@ export const MapPointContextMenu = ({target, menuRef}) => {
         setOrbitStoreSettings(panorama, panoramaSettings)
         panorama.active = true
         hideMenu()
-    }, [hideMenu, panoramaAllowed, target])
+    }, [hideMenu, panoramaAllowed, panoramaState, target])
 
     const stopOrbit = useCallback(async () => {
         await __.ui.poiManager.stopRotationAndSync()
         hideMenu()
     }, [hideMenu])
+
+    /**
+     * Opens the video crop editor and selects the crop zone.
+     */
+    const resizeVideo = useCallback(() => {
+        if (!canResizeVideo) {
+            return
+        }
+
+        const cropper = lgs.stores.ui.video?.cropper
+        if (cropper) {
+            Object.assign(cropper, {
+                presetEditor: true,
+                ratioEditor:  true,
+                resizable:     true,
+                selectionRequestKey: (cropper.selectionRequestKey ?? 0) + 1,
+                widgetEditor: true,
+            })
+        }
+
+        const rotation = Number(__.ui.widgetManager.getWidgetConfig?.(VIDEO_CROP_ZONE)?.rotate)
+        lgs.stores.ui.widget.current = {
+            ...(lgs.stores.ui.widget.current ?? {}),
+            id:     VIDEO_CROP_ZONE,
+            rotate: Number.isFinite(rotation) ? rotation : 0,
+        }
+        hideMenu()
+    }, [canResizeVideo, hideMenu])
 
     const isPointRotating = target
         && rotateState.running
@@ -231,26 +262,30 @@ export const MapPointContextMenu = ({target, menuRef}) => {
                 <li onClick={copyCoordinates}>
                     <WaIcon name="copy" variant="regular"/>{'Copy Coords'}
                 </li>
-                <li onClick={createPOI}>
-                    <WaIcon name="location-dot" variant="regular"/>{'Create POI'}
-                </li>
-                {isPointRotating || isPointPanoramic ? (
-                    <li onClick={stopOrbit}>
-                        <WaIcon name={ROTATION_ICON} animation="spin" variant="regular"/>
-                        {isPointPanoramic ? 'Stop Panorama' : 'Stop Orbit'}
-                    </li>
-                ) : (
-                     <>
-                         <li onClick={rotateAroundPoint}>
-                             <WaIcon name={ROTATION_ICON} variant="regular"/>{'Orbit'}
-                         </li>
-                         {panoramaAllowed && (
-                             <li onClick={startPanoramic}>
-                                 <WaIcon name="panorama" variant="regular"/>{'Panoramic'}
-                             </li>
+                {!hideVideoActions && (
+                    <>
+                        <li onClick={createPOI}>
+                            <WaIcon name="location-dot" variant="regular"/>{'Create POI'}
+                        </li>
+                        {isPointRotating || isPointPanoramic ? (
+                            <li onClick={stopOrbit}>
+                                <WaIcon name={ROTATION_ICON} animation="spin" variant="regular"/>
+                                {isPointPanoramic ? 'Stop Panorama' : 'Stop Orbit'}
+                            </li>
+                        ) : (
+                             <>
+                                 <li onClick={rotateAroundPoint}>
+                                     <WaIcon name={ROTATION_ICON} variant="regular"/>{'Orbit'}
+                                 </li>
+                                 {panoramaAllowed && (
+                                     <li onClick={startPanoramic}>
+                                         <WaIcon name="panorama" variant="regular"/>{'Panoramic'}
+                                     </li>
+                                 )}
+                             </>
                          )}
-                     </>
-                 )}
+                    </>
+                )}
                 {canManageSceneWidgets && (
                     <>
                         <li className="widget-no-hover">
@@ -262,6 +297,16 @@ export const MapPointContextMenu = ({target, menuRef}) => {
                         }}>
                             <WaIcon name="layer" variant="regular"/>
                             <span>{'Manage widgets'}</span>
+                        </li>
+                    </>
+                )}
+                {canResizeVideo && (
+                    <>
+                        <li className="widget-no-hover">
+                            <WaDivider/>
+                        </li>
+                        <li id="resize-video-map-context" onClick={resizeVideo}>
+                            <WaIcon name="expand" variant="regular"/>{'Resize Video'}
                         </li>
                     </>
                 )}

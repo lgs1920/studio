@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: ReplayRenderModeContract.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-28
+ * Last modified: 2026-09-13
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 /**
  * Shared visual contract for Draft and HQ replay rendering.
  */
@@ -122,7 +138,9 @@ export const createReplayRenderModeContract = ({
         renderMode: mode,
         logicalFrame: cloneValue(logicalFrame),
         cameraPose: cloneValue(cameraPose ?? logicalFrame?.cameraPose),
-        trackPath: cloneValue(trackPath),
+        // Track geometry is immutable plan-owned data. Retain its reference so
+        // frame publication never clones an entire journey on the UI thread.
+        trackPath: trackPath ?? null,
         initialCameraState: cloneCameraState(initialCameraState),
         renderSpec: normalizeRenderSpec(renderSpec),
         visibleOverlayIds: normalizeOverlayIds(visibleOverlayIds),

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2025-01-13
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -1109,7 +1109,7 @@ export class POIManager {
         if (!point) {
             return false
         }
-        const rotationSettings = getOrbitSettings(point, 'rotation')
+        const rotationSettings = getOrbitSettings(point, 'rotation', lgs.stores.ui.mainUI.rotate)
 
         if (__.ui.cameraManager.isRotating()) {
             await this.stopRotationAndSync()
@@ -1143,6 +1143,7 @@ export class POIManager {
         const rotatingId = this.getRotatingPoiId()
         const panorama = lgs.stores.ui.mainUI.panorama
         const panoramaId = panorama.target?.slug ?? panorama.target?.id
+        __.ui.cameraManager?.stopPanoramic?.()
         if (__.ui.cameraManager.isRotating()) {
             await __.ui.cameraManager.stopRotate()
         }

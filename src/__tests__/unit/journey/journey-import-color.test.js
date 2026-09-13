@@ -4,6 +4,14 @@
  *
  * File: journey-import-color.test.js
  *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-12
+ * Last modified: 2026-09-13
+ *
+ *
+ * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { Journey } from '@Core/Journey'

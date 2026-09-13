@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2024-05-01
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -55,7 +55,9 @@ export const ProfileButton = (props) => {
         }
 
         if (existing) {
-            __.ui.widgetManager.getElementById(existing)?.classList.remove('lgs-widget-hidden')
+            const widgetElement = __.ui.widgetManager.getElementById(existing)
+            widgetElement?.classList.remove('lgs-widget-hidden')
+            __.ui.widgetManager.toggleWidgetVisibility(existing, true)
         }
 
         return existing
@@ -82,14 +84,14 @@ export const ProfileButton = (props) => {
                 await ensureProfileWidget()
                 $profile.show = true
             }
-            else if (widgetElement.classList.contains('lgs-widget-hidden')) {
+            else if (lgs.stores.ui.widget.list.get(existing)?.visible === false
+                     || widgetElement.classList.contains('lgs-widget-hidden')) {
                 widgetElement.classList.remove('lgs-widget-hidden')
+                __.ui.widgetManager.toggleWidgetVisibility(existing, true)
                 $profile.show = true
             }
             else {
-                if (widgetElement) {
-                    widgetElement.classList.add('lgs-widget-hidden')
-                }
+                __.ui.widgetManager.toggleWidgetVisibility(existing, false)
                 $profile.show = false
 
                 if (lgs.stores.ui.drawers.open === WIDGETS_EDITOR_DRAWER) {

@@ -1,19 +1,18 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *  
+ *
  * File: theme.css
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-09
- * Last modified: 2026-07-09
+ * Created on: 2024-02-02
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
-
 
 /* WebAwesome theme contract overrides. */
 :root,
@@ -108,6 +107,8 @@ html {
     --lgs-context-menu-zindex: calc(var(--lgs-ui-layer-zindex) + 9000);
     --lgs-video-recording-settings-toolbar-zindex: calc(var(--lgs-context-menu-zindex) - 2);
     --lgs-video-recorder-toolbar-zindex: calc(var(--lgs-context-menu-zindex) + 1);
+    /* Error dialogs must remain above widgets, crop controls, and recorder toolbars. */
+    --lgs-error-dialog-zindex: calc(var(--lgs-video-recorder-toolbar-zindex) + 100);
 
     /* Brand button tokens for filled, hover, outlined and plain states. */
     --lgs-button-border-color: color-mix(in oklab, var(--wa-color-brand) 85%, black 12%);
@@ -311,7 +312,7 @@ html {
     --lgs-max-mobile-width: min(var(--lgs-width-unit), calc(100% - var(--left) - var(--top)));
 
     /* Scrollbar colors. Misspelled aliases are kept for existing consumers. */
-    --lgs-scrollbar-track-color: var(--lgs-switch-active-thumb-color);
+    --lgs-scrollbar-track-color: color-mix(in oklab, var(--wa-color-text-quiet) 22%, transparent);
     --lgs-scrollbar-thumb-color: var(--lgs-switch-active-track-color);
     --lgs-scroolbar-track-color: var(--lgs-scrollbar-track-color);
     --lgs-scroolbar-thumb-color: var(--lgs-scrollbar-thumb-color);
@@ -1197,6 +1198,12 @@ wa-card.wa-theme-lgs1920-on-map::part(body) {
     );
 }
 
+.lgs-scrollbars .track-vertical:focus-visible,
+.lgs-scrollbars .track-horizontal:focus-visible {
+    outline: 2px solid var(--wa-color-focus, var(--wa-color-brand));
+    outline-offset: 1px;
+}
+
 @supports (-moz-appearance: none) {
     .lgs-scrollbars .view {
         scrollbar-width: none;
@@ -1466,6 +1473,17 @@ wa-tab-panel wa-details.lgs--details-hoverable {
     background: var(--lgs-hover-context-menu-bg-color);
 }
 
+.lgs-context-menu li.widget-context-menu-action-disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.lgs-context-menu li.widget-context-menu-action-disabled:hover {
+    color: inherit;
+    border-color: transparent;
+    background: transparent;
+}
+
 .lgs-context-menu wa-divider {
     --color: var(--lgs-card-on-map-border-color);
 }
@@ -1525,6 +1543,23 @@ wa-input[label-at-start], wa-number-input[label-at-start], wa-select[label-at-st
     gap: var(--lgs-gutter-s);
 }
 
+/* Keep label-at-start hints below the label/control row instead of squeezing them into it. */
+wa-input[label-at-start],
+wa-number-input[label-at-start],
+wa-select[label-at-start] {
+    flex-wrap: wrap;
+}
+
+wa-input[label-at-start]::part(hint),
+wa-number-input[label-at-start]::part(hint),
+wa-select[label-at-start]::part(hint) {
+    flex: 0 0 100%;
+    min-width: 0;
+}
+
+wa-select[label-at-start]::part(form-control) {
+    flex-wrap: wrap;
+}
 
 wa-input.lgs--short-input[label-at-start], wa-number-input.lgs--short-input[label-at-start] {
     flex: none;
@@ -1542,14 +1577,6 @@ wa-input[label-at-start] label, wa-number-input[label-at-start] label {
     flex: none;
     width: auto;
     margin-block-end: 0 !important;
-}
-
-wa-number-input[label-at-start] {
-    flex-wrap: wrap;
-}
-
-wa-number-input[label-at-start]::part(hint) {
-    flex: 0 0 100%;
 }
 
 [label-at-start]::part(base) {
@@ -2000,6 +2027,16 @@ wa-progress-bar.normal {
 /*******************************************************************************
  * Toggle State Icon
  ******************************************************************************/
+
+.toggle-state-icon-link {
+    text-decoration: none;
+}
+
+.toggle-state-icon-link:hover,
+.toggle-state-icon-link:focus-visible {
+    text-decoration: none;
+}
+
 /*.toggle-state-icon wa-button {*/
 /*    font-size: var(--lgs-font-size-m);*/
 /*}*/
@@ -2108,6 +2145,11 @@ hr {
     visibility: hidden !important;
 }
 
+.lgs-widget.lgs-widget-user-hidden {
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
 .lgs-widget * {
     user-select: none !important;
 }
@@ -2140,6 +2182,16 @@ hr {
     height: 40px;
     min-height: 40px;
     cursor: grab;
+
+    & > .lgs-widget-collapsed-preserved-content {
+        position: absolute;
+        overflow: hidden;
+        width: 1px;
+        height: 1px;
+        pointer-events: none;
+        opacity: 0;
+        clip-path: inset(50%);
+    }
 }
 
 .lgs-widget.lgs-widget-collapsed.lgs-widget-locked {
@@ -2357,6 +2409,11 @@ hr {
 .lgs-widget.recording-locked {
     user-select: none;
     pointer-events: none;
+}
+
+.lgs-widget.crop-pass-through,
+.lgs-widget.crop-pass-through * {
+    pointer-events: none !important;
 }
 
 /*******************************************************************************

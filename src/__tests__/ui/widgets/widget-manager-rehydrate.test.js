@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: widget-manager-rehydrate.test.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-25
+ * Last modified: 2026-09-13
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 
@@ -15,6 +31,7 @@ describe('WidgetManager video widget rehydration', () => {
     let board
     let widget
     let config
+    let widgetCache
 
     beforeEach(() => {
         board = document.createElement('div')
@@ -34,6 +51,7 @@ describe('WidgetManager video widget rehydration', () => {
 
         config = {
             id:          'credits-widget#video',
+            canHide:     true,
             dimensions:  {width: 200, height: 100},
             element:     null,
             isCropper:   false,
@@ -54,7 +72,8 @@ describe('WidgetManager video widget rehydration', () => {
                 },
             },
         }
-
+        widgetCache = {mount: vi.fn()}
+        globalThis.__ = {ui: {widgetCache}}
         manager = new WidgetManager()
         manager.resolveWidgetsBoardReferenceContainer = vi.fn(() => board)
         manager.getWidgetConfig = vi.fn(() => config)
@@ -80,5 +99,53 @@ describe('WidgetManager video widget rehydration', () => {
         expect(widget.style.width).toBe('200px')
         expect(widget.style.height).toBe('100px')
         expect(manager.setScale).toHaveBeenCalledWith(widget, 1.65, 1.65)
+        expect(widgetCache.mount).toHaveBeenCalledWith(config.id)
+    })
+
+    it('persists a top-to-bottom video widget order as descending z-index values', async () => {
+        const topWidget = 'dynamic-stats-widget'
+        const bottomWidget = 'journey-stats-widget'
+        lgs.stores.ui.widget.list = new Map([
+            [topWidget, {widgetsBoard: VIDEO_WIDGETS_BOARD, zIndex: 4000}],
+            [bottomWidget, {widgetsBoard: VIDEO_WIDGETS_BOARD, zIndex: 4001}],
+        ])
+        manager.getWidgetPosition = vi.fn(async () => ({left: 0, top: 0, width: 100, height: 50}))
+        manager.saveWidgetPosition = vi.fn(async () => undefined)
+
+        await manager.reorderWidgets([bottomWidget, topWidget])
+
+        expect(lgs.stores.ui.widget.list.get(bottomWidget).zIndex).toBe(4001)
+        expect(lgs.stores.ui.widget.list.get(topWidget).zIndex).toBe(4000)
+        expect(manager.saveWidgetPosition).toHaveBeenCalledTimes(2)
+    })
+
+    it('toggles user visibility without changing video board isolation classes', () => {
+        const widgetId = config.id
+
+        expect(manager.toggleWidgetVisibility(widgetId)).toBe(false)
+        expect(lgs.stores.ui.widget.list.get(widgetId).visible).toBe(false)
+        expect(widget.classList.contains('lgs-widget-user-hidden')).toBe(true)
+        expect(widget.classList.contains('lgs-widget-hidden')).toBe(false)
+
+        expect(manager.toggleWidgetVisibility(widgetId)).toBe(true)
+        expect(lgs.stores.ui.widget.list.get(widgetId).visible).toBe(true)
+        expect(widget.classList.contains('lgs-widget-user-hidden')).toBe(false)
+    })
+
+    it('updates widget group membership in runtime state and persistence', async () => {
+        const widgetId = config.id
+        const position = {left: 0, top: 0, width: 100, height: 50}
+        manager.getWidgetPosition = vi.fn(async () => position)
+        manager.saveWidgetPosition = vi.fn(async () => undefined)
+
+        await manager.updateWidgetGroups(new Map([[widgetId, 'widget-group#one']]))
+
+        expect(config.widgetGroup).toBe('widget-group#one')
+        expect(lgs.stores.ui.widget.list.get(widgetId).widgetGroup).toBe('widget-group#one')
+        expect(manager.saveWidgetPosition).toHaveBeenCalledWith(
+            widgetId,
+            {...position, widgetGroup: 'widget-group#one'},
+            false,
+        )
     })
 })

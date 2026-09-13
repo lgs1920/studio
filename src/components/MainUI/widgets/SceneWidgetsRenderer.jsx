@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-24
- * Last modified: 2026-04-24
+ * Created on: 2025-12-13
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { DynamicWidget } from '@Components/MainUI/widgets/DynamicWidget'
-import { SCENE_WIDGETS_BOARD } from '@Core/constants'
+import { REPLAY_TIMELINE_WIDGET, SCENE_WIDGETS_BOARD } from '@Core/constants'
 import { useMemo } from 'react'
 import { useSnapshot }   from 'valtio'
 
@@ -26,14 +26,16 @@ import { useSnapshot }   from 'valtio'
 export const SceneWidgetsRenderer = () => {
     const $widget = lgs.stores.ui.widget
     const $video = lgs.stores.ui.video
-    const {list} = useSnapshot($widget)
+    const {list, docked} = useSnapshot($widget)
     const video = useSnapshot($video)
 
     const isVideoSceneActive = video.editing || video.preRecording || video.recording || video.snapshot || video.finalizing
 
     const sceneWidgets = useMemo(() => {
         return Array.from(list.entries()).filter(([, props]) => props?.widgetsBoard === SCENE_WIDGETS_BOARD)
-    }, [list])
+            .filter(([id]) => id.split('#')[0] !== REPLAY_TIMELINE_WIDGET)
+            .filter(([id]) => id !== docked?.id)
+    }, [docked?.id, list])
 
     if (isVideoSceneActive) {
         return null

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-18
- * Last modified: 2026-07-18
+ * Created on: 2025-09-19
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import { usePointerInteractions } from '@Components/MainUI/context-menu/usePoint
 import {
     LGS_ANIMATION_DRAGGING, LGS_ANIMATION_RESIZING, LGS_TOOLBAR, LGS_VISUAL_WIDGET, LGS_WIDGET,
     LGS_WIDGET_SCALE_EFFECTIVE,
+    REPLAY_RECORDING_MONITOR_WIDGET_ID,
     SCENE_WIDGETS_BOARD,
     WIDGET_EDITOR_PRE_RENDER_EVENT,
     WIDGETS_CAPABILITIES, WIDGETS_EDITOR_DRAWER,
@@ -33,6 +34,7 @@ import {
     DEFAULT_WIDGET_GRID_SETTINGS,
     getWidgetGridSettings,
 }                                 from '@Core/ui/widget-manager/widgetGridUtils'
+import {resolveWidgetResizeLimits} from '@Core/ui/widget-manager/widgetResizeUtils'
 import { useOptionalSnapshot }     from '@Utils/ValtioUtils'
 import { WaIcon }                 from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                 from 'classnames'
@@ -56,6 +58,7 @@ const SNAPSHOT_MAX_PADDING = 220
 const WIDGET_SNAP_GRID_GUIDELINE_CLASS = 'lgs-widget-snap-grid-guideline'
 const WIDGET_SNAP_CENTER_GUIDELINE_CLASS = 'lgs-widget-snap-center-guideline'
 const WIDGET_SNAP_ELEMENT_GUIDELINE_CLASS = 'lgs-widget-snap-element-guideline'
+const CROP_RESIZE_DIRECTIONS = Object.freeze(['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'])
 
 /**
  * Converts numeric positions into Moveable guidelines with a visual class.
@@ -131,6 +134,20 @@ const buildWidgetCenterGuidelines = widgetElements => widgetElements.reduce((res
 }, {verticalGuidelines: [], horizontalGuidelines: []})
 
 export const WidgetPreviewContext = createContext(false)
+export const WidgetContentOnlyContext = createContext(false)
+
+/**
+ * Render widget content in the external-window host without scene controls.
+ *
+ * @param {Object} props - Widget host properties.
+ * @param {React.ReactNode} props.children - Widget visual content.
+ * @returns {JSX.Element} Detached widget host.
+ */
+const DetachedWidgetHost = ({children}) => (
+    <div className="lgs-detached-widget-host">
+        {children}
+    </div>
+)
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 
@@ -340,6 +357,25 @@ const createWidgetSnapshot = (sourceCanvas, canvasRect, widgetRect, previewerRec
 }
 
 /**
+ * Render only the widget content when the surrounding renderer requests it.
+ *
+ * @param {Object} props - Widget properties.
+ * @param {React.ReactNode} props.children - Widget visual content.
+ * @returns {JSX.Element|null} Widget host or content-only output.
+ */
+export const Widget = props => {
+    const renderContext = useContext(WidgetContentOnlyContext)
+    if (renderContext?.detached) {
+        return <DetachedWidgetHost>{props.children}</DetachedWidgetHost>
+    }
+    if (renderContext?.contentOnly || renderContext === true) {
+        return props.children ?? null
+    }
+
+    return <WidgetHost {...props}/>
+}
+
+/**
  * Draggable, resizable and scalable widget with full pointer interaction support.
  * Synchronized with Valtio store for reactive zIndex and state management.
  *
@@ -351,9 +387,21 @@ const createWidgetSnapshot = (sourceCanvas, canvasRect, widgetRect, previewerRec
  * @param {React.ReactNode} props.children          - Widget visual content
  * @param {Object} props.config                     - Complete widget configuration object
  * @param {React.RefObject} [props.childRef]        - Optional forwarded ref to inner content
+ * @param {number|string|null} [props.expandRequestKey=null] - Changes request host-managed expansion
+ * @param {number} [props.selectionRequestKey=0]    - Changes request cropper selection
  * @returns {JSX.Element|null}
  */
-export const Widget = ({isVisible, className = '', moveableClassName = '', containerClassName = '', children, config, childRef}) => {
+const WidgetHost = ({
+    isVisible,
+    className = '',
+    moveableClassName = '',
+    containerClassName = '',
+    children,
+    config,
+    childRef,
+    expandRequestKey = null,
+    selectionRequestKey = 0,
+}) => {
     // Core DOM references
     const _widget = useRef(null)
     const _moveable = useRef(null)
@@ -383,6 +431,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     const [locked, setLocked] = useState(false)
     const [collapsedIconFallback, setCollapsedIconFallback] = useState(false)
     const [showLockedHint, setShowLockedHint] = useState(false)
+    const [contentResizeLimits, setContentResizeLimits] = useState(null)
 
     // Global stores (valtio)
     const $widget = lgs.stores.ui.widget
@@ -400,16 +449,23 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
 
-    const throttleRotate = 1
+    const throttleRotate = 0
     const [widgetId] = useState(() => {
         const id = config.id
         return id && id.includes('#') ? id : __.ui.widgetManager.defineElementId(config.group, id)
     })
     const selectedId = widget.current?.id ?? null
     const isSelected = selectedId === widgetId
+                       || Boolean(config.isCropper
+                                  && typeof selectedId === 'string'
+                                  && selectedId.split('#')[0] === widgetId?.split('#')[0])
+    const reattachSelection = widget.reattachSelection
+    const shouldRestoreSelection = reattachSelection?.id === widgetId
     const keyboardUpdate = widget.current?.keyboardUpdate ?? 0
     const widgetTypeId = widgetId?.split('#')[0] ?? widgetId
-    const isTargetingBoard = Boolean(config.widgetsBoard && config.widgetsBoard !== SCENE_WIDGETS_BOARD)
+    const isReplayRecordingMonitor = widgetId === REPLAY_RECORDING_MONITOR_WIDGET_ID
+    const isDocked = config.docked === true
+    const isTargetingBoard = Boolean(!isDocked && config.widgetsBoard && config.widgetsBoard !== SCENE_WIDGETS_BOARD)
     const sceneContainer = useMemo(() => {
         return isTargetingBoard
                ? null
@@ -420,6 +476,9 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
         const definition = config.group ? __.widgets.get(config.group)?.widgets?.get(widgetTypeId) : null
         return definition ?? null
     }, [config.group, widgetTypeId])
+    const widgetEntry = widgetListSnapshot.get(widgetId)
+    const canHide = config.canHide ?? widgetDefinition?.canHide ?? false
+    const isWidgetVisible = !canHide || widgetEntry?.visible !== false
     const collapsedIcon = useMemo(
         () => resolveCollapsedWidgetIcon(config.icon, widgetDefinition?.icon),
         [config.icon, widgetDefinition?.icon],
@@ -432,7 +491,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     const effectiveLocked = canLock && locked
     const suppressLockedOverlay = widgetId === ORBIT_CAMERA_ADJUSTMENT_WIDGET
     const isCollapsedToolbar = effectiveCollapsed && config.type === LGS_TOOLBAR
-    const isOnMapWidget = !isTargetingBoard
+    const isOnMapWidget = !isTargetingBoard && !isDocked
     const showLockedOverlay = effectiveLocked && showLockedHint && !suppressLockedOverlay
     const liveOpacity = config.type === LGS_TOOLBAR
                         ? (effectiveCollapsed ? 1 : (toolbars.opacity ?? config.opacity ?? 1))
@@ -532,10 +591,19 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
         }
     }, [config.widgetsBoard, isTargetingBoard])
 
-    const interactionLocked = previewOnly || ((video.preRecording || video.recording || video.snapshot || video.finalizing) && config.type === LGS_VISUAL_WIDGET)
-    const cropPassThrough = Boolean(config.isCropper && interactionLocked)
+    const synchronizedRecording = (video.recording === true || video.recordingHQ === true)
+                                  && globalThis.lgs?.stores?.replay?.recordingSync === true
+    const interactionLocked = previewOnly
+                              || ((video.preRecording || video.recording || video.snapshot || video.finalizing)
+                                  && config.type === LGS_VISUAL_WIDGET)
+    const inputBlocked = previewOnly
+                         || ((synchronizedRecording || video.snapshot || video.finalizing)
+                             && config.type === LGS_VISUAL_WIDGET)
+    // The crop surface is visual only. Moveable renders its handles in a
+    // separate sibling control box, so the empty crop area can reach Cesium.
+    const cropPassThrough = Boolean(config.isCropper)
     const showGhostOnly = Boolean(config?.showGhostDuringRecording) && video.recording && config.type === LGS_VISUAL_WIDGET
-    const canInteract = !interactionLocked && !effectiveLocked
+    const canInteract = !effectiveLocked && (!interactionLocked || isReplayRecordingMonitor)
     const canDrag = canInteract && (config?.draggable ?? true)
     const canResize = canInteract && !effectiveCollapsed && (config?.resizable ?? false)
     const canScale = canInteract && !effectiveCollapsed && (config?.scalable ?? false)
@@ -681,9 +749,39 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
             return false
         }
 
-        const path = event?.composedPath?.() ?? [event?.target]
+        const nativeEvent = event?.nativeEvent ?? event
+        const path = nativeEvent?.composedPath?.()
+            ?? event?.composedPath?.()
+            ?? [event?.target]
         return path.some(target => target instanceof ElementClass && Boolean(target.closest?.('.lgs-widget-no-drag')))
     }
+
+    const selectWidget = useCallback(() => {
+        if (!canInteract) {
+            return
+        }
+        const drawerEntity = typeof drawers.entity === 'string' ? drawers.entity : ''
+        const drawerBase = drawerEntity.split('#')[0],
+              widgetBase = typeof widgetId === 'string' ? widgetId.split('#')[0] : ''
+        if (drawers.open === WIDGETS_EDITOR_DRAWER && drawerBase && drawerBase !== widgetBase) {
+            __.ui.drawerManager.close()
+        }
+        if (drawers.open === WIDGETS_EDITOR_DRAWER && drawerBase && drawerBase === widgetBase && drawers.entity !== widgetId) {
+            lgs.stores.ui.drawers.entity = widgetId
+        }
+        const currentRotation = lgs.stores.ui.widget.current?.id === widgetId
+                                ? Number(lgs.stores.ui.widget.current?.rotate)
+                                : Number.NaN
+        const configRotation = Number(__.ui.widgetManager.getWidgetConfig(widgetId)?.rotate)
+        lgs.stores.ui.widget.current = {
+            ...(lgs.stores.ui.widget.current ?? {}),
+            id: widgetId,
+            rotate: Number.isFinite(currentRotation)
+                    ? currentRotation
+                    : (Number.isFinite(configRotation) ? configRotation : 0),
+        }
+        __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, true, true)
+    }, [widgetId, drawers.entity, drawers.open, canInteract])
 
     /**
      * Updates the reactive widget entry only when a persisted field changes.
@@ -799,6 +897,15 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
             expandedInlineDimensions: widgetConfig.expandedInlineDimensions,
         })
     }, [canReduce, config.type, effectiveCollapsed, effectiveLocked, interactionLocked, persistInteractionState, widgetId])
+
+    useEffect(() => {
+        if (expandRequestKey === null || expandRequestKey === undefined || !effectiveCollapsed) {
+            return
+        }
+
+        const frameId = requestAnimationFrame(toggleCollapsed)
+        return () => cancelAnimationFrame(frameId)
+    }, [effectiveCollapsed, expandRequestKey, toggleCollapsed])
 
     useEffect(() => {
         if (effectiveCollapsed || config.type !== LGS_TOOLBAR || !_initialized.current || !_widget.current) {
@@ -925,7 +1032,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
         _children.current?.onDragStart?.(event)
         __.ui.widgetManager.onDragStart(event)
         __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, true, isMouseOver)
-    }, [canDrag, isMouseOver])
+    }, [canDrag, isMouseOver, _children])
 
     const handleDrag = useCallback((event) => {
         const input = event.inputEvent
@@ -958,15 +1065,16 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
         }
         __.ui.widgetManager.onDrag(event)
         _children.current?.handleDrag?.(event)
-    }, [canDrag])
+    }, [canDrag, _children])
 
     const handleDragEnd = useCallback(async (event) => {
         __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, false, isMouseOver)
         setIsDragging(false)
         _dragConfirmed.current = false
+        _children.current?.onDragEnd?.(event)
         await __.ui.widgetManager.onDragEnd(event)
         _moveable.current?.updateRect()
-    }, [isMouseOver])
+    }, [isMouseOver, _children])
 
     const handleDoubleClick = useCallback((event) => {
         if (hasNoDragInPath(event)) {
@@ -982,8 +1090,15 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     }, [blockDoubleClick, canReduce, openEditorFromDoubleClick, toggleCollapsed])
 
     const handlePointerDownCapture = useCallback((event) => {
+        // Timeline interactive elements are marked no-drag so their own
+        // editor gestures stay local. Neutral areas continue to the widget
+        // pointer handler and can select or move it.
         if (hasNoDragInPath(event)) {
             return
+        }
+
+        if (isPrimaryLeftPointer(event) && !event.ctrlKey) {
+            selectWidget()
         }
 
         if (!canReduce || !isPrimaryLeftPointer(event) || event.ctrlKey) {
@@ -1010,7 +1125,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
 
         blockDoubleClick(event)
         toggleCollapsed()
-    }, [blockDoubleClick, canReduce, toggleCollapsed])
+    }, [blockDoubleClick, canReduce, selectWidget, toggleCollapsed])
 
     const handleDoubleClickCapture = useCallback((event) => {
         if (hasNoDragInPath(event)) {
@@ -1046,11 +1161,16 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
     }, [blockDoubleClick, canReduce, toggleCollapsed])
 
     const openContextMenu = useCallback((event) => {
+        if (hasNoDragInPath(event)) {
+            return
+        }
+
         event?.preventDefault?.()
         event?.stopPropagation?.()
         event?.nativeEvent?.stopImmediatePropagation?.()
         event?.stopImmediatePropagation?.()
-        if (interactionLocked) {
+        if ((config.docked === true || lgs.stores.ui.widget.undocked?.id === widgetId)
+            || (interactionLocked && !isReplayRecordingMonitor)) {
             return
         }
         const clientX = event.clientX ?? event.touches?.[0]?.clientX ?? 0
@@ -1059,7 +1179,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
         lgs.stores.ui.contextMenu.type = 'widget'
         lgs.stores.ui.contextMenu.targetId = widgetId
         lgs.stores.ui.contextMenu.position = {x: clientX, y: clientY}
-    }, [interactionLocked, widgetId])
+    }, [config.docked, interactionLocked, isReplayRecordingMonitor, widgetId])
 
     const pointerInteractionsRef = usePointerInteractions({
                                                               onDoubleTap:           handleDoubleClick,
@@ -1100,6 +1220,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
             return
         }
         __.ui.widgetManager.onResize(event, {widget: _widget, child: _children}, setPosition)
+        requestAnimationFrame(() => _moveable.current?.updateRect())
     }, [canResize])
 
     const handleResizeStart = useCallback((event) => {
@@ -1134,7 +1255,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
         }
         _children.current?.onRotate?.(event)
         __.ui.widgetManager.onRotate(event, {_prevRotate})
-        lgs.stores.ui.widget.current.rotate = Math.ceil(event.rotate)
+        lgs.stores.ui.widget.current.rotate = event.rotate
     }, [canRotate])
 
     const handleRotateEnd = useCallback((event) => {
@@ -1149,32 +1270,24 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
         }
     }, [canRotate])
 
-    const selectWidget = useCallback(() => {
-        if (!canInteract) {
-            return
+    /**
+     * Displays the cropper resize handles independently of manager registry state.
+     *
+     * @returns {boolean} Whether Moveable was ready and the handles were requested.
+     */
+    const showCropperControlBox = useCallback(() => {
+        if (!config.isCropper || !_moveable.current?.target) {
+            return false
         }
-        const drawerEntity = typeof drawers.entity === 'string' ? drawers.entity : ''
-        const drawerBase = drawerEntity.split('#')[0],
-              widgetBase = typeof widgetId === 'string' ? widgetId.split('#')[0] : ''
-        if (drawers.open === WIDGETS_EDITOR_DRAWER && drawerBase && drawerBase !== widgetBase) {
-            __.ui.drawerManager.close()
-        }
-        if (drawers.open === WIDGETS_EDITOR_DRAWER && drawerBase && drawerBase === widgetBase && drawers.entity !== widgetId) {
-            lgs.stores.ui.drawers.entity = widgetId
-        }
-        const currentRotation = lgs.stores.ui.widget.current?.id === widgetId
-                                ? Number(lgs.stores.ui.widget.current?.rotate)
-                                : Number.NaN
-        const configRotation = Number(__.ui.widgetManager.getWidgetConfig(widgetId)?.rotate)
-        lgs.stores.ui.widget.current = {
-            ...(lgs.stores.ui.widget.current ?? {}),
-            id: widgetId,
-            rotate: Number.isFinite(currentRotation)
-                    ? currentRotation
-                    : (Number.isFinite(configRotation) ? configRotation : 0),
-        }
-        __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, true, true)
-    }, [widgetId, drawers.entity, drawers.open, canInteract])
+
+        setControlBox({
+            renderDirections: CROP_RESIZE_DIRECTIONS,
+            zoom:             1,
+            opacity:          1,
+        })
+        _moveable.current.updateRect()
+        return true
+    }, [config.isCropper])
 
     const handlePointerDown = useCallback((event) => {
         if (hasNoDragInPath(event)) {
@@ -1190,7 +1303,79 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
         selectWidget()
     }, [canLock, selectWidget, toggleLocked])
 
+    /**
+     * Resolves a drag handle inside the current widget element.
+     *
+     * @returns {HTMLElement|null} The scoped drag handle or the widget itself.
+     */
+    const resolveDragTarget = useCallback(() => {
+        const element = _widget.current
+        if (!element) {
+            return null
+        }
+
+        if (typeof config?.handle === 'string') {
+            return element.querySelector(config.handle) ?? element
+        }
+
+        return config?.handle ?? element
+    }, [config.handle])
+
     const handleBound = useCallback(() => __.ui.widgetManager.setBoundStatus(_widget.current), [])
+
+    useEffect(() => {
+        if (!config.isCropper || selectionRequestKey === 0) {
+            return undefined
+        }
+
+        let cancelled = false
+        let frameId = 0
+        let attempts = 0
+        let selectionRequested = false
+
+        /**
+         * Confirms cropper selection after the selected state has rendered.
+         */
+        const confirmSelection = () => {
+            if (!cancelled && _moveable.current?.target) {
+                selectWidget()
+                showCropperControlBox()
+            }
+        }
+
+        /**
+         * Waits for Moveable to attach its target before selecting the cropper.
+         */
+        const selectWhenReady = () => {
+            if (cancelled) {
+                return
+            }
+
+            if (_moveable.current?.target) {
+                selectWidget()
+                showCropperControlBox()
+                frameId = requestAnimationFrame(confirmSelection)
+                return
+            }
+
+            if (!selectionRequested) {
+                selectionRequested = true
+                selectWidget()
+                showCropperControlBox()
+            }
+
+            attempts += 1
+            if (attempts < 60) {
+                frameId = requestAnimationFrame(selectWhenReady)
+            }
+        }
+
+        frameId = requestAnimationFrame(selectWhenReady)
+        return () => {
+            cancelled = true
+            cancelAnimationFrame(frameId)
+        }
+    }, [config.isCropper, selectWidget, selectionRequestKey, showCropperControlBox])
 
     useEffect(() => {
         if (isSelected) {
@@ -1233,6 +1418,80 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
             observer.disconnect()
         }
     }, [widgetId])
+
+    useEffect(() => {
+        const resizeToContent = config?.constrainResizeToContent === false
+            ? null
+            : config?.resizeToContent
+        const element = _widget.current
+        if (!element || config?.isCropper || !resizeToContent || typeof ResizeObserver === 'undefined') {
+            setContentResizeLimits(null)
+            return undefined
+        }
+
+        const content = typeof resizeToContent === 'object' && resizeToContent.target
+            ? (typeof resizeToContent.target === 'string'
+                ? element.querySelector(resizeToContent.target)
+                : resizeToContent.target)
+            : element.firstElementChild
+
+        if (!content) {
+            setContentResizeLimits(null)
+            return undefined
+        }
+
+        const originalMaxWidth = element.style.maxWidth
+        const originalMaxHeight = element.style.maxHeight
+        const originalMinWidth = element.style.minWidth
+        const originalMinHeight = element.style.minHeight
+
+        const updateLimits = () => {
+            const runtimeConfig = __.ui.widgetManager.getWidgetConfig(widgetId) ?? config
+            const limits = resolveWidgetResizeLimits(runtimeConfig, element)
+            const limitsWidth = resizeToContent === true || resizeToContent?.width === true
+            const limitsHeight = resizeToContent === true || resizeToContent?.height === true
+
+            if (limitsWidth && Number.isFinite(limits.maxWidth)) {
+                element.style.maxWidth = `${limits.maxWidth}px`
+            }
+            if (limitsHeight && Number.isFinite(limits.maxHeight)) {
+                element.style.maxHeight = `${limits.maxHeight}px`
+            }
+            const minimumWidth = resizeToContent?.minWidth === true || resizeToContent?.min?.width === true
+            const minimumHeight = resizeToContent?.minHeight === true || resizeToContent?.min?.height === true
+            if (minimumWidth && Number.isFinite(limits.minWidth)) {
+                element.style.minWidth = `${limits.minWidth}px`
+            }
+            if (minimumHeight && Number.isFinite(limits.minHeight)) {
+                element.style.minHeight = `${limits.minHeight}px`
+            }
+
+            setContentResizeLimits(previous => previous?.minWidth === limits.minWidth
+                && previous?.minHeight === limits.minHeight
+                && previous?.maxWidth === limits.maxWidth
+                && previous?.maxHeight === limits.maxHeight
+                ? previous
+                : {
+                    minWidth:  limits.minWidth,
+                    minHeight: limits.minHeight,
+                    maxWidth:  limits.maxWidth,
+                    maxHeight: limits.maxHeight,
+                })
+            _moveable.current?.updateRect()
+        }
+
+        updateLimits()
+        const observer = new ResizeObserver(updateLimits)
+        observer.observe(content)
+
+        return () => {
+            observer.disconnect()
+            element.style.maxWidth = originalMaxWidth
+            element.style.maxHeight = originalMaxHeight
+            element.style.minWidth = originalMinWidth
+            element.style.minHeight = originalMinHeight
+        }
+    }, [config, config?.constrainResizeToContent, config?.isCropper, config?.resizeToContent, widgetId])
 
     useEffect(() => {
         if (!isSelected || keyboardUpdate === 0) {
@@ -1285,7 +1544,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
             return
         }
 
-        const isTargetingBoard = config.widgetsBoard && config.widgetsBoard !== SCENE_WIDGETS_BOARD
+        const isTargetingBoard = !config.docked && config.widgetsBoard && config.widgetsBoard !== SCENE_WIDGETS_BOARD
         if (isTargetingBoard && !actualContainer) {
             return
         }
@@ -1314,9 +1573,11 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                                 ?? __.ui.widgetManager.resolveWidgetsBoardReferenceContainer(config.widgetsBoard)
                                 ?? actualContainer,
                 boundsContainer: config.boundsContainer ?? actualContainer,
+                canHide:        canHide,
                 canLock:        config.canLock ?? true,
                 canReduce:      isVisualWidget ? false : (config.canReduce ?? true),
                 collapsed:      isVisualWidget ? false : (config.collapsed ?? false),
+                constrainResizeToContent: config.constrainResizeToContent ?? true,
                 contextMenu:    __.ui.widgetManager.cloneContext(config?.contextMenu ?? {}, WIDGETS_CAPABILITIES),
                 cropDimensions: config.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0},
                 dynamic:        config.dynamic ?? false,
@@ -1325,6 +1586,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                 expandedInlineDimensions: config.expandedInlineDimensions ?? null,
                 forceEven:      config.forceEven ?? false,
                 group:          config.group ?? null,
+                widgetGroup:    config.widgetGroup ?? null,
                 handle:         config.handle ?? null,
                 icon:           collapsedIcon,
                 id: widgetId,
@@ -1344,6 +1606,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                 ratio:          config.ratio ?? null,
                 resizeFromCenter: config.resizeFromCenter ?? false,
                 resizable:      config.resizable ?? false,
+                resizeToContent: config.resizeToContent ?? null,
                 rotatable:      config.rotatable ?? false,
                 scalable:       config.scalable ?? false,
                 showControlBox: config.showControlBox ?? true,
@@ -1354,8 +1617,12 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                 transient:      config.transient ?? false,
                 ttl:            config.ttl ?? null,
                 type:           config.type ?? LGS_WIDGET,
+                visible:        isWidgetVisible,
+                onRemove:       config.onRemove ?? null,
+                preserveChildrenWhenCollapsed: config.preserveChildrenWhenCollapsed ?? false,
                 widgetsBoard:   config.widgetsBoard || null,
                 width:          config.width,
+                height:         config.isCropper ? undefined : config.height,
                 zIndex:         activeZIndex, // Inject the reactive value immediately
             }
 
@@ -1379,29 +1646,50 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
 
                 // Synchronize store entry if missing
                 if (!$widget.list.has(widgetId)) {
-                    $widget.list.set(widgetId, {
+                    const widgetEntry = {
                         zIndex:      activeZIndex,
                         collapsed:   Boolean(resolved.collapsed),
+                        visible:     resolved.visible !== false,
                         icon:        collapsedIcon,
                         locked:      Boolean(resolved.locked),
+                        widgetGroup: resolved.widgetGroup ?? null,
                         widgetsBoard: resolved.widgetsBoard,
-                    })
+                    }
+                    if (!resolved.isCropper) {
+                        Object.assign(widgetEntry, {
+                            dimensions: resolved.dimensions,
+                            position:   resolved.position,
+                            ratio:      resolved.ratio,
+                        })
+                    }
+                    $widget.list.set(widgetId, widgetEntry)
                 }
                 else {
-                    updateWidgetStoreEntry({
+                    const widgetEntry = {
                         collapsed:   Boolean(resolved.collapsed),
+                        visible:     resolved.visible !== false,
                         icon:        collapsedIcon,
                         locked:      Boolean(resolved.locked),
+                        widgetGroup: resolved.widgetGroup ?? null,
                         widgetsBoard: resolved.widgetsBoard,
-                    })
+                    }
+                    if (!resolved.isCropper) {
+                        Object.assign(widgetEntry, {
+                            dimensions: resolved.dimensions,
+                            position:   resolved.position,
+                            ratio:      resolved.ratio,
+                        })
+                    }
+                    updateWidgetStoreEntry(widgetEntry)
                 }
 
                 _widget.current.style.opacity = liveOpacity
                 lgs.stores.ui.widget.current.rotate = resolved.rotate
 
                 if (interactionLocked) {
+                    let mirror = _w2c.current
                     if (!_w2c.current) {
-                        _w2c.current = new Widget2Canvas(_widget.current.querySelector(':scope >:not(.lgs-widget-inner-overlay)'), {
+                        mirror = new Widget2Canvas(_widget.current.querySelector(':scope >:not(.lgs-widget-inner-overlay)'), {
                             embedFonts:      true,
                             exclude:         config.captureExclude ?? [],
                             excludeMode:     'remove',
@@ -1414,9 +1702,24 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                             debugTiming: false,//config.refreshMode === 'both',
                             refreshMode:     config.refreshMode ?? (interactionLocked ? 'live' : 'mutation'),
                         })
-                        await _w2c.current.init()
+                        _w2c.current = mirror
+                        try {
+                            await mirror.init()
+                        }
+                        catch {
+                            mirror.destroy()
+                            if (_w2c.current === mirror) {
+                                _w2c.current = null
+                            }
+                            _widget.current.style.visibility = 'visible'
+                            return
+                        }
                     }
-                    const canvas = _w2c.current.getCanvas?.()
+                    if (cancelled || _w2c.current !== mirror) {
+                        mirror.destroy()
+                        return
+                    }
+                    const canvas = mirror.getCanvas?.()
                     if (canvas) {
                         canvas.style.visibility = showGhostOnly ? 'visible' : 'hidden'
                     }
@@ -1442,8 +1745,10 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
             $widget.list.set(widgetId, {
                 zIndex:      activeZIndex,
                 collapsed:   false,
+                visible:     config.visible !== false,
                 icon:        config.icon ?? collapsedIcon,
                 locked:      Boolean(config.locked),
+                widgetGroup: config.widgetGroup ?? null,
                 widgetsBoard: config.widgetsBoard,
             })
         }
@@ -1468,6 +1773,35 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
             __.recorder.removeEventListener(ScreenMediaRecorder.events.CANCEL, clean)
         }
     }, [isVisible, config, widgetId, actualContainer])
+
+    useEffect(() => {
+        if (!isVisible || !shouldRestoreSelection) {
+            return undefined
+        }
+
+        const frame = requestAnimationFrame(() => {
+            if (lgs.stores.ui.widget.undocked?.id) {
+                return
+            }
+
+            const runtimeConfig = __.ui.widgetManager.getWidgetConfig(widgetId)
+            const rotation = Number(runtimeConfig?.rotate)
+            lgs.stores.ui.widget.current = {
+                ...(lgs.stores.ui.widget.current ?? {}),
+                id:     widgetId,
+                rotate: Number.isFinite(rotation) ? rotation : 0,
+            }
+            __.ui.widgetManager.manageControlBox(_moveable, setControlBox, _controlBoxTimer, true, true)
+
+            const currentRequest = lgs.stores.ui.widget.reattachSelection
+            if (currentRequest?.id === reattachSelection.id
+                && currentRequest.request === reattachSelection.request) {
+                lgs.stores.ui.widget.reattachSelection = {id: null, request: 0}
+            }
+        })
+
+        return () => cancelAnimationFrame(frame)
+    }, [isVisible, reattachSelection?.id, reattachSelection?.request, shouldRestoreSelection, widgetId])
 
     useEffect(() => {
         if (!_initialized.current || !_widget.current) {
@@ -1504,7 +1838,7 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
             data-widget={widgetId}
             style={{
                 zIndex:        activeZIndex,
-                pointerEvents: cropPassThrough ? 'none' : 'auto',
+                pointerEvents: cropPassThrough || !isWidgetVisible ? 'none' : 'auto',
             }}
         >
             <div
@@ -1520,8 +1854,11 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                     'lgs-widget-lock-hint-active': showLockedOverlay,
                     'lgs-one-line-card': effectiveCollapsed,
                     'wa-theme-lgs1920-on-map': effectiveCollapsed,
-                    'recording-locked': interactionLocked,
+                    'crop-pass-through': cropPassThrough,
+                    'recording-locked': inputBlocked,
                     'lgs-widget-preview-only': previewOnly,
+                    'lgs-widget-user-hidden': !isWidgetVisible,
+                    'lgs-widget-docked': isDocked,
                 })}
                 ref={(el) => {
                     _widget.current = el
@@ -1536,26 +1873,32 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
             >
-                {effectiveCollapsed
+                {effectiveCollapsed && (
+                    <div
+                        className="lgs-widget-collapsed-icon"
+                        data-collapsed-icon={renderedCollapsedIcon}
+                        data-widget-type={config.type}
+                        title={effectiveLocked ? 'Locked widget' : 'Collapsed widget'}
+                    >
+                        <WaIcon
+                            key={renderedCollapsedIcon}
+                            name={renderedCollapsedIcon}
+                            variant="regular"
+                            label={showLockedOverlay ? '' : (effectiveLocked ? 'Locked widget' : 'Collapsed widget')}
+                            onWaError={handleCollapsedIconError}
+                            aria-hidden={showLockedOverlay}
+                        />
+                    </div>
+                )}
+                {config.preserveChildrenWhenCollapsed
                  ? (
-                     <div
-                         className="lgs-widget-collapsed-icon"
-                         data-collapsed-icon={renderedCollapsedIcon}
-                         data-widget-type={config.type}
-                         title={effectiveLocked ? 'Locked widget' : 'Collapsed widget'}
-                     >
-                         <WaIcon
-                             key={renderedCollapsedIcon}
-                             name={renderedCollapsedIcon}
-                             variant="regular"
-                             label={showLockedOverlay ? '' : (effectiveLocked ? 'Locked widget' : 'Collapsed widget')}
-                             onWaError={handleCollapsedIconError}
-                             aria-hidden={showLockedOverlay}
-                         />
+                     <div className={classNames('lgs-widget-preserved-content', {
+                         'lgs-widget-collapsed-preserved-content': effectiveCollapsed,
+                     })}>
+                         {children}
                      </div>
                  )
-                 : children
-                }
+                 : (!effectiveCollapsed ? children : null)}
                 {effectiveLocked && !suppressLockedOverlay && (
                     <div className={classNames('lgs-widget-lock-overlay', {'is-visible': showLockedOverlay})}
                          aria-hidden={!showLockedOverlay}>
@@ -1573,12 +1916,15 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
 
             <Moveable
                 className={classNames('lgs-widget-control-box', moveableClassName)}
-                style={{pointerEvents: isSelected && !effectiveLocked ? 'auto' : 'none'}}
+                style={{
+                    opacity:      isSelected && !effectiveLocked ? 1 : 0,
+                    pointerEvents: isSelected && !effectiveLocked ? 'auto' : 'none',
+                }}
                 container={actualContainer ?? lgs.canvas}
                 origin={false}
                 ref={_moveable}
                 target={_widget}
-                dragTarget={config.handle}
+                dragTarget={config.handle ? resolveDragTarget : _widget}
                 draggable={canDrag}
                 edgeDraggable={true}
                 edge={['w', 'e', 's', 'n']}
@@ -1591,6 +1937,10 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                 stopPropagation={true}
                 keepRatio={Boolean(__.ui.widgetManager.getWidgetConfig(widgetId)?.ratio?.locked ?? config?.ratio?.locked)}
                 resizable={canResize}
+                minWidth={canResize && !config.isCropper ? contentResizeLimits?.minWidth ?? config?.min?.width : undefined}
+                minHeight={canResize && !config.isCropper ? contentResizeLimits?.minHeight ?? config?.min?.height : undefined}
+                maxWidth={canResize && !config.isCropper ? contentResizeLimits?.maxWidth ?? config?.max?.width : undefined}
+                maxHeight={canResize && !config.isCropper ? contentResizeLimits?.maxHeight ?? config?.max?.height : undefined}
                 onResize={handleResize}
                 onResizeStart={handleResizeStart}
                 onResizeEnd={handleResizeEnd}
@@ -1620,8 +1970,8 @@ export const Widget = ({isVisible, className = '', moveableClassName = '', conta
                 snapDirections={canSnapWidget ? {top: true, right: true, bottom: true, left: true, center: canSnapCenter, middle: canSnapCenter} : false}
                 elementSnapDirections={canSnapWidget ? {top: true, left: true, bottom: true, right: true, center: canSnapCenter, middle: canSnapCenter} : false}
                 maxSnapElementGuidelineDistance={canSnapWidget ? 10 : 0}
-                renderDirections={controlBox.renderDirections}
-                zoom={controlBox.zoom}
+                renderDirections={config.isCropper && isSelected ? CROP_RESIZE_DIRECTIONS : controlBox.renderDirections}
+                zoom={config.isCropper && isSelected ? 1 : controlBox.zoom}
                 onRender={(event) => !config.isCropper && (event.target.style.cssText += event.cssText)}
                 useMutationObserver={false}
                 useResizeObserver={false}

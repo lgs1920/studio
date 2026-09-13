@@ -17,20 +17,22 @@ The current widget model is documented in [widget-architecture.md](references/wi
    - `public/widgets.yaml` for catalog metadata and defaults
    - `src/components/MainUI/widgets/Widget.jsx` for the host lifecycle and interaction contract
    - `src/components/MainUI/widgets/DynamicWidget.jsx` and `SceneWidgetsRenderer.jsx` for rendering paths
-   - `src/core/ui/widget-manager/` for positioning, scaling, persistence, capture, and grid behavior
+   - `src/core/ui/widget-manager/` for positioning, scaling, visibility, persistence, capture, and grid behavior
+   - `src/core/ui/replay/ReplayPreparationTimeline.js` and `ReplayOverlayResolver.js` when the widget participates in linked preparation or replay visibility
    - `src/core/constants.js` when adding widget IDs, groups, components, or static and dynamic part markers
    - analogous widgets under `src/components/MainUI/widgets/list/`, `src/components/`, or `src/components/Stats/`
 
 2. Decide the widget contract before coding:
    - Is it visual, dynamic, or both?
    - Is it available on the scene board, the video crop board, or both?
-   - Is it mandatory, singleton, removable, lockable, scalable, editable, reducible, or fixed?
+   - Is it mandatory, singleton, removable, hideable, lockable, scalable, editable, reducible, or fixed?
    - Which journey, replay, profile, or map state is required?
    - Which parts must remain visible and stable during snapshots and HQ video export?
 
 3. Add or update the catalog entry in `public/widgets.yaml`.
    - Use a unique kebab-case ID and an existing group unless a new group is justified.
    - Declare `component`, `type: "lgs-visual-widget"`, `path` when needed, `mandatory`, `max`, and `availability` explicitly.
+   - Declare `canHide` explicitly for user-hideable widgets. Keep mandatory widgets non-hideable unless the product requirement changes the composition contract.
    - Put user-editable defaults under `configuration.default` and preserve the `user` and `elements` layers.
    - Keep dynamic Stats restricted to the video board and journey availability unless the product requirement says otherwise.
    - When changing a widget definition, check whether the matching icon and component mapping in `src/core/constants.js` must also change.
@@ -46,14 +48,17 @@ The current widget model is documented in [widget-architecture.md](references/wi
    - Reuse existing editor elements for background, border, padding, text, shadow, scale, alignment, and separators.
    - Add a dedicated editor element only when the configuration cannot be represented by existing controls.
    - Respect locked, reduced, fixed-position, always-on-top, and mandatory semantics in context menus, ordering, keyboard movement, and pointer interaction.
+   - Route hide/show through `WidgetManager.toggleWidgetVisibility()`. Keep `config.visible` and the widget store entry synchronized, persist only when the widget contract allows it, and clear selection when hiding the selected widget.
    - Use widget-manager APIs for position and scale changes so browser persistence and crop bounds stay synchronized.
    - Keep grid visibility and snapping scoped to the active widget board and selected widget. Never move unrelated widgets as a side effect.
+   - Preserve bottom-to-top widget stacking in the manager and adapt it explicitly when a UI list or timeline displays rows in the opposite direction.
 
 6. Verify composition behavior.
    - Test normal scene rendering and the video crop board separately.
    - Test scene replacement and remounting so stale widget instances are not retained.
    - Test grid settings, snapping, margins, bounds, selection scope, keyboard movement, scaling, and persisted positions when relevant.
    - Test background toggles, credits anchoring and scaling, mandatory Logo presence, and dynamic Stats updates when relevant.
+   - Test hide/show from the context menu and ordering panel, rehydration of `visible`, selected-widget clearing, and mandatory-widget protection when relevant.
    - Test snapshot and HQ replay export paths when the widget appears in captured output. Confirm visibility, z-index, crop alignment, and cleanup after cancellation or completion.
 
 7. Add focused tests beside the affected code. Run the smallest relevant test set, then `bun run lint` and an allowed production build when the change crosses module boundaries. Do not run `bun run dev`.

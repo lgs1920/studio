@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-13
- * Last modified: 2026-07-13
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -200,5 +200,20 @@ describe('CameraManager orbit', () => {
         animationFrames[1]()
 
         expect(lgs.camera.lookAtTransform).toHaveBeenCalledTimes(1)
+    })
+
+    it('cancels the active panorama motion before clearing its state', () => {
+        installCameraManagerGlobals()
+        const manager = new CameraManager()
+        const cancel = vi.fn()
+        lgs.stores.ui.mainUI.panorama.active = true
+        lgs.stores.ui.mainUI.panorama.target = orbitTarget
+
+        manager.setPanoramicCancel(cancel)
+
+        expect(manager.stopPanoramic()).toBe(true)
+        expect(cancel).toHaveBeenCalledOnce()
+        expect(lgs.stores.ui.mainUI.panorama.active).toBe(false)
+        expect(lgs.stores.ui.mainUI.panorama.target).toBe(false)
     })
 })

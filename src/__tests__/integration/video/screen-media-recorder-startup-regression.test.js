@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-29
- * Last modified on: 2026-06-29
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -225,6 +225,21 @@ describe('ScreenMediaRecorder startup', () => {
 
         expect(frameCaptureReady).toHaveBeenCalled()
         expect(errorHandler).not.toHaveBeenCalled()
+    })
+
+    it('prepares the first encoded frame after the recording state is dispatched', async () => {
+        const frameCaptureReady = vi.fn(async () => undefined)
+        const started = vi.fn(() => {
+            recorder.setFrameCaptureReady(frameCaptureReady)
+        })
+        recorder.addEventListener(ScreenMediaRecorder.events.START, started)
+
+        await recorder.startVideo()
+
+        expect(started).toHaveBeenCalledOnce()
+        expect(frameCaptureReady).toHaveBeenCalledOnce()
+
+        recorder.removeEventListener(ScreenMediaRecorder.events.START, started)
     })
 
     it('exposes the 15 fps medium-quality preset', () => {

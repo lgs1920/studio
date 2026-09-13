@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: replay-runtime.test.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-22
+ * Last modified: 2026-09-13
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import {REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP} from '@Core/ui/replay/JourneyReplayClips'
 import {
     finiteNumber, isJourneyReplayCameraActive, isJourneyReplayTraceActive, isJourneyReplayVideoCaptureActive,
@@ -148,6 +164,7 @@ describe('JourneyReplayRuntime', () => {
         expect(store.playing).toBe(false)
         expect(store.progress).toBe(0)
         expect(store.dynamicFrameState).toBeNull()
+        expect(store.resolvedFrameState).toBeNull()
         expect(store.metricOverlay.visible).toBe(false)
     })
 })

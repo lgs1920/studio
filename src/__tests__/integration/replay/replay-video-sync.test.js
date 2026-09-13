@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-06-02
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -75,7 +75,8 @@ const makeJourneyReplay = () => {
         setPublicationCadence: vi.fn(),
         setTerrainHeightLookupBypass: vi.fn(),
         setTerrainHeightLookupTrace: vi.fn(),
-        restoreCameraState: vi.fn(),
+        prepareReplayCamera: vi.fn(async () => true),
+        restoreCameraState:     vi.fn(),
         restorePlaybackScene: vi.fn(),
     }
 }
@@ -108,8 +109,7 @@ describe('JourneyReplayVideoSync', () => {
             expect(store.recordingSync).toBe(true)
             expect(globalThis.lgs.settings.ui.replay.recordingSync).toBe(true)
             expect(replay.setVideoSafeMode).toHaveBeenCalledWith(true)
-            expect(replay.restoreCameraState).toHaveBeenCalledWith({clear: false})
-            expect(replay.restoreCameraState.mock.invocationCallOrder[0]).toBeLessThan(replay.start.mock.invocationCallOrder[0])
+            expect(replay.restoreCameraState).not.toHaveBeenCalled()
             expect(replay.setTerrainHeightLookupBypass.mock.invocationCallOrder[0]).toBeLessThan(replay.start.mock.invocationCallOrder[0])
             expect(replay.setTerrainHeightLookupBypass).toHaveBeenLastCalledWith(false)
             expect(replay.setTerrainHeightLookupTrace).toHaveBeenLastCalledWith(false)
@@ -117,8 +117,7 @@ describe('JourneyReplayVideoSync', () => {
                 'draft.recorder.start.received',
                 'draft.replay.start.scheduled',
                 'draft.replay.terrain.lookup.bypass.start',
-                'draft.replay.camera.restore.start',
-                'draft.replay.camera.restore.end',
+                'draft.replay.camera.prepared',
                 'draft.replay.start.begin',
                 'draft.replay.terrain.lookup.bypass.end',
                 'draft.replay.start.end',
@@ -168,6 +167,7 @@ describe('JourneyReplayVideoSync', () => {
     })
 
     it('stops the recorder after the final composed frames when stop clips exist', async () => {
+        vi.useFakeTimers()
         const recorder = new FakeRecorder()
         recorder.recording = true
         const replay = makeJourneyReplay()
@@ -180,13 +180,14 @@ describe('JourneyReplayVideoSync', () => {
         expect(recorder.stopVideo).not.toHaveBeenCalled()
 
         window.dispatchEvent(new CustomEvent(REPLAY_EVENT_STOP_CLIPS_COMPLETE))
-        await new Promise(resolve => setTimeout(resolve, 10))
+        await vi.runAllTimersAsync()
 
         expect(recorder.stopVideo).toHaveBeenCalledTimes(1)
         expect(recorder.stopVideo).toHaveBeenCalledWith({captureFinalFrame: true})
     })
 
     it('stops the recorder after the final composed frames without stop clips', async () => {
+        vi.useFakeTimers()
         const recorder = new FakeRecorder()
         recorder.recording = true
         const replay = makeJourneyReplay()
@@ -196,7 +197,7 @@ describe('JourneyReplayVideoSync', () => {
 
         sync.arm({autoStopRecording: true})
         window.dispatchEvent(new CustomEvent(REPLAY_EVENT_STOP_CLIPS_COMPLETE))
-        await new Promise(resolve => setTimeout(resolve, 10))
+        await vi.runAllTimersAsync()
 
         expect(recorder.stopVideo).toHaveBeenCalledTimes(1)
         expect(recorder.stopVideo).toHaveBeenCalledWith({captureFinalFrame: true})
@@ -204,6 +205,7 @@ describe('JourneyReplayVideoSync', () => {
     })
 
     it('captures the final frame before stopping the recorder', async () => {
+        vi.useFakeTimers()
         const recorder = new FakeRecorder()
         recorder.recording = true
         const replay = makeJourneyReplay()
@@ -213,7 +215,7 @@ describe('JourneyReplayVideoSync', () => {
 
         sync.arm({autoStopRecording: true})
         window.dispatchEvent(new CustomEvent(REPLAY_EVENT_STOP_CLIPS_COMPLETE))
-        await new Promise(resolve => setTimeout(resolve, 10))
+        await vi.runAllTimersAsync()
 
         expect(recorder.stopVideo).toHaveBeenCalledTimes(1)
         expect(recorder.stopVideo).toHaveBeenCalledWith({captureFinalFrame: true})
@@ -276,8 +278,6 @@ describe('JourneyReplayVideoSync', () => {
             detail: {clipSequenceToken: 1},
         }))
 
-        await new Promise(resolve => setTimeout(resolve, 10))
-
         expect(recorder.stopVideo).not.toHaveBeenCalled()
     })
 
@@ -318,9 +318,9 @@ describe('JourneyReplayVideoSync', () => {
         window.dispatchEvent(new CustomEvent(REPLAY_EVENT_STOP_CLIPS_COMPLETE, {
             detail: {clipSequenceToken: 2},
         }))
-        await new Promise(resolve => setTimeout(resolve, 10))
-
-        expect(recorder.stopVideo).toHaveBeenCalledTimes(1)
+        await waitFor(() => {
+            expect(recorder.stopVideo).toHaveBeenCalledTimes(1)
+        })
     })
 
     it('ignores a replay start that resolves after the recording was disarmed', async () => {
@@ -351,6 +351,7 @@ describe('JourneyReplayVideoSync', () => {
     })
 
     it('cancels a pending auto-stop when the previous replay is aborted', async () => {
+        vi.useFakeTimers()
         const recorder = new FakeRecorder()
         recorder.recording = true
         const replay = makeJourneyReplay()
@@ -366,7 +367,7 @@ describe('JourneyReplayVideoSync', () => {
         }))
         sync.stopJourneyReplay()
 
-        await new Promise(resolve => setTimeout(resolve, 20))
+        await vi.runAllTimersAsync()
 
         expect(recorder.stopVideo).not.toHaveBeenCalled()
     })

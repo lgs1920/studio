@@ -7,14 +7,15 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2025-11-07
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { JOURNEY_WIDGETS, SCENE_WIDGETS, WIDGET_LAYER_START, WIDGETS_STORE } from '@Core/constants'
+import { stripWidgetDefinitionMetadata, WIDGET_DEFINITION_METADATA_KEYS } from './WidgetDBManager'
 
 /**
  * Utility class providing a clean, reactive API over the global Valtio proxy cache.
@@ -56,10 +57,11 @@ export class WidgetCache {
      * @param {Object} options
      */
     set = (key, options) => {
-        const {group, component, mounted, widgetsBoard, zIndex} = options
+        const {group, component, mounted, widgetGroup, widgetsBoard, zIndex} = options
 
         this.#cache.set(key, {
             group:        group ?? null,
+            widgetGroup:  widgetGroup ?? null,
             component: component ?? null,
             mounted:      mounted ?? false,
             widgetsBoard: widgetsBoard ?? null,
@@ -209,7 +211,7 @@ export class WidgetCache {
         }
 
         return {
-            ...position,
+            ...stripWidgetDefinitionMetadata(position),
             group,
             widgetsBoard: position.widgetsBoard || this.#defaultBoard,
             zIndex:       Number(position.zIndex) > 0 ? Number(position.zIndex) : WIDGET_LAYER_START,
@@ -221,9 +223,13 @@ export class WidgetCache {
             return false
         }
 
+        const hasDefinitionMetadata = WIDGET_DEFINITION_METADATA_KEYS.some(key =>
+            Object.prototype.hasOwnProperty.call(source, key))
+
         return source.group !== normalized.group ||
             (source.widgetsBoard || this.#defaultBoard) !== normalized.widgetsBoard ||
-            Number(source.zIndex) !== normalized.zIndex
+            Number(source.zIndex) !== normalized.zIndex ||
+            hasDefinitionMetadata
     }
 
     #resolveWidgetDefinition = (group, id) => {
@@ -307,12 +313,15 @@ export class WidgetCache {
 
                 this.set(widgetId, {
                     group:        position.group,
+                    widgetGroup:  position.widgetGroup,
                     component: null,
                     widgetsBoard: position.widgetsBoard,
                 })
 
                 $widget.list.set(widgetId, {
                     group:        position.group,
+                    widgetGroup:  position.widgetGroup,
+                    visible:      position.visible !== false,
                     widgetsBoard: position.widgetsBoard,
                 })
             }
@@ -336,12 +345,15 @@ export class WidgetCache {
             // Update local cache
             this.set(id, {
                 group:        position.group,
+                widgetGroup:  position.widgetGroup,
                 widgetsBoard: position.widgetsBoard,
                 zIndex:       zIndex,
             })
             // Create  global store
             const item = {
                 group: position.group,
+                widgetGroup: position.widgetGroup,
+                visible: position.visible !== false,
                 widgetsBoard: position.widgetsBoard || this.#defaultBoard,
                 zIndex,
             }
@@ -360,8 +372,10 @@ export class WidgetCache {
      */
     getAllExceptBoards = excludedBoardIds => {
         const exclusions = Array.isArray(excludedBoardIds) ? excludedBoardIds : [excludedBoardIds]
-        const filteredEntries = Array.from(this.#cache.entries()).filter(([, entry]) => {
-            return entry.widgetsBoard && !exclusions.includes(entry.widgetsBoard)
+        const filteredEntries = Array.from(this.#cache.entries()).filter(([id, entry]) => {
+            // A board host can carry stale or absent board metadata in the cache.
+            // Preserve the host itself whenever its ID is one of the excluded boards.
+            return !exclusions.includes(id) && entry.widgetsBoard && !exclusions.includes(entry.widgetsBoard)
         })
         return new Map(filteredEntries)
     }

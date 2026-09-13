@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-15
- * Last modified: 2026-07-15
+ * Created on: 2026-07-16
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -46,6 +46,7 @@ vi.mock('@Components/MainUI/video/WidgetMountErrorDialog', () => ({
 
 vi.mock('@Components/MainUI/video/videoEditingCleanup', () => ({
     prepareVideoCaptureUi: vi.fn(),
+    restoreVideoCaptureUi: vi.fn(),
 }))
 
 vi.mock('@Utils/UIToast', () => ({
@@ -62,6 +63,7 @@ vi.mock('@Core/ui/replay/ReplayDeferredExporter', () => ({
 
 vi.mock('@Core/ui/replay/ReplayVideoOverlayComposer', () => ({
     buildReplayVideoComposerOverlays: vi.fn(),
+    flushReplayVideoOverlayCanvases: vi.fn(async () => undefined),
     isReplayVideoWidgetReady:         vi.fn(() => true),
 }))
 
@@ -100,6 +102,7 @@ vi.mock('@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder', () => ({
             PAUSE:    'pause',
             RESUME:   'resume',
             START:    'start',
+            INFO:     'info',
         },
     },
 }))
@@ -113,7 +116,7 @@ describe('VideoRecordingScreenArea start flow', () => {
     beforeEach(() => {
         vi.clearAllMocks()
         globalThis.requestAnimationFrame = vi.fn(callback => {
-            setTimeout(callback, 0)
+            queueMicrotask(() => callback(globalThis.performance?.now?.() ?? 0))
             return 1
         })
         globalThis.cancelAnimationFrame = vi.fn()
@@ -132,14 +135,26 @@ describe('VideoRecordingScreenArea start flow', () => {
             },
             recorder,
             ui: {
+                ui: {
+                    formatJourneyDurationDates: vi.fn(() => ({
+                        prefix: 'June 1, 2026',
+                        sufix:  '10:00 AM - 11:00 AM',
+                    })),
+                },
                 replay: {
                     captureCameraState: vi.fn(),
+                    prepareReplayCamera: vi.fn(async () => true),
                     waitForSceneRestore: vi.fn(() => Promise.resolve()),
                 },
                 replayVideoSync: {
                     arm:     vi.fn(),
                     disarm:  vi.fn(),
                     isArmed: vi.fn(() => false),
+                },
+                cameraManager: {
+                    isRotating:    vi.fn(() => false),
+                    stopPanoramic: vi.fn(),
+                    stopRotate:    vi.fn(async () => undefined),
                 },
                 widgetCache: {
                     getAll: vi.fn(({widgetsBoard}) => (
@@ -163,6 +178,11 @@ describe('VideoRecordingScreenArea start flow', () => {
 
         globalThis.lgs = {
             canvas: document.createElement('canvas'),
+            theJourney: {
+                title:    'Journey title',
+                location: 'Annecy - Aoste',
+                getDate:  vi.fn(() => ({start: '2026-06-01T10:00:00.000Z', stop: '2026-06-01T11:00:00.000Z'})),
+            },
             scene:  {
                 render: vi.fn(),
             },
@@ -222,6 +242,7 @@ describe('VideoRecordingScreenArea start flow', () => {
 
         await waitFor(() => {
             expect(recorder.startVideo).toHaveBeenCalledTimes(1)
+            expect(globalThis.lgs.stores.ui.video.recording).toBe(true)
         })
 
         const traceEntries = globalThis.__lgsReplayVideoTrace ?? []
@@ -232,10 +253,6 @@ describe('VideoRecordingScreenArea start flow', () => {
             'draft.recording.ui.prepare.end',
             'draft.recording.crop.sync.start',
             'draft.recording.crop.sync.end',
-            'draft.recording.replay-bridge.start',
-            'draft.recording.replay-bridge.end',
-            'draft.recording.scene-restore.wait.start',
-            'draft.recording.scene-restore.wait.end',
             'draft.recording.composer.first-frame.end',
             'draft.recording.initialize.end',
             'draft.recorder.start.begin',
@@ -246,10 +263,20 @@ describe('VideoRecordingScreenArea start flow', () => {
         }))
         expect(globalThis.__.ui.replayVideoSync.arm).not.toHaveBeenCalled()
         expect(globalThis.__.ui.replayVideoSync.disarm).not.toHaveBeenCalled()
+        expect(globalThis.__.ui.cameraManager.stopPanoramic).not.toHaveBeenCalled()
+        expect(globalThis.__.ui.cameraManager.stopRotate).not.toHaveBeenCalled()
+        expect(globalThis.__.ui.replay.prepareReplayCamera).not.toHaveBeenCalled()
+        expect(globalThis.__.ui.replay.waitForSceneRestore).not.toHaveBeenCalled()
 
         expect(globalThis.lgs.stores.ui.video.preRecording).toBe(false)
         expect(globalThis.lgs.stores.ui.video.recording).toBe(true)
         expect(CanvasOverlayComposer.mock.instances[0].setContinuousRendering).toHaveBeenCalledWith(false)
+        expect(recorder.initialize).toHaveBeenCalledWith(expect.objectContaining({
+            metadata: expect.objectContaining({
+                title:   'Journey title (draft version)',
+                comment: expect.stringMatching(/^Journey title\nJune 1, 2026 10:00 AM - 11:00 AM\nAnnecy - Aoste\n\nRecorded on \d{4}-\d{2}-\d{2}$/),
+            }),
+        }))
     })
 
     it('captures the draft camera before arming a linked replay recording', async () => {
@@ -275,4 +302,5 @@ describe('VideoRecordingScreenArea start flow', () => {
             'draft.recording.replay-camera.capture.end',
         ]))
     })
+
 })

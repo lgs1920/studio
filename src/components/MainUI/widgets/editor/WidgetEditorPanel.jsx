@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2025-12-20
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,8 +24,8 @@ import {
 import PanelActions
     from '@Components/PanelsActions'
 import {
-    COMPASS_WIDGET, CREDITS_WIDGET, LOGO_WIDGET, SCENE_WIDGETS_BOARD, SETTINGS_EDITOR_DRAWER, WIDGET_LAYER_START,
-    WIDGET_LAYER_STEP, WIDGETS_EDITOR_DRAWER,
+    COMPASS_WIDGET, CREDITS_WIDGET, LOGO_WIDGET, REPLAY_TIMELINE_WIDGET, SCENE_WIDGETS_BOARD, SETTINGS_EDITOR_DRAWER,
+    WIDGET_LAYER_START, WIDGET_LAYER_STEP, WIDGETS_EDITOR_DRAWER,
 }   from '@Core/constants'
 import {
     WidgetRegistry,
@@ -110,6 +110,7 @@ export const WidgetEditorPanel = () => {
     const syncGlobalCompass = drawers.action === 'edit-global-compass'
     const drawerPlacement = menuSettings.drawer
     const currentSnapshotImage = widget.currentSnapshot?.entity === drawers.entity ? widget.currentSnapshot.image : null
+    const previewRotation = Number.isFinite(Number(widgetPosition?.rotate)) ? Number(widgetPosition.rotate) : 0
     const previewBg = widgetType === 'profile'
                       ? null
                       : (currentSnapshotImage ||
@@ -255,7 +256,9 @@ export const WidgetEditorPanel = () => {
     }, [widget.list, cached]) // Use 'cached' as a dependency to react to any change
 
     const excludedOrderingWidgetTypes = useMemo(
-        () => cached?.widgetsBoard === SCENE_WIDGETS_BOARD ? [COMPASS_WIDGET, LOGO_WIDGET] : [LOGO_WIDGET],
+        () => cached?.widgetsBoard === SCENE_WIDGETS_BOARD
+            ? [COMPASS_WIDGET, LOGO_WIDGET, REPLAY_TIMELINE_WIDGET]
+            : [LOGO_WIDGET],
         [cached?.widgetsBoard],
     )
     const activeWidgets = useMemo(() => activeWidgetsList(), [activeWidgetsList])
@@ -312,20 +315,27 @@ export const WidgetEditorPanel = () => {
                                 data-widget-preview-entity={drawers.entity}
                                 style={{'--lgs-widget-preview-bg': previewBg ? `url(${previewBg})` : 'none'}}
                             >
-                                <Suspense fallback={PreviewLoadingFallback}>
-                                    {PreviewComponent ? (
-                                        <PreviewComponent
-                                            key={`preview:${widgetPresetKey}`}
-                                            entity={drawers.entity}
-                                            data={data}
-                                            syncGlobalCompass={syncGlobalCompass}
-                                        />
-                                    ) : (
-                                         <div className="default-preview">
-                                             <WaIcon library="fa" name={data.icon}/>
-                                         </div>
-                                     )}
-                                </Suspense>
+                                <div
+                                    className="lgs-widget-preview-rotation-stage"
+                                    data-widget-preview-rotation-stage
+                                    data-widget-preview-rotation={previewRotation}
+                                    style={{transform: `rotate(${previewRotation}deg)`}}
+                                >
+                                    <Suspense fallback={PreviewLoadingFallback}>
+                                        {PreviewComponent ? (
+                                            <PreviewComponent
+                                                key={`preview:${widgetPresetKey}`}
+                                                entity={drawers.entity}
+                                                data={data}
+                                                syncGlobalCompass={syncGlobalCompass}
+                                            />
+                                        ) : (
+                                             <div className="default-preview">
+                                                 <WaIcon library="fa" name={data.icon}/>
+                                             </div>
+                                         )}
+                                    </Suspense>
+                                </div>
                             </section>
                         </WaTabPanel>
                         {hasBoardWidgets &&

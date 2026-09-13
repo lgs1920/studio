@@ -8,13 +8,18 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified on: 2026-07-14
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import {REPLAY_CLIP_SLOT_POST_REPLAY, REPLAY_CLIP_SLOT_PRE_REPLAY} from './JourneyReplayClips'
+import {
+    resolvePublishedReplayExportFrame,
+    resolvePublishedReplayFrame,
+} from '@Core/ui/replay/ReplayFramePublisher'
 
 const VIDEO_STATS_WIDGET_MODES = Object.freeze({
     'dynamic-stats-widget': 'dynamic',
@@ -22,8 +27,8 @@ const VIDEO_STATS_WIDGET_MODES = Object.freeze({
 })
 
 const REPLAY_VIDEO_PHASE_REPLAY = 'replay'
-const REPLAY_VIDEO_PHASE_START = 'start'
-const REPLAY_VIDEO_PHASE_STOP = 'stop'
+const REPLAY_VIDEO_PHASE_PRE_REPLAY = REPLAY_CLIP_SLOT_PRE_REPLAY
+const REPLAY_VIDEO_PHASE_POST_REPLAY = REPLAY_CLIP_SLOT_POST_REPLAY
 const LAST_REPLAY_FRAME_WINDOW = 2
 
 const finiteNumber = value => {
@@ -142,9 +147,8 @@ const resolveReplayFrameWindow = replayState => {
  * position.
  */
 export const resolveReplayExportFrameState = (replay = defaultReplayStore()) => {
-    const runtime = replay?.deferredExportPlan?.runtime ?? null
-    const frameState = runtime?.frameState ?? null
-    if (runtime?.status !== 'exporting' || frameState?.active !== true) {
+    const frameState = resolvePublishedReplayExportFrame(replay)
+    if (frameState?.active !== true) {
         return null
     }
 
@@ -159,7 +163,7 @@ export const resolveReplayExportFrameState = (replay = defaultReplayStore()) => 
  */
 export const resolveReplayDynamicFrameState = (replay = defaultReplayStore()) => (
     resolveReplayExportFrameState(replay)
-    ?? replay?.dynamicFrameState
+    ?? resolvePublishedReplayFrame(replay)
     ?? null
 )
 
@@ -177,7 +181,8 @@ const videoOverlayModeForWidgetId = (widgetId = '') => {
     return VIDEO_STATS_WIDGET_MODES[baseId] ?? null
 }
 
-export const isJourneyReplayLinked = () => globalThis.lgs?.stores?.replay?.recordingSync === true
+export const isJourneyReplayLinked = (replay = defaultReplayStore()) => replay?.recordingSync === true
+    || (replay === defaultReplayStore() && globalThis.lgs?.settings?.ui?.replay?.recordingSync === true)
 
 /**
  * Return true when the journey has stop clips configured.
@@ -305,18 +310,19 @@ const resolveReplayStatsWidgetVisibility = ({
     replay = defaultReplayStore(),
     controller = undefined,
     includeEditorPhase = false,
+    linked = undefined,
 } = {}) => {
     if (includeEditorPhase && isVideoWidgetEditorPhase()) {
         return true
     }
 
     const replayState = resolveReplayVisibilityState({replay, controller})
-    if (!isJourneyReplayLinked() || !replayState) {
+    if (!(linked ?? isJourneyReplayLinked(replay)) || !replayState) {
         return false
     }
 
     const {phase, isLastReplayFrames} = resolveReplayFrameWindow(replayState)
-    if (phase?.slot === REPLAY_VIDEO_PHASE_START || phase?.kind === REPLAY_VIDEO_PHASE_START) {
+    if (phase?.slot === REPLAY_VIDEO_PHASE_PRE_REPLAY || phase?.kind === REPLAY_VIDEO_PHASE_PRE_REPLAY) {
         return false
     }
 
@@ -324,7 +330,7 @@ const resolveReplayStatsWidgetVisibility = ({
         return false
     }
 
-    if (phase?.slot === REPLAY_VIDEO_PHASE_STOP || phase?.kind === REPLAY_VIDEO_PHASE_STOP) {
+    if (phase?.slot === REPLAY_VIDEO_PHASE_POST_REPLAY || phase?.kind === REPLAY_VIDEO_PHASE_POST_REPLAY) {
         return mode === 'journey'
     }
 
@@ -337,12 +343,15 @@ export const resolveReplayVideoStatsWidgetVisibility = ({
     mode = 'journey',
     replay = defaultReplayStore(),
     controller = undefined,
+    includeEditorPhase = true,
+    linked = undefined,
 } = {}) => (
     resolveReplayStatsWidgetVisibility({
         mode,
         replay,
         controller,
-        includeEditorPhase: true,
+        includeEditorPhase,
+        linked,
     })
 )
 

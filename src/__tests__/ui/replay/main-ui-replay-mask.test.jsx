@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: main-ui-replay-mask.test.jsx
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-06-14
+ * Last modified: 2026-09-13
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
@@ -36,6 +52,11 @@ vi.mock('@Components/MainUI/PanoramaWidget', () => ({
 vi.mock('@Components/MainUI/OrbitWidget', () => ({
     OrbitWidget: () => <div data-testid="orbit-widget"/>,
 }))
+vi.mock('@Components/MainUI/CameraAdjustmentOverlay', () => ({
+    CameraAdjustmentOverlay: ({isVisible = true}) => isVisible
+        ? <div data-testid="camera-adjustment-overlay"/>
+        : null,
+}))
 vi.mock('@Components/MainUI/OrbitButton', () => ({
     OrbitButton: () => <div data-testid="orbit-button"/>,
 }))
@@ -47,6 +68,9 @@ vi.mock('@Components/MainUI/video/VideoButton', () => ({
 }))
 vi.mock('@Components/MainUI/video/VideoDownloadAndShareDialog', () => ({
     VideoDownloadAndShareDialog: () => <div data-testid="video-share-dialog"/>,
+}))
+vi.mock('@Components/MainUI/video/ReplayRecordingMonitorWidget', () => ({
+    ReplayRecordingMonitorWidget: () => <div data-testid="replay-controls"/>,
 }))
 vi.mock('@Components/MainUI/SyncLinkBadge', () => ({
     SyncLinkBadge: () => <div data-testid="sync-link-badge"/>,
@@ -62,9 +86,6 @@ vi.mock('@Editor/groups/JourneyGroupsDrawer', () => ({
 }))
 vi.mock('@Components/JourneyReplay/JourneyReplayButton', () => ({
     JourneyReplayButton: () => <div data-testid="replay-launch-button"/>,
-}))
-vi.mock('@Components/JourneyReplay/JourneyReplayControlsWidget', () => ({
-    JourneyReplayControlsWidget: () => <div data-testid="replay-controls"/>,
 }))
 vi.mock('@Components/JourneyReplay/JourneyReplayDrawer', () => ({
     JourneyReplayDrawer: () => <div data-testid="replay-drawer"/>,
@@ -284,5 +305,14 @@ describe('MainUI replay mask', () => {
         expect(container.querySelector('#lgs-main-ui')).toBeNull()
         expect(screen.getByTestId('replay-controls')).not.toBeNull()
         expect(screen.getByTestId('map-poi-monitor')).not.toBeNull()
+    })
+
+    it('keeps the camera adjustment overlay visible during video preparation', () => {
+        lgs.stores.ui.video.editing = true
+
+        const {container} = render(<MainUI/>)
+
+        expect(container.querySelector('#lgs-main-ui')).toBeNull()
+        expect(screen.getByTestId('camera-adjustment-overlay')).not.toBeNull()
     })
 })

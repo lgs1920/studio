@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-08-04
- * Last modified: 2026-08-04
+ * Created on: 2025-09-04
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -84,9 +84,11 @@ const clearVideoReplayRuntimeState = () => {
     }
 
     replayStore.dynamicFrameState = null
+    replayStore.resolvedFrameState = null
     replayStore.replayFramePhase = null
     if (replayStore.deferredExportPlan?.runtime) {
         replayStore.deferredExportPlan.runtime.frameState = null
+        replayStore.deferredExportPlan.runtime.resolvedFrameState = null
     }
 }
 
@@ -245,6 +247,7 @@ export const VideoDownloadAndShareDialog = () => {
             dimensions: {width: 0, height: 0},
             quality:    {name: 'Unknown'},
             ratio:      {label: 'Unknown'},
+            metadata:   {},
         }
 
         try {
@@ -268,6 +271,7 @@ export const VideoDownloadAndShareDialog = () => {
                     },
                     quality:    data.quality || {name: 'Unknown'},
                     ratio:      data.ratio || {label: 'Unknown'},
+                    metadata:   data.metadata || {},
                 }
             }
             else {
@@ -493,15 +497,17 @@ export const VideoDownloadAndShareDialog = () => {
             return
         }
 
+        const wasTimelinePreviewActive = lgs.stores.ui.video.timelinePreviewActive === true
+        Object.assign(lgs.stores.ui.video, {
+            editing:    true,
+            recordingHQ: true,
+            finalizing: true,
+        })
         prepareVideoCaptureUi()
         const hqRenderSpec = await resolveHqExportRenderSpec()
         const exportFilename = getHqExportFilename()
         const controller = new AbortController()
         _hqExportAbortController.current = controller
-        Object.assign(lgs.stores.ui.video, {
-            editing:    true,
-            finalizing: true,
-        })
         setHqExportStatus('exporting')
         _dialogHiddenForHqExport.current = true
         _suppressNextDialogHideCleanup.current = true
@@ -511,6 +517,9 @@ export const VideoDownloadAndShareDialog = () => {
             await waitForAnimationFrame()
             releaseHqMediaUrl()
             setHqMedia(null)
+            const hqMediaMetadata = lgs.stores.replay?.deferredExportPlan?.mediaMetadata
+                                      ?? __.recorder?.mediaData?.metadata
+                                      ?? null
             const result = await exportReplayDeferredMp4({
                 replay: lgs.stores.replay,
                 journey: lgs.theJourney,
@@ -521,9 +530,14 @@ export const VideoDownloadAndShareDialog = () => {
                 filename: exportFilename,
                 signal: controller.signal,
                 abortController: controller,
+                mediaMetadata: hqMediaMetadata,
             })
 
             const draftMediaData = getMediaData()
+            const hqMetadata = result.plan?.mediaMetadata
+                              ?? hqMediaMetadata
+                              ?? draftMediaData.metadata
+                              ?? {}
             const hqDuration = Number(result.plan?.videoTimeline?.durationMillis)
                                || Number(result.plan?.manifest?.metadata?.replayDurationMillis)
                                || Number(draftMediaData.duration)
@@ -556,6 +570,7 @@ export const VideoDownloadAndShareDialog = () => {
                     },
                     quality:    {name: 'HQ'},
                     ratio:      draftMediaData.ratio || {label: 'Unknown'},
+                    metadata:   hqMetadata,
                 },
                 isDeferred: true,
             }
@@ -567,7 +582,9 @@ export const VideoDownloadAndShareDialog = () => {
             void CountApi.sendHqVideo()
             Object.assign(lgs.stores.ui.video, {
                 editing:    false,
+                recordingHQ: false,
                 finalizing: false,
+                timelinePreviewActive: wasTimelinePreviewActive,
             })
             _dialogHiddenForHqExport.current = false
             _suppressNextDialogHideCleanup.current = false
@@ -588,7 +605,9 @@ export const VideoDownloadAndShareDialog = () => {
             }
             Object.assign(lgs.stores.ui.video, {
                 editing:    false,
+                recordingHQ: false,
                 finalizing: false,
+                timelinePreviewActive: wasTimelinePreviewActive,
             })
             _dialogHiddenForHqExport.current = false
             _suppressNextDialogHideCleanup.current = false
@@ -599,6 +618,20 @@ export const VideoDownloadAndShareDialog = () => {
             _hqExportAbortController.current = null
         }
     }, [__.recorder, getHqExportFilename, getHqFilenameStem, getMediaData, getVideoExtension, getVideoMimeType, isHqExporting, isReplayVideoLinked, prepareReplaySceneForDialog, releaseHqMediaUrl, waitForAnimationFrame])
+
+    /**
+     * Starts the linked Replay HQ export requested by the preparation timeline.
+     */
+    useEffect(() => {
+        const handleStartHqExport = () => {
+            if (globalThis.lgs?.stores?.replay?.recordingSync === true) {
+                void startHqExport()
+            }
+        }
+
+        globalThis.window?.addEventListener('lgs:video:start-hq-export', handleStartHqExport)
+        return () => globalThis.window?.removeEventListener('lgs:video:start-hq-export', handleStartHqExport)
+    }, [startHqExport])
 
     /**
      * Handle share action with Web Share API fallback.
@@ -760,6 +793,7 @@ export const VideoDownloadAndShareDialog = () => {
         Object.assign(lgs.stores.ui.video, {
             preRecording:     false,
             recording:        false,
+            recordingHQ:      false,
             paused:           false,
             size:             0,
             recordedDuration: 0,

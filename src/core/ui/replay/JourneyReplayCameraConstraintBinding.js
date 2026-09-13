@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-26
- * Last modified: 2026-07-26
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -162,8 +162,8 @@ export const constrainedReplayTerrainRedirectWeight = ({
  */
 export const constrainedReplayProjectionViewport = mode => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-    const viewer = globalThis.lgs?.viewer
-    const scene = call.cesiumScene()
+    const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
+    const scene = call.cesiumScene?.() ?? globalThis.lgs?.scene ?? globalThis.lgs?.viewer?.scene
     const canvas = viewer?.canvas ?? scene?.canvas ?? globalThis.lgs?.canvas
     const crop = call.videoCropRect()
     const canvasRect = canvas?.getBoundingClientRect?.()
@@ -205,7 +205,7 @@ export const constrainedReplayCameraPathKey = (mode, {
     lookaheadSeconds,
 } = {}) => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-    const viewer = globalThis.lgs?.viewer
+    const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
     const frustum = viewer?.camera?.frustum
     return JSON.stringify({
         guide: call.cameraGuideKey(),
@@ -261,7 +261,7 @@ export const resolveConstrainedReplayCameraPath = (mode, {
         return state.constrainedReplayCameraPath.path
     }
 
-    const viewer = globalThis.lgs?.viewer
+    const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
     const frustum = viewer?.camera?.frustum
     const verticalFovRadians = finiteNumber(frustum?.fovy)
                                ?? finiteNumber(frustum?.fov)

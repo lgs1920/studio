@@ -1,9 +1,29 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: JourneyReplayCameraBinding.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-22
+ * Last modified: 2026-09-13
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 /**
  * Replay camera Binding behavior.
  */
 
 
 import {Cartesian3} from 'cesium'
+import {
+    replayCesiumCameraDestinationAboveTerrain,
+    replayCesiumCameraFrameAboveTerrain,
+} from './ReplayCesiumCameraAdapter'
 import {finiteNumber, isJourneyReplayCameraActive, replayStore} from './JourneyReplayRuntime'
 import {
     REPLAY_MARKER_MODE_HYSTERESIS,
@@ -21,6 +41,7 @@ import {
 import {
     buildReplayAntiCollisionBounds,
 } from './JourneyReplayCameraCollision'
+import {replayCameraFor} from './ReplayRenderTarget'
 
 const CAMERA_TRANSFER_MIN_LIFT_METERS = 120
 const CAMERA_TRANSFER_DISTANCE_LIFT_RATIO = 0.18
@@ -76,7 +97,7 @@ export const recenterCameraToSample = (mode, {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const viewer = globalThis.lgs?.viewer
+        const camera = replayCameraFor(mode)
         const frame = call.cameraRecenterFrame({
             sample,
             heading,
@@ -85,11 +106,11 @@ export const recenterCameraToSample = (mode, {
             cameraSettings,
             cameraHeight,
         })
-        if (!viewer || !frame) {
+        if (!camera || !frame) {
             return
         }
 
-        const {destination, direction, correctedUp, safeHeading, safePitch, roll: safeRoll} = frame
+        const {safeHeading, safePitch, roll: safeRoll} = frame
         const finishFlight = () => {
             state.cameraFlightActive = false
         }
@@ -115,11 +136,15 @@ export const recenterCameraToSample = (mode, {
                                      }))
         }
         if (instant || duration <= 0) {
-            viewer.camera.setView?.({
-                                        destination,
+            const safeFrame = replayCesiumCameraFrameAboveTerrain({
+                frame,
+                scene: call.cesiumScene?.(),
+            })
+            camera.setView?.({
+                                        destination: safeFrame.destination,
                                         orientation: {
-                                            direction,
-                                            up: correctedUp,
+                                            direction: safeFrame.direction,
+                                            up:        safeFrame.correctedUp ?? safeFrame.up,
                                         },
                                     })
             call.refreshReplayDiagnosticsOverlay?.()
@@ -153,8 +178,8 @@ export const startCameraTransition = (mode, {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const viewer = globalThis.lgs?.viewer
-        if (!viewer?.camera) {
+        const camera = replayCameraFor(mode)
+        if (!camera) {
             return Promise.resolve(false)
         }
 
@@ -177,7 +202,7 @@ export const startCameraTransition = (mode, {
         const endPosition = frame.destination
         const endDirection = frame.direction
         const endUp = frame.correctedUp
-        const currentHeight = finiteNumber(viewer.camera.positionCartographic?.height)
+        const currentHeight = finiteNumber(camera.positionCartographic?.height)
         state.cameraFlightActive = true
         state.cameraApplyingView = true
         state.cameraAutoTrackingIgnoreUntil = call.now() + Math.max(180, Math.max(0, Number(duration) * 1000) + 180)
@@ -208,7 +233,7 @@ export const startCameraTransition = (mode, {
             }
 
             const transferThresholdKm = finiteNumber(globalThis.lgs?.settings?.camera?.transferDistanceThresholdKm) ?? 50
-            const cameraWorldPosition = viewer.camera?.positionWC ?? viewer.camera?.position
+            const cameraWorldPosition = camera.positionWC ?? camera.position
             const transferDistance = cameraWorldPosition
                 ? Cartesian3.distance(cameraWorldPosition, endPosition)
                 : null
@@ -242,8 +267,9 @@ export const startCameraTransition = (mode, {
             if (transferPath) {
                 try {
                     const cancelTransition = transferPath.flyTo({
-                        camera: viewer.camera,
+                        camera,
                         target: frame.target,
+                        scene: call.cesiumScene?.(),
                         duration: Math.max(0, Number(duration) || 0),
                         cadence: draftTiming ? 'time' : 'frame',
                         complete: () => settle(true),
@@ -258,10 +284,14 @@ export const startCameraTransition = (mode, {
                 }
             }
 
-            if (typeof viewer.camera.flyTo === 'function') {
+            if (typeof camera.flyTo === 'function') {
                 try {
-                    viewer.camera.flyTo({
+                    const safeEndPosition = replayCesiumCameraDestinationAboveTerrain({
                         destination: endPosition,
+                        scene: call.cesiumScene?.(),
+                    })
+                    camera.flyTo({
+                        destination: safeEndPosition,
                         orientation: {
                             direction: endDirection,
                             up:        endUp,
@@ -279,9 +309,9 @@ export const startCameraTransition = (mode, {
                 }
             }
 
-            if (typeof viewer.camera.setView === 'function') {
+            if (typeof camera.setView === 'function') {
                 try {
-                    viewer.camera.setView({
+                    camera.setView({
                         destination: endPosition,
                         orientation: {
                             direction: endDirection,
@@ -309,11 +339,12 @@ export const bindMarkerInteractions = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const camera = globalThis.lgs?.viewer?.camera
+        const viewer = globalThis.lgs?.viewer
+        const camera = globalThis.lgs?.camera ?? viewer?.camera
         const interactionTargets = [
-            globalThis.lgs?.viewer?.canvas,
-            globalThis.lgs?.viewer?.scene?.canvas,
-            call.cesiumScene()?.canvas,
+            viewer?.canvas,
+            viewer?.scene?.canvas,
+            call.cesiumScene?.()?.canvas,
             globalThis.lgs?.canvas,
         ].filter((target, index, targets) => target && targets.indexOf(target) === index)
         if (!camera) {
@@ -484,7 +515,7 @@ export const bindCesiumCameraBridge = (mode) => {
             return true
         }
 
-        const camera = globalThis.lgs?.viewer?.camera
+        const camera = globalThis.lgs?.camera ?? globalThis.lgs?.viewer?.camera
         if (!camera) {
             return false
         }

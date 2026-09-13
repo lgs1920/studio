@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2025-03-22
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,7 @@
  */
 import { DOUBLE_CLICK_TIMEOUT, DOUBLE_TAP_TIMEOUT, LGS_CONTEXT_MENU_HOOK, LONG_TAP_TIMEOUT } from '@Core/constants'
 import { ScreenSpaceEventHandler }                                                           from 'cesium'
+import { CesiumInputGate }                                                                    from './CesiumInputGate'
 import { CESIUM_EVENTS, EVENT_LOWEST, EVENTS, MODIFIER_SEPARATOR, MODIFIERS }                from './cesiumEvents'
 
 const LONG_TAP_MOVE_THRESHOLD = 10
@@ -75,6 +76,13 @@ export class CanvasEventManager {
     #screenSpaceEventHandler
 
     /**
+     * State-driven gate for Cesium scene events and native camera controls.
+     * @type {CesiumInputGate}
+     * @private
+     */
+    #cesiumInputGate
+
+    /**
      * Tracks touch tap event state for TAP, DOUBLE_TAP, and LONG_TAP detection.
      * @type {{lastTapTime: number, tapCount: number, isProcessing: boolean, longTapTimer: number|null, suppressTap:
      *     boolean, pendingTap: number|null}}
@@ -90,11 +98,25 @@ export class CanvasEventManager {
     }
 
     /**
-     * Tracks the last selected entity to handle animation resets and hover events.
-     * @type {string|null}
+     * Stores the hovered entity ID for each mouse motion modifier.
+     * @type {Map<string, string|null>}
      * @private
      */
-    #lastSelectedEntity = null
+    #hoveredEntityIds = new Map()
+
+    /**
+     * Stores the single Cesium input action used by each mouse motion modifier.
+     * @type {Map<string, Function>}
+     * @private
+     */
+    #mouseMotionActions = new Map()
+
+    /**
+     * Stores the single Cesium actions shared by TAP, DOUBLE_TAP, and LONG_TAP.
+     * @type {{downHandler: Function, upHandler: Function}|null}
+     * @private
+     */
+    #touchTapActions = null
 
     /**
      * Tracks the last click time for click-related events.
@@ -125,6 +147,13 @@ export class CanvasEventManager {
     #modifierState = {ctrl: false, alt: false, shift: false}
 
     /**
+     * Cleanup callbacks for temporary canvas event listeners.
+     * @type {Array<Function>}
+     * @private
+     */
+    #canvasEventCleanup = []
+
+    /**
      * Creates or returns the singleton instance of CanvasEventManager.
      * Initializes the Cesium ScreenSpaceEventHandler and configures touch/mouse/keyboard event handling.
      *
@@ -141,6 +170,7 @@ export class CanvasEventManager {
         }
 
         this.#viewer = viewer
+        this.#cesiumInputGate = new CesiumInputGate(viewer)
         this.#screenSpaceEventHandler = new ScreenSpaceEventHandler(viewer.scene.canvas)
         this.isTouchDevice = this.#isTouchDevice()
 
@@ -153,9 +183,60 @@ export class CanvasEventManager {
         }, {capture: false})
 
         this.#viewer.scene.canvas.setAttribute('tabindex', '0')
+        this.#setupSynchronizedInputGuard()
+        this.#setupCanvasFocus()
         this.#setupKeyboardEvents()
         this.#setupMousePositionTracking()
         CanvasEventManager.#instance = this
+    }
+
+    /**
+     * Prevents pointer and mouse input from reaching Cesium while synchronized
+     * video recording owns the scene camera.
+     * @private
+     */
+    #setupSynchronizedInputGuard() {
+        const canvas = this.#viewer.scene.canvas
+        const eventTypes = [
+            'pointerdown', 'pointermove', 'pointerup', 'pointercancel',
+            'mousedown', 'mousemove', 'mouseup', 'click', 'dblclick',
+            'contextmenu', 'wheel',
+            'touchstart', 'touchmove', 'touchend', 'touchcancel',
+        ]
+
+        const blockSynchronizedInput = event => {
+            if (!this.#cesiumInputGate.isBlocked()) {
+                return
+            }
+
+            const path = event.composedPath?.() ?? []
+            if (!path.includes(canvas) && event.target !== canvas) {
+                return
+            }
+
+            event.preventDefault()
+            event.stopPropagation()
+        }
+
+        eventTypes.forEach(eventType => {
+            const options = {capture: true, passive: false}
+            document.addEventListener(eventType, blockSynchronizedInput, options)
+            this.#canvasEventCleanup.push(() => document.removeEventListener(eventType, blockSynchronizedInput, options))
+        })
+    }
+
+    /**
+     * Focuses the Cesium canvas when a pointer interaction starts on it so
+     * subsequent wheel and keyboard-related interactions do not require an
+     * additional click.
+     * @private
+     */
+    #setupCanvasFocus() {
+        const canvas = this.#viewer.scene.canvas
+        const focusCanvas = () => canvas.focus({preventScroll: true})
+
+        canvas.addEventListener('pointerdown', focusCanvas, true)
+        this.#canvasEventCleanup.push(() => canvas.removeEventListener('pointerdown', focusCanvas, true))
     }
 
     /**
@@ -296,6 +377,10 @@ export class CanvasEventManager {
      * @private
      */
     #emit(eventName, event, pickedEntityId) {
+        if (this.#cesiumInputGate.isBlocked()) {
+            return
+        }
+
         const handlers = this.#handlers.get(eventName)
         if (!handlers) {
             return
@@ -435,6 +520,10 @@ export class CanvasEventManager {
         }
 
         const downHandler = (event) => {
+            if (this.#cesiumInputGate.isBlocked()) {
+                return
+            }
+
             const entityId = validateTouchEvent(event)
             if (entityId === null && !this.#handlers.get(EVENTS.TAP)?.some(h => h.options.entity === false) &&
                 !this.#handlers.get(EVENTS.DOUBLE_TAP)?.some(h => h.options.entity === false) &&
@@ -526,6 +615,10 @@ export class CanvasEventManager {
      */
     #setupMouseEvents(eventType, modifier, requiredModifiers) {
         return (event) => {
+            if (this.#cesiumInputGate.isBlocked()) {
+                return
+            }
+
             if (eventType === EVENTS.RIGHT_CLICK && (this.isTouchDevice || event.pointerType === 'touch')) {
                 return
             }
@@ -540,24 +633,12 @@ export class CanvasEventManager {
                 return
             }
 
-            const picked = this.#viewer.scene.pick(event.position ?? event.endPosition)
+            const position = event?.position ?? event?.endPosition
+            const picked = position ? this.#viewer.scene.pick(position) : undefined
             const entityId = pickedObjectEntityId(picked)
             const eventName = modifier ? `${modifier.name}${MODIFIER_SEPARATOR}${eventType}` : eventType
 
             if (!this.#handlers.has(eventName)) {
-                return
-            }
-
-            if (eventType === EVENTS.MOUSE_ENTER || eventType === EVENTS.MOUSE_LEAVE) {
-                if (entityId !== this.#lastSelectedEntity) {
-                    if (this.#lastSelectedEntity && eventType === EVENTS.MOUSE_LEAVE) {
-                        this.#emit(EVENTS.MOUSE_LEAVE, event, this.#lastSelectedEntity)
-                    }
-                    else if (entityId) {
-                        this.#emit(EVENTS.MOUSE_ENTER, event, entityId)
-                    }
-                    this.#lastSelectedEntity = entityId
-                }
                 return
             }
 
@@ -586,12 +667,125 @@ export class CanvasEventManager {
                 clearTimeout(this.#clickTimeout)
                 this.#emit(eventName, event, entityId)
             }
-            else if (eventType === EVENTS.MOUSE_DOWN || eventType === EVENTS.MOUSE_UP ||
+            else if (eventType === EVENTS.DOWN || eventType === EVENTS.UP ||
                 eventType === EVENTS.RIGHT_DOWN || eventType === EVENTS.RIGHT_UP ||
                 eventType === EVENTS.MIDDLE_DOWN || eventType === EVENTS.MIDDLE_UP ||
                 eventType === EVENTS.MOUSE_MOVE || eventType === EVENTS.WHEEL) {
                 this.#emit(eventName, event, entityId)
             }
+        }
+    }
+
+    /**
+     * Returns whether the logical event is derived from Cesium mouse motion.
+     *
+     * @param {string} eventType - Logical CanvasEventManager event type.
+     * @returns {boolean} True for mouse move and hover transition events.
+     * @private
+     */
+    #isMouseMotionEvent(eventType) {
+        return eventType === EVENTS.MOUSE_MOVE
+               || eventType === EVENTS.MOUSE_ENTER
+               || eventType === EVENTS.MOUSE_LEAVE
+    }
+
+    /**
+     * Returns whether the logical event is derived from the same touch press.
+     *
+     * @param {string} eventType - Logical CanvasEventManager event type.
+     * @returns {boolean} True for tap gesture events.
+     * @private
+     */
+    #isTouchTapEvent(eventType) {
+        return eventType === EVENTS.TAP
+               || eventType === EVENTS.DOUBLE_TAP
+               || eventType === EVENTS.LONG_TAP
+    }
+
+    /**
+     * Returns whether a tap gesture listener remains registered.
+     *
+     * @returns {boolean} True when the shared Cesium touch actions must be retained.
+     * @private
+     */
+    #hasTouchTapHandlers() {
+        return [EVENTS.TAP, EVENTS.DOUBLE_TAP, EVENTS.LONG_TAP]
+            .some(eventType => this.#handlers.has(eventType))
+    }
+
+    /**
+     * Returns the internal key for a Cesium mouse motion modifier.
+     *
+     * @param {Object|null} modifier - Parsed Cesium keyboard modifier.
+     * @returns {string} Stable mouse motion action key.
+     * @private
+     */
+    #mouseMotionActionKey(modifier) {
+        return modifier?.name ?? 'DEFAULT'
+    }
+
+    /**
+     * Returns the registered logical event name for an optional modifier.
+     *
+     * @param {string} eventType - Logical CanvasEventManager event type.
+     * @param {Object|null} modifier - Parsed Cesium keyboard modifier.
+     * @returns {string} Normalized handler map key.
+     * @private
+     */
+    #eventNameForModifier(eventType, modifier) {
+        return modifier ? `${modifier.name}${MODIFIER_SEPARATOR}${eventType}` : eventType
+    }
+
+    /**
+     * Returns whether logical mouse motion listeners remain for a modifier.
+     *
+     * @param {Object|null} modifier - Parsed Cesium keyboard modifier.
+     * @returns {boolean} True when the shared Cesium action must be retained.
+     * @private
+     */
+    #hasMouseMotionHandlers(modifier) {
+        return [EVENTS.MOUSE_MOVE, EVENTS.MOUSE_ENTER, EVENTS.MOUSE_LEAVE]
+            .some(eventType => this.#handlers.has(this.#eventNameForModifier(eventType, modifier)))
+    }
+
+    /**
+     * Creates the sole Cesium MOUSE_MOVE action for a modifier and dispatches
+     * movement plus entity enter/leave transitions to logical listeners.
+     *
+     * @param {Object|null} modifier - Parsed Cesium keyboard modifier.
+     * @returns {Function} Cesium mouse motion callback.
+     * @private
+     */
+    #setupMouseMotionEvents(modifier) {
+        const actionKey = this.#mouseMotionActionKey(modifier)
+        const mouseMoveEventName = this.#eventNameForModifier(EVENTS.MOUSE_MOVE, modifier)
+        const mouseEnterEventName = this.#eventNameForModifier(EVENTS.MOUSE_ENTER, modifier)
+        const mouseLeaveEventName = this.#eventNameForModifier(EVENTS.MOUSE_LEAVE, modifier)
+
+        return event => {
+            if (this.#cesiumInputGate.isBlocked()) {
+                return
+            }
+
+            const position = event?.endPosition ?? event?.position
+            const picked = position ? this.#viewer.scene.pick(position) : undefined
+            const entityId = pickedObjectEntityId(picked)
+            const previousEntityId = this.#hoveredEntityIds.get(actionKey) ?? null
+
+            this.#emit(mouseMoveEventName, event, entityId)
+
+            if (entityId === previousEntityId) {
+                return
+            }
+
+            if (previousEntityId) {
+                this.#emit(mouseLeaveEventName, event, previousEntityId)
+            }
+            if (entityId) {
+                this.#emit(mouseEnterEventName, event, entityId)
+            }
+
+            this.#hoveredEntityIds.set(actionKey, entityId)
         }
     }
 
@@ -654,10 +848,20 @@ export class CanvasEventManager {
         }
         else if (this.isTouchDevice) {
             if (this.#events[eventType]?.touch) {
-                handler = this.#setupTouchEvents()
-                if (!this.#handlers.has(eventName)) {
-                    this.#screenSpaceEventHandler.setInputAction(handler.downHandler, this.#events[eventType].event)
-                    this.#screenSpaceEventHandler.setInputAction(handler.upHandler, this.#events.UP.event)
+                if (this.#isTouchTapEvent(eventType)) {
+                    handler = this.#touchTapActions
+                    if (!handler) {
+                        handler = this.#setupTouchEvents()
+                        this.#touchTapActions = handler
+                        this.#screenSpaceEventHandler.setInputAction(handler.downHandler, this.#events[EVENTS.TAP].event)
+                        this.#screenSpaceEventHandler.setInputAction(handler.upHandler, this.#events.UP.event)
+                    }
+                }
+                else {
+                    handler = this.#setupMouseEvents(eventType, modifier, modifiers)
+                    if (!this.#handlers.has(eventName)) {
+                        this.#screenSpaceEventHandler.setInputAction(handler, this.#events[eventType].event)
+                    }
                 }
             }
             else {
@@ -666,8 +870,23 @@ export class CanvasEventManager {
         }
         else {
             if (!this.#events[eventType]?.touch) {
-                handler = this.#setupMouseEvents(eventType, modifier, modifiers)
-                if (!this.#handlers.has(eventName)) {
+                if (this.#isMouseMotionEvent(eventType)) {
+                    const actionKey = this.#mouseMotionActionKey(modifier)
+                    handler = this.#mouseMotionActions.get(actionKey)
+                    if (!handler) {
+                        handler = this.#setupMouseMotionEvents(modifier)
+                        this.#mouseMotionActions.set(actionKey, handler)
+                        this.#screenSpaceEventHandler.setInputAction(
+                            handler,
+                            this.#events[EVENTS.MOUSE_MOVE].event,
+                            modifier?.value,
+                        )
+                    }
+                }
+                else {
+                    handler = this.#setupMouseEvents(eventType, modifier, modifiers)
+                }
+                if (!this.#handlers.has(eventName) && !this.#isMouseMotionEvent(eventType)) {
                     if (modifier && modifier.value) {
                         this.#screenSpaceEventHandler.setInputAction(
                             handler,
@@ -703,13 +922,33 @@ export class CanvasEventManager {
             return
         }
 
-        const {eventType} = this.#parseEventName(eventName)
+        const {eventType, modifier} = this.#parseEventName(eventName)
         const handlers = this.#handlers.get(eventName)
 
         const removeHandler = (handler) => {
-            if (eventType === EVENTS.LONG_TAP) {
-                this.#screenSpaceEventHandler.removeInputAction(this.#events[eventType].event, handler.downHandler)
-                this.#screenSpaceEventHandler.removeInputAction(this.#events.UP.event, handler.upHandler)
+            if (this.#isMouseMotionEvent(eventType)) {
+                if (this.#hasMouseMotionHandlers(modifier)) {
+                    return
+                }
+
+                const actionKey = this.#mouseMotionActionKey(modifier)
+                this.#screenSpaceEventHandler.removeInputAction(
+                    this.#events[EVENTS.MOUSE_MOVE].event,
+                    modifier?.value,
+                )
+                this.#mouseMotionActions.delete(actionKey)
+                this.#hoveredEntityIds.delete(actionKey)
+                return
+            }
+
+            if (this.#isTouchTapEvent(eventType)) {
+                if (this.#hasTouchTapHandlers()) {
+                    return
+                }
+
+                this.#screenSpaceEventHandler.removeInputAction(this.#events[EVENTS.TAP].event)
+                this.#screenSpaceEventHandler.removeInputAction(this.#events.UP.event)
+                this.#touchTapActions = null
             }
             else if (this.#events[eventType]) {
                 this.#screenSpaceEventHandler.removeInputAction(this.#events[eventType].event, handler)
@@ -719,23 +958,18 @@ export class CanvasEventManager {
         if (callback) {
             const index = handlers.findIndex((h) => h.callback === callback)
             if (index !== -1) {
-                if (handlers.length === 1 && this.#handlers.get(eventName)) {
-                    removeHandler(handlers[index].handler)
+                const [removedHandler] = handlers.splice(index, 1)
+                if (handlers.length === 0) {
                     this.#handlers.delete(eventName)
+                    removeHandler(removedHandler.handler)
                 }
-                handlers.splice(index, 1)
             }
         }
         else {
             if (this.#handlers.get(eventName)) {
-                handlers.forEach(({handler}) => removeHandler(handler))
                 this.#handlers.delete(eventName)
+                removeHandler(handlers[0]?.handler)
             }
-            handlers.length = 0
-        }
-
-        if (handlers.length === 0) {
-            this.#handlers.delete(eventName)
         }
     }
 
@@ -808,6 +1042,12 @@ export class CanvasEventManager {
      */
     destroy() {
         this.removeAllListeners()
+        this.#cesiumInputGate.destroy()
+        this.#canvasEventCleanup.forEach(cleanup => cleanup())
+        this.#canvasEventCleanup = []
+        this.#mouseMotionActions.clear()
+        this.#hoveredEntityIds.clear()
+        this.#touchTapActions = null
         this.#screenSpaceEventHandler.destroy()
         this.#handlers.clear()
         CanvasEventManager.#instance = null
@@ -903,7 +1143,7 @@ export class CanvasEventManager {
         if (typeof callback !== 'function') {
             throw new Error('Callback must be a function')
         }
-        this.on('MOUSE_DOWN', callback, options, userData)
+        this.on('DOWN', callback, options, userData)
     }
 
     /**
@@ -916,7 +1156,7 @@ export class CanvasEventManager {
         if (typeof callback !== 'function') {
             throw new Error('Callback must be a function')
         }
-        this.off('MOUSE_DOWN', callback)
+        this.off('DOWN', callback)
     }
 
     /**
@@ -931,7 +1171,7 @@ export class CanvasEventManager {
         if (typeof callback !== 'function') {
             throw new Error('Callback must be a function')
         }
-        this.on('MOUSE_UP', callback, options, userData)
+        this.on('UP', callback, options, userData)
     }
 
     /**
@@ -944,7 +1184,7 @@ export class CanvasEventManager {
         if (typeof callback !== 'function') {
             throw new Error('Callback must be a function')
         }
-        this.off('MOUSE_UP', callback)
+        this.off('UP', callback)
     }
 
     /**

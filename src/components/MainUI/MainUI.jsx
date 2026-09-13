@@ -7,13 +7,16 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-03
- * Last modified: 2026-07-03
+ * Created on: 2024-02-02
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
+
 import { Compass }          from '@Components/MainUI/compass/Compass'
+import { CameraAdjustmentOverlay } from '@Components/MainUI/CameraAdjustmentOverlay'
+import { JourneyReplayCameraAngleGuide } from '@Components/JourneyReplay/JourneyReplayCameraAngleGuide'
 import { FullScreenButton } from '@Components/FullScreenButton/FullScreenButton'
 import { ContextMenuRenderer } from '@Components/MainUI/context-menu/ContextMenuRenderer'
 import { MapPointContextMenuTrigger } from '@Components/MainUI/context-menu/MapPointContextMenuTrigger'
@@ -27,12 +30,11 @@ import { OrbitButton }       from '@Components/MainUI/OrbitButton'
 import { EditorPanelButton } from '@Editor/EditorPanelButton'
 import { VideoButton }       from '@Components/MainUI/video/VideoButton'
 import { VideoDownloadAndShareDialog } from '@Components/MainUI/video/VideoDownloadAndShareDialog'
-import { SyncLinkBadge }     from '@Components/MainUI/SyncLinkBadge'
+import { ReplayRecordingMonitorWidget } from '@Components/MainUI/video/ReplayRecordingMonitorWidget'
 import { TextButton }        from '@Components/Text/TextButton'
 import { TracksEditor }                         from '@Components/TracksEditor/TracksEditor'
 import { JourneyGroupsDrawer }                  from '@Editor/groups/JourneyGroupsDrawer'
 import { JourneyReplayButton }         from '@Components/JourneyReplay/JourneyReplayButton'
-import { JourneyReplayControlsWidget } from '@Components/JourneyReplay/JourneyReplayControlsWidget'
 import { JourneyReplayDrawer }         from '@Components/JourneyReplay/JourneyReplayDrawer'
 import {
     BOTTOM, END, EVENTS, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END, MENU_END_START, MENU_START_END,
@@ -84,6 +86,20 @@ export const MainUI = memo(() => {
 
     const closeDrawer = useCallback(() => {
         __.ui.drawerManager.close()
+    }, [])
+
+    /**
+     * Starts the synchronized Replay video entry point.
+     *
+     * @returns {void} Nothing.
+     */
+    const startReplayVideo = useCallback(() => {
+        __.ui.replayVideoSync?.arm?.({
+            autoStopRecording: true,
+            resetToStart:      true,
+        })
+        lgs.stores.ui.video.timelinePreviewActive = true
+        lgs.stores.ui.video.editing = true
     }, [])
 
     const handleKeyDown = useCallback((event) => {
@@ -228,7 +244,7 @@ export const MainUI = memo(() => {
     return (
         <>
             <MapPointContextMenuTrigger/>
-            <JourneyReplayControlsWidget/>
+            <JourneyReplayCameraAngleGuide/>
             <MapPOIMonitor/>
             {!isJourneyReplayUiHidden && (
                 <>
@@ -252,24 +268,19 @@ export const MainUI = memo(() => {
                                         <GeocodingButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                         <OrbitButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                         {!videoCaptureActive && <FullScreenButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>}
-                                        <div
-                                            className={`sync-linked-actions ${
-                                                replay.recordingSync === true ? 'is-linked' : 'is-unlinked'
-                                            }`}
-                                        >
+                                        <div className="video-entry-actions">
                                             <VideoButton
                                                 tooltip={toolBar.fromStart ? 'left' : 'right'}
-                                                className="square-button sync-linked-video-button"
+                                                className="square-button"
                                                 appearance="filled"
                                             />
-                                            <SyncLinkBadge
-                                                visible={Boolean(theJourney)}
-                                                tooltip={toolBar.fromStart ? 'left' : 'right'}
-                                                className="sync-linked-actions-badge"
-                                            />
                                             <JourneyReplayButton
+                                                id="launch-the-replay-video"
                                                 tooltip={toolBar.fromStart ? 'left' : 'right'}
-                                                variant={replay.recordingSync === true ? 'warning' : 'brand'}
+                                                tooltipText="Record a synchronized Replay video"
+                                                ariaLabel="Record a synchronized Replay video"
+                                                onClick={startReplayVideo}
+                                                variant="brand"
                                                 appearance="filled"
                                             />
                                         </div>
@@ -311,12 +322,13 @@ export const MainUI = memo(() => {
                     </div>
                     <SupportUI/>
                     <JourneyLoaderUI multiple/>
-                    <ContextMenuRenderer/>
-
                     {mainUI.callForActions.active && <CallForActions/>}
                 </>
             )}
+            {video.editing && <CameraAdjustmentOverlay/>}
+            <ContextMenuRenderer/>
             <VideoDownloadAndShareDialog/>
+            <ReplayRecordingMonitorWidget/>
 
         </>
     )

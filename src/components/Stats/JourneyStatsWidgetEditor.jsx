@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-02
- * Last modified: 2026-07-02
+ * Created on: 2026-02-06
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -399,7 +399,7 @@ export const JourneyStatsWidgetEditor = ({
             const angle = position?.rotate !== undefined ? Number(position.rotate) : Number(element?.rotate ?? 0)
             const normalizedAngle = Number.isFinite(angle) ? angle : 0
 
-            setLocalRotation(Math.ceil(normalizedAngle))
+            setLocalRotation(normalizedAngle)
             $widgetStore.current = {
                 id:     entity,
                 rotate: normalizedAngle,
@@ -419,7 +419,7 @@ export const JourneyStatsWidgetEditor = ({
         }
 
         const angle = Number(widgetStore.current.rotate)
-        return Math.ceil(Number.isFinite(angle) ? angle : 0)
+        return Number.isFinite(angle) ? angle : 0
     }, [entity, localRotation, widgetStore])
 
     const getColor = (item, alpha = false) => __.ui.ui.resolveItemColor(item, alpha)

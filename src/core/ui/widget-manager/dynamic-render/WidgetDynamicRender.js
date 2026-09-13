@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2025-12-11
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -192,10 +192,12 @@ export class WidgetDynamicRenderer {
         return new Promise((resolve) => {
             const commitUpdate = () => {
                 const zIndex = this.#resolveZIndex(props.zIndex)
+                const currentEntry = $widget.list.get(widgetId) ?? {}
 
                 // Registering in cache with the resolved reference
                 __.ui.widgetCache.set(widgetId, {
                     group,
+                    widgetGroup:  props.widgetGroup ?? currentEntry.widgetGroup ?? null,
                     component:    ResolvedComponent,
                     widgetsBoard: props.widgetsBoard,
                     zIndex,
@@ -203,8 +205,10 @@ export class WidgetDynamicRenderer {
 
                 // Only update the Valtio store once everything is ready in cache
                 $widget.list.set(widgetId, {
+                    ...currentEntry,
                     ...props,
                     group,
+                    widgetGroup: props.widgetGroup ?? currentEntry.widgetGroup ?? null,
                     zIndex,
                 })
 

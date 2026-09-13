@@ -4,6 +4,13 @@
  *
  * File: welcome-background-media.js
  *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-13
+ * Last modified: 2026-09-13
+ *
+ *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
@@ -294,6 +301,30 @@ export const applyWelcomeBackgroundToVideo = (videoElement, selection) => {
     }
 
     return videoSources.length > 0
+}
+
+/**
+ * Applies the resolved fallback image to the boot splash element.
+ *
+ * @param {HTMLImageElement|null} imageElement - Boot splash fallback image element.
+ * @param {{imageSources?: Array<object>}} selection - Resolved media selection.
+ * @returns {boolean} Whether an image source was applied.
+ */
+export const applyWelcomeBackgroundToImage = (imageElement, selection) => {
+    if (!imageElement) {
+        return false
+    }
+
+    const imageSource = (selection?.imageSources ?? []).find(asset => asset?.src)
+    if (!imageSource) {
+        imageElement.removeAttribute('src')
+        imageElement.hidden = true
+        return false
+    }
+
+    imageElement.src = imageSource.src
+    imageElement.hidden = false
+    return true
 }
 
 /**

@@ -4,6 +4,13 @@
  *
  * File: poi-utils-replay-visibility.test.js
  *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-06-12
+ * Last modified: 2026-09-13
+ *
+ *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 

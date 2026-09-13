@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: DeploymentCommands.test.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-06
+ * Last modified: 2026-09-13
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import {describe, expect, test} from 'vitest'
 import {
     createBackendEnvironmentContent,
@@ -45,10 +61,26 @@ describe('backend PM2 deployment command', () => {
             backendPath:     '/home/www/lgs1920/staging/backend/current',
             environmentFile: '/home/www/lgs1920/staging/backend/shared/backend.env',
             pm2Bin:           '/home/.bun/bin/pm2',
+            pm2App:           'backend-staging',
+            platform:         'staging',
+            backendPort:      3334,
         })
 
         expect(command).toContain("test -r '/home/www/lgs1920/staging/backend/shared/backend.env'")
         expect(command).toContain(". '/home/www/lgs1920/staging/backend/shared/backend.env'")
+        expect(command).toContain("install -d -m 750 '/home/www/lgs1920/staging/backend/shared/logs'")
+        expect(command).toContain("'/home/.bun/bin/pm2' install 'pm2-logrotate'")
+        expect(command).toContain("export PATH='/home/.bun/bin':$PATH")
+        expect(command).toContain("'/home/.bun/bin/pm2' set pm2-logrotate:max_size 10M")
+        expect(command).toContain("'/home/.bun/bin/pm2' set pm2-logrotate:retain 14")
+        expect(command).toContain("'/home/.bun/bin/pm2' set pm2-logrotate:compress true")
+        expect(command).toContain("'/home/.bun/bin/pm2' set pm2-logrotate:dateFormat YYYY-MM-DD_HH-mm-ss")
+        expect(command).toContain("if crontab -l 2>/dev/null")
+        expect(command).toContain("printf '%s\\n' '# BEGIN LGS1920 BACKEND WATCHDOG staging' '*/5 * * * * '")
+        expect(command).toContain('127.0.0.1:3334/ping')
+        expect(command).toContain("@reboot sleep 30")
+        expect(command).toContain('--pm2-app')
+        expect(command).toContain('backend-staging')
         expect(command).toContain("'/home/.bun/bin/pm2' startOrRestart '/home/www/lgs1920/staging/backend/current/ecosystem.config.js'")
         expect(command).toContain('--update-env')
         expect(command).toContain("'/home/.bun/bin/pm2' save")

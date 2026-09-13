@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: JourneyReplaySessionSceneController.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-22
+ * Last modified: 2026-09-13
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 /**
  * Scene, camera state and renderer binding for journey replay.
  */
@@ -21,8 +37,6 @@ import {
     EasingFunction, HeightReference, HorizontalOrigin, LinearApproximation, Math as CesiumMath, Matrix4,
     PolylineDashMaterialProperty, SampledPositionProperty, SceneTransforms, Transforms, VerticalOrigin,
 }                                                                                          from 'cesium'
-import { faCamera }                                                                        from '@fortawesome/pro-solid-svg-icons'
-import { faPersonHiking }                                                                  from '@fortawesome/pro-regular-svg-icons'
 import {
     JourneyReplayCesiumRenderer,
 }                                                                                          from './JourneyReplayCesiumRenderer'
@@ -47,6 +61,14 @@ import {
     REPLAY_EVENT_STOP, REPLAY_EVENT_UPDATE, JourneyReplayPlaybackController,
 }                                                                                          from './JourneyReplayPlaybackController'
 import { replayVideoTraceDebug }                                                           from './ReplayVideoTraceDebug'
+import {disposeReplaySceneFrameQualifier} from './ReplaySceneFrameQualifier'
+import {replayCesiumCameraDestinationAboveTerrain} from './ReplayCesiumCameraAdapter'
+import {
+    currentReplaySessionOwnership,
+    invalidateReplaySessionOwnership,
+    ownsReplaySession,
+    releaseReplaySessionOwnership,
+} from './ReplaySessionOwnership'
 import {
     DEFAULT_REPLAY_POI_DISPLAY_DURATION_SECONDS, normalizeJourneyReplayPOISettings,
 }                                                                                          from './JourneyReplayPOISettings'
@@ -99,17 +121,12 @@ import {
     REPLAY_TRACKING_DYNAMIC_LOOKAHEAD_FACTOR,
     REPLAY_POI_TRIGGER_EPSILON_METERS,
     REPLAY_POI_TRIGGER_SCAN_MARGIN_METERS,
-    CAMERA_ANGLE_PREVIEW_AXIS_LENGTH,
-    CAMERA_ANGLE_PREVIEW_OFFSET_LENGTH,
-    CAMERA_ANGLE_PREVIEW_ICON_SIZE,
     REPLAY_JOURNEY_TOOLBAR_VISIBILITY_EVENT,
     REPLAY_EVENT_STOP_CLIPS_COMPLETE,
     CAMERA_REDIRECT_CANDIDATES,
     isUsableCartesian3,
     safeCartesian3Normalize,
     safeCartesian3Lerp,
-    makeFontAwesomeIconDataUri,
-    resolveJourneyActivityIcon,
 } from './JourneyReplaySessionShared'
 
 export const syncCameraFromCesiumControls = (mode, {sample = null, altitudeMode = null} = {}) => {
@@ -121,7 +138,7 @@ export const syncCameraFromCesiumControls = (mode, {sample = null, altitudeMode 
             ?? state.sampler?.atProgress?.(state.controller.progress ?? 0)
 
         if (!resolvedSample) {
-            const camera = globalThis.lgs?.viewer?.camera
+            const camera = globalThis.lgs?.camera ?? globalThis.lgs?.viewer?.camera
             const position = camera?.positionCartographic
             if (camera && position) {
                 resolvedSample = {
@@ -183,17 +200,10 @@ export const handleProfileLeave = (mode, ) => {
         }
     }
 
-export const showCameraAnglePreview = (mode, ) => {}
-
-export const hideCameraAnglePreview = (mode, ) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
-    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-        call.hideCameraAnglePreviewOverlay()
-    }
-
 export const stop = (mode, options = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        disposeReplaySceneFrameQualifier(mode)
         state.clipSequenceToken++
         state.skipNextImmediateStartRecenter = false
         call.stopStopClipPOIMaskLoop()
@@ -209,7 +219,6 @@ export const stop = (mode, options = {}) => {
         call.setContinuousRender(false)
         call.removeToleranceZoneOverlay()
         call.setToleranceZoneOverlayVisible(false)
-        call.hideCameraAnglePreviewOverlay()
         if (options.emit === false) {
             call.restorePlaybackCameraSettings()
             state.cameraStateRestoredBeforeSceneCleanup = true
@@ -271,7 +280,10 @@ export const cancelPendingSceneRestore = (mode) => {
 export const dispose = (mode, ) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+        disposeReplaySceneFrameQualifier(mode)
+        mode.clearRenderTarget?.()
         call.stop({emit: false})
+        invalidateReplaySessionOwnership(mode)
         state.replayEntryCameraState = null
         if (state.profileHoverTimeout !== null) {
             clearTimeout(state.profileHoverTimeout)
@@ -334,12 +346,13 @@ export const resetCameraController = (mode, {
         state.terrainHeightLookupBypass = false
         state.terrainHeightLookupTrace = false
         state.cameraPointerActive = false
+        state.replayCameraPrepared = false
+        state.replayPreparationSample = null
         state.cameraAutoTrackingIgnoreUntil = 0
         state.journeyToolbarHidden = false
         state.journeyToolbarWasVisible = null
         state.introHeadingTransition = null
         call.removeToleranceZoneOverlay()
-        call.hideCameraAnglePreviewOverlay()
         if (state.cameraManualInteractionTimer !== null) {
             clearTimeout(state.cameraManualInteractionTimer)
             state.cameraManualInteractionTimer = null
@@ -350,10 +363,84 @@ export const resetCameraController = (mode, {
         }
     }
 
+/**
+ * Copy the current geographic camera pivot when it is usable.
+ *
+ * @param {Object|null} pivot - Camera manager or store target.
+ * @returns {Object|null} Serializable camera pivot.
+ */
+const cloneCameraPivot = pivot => {
+    const longitude = finiteNumber(pivot?.longitude)
+    const latitude = finiteNumber(pivot?.latitude)
+    const height = finiteNumber(pivot?.height) ?? finiteNumber(pivot?.simulatedHeight)
+    if (longitude === null || latitude === null || height === null) {
+        return null
+    }
+
+    return Object.assign({}, pivot, {
+        height,
+        latitude,
+        longitude,
+    })
+}
+
+/**
+ * Restore a geographic camera pivot to the live camera manager and store.
+ *
+ * @param {Object|null} pivot - Serializable camera pivot.
+ * @returns {void}
+ */
+const restoreCameraPivot = pivot => {
+    if (!pivot) {
+        return
+    }
+
+    const cameraManager = globalThis.__?.ui?.cameraManager
+    if (cameraManager) {
+        cameraManager.target = Object.assign({}, pivot)
+    }
+    const cameraStore = globalThis.lgs?.stores?.main?.components?.camera
+    if (cameraStore) {
+        cameraStore.target = Object.assign({}, pivot)
+    }
+}
+
+/**
+ * Force the preparation pivot to the first replay sample.
+ *
+ * @param {object} mode - Replay session mode.
+ * @param {object|null} sample - Departure sample used by the preparation camera.
+ * @returns {object|null} Applied preparation pivot.
+ */
+export const setReplayPreparationPivot = (mode, sample) => {
+    const longitude = finiteNumber(sample?.longitude)
+    const latitude = finiteNumber(sample?.latitude)
+    const height = finiteNumber(sample?.altitude ?? sample?.height) ?? 0
+    if (longitude === null || latitude === null) {
+        return null
+    }
+
+    const pivot = {
+        height,
+        latitude,
+        longitude,
+    }
+    const cameraManager = globalThis.__?.ui?.cameraManager
+    if (cameraManager) {
+        cameraManager.target = {...pivot}
+    }
+    const cameraStore = globalThis.lgs?.stores?.main?.components?.camera
+    if (cameraStore) {
+        cameraStore.target = {...pivot}
+    }
+
+    return pivot
+}
+
 export const captureCameraState = (mode, {sample = null} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-        const camera = globalThis.lgs?.viewer?.camera
+        const camera = globalThis.lgs?.camera ?? globalThis.lgs?.viewer?.camera
         const position = camera?.positionCartographic
         const sampleHeight = finiteNumber(sample?.altitude ?? sample?.height)
         if (!camera && sampleHeight === null) {
@@ -361,6 +448,9 @@ export const captureCameraState = (mode, {sample = null} = {}) => {
             return null
         }
 
+        const cameraManagerPivot = cloneCameraPivot(globalThis.__?.ui?.cameraManager?.target)
+        const cameraPivot = cameraManagerPivot
+            ?? cloneCameraPivot(globalThis.lgs?.stores?.main?.components?.camera?.target)
         state.savedCameraState = {
             destination: {
                 longitude: finiteNumber(position?.longitude) !== null ? CesiumMath.toDegrees(position.longitude) : finiteNumber(sample?.longitude) ?? 0,
@@ -373,6 +463,7 @@ export const captureCameraState = (mode, {sample = null} = {}) => {
                 roll:    finiteNumber(camera?.roll) ?? 0,
             },
             altitude: finiteNumber(position?.height) ?? sampleHeight ?? 0,
+            pivot: cameraPivot,
         }
         return state.savedCameraState
     }
@@ -478,11 +569,14 @@ export const restorePlaybackSceneInternal = (mode, ) => {
         call.resetCameraController({preserveSavedCameraState: true})
         state.suppressPlaybackCameraSync = true
         const restoreClipSequenceToken = state.clipSequenceToken
+        const replaySessionLease = currentReplaySessionOwnership(mode)
         let restorePromise
         restorePromise = call.focusJourneyAfterPlayback({
             snapDistance: 50000,
         }).finally(() => {
-            if (state.sceneRestorePromise !== restorePromise) {
+            const staleReplaySession = replaySessionLease
+                                       && !ownsReplaySession(mode, replaySessionLease)
+            if (state.sceneRestorePromise !== restorePromise || staleReplaySession) {
                 // A cancelled restoration may finish its Cesium focus flight later.
                 // Reapply the current replay pose so stale focus cannot move the active replay.
                 const replayActive = state.controller?.running === true
@@ -491,7 +585,7 @@ export const restorePlaybackSceneInternal = (mode, ) => {
                 const sample = replayActive
                              ? currentJourneyReplaySample(state.controller)
                              : null
-                if (restoreClipSequenceToken !== state.clipSequenceToken
+                if ((restoreClipSequenceToken !== state.clipSequenceToken || staleReplaySession)
                     && replayActive
                     && sample
                     && typeof call.updateCamera === 'function') {
@@ -502,6 +596,9 @@ export const restorePlaybackSceneInternal = (mode, ) => {
                         logicalCamera: state.logicalCameraTrajectory === true,
                         exportMode:    state.replayExportCameraActive === true,
                     })
+                }
+                if (staleReplaySession && state.sceneRestorePromise === restorePromise) {
+                    state.sceneRestorePromise = null
                 }
                 return
             }
@@ -522,6 +619,7 @@ export const restorePlaybackSceneInternal = (mode, ) => {
             call.restorePlaybackCameraSettings({force: true})
             state.replayEntryCameraState = null
             state.sceneRestorePromise = null
+            releaseReplaySessionOwnership(mode, replaySessionLease)
         })
         state.sceneRestorePromise = restorePromise
         return restorePromise
@@ -550,14 +648,19 @@ export const restoreCameraState = (mode, {clear = true, cameraState = null} = {}
 
         camera.cancelFlight?.()
         CameraUtils.unlock(camera)
-        camera.setView?.({
+        const destination = replayCesiumCameraDestinationAboveTerrain({
             destination: Cartesian3.fromDegrees(
                 savedCameraState.destination.longitude,
                 savedCameraState.destination.latitude,
                 finiteNumber(savedCameraState.destination.height) ?? finiteNumber(savedCameraState.altitude) ?? 0,
             ),
+            scene: globalThis.lgs?.scene ?? call.cesiumScene?.(),
+        })
+        camera.setView?.({
+            destination,
             orientation: savedCameraState.orientation,
         })
+        restoreCameraPivot(savedCameraState.pivot)
         return true
     }
 
@@ -776,11 +879,11 @@ export const bindRenderer = (mode, ) => {
                                                    immediateToleranceRecenter: true,
                                                    logicalCamera:             isJourneyReplayVideoCaptureActive(),
                                                })
-                            updateReplayFrameRenderContract({
-                                logicalFrame: detail?.logicalFrame,
-                            })
                             traceStep('update-camera.end')
                         }
+                        updateReplayFrameRenderContract({
+                            logicalFrame: detail?.logicalFrame,
+                        })
                         const startProgress = finiteNumber(detail?.progress ?? startSample?.progress)
                         state.lastPlaybackUpdateProgressKey = Math.round((startProgress ?? 0) / CAMERA_UPDATE_MIN_PROGRESS_DELTA)
                     }
@@ -835,6 +938,9 @@ export const bindRenderer = (mode, ) => {
                     void call.syncNearbyPOIsForSample(detail.sample ?? null)
                     traceUpdateStep('sync-nearby-pois.end')
                     if (!videoCaptureActive && state.lastPlaybackUpdateProgressKey === playbackProgressKey) {
+                        updateReplayFrameRenderContract({
+                            logicalFrame: detail?.logicalFrame,
+                        })
                         traceUpdateStep('update-camera.skip', {
                             reason: 'duplicate-progress-key',
                             playbackProgressKey,
@@ -872,6 +978,9 @@ export const bindRenderer = (mode, ) => {
                 call.setContinuousRender(false)
                 try {
                     state.renderer.update({...detail, freezeDynamic: true, showTrace: isJourneyReplayTraceActive()})
+                    updateReplayFrameRenderContract({
+                        logicalFrame: detail?.logicalFrame,
+                    })
                 }
                 catch (error) {
                     call.abortPlaybackAfterListenerError(error)
@@ -944,6 +1053,8 @@ export const bindRenderer = (mode, ) => {
                         frameTimeMs: stopPhase?.frameTimeMs,
                         frameIntervalMs: videoTimeline?.frameIntervalMs,
                         durationMillis: videoTimeline?.durationMillis,
+                        cameraPose: state.clipCameraContinuity,
+                        intentResolved: true,
                     })
                     call.refreshReplayDiagnosticsOverlay?.()
                 }
@@ -1057,6 +1168,10 @@ export const bindRenderer = (mode, ) => {
                                         frameTimeMs: resolvedPhase?.frameTimeMs,
                                         frameIntervalMs: videoTimeline?.frameIntervalMs,
                                         durationMillis: videoTimeline?.durationMillis,
+                                        cameraPose: call.currentReplayClipCameraState({
+                                            sample: clipSample ?? sample,
+                                        }),
+                                        intentResolved: true,
                                     })
                                     call.refreshReplayDiagnosticsOverlay?.()
                                 },
@@ -1077,6 +1192,8 @@ export const bindRenderer = (mode, ) => {
                                 frameTimeMs: finalStopPhase?.frameTimeMs,
                                 frameIntervalMs: videoTimeline?.frameIntervalMs,
                                 durationMillis: videoTimeline?.durationMillis,
+                                cameraPose: call.currentReplayClipCameraState({sample}),
+                                intentResolved: true,
                             })
                             call.refreshReplayDiagnosticsOverlay?.()
                             notifyStopClipsComplete()

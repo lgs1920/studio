@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2025-10-16
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -231,6 +231,7 @@ export class WidgetScalable {
         config.scale = this.clampScale(transforms.scale, config)
         this.#widgetTransform.setScale(event.target, config.scale.x, config.scale.y)
         config.runtimeReady = true
+        this.#widgetManager.constrainSceneWidgetToBounds?.(config, event.target)
 
         // Position was already updated by commitTranslateToPosition
         // Just make sure config.position is in sync

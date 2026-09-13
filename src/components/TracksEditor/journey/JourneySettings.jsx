@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2024-04-17
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,7 +31,7 @@ import {
     ToggleStateIcon,
 }                                     from '@Components/ToggleStateIcon'
 import {
-    CURRENT_JOURNEY, EDIT_JOURNEY_ICON, JOURNEY_EDITOR_DRAWER, ORIGIN_STORE, REMOVE_JOURNEY_IN_EDIT,
+    CURRENT_JOURNEY, EDIT_JOURNEY_ICON, JOURNEY_EDITOR_DRAWER, ORIGIN_STORE, REMOVE_JOURNEY_IN_EDIT, ROTATION_ICON,
     SIMULATE_ALTITUDE,
     UPDATE_JOURNEY_SILENTLY,
 } from '@Core/constants'
@@ -176,13 +176,11 @@ export const JourneySettings = () => {
     // Proxies
     const $journeyEditor = lgs.stores.journeyEditor
     const $uiRotate = lgs.stores.ui.mainUI.rotate
-    const $cameraSettings = lgs.settings.ui.camera.start.rotate
     const $drawers = lgs.stores.ui.drawers
 
     // Snapshots
     const {journey} = useSnapshot($journeyEditor)
     const {running, target} = useSnapshot($uiRotate)
-    const {journey: autoRotateJourney} = useSnapshot($cameraSettings)
     const {open} = useSnapshot($drawers)
     const journeySlug = journey?.slug ?? null
 
@@ -199,9 +197,6 @@ export const JourneySettings = () => {
     const [exportChoiceOpen, setExportChoiceOpen] = useState(false)
     const [journeyLocationState, setJourneyLocationState] = useState({slug: null, value: ''})
     const [reportExportAnimation, setReportExportAnimation] = useState(null)
-
-    // Local state-like ref for rotation toggle
-    const _allowRotation = useRef(false)
 
     const serverList = (() => {
         const list = []
@@ -348,9 +343,7 @@ export const JourneySettings = () => {
     }
 
     const setJourneyVisibility = async (v) => {
-        if (running) {
-            await __.ui.cameraManager.stopRotate()
-        }
+        await stopRotate()
         setJourneyEditorJourneyVisible(v)
         lgs.theJourney.updateVisibility(v)
         await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY, {focus: false})
@@ -370,32 +363,37 @@ export const JourneySettings = () => {
         Utils.renderJourneySettings()
     }
 
-    const focusOnJourney = async () => {
-        if (running) {
+    const stopRotate = async () => {
+        if ($uiRotate.running) {
             await __.ui.cameraManager.stopRotate()
         }
+    }
+
+    const focusOnJourney = async ({rotate: shouldRotate = false} = {}) => {
+        await stopRotate()
         await setJourneyVisibility(true)
-        lgs.theJourney.focus({
-                                 resetCamera: true,
-                                 rotate: _allowRotation.current || autoRotateJourney,
-                             })
+        await lgs.theJourney.focus({
+                                      resetCamera: true,
+                                      rotate: shouldRotate,
+                                  })
     }
 
     const maybeRotate = async () => {
         if (running) {
-            _allowRotation.current = false
-            await __.ui.cameraManager.stopRotate()
-            if (target?.element === lgs.theJourney.element) {
-                return
-            }
+            await stopRotate()
+            await focusOnJourney({rotate: false})
+            return
         }
-        _allowRotation.current = autoRotateJourney
-        await focusOnJourney()
+        await focusOnJourney({rotate: false})
     }
 
     const forceRotate = async () => {
-        _allowRotation.current = !_allowRotation.current
-        await focusOnJourney()
+        if ($uiRotate.running) {
+            await stopRotate()
+            return
+        }
+
+        await focusOnJourney({rotate: true})
     }
 
     const initTab = (e) => {
@@ -775,30 +773,28 @@ export const JourneySettings = () => {
                             <div className="lgs--tabs-right-menu " slot="nav">
                                 {journey.visible && (
                                     <>
-                                        {!autoRotateJourney && (<>
-                                                <WaTooltip
-                                                    placement="bottom"
-                                                    for="rotation-in-settings"
-                                                >
-                                                    {running && target?.instanceOf?.(CURRENT_JOURNEY) ? 'Stop orbit' : 'Start orbit'}
-                                                </WaTooltip>
-                                                <WaButton
-                                                    size="s"
-                                                    onClick={forceRotate}
-                                                    ref={_manualRotate}
-                                                    id="rotation-in-settings"
-                                                    variant="brand"
-                                                    appearance="plain">
-                                                    <WaIcon name="arrow-rotate-right"
-                                                            variant="regular"
-                                                            animation={running && target?.instanceOf?.(CURRENT_JOURNEY) ? 'spin' : ''}/>
-                                                </WaButton>
-                                            </>
-                                        )}
+                                        <WaTooltip
+                                            placement="bottom"
+                                            for="rotation-in-settings"
+                                        >
+                                            {running && target?.instanceOf?.(CURRENT_JOURNEY) ? 'Stop orbit' : 'Start orbit'}
+                                        </WaTooltip>
+                                        <WaButton
+                                            size="s"
+                                            onClick={forceRotate}
+                                            ref={_manualRotate}
+                                            id="rotation-in-settings"
+                                            variant="brand"
+                                            appearance="plain">
+                                            <WaIcon name={ROTATION_ICON}
+                                                    variant="regular"
+                                                    animation={running && target?.instanceOf?.(CURRENT_JOURNEY) ? 'spin' : 'none'}/>
+                                        </WaButton>
+
                                         <WaTooltip
                                             for="auto-rotate-in-settings"
                                             placement="bottom">
-                                            {running && target?.instanceOf?.(CURRENT_JOURNEY) ? 'Stop orbit' : 'Focus on Journey'}
+                                            {'Focus on Journey'}
                                         </WaTooltip>
                                         <WaButton id="auto-rotate-in-settings"
                                                   size="s"
@@ -807,8 +803,7 @@ export const JourneySettings = () => {
                                                   appearance="plain">
                                             <WaIcon
                                                 variant="regular"
-                                                name={running && autoRotateJourney && target?.instanceOf?.(CURRENT_JOURNEY) ? 'arrow-rotate-right' : 'crosshairs-simple'}
-                                                animation={running && autoRotateJourney && target?.instanceOf?.(CURRENT_JOURNEY) ? 'spin' : ''}
+                                                name="crosshairs-simple"
                                             />
                                         </WaButton>
 
@@ -855,30 +850,30 @@ export const JourneySettings = () => {
                                 >
                                     <div className="journey-export-choice-content">
                                         <WaTooltip placement="bottom"
-                                                   for="export-journey-file-choice">{'Export as File'}</WaTooltip>
+                                                   for="export-journey-file-choice">{'Export as Route'}</WaTooltip>
                                         <WaButton
                                             id="export-journey-file-choice"
                                             className="journey-export-choice-button"
                                             variant="brand"
                                             appearance="plain"
-                                            aria-label="Export as File"
+                                            aria-label="Export as Route"
                                             onClick={openExportFileDialog}
                                         >
                                             <WaIcon slot="start" name="route" variant="regular"/>
-                                            <span>Export as File</span>
+                                            <span>Export as Route</span>
                                         </WaButton>
                                         <WaTooltip placement="bottom"
-                                                   for="export-journey-report-choice">{'Export a Report'}</WaTooltip>
+                                                   for="export-journey-report-choice">{'Create report'}</WaTooltip>
                                         <WaButton
                                             id="export-journey-report-choice"
                                             className="journey-export-choice-button"
                                             variant="brand"
                                             appearance="plain"
-                                            aria-label="Export a Report"
+                                            aria-label="Create report"
                                             onClick={openExportReportDialog}
                                         >
                                             <WaIcon slot="start" name="file-lines" variant="regular"/>
-                                            <span>Export a Report</span>
+                                            <span>Create report</span>
                                         </WaButton>
                                     </div>
                                 </LGSPopup>

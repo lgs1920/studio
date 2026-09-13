@@ -4,10 +4,17 @@
  *
  * File: welcome-hero.test.jsx
  *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-13
+ * Last modified: 2026-09-13
+ *
+ *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {cleanup, fireEvent, render, screen} from '@testing-library/react'
+import {act, cleanup, fireEvent, render, screen} from '@testing-library/react'
 import {afterEach, describe, expect, it, vi} from 'vitest'
 
 vi.mock('@Components/MainUI/LogoSvg', () => ({
@@ -26,7 +33,26 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaButton: ({children, href, ...props}) => href
         ? <a href={href} {...props}>{children}</a>
         : <button {...props}>{children}</button>,
+    WaFormatDate: ({date, ...props}) => <time {...props}>{date}</time>,
     WaIcon: () => null,
+    WaPopup: ({children, active, anchor, placement, distance, flip, shift, sync, ...props}) => (
+        <div
+            data-testid="welcome-initialization-popup"
+            data-active={active}
+            data-anchor={anchor}
+            data-placement={placement}
+            data-distance={distance}
+            data-flip={flip}
+            data-shift={shift}
+            data-sync={sync}
+            {...props}
+        >
+            {children}
+        </div>
+    ),
+    WaProgressBar: ({children, label, value, ...props}) => (
+        <div role="progressbar" aria-label={label} aria-valuenow={value} {...props}>{children}</div>
+    ),
 }))
 
 import { WelcomeHero } from '@Components/MainUI/WelcomeHero'
@@ -34,6 +60,7 @@ import { WelcomeHero } from '@Components/MainUI/WelcomeHero'
 describe('WelcomeHero', () => {
     afterEach(() => {
         cleanup()
+        vi.useRealTimers()
         globalThis.lgs = undefined
         globalThis.__ = undefined
     })
@@ -53,6 +80,8 @@ describe('WelcomeHero', () => {
         expect(document.querySelector('.welcome-logo img')?.getAttribute('src')).toBe('/assets/logo/logo-horizontal.png')
         expect(document.querySelector('.welcome-logo source')?.getAttribute('srcset')).toBe('/assets/logo/logo-vertical.png')
         expect(document.querySelector('.welcome-hero-route-canvas')).toBeTruthy()
+        expect(document.querySelector('.welcome-hero-build-info')?.textContent).toContain('1.0.0')
+        expect(document.querySelector('.welcome-hero-build-info')?.textContent).toContain('build-42')
         const siteButton = screen.getByRole('link', {name: /Visit Our Site/})
         const enterButton = screen.getByRole('button', {name: /Enter Studio/})
 
@@ -63,6 +92,19 @@ describe('WelcomeHero', () => {
         fireEvent.click(enterButton)
 
         expect(onEnter).toHaveBeenCalledTimes(1)
+    })
+
+    it('renders the build date with Web Awesome', () => {
+        globalThis.lgs = {
+            versions: {studio: '1.0.0'},
+            build: {date: '2026-08-13T12:34:56.000Z'},
+            configuration: {website: {domain: 'lgs1920.fr', protocol: 'https'}},
+        }
+
+        render(<WelcomeHero/>)
+
+        expect(document.querySelector('.welcome-hero-build-info')?.textContent).toContain('1.0.0')
+        expect(document.querySelector('.welcome-hero-build-info time')?.textContent).toBe('2026-08-13T12:34:56.000Z')
     })
 
     it('does not allow entering Studio before the application is ready', () => {
@@ -82,6 +124,163 @@ describe('WelcomeHero', () => {
         fireEvent.click(button)
 
         expect(onEnter).not.toHaveBeenCalled()
+    })
+
+    it('shows the current initialization step and overall progress', () => {
+        globalThis.lgs = {
+            versions: {studio: '1.0.0'},
+            build: {id: 'build-42'},
+        }
+
+        render(
+            <WelcomeHero
+                initializationProgress={{
+                    activeStep: 1,
+                    steps: [
+                        {id: 'backend', label: 'Checking backend connection'},
+                        {id: 'application', label: 'Loading application configuration'},
+                        {id: 'services', label: 'Starting application services'},
+                        {id: 'data', label: 'Loading terrain and journeys'},
+                        {id: 'camera', label: 'Preparing the initial map view'},
+                        {id: 'surface', label: 'Rendering the Studio interface'},
+                        {id: 'ready', label: 'Finalizing Studio launch'},
+                    ],
+                }}
+            />
+        )
+
+        expect(screen.getByRole('progressbar', {name: 'Studio initialization: 10%'})
+            .getAttribute('aria-valuenow')).toBe('10')
+        expect(screen.getByText('Preparing studio')).toBeTruthy()
+        expect(screen.getByTestId('welcome-initialization-popup')).toMatchObject({
+            dataset: {
+                active:    'true',
+                anchor:    'welcome-enter-call-for-action',
+                placement: 'bottom-start',
+                distance:  '8',
+                flip:      'true',
+                shift:     'true',
+                sync:      'width',
+            },
+        })
+        expect(document.querySelector('#welcome-enter-call-for-action')).toBeTruthy()
+        expect(document.querySelectorAll('.welcome-initialization-step').length).toBe(7)
+        expect(document.querySelector('.welcome-initialization-steps-frame')).toBeTruthy()
+        expect(document.querySelector('.welcome-initialization-scrollbar')).toBeTruthy()
+        expect(document.querySelector('.welcome-initialization-steps')?.getAttribute('style'))
+            .toContain('translateY(-0.41rem)')
+        expect(document.querySelector('.welcome-initialization-scrollbar-thumb')?.getAttribute('style'))
+            .toContain('top: 4.29%')
+        expect(screen.getByText('Checking backend connection').parentElement
+            .classList.contains('is-complete')).toBe(true)
+        expect(screen.getByText('Loading application configuration').parentElement
+            .classList.contains('is-active')).toBe(true)
+        expect(screen.getByText('Starting application services').parentElement
+            .classList.contains('is-complete')).toBe(false)
+        expect(screen.getByText('Loading terrain and journeys').parentElement
+            .classList.contains('welcome-initialization-step')).toBe(true)
+        expect(screen.getByText('In progress')).toBeTruthy()
+    })
+
+    it('shows the initialization progress in development', () => {
+        globalThis.lgs = {
+            platform: 'development',
+            versions: {studio: '1.0.0'},
+            build: {id: 'build-42'},
+        }
+
+        render(
+            <WelcomeHero
+                initializationProgress={{
+                    activeStep: 1,
+                    steps: [
+                        {id: 'backend', label: 'Checking backend connection'},
+                        {id: 'application', label: 'Loading application configuration'},
+                        {id: 'services', label: 'Starting application services'},
+                    ],
+                }}
+            />
+        )
+
+        expect(screen.getByRole('progressbar')).toBeTruthy()
+        expect(screen.getByText('Loading application configuration')).toBeTruthy()
+    })
+
+    it('keeps completed initialization steps visible for three seconds', () => {
+        vi.useFakeTimers()
+        globalThis.lgs = {
+            versions: {studio: '1.0.0'},
+            build: {id: 'build-42'},
+        }
+
+        render(
+            <WelcomeHero
+                initComplete
+                appReady
+                initializationProgress={{
+                    activeStep: 5,
+                    steps: [
+                        {id: 'backend', label: 'Checking backend connection'},
+                        {id: 'application', label: 'Loading application configuration'},
+                        {id: 'services', label: 'Starting application services'},
+                        {id: 'data', label: 'Loading terrain and journeys'},
+                        {id: 'camera', label: 'Preparing the initial map view'},
+                        {id: 'surface', label: 'Rendering the Studio interface'},
+                        {id: 'ready', label: 'Finalizing Studio launch'},
+                    ],
+                }}
+            />
+        )
+
+        expect(screen.getByText('Finalizing Studio launch')).toBeTruthy()
+        expect(screen.getByText('Studio gameplay is ready, enjoy !')).toBeTruthy()
+        expect(screen.getByRole('progressbar', {name: 'Studio initialization: 100%'})
+            .getAttribute('aria-valuenow')).toBe('100')
+        expect(document.querySelector('.welcome-initialization-scrollbar-thumb')?.getAttribute('style'))
+            .toContain('top: 42.86%')
+
+        act(() => {
+            vi.advanceTimersByTime(2999)
+        })
+        expect(screen.getByText('Finalizing Studio launch')).toBeTruthy()
+
+        act(() => {
+            vi.advanceTimersByTime(1)
+        })
+        expect(screen.queryByText('Finalizing Studio launch')).toBeNull()
+        expect(screen.queryByTestId('welcome-initialization-popup')).toBeNull()
+    })
+
+    it('keeps the progress at 60 percent until Studio is ready', () => {
+        globalThis.lgs = {
+            versions: {studio: '1.0.0'},
+            build: {id: 'build-42'},
+        }
+
+        render(
+            <WelcomeHero
+                initComplete
+                initializationProgress={{
+                    activeStep: 4,
+                    steps: [
+                        {id: 'backend', label: 'Checking backend connection'},
+                        {id: 'application', label: 'Loading application configuration'},
+                        {id: 'services', label: 'Starting application services'},
+                        {id: 'data', label: 'Loading terrain and journeys'},
+                        {id: 'camera', label: 'Preparing the initial map view'},
+                        {id: 'surface', label: 'Rendering the Studio interface'},
+                        {id: 'ready', label: 'Finalizing Studio launch'},
+                    ],
+                }}
+            />
+        )
+
+        expect(screen.getByRole('progressbar', {name: 'Studio initialization: 60%'})
+            .getAttribute('aria-valuenow')).toBe('60')
+        expect(document.querySelector('.welcome-initialization-steps')?.getAttribute('style'))
+            .toContain('translateY(-2.43rem)')
+        expect(document.querySelector('.welcome-initialization-scrollbar-thumb')?.getAttribute('style'))
+            .toContain('top: 25.71%')
     })
 
     it('renders the resolved video and falls back to the resolved image', () => {
@@ -114,5 +313,50 @@ describe('WelcomeHero', () => {
 
         expect(document.querySelector('#welcome-hero')?.classList.contains('welcome-hero-image-visible')).toBe(true)
         expect(document.querySelector('.welcome-hero-media')?.getAttribute('style')).toContain('background-color: rgb(18, 52, 86)')
+    })
+
+    it('promotes the incoming video element without replaying it', () => {
+        vi.useFakeTimers()
+        const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
+        vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => {})
+        globalThis.lgs = {
+            configuration: {website: {domain: 'lgs1920.fr', protocol: 'https'}},
+        }
+
+        render(
+            <WelcomeHero
+                backgroundMedia={{
+                    id: '20260812-10548975',
+                    fallbackColor: '#123456',
+                    imageSources: [{src: '/fallback.webp', type: 'image/webp'}],
+                    videoSources: [{src: '/assets/media/20260812-10548975-hd-3840x2160.mp4', type: 'video/mp4'}],
+                    credit: null,
+                }}
+            />
+        )
+
+        const videos = document.querySelectorAll('.welcome-hero-video')
+        const activeVideo = videos[0]
+        const incomingVideo = videos[1]
+        Object.defineProperty(activeVideo, 'duration', {configurable: true, value: 10})
+        Object.defineProperty(activeVideo, 'currentTime', {configurable: true, writable: true, value: 8.6})
+        act(() => {
+            fireEvent.timeUpdate(activeVideo)
+        })
+        expect(incomingVideo.querySelector('source')?.getAttribute('src')).toBe('/assets/media/20260812-15404528-3840x2160.mp4')
+
+        fireEvent.canPlay(incomingVideo)
+        fireEvent.loadedData(incomingVideo)
+        expect(play).toHaveBeenCalledOnce()
+        expect(document.querySelector('#welcome-hero')?.classList.contains('welcome-hero-video-transitioning')).toBe(true)
+        expect(document.querySelector('#welcome-hero')?.classList.contains('welcome-hero-video-crossfade-ready')).toBe(true)
+
+        act(() => {
+            vi.advanceTimersByTime(2300)
+        })
+
+        expect(document.querySelector('.welcome-hero-video-active')).toBe(incomingVideo)
+        expect(play).toHaveBeenCalledOnce()
+        expect(document.querySelector('#welcome-hero')?.classList.contains('welcome-hero-video-transitioning')).toBe(false)
     })
 })

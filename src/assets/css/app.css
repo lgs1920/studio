@@ -1,14 +1,14 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *  
+ *
  * File: app.css
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-16
- * Last modified: 2026-07-16
+ * Created on: 2024-02-02
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,6 +37,53 @@ body {
     overflow: hidden;
     height: 100%;
     margin: 0;
+
+    &,
+    & * {
+        user-select: none !important;
+        -webkit-user-select: none !important;
+    }
+
+    & :is(
+        input,
+        textarea,
+        select,
+        [contenteditable=""],
+        [contenteditable="true"],
+        [contenteditable="plaintext-only"],
+        [role="textbox"],
+        [data-lgs-shortcut-editable="true"],
+        wa-input,
+        wa-number-input,
+        wa-textarea,
+        wa-select,
+        wa-combobox,
+        sl-input,
+        sl-textarea,
+        sl-select
+    ) {
+        user-select: text !important;
+        -webkit-user-select: text !important;
+    }
+
+    & :is(
+        wa-input,
+        wa-number-input,
+        wa-textarea,
+        wa-select,
+        wa-combobox,
+        sl-input,
+        sl-textarea,
+        sl-select
+    )::part(input),
+    & :is(
+        wa-select,
+        wa-combobox,
+        sl-select
+    )::part(display-input) {
+        user-select: text !important;
+        -webkit-user-select: text !important;
+    }
 }
 
 .no-select {
@@ -55,14 +102,96 @@ body {
     left: var(--left);
 }
 
+/* Keep Cesium input active while crop overlays control hit testing selectively. */
+#lgs1920-container.lgs-video-crop-input-mode #cesium-viewer,
+#lgs1920-container.lgs-video-crop-input-mode #cesium-viewer .cesium-widget,
+#lgs1920-container.lgs-video-crop-input-mode #cesium-viewer .cesium-widget canvas {
+    pointer-events: auto;
+    touch-action: none;
+}
+
 #lgs-tools-ui {
     position: absolute;
-    /*z-index: var(--lgs-tools-ui-zindex);*/
     top: calc(-1 * var(--top));
     right: calc(-1 * var(--right));
     bottom: calc(-1 * var(--bottom));
     left: calc(-1 * var(--left));
-    /*pointer-events: none;*/
+    pointer-events: none;
+}
+
+/**
+ * Layout for content rendered in a Document Picture-in-Picture or popup window.
+ */
+.lgs-detached-window-container {
+    display: block;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.lgs-detached-window-content {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+}
+
+.lgs-detached-window-content > * {
+    width: 100%;
+    height: 100%;
+}
+
+.lgs-detached-window-card {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    --spacing: var(--lgs-gutter-s);
+}
+
+.lgs-detached-window-card::part(header) {
+    flex: 0 0 auto;
+}
+
+.lgs-detached-window-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xxs);
+}
+
+.lgs-detached-window-card::part(body) {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.lgs-detached-widget-host,
+.lgs-replay-timeline-content {
+    display: block;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.lgs-detached-widget-host > * {
+    width: 100%;
+    height: 100%;
 }
 
 #cesium-viewer {
@@ -83,10 +212,12 @@ body {
     background: var(--lgs-dark-color-95);
 }
 
-body.lgs-app-booting #cesium-viewer {
-    visibility: hidden;
-    pointer-events: none;
-    opacity: 0;
+@media (display-mode: standalone) {
+    body.lgs-app-booting #cesium-viewer {
+        visibility: hidden;
+        pointer-events: none;
+        opacity: 0;
+    }
 }
 
 /** Hide the main toolbar */
@@ -246,6 +377,12 @@ body.lgs-app-booting #cesium-viewer {
     pointer-events: auto;
 }
 
+.drawer-resize-handle {
+    /* The handle is portaled into Web Awesome's top-layer dialog. */
+    box-sizing: border-box;
+    outline-offset: -1px;
+}
+
 .drawer-wrapper.horizontal {
     left: var(--left);
     max-width: var(--lgs-horizontal-panel-width);
@@ -354,6 +491,11 @@ body.lgs-app-booting #cesium-viewer {
 .video-scene-widgets-portal-preview .lgs-widget-preview-forbidden:hover,
 .video-scene-widgets-portal-preview .lgs-widget-preview-only:hover .lgs-widget-preview-forbidden {
     opacity: 1;
+}
+
+.video-scene-widgets-portal-input-blocked .lgs-widget-container,
+.video-scene-widgets-portal-input-blocked .lgs-widget-container * {
+    pointer-events: none !important;
 }
 
 .lgs-widget-control-box * {
@@ -520,6 +662,36 @@ body.lgs-app-booting #cesium-viewer {
     align-items: center;
 }
 
+.lgs-webapp-update-callout {
+    position: fixed;
+    z-index: calc(var(--lgs-ui-layer-zindex) + 30);
+    top: var(--lgs-gutter);
+    right: var(--lgs-gutter);
+    left: var(--lgs-gutter);
+    max-width: 42rem;
+    margin: 0 auto;
+    pointer-events: auto;
+}
+
+.lgs-webapp-update-callout-content {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+    flex-wrap: wrap;
+}
+
+.app-update-progress {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lgs-gutter-s);
+    font-size: var(--lgs-font-size);
+}
+
+.app-update-progress > wa-spinner {
+    flex: 0 0 auto;
+    font-size: var(--lgs-font-size-l);
+}
+
 /*******************************************************************************
  * Widgets and Cropper Menus
  ******************************************************************************/
@@ -617,7 +789,8 @@ body.lgs-app-booting #cesium-viewer {
     width: fit-content;
     min-width: fit-content;
     padding: var(--lgs-gutter-xs);
-    box-shadow: var(--lgs-on-map-floating-shadow, var(--wa-shadow-l));
+    box-shadow: var(--wa-shadow-l);
+    color: var(--wa-color-text-normal);
     --widget-deck-panel-max-width: 14rem;
     padding-block-end: calc(var(--lgs-gutter-s) + var(--lgs-gutter-xs));
     gap: 0;
@@ -662,7 +835,7 @@ body.lgs-app-booting #cesium-viewer {
     padding: 2px;
     transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
     border: 1px solid transparent;
-    border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-xs));
+    border-radius: var(--wa-border-radius-s);
     background: transparent;
     gap: var(--lgs-gutter-xs);
 }
@@ -679,16 +852,16 @@ body.lgs-app-booting #cesium-viewer {
 .widget-deck-item:hover,
 .widget-deck-item.selected,
 .widget-deck-item.is-selected {
-    color: var(--lgs-card-on-map-hover-color);
-    border-color: var(--lgs-card-on-map-hover-border-color);
-    background: var(--lgs-card-on-map-hover-bg-color);
+    color: var(--wa-color-neutral-on-loud);
+    border-color: var(--wa-color-neutral-border-loud);
+    background: var(--wa-color-neutral-fill-loud);
 }
 
 .widget-deck-item.selected,
 .widget-deck-item.is-selected {
-    color: var(--lgs-card-on-map-selected-color);
-    border-color: var(--lgs-card-on-map-selected-border-color);
-    background: var(--lgs-card-on-map-selected-bg-color);
+    color: var(--wa-color-brand-on-loud);
+    border-color: var(--wa-color-brand-border-loud);
+    background: var(--wa-color-brand-fill-loud);
 }
 
 .widget-deck-title {
@@ -835,7 +1008,7 @@ body.lgs-app-booting #cesium-viewer {
 
 .widget-menu-disabled {
     cursor: not-allowed !important;
-    color: var(--lgs-card-on-map-disabled-color) !important;
+    color: var(--wa-color-text-quiet) !important;
     border-color: transparent !important;
     background: transparent !important;
 }
@@ -843,7 +1016,7 @@ body.lgs-app-booting #cesium-viewer {
 .widget-deck-item.widget-menu-disabled:hover,
 .widget-deck-item.widget-menu-disabled.selected,
 .widget-deck-item.widget-menu-disabled.is-selected {
-    color: var(--lgs-card-on-map-disabled-color) !important;
+    color: var(--wa-color-text-quiet) !important;
     border-color: transparent !important;
     background: transparent !important;
 }
@@ -870,6 +1043,60 @@ body.lgs-app-booting #cesium-viewer {
     display: flex;
     align-items: center;
     gap: var(--lgs-gutter-s);
+}
+
+.widget-dock-bottom-drawer {
+    --size: 320px; /* Current dock height, updated by the resize handle. */
+    --widget-dock-min-size: 180px; /* Absolute minimum height allowed for the dock. */
+}
+
+.widget-dock-bottom-drawer::part(dialog) {
+    top: auto !important;
+    right: auto !important;
+    bottom: 0 !important;
+    left: var(--widget-dock-horizontal-left, 0px) !important;
+    width: var(--widget-dock-horizontal-width, 100%) !important;
+    height: min(90dvh, max(var(--widget-dock-min-size), var(--size))) !important;
+    min-height: var(--widget-dock-min-size) !important;
+    max-width: 100% !important;
+    max-height: 90dvh !important;
+}
+
+.widget-dock-bottom-drawer::part(body) {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+}
+
+.widget-dock-surface {
+    position: relative;
+    box-sizing: border-box;
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    height: auto;
+    overflow: hidden;
+}
+
+.widget-dock-surface .lgs-widget-container {
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.widget-dock-surface .lgs-widget-docked {
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0;
+    min-height: 0;
+    margin: 0 !important;
+    transform: translate(0, 0) rotate(0deg) scale(1) !important;
+    transform-origin: top left;
+    opacity: 1;
 }
 
 .widget-group-management {
@@ -953,12 +1180,82 @@ body.lgs-app-booting #cesium-viewer {
     user-select: none;
 }
 
-.widget-ordering-row::part(body) {
+.widget-ordering-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
+    cursor: grab;
+    user-select: none;
+}
+
+.widget-ordering-group-members {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-xs);
+}
+
+.widget-ordering-group-details::part(header),
+.widget-ordering-row::part(body),
+.widget-ordering-child::part(body) {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: var(--lgs-gutter-s);
     gap: var(--lgs-gutter-xs);
+    box-sizing: border-box;
+}
+
+.widget-ordering-group-details {
+    --spacing: var(--lgs-gutter-s);
+    --wa-panel-border-radius: var(--lgs-border-radius-s);
+    border-radius: var(--lgs-border-radius-s);
+    outline: 4px solid transparent;
+    outline-offset: 4px;
+    backface-visibility: hidden;
+}
+
+.widget-ordering-group-details:not([open]) {
+    height: 2rem;
+}
+
+.widget-ordering-group-details:not([open])::part(details) {
+    height: 2rem;
+    box-sizing: border-box;
+}
+
+.widget-ordering-group-details::part(header) {
+    min-height: 0;
+}
+
+.widget-ordering-group-details:not([open])::part(header) {
+    height: calc(2rem - 2 * var(--wa-panel-border-width, 1px));
+}
+
+.widget-ordering-group-details:hover {
+    color: var(--wa-color-brand-on-normal) !important;
+    outline: 2px solid var(--wa-color-brand-50);
+    outline-offset: 2px;
+    box-shadow: var(--wa-shadow-l);
+}
+
+.widget-ordering-group-summary {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: var(--lgs-gutter-xs);
+    cursor: grab;
+}
+
+.widget-ordering-child {
+    cursor: default;
+}
+
+.widget-ordering-child wa-icon {
+    width: 1.2rem;
+}
+
+.widget-ordering-child .sortable-widget-info {
+    flex: 1;
 }
 
 .widget-ordering-row wa-icon {

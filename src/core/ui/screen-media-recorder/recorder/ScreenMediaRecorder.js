@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2025-07-10
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,6 +21,7 @@
  ******************************************************************************/
 import { APP_KEY, NAVIGATOR, SECOND } from '@Core/constants'
 import { DateTime }                   from 'luxon'
+import { normalizeMediabunnyMetadataTags } from './MediaMetadata'
 import {
     BufferTarget, canEncodeVideo, CanvasSource, getEncodableVideoCodecs, Mp4OutputFormat, Output, QUALITY_HIGH,
     QUALITY_MEDIUM, QUALITY_VERY_HIGH,
@@ -66,7 +67,7 @@ export class ScreenMediaRecorder extends EventTarget {
         // {value: QUALITY_LOW, name: 'Low Quality', short: 'L'},
         {value: QUALITY_MEDIUM, name: 'Medium Quality', short: 'M'},
         {value: QUALITY_HIGH, name: 'High Quality', short: 'H'},
-        {value: QUALITY_VERY_HIGH, name: 'Ultra High Quality', short: 'V'},
+        {value: QUALITY_VERY_HIGH, name: 'Ultra High Quality', short: 'U'},
     ]
     /** Supported output frame rates */
     static FPS = [30, 45, 60, 15]
@@ -693,7 +694,7 @@ export class ScreenMediaRecorder extends EventTarget {
                                           format,
                                           target: new BufferTarget(),
                                       })
-            await this.#output.setMetadataTags(this.#metadata)
+            await this.#output.setMetadataTags(normalizeMediabunnyMetadataTags(this.#metadata))
             this.#videoSource = new CanvasSource(this.#canvas, this.#getCanvasSourceConfig(outputConfig, safe))
 
             const maximumPacketCount = Number.isFinite(this.#maxDuration)
@@ -722,13 +723,21 @@ export class ScreenMediaRecorder extends EventTarget {
             this.#nextFrameDueMs = 0
             document.body.classList.add(ScreenMediaRecorder.CLASSES.RECORDING)
 
+            this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
+
             await this.#waitForStartFrameReady()
 
             if (isStartCancelled()) {
                 return
             }
 
-            this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.START))
+            // Allow the application to commit its recording-state layout before
+            // the first encoded frame is submitted. This keeps the initial frame
+            // aligned with the same DOM state used by subsequent frames.
+            if (!await this.#prepareFrameCapture()) {
+                return
+            }
+
             this.#startTime = performance.now()
             this.#emitInfo(0)
             this.#startMonitoring()

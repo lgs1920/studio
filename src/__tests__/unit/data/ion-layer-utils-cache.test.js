@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-30
- * Last modified: 2026-06-30
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -119,5 +119,60 @@ describe('IonLayerUtils Cesium cache', () => {
             }),
         )
         expect(tileset).toEqual({id: 'tileset'})
+    })
+
+    it('passes the provider token explicitly to Ion resources', async () => {
+        const {IonResource} = await import('cesium')
+
+        await IonLayerUtils.ionResourceFromAssetId(1, 'provider-token')
+
+        expect(IonResource.fromAssetId).toHaveBeenCalledWith(1, {accessToken: 'provider-token'})
+    })
+
+    it('rejects Ion resources when no provider token is available', async () => {
+        const {IonResource} = await import('cesium')
+        globalThis.lgs.stores.ion.token = ''
+
+        await expect(IonLayerUtils.ionResourceFromAssetId(1)).rejects.toThrow('A Cesium Ion token is required')
+        expect(IonResource.fromAssetId).not.toHaveBeenCalled()
+    })
+
+    it('creates a Google 2D imagery provider for dedicated Google Maps layers', async () => {
+        const {Google2DImageryProvider} = await import('cesium')
+        Google2DImageryProvider.fromIonAssetId.mockResolvedValue({id: 'google-imagery'})
+
+        const provider = await IonLayerUtils.imageryProviderFromLayer({
+            assetId:     3830182,
+            imageryKind: 'google2d',
+            mapType:     'satellite',
+        }, {accessToken: 'google-token'})
+
+        expect(Google2DImageryProvider.fromIonAssetId).toHaveBeenCalledWith({
+            assetId:          3830182,
+            accessToken:      'google-token',
+            mapType:          'satellite',
+            overlayLayerType: undefined,
+        })
+        expect(provider).toEqual({id: 'google-imagery'})
+    })
+
+    it('creates Google Photorealistic 3D Tiles with the layer visibility', async () => {
+        const {createGooglePhotorealistic3DTileset} = await import('cesium')
+        createGooglePhotorealistic3DTileset.mockResolvedValue({id: 'google-3d'})
+
+        const tileset = await IonLayerUtils.createTileset({
+            id:        'google-photorealistic-3d',
+            type:      'base3d',
+            show:      true,
+            sceneKind: 'google-photorealistic',
+        }, {accessToken: 'google-token'})
+
+        expect(createGooglePhotorealistic3DTileset).toHaveBeenCalledWith(
+            {onlyUsingWithGoogleGeocoder: true},
+            {
+                show: true,
+            },
+        )
+        expect(tileset).toEqual({id: 'google-3d'})
     })
 })

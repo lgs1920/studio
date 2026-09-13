@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-06-05
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -105,5 +105,20 @@ describe('cancelVideoEditing', () => {
         expect(__.ui.widgetCache.restoreAllHiddenWidgetsExcept).toHaveBeenCalledWith(VIDEO_WIDGETS_BOARD)
         expect(__.ui.contextMenu.hide).toHaveBeenCalled()
         expect(__.ui.drawerManager.close).toHaveBeenCalled()
+    })
+
+    it('clears the transient linked timeline preparation on cancel', () => {
+        lgs.stores.ui.video.timelinePreviewActive = true
+        __.ui.replay = {
+            leaveReplayPreparation: vi.fn(),
+            pause:                 vi.fn(),
+        }
+
+        cancelVideoEditing()
+
+        expect(__.ui.replay.pause).toHaveBeenCalledTimes(1)
+        expect(__.ui.replay.leaveReplayPreparation).toHaveBeenCalledTimes(1)
+        expect(lgs.stores.ui.video.timelinePreviewActive).toBe(false)
+        expect(lgs.stores.replay.recordingSync).toBe(false)
     })
 })

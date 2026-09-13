@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: JourneyReplayCameraTrackingBinding.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-03
+ * Last modified: 2026-09-13
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 /**
  * Shared logical replay camera tracking for Draft and HQ rendering.
  */
@@ -42,6 +58,7 @@ import {
     resolveReplayCameraPitchCorrection,
 } from './JourneyReplayCameraPitchController'
 import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
+import {replayCameraFor} from './ReplayRenderTarget'
 
 const REPLAY_NAVIGATION_PREDICTIVE_TRANSITION_SECONDS = 2
 const REPLAY_NAVIGATION_TARGET_LEAD_RATIO = 1
@@ -117,7 +134,7 @@ const applyLiveReplayCameraView = (mode, view, cameraSettings, {
         return false
     }
 
-    const camera = globalThis.lgs?.viewer?.camera
+    const camera = replayCameraFor(mode)
     const hasCameraWorldPosition = Boolean(
         camera?.position
         || camera?.positionWC
@@ -202,7 +219,7 @@ export const applyResolvedReplayCameraView = (mode, {
         cameraSettings: view.cameraSettings ?? cameraSettings,
         cameraHeight:   view.cameraHeight,
     })
-    const camera = globalThis.lgs?.viewer?.camera
+    const camera = replayCameraFor(mode)
     if (liveRecenter
         && typeof camera?.flyTo === 'function'
         && typeof call.recenterCameraToSample === 'function') {
@@ -530,7 +547,7 @@ export const updateCamera = (mode, {
         ?? globalThis.lgs?.stores?.replay?.marker
         ?? settings.marker,
     )
-    if (markerSettings.mode === REPLAY_MARKER_MODE_TRACE) {
+    if (markerSettings.mode === REPLAY_MARKER_MODE_TRACE && source !== 'refresh' && source !== 'drawer') {
         state.cameraMode = markerSettings.mode
         state.cameraFlightActive = false
         state.navigationCameraView = null
@@ -543,8 +560,9 @@ export const updateCamera = (mode, {
     if (state.cameraUserAdjusting) {
         return
     }
-    if (globalThis.lgs?.viewer) {
-        globalThis.lgs.viewer.trackedEntity = undefined
+    const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
+    if (viewer) {
+        viewer.trackedEntity = undefined
     }
 
     const cameraSettings = normalizeJourneyReplayCamera(
@@ -556,8 +574,9 @@ export const updateCamera = (mode, {
         resetReplayCameraPitchCorrection(mode)
     }
     const deterministicCamera = exportMode || logicalCamera === true
+    const camera = replayCameraFor(mode)
     const playbackUsesLiveCamera = source !== 'playback'
-                                   || Boolean(globalThis.lgs?.viewer?.camera)
+                                   || Boolean(camera)
                                       && !(
                                           globalThis.lgs?.settings?.ui?.replay?.recordingSync === true
                                           || globalThis.lgs?.stores?.replay?.recordingSync === true
@@ -618,6 +637,17 @@ export const updateCamera = (mode, {
         cache: updateCache,
     })
     if (!nominalView) {
+        return
+    }
+
+    if (markerSettings.mode === REPLAY_MARKER_MODE_TRACE) {
+        call.cancelCameraBezierTransition(false)
+        resetCameraTransportState(state)
+        applyResolvedReplayCameraView(mode, {
+            view: nominalView,
+            cameraSettings,
+            logicalFrame,
+        })
         return
     }
     call.rememberNominalCameraView(nominalView)
@@ -836,7 +866,7 @@ export const updateCamera = (mode, {
                 state.navigationCameraView = nominalView
                 applyLiveReplayCameraView(mode, nominalView, cameraSettings)
             }
-            else if (!state.lastAppliedCameraView) {
+            else if (deterministicCamera || !state.lastAppliedCameraView) {
                 state.navigationCameraView = nominalView
                 applyResolvedReplayCameraView(mode, {
                     view: nominalView,

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-09
- * Last modified: 2026-05-09
+ * Created on: 2024-02-03
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -205,11 +205,27 @@ export class TrackUtils {
      * Process a single journey file
      *
      * @param {Object} journey {name, extension, content}
+     * @param {Object} options loading options
+     * @param {Function} options.onError callback invoked with the original loading error
      * @return {Promise<number>} Result status
      */
-    static loadJourneyFromFile = async (journey) => {
+    static loadJourneyFromFile = async (journey, options = {}) => {
         const mainStore = lgs.stores.main
         mainStore.fullSize = false
+        let errorReported = false
+
+        /**
+         * Reports the first loading error to the caller.
+         * @param {unknown} error
+         */
+        const reportError = error => {
+            if (errorReported) {
+                return
+            }
+
+            errorReported = true
+            options.onError?.(error)
+        }
 
         try {
             if (!journey) {
@@ -219,6 +235,7 @@ export class TrackUtils {
             let theJourney = await Journey.create(journey.name, journey.extension, {
                 content:     journey.content,
                 allowRename: false,
+                onError:     reportError,
             })
 
             // Final check on generated instance slug
@@ -252,6 +269,7 @@ export class TrackUtils {
 
         }
         catch (error) {
+            reportError(error)
             console.error('Import failed:', error)
             UIToast.error({
                               caption: IMPORT_FAILED.caption,
@@ -792,7 +810,7 @@ export class TrackUtils {
             width:                    image.width,
             height:                   image.height,
             heightReference:          __.ui.sceneManager.noRelief() ? HeightReference.NONE : HeightReference.CLAMP_TO_GROUND,
-            disableDepthTestDistance: __.ui.sceneManager.is2D ? 0 : 1.2742018E7,
+            disableDepthTestDistance: 0,
             horizontalOrigin:         HorizontalOrigin.CENTER,
             verticalOrigin:           VerticalOrigin.CENTER,
         }

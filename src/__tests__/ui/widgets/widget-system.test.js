@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,10 +17,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
     CROP_TOOLS_WIDGETS, JOURNEY_STATS_WIDGET, JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, PROFILE_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD,
+    VIDEO_WIDGETS_BOARD,
     WIDGET_LAYER_START, WIDGETS_STORE,
 }                                               from '../../../core/constants'
 import { WidgetDynamicRenderer }                from '../../../core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import { WidgetCache }                          from '../../../core/ui/widget-manager/WidgetCache'
+import { stripWidgetDefinitionMetadata }        from '../../../core/ui/widget-manager/WidgetDBManager'
 import { WidgetCoreRegistry }                   from '../../../core/ui/widget-manager/WidgetCoreRegistry'
 
 const widgetCacheStore = new Map()
@@ -65,6 +67,7 @@ const installGlobals = () => {
             videoFormats: [
                 {value: '1x1', locked: true, aspectRatio: 1},
                 {value: '16x9', locked: true, aspectRatio: 16 / 9},
+                {value: '0x0', locked: false, aspectRatio: 0},
             ],
             widgetRatio: {value: '1x1', locked: true, aspectRatio: 1},
         },
@@ -174,6 +177,33 @@ describe('Widget persistence bootstrap', () => {
         expect(putCalls).toHaveLength(0)
     })
 
+    it('removes widget catalog metadata from legacy persisted records', async () => {
+        const widgetId = `${JOURNEY_STATS_WIDGET}#metadata`
+        addPersistedRecord(widgetId, {
+            color:        'pink',
+            group:        JOURNEY_WIDGETS,
+            icon:         'chart-tree-map',
+            name:         'Journey Stats',
+            timelineColor: 'pink',
+            widgetsBoard: 'video-crop-zone',
+            zIndex:       WIDGET_LAYER_START + 2,
+        })
+
+        await new WidgetCache().init()
+
+        expect(putCalls).toEqual([
+            {
+                id:    widgetId,
+                store: WIDGETS_STORE,
+                value: {
+                    group:        JOURNEY_WIDGETS,
+                    widgetsBoard: 'video-crop-zone',
+                    zIndex:       WIDGET_LAYER_START + 2,
+                },
+            },
+        ])
+    })
+
     it('restores journey widgets on non-scene boards with the journey group', async () => {
         const widgetId = `${PROFILE_WIDGET}#video`
         addPersistedRecord(widgetId, {
@@ -189,11 +219,60 @@ describe('Widget persistence bootstrap', () => {
                                                                 zIndex:       WIDGET_LAYER_START,
                                                             })
     })
+
+    it('restores a persisted hidden state for a widget instance', async () => {
+        const widgetId = `${PROFILE_WIDGET}#hidden`
+        addPersistedRecord(widgetId, {
+            widgetsBoard: SCENE_WIDGETS_BOARD,
+            visible:      false,
+            zIndex:       WIDGET_LAYER_START,
+        })
+
+        await new WidgetCache().init()
+
+        expect(widgetListStore.get(widgetId)).toMatchObject({visible: false})
+    })
+})
+
+describe('Widget cache board visibility', () => {
+    beforeEach(() => {
+        installGlobals()
+        lgs.stores.ui.widget.restrictions = new Map()
+    })
+
+    it('keeps a board host visible when its cached board metadata is stale', () => {
+        const cropElement = document.createElement('div')
+        const sceneElement = document.createElement('div')
+        widgetCacheStore.set('video-crop-zone', {widgetsBoard: SCENE_WIDGETS_BOARD})
+        widgetCacheStore.set('scene-widget', {widgetsBoard: SCENE_WIDGETS_BOARD})
+        __.ui.widgetManager.getElementById = vi.fn(id => ({
+            'video-crop-zone': cropElement,
+            'scene-widget':    sceneElement,
+        }[id] ?? null))
+
+        new WidgetCache().hideAllExceptBoards(VIDEO_WIDGETS_BOARD)
+
+        expect(cropElement.classList.contains('lgs-widget-hidden')).toBe(false)
+        expect(sceneElement.classList.contains('lgs-widget-hidden')).toBe(true)
+    })
 })
 
 describe('Widget registry ratio resolution', () => {
     beforeEach(() => {
         installGlobals()
+    })
+
+    it('keeps the hide capability and visibility state in runtime configuration', async () => {
+        const registry = new WidgetCoreRegistry()
+        const config = await registry.retrieveConfig({}, {
+            id:        `${PROFILE_WIDGET}#hidden`,
+            canHide:   true,
+            visible:   false,
+            container: document.body,
+        })
+
+        expect(config.canHide).toBe(true)
+        expect(config.visible).toBe(false)
     })
 
     it('keeps an explicit visual widget ratio instead of the global widget ratio', async () => {
@@ -208,6 +287,50 @@ describe('Widget registry ratio resolution', () => {
         })
 
         expect(config.ratio.value).toBe('16x9')
+    })
+
+    it('keeps an explicit free visual widget ratio', async () => {
+        const registry = new WidgetCoreRegistry()
+        const config = await registry.retrieveConfig({}, {
+            id:        `${PROFILE_WIDGET}#free`,
+            type:      LGS_VISUAL_WIDGET,
+            ratio:     '0x0',
+            container: document.body,
+        })
+
+        expect(config.ratio).toEqual({value: '0x0', locked: false, aspectRatio: 0})
+    })
+
+    it('refreshes resize behavior when a runtime widget configuration is reused', async () => {
+        const registry = new WidgetCoreRegistry()
+        const widgetId = `${PROFILE_WIDGET}#runtime`
+        registry.setConfig(widgetId, {
+            id:            widgetId,
+            runtimeReady:  false,
+            resizable:     false,
+            scalable:      true,
+            min:           {width: 10, height: 10},
+            max:           {width: 500, height: 500},
+            container:     document.body,
+        })
+
+        const config = await registry.retrieveConfig({}, {
+            id:              widgetId,
+            container:       document.body,
+            max:             {width: 900},
+            min:             {width: 150},
+            resizable:       true,
+            constrainResizeToContent: false,
+            resizeToContent: {height: true},
+            scalable:        false,
+        })
+
+        expect(config.resizable).toBe(true)
+        expect(config.scalable).toBe(false)
+        expect(config.min).toEqual({width: 150})
+        expect(config.max).toEqual({width: 900})
+        expect(config.resizeToContent).toEqual({height: true})
+        expect(config.constrainResizeToContent).toBe(false)
     })
 
     it('migrates old persisted global ratios when an explicit widget ratio is requested', async () => {
@@ -268,17 +391,17 @@ describe('Widget registry ratio resolution', () => {
             topRatio:    10,
             width:       200,
             height:      100,
-            positionKey: 'replay-controls-window-v1',
+            positionKey: 'test-toolbar-window-v1',
         }))
 
         const config = await registry.retrieveConfig(document.createElement('div'), {
-            id:              'replay-controls-widget',
+            id:              'test-toolbar-widget',
             attachTo:        'center',
             container,
             boundsContainer: container,
             left:            '50%',
             persist:         true,
-            positionKey:     'replay-controls-window-v2',
+            positionKey:     'test-toolbar-window-v2',
             top:             '66.7%',
             type:            'toolbar',
         })
@@ -395,6 +518,11 @@ describe('Widget registry ratio resolution', () => {
                 y: 1.25,
             }, {}),
             type: LGS_VISUAL_WIDGET,
+            widgetGroup: 'widget-group#one',
+            color: 'pink',
+            icon: 'chart-tree-map',
+            name: 'Journey Stats',
+            timelineColor: 'pink',
         })
 
         getComputedStyleSpy.mockRestore()
@@ -410,6 +538,11 @@ describe('Widget registry ratio resolution', () => {
             x: 1.25,
             y: 1.25,
         })
+        expect(positionData.widgetGroup).toBe('widget-group#one')
+        expect(positionData).not.toHaveProperty('color')
+        expect(positionData).not.toHaveProperty('icon')
+        expect(positionData).not.toHaveProperty('name')
+        expect(positionData).not.toHaveProperty('timelineColor')
     })
 
     it('persists crop dimensions without a visual scale', () => {
@@ -452,6 +585,26 @@ describe('Widget registry ratio resolution', () => {
         expect(positionData.width).toBe(640)
         expect(positionData.height).toBe(360)
         expect(positionData.scale).toEqual({x: 1, y: 1})
+    })
+})
+
+describe('Widget persistence metadata sanitization', () => {
+    it('strips catalog metadata without changing widget state fields', () => {
+        expect(stripWidgetDefinitionMetadata({
+            color:        'pink',
+            height:       180,
+            icon:         'chart-tree-map',
+            name:         'Journey Stats',
+            timelineColor: 'pink',
+            visible:      true,
+            widgetGroup:  'widget-group#one',
+            width:        320,
+        })).toEqual({
+            height:  180,
+            visible: true,
+            widgetGroup: 'widget-group#one',
+            width:   320,
+        })
     })
 })
 
@@ -585,5 +738,34 @@ describe('Widget dynamic renderer bootstrap', () => {
                                                                 widgetsBoard: SCENE_WIDGETS_BOARD,
                                                                 zIndex:       WIDGET_LAYER_START,
                                                             })
+    })
+
+    it('preserves creation positioning when a concrete widget is rendered again', async () => {
+        const DynamicTestWidget = () => null
+        const renderer = WidgetDynamicRenderer.instance
+        renderer.registry = {
+            getLazyComponent: vi.fn(async () => DynamicTestWidget),
+        }
+
+        const widgetId = `${DYNAMIC_TEST_WIDGET}#positioned`
+        await renderer.renderWidget(SCENE_WIDGETS, widgetId, {
+            attachTo:    'top-left',
+            forceRefresh: true,
+            left:        '25%',
+            top:         '25%',
+            widgetsBoard: SCENE_WIDGETS_BOARD,
+        })
+
+        await renderer.renderWidget(SCENE_WIDGETS, widgetId, {
+            forceRefresh: true,
+            widgetsBoard: SCENE_WIDGETS_BOARD,
+        })
+
+        expect(widgetListStore.get(widgetId)).toMatchObject({
+                                                                 attachTo:    'top-left',
+                                                                 left:        '25%',
+                                                                 top:         '25%',
+                                                                 widgetsBoard: SCENE_WIDGETS_BOARD,
+                                                             })
     })
 })

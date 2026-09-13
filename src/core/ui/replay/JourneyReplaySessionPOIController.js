@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: JourneyReplaySessionPOIController.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-22
+ * Last modified: 2026-09-13
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 /**
  * Nearby POI lifecycle for journey replay.
  */
@@ -21,8 +37,6 @@ import {
     EasingFunction, HeightReference, HorizontalOrigin, LinearApproximation, Math as CesiumMath, Matrix4,
     PolylineDashMaterialProperty, SampledPositionProperty, SceneTransforms, Transforms, VerticalOrigin,
 }                                                                                          from 'cesium'
-import { faCamera }                                                                        from '@fortawesome/pro-solid-svg-icons'
-import { faPersonHiking }                                                                  from '@fortawesome/pro-regular-svg-icons'
 import {
     JourneyReplayCesiumRenderer,
 }                                                                                          from './JourneyReplayCesiumRenderer'
@@ -98,17 +112,12 @@ import {
     REPLAY_TRACKING_DYNAMIC_LOOKAHEAD_FACTOR,
     REPLAY_POI_TRIGGER_EPSILON_METERS,
     REPLAY_POI_TRIGGER_SCAN_MARGIN_METERS,
-    CAMERA_ANGLE_PREVIEW_AXIS_LENGTH,
-    CAMERA_ANGLE_PREVIEW_OFFSET_LENGTH,
-    CAMERA_ANGLE_PREVIEW_ICON_SIZE,
     REPLAY_JOURNEY_TOOLBAR_VISIBILITY_EVENT,
     REPLAY_EVENT_STOP_CLIPS_COMPLETE,
     CAMERA_REDIRECT_CANDIDATES,
     isUsableCartesian3,
     safeCartesian3Normalize,
     safeCartesian3Lerp,
-    makeFontAwesomeIconDataUri,
-    resolveJourneyActivityIcon,
 } from './JourneyReplaySessionShared'
 
 export const syncRuntimeNearbyPOIs = (mode, journey = globalThis.lgs?.theJourney ?? null) => {
@@ -373,6 +382,4 @@ export const replayPoiCursorForDistance = (mode, nearbyPois = [], distance = 0) 
      * Pull the live Cesium camera state back into the replay settings/store.
      * This keeps the drawer and the Cesium viewport in lockstep while the FT is running.
      */
-
-
 

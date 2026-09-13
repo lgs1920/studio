@@ -2,13 +2,13 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: replay-phase1.test.js
+ * File: replay-settings.test.js
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-01
- * Last modified: 2026-07-01
+ * Created on: 2026-07-22
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,9 +35,10 @@ import {
     defaultJourneyReplaySettings, REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
     REPLAY_CAMERA_HEADING_OFFSET_MAX, REPLAY_CAMERA_POSITION_AHEAD, REPLAY_CAMERA_POSITION_BEHIND, REPLAY_CAMERA_POSITION_SYSTEM,
     REPLAY_CAMERA_PRESET_DEFAULT, REPLAY_CAMERA_PRESET_ULTRA_SMOOTH,
+    REPLAY_READINESS_POLICY_ADAPTIVE, REPLAY_READINESS_POLICY_OFF,
     REPLAY_EFFECT_GLOW, REPLAY_EFFECT_NEON, REPLAY_EFFECT_NONE,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
-    getJourneyReplayCameraPresetKey, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplaySettings,
+    getJourneyReplayCameraPresetKey, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplayReadiness, normalizeJourneyReplaySettings,
 }                                                                      from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { gpx }                                                         from '@tmcw/togeojson'
 import { applyGpxStyleExtensionProperties, extractLgsTrackProperties } from '@Utils/JourneyGpxUtils'
@@ -58,6 +59,19 @@ vi.mock('@Components/Toast', () => ({
 import {makeJourney, makeTrack} from './replay-phase1-fixtures'
 
 describe('replay settings normalization', () => {
+    it('normalizes persisted timeline view settings', () => {
+        expect(defaultJourneyReplaySettings().timeline).toBeUndefined()
+        expect(normalizeJourneyReplaySettings({
+            timeline: {
+                zoomPercent: 180,
+                currentTimeMillis: -1,
+            },
+        }).timeline).toEqual({
+            zoomPercent: 180,
+            currentTimeMillis: 0,
+        })
+    })
+
     it('normalizes the shared replay effect mode without a separate effect opacity', () => {
         expect(defaultJourneyReplaySettings().progression.effect).toEqual({
             mode: REPLAY_EFFECT_NONE,
@@ -141,7 +155,7 @@ describe('replay settings normalization', () => {
         const camera = normalizeJourneyReplayCamera({
             altitudeMode: 'constant',
             altitude:     1500,
-            headingOffset: 120,
+            headingOffset: 240,
             pitch:        -50,
             positionMode: REPLAY_CAMERA_POSITION_AHEAD,
         })
@@ -178,6 +192,30 @@ describe('replay settings normalization', () => {
         expect(camera.driftSensitivity).toBe(0)
         expect(camera.rollSensitivity).toBe(0.35)
         expect(camera.pitchCorrectionSensitivity).toBe(1)
+    })
+
+    it('normalizes tile readiness policy and camera preloading settings', () => {
+        expect(defaultJourneyReplaySettings().readiness).toMatchObject({
+                                                                       enabled: true,
+                                                                       policy: REPLAY_READINESS_POLICY_ADAPTIVE,
+                                                                       prewarmEnabled: true,
+                                                                   })
+        expect(normalizeJourneyReplayReadiness({
+                                                   enabled: false,
+                                                   policy: 'invalid',
+                                                   movingTimeoutMs: 99999,
+                                               })).toMatchObject({
+                                                                        enabled: false,
+                                                                        policy: REPLAY_READINESS_POLICY_ADAPTIVE,
+                                                                        movingTimeoutMs: 5000,
+                                                                    })
+        expect(normalizeJourneyReplayReadiness({policy: REPLAY_READINESS_POLICY_OFF}).policy)
+            .toBe(REPLAY_READINESS_POLICY_OFF)
+        expect(normalizeJourneyReplayCamera({
+                                               playback: {
+                                                   tilePreloadHorizonMs: 99999,
+                                               },
+                                           }).playback.tilePreloadHorizonMs).toBe(3000)
     })
 
     it('keeps a default tolerance zone aligned to the window and clamps custom rectangles', () => {

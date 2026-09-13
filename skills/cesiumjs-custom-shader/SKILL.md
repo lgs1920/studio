@@ -4,7 +4,12 @@ description: "CustomShader authoring — vertexShaderText and fragmentShaderText
 ---
 # CesiumJS CustomShader
 
-Version baseline: CesiumJS 1.143. All imports use ES module style.
+## User intent discipline
+
+For Studio work, follow the autonomy and approval rules in [PROJECT_RULES.md](../../PROJECT_RULES.md#1-core-directives). Preserve the task-specific safeguards below.
+
+
+Version baseline: CesiumJS 1.144. All imports use ES module style.
 
 `CustomShader` injects user GLSL into the `Model` / `Cesium3DTileset` / `VoxelPrimitive` rendering pipeline. It exposes glTF attributes, feature IDs, and `EXT_structural_metadata` to per-vertex and per-fragment code, and returns values through the built-in `czm_modelVertexOutput` and `czm_modelMaterial` structs.
 

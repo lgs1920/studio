@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: JourneyReplayClipController.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-22
+ * Last modified: 2026-09-13
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 /**
  * Replay clips and export camera frames.
  */
@@ -14,6 +30,7 @@ import {REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_POSITION_SYSTEM, getJourn
 import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
 import {resolveJourneyReplayLogicalCameraPose} from './JourneyReplayLogicalCameraPose'
+import {createReplayCameraCommand} from './ReplayCameraCommand'
 
 const SAFE_TOP_DOWN_PITCH = -(Math.PI / 2 - 0.0001)
 const LANDING_CAMERA_GROUND_OFFSET_METERS = 20
@@ -124,7 +141,9 @@ const cloneReplayClipCameraView = view => {
         sample: view.sample ? {...view.sample} : null,
         heading: finiteNumber(view.heading),
         pitch: finiteNumber(view.pitch),
+        roll: finiteNumber(view.roll) ?? 0,
         height: finiteNumber(view.height),
+        cameraCommand: view.cameraCommand ? {...view.cameraCommand} : null,
         cameraSettings: view.cameraSettings ? {...view.cameraSettings} : null,
     }
 }
@@ -161,7 +180,7 @@ export const currentReplayClipCameraState = (mode, {initial = false, sample = nu
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const camera = globalThis.lgs?.viewer?.camera
+        const camera = (call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera
         const saved = initial ? state.savedCameraState : null
         return {
             sample: sample ? {...sample} : null,
@@ -171,6 +190,9 @@ export const currentReplayClipCameraState = (mode, {initial = false, sample = nu
             pitch:   finiteNumber(saved?.orientation?.pitch)
                      ?? finiteNumber(camera?.pitch)
                      ?? SAFE_TOP_DOWN_PITCH,
+            roll:    finiteNumber(saved?.orientation?.roll)
+                     ?? finiteNumber(camera?.roll)
+                     ?? 0,
             height:  finiteNumber(saved?.destination?.height)
                      ?? finiteNumber(camera?.positionCartographic?.height)
                      ?? finiteNumber(camera?.positionCartographic?.altitude)
@@ -505,12 +527,26 @@ export const sampleJourneyReplayClipCameraPlan = (mode, plan = null, {localProgr
         const heading = plan.kind === 'focus'
                         ? (finiteNumber(plan.endView?.heading) ?? 0) + (((finiteNumber(plan.rpm) ?? 0) / 60) * Math.PI * 2 * elapsedSeconds)
                         : interpolateRadians(plan.startView?.heading, plan.endView?.heading, ratio)
-        return {
+        const view = {
             sample: viewSample,
             heading,
             pitch: lerp(plan.startView?.pitch, plan.endView?.pitch, ratio),
+            roll: interpolateRadians(plan.startView?.roll ?? 0, plan.endView?.roll ?? 0, ratio),
             height: lerp(plan.startView?.height, plan.endView?.height, ratio),
             cameraSettings: plan.endView?.cameraSettings,
+        }
+        return {
+            ...view,
+            cameraCommand: createReplayCameraCommand({
+                pose: {
+                    target: view.sample,
+                    heading: view.heading,
+                    pitch: view.pitch,
+                    roll: view.roll,
+                    cameraHeight: view.height,
+                },
+                source: 'replay-clip',
+            }),
         }
     }
 
@@ -650,7 +686,8 @@ const playJourneyReplayClipPath = (mode, plan, {token, state, call, onFrame = nu
                                                  force:          true,
                                              })
                 }
-                globalThis.lgs?.scene?.requestRender?.()
+                const renderScene = call.cesiumScene?.() ?? globalThis.lgs?.scene ?? globalThis.lgs?.viewer?.scene
+                renderScene?.requestRender?.()
             }
             onFrame?.({
                 localProgress,
@@ -721,7 +758,7 @@ export const renderReplayExportClipFrame = async (mode, {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const viewer = globalThis.lgs?.viewer
+        const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
         if (!viewer?.camera || !clip || !sample) {
             return null
         }
@@ -808,7 +845,7 @@ export const placeCameraAtPlaybackStart = (mode, sample, progress = 0) => {
             return false
         }
 
-        const liveHeight = finiteNumber(globalThis.lgs?.viewer?.camera?.positionCartographic?.height)
+        const liveHeight = finiteNumber((call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera?.positionCartographic?.height)
         if (liveHeight === null) {
             return false
         }
@@ -882,7 +919,7 @@ export const introHeadingForProgress = (mode, progress = 0) => {
 
         const cameraSettings = normalizeJourneyReplayCamera(globalThis.lgs?.stores?.replay?.camera ?? getJourneyReplaySettings().camera)
         if (cameraSettings.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
-            return degreesToRadians(cameraSettings.heading) ?? finiteNumber(globalThis.lgs?.viewer?.camera?.heading) ?? 0
+            return degreesToRadians(cameraSettings.heading) ?? finiteNumber((call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera?.heading) ?? 0
         }
 
         return replayCameraHeadingForPositionMode({
@@ -939,7 +976,7 @@ export const cameraClipFlight = async (mode, {
 } = {}) => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        if (!globalThis.lgs?.viewer?.camera || !sample) {
+        if (!(call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera || !sample) {
             return
         }
 
@@ -1045,7 +1082,7 @@ export const cancelActiveCameraFlight = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const camera = globalThis.lgs?.viewer?.camera
+        const camera = (call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera
         camera?.cancelFlight?.()
         call.cancelCameraBezierTransition(false)
         state.cameraFlightActive = false
@@ -1071,7 +1108,8 @@ export const focusJourneyAfterPlayback = (mode, {snapDistance = 50000} = {}) => 
             TrackUtils.updatePOIsVisibility(journey, true)
         }
         state.cameraFlightActive = false
-        globalThis.lgs?.viewer?.camera?.cancelFlight?.()
+        const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer
+        viewer?.camera?.cancelFlight?.()
         return new Promise(resolve => {
             let settled = false
         const finish = () => {

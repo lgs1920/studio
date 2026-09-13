@@ -4,7 +4,12 @@ description: "CesiumJS primitives and geometry - Primitive, GeometryInstance, Ap
 ---
 # CesiumJS Primitives & Geometry
 
-> **Applies to:** CesiumJS v1.143+ (ES module imports, `??` instead of `defaultValue`)
+## User intent discipline
+
+For Studio work, follow the autonomy and approval rules in [PROJECT_RULES.md](../../PROJECT_RULES.md#1-core-directives). Preserve the task-specific safeguards below.
+
+
+> **Applies to:** CesiumJS v1.144+ (ES module imports, `??` instead of `defaultValue`)
 
 ## Architecture
 

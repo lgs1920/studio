@@ -8,26 +8,39 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-01-28
- * Last modified: 2026-01-28
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { faXmark, faClapperboardPlay, faImagePolaroid } from '@fortawesome/pro-regular-svg-icons'
-import { SlAlert, SlButton, SlDialog, SlIcon }          from '@shoelace-style/shoelace/dist/react'
-import { FA2SL }                                        from '@Utils/FA2SL'
+import { ErrorDiagnosticDetails } from '@Components/Modals/ErrorDiagnosticDetails'
+import { collectErrorDiagnostic, formatErrorDiagnostic } from '@Utils/ErrorDiagnosticUtils'
+import { SlAlert, SlButton, SlDialog }                   from '@shoelace-style/shoelace/dist/react'
+import { WaIcon }                                        from '@web.awesome.me/webawesome-pro/dist/react'
 import React                                            from 'react'
+import './style.css'
 
 export const WidgetMountErrorDialog = ({open, error, action, onConfirm, onCancel}) => {
     const missing = Array.isArray(error?.missing) ? error.missing : []
     const timeoutMs = typeof error?.timeoutMs === 'number' ? error.timeoutMs : null
+    const timeoutError = new Error(
+        `The following widgets did not mount within ${timeoutMs ?? 'the requested'} milliseconds: ${missing.join(', ') || 'Unavailable'}`,
+    )
+    timeoutError.name = 'WidgetMountTimeoutError'
+    timeoutError.code = 'WIDGET_MOUNT_TIMEOUT'
+    const diagnostic = collectErrorDiagnostic({
+        error:        timeoutError,
+        suggestedFix: 'Wait for the widgets to finish mounting, then retry the recording or snapshot.',
+    })
+    diagnostic.details = formatErrorDiagnostic(diagnostic)
     return (
         <SlDialog
             open={open}
             label={'Widgets not mounted'}
             onSlRequestClose={onConfirm}
-            className={'lgs-theme'}
+            className={'lgs-theme lgs-error-dialog widget-mount-error-dialog'}
+            style={{'--sl-z-index-dialog': 'var(--lgs-error-dialog-zindex)'}}
         >
             <SlAlert variant="warning" open>
                 <p>{`Some widgets could not be mounted in time for the ${action === 'record' ? 'record' : 'snapshot'}.`}</p>
@@ -40,15 +53,19 @@ export const WidgetMountErrorDialog = ({open, error, action, onConfirm, onCancel
                 )}
             </SlAlert>
 
+            <ErrorDiagnosticDetails
+                diagnostic={diagnostic}
+                id="widget-mount-error-details"
+            />
+
             <div slot="footer">
                 <div className="buttons-bar">
                     <SlButton variant="default" onClick={onCancel}>
-                        <SlIcon slot="prefix" library="fa" name={FA2SL.set(faXmark)}></SlIcon>
+                        <WaIcon slot="prefix" name="xmark" variant="regular"/>
                         {'Cancel'}
                     </SlButton>
                     <SlButton variant="primary" onClick={onConfirm}>
-                        <SlIcon slot="prefix" library="fa"
-                                name={FA2SL.set(action === 'record' ? faClapperboardPlay : faImagePolaroid)}/>
+                        <WaIcon slot="prefix" name={action === 'record' ? 'clapperboard-play' : 'image-polaroid'} variant="regular"/>
                         {`${action === 'record' ? 'Record' : 'Snap it'} anyway`}
                     </SlButton>
                 </div>

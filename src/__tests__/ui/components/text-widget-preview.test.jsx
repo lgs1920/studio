@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-18
- * Last modified: 2026-06-18
+ * Created on: 2026-06-16
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -159,17 +159,17 @@ describe('TextWidgetPreview', () => {
         )
     })
 
-    it('keeps rotation applied while the preview editor is focused', async () => {
+    it('keeps the preview transform stable while the editor is focused', async () => {
         const {container, getByRole} = render(<TextWidgetPreview entity="text-widget#1"/>)
         const editor = getByRole('textbox')
         const wrapper = container.querySelector('.lgs-editable-text-wrapper')
 
-        expect(wrapper.style.transform).toContain('rotate(45deg)')
+        const initialTransform = wrapper.style.transform
 
         fireEvent.focus(editor)
 
         await waitFor(() => {
-            expect(wrapper.style.transform).toContain('rotate(45deg)')
+            expect(wrapper.style.transform).toBe(initialTransform)
         })
     })
 })

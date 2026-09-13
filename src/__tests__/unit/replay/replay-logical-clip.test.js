@@ -1,3 +1,19 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: replay-logical-clip.test.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-07-28
+ * Last modified: 2026-09-13
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import {afterEach, describe, expect, it, vi} from 'vitest'
 
 vi.mock('@Components/Toast', () => ({
@@ -15,9 +31,11 @@ import {
     playJourneyReplayClips,
     replayElementBoundaryOwner,
     resolveJourneyReplayClipCameraPlan,
+    sampleJourneyReplayClipCameraPlan,
     targetSampleForClip,
 } from '@Core/ui/replay/JourneyReplayClipController'
 import {REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP} from '@Core/ui/replay/JourneyReplayClips'
+import {createReplayCameraCommand} from '@Core/ui/replay/ReplayCameraCommand'
 import {
     JOURNEY_REPLAY_INTERNAL_CALL,
     JOURNEY_REPLAY_INTERNAL_STATE,
@@ -178,6 +196,7 @@ describe('logical replay clip camera path', () => {
                 clipReplayHeadingForProgress: vi.fn(() => 0.5),
                 targetSampleForClip:         vi.fn(() => landingSample),
                 markerRenderHeightForSample: vi.fn(() => 80),
+                interpolateReplayExportSample: vi.fn((_start, end) => end),
             },
         }
         vi.stubGlobal('lgs', {
@@ -396,6 +415,7 @@ describe('logical replay clip camera path', () => {
                 targetSampleForClip: vi.fn(() => replaySample),
                 cameraAltitudeForSample: vi.fn(() => 1400),
                 markerRenderHeightForSample: vi.fn(() => 80),
+                interpolateReplayExportSample: vi.fn((_start, end) => end),
             },
         }
         vi.stubGlobal('lgs', {
@@ -416,6 +436,22 @@ describe('logical replay clip camera path', () => {
             height:  1400,
         }))
         expect(plan.endView.pitch).toBeCloseTo(-1.099557, 5)
+
+        const clipEndFrame = sampleJourneyReplayClipCameraPlan(mode, plan, {
+            localProgress: 1,
+            localMillis: 2000,
+        })
+        const replayEntryCommand = createReplayCameraCommand({
+            pose: {
+                target: replaySample,
+                heading: plan.endView.heading,
+                pitch: plan.endView.pitch,
+                cameraHeight: plan.endView.height,
+            },
+            source: 'replay',
+        })
+
+        expect(clipEndFrame.cameraCommand.id).toBe(replayEntryCommand.id)
     })
 
     it('uses the shared path for a live focus clip', async () => {

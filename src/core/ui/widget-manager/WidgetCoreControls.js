@@ -7,15 +7,16 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-30
- * Last modified: 2026-04-30
+ * Created on: 2026-01-26
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { CREDITS_WIDGET, LGS_VISUAL_WIDGET, LOGO_WIDGET, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { CREDITS_WIDGET, LGS_VISUAL_WIDGET, LOGO_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { v4 as uuid }        from 'uuid'
+import { fitWidgetDimensionsToBounds, isNonDistortingWidget } from './widgetResizeUtils'
 
 /**
  * Handles widget layout, control box visibility, and setup routines.
@@ -31,6 +32,21 @@ export class WidgetCoreControls {
     }
 
     #getBoundsTarget = (config) => config.boundsContainer ?? config.container
+
+    #getElementMargins = element => {
+        if (!element || typeof getComputedStyle !== 'function') {
+            return {left: 0, right: 0, top: 0, bottom: 0}
+        }
+
+        const style = getComputedStyle(element)
+        const readMargin = value => Math.max(0, Number.parseFloat(value) || 0)
+        return {
+            left:   readMargin(style.marginLeft),
+            right:  readMargin(style.marginRight),
+            top:    readMargin(style.marginTop),
+            bottom: readMargin(style.marginBottom),
+        }
+    }
 
     /**
      * Keeps video widgets inside the crop using edge percentages.
@@ -333,8 +349,10 @@ export class WidgetCoreControls {
         const widget = element.getBoundingClientRect()
         const margin = Number.isFinite(config.margin) ? config.margin : 0
 
-        let defaultWidth = widget.width || 200
-        let defaultHeight = widget.height || 200
+        const configuredWidth = Number(config.width)
+        const configuredHeight = Number(config.height)
+        let defaultWidth = Number.isFinite(configuredWidth) && configuredWidth > 0 ? configuredWidth : (widget.width || 200)
+        let defaultHeight = Number.isFinite(configuredHeight) && configuredHeight > 0 ? configuredHeight : (widget.height || 200)
 
         if ((config.fromDB || config.fromRuntime) && config.dimensions?.width && config.dimensions?.height) {
             defaultWidth = config.dimensions.width
@@ -390,16 +408,25 @@ export class WidgetCoreControls {
         const scaledWidth = defaultWidth * scaleX
         const scaledHeight = defaultHeight * scaleY
 
-        if (!config.fromDB && !config.fromRuntime) {
+        const isVideoBoardWidget = config.widgetsBoard === VIDEO_WIDGETS_BOARD
+        const shouldConstrainPosition = !config.isCropper && !isVideoBoardWidget
+        if (shouldConstrainPosition || (!config.fromDB && !config.fromRuntime)) {
+            const safeMargin = Math.max(0, Number.isFinite(config.margin) ? config.margin : 0)
+            const elementMargins = this.#getElementMargins(element)
+            const minimumLeft = container.left + safeMargin
+            const minimumTop = container.top + safeMargin
+            const maximumLeft = Math.max(
+                minimumLeft,
+                container.right - scaledWidth - safeMargin - elementMargins.left - elementMargins.right,
+            )
+            const maximumTop = Math.max(
+                minimumTop,
+                container.bottom - scaledHeight - safeMargin - elementMargins.top - elementMargins.bottom,
+            )
+
             config.position = {
-                left: Math.max(
-                    container.left,
-                    Math.min(left, container.right - scaledWidth),
-                ),
-                top:  Math.max(
-                    container.top,
-                    Math.min(top, container.bottom - scaledHeight),
-                ),
+                left: Math.min(Math.max(left, minimumLeft), maximumLeft),
+                top:  Math.min(Math.max(top, minimumTop), maximumTop),
             }
         }
 
@@ -504,6 +531,133 @@ export class WidgetCoreControls {
     }
 
     /**
+     * Scales a crop zone with its container and keeps it inside the current bounds.
+     * @param {Object} config - Crop zone configuration
+     * @param {DOMRect|Object} boundsRect - Current crop bounds
+     * @param {number} margin - Minimum distance from the bounds edges
+     * @param {Object|null} previousBounds - Bounds before the resize
+     * @returns {{crop: Object, changed: boolean, outOfBounds: Object}|null} Constrained crop data
+     */
+    #constrainCropToContainer = (config, boundsRect, margin, previousBounds = null) => {
+        const currentCrop = config.cropDimensions ?? {}
+        const currentLeft = Number.isFinite(Number(currentCrop.left))
+            ? Number(currentCrop.left)
+            : Number(config.position?.left)
+        const currentTop = Number.isFinite(Number(currentCrop.top))
+            ? Number(currentCrop.top)
+            : Number(config.position?.top)
+        const currentWidth = Number(currentCrop.width)
+        const currentHeight = Number(currentCrop.height)
+
+        if (!Number.isFinite(currentLeft) || !Number.isFinite(currentTop) ||
+            !Number.isFinite(currentWidth) || !Number.isFinite(currentHeight) ||
+            currentWidth <= 0 || currentHeight <= 0 || boundsRect.width <= 0 || boundsRect.height <= 0) {
+            return null
+        }
+
+        const safeMargin = Math.min(
+            Math.max(0, Number.isFinite(margin) ? margin : 0),
+            Math.max(0, (Math.min(boundsRect.width, boundsRect.height) - 1) / 2),
+        )
+        const availableWidth = Math.max(1, boundsRect.width - (2 * safeMargin))
+        const availableHeight = Math.max(1, boundsRect.height - (2 * safeMargin))
+        let width = currentWidth
+        let height = currentHeight
+        let left = currentLeft
+        let top = currentTop
+
+        const previousWidth = Number(previousBounds?.right) - Number(previousBounds?.left)
+        const previousHeight = Number(previousBounds?.bottom) - Number(previousBounds?.top)
+        const hasPreviousBounds = Number.isFinite(previousWidth) && previousWidth > 0 &&
+            Number.isFinite(previousHeight) && previousHeight > 0
+        const boundsChanged = hasPreviousBounds && (
+            boundsRect.left !== Number(previousBounds.left) ||
+            boundsRect.top !== Number(previousBounds.top) ||
+            boundsRect.width !== previousWidth ||
+            boundsRect.height !== previousHeight
+        )
+
+        if (boundsChanged) {
+            const scaleX = boundsRect.width / previousWidth
+            const scaleY = boundsRect.height / previousHeight
+            const uniformScale = config.ratio?.locked
+                ? Math.min(scaleX, scaleY)
+                : null
+            const widthScale = uniformScale ?? scaleX
+            const heightScale = uniformScale ?? scaleY
+            width *= widthScale
+            height *= heightScale
+            left = boundsRect.left + ((boundsRect.width - width) / 2)
+            top = boundsRect.top + ((boundsRect.height - height) / 2)
+        }
+        else if (!hasPreviousBounds && (
+            currentLeft < boundsRect.left + safeMargin ||
+            currentTop < boundsRect.top + safeMargin ||
+            currentLeft + currentWidth > boundsRect.right - safeMargin ||
+            currentTop + currentHeight > boundsRect.bottom - safeMargin
+        )) {
+            left = boundsRect.left + ((boundsRect.width - width) / 2)
+            top = boundsRect.top + ((boundsRect.height - height) / 2)
+        }
+
+        if (width > availableWidth || height > availableHeight) {
+            const aspectRatio = Number(config.ratio?.aspectRatio)
+            if (config.ratio?.locked && Number.isFinite(aspectRatio) && aspectRatio > 0) {
+                const centerLeft = left + (width / 2)
+                const centerTop = top + (height / 2)
+                width = Math.min(width, availableWidth, availableHeight * aspectRatio)
+                height = width / aspectRatio
+                if (height > availableHeight) {
+                    height = availableHeight
+                    width = height * aspectRatio
+                }
+                left = centerLeft - (width / 2)
+                top = centerTop - (height / 2)
+            }
+            else {
+                width = Math.min(width, availableWidth)
+                height = Math.min(height, availableHeight)
+            }
+        }
+
+        const minimumLeft = boundsRect.left + safeMargin
+        const minimumTop = boundsRect.top + safeMargin
+        const maximumLeft = Math.max(minimumLeft, boundsRect.right - safeMargin - width)
+        const maximumTop = Math.max(minimumTop, boundsRect.bottom - safeMargin - height)
+        const outOfBounds = {
+            top:    left < minimumTop,
+            bottom: top + height > boundsRect.bottom - safeMargin,
+            left:   left < minimumLeft,
+            right:  left + width > boundsRect.right - safeMargin,
+        }
+        left = Math.max(minimumLeft, Math.min(left, maximumLeft))
+        top = Math.max(minimumTop, Math.min(top, maximumTop))
+        const changed = left !== currentLeft || top !== currentTop || width !== currentWidth || height !== currentHeight
+
+        return {
+            crop: {left, top, width, height},
+            changed,
+            outOfBounds,
+        }
+    }
+
+    /**
+     * Debounces expensive crop update notifications and persistence during a window resize.
+     * @param {Object} config - Crop zone configuration
+     * @returns {void}
+     */
+    #scheduleCropResizeCommit = config => {
+        clearTimeout(config.cropResizeCommitTimer)
+        config.cropResizeCommitTimer = setTimeout(() => {
+            config.cropResizeCommitTimer = null
+            __.ui.widgetManager.dispatchCropUpdate(config, 'resize')
+            if (config.persist) {
+                void __.ui.widgetManager.saveWidgetPosition(config.id, config)
+            }
+        }, 120)
+    }
+
+    /**
      * Monitors container resize events and updates widget bounds and position.
      * @param {Object} config - Widget configuration
      * @param {Function} setBounds - Function to update bounds
@@ -540,12 +694,9 @@ export class WidgetCoreControls {
             const oldBounds = {...config.bounds}
             const mv = this.#registry.getMoveable(elementId)
             const newBounds = this.refreshBounds(config, mv?.current)
-            if (!first && config.isCropper && config.id === VIDEO_CROP_ZONE) {
-                __.ui.widgetManager.applyCropToOverlay(config)
-                this.repositionWidgetsForBoard(VIDEO_WIDGETS_BOARD)
-            }
-            if (!first && newBounds.left === oldBounds.left && newBounds.top === oldBounds.top &&
-                newBounds.right === oldBounds.right && newBounds.bottom === oldBounds.bottom) {
+            const boundsChanged = newBounds.left !== oldBounds.left || newBounds.top !== oldBounds.top ||
+                newBounds.right !== oldBounds.right || newBounds.bottom !== oldBounds.bottom
+            if (!first && !boundsChanged && !config.isCropper) {
                 return
             }
             setBounds(newBounds)
@@ -553,26 +704,72 @@ export class WidgetCoreControls {
 
             const referenceRect = config.container.getBoundingClientRect()
             const boundsRect = this.#getBoundsTarget(config).getBoundingClientRect()
-            const allowAutoAdapt = this.#registry.windowResizing
-            const skipInitialAutoAdapt = first && (config.fromDB || config.fromRuntime) && !config.isCropper
-            const oldContainerWidth = oldBounds.right - oldBounds.left
-            const oldContainerHeight = oldBounds.bottom - oldBounds.top
-            const newContainerWidth = newBounds.right - newBounds.left
-            const newContainerHeight = newBounds.bottom - newBounds.top
-            const isContainerShrinking = newContainerWidth < oldContainerWidth ||
-                newContainerHeight < oldContainerHeight
-            if (config.isCropper && allowAutoAdapt && !isContainerShrinking) {
-                // A window resize can move the crop board without changing its
-                // crop dimensions. Video widgets live in a fixed portal and
-                // must follow the board's new screen rectangle in that case.
-                if (!first && config.id === VIDEO_CROP_ZONE) {
+            const isSceneWidget = !config.isCropper &&
+                (!config.widgetsBoard || config.widgetsBoard === SCENE_WIDGETS_BOARD)
+            const allowAutoAdapt = this.#registry.windowResizing || isSceneWidget
+
+            if (config.isCropper) {
+                if (allowAutoAdapt) {
+                    const cropResult = this.#constrainCropToContainer(
+                        config,
+                        boundsRect,
+                        Number.isFinite(config.margin) ? config.margin : 0,
+                        oldBounds,
+                    )
+                    if (cropResult) {
+                        const {crop, changed, outOfBounds} = cropResult
+                        element.style.left = `${crop.left}px`
+                        element.style.top = `${crop.top}px`
+                        element.style.width = `${crop.width}px`
+                        element.style.height = `${crop.height}px`
+                        config.cropDimensions = crop
+                        config.position = {left: crop.left, top: crop.top}
+                        config.centerRatio = {
+                            x: (crop.left - boundsRect.left + crop.width / 2) / boundsRect.width,
+                            y: (crop.top - boundsRect.top + crop.height / 2) / boundsRect.height,
+                        }
+                        __.ui.widgetManager.setConfig(config.id, config)
+
+                        if (changed) {
+                            if (first) {
+                                __.ui.widgetManager.dispatchCropUpdate(config, 'resize')
+                                if (config.persist) {
+                                    void __.ui.widgetManager.saveWidgetPosition(config.id, config)
+                                }
+                            }
+                            else {
+                                this.#scheduleCropResizeCommit(config)
+                            }
+                            if (mv?.current) {
+                                mv.current.updateRect()
+                            }
+                            setPosition(config.position)
+                        }
+
+                        if (Object.values(outOfBounds).some(Boolean)) {
+                            element.dispatchEvent(new CustomEvent('widgetOutOfBounds', {
+                                detail: {
+                                    top:         outOfBounds.top,
+                                    bottom:      outOfBounds.bottom,
+                                    left:        outOfBounds.left,
+                                    right:       outOfBounds.right,
+                                    newPosition: config.position,
+                                },
+                                bubbles: true,
+                                cancelable: true,
+                            }))
+                        }
+                    }
+                }
+
+                __.ui.widgetManager.applyCropToOverlay(config)
+                if (config.id === VIDEO_CROP_ZONE) {
                     this.repositionWidgetsForBoard(VIDEO_WIDGETS_BOARD)
                 }
                 return
             }
-            const margin = Number.isFinite(config.margin) ? config.margin : 0
-            let isOutOfBounds = false
-            const outOfBoundsDetails = {top: false, bottom: false, left: false, right: false}
+
+            const skipInitialAutoAdapt = first && (config.fromDB || config.fromRuntime) && !isSceneWidget
 
             // Video-board widgets are repositioned from the crop board's
             // coordinate system by repositionWidgetsForBoard. Applying the
@@ -593,8 +790,34 @@ export class WidgetCoreControls {
                 }
             }
 
+            const isLayoutResizable = isNonDistortingWidget(config)
+            let dimensionsWereAdapted = false
+            if (allowAutoAdapt && !skipInitialAutoAdapt && isLayoutResizable && !isVideoBoardWidget) {
+                const currentDimensions = {
+                    width:  Number(config.dimensions?.width) || Number(element.getBoundingClientRect().width) || 0,
+                    height: Number(config.dimensions?.height) || Number(element.getBoundingClientRect().height) || 0,
+                }
+                const elementMargins = this.#getElementMargins(element)
+                const dimensions = fitWidgetDimensionsToBounds({
+                    config,
+                    element,
+                    dimensions: currentDimensions,
+                    bounds: {
+                        width:  boundsRect.width,
+                        height: boundsRect.height,
+                    },
+                    margins: elementMargins,
+                })
+                dimensionsWereAdapted = dimensions.width !== currentDimensions.width || dimensions.height !== currentDimensions.height
+                if (dimensionsWereAdapted) {
+                    config.dimensions = dimensions
+                    element.style.width = `${dimensions.width}px`
+                    element.style.height = `${dimensions.height}px`
+                }
+            }
+
             let scaleWasAdapted = false
-            if (allowAutoAdapt && !skipInitialAutoAdapt && !config.isCropper && config.type === LGS_VISUAL_WIDGET &&
+            if (allowAutoAdapt && !skipInitialAutoAdapt && !isLayoutResizable && !config.isCropper && config.type === LGS_VISUAL_WIDGET &&
                 config.widgetsBoard !== VIDEO_WIDGETS_BOARD) {
                 const oldScale = {...config.scale}
                 config.scale = this.adaptScaleToContainer(config, boundsRect)
@@ -607,21 +830,21 @@ export class WidgetCoreControls {
 
             let positionWasAdapted = false
             if (allowAutoAdapt && !skipInitialAutoAdapt && !config.isCropper && !isVideoBoardWidget) {
-                const adaptedPosition = this.adaptPositionToContainer(config, boundsRect)
+                const adaptedPosition = this.adaptPositionToContainer(config, boundsRect, element)
                 if (adaptedPosition.left !== config.position.left || adaptedPosition.top !== config.position.top) {
                     config.position = adaptedPosition
                     positionWasAdapted = true
                 }
             }
 
-            if ((!first && config.savedRatios && !isVideoBoardWidget) || scaleWasAdapted || positionWasAdapted) {
+            if ((!first && config.savedRatios && !isVideoBoardWidget) || dimensionsWereAdapted || scaleWasAdapted || positionWasAdapted) {
                 element.style.left = `${config.position.left}px`
                 element.style.top = `${config.position.top}px`
                 setPosition(config.position)
             }
 
             if (!first && allowAutoAdapt && !config.isCropper && !isVideoBoardWidget &&
-                (scaleWasAdapted || positionWasAdapted) && config.persist) {
+                (dimensionsWereAdapted || scaleWasAdapted || positionWasAdapted) && config.persist) {
                 __.ui.widgetManager.saveWidgetPosition(config.id, config)
             }
 
@@ -655,115 +878,17 @@ export class WidgetCoreControls {
                 }
             }
 
-            if (config.isCropper && this.#registry.windowResizing && isContainerShrinking) {
-                const containerRect = boundsRect
-                const currentWidth = config.cropDimensions?.width || 200
-                const currentHeight = config.cropDimensions?.height || 200
-                const maxWidth = containerRect.width - 2 * margin
-                const maxHeight = containerRect.height - 2 * margin
-                let newWidth = currentWidth
-                let newHeight = currentHeight
-                let newLeft = config.position.left
-                let newTop = config.position.top
-                const clampPosition = (width, height) => {
-                    if (newLeft < newBounds.left + margin) {
-                        newLeft = newBounds.left + margin
-                        outOfBoundsDetails.left = true
-                        isOutOfBounds = true
-                    }
-                    else if (newLeft + width > newBounds.right - margin) {
-                        newLeft = newBounds.right - width - margin
-                        outOfBoundsDetails.right = true
-                        isOutOfBounds = true
-                    }
-                    if (newTop < newBounds.top + margin) {
-                        newTop = newBounds.top + margin
-                        outOfBoundsDetails.top = true
-                        isOutOfBounds = true
-                    }
-                    else if (newTop + height > newBounds.bottom - margin) {
-                        newTop = newBounds.bottom - height - margin
-                        outOfBoundsDetails.bottom = true
-                        isOutOfBounds = true
-                    }
-                }
-                clampPosition(currentWidth, currentHeight)
-                const needsResize = currentWidth > maxWidth || currentHeight > maxHeight
-                if (needsResize) {
-                    if (config.ratio?.locked) {
-                        const aspectRatio = config.ratio.aspectRatio
-                        newWidth = Math.min(currentWidth, maxWidth)
-                        newHeight = newWidth / aspectRatio
-                        if (newHeight > maxHeight) {
-                            newHeight = maxHeight
-                            newWidth = newHeight * aspectRatio
-                        }
-                    }
-                    else {
-                        newWidth = Math.min(currentWidth, maxWidth)
-                        newHeight = Math.min(currentHeight, maxHeight)
-                    }
-                    const centerRatio = {
-                        x: (newLeft - containerRect.left + currentWidth / 2) / containerRect.width,
-                        y: (newTop - containerRect.top + currentHeight / 2) / containerRect.height,
-                    }
-                    newLeft = containerRect.left + centerRatio.x * containerRect.width - newWidth / 2
-                    newTop = containerRect.top + centerRatio.y * containerRect.height - newHeight / 2
-                    clampPosition(newWidth, newHeight)
-                }
-                const positionChanged = newLeft !== config.position.left || newTop !== config.position.top
-                const sizeChanged = newWidth !== currentWidth || newHeight !== currentHeight
-                if (!positionChanged && !sizeChanged) {
-                    return
-                }
-                config.centerRatio = {
-                    x: (newLeft - containerRect.left + newWidth / 2) / containerRect.width,
-                    y: (newTop - containerRect.top + newHeight / 2) / containerRect.height,
-                }
-                config.cropDimensions = {
-                    left:   newLeft,
-                    top:    newTop,
-                    width:  newWidth,
-                    height: newHeight,
-                }
-                config.position = {
-                    left: newLeft,
-                    top:  newTop,
-                }
-                element.style.width = `${newWidth}px`
-                element.style.height = `${newHeight}px`
-                element.style.left = `${newLeft}px`
-                element.style.top = `${newTop}px`
-                __.ui.widgetManager.applyCropToOverlay(config)
-                __.ui.widgetManager.setConfig(config.id, config)
-                __.ui.widgetManager.dispatchCropUpdate(config, 'resize')
-                if (config.persist) {
-                    __.ui.widgetManager.saveWidgetPosition(config.id, config)
-                }
-                if (mv && mv.current && (config.transform || config.isCropper)) {
-                    mv.current.updateRect()
-                }
-                setPosition(config.position)
-                if (isOutOfBounds) {
-                    outOfBoundsDetails.newPosition = {left: newLeft, top: newTop}
-                    const outOfBoundsEvent = new CustomEvent('widgetOutOfBounds', {
-                        detail:     outOfBoundsDetails,
-                        bubbles:    true,
-                        cancelable: true,
-                    })
-                    element.dispatchEvent(outOfBoundsEvent)
-                }
-            }
         }
         if (config.windowResizeHandler) {
             window.removeEventListener('resize', config.windowResizeHandler)
             config.windowResizeHandler = null
         }
         handleResize(true)
-        config.observer = new ResizeObserver(this.#throttle(() => handleResize(false), 100))
+        const resizeThrottle = config.isCropper ? 16 : 100
+        config.observer = new ResizeObserver(this.#throttle(() => handleResize(false), resizeThrottle))
         config.observedTargets = [referenceTarget, boundsTarget].filter((target, index, array) => target && array.indexOf(target) === index)
         config.observedTargets.forEach(target => config.observer.observe(target))
-        config.windowResizeHandler = this.#throttle(() => handleResize(false), 100)
+        config.windowResizeHandler = this.#throttle(() => handleResize(false), resizeThrottle)
         window.addEventListener('resize', config.windowResizeHandler)
     }
 
@@ -774,7 +899,10 @@ export class WidgetCoreControls {
      * @param config - Widget configuration
      * @return {{left: number, top: number}} - new position
      */
-    adaptPositionToContainer = (config, container) => {
+    adaptPositionToContainer = (config, container, element = config?.element) => {
+        const margin = Math.max(0, Number.isFinite(config.margin) ? config.margin : 0)
+        const elementMargins = this.#getElementMargins(element)
+
         if (config.type === LGS_VISUAL_WIDGET) {
             const scaleX = config.scale?.x ?? 1
             const scaleY = config.scale?.y ?? 1
@@ -792,8 +920,8 @@ export class WidgetCoreControls {
             const rotatedHeight = (scaledWidth * absSin) + (scaledHeight * absCos)
             const halfRotatedWidth = rotatedWidth / 2
             const halfRotatedHeight = rotatedHeight / 2
-            const centerX = config.position.left + (width / 2)
-            const centerY = config.position.top + (height / 2)
+            const centerX = config.position.left + elementMargins.left + (width / 2)
+            const centerY = config.position.top + elementMargins.top + (height / 2)
             const clamp = (value, min, max) => {
                 if (min > max) {
                     return (min + max) / 2
@@ -801,25 +929,85 @@ export class WidgetCoreControls {
                 return Math.max(min, Math.min(value, max))
             }
 
-            const clampedCenterX = clamp(centerX, container.left + halfRotatedWidth, container.right - halfRotatedWidth)
-            const clampedCenterY = clamp(centerY, container.top + halfRotatedHeight, container.bottom - halfRotatedHeight)
+            const clampedCenterX = clamp(
+                centerX,
+                container.left + margin + elementMargins.left + halfRotatedWidth,
+                container.right - margin - elementMargins.right - halfRotatedWidth,
+            )
+            const clampedCenterY = clamp(
+                centerY,
+                container.top + margin + elementMargins.top + halfRotatedHeight,
+                container.bottom - margin - elementMargins.bottom - halfRotatedHeight,
+            )
 
             return {
-                left: clampedCenterX - (width / 2),
-                top:  clampedCenterY - (height / 2),
+                left: clampedCenterX - elementMargins.left - (width / 2),
+                top:  clampedCenterY - elementMargins.top - (height / 2),
             }
         }
 
         return {
             left: Math.max(
-                container.left,
-                Math.min(config.position.left, container.right - config.dimensions.width * config.scale.x),
+                container.left + margin,
+                Math.min(
+                    config.position.left,
+                    Math.max(
+                        container.left + margin,
+                        container.right - config.dimensions.width * config.scale.x - margin - elementMargins.left - elementMargins.right,
+                    ),
+                ),
             ),
             top:  Math.max(
-                container.top,
-                Math.min(config.position.top, container.bottom - config.dimensions.height * config.scale.y),
+                container.top + margin,
+                Math.min(
+                    config.position.top,
+                    Math.max(
+                        container.top + margin,
+                        container.bottom - config.dimensions.height * config.scale.y - margin - elementMargins.top - elementMargins.bottom,
+                    ),
+                ),
             ),
         }
+    }
+
+    /**
+     * Keeps a scene widget inside its resolved bounds after an interaction.
+     * @param {Object} config - Widget configuration.
+     * @param {HTMLElement} [element=config.element] - Rendered widget element.
+     * @returns {{positionChanged: boolean, scaleChanged: boolean}} Applied changes.
+     */
+    constrainSceneWidgetToBounds = (config, element = config?.element) => {
+        const isSceneWidget = config && !config.isCropper &&
+            (!config.widgetsBoard || config.widgetsBoard === SCENE_WIDGETS_BOARD)
+        const boundsTarget = config?.boundsContainer ?? config?.container
+        const bounds = boundsTarget?.getBoundingClientRect?.()
+
+        if (!isSceneWidget || !bounds || bounds.width <= 0 || bounds.height <= 0) {
+            return {positionChanged: false, scaleChanged: false}
+        }
+
+        config.scale = config.scale ?? {x: 1, y: 1}
+        const previousScale = {...(config.scale ?? {x: 1, y: 1})}
+        if (config.type === LGS_VISUAL_WIDGET) {
+            config.scale = this.adaptScaleToContainer(config, bounds)
+            if (element && (config.scale.x !== previousScale.x || config.scale.y !== previousScale.y)) {
+                __.ui.widgetManager.transform.setScale(element, config.scale.x, config.scale.y)
+            }
+        }
+
+        const previousPosition = {...(config.position ?? {left: 0, top: 0})}
+        const nextPosition = this.adaptPositionToContainer(config, bounds, element)
+        const positionChanged = nextPosition.left !== previousPosition.left || nextPosition.top !== previousPosition.top
+        const scaleChanged = config.scale.x !== previousScale.x || config.scale.y !== previousScale.y
+
+        if (element && positionChanged) {
+            element.style.left = `${nextPosition.left}px`
+            element.style.top = `${nextPosition.top}px`
+        }
+        config.position = nextPosition
+        config.runtimeReady = true
+
+        return {positionChanged, scaleChanged}
     }
 
     /**
@@ -847,9 +1035,19 @@ export class WidgetCoreControls {
         const absSin = Math.abs(Math.sin(angle))
         const rotatedWidth = (width * absCos) + (height * absSin)
         const rotatedHeight = (width * absSin) + (height * absCos)
+        const safeMargin = Math.max(0, Number.isFinite(config.margin) ? config.margin : 0)
+        const elementMargins = this.#getElementMargins(config.element)
+        const availableWidth = Math.max(
+            1,
+            container.width - (2 * safeMargin) - elementMargins.left - elementMargins.right,
+        )
+        const availableHeight = Math.max(
+            1,
+            container.height - (2 * safeMargin) - elementMargins.top - elementMargins.bottom,
+        )
 
-        const limitX = rotatedWidth > 0 ? container.width / rotatedWidth : 1
-        const limitY = rotatedHeight > 0 ? container.height / rotatedHeight : 1
+        const limitX = rotatedWidth > 0 ? availableWidth / rotatedWidth : 1
+        const limitY = rotatedHeight > 0 ? availableHeight / rotatedHeight : 1
         const minScale = Number(config.minScale)
         const maxScale = Number(config.maxScale)
         const explicitMinScale = Number.isFinite(minScale) && minScale > 0 ? minScale : MIN_SCALE
@@ -901,6 +1099,10 @@ export class WidgetCoreControls {
             config.ratio = this.#registry.getRatio(initialConfig.ratio ?? fallback)
         }
 
+        if (isNonDistortingWidget(config)) {
+            config.scale = {x: 1, y: 1}
+        }
+
         const hasCropDimensions = config.isCropper &&
             Number.isFinite(config.cropDimensions?.left) &&
             Number.isFinite(config.cropDimensions?.top) &&
@@ -939,6 +1141,12 @@ export class WidgetCoreControls {
             Number.isFinite(config.dimensions?.height) &&
             config.dimensions.width > 0 &&
             config.dimensions.height > 0) {
+            element.style.width = `${config.dimensions.width}px`
+            element.style.height = `${config.dimensions.height}px`
+        }
+
+        if (!config.isCropper && config.resizable &&
+            Number.isFinite(config.dimensions?.width) && Number.isFinite(config.dimensions?.height)) {
             element.style.width = `${config.dimensions.width}px`
             element.style.height = `${config.dimensions.height}px`
         }

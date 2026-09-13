@@ -182,8 +182,29 @@ function serveProxyPhpDev(): Plugin {
 }
 
 const version = process.env.LGS_RELEASE_VERSION || data.studio
+const gitTag = (() => {
+    if (process.env.LGS_DEPLOYMENT_TAG) {
+        return process.env.LGS_DEPLOYMENT_TAG
+    }
+
+    const _refTag = process.env.GITHUB_REF_TYPE === 'tag' ? process.env.GITHUB_REF_NAME : null
+    if (_refTag) {
+        return _refTag
+    }
+
+    try {
+        return execSync('git describe --tags --exact-match HEAD', {encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore']}).trim()
+    }
+    catch {
+        return execSync('git rev-parse --short HEAD', {encoding: 'utf-8'}).trim()
+    }
+})()
 
 export default defineConfig({
+    define: {
+        __LGS_SERVICE_WORKER_VERSION__: JSON.stringify(version),
+        __LGS_SERVICE_WORKER_TAG__:     JSON.stringify(gitTag),
+    },
     plugins: [
         cesium(),
         serveCesiumDev(),
@@ -228,7 +249,7 @@ export default defineConfig({
             'localhost',
             'dev.lgs1920.fr',
         ],
-        host: 'dev.lgs1920.fr',
+        host: '0.0.0.0',
         port: 5173,
         /** Force WebStorm (WSL) as editor for the error overlay */
         // @ts-expect-error Vite accepts this editor integration option at runtime.
@@ -248,9 +269,15 @@ export default defineConfig({
         chunkSizeWarningLimit: 500000,
         outDir: `./dist/${version}`,
         rollupOptions: {
+            input: {
+                index:                      path.resolve(PROJECT_ROOT, 'index.html'),
+                'external-window-bootstrap': path.resolve(PROJECT_ROOT, 'src/external-window-bootstrap.js'),
+            },
             output: {
                 chunkFileNames: 'assets/js/[name]-[hash].js',
-                entryFileNames: 'assets/js/[name]-[hash].js',
+                entryFileNames: chunk => chunk.name === 'external-window-bootstrap'
+                    ? 'assets/js/external-window-bootstrap.js'
+                    : 'assets/js/[name]-[hash].js',
                 assetFileNames: ({name}) => {
                     if (name?.endsWith('.css')) {
                         return 'assets/css/[name]-[hash][extname]'
@@ -259,6 +286,14 @@ export default defineConfig({
                 }
             }
         }
+    },
+
+    optimizeDeps: {
+        // Pre-bundle lazy timeline dependencies so Vite applies CommonJS interop to their imports.
+        include: [
+            'interactjs',
+            'react-virtualized',
+        ],
     },
 
     resolve: {
@@ -274,6 +309,10 @@ export default defineConfig({
             {
                 find: '@Components',
                 replacement: path.resolve(PROJECT_ROOT, 'src/components')
+            },
+            {
+                find: '@WebComponents',
+                replacement: path.resolve(PROJECT_ROOT, 'src/webcomponents')
             },
             {
                 find: '@Stores',

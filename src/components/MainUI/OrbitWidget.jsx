@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-04-26
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,13 +27,12 @@ import {
   OrbitInteractionHintsWidget,
 } from "@Components/MainUI/OrbitInteractionHintsWidget";
 import { Widget } from "@Components/MainUI/widgets/Widget";
+import { CameraAdjustmentOverlay } from "./CameraAdjustmentOverlay";
 import {
   LGS_WIDGET,
   SCENE_WIDGETS,
   SCENE_WIDGETS_BOARD,
 } from "@Core/constants";
-import { faAngle, faMagnifyingGlassLocation, faVideo } from "@fortawesome/pro-regular-svg-icons";
-import { FA2SL } from "@Utils/FA2SL";
 import { foot, meter, UnitUtils } from "@Utils/UnitUtils";
 import { cameraViewToSlippyLevel } from "@Utils/cesium/CameraLevel";
 import {
@@ -254,6 +253,7 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
   const timerRef = useRef(null);
   const centerAdjustmentCancelRef = useRef(null);
   const lastCameraKeyRef = useRef(null);
+  const _adjustmentDragging = useRef(false);
   const pointerActiveRef = useRef(false);
   const userActionUntilRef = useRef(0);
   const userActionFrameRef = useRef(null);
@@ -268,7 +268,7 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
   );
   const config = useMemo(
     () => ({
-      attachTo: "center",
+      attachTo: "top",
       canReduce: false,
       contextMenu: {
         canRemove: false,
@@ -286,7 +286,7 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
       scalable: false,
       snappable: true,
       stopPropagation: true,
-      top: "50%",
+      top: "10%",
       transient: true,
       type: LGS_WIDGET,
       widgetsBoard: SCENE_WIDGETS_BOARD,
@@ -320,7 +320,7 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
         window.clearTimeout(timerRef.current);
       }
 
-      if (!adjustmentWidgetLocked) {
+      if (!adjustmentWidgetLocked && !_adjustmentDragging.current) {
         timerRef.current = window.setTimeout(() => {
           hide();
           timerRef.current = null;
@@ -339,12 +339,38 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
       return;
     }
 
-    if (visibleRef.current && !timerRef.current) {
+    if (visibleRef.current && !timerRef.current && !_adjustmentDragging.current) {
       timerRef.current = window.setTimeout(() => {
         hide();
         timerRef.current = null;
       }, ADJUSTMENT_OVERLAY_DELAY);
     }
+  }, [adjustmentWidgetLocked, hide]);
+
+  /**
+   * Pauses the orbit adjustment overlay expiration while its widget is dragged.
+   */
+  const pauseAdjustmentOverlayTimer = useCallback(() => {
+    _adjustmentDragging.current = true;
+    if (timerRef.current) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  /**
+   * Restarts the orbit adjustment overlay expiration after the widget is released.
+   */
+  const resumeAdjustmentOverlayTimer = useCallback(() => {
+    _adjustmentDragging.current = false;
+    if (adjustmentWidgetLocked || !visibleRef.current || timerRef.current) {
+      return;
+    }
+
+    timerRef.current = window.setTimeout(() => {
+      hide();
+      timerRef.current = null;
+    }, ADJUSTMENT_OVERLAY_DELAY);
   }, [adjustmentWidgetLocked, hide]);
 
   const unlockAdjustmentWidget = useCallback((event) => {
@@ -683,41 +709,16 @@ const OrbitCameraAdjustmentOverlay = memo(() => {
   ]);
 
   return (
-    <Widget
+    <CameraAdjustmentOverlay
       isVisible={adjustmentWidgetMounted}
       config={config}
-      className={`panorama-adjustment-widget-shell${
-        visible ? " adjustment-visible" : ""
-      }`}
-    >
-      <div className="panorama-adjustment-overlay">
-        <span className="panorama-adjustment-metric">
-          <sl-icon library="fa" name={FA2SL.set(faVideo)} />
-          <strong>{values.height}</strong>
-        </span>
-        <span className="panorama-adjustment-metric">
-          <sl-icon library="fa" name={FA2SL.set(faAngle)} />
-          <strong>{values.pitch}</strong>
-        </span>
-        {values.level !== null && (
-          <span className="panorama-adjustment-metric">
-            <sl-icon library="fa" name={FA2SL.set(faMagnifyingGlassLocation)} />
-            <strong>{values.level}</strong>
-          </span>
-        )}
-        {adjustmentWidgetLocked && (
-          <button
-            type="button"
-            className="panorama-adjustment-lock-control"
-            aria-label="Unlock camera adjustment widget"
-            onClick={unlockAdjustmentWidget}
-            onPointerDown={(event) => event.stopPropagation()}
-          >
-            <WaIcon name="lock" variant="regular" />
-          </button>
-        )}
-      </div>
-    </Widget>
+      visible={visible}
+      values={values}
+      locked={adjustmentWidgetLocked}
+      onUnlock={unlockAdjustmentWidget}
+      onDragStart={pauseAdjustmentOverlayTimer}
+      onDragEnd={resumeAdjustmentOverlayTimer}
+    />
   );
 });
 
@@ -745,14 +746,6 @@ export const OrbitWidget = memo(() => {
     void __.ui.poiManager.stopRotationAndSync();
   }, []);
 
-  const updateRPM = useCallback(
-    (event) => {
-      const value = Number(event.target.value);
-      $rotate.rpm = value;
-    },
-    [$rotate]
-  );
-
   const setOrbitRPM = useCallback(
     (value, persist = false) => {
       const rpm = normalizeOrbitRPM(value, $rotate.rpm);
@@ -765,6 +758,22 @@ export const OrbitWidget = memo(() => {
       if (persist) {
         void persistOrbitSettings($rotate.target, "rotation", { rpm });
       }
+    },
+    [$rotate]
+  );
+
+  const updateRPM = useCallback(
+    (event) => {
+      const value = Number(event.target.value);
+      setOrbitRPM(value, true);
+    },
+    [setOrbitRPM]
+  );
+
+  const persistRPM = useCallback(
+    (event) => {
+      const value = Number(event.target.value);
+      void persistOrbitSettings($rotate.target, "rotation", { rpm: value });
     },
     [$rotate]
   );
@@ -791,14 +800,6 @@ export const OrbitWidget = memo(() => {
       }
     },
     [$rotate]
-  );
-
-  const persistRPM = useCallback(
-    (event) => {
-      const value = Number(event.target.value);
-      void persistOrbitSettings(rotate.target, "rotation", { rpm: value });
-    },
-    [rotate.target]
   );
 
   const toggleDirection = useCallback(

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-03-06
- * Last modified: 2026-03-06
+ * Created on: 2024-05-16
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -226,6 +226,7 @@ export const MapLayer = (props) => {
 
     const isBase = props.type === BASE_ENTITY
     const isLayerType = [BASE_ENTITY, OVERLAY_ENTITY].includes(props.type)
+    const isBase3DActive = Boolean(layers.base3d)
     const manager = __.layersAndTerrainManager
     const snapLayer = isBase ? layers.base : layers.overlay
     const theLayer = isLayerType && snapLayer ? manager.getEntityProxy(snapLayer) : null
@@ -253,11 +254,11 @@ export const MapLayer = (props) => {
     const minLevel = readLevelOption(layerMinimumLevel)
     const maxLevel = readLevelOption(layerMaximumLevel)
     const imageryProvider = useMemo(() => {
-        if (!isLayerType || !layerType || !layerTile) {
+        if (!isLayerType || !layerType || !layerTile || (isBase && isBase3DActive)) {
             return null
         }
 
-        if (layerTile === ION && layerType === props.type) {
+        if (layerTile === ION && layerType === props.type && (!IonLayerUtils.isIonDependentLayer(theLayer) || ion.source === 'user')) {
             return IonLayerUtils.imageryProviderFromLayer(theLayer)
         }
 
@@ -380,6 +381,8 @@ export const MapLayer = (props) => {
         return null
     }, [
         isLayerType,
+        isBase,
+        isBase3DActive,
         props.type,
         layerType,
         layerTile,
@@ -398,22 +401,24 @@ export const MapLayer = (props) => {
         layerUsageUnlocked,
         layerApiKey,
         layerOther,
+        layerProxy,
+        ion.source,
         minLevel,
         maxLevel,
         theLayer,
     ])
 
     const ionImageryProvider = useMemo(() => {
-        if (!theLayer || layerTile || !theLayer?.ionAssetId) {
+        if (!theLayer || layerTile || !theLayer?.ionAssetId || (isBase && isBase3DActive)) {
             return null
         }
 
-        if (IonLayerUtils.isPersonalLayer(theLayer) && ion.source !== 'user') {
+        if (IonLayerUtils.isIonDependentLayer(theLayer) && ion.source !== 'user') {
             return null
         }
 
         return IonLayerUtils.imageryProviderFromLayer(theLayer)
-    }, [ion.source, layerTile, theLayer])
+    }, [ion.source, isBase, isBase3DActive, layerTile, theLayer])
 
     const shouldDrapeOnBase3D = !isBase && layers.base3d && lgs.base3dTileset?.imageryLayers
     const targetCollectionKey = shouldDrapeOnBase3D ? 'base3d' : 'globe'

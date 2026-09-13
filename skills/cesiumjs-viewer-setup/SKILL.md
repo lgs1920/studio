@@ -5,7 +5,14 @@ description: "CesiumJS viewer setup - Viewer, CesiumWidget, widgets, Ion token, 
 
 # CesiumJS Viewer & Scene Setup
 
+## User intent discipline
+
+For Studio work, follow the autonomy and approval rules in [PROJECT_RULES.md](../../PROJECT_RULES.md#1-core-directives). Preserve the task-specific safeguards below.
+
+
 Reference for bootstrapping CesiumJS applications: Viewer, CesiumWidget, Ion/GoogleMaps/ITwinPlatform configuration, widgets, factory helpers, geocoder services, viewer mixins, Credits, and related enums.
+
+Version baseline: CesiumJS v1.144. Verify setup APIs against the latest official reference documentation.
 
 ## Quick Start
 

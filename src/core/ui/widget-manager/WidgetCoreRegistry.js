@@ -7,14 +7,15 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-23
- * Last modified: 2026-04-23
+ * Created on: 2026-01-26
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { LGS_VISUAL_WIDGET, LGS_WIDGET, SCENE_WIDGETS_BOARD, SECOND, WIDGETS_CAPABILITIES } from '@Core/constants'
+import { isNonDistortingWidget } from './widgetResizeUtils'
 import { v4 as uuid }                                      from 'uuid'
 
 /**
@@ -162,6 +163,22 @@ export class WidgetCoreRegistry {
     }
 
     /**
+     * Invalidates one widget runtime while preserving its persisted position.
+     *
+     * @param {string} elementId - Widget identifier.
+     * @returns {boolean} Whether a runtime configuration was invalidated.
+     */
+    invalidateRuntimeById = elementId => {
+        const config = this.#widgets.get(elementId)
+        if (!config) {
+            return false
+        }
+
+        this.#invalidateRuntimeConfig(elementId, config)
+        return true
+    }
+
+    /**
      * Retrieves the moveable reference for an element ID.
      * @param {string} elementId - The element ID
      * @returns {Object|undefined} Moveable reference or undefined if not found
@@ -213,6 +230,10 @@ export class WidgetCoreRegistry {
         if (config.windowResizeHandler) {
             window.removeEventListener('resize', config.windowResizeHandler)
             config.windowResizeHandler = null
+        }
+        if (config.cropResizeCommitTimer) {
+            clearTimeout(config.cropResizeCommitTimer)
+            config.cropResizeCommitTimer = null
         }
         this.#widgets.delete(elementId)
         this.#moveables.delete(elementId)
@@ -285,6 +306,10 @@ export class WidgetCoreRegistry {
         if (config.windowResizeHandler) {
             window.removeEventListener('resize', config.windowResizeHandler)
             config.windowResizeHandler = null
+        }
+        if (config.cropResizeCommitTimer) {
+            clearTimeout(config.cropResizeCommitTimer)
+            config.cropResizeCommitTimer = null
         }
         config.element = null
         config.observedTargets = []
@@ -464,10 +489,12 @@ export class WidgetCoreRegistry {
                 attachTo:               anchor,
                 boundStatus:            {left: false, top: false, right: false, bottom: false},
                 bounds:                 {left: 0, top: 0, right: 0, bottom: 0},
+                canHide:                initialConfig.canHide ?? false,
                 canLock:                initialConfig.canLock ?? true,
                 canReduce:              initialConfig.canReduce ?? true,
                 centerRatio:            {x: 0.5, y: 0.5},
                 collapsed:              initialConfig.collapsed ?? false,
+                constrainResizeToContent: initialConfig.constrainResizeToContent ?? true,
                 container:              initialConfig.container,
                 contextMenu:            this.cloneContext(initialConfig?.contextMenu ?? {}, WIDGETS_CAPABILITIES),
                 boundsContainer:        initialConfig.boundsContainer ?? initialConfig.container,
@@ -480,6 +507,7 @@ export class WidgetCoreRegistry {
                 expandedDimensions:     initialConfig.expandedDimensions ?? null,
                 expandedInlineDimensions: initialConfig.expandedInlineDimensions ?? null,
                 group:                  initialConfig.group ?? null,
+                widgetGroup:             initialConfig.widgetGroup ?? null,
                 icon:                   initialConfig.icon ?? null,
                 id:                     elementId,
                 isCropper:              initialConfig.isCropper,
@@ -494,13 +522,16 @@ export class WidgetCoreRegistry {
                 minScale:               initialConfig.minScale ?? null,
                 minCropSize:            initialConfig.minCropSize ?? {width: 100, height: 100},
                 observer:               null,
+                onRemove:               initialConfig.onRemove ?? null,
                 outsideOverlay:         initialConfig.outsideOverlay,
                 positionKey:            initialConfig.positionKey,
                 persist:                initialConfig.persist ?? null,
+                preserveChildrenWhenCollapsed: initialConfig.preserveChildrenWhenCollapsed ?? false,
                 position:               {left: 0, top: 0},
                 previousCropDimensions: null,
                 ratio:                  ratio,
                 resizeFromCenter:       initialConfig.resizeFromCenter ?? false,
+                resizeToContent:        initialConfig.resizeToContent ?? null,
                 resizable:              initialConfig.resizable ?? false,
                 rotate:                 initialConfig.rotate ?? 0,
                 runtimeReady:           false,
@@ -517,7 +548,10 @@ export class WidgetCoreRegistry {
                 ttl:                    initialConfig.ttl ?? this.#ttl,
                 type:                   initialConfig.type ?? LGS_WIDGET,
                 useRatio:               initialConfig.useRatio ?? true,
+                visible:                initialConfig.visible ?? true,
                 widgetsBoard:           initialConfig.widgetsBoard,
+                width:                   initialConfig.width,
+                height:                  initialConfig.height,
                 zIndex: initialConfig.zIndex ?? 0,
             }
         }
@@ -531,6 +565,12 @@ export class WidgetCoreRegistry {
             }
             if (initialConfig.canLock !== undefined) {
                 config.canLock = initialConfig.canLock
+            }
+            if (initialConfig.canHide !== undefined) {
+                config.canHide = initialConfig.canHide
+            }
+            if (initialConfig.visible !== undefined) {
+                config.visible = initialConfig.visible
             }
             if (initialConfig.canReduce !== undefined) {
                 config.canReduce = initialConfig.canReduce
@@ -559,6 +599,9 @@ export class WidgetCoreRegistry {
             if (initialConfig.group !== undefined) {
                 config.group = initialConfig.group
             }
+            if (initialConfig.widgetGroup !== undefined) {
+                config.widgetGroup = initialConfig.widgetGroup
+            }
             if (initialConfig.icon !== undefined) {
                 config.icon = initialConfig.icon
             }
@@ -567,6 +610,36 @@ export class WidgetCoreRegistry {
             }
             if (initialConfig.positionKey !== undefined) {
                 config.positionKey = initialConfig.positionKey
+            }
+            if (initialConfig.onRemove !== undefined) {
+                config.onRemove = initialConfig.onRemove
+            }
+            if (initialConfig.preserveChildrenWhenCollapsed !== undefined) {
+                config.preserveChildrenWhenCollapsed = initialConfig.preserveChildrenWhenCollapsed
+            }
+            if (initialConfig.width !== undefined) {
+                config.width = initialConfig.width
+            }
+            if (initialConfig.height !== undefined) {
+                config.height = initialConfig.height
+            }
+            if (initialConfig.min !== undefined) {
+                config.min = initialConfig.min
+            }
+            if (initialConfig.max !== undefined) {
+                config.max = initialConfig.max
+            }
+            if (initialConfig.resizeToContent !== undefined) {
+                config.resizeToContent = initialConfig.resizeToContent
+            }
+            if (initialConfig.constrainResizeToContent !== undefined) {
+                config.constrainResizeToContent = initialConfig.constrainResizeToContent
+            }
+            if (initialConfig.persist !== undefined) {
+                config.persist = initialConfig.persist
+            }
+            if (initialConfig.transient !== undefined) {
+                config.transient = initialConfig.transient
             }
         }
 
@@ -644,6 +717,8 @@ export class WidgetCoreRegistry {
                 }
 
                 config.group = savedWidget.group || config.group
+                config.widgetGroup = savedWidget.widgetGroup ?? config.widgetGroup ?? null
+                config.visible = savedWidget.visible !== false
                 config.collapsed = Boolean(savedWidget.collapsed)
                 config.locked = Boolean(savedWidget.locked)
                 config.expandedDimensions = savedWidget.expandedDimensions ?? config.expandedDimensions
@@ -656,7 +731,6 @@ export class WidgetCoreRegistry {
                         config.dimensions = {width, height}
                     }
                 }
-                config.icon = initialConfig.icon ?? savedWidget.icon ?? config.icon
                 config.scale = savedWidget.scale || {x: 1, y: 1}
                 config.rotate = savedWidget.rotate || 0
                 const requestedRatioValue = this.#getRatioValue(initialConfig.ratio)
@@ -788,7 +862,7 @@ export class WidgetCoreRegistry {
         const fallbackTopRatio = config.savedRatios?.topRatio
         const leftRatio = Number.isFinite(computedLeftRatio) ? computedLeftRatio : (Number.isFinite(fallbackLeftRatio) ? fallbackLeftRatio : 0)
         const topRatio = Number.isFinite(computedTopRatio) ? computedTopRatio : (Number.isFinite(fallbackTopRatio) ? fallbackTopRatio : 0)
-        const scale = config.isCropper
+        const scale = config.isCropper || isNonDistortingWidget(config)
                       ? {x: 1, y: 1}
                       : config.scale
                         ? {
@@ -826,6 +900,7 @@ export class WidgetCoreRegistry {
         return {
             id:           widgetId,
             group:        config.group || null,
+            widgetGroup:  config.widgetGroup || null,
             widgetsBoard: config.widgetsBoard,
             left: config.position?.left,
             top:  config.position?.top,
@@ -841,9 +916,9 @@ export class WidgetCoreRegistry {
             positionReference: config.widgetsBoard && config.widgetsBoard !== SCENE_WIDGETS_BOARD ? 'board' : 'scene',
             collapsed:          Boolean(config.collapsed),
             locked:             Boolean(config.locked),
+            visible:            config.visible !== false,
             expandedDimensions: expandedDimensions,
             expandedInlineDimensions: expandedInlineDimensions,
-            icon:               config.icon ?? null,
             positionKey:        config.positionKey ?? null,
         }
     }

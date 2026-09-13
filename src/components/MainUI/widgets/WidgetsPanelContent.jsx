@@ -7,16 +7,17 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2025-11-07
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
-    SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD, LGS_VISUAL_WIDGET, WIDGET_LAYER_START, WIDGET_LAYER_STEP,
+    CREDITS_WIDGET, LOGO_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD, LGS_VISUAL_WIDGET, TEXT_WIDGET, WIDGET_LAYER_START, WIDGET_LAYER_STEP,
 }                                from '@Core/constants'
+import { getNextTextWidgetPosition } from '@Components/Text/textWidgetPosition'
 import {
     getManageableWidgets,
     openWidgetManagementDrawer,
@@ -44,14 +45,14 @@ import { useSnapshot }           from 'valtio'
  *
  * @param {Object} props
  * @param {Iterable<string>} props.groups - Group IDs to show in the panel
+ * @param {string} [props.themeClassName='wa-theme-lgs1920-on-map'] - Theme class applied to the panel
  * @returns {JSX.Element | null}
  */
-export const WidgetsPanelContent = ({groups}) => {
+export const WidgetsPanelContent = ({groups, themeClassName = 'wa-theme-lgs1920-on-map'}) => {
     const _widgetDeckPanel = useRef(null)
     const widgetDynamicRenderer = WidgetDynamicRenderer.instance
     const widget = useSnapshot(lgs.stores.ui.widget)
     const video = useSnapshot(lgs.stores.ui.video)
-    const toolbars = useSnapshot(lgs.settings.ui.toolbars)
     const gridSnapshot = useOptionalSnapshot(lgs.settings?.ui?.widgets?.grid, DEFAULT_WIDGET_GRID_SETTINGS)
     const grid = useMemo(
         () => getWidgetGridSettings(gridSnapshot),
@@ -91,6 +92,29 @@ export const WidgetsPanelContent = ({groups}) => {
     }, [])
 
     /**
+     * Resolve the next z-index above every regular widget on the active board.
+     * Logo and Credits keep their dedicated fixed-layer ordering.
+     *
+     * @returns {number} Z-index for a newly created widget.
+     */
+    const nextWidgetZIndex = useCallback(() => {
+        const currentMax = Array.from(lgs.stores.ui.widget.list.entries())
+            .filter(([id, entry]) => {
+                const type = id.split('#')[0]
+                return entry?.widgetsBoard === widgetsBoard
+                    && type !== CREDITS_WIDGET
+                    && type !== LOGO_WIDGET
+            })
+            .reduce((maximum, [, entry]) => {
+                const zIndex = Number(entry?.zIndex)
+                return Number.isFinite(zIndex) ? Math.max(maximum, zIndex) : maximum
+            }, WIDGET_LAYER_START - WIDGET_LAYER_STEP)
+        const zIndex = Math.max(_widgetIndex.current, currentMax + WIDGET_LAYER_STEP)
+        _widgetIndex.current = zIndex + WIDGET_LAYER_STEP
+        return zIndex
+    }, [widgetsBoard])
+
+    /**
      * Adds a new instance of a widget to the map.
      * @param {string} group
      * @param {string} key
@@ -108,21 +132,20 @@ export const WidgetsPanelContent = ({groups}) => {
             return
         }
 
+        const isNewTextWidget = key === TEXT_WIDGET && props.left === undefined && props.top === undefined
+        const textWidgetPosition = isNewTextWidget ? getNextTextWidgetPosition() : {}
+
         const additionalProps = {}
 
         // Only apply zIndex to visual components
         if (widgetDef?.type === LGS_VISUAL_WIDGET) {
-            // Priority: 1. Existing zIndex from props | 2. Current ref counter
-            additionalProps.zIndex = props.zIndex || _widgetIndex.current
-
-            // Increment counter only if a new zIndex was generated
-            if (!props.zIndex) {
-                _widgetIndex.current += WIDGET_LAYER_STEP
-            }
+            // Preserve imported positions while placing new widgets above the current stack.
+            additionalProps.zIndex = props.zIndex ?? nextWidgetZIndex()
         }
 
         widgetDynamicRenderer.renderWidget(group, id, {
             ...props,
+            ...textWidgetPosition,
             widgetsBoard,
             forceRefresh: true,
             ...additionalProps,
@@ -130,7 +153,7 @@ export const WidgetsPanelContent = ({groups}) => {
 
         // Ensure the global list Map is ordered correctly after insertion
         sortWidgetStore()
-    }, [sortWidgetStore, widgetDynamicRenderer, widgetsBoard])
+    }, [nextWidgetZIndex, sortWidgetStore, widgetDynamicRenderer, widgetsBoard])
 
     /**
      * Stops event propagation for both mouse and touch interactions.
@@ -251,9 +274,8 @@ export const WidgetsPanelContent = ({groups}) => {
 
     return (
         <div
-            className="lgs-widget-menu widget-deck-panel lgs-card wa-theme-lgs1920-on-map"
+            className={`lgs-widget-menu widget-deck-panel lgs-card ${themeClassName}`}
             ref={_widgetDeckPanel}
-            style={{opacity: toolbars.opacity}}
             onMouseDown={handleInteraction}
             onTouchStart={handleInteraction}
         >

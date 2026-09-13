@@ -17,7 +17,7 @@ It compares two implementation strategies:
 
 The document also explains how the migration relates to the Draft/HQ replay
 rendering architecture described in
-[`CORE-REPLAY-RENDER-MODE-ARCHITECTURE.md`](CORE-REPLAY-RENDER-MODE-ARCHITECTURE.md).
+[`CORE-REPLAY-RENDER-MODE-ARCHITECTURE.md`](../specs/replay-video/CORE-REPLAY-RENDER-MODE-ARCHITECTURE.md).
 
 The scope is the Studio application. The current deployment class also
 contains backend-specific behavior, but backend migration should be treated as
@@ -820,7 +820,7 @@ true:
 - `deployment/deploy.yml`
   - remain the canonical environment configuration, or be replaced by a
     validated configuration source
-- `tech-doc/specs/DEPLOYMENT-README.md`
+- `tech-doc/specs/delivery/DEPLOYMENT-README.md`
   - document the final current behavior after migration
 
 ### New files likely to be added
@@ -983,8 +983,8 @@ The following decisions require explicit project validation before implementatio
 
 ## Related documents
 
-- [Replay render mode architecture](CORE-REPLAY-RENDER-MODE-ARCHITECTURE.md)
-- [Deployment specification](../specs/DEPLOYMENT-README.md)
-- [Replay/video issue analysis](../specs/JOURNEY-REPLAY-VIDEO-ISSUES.md)
-- [Replay core documentation](../specs/CORE-UI-REPLAY-README-REPLAY.md)
-- [Screen media recorder](../specs/CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)
+- [Replay render mode architecture](../specs/replay-video/CORE-REPLAY-RENDER-MODE-ARCHITECTURE.md)
+- [Deployment specification](../specs/delivery/DEPLOYMENT-README.md)
+- [Replay/video issue analysis](../specs/replay-video/JOURNEY-REPLAY-VIDEO-ISSUES.md)
+- [Replay core documentation](../specs/replay-video/CORE-UI-REPLAY-README-REPLAY.md)
+- [Screen media recorder](../specs/replay-video/CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)

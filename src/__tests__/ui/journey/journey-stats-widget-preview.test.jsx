@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified on: 2026-07-03
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -135,7 +135,7 @@ describe('JourneyStatsWidgetPreview', () => {
             const stage = container.querySelector('.journey-stats-widget-preview-stage')
             expect(stage).toBeTruthy()
             expect(stage.style.transform).toContain('scale(0.9)')
-            expect(stage.style.transform).toContain('rotate(0deg)')
+            expect(stage.style.transform).not.toContain('rotate(')
         })
     })
 })
