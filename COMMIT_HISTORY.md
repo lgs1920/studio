@@ -2344,3 +2344,7 @@
 ## 2026-09-13 — [`merge: integrate deployment workflows`](https://github.com/lgs1920/studio/commit/8d86f175e40f1efc395c1109fc67b41614c2f2df)
 
 - Recorded automatically from Git history.
+
+## 2026-09-13 — [`fix(deployment): align Bun commands with Studio workflow`](https://github.com/lgs1920/studio/commit/20f0614e897393db5f5d1fc9e0031a01d01eefe0)
+
+- Recorded automatically from Git history.
