@@ -1900,6 +1900,35 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.currentTimeMillis).toBe(5_000)
     })
 
+    it('applies controlled structure and playback values with one render', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline)
+        document.body.append(timeline)
+        const replaceChildren = vi.spyOn(timeline.shadowRoot, 'replaceChildren')
+        const nextTracks = [{
+            id: 'next',
+            label: 'Next',
+            clips: [{id: 'next-clip', kind: 'video', start: 1, end: 3}],
+        }]
+
+        timeline.applyControlledState({
+            currentTimeMillis: 2_000,
+            playing: true,
+            timeline: {
+                durationMillis: 12_000,
+                hostNoDragClass: 'test-no-drag',
+                swatches: testColorSwatches,
+                visible: true,
+            },
+            tracks: nextTracks,
+        })
+
+        expect(replaceChildren).toHaveBeenCalledOnce()
+        expect(timeline.currentTimeMillis).toBe(2_000)
+        expect(timeline.playing).toBe(true)
+        expect(timeline.tracks).toEqual(nextTracks)
+    })
+
     it('scrolls the surface to keep the current playhead visible', () => {
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline, {

@@ -857,6 +857,7 @@ also provides these small imperative helpers:
 
 | Method | Description |
 | --- | --- |
+| `applyControlledState(state)` | Apply timeline, tracks, clip options, playback, and playhead values in one controlled synchronization. |
 | `setTime(timeMillis)` | Move the playhead without emitting `seek`. |
 | `isCurrentTimeNearViewportEdge(padding)` | Check whether the playhead is close enough to a viewport edge to require following. |
 | `ensureCurrentTimeVisible(padding)` | Scroll the horizontal surface just enough to keep the playhead visible. |

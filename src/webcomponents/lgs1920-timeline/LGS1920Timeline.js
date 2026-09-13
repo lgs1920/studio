@@ -177,6 +177,10 @@ export class LGS1920Timeline extends HTMLElement {
     #inputPropagationBlockersInstalled = false
     #externalInteractionActive = false
     #pendingControlledState = null
+    #controlledUpdateDepth = 0
+    #controlledSyncPending = false
+    #controlledSyncForceRender = false
+    #controlledSyncZoomPercent
     #clipEditor
     #clipScroll
     #clipWorkspaceWidth = 0
@@ -760,7 +764,7 @@ export class LGS1920Timeline extends HTMLElement {
             this.#stopAutoScroll()
         }
         this.#visible = this.#timelineConfig.visible !== false
-        this.#syncPublicProps({
+        this.#requestControlledSync({
             zoomPercent: applyControlledZoom ? requestedZoom : undefined,
             forceRender: previousStructureConfig !== this.#structureConfig(this.#timelineConfig, STRUCTURAL_CONFIG_KEYS),
         })
@@ -838,7 +842,7 @@ export class LGS1920Timeline extends HTMLElement {
             this.#editingRowId = null
             this.#editingLabelValue = ''
         }
-        this.#syncPublicProps()
+        this.#requestControlledSync()
     }
 
     /**
@@ -859,6 +863,7 @@ export class LGS1920Timeline extends HTMLElement {
         const normalizedTime = this.#normalizeTime(value)
         if (normalizedTime === this.#currentTimeMillis) return
         this.#currentTimeMillis = normalizedTime
+        if (this.#controlledUpdateDepth > 0) return
         this.#updateDynamicState()
     }
 
@@ -899,7 +904,27 @@ export class LGS1920Timeline extends HTMLElement {
         this.#clipOptions = value === null || value === undefined
             ? null
             : (Array.isArray(value) ? value : [])
-        if (this.isConnected) this.#render()
+        if (this.isConnected) this.#requestControlledSync({forceRender: true})
+    }
+
+    /**
+     * Apply several controlled values as one structural synchronization.
+     *
+     * @param {Object} state - Controlled timeline values.
+     */
+    applyControlledState(state = {}) {
+        this.#controlledUpdateDepth += 1
+        try {
+            if (Object.prototype.hasOwnProperty.call(state, 'timeline')) this.timeline = state.timeline
+            if (Object.prototype.hasOwnProperty.call(state, 'tracks')) this.tracks = state.tracks
+            if (Object.prototype.hasOwnProperty.call(state, 'clipOptions')) this.clipOptions = state.clipOptions
+        }
+        finally {
+            this.#controlledUpdateDepth -= 1
+            if (this.#controlledUpdateDepth === 0) this.#flushControlledSync()
+        }
+        if (Object.prototype.hasOwnProperty.call(state, 'playing')) this.playing = state.playing
+        if (Object.prototype.hasOwnProperty.call(state, 'currentTimeMillis')) this.currentTimeMillis = state.currentTimeMillis
     }
 
     /**
@@ -1039,6 +1064,32 @@ export class LGS1920Timeline extends HTMLElement {
         const menu = this.#root.querySelector('[data-testid="lgs1920-timeline-clip-context-menu"]')
         if (menu && path.includes(menu)) return
         this.#closeClipContextMenu()
+    }
+
+    /**
+     * Synchronize the public properties with the internal editor projection.
+     */
+    #requestControlledSync = ({forceRender = false, zoomPercent} = {}) => {
+        if (this.#controlledUpdateDepth > 0) {
+            this.#controlledSyncPending = true
+            this.#controlledSyncForceRender ||= forceRender
+            if (Number.isFinite(Number(zoomPercent))) this.#controlledSyncZoomPercent = zoomPercent
+            return
+        }
+        this.#syncPublicProps({forceRender, zoomPercent})
+    }
+
+    /**
+     * Flush a pending controlled synchronization after a transaction.
+     */
+    #flushControlledSync = () => {
+        if (!this.#controlledSyncPending) return
+        const forceRender = this.#controlledSyncForceRender
+        const zoomPercent = this.#controlledSyncZoomPercent
+        this.#controlledSyncPending = false
+        this.#controlledSyncForceRender = false
+        this.#controlledSyncZoomPercent = undefined
+        this.#syncPublicProps({forceRender, zoomPercent})
     }
 
     /**

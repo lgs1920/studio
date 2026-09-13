@@ -646,23 +646,30 @@ export const ReplayTimelinePreview = forwardRef(({
 
             const replayStore = lgs.stores.replay
             const localTimeMillis = element.currentTimeMillis
-            element.timeline = timeline
-            element.tracks = tracks
-            element.playing = replayStore.playing === true
-            if (hasPublishedReplayFrame(replayStore)) {
-                const currentTimeMillis = resolveCurrentTimeMillis(replayStore, {
+            const currentTimeMillis = hasPublishedReplayFrame(replayStore)
+                ? resolveCurrentTimeMillis(replayStore, {
                     durationMillis: timeline.durationMillis,
                 })
-                element.currentTimeMillis = currentTimeMillis
-                element.ensureCurrentTimeVisible?.()
-                syncSliderTime(currentTimeMillis)
-            } else {
-                element.currentTimeMillis = Number.isFinite(persistedTimelineTimeMillis)
+                : Number.isFinite(persistedTimelineTimeMillis)
                     ? initialTimelineTimeMillis
                     : localTimeMillis
-                element.ensureCurrentTimeVisible?.()
-                syncSliderTime(element.currentTimeMillis)
+            const controlledState = {
+                currentTimeMillis,
+                playing: replayStore.playing === true,
+                timeline,
+                tracks,
             }
+            if (typeof element.applyControlledState === 'function') {
+                element.applyControlledState(controlledState)
+            }
+            else {
+                element.timeline = timeline
+                element.tracks = tracks
+                element.playing = controlledState.playing
+                element.currentTimeMillis = currentTimeMillis
+            }
+            element.ensureCurrentTimeVisible?.()
+            syncSliderTime(element.currentTimeMillis)
         }
 
         void applyControlledState()
