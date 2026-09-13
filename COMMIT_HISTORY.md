@@ -875,3 +875,7 @@
 ## 2026-09-13 — [`fix(ci): exclude vendored preview from lint gate`](https://github.com/lgs1920/studio/commit/8e44741b2920f243bb9723ad498f802471b979bb)
 
 - Recorded automatically from Git history.
+
+## 2026-09-13 — [`fix(deployment): support keyboard-interactive SSH auth`](https://github.com/lgs1920/studio/commit/15ee6efb8e44e274a8ca126155a42df68bf8b922)
+
+- Recorded automatically from Git history.
