@@ -60,6 +60,15 @@ jobs:
       - name: Run the test projects
         run: bun run test
 
+      - name: Generate coverage reports
+        run: bun run test:coverage
+
+      - name: Install browsers for browser tests
+        run: bunx playwright install --with-deps chromium firefox webkit
+
+      - name: Run browser tests
+        run: bun run test:browser
+
       - name: Run Oxlint
         run: bun run lint
 
