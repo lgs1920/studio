@@ -36,3 +36,4 @@ implementation documents. Implemented and historical documents belong under
 
 - [Bun build and test migration study](CORE-BUN-BUILD-TEST-MIGRATION.md)
 - [GitHub Actions deployment migration](CORE-GITHUB-ACTIONS-DEPLOYMENT-MIGRATION.md)
+- [Test and deployment next steps](CORE-TEST-AND-DEPLOYMENT-NEXT-STEPS.md)
