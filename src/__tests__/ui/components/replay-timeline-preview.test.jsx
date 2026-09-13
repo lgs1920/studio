@@ -7,7 +7,7 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
+ * Created on: 2026-08-29
  * Last modified: 2026-09-13
  *
  *
@@ -268,6 +268,7 @@ describe('ReplayTimelinePreview', () => {
             </Profiler>,
         )
         const timelineElement = container.querySelector('lgs1920-timeline')
+        timelineElement.ensureCurrentTimeVisible = vi.fn()
         const initialCommits = commits
         const initialTimeline = timelineElement.timeline
         const initialTracks = timelineElement.tracks
@@ -316,6 +317,30 @@ describe('ReplayTimelinePreview', () => {
         expect(timelineAssignments).toBe(0)
         expect(trackAssignments).toBe(0)
         expect(clipOptionAssignments).toBe(0)
+        expect(timelineElement.ensureCurrentTimeVisible).not.toHaveBeenCalled()
+    })
+
+    it('ignores Replay mutations unrelated to the published frame or playback state', async () => {
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+        let currentTimeMillis = timelineElement.currentTimeMillis
+        const setCurrentTime = vi.fn(value => {
+            currentTimeMillis = value
+        })
+        Object.defineProperty(timelineElement, 'currentTimeMillis', {
+            configurable: true,
+            get: () => currentTimeMillis,
+            set: setCurrentTime,
+        })
+
+        globalThis.lgs.stores.replay.liveSample = {journeyElapsedMillis: 2_000}
+        globalThis.lgs.stores.replay.dynamicStatsTick = 2_000
+        globalThis.lgs.stores.replay.replayFramePhase = {kind: 'replay'}
+        globalThis.lgs.stores.replay.sample = {journeyElapsedMillis: 2_000}
+
+        await Promise.resolve()
+        expect(setCurrentTime).not.toHaveBeenCalled()
+        expect(currentTimeMillis).toBe(1_000)
     })
 
     it('keeps the current time while widget changes rebuild the preparation state', async () => {

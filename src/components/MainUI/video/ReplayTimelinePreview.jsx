@@ -7,7 +7,7 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
+ * Created on: 2026-08-29
  * Last modified: 2026-09-13
  *
  *
@@ -23,7 +23,8 @@
  */
 
 import {forwardRef, useCallback, useEffect, useId, useImperativeHandle, useMemo, useRef, useState} from 'react'
-import {subscribe, useSnapshot} from 'valtio'
+import {useSnapshot} from 'valtio'
+import {subscribeKey} from 'valtio/utils'
 import {WaButton, WaIcon, WaSlider, WaTooltip} from '@web.awesome.me/webawesome-pro/dist/react'
 import {
     CREDITS_WIDGET,
@@ -706,14 +707,19 @@ export const ReplayTimelinePreview = forwardRef(({
                     durationMillis: projectionDurationMillis,
                 })
                 element.currentTimeMillis = currentTimeMillis
-                element.ensureCurrentTimeVisible?.()
                 syncSliderTime(currentTimeMillis)
             }
             element.playing = replayStore.playing === true
         }
 
         syncPlayback()
-        return subscribe(lgs.stores.replay, syncPlayback)
+        const replayStore = lgs.stores.replay
+        const unsubscribers = [
+            subscribeKey(replayStore, 'dynamicFrameState', syncPlayback),
+            subscribeKey(replayStore, 'resolvedFrameState', syncPlayback),
+            subscribeKey(replayStore, 'playing', syncPlayback),
+        ]
+        return () => unsubscribers.forEach(unsubscribe => unsubscribe())
     }, [linkedPreparation, projection.durationMillis, syncSliderTime])
 
     useEffect(() => {
