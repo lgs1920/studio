@@ -871,3 +871,7 @@
 ## 2026-09-13 — [`Merge remote-tracking branch 'origin/main'`](https://github.com/lgs1920/studio/commit/fcce51ba4cd7f130fefaae38a7c6eb685c6b447c)
 
 - Recorded automatically from Git history.
+
+## 2026-09-13 — [`fix(ci): exclude vendored preview from lint gate`](https://github.com/lgs1920/studio/commit/8e44741b2920f243bb9723ad498f802471b979bb)
+
+- Recorded automatically from Git history.
