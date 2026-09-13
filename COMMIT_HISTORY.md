@@ -823,3 +823,51 @@
 ## 2026-08-13 — [`merge: sync main with origin`](https://github.com/lgs1920/studio/commit/93807769aa81fa23ae8ca96c6216cb99b8aa2afb)
 
 - Recorded automatically from Git history.
+
+## 2026-08-13 — [`feat: add shared welcome media catalog`](https://github.com/lgs1920/studio/commit/6fef4b20c59c0613325271fc7cb3dac48686e24e)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`feat: add welcome hero route and animation fixes`](https://github.com/lgs1920/studio/commit/f53eaabac4f90d0a529fb6249674c5f46f8d7f47)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`chore: keep only current changelog draft`](https://github.com/lgs1920/studio/commit/89536eca148e8af911b31cedefa3a4e8d738fff3)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`fix: include error details in support email`](https://github.com/lgs1920/studio/commit/da8973744380b1f3d0031f549c8a4ed874d7acd4)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`docs: update media credits`](https://github.com/lgs1920/studio/commit/55043474ad2c458daab64e3fbe6abb7956f0a0b3)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`feat: show welcome media credit`](https://github.com/lgs1920/studio/commit/32a7c1a4493ef12f4e1aca1eb029e362c3d34cb5)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`fix: hide welcome language selector`](https://github.com/lgs1920/studio/commit/65bae0373ec854bf7e6b528520836b65e2265dd1)
+
+- Recorded automatically from Git history.
+
+## 2026-08-13 — [`fix: fade welcome route edges`](https://github.com/lgs1920/studio/commit/cd84107e306edd34cb974e7961bf0821ceeb0ff8)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`docs: add analytical rigor rules`](https://github.com/lgs1920/studio/commit/befce56dd9cb314ae9556af4e0f6b37f685390d7)
+
+- Recorded automatically from Git history.
+
+## 2026-08-27 — [`chore: centralize project skills`](https://github.com/lgs1920/studio/commit/9274c378e382ff6e1ef2fccf7001e9dd4243917d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`feat(deployment): add Studio GitHub Actions deployments`](https://github.com/lgs1920/studio/commit/ea109ddc974e5d9475871261af9e66a43faeb133)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`Merge remote-tracking branch 'origin/main'`](https://github.com/lgs1920/studio/commit/fcce51ba4cd7f130fefaae38a7c6eb685c6b447c)
+
+- Recorded automatically from Git history.
