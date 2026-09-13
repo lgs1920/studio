@@ -1,5 +1,52 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: Deployment.test.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-08-27
+ * Last modified: 2026-09-13
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
 import {describe, expect, test, vi} from 'vitest'
-import {deleteGitTag, pushBranchWithRetry} from '../Deployment.js'
+import {
+    createDeploymentIdentifier,
+    deleteGitTag,
+    normalizeReleaseVersion,
+    pushBranchWithRetry,
+} from '../Deployment.js'
+
+describe('CI deployment metadata', () => {
+    test('normalizes stable and pre-release tags', () => {
+        expect(normalizeReleaseVersion('v1.0.0-beta.4')).toBe('1.0.0-beta.4')
+        expect(normalizeReleaseVersion('1.1.0')).toBe('1.1.0')
+    })
+
+    test('rejects release values that could escape a remote path', () => {
+        expect(() => normalizeReleaseVersion('v1.0.0/../../current')).toThrow('Invalid release version')
+    })
+
+    test('adds the immutable source suffix only for CI identifiers', () => {
+        const options = {
+            branch:    'release/v1.0.0-beta.4',
+            date:      '20260913103000',
+            platform:  'production',
+            sourceRef: '0123456789abcdef',
+            version:   '1.0.0-beta.4',
+        }
+
+        expect(createDeploymentIdentifier({...options, ci: true}))
+            .toBe('production-1.0.0-beta.4-release/v1.0.0-beta.4-20260913103000-0123456789ab')
+        expect(createDeploymentIdentifier(options))
+            .toBe('production-1.0.0-beta.4-release/v1.0.0-beta.4-20260913103000')
+    })
+})
 
 describe('deployment Git synchronization', () => {
     test('synchronizes a fast-forward remote commit before retrying the branch push', async () => {

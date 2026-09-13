@@ -1,8 +1,8 @@
 # Test and Deployment Next Steps
 
-**Status:** Coverage and browser baseline implemented; deployment workflow remains
+**Status:** Coverage and browser baseline implemented; Studio GitHub deployment workflow implemented
 **Date:** 2026-09-13
-**Scope:** Vitest coverage and GitHub Actions deployment for Studio and Backend
+**Scope:** Vitest coverage and GitHub Actions deployment for Studio
 
 ## Current baseline
 

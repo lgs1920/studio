@@ -105,12 +105,15 @@ current working directory’s name, and the local workspace path is set to its p
 
 - `-p, --prod`: Deploy to the `production` platform.
 - `-s, --staging`: Deploy to the `staging` platform.
+- `-n, --nightly`: Deploy to the `nightly` platform.
 - `-t, --test`: Deploy to the `test` platform.
+- `--ci`: Run without creating or pushing Git commits and tags.
 
 The script resolves the target platform in this order:
 
 - `--prod` / `-p` selects `production`.
 - Otherwise, `--staging` / `-s` selects `staging`.
+- Otherwise, `--nightly` / `-n` selects `nightly`.
 - Otherwise, `--test` / `-t`, or no platform flag, selects `test`.
 
 The script infers:
@@ -120,7 +123,7 @@ The script infers:
 ### General Syntax
 
 ```bash
-bun run deploy [-p | --prod | -s | --staging | -t | --test]
+bun run deploy [-p | --prod | -s | --staging | -n | --nightly | -t | --test] [--ci]
 ```
 
 ### Examples
@@ -165,12 +168,28 @@ determines the `product`.
 
 ### Parameter Notes
 
-- **Platform**: One of `production`, `staging`, or `test`, selected via `-p/--prod`, `-s/--staging`, or `-t/--test`.
+- **Platform**: One of `production`, `staging`, `nightly`, or `test`, selected via `-p/--prod`, `-s/--staging`, `-n/--nightly`, or `-t/--test`.
 - **Product**: Automatically set to the current directory name (`studio` or `backend`). Run the command from the
   appropriate directory.
 - **Local Path**: Automatically set to the parent directory of the current working directory (e.g.,
   `/home/christian/devs/assets/lgs1920`).
 - Ensure the current directory is either `studio` or `backend` when running the command.
+
+### GitHub Actions deployment
+
+The `Deploy Studio` workflow in `.github/workflows/deploy-studio.yml` is the
+authoritative deployment entry point for Studio. It can be started manually
+for `test`, `nightly`, or `staging` with an explicit branch or commit. A
+published GitHub pre-release triggers the `production` deployment and uses the
+`production` environment.
+
+Each deployment environment must contain a `DEPLOY_PASSWORD` secret. The
+workflow exposes it only to the deployment job, maps it to the platform-specific
+variable expected by the deployment script, and verifies the published Studio
+URL after activation. CI mode does not create or push Git commits or tags.
+
+The production environment should be configured with required reviewers before
+the first pre-release deployment is enabled.
 
 ## Deployment Process
 

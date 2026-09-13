@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-03-07
- * Last modified: 2026-03-07
+ * Created on: 2024-09-21
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -132,7 +132,39 @@ export const deleteGitTag = async ({git, remote = 'origin', tagName}) => {
 }
 
 /**
- * Manages the deployment of applications to various platforms (production, staging, test).
+ * Normalize and validate a release version supplied by a CI release event.
+ *
+ * @param {string} value - Candidate semantic release version.
+ * @returns {string} The normalized release version without a leading `v`.
+ * @throws {TypeError} If the release version is invalid.
+ */
+export const normalizeReleaseVersion = (value) => {
+    const normalized = String(value ?? '').trim().replace(/^v/, '')
+    if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/.test(normalized)) {
+        throw new TypeError(`Invalid release version: ${value}`)
+    }
+    return normalized
+}
+
+/**
+ * Create the identifier embedded in deployment metadata and service-worker caches.
+ *
+ * @param {Object} options - Deployment identifier options.
+ * @param {boolean} [options.ci=false] - Whether the identifier is created in CI mode.
+ * @param {string} options.date - Deployment timestamp.
+ * @param {string} options.platform - Deployment platform.
+ * @param {string} options.sourceRef - Source commit reference.
+ * @param {string} options.version - Application version.
+ * @param {string} options.branch - Source branch or release reference.
+ * @returns {string} Deployment identifier.
+ */
+export const createDeploymentIdentifier = ({ci = false, date, platform, sourceRef, version, branch}) => {
+    const sourceSuffix = ci && sourceRef ? `-${String(sourceRef).slice(0, 12)}` : ''
+    return `${platform}-${version}-${branch}-${date}${sourceSuffix}`
+}
+
+/**
+ * Manages the deployment of applications to various platforms (production, staging, nightly, test).
  * Handles building, zipping, copying, deploying, and Git tag management.
  *
  * @class
@@ -143,7 +175,7 @@ export class Deployment {
      * Supported platforms for deployment.
      * @type {Object<string, string>}
      */
-    platforms = {production: 'production', staging: 'staging', test: 'test'}
+    platforms = {production: 'production', staging: 'staging', nightly: 'nightly', test: 'test'}
 
     /**
      * Supported products for deployment.
@@ -166,13 +198,19 @@ export class Deployment {
      *
      * @param {Object} params - Deployment parameters.
      * @param {string} params.product - The product to deploy ('studio' or 'backend').
-     * @param {string} params.platform - The target platform ('production', 'staging', or 'test').
+     * @param {string} params.platform - The target platform ('production', 'staging', 'nightly', or 'test').
      * @param {string} params.local - The local base path for deployment files.
+     * @param {boolean} [params.ci=false] - Whether to avoid Git mutations in CI mode.
+     * @param {string} [params.sourceBranch] - Branch or release reference supplied by CI.
+     * @param {string} [params.sourceRef] - Immutable source reference supplied by CI.
      */
     constructor(params) {
+        this.ci = params.ci === true
         this.product = params.product
         this.platform = params.platform
         this.local = params.local
+        this.sourceBranch = params.sourceBranch
+        this.sourceRef = params.sourceRef
         this.done = this.configure().then(() => this.launch())
     }
 
@@ -204,9 +242,9 @@ export class Deployment {
 
         // Initialize Git with GitHub token authentication
         this.git = simpleGit({
-                                 config: [
-                                     `http.extraHeader=Authorization: ${this.github_token}`,
-                                 ],
+                                 config: this.github_token
+                                     ? [`http.extraHeader=Authorization: ${this.github_token}`]
+                                     : [],
                              })
 
         // Configure SSH connection settings
@@ -244,7 +282,7 @@ export class Deployment {
             .slice(0, 15)
 
         // Retrieve current Git branch
-        this.branch = (await this.git.status()).current
+        this.branch = this.sourceBranch || (await this.git.status()).current || 'detached'
     }
 
     /**
@@ -255,6 +293,10 @@ export class Deployment {
      * @private
      */
     getVersion = async () => {
+        if (process.env.LGS_RELEASE_VERSION) {
+            return normalizeReleaseVersion(process.env.LGS_RELEASE_VERSION)
+        }
+
         switch (this.product) {
             case 'studio': {
                 return JSON.parse(fs.readFileSync('./public/version.json', 'utf8')).studio
@@ -487,7 +529,7 @@ export class Deployment {
                 }
             }
             const buildEnvironment = this.product === this.products.studio
-                ? {...process.env, LGS_DEPLOYMENT_TAG: this.tagName}
+                ? {...process.env, LGS_DEPLOYMENT_TAG: this.tagName, LGS_RELEASE_VERSION: this.version}
                 : process.env
             exec(buildCommand, {env: buildEnvironment}, (error) => {
                 if (error) {
@@ -588,7 +630,18 @@ export class Deployment {
      * @private
      */
     gitTag = async () => {
-        this.tagName = `${this.platform}-${this.version}-${this.branch}-${this.date}`
+        this.tagName = createDeploymentIdentifier({
+            branch:    this.branch,
+            ci:        this.ci,
+            date:      this.date,
+            platform:  this.platform,
+            sourceRef: this.sourceRef,
+            version:   this.version,
+        })
+        if (this.ci) {
+            console.log(`    > Using CI deployment identifier: ${this.tagName}`)
+            return
+        }
         const message = `Branch ${this.branch} deployed on ${this.tagName}!`
         console.log(`    > Creating Git tag: ${this.tagName}`)
         await this.git.commit(message)
@@ -603,6 +656,9 @@ export class Deployment {
      * @private
      */
     pushTag = async () => {
+        if (this.ci) {
+            return
+        }
         console.log(`    > Pushing Git tag on branch ${this.branch}`)
         await pushBranchWithRetry({
             git:    this.git,
@@ -619,7 +675,7 @@ export class Deployment {
      * @private
      */
     deleteTag = async () => {
-        if (!this.tagName) {
+        if (this.ci || !this.tagName) {
             return
         }
 
@@ -786,6 +842,11 @@ export class Deployment {
                 }
                 else {
                     console.warn(`    > ${this.yellow}manifest.webmanifest not found in ${this.localDistPath}${this.reset}`)
+                }
+
+                const versionPath = path.join(this.localDistPath, 'version.json')
+                if (fs.existsSync(versionPath)) {
+                    fs.writeFileSync(versionPath, JSON.stringify({studio: this.version}, null, 2), 'utf8')
                 }
 
                 break
