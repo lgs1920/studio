@@ -1888,6 +1888,18 @@ describe('lgs1920-timeline Web Component', () => {
         expect(seek).not.toHaveBeenCalled()
     })
 
+    it('does not update dynamic DOM state when the normalized time is unchanged', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {currentTimeMillis: 5_000})
+        document.body.append(timeline)
+        const querySelector = vi.spyOn(timeline.shadowRoot, 'querySelector')
+
+        timeline.currentTimeMillis = 5_000
+
+        expect(querySelector).not.toHaveBeenCalled()
+        expect(timeline.currentTimeMillis).toBe(5_000)
+    })
+
     it('scrolls the surface to keep the current playhead visible', () => {
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline, {

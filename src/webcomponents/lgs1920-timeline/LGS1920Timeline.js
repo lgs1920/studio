@@ -853,10 +853,12 @@ export class LGS1920Timeline extends HTMLElement {
     /**
      * Set the current logical timeline time.
      *
-     * @param {number} value - Time in milliseconds.
+    * @param {number} value - Time in milliseconds.
      */
     set currentTimeMillis(value) {
-        this.#currentTimeMillis = this.#normalizeTime(value)
+        const normalizedTime = this.#normalizeTime(value)
+        if (normalizedTime === this.#currentTimeMillis) return
+        this.#currentTimeMillis = normalizedTime
         this.#updateDynamicState()
     }
 
