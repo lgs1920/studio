@@ -2104,3 +2104,19 @@
 ## 2026-09-13 — [`feat(deployment): add Studio GitHub Actions deployments`](https://github.com/lgs1920/studio/commit/05b18a9387fad1dc7d33f56b9fdd7d5218cb5891)
 
 - Recorded automatically from Git history.
+
+## 2026-09-13 — [`feat(replay): extend timeline web component`](https://github.com/lgs1920/studio/commit/f1f916f2f7fbde2e31b3d681ddb9f3a77f3a157c)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`feat(replay): add timeline zoom persistence`](https://github.com/lgs1920/studio/commit/c9f5346f7bbc0780602c1de5b53f72cb7563ed04)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`docs(replay): update timeline todo`](https://github.com/lgs1920/studio/commit/8732422099b843ce287c4eb23b3248c04eec7ed9)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/8a87d37b4604c1aa45e7bd3b279ab5a19cefea20)
+
+- Recorded automatically from Git history.
