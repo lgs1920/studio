@@ -74,7 +74,7 @@ jobs:
         run: bun run test
 
       - name: Run Oxlint
-        run: bun run lint
+        run: bun run lint -- --ignore-pattern artifacts/camera-hpr-sphere-preview/three.module.js
 
       - name: Run TypeScript validation
         run: bun run typecheck
