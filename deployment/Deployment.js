@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-03-07
- * Last modified: 2026-03-07
+ * Created on: 2024-09-21
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -57,7 +57,7 @@ export class Deployment {
      * Supported platforms for deployment.
      * @type {Object<string, string>}
      */
-    platforms = {production: 'production', staging: 'staging', test: 'test'}
+    platforms = {production: 'production', staging: 'staging', test: 'test', nightly: 'nightly'}
 
     /**
      * Supported products for deployment.
@@ -80,13 +80,19 @@ export class Deployment {
      *
      * @param {Object} params - Deployment parameters.
      * @param {string} params.product - The product to deploy ('studio' or 'backend').
-     * @param {string} params.platform - The target platform ('production', 'staging', or 'test').
+     * @param {string} params.platform - The target platform ('production', 'staging', 'test', or 'nightly').
      * @param {string} params.local - The local base path for deployment files.
+     * @param {string} [params.localProductRoot] - The repository root for the selected product.
+     * @param {boolean} [params.ci=false] - Run without mutating Git history.
+     * @param {string} [params.releaseTag] - Existing release tag used in CI metadata.
      */
     constructor(params) {
         this.product = params.product
         this.platform = params.platform
         this.local = params.local
+        this.localProductRoot = params.localProductRoot || path.join(params.local, params.product)
+        this.ci = params.ci === true
+        this.releaseTag = params.releaseTag || process.env.RELEASE_TAG
         this.done = this.configure().then(() => this.launch())
     }
 
@@ -109,18 +115,19 @@ export class Deployment {
         // Set local and remote paths for the build
         this.dist = this.configuration.local.dist
         this.current = this.configuration.remote.current
-        this.localDistPath = path.join(`${this.local}/${this.product}`, `./${this.dist}/${this.version}`)
+        this.localDistPath = path.join(this.localProductRoot, this.dist, this.version)
 
         // Load environment variables for authentication
         this.password = process.env[`LGS1920_PASSWORD_${this.platform.toUpperCase()}`]
-        this.github_token = process.env[`LGS1920_GITHUB_TOKEN`]
+        this.github_token = process.env.LGS1920_GITHUB_TOKEN || process.env.GITHUB_TOKEN
         this.github_user = process.env[`LGS1920_GITHUB_USER`]
 
         // Initialize Git with GitHub token authentication
+        const gitConfig = this.github_token
+            ? [`http.extraHeader=Authorization: ${this.github_token}`]
+            : []
         this.git = simpleGit({
-                                 config: [
-                                     `http.extraHeader=Authorization: ${this.github_token}`,
-                                 ],
+                                 config: gitConfig,
                              })
 
         // Configure SSH connection settings
@@ -129,6 +136,10 @@ export class Deployment {
             port: 22,
             username: this.remoteUser,
             password: this.password,
+        }
+
+        if (!this.password) {
+            throw new Error(`Missing LGS1920_PASSWORD_${this.platform.toUpperCase()}`)
         }
 
         // Load PM2 configuration for backend deployments
@@ -157,8 +168,16 @@ export class Deployment {
             .replace(/[-:.]/g, '')
             .slice(0, 15)
 
-        // Retrieve current Git branch
-        this.branch = (await this.git.status()).current
+        // Retrieve the source branch and commit used for the deployment.
+        const status = await this.git.status()
+        this.branch = this.ci
+            ? process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME || status.current || 'unknown'
+            : status.current
+        this.sourceCommit = (await this.git.revparse(['HEAD'])).trim()
+
+        if (this.ci) {
+            this.tagName = this.releaseTag || `ci-${this.platform}-${this.version}-${this.sourceCommit.slice(0, 12)}`
+        }
     }
 
     /**
@@ -443,14 +462,16 @@ export class Deployment {
             console.log('    > Copying file...')
 
             const args = [
-                '-p', password,
+                '-e',
                 'scp',
                 '-o', 'StrictHostKeyChecking=no',
                 localFile,
                 remoteTarget,
             ]
 
-            const scp = spawn('sshpass', args)
+            const scp = spawn('sshpass', args, {
+                env: {...process.env, SSHPASS: password},
+            })
 
             scp.stdout.on('data', data => process.stdout.write(data))
             scp.stderr.on('data', data => process.stderr.write(data))
@@ -494,6 +515,10 @@ export class Deployment {
      * @private
      */
     gitTag = async () => {
+        if (this.ci) {
+            return
+        }
+
         this.tagName = `${this.platform}-${this.version}-${this.branch}-${this.date}`
         const message = `Branch ${this.branch} deployed on ${this.tagName}!`
         console.log(`    > Creating Git tag: ${this.tagName}`)
@@ -509,6 +534,10 @@ export class Deployment {
      * @private
      */
     pushTag = async () => {
+        if (this.ci) {
+            return
+        }
+
         console.log(`    > Pushing Git tag on branch ${this.branch}`)
         await this.git.push('origin', this.branch)
         await this.git.pushTags('origin')
@@ -522,7 +551,7 @@ export class Deployment {
      * @private
      */
     deleteTag = async () => {
-        if (!this.tagName) {
+        if (!this.tagName || this.ci) {
             return
         }
 

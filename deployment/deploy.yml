@@ -47,6 +47,19 @@ backend:
     # Launch registrations must survive versioned release switches.
     registrationFile: shared/launch-registrations.json
 
+  nightly:
+    name: LGS1920 Nightly Backend server
+    shortname: Backend
+    domain: api.lgs1920.fr
+    protocol: http
+    port: 3336
+
+    pm2:
+      bin:             /home/.bun/bin/pm2
+      config:          backend-nightly.config.js
+      environmentFile: shared/backend.env
+    registrationFile: shared/launch-registrations.json
+
 studio:
   #
   # Studio deployment configuration
@@ -72,6 +85,13 @@ studio:
     protocol: https
     proxy: /proxy.php?csurl=
 
+  nightly:
+    name:  LGS1920 Nightly Studio
+    shortname: Studio
+    domain: nightly.lgs1920.fr
+    protocol: https
+    proxy: /proxy.php?csurl=
+
 site:
   production:
     domain: lgs1920.fr
@@ -82,6 +102,10 @@ site:
     protocol: https
 
   test:
+    domain: lgs1920.fr
+    protocol: https
+
+  nightly:
     domain: lgs1920.fr
     protocol: https
 
@@ -113,6 +137,11 @@ remote:
     path: /home/www/lgs1920
 
   test:
+    user: p5077
+    host: p5077.phpnet.org
+    path: /home/www/lgs1920
+
+  nightly:
     user: p5077
     host: p5077.phpnet.org
     path: /home/www/lgs1920
