@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-05-04
- * Last modified: 2026-09-12
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -55,6 +55,20 @@ export default defineConfig({
     test: {
         globals: true,
         exclude: ['node_modules', 'dist', '.idea', '.git', '.cache'],
+        coverage: {
+            provider: 'v8',
+            reporter: ['text', 'json', 'html'],
+            reportsDirectory: './coverage',
+            include: [
+                'src/**/*.{js,jsx,ts,tsx}',
+                'deployment/**/*.js',
+            ],
+            exclude: [
+                '**/*.test.{js,jsx,ts,tsx}',
+                '**/*.spec.{js,jsx,ts,tsx}',
+                'src/__tests__/**',
+            ],
+        },
         projects: [
             {
                 extends: true,

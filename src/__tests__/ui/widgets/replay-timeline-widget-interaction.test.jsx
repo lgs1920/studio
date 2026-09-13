@@ -66,7 +66,12 @@ vi.mock('@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder', () => ({
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
     WaIcon: ({name}) => <span data-icon={name}/>,
-    WaSlider: forwardRef((props, ref) => <input ref={ref} {...props}/>),
+    WaSlider: forwardRef((props, ref) => {
+        const sliderProps = Object.fromEntries(Object.entries(props).filter(([key]) => ![
+            'children', 'label-at-start', 'width-auto', 'withTooltip', 'valueFormatter',
+        ].includes(key)))
+        return <div data-slider><input ref={ref} {...sliderProps}/>{props.children}</div>
+    }),
     WaTooltip: ({children, ...props}) => <span data-tooltip {...props}>{children}</span>,
 }))
 

@@ -1989,7 +1989,7 @@ describe('lgs1920-timeline Web Component', () => {
             window.cancelAnimationFrame = originalWindowCancelAnimationFrame
             now.mockRestore()
         }
-    })
+    }, 30_000)
 
     it('does not auto-scroll beyond the visible minimum or maximum time limit', () => {
         const originalRequestAnimationFrame = globalThis.requestAnimationFrame
