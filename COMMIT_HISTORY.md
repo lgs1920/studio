@@ -2120,3 +2120,15 @@
 ## 2026-09-13 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/8a87d37b4604c1aa45e7bd3b279ab5a19cefea20)
 
 - Recorded automatically from Git history.
+
+## 2026-09-13 — [`style(core): normalize context imports and headers`](https://github.com/lgs1920/studio/commit/5ddd3aeb98ad0a5a6a1891fffdf60708e83ebdea)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`docs(replay): add timeline performance audit`](https://github.com/lgs1920/studio/commit/232adc029505f789a7bf255d69caa5767bb020d7)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/02688c80e5107630b4a33ce3b6e3e9f304481249)
+
+- Recorded automatically from Git history.
