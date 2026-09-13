@@ -2356,3 +2356,35 @@
 ## 2026-09-13 — [`Merge remote-tracking branch 'origin/main' into codex/rename-deploy-github`](https://github.com/lgs1920/studio/commit/fdf9f654619314302694ea7c7fdcecd744ca5e6f)
 
 - Recorded automatically from Git history.
+
+## 2026-09-13 — [`refactor(replay): narrow timeline playback sync`](https://github.com/lgs1920/studio/commit/2faf76af6dc1f93b6c8e106660e25a5438fafa8e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`fix(timeline): anchor clip menu in shadow dom`](https://github.com/lgs1920/studio/commit/0193d33b131b9dc92cd3c581ff96e5f788482afb)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`refactor(replay): coalesce timeline frame updates`](https://github.com/lgs1920/studio/commit/557ee6309d705942c751638ca48566f332ffa17c)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`refactor(timeline): skip unchanged playhead updates`](https://github.com/lgs1920/studio/commit/8550b8e2ccd0e5ddf265f1881cf7bd6b2649e91f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`refactor(timeline): follow playhead near viewport edges`](https://github.com/lgs1920/studio/commit/2e3181d13a521637b956e923d96d05659a7e7e29)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`refactor(timeline): batch controlled state updates`](https://github.com/lgs1920/studio/commit/d3c382c482296d2bc87bfab94d2fd64cf085d95f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`refactor(timeline): cache dynamic playback elements`](https://github.com/lgs1920/studio/commit/3cf56ecdf2fae0464e8e6c8bcb30595e57f234ed)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`docs(release): condense Studio 1.0.0 draft changelog`](https://github.com/lgs1920/studio/commit/a3446c35e8540494af03ce67a65e0eca24d202be)
+
+- Recorded automatically from Git history.
