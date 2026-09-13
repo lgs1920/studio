@@ -7,7 +7,7 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
+ * Created on: 2026-08-30
  * Last modified: 2026-09-13
  *
  *
@@ -2482,7 +2482,7 @@ export class LGS1920Timeline extends HTMLElement {
         rulerSlot.append(ruler)
         legend.append(rulerSlot)
         if (this.#menuOpen && this.#timelineConfig.interactive !== false && editable && this.#timelineConfig.showClipMenu === true) {
-            legend.append(this.#menu())
+            legend.append(this.#menu(add))
         }
         const viewport = createElement('div', 'lgs1920-wa-timeline__legend-viewport', {part: 'legend-viewport'})
         const rows = createElement('div', 'lgs1920-wa-timeline__legend-rows', {part: 'legend-rows'})
@@ -2503,14 +2503,14 @@ export class LGS1920Timeline extends HTMLElement {
      *
      * @returns {HTMLElement} Popup element.
      */
-    #menu = () => {
+    #menu = anchor => {
         const popup = createElement('wa-popup', 'lgs1920-wa-timeline__popup lgs-widget-no-drag', {
             placement: 'right-start',
             distance: 4,
             active: true,
-            anchor: 'lgs1920-timeline-clip-menu-trigger',
             part: 'popup',
         })
+        popup.anchor = anchor
         const menu = createElement('div', 'lgs1920-wa-timeline__menu', {role: 'menu', part: 'menu'})
         this.#resolvedClipOptions().forEach(option => {
             const item = createElement('wa-button', 'lgs1920-wa-timeline__menu-item', {

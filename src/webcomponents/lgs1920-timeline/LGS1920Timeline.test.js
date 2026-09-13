@@ -7,7 +7,7 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
+ * Created on: 2026-08-30
  * Last modified: 2026-09-13
  *
  *
@@ -1467,7 +1467,7 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.playing).toBe(false)
         timeline.shadowRoot.querySelector('[data-testid="lgs1920-wa-add-clip"]').click()
         const clipMenu = timeline.shadowRoot.querySelector('wa-popup')
-        expect(clipMenu.getAttribute('anchor')).toBe('lgs1920-timeline-clip-menu-trigger')
+        expect(clipMenu.anchor).toBe(timeline.shadowRoot.querySelector('#lgs1920-timeline-clip-menu-trigger'))
         expect(clipMenu.getAttribute('placement')).toBe('right-start')
     })
 
