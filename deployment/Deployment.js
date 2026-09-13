@@ -251,6 +251,7 @@ export class Deployment {
         this.sshConfig = {
             host: this.remoteHost,
             port: 22,
+            tryKeyboard: true,
             username: this.remoteUser,
             password: this.password,
         }
@@ -737,6 +738,10 @@ export class Deployment {
         await new Promise((resolve, reject) => {
             const connection = new SSH2()
             let settled = false
+
+            connection.once('keyboard-interactive', (_name, _instructions, _instructionsLang, prompts, finish) => {
+                finish(prompts.map(() => this.sshConfig.password))
+            })
 
             const settle = (error = null) => {
                 if (settled) {
