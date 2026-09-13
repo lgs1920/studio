@@ -2100,3 +2100,7 @@
 ## 2026-09-13 — [`docs: document coverage and browser validation`](https://github.com/lgs1920/studio/commit/35f10ca075b26439fa9f96dc1dfe665d0e04fc15)
 
 - Recorded automatically from Git history.
+
+## 2026-09-13 — [`feat(deployment): add Studio GitHub Actions deployments`](https://github.com/lgs1920/studio/commit/05b18a9387fad1dc7d33f56b9fdd7d5218cb5891)
+
+- Recorded automatically from Git history.
