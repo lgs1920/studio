@@ -24,6 +24,10 @@ to provide a readable dependency snapshot for contributors and maintainers.
 - `vite-plugin-cesium`
 - `vite-plugin-pwa`
 - Vitest
+- `@vitest/browser-playwright`
+- `@vitest/coverage-v8`
+- `vitest-browser-react`
+- Playwright
 - Oxlint
 - `oxlint-tsgolint`
 - TypeScript
@@ -139,6 +143,8 @@ These are the current package names declared in the `devDependencies` section of
 ```text
 @resvg/resvg-js
 @testing-library/react
+@vitest/browser-playwright
+@vitest/coverage-v8
 @types/bun
 @types/react
 @types/react-dom
@@ -150,10 +156,12 @@ jsdom
 less
 oxlint
 oxlint-tsgolint
+playwright
 typescript
 vite
 vite-plugin-markdown
 vitest
+vitest-browser-react
 ```
 
 ## Trusted Dependencies
@@ -170,4 +178,4 @@ protobufjs
 - A few tooling packages are currently declared in `dependencies` rather than `devDependencies`; this document reflects
   the repository as it exists today rather than an idealized split.
 - When `package.json` changes, this file should be updated in the same change set.
-- Last synchronized with `package.json`: 2026-09-12.
+- Last synchronized with `package.json`: 2026-09-13.

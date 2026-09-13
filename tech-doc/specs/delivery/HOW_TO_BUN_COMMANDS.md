@@ -41,6 +41,8 @@ or a production build when verifying a change.
 | Command | Purpose | Notes |
 | --- | --- | --- |
 | `bun run test` | Runs the complete Vitest suite and the Oxlint migration test. | This is the main automated test command. |
+| `bun run test:coverage` | Runs the complete Vitest suite and writes V8 coverage reports to `coverage/`. | Coverage has no enforced threshold until the baseline has been reviewed. |
+| `bun run test:browser` | Runs the browser smoke suite in Chromium, Firefox, and WebKit through Vitest Browser Mode. | Install the Playwright browsers once with `bunx playwright install chromium firefox webkit`. |
 | `bun run test:watch` | Runs Vitest in watch mode. | Use during local test authoring; stop it with `Ctrl+C`. |
 | `bun run test:stores` | Runs the store proxy contract test only. | This is also the first step of `bun run build`. |
 | `bun run test:lint-config` | Runs the Oxlint migration fixtures and assertions. | It is also included in `bun run test`. |
