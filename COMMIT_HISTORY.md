@@ -2356,3 +2356,7 @@
 ## 2026-09-13 — [`Merge remote-tracking branch 'origin/main' into codex/rename-deploy-github`](https://github.com/lgs1920/studio/commit/fdf9f654619314302694ea7c7fdcecd744ca5e6f)
 
 - Recorded automatically from Git history.
+
+## 2026-09-13 — [`fix(deployment): remove duplicate environment configuration keys`](https://github.com/lgs1920/studio/commit/1a6eaee0ac95595514a902154085d2932e5c7cc0)
+
+- Recorded automatically from Git history.
