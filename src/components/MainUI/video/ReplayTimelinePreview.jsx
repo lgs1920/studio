@@ -710,6 +710,9 @@ export const ReplayTimelinePreview = forwardRef(({
                     durationMillis: projectionDurationMillis,
                 })
                 element.currentTimeMillis = currentTimeMillis
+                if (element.isCurrentTimeNearViewportEdge?.()) {
+                    element.ensureCurrentTimeVisible?.()
+                }
                 syncSliderTime(currentTimeMillis)
             }
             element.playing = replayStore.playing === true

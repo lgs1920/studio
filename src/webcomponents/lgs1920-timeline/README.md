@@ -858,6 +858,8 @@ also provides these small imperative helpers:
 | Method | Description |
 | --- | --- |
 | `setTime(timeMillis)` | Move the playhead without emitting `seek`. |
+| `isCurrentTimeNearViewportEdge(padding)` | Check whether the playhead is close enough to a viewport edge to require following. |
+| `ensureCurrentTimeVisible(padding)` | Scroll the horizontal surface just enough to keep the playhead visible. |
 | `setZoom(zoomPercent)` | Set the ruler zoom up to `500`; the minimum is calculated from the available surface width, full timeline duration, and right safety margin. |
 | `handleResize()` | Recompute surface dimensions after an external resize. |
 | `setScrollbarsInteractionActive(active)` | Keep custom rails visible during an external drag or resize gesture. |

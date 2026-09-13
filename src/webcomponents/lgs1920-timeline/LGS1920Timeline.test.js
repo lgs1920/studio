@@ -1921,6 +1921,7 @@ describe('lgs1920-timeline Web Component', () => {
         })
 
         timeline.currentTimeMillis = 60_000
+        expect(timeline.isCurrentTimeNearViewportEdge()).toBe(true)
         timeline.ensureCurrentTimeVisible()
 
         const playheadX = Number.parseFloat(timeline.shadowRoot.querySelector('[data-playhead]').style.left)
@@ -1930,9 +1931,11 @@ describe('lgs1920-timeline Web Component', () => {
         expect(fixedRuler.style.getPropertyValue('--lgs-timeline-ruler-scroll-offset')).toBe(`${surface.scrollLeft}px`)
 
         timeline.currentTimeMillis = 0
+        expect(timeline.isCurrentTimeNearViewportEdge()).toBe(true)
         timeline.ensureCurrentTimeVisible()
 
         expect(surface.scrollLeft).toBeLessThanOrEqual(12)
+        expect(timeline.isCurrentTimeNearViewportEdge()).toBe(false)
     })
 
     it('renders timeline handles in the ruler overlay with recessed grip dots', () => {

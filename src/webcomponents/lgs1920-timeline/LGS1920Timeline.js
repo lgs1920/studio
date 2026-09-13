@@ -1184,15 +1184,10 @@ export class LGS1920Timeline extends HTMLElement {
         this.#updateDynamicState()
     }
 
-    /**
-     * Scroll the horizontal surface just enough to keep the current playhead visible.
-     *
-     * @param {number} [padding=12] - Minimum space to keep around the playhead.
-     */
-    ensureCurrentTimeVisible(padding = 12) {
+    #currentTimeViewportState = (padding = 12) => {
         const surface = this.#surface
         const viewportWidth = Number(surface?.clientWidth)
-        if (!surface || !Number.isFinite(viewportWidth) || viewportWidth <= 0) return
+        if (!surface || !Number.isFinite(viewportWidth) || viewportWidth <= 0) return null
 
         const safePadding = Math.max(0, Number(padding) || 0)
         const playheadX = this.#currentTimeContentX()
@@ -1202,18 +1197,43 @@ export class LGS1920Timeline extends HTMLElement {
             0,
             Math.max(Number(surface.scrollWidth) || 0, this.#contentWidth) - viewportWidth,
         )
-        let nextScrollLeft = viewportLeft
-        if (playheadX < viewportLeft + safePadding) {
-            nextScrollLeft = playheadX - safePadding
-        } else if (playheadX > viewportRight - safePadding) {
-            nextScrollLeft = playheadX - viewportWidth + safePadding
-        }
-        nextScrollLeft = clamp(nextScrollLeft, 0, maximumScrollLeft)
-        if (nextScrollLeft === viewportLeft) return
+        return {maximumScrollLeft, playheadX, safePadding, surface, viewportLeft, viewportRight, viewportWidth}
+    }
 
-        surface.scrollLeft = nextScrollLeft
-        this.#updateFixedRulerContent(surface)
-        this.#updateTimelineViewportMargins(surface)
+    /**
+     * Check whether the current playhead is close to the visible viewport edge.
+     *
+     * @param {number} [padding=12] - Minimum space to keep around the playhead.
+     * @returns {boolean} Whether following the playhead may scroll the surface.
+     */
+    isCurrentTimeNearViewportEdge(padding = 12) {
+        const viewport = this.#currentTimeViewportState(padding)
+        if (!viewport) return false
+        return viewport.playheadX < viewport.viewportLeft + viewport.safePadding
+            || viewport.playheadX > viewport.viewportRight - viewport.safePadding
+    }
+
+    /**
+     * Scroll the horizontal surface just enough to keep the current playhead visible.
+     *
+     * @param {number} [padding=12] - Minimum space to keep around the playhead.
+     */
+    ensureCurrentTimeVisible(padding = 12) {
+        const viewport = this.#currentTimeViewportState(padding)
+        if (!viewport) return
+
+        let nextScrollLeft = viewport.viewportLeft
+        if (viewport.playheadX < viewport.viewportLeft + viewport.safePadding) {
+            nextScrollLeft = viewport.playheadX - viewport.safePadding
+        } else if (viewport.playheadX > viewport.viewportRight - viewport.safePadding) {
+            nextScrollLeft = viewport.playheadX - viewport.viewportWidth + viewport.safePadding
+        }
+        nextScrollLeft = clamp(nextScrollLeft, 0, viewport.maximumScrollLeft)
+        if (nextScrollLeft === viewport.viewportLeft) return
+
+        viewport.surface.scrollLeft = nextScrollLeft
+        this.#updateFixedRulerContent(viewport.surface)
+        this.#updateTimelineViewportMargins(viewport.surface)
         this.#updateScrollbars()
     }
 

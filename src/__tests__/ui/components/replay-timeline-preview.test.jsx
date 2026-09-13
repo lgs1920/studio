@@ -268,6 +268,7 @@ describe('ReplayTimelinePreview', () => {
             </Profiler>,
         )
         const timelineElement = container.querySelector('lgs1920-timeline')
+        timelineElement.isCurrentTimeNearViewportEdge = vi.fn(() => false)
         timelineElement.ensureCurrentTimeVisible = vi.fn()
         const initialCommits = commits
         const initialTimeline = timelineElement.timeline
@@ -317,6 +318,7 @@ describe('ReplayTimelinePreview', () => {
         expect(timelineAssignments).toBe(0)
         expect(trackAssignments).toBe(0)
         expect(clipOptionAssignments).toBe(0)
+        expect(timelineElement.isCurrentTimeNearViewportEdge).toHaveBeenCalled()
         expect(timelineElement.ensureCurrentTimeVisible).not.toHaveBeenCalled()
     })
 
