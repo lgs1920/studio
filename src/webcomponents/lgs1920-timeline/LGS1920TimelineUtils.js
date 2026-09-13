@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-31
- * Last modified: 2026-09-10
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,24 @@ export const TAG_NAME = 'lgs1920-timeline'
 export const MIN_ZOOM = -99.9
 export const MAX_ZOOM = 500
 export const ZOOM_STEP = 20
+export const FINE_SCALE_ZOOM = 300
+export const MAJOR_RULER_UNITS = Object.freeze([
+    0.25,
+    0.5,
+    1,
+    2,
+    5,
+    10,
+    30,
+    60,
+    120,
+    300,
+    600,
+    1_800,
+    3_600,
+    7_200,
+])
+export const MAX_VISIBLE_MAJOR_TICKS = 12
 export const START_LEFT = 20
 export const SCALE_WIDTH = 40
 export const MIN_VISIBLE_DURATION_SECONDS = 5
@@ -134,27 +152,37 @@ export const formatScale = seconds => {
 }
 
 /**
- * Format a ruler time using the smallest useful time precision.
+ * Format a ruler time using the timeline's adaptive time notation.
  *
  * @param {number} seconds - Ruler time in seconds.
- * @returns {string} Zero-padded ruler label.
+ * @param {number|null} [majorSeconds=null] - Major ruler interval in seconds.
+ * @returns {string} Ruler label using compact hours, minutes, and seconds.
  */
-export const formatRulerTime = seconds => {
-    const totalSeconds = Math.max(0, Math.round(Number(seconds) || 0))
-    const hours = Math.floor(totalSeconds / 3600)
-    const minutes = Math.floor(totalSeconds / 60)
-    const remainderSeconds = totalSeconds % 60
-    const paddedHours = `${hours}`
+export const formatRulerTime = (seconds, majorSeconds = null) => {
+    const normalizedSeconds = Math.max(0, Number(seconds) || 0)
+    const totalCentiseconds = Math.round(normalizedSeconds * 100)
+    const intervalSeconds = majorSeconds === null || majorSeconds === undefined
+        ? null
+        : Number(majorSeconds)
+    const showTickSeconds = Number.isFinite(intervalSeconds) && intervalSeconds < 60
+    const showTickFraction = showTickSeconds && intervalSeconds < 1
+    const hours = Math.floor(totalCentiseconds / 360_000)
+    const minutes = Math.floor(totalCentiseconds / 6_000)
+    const remainderSeconds = Math.floor(totalCentiseconds / 100) % 60
+    const centiseconds = totalCentiseconds % 100
     const paddedMinutes = `${minutes % 60}`.padStart(2, '0')
     const paddedSeconds = `${remainderSeconds}`.padStart(2, '0')
+    const fraction = `${centiseconds}`.padStart(2, '0').replace(/0+$/, '')
+    const preciseSeconds = `${paddedSeconds}${showTickFraction && fraction ? `.${fraction}` : ''}`
 
-    if (totalSeconds >= 3600) {
-        return `${paddedHours}:${paddedMinutes}:${paddedSeconds}`
+    if (totalCentiseconds >= 360_000) {
+        return `${hours}h${paddedMinutes}${showTickSeconds ? `:${preciseSeconds}` : ''}`
     }
-    if (totalSeconds >= 60) {
-        return `${minutes}:${paddedSeconds}`
+    if (totalCentiseconds >= 6_000) {
+        return `${minutes}m${showTickSeconds ? preciseSeconds : paddedSeconds}`
     }
-    return `${totalSeconds}`
+    if (centiseconds === 0) return `${remainderSeconds}`
+    return `${remainderSeconds}.${fraction}`
 }
 
 /**
@@ -312,17 +340,27 @@ export const resolveLegendBounds = (timeline = {}) => {
  * Resolve the major ruler unit for the configured zoom.
  *
  * @param {number} zoomPercent - Current zoom percentage.
+ * @param {number} [viewWidth=0] - Visible ruler width in pixels.
  * @returns {{majorSeconds: number, scaleSplitCount: number}} Ruler configuration.
  */
-export const resolveScale = zoomPercent => {
+export const resolveScale = (zoomPercent, viewWidth = 0) => {
     const zoom = clamp(Number(zoomPercent) || 0, MIN_ZOOM, MAX_ZOOM)
     const pixelsPerSecond = 40 * ((100 + zoom) / 100)
+    const safeViewWidth = Number(viewWidth)
+    const minimumMajorSeconds = Number.isFinite(safeViewWidth) && safeViewWidth > 0
+        ? safeViewWidth / (MAX_VISIBLE_MAJOR_TICKS * pixelsPerSecond)
+        : 0
+    if (minimumMajorSeconds > 0) {
+        const majorSeconds = MAJOR_RULER_UNITS.find(unit => unit >= minimumMajorSeconds)
+            ?? MAJOR_RULER_UNITS[MAJOR_RULER_UNITS.length - 1]
+        return {majorSeconds, scaleSplitCount: 5}
+    }
     if (pixelsPerSecond < 40) {
-        const majorSeconds = [1, 2, 5, 10, 30, 60, 120, 300, 600]
-            .find(seconds => pixelsPerSecond * seconds >= 40)
-            ?? 600
+        const majorSeconds = MAJOR_RULER_UNITS.find(unit => pixelsPerSecond * unit >= 40)
+            ?? MAJOR_RULER_UNITS[MAJOR_RULER_UNITS.length - 1]
         return {majorSeconds, scaleSplitCount: 5}
     }
     if (pixelsPerSecond < 80) return {majorSeconds: 1, scaleSplitCount: 5}
-    return {majorSeconds: 1, scaleSplitCount: 10}
+    if (zoom < FINE_SCALE_ZOOM) return {majorSeconds: 0.5, scaleSplitCount: 5}
+    return {majorSeconds: 0.25, scaleSplitCount: 5}
 }

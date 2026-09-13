@@ -301,6 +301,7 @@ targeted slot takes the form `{slot}-{id}` and overrides the global slot.
 | `timeline-toolbar` | Toolbar content beside the clip menu. |
 | `legend-ruler` | Replacement content for the title-column ruler area. The default fallback contains `timeline-toolbar`, the direct track button, and the optional clip-menu button. |
 | `timeline-ruler` | Additional content over the time ruler. |
+| `timeline-controls` | Controls displayed in the bottom band of the time surface, below the track viewport and outside the global footer. |
 | `overlay-text` | Initial construction-overlay label. Falls back to `Building...`. |
 | `footer` | Content below the timeline layout. |
 | `empty-state` | Content displayed when the clip menu has no options. |
@@ -439,11 +440,25 @@ changes the ruler zoom by 20 percent. Unmodified arrow keys change the row
 height vertically and the ruler zoom horizontally. `Ctrl` plus the wheel is
 left untouched so the browser can keep its own zoom behavior. The containing
 widget can also enable these arrow-key shortcuts while selected with
-`keyboardZoomActive`. The ruler always renders secondary ticks: it uses five
-subdivisions per major unit below 80 pixels per second and ten subdivisions at
-higher zoom. The minimum horizontal zoom adapts to the available surface width
-so the complete timeline can fit without horizontal scrolling, with a small
-right safety margin.
+`keyboardZoomActive`. The ruler always renders secondary ticks with at most five
+subdivisions per major unit and targets at most twelve major intervals in the
+visible surface. The major unit follows a readable progression from 250 ms to
+2 h until each major interval has enough space. The minimum horizontal zoom
+adapts to the available surface width so the complete timeline can fit without
+horizontal scrolling, with a small right safety margin. The Replay integration
+places its horizontal zoom control in a dedicated control band at the bottom of
+the track viewport, inside the time surface and outside the time ruler and global
+timeline footer, with the timeline's vertical and horizontal zoom buttons at the
+left, followed by the horizontal icon and an unlabeled branded slider.
+Pointer adjustment uses a one-percent step while keyboard and wheel zoom retain
+their twenty-percent step.
+The track legend reserves an equivalent bottom band so its rows stay aligned
+with the time surface.
+
+Ruler labels use `SS.XX` below one minute, `MmSS` from one minute through 59
+minutes, and `HhMM` from one hour onward. When the major interval is below one
+minute, hour labels include seconds as `HhMM:SS` so adjacent labels remain
+distinct.
 
 ## Track names and controlled editing
 

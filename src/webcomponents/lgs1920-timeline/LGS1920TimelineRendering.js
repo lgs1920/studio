@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-31
- * Last modified: 2026-09-12
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -43,6 +43,7 @@ export const createTimelineRenderer = ({
     getDurationMillis,
     getContentWidth,
     getZoom,
+    timelineTools,
     isClipSelected,
     contextualSlot,
     hasContextualSlot,
@@ -82,6 +83,16 @@ export const createTimelineRenderer = ({
     scaleWidth,
     scaleOffset,
 }) => {
+    /**
+     * Check whether an event originated in the application-provided ruler slot.
+     *
+     * @param {Event} event - Native event to inspect.
+     * @returns {boolean} Whether the event belongs to the ruler slot.
+     */
+    const isTimelineRulerSlotEvent = event => (typeof event.composedPath === 'function'
+        ? event.composedPath()
+        : []).some(target => target?.getAttribute?.('slot') === 'timeline-ruler')
+
     /**
      * Create one visual timeline clip.
      *
@@ -226,7 +237,7 @@ export const createTimelineRenderer = ({
             'data-ruler-index': index,
         })
         tick.style.left = `${scaleOffset() + (index * scaleWidth())}px`
-        tick.append(contextualSlot('scale-label', index, 'scale-label', document.createTextNode(formatRulerTime(index * majorSeconds))))
+        tick.append(contextualSlot('scale-label', index, 'scale-label', document.createTextNode(formatRulerTime(index * majorSeconds, majorSeconds))))
         fragment.append(tick)
         return fragment
     }
@@ -554,10 +565,17 @@ export const createTimelineRenderer = ({
         )
         tracksViewport.append(tracks)
         canvas.append(ruler, tracksViewport, overlay)
-        surface.append(createElement('slot', '', {name: 'timeline-ruler'}), canvas)
+        const controls = createElement('div', 'lgs1920-wa-timeline__surface-controls', {
+            part: 'surface-controls',
+        })
+        const tools = timelineTools?.()
+        if (tools) controls.append(tools)
+        controls.append(createElement('slot', '', {name: 'timeline-controls'}))
+        surface.append(createElement('slot', '', {name: 'timeline-ruler'}), canvas, controls)
         if (interactive) {
             ruler.addEventListener('click', event => handleRulerClick(event))
             surface.addEventListener('pointerdown', event => {
+                if (isTimelineRulerSlotEvent(event)) return
                 if (event.button !== 0 || event.target.closest('.lgs1920-wa-timeline__clip')) return
                 if (event.target.closest('[data-range-handle]')) return
                 const rangeHandle = [...overlay.querySelectorAll('[data-range-handle]')]
@@ -572,12 +590,14 @@ export const createTimelineRenderer = ({
                 startRangeInteraction(event, rangeHandle.handle.getAttribute('data-range-handle'))
             }, true)
             surface.addEventListener('click', event => {
+                if (isTimelineRulerSlotEvent(event)) return
                 if (event.target.closest('.lgs1920-wa-timeline__clip, [data-range-handle], [data-playhead]')) return
                 seek(event.clientX, true)
             })
             surface.addEventListener('wheel', event => handleWheel(event))
             surface.addEventListener('keydown', event => handleKeyDown(event))
             surface.addEventListener('pointerdown', event => {
+                if (isTimelineRulerSlotEvent(event)) return
                 if (event.button !== 0 || event.target.closest('.lgs1920-wa-timeline__clip')) return
                 if (allowsHostInteraction()) return
                 setScrubPointerId(event.pointerId)

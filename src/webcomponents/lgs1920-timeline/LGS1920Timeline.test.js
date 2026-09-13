@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
@@ -9,13 +8,17 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-12
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+// @vitest-environment jsdom
 import {afterEach, describe, expect, it, vi} from 'vitest'
+import {LGS1920Timeline} from './LGS1920Timeline'
+import {rippleResizedClips} from './LGS1920TimelineEditing'
+import {formatRulerTime, resolveScale} from './LGS1920TimelineUtils.js'
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/button/button.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/card/card.js', () => ({}))
@@ -26,10 +29,6 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/components/input/input.js', () => (
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/popup/popup.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/split-panel/split-panel.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/tooltip/tooltip.js', () => ({}))
-
-import {LGS1920Timeline} from './LGS1920Timeline'
-import {rippleResizedClips} from './LGS1920TimelineEditing'
-import {formatRulerTime} from './LGS1920TimelineUtils.js'
 
 const timelineState = {
     durationMillis: 10_000,
@@ -145,10 +144,29 @@ describe('lgs1920-timeline Web Component', () => {
     it('formats ruler labels according to the timeline duration', () => {
         expect(formatRulerTime(0)).toBe('0')
         expect(formatRulerTime(3)).toBe('3')
+        expect(formatRulerTime(3.05)).toBe('3.05')
+        expect(formatRulerTime(3.5)).toBe('3.5')
+        expect(formatRulerTime(14.05)).toBe('14.05')
         expect(formatRulerTime(16)).toBe('16')
-        expect(formatRulerTime(63)).toBe('1:03')
-        expect(formatRulerTime(603)).toBe('10:03')
-        expect(formatRulerTime(3723)).toBe('1:02:03')
+        expect(formatRulerTime(63)).toBe('1m03')
+        expect(formatRulerTime(603)).toBe('10m03')
+        expect(formatRulerTime(3723)).toBe('1h02')
+        expect(formatRulerTime(5_403, 30)).toBe('1h30:03')
+        expect(formatRulerTime(5_403.5, 0.5)).toBe('1h30:03.5')
+    })
+
+    it('keeps secondary ruler graduations at or above 50 milliseconds', () => {
+        expect(resolveScale(-99.9)).toEqual({majorSeconds: 1_800, scaleSplitCount: 5})
+        expect(resolveScale(-20)).toEqual({majorSeconds: 2, scaleSplitCount: 5})
+        expect(resolveScale(0)).toEqual({majorSeconds: 1, scaleSplitCount: 5})
+        expect(resolveScale(100)).toEqual({majorSeconds: 0.5, scaleSplitCount: 5})
+        expect(resolveScale(300)).toEqual({majorSeconds: 0.25, scaleSplitCount: 5})
+    })
+
+    it('limits the visible major ruler ticks according to the surface width', () => {
+        expect(resolveScale(0, 300)).toEqual({majorSeconds: 1, scaleSplitCount: 5})
+        expect(resolveScale(0, 1_200)).toEqual({majorSeconds: 5, scaleSplitCount: 5})
+        expect(resolveScale(-99.9, 500)).toEqual({majorSeconds: 1_800, scaleSplitCount: 5})
     })
 
     it('opens in controlled horizontal fit mode when requested', () => {
@@ -441,6 +459,9 @@ describe('lgs1920-timeline Web Component', () => {
         const tools = timeline.shadowRoot.querySelector('[part="timeline-tools"]')
         const header = timeline.shadowRoot.querySelector('[part="header"]')
         const headerStart = timeline.shadowRoot.querySelector('[part="header-start"]')
+        const ruler = timeline.shadowRoot.querySelector('[part="ruler"]')
+        const surfaceControls = timeline.shadowRoot.querySelector('[part="surface-controls"]')
+        const controlsSpacer = timeline.shadowRoot.querySelector('[part="controls-spacer"]')
         const headerEnd = timeline.shadowRoot.querySelector('[part="header-end"]')
         const customMenu = timeline.shadowRoot.querySelector('[part="custom-menu"]')
         const transport = timeline.shadowRoot.querySelector('[part="transport"]')
@@ -448,8 +469,13 @@ describe('lgs1920-timeline Web Component', () => {
         const vertical = tools.querySelector('[data-testid="lgs1920-wa-tools-vertical-zoom"]')
         const tooltips = tools.querySelectorAll('wa-tooltip')
         expect(tools).not.toBeNull()
-        expect(tools.parentElement).toBe(headerStart)
-        expect(headerStart.contains(tools)).toBe(true)
+        expect(tools.parentElement).toBe(surfaceControls)
+        expect(surfaceControls.getAttribute('slot')).toBeNull()
+        expect(headerStart.contains(tools)).toBe(false)
+        expect(ruler.contains(tools)).toBe(false)
+        expect(surfaceControls.contains(tools)).toBe(true)
+        expect(timeline.shadowRoot.querySelector('slot[name="footer"]')).not.toBeNull()
+        expect(controlsSpacer).not.toBeNull()
         expect(customMenu.parentElement).toBe(header)
         expect(transport.parentElement).toBe(headerEnd)
         expect([...header.children]).toEqual([headerStart, customMenu, headerEnd])
@@ -854,6 +880,10 @@ describe('lgs1920-timeline Web Component', () => {
         configureTimeline(timeline)
         document.body.append(timeline)
         const initialCanvasWidth = Number.parseFloat(timeline.shadowRoot.querySelector('[part="canvas"]').style.width)
+        const fixedRuler = document.createElement('span')
+        fixedRuler.slot = 'timeline-ruler'
+        fixedRuler.setAttribute('data-timeline-ruler-fixed', '')
+        timeline.append(fixedRuler)
 
         const plainWheel = new WheelEvent('wheel', {bubbles: true, cancelable: true, deltaY: -100})
         timeline.shadowRoot.querySelector('[data-surface]').dispatchEvent(plainWheel)
@@ -889,6 +919,8 @@ describe('lgs1920-timeline Web Component', () => {
         expect(horizontalWheel.defaultPrevented).toBe(true)
         expect(timeline.shadowRoot.querySelector('[data-surface]').getAttribute('data-zoom-percent')).toBe('20')
         expect(Number.parseFloat(timeline.shadowRoot.querySelector('[part="canvas"]').style.width)).toBeGreaterThan(initialCanvasWidth)
+        expect(fixedRuler.style.getPropertyValue('--lgs-timeline-ruler-scroll-offset'))
+            .toBe(`${timeline.shadowRoot.querySelector('[data-surface]').scrollLeft}px`)
 
         const browserWheel = new WheelEvent('wheel', {bubbles: true, cancelable: true, ctrlKey: true, deltaY: -100})
         timeline.shadowRoot.querySelector('[data-surface]').dispatchEvent(browserWheel)
@@ -910,12 +942,17 @@ describe('lgs1920-timeline Web Component', () => {
         const lowZoomSecondaryTicks = timeline.shadowRoot.querySelectorAll('[part="minor-tick"]')
         expect(lowZoomSecondaryTicks.length).toBeGreaterThan(0)
         expect(Number.parseFloat(lowZoomSecondaryTicks[1].style.left) - Number.parseFloat(lowZoomSecondaryTicks[0].style.left))
-            .toBeCloseTo(12.8)
+            .toBeCloseTo(1.6)
 
         timeline.setZoom(100)
         const secondaryTicks = timeline.shadowRoot.querySelectorAll('[part="minor-tick"]')
         expect(secondaryTicks.length).toBeGreaterThan(0)
         expect(Number.parseFloat(secondaryTicks[1].style.left) - Number.parseFloat(secondaryTicks[0].style.left)).toBe(8)
+
+        timeline.setZoom(300)
+        const fineSecondaryTicks = timeline.shadowRoot.querySelectorAll('[part="minor-tick"]')
+        expect(fineSecondaryTicks.length).toBeGreaterThan(0)
+        expect(Number.parseFloat(fineSecondaryTicks[1].style.left) - Number.parseFloat(fineSecondaryTicks[0].style.left)).toBe(8)
 
         Object.defineProperty(timeline.shadowRoot.querySelector('[data-surface]'), 'clientWidth', {configurable: true, value: 300})
         timeline.handleResize()
@@ -1027,6 +1064,36 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.timeline.rangeEndMillis).toBe(8_000)
         ruler.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, button: 0, clientX: 320, ctrlKey: true}))
         expect(timeline.timeline.rangeEndMillis).toBe(7_500)
+    })
+
+    it('does not let ruler slot controls trigger timeline seeking or range handles', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {
+            timeline: {rangeStartMillis: 2_000, rangeEndMillis: 8_000},
+            currentTimeMillis: 5_000,
+        })
+        const rulerControl = document.createElement('button')
+        rulerControl.slot = 'timeline-ruler'
+        timeline.append(rulerControl)
+        document.body.append(timeline)
+
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 1_000, width: 1_000})
+        const rangeStart = timeline.timeline.rangeStartMillis
+        const rangeEnd = timeline.timeline.rangeEndMillis
+
+        rulerControl.dispatchEvent(createPointerEvent('pointerdown', {clientX: 1, composed: true}))
+        rulerControl.dispatchEvent(new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            button: 0,
+            clientX: 1,
+            composed: true
+        }))
+
+        expect(timeline.currentTimeMillis).toBe(5_000)
+        expect(timeline.timeline.rangeStartMillis).toBe(rangeStart)
+        expect(timeline.timeline.rangeEndMillis).toBe(rangeEnd)
     })
 
     it('accepts arrow zoom from the window when the timeline widget is selected', () => {
@@ -1819,6 +1886,41 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.shadowRoot.querySelector('[data-playhead]').style.left).toBe('220px')
         expect(timeline.shadowRoot.querySelector('[data-current-time]').textContent).toBe('0:05')
         expect(seek).not.toHaveBeenCalled()
+    })
+
+    it('scrolls the surface to keep the current playhead visible', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline, {
+            timeline: {durationMillis: 60_000},
+            currentTimeMillis: 0,
+        })
+        document.body.append(timeline)
+
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 600, width: 600})
+        const fixedRuler = document.createElement('span')
+        fixedRuler.slot = 'timeline-ruler'
+        fixedRuler.setAttribute('data-timeline-ruler-fixed', '')
+        timeline.append(fixedRuler)
+        Object.defineProperties(surface, {
+            clientWidth: {configurable: true, value: 600},
+            scrollWidth: {configurable: true, value: 1_500},
+            scrollLeft: {configurable: true, writable: true, value: 0},
+        })
+
+        timeline.currentTimeMillis = 60_000
+        timeline.ensureCurrentTimeVisible()
+
+        const playheadX = Number.parseFloat(timeline.shadowRoot.querySelector('[data-playhead]').style.left)
+        expect(surface.scrollLeft).toBeGreaterThan(0)
+        expect(playheadX - surface.scrollLeft).toBeGreaterThanOrEqual(12)
+        expect(playheadX - surface.scrollLeft).toBeLessThanOrEqual(588)
+        expect(fixedRuler.style.getPropertyValue('--lgs-timeline-ruler-scroll-offset')).toBe(`${surface.scrollLeft}px`)
+
+        timeline.currentTimeMillis = 0
+        timeline.ensureCurrentTimeVisible()
+
+        expect(surface.scrollLeft).toBeLessThanOrEqual(12)
     })
 
     it('renders timeline handles in the ruler overlay with recessed grip dots', () => {

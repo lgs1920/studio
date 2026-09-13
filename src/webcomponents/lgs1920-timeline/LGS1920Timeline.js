@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-10
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,47 +25,48 @@ import '@web.awesome.me/webawesome-pro/dist/components/split-panel/split-panel.j
 import '@web.awesome.me/webawesome-pro/dist/components/tooltip/tooltip.js'
 import styles from './lgs1920-timeline.css?inline'
 import {createTimelineClipScroll} from './LGS1920TimelineClipScroll.js'
-import {cloneRows, createTimelineClipEditor, normalizeClipLayout, resolveClipInterval, trackAcceptsClip} from './LGS1920TimelineEditing.js'
+import {
+    cloneRows,
+    createTimelineClipEditor,
+    normalizeClipLayout,
+    resolveClipInterval,
+    trackAcceptsClip
+} from './LGS1920TimelineEditing.js'
 import {
     allowsHostInteraction,
     EXTERNAL_INTERACTION_CONTINUATION_EVENT_TYPES,
+    HOST_DRAG_CONTINUATION_EVENT_TYPES,
+    HOST_DRAG_START_EVENT_TYPES,
     TIMELINE_ARROW_KEYS,
     TIMELINE_HORIZONTAL_ARROW_KEYS,
     TIMELINE_INPUT_EVENT_TYPES,
-    TIMELINE_KEYBOARD_KEYS,
     TIMELINE_KEYBOARD_EDITABLE_SELECTOR,
-    HOST_DRAG_CONTINUATION_EVENT_TYPES,
-    HOST_DRAG_START_EVENT_TYPES,
+    TIMELINE_KEYBOARD_KEYS,
 } from './LGS1920TimelineInteraction.js'
 import {createTimelineRenderer} from './LGS1920TimelineRendering.js'
 import {
     ACCELERATION_INTERVAL,
-    DEFAULT_TIMELINE_COLOR_SWATCHES,
-    EDGE_TIME_ACCELERATION_INTERVAL,
-    EDGE_SCROLL_SPEEDS,
-    EDGE_SCROLL_TIME_STEPS,
-    EDGE_TRIGGER_SIZE,
-    END_PADDING,
-    GLOBAL_SLOTS,
-    HEADER_HEIGHT,
-    HORIZONTAL_SCROLLBAR_HEIGHT,
-    MAX_ZOOM,
-    MIN_VISIBLE_DURATION_SECONDS,
-    MIN_ROW_HEIGHT,
-    MAX_ROW_HEIGHT,
-    MIN_ZOOM,
-    ROW_ZOOM_STEP,
-    SCALE_WIDTH,
-    START_LEFT,
-    TAG_NAME,
-    ZOOM_STEP,
     applyTimelinePaletteStyles,
     clamp,
     createElement,
     createEvent,
     createIcon,
-    formatTime,
+    DEFAULT_TIMELINE_COLOR_SWATCHES,
+    EDGE_SCROLL_SPEEDS,
+    EDGE_SCROLL_TIME_STEPS,
+    EDGE_TIME_ACCELERATION_INTERVAL,
+    EDGE_TRIGGER_SIZE,
+    END_PADDING,
     formatRulerTime,
+    formatTime,
+    GLOBAL_SLOTS,
+    HEADER_HEIGHT,
+    HORIZONTAL_SCROLLBAR_HEIGHT,
+    MAX_ROW_HEIGHT,
+    MAX_ZOOM,
+    MIN_ROW_HEIGHT,
+    MIN_VISIBLE_DURATION_SECONDS,
+    MIN_ZOOM,
     normalizeTimelineColorSwatches,
     resolveClipIcon,
     resolveClipLabel,
@@ -75,7 +76,12 @@ import {
     resolveScale,
     resolveTimelineColorValue,
     resolveTimelinePaletteFromValue,
+    ROW_ZOOM_STEP,
+    SCALE_WIDTH,
     slotKey,
+    START_LEFT,
+    TAG_NAME,
+    ZOOM_STEP,
 } from './LGS1920TimelineUtils.js'
 
 const ROW_DRAG_THRESHOLD = 4
@@ -221,7 +227,7 @@ export class LGS1920Timeline extends HTMLElement {
             getTimelineConfig: () => this.#timelineConfig,
             getProjectionDurationMillis: () => this.#dragState?.initialDurationMillis ?? this.#durationMillis(),
             getMajorRulerUnit: () => {
-                const {majorSeconds, scaleSplitCount} = resolveScale(this.#zoom)
+                const {majorSeconds, scaleSplitCount} = this.#resolveScale()
                 const scaleWidth = this.#scaleWidth()
                 const splitCount = Number(scaleSplitCount)
                 return {
@@ -301,6 +307,7 @@ export class LGS1920Timeline extends HTMLElement {
             getDurationMillis: () => this.#durationMillis(),
             getContentWidth: () => this.#contentWidth,
             getZoom: () => this.#zoom,
+            timelineTools: () => this.#timelineTools(),
             isClipSelected: clip => this.#isClipSelected(clip),
             contextualSlot: (prefix, identifier, globalName, fallback) => this.#contextualSlot(prefix, identifier, globalName, fallback),
             hasContextualSlot: (prefix, identifier) => this.#hasContextualSlot(prefix, identifier),
@@ -1176,6 +1183,39 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
+     * Scroll the horizontal surface just enough to keep the current playhead visible.
+     *
+     * @param {number} [padding=12] - Minimum space to keep around the playhead.
+     */
+    ensureCurrentTimeVisible(padding = 12) {
+        const surface = this.#surface
+        const viewportWidth = Number(surface?.clientWidth)
+        if (!surface || !Number.isFinite(viewportWidth) || viewportWidth <= 0) return
+
+        const safePadding = Math.max(0, Number(padding) || 0)
+        const playheadX = this.#currentTimeContentX()
+        const viewportLeft = Number(surface.scrollLeft) || 0
+        const viewportRight = viewportLeft + viewportWidth
+        const maximumScrollLeft = Math.max(
+            0,
+            Math.max(Number(surface.scrollWidth) || 0, this.#contentWidth) - viewportWidth,
+        )
+        let nextScrollLeft = viewportLeft
+        if (playheadX < viewportLeft + safePadding) {
+            nextScrollLeft = playheadX - safePadding
+        } else if (playheadX > viewportRight - safePadding) {
+            nextScrollLeft = playheadX - viewportWidth + safePadding
+        }
+        nextScrollLeft = clamp(nextScrollLeft, 0, maximumScrollLeft)
+        if (nextScrollLeft === viewportLeft) return
+
+        surface.scrollLeft = nextScrollLeft
+        this.#updateFixedRulerContent(surface)
+        this.#updateTimelineViewportMargins(surface)
+        this.#updateScrollbars()
+    }
+
+    /**
      * Set the visible zoom percentage and rerender the ruler.
      *
      * @param {number} zoomPercent - Requested zoom percentage.
@@ -1455,15 +1495,36 @@ export class LGS1920Timeline extends HTMLElement {
     #clampHorizontalZoom = zoomPercent => clamp(Number(zoomPercent) || 0, this.#minimumHorizontalZoom(), MAX_ZOOM)
 
     /**
+     * Resolve the current ruler scale while keeping large timelines performant.
+     *
+     * @returns {{majorSeconds: number, scaleSplitCount: number}} Ruler configuration.
+     */
+    #resolveScale = () => resolveScale(this.#zoom, this.#surface?.clientWidth || this.#surfaceWidth)
+
+    /**
      * Resolve the pixel width of one major ruler interval at the current zoom.
      *
      * @returns {number} Pixel width of one major ruler interval.
      */
     #scaleWidth = () => {
-        const {majorSeconds} = resolveScale(this.#zoom)
+        const {majorSeconds} = this.#resolveScale()
         const baseScaleWidth = this.#numericToken('scale-width', SCALE_WIDTH)
         const zoomFactor = (100 + this.#zoom) / 100
         return baseScaleWidth * zoomFactor * majorSeconds
+    }
+
+    /**
+     * Resolve the current playhead position in the horizontal content.
+     *
+     * @returns {number} Playhead position in content pixels.
+     */
+    #currentTimeContentX = () => {
+        const duration = this.#durationMillis()
+        const ratio = duration > 0 ? clamp(this.#currentTimeMillis / duration, 0, 1) : 0
+        const {majorSeconds} = this.#resolveScale()
+        const scaleWidth = this.#scaleWidth()
+        const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
+        return scaleOffset + ((ratio * this.#durationSeconds()) / majorSeconds * scaleWidth)
     }
 
     /**
@@ -1507,7 +1568,7 @@ export class LGS1920Timeline extends HTMLElement {
      */
     #refreshDurationGeometry = () => {
         if (!this.#projection || !this.#surface) return
-        const {majorSeconds, scaleSplitCount} = resolveScale(this.#zoom)
+        const {majorSeconds, scaleSplitCount} = this.#resolveScale()
         const durationSeconds = this.#durationSeconds()
         const scaleWidth = this.#scaleWidth()
         const nextScaleCount = this.#scaleCountForDuration(durationSeconds, majorSeconds, scaleWidth)
@@ -1602,7 +1663,7 @@ export class LGS1920Timeline extends HTMLElement {
         this.#zoom = this.#horizontalFitActive
             ? this.#minimumHorizontalZoom()
             : this.#clampHorizontalZoom(this.#zoom)
-        const {majorSeconds, scaleSplitCount} = resolveScale(this.#zoom)
+        const {majorSeconds, scaleSplitCount} = this.#resolveScale()
         const durationSeconds = this.#durationSeconds()
         const scaleWidth = this.#scaleWidth()
         const scaleCount = this.#scaleCountForDuration(durationSeconds, majorSeconds, scaleWidth)
@@ -1651,6 +1712,7 @@ export class LGS1920Timeline extends HTMLElement {
                 this.#surface.scrollLeft = clamp(previousScrollLeft, 0, maximumScrollLeft)
             }
         }
+        this.#updateFixedRulerContent(this.#surface)
         this.#updateTimelineViewportMargins(this.#surface)
         if (this.#tracksViewport) {
             this.#tracksViewport.scrollTop = previousScrollTop
@@ -1852,7 +1914,7 @@ export class LGS1920Timeline extends HTMLElement {
             createElement('slot', '', {name: 'timeline-actions'}),
             createElement('slot', '', {name: 'header-actions'}),
         )
-        headerStart.append(this.#timelineTools(), createElement('slot', '', {name: 'header'}))
+        headerStart.append(createElement('slot', '', {name: 'header'}))
         const headerEnd = createElement('span', 'lgs1920-wa-timeline__header-end', {part: 'header-end'})
         const playbackControls = this.#playbackControls()
         if (playbackControls) headerEnd.append(playbackControls)
@@ -2426,7 +2488,13 @@ export class LGS1920Timeline extends HTMLElement {
         const rows = createElement('div', 'lgs1920-wa-timeline__legend-rows', {part: 'legend-rows'})
         this.#rows.forEach(row => rows.append(this.#legendRow(row)))
         viewport.append(rows)
-        legend.append(this.#scrollbarShell(viewport, {role: 'legend', horizontal: false, vertical: true}))
+        legend.append(
+            this.#scrollbarShell(viewport, {role: 'legend', horizontal: false, vertical: true}),
+            createElement('div', 'lgs1920-wa-timeline__legend-controls-spacer', {
+                part: 'controls-spacer',
+                'aria-hidden': 'true',
+            }),
+        )
         return legend
     }
 
@@ -2890,7 +2958,7 @@ export class LGS1920Timeline extends HTMLElement {
         const isInitialCopy = state.previewClientX === null
         const presentationStart = isInitialCopy ? state.originalStart : start
         const presentationEnd = presentationStart + (end - start)
-        const {majorSeconds} = resolveScale(this.#zoom)
+        const {majorSeconds} = this.#resolveScale()
         const scaleWidth = this.#scaleWidth()
         const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
         const copyOffset = isInitialCopy
@@ -3508,7 +3576,7 @@ export class LGS1920Timeline extends HTMLElement {
     #timeAtClientX = clientX => {
         const rect = this.#surface?.getBoundingClientRect()
         if (!rect) return 0
-        const {majorSeconds} = resolveScale(this.#zoom)
+        const {majorSeconds} = this.#resolveScale()
         const scaleWidth = this.#scaleWidth()
         const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
         const x = Math.max(scaleOffset, clientX - rect.left + (this.#surface?.scrollLeft ?? 0))
@@ -3731,7 +3799,10 @@ export class LGS1920Timeline extends HTMLElement {
             this.#showScrollbars()
             this.#scheduleScrollbarHide()
             const viewRole = view.getAttribute('data-scroll-view')
-            if (viewRole === 'surface') this.#updateTimelineViewportMargins(view)
+            if (viewRole === 'surface') {
+                this.#updateFixedRulerContent(view)
+                this.#updateTimelineViewportMargins(view)
+            }
             if (viewRole === 'legend') this.#syncTracksScroll()
             if (viewRole === 'tracks') this.#updateLegendScroll()
             else this.#updateScrollbars()
@@ -3751,6 +3822,19 @@ export class LGS1920Timeline extends HTMLElement {
         const maximumScrollLeft = Math.max(0, view.scrollWidth - view.clientWidth)
         view.toggleAttribute('data-viewport-margin-left', view.scrollLeft > 0.5)
         view.toggleAttribute('data-viewport-margin-right', view.scrollLeft < maximumScrollLeft - 0.5)
+    }
+
+    /**
+     * Keep marked ruler slot content aligned with the visible surface edge.
+     *
+     * @param {HTMLElement|null} view - Horizontal timeline surface.
+     */
+    #updateFixedRulerContent = view => {
+        if (!view || view.getAttribute('data-scroll-view') !== 'surface') return
+        const offset = `${Number(view.scrollLeft) || 0}px`
+        this.querySelectorAll('[slot="timeline-ruler"][data-timeline-ruler-fixed]').forEach(element => {
+            element.style.setProperty('--lgs-timeline-ruler-scroll-offset', offset)
+        })
     }
 
     /**
@@ -4303,7 +4387,7 @@ export class LGS1920Timeline extends HTMLElement {
         const rect = this.#surface?.getBoundingClientRect()
         const duration = this.#durationMillis()
         if (!rect || duration <= 0) return
-        const {majorSeconds} = resolveScale(this.#zoom)
+        const {majorSeconds} = this.#resolveScale()
         const scaleWidth = this.#scaleWidth()
         const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
         const x = clamp(clientX - rect.left + (this.#surface?.scrollLeft ?? 0), scaleOffset, this.#contentWidth)
@@ -4644,7 +4728,7 @@ export class LGS1920Timeline extends HTMLElement {
         const element = this.#root.querySelector('[data-clip-snap-guide]')
         if (!element) return
         const guide = activeGuide ?? this.#clipSnapGuide
-        const {majorSeconds} = resolveScale(this.#zoom)
+        const {majorSeconds} = this.#resolveScale()
         const scaleWidth = this.#scaleWidth()
         const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
         const time = Number(guide?.time)
@@ -5058,7 +5142,7 @@ export class LGS1920Timeline extends HTMLElement {
                     this.#autoScrollFrame = requestAnimationFrame(loop)
                     return
                 }
-                const {majorSeconds} = resolveScale(this.#zoom)
+                const {majorSeconds} = this.#resolveScale()
                 const scaleWidth = this.#scaleWidth()
                 const stepCount = Math.max(1, Math.floor(elapsedSinceStep / EDGE_TIME_ACCELERATION_INTERVAL))
                 const firstStepAt = this.#edgeLastStepAt
@@ -5415,7 +5499,7 @@ export class LGS1920Timeline extends HTMLElement {
         this.#render()
 
         if (anchorTimeSeconds === null || !this.#surface) return
-        const {majorSeconds} = resolveScale(this.#zoom)
+        const {majorSeconds} = this.#resolveScale()
         const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
         const anchorX = scaleOffset + ((anchorTimeSeconds / majorSeconds) * this.#scaleWidth())
         const maximumScrollLeft = Math.max(
@@ -5423,6 +5507,8 @@ export class LGS1920Timeline extends HTMLElement {
             Math.max(this.#surface.scrollWidth, this.#contentWidth) - (this.#surface.clientWidth || 0),
         )
         this.#surface.scrollLeft = clamp(anchorX - viewportX, 0, maximumScrollLeft)
+        this.#updateFixedRulerContent(this.#surface)
+        this.#updateTimelineViewportMargins(this.#surface)
         this.#updateScrollbars()
     }
 
@@ -5434,12 +5520,10 @@ export class LGS1920Timeline extends HTMLElement {
         const total = this.#root.querySelector('[data-total-time]')
         if (current) current.textContent = formatTime(this.#currentTimeMillis / 1000)
         if (total) total.textContent = formatTime(this.#durationSeconds())
-        const duration = this.#durationMillis()
-        const ratio = duration > 0 ? clamp(this.#currentTimeMillis / duration, 0, 1) : 0
-        const {majorSeconds} = resolveScale(this.#zoom)
+        const {majorSeconds} = this.#resolveScale()
         const scaleWidth = this.#scaleWidth()
         const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
-        const position = scaleOffset + ((ratio * this.#durationSeconds()) / majorSeconds * scaleWidth)
+        const position = this.#currentTimeContentX()
         const playhead = this.#root.querySelector('[data-playhead]')
         const end = this.#root.querySelector('[data-end-marker]')
         const rangeStart = this.#root.querySelector('[data-range-handle="start"]')
@@ -5485,7 +5569,7 @@ export class LGS1920Timeline extends HTMLElement {
     #updateClipInteractionPresentation = () => {
         this.#reconcileClipSelection()
         this.#updateClipSelectionPresentation()
-        const {majorSeconds} = resolveScale(this.#zoom)
+        const {majorSeconds} = this.#resolveScale()
         const scaleWidth = this.#scaleWidth()
         const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
         const dragState = this.#dragState

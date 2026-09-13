@@ -332,11 +332,26 @@ zoom by 20 percent. Unmodified `ArrowUp` and `ArrowDown` adjust row height;
 unmodified `ArrowLeft` and `ArrowRight` adjust ruler zoom. `Ctrl` plus the
 wheel is not intercepted, preserving browser zoom. The selected timeline
 widget enables the window-level arrow behavior through `keyboardZoomActive`.
-The ruler always renders secondary ticks: it uses five subdivisions per major
-unit below 80 pixels per second and ten subdivisions at higher zoom. The
-minimum horizontal zoom adapts to the available surface width so the complete
-timeline can fit without horizontal scrolling, with a small right safety
-margin.
+The Replay integration places the horizontal zoom control in a dedicated control
+band at the bottom of the track viewport, inside the time surface and outside
+the time ruler and global timeline footer. The timeline's vertical and horizontal
+zoom buttons are at the left, followed by the horizontal resize icon and an
+unlabeled branded slider. The slider uses a one-percent step for smooth pointer adjustment;
+keyboard and wheel zoom continue to use their coarser twenty-percent step.
+The legend reserves an equivalent bottom band so its track rows remain aligned
+with the time surface.
+The ruler always renders secondary ticks with at most five subdivisions per
+major unit and targets at most twelve major intervals in the visible surface.
+The minimum spacing for a major interval is therefore the visible ruler width
+divided by twelve. The major unit follows a readable progression of 250 ms,
+500 ms, 1 s, 2 s, 5 s, 10 s, 30 s, 1 min, 2 min, 5 min, 10 min, 30 min, 1 h,
+and 2 h until that spacing is reached. For example, a 10 h timeline in a
+500-pixel view uses 30-minute major units at its minimum zoom. The timeline
+never renders a secondary graduation finer than 50 ms. Ruler labels use
+`SS.XX` below one minute, omitting trailing zeroes in the fractional part,
+`MmSS` from one minute through 59 minutes, and `HhMM` from one hour onward. If
+the major interval is below one minute, hours also include seconds (`HhMM:SS`)
+so adjacent ruler labels remain distinct.
 
 ## Clip editing
 
@@ -491,8 +506,8 @@ The component exposes global and identifier-specific slots for:
 - track icons, labels, drag triggers, visibility controls, and track actions;
 - clip icons, labels, content, start handles, end handles, and clip actions;
 - video range handle content;
-- playback controls, headers, timeline actions, toolbar, ruler, footer, and
-  empty states;
+- playback controls, headers, timeline actions, toolbar, ruler, bottom surface
+  controls, footer, and empty states;
 - an independent-button transport toolbar for the Replay controls;
 - an application-owned `custom-menu` centered between the left view tools and
   right transport controls; menu controls supplied by the application use the

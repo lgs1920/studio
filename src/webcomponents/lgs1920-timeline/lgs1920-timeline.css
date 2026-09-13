@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-12
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -58,6 +58,8 @@
     --lgs-timeline-building-overlay-gap: var(--lgs-gutter-xs, 0.5rem);
     /* Timeline header height used by row sizing. */
     --lgs-timeline-header-height: 42px;
+    /* Height reserved below the track viewport for surface controls. */
+    --lgs-timeline-controls-height: 2.5rem;
     /* Timeline minimum width. */
     --lgs-timeline-min-width: 352px;
     /* Timeline minimum height. */
@@ -304,7 +306,6 @@
         gap: var(--lgs-timeline-gap);
     }
 
-    & .lgs1920-wa-timeline__timeline-tools,
     & slot[name='custom-menu'],
     & .lgs1920-wa-timeline__transport {
         box-sizing: border-box;
@@ -474,7 +475,17 @@
     }
 
     & .lgs1920-wa-timeline__scroll-shell--legend {
-        height: calc(100% - var(--lgs-timeline-header-height));
+        height: calc(100% - var(--lgs-timeline-header-height) - var(--lgs-timeline-controls-height));
+    }
+
+    & .lgs1920-wa-timeline__legend-controls-spacer {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        height: var(--lgs-timeline-controls-height);
+        min-height: var(--lgs-timeline-controls-height);
+        background: var(--lgs-timeline-surface-color);
+        border-top: 1px solid var(--lgs-timeline-quiet-border-color);
     }
 
     & .lgs1920-wa-timeline__scroll-shell > .view {
@@ -521,6 +532,7 @@
 
     & [data-scrollbar-view='tracks'].lgs1920-wa-timeline__scrollbar-track.track-vertical {
         top: calc(var(--lgs-timeline-header-height) + 2px);
+        bottom: calc(var(--lgs-timeline-controls-height) + 2px);
     }
 
     & .lgs1920-wa-timeline__scrollbar-track[hidden] {
@@ -838,11 +850,47 @@
     }
 
     & .lgs1920-wa-timeline__surface::part(body) {
+        position: relative;
         box-sizing: border-box;
         height: 100%;
         min-width: 0;
         min-height: 0;
         padding: 0;
+    }
+
+    & .lgs1920-wa-timeline__surface > .lgs1920-wa-timeline__canvas {
+        height: calc(100% - var(--lgs-timeline-controls-height));
+        min-height: 0;
+    }
+
+    & .lgs1920-wa-timeline__surface-controls {
+        position: absolute;
+        z-index: 7;
+        inset-block-end: 0;
+        inset-inline-start: 0;
+        display: flex;
+        align-items: center;
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        height: var(--lgs-timeline-controls-height);
+        min-height: var(--lgs-timeline-controls-height);
+        gap: var(--lgs-timeline-gap);
+        padding-block: var(--lgs-gutter-xxs, 0.25rem) var(--lgs-gutter-xs, 0.5rem);
+        padding-inline: var(--lgs-gutter-xxs, 0.25rem);
+        overflow: hidden;
+        background: var(--lgs-timeline-surface-color);
+        border-top: 1px solid var(--lgs-timeline-quiet-border-color);
+    }
+
+    & .lgs1920-wa-timeline__surface-controls > .lgs1920-wa-timeline__timeline-tools {
+        flex: 0 0 auto;
+    }
+
+    & .lgs1920-wa-timeline__surface-controls > slot[name='timeline-controls'] {
+        display: flex;
+        flex: 1 1 auto;
+        min-width: 0;
     }
 
     & .lgs1920-wa-timeline__surface:focus-visible {
@@ -873,6 +921,7 @@
     }
 
     & .lgs1920-wa-timeline__ruler {
+        position: relative;
         z-index: 2;
         height: var(--lgs-timeline-header-height);
         min-width: 100%;
@@ -1549,6 +1598,10 @@
         display: flex;
         align-items: center;
         gap: var(--lgs-gutter-xxs, 0.25rem);
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
         cursor: default;
     }
 
