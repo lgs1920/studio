@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-12
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -45,17 +45,68 @@
         box-sizing: border-box;
         width: 100%;
         min-width: 0;
-        padding-block: var(--lgs-gutter-xxs);
-        background: var(--lgs-timeline-surface-color, var(--wa-color-surface-default));
+        height: var(--lgs-timeline-header-height, 72px);
+        min-height: 0;
+        transform: translateX(var(--lgs-timeline-ruler-scroll-offset, 0px));
+        padding: 0;
+        pointer-events: none;
+        background: transparent;
+    }
+
+    .replay-timeline-preview__scrubber-control {
+        position: absolute;
+        inset-block-start: 0;
+        inset-inline: 0;
+        display: flex;
+        align-items: center;
+        width: 100%;
+        min-width: 0;
+        padding-block: 2px;
+        padding-inline: var(--lgs-gutter-s);
+        gap: var(--lgs-gutter-xs);
+        pointer-events: auto;
     }
 
     .replay-timeline-preview__scrubber wa-slider {
-        display: block;
+        flex: 1 1 auto;
+        min-width: 0;
         width: 100%;
+        --track-size: 0.25rem;
+    }
+
+    .replay-timeline-preview__scrubber wa-slider[label-at-start][width-auto] {
+        grid-template-columns: auto minmax(0, 1fr);
     }
 
     .replay-timeline-preview__scrubber wa-slider::part(slider) {
         margin-block-start: 0;
+    }
+
+    .replay-timeline-preview__zoom {
+        display: flex;
+        flex: 1 1 auto;
+        align-items: center;
+        box-sizing: border-box;
+        width: auto;
+        min-width: 0;
+        gap: var(--lgs-gutter-xs);
+        background: var(--lgs-timeline-surface-color, var(--wa-color-surface-default));
+    }
+
+    .replay-timeline-preview__zoom-slider {
+        display: block;
+        flex: 1 1 auto;
+        width: auto;
+        min-width: 0;
+        --track-size: 0.25rem;
+    }
+
+    .replay-timeline-preview__zoom-icon {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
     }
 
     .replay-timeline-preview__additional-content {
@@ -128,9 +179,9 @@
 
     lgs1920-timeline::part(top) {
         display: flex;
-        flex: 0 0 56px;
-        height: 56px;
-        min-height: 56px;
+        flex: 0 0 auto;
+        height: auto;
+        min-height: 0;
     }
 
     /* Keep the controlled transport visible in the embedded Replay timeline. */

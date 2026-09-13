@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-04
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -60,6 +60,7 @@ describe('replayTimelineUtils', () => {
         expect(resolveReplayTimelineMinimumWidth()).toBe(352)
         expect(resolveReplayTimelineMinimumDimensions(3)).toEqual({width: 352, height: 204, layoutHeight: 122})
         expect(REPLAY_TIMELINE_UI.scaleIntervalMillis).toBe(200)
+        expect(REPLAY_TIMELINE_ZOOM.sliderStepPercent).toBe(1)
         expect(editorData[0].classNames).toEqual(['widget-row', 'replay-timeline-row-index-0'])
         expect(editorData[1].classNames).toEqual(['replay-timeline-row-index-1'])
         expect(resolveReplayTimelineLegendTransform(48)).toBe('translateY(-48px)')
@@ -77,20 +78,18 @@ describe('replayTimelineUtils', () => {
     })
 
     it('resolves the requested major and minor time units from the zoom level', () => {
-        expect(REPLAY_TIMELINE_TIME_UNITS.map(unit => [unit.majorSeconds, unit.minorMillis])).toEqual([
-            [0.5, 100],
-            [1, 200],
-            [10, 1000],
-            [30, 5000],
-            [60, 10000],
-            [300, 30000],
+        expect(REPLAY_TIMELINE_TIME_UNITS.map(unit => [unit.majorSeconds, unit.minorMillis, unit.scaleSplitCount])).toEqual([
+            [2, 400, 5],
+            [1, 200, 5],
+            [0.5, 100, 5],
+            [0.25, 50, 5],
         ])
+        expect(REPLAY_TIMELINE_TIME_UNITS.every(unit => unit.scaleSplitCount <= 5)).toBe(true)
+        expect(resolveReplayTimelineScale(-50).id).toBe('two-seconds')
         expect(resolveReplayTimelineScale(0).id).toBe('second')
-        expect(resolveReplayTimelineScale(-50).id).toBe('half-second')
-        expect(resolveReplayTimelineScale(200).id).toBe('ten-seconds')
-        expect(resolveReplayTimelineScale(320).id).toBe('thirty-seconds')
-        expect(resolveReplayTimelineScale(400).id).toBe('minute')
-        expect(resolveReplayTimelineScale(500).id).toBe('five-minutes')
+        expect(resolveReplayTimelineScale(100).id).toBe('half-second')
+        expect(resolveReplayTimelineScale(300).id).toBe('quarter-second')
+        expect(resolveReplayTimelineScale(500).minorMillis).toBe(50)
     })
 
     it('clamps zoom and advances it by twenty percent', () => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified: 2026-07-03
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -584,6 +584,9 @@ export const normalizeJourneyReplayReadiness = (readiness = {}) => {
 export const normalizeJourneyReplaySettings = (settings = {}) => {
     const duration = finiteNumber(settings?.duration) ?? DEFAULT_REPLAY_DURATION
     const clips = normalizeJourneyReplayClips(settings?.clips)
+    const timelineSettings = settings?.timeline && typeof settings.timeline === 'object'
+        ? settings.timeline
+        : null
 
     return {
         duration:    Math.max(1, duration),
@@ -612,6 +615,19 @@ export const normalizeJourneyReplaySettings = (settings = {}) => {
         marker:      normalizeJourneyReplayMarker(settings?.marker),
         camera:      normalizeJourneyReplayCamera(settings?.camera),
         clips:       clips,
+        ...(timelineSettings ? {
+            timeline: {
+                zoomPercent: Number.isFinite(Number(timelineSettings.zoomPercent))
+                    ? Number(timelineSettings.zoomPercent)
+                    : 0,
+                currentTimeMillis: Math.max(
+                    0,
+                    Number.isFinite(Number(timelineSettings.currentTimeMillis))
+                        ? Number(timelineSettings.currentTimeMillis)
+                        : 0,
+                ),
+            },
+        } : {}),
     }
 }
 

@@ -196,6 +196,20 @@ ruler unit inside an eight-pixel magnetic threshold. Holding `Shift` while
 moving or resizing a clip switches the snap unit to the currently rendered
 secondary ruler divisions. The closest edge is used for movement so clip
 duration remains unchanged, including cross-track moves.
+
+The ruler uses at most five subdivisions per major unit and targets at most
+twelve major intervals in the visible surface. The minimum spacing for a major
+interval is the visible ruler width divided by twelve. The major unit follows a
+readable progression of 250 ms, 500 ms, 1 s, 2 s, 5 s, 10 s, 30 s, 1 min, 2 min,
+5 min, 10 min, 30 min, 1 h, and 2 h until that spacing is reached. For example,
+a 10 h timeline in a 500-pixel view uses 30-minute major units at its minimum
+zoom. The 50 ms interval is the finest rendered graduation. The Replay preview persists the view-only
+horizontal zoom and playhead time in the Replay settings, without creating a
+second persisted timeline editor model. Ruler labels use `SS.XX` below one
+minute, omitting trailing zeroes in the fractional part, `MmSS` from one minute
+through 59 minutes, and `HhMM` from one hour onward. When the major interval
+is below one minute, hour labels include seconds as `HhMM:SS` so adjacent
+labels remain distinct.
 Controlled track updates preserve the timeline's local horizontal zoom; a new
 explicit `zoomPercent` value still applies normally.
 During an active clip-edge resize, a transient blue diamond is centered on the

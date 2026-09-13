@@ -2,13 +2,13 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: replay-phase1.test.js
+ * File: replay-settings.test.js
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-01
- * Last modified: 2026-07-01
+ * Created on: 2026-07-22
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -59,6 +59,19 @@ vi.mock('@Components/Toast', () => ({
 import {makeJourney, makeTrack} from './replay-phase1-fixtures'
 
 describe('replay settings normalization', () => {
+    it('normalizes persisted timeline view settings', () => {
+        expect(defaultJourneyReplaySettings().timeline).toBeUndefined()
+        expect(normalizeJourneyReplaySettings({
+            timeline: {
+                zoomPercent: 180,
+                currentTimeMillis: -1,
+            },
+        }).timeline).toEqual({
+            zoomPercent: 180,
+            currentTimeMillis: 0,
+        })
+    })
+
     it('normalizes the shared replay effect mode without a separate effect opacity', () => {
         expect(defaultJourneyReplaySettings().progression.effect).toEqual({
             mode: REPLAY_EFFECT_NONE,

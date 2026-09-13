@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-12
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -46,9 +46,39 @@ describe('Replay timeline preview styles', () => {
         expect(styleSource).toContain('width: 100%;')
         expect(styleSource).toContain('inset-block-start: 0;')
         expect(styleSource).toContain('z-index: 8;')
+        expect(styleSource).toContain('padding-inline: var(--lgs-gutter-s);')
+        const scrubberRule = styleSource.match(/\.replay-timeline-preview__scrubber \{([^}]*)}/)?.[1] ?? ''
+        expect(scrubberRule).toContain('background: transparent;')
+        expect(scrubberRule).toContain('pointer-events: none;')
+        expect(styleSource).toContain('.replay-timeline-preview__scrubber-control')
+        const scrubberControlRule = styleSource.match(/\.replay-timeline-preview__scrubber-control \{([^}]*)}/)?.[1] ?? ''
+        expect(scrubberControlRule).toContain('pointer-events: auto;')
+        const scrubberSliderRule = styleSource.match(/\.replay-timeline-preview__scrubber wa-slider \{([^}]*)}/)?.[1] ?? ''
+        expect(scrubberSliderRule).not.toContain('display: block;')
+        expect(styleSource).toContain('wa-slider[label-at-start][width-auto]')
+        expect(styleSource).toContain('grid-template-columns: auto minmax(0, 1fr);')
         expect(styleSource).toContain('.replay-timeline-preview__scrubber wa-slider')
         expect(styleSource).toContain('margin-block-start: 0;')
+        expect(scrubberSliderRule).toContain('--track-size: 0.25rem;')
+        expect(styleSource).toContain('.replay-timeline-preview__zoom')
+        expect(styleSource).toContain('.replay-timeline-preview__zoom-slider')
+        expect(styleSource).toContain('.replay-timeline-preview__zoom-icon')
+        const zoomRule = styleSource.match(/\.replay-timeline-preview__zoom \{([^}]*)}/)?.[1] ?? ''
+        expect(zoomRule).toContain('background: var(--lgs-timeline-surface-color, var(--wa-color-surface-default));')
+        expect(styleSource).toContain('--track-size: 0.25rem;')
+        expect(styleSource).toContain('line-height: 1;')
+        expect(styleSource).toContain('align-items: center;')
+        expect(styleSource).toContain('justify-content: center;')
+        expect(styleSource).toContain('height: var(--lgs-timeline-header-height, 72px);')
         expect(styleSource).toContain('--lgs-timeline-header-height: 72px;')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__surface-controls {')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__surface-controls > .lgs1920-wa-timeline__timeline-tools {')
+        expect(webComponentStyleSource).toContain('inset-block-end: 0;')
+        expect(webComponentStyleSource).toContain('height: calc(100% - var(--lgs-timeline-controls-height));')
+        expect(webComponentStyleSource).toContain('--lgs-timeline-controls-height: 2.5rem;')
+        expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__legend-controls-spacer {')
+        expect(webComponentStyleSource).toContain("[data-scrollbar-view='tracks'].lgs1920-wa-timeline__scrollbar-track.track-vertical")
+        expect(webComponentStyleSource).toContain('bottom: calc(var(--lgs-timeline-controls-height) + 2px);')
         expect(styleSource).toContain('lgs1920-timeline::part(tick)')
         expect(styleSource).toContain('align-items: flex-end;')
         expect(styleSource).toContain('container-type: inline-size;')
@@ -66,8 +96,9 @@ describe('Replay timeline preview styles', () => {
         expect(styleSource).toContain('--lgs-timeline-scrollbar-track-color:')
         expect(styleSource).toContain('--lgs-timeline-scrollbar-thumb-color:')
         expect(styleSource).toContain('lgs1920-timeline::part(top)')
-        expect(styleSource).toContain('flex: 0 0 56px;')
-        expect(styleSource).toContain('height: 56px;')
+        expect(styleSource).toContain('flex: 0 0 auto;')
+        expect(styleSource).toContain('height: auto;')
+        expect(styleSource).toContain('min-height: 0;')
         expect(styleSource).toContain('lgs1920-timeline::part(header)')
         expect(styleSource).toContain('position: relative;')
         expect(styleSource).toContain('lgs1920-timeline::part(playback-controls)')
@@ -124,6 +155,9 @@ describe('Replay timeline preview styles', () => {
         expect(webComponentStyleSource).toContain('cursor: pointer;')
         expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__timeline-tools {')
         expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__timeline-tools > wa-tooltip {')
+        const timelineToolsRule = webComponentStyleSource
+            .match(/& \.lgs1920-wa-timeline__timeline-tools \{([^}]*)}/)?.[1] ?? ''
+        expect(timelineToolsRule).toContain('border: 0;')
         expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__clip-handle::before {')
         expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__playhead > .lgs1920-wa-timeline__playhead-grip,')
         expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__range-handle > .lgs1920-wa-timeline__range-grip {')

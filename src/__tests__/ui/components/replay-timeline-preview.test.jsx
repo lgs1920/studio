@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-12
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,11 +25,27 @@ vi.mock('../../../webcomponents/lgs1920-timeline/LGS1920Timeline.js', () => ({})
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
     WaIcon: props => <span {...props}/>,
-    WaSlider: forwardRef(({size, variant, ...props}, ref) => <input ref={ref}
-                                                                      data-testid="replay-timeline-slider"
-                                                                      data-size={size}
-                                                                      data-variant={variant}
-                                                                      {...props}/>),
+    WaSlider: forwardRef(({
+                              children,
+                              size,
+                              variant,
+                              withTooltip,
+                              valueFormatter,
+                              'label-at-start': labelAtStart,
+                              'width-auto': widthAuto,
+                              ...props
+                          }, ref) => <>
+        <input ref={ref}
+               data-testid="replay-timeline-slider"
+               data-size={size}
+               data-variant={variant}
+               data-with-tooltip={withTooltip ? 'true' : 'false'}
+               data-value-formatter={typeof valueFormatter === 'function' ? 'provided' : 'missing'}
+               data-label-at-start={labelAtStart ? 'true' : 'false'}
+               data-width-auto={widthAuto ? 'true' : 'false'}
+               {...props}/>
+        {children}
+    </>),
     WaTooltip: ({children, ...props}) => <span data-tooltip {...props}>{children}</span>,
 }))
 
@@ -118,7 +134,7 @@ describe('ReplayTimelinePreview', () => {
         globalThis.lgs = undefined
     })
 
-    it('renders the existing Replay projection with the Web Component interactions enabled', () => {
+    it('renders the existing Replay projection with the Web Component interactions enabled', async () => {
         const {container} = render(<ReplayTimelinePreview/>)
         const timelineElement = container.querySelector('lgs1920-timeline')
 
@@ -152,6 +168,27 @@ describe('ReplayTimelinePreview', () => {
         expect(slider.value).toBe('1000')
         expect(slider.getAttribute('data-size')).toBe('s')
         expect(slider.getAttribute('data-variant')).toBe('brand')
+        expect(slider.getAttribute('data-with-tooltip')).toBe('true')
+        expect(slider.getAttribute('data-value-formatter')).toBe('provided')
+        expect(slider.getAttribute('aria-label')).toBe('Replay timeline time')
+        expect(slider.getAttribute('data-label-at-start')).toBe('true')
+        expect(slider.getAttribute('data-width-auto')).toBe('true')
+        const scrubberLabel = container.querySelector('[slot="label"]')
+        expect(scrubberLabel.getAttribute('name')).toBe('clock')
+        expect(scrubberLabel.getAttribute('variant')).toBe('regular')
+        const zoomSlider = container.querySelector('[data-testid="replay-timeline-zoom-slider"]')
+        expect(zoomSlider).not.toBeNull()
+        expect(zoomSlider.getAttribute('min')).toBe('-50')
+        expect(zoomSlider.getAttribute('max')).toBe('500')
+        expect(zoomSlider.getAttribute('step')).toBe('1')
+        expect(zoomSlider.getAttribute('data-size')).toBe('s')
+        expect(zoomSlider.getAttribute('data-variant')).toBe('brand')
+        expect(zoomSlider.getAttribute('data-with-tooltip')).toBe('true')
+        expect(zoomSlider.getAttribute('aria-label')).toBe('Horizontal timeline zoom')
+        expect(zoomSlider.value).toBe('0')
+        expect(zoomSlider.closest('[slot="timeline-controls"]')).not.toBeNull()
+        expect(zoomSlider.closest('[slot="timeline-ruler"]')).toBeNull()
+        expect(container.querySelector('.replay-timeline-preview__zoom-icon').getAttribute('name')).toBe('arrows-left-right')
         expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-min-width')).toBe('352px')
         expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-min-height')).toBe('156px')
         expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-layout-min-height')).toBe('74px')
@@ -191,11 +228,14 @@ describe('ReplayTimelinePreview', () => {
         const {container} = render(<ReplayTimelinePreview/>)
         const timelineElement = container.querySelector('lgs1920-timeline')
         const slider = container.querySelector('[data-testid="replay-timeline-slider"]')
+        timelineElement.ensureCurrentTimeVisible = vi.fn()
 
         fireEvent.input(slider, {target: {value: '2500'}})
 
         await waitFor(() => expect(timelineElement.currentTimeMillis).toBe(2_500))
         expect(slider.value).toBe('2500')
+        expect(timelineElement.ensureCurrentTimeVisible).toHaveBeenCalled()
+        expect(globalThis.lgs.settings.ui.replay.timeline.currentTimeMillis).toBe(2_500)
 
         timelineElement.currentTimeMillis = 3_000
         timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-seek', {
@@ -315,6 +355,30 @@ describe('ReplayTimelinePreview', () => {
         })
 
         await waitFor(() => expect(timelineElement.currentTimeMillis).toBe(2_500))
+    })
+
+    it('restores and persists the horizontal zoom and playhead position', async () => {
+        globalThis.lgs.settings.ui.replay.timeline = {
+            zoomPercent: 100,
+            currentTimeMillis: 2_500,
+        }
+        globalThis.lgs.stores.replay.dynamicFrameState = null
+
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+        const zoomSlider = container.querySelector('[data-testid="replay-timeline-zoom-slider"]')
+
+        await waitFor(() => expect(timelineElement.currentTimeMillis).toBe(2_500))
+        expect(timelineElement.timeline).toMatchObject({
+            horizontalFit: false,
+            zoomPercent: 100,
+        })
+        expect(zoomSlider.value).toBe('100')
+
+        fireEvent.input(zoomSlider, {target: {value: '180'}})
+
+        await waitFor(() => expect(globalThis.lgs.settings.ui.replay.timeline.zoomPercent).toBe(180))
+        expect(zoomSlider.value).toBe('180')
     })
 
     it('does not reassign the timeline when a local track event is emitted', () => {

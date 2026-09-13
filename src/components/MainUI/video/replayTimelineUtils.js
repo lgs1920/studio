@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-06
+ * Last modified: 2026-09-13
  *
  *
  * Copyright © 2026 LGS1920
@@ -71,56 +71,42 @@ export const REPLAY_TIMELINE_ZOOM = Object.freeze({
     maxPercent:     500,
     minPercent:     -50,
     stepPercent:    20,
+    sliderStepPercent: 1,
 })
 
 /**
  * Define the major and minor time units used by the timeline ruler.
  *
- * The half-second unit is used only when the timeline is zoomed below the
- * default level so that the lower zoom boundary still has an observable
- * effect.
+ * Every major unit has at most five subdivisions. The major unit becomes
+ * shorter as the zoom increases so the secondary graduation reaches 50 ms.
  */
 export const REPLAY_TIMELINE_TIME_UNITS = Object.freeze([
     Object.freeze({
-        id:             'half-second',
-        majorSeconds:   0.5,
-        minorMillis:    100,
+        id:             'two-seconds',
+        majorSeconds:   2,
+        minorMillis:    400,
         scaleSplitCount: 5,
-        maxZoomPercent: -21,
+        maxZoomPercent: -1,
     }),
     Object.freeze({
         id:             'second',
         majorSeconds:   1,
         minorMillis:    200,
         scaleSplitCount: 5,
-        maxZoomPercent: 100,
+        maxZoomPercent: 99,
     }),
     Object.freeze({
-        id:             'ten-seconds',
-        majorSeconds:   10,
-        minorMillis:    1000,
-        scaleSplitCount: 10,
-        maxZoomPercent: 260,
+        id:             'half-second',
+        majorSeconds:   0.5,
+        minorMillis:    100,
+        scaleSplitCount: 5,
+        maxZoomPercent: 299,
     }),
     Object.freeze({
-        id:             'thirty-seconds',
-        majorSeconds:   30,
-        minorMillis:    5000,
-        scaleSplitCount: 6,
-        maxZoomPercent: 360,
-    }),
-    Object.freeze({
-        id:             'minute',
-        majorSeconds:   60,
-        minorMillis:    10000,
-        scaleSplitCount: 6,
-        maxZoomPercent: 440,
-    }),
-    Object.freeze({
-        id:             'five-minutes',
-        majorSeconds:   300,
-        minorMillis:    30000,
-        scaleSplitCount: 10,
+        id:             'quarter-second',
+        majorSeconds:   0.25,
+        minorMillis:    50,
+        scaleSplitCount: 5,
         maxZoomPercent: REPLAY_TIMELINE_ZOOM.maxPercent,
     }),
 ])
