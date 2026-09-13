@@ -16,7 +16,7 @@ if (!platform || hasFlag('--prod') || hasFlag('-p')) {
 
 const currentRef = execFileSync('git', ['branch', '--show-current'], {encoding: 'utf8'}).trim()
 const sourceRef = currentRef || execFileSync('git', ['rev-parse', 'HEAD'], {encoding: 'utf8'}).trim()
-const workflow = platform === 'nightly' ? 'nightly.yml' : 'deploy.yml'
+const workflow = 'deploy-studio.yml'
 const workflowArguments = ['workflow', 'run', workflow]
 
 // A detached commit can be checked out by the workflow input, but GitHub
@@ -25,11 +25,7 @@ if (currentRef) {
     workflowArguments.push('--ref', currentRef)
 }
 
-workflowArguments.push('-f', `source_ref=${sourceRef}`)
-
-if (platform !== 'nightly') {
-    workflowArguments.push('-f', `platform=${platform}`)
-}
+workflowArguments.push('-f', `target=${platform}`, '-f', `ref=${sourceRef}`)
 
 execFileSync('gh', workflowArguments, {stdio: 'inherit'})
 console.log(`GitHub deployment workflow dispatched for ${platform}: https://github.com/lgs1920/studio/actions/workflows/${workflow}`)

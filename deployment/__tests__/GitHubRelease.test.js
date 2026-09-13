@@ -42,7 +42,17 @@ describe('GitHub release arguments', () => {
             target: 'commit-sha',
             title:  'LGS1920 studio v1.0.0',
             auto:   true,
-        })).not.toContain('--draft')
+        })).toEqual([
+            'release',
+            'create',
+            'v1.0.0',
+            '--target',
+            'commit-sha',
+            '--title',
+            'LGS1920 studio v1.0.0',
+            '--generate-notes',
+            '--prerelease',
+        ])
     })
 })
 

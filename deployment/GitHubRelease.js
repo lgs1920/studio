@@ -25,7 +25,7 @@ import path from 'node:path'
  * @param {string} options.tag Release tag.
  * @param {string} options.target Commit SHA or branch targeted by the release.
  * @param {string} options.title Release title.
- * @param {boolean} [options.auto=false] Publish the release immediately.
+ * @param {boolean} [options.auto=false] Publish the pre-release immediately.
  * @returns {string[]} GitHub CLI arguments.
  */
 export const buildGitHubReleaseArguments = ({tag, target, title, auto = false} = {}) => {
@@ -44,7 +44,10 @@ export const buildGitHubReleaseArguments = ({tag, target, title, auto = false} =
         '--generate-notes',
     ]
 
-    if (!auto) {
+    if (auto) {
+        argumentsList.push('--prerelease')
+    }
+    else {
         argumentsList.push('--draft')
     }
 
