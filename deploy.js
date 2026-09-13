@@ -15,9 +15,11 @@
  ******************************************************************************/
 
 import argparse       from 'argparse'
+import fs              from 'node:fs'
 import path           from 'path'
 import process        from 'node:process'
 import { Deployment } from './deployment/Deployment.js'
+import {createGitHubRelease} from './deployment/GitHubRelease.js'
 
 // Keep the platform values centralized so CLI flags and deployment configuration
 // always use the same identifiers.
@@ -57,18 +59,83 @@ parser.add_argument('--ci', {
     action: 'store_true',
     help:   'Run in CI mode without mutating Git branches or tags',
 })
+
+parser.add_argument('--release', {
+    action: 'store_true',
+    help:   'Create a production GitHub Release instead of deploying locally',
+})
+
+parser.add_argument('--auto', {
+    action: 'store_true',
+    help:   'Publish a production GitHub Release immediately',
+})
+
+parser.add_argument('--release-tag', {
+    help: 'Use an existing release tag in CI metadata',
+})
+
+parser.add_argument('--product', {
+    help: 'Product to deploy when the worktree directory name is not studio or backend',
+})
 const args = parser.parse_args()
 
-// The product is inferred by Deployment from the current directory name.
+const directoryProduct = path.basename(process.cwd())
+const detectedProduct = ['studio', 'backend'].includes(directoryProduct)
+    ? directoryProduct
+    : fs.existsSync(path.join(process.cwd(), 'public/version.json'))
+        ? 'studio'
+        : fs.existsSync(path.join(process.cwd(), 'version.json'))
+            ? 'backend'
+            : directoryProduct
+const product = args.product || detectedProduct
+const platform = args.prod
+    ? platforms.production
+    : args.staging
+        ? platforms.staging
+            : args.nightly
+                ? platforms.nightly
+                : platforms.test
+
+if (!['studio', 'backend'].includes(product)) {
+    throw new Error(`Unsupported product: ${product}. Use --product studio or --product backend`)
+}
+
+if (args.auto && (!args.release || !args.prod)) {
+    throw new Error('--auto requires --prod --release')
+}
+
+if (args.release && !args.prod) {
+    throw new Error('--release requires --prod')
+}
+
+if (args.release) {
+    try {
+        const release = createGitHubRelease({
+            auto:   args.auto,
+            product,
+        })
+        const state = release.draft ? 'draft created' : 'published'
+        console.log(`GitHub Release ${state}: ${release.url}`)
+        process.exit(0)
+    }
+    catch (error) {
+        console.error(`GitHub Release creation failed: ${error.message}`)
+        process.exit(1)
+    }
+}
+
+// The product is inferred from the current directory when no explicit product is supplied.
 // When no platform flag is provided, the script intentionally falls back to test.
 const deployment = new Deployment(
     {
-        ci:           args.ci,
-        local:        path.dirname(process.cwd()),
-        platform:     args.prod ? platforms.production : args.staging ? platforms.staging : args.nightly ? platforms.nightly : platforms.test,
-        product:      path.basename(process.cwd()),
+        ci:              args.ci,
+        local:           path.dirname(process.cwd()),
+        localProductRoot: process.cwd(),
+        platform,
+        product,
         sourceBranch: process.env.LGS1920_SOURCE_BRANCH || process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME,
         sourceRef:    process.env.LGS1920_SOURCE_REF || process.env.GITHUB_SHA,
+        releaseTag:   args.releaseTag,
     })
 
 // Deployment exposes a promise so the CLI exits with a meaningful status code:

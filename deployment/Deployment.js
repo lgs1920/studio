@@ -200,17 +200,21 @@ export class Deployment {
      * @param {string} params.product - The product to deploy ('studio' or 'backend').
      * @param {string} params.platform - The target platform ('production', 'staging', 'nightly', or 'test').
      * @param {string} params.local - The local base path for deployment files.
+     * @param {string} [params.localProductRoot] - The repository root for the selected product.
      * @param {boolean} [params.ci=false] - Whether to avoid Git mutations in CI mode.
      * @param {string} [params.sourceBranch] - Branch or release reference supplied by CI.
      * @param {string} [params.sourceRef] - Immutable source reference supplied by CI.
+     * @param {string} [params.releaseTag] - Existing release tag used in CI metadata.
      */
     constructor(params) {
         this.ci = params.ci === true
         this.product = params.product
         this.platform = params.platform
         this.local = params.local
+        this.localProductRoot = params.localProductRoot || path.join(params.local, params.product)
         this.sourceBranch = params.sourceBranch
         this.sourceRef = params.sourceRef
+        this.releaseTag = params.releaseTag || process.env.RELEASE_TAG
         this.done = this.configure().then(() => this.launch())
     }
 
@@ -233,11 +237,11 @@ export class Deployment {
         // Set local and remote paths for the build
         this.dist = this.configuration.local.dist
         this.current = this.configuration.remote.current
-        this.localDistPath = path.join(`${this.local}/${this.product}`, `./${this.dist}/${this.version}`)
+        this.localDistPath = path.join(this.localProductRoot, this.dist, this.version)
 
         // Load environment variables for authentication
         this.password = process.env[`LGS1920_PASSWORD_${this.platform.toUpperCase()}`]
-        this.github_token = process.env[`LGS1920_GITHUB_TOKEN`]
+        this.github_token = process.env.LGS1920_GITHUB_TOKEN || process.env.GITHUB_TOKEN
         this.github_user = process.env[`LGS1920_GITHUB_USER`]
 
         // Initialize Git with GitHub token authentication
@@ -282,8 +286,13 @@ export class Deployment {
             .replace(/[-:.]/g, '')
             .slice(0, 15)
 
-        // Retrieve current Git branch
-        this.branch = this.sourceBranch || (await this.git.status()).current || 'detached'
+        // Retrieve the source branch and commit used for the deployment.
+        const status = await this.git.status()
+        this.branch = this.sourceBranch || status.current || 'detached'
+        this.sourceCommit = (await this.git.revparse(['HEAD'])).trim()
+        if (this.releaseTag) {
+            this.tagName = this.releaseTag
+        }
     }
 
     /**
@@ -580,14 +589,16 @@ export class Deployment {
             console.log('    > Copying file...')
 
             const args = [
-                '-p', password,
+                '-e',
                 'scp',
                 '-o', 'StrictHostKeyChecking=no',
                 localFile,
                 remoteTarget,
             ]
 
-            const scp = spawn('sshpass', args)
+            const scp = spawn('sshpass', args, {
+                env: {...process.env, SSHPASS: password},
+            })
 
             scp.stdout.on('data', data => process.stdout.write(data))
             scp.stderr.on('data', data => process.stderr.write(data))
@@ -631,7 +642,7 @@ export class Deployment {
      * @private
      */
     gitTag = async () => {
-        this.tagName = createDeploymentIdentifier({
+        this.tagName = this.releaseTag || createDeploymentIdentifier({
             branch:    this.branch,
             ci:        this.ci,
             date:      this.date,

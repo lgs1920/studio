@@ -1,8 +1,8 @@
 # GitHub Actions Deployment Migration Study
 
-Status: proposal pending validation
+Status: first Studio implementation prepared on `codex/github-deployment`
 
-Date: 2026-07-28
+Date: 2026-09-13
 
 ## Purpose
 
@@ -58,14 +58,15 @@ Cesium output adapter, live recorder, or deferred HQ exporter.
 
 ### Local entry point
 
-The current package scripts expose:
+The relevant package scripts are:
 
 ```json
 {
   "build": "bun run test:stores && bunx --bun vite build",
   "deploy": "bun deploy.js",
-  "lint": "eslint . --ext js,jsx,ts,tsx --report-unused-disable-directives --max-warnings 0",
-  "test": "vitest run"
+  "deploy:action": "bun scripts/dispatch-deployment.mjs",
+  "lint": "oxlint . --type-aware --report-unused-disable-directives-severity error",
+  "test": "vitest run && bun run test:lint-config"
 }
 ```
 
@@ -83,7 +84,7 @@ CI contract.
 
 ### Current deployment sequence
 
-The deployment class currently performs the following operations:
+The deployment class performs the following operations:
 
 1. Read `deployment/deploy.yml`.
 2. Read the Studio version from `public/version.json`.
@@ -201,15 +202,72 @@ shared visual contract.
 
 ## Strategy A — GitHub Actions orchestrates the existing deployment script
 
+### Agreed first implementation
+
+The first implementation is limited to Studio. The same orchestration can be
+adapted to the Site repository later, while existing local deployment behavior
+and deployment configuration remain available.
+
+- Test and staging deployments are manually dispatched GitHub workflows.
+- Nightly deployment runs on a schedule against a separate `nightly` release
+  path on the existing server.
+- Production starts from a GitHub Release. `bun run deploy -- --prod
+  --release` creates a draft and prints its URL. The future
+  `bun run deploy -- --prod --release --auto` mode publishes the release
+  immediately, but is not used by the current command or workflow.
+- CI deployments run with `--ci` and do not create or push deployment tags.
+  Existing local deployment tags remain available for local deployments.
+- The hosting provider requires password-based SSH authentication. The
+  password is supplied through `DEPLOY_PASSWORD`; SCP remains the transfer
+  mechanism.
+
+The repository now contains these workflows:
+
+- `.github/workflows/deploy.yml` validates and manually deploys test or
+  staging.
+- `.github/workflows/nightly.yml` validates and deploys the nightly platform
+  on its schedule or through a manual dispatch.
+- `.github/workflows/deploy-production.yml` validates a published non-preview
+  GitHub Release before deploying production.
+
+The repository secret `DEPLOY_PASSWORD` is read by the workflows and mapped to
+the platform-specific environment variable expected by the existing deployer.
+The Font Awesome and Web Awesome package tokens remain repository secrets.
+Directory paths and host names remain in `deployment/deploy.yml`, because they
+are deployment configuration rather than credentials.
+
+The nightly configuration uses the existing server with a separate
+`/home/www/lgs1920/nightly` release tree. Studio is exposed through
+`nightly.lgs1920.fr`; the DNS and hosting configuration for that name must be
+present before the first nightly deployment.
+
+Useful commands are:
+
+```bash
+# Create a reviewable production draft release and print its URL.
+bun run deploy -- --prod --release
+
+# Publish immediately when an automated release flow is explicitly desired.
+bun run deploy -- --prod --release --auto
+
+# Dispatch a GitHub Actions deployment for a non-production platform.
+bun run deploy:action -- --test
+bun run deploy:action -- --staging
+bun run deploy:action -- --nightly
+```
+
+The current production command intentionally omits `--auto`, so production
+deployment starts only after the draft release is reviewed and published.
+
 ### Definition
 
 In Strategy A, GitHub Actions performs the validation, selects the target
 environment, provides credentials, and invokes a deployment entry point. The
 existing release operations remain in JavaScript.
 
-The first version should not invoke the current implementation unchanged. A
-small compatibility refactor is required because a CI runner has different Git
-and security semantics from a developer workstation.
+The first version invokes the existing deployment operations through a small
+compatibility refactor because a CI runner has different Git and security
+semantics from a developer workstation.
 
 ### Required compatibility refactor
 
@@ -226,7 +284,9 @@ new Deployment({
 })
 ```
 
-The exact API is illustrative. The important properties are:
+The exact API is illustrative. The current CLI also accepts `--product` for
+worktrees whose directory name does not identify the product. The important
+properties are:
 
 - product is explicit
 - platform is explicit
@@ -294,28 +354,26 @@ jobs:
       - setup-bun
       - install-dependencies
       - configure-ssh
-      - run: bun run deploy -- --platform ${{ inputs.platform }} --product studio --ci
+      - run: bun run deploy -- --staging --ci
 ```
 
 The action names in this example are placeholders. The real workflow must use
-approved, pinned action references and must not pass secrets on the command
-line.
+approved action references and must not pass secrets on the command line. The
+current CLI uses `--test`, `--staging`, or `--nightly` rather than a generic
+platform flag; the actual workflow selects the corresponding flag from its
+validated input.
 
 ### Authentication model for Strategy A
 
-Password authentication should be considered transitional only. The preferred
-model is:
+The hosting provider does not accept deployment SSH keys, so the first
+implementation uses password authentication with separate GitHub environment
+credentials where required. The password must be exposed to the `sshpass`
+child process through `SSHPASS` rather than an argument, and it must never be
+printed in logs.
 
-- a dedicated deployment SSH key
-- a dedicated remote account or restricted deployment account
-- a restricted authorized-key command or deployment directory where practical
-- a repository or environment secret containing the private key
-- a repository or environment secret containing the expected host key
-- strict host-key verification enabled in the runner
-- separate credentials for test, staging, and production
-
-The workflow should configure `known_hosts` from a reviewed value. It must not
-use `StrictHostKeyChecking=no`.
+The current SCP implementation keeps `StrictHostKeyChecking=no` because it is
+required by the existing hosting setup. Host-key verification remains a
+follow-up hardening item if the provider exposes a stable reviewed fingerprint.
 
 GitHub's token should be scoped separately from the server credential. A
 deployment that only reads the repository should have read-only contents
@@ -697,7 +755,9 @@ Before changing deployment behavior:
    runtime configuration.
 6. Define the production approval policy.
 
-No workflow should be allowed to deploy until these decisions are recorded.
+The first Studio implementation records these choices in the agreed first
+implementation section above. The Site repository and backend-specific
+workflow remain follow-up work.
 
 ### Phase 1 — CI-only validation
 
@@ -726,8 +786,10 @@ Required changes:
 - accept explicit product, platform, and source reference values
 - remove branch pushing from the deployment operation
 - remove deployment-created commits
-- replace password-based SSH with key-based authentication
-- enforce host-key verification
+- keep password-based SSH because the current hosting provider does not accept
+  deployment keys; pass the password through `SSHPASS`
+- plan host-key verification as a hardening follow-up when the provider offers
+  a stable reviewed fingerprint
 - validate remote paths and release versions
 - separate build, package, transfer, activation, and verification methods
 - add a dry-run mode that performs validation without activation
@@ -739,8 +801,8 @@ Run the refactored code locally against test or staging before enabling Actions.
 
 Create a manual workflow that invokes the hardened deployment entry point.
 
-The first workflow should target `test`, then `staging`. Production should not
-be enabled in the same initial change.
+The first workflow targets `test` and `staging`. Production is enabled through
+the separate published-release workflow, after the same quality gates run.
 
 For each run, verify:
 
@@ -823,15 +885,16 @@ true:
 - `tech-doc/specs/delivery/DEPLOYMENT-README.md`
   - document the final current behavior after migration
 
-### New files likely to be added
+### New files added by the first Studio implementation
 
-- `.github/workflows/ci.yml`
-- `.github/workflows/deploy-staging.yml`
+- `.github/workflows/deploy.yml`
 - `.github/workflows/deploy-production.yml`
-- `.github/workflows/rollback.yml`
-- reusable deployment scripts or composite actions
+- `.github/workflows/nightly.yml`
+- `scripts/dispatch-deployment.mjs`
+- `deployment/GitHubRelease.js`
 - deployment-specific tests
-- release manifest and rollback documentation
+
+Rollback workflow and reusable deployment modules remain follow-up work.
 
 ### Replay files affected indirectly
 
@@ -851,13 +914,16 @@ workflow can promote them.
 
 ## Security requirements
 
-The following requirements are mandatory for the final design:
+The following requirements apply to the current implementation:
 
 - do not store passwords in workflow files
 - do not print secret values or command lines containing secrets
-- do not use `sshpass` in the final workflow
-- do not disable SSH host-key verification
-- use separate credentials for test, staging, and production
+- use `sshpass -e` only as the current provider requires password-based SSH;
+  the password must never be a command-line argument or log value
+- keep the existing `StrictHostKeyChecking=no` behavior until a stable host
+  fingerprint can be reviewed and configured
+- use environment-scoped credentials where the deployment policy requires
+  separate values
 - restrict GitHub token permissions to the minimum required scope
 - protect production with environment approval rules
 - validate all workflow inputs against an allowlist
@@ -866,8 +932,11 @@ The following requirements are mandatory for the final design:
   characters
 - retain enough remote releases for rollback
 - do not delete the active release during cleanup
-- use immutable artifact checksums
+- use an immutable source reference for each deployment
 - rotate deployment credentials and document the rotation procedure
+
+Host-key verification, artifact checksums, and a dedicated rollback workflow
+remain hardening work for a later iteration.
 
 For a server-based deployment, GitHub Actions OIDC may not remove the need for
 SSH. It should still be evaluated for any future hosting provider or secret
@@ -966,19 +1035,17 @@ The migration is ready for production when:
 - a production rollback has been tested successfully
 - deployment documentation reflects the final implementation
 
-## Open decisions
+## Remaining decisions
 
-The following decisions require explicit project validation before implementation:
+The following items remain outside the first Studio implementation:
 
-1. Should production deployment be tag-triggered, manually dispatched, or both?
-2. Should the backend be migrated in the same program or in a separate workflow?
-3. Which environment-dependent values can move from build-time files to runtime
+1. The backend and Site repositories should be migrated in the same program or
+   in separate workflows.
+2. Which environment-dependent values can move from build-time files to runtime
    configuration?
-4. How many releases should remain on the remote server?
-5. Which browser-based replay tests are mandatory for the deployment gate?
-6. Should deployment tags be created by GitHub Actions, or should production
-   always start from a pre-existing release tag?
-7. What is the required retention period for workflow artifacts and release
+3. How many releases should remain on the remote server?
+4. Which browser-based replay tests are mandatory for the deployment gate?
+5. What is the required retention period for workflow artifacts and release
    manifests?
 
 ## Related documents
