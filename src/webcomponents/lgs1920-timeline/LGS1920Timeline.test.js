@@ -1900,6 +1900,21 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.currentTimeMillis).toBe(5_000)
     })
 
+    it('uses cached dynamic elements for playhead updates', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline)
+        document.body.append(timeline)
+        const current = timeline.shadowRoot.querySelector('[data-current-time]')
+        const playhead = timeline.shadowRoot.querySelector('[data-playhead]')
+        const querySelector = vi.spyOn(timeline.shadowRoot, 'querySelector')
+
+        timeline.currentTimeMillis = 5_000
+
+        expect(querySelector).not.toHaveBeenCalled()
+        expect(current.textContent).toBe('0:05')
+        expect(playhead.style.left).toBe('220px')
+    })
+
     it('applies controlled structure and playback values with one render', () => {
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline)

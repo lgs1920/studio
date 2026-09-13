@@ -154,6 +154,7 @@ export class LGS1920Timeline extends HTMLElement {
     #lastControlledZoomPercent = null
     #surface = null
     #tracksViewport = null
+    #dynamicElements = null
     #resizeObserver = null
     #scrollbarDrag = null
     #scrollbarDragCleanup = null
@@ -948,6 +949,7 @@ export class LGS1920Timeline extends HTMLElement {
         this.#stopAutoScroll()
         this.#cancelClipCopy()
         this.#closeClipContextMenu()
+        this.#dynamicElements = null
     }
 
     /**
@@ -1709,6 +1711,7 @@ export class LGS1920Timeline extends HTMLElement {
             )
             this.#surface = null
             this.#tracksViewport = null
+            this.#dynamicElements = null
             return
         }
 
@@ -1760,6 +1763,7 @@ export class LGS1920Timeline extends HTMLElement {
         })
         this.#surface = this.#root.querySelector('[data-surface]')
         this.#tracksViewport = this.#root.querySelector('[data-tracks-viewport]')
+        this.#cacheDynamicElements()
         const measuredSurfaceWidth = this.#surface?.clientWidth ?? 0
         const surfaceWidthChanged = measuredSurfaceWidth > 0 && measuredSurfaceWidth !== this.#surfaceWidth
         if (surfaceWidthChanged) this.#surfaceWidth = measuredSurfaceWidth
@@ -5588,23 +5592,42 @@ export class LGS1920Timeline extends HTMLElement {
     /**
      * Update playback labels and controlled cursor geometry.
      */
+    #cacheDynamicElements = () => {
+        this.#dynamicElements = {
+            current: this.#root.querySelector('[data-current-time]'),
+            total: this.#root.querySelector('[data-total-time]'),
+            playhead: this.#root.querySelector('[data-playhead]'),
+            end: this.#root.querySelector('[data-end-marker]'),
+            rangeStart: this.#root.querySelector('[data-range-handle="start"]'),
+            rangeEnd: this.#root.querySelector('[data-range-handle="end"]'),
+            startButton: this.#root.querySelector('[data-testid="lgs1920-wa-timeline-restart"]'),
+            previousButton: this.#root.querySelector('[data-testid="lgs1920-wa-timeline-previous-frame"]'),
+            nextButton: this.#root.querySelector('[data-testid="lgs1920-wa-timeline-next-frame"]'),
+            endButton: this.#root.querySelector('[data-testid="lgs1920-wa-timeline-end"]'),
+            playbackButton: this.#root.querySelector('[data-testid="lgs1920-wa-timeline-play"]'),
+        }
+        return this.#dynamicElements
+    }
+
     #updateDynamicState = () => {
-        const current = this.#root.querySelector('[data-current-time]')
-        const total = this.#root.querySelector('[data-total-time]')
+        const {
+            current,
+            total,
+            playhead,
+            end,
+            rangeStart,
+            rangeEnd,
+            startButton,
+            previousButton,
+            nextButton,
+            endButton,
+        } = this.#dynamicElements ?? this.#cacheDynamicElements()
         if (current) current.textContent = formatTime(this.#currentTimeMillis / 1000)
         if (total) total.textContent = formatTime(this.#durationSeconds())
         const {majorSeconds} = this.#resolveScale()
         const scaleWidth = this.#scaleWidth()
         const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
         const position = this.#currentTimeContentX()
-        const playhead = this.#root.querySelector('[data-playhead]')
-        const end = this.#root.querySelector('[data-end-marker]')
-        const rangeStart = this.#root.querySelector('[data-range-handle="start"]')
-        const rangeEnd = this.#root.querySelector('[data-range-handle="end"]')
-        const startButton = this.#root.querySelector('[data-testid="lgs1920-wa-timeline-restart"]')
-        const previousButton = this.#root.querySelector('[data-testid="lgs1920-wa-timeline-previous-frame"]')
-        const nextButton = this.#root.querySelector('[data-testid="lgs1920-wa-timeline-next-frame"]')
-        const endButton = this.#root.querySelector('[data-testid="lgs1920-wa-timeline-end"]')
         const transportButtons = [
             [startButton, this.#isAtRangeStart()],
             [previousButton, this.#isAtRangeStart()],
@@ -5822,7 +5845,7 @@ export class LGS1920Timeline extends HTMLElement {
      * Update the existing play/pause control without rebuilding the timeline.
      */
     #updatePlaybackButton = () => {
-        const button = this.#root.querySelector('[data-testid="lgs1920-wa-timeline-play"]')
+        const button = this.#dynamicElements?.playbackButton
         if (!button) return
         const label = this.#playing ? 'Pause timeline' : 'Play timeline'
         button.setAttribute('aria-label', label)
