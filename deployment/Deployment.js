@@ -761,6 +761,7 @@ export class Deployment {
             reject(error)
         }
 
+        sshProcess.stdout.on('data', () => {})
         sshProcess.stderr.on('data', data => {
             stderr += data.toString()
         })
