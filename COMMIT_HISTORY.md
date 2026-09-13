@@ -2088,3 +2088,15 @@
 ## 2026-09-12 — [`ci: update checkout action runtime`](https://github.com/lgs1920/studio/commit/0a7c2e202c1519b432e5bd58c11a1fe9273d42ea)
 
 - Recorded automatically from Git history.
+
+## 2026-09-13 — [`test: add coverage and cross-browser test infrastructure`](https://github.com/lgs1920/studio/commit/f9b4e86ecac2e1627e2869b5e76c0f2489a4adfa)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`ci: run coverage and cross-browser tests`](https://github.com/lgs1920/studio/commit/e9a8c5c0ef842bbe30ddeaf6d48fa143f61d2026)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`docs: document coverage and browser validation`](https://github.com/lgs1920/studio/commit/35f10ca075b26439fa9f96dc1dfe665d0e04fc15)
+
+- Recorded automatically from Git history.
