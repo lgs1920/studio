@@ -239,8 +239,8 @@ The local and GitHub deployment commands should remain distinguishable:
 
 ```bash
 bun run deploy -- -t                 # direct local test deployment
-bun run deploy:action -- -t          # manually trigger the GitHub test workflow
-bun run deploy:action -- -s          # manually trigger the GitHub staging workflow
+bun run deploy:github -- -t          # manually trigger the GitHub test workflow
+bun run deploy:github -- -s          # manually trigger the GitHub staging workflow
 bun run deploy -- --prod --release   # create a GitHub Release for production
 ```
 

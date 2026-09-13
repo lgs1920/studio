@@ -10,7 +10,7 @@
     "commit-history:update": "bun scripts/update-commit-history.mjs",
     "cesium:skills:check": "bun scripts/check-cesium-skills.mjs",
     "deploy": "bun deploy.js",
-    "deploy:action": "bun scripts/dispatch-deployment.mjs",
+    "deploy:github": "bun scripts/dispatch-deployment.mjs",
     "headers:update": "bun scripts/update-file-headers.mjs --staged",
     "headers:check": "bun scripts/update-file-headers.mjs --staged --check",
     "git:hooks:install": "git config core.hooksPath .githooks",

@@ -64,7 +64,7 @@ The relevant package scripts are:
 {
   "build": "bun run test:stores && bunx --bun vite build",
   "deploy": "bun deploy.js",
-  "deploy:action": "bun scripts/dispatch-deployment.mjs",
+  "deploy:github": "bun scripts/dispatch-deployment.mjs",
   "lint": "oxlint . --type-aware --report-unused-disable-directives-severity error",
   "test": "vitest run && bun run test:lint-config"
 }
@@ -251,9 +251,9 @@ bun run deploy -- --prod --release
 bun run deploy -- --prod --release --auto
 
 # Dispatch a GitHub Actions deployment for a non-production platform.
-bun run deploy:action -- --test
-bun run deploy:action -- --staging
-bun run deploy:action -- --nightly
+bun run deploy:github -- --test
+bun run deploy:github -- --staging
+bun run deploy:github -- --nightly
 ```
 
 The current production command intentionally omits `--auto`, so production
