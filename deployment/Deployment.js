@@ -729,12 +729,95 @@ export class Deployment {
     }
 
     /**
+     * Execute one remote command through OpenSSH and sshpass.
+     *
+     * CI Studio deployments use the same OpenSSH transport as the successful
+     * SCP upload because the target server does not accept the SSH2 client.
+     *
+     * @param {string} command Remote shell command.
+     * @param {string} failureMessage Public-safe failure description.
+     * @returns {Promise<void>} Resolves when the command exits successfully.
+     * @private
+     */
+    runSshpassRemoteCommand = async (command, failureMessage) => new Promise((resolve, reject) => {
+        const remoteTarget = `${this.sshConfig.username}@${this.sshConfig.host}`
+        const sshProcess = spawn('sshpass', [
+            '-e',
+            'ssh',
+            '-o', 'StrictHostKeyChecking=no',
+            remoteTarget,
+            command,
+        ], {
+            env: {...process.env, SSHPASS: this.sshConfig.password},
+        })
+        let stderr = ''
+        let settled = false
+
+        const fail = error => {
+            if (settled) {
+                return
+            }
+            settled = true
+            reject(error)
+        }
+
+        sshProcess.stderr.on('data', data => {
+            stderr += data.toString()
+        })
+        sshProcess.on('error', error => fail(new Error(failureMessage, {cause: error})))
+        sshProcess.on('close', code => {
+            if (settled) {
+                return
+            }
+            settled = true
+            if (code === 0) {
+                resolve()
+                return
+            }
+            reject(new Error(`${failureMessage}${stderr ? `: ${stderr.trim()}` : ''}`))
+        })
+    })
+
+    /**
+     * Run the CI Studio deployment through OpenSSH.
+     *
+     * @returns {Promise<void>} Resolves when the release is activated.
+     * @private
+     */
+    runSshpassStudioDeployment = async () => {
+        console.log('    > Connecting to SSH via OpenSSH...')
+        const releasePath = quoteShellArgument(`${this.remoteReleasePath}/${this.version}`)
+        const archivePath = quoteShellArgument(`${this.remoteReleasePath}/${this.version}.zip`)
+        const currentPath = quoteShellArgument(`${this.remotePath}/${this.current}`)
+        const temporaryCurrentPath = quoteShellArgument(`${this.remotePath}/.${this.current}-${this.version}-${this.date}`)
+
+        await this.runSshpassRemoteCommand(
+            `rm -rf ${releasePath} && unzip -o ${archivePath} -d ${releasePath}`,
+            'Remote release extraction failed',
+        )
+        console.log(`    > ${this.green}Release extracted successfully${this.reset}`)
+        await this.runSshpassRemoteCommand(
+            `ln -sfn ${releasePath} ${temporaryCurrentPath} && mv -Tf ${temporaryCurrentPath} ${currentPath} && rm ${archivePath}`,
+            'Release activation failed',
+        )
+        await this.pushTag()
+        console.log('\n---')
+        console.log(`     Application ${this.yellow}${this.product} (version: ${this.version} - branch ${this.branch}) ${this.reset} deployed to ${this.platform}${this.reset}`)
+        console.log('---\n')
+    }
+
+    /**
      * Runs remote deployment steps inside a real promise, including SSH cleanup.
      *
      * @returns {Promise<void>} Resolves when remote deployment and connection close are complete.
      * @private
      */
     runRemoteDeployment = async () => {
+        if (this.ci && this.product === this.products.studio) {
+            await this.runSshpassStudioDeployment()
+            return
+        }
+
         await new Promise((resolve, reject) => {
             const connection = new SSH2()
             let settled = false
