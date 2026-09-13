@@ -1944,6 +1944,23 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.tracks).toEqual(nextTracks)
     })
 
+    it('patches controlled playback values without rebuilding or rescanning clips', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline)
+        document.body.append(timeline)
+        const replaceChildren = vi.spyOn(timeline.shadowRoot, 'replaceChildren')
+        const querySelectorAll = vi.spyOn(timeline.shadowRoot, 'querySelectorAll')
+
+        timeline.playing = true
+        timeline.currentTimeMillis = 2_000
+
+        expect(replaceChildren).not.toHaveBeenCalled()
+        expect(querySelectorAll).not.toHaveBeenCalled()
+        expect(timeline.currentTimeMillis).toBe(2_000)
+        expect(timeline.playing).toBe(true)
+        expect(timeline.shadowRoot.querySelector('[data-current-time]').textContent).toBe('0:02')
+    })
+
     it('scrolls the surface to keep the current playhead visible', () => {
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline, {

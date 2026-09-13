@@ -155,6 +155,7 @@ export class LGS1920Timeline extends HTMLElement {
     #surface = null
     #tracksViewport = null
     #dynamicElements = null
+    #transportState = null
     #resizeObserver = null
     #scrollbarDrag = null
     #scrollbarDragCleanup = null
@@ -865,7 +866,9 @@ export class LGS1920Timeline extends HTMLElement {
         if (normalizedTime === this.#currentTimeMillis) return
         this.#currentTimeMillis = normalizedTime
         if (this.#controlledUpdateDepth > 0) return
-        this.#updateDynamicState()
+        const elements = this.#dynamicElements ?? this.#cacheDynamicElements()
+        this.#updatePlayheadPresentation(elements)
+        this.#updateTransportButtons(elements)
     }
 
     /**
@@ -950,6 +953,7 @@ export class LGS1920Timeline extends HTMLElement {
         this.#cancelClipCopy()
         this.#closeClipContextMenu()
         this.#dynamicElements = null
+        this.#transportState = null
     }
 
     /**
@@ -1136,6 +1140,7 @@ export class LGS1920Timeline extends HTMLElement {
         }
         const nextProjection = state.projection ?? null
         const incomingRows = state.editorData ?? nextProjection?.editorData ?? state.rows ?? []
+        const previousRows = this.#rows
         const sourceRows = this.#trackDefinitions.map(row => ({
             ...row,
             actions: row.clips ?? [],
@@ -1176,8 +1181,14 @@ export class LGS1920Timeline extends HTMLElement {
             this.#rangeEndMillis = durationMillis
         }
         this.#currentTimeMillis = this.#normalizeTime(state.currentTimeMillis ?? 0)
-        if (patchInPlace) this.#updateClipInteractionPresentation()
-        else this.#render()
+        if (!patchInPlace) {
+            this.#render()
+            return
+        }
+        const rowsPresentationChanged = this.#rowSignature(previousRows) !== this.#rowSignature(nextRows)
+        if (rowsPresentationChanged) this.#updateClipInteractionPresentation()
+        else this.#updateDynamicState()
+        this.#updatePlaybackButton()
     }
 
     /**
@@ -1194,7 +1205,6 @@ export class LGS1920Timeline extends HTMLElement {
         const nextDuration = Number(projection.durationMillis) || 0
         if (currentDuration !== nextDuration) return false
         if (state.visible !== undefined && state.visible !== this.#visible) return false
-        if (state.playing !== undefined && state.playing !== this.#playing) return false
         if (Number.isFinite(Number(state.zoomPercent))) return false
         if (JSON.stringify(this.#clipOptions) !== JSON.stringify(state.clipOptions ?? null)) return false
 
@@ -1712,6 +1722,7 @@ export class LGS1920Timeline extends HTMLElement {
             this.#surface = null
             this.#tracksViewport = null
             this.#dynamicElements = null
+            this.#transportState = null
             return
         }
 
@@ -5606,44 +5617,19 @@ export class LGS1920Timeline extends HTMLElement {
             endButton: this.#root.querySelector('[data-testid="lgs1920-wa-timeline-end"]'),
             playbackButton: this.#root.querySelector('[data-testid="lgs1920-wa-timeline-play"]'),
         }
+        this.#transportState = null
         return this.#dynamicElements
     }
 
     #updateDynamicState = () => {
-        const {
-            current,
-            total,
-            playhead,
-            end,
-            rangeStart,
-            rangeEnd,
-            startButton,
-            previousButton,
-            nextButton,
-            endButton,
-        } = this.#dynamicElements ?? this.#cacheDynamicElements()
-        if (current) current.textContent = formatTime(this.#currentTimeMillis / 1000)
+        const elements = this.#dynamicElements ?? this.#cacheDynamicElements()
+        this.#updatePlayheadPresentation(elements)
+        this.#updateTransportButtons(elements)
+        const {total, end, rangeStart, rangeEnd} = elements
         if (total) total.textContent = formatTime(this.#durationSeconds())
         const {majorSeconds} = this.#resolveScale()
         const scaleWidth = this.#scaleWidth()
         const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
-        const position = this.#currentTimeContentX()
-        const transportButtons = [
-            [startButton, this.#isAtRangeStart()],
-            [previousButton, this.#isAtRangeStart()],
-            [nextButton, this.#isAtRangeEnd()],
-            [endButton, this.#isAtRangeEnd()],
-        ]
-        transportButtons.forEach(([button, disabled]) => {
-            if (!button) return
-            button.toggleAttribute('disabled', disabled)
-        })
-        if (playhead) {
-            playhead.style.left = `${position}px`
-            playhead.setAttribute('aria-valuemin', `${this.#rangeStartMillis}`)
-            playhead.setAttribute('aria-valuemax', `${this.#rangeEndMillis}`)
-            playhead.setAttribute('aria-valuenow', `${this.#currentTimeMillis}`)
-        }
         if (end) end.style.left = `${scaleOffset + ((this.#durationSeconds() / majorSeconds) * scaleWidth)}px`
         if (rangeStart) {
             rangeStart.style.left = `${scaleOffset + ((this.#rangeStartMillis / 1000) / majorSeconds * scaleWidth)}px`
@@ -5654,6 +5640,40 @@ export class LGS1920Timeline extends HTMLElement {
             rangeEnd.setAttribute('aria-valuenow', `${this.#rangeEndMillis}`)
             rangeEnd.setAttribute('aria-valuemax', `${this.#durationMillis()}`)
         }
+    }
+
+    #updatePlayheadPresentation = elements => {
+        const {current, playhead} = elements
+        if (current) current.textContent = formatTime(this.#currentTimeMillis / 1000)
+        if (!playhead) return
+        const position = this.#currentTimeContentX()
+        playhead.style.left = `${position}px`
+        playhead.setAttribute('aria-valuemin', `${this.#rangeStartMillis}`)
+        playhead.setAttribute('aria-valuemax', `${this.#rangeEndMillis}`)
+        playhead.setAttribute('aria-valuenow', `${this.#currentTimeMillis}`)
+    }
+
+    #updateTransportButtons = elements => {
+        const {
+            startButton,
+            previousButton,
+            nextButton,
+            endButton,
+        } = elements
+        const atStart = this.#isAtRangeStart()
+        const atEnd = this.#isAtRangeEnd()
+        if (this.#transportState?.atStart === atStart && this.#transportState?.atEnd === atEnd) return
+        this.#transportState = {atStart, atEnd}
+        const transportButtons = [
+            [startButton, atStart],
+            [previousButton, atStart],
+            [nextButton, atEnd],
+            [endButton, atEnd],
+        ]
+        transportButtons.forEach(([button, disabled]) => {
+            if (!button) return
+            button.toggleAttribute('disabled', disabled)
+        })
     }
 
     /**
