@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-31
+ * Last modified: 2026-09-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -183,10 +183,16 @@ const resolveCollisionPolicy = (timeline, track, mode = 'move') => {
  *
  * @param {Object} track - Target track.
  * @param {Object} clip - Clip being placed.
+ * @param {Object} [options] - Placement mode options.
+ * @param {'move'|'resize'} [options.mode='move'] - Requested placement mode.
  * @returns {boolean} Whether the clip can be placed.
  */
-export const trackAcceptsClip = (track, clip) => {
-    if (!track || track.editable === false || track.droppable === false || track.acceptsClips === false) return false
+export const trackAcceptsClip = (track, clip, {mode = 'move'} = {}) => {
+    const readOnlyResize = mode === 'resize'
+        && track?.clipResizable === true
+        && clip?.editable !== false
+        && clip?.resizable !== false
+    if (!track || (track.editable === false && !readOnlyResize) || track.droppable === false || track.acceptsClips === false) return false
     if (!Array.isArray(track.accepts) || track.accepts.length === 0) return true
     return track.accepts.includes(clip?.kind)
 }
@@ -536,11 +542,14 @@ export const createTimelineClipEditor = ({
     const place = ({baseRows, clip, targetTrackId, mode = 'move', edge = null, previewOnly = false}) => {
         const timeline = getTimelineConfig()
         const target = baseRows.find(row => row.id === targetTrackId)
-        if (!target || !trackAcceptsClip(target, clip)) return null
+        if (!target || !trackAcceptsClip(target, clip, {mode})) return null
         const {start, end} = resolveClipInterval(clip)
         if (!Number.isFinite(Number(clip.start)) || !Number.isFinite(Number(clip.end)) || Number(clip.start) < 0 || end <= start) return null
         const source = findClipEntry(baseRows, clip.id)
-        if (source && (source.row.editable === false || source.clip.editable === false)) return null
+        const readOnlyResize = mode === 'resize'
+            && source?.row.id === target.id
+            && source.row.clipResizable === true
+        if (source && ((source.row.editable === false && !readOnlyResize) || source.clip.editable === false)) return null
         if (mode === 'resize' && source?.clip.resizable === false) return null
 
         const rowsWithoutClip = baseRows.map(row => ({

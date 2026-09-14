@@ -650,6 +650,29 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.shadowRoot.querySelector('[data-current-time]').textContent).toBe('0:02')
     })
 
+    it('preserves the vertical track position through a measured rerender', () => {
+        const timeline = new LGS1920Timeline()
+        let surfaceWidth = 100
+        const clientWidth = vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function () {
+            return this.getAttribute?.('data-scroll-view') === 'surface' ? surfaceWidth : 0
+        })
+        configureTimeline(timeline)
+        document.body.append(timeline)
+
+        try {
+            const tracksViewport = timeline.shadowRoot.querySelector('[data-scroll-view="tracks"]')
+            Object.defineProperty(tracksViewport, 'scrollTop', {configurable: true, writable: true, value: 48})
+            surfaceWidth = 120
+
+            timeline.setZoom(20)
+
+            const nextTracksViewport = timeline.shadowRoot.querySelector('[data-scroll-view="tracks"]')
+            expect(nextTracksViewport.scrollTop).toBe(48)
+        } finally {
+            clientWidth.mockRestore()
+        }
+    })
+
     it('recomputes horizontal zoom geometry for the new duration', () => {
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline, {timeline: {durationMillis: 10_000}})
@@ -867,6 +890,45 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.shadowRoot.querySelector('[part="split-panel"]').positionInPixels).toBe(150)
     })
 
+    it('deduplicates pending split-panel width corrections', () => {
+        vi.useFakeTimers()
+        try {
+            const timeline = new LGS1920Timeline()
+            configureTimeline(timeline, {timeline: {showBuildingOverlay: false}})
+            document.body.append(timeline)
+
+            const splitPanel = timeline.shadowRoot.querySelector('[part="split-panel"]')
+            const cancelAnimationFrame = vi.spyOn(globalThis, 'cancelAnimationFrame')
+            let positionInPixels = 150
+            Object.defineProperty(splitPanel, 'positionInPixels', {
+                configurable: true,
+                get: () => positionInPixels,
+                set: value => {
+                    positionInPixels = value
+                },
+            })
+            splitPanel.positionInPixels = 100
+            const setPositionInPixels = vi.spyOn(splitPanel, 'positionInPixels', 'set')
+
+            timeline.setZoom(20)
+            expect(setPositionInPixels).toHaveBeenCalledTimes(1)
+            timeline.setZoom(20)
+            expect(setPositionInPixels).toHaveBeenCalledTimes(1)
+
+            splitPanel.positionInPixels = 200
+            splitPanel.dispatchEvent(new Event('wa-reposition'))
+            splitPanel.positionInPixels = 100
+            timeline.setZoom(20)
+            expect(cancelAnimationFrame).toHaveBeenCalled()
+            expect(setPositionInPixels).toHaveBeenCalledTimes(4)
+
+            timeline.setZoom(20)
+            expect(setPositionInPixels).toHaveBeenCalledTimes(4)
+        } finally {
+            vi.useRealTimers()
+        }
+    })
+
     it('resolves the row height from the rendered layout', () => {
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline)
@@ -1069,6 +1131,41 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.timeline.rangeEndMillis).toBe(8_000)
         ruler.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, button: 0, clientX: 320, ctrlKey: true}))
         expect(timeline.timeline.rangeEndMillis).toBe(7_500)
+    })
+
+    it('positions the playhead immediately at a normal ruler click', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline)
+        document.body.append(timeline)
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        const ruler = timeline.shadowRoot.querySelector('[part="ruler"]')
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 1_000, width: 1_000})
+
+        ruler.dispatchEvent(new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            button: 0,
+            clientX: 120,
+        }))
+
+        expect(timeline.currentTimeMillis).toBe(2_500)
+        expect(timeline.shadowRoot.querySelector('[data-playhead]').style
+            .getPropertyValue('--lgs-timeline-playhead-offset')).toBe('120px')
+    })
+
+    it('previews the playhead immediately at ruler pointerdown', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline)
+        document.body.append(timeline)
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        const ruler = timeline.shadowRoot.querySelector('[part="ruler"]')
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 1_000, width: 1_000})
+
+        ruler.dispatchEvent(createPointerEvent('pointerdown', {clientX: 120}))
+
+        expect(timeline.currentTimeMillis).toBe(2_500)
+        expect(timeline.shadowRoot.querySelector('[data-playhead]').style
+            .getPropertyValue('--lgs-timeline-playhead-offset')).toBe('120px')
     })
 
     it('does not let ruler slot controls trigger timeline seeking or range handles', () => {
@@ -1920,6 +2017,20 @@ describe('lgs1920-timeline Web Component', () => {
         expect(playhead.style.getPropertyValue('--lgs-timeline-playhead-offset')).toBe('220px')
     })
 
+    it('updates only the playhead through the lightweight time path', () => {
+        const timeline = new LGS1920Timeline()
+        configureTimeline(timeline)
+        document.body.append(timeline)
+        const current = timeline.shadowRoot.querySelector('[data-current-time]')
+        const playhead = timeline.shadowRoot.querySelector('[data-playhead]')
+
+        timeline.setPlayheadTimeMillis(5_000)
+
+        expect(timeline.currentTimeMillis).toBe(5_000)
+        expect(current.textContent).toBe('0:00')
+        expect(playhead.style.getPropertyValue('--lgs-timeline-playhead-offset')).toBe('220px')
+    })
+
     it('applies controlled structure and playback values with one render', () => {
         const timeline = new LGS1920Timeline()
         configureTimeline(timeline)
@@ -2422,6 +2533,58 @@ describe('lgs1920-timeline Web Component', () => {
         expect(handle.getAttribute('aria-hidden')).toBe('true')
         handle.dispatchEvent(createPointerEvent('pointerdown', {clientX: 180, clientY: 50}))
         expect(changes).not.toHaveBeenCalled()
+    })
+
+    it('resizes selectable clips on a read-only track and disables the replay clip', () => {
+        const timeline = new LGS1920Timeline()
+        const selections = vi.fn()
+        const changes = vi.fn()
+        configureTimeline(timeline, {
+            tracks: [{
+                id: 'replay',
+                label: 'Replay',
+                editable: false,
+                clipResizable: true,
+                clips: [
+                    {id: 'pre', kind: 'pre-replay', start: 0, end: 1, editable: true, selectable: true, resizable: true},
+                    {id: 'replay-clip', kind: 'replay', start: 1, end: 4, editable: false, selectable: false, resizable: false},
+                    {id: 'post', kind: 'post-replay', start: 4, end: 5, editable: true, selectable: true, resizable: true},
+                ],
+            }],
+        })
+        timeline.addEventListener('lgs1920-timeline-clip-select', selections)
+        timeline.addEventListener('lgs1920-timeline-clip-change', changes)
+        document.body.append(timeline)
+
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 600, width: 600})
+        const pre = timeline.shadowRoot.querySelector('[data-clip-id="pre"]')
+        const replay = timeline.shadowRoot.querySelector('[data-clip-id="replay-clip"]')
+        const preEndHandle = pre.querySelector('[data-clip-handle="end"]')
+        const replayEndHandle = replay.querySelector('[data-clip-handle="end"]')
+
+        expect(pre.getAttribute('tabindex')).toBe('0')
+        expect(preEndHandle.getAttribute('tabindex')).toBe('0')
+        expect(replay.getAttribute('tabindex')).toBe('-1')
+        expect(replayEndHandle.getAttribute('tabindex')).toBe('-1')
+
+        pre.dispatchEvent(createPointerEvent('pointerdown', {clientX: 40, clientY: 50}))
+        expect(timeline.selectedClipId).toBe('pre')
+        expect(selections).toHaveBeenCalledWith(expect.objectContaining({detail: expect.objectContaining({clipId: 'pre', selected: true})}))
+
+        preEndHandle.dispatchEvent(createPointerEvent('pointerdown', {clientX: 60, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointermove', {clientX: 100, clientY: 50}))
+        window.dispatchEvent(createPointerEvent('pointerup', {clientX: 100, clientY: 50}))
+        expect(changes).toHaveBeenCalledWith(expect.objectContaining({detail: expect.objectContaining({
+            type: 'resize',
+            clip: expect.objectContaining({id: 'pre'}),
+        })}))
+
+        timeline.selectedClipId = null
+        replay.dispatchEvent(createPointerEvent('pointerdown', {clientX: 140, clientY: 50}))
+        replayEndHandle.dispatchEvent(createPointerEvent('pointerdown', {clientX: 180, clientY: 50}))
+        expect(timeline.selectedClipId).toBeNull()
+        expect(changes.mock.calls.some(([event]) => event.detail.clip.id === 'replay-clip')).toBe(false)
     })
 
     it('hides and blocks Extend for non-resizable clips', () => {

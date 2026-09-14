@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -320,6 +320,22 @@ describe('ReplayTimelinePreview', () => {
         expect(clipOptionAssignments).toBe(0)
         expect(timelineElement.isCurrentTimeNearViewportEdge).toHaveBeenCalled()
         expect(timelineElement.ensureCurrentTimeVisible).not.toHaveBeenCalled()
+    })
+
+    it('keeps the optimistic playhead while Replay publishes a stale frame', async () => {
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-seek', {
+            bubbles: true,
+            detail: {timeMillis: 2_500, settled: false},
+        }))
+        globalThis.lgs.stores.replay.dynamicFrameState = {frameTimeMs: 1_000}
+
+        await waitFor(() => expect(timelineElement.currentTimeMillis).toBe(2_500))
+
+        globalThis.lgs.stores.replay.dynamicFrameState = {frameTimeMs: 2_500}
+        await waitFor(() => expect(timelineElement.currentTimeMillis).toBe(2_500))
     })
 
     it('ignores Replay mutations unrelated to the published frame or playback state', async () => {

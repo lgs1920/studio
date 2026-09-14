@@ -135,6 +135,8 @@ export class LGS1920Timeline extends HTMLElement {
     #playheadGeometry = null
     #rowHeight = MIN_ROW_HEIGHT
     #legendWidth = null
+    #legendWidthCorrection = null
+    #legendWidthCorrectionNeedsMeasure = false
     #building = true
     #buildingFrame = null
     #buildingLayoutSignature = null
@@ -156,6 +158,7 @@ export class LGS1920Timeline extends HTMLElement {
     #lastControlledZoomPercent = null
     #surface = null
     #tracksViewport = null
+    #pendingTracksScrollTop = null
     #dynamicElements = null
     #clipPresentationElements = null
     #transportState = null
@@ -401,6 +404,7 @@ export class LGS1920Timeline extends HTMLElement {
             capturePointer: event => this.#capturePointer(event),
             handleWheel: event => this.#handleWheel(event),
             handleKeyDown: event => this.#handleKeyDown(event, true),
+            handleRulerPointerDown: event => this.#handleRulerPointerDown(event),
             handleRulerClick: event => this.#handleRulerClick(event),
             emit: (name, detail) => this.#emit(name, detail),
             setScrubPointerId: value => {
@@ -943,6 +947,20 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
+     * Update only the visual playhead position without refreshing secondary controls.
+     *
+     * @param {number} value - Time in milliseconds.
+     * @returns {void}
+     */
+    setPlayheadTimeMillis(value) {
+        const normalizedTime = this.#normalizeTime(value)
+        if (normalizedTime === this.#currentTimeMillis) return
+        this.#currentTimeMillis = normalizedTime
+        const elements = this.#dynamicElements ?? this.#cacheDynamicElements()
+        this.#updatePlayheadPosition(elements)
+    }
+
+    /**
      * Get the current playback state.
      *
      * @returns {boolean} Whether playback is active.
@@ -1019,6 +1037,7 @@ export class LGS1920Timeline extends HTMLElement {
         this.#removePointerListeners()
         this.#finishScrollbarDrag()
         this.#finishNativeSplitPanelInteraction()
+        this.#cancelLegendWidthCorrection()
         this.#externalInteractionActive = false
         this.#scrollbarsInteractionActive = false
         this.#clearScrollbarHideTimer()
@@ -1790,6 +1809,7 @@ export class LGS1920Timeline extends HTMLElement {
         this.#reconcileClipSelection()
         if (!this.#visible || !this.#projection) {
             this.#cancelBuildingCompletion()
+            this.#cancelLegendWidthCorrection()
             this.#building = this.#visible
                 && !this.#initialBuildComplete
                 && this.#timelineConfig.showBuildingOverlay !== false
@@ -1809,6 +1829,7 @@ export class LGS1920Timeline extends HTMLElement {
             )
             this.#surface = null
             this.#tracksViewport = null
+            this.#pendingTracksScrollTop = null
             this.#dynamicElements = null
             this.#clipPresentationElements = null
             this.#scrollbarElements = null
@@ -1838,7 +1859,8 @@ export class LGS1920Timeline extends HTMLElement {
         const previousAnchorTimeSeconds = previousSurfaceRect
             ? this.#timeAtClientX(previousSurfaceRect.left)
             : null
-        const previousScrollTop = this.#tracksViewport?.scrollTop ?? 0
+        const previousScrollTop = this.#pendingTracksScrollTop ?? this.#tracksViewport?.scrollTop ?? 0
+        this.#pendingTracksScrollTop = null
         this.#finishScrollbarDrag()
         this.#zoom = this.#horizontalFitActive
             ? this.#minimumHorizontalZoom()
@@ -1875,6 +1897,7 @@ export class LGS1920Timeline extends HTMLElement {
         const surfaceWidthChanged = measuredSurfaceWidth > 0 && measuredSurfaceWidth !== this.#surfaceWidth
         if (surfaceWidthChanged) this.#surfaceWidth = measuredSurfaceWidth
         if (surfaceWidthChanged) {
+            this.#pendingTracksScrollTop = previousScrollTop
             this.#render()
             return
         }
@@ -2208,42 +2231,75 @@ export class LGS1920Timeline extends HTMLElement {
      * @param {{minimum: number, maximum: number, preferred: number}} bounds - Width bounds.
      * @returns {void}
      */
+    #cancelLegendWidthCorrection = () => {
+        const correction = this.#legendWidthCorrection
+        if (!correction) return
+        if (correction.firstFrame !== null) globalThis.cancelAnimationFrame?.(correction.firstFrame)
+        if (correction.secondFrame !== null) globalThis.cancelAnimationFrame?.(correction.secondFrame)
+        this.#legendWidthCorrection = null
+    }
+
     #applyLegendWidth = (splitPanel, {minimum, maximum, preferred}) => {
-        if (!splitPanel) return
+        if (!splitPanel) {
+            this.#cancelLegendWidthCorrection()
+            return
+        }
         const requested = clamp(Number(preferred) || 0, minimum, maximum)
+        const correction = this.#legendWidthCorrection
+        if (correction?.splitPanel === splitPanel && correction.requested === requested) return
+        if (correction) this.#cancelLegendWidthCorrection()
+
+        const currentPosition = Number(splitPanel.positionInPixels)
+        const positionMatches = Number.isFinite(currentPosition) && currentPosition === requested
         this.#legendWidth = requested
-        splitPanel.positionInPixels = requested
+        if (!positionMatches) splitPanel.positionInPixels = requested
         if (!this.#initialBuildComplete) {
+            this.#legendWidthCorrectionNeedsMeasure = true
             console.log('[LGS1920Timeline] split panel deferred correction skipped while building')
             return
         }
-        const startedAt = globalThis.performance?.now?.() ?? Date.now()
-        const applyMeasuredWidth = () => {
-            if (!splitPanel.isConnected || this.#legendWidth !== requested) return
+        if (positionMatches && !this.#legendWidthCorrectionNeedsMeasure) return
+        this.#legendWidthCorrectionNeedsMeasure = false
+
+        const applyMeasuredWidth = activeCorrection => {
+            if (this.#legendWidthCorrection !== activeCorrection || !splitPanel.isConnected) return null
             const panelWidth = splitPanel.getBoundingClientRect?.().width ?? 0
-            if (!Number.isFinite(panelWidth) || panelWidth <= 0) return
+            if (!Number.isFinite(panelWidth) || panelWidth <= 0) return null
             const measuredMaximum = Math.max(minimum, Math.min(maximum, panelWidth - minimum))
-            const resolved = clamp(requested, minimum, measuredMaximum)
-            splitPanel.positionInPixels = resolved
+            const resolved = clamp(activeCorrection.requested, minimum, measuredMaximum)
+            if (Number(splitPanel.positionInPixels) !== resolved) splitPanel.positionInPixels = resolved
+            this.#legendWidth = resolved
+            return resolved
         }
-        if (typeof requestAnimationFrame === 'function') {
-            requestAnimationFrame(() => {
-                applyMeasuredWidth()
-                requestAnimationFrame(() => {
-                    applyMeasuredWidth()
-                    console.log('[LGS1920Timeline] split panel measured', {
-                        durationMs: Number(((globalThis.performance?.now?.() ?? Date.now()) - startedAt).toFixed(2)),
-                        width: splitPanel.getBoundingClientRect?.().width ?? 0,
-                    })
+
+        if (typeof globalThis.requestAnimationFrame !== 'function') {
+            const immediateCorrection = {splitPanel, requested, firstFrame: null, secondFrame: null}
+            this.#legendWidthCorrection = immediateCorrection
+            const resolved = applyMeasuredWidth(immediateCorrection)
+            this.#legendWidthCorrection = null
+            this.#legendWidthCorrectionNeedsMeasure = resolved === null
+            return
+        }
+
+        const startedAt = globalThis.performance?.now?.() ?? Date.now()
+        const scheduledCorrection = {splitPanel, requested, firstFrame: null, secondFrame: null}
+        this.#legendWidthCorrection = scheduledCorrection
+        scheduledCorrection.firstFrame = globalThis.requestAnimationFrame(() => {
+            scheduledCorrection.firstFrame = null
+            if (this.#legendWidthCorrection !== scheduledCorrection) return
+            applyMeasuredWidth(scheduledCorrection)
+            scheduledCorrection.secondFrame = globalThis.requestAnimationFrame(() => {
+                scheduledCorrection.secondFrame = null
+                if (this.#legendWidthCorrection !== scheduledCorrection) return
+                const resolved = applyMeasuredWidth(scheduledCorrection)
+                this.#legendWidthCorrection = null
+                this.#legendWidthCorrectionNeedsMeasure = resolved === null
+                console.log('[LGS1920Timeline] split panel measured', {
+                    durationMs: Number(((globalThis.performance?.now?.() ?? Date.now()) - startedAt).toFixed(2)),
+                    width: splitPanel.getBoundingClientRect?.().width ?? 0,
                 })
             })
-        } else {
-            applyMeasuredWidth()
-            console.log('[LGS1920Timeline] split panel measured', {
-                durationMs: Number(((globalThis.performance?.now?.() ?? Date.now()) - startedAt).toFixed(2)),
-                width: splitPanel.getBoundingClientRect?.().width ?? 0,
-            })
-        }
+        })
     }
 
     /**
@@ -4625,6 +4681,28 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
+     * Preview a normal ruler position before the click event settles the seek.
+     *
+     * @param {PointerEvent} event - Ruler pointer event.
+     */
+    #handleRulerPointerDown = event => {
+        if (this.#timelineConfig.interactive === false
+            || event.button !== 0
+            || event.altKey
+            || event.ctrlKey) return
+        const rect = this.#surface?.getBoundingClientRect()
+        const duration = this.#durationMillis()
+        if (!rect || duration <= 0) return
+        const {majorSeconds} = this.#resolveScale()
+        const scaleWidth = this.#scaleWidth()
+        const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
+        const x = clamp(event.clientX - rect.left + (this.#surface?.scrollLeft ?? 0), scaleOffset, this.#contentWidth)
+        const timeMillis = this.#normalizeTime(((x - scaleOffset) / scaleWidth) * majorSeconds * 1000)
+        this.#currentTimeMillis = timeMillis
+        this.#updatePlayheadPosition(this.#dynamicElements ?? this.#cacheDynamicElements())
+    }
+
+    /**
      * Build a public detail payload for a video range edit.
      *
      * @param {Event} event - Triggering event.
@@ -5861,6 +5939,16 @@ export class LGS1920Timeline extends HTMLElement {
     #updatePlayheadPresentation = elements => {
         const {current, playhead} = elements
         if (current) current.textContent = formatTime(this.#currentTimeMillis / 1000)
+        this.#updatePlayheadPosition({playhead})
+    }
+
+    /**
+     * Apply the cached playhead transform and accessibility range values.
+     *
+     * @param {{playhead: HTMLElement|null}} elements - Cached dynamic elements.
+     * @returns {void}
+     */
+    #updatePlayheadPosition = ({playhead}) => {
         if (!playhead) return
         const position = this.#currentTimeContentX()
         playhead.style.setProperty('--lgs-timeline-playhead-offset', `${position}px`)

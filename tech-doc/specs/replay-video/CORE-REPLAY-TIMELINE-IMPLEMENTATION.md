@@ -99,9 +99,11 @@ Widget rows and clips expose their projected data to the Web Component. The
 timeline adapter combines the global `timeline.editable` master switch with
 each track's `editable` capability for track dragging, track-name editing,
 clip editing, and track removal. It does not use per-track `locked`, `movable`,
-or `fixed` flags. The Replay track is read-only through `editable: false`; its
-clips remain size-locked through their projected `resizable` capability. Other
-clips are resizable by default and can opt out through their `resizable` input.
+or `fixed` flags. The Replay track remains read-only for track-level operations
+through `editable: false`. Its Pre-Replay and Post-Replay actions remain
+selectable and resizable through their per-action capabilities, while the
+Replay action is neither selectable nor resizable. Other clips are resizable by
+default and can opt out through their `resizable` input.
 Future
 application-side row ordering must continue through `WidgetManager.reorderWidgets`, which updates
 Valtio widget entries, cache z-index values, live DOM z-index, and persisted
@@ -148,7 +150,9 @@ never recreated by controlled updates, resizing, or dragging.
 is a controlled adapter around the `lgs1920-timeline` Web Component.
 It keeps Replay as the source of the normalized projection and assigns only
 the public `timeline`, `tracks`, `currentTimeMillis`, `playing`, and null
-`clipOptions` properties. It sets `interactive: true` and keeps a dedicated
+`clipOptions` properties. Playback synchronization uses the lightweight
+`setPlayheadTimeMillis` helper, while ruler seeks still use the controlled
+`currentTimeMillis` path. It sets `interactive: true` and keeps a dedicated
 blank-area drag handle for the widget host.
 
 The displayed timeline surface uses an LGS-style horizontal rail and a vertical

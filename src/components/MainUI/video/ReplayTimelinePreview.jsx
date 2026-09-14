@@ -573,6 +573,7 @@ export const ReplayTimelinePreview = forwardRef(({
     const initialTimelineTimeMillis = Number.isFinite(persistedTimelineTimeMillis)
         ? Math.max(sliderMinMillis, Math.min(sliderMaxMillis, persistedTimelineTimeMillis))
         : sliderMinMillis
+    const _pendingPlayhead = useRef(null)
     const normalizeTimelineTime = useCallback(value => {
         const requestedTime = Number(value)
         const safeTime = Number.isFinite(requestedTime) ? requestedTime : sliderMinMillis
@@ -608,6 +609,21 @@ export const ReplayTimelinePreview = forwardRef(({
         }
     }, [normalizeTimelineTime])
 
+    /**
+     * Apply a time to the timeline's lightweight playhead path.
+     *
+     * @param {HTMLElement} element - Timeline custom element.
+     * @param {number} timeMillis - Requested time in milliseconds.
+     * @returns {void}
+     */
+    const applyTimelinePlayheadTime = useCallback((element, timeMillis) => {
+        if (typeof element?.setPlayheadTimeMillis === 'function') {
+            element.setPlayheadTimeMillis(timeMillis)
+            return
+        }
+        if (element) element.currentTimeMillis = timeMillis
+    }, [])
+
     useEffect(() => {
         const scheduler = createReplayScrubScheduler({apply: applyReplayScrub})
         _scrubScheduler.current = scheduler
@@ -624,10 +640,17 @@ export const ReplayTimelinePreview = forwardRef(({
         const timeMillis = normalizeTimelineTime(value)
         const durationMillis = Number(timeline.durationMillis)
         const progress = durationMillis > 0 ? timeMillis / durationMillis : 0
+        const publishedFrame = lgs.stores.replay?.dynamicFrameState
+            ?? lgs.stores.replay?.resolvedFrameState
+            ?? null
+        _pendingPlayhead.current = {
+            publishedUpdatedAt: Number(publishedFrame?.updatedAt),
+            timeMillis,
+        }
         persistTimelineView({currentTimeMillis: timeMillis})
         syncSliderTime(timeMillis)
         if (_timeline.current) {
-            _timeline.current.currentTimeMillis = timeMillis
+            applyTimelinePlayheadTime(_timeline.current, timeMillis)
             _timeline.current.ensureCurrentTimeVisible?.()
         }
         if (settled) {
@@ -636,7 +659,7 @@ export const ReplayTimelinePreview = forwardRef(({
         else {
             _scrubScheduler.current?.request(progress)
         }
-    }, [normalizeTimelineTime, persistTimelineView, syncSliderTime, timeline.durationMillis])
+    }, [applyTimelinePlayheadTime, normalizeTimelineTime, persistTimelineView, syncSliderTime, timeline.durationMillis])
 
     const handleTimelineSeek = useCallback(event => {
         const detail = event?.detail ?? {}
@@ -726,13 +749,16 @@ export const ReplayTimelinePreview = forwardRef(({
 
             const replayStore = lgs.stores.replay
             const localTimeMillis = element.currentTimeMillis
-            const currentTimeMillis = hasPublishedReplayFrame(replayStore)
-                ? resolveCurrentTimeMillis(replayStore, {
-                    durationMillis: timeline.durationMillis,
-                })
-                : Number.isFinite(persistedTimelineTimeMillis)
-                    ? initialTimelineTimeMillis
-                    : localTimeMillis
+            const pendingPlayhead = _pendingPlayhead.current
+            const currentTimeMillis = pendingPlayhead !== null
+                ? pendingPlayhead.timeMillis
+                : hasPublishedReplayFrame(replayStore)
+                    ? resolveCurrentTimeMillis(replayStore, {
+                        durationMillis: timeline.durationMillis,
+                    })
+                    : Number.isFinite(persistedTimelineTimeMillis)
+                        ? initialTimelineTimeMillis
+                        : localTimeMillis
             const controlledState = {
                 currentTimeMillis,
                 playing: replayStore.playing === true,
@@ -797,10 +823,24 @@ export const ReplayTimelinePreview = forwardRef(({
         const syncPlayback = () => {
             const replayStore = lgs.stores.replay
             if (hasPublishedReplayFrame(replayStore)) {
-                const currentTimeMillis = resolveCurrentTimeMillis(replayStore, {
+                const publishedTimeMillis = resolveCurrentTimeMillis(replayStore, {
                     durationMillis: projectionDurationMillis,
                 })
-                element.currentTimeMillis = currentTimeMillis
+                const pendingPlayhead = _pendingPlayhead.current
+                const publishedFrame = replayStore.dynamicFrameState
+                    ?? replayStore.resolvedFrameState
+                    ?? null
+                const publishedUpdatedAt = Number(publishedFrame?.updatedAt)
+                const hasNewerPublishedFrame = pendingPlayhead !== null
+                    && Number.isFinite(publishedUpdatedAt)
+                    && Number.isFinite(pendingPlayhead.publishedUpdatedAt)
+                    && publishedUpdatedAt > pendingPlayhead.publishedUpdatedAt
+                if (pendingPlayhead !== null
+                    && (publishedTimeMillis === pendingPlayhead.timeMillis || hasNewerPublishedFrame)) {
+                    _pendingPlayhead.current = null
+                }
+                const currentTimeMillis = _pendingPlayhead.current?.timeMillis ?? publishedTimeMillis
+                applyTimelinePlayheadTime(element, currentTimeMillis)
                 if (element.isCurrentTimeNearViewportEdge?.()) {
                     element.ensureCurrentTimeVisible?.()
                 }
@@ -846,7 +886,13 @@ export const ReplayTimelinePreview = forwardRef(({
             playbackSyncScheduled = false
             scheduledFrameId = null
         }
-    }, [linkedPreparation, projection.durationMillis, syncSliderTime])
+    }, [applyTimelinePlayheadTime, linkedPreparation, projection.durationMillis, syncSliderTime])
+
+    useEffect(() => {
+        if (linkedPreparation) return undefined
+        _pendingPlayhead.current = null
+        return undefined
+    }, [linkedPreparation])
 
     useEffect(() => {
         if (!linkedPreparation || getReplayTimelineDebugStage() !== 'full') {

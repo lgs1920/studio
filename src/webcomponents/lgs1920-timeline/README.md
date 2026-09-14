@@ -859,6 +859,7 @@ also provides these small imperative helpers:
 | --- | --- |
 | `applyControlledState(state)` | Apply timeline, tracks, clip options, playback, and playhead values in one controlled synchronization. |
 | `setTime(timeMillis)` | Move the playhead without emitting `seek`. |
+| `setPlayheadTimeMillis(timeMillis)` | Update only the playhead position without refreshing the current-time label or transport controls. |
 | `isCurrentTimeNearViewportEdge(padding)` | Check whether the playhead is close enough to a viewport edge to require following. |
 | `ensureCurrentTimeVisible(padding)` | Scroll the horizontal surface just enough to keep the playhead visible. |
 | `setZoom(zoomPercent)` | Set the ruler zoom up to `500`; the minimum is calculated from the available surface width, full timeline duration, and right safety margin. |

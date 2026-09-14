@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-29
+ * Last modified: 2026-09-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -86,6 +86,15 @@ describe('ReplayPreparationTimeline', () => {
             ['wa-neutral', 'wa-neutral-purple'],
             ['wa-neutral', 'wa-neutral-blue'],
             ['wa-neutral', 'wa-neutral-orange'],
+        ])
+        expect(projection.tracks[0]).toMatchObject({
+            editable: false,
+            clipResizable: true,
+        })
+        expect(projection.tracks[0].actions).toMatchObject([
+            {editable: true, selectable: true, resizable: true},
+            {editable: false, selectable: false, resizable: false},
+            {editable: true, selectable: true, resizable: true},
         ])
     })
 

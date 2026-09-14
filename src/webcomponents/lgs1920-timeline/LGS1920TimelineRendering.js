@@ -77,6 +77,7 @@ export const createTimelineRenderer = ({
     capturePointer,
     handleWheel,
     handleKeyDown,
+    handleRulerPointerDown,
     handleRulerClick,
     emit,
     setScrubPointerId,
@@ -101,7 +102,7 @@ export const createTimelineRenderer = ({
      * @param {boolean} trackVisible - Whether the owning track is visible.
      * @returns {HTMLElement} Clip element.
      */
-    const clip = (value, majorSeconds, trackVisible = true, trackEditable = true) => {
+    const clip = (value, majorSeconds, trackVisible = true, trackEditable = true, trackClipResizable = false) => {
         const start = Math.max(0, Number(value.start) || 0)
         const end = Math.max(start, Number(value.end) || start)
         const dragState = getDragState()
@@ -123,14 +124,14 @@ export const createTimelineRenderer = ({
         applyTimelinePaletteStyles(element, value.colorClasses)
         const timeline = getTimelineConfig()
         const interactive = timeline.interactive !== false
-        const editable = timeline.editable !== false
-            && trackEditable !== false
-            && value.editable !== false
-        const movable = interactive && editable
-        const resizable = interactive && editable && value.resizable !== false
+        const selectable = interactive && value.selectable !== false
+        const editable = timeline.editable !== false && value.editable !== false
+        const movable = selectable && editable && trackEditable !== false
+        const resizable = selectable && editable && value.resizable !== false
+            && (trackEditable !== false || trackClipResizable === true)
         if (movable) element.classList.add('lgs1920-wa-timeline__clip--movable')
-        element.setAttribute('tabindex', interactive ? '0' : '-1')
-        if (interactive) {
+        element.setAttribute('tabindex', selectable ? '0' : '-1')
+        if (selectable) {
             element.setAttribute('role', 'button')
             if (movable) element.setAttribute('aria-keyshortcuts', 'ArrowLeft ArrowRight Alt+ArrowLeft Alt+ArrowRight Delete Backspace Mod+C Mod+D M V')
         }
@@ -152,12 +153,12 @@ export const createTimelineRenderer = ({
                 hidden: true,
             }),
         )
-        if (interactive) {
+        if (selectable) {
             element.addEventListener('pointerdown', event => {
                 if (event.target.closest('[data-clip-handle]')) return
                 const wasSelected = isClipSelected(value)
                 selectClip(value, event, element)
-                startClipInteraction(event, value.id, 'move', null, wasSelected)
+                if (movable) startClipInteraction(event, value.id, 'move', null, wasSelected)
             })
             element.addEventListener('click', event => {
                 event.stopPropagation()
@@ -520,7 +521,7 @@ export const createTimelineRenderer = ({
             })
             track.append(trackBackground)
             for (const value of row.actions ?? []) {
-                track.append(clip(Object.assign({}, value, {trackId: row.id}), majorSeconds, row.visible !== false, row.editable !== false))
+                track.append(clip(Object.assign({}, value, {trackId: row.id}), majorSeconds, row.visible !== false, row.editable !== false, row.clipResizable === true))
             }
             track.addEventListener('dragover', event => handleClipDragOver(event, row.id, track))
             track.addEventListener('dragleave', event => handleClipDragLeave(event, track))
@@ -573,6 +574,7 @@ export const createTimelineRenderer = ({
         controls.append(createElement('slot', '', {name: 'timeline-controls'}))
         surface.append(createElement('slot', '', {name: 'timeline-ruler'}), canvas)
         if (interactive) {
+            ruler.addEventListener('pointerdown', event => handleRulerPointerDown(event))
             ruler.addEventListener('click', event => handleRulerClick(event))
             surface.addEventListener('pointerdown', event => {
                 if (isTimelineRulerSlotEvent(event)) return

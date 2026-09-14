@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-29
+ * Last modified: 2026-09-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -226,6 +226,8 @@ const actionFromRange = ({
     endMillis,
     clip = null,
     icon = null,
+    editable = true,
+    selectable = true,
     resizable = true,
     timelineColor = DEFAULT_TIMELINE_COLOR,
     visible = true,
@@ -244,6 +246,8 @@ const actionFromRange = ({
     durationMillis: Math.max(0, endMillis - startMillis),
     clip,
     icon,
+    editable,
+    selectable,
     colorClasses: timelineColorClasses(timelineColor),
     visible,
     resizable,
@@ -281,6 +285,8 @@ const buildReplayActions = (timeline, journeyTitle = '') => timeline.phases
         startMillis: phase.startMillis,
         endMillis: phase.endMillis,
         clip: phase.clip,
+        editable: phase.kind !== 'replay',
+        selectable: phase.kind !== 'replay',
         resizable: phase.kind !== 'replay' && phase.clip?.resizable !== false,
         icon: phase.kind === 'replay'
             ? 'route'
@@ -507,7 +513,16 @@ const timelineSignature = ({timeline, tracks}) => JSON.stringify({
     clipSignature: timeline.clipSignature,
     tracks: tracks.map(track => ({
         id: track.id,
-        actions: track.actions.map(action => [action.id, action.startMillis, action.endMillis]),
+        editable: track.editable,
+        clipResizable: track.clipResizable,
+        actions: track.actions.map(action => [
+            action.id,
+            action.startMillis,
+            action.endMillis,
+            action.editable,
+            action.selectable,
+            action.resizable,
+        ]),
     })),
 })
 
@@ -536,6 +551,7 @@ export const buildReplayPreparationTimeline = (options = {}) => {
         kind: REPLAY_PREPARATION_TRACK_REPLAY,
         label: 'Replay',
         editable: false,
+        clipResizable: true,
         actions: buildReplayActions(timeline, options.journeyTitle),
         colorClasses: REPLAY_COLOR_CLASSES,
         timelineColor: DEFAULT_TIMELINE_COLOR,
@@ -559,6 +575,7 @@ export const buildReplayPreparationTimeline = (options = {}) => {
         label: track.label,
         kind: track.kind,
         editable: track.editable !== false,
+        clipResizable: track.clipResizable === true,
         canHide: track.canHide,
         visible: track.visible,
         widgetGroup: track.widgetGroup ?? null,
