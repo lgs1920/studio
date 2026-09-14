@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-23
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -337,6 +337,13 @@ export default defineConfig({
             {
                 find: '@Settings',
                 replacement: path.resolve(PROJECT_ROOT, 'src/components/Settings')
+            },
+            {
+                // The timeline package currently imports the free Web Awesome package.
+                // Resolve it to the application's Pro package so both entry points share
+                // one CustomElementRegistry definition for every wa-* component.
+                find: '@awesome.me/webawesome',
+                replacement: path.resolve(PROJECT_ROOT, 'node_modules/@web.awesome.me/webawesome-pro')
             },
             {
                 find: '@Tests',
