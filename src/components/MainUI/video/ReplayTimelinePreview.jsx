@@ -44,6 +44,10 @@ import {
     groupWidgetEntries,
 } from '@Core/ui/widget-manager/WidgetGroupUtils'
 import {createReplayScrubScheduler} from '@Core/ui/replay/ReplayScrubScheduler'
+import {
+    finishReplayTimelineOpeningMeasurement,
+    startReplayTimelineOpeningMeasurement,
+} from '@Core/ui/replay/ReplayTimelineOpeningPerformance'
 import {useOptionalSnapshot} from '@Utils/ValtioUtils'
 import {formatRulerTime} from '../../../webcomponents/lgs1920-timeline/LGS1920TimelineUtils.js'
 import '../../../webcomponents/lgs1920-timeline/LGS1920Timeline.js'
@@ -495,15 +499,23 @@ export const ReplayTimelinePreview = forwardRef(({
         },
     }), [journeyTitle, journeyName, journeyReplayStart, journeyReplayStop])
 
-    const projection = useMemo(() => buildReplayPreparationTimeline({
-        videoTimeline: projectionReplay.deferredExportPlan?.videoTimeline ?? null,
-        replayDurationMillis: resolveReplayDurationMillis(projectionReplay, projectionReplaySettings),
-        fps: resolveCaptureFps({fps: video.fps}, projectionReplay),
-        direction: projectionReplay.direction,
-        clips: resolvePreparationClips(projectionReplay, projectionJourney, projectionReplaySettings.clips),
-        journeyTitle: projectionJourney.title,
-        widgetOrder,
-    }), [projectionJourney, projectionReplay, projectionReplaySettings, video.fps, widgetOrder])
+    const projection = useMemo(() => {
+        const measurement = startReplayTimelineOpeningMeasurement('react-projection')
+        const nextProjection = buildReplayPreparationTimeline({
+            videoTimeline: projectionReplay.deferredExportPlan?.videoTimeline ?? null,
+            replayDurationMillis: resolveReplayDurationMillis(projectionReplay, projectionReplaySettings),
+            fps: resolveCaptureFps({fps: video.fps}, projectionReplay),
+            direction: projectionReplay.direction,
+            clips: resolvePreparationClips(projectionReplay, projectionJourney, projectionReplaySettings.clips),
+            journeyTitle: projectionJourney.title,
+            widgetOrder,
+        })
+        finishReplayTimelineOpeningMeasurement(measurement, {
+            tracks: nextProjection.tracks.length,
+            actions: nextProjection.tracks.reduce((count, track) => count + track.actions.length, 0),
+        })
+        return nextProjection
+    }, [projectionJourney, projectionReplay, projectionReplaySettings, video.fps, widgetOrder])
     const preparationTimeline = replay.preparationTimeline
     const preparedTimeline = preparationTimeline?.timeline ?? null
     const persistedTimelineView = replaySettings?.timeline ?? {}
@@ -687,6 +699,7 @@ export const ReplayTimelinePreview = forwardRef(({
             if (cancelled) return
             const element = _timeline.current
             if (!element || !element.isConnected) return
+            const measurement = startReplayTimelineOpeningMeasurement('controlled-state-application')
 
             if (['surface', 'track', 'clip', 'data'].includes(debugStage)) {
                 element.timeline = {...timeline, showBuildingOverlay: true}
@@ -704,6 +717,7 @@ export const ReplayTimelinePreview = forwardRef(({
                         }]
                 element.currentTimeMillis = 0
                 syncSliderTime(0)
+                finishReplayTimelineOpeningMeasurement(measurement, {debugStage})
                 return
             }
 
@@ -733,6 +747,7 @@ export const ReplayTimelinePreview = forwardRef(({
             }
             element.ensureCurrentTimeVisible?.()
             syncSliderTime(element.currentTimeMillis)
+            finishReplayTimelineOpeningMeasurement(measurement, {debugStage})
         }
 
         void applyControlledState()

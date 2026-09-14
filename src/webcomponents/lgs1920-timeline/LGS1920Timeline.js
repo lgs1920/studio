@@ -45,6 +45,12 @@ import {
 } from './LGS1920TimelineInteraction.js'
 import {createTimelineRenderer} from './LGS1920TimelineRendering.js'
 import {
+    finishReplayTimelineOpeningMeasurement,
+    printReplayTimelineOpeningTable,
+    recordReplayTimelineOpeningEvent,
+    startReplayTimelineOpeningMeasurement,
+} from '../../core/ui/replay/ReplayTimelineOpeningPerformance.js'
+import {
     ACCELERATION_INTERVAL,
     applyTimelinePaletteStyles,
     clamp,
@@ -138,6 +144,8 @@ export class LGS1920Timeline extends HTMLElement {
     #building = true
     #buildingFrame = null
     #buildingLayoutSignature = null
+    #openingConnectedMeasurement = null
+    #openingBuildingMeasurement = null
     #initialBuildComplete = false
     #additionalContentOpen = false
     #additionalContentPanelId = `lgs1920-timeline-additional-content-${++timelineAdditionalContentInstance}`
@@ -442,6 +450,7 @@ export class LGS1920Timeline extends HTMLElement {
      * Render the component when it is attached to the document.
      */
     connectedCallback() {
+        this.#openingConnectedMeasurement = startReplayTimelineOpeningMeasurement('timeline-connected')
         this.#initialBuildComplete = false
         this.#building = this.#timelineConfig.showBuildingOverlay !== false
         this.#buildingLayoutSignature = null
@@ -456,6 +465,10 @@ export class LGS1920Timeline extends HTMLElement {
         this.#installResizeObserver()
         this.#render()
         this.setAttribute('data-ready', '')
+        finishReplayTimelineOpeningMeasurement(this.#openingConnectedMeasurement, {
+            phase: this.#projection ? 'active' : 'empty',
+        })
+        this.#openingConnectedMeasurement = null
     }
 
     /**
@@ -1013,6 +1026,8 @@ export class LGS1920Timeline extends HTMLElement {
         this.#clipPresentationElements = null
         this.#scrollbarElements = null
         this.#playheadGeometry = null
+        this.#openingConnectedMeasurement = null
+        this.#openingBuildingMeasurement = null
         this.#transportState = null
     }
 
@@ -1759,6 +1774,13 @@ export class LGS1920Timeline extends HTMLElement {
      * Render the empty or active component state.
      */
     #render = () => {
+        const measurement = startReplayTimelineOpeningMeasurement('timeline-render')
+        const phase = this.#projection ? 'active' : 'empty'
+        this.#renderStructure()
+        finishReplayTimelineOpeningMeasurement(measurement, {phase})
+    }
+
+    #renderStructure = () => {
         this.#reconcileClipSelection()
         if (!this.#visible || !this.#projection) {
             this.#cancelBuildingCompletion()
@@ -1790,6 +1812,9 @@ export class LGS1920Timeline extends HTMLElement {
 
         const initialOverlayEnabled = this.#timelineConfig.showBuildingOverlay !== false
         if (!this.#initialBuildComplete && initialOverlayEnabled) {
+            if (!this.#openingBuildingMeasurement) {
+                this.#openingBuildingMeasurement = startReplayTimelineOpeningMeasurement('building-overlay')
+            }
             // A copy preview rerenders the timeline while the initial layout is
             // settling. Keep that completion alive so the preview cannot reset
             // the construction overlay.
@@ -1953,8 +1978,14 @@ export class LGS1920Timeline extends HTMLElement {
             this.#building = false
             this.#initialBuildComplete = true
             this.#buildingLayoutSignature = null
+            finishReplayTimelineOpeningMeasurement(this.#openingBuildingMeasurement, {
+                layoutMeasured,
+                layoutStable,
+            })
+            this.#openingBuildingMeasurement = null
             this.#root.querySelector('[data-building-overlay]')?.remove()
             this.#root.querySelector('[data-building]')?.removeAttribute('data-building')
+            printReplayTimelineOpeningTable()
         }
         if (typeof requestAnimationFrame !== 'function') {
             complete()
@@ -2176,6 +2207,7 @@ export class LGS1920Timeline extends HTMLElement {
         const requested = clamp(Number(preferred) || 0, minimum, maximum)
         this.#legendWidth = requested
         splitPanel.positionInPixels = requested
+        const measurement = startReplayTimelineOpeningMeasurement('split-panel-measurement')
         const applyMeasuredWidth = () => {
             if (!splitPanel.isConnected || this.#legendWidth !== requested) return
             const panelWidth = splitPanel.getBoundingClientRect?.().width ?? 0
@@ -2187,7 +2219,17 @@ export class LGS1920Timeline extends HTMLElement {
         if (typeof requestAnimationFrame === 'function') {
             requestAnimationFrame(() => {
                 applyMeasuredWidth()
-                requestAnimationFrame(applyMeasuredWidth)
+                requestAnimationFrame(() => {
+                    applyMeasuredWidth()
+                    finishReplayTimelineOpeningMeasurement(measurement, {
+                        width: splitPanel.getBoundingClientRect?.().width ?? 0,
+                    })
+                })
+            })
+        } else {
+            applyMeasuredWidth()
+            finishReplayTimelineOpeningMeasurement(measurement, {
+                width: splitPanel.getBoundingClientRect?.().width ?? 0,
             })
         }
     }
@@ -4251,6 +4293,12 @@ export class LGS1920Timeline extends HTMLElement {
      * Refresh dimensions in place without rebuilding the timeline DOM.
      */
     #refreshLayoutMetrics = () => {
+        const measurement = startReplayTimelineOpeningMeasurement('layout-refresh')
+        this.#refreshLayoutMetricsInternal()
+        finishReplayTimelineOpeningMeasurement(measurement)
+    }
+
+    #refreshLayoutMetricsInternal = () => {
         const surfaceWidth = this.#surface?.clientWidth ?? 0
         if (Number.isFinite(surfaceWidth) && surfaceWidth > 0 && surfaceWidth !== this.#surfaceWidth) {
             this.#surfaceWidth = surfaceWidth
@@ -4278,6 +4326,7 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     #scheduleLayoutRefresh = () => {
+        recordReplayTimelineOpeningEvent('resize-observer-callback')
         if (this.#layoutRefreshFrame !== null) return
         const refresh = () => {
             this.#layoutRefreshFrame = null
