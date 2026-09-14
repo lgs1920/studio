@@ -319,6 +319,66 @@ The 4 ms target is a performance budget for the Timeline update itself, not a
 claim about the total Replay or Cesium frame budget. It should be adjusted if
 the reference hardware and representative data set change.
 
+## Follow-up code audit: opening and playhead path
+
+The current implementation now narrows Replay playback subscriptions, batches
+controlled state, caches dynamic and clip presentation elements, coalesces
+layout refreshes, and keeps the moving playhead on a compositor transform. A
+new source audit focused on opening latency and playhead updates found these
+remaining costs.
+
+### Opening latency
+
+`ReplayTimelinePreview` builds the preparation projection synchronously during
+React render. The projection can rebuild the canonical video timeline, resolve
+widget visibility across every phase boundary, serialize a projection
+signature, create editor rows, and then adapt those rows again for the Web
+Component. This work is performed before the timeline can receive its first
+controlled state.
+
+The custom element is connected before the React effect assigns the controlled
+projection. It therefore performs an initial empty render, then receives the
+projection from a passive `useEffect` and performs the active structural render
+after the first paint opportunity. The initial layout also schedules a
+`ResizeObserver` refresh, a deferred split-panel measurement, and construction
+overlay completion frames. These passes are individually justified, but they
+extend the opening critical path when combined.
+
+The first opening optimization should apply the initial controlled state from
+a layout effect so the first painted timeline already contains its projection.
+The next optimization should remove redundant projection and row copies on
+the opening path, while preserving the public Web Component row shape. A later
+step can reduce the post-mount layout passes after a browser trace confirms
+which pass delays the first usable frame.
+
+### Playhead independence from total duration
+
+`#currentTimeContentX()` currently computes a normalized ratio from the current
+time and total duration, then multiplies that ratio by the same total duration.
+The duration cancels algebraically, but the hot path still reads duration,
+scale, and CSS token state for every dynamic update. The playhead only needs
+the current time in seconds and the current pixels-per-major-unit geometry.
+
+The playhead geometry should therefore be cached when structure, zoom, resize,
+or duration-dependent layout changes. A playback tick should only multiply the
+current time by the cached pixel scale and update the playhead transform. A
+duration change invalidates the cached geometry and may rebuild the ruler, but
+it must not add duration work to ordinary playhead updates.
+
+The current time remains clamped to the selected range at the controlled-state
+boundary. This preserves range behavior while removing total-duration reads
+from the visual playhead path.
+
+### Follow-up implementation order
+
+1. Apply the first controlled timeline state in a layout effect to remove the
+   passive-effect opening gap.
+2. Cache playhead pixel geometry and calculate its position directly from the
+   current time, independently of the total duration in the hot path.
+3. Reduce projection-to-display row copying during the initial mount.
+4. Profile the remaining construction overlay, split-panel, and resize passes
+   before changing their scheduling or removing a stabilization frame.
+
 ## Risks and safeguards
 
 - Coalescing frame updates must not change the canonical Replay clock. The
