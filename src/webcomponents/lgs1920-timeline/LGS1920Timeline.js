@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -187,6 +187,9 @@ export class LGS1920Timeline extends HTMLElement {
     #clipScroll
     #clipWorkspaceWidth = 0
     #renderer
+    #rowSignatureCache = new WeakMap()
+    #placementSignatureCache = new WeakMap()
+    #rowPresentationSignatureCache = new WeakMap()
 
     /**
      * Build a stable signature for controlled or internal row snapshots.
@@ -194,10 +197,17 @@ export class LGS1920Timeline extends HTMLElement {
      * @param {Array} rows - Timeline rows.
      * @returns {string} Normalized row signature.
      */
-    #rowSignature = rows => JSON.stringify((rows ?? []).map(row => {
-        const {actions, clips, ...stable} = row ?? {}
-        return {...stable, clips: actions ?? clips ?? []}
-    }))
+    #rowSignature = rows => {
+        if (!Array.isArray(rows)) return '[]'
+        const cached = this.#rowSignatureCache.get(rows)
+        if (cached !== undefined) return cached
+        const signature = JSON.stringify(rows.map(row => {
+            const {actions, clips, ...stable} = row ?? {}
+            return {...stable, clips: actions ?? clips ?? []}
+        }))
+        this.#rowSignatureCache.set(rows, signature)
+        return signature
+    }
 
     /**
      * Build a placement signature that ignores projection-only clip metadata.
@@ -205,10 +215,48 @@ export class LGS1920Timeline extends HTMLElement {
      * @param {Array} rows - Timeline rows.
      * @returns {string} Clip placement signature.
      */
-    #placementSignature = rows => JSON.stringify((rows ?? []).map(row => ({
-        id: row?.id,
-        clips: (row?.actions ?? row?.clips ?? []).map(clip => [clip.id, clip.start, clip.end]),
-    })))
+    #placementSignature = rows => {
+        if (!Array.isArray(rows)) return '[]'
+        const cached = this.#placementSignatureCache.get(rows)
+        if (cached !== undefined) return cached
+        const signature = JSON.stringify(rows.map(row => ({
+            id: row?.id,
+            clips: (row?.actions ?? row?.clips ?? []).map(clip => [clip.id, clip.start, clip.end]),
+        })))
+        this.#placementSignatureCache.set(rows, signature)
+        return signature
+    }
+
+    /**
+     * Build a signature for row metadata while ignoring clip placement values.
+     *
+     * @param {Array} rows - Timeline rows.
+     * @returns {string} Stable presentation signature.
+     */
+    #rowPresentationSignature = rows => {
+        if (!Array.isArray(rows)) return '[]'
+        const cached = this.#rowPresentationSignatureCache.get(rows)
+        if (cached !== undefined) return cached
+        const shape = value => {
+            const stable = Object.assign({}, value)
+            delete stable.start
+            delete stable.end
+            delete stable.duration
+            delete stable.startMillis
+            delete stable.endMillis
+            delete stable.durationMillis
+            return stable
+        }
+        const signature = JSON.stringify(rows.map(row => {
+            const {actions, clips, ...stable} = row ?? {}
+            return {
+                stable,
+                actions: (actions ?? clips ?? []).map(action => shape(action)),
+            }
+        }))
+        this.#rowPresentationSignatureCache.set(rows, signature)
+        return signature
+    }
 
     /**
      * Construct the shadow DOM host and its persistent stylesheet.
@@ -1208,24 +1256,7 @@ export class LGS1920Timeline extends HTMLElement {
         if (Number.isFinite(Number(state.zoomPercent))) return false
         if (JSON.stringify(this.#clipOptions) !== JSON.stringify(state.clipOptions ?? null)) return false
 
-        const shape = value => {
-            const stable = Object.assign({}, value)
-            delete stable.start
-            delete stable.end
-            delete stable.duration
-            delete stable.startMillis
-            delete stable.endMillis
-            delete stable.durationMillis
-            return stable
-        }
-        const rowShape = row => {
-            const {actions, clips, ...stable} = row ?? {}
-            return {
-                stable,
-                actions: (actions ?? clips ?? []).map(action => shape(action)),
-            }
-        }
-        return JSON.stringify(this.#rows.map(rowShape)) === JSON.stringify(rows.map(rowShape))
+        return this.#rowPresentationSignature(this.#rows) === this.#rowPresentationSignature(rows)
     }
 
     /**
