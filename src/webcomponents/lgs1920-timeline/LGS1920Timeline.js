@@ -45,11 +45,6 @@ import {
 } from './LGS1920TimelineInteraction.js'
 import {createTimelineRenderer} from './LGS1920TimelineRendering.js'
 import {
-    finishReplayTimelineMeasurement,
-    recordReplayTimelineMetric,
-    startReplayTimelineMeasurement,
-} from '../../core/ui/replay/ReplayTimelinePerformance.js'
-import {
     ACCELERATION_INTERVAL,
     applyTimelinePaletteStyles,
     clamp,
@@ -923,13 +918,10 @@ export class LGS1920Timeline extends HTMLElement {
         const normalizedTime = this.#normalizeTime(value)
         if (normalizedTime === this.#currentTimeMillis) return
         this.#currentTimeMillis = normalizedTime
-        recordReplayTimelineMetric('currentTimeAssignments')
         if (this.#controlledUpdateDepth > 0) return
-        const startedAt = startReplayTimelineMeasurement()
         const elements = this.#dynamicElements ?? this.#cacheDynamicElements()
         this.#updatePlayheadPresentation(elements)
         this.#updateTransportButtons(elements)
-        finishReplayTimelineMeasurement('dynamicDomUpdates', startedAt)
     }
 
     /**
@@ -1330,7 +1322,6 @@ export class LGS1920Timeline extends HTMLElement {
      * @param {number} [padding=12] - Minimum space to keep around the playhead.
      */
     ensureCurrentTimeVisible(padding = 12) {
-        recordReplayTimelineMetric('ensureCurrentTimeVisibleCalls')
         const viewport = this.#currentTimeViewportState(padding)
         if (!viewport) return
 
@@ -1343,7 +1334,6 @@ export class LGS1920Timeline extends HTMLElement {
         nextScrollLeft = clamp(nextScrollLeft, 0, viewport.maximumScrollLeft)
         if (nextScrollLeft === viewport.viewportLeft) return
 
-        recordReplayTimelineMetric('ensureCurrentTimeVisibleScrolls')
         viewport.surface.scrollLeft = nextScrollLeft
         this.#updateFixedRulerContent(viewport.surface)
         this.#updateTimelineViewportMargins(viewport.surface)
@@ -1749,7 +1739,6 @@ export class LGS1920Timeline extends HTMLElement {
      * Render the empty or active component state.
      */
     #render = () => {
-        recordReplayTimelineMetric('structuralRenders')
         this.#reconcileClipSelection()
         if (!this.#visible || !this.#projection) {
             this.#cancelBuildingCompletion()
@@ -5745,7 +5734,6 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     #updateDynamicState = () => {
-        const startedAt = startReplayTimelineMeasurement()
         const elements = this.#dynamicElements ?? this.#cacheDynamicElements()
         this.#updatePlayheadPresentation(elements)
         this.#updateTransportButtons(elements)
@@ -5764,7 +5752,6 @@ export class LGS1920Timeline extends HTMLElement {
             rangeEnd.setAttribute('aria-valuenow', `${this.#rangeEndMillis}`)
             rangeEnd.setAttribute('aria-valuemax', `${this.#durationMillis()}`)
         }
-        finishReplayTimelineMeasurement('dynamicDomUpdates', startedAt)
     }
 
     #updatePlayheadPresentation = elements => {
