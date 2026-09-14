@@ -3947,9 +3947,11 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     #surfaceElement = (scaleCount, majorSeconds, scaleSplitCount) => {
-        const surface = this.#renderer.surfaceElement(scaleCount, majorSeconds, scaleSplitCount)
+        const {surface, controls} = this.#renderer.surfaceElement(scaleCount, majorSeconds, scaleSplitCount)
         const tracksViewport = surface.querySelector('[data-tracks-viewport]')
-        return this.#scrollbarShell(surface, {role: 'surface', horizontal: true, vertical: true, verticalView: tracksViewport ?? surface})
+        const shell = this.#scrollbarShell(surface, {role: 'surface', horizontal: true, vertical: true, verticalView: tracksViewport ?? surface})
+        shell.append(controls)
+        return shell
     }
 
     /**

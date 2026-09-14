@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-31
+ * Last modified: 2026-09-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -571,7 +571,7 @@ export const createTimelineRenderer = ({
         const tools = timelineTools?.()
         if (tools) controls.append(tools)
         controls.append(createElement('slot', '', {name: 'timeline-controls'}))
-        surface.append(createElement('slot', '', {name: 'timeline-ruler'}), canvas, controls)
+        surface.append(createElement('slot', '', {name: 'timeline-ruler'}), canvas)
         if (interactive) {
             ruler.addEventListener('click', event => handleRulerClick(event))
             surface.addEventListener('pointerdown', event => {
@@ -606,7 +606,7 @@ export const createTimelineRenderer = ({
                 seek(event.clientX, false)
             })
         }
-        return surface
+        return {surface, controls}
     }
 
     return {clip, clipHandle, legendRow, rangeHandle, surfaceElement, updateRulerDuration}
