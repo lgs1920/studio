@@ -39,7 +39,6 @@ import {VideoRecordingSettingsToolbar} from './toolbox/VideoRecordingSettingsToo
 import {VideoRecordingSettingsMenus} from './toolbox/VideoRecordingSettingsMenus'
 import {
     buildReplayPreparationTimeline,
-    toReplayTimelineEditorData,
 } from '@Core/ui/replay/ReplayPreparationTimeline'
 import {
     groupWidgetEntries,
@@ -401,7 +400,7 @@ const resolveVideoWidgetOrder = (widgetList, widgetSettings) => {
  * @param {Array} rows - Existing Replay timeline rows.
  * @returns {Array} Public Web Component track definitions.
  */
-const toDisplayTracks = rows => rows.map(row => ({
+const toDisplayTracks = rows => [...(rows ?? [])].reverse().map(row => ({
     id: row.id,
     kind: row.kind,
     label: row.label,
@@ -505,7 +504,6 @@ export const ReplayTimelinePreview = forwardRef(({
         journeyTitle: projectionJourney.title,
         widgetOrder,
     }), [projectionJourney, projectionReplay, projectionReplaySettings, video.fps, widgetOrder])
-    const editorData = useMemo(() => toReplayTimelineEditorData(projection), [projection])
     const preparationTimeline = replay.preparationTimeline
     const preparedTimeline = preparationTimeline?.timeline ?? null
     const persistedTimelineView = replaySettings?.timeline ?? {}
@@ -548,7 +546,7 @@ export const ReplayTimelinePreview = forwardRef(({
         hostInteraction: 'selectable',
         hostNoDragClass: 'lgs-widget-no-drag',
     }), [horizontalZoomPercent, hasPersistedZoom, keyboardZoomActive, preparedTimeline, projection.signature, projection.durationMillis, projection.fps, projection.source.frameCount, projection.source.frameIntervalMs])
-    const baseTracks = useMemo(() => toDisplayTracks(editorData), [editorData])
+    const baseTracks = useMemo(() => toDisplayTracks(projection.tracks), [projection])
     const tracks = Array.isArray(preparationTimeline?.tracks)
         ? preparationTimeline.tracks
         : baseTracks
