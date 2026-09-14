@@ -44,10 +44,6 @@ import {
     groupWidgetEntries,
 } from '@Core/ui/widget-manager/WidgetGroupUtils'
 import {createReplayScrubScheduler} from '@Core/ui/replay/ReplayScrubScheduler'
-import {
-    finishReplayTimelineOpeningMeasurement,
-    startReplayTimelineOpeningMeasurement,
-} from '@Core/ui/replay/ReplayTimelineOpeningPerformance'
 import {useOptionalSnapshot} from '@Utils/ValtioUtils'
 import {formatRulerTime} from '../../../webcomponents/lgs1920-timeline/LGS1920TimelineUtils.js'
 import '../../../webcomponents/lgs1920-timeline/LGS1920Timeline.js'
@@ -500,7 +496,7 @@ export const ReplayTimelinePreview = forwardRef(({
     }), [journeyTitle, journeyName, journeyReplayStart, journeyReplayStop])
 
     const projection = useMemo(() => {
-        const measurement = startReplayTimelineOpeningMeasurement('react-projection')
+        const startedAt = globalThis.performance?.now?.() ?? Date.now()
         const nextProjection = buildReplayPreparationTimeline({
             videoTimeline: projectionReplay.deferredExportPlan?.videoTimeline ?? null,
             replayDurationMillis: resolveReplayDurationMillis(projectionReplay, projectionReplaySettings),
@@ -510,7 +506,8 @@ export const ReplayTimelinePreview = forwardRef(({
             journeyTitle: projectionJourney.title,
             widgetOrder,
         })
-        finishReplayTimelineOpeningMeasurement(measurement, {
+        console.log('[ReplayTimeline] projection built', {
+            durationMs: Number(((globalThis.performance?.now?.() ?? Date.now()) - startedAt).toFixed(2)),
             tracks: nextProjection.tracks.length,
             actions: nextProjection.tracks.reduce((count, track) => count + track.actions.length, 0),
         })
@@ -699,7 +696,8 @@ export const ReplayTimelinePreview = forwardRef(({
             if (cancelled) return
             const element = _timeline.current
             if (!element || !element.isConnected) return
-            const measurement = startReplayTimelineOpeningMeasurement('controlled-state-application')
+            const startedAt = globalThis.performance?.now?.() ?? Date.now()
+            console.log('[ReplayTimeline] controlled state start', {debugStage})
 
             if (['surface', 'track', 'clip', 'data'].includes(debugStage)) {
                 element.timeline = {...timeline, showBuildingOverlay: true}
@@ -717,7 +715,10 @@ export const ReplayTimelinePreview = forwardRef(({
                         }]
                 element.currentTimeMillis = 0
                 syncSliderTime(0)
-                finishReplayTimelineOpeningMeasurement(measurement, {debugStage})
+                console.log('[ReplayTimeline] controlled state end', {
+                    debugStage,
+                    durationMs: Number(((globalThis.performance?.now?.() ?? Date.now()) - startedAt).toFixed(2)),
+                })
                 return
             }
 
@@ -747,7 +748,10 @@ export const ReplayTimelinePreview = forwardRef(({
             }
             element.ensureCurrentTimeVisible?.()
             syncSliderTime(element.currentTimeMillis)
-            finishReplayTimelineOpeningMeasurement(measurement, {debugStage})
+            console.log('[ReplayTimeline] controlled state end', {
+                debugStage,
+                durationMs: Number(((globalThis.performance?.now?.() ?? Date.now()) - startedAt).toFixed(2)),
+            })
         }
 
         void applyControlledState()
