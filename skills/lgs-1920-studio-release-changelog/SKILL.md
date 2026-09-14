@@ -32,10 +32,14 @@ authoritative where it conflicts.
    pattern includes one. Retain only the current draft for the release line;
    never delete published changelogs or rewrite their dates.
 5. Describe implemented improvements and fixes in `New Features and Improvements`.
-   Build `Closed Issues` from verified owning-repository data. Keep
-   `Remaining Bugs` and `Remaining Features` as filtered GitHub search links,
-   not lists of individual open issues. Retain all four required section headings
-   and omit only application headings without matching entries.
+   Build `Closed Issues` from verified owning-repository data as individual issue
+   entries. Display at most the 10 latest issues per application, sorted by
+   descending fix/closure date; never merge or synthesize multiple issues into one
+   closed-issue item. If more than 10 issues exist, add `Full list: ` followed by
+   the repository-specific GitHub issues search link. Keep `Remaining Bugs` and
+   `Remaining Features` as filtered GitHub search links, not lists of individual
+   open issues. Retain all four required section headings and omit only
+   application headings without matching entries.
 6. Preserve issue titles' meaning, correct only obvious formatting errors, and
    link moved issues using their final owning URLs. Never create or include a
    Studio mirror of a Site or Backend issue. Report legacy mirrors separately;
