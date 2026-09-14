@@ -2396,3 +2396,15 @@
 ## 2026-09-13 — [`refactor(timeline): isolate playback presentation updates`](https://github.com/lgs1920/studio/commit/be8b34a05e5b3d08d17e52f31f08517a41855459)
 
 - Recorded automatically from Git history.
+
+## 2026-09-14 — [`chore: remove unused Claude and Junie configuration`](https://github.com/lgs1920/studio/commit/989d1f32e440983fe83d34a0e16b6e447aaf2e9d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`refactor(timeline): cache controlled row signatures`](https://github.com/lgs1920/studio/commit/e6e154fd1729677a9ecd839bc0d61f3848addec8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/9d4a46c30110e1ab31e360e1bcfcdc2cb5ab3ca0)
+
+- Recorded automatically from Git history.
