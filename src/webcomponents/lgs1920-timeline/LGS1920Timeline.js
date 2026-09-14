@@ -155,6 +155,7 @@ export class LGS1920Timeline extends HTMLElement {
     #surface = null
     #tracksViewport = null
     #dynamicElements = null
+    #clipPresentationElements = null
     #transportState = null
     #resizeObserver = null
     #scrollbarDrag = null
@@ -1001,6 +1002,7 @@ export class LGS1920Timeline extends HTMLElement {
         this.#cancelClipCopy()
         this.#closeClipContextMenu()
         this.#dynamicElements = null
+        this.#clipPresentationElements = null
         this.#transportState = null
     }
 
@@ -1753,6 +1755,7 @@ export class LGS1920Timeline extends HTMLElement {
             this.#surface = null
             this.#tracksViewport = null
             this.#dynamicElements = null
+            this.#clipPresentationElements = null
             this.#transportState = null
             return
         }
@@ -1806,6 +1809,7 @@ export class LGS1920Timeline extends HTMLElement {
         this.#surface = this.#root.querySelector('[data-surface]')
         this.#tracksViewport = this.#root.querySelector('[data-tracks-viewport]')
         this.#cacheDynamicElements()
+        this.#cacheClipPresentationElements()
         const measuredSurfaceWidth = this.#surface?.clientWidth ?? 0
         const surfaceWidthChanged = measuredSurfaceWidth > 0 && measuredSurfaceWidth !== this.#surfaceWidth
         if (surfaceWidthChanged) this.#surfaceWidth = measuredSurfaceWidth
@@ -5652,6 +5656,35 @@ export class LGS1920Timeline extends HTMLElement {
         return this.#dynamicElements
     }
 
+    #cacheClipPresentationElements = () => {
+        const clips = new Map([...this.#root.querySelectorAll('[data-clip-id]')]
+            .map(element => [String(element.getAttribute('data-clip-id')), element]))
+        const tracks = new Map([...this.#root.querySelectorAll('[part="track"]')]
+            .map(element => [String(element.dataset.rowId), element]))
+        const legends = new Map([...this.#root.querySelectorAll('[part="legend-row"]')]
+            .map(element => [String(element.dataset.rowId), element]))
+        const trackBackgrounds = new Map([...tracks].map(([rowId, track]) => [
+            rowId,
+            track.querySelector('[part="track-background"]'),
+        ]))
+        const durationOverlays = new Map([...clips].map(([clipId, clip]) => [
+            clipId,
+            clip.querySelector('[data-clip-duration-overlay]'),
+        ]))
+        this.#clipPresentationElements = {
+            clipEdgeIndicator: this.#root.querySelector('[data-clip-edge-indicator]'),
+            clipMoveEndpoints: [...this.#root.querySelectorAll('[data-clip-move-endpoint]')],
+            clips,
+            tracks,
+            legends,
+            trackBackgrounds,
+            durationOverlays,
+            overlay: this.#root.querySelector('[data-overlay]'),
+            dragElements: new Set(),
+        }
+        return this.#clipPresentationElements
+    }
+
     #updateDynamicState = () => {
         const elements = this.#dynamicElements ?? this.#cacheDynamicElements()
         this.#updatePlayheadPresentation(elements)
@@ -5732,13 +5765,20 @@ export class LGS1920Timeline extends HTMLElement {
             : null
         if (dragState?.type === 'clip' && !activeSnapGuide) this.#clearClipSnapGuide()
         this.#updateClipSnapGuidePresentation(activeSnapGuide)
-        this.#root.querySelectorAll('[data-clip-drag-ghost], [data-clip-drag-source]')
-            .forEach(element => element.remove())
+        const presentation = this.#clipPresentationElements ?? this.#cacheClipPresentationElements()
+        presentation.dragElements.forEach(element => element.remove())
+        presentation.dragElements.clear()
         this.toggleAttribute('data-clip-drop-rejected', dragState?.type === 'clip' && dragState.dropRejected === true)
-        const clipEdgeIndicator = this.#root.querySelector('[data-clip-edge-indicator]')
-        const clipMoveEndpoints = [...this.#root.querySelectorAll('[data-clip-move-endpoint]')]
-        const clips = new Map([...this.#root.querySelectorAll('[data-clip-id]')]
-            .map(element => [String(element.getAttribute('data-clip-id')), element]))
+        const {
+            clipEdgeIndicator,
+            clipMoveEndpoints,
+            clips,
+            tracks,
+            legends,
+            trackBackgrounds,
+            durationOverlays,
+            overlay,
+        } = presentation
         const resizingClip = dragState?.type === 'clip' && dragState.mode === 'resize'
             ? this.#clipEditor.findClipEntry(this.#rows, dragState.clipId)?.clip
             : null
@@ -5773,10 +5813,6 @@ export class LGS1920Timeline extends HTMLElement {
                 endpoint.style.left = `${scaleOffset + ((endpointTime / Math.max(Number.EPSILON, majorSeconds)) * scaleWidth)}px`
             }
         })
-        const tracks = new Map([...this.#root.querySelectorAll('[part="track"]')]
-            .map(element => [String(element.dataset.rowId), element]))
-        const legends = new Map([...this.#root.querySelectorAll('[part="legend-row"]')]
-            .map(element => [String(element.dataset.rowId), element]))
         this.#rows.forEach(row => {
             const track = tracks.get(String(row.id))
             const legend = legends.get(String(row.id))
@@ -5800,7 +5836,7 @@ export class LGS1920Timeline extends HTMLElement {
                     'lgs1920-wa-timeline__clip--drag-source',
                     'lgs1920-wa-timeline__clip--drag-source-rejected',
                 )
-                const durationOverlay = element.querySelector('[data-clip-duration-overlay]')
+                const durationOverlay = durationOverlays.get(String(value.id))
                 const isResizing = isDragging && dragState.mode === 'resize'
                 if (durationOverlay) {
                     durationOverlay.hidden = !isResizing
@@ -5821,7 +5857,7 @@ export class LGS1920Timeline extends HTMLElement {
                 const isClipDropRejected = dragState?.type === 'clip'
                     && dragState.targetTrackId === row.id
                     && dragState.dropRejected === true
-                const trackBackground = track.querySelector('[part="track-background"]')
+                const trackBackground = trackBackgrounds.get(String(row.id))
                 track.classList.toggle('lgs1920-wa-timeline__track--clip-drop-target', isClipDropTarget)
                 track.classList.toggle('lgs1920-wa-timeline__track--clip-drop-rejected', isClipDropRejected)
                 trackBackground?.classList.toggle('lgs1920-wa-timeline__track-background--clip-drop-rejected', isClipDropRejected)
@@ -5831,7 +5867,6 @@ export class LGS1920Timeline extends HTMLElement {
         })
         if (dragState?.type === 'clip' && dragState.mode === 'move' && movingClip) {
             const sourceElement = clips.get(String(dragState.clipId))
-            const overlay = this.#root.querySelector('[data-overlay]')
             if (sourceElement && overlay) {
                 const accepted = dragState.lastResult !== null && dragState.lastResult !== undefined
                 const ghostClip = movingClip
@@ -5878,12 +5913,14 @@ export class LGS1920Timeline extends HTMLElement {
                             const original = resolveClipInterval(sourceEntry.clip)
                             configureClone(sourceClone, 'source', original.start, original.end)
                             sourceTrack.append(sourceClone)
+                            presentation.dragElements.add(sourceClone)
                         }
                     } else {
                         const ghost = sourceElement.cloneNode(true)
                         configureClone(ghost, 'ghost', start, end)
                         positionGhost(ghost)
                         overlay.append(ghost)
+                        presentation.dragElements.add(ghost)
                     }
                 }
             }
