@@ -22,7 +22,7 @@
  * introduced.
  */
 
-import {forwardRef, useCallback, useEffect, useId, useImperativeHandle, useMemo, useRef, useState} from 'react'
+import {forwardRef, useCallback, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState} from 'react'
 import {useSnapshot} from 'valtio'
 import {subscribeKey} from 'valtio/utils'
 import {WaButton, WaIcon, WaSlider, WaTooltip} from '@web.awesome.me/webawesome-pro/dist/react'
@@ -67,6 +67,8 @@ const REPLAY_TIMELINE_EDIT_EVENTS = [
     'reorder',
     'range-change',
 ]
+
+const useTimelineMountEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
 const getReplayTimelineDebugStage = () => {
     if (typeof window !== 'undefined') {
@@ -668,7 +670,7 @@ export const ReplayTimelinePreview = forwardRef(({
         onResizeEnd: () => _timeline.current?.setExternalInteractionActive?.(false),
     }), [])
 
-    useEffect(() => {
+    useTimelineMountEffect(() => {
         const debugStage = getReplayTimelineDebugStage()
         if (!linkedPreparation || !['surface', 'track', 'clip', 'data', 'full'].includes(debugStage)) return undefined
         let cancelled = false
