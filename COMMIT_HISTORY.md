@@ -2388,3 +2388,11 @@
 ## 2026-09-13 — [`docs(release): condense Studio 1.0.0 draft changelog`](https://github.com/lgs1920/studio/commit/a3446c35e8540494af03ce67a65e0eca24d202be)
 
 - Recorded automatically from Git history.
+
+## 2026-09-13 — [`docs(release): refine 1.0.0 changelog item limit`](https://github.com/lgs1920/studio/commit/c49ff389fe6075fc4d9d1f736e4f154c10aebc23)
+
+- Recorded automatically from Git history.
+
+## 2026-09-13 — [`refactor(timeline): isolate playback presentation updates`](https://github.com/lgs1920/studio/commit/be8b34a05e5b3d08d17e52f31f08517a41855459)
+
+- Recorded automatically from Git history.
