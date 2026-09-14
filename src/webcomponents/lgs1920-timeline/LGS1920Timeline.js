@@ -5433,7 +5433,12 @@ export class LGS1920Timeline extends HTMLElement {
             : this.#edgeDirection === -1
                 ? rect.left + 1
                 : event.clientX
-        handle.style.left = `${pinnedClientX - rect.left + (this.#surface.scrollLeft ?? 0)}px`
+        const pinnedPosition = `${pinnedClientX - rect.left + (this.#surface.scrollLeft ?? 0)}px`
+        if (state.type === 'playhead') {
+            handle.style.setProperty('--lgs-timeline-playhead-offset', pinnedPosition)
+        } else {
+            handle.style.left = pinnedPosition
+        }
     }
 
     /**
