@@ -2412,3 +2412,11 @@
 ## 2026-09-14 — [`docs(release): restore sorted issue list in 1.0.0 draft`](https://github.com/lgs1920/studio/commit/dd00ab9856861f0853fdb13e1002a3250f4a357d)
 
 - Recorded automatically from Git history.
+
+## 2026-09-14 — [`refactor(timeline): index clip presentation elements`](https://github.com/lgs1920/studio/commit/1ec2a97d83898720c25f87f063d53a413a683522)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`docs(workflow): define sorted closed issue changelogs`](https://github.com/lgs1920/studio/commit/651b540b23b05aa2468107048008fb2910026402)
+
+- Recorded automatically from Git history.
