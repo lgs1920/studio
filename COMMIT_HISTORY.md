@@ -2408,3 +2408,7 @@
 ## 2026-09-14 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/9d4a46c30110e1ab31e360e1bcfcdc2cb5ab3ca0)
 
 - Recorded automatically from Git history.
+
+## 2026-09-14 — [`docs(release): restore sorted issue list in 1.0.0 draft`](https://github.com/lgs1920/studio/commit/dd00ab9856861f0853fdb13e1002a3250f4a357d)
+
+- Recorded automatically from Git history.
