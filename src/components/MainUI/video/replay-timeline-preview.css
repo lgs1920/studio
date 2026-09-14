@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-29
+ * Last modified: 2026-09-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -61,10 +61,19 @@
         align-items: center;
         width: 100%;
         min-width: 0;
-        padding-block: 2px;
+        padding-block: var(--lgs-gutter-xxs, 0.25rem) 6px;
         padding-inline: var(--lgs-gutter-s);
         gap: var(--lgs-gutter-xs);
         pointer-events: auto;
+
+        &::after {
+            position: absolute;
+            inset-block-end: 0;
+            inset-inline: var(--lgs-gutter-xs);
+            height: 1px;
+            content: '';
+            background: var(--lgs-timeline-quiet-border-color, var(--wa-color-border-quiet));
+        }
     }
 
     .replay-timeline-preview__scrubber wa-slider {
@@ -90,6 +99,7 @@
         width: auto;
         min-width: 0;
         gap: var(--lgs-gutter-xs);
+        padding-inline: 0;
         background: var(--lgs-timeline-surface-color, var(--wa-color-surface-default));
     }
 
@@ -146,7 +156,7 @@
         /* Keep the inner timeline layout below the reserved drag area. */
         --lgs-timeline-layout-min-height: var(--lgs-replay-timeline-layout-min-height);
         /* Reserve the upper ruler band for the visible Replay scrubber. */
-        --lgs-timeline-header-height: 72px;
+        --lgs-timeline-header-height: 56px;
     }
 
     lgs1920-timeline::part(tick) {

@@ -877,7 +877,7 @@
         min-height: var(--lgs-timeline-controls-height);
         gap: var(--lgs-timeline-gap);
         padding-block: var(--lgs-gutter-xxs, 0.25rem) var(--lgs-gutter-xs, 0.5rem);
-        padding-inline: var(--lgs-gutter-xxs, 0.25rem);
+        padding-inline: var(--lgs-gutter-s, 0.75rem);
         overflow: hidden;
         background: var(--lgs-timeline-surface-color);
         border-top: 1px solid var(--lgs-timeline-quiet-border-color);

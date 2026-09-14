@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-30
+ * Last modified: 2026-09-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -53,6 +53,9 @@ describe('Replay timeline preview styles', () => {
         expect(styleSource).toContain('.replay-timeline-preview__scrubber-control')
         const scrubberControlRule = styleSource.match(/\.replay-timeline-preview__scrubber-control \{([^}]*)}/)?.[1] ?? ''
         expect(scrubberControlRule).toContain('pointer-events: auto;')
+        expect(scrubberControlRule).toContain('padding-block: var(--lgs-gutter-xxs, 0.25rem) 6px;')
+        expect(styleSource).toContain('&::after {')
+        expect(styleSource).toContain('inset-inline: var(--lgs-gutter-xs);')
         const scrubberSliderRule = styleSource.match(/\.replay-timeline-preview__scrubber wa-slider \{([^}]*)}/)?.[1] ?? ''
         expect(scrubberSliderRule).not.toContain('display: block;')
         expect(styleSource).toContain('wa-slider[label-at-start][width-auto]')
@@ -65,14 +68,17 @@ describe('Replay timeline preview styles', () => {
         expect(styleSource).toContain('.replay-timeline-preview__zoom-icon')
         const zoomRule = styleSource.match(/\.replay-timeline-preview__zoom \{([^}]*)}/)?.[1] ?? ''
         expect(zoomRule).toContain('background: var(--lgs-timeline-surface-color, var(--wa-color-surface-default));')
+        expect(zoomRule).toContain('padding-inline: 0;')
+        expect(zoomRule).not.toContain('border-bottom:')
         expect(styleSource).toContain('--track-size: 0.25rem;')
         expect(styleSource).toContain('line-height: 1;')
         expect(styleSource).toContain('align-items: center;')
         expect(styleSource).toContain('justify-content: center;')
         expect(styleSource).toContain('height: var(--lgs-timeline-header-height, 72px);')
-        expect(styleSource).toContain('--lgs-timeline-header-height: 72px;')
+        expect(styleSource).toContain('--lgs-timeline-header-height: 56px;')
         expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__surface-controls {')
         expect(webComponentStyleSource).toContain('& .lgs1920-wa-timeline__surface-controls > .lgs1920-wa-timeline__timeline-tools {')
+        expect(webComponentStyleSource).toContain('padding-inline: var(--lgs-gutter-s, 0.75rem);')
         expect(webComponentStyleSource).toContain('inset-block-end: 0;')
         expect(webComponentStyleSource).toContain('height: calc(100% - var(--lgs-timeline-controls-height));')
         expect(webComponentStyleSource).toContain('--lgs-timeline-controls-height: 2.5rem;')
