@@ -379,6 +379,17 @@ from the visual playhead path.
 4. Profile the remaining construction overlay, split-panel, and resize passes
    before changing their scheduling or removing a stabilization frame.
 
+The first three follow-up steps are implemented in:
+
+- `67fb6c23`: apply the initial controlled state from a layout effect;
+- `d4ccb7b9` and `90cca74b`: cache playhead geometry and preserve edge
+  scrolling on the transform path;
+- `61dbacb5`: remove the adapter's duplicate projection-to-display row copy.
+
+The fourth step remains pending a browser trace. The source audit does not
+provide enough evidence to remove the construction stabilization frames
+safely.
+
 ## Risks and safeguards
 
 - Coalescing frame updates must not change the canonical Replay clock. The
