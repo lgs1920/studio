@@ -5733,6 +5733,17 @@ export class LGS1920Timeline extends HTMLElement {
         return this.#clipPresentationElements
     }
 
+    #resolveClipPresentationElements = () => {
+        const presentation = this.#clipPresentationElements ?? this.#cacheClipPresentationElements()
+        const isAttached = element => element && this.#root.contains(element)
+        const indexIsComplete = this.#rows.every(row => (
+            isAttached(presentation.tracks.get(String(row.id)))
+            && isAttached(presentation.legends.get(String(row.id)))
+            && (row.actions ?? []).every(clip => isAttached(presentation.clips.get(String(clip.id))))
+        ))
+        return indexIsComplete ? presentation : this.#cacheClipPresentationElements()
+    }
+
     #updateDynamicState = () => {
         const elements = this.#dynamicElements ?? this.#cacheDynamicElements()
         this.#updatePlayheadPresentation(elements)
@@ -5813,7 +5824,7 @@ export class LGS1920Timeline extends HTMLElement {
             : null
         if (dragState?.type === 'clip' && !activeSnapGuide) this.#clearClipSnapGuide()
         this.#updateClipSnapGuidePresentation(activeSnapGuide)
-        const presentation = this.#clipPresentationElements ?? this.#cacheClipPresentationElements()
+        const presentation = this.#resolveClipPresentationElements()
         presentation.dragElements.forEach(element => element.remove())
         presentation.dragElements.clear()
         this.toggleAttribute('data-clip-drop-rejected', dragState?.type === 'clip' && dragState.dropRejected === true)
