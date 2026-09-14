@@ -2420,3 +2420,59 @@
 ## 2026-09-14 — [`docs(workflow): define sorted closed issue changelogs`](https://github.com/lgs1920/studio/commit/651b540b23b05aa2468107048008fb2910026402)
 
 - Recorded automatically from Git history.
+
+## 2026-09-14 — [`refactor(replay): stabilize timeline projection inputs`](https://github.com/lgs1920/studio/commit/326af7b2621059d463f71f2afe1b8b1164259fd6)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`refactor(timeline): coalesce layout and scrollbar refreshes`](https://github.com/lgs1920/studio/commit/afeab062dba4b8123936a92416334b520bd74ead)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`perf(replay): instrument timeline runtime metrics`](https://github.com/lgs1920/studio/commit/93df7a12dc55d18dbfbb52a8e31d0e547620dced)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`revert(perf): remove timeline runtime instrumentation`](https://github.com/lgs1920/studio/commit/1f97c813115b75a4aa0a119b0364a8d85c80c848)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`fix(timeline): recover stale clip presentation index`](https://github.com/lgs1920/studio/commit/49cb7f47aaf8deaf88aa7b41c758efbc8dfa8bf2)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`perf(timeline): move playhead updates to transform`](https://github.com/lgs1920/studio/commit/15474180bc0c9df51bfa88a75ba51aed080bb052)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`docs(perf): audit timeline opening and playhead paths`](https://github.com/lgs1920/studio/commit/e9736d011002c3b856761d0d1573a88a5b837b29)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`perf(replay): apply timeline state before paint`](https://github.com/lgs1920/studio/commit/67fb6c237b1daca76b254cf1330a267eccaa803f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`perf(timeline): cache playhead scale geometry`](https://github.com/lgs1920/studio/commit/d4ccb7b9a649ff7f434d9db26b7bc8582e94133f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`perf(replay): avoid duplicate timeline row projection`](https://github.com/lgs1920/studio/commit/61dbacb5e055a5dba405d7c93bf63135b4bdd5fa)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`fix(timeline): keep playhead edge scrolling on transform`](https://github.com/lgs1920/studio/commit/90cca74bd5c91df40ef255f46e7265e7f5f7cb2e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`fix(replay): refine timeline slider spacing`](https://github.com/lgs1920/studio/commit/9d4567a8538266ef812173b7a027eed9c5b0e29e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`docs(perf): record timeline opening optimizations`](https://github.com/lgs1920/studio/commit/31d9d445e671c544d3345e14fea576c101adaf0b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/c7e3dacc9919752e59b08f3af7852c7e2144f14b)
+
+- Recorded automatically from Git history.
