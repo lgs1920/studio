@@ -228,6 +228,7 @@ describe('ReplayTimelinePreview', () => {
         const {container} = render(<ReplayTimelinePreview/>)
         const timelineElement = container.querySelector('lgs1920-timeline')
         const slider = container.querySelector('[data-testid="replay-timeline-slider"]')
+        timelineElement.isCurrentTimeNearViewportEdge = vi.fn(() => true)
         timelineElement.ensureCurrentTimeVisible = vi.fn()
 
         fireEvent.input(slider, {target: {value: '2500'}})
@@ -248,6 +249,20 @@ describe('ReplayTimelinePreview', () => {
             settled: true,
             source: 'timeline-scrub',
         }))
+    })
+
+    it('does not recenter the timeline when slider input stays inside the viewport', async () => {
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+        const slider = container.querySelector('[data-testid="replay-timeline-slider"]')
+        timelineElement.isCurrentTimeNearViewportEdge = vi.fn(() => false)
+        timelineElement.ensureCurrentTimeVisible = vi.fn()
+
+        fireEvent.input(slider, {target: {value: '2500'}})
+
+        await waitFor(() => expect(timelineElement.currentTimeMillis).toBe(2_500))
+        expect(timelineElement.isCurrentTimeNearViewportEdge).toHaveBeenCalled()
+        expect(timelineElement.ensureCurrentTimeVisible).not.toHaveBeenCalled()
     })
 
     it('assigns application actions to the generic timeline header', () => {
@@ -335,6 +350,32 @@ describe('ReplayTimelinePreview', () => {
         await waitFor(() => expect(timelineElement.currentTimeMillis).toBe(2_500))
 
         globalThis.lgs.stores.replay.dynamicFrameState = {frameTimeMs: 2_500}
+        await waitFor(() => expect(timelineElement.currentTimeMillis).toBe(2_500))
+    })
+
+    it('keeps a settled playhead while the seek request is still processing', async () => {
+        let resolveSeek
+        globalThis.__.ui.replay.seek = vi.fn(() => new Promise(resolve => {
+            resolveSeek = resolve
+        }))
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-seek', {
+            bubbles: true,
+            detail: {timeMillis: 2_500, settled: true},
+        }))
+        globalThis.lgs.stores.replay.dynamicFrameState = {
+            frameTimeMs: 3_000,
+            updatedAt: 2,
+        }
+
+        await waitFor(() => expect(timelineElement.currentTimeMillis).toBe(2_500))
+        resolveSeek?.()
+        globalThis.lgs.stores.replay.dynamicFrameState = {
+            frameTimeMs: 3_000,
+            updatedAt: 3,
+        }
         await waitFor(() => expect(timelineElement.currentTimeMillis).toBe(2_500))
     })
 

@@ -640,21 +640,27 @@ export const ReplayTimelinePreview = forwardRef(({
         const timeMillis = normalizeTimelineTime(value)
         const durationMillis = Number(timeline.durationMillis)
         const progress = durationMillis > 0 ? timeMillis / durationMillis : 0
-        const publishedFrame = lgs.stores.replay?.dynamicFrameState
-            ?? lgs.stores.replay?.resolvedFrameState
-            ?? null
-        _pendingPlayhead.current = {
-            publishedUpdatedAt: Number(publishedFrame?.updatedAt),
-            timeMillis,
-        }
+        const pendingPlayhead = {timeMillis}
+        _pendingPlayhead.current = pendingPlayhead
         persistTimelineView({currentTimeMillis: timeMillis})
         syncSliderTime(timeMillis)
         if (_timeline.current) {
             applyTimelinePlayheadTime(_timeline.current, timeMillis)
-            _timeline.current.ensureCurrentTimeVisible?.()
+            if (_timeline.current.isCurrentTimeNearViewportEdge?.()) {
+                _timeline.current.ensureCurrentTimeVisible?.()
+            }
         }
         if (settled) {
-            void _scrubScheduler.current?.settle(progress)
+            const settlePromise = _scrubScheduler.current?.settle(progress)
+            if (settlePromise && typeof settlePromise.then === 'function') {
+                void settlePromise.then(() => {
+                    if (_pendingPlayhead.current !== pendingPlayhead) return
+                    const replayStore = lgs.stores.replay
+                    if (!hasPublishedReplayFrame(replayStore)
+                        || resolveCurrentTimeMillis(replayStore, {durationMillis}) !== pendingPlayhead.timeMillis) return
+                    _pendingPlayhead.current = null
+                })
+            }
         }
         else {
             _scrubScheduler.current?.request(progress)
@@ -827,16 +833,8 @@ export const ReplayTimelinePreview = forwardRef(({
                     durationMillis: projectionDurationMillis,
                 })
                 const pendingPlayhead = _pendingPlayhead.current
-                const publishedFrame = replayStore.dynamicFrameState
-                    ?? replayStore.resolvedFrameState
-                    ?? null
-                const publishedUpdatedAt = Number(publishedFrame?.updatedAt)
-                const hasNewerPublishedFrame = pendingPlayhead !== null
-                    && Number.isFinite(publishedUpdatedAt)
-                    && Number.isFinite(pendingPlayhead.publishedUpdatedAt)
-                    && publishedUpdatedAt > pendingPlayhead.publishedUpdatedAt
                 if (pendingPlayhead !== null
-                    && (publishedTimeMillis === pendingPlayhead.timeMillis || hasNewerPublishedFrame)) {
+                    && publishedTimeMillis === pendingPlayhead.timeMillis) {
                     _pendingPlayhead.current = null
                 }
                 const currentTimeMillis = _pendingPlayhead.current?.timeMillis ?? publishedTimeMillis
