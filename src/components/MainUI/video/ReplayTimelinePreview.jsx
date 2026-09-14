@@ -552,7 +552,7 @@ export const ReplayTimelinePreview = forwardRef(({
         resizeExtendsDuration: true,
         durationPolicy: 'extend',
         keyboardZoomActive,
-        showBuildingOverlay: true,
+        showBuildingOverlay: false,
         swatches: REPLAY_TIMELINE_COLOR_SWATCHES,
         hostInteraction: 'selectable',
         hostNoDragClass: 'lgs-widget-no-drag',

@@ -2213,7 +2213,7 @@ export class LGS1920Timeline extends HTMLElement {
         const requested = clamp(Number(preferred) || 0, minimum, maximum)
         this.#legendWidth = requested
         splitPanel.positionInPixels = requested
-        if (this.#building) {
+        if (!this.#initialBuildComplete) {
             console.log('[LGS1920Timeline] split panel deferred correction skipped while building')
             return
         }

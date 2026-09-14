@@ -349,7 +349,12 @@ a layout effect so the first painted timeline already contains its projection.
 The next optimization should remove redundant projection and row copies on
 the opening path, while preserving the public Web Component row shape. A later
 step can reduce the post-mount layout passes after a browser trace confirms
-which pass delays the first usable frame.
+which pass delays the first usable frame. Replay now also disables the
+construction overlay and defers the first split-panel width correction until
+the initial structural render is complete. This removes the overlay's
+multi-frame wait and the slow Web Awesome measurement from the opening
+critical path. The generic Web Component still supports the overlay when
+callers opt into it.
 
 ### Playhead independence from total duration
 
@@ -376,8 +381,8 @@ from the visual playhead path.
 2. Cache playhead pixel geometry and calculate its position directly from the
    current time, independently of the total duration in the hot path.
 3. Reduce projection-to-display row copying during the initial mount.
-4. Profile the remaining construction overlay, split-panel, and resize passes
-   before changing their scheduling or removing a stabilization frame.
+4. Profile the remaining resize pass and the deferred split-panel correction
+   after the first usable frame.
 
 The first three follow-up steps are implemented in:
 
@@ -386,9 +391,10 @@ The first three follow-up steps are implemented in:
   scrolling on the transform path;
 - `61dbacb5`: remove the adapter's duplicate projection-to-display row copy.
 
-The fourth step remains pending a browser trace. The source audit does not
-provide enough evidence to remove the construction stabilization frames
-safely.
+The construction-overlay and initial split-panel parts of the fourth step are
+implemented in the current change. A browser trace is still needed to measure
+the remaining post-open resize and split-panel work before reducing those
+passes further.
 
 ## Risks and safeguards
 
