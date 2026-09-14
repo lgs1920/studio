@@ -456,7 +456,15 @@ export class LGS1920Timeline extends HTMLElement {
         this.#installInputPropagationBlockers()
         window.addEventListener('keydown', this.#handleWindowKeyDown, true)
         this.#installResizeObserver()
-        this.#render()
+        if (this.#projection) {
+            this.#render()
+        } else {
+            this.hidden = false
+            if (this.#timelineConfig.showBuildingOverlay === false) {
+                this.#root.querySelector('[data-building-overlay]')?.remove()
+            }
+            console.log('[LGS1920Timeline] connected without projection')
+        }
         this.setAttribute('data-ready', '')
         console.log('[LGS1920Timeline] connected', {
             phase: this.#projection ? 'active' : 'empty',
@@ -601,6 +609,7 @@ export class LGS1920Timeline extends HTMLElement {
      * @param {HTMLElement|null} element - Rendered clip element to focus.
      */
     #selectClip = (clip, event, element = null) => {
+        if (clip?.selectable === false) return
         const trackId = clip?.trackId ?? this.#rows.find(row => (row.actions ?? []).some(value => value.id === clip?.id))?.id
         if (trackId === undefined || clip?.id === undefined || clip?.id === null) return
         const previousSelectionKey = this.#selectedClipKey
@@ -862,7 +871,9 @@ export class LGS1920Timeline extends HTMLElement {
             this.#selectedClipKey = null
         } else {
             const entry = this.#clipEditor.findClipEntry(this.#rows, value)
-            this.#selectedClipKey = entry ? this.#clipSelectionKey(entry.row.id, entry.clip.id) : null
+            this.#selectedClipKey = entry && entry.clip.selectable !== false
+                ? this.#clipSelectionKey(entry.row.id, entry.clip.id)
+                : null
         }
         this.#updateClipSelectionPresentation()
     }
@@ -1963,7 +1974,7 @@ export class LGS1920Timeline extends HTMLElement {
             if (typeof requestAnimationFrame === 'function'
                 && typeof ResizeObserver !== 'undefined'
                 && this.#projection
-                && (!layoutMeasured || !layoutStable)) {
+                && !layoutMeasured) {
                 this.#buildingLayoutSignature = layoutSignature
                 this.#buildingFrame = requestAnimationFrame(() => {
                     this.#buildingFrame = requestAnimationFrame(complete)
@@ -2202,6 +2213,10 @@ export class LGS1920Timeline extends HTMLElement {
         const requested = clamp(Number(preferred) || 0, minimum, maximum)
         this.#legendWidth = requested
         splitPanel.positionInPixels = requested
+        if (this.#building) {
+            console.log('[LGS1920Timeline] split panel deferred correction skipped while building')
+            return
+        }
         const startedAt = globalThis.performance?.now?.() ?? Date.now()
         const applyMeasuredWidth = () => {
             if (!splitPanel.isConnected || this.#legendWidth !== requested) return
@@ -3802,7 +3817,9 @@ export class LGS1920Timeline extends HTMLElement {
     #startClipInteraction = (event, clipId, mode, edge = null, wasSelected = false) => {
         if (event.button !== 0) return
         const entry = this.#clipEditor.findClipEntry(this.#rows, clipId)
-        if (!entry || !this.#isTrackEditable(entry.row) || entry.clip.editable === false) return
+        const readOnlyResize = mode === 'resize' && entry?.row.clipResizable === true
+        if (!entry || (!this.#isTrackEditable(entry.row) && !readOnlyResize) || entry.clip.editable === false
+            || entry.clip.selectable === false || (mode === 'resize' && entry.clip.resizable === false)) return
         const interval = resolveClipInterval(entry.clip)
         const startTime = this.#timeAtClientX(event.clientX)
         const initialDurationMillis = this.#durationMillis()
