@@ -305,7 +305,7 @@ or own the HQ clock.
 ## Styling and dependency
 
 The implementation uses the fixed dependency
-`@xzdarcy/react-timeline-editor` at version `1.0.0`, declared in
+`@lgs1920/timeline` at version `0.1.0`, declared in
 [`package.json`](../../../package.json#L55-L63) and installed in `bun.lock`.
 Web Awesome and FontAwesome remain the application UI and icon authorities.
 
@@ -317,7 +317,7 @@ Web Awesome and FontAwesome remain the application UI and icon authorities.
 | Layout constants, row selectors, legend transform | [`replay-timeline-utils.test.js`](../../../src/__tests__/ui/components/replay-timeline-utils.test.js) |
 | Controlled projection rendering, interaction flags, labels, ordering, duration, and cleanup | [`replay-timeline-preview.test.jsx`](../../../src/__tests__/ui/components/replay-timeline-preview.test.jsx) |
 | CSS nesting, compact layout parts, drag-area geometry, and interaction selectors | [`replay-timeline-preview-style.test.js`](../../../src/__tests__/ui/components/replay-timeline-preview-style.test.js) |
-| Web Component rendering, interactions, drag lifecycle, and event suppression | [`LGS1920Timeline.test.js`](../../../src/webcomponents/lgs1920-timeline/LGS1920Timeline.test.js) |
+| Web Component rendering, interactions, drag lifecycle, and event suppression | [`LGS1920Timeline.test.js`](../../../../timeline/src/lgs1920-timeline/LGS1920Timeline.test.js) |
 | Widget host dimensions and runtime invalidation | [`replay-timeline-widget.test.jsx`](../../../src/__tests__/ui/components/replay-timeline-widget.test.jsx) |
 | Clip creation, editing, ordering, removal, and stable anchors | [`replay-clips-tab.test.jsx`](../../../src/__tests__/ui/replay/replay-clips-tab.test.jsx) |
 | Drawer tabs, nested targets, stacked restoration, and toggle close behavior | [`panel-manager.test.js`](../../../src/__tests__/ui/widgets/panel-manager.test.js) |

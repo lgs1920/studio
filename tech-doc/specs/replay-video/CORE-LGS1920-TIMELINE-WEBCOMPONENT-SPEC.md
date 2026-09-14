@@ -5,7 +5,7 @@
 Current implementation specification.
 
 The component is a generic video-timeline editor. It is based on
-`@xzdarcy/react-timeline-editor`, whose React timeline implementation has been
+`@lgs1920/timeline`, whose generic timeline implementation is published as
 transformed into JavaScript and CSS Web Component code. The package also
 provides a thin React wrapper around the custom element.
 
@@ -17,7 +17,7 @@ inputs, icons, popups, and split-panel layout.
 The implementation is located in:
 
 ```text
-src/webcomponents/lgs1920-timeline/
+../timeline/src/lgs1920-timeline/
 ├── LGS1920Timeline.js
 ├── LGS1920TimelineEditing.js
 ├── LGS1920TimelineRendering.js
@@ -72,7 +72,7 @@ dependencies.
 </lgs1920-timeline>
 
 <script type="module">
-    import '/src/webcomponents/lgs1920-timeline/LGS1920Timeline.js'
+    import '@lgs1920/timeline'
 </script>
 ```
 
@@ -582,4 +582,4 @@ parts, including:
 - tracks, clips, playhead, ruler, menus, and actions.
 
 The complete usage examples and property tables are maintained in the
-component [README](../../../src/webcomponents/lgs1920-timeline/README.md).
+component [README](../../../../timeline/src/lgs1920-timeline/README.md).

@@ -12,10 +12,10 @@ to provide a readable dependency snapshot for contributors and maintainers.
 - Valtio
 - Cesium
 - Web Awesome
+- `@lgs1920/timeline`
 - Shoelace
 - ECharts
 - Mediabunny
-- `@xzdarcy/react-timeline-editor`
 
 ### Build and Quality Tooling
 
@@ -38,6 +38,7 @@ These are the current package names declared in the `dependencies` section of `p
 
 ```text
 @awesome.me/kit-eb5c406148
+@lgs1920/timeline
 @fortawesome/duotone-light-svg-icons
 @fortawesome/duotone-regular-svg-icons
 @fortawesome/duotone-thin-svg-icons
@@ -72,7 +73,6 @@ These are the current package names declared in the `dependencies` section of `p
 @turf/point-to-line-distance
 @turf/transform-rotate
 @web.awesome.me/webawesome-pro
-@xzdarcy/react-timeline-editor
 @zumer/snapdom
 argparse
 axios
@@ -178,4 +178,4 @@ protobufjs
 - A few tooling packages are currently declared in `dependencies` rather than `devDependencies`; this document reflects
   the repository as it exists today rather than an idealized split.
 - When `package.json` changes, this file should be updated in the same change set.
-- Last synchronized with `package.json`: 2026-09-13.
+- Last synchronized with `package.json`: 2026-09-14.

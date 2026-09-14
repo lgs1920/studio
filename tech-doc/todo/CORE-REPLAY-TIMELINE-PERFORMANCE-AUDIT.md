@@ -21,11 +21,11 @@ The audit covers:
 - the React adapter in
   [`ReplayTimelinePreview.jsx`](../../src/components/MainUI/video/ReplayTimelinePreview.jsx);
 - the generic Web Component in
-  [`LGS1920Timeline.js`](../../src/webcomponents/lgs1920-timeline/LGS1920Timeline.js);
+  [`LGS1920Timeline.js`](../../../timeline/src/lgs1920-timeline/LGS1920Timeline.js);
 - the renderer and clip editing helpers in
-  [`LGS1920TimelineRendering.js`](../../src/webcomponents/lgs1920-timeline/LGS1920TimelineRendering.js)
+  [`LGS1920TimelineRendering.js`](../../../timeline/src/lgs1920-timeline/LGS1920TimelineRendering.js)
   and
-  [`LGS1920TimelineEditing.js`](../../src/webcomponents/lgs1920-timeline/LGS1920TimelineEditing.js);
+  [`LGS1920TimelineEditing.js`](../../../timeline/src/lgs1920-timeline/LGS1920TimelineEditing.js);
 - the Replay projection in
   [`ReplayPreparationTimeline.js`](../../src/core/ui/replay/ReplayPreparationTimeline.js);
 - the Replay frame publication path and recent timeline changes.
@@ -74,7 +74,7 @@ LGS1920Timeline state comparison and possible full DOM render
 ```
 
 The active application path uses the generic `LGS1920Timeline` Web Component.
-The repository still depends on `@xzdarcy/react-timeline-editor`, but the active
+The extracted timeline package owns the active
 Replay preview does not import that package at runtime. Optimizing that package
 is therefore secondary unless another host still mounts it.
 
@@ -111,7 +111,7 @@ callback calls it for every published frame at
 [`ReplayTimelinePreview.jsx:702-712`](../../src/components/MainUI/video/ReplayTimelinePreview.jsx#L702).
 
 The method reads viewport dimensions and scroll metrics at
-[`LGS1920Timeline.js:1190-1215`](../../src/webcomponents/lgs1920-timeline/LGS1920Timeline.js#L1190).
+[`LGS1920Timeline.js:1190-1215`](../../../timeline/src/lgs1920-timeline/LGS1920Timeline.js#L1190).
 When the playhead reaches an edge it also updates the fixed ruler, viewport
 margins, and all custom scrollbar geometry. During normal playback this work is
 usually unnecessary because the playhead remains inside the current viewport.
@@ -130,10 +130,10 @@ directly connected to the reported regression.
 ### P1: every current-time assignment performs a dynamic DOM pass
 
 The `currentTimeMillis` setter always calls `#updateDynamicState()` at
-[`LGS1920Timeline.js:858-861`](../../src/webcomponents/lgs1920-timeline/LGS1920Timeline.js#L858).
+[`LGS1920Timeline.js:858-861`](../../../timeline/src/lgs1920-timeline/LGS1920Timeline.js#L858).
 That method performs multiple `querySelector` calls, recalculates scale values,
 updates the playhead, updates range handles, and updates transport button state
-at [`LGS1920Timeline.js:5518-5561`](../../src/webcomponents/lgs1920-timeline/LGS1920Timeline.js#L5518).
+at [`LGS1920Timeline.js:5518-5561`](../../../timeline/src/lgs1920-timeline/LGS1920Timeline.js#L5518).
 
 Proposal:
 
@@ -156,7 +156,7 @@ The React controlled effect assigns `element.timeline` and `element.tracks`
 sequentially at
 [`ReplayTimelinePreview.jsx:646-650`](../../src/components/MainUI/video/ReplayTimelinePreview.jsx#L646).
 Both setters enter `#syncPublicProps()` and can reach `#applyState()` in
-[`LGS1920Timeline.js:1045-1125`](../../src/webcomponents/lgs1920-timeline/LGS1920Timeline.js#L1045).
+[`LGS1920Timeline.js:1045-1125`](../../../timeline/src/lgs1920-timeline/LGS1920Timeline.js#L1045).
 When the structure changes, `#applyState()` calls the full renderer.
 
 Proposal: add one generic `applyControlledState()` method to the Web Component
@@ -173,7 +173,7 @@ are never visible to the user.
 ### P1: full structural rendering remains expensive
 
 `#render()` rebuilds the timeline structure and replaces the shadow DOM children
-at [`LGS1920Timeline.js:1616-1681`](../../src/webcomponents/lgs1920-timeline/LGS1920Timeline.js#L1616).
+at [`LGS1920Timeline.js:1616-1681`](../../../timeline/src/lgs1920-timeline/LGS1920Timeline.js#L1616).
 Afterward it reapplies the split-panel width, scroll positions, fixed ruler,
 scrollbars, dynamic state, selection, copy presentation, and snap presentation.
 This is appropriate for changes to rows, duration, scale, or structure, but it
@@ -193,9 +193,9 @@ acceptance criterion is that steady playback produces zero structural renders.
 ### P1: comparison logic serializes rows repeatedly
 
 The Web Component computes row and placement signatures with `JSON.stringify`
-at [`LGS1920Timeline.js:191-205`](../../src/webcomponents/lgs1920-timeline/LGS1920Timeline.js#L191).
+at [`LGS1920Timeline.js:191-205`](../../../timeline/src/lgs1920-timeline/LGS1920Timeline.js#L191).
 The controlled-state patch test serializes normalized row shapes again at
-[`LGS1920Timeline.js:1136-1164`](../../src/webcomponents/lgs1920-timeline/LGS1920Timeline.js#L1136).
+[`LGS1920Timeline.js:1136-1164`](../../../timeline/src/lgs1920-timeline/LGS1920Timeline.js#L1136).
 This cost is modest for the current small projection, but it grows with clip
 count and is paid on controlled assignments even when no visible change exists.
 
@@ -208,7 +208,7 @@ model to solve this problem.
 
 `#updateClipInteractionPresentation()` rebuilds maps from all clips, tracks, and
 legend rows and then loops through every row and action at
-[`LGS1920Timeline.js:5569-5684`](../../src/webcomponents/lgs1920-timeline/LGS1920Timeline.js#L5569).
+[`LGS1920Timeline.js:5569-5684`](../../../timeline/src/lgs1920-timeline/LGS1920Timeline.js#L5569).
 This is appropriate for a committed edit or a changed row set, but it is a
 costly path for every pointer movement during a clip drag.
 
@@ -224,10 +224,10 @@ proposal changes presentation work only.
 
 Structural rendering disconnects and reinstalls the `ResizeObserver` through
 `#installResizeObserver()` at
-[`LGS1920Timeline.js:1721`](../../src/webcomponents/lgs1920-timeline/LGS1920Timeline.js#L1721)
-and [`LGS1920Timeline.js:5253-5259`](../../src/webcomponents/lgs1920-timeline/LGS1920Timeline.js#L5253).
+[`LGS1920Timeline.js:1721`](../../../timeline/src/lgs1920-timeline/LGS1920Timeline.js#L1721)
+and [`LGS1920Timeline.js:5253-5259`](../../../timeline/src/lgs1920-timeline/LGS1920Timeline.js#L5253).
 Scrollbar updates walk nested shadow-DOM queries at
-[`LGS1920Timeline.js:3843-3853`](../../src/webcomponents/lgs1920-timeline/LGS1920Timeline.js#L3843).
+[`LGS1920Timeline.js:3843-3853`](../../../timeline/src/lgs1920-timeline/LGS1920Timeline.js#L3843).
 
 Proposal: install the host observer once in `connectedCallback()`, disconnect it
 once in `disconnectedCallback()`, and schedule one layout refresh per animation
@@ -415,4 +415,4 @@ passes further.
 - [Replay Timeline preparation implementation](../specs/replay-video/CORE-REPLAY-TIMELINE-IMPLEMENTATION.md)
 - [Timeline Web Component specification](../specs/replay-video/CORE-LGS1920-TIMELINE-WEBCOMPONENT-SPEC.md)
 - [Replay timeline preview tests](../../src/__tests__/ui/components/replay-timeline-preview.test.jsx)
-- [Timeline Web Component tests](../../src/webcomponents/lgs1920-timeline/LGS1920Timeline.test.js)
+- [Timeline Web Component tests](../../../timeline/src/lgs1920-timeline/LGS1920Timeline.test.js)
