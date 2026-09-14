@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-30
+ * Last modified: 2026-09-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -1111,6 +1111,11 @@
         width: var(--lgs-timeline-playhead-width);
         overflow: visible;
         background: transparent;
+        transform: translate3d(var(--lgs-timeline-playhead-offset, 0px), 0, 0);
+    }
+
+    :host([data-playback-active]) .lgs1920-wa-timeline__playhead {
+        will-change: transform;
     }
 
     & .lgs1920-wa-timeline__playhead-grip {

@@ -940,6 +940,7 @@ export class LGS1920Timeline extends HTMLElement {
      */
     set playing(value) {
         this.#playing = value === true
+        this.toggleAttribute('data-playback-active', this.#playing)
         this.#updatePlaybackButton()
     }
 
@@ -5770,7 +5771,7 @@ export class LGS1920Timeline extends HTMLElement {
         if (current) current.textContent = formatTime(this.#currentTimeMillis / 1000)
         if (!playhead) return
         const position = this.#currentTimeContentX()
-        playhead.style.left = `${position}px`
+        playhead.style.setProperty('--lgs-timeline-playhead-offset', `${position}px`)
         playhead.setAttribute('aria-valuemin', `${this.#rangeStartMillis}`)
         playhead.setAttribute('aria-valuemax', `${this.#rangeEndMillis}`)
         playhead.setAttribute('aria-valuenow', `${this.#currentTimeMillis}`)

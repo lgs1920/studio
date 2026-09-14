@@ -1884,7 +1884,7 @@ describe('lgs1920-timeline Web Component', () => {
         timeline.addEventListener('lgs1920-timeline-seek', seek)
         timeline.setTime(5_000)
 
-        expect(timeline.shadowRoot.querySelector('[data-playhead]').style.left).toBe('220px')
+        expect(timeline.shadowRoot.querySelector('[data-playhead]').style.getPropertyValue('--lgs-timeline-playhead-offset')).toBe('220px')
         expect(timeline.shadowRoot.querySelector('[data-current-time]').textContent).toBe('0:05')
         expect(seek).not.toHaveBeenCalled()
     })
@@ -1913,7 +1913,7 @@ describe('lgs1920-timeline Web Component', () => {
 
         expect(querySelector).not.toHaveBeenCalled()
         expect(current.textContent).toBe('0:05')
-        expect(playhead.style.left).toBe('220px')
+        expect(playhead.style.getPropertyValue('--lgs-timeline-playhead-offset')).toBe('220px')
     })
 
     it('applies controlled structure and playback values with one render', () => {
@@ -1986,7 +1986,7 @@ describe('lgs1920-timeline Web Component', () => {
         expect(timeline.isCurrentTimeNearViewportEdge()).toBe(true)
         timeline.ensureCurrentTimeVisible()
 
-        const playheadX = Number.parseFloat(timeline.shadowRoot.querySelector('[data-playhead]').style.left)
+        const playheadX = Number.parseFloat(timeline.shadowRoot.querySelector('[data-playhead]').style.getPropertyValue('--lgs-timeline-playhead-offset'))
         expect(surface.scrollLeft).toBeGreaterThan(0)
         expect(playheadX - surface.scrollLeft).toBeGreaterThanOrEqual(12)
         expect(playheadX - surface.scrollLeft).toBeLessThanOrEqual(588)
@@ -2058,24 +2058,24 @@ describe('lgs1920-timeline Web Component', () => {
         const surface = timeline.shadowRoot.querySelector('[data-surface]')
         vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 600, width: 600})
         const playhead = timeline.shadowRoot.querySelector('[data-playhead]')
-        const initialPlayheadPosition = playhead.style.left
+        const initialPlayheadPosition = playhead.style.getPropertyValue('--lgs-timeline-playhead-offset')
         const startHandle = timeline.shadowRoot.querySelector('[data-range-handle="start"]')
         startHandle.dispatchEvent(createPointerEvent('pointerdown', {clientX: 60, clientY: 50}))
         window.dispatchEvent(createPointerEvent('pointermove', {clientX: 100, clientY: 50}))
 
         expect(timeline.currentTimeMillis).toBe(5_000)
-        expect(playhead.style.left).toBe(initialPlayheadPosition)
+        expect(playhead.style.getPropertyValue('--lgs-timeline-playhead-offset')).toBe(initialPlayheadPosition)
         window.dispatchEvent(createPointerEvent('pointerup', {clientX: 100, clientY: 50}))
         surface.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true, clientX: 100, clientY: 50}))
         expect(timeline.currentTimeMillis).toBe(5_000)
-        expect(playhead.style.left).toBe(initialPlayheadPosition)
+        expect(playhead.style.getPropertyValue('--lgs-timeline-playhead-offset')).toBe(initialPlayheadPosition)
 
         const endHandle = timeline.shadowRoot.querySelector('[data-range-handle="end"]')
         endHandle.dispatchEvent(createPointerEvent('pointerdown', {clientX: 340, clientY: 50}))
         window.dispatchEvent(createPointerEvent('pointermove', {clientX: 180, clientY: 50}))
 
         expect(timeline.currentTimeMillis).toBe(4_000)
-        expect(playhead.style.left).not.toBe(initialPlayheadPosition)
+        expect(playhead.style.getPropertyValue('--lgs-timeline-playhead-offset')).not.toBe(initialPlayheadPosition)
         window.dispatchEvent(createPointerEvent('pointerup', {clientX: 180, clientY: 50}))
         expect(timeline.currentTimeMillis).toBe(4_000)
     })
