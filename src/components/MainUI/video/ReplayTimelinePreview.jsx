@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -103,6 +103,52 @@ const resolvePreparationClips = (replay, journey, settingsClips = {}) => {
 
     return {catalog, start, stop}
 }
+
+/**
+ * Keep only journey fields that can change the preparation projection.
+ *
+ * @param {Object|null} journey - Reactive journey snapshot.
+ * @returns {Object} Projection-specific journey inputs.
+ */
+const resolvePreparationJourney = journey => ({
+    title: journey?.title ?? journey?.name ?? '',
+    replay: {
+        start: journey?.replay?.start,
+        stop: journey?.replay?.stop,
+    },
+})
+
+/**
+ * Build a stable signature for the widget order consumed by the projection.
+ *
+ * @param {Array} widgetOrder - Resolved video widget order.
+ * @returns {string} Stable widget order signature.
+ */
+const widgetOrderSignature = widgetOrder => JSON.stringify((widgetOrder ?? []).map(widget => ({
+    id: widget.id,
+    type: widget.type,
+    label: widget.label,
+    icon: widget.icon,
+    timelineColor: widget.timelineColor,
+    canHide: widget.canHide,
+    visible: widget.visible,
+    widgetGroup: widget.widgetGroup,
+    widgetGroupLabel: widget.widgetGroupLabel,
+    editable: widget.editable,
+    widgetId: widget.widgetId,
+    widgetIds: widget.widgetIds,
+    members: widget.members?.map(member => ({
+        id: member.id,
+        type: member.type,
+        label: member.label,
+        icon: member.icon,
+        timelineColor: member.timelineColor,
+        canHide: member.canHide,
+        visible: member.visible,
+        editable: member.editable,
+        widgetId: member.widgetId,
+    })),
+})))
 
 /**
  * Resolve the capture frame rate used to build the preparation projection.
@@ -410,7 +456,11 @@ export const ReplayTimelinePreview = forwardRef(({
     const _timeline = useRef(null)
     const videoSettingsButtonId = `replay-timeline-video-settings-${useId().replaceAll(':', '')}`
     const journey = main?.theJourney ?? lgs.theJourney
-    const widgetOrder = useMemo(() => resolveVideoWidgetOrder(widgetList, widgetSettings), [widgetList, widgetSettings])
+    const resolvedWidgetOrder = useMemo(() => resolveVideoWidgetOrder(widgetList, widgetSettings), [widgetList, widgetSettings])
+    const widgetOrderRevision = useMemo(() => widgetOrderSignature(resolvedWidgetOrder), [resolvedWidgetOrder])
+    // The revision intentionally controls when the projection input reference changes.
+    // oxlint-disable-next-line react/exhaustive-deps
+    const widgetOrder = useMemo(() => resolvedWidgetOrder, [widgetOrderRevision])
 
     const linkedPreparation = video.editing === true
                                && video.timelinePreviewActive === true
@@ -431,16 +481,28 @@ export const ReplayTimelinePreview = forwardRef(({
         clips: replaySettings.clips,
         duration: replaySettings.duration,
     }), [replaySettings.clips, replaySettings.duration])
+    const journeyTitle = journey?.title
+    const journeyName = journey?.name
+    const journeyReplayStart = journey?.replay?.start
+    const journeyReplayStop = journey?.replay?.stop
+    const projectionJourney = useMemo(() => resolvePreparationJourney({
+        title: journeyTitle,
+        name: journeyName,
+        replay: {
+            start: journeyReplayStart,
+            stop: journeyReplayStop,
+        },
+    }), [journeyTitle, journeyName, journeyReplayStart, journeyReplayStop])
 
     const projection = useMemo(() => buildReplayPreparationTimeline({
         videoTimeline: projectionReplay.deferredExportPlan?.videoTimeline ?? null,
         replayDurationMillis: resolveReplayDurationMillis(projectionReplay, projectionReplaySettings),
         fps: resolveCaptureFps({fps: video.fps}, projectionReplay),
         direction: projectionReplay.direction,
-        clips: resolvePreparationClips(projectionReplay, journey, projectionReplaySettings.clips),
-        journeyTitle: journey?.title ?? journey?.name ?? '',
+        clips: resolvePreparationClips(projectionReplay, projectionJourney, projectionReplaySettings.clips),
+        journeyTitle: projectionJourney.title,
         widgetOrder,
-    }), [journey, projectionReplay, projectionReplaySettings, video.fps, widgetOrder])
+    }), [projectionJourney, projectionReplay, projectionReplaySettings, video.fps, widgetOrder])
     const editorData = useMemo(() => toReplayTimelineEditorData(projection), [projection])
     const preparationTimeline = replay.preparationTimeline
     const preparedTimeline = preparationTimeline?.timeline ?? null
@@ -452,6 +514,7 @@ export const ReplayTimelinePreview = forwardRef(({
     )
     const [horizontalZoomPercent, setHorizontalZoomPercent] = useState(resolvedHorizontalZoomPercent)
     const timeline = useMemo(() => ({
+        projectionRevision: projection.signature,
         durationMillis: Number(preparedTimeline?.durationMillis) > 0
             ? Number(preparedTimeline.durationMillis)
             : projection.durationMillis,
@@ -482,7 +545,7 @@ export const ReplayTimelinePreview = forwardRef(({
         swatches: REPLAY_TIMELINE_COLOR_SWATCHES,
         hostInteraction: 'selectable',
         hostNoDragClass: 'lgs-widget-no-drag',
-    }), [horizontalZoomPercent, hasPersistedZoom, keyboardZoomActive, preparedTimeline, projection.durationMillis, projection.fps, projection.source.frameCount, projection.source.frameIntervalMs])
+    }), [horizontalZoomPercent, hasPersistedZoom, keyboardZoomActive, preparedTimeline, projection.signature, projection.durationMillis, projection.fps, projection.source.frameCount, projection.source.frameIntervalMs])
     const baseTracks = useMemo(() => toDisplayTracks(editorData), [editorData])
     const tracks = Array.isArray(preparationTimeline?.tracks)
         ? preparationTimeline.tracks
