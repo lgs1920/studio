@@ -132,6 +132,7 @@ export class LGS1920Timeline extends HTMLElement {
     #rangeEndFollowsDuration = true
     #surfaceWidth = 0
     #contentWidth = START_LEFT + SCALE_WIDTH
+    #playheadGeometry = null
     #rowHeight = MIN_ROW_HEIGHT
     #legendWidth = null
     #building = true
@@ -1011,6 +1012,7 @@ export class LGS1920Timeline extends HTMLElement {
         this.#dynamicElements = null
         this.#clipPresentationElements = null
         this.#scrollbarElements = null
+        this.#playheadGeometry = null
         this.#transportState = null
     }
 
@@ -1640,17 +1642,33 @@ export class LGS1920Timeline extends HTMLElement {
     }
 
     /**
+     * Cache the scale used by the hot playhead update path.
+     *
+     * @param {number} majorSeconds - Seconds represented by one major interval.
+     * @param {number} scaleWidth - Pixel width of one major interval.
+     * @returns {void}
+     */
+    #cachePlayheadGeometry = (majorSeconds, scaleWidth) => {
+        this.#playheadGeometry = {
+            majorSeconds: Math.max(Number(majorSeconds) || 0, Number.EPSILON),
+            scaleOffset: this.#numericToken('scale-offset', START_LEFT),
+            scaleWidth: Number.isFinite(Number(scaleWidth)) ? Number(scaleWidth) : 0,
+        }
+    }
+
+    /**
      * Resolve the current playhead position in the horizontal content.
      *
      * @returns {number} Playhead position in content pixels.
      */
     #currentTimeContentX = () => {
-        const duration = this.#durationMillis()
-        const ratio = duration > 0 ? clamp(this.#currentTimeMillis / duration, 0, 1) : 0
-        const {majorSeconds} = this.#resolveScale()
-        const scaleWidth = this.#scaleWidth()
-        const scaleOffset = this.#numericToken('scale-offset', START_LEFT)
-        return scaleOffset + ((ratio * this.#durationSeconds()) / majorSeconds * scaleWidth)
+        if (!this.#playheadGeometry) {
+            const {majorSeconds} = this.#resolveScale()
+            this.#cachePlayheadGeometry(majorSeconds, this.#scaleWidth())
+        }
+        const {majorSeconds, scaleOffset, scaleWidth} = this.#playheadGeometry
+        const currentTimeSeconds = Math.max(0, Number(this.#currentTimeMillis) || 0) / 1000
+        return scaleOffset + ((currentTimeSeconds / majorSeconds) * scaleWidth)
     }
 
     /**
@@ -1697,6 +1715,7 @@ export class LGS1920Timeline extends HTMLElement {
         const {majorSeconds, scaleSplitCount} = this.#resolveScale()
         const durationSeconds = this.#durationSeconds()
         const scaleWidth = this.#scaleWidth()
+        this.#cachePlayheadGeometry(majorSeconds, scaleWidth)
         const nextScaleCount = this.#scaleCountForDuration(durationSeconds, majorSeconds, scaleWidth)
         this.#contentWidth = Math.max(this.#clipWorkspaceWidth, this.#contentWidthForDuration(durationSeconds, majorSeconds, scaleWidth))
         const widthSelectors = ['[part="canvas"]', '[part="ruler"]', '[part="tracks-viewport"]', '[part="tracks"]']
@@ -1796,6 +1815,7 @@ export class LGS1920Timeline extends HTMLElement {
         const {majorSeconds, scaleSplitCount} = this.#resolveScale()
         const durationSeconds = this.#durationSeconds()
         const scaleWidth = this.#scaleWidth()
+        this.#cachePlayheadGeometry(majorSeconds, scaleWidth)
         const scaleCount = this.#scaleCountForDuration(durationSeconds, majorSeconds, scaleWidth)
         this.#contentWidth = Math.max(this.#clipWorkspaceWidth, this.#contentWidthForDuration(durationSeconds, majorSeconds, scaleWidth))
         this.#rowHeight = this.#resolveRowHeight()
