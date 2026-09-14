@@ -22,7 +22,7 @@
  * introduced.
  */
 
-import {forwardRef, useCallback, useEffect, useId, useImperativeHandle, useMemo, useRef, useState} from 'react'
+import {forwardRef, Profiler, useCallback, useEffect, useId, useImperativeHandle, useMemo, useRef, useState} from 'react'
 import {useSnapshot} from 'valtio'
 import {subscribeKey} from 'valtio/utils'
 import {WaButton, WaIcon, WaSlider, WaTooltip} from '@web.awesome.me/webawesome-pro/dist/react'
@@ -45,6 +45,7 @@ import {
     groupWidgetEntries,
 } from '@Core/ui/widget-manager/WidgetGroupUtils'
 import {createReplayScrubScheduler} from '@Core/ui/replay/ReplayScrubScheduler'
+import {recordReplayTimelineDuration, recordReplayTimelineMetric} from '@Core/ui/replay/ReplayTimelinePerformance'
 import {useOptionalSnapshot} from '@Utils/ValtioUtils'
 import {formatRulerTime} from '../../../webcomponents/lgs1920-timeline/LGS1920TimelineUtils.js'
 import '../../../webcomponents/lgs1920-timeline/LGS1920Timeline.js'
@@ -149,6 +150,10 @@ const widgetOrderSignature = widgetOrder => JSON.stringify((widgetOrder ?? []).m
         widgetId: member.widgetId,
     })),
 })))
+
+const handleReplayTimelineProfiler = (_id, _phase, actualDuration) => {
+    recordReplayTimelineDuration('reactCommits', actualDuration)
+}
 
 /**
  * Resolve the capture frame rate used to build the preparation projection.
@@ -774,6 +779,7 @@ export const ReplayTimelinePreview = forwardRef(({
         let scheduledWithAnimationFrame = false
 
         const syncPlayback = () => {
+            recordReplayTimelineMetric('replayStoreCallbacks')
             const replayStore = lgs.stores.replay
             if (hasPublishedReplayFrame(replayStore)) {
                 const currentTimeMillis = resolveCurrentTimeMillis(replayStore, {
@@ -844,7 +850,8 @@ export const ReplayTimelinePreview = forwardRef(({
     }
 
     return (
-        <section className="replay-timeline-preview wa-theme-lgs1920"
+        <Profiler id="replay-timeline" onRender={handleReplayTimelineProfiler}>
+            <section className="replay-timeline-preview wa-theme-lgs1920"
                  data-testid="replay-timeline-preview"
                  data-widget-capture="exclude"
                  aria-label="Replay tracks"
@@ -942,7 +949,8 @@ export const ReplayTimelinePreview = forwardRef(({
                                                  mainTheme/>
                 </lgs1920-timeline>
             )}
-        </section>
+            </section>
+        </Profiler>
     )
 })
 
