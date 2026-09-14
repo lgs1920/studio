@@ -2476,3 +2476,23 @@
 ## 2026-09-14 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/c7e3dacc9919752e59b08f3af7852c7e2144f14b)
 
 - Recorded automatically from Git history.
+
+## 2026-09-14 — [`perf(replay): measure timeline opening stages`](https://github.com/lgs1920/studio/commit/a6a4e1fb0a11785d89d20d839f2e9c408df5e60d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`chore(replay): add direct timeline opening logs`](https://github.com/lgs1920/studio/commit/ee09f0df38cada55757b7f15b63191794d9d891e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`perf(timeline): shorten initial opening layout`](https://github.com/lgs1920/studio/commit/497fe520a207143137b81511ec42da53078fd142)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`perf(replay): remove opening construction wait`](https://github.com/lgs1920/studio/commit/653695319588ad7851958731b9c54aee6c4d4015)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/4b8ea3faace1c4ef89226cdc56baafecfaa25496)
+
+- Recorded automatically from Git history.
