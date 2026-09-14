@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-30
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -820,6 +820,7 @@ describe('lgs1920-timeline Web Component', () => {
             const surface = timeline.shadowRoot.querySelector('[data-surface]')
             Object.defineProperty(surface, 'clientWidth', {configurable: true, value: 600})
             resizeCallback()
+            await advanceAnimationFrames(1)
             expect(timeline.shadowRoot.querySelector('[data-surface]')).not.toBe(surface)
             await advanceAnimationFrames(4)
 

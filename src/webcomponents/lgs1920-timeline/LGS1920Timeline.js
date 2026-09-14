@@ -158,6 +158,9 @@ export class LGS1920Timeline extends HTMLElement {
     #clipPresentationElements = null
     #transportState = null
     #resizeObserver = null
+    #layoutRefreshFrame = null
+    #layoutRefreshUsesAnimationFrame = false
+    #scrollbarElements = null
     #scrollbarDrag = null
     #scrollbarDragCleanup = null
     #scrollbarHideTimer = null
@@ -449,6 +452,7 @@ export class LGS1920Timeline extends HTMLElement {
         if (!this.getAttribute('aria-label')) this.setAttribute('aria-label', 'Timeline')
         this.#installInputPropagationBlockers()
         window.addEventListener('keydown', this.#handleWindowKeyDown, true)
+        this.#installResizeObserver()
         this.#render()
         this.setAttribute('data-ready', '')
     }
@@ -991,6 +995,8 @@ export class LGS1920Timeline extends HTMLElement {
         window.removeEventListener('keydown', this.#handleWindowKeyDown, true)
         window.removeEventListener('pointerdown', this.#handleTrackLabelOutsidePointerDown, true)
         this.#resizeObserver?.disconnect()
+        this.#resizeObserver = null
+        this.#cancelLayoutRefresh()
         this.#removePointerListeners()
         this.#finishScrollbarDrag()
         this.#finishNativeSplitPanelInteraction()
@@ -1003,6 +1009,7 @@ export class LGS1920Timeline extends HTMLElement {
         this.#closeClipContextMenu()
         this.#dynamicElements = null
         this.#clipPresentationElements = null
+        this.#scrollbarElements = null
         this.#transportState = null
     }
 
@@ -1756,6 +1763,7 @@ export class LGS1920Timeline extends HTMLElement {
             this.#tracksViewport = null
             this.#dynamicElements = null
             this.#clipPresentationElements = null
+            this.#scrollbarElements = null
             this.#transportState = null
             return
         }
@@ -1810,6 +1818,7 @@ export class LGS1920Timeline extends HTMLElement {
         this.#tracksViewport = this.#root.querySelector('[data-tracks-viewport]')
         this.#cacheDynamicElements()
         this.#cacheClipPresentationElements()
+        this.#cacheScrollbarElements()
         const measuredSurfaceWidth = this.#surface?.clientWidth ?? 0
         const surfaceWidthChanged = measuredSurfaceWidth > 0 && measuredSurfaceWidth !== this.#surfaceWidth
         if (surfaceWidthChanged) this.#surfaceWidth = measuredSurfaceWidth
@@ -1841,7 +1850,6 @@ export class LGS1920Timeline extends HTMLElement {
             this.#tracksViewport.scrollTop = previousScrollTop
         }
         this.#positionRowDragGhost()
-        this.#installResizeObserver()
         this.#updateLegendScroll()
         this.#updateScrollbars()
         this.#showScrollbars()
@@ -3960,16 +3968,30 @@ export class LGS1920Timeline extends HTMLElement {
         })
     }
 
+    #cacheScrollbarElements = () => {
+        this.#scrollbarElements = [...this.#root.querySelectorAll('[data-scrollbar-shell]')].map(shell => ({
+            shell,
+            tracks: [...shell.querySelectorAll('[data-scrollbar-track]')].map(track => {
+                const axis = track.getAttribute('data-scrollbar-track')
+                const viewRole = track.getAttribute('data-scrollbar-view')
+                return {
+                    axis,
+                    track,
+                    thumb: track.querySelector('[data-scrollbar-thumb]'),
+                    view: shell.querySelector(`[data-scroll-view="${viewRole}"]`),
+                }
+            }),
+        }))
+        return this.#scrollbarElements
+    }
+
     /**
      * Update every custom rail from its associated native scroll view.
      */
     #updateScrollbars = () => {
-        this.#root.querySelectorAll('[data-scrollbar-shell]').forEach(shell => {
-            shell.querySelectorAll('[data-scrollbar-track]').forEach(track => {
-                const axis = track.getAttribute('data-scrollbar-track')
-                const viewRole = track.getAttribute('data-scrollbar-view')
-                const view = shell.querySelector(`[data-scroll-view="${viewRole}"]`)
-                const thumb = track.querySelector('[data-scrollbar-thumb]')
+        const shells = this.#scrollbarElements ?? this.#cacheScrollbarElements()
+        shells.forEach(shell => {
+            shell.tracks.forEach(({view, axis, track, thumb}) => {
                 if (view && thumb) this.#updateScrollbarGeometry(view, axis, track, thumb)
             })
         })
@@ -4223,6 +4245,32 @@ export class LGS1920Timeline extends HTMLElement {
         this.#updateScrollbars()
     }
 
+    #cancelLayoutRefresh = () => {
+        if (this.#layoutRefreshFrame === null) return
+        if (this.#layoutRefreshUsesAnimationFrame) {
+            globalThis.cancelAnimationFrame?.(this.#layoutRefreshFrame)
+        } else {
+            globalThis.clearTimeout(this.#layoutRefreshFrame)
+        }
+        this.#layoutRefreshFrame = null
+        this.#layoutRefreshUsesAnimationFrame = false
+    }
+
+    #scheduleLayoutRefresh = () => {
+        if (this.#layoutRefreshFrame !== null) return
+        const refresh = () => {
+            this.#layoutRefreshFrame = null
+            this.#layoutRefreshUsesAnimationFrame = false
+            this.#refreshLayoutMetrics()
+        }
+        if (typeof globalThis.requestAnimationFrame === 'function') {
+            this.#layoutRefreshUsesAnimationFrame = true
+            this.#layoutRefreshFrame = globalThis.requestAnimationFrame(refresh)
+        } else {
+            this.#layoutRefreshFrame = globalThis.setTimeout(refresh, 0)
+        }
+    }
+
     /**
      * Read the custom scrollbar auto-hide delay from the host CSS token.
      *
@@ -4248,7 +4296,8 @@ export class LGS1920Timeline extends HTMLElement {
      */
     #showScrollbars = () => {
         this.#clearScrollbarHideTimer()
-        this.#root.querySelectorAll('[data-scrollbar-shell]').forEach(shell => shell.classList.remove('lgs1920-wa-timeline__scroll-shell--idle'))
+        const shells = this.#scrollbarElements ?? this.#cacheScrollbarElements()
+        shells.forEach(({shell}) => shell.classList.remove('lgs1920-wa-timeline__scroll-shell--idle'))
     }
 
     /**
@@ -4257,11 +4306,12 @@ export class LGS1920Timeline extends HTMLElement {
     #scheduleScrollbarHide = () => {
         this.#clearScrollbarHideTimer()
         if (this.#scrollbarsInteractionActive) return
-        if (!this.#root.querySelector('[data-scrollbar-shell]')) return
+        const shells = this.#scrollbarElements ?? this.#cacheScrollbarElements()
+        if (shells.length === 0) return
         const delay = this.#scrollbarAutoHideDelay()
         if (delay <= 0) return
         this.#scrollbarHideTimer = setTimeout(() => {
-            this.#root.querySelectorAll('[data-scrollbar-shell]').forEach(shell => shell.classList.add('lgs1920-wa-timeline__scroll-shell--idle'))
+            shells.forEach(({shell}) => shell.classList.add('lgs1920-wa-timeline__scroll-shell--idle'))
             this.#scrollbarHideTimer = null
         }, delay)
     }
@@ -5374,11 +5424,9 @@ export class LGS1920Timeline extends HTMLElement {
      * the timeline container itself is resized.
      */
     #installResizeObserver = () => {
-        this.#resizeObserver?.disconnect()
+        if (this.#resizeObserver) return
         if (typeof ResizeObserver === 'undefined') return
-        this.#resizeObserver = new ResizeObserver(() => {
-            this.#refreshLayoutMetrics()
-        })
+        this.#resizeObserver = new ResizeObserver(this.#scheduleLayoutRefresh)
         this.#resizeObserver.observe(this)
     }
 
