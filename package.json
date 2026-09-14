@@ -42,6 +42,7 @@
     "@fortawesome/pro-regular-svg-icons": "^7.3.1",
     "@fortawesome/pro-solid-svg-icons": "^7.3.1",
     "@fortawesome/react-fontawesome": "^3.5.0",
+    "@lgs1920/timeline": "file:../timeline",
     "@mapbox/extent": "^0.4.0",
     "@mapbox/geojson-extent": "^1.0.1",
     "@mapbox/togeojson": "^0.16.2",
@@ -66,7 +67,6 @@
     "@turf/point-to-line-distance": "^7.4.0",
     "@turf/transform-rotate": "^7.4.0",
     "@web.awesome.me/webawesome-pro": "3.12.0",
-    "@xzdarcy/react-timeline-editor": "1.0.0",
     "@zumer/snapdom": "2.24.18",
     "argparse": "^3.0.2",
     "axios": "^1.20.0",
@@ -157,8 +157,5 @@
     "canvas",
     "core-js",
     "protobufjs"
-  ],
-  "patchedDependencies": {
-    "@xzdarcy/react-timeline-editor@1.0.0": "patches/@xzdarcy%2Freact-timeline-editor@1.0.0.patch"
-  }
+  ]
 }

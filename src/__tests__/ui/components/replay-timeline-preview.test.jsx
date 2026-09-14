@@ -20,7 +20,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {proxy} from 'valtio'
 import {proxyMap} from 'valtio/utils'
 
-vi.mock('../../../webcomponents/lgs1920-timeline/LGS1920Timeline.js', () => ({}))
+vi.mock('@lgs1920/timeline', () => ({formatRulerTime: value => String(value)}))
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
@@ -139,7 +139,7 @@ describe('ReplayTimelinePreview', () => {
         const timelineElement = container.querySelector('lgs1920-timeline')
 
         expect(timelineElement).not.toBeNull()
-        expect(timelineElement.hasAttribute('data-widget-selectable')).toBe(true)
+        expect(timelineElement.timeline.hostInteraction).toBe('selectable')
         expect(timelineElement.parentElement.getAttribute('data-widget-capture')).toBe('exclude')
         expect(timelineElement.className).toBe('')
         expect(container.querySelector('[data-testid="replay-timeline-drag-handle"]')).toBeNull()

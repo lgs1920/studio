@@ -45,8 +45,8 @@ import {
 } from '@Core/ui/widget-manager/WidgetGroupUtils'
 import {createReplayScrubScheduler} from '@Core/ui/replay/ReplayScrubScheduler'
 import {useOptionalSnapshot} from '@Utils/ValtioUtils'
-import {formatRulerTime} from '../../../webcomponents/lgs1920-timeline/LGS1920TimelineUtils.js'
-import '../../../webcomponents/lgs1920-timeline/LGS1920Timeline.js'
+import {formatRulerTime} from '@lgs1920/timeline'
+import '@lgs1920/timeline'
 import './replay-timeline-preview.css'
 
 const DEFAULT_REPLAY_DURATION_MILLIS = 60_000
@@ -923,7 +923,7 @@ export const ReplayTimelinePreview = forwardRef(({
                      data-testid="replay-timeline-empty-debug"
                      aria-hidden="true"/>
             ) : (
-                <lgs1920-timeline data-widget-selectable=""
+                <lgs1920-timeline data-capture-exclude="true"
                                   data-replay-timeline-debug={getReplayTimelineDebugStage()}
                                   ref={_timeline}
                                   aria-label="Replay tracks">

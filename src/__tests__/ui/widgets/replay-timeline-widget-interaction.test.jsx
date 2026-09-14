@@ -8,8 +8,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-09-08
+ * Last modified: 2026-09-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -95,7 +95,7 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/components/tooltip/tooltip.js', () 
 
 import {Widget} from '@Components/MainUI/widgets/Widget'
 import {ReplayTimelinePreview} from '@Components/MainUI/video/ReplayTimelinePreview'
-import {LGS1920Timeline} from '../../../webcomponents/lgs1920-timeline/LGS1920Timeline'
+import {LGS1920Timeline} from '@lgs1920/timeline'
 
 const rect = {
     left:   10,
@@ -267,7 +267,7 @@ describe('Replay timeline widget interaction isolation', () => {
 
     it('keeps an empty timeline host selectable', () => {
         const timeline = document.createElement('lgs1920-timeline')
-        timeline.setAttribute('data-widget-selectable', '')
+        timeline.timeline = {hostInteraction: 'selectable'}
         const {container} = renderWidget(<TimelineMount timeline={timeline}/>)
 
         pointerDown(container.querySelector('lgs1920-timeline'))

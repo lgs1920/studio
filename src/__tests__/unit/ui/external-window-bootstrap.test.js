@@ -8,8 +8,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-09-11
+ * Last modified: 2026-09-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,7 +24,7 @@ const {registerLGS1920IconLibrary} = vi.hoisted(() => ({
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/button/button.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/card/card.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/icon/icon.js', () => ({}))
-vi.mock('../../../webcomponents/lgs1920-timeline/LGS1920Timeline.js', () => ({}))
+vi.mock('@lgs1920/timeline', () => ({}))
 vi.mock('../../../Utils/LGS1920IconLibrary', () => ({registerLGS1920IconLibrary}))
 
 describe('external window bootstrap', () => {
