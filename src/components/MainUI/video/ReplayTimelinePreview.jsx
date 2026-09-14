@@ -523,6 +523,11 @@ export const ReplayTimelinePreview = forwardRef(({
     const resolvedHorizontalZoomPercent = clampReplayTimelineZoom(
         hasPersistedZoom ? persistedZoomPercent : REPLAY_TIMELINE_ZOOM.defaultPercent,
     )
+    const persistedVerticalScrollTop = Number(persistedTimelineView.verticalScrollTop)
+    const initialVerticalScrollTop = Number.isFinite(persistedVerticalScrollTop)
+        ? Math.max(0, persistedVerticalScrollTop)
+        : 0
+    const _verticalScrollTop = useRef(initialVerticalScrollTop)
     const [horizontalZoomPercent, setHorizontalZoomPercent] = useState(resolvedHorizontalZoomPercent)
     const timeline = useMemo(() => ({
         projectionRevision: projection.signature,
@@ -589,6 +594,14 @@ export const ReplayTimelinePreview = forwardRef(({
         settings.timeline ??= {}
         Object.assign(settings.timeline, updates)
     }, [])
+
+    const persistVerticalScrollTop = useCallback(value => {
+        const scrollTop = Number(value)
+        if (!Number.isFinite(scrollTop)) return
+        const normalizedScrollTop = Math.max(0, scrollTop)
+        _verticalScrollTop.current = normalizedScrollTop
+        persistTimelineView({verticalScrollTop: normalizedScrollTop})
+    }, [persistTimelineView])
 
     const applyReplayScrub = useCallback(({progress, settled, signal, requestId}) => __.ui.replay?.seek?.(progress, {
         qualifyScene: true,
@@ -681,11 +694,12 @@ export const ReplayTimelinePreview = forwardRef(({
     }, [updateTimelineTime])
 
     const updateHorizontalZoom = useCallback(value => {
+        persistVerticalScrollTop(_timeline.current?.verticalScrollTop)
         const zoomPercent = clampReplayTimelineZoom(value)
         setHorizontalZoomPercent(zoomPercent)
         persistTimelineView({zoomPercent})
         _timeline.current?.setZoom?.(zoomPercent)
-    }, [persistTimelineView])
+    }, [persistTimelineView, persistVerticalScrollTop])
 
     const handleHorizontalZoomInput = useCallback(event => {
         updateHorizontalZoom(event.target.value)
@@ -781,6 +795,7 @@ export const ReplayTimelinePreview = forwardRef(({
                 element.currentTimeMillis = currentTimeMillis
             }
             element.ensureCurrentTimeVisible?.()
+            element.verticalScrollTop = _verticalScrollTop.current
             syncSliderTime(element.currentTimeMillis)
             console.log('[ReplayTimeline] controlled state end', {
                 debugStage,
@@ -809,6 +824,18 @@ export const ReplayTimelinePreview = forwardRef(({
             eventNames.forEach(name => element.removeEventListener(name, persistTimelineEdit))
         }
     }, [linkedPreparation, projection.signature])
+
+    useEffect(() => {
+        const element = _timeline.current
+        if (!linkedPreparation || !element || getReplayTimelineDebugStage() !== 'full') return undefined
+
+        const persistVerticalScroll = event => {
+            persistVerticalScrollTop(event?.detail?.scrollTop)
+        }
+
+        element.addEventListener('lgs1920-timeline-vertical-scroll', persistVerticalScroll)
+        return () => element.removeEventListener('lgs1920-timeline-vertical-scroll', persistVerticalScroll)
+    }, [linkedPreparation, persistVerticalScrollTop])
 
     useEffect(() => {
         const element = _timeline.current
@@ -888,9 +915,10 @@ export const ReplayTimelinePreview = forwardRef(({
 
     useEffect(() => {
         if (linkedPreparation) return undefined
+        _verticalScrollTop.current = initialVerticalScrollTop
         _pendingPlayhead.current = null
         return undefined
-    }, [linkedPreparation])
+    }, [initialVerticalScrollTop, linkedPreparation])
 
     useEffect(() => {
         if (!linkedPreparation || getReplayTimelineDebugStage() !== 'full') {

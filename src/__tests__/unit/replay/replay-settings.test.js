@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -64,10 +64,12 @@ describe('replay settings normalization', () => {
         expect(normalizeJourneyReplaySettings({
             timeline: {
                 zoomPercent: 180,
+                verticalScrollTop: 96,
                 currentTimeMillis: -1,
             },
         }).timeline).toEqual({
             zoomPercent: 180,
+            verticalScrollTop: 96,
             currentTimeMillis: 0,
         })
     })

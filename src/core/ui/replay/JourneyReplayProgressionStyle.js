@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -620,6 +620,12 @@ export const normalizeJourneyReplaySettings = (settings = {}) => {
                 zoomPercent: Number.isFinite(Number(timelineSettings.zoomPercent))
                     ? Number(timelineSettings.zoomPercent)
                     : 0,
+                verticalScrollTop: Math.max(
+                    0,
+                    Number.isFinite(Number(timelineSettings.verticalScrollTop))
+                        ? Number(timelineSettings.verticalScrollTop)
+                        : 0,
+                ),
                 currentTimeMillis: Math.max(
                     0,
                     Number.isFinite(Number(timelineSettings.currentTimeMillis))

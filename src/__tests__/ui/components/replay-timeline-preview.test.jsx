@@ -504,6 +504,48 @@ describe('ReplayTimelinePreview', () => {
         expect(zoomSlider.value).toBe('180')
     })
 
+    it('restores and persists the vertical track scroll position', async () => {
+        globalThis.lgs.settings.ui.replay.timeline = {
+            verticalScrollTop: 120,
+        }
+
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+
+        await waitFor(() => expect(timelineElement.verticalScrollTop).toBe(120))
+
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-vertical-scroll', {
+            detail: {scrollTop: 240, view: 'tracks'},
+        }))
+
+        await waitFor(() => expect(globalThis.lgs.settings.ui.replay.timeline.verticalScrollTop).toBe(240))
+    })
+
+    it('keeps the live vertical position while horizontal zoom is sliding', async () => {
+        globalThis.lgs.settings.ui.replay.timeline = {
+            verticalScrollTop: 120,
+            zoomPercent: 100,
+        }
+
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+        const zoomSlider = container.querySelector('[data-testid="replay-timeline-zoom-slider"]')
+        let verticalScrollTop = 0
+        Object.defineProperty(timelineElement, 'verticalScrollTop', {
+            configurable: true,
+            get: () => verticalScrollTop,
+            set: value => { verticalScrollTop = value },
+        })
+
+        verticalScrollTop = 120
+        await waitFor(() => expect(timelineElement.verticalScrollTop).toBe(120))
+        verticalScrollTop = 240
+        fireEvent.input(zoomSlider, {target: {value: '180'}})
+
+        await waitFor(() => expect(timelineElement.verticalScrollTop).toBe(240))
+        expect(globalThis.lgs.settings.ui.replay.timeline.verticalScrollTop).toBe(240)
+    })
+
     it('does not reassign the timeline when a local track event is emitted', () => {
         const {container} = render(<ReplayTimelinePreview/>)
         const timelineElement = container.querySelector('lgs1920-timeline')
