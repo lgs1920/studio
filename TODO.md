@@ -22,12 +22,22 @@ Implementation requests for Codex:
 * Reposition the timeline menus.
 * Add preset and aspect ratio management menus to the timeline drawer without copying the video widget.
 
-### 6. Timeline Margin
-
-> Refactor the timeline margin implementation. Review the current setup and simplify how additional margin space is added.
-
 ### 9 Implement Replay management
-> - le double click d'un clip pour editer les widgets
-> - les insertions modifications de pistes,
-> - verifie si d'autres points ne sont pas encore pris en compte: dans ce cas, tu listes ce qu'ilrestes à faire pour que je confirme.
->   RAJOUT DES CLIPS/retraits reactif (durée change, insertion des clips)
+
+Implement two Replay user modes:
+
+> * Basic mode: click the drone and choose the camera orientation and height.
+>   The camera uses a fixed height. This is the default mode, with a red
+>   border, a white marker, and the standard line thickness.
+> * Expert mode: provide access to the timeline and Replay UI so the user can
+>   refine the result in detail.
+>   Determine how the two levels should be introduced in the interface.
+>   - Clicking the drone could open a Basic or Expert popover, with the choice
+>     persisted. Decide whether the choice should open every time or whether
+>     two separate base buttons are preferable.
+> - Double-click a clip to edit its widgets.
+> - Support track insertion and modification.
+> - Check whether other points are still missing and list the remaining work
+>   for confirmation.
+>   Add and remove clips reactively when their duration changes or clips are
+>   inserted.
