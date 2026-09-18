@@ -540,7 +540,7 @@ export const ReplayTimelinePreview = forwardRef(({
         zoomPercent: hasPersistedZoom ? horizontalZoomPercent : undefined,
         showTimeSlider: true,
         showZoomSlider: true,
-        showClipMenu: true,
+        showClipMenu: false,
         legendMinWidth: REPLAY_TIMELINE_UI.legendMinWidth,
         legendWidth: REPLAY_TIMELINE_UI.legendWidth,
         legendMaxWidth: REPLAY_TIMELINE_UI.legendMaxWidth,

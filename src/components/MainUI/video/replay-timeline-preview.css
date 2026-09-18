@@ -115,18 +115,8 @@
         z-index: 3;
     }
 
-    /* The numeric clock is intentionally hidden; Replay remains the time authority. */
-    lgs1920-timeline::part(playback-controls) {
-        display: none;
-    }
-
     lgs1920-timeline::part(layout) {
         border: 0;
         border-radius: 0;
-    }
-
-    lgs1920-timeline::part(timeline-start-handle),
-    lgs1920-timeline::part(timeline-end-handle) {
-        pointer-events: none;
     }
 }

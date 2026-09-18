@@ -140,7 +140,7 @@ describe('ReplayTimelinePreview', () => {
             resizeExtendsDuration: true,
             showTimeSlider: true,
             showZoomSlider: true,
-            showClipMenu: true,
+            showClipMenu: false,
         })
         expect(timelineElement.currentTimeMillis).toBe(1_000)
         expect(timelineElement.querySelector('[slot="timeline-ruler"]')).toBeNull()
