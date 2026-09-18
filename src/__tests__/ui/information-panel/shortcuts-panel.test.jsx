@@ -26,6 +26,13 @@ vi.mock('@Core/constants', () => ({
 vi.mock('@Core/events/appShortcuts', () => ({
     SHORTCUTS: [
         {
+            action:      'General command',
+            description: 'Uses a general application command.',
+            id:          'general-command',
+            keys:        ['Escape'],
+            scope:       'App',
+        },
+        {
             action:      'Simple alternatives',
             description: 'Uses a simple alternative binding.',
             id:          'simple-alternatives',
@@ -74,6 +81,9 @@ describe('ShortcutsPanel', () => {
     it('separates composed alternatives and pipes simple alternatives', () => {
         render(<ShortcutsPanel/>)
 
+        expect([...document.querySelectorAll('.lgs--shortcuts-section h3')].map(element => element.textContent))
+            .toEqual(['General', 'Timeline', 'Clips'])
+
         const simpleRow = screen.getByText('Simple alternatives').closest('.lgs--shortcuts-row')
         const composedRow = screen.getByText('Composed alternatives').closest('.lgs--shortcuts-row')
 
@@ -97,7 +107,7 @@ describe('ShortcutsPanel', () => {
 
         expect(sectionsPopup).not.toBeNull()
         expect(sectionsPopup.querySelector('[data-auto-hide="false"]')).not.toBeNull()
-        fireEvent.click(screen.getByRole('button', {name: 'Replay timeline clips'}))
+        fireEvent.click(screen.getByRole('button', {name: 'Clips'}))
 
         expect(scrollIntoView).toHaveBeenCalledWith({behavior: 'smooth', block: 'start'})
         expect(screen.queryByRole('dialog', {name: 'Shortcut sections'})).toBeNull()

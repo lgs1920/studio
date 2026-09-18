@@ -58,13 +58,41 @@ const KEY_TOKEN_LABELS = {
  */
 const hasComposedShortcut = keys => keys.some(key => key.includes('+'))
 
-const byScope = SHORTCUTS.reduce((groups, shortcut) => {
-    const group = groups.get(shortcut.scope) ?? []
+/**
+ * Group detailed interaction scopes into the user-facing shortcut themes.
+ *
+ * @type {string[]}
+ */
+const SHORTCUT_THEME_ORDER = ['General', 'Timeline', 'Clips', 'Camera', 'Widgets', 'Map']
+const SHORTCUT_THEME_BY_SCOPE = {
+    App:                      'General',
+    'Replay mode':            'General',
+    'Resizable drawer':       'General',
+    'Replay timeline':        'Timeline',
+    'Replay timeline tracks': 'Timeline',
+    'Replay timeline clips':  'Clips',
+    'Replay camera setup':    'Camera',
+    'Orbit mode':             'Camera',
+    'Panorama mode':          'Camera',
+    Orbit:                    'Camera',
+    'Cesium navigation':      'Camera',
+    'Selected widget':        'Widgets',
+    'Widget interaction':     'Widgets',
+    'Map objects':             'Map',
+}
+
+const shortcutThemeOf = shortcut => SHORTCUT_THEME_BY_SCOPE[shortcut.scope] ?? 'General'
+
+const byTheme = SHORTCUTS.reduce((groups, shortcut) => {
+    const theme = shortcutThemeOf(shortcut)
+    const group = groups.get(theme) ?? []
     group.push(shortcut)
-    groups.set(shortcut.scope, group)
+    groups.set(theme, group)
     return groups
 }, new Map())
-const shortcutSections = Array.from(byScope.entries()).map(([scope, shortcuts]) => ({scope, shortcuts}))
+const shortcutSections = SHORTCUT_THEME_ORDER
+    .map(theme => ({scope: theme, theme, shortcuts: byTheme.get(theme) ?? []}))
+    .filter(section => section.shortcuts.length > 0)
 
 const cardAppearanceProps = index => index % 2 === 0 ? {appearance: 'filled-outlined'} : {}
 
@@ -131,24 +159,24 @@ export const ShortcutsPanel = () => {
     /**
      * Register a shortcut section element for table-of-contents navigation.
      *
-     * @param {string} scope - Shortcut section scope.
+     * @param {string} theme - Shortcut section theme.
      * @param {HTMLElement|null} element - Section element.
      */
-    const registerSection = useCallback((scope, element) => {
+    const registerSection = useCallback((theme, element) => {
         if (element) {
-            _sectionElements.current.set(scope, element)
+            _sectionElements.current.set(theme, element)
             return
         }
-        _sectionElements.current.delete(scope)
+        _sectionElements.current.delete(theme)
     }, [])
 
     /**
      * Scroll to a shortcut section and close the table of contents.
      *
-     * @param {string} scope - Shortcut section scope.
+     * @param {string} theme - Shortcut section theme.
      */
-    const navigateToSection = useCallback(scope => {
-        _sectionElements.current.get(scope)?.scrollIntoView?.({behavior: 'smooth', block: 'start'})
+    const navigateToSection = useCallback(theme => {
+        _sectionElements.current.get(theme)?.scrollIntoView?.({behavior: 'smooth', block: 'start'})
         setSectionsOpen(false)
     }, [])
 
@@ -222,15 +250,15 @@ export const ShortcutsPanel = () => {
                     <div className="lgs--shortcuts-sections-scroll">
                         <LGSScrollbars autoHide={false}>
                             <nav className="lgs--shortcuts-sections-list" aria-label="Shortcut sections">
-                                {shortcutSections.map(({scope}) => (
+                                {shortcutSections.map(({theme}) => (
                                     <WaButton
                                         appearance="plain"
                                         className="lgs--shortcuts-section-link"
-                                        key={scope}
-                                        onClick={() => navigateToSection(scope)}
+                                        key={theme}
+                                        onClick={() => navigateToSection(theme)}
                                         size="s"
                                     >
-                                        {scope}
+                                        {theme}
                                     </WaButton>
                                 ))}
                             </nav>
@@ -241,13 +269,13 @@ export const ShortcutsPanel = () => {
 
             <LGSScrollbars>
                 <div className="lgs--shortcuts-list">
-                    {shortcutSections.map(({scope, shortcuts}, sectionIndex) => (
-                        <WaCard {...cardAppearanceProps(sectionIndex)} className="lgs--shortcuts-section-card" key={scope}>
+                    {shortcutSections.map(({theme, shortcuts}, sectionIndex) => (
+                        <WaCard {...cardAppearanceProps(sectionIndex)} className="lgs--shortcuts-section-card" key={theme}>
                             <section
                                 className="lgs--shortcuts-section"
-                                ref={element => registerSection(scope, element)}
+                                ref={element => registerSection(theme, element)}
                             >
-                                <h3>{scope}</h3>
+                                <h3>{theme}</h3>
                                 <div className="lgs--shortcuts-table">
                                     {shortcuts.map(shortcut => {
                                         const separateAlternatives = hasComposedShortcut(shortcut.keys)

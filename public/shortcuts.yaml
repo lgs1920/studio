@@ -22,7 +22,7 @@
 # - `action`: Short English user-facing action name.
 # - `description`: English explanation of the action and its active context.
 # - `id`: Stable kebab-case identifier. Reuse it when updating an entry.
-# - `scope`: Exact English interaction context used to group the catalog.
+# - `scope`: Exact English interaction context used to assign a shortcut theme.
 # - `platform`: Use values such as `macOS`, `Windows / Linux`, or
 #   `macOS / Windows / Linux` when the binding differs by operating system.
 # - `reference`: Set to `true` for gestures primarily documented as
