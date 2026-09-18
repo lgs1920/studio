@@ -3,6 +3,8 @@
 This directory centralizes Studio technical documentation. Documents are grouped
 below by engineering domain rather than storage directory.
 
+- [Latest specification audit — 2026-09-18](SPECS-AUDIT-20260918.md)
+
 - **Current** links point to implemented behavior under [`specs/`](specs/).
 - **Planned** links point to proposals, research, or pending work under
   [`todo/`](todo/).
@@ -31,15 +33,14 @@ below by engineering domain rather than storage directory.
 
 - [Replay Timeline performance audit and improvement proposals](todo/CORE-REPLAY-TIMELINE-PERFORMANCE-AUDIT.md)
 - [Replay recording loops and time-ranged object visibility](todo/CORE-REPLAY-RECORDING-LOOPS-AND-TIME-RANGED-OBJECTS.md)
-- [Replay start camera editor and clip synchronization](specs/replay-video/CORE-REPLAY-START-CAMERA-EDITOR-SPEC.md)
-- [Replay Timeline preview](todo/CORE-REPLAY-TIMELINE-PREVIEW-SPEC.md) — TODO, 1.0.0
+- [Replay start camera editor and clip synchronization](todo/CORE-REPLAY-START-CAMERA-EDITOR-SPEC.md)
 - [Replay track timeline editor](todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) — TODO, 1.0.0 preview / 1.1.0 editor
-- [POI animation during replay](specs/replay-video/CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md)
-- [Clip altitude alignment](specs/replay-video/CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md)
-- [Drone camera 3D path editor](specs/replay-video/CORE-DRONE-CAMERA-3D-PATH-EDITOR-SPEC.md)
-- [Camera HPR orientation sphere](specs/replay-video/CORE-CAMERA-HPR-THREEJS-SPHERE-WIDGET-SPEC.md)
-- [HQ video resolution profiles](specs/replay-video/HQ_4K_VIDEO_EXPORT_SPEC.md)
-- [Video widget](specs/replay-video/VIDEO_WIDGET_SPEC.md)
+- [POI animation during replay](todo/CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md)
+- [Clip altitude alignment](todo/CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md)
+- [Drone camera 3D path editor](todo/CORE-DRONE-CAMERA-3D-PATH-EDITOR-SPEC.md)
+- [Camera HPR orientation sphere](todo/CORE-CAMERA-HPR-THREEJS-SPHERE-WIDGET-SPEC.md)
+- [HQ video resolution profiles](todo/HQ_4K_VIDEO_EXPORT_SPEC.md)
+- [Video widget](todo/VIDEO_WIDGET_SPEC.md)
 
 ### Historical
 
@@ -77,7 +78,6 @@ below by engineering domain rather than storage directory.
 ### Planned
 
 - [Journey import formats](todo/JOURNEY_IMPORT_FORMATS_SPEC.md)
-- [Tracks editor](todo/TRACKSEDITOR-SPEC.md)
 - [Cloud synchronization](todo/CLOUD-SYNC-TODO.md)
 - [Journey and track map selection](todo/CORE-JOURNEY-CLICK-OVERLAY-SELECTION-SPEC.md)
 
@@ -101,7 +101,6 @@ below by engineering domain rather than storage directory.
 
 - [Arrow widget](todo/ARROW_WIDGET_SPEC.md)
 - [Brand and season swatch reactivity](todo/BRAND_SEASON_SWATCH_REACTIVITY_SPEC.md)
-- [Non-distorting widget resize](todo/CORE-WIDGET-NON-DISTORTING-RESIZE-SPEC.md) — TODO, 1.0.0
 - [Main UI work](todo/MAINUI-TODO.md)
 - [Profile work](todo/PROFILE-TODO.md)
 - [Translation notes](todo/Translate.md)

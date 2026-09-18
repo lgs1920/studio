@@ -2,7 +2,7 @@
 
 Status: current implementation inventory
 
-Date: 2026-08-30
+Date: 2026-09-18
 
 ## Purpose
 
@@ -36,10 +36,10 @@ and issue analysis remain in [`REPLAY-AUDIT.md`](REPLAY-AUDIT.md).
   terrain, and 3D Tiles capture.
 - Frame-accurate HQ trace updates and deterministic Navigation camera updates.
 - Moving clip readiness separated from settled waits.
-- Linked-video Replay preparation timeline with a normalized read-only
+- Linked-video Replay preparation timeline with a normalized transient
   multi-track projection, controlled playhead and scrubbing, widget visibility
-  tracks, widget-row ordering, clip/widget editor navigation, a resizable
-  track-title legend, bounded ruler zoom, and throttled transient scrubbing.
+  tracks, widget-row ordering, local clip edits, a resizable track-title legend,
+  bounded ruler zoom, and throttled transient scrubbing.
   See
   [Replay timeline preparation implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md).
 
@@ -59,24 +59,28 @@ subject to the validation gates below.
 - Automated tests cover contracts and routing, but fixed visual reference
   journeys and video artifact comparison are not complete.
 - `JourneyReplayRunner` remains in the application for legacy consumers.
-- The delivered timeline is a read-only preparation projection. Persisted
-  editable timeline authoring, item trimming, overlap validation, and complete
-  timeline-driven Draft/HQ authoring remain future work.
+- The delivered timeline is a transient preparation projection. Persisted
+  editable timeline authoring, domain-level item trimming and overlap
+  validation, and complete timeline-driven Draft/HQ authoring remain future
+  work.
 
 ## TODO roadmap
 
 | Status | Target | Work item | Detailed specification |
 | --- | --- | --- | --- |
-| PARTIAL / TODO | 1.0.0 | Complete synchronized replay-start camera editing while preserving the implemented canonical camera and clip continuity | [Start camera editor](CORE-REPLAY-START-CAMERA-EDITOR-SPEC.md) |
+| PARTIAL / TODO | 1.0.0 | Complete synchronized replay-start camera editing while preserving the implemented canonical camera and clip continuity | [Start camera editor](../../todo/CORE-REPLAY-START-CAMERA-EDITOR-SPEC.md) |
 | TODO | 1.0.0 | Validate isolated HQ on fixed imagery, terrain, and 3D Tiles journeys; prove camera parity, resource teardown, and visual quality | [Replay quality validation](CORE-REPLAY-QUALITY-VALIDATION.md) |
 | IMPLEMENTED | 1.0.0 | Deliver linked Replay preparation as a compact controlled Timeline preview | [Timeline implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md) |
+| TODO | 1.0.0 follow-up | Connect Timeline transport and domain commands, including Dry Run, Action Mode, clip double-click navigation, and persisted visibility/order changes | [Timeline implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md) |
 | TODO | 1.1.0 | Replace separated clip controls with the normalized editable multi-track replay timeline | [Track timeline editor](../../todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) |
-| TODO | 1.1.0 | Drive POI animation and displayed fields from canonical replay time | [POI animation](CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md) |
-| TODO | 1.1.0 | Align clip altitude inputs and continuity across reordered sequences | [Clip altitude alignment](CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md) |
-| TODO | 1.1.0 | Add explicit Automatic, 720p, 1080p, and 4K HQ output profiles with capability checks | [HQ resolution profiles](HQ_4K_VIDEO_EXPORT_SPEC.md) |
-| TODO | 1.1.0 | Implement the replay-synchronized repeatable Video Widget | [Video Widget](VIDEO_WIDGET_SPEC.md) |
-| TODO | 1.1.0 | Implement the Three.js drone path editor over the serializable runtime evaluator | [Drone camera editor](CORE-DRONE-CAMERA-3D-PATH-EDITOR-SPEC.md) |
-| TODO | Unplanned | Validate and schedule the Three.js HPR orientation sphere widget | [HPR sphere widget](CORE-CAMERA-HPR-THREEJS-SPHERE-WIDGET-SPEC.md) |
+| TODO | 1.1.0 | Persist timeline authoring and make Draft/HQ consume the edited domain model | [Track timeline editor](../../todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) |
+| TODO | Unplanned | Add persisted Basic and Expert Replay user modes with the corresponding camera and timeline entry points | [Replay specification audit](../../SPECS-AUDIT-20260918.md) |
+| TODO | 1.1.0 | Drive POI animation and displayed fields from canonical replay time | [POI animation](../../todo/CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md) |
+| TODO | 1.1.0 | Align clip altitude inputs and continuity across reordered sequences | [Clip altitude alignment](../../todo/CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md) |
+| TODO | 1.1.0 | Add explicit Automatic, 720p, 1080p, and 4K HQ output profiles with capability checks | [HQ resolution profiles](../../todo/HQ_4K_VIDEO_EXPORT_SPEC.md) |
+| TODO | 1.1.0 | Implement the replay-synchronized repeatable Video Widget | [Video Widget](../../todo/VIDEO_WIDGET_SPEC.md) |
+| TODO | 1.1.0 | Implement the Three.js drone path editor over the serializable runtime evaluator | [Drone camera editor](../../todo/CORE-DRONE-CAMERA-3D-PATH-EDITOR-SPEC.md) |
+| TODO | Unplanned | Validate and schedule the Three.js HPR orientation sphere widget | [HPR sphere widget](../../todo/CORE-CAMERA-HPR-THREEJS-SPHERE-WIDGET-SPEC.md) |
 
 Additional 1.1.0 architecture work remains to complete capture-time camera
 qualification, migrate every dynamic consumer to canonical frame time, and

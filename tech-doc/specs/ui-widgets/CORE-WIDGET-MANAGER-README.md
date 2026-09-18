@@ -187,6 +187,45 @@ This separation matters:
 
 For dynamic widgets such as text or compass, the element resize observer updates `config.dimensions` when the underlying rendered size changes.
 
+### Non-distorting widget resize
+
+Visual widgets may opt into layout resizing without applying a non-uniform
+transform to their content. This mode is selected with `resizable: true` and
+`scalable: false`. It changes the widget's layout dimensions and lets the
+content adapt to the available box, so text, icons, charts, borders, and
+controls are not stretched through `scaleX` or `scaleY`.
+
+The host owns the complete resize lifecycle. An adopting widget supplies its
+minimum and maximum dimensions, its responsive content behavior, and its
+ratio policy. The host then:
+
+- updates `config.dimensions` during the gesture and at gesture completion;
+- constrains the widget to the active board bounds;
+- applies `ratio.locked` when the widget must keep its aspect ratio;
+- persists width and height independently from `config.scale`;
+- restores those dimensions without converting them into a scale transform;
+- preserves the existing scalable behavior for widgets that do not opt into
+  layout resizing.
+
+The current adopting widgets are:
+
+- **Profile:** the chart and its labels adapt to the available width and
+  height. An unlocked profile can change both dimensions independently, while
+  a locked ratio remains proportional.
+- **Replay Timeline:** the timeline layout expands inside its widget box while
+  its typography and controls keep their own layout dimensions. Its host
+  dimensions remain persisted through remount and preparation transitions.
+
+Content-based limits may be enabled with `resizeToContent`. The generic host
+resolves these limits before applying static minimum and maximum dimensions,
+and `constrainResizeToContent: false` disables stale content constraints when a
+widget manages its own responsive layout.
+
+The resize contract is validated by the generic widget dimension tests and the
+Profile and Replay Timeline widget tests. Timeline clip timing, track editing,
+and clip resize behavior belong to the Replay Timeline documentation rather
+than to this widget-host contract.
+
 The editable crop uses a stricter contract:
 
 - `cropDimensions.width/height` are its rendered logical dimensions
@@ -282,6 +321,8 @@ With the current implementation, the widget system is designed to guarantee:
 - widgets stay inside their board
 - board resize repositions widgets from persisted ratios
 - widgets are reduced only when they no longer fit
+- opted-in widgets resize through independent layout dimensions without a
+  non-uniform content scale
 - video widgets restore inside `defined crop-zone`
 - runtime state does not override persisted state for the wrong board
 - the editable crop preserves its resized dimensions across editor sessions

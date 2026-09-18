@@ -11,7 +11,7 @@ implemented.
 
 Provide a dedicated visual editor for authoring drone camera trajectories in
 3D. The editor is a later authoring surface on top of the deterministic drone
-path runtime described in [Drone camera path architecture](CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md).
+path runtime described in [Drone camera path architecture](../specs/replay-video/CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md).
 
 The editor must let users shape a camera path visually, compare it with the
 journey route, position targets and orbit pivots, and export a runtime-safe
@@ -33,6 +33,13 @@ The first 3D editor version includes:
 
 It does not include a second playback engine, video encoding, terrain
 visibility correction, or direct mutation of Cesium camera state.
+
+This specification also contains the former Track Editor scope. The editor
+must therefore support path selection and in-memory path creation, journey
+derived Replay path editing, and safe camera motion presets such as focus,
+orbit, panorama, and fly-to policies. These presets create or modify path
+definitions; they do not move runtime camera ownership into the authoring
+surface.
 
 ## Editor Layout
 
@@ -165,7 +172,7 @@ The export boundary must:
 ```text
 src/core/ui/camera/DroneCameraBezier3DPath.js
 src/core/ui/camera/DroneCameraPathThreePreview.js
-tech-doc/specs/replay-video/CORE-DRONE-CAMERA-3D-PATH-EDITOR-SPEC.md
+tech-doc/todo/CORE-DRONE-CAMERA-3D-PATH-EDITOR-SPEC.md
 src/__tests__/drone-camera-bezier-3d-path.test.js
 ```
 
@@ -220,4 +227,4 @@ interaction.
 ## Sources
 
 - [Three.js `CubicBezierCurve3`](https://threejs.org/docs/pages/CubicBezierCurve3.html)
-- [Drone camera path architecture](CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)
+- [Drone camera path architecture](../specs/replay-video/CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)

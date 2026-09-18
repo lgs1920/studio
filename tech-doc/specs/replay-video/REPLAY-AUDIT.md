@@ -502,8 +502,8 @@ The normalized timeline contains one mandatory replay-main track and optional ty
 
 The 1.0.0 implementation does not need the complete 1.1.0 timeline editor. It does need the normalized runtime model behind an adapter from the existing start/replay/stop settings. #404 can then replace the authoring surface without replacing the runtime clock.
 
-The read-only 1.0.0 preparation slice is specified in
-[`CORE-REPLAY-TIMELINE-PREVIEW-SPEC.md`](../../todo/CORE-REPLAY-TIMELINE-PREVIEW-SPEC.md).
+The controlled 1.0.0 preparation slice is specified in
+[`CORE-REPLAY-TIMELINE-IMPLEMENTATION.md`](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md).
 It is a projection of the future #404 model, not a second timeline model. Its
 Dynamic Stats and Journey Stats visibility projection also applies the
 canonical-frame direction described for #450; recorder timestamps remain only

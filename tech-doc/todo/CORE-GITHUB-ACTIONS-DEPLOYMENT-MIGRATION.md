@@ -147,6 +147,25 @@ These risks exist independently of GitHub Actions. Moving the same script to a
 runner without addressing them would improve centralization but would not by
 itself produce a secure deployment system.
 
+## Current validation baseline
+
+The Studio quality workflow now runs the coverage and browser validation steps
+alongside the existing test, lint, type, and production-build gates. The
+baseline recorded during the first workflow implementation was:
+
+- 223 test files passed under coverage instrumentation;
+- 1,450 Vitest tests passed under coverage instrumentation;
+- Oxlint, TypeScript validation, and the production build passed;
+- the browser smoke project ran through Vitest Browser Mode and Playwright on
+  Chromium, Firefox, and WebKit.
+
+Coverage is reported without global thresholds. The next quality steps are to
+add targeted behavior tests for the remaining high-risk paths and define
+targeted thresholds after the deployment workflow and those tests have been
+validated. The main identified gaps are deployment failure handling,
+ScreenMediaRecorder cancellation and codec fallback, and persistence failure
+and migration cases.
+
 ## Relationship with the Draft/HQ replay architecture
 
 The replay architecture is a runtime rendering architecture, not a server

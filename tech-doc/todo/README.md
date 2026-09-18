@@ -15,12 +15,19 @@ implementation documents. Implemented and historical documents belong under
 ## Journeys, Tracks, and Data
 
 - [Journey import formats](JOURNEY_IMPORT_FORMATS_SPEC.md)
-- [Tracks editor](TRACKSEDITOR-SPEC.md)
 - [Cloud synchronization](CLOUD-SYNC-TODO.md)
 - [Journey and track map selection](CORE-JOURNEY-CLICK-OVERLAY-SELECTION-SPEC.md)
 
 ## Replay and Video
 
+- [Replay start camera editor and clip synchronization](CORE-REPLAY-START-CAMERA-EDITOR-SPEC.md)
+- [Replay track timeline editor](CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md)
+- [POI animation during replay](CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md)
+- [Clip altitude alignment](CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md)
+- [HQ video resolution profiles](HQ_4K_VIDEO_EXPORT_SPEC.md)
+- [Replay Video Widget](VIDEO_WIDGET_SPEC.md)
+- [Drone camera 3D path editor](CORE-DRONE-CAMERA-3D-PATH-EDITOR-SPEC.md)
+- [Camera HPR orientation sphere](CORE-CAMERA-HPR-THREEJS-SPHERE-WIDGET-SPEC.md)
 - [Replay Timeline performance audit and improvement proposals](CORE-REPLAY-TIMELINE-PERFORMANCE-AUDIT.md)
 - [Replay recording loops and time-ranged object visibility](CORE-REPLAY-RECORDING-LOOPS-AND-TIME-RANGED-OBJECTS.md)
 - [Parallel HQ workspace execution analysis](REPLAY-PARALLEL-WORKSPACE-EXECUTION-ANALYSIS.md)
@@ -29,7 +36,6 @@ implementation documents. Implemented and historical documents belong under
 
 - [Arrow widget](ARROW_WIDGET_SPEC.md)
 - [Brand and season swatch reactivity](BRAND_SEASON_SWATCH_REACTIVITY_SPEC.md)
-- [Non-distorting widget resize](CORE-WIDGET-NON-DISTORTING-RESIZE-SPEC.md) — TODO, 1.0.0
 - [Main UI work](MAINUI-TODO.md)
 - [Profile work](PROFILE-TODO.md)
 - [Translation notes](Translate.md)
@@ -38,4 +44,3 @@ implementation documents. Implemented and historical documents belong under
 
 - [Bun build and test migration study](CORE-BUN-BUILD-TEST-MIGRATION.md)
 - [GitHub Actions deployment migration](CORE-GITHUB-ACTIONS-DEPLOYMENT-MIGRATION.md)
-- [Test and deployment next steps](CORE-TEST-AND-DEPLOYMENT-NEXT-STEPS.md)

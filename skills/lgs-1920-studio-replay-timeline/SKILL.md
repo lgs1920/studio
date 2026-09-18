@@ -9,9 +9,9 @@ Use this skill for the linked-video Replay preparation timeline. Read the
 current implementation inventory in
 [`CORE-REPLAY-TIMELINE-IMPLEMENTATION.md`](../../tech-doc/specs/replay-video/CORE-REPLAY-TIMELINE-IMPLEMENTATION.md)
 before changing behavior. Read
-[`CORE-REPLAY-TIMELINE-PREVIEW-SPEC.md`](../../tech-doc/todo/CORE-REPLAY-TIMELINE-PREVIEW-SPEC.md)
-only when comparing the delivered preview with the proposed product scope or
-the future editable timeline.
+[`CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md`](../../tech-doc/todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md)
+when comparing the delivered preparation surface with the future editable
+timeline.
 
 ## Authorities and boundaries
 
@@ -21,8 +21,8 @@ the future editable timeline.
   `src/core/ui/replay/ReplayFrameTimeline.js` remain the phase and frame-time
   authorities. Do not rebuild phase boundaries from UI values.
 - `src/components/MainUI/video/ReplayTimelinePreview.jsx` is a controlled
-  visual and interaction adapter for `@xzdarcy/react-timeline-editor`. Never
-  start the package runner or create a competing Replay clock.
+  visual and interaction adapter for `@lgs1920/timeline`. Never start a
+  package runner or create a competing Replay clock.
 - Replay store state and the published canonical frame own playback, pause,
   progress, and current time. Scrubbing must continue through
   `ReplayScrubScheduler` with latest-request-wins behavior.
@@ -51,7 +51,7 @@ the future editable timeline.
   environment. Do not mutate unrelated application state, create a competing
   clock, or leak listeners, timers, DOM effects, capture effects, or persistence
   outside the explicit Timeline lifecycle.
-- Every file under `src/webcomponents/lgs1920-timeline/` must remain completely
+- Every file under the sibling `../timeline/src/` package must remain completely
   domain-agnostic. It must not contain Replay-specific words, identifiers,
   methods, classes, filenames, imports, comments, documentation, tests, or
   behavior. Generic timeline mechanisms belong inside Timeline and must use

@@ -507,7 +507,7 @@ The practical rule is:
 
 - [Replay / Video Architecture](CORE-REPLAY-VIDEO-ARCHITECTURE.md)
 - [Journey replay / video issues](JOURNEY-REPLAY-VIDEO-ISSUES.md)
-- [HQ video resolution profiles](HQ_4K_VIDEO_EXPORT_SPEC.md)
+- [HQ video resolution profiles](../../todo/HQ_4K_VIDEO_EXPORT_SPEC.md)
 - [Screen media recorder](CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)
 - [Canvas overlay composer](CORE-SCREEN-MEDIA-RECORDER-COMPOSER-README.md)
 - [Replay camera tracking zones](REPLAY_CAMERA_TRACKING_ZONES.md)

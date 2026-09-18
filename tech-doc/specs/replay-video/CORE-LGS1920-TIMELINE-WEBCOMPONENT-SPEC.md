@@ -2,11 +2,11 @@
 
 ## Status
 
-Current implementation specification.
+Current Studio integration snapshot.
 
 The component is a generic video-timeline editor. It is based on
 `@lgs1920/timeline`, whose generic timeline implementation is published as
-transformed into JavaScript and CSS Web Component code. The package also
+JavaScript and CSS Web Component code. The package also
 provides a thin React wrapper around the custom element.
 
 The Web Component uses Web Awesome 3 and Font Awesome for its controls,
@@ -14,23 +14,25 @@ inputs, icons, popups, and split-panel layout.
 
 ## Package structure
 
-The implementation is located in:
+The implementation is maintained in the standalone sibling package at:
 
 ```text
-../timeline/src/lgs1920-timeline/
+../timeline/src/
 ├── LGS1920Timeline.js
-├── LGS1920TimelineEditing.js
-├── LGS1920TimelineRendering.js
-├── LGS1920TimelineUtils.js
-├── LGS1920TimelineReact.jsx
-├── LGS1920Timeline.test.js
-├── LGS1920TimelineReact.test.jsx
-├── lgs1920-timeline.css
+├── timelineEditing.js
+├── timelineRendering.js
+├── timelineUtils.js
+├── timelineReact.jsx
+├── timeline.css
 └── README.md
 ```
 
 The custom element name is `lgs1920-timeline`. The React adapter is named
-`LGS1920TimelineReact` and re-exports `LGS1920Timeline`.
+`LGS1920TimelineReact` and re-exports `LGS1920Timeline`. Generic package
+properties, events, slots, and test ownership are documented by the package
+[README](../../../../timeline/src/README.md) and
+[specification](../../../../timeline/docs/specifications.md). This Studio
+document records the application-facing contract and Replay integration.
 
 ## Ownership and controlled state
 
@@ -582,4 +584,4 @@ parts, including:
 - tracks, clips, playhead, ruler, menus, and actions.
 
 The complete usage examples and property tables are maintained in the
-component [README](../../../../timeline/src/lgs1920-timeline/README.md).
+component [README](../../../../timeline/src/README.md).

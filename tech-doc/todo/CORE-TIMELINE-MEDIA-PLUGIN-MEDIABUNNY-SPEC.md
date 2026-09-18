@@ -403,8 +403,8 @@ The media plugin must preserve the timeline boundary:
 
 ## Current implementation references
 
-- [`LGS1920Timeline.js`](../../../timeline/src/lgs1920-timeline/LGS1920Timeline.js)
-- [`LGS1920TimelineRendering.js`](../../../timeline/src/lgs1920-timeline/LGS1920TimelineRendering.js)
-- [`LGS1920TimelineEditing.js`](../../../timeline/src/lgs1920-timeline/LGS1920TimelineEditing.js)
-- [`README.md`](../../../timeline/src/lgs1920-timeline/README.md)
+- [`LGS1920Timeline.js`](../../../timeline/src/LGS1920Timeline.js)
+- [`timelineRendering.js`](../../../timeline/src/timelineRendering.js)
+- [`timelineEditing.js`](../../../timeline/src/timelineEditing.js)
+- [`README.md`](../../../timeline/src/README.md)
 - [`CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md`](CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md)

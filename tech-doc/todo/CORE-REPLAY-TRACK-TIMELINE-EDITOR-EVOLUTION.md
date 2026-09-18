@@ -2,7 +2,7 @@
 
 Status: **TODO**
 
-Target release: `1.0.0` (read-only preparation preview) and `1.1.0` (editable authoring timeline)
+Target release: `1.0.0` (controlled preparation projection) and `1.1.0` (editable authoring timeline)
 
 Date: 2026-07-16
 
@@ -31,11 +31,14 @@ The work tracked by this specification is delivered in two compatible slices:
   active video widget, while keeping Logo and Credits fixed at the top.
 - Show `Start`, `Replay`, and `Stop` phase segments on the replay track.
 - Show Dynamic Stats and Journey Stats visibility intervals on the widget track.
-- Allow only playhead movement, play, pause, and replay.
+- Allow playhead movement, play, pause, replay, and the local projection
+  interactions supported by the current Timeline component without persisting
+  an authoring timeline.
 - Drive the scene from the canonical Replay frame contract without creating a second clock.
 - Keep the Timeline outside the captured video board.
 
-The detailed behavior is defined in [Replay Timeline Preview Specification](CORE-REPLAY-TIMELINE-PREVIEW-SPEC.md).
+The delivered preparation behavior is documented in the
+[Replay Timeline preparation implementation](../specs/replay-video/CORE-REPLAY-TIMELINE-IMPLEMENTATION.md).
 
 ### 1.1.0 — Editable authoring timeline
 
@@ -45,9 +48,9 @@ The detailed behavior is defined in [Replay Timeline Preview Specification](CORE
   migration, and mobile editing behavior.
 - Make Draft recording and HQ export consume the normalized timeline.
 
-The 1.0.0 preview is intentionally a read-only projection of this future model.
-It must not introduce a temporary data model that would need to be discarded by
-the 1.1.0 editor.
+The 1.0.0 preparation surface remains a controlled projection of this future
+model. Its local interactions must not introduce a second persisted data model
+that would need to be discarded by the 1.1.0 editor.
 
 ## Current State
 
@@ -351,19 +354,20 @@ Costs:
 - More tests are needed because timeline edits directly affect video export.
 - More implementation work than dropping in a timeline package.
 
-For the 1.0.0 read-only preview, use `@xzdarcy/react-timeline-editor` through
-an application-owned adapter. Keep the normalized model and playback authority
-in Studio so the package remains a rendering and pointer-input surface only.
-The custom implementation remains the fallback if the package spike fails, and
-the long-term 1.1.0 editor decision must be based on the spike results.
+The current 1.0.0 preparation surface uses the standalone `@lgs1920/timeline`
+Web Component through an application-owned adapter. Keep the normalized model,
+Replay clock, domain commands, and persistence in Studio. The package remains a
+generic rendering and pointer-input surface. The future 1.1.0 work should
+extend this boundary with domain authoring commands instead of introducing a
+second timeline implementation.
 
 ## Open Source Package Options
 
-Package metadata was checked on 2026-07-16.
+Package metadata was checked on 2026-09-18.
 
 | Package | Fit | License / compatibility | Strengths | Gaps | Verdict |
 | --- | --- | --- | --- | --- | --- |
-| `@xzdarcy/react-timeline-editor` | Medium-high | MIT. npm reports `1.0.0`, React `>=18`. | Rows and actions map reasonably well to tracks and clips. Built for timeline editing, not calendars. Uses virtualization/interactjs internally. | UI model is animation-oriented. Still requires adapters for locked replay, start/replay/stop rules, effects, widget visibility, and mobile drawer polish. Adds `react-virtualized` and `interactjs`. | Best package spike if we want to test a ready-made timeline UI. Not the recommended final architecture unless the spike proves styling and mobile are acceptable. |
+| `@lgs1920/timeline` | Current | Standalone project package used by Studio. | Generic Web Component, controlled state, track/clip editing, slots, replay-safe event boundary, and current Web Awesome integration. | Studio still needs domain commands, persisted authoring, and playback action wiring. | Keep as the single timeline surface and extend the Studio adapter. |
 | `react-calendar-timeline` | Medium | MIT. npm reports `0.30.0-beta.4`; README says the beta targets React 18/19 and Vite. | Mature group/item model, move/resize/group change, headers, markers. | Calendar/date semantics are awkward for a seconds-based video editor. Current React 19 support is beta. Styling a video-editor drawer may be expensive. | Possible, but too calendar-shaped for this feature. |
 | `vis-timeline` | Low-medium | MIT or Apache-2.0. npm reports `8.5.2`. | Powerful standalone groups/items/ranges editor with create/edit/delete support. | Imperative DOM library, not React-native. Adds more non-React state, moment-era dependencies, and styling isolation work. | Avoid for this React drawer. |
 | `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/react` | Building block | MIT. `@dnd-kit/react` supports React 18/19; `@dnd-kit/core` is widely used but older API. | Accessible drag/drop, touch and keyboard sensors, extensible collision rules. | Not a timeline. We still build time math, trim handles, snapping, and rendering. | Good optional dependency for custom implementation, especially track reordering and future keyboard DnD. |
@@ -373,16 +377,16 @@ Package metadata was checked on 2026-07-16.
 
 ## Recommended Architecture
 
-Use a custom timeline model and an adapter around
-`@xzdarcy/react-timeline-editor` for the 1.0.0 preview.
+Use the existing `@lgs1920/timeline` Web Component with a Studio-owned
+normalized model and domain adapter.
 
 The project already owns the replay clock, the HQ export frame loop, the widget board, and overlay composition. A third-party timeline can only solve the visible editor surface. It cannot remove the need for a project-specific runtime model.
 
 Recommended compromise:
 
 1. Build `ReplayTrackTimelineModel` first.
-2. Build the compact stacked-widget preview with
-   `@xzdarcy/react-timeline-editor`, including row and action drag behavior.
+2. Extend the current compact stacked-widget surface with explicit domain
+   commands for row and action changes.
 3. Keep the preview interaction surface intentionally small:
    - move the cursor;
    - play, pause, and replay;
@@ -565,7 +569,7 @@ Manual:
 
 ## External References Checked
 
-- `@xzdarcy/react-timeline-editor`: https://github.com/xzdarcy/react-timeline-editor
+- `@lgs1920/timeline`: sibling package at `../timeline`
 - `react-calendar-timeline`: https://github.com/namespace-ee/react-calendar-timeline
 - `vis-timeline`: https://github.com/visjs/vis-timeline
 - `dnd-kit`: https://github.com/clauderic/dnd-kit and https://dndkit.com/
