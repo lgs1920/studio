@@ -580,6 +580,7 @@ export const ReplayTimelinePreview = forwardRef(({
         ? Math.max(sliderMinMillis, Math.min(sliderMaxMillis, persistedTimelineTimeMillis))
         : sliderMinMillis
     const _pendingPlayhead = useRef(null)
+    const _preservedPlayheadTimeMillis = useRef(null)
     const normalizeTimelineTime = useCallback(value => {
         const requestedTime = Number(value)
         const safeTime = Number.isFinite(requestedTime) ? requestedTime : sliderMinMillis
@@ -737,8 +738,11 @@ export const ReplayTimelinePreview = forwardRef(({
             const replayStore = lgs.stores.replay
             const localTimeMillis = element.currentTimeMillis
             const pendingPlayhead = _pendingPlayhead.current
+            const preservedPlayheadTimeMillis = _preservedPlayheadTimeMillis.current
             const currentTimeMillis = pendingPlayhead !== null
                 ? pendingPlayhead.timeMillis
+                : Number.isFinite(preservedPlayheadTimeMillis)
+                    ? normalizeTimelineTime(preservedPlayheadTimeMillis)
                 : hasPublishedReplayFrame(replayStore)
                     ? resolveCurrentTimeMillis(replayStore, {
                         durationMillis: timeline.durationMillis,
@@ -763,6 +767,7 @@ export const ReplayTimelinePreview = forwardRef(({
             }
             element.ensureCurrentTimeVisible?.()
             element.verticalScrollTop = _verticalScrollTop.current
+            _preservedPlayheadTimeMillis.current = null
             console.log('[ReplayTimeline] controlled state end', {
                 debugStage,
                 durationMs: Number(((globalThis.performance?.now?.() ?? Date.now()) - startedAt).toFixed(2)),
@@ -780,6 +785,10 @@ export const ReplayTimelinePreview = forwardRef(({
         if (!linkedPreparation || !element || getReplayTimelineDebugStage() !== 'full') return undefined
 
         const persistTimelineEdit = event => {
+            const localTimeMillis = Number(element.currentTimeMillis)
+            if (Number.isFinite(localTimeMillis)) {
+                _preservedPlayheadTimeMillis.current = localTimeMillis
+            }
             const editState = buildReplayTimelineEditState(event, element, projection.signature)
             if (editState) lgs.stores.replay.preparationTimeline = editState
         }

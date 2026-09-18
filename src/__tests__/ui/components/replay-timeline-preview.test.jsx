@@ -428,6 +428,31 @@ describe('ReplayTimelinePreview', () => {
         await waitFor(() => expect(timelineElement.currentTimeMillis).toBe(2_500))
     })
 
+    it('keeps the local playhead when a clip edit rebuilds the controlled tracks', async () => {
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+        const editedTracks = timelineElement.tracks.map(track => ({
+            ...track,
+            clips: track.clips.map(clip => ({...clip})),
+        }))
+        const widgetTrack = editedTracks.find(track => track.id === 'dynamic-stats-widget')
+        widgetTrack.clips[0].end = widgetTrack.clips[0].end - 0.25
+
+        timelineElement.currentTimeMillis = 2_500
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-clip-change', {
+            bubbles: true,
+            detail: {
+                tracks: editedTracks,
+                durationMillis: 4_000,
+                rangeStartMillis: 0,
+                rangeEndMillis: 4_000,
+            },
+        }))
+
+        await waitFor(() => expect(timelineElement.tracks[0].clips[0].end).toBe(widgetTrack.clips[0].end))
+        expect(timelineElement.currentTimeMillis).toBe(2_500)
+    })
+
     it('restores and persists the horizontal zoom and playhead position', async () => {
         globalThis.lgs.settings.ui.replay.timeline = {
             zoomPercent: 100,
