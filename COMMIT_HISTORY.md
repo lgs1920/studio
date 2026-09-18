@@ -2496,3 +2496,15 @@
 ## 2026-09-14 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/4b8ea3faace1c4ef89226cdc56baafecfaa25496)
 
 - Recorded automatically from Git history.
+
+## 2026-09-14 — [`fix(timeline): keep zoom controls fixed while scrolling`](https://github.com/lgs1920/studio/commit/2e21ab702b87c4c7b80c020f895a20a9690d5b73)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`fix(replay): keep timeline playhead responsive`](https://github.com/lgs1920/studio/commit/653fd537554f3a831be4a1cc1950841ab4475bde)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/74f5f7dfd5ed9550718298115f5894e28bd7671f)
+
+- Recorded automatically from Git history.
