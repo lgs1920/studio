@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-14
+ * Last modified: 2026-09-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,7 +25,7 @@
 import {forwardRef, useCallback, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState} from 'react'
 import {useSnapshot} from 'valtio'
 import {subscribeKey} from 'valtio/utils'
-import {WaButton, WaIcon, WaSlider, WaTooltip} from '@web.awesome.me/webawesome-pro/dist/react'
+import {WaButton, WaIcon, WaTooltip} from '@web.awesome.me/webawesome-pro/dist/react'
 import {
     CREDITS_WIDGET,
     LOGO_WIDGET,
@@ -45,7 +45,6 @@ import {
 } from '@Core/ui/widget-manager/WidgetGroupUtils'
 import {createReplayScrubScheduler} from '@Core/ui/replay/ReplayScrubScheduler'
 import {useOptionalSnapshot} from '@Utils/ValtioUtils'
-import {formatRulerTime} from '@lgs1920/timeline'
 import '@lgs1920/timeline'
 import './replay-timeline-preview.css'
 
@@ -496,7 +495,6 @@ export const ReplayTimelinePreview = forwardRef(({
             stop: journeyReplayStop,
         },
     }), [journeyTitle, journeyName, journeyReplayStart, journeyReplayStop])
-
     const projection = useMemo(() => {
         const startedAt = globalThis.performance?.now?.() ?? Date.now()
         const nextProjection = buildReplayPreparationTimeline({
@@ -540,6 +538,9 @@ export const ReplayTimelinePreview = forwardRef(({
         visible: true,
         horizontalFit: !hasPersistedZoom,
         zoomPercent: hasPersistedZoom ? horizontalZoomPercent : undefined,
+        showTimeSlider: true,
+        showZoomSlider: true,
+        showClipMenu: true,
         legendMinWidth: REPLAY_TIMELINE_UI.legendMinWidth,
         legendWidth: REPLAY_TIMELINE_UI.legendWidth,
         legendMaxWidth: REPLAY_TIMELINE_UI.legendMaxWidth,
@@ -584,10 +585,6 @@ export const ReplayTimelinePreview = forwardRef(({
         const safeTime = Number.isFinite(requestedTime) ? requestedTime : sliderMinMillis
         return Math.max(sliderMinMillis, Math.min(sliderMaxMillis, safeTime))
     }, [sliderMaxMillis, sliderMinMillis])
-    const formatSliderValue = useCallback(value => `${formatRulerTime(Number(value) / 1000)} / ${formatRulerTime(Number(timeline.durationMillis) / 1000)}`,
-        [timeline.durationMillis])
-    const formatZoomValue = useCallback(value => `${Math.round(Number(value))}%`, [])
-
     const persistTimelineView = useCallback(updates => {
         const settings = lgs.settings?.ui?.replay
         if (!settings) return
@@ -611,17 +608,6 @@ export const ReplayTimelinePreview = forwardRef(({
         source: 'timeline-scrub',
     }), [])
     const _scrubScheduler = useRef(null)
-    const _slider = useRef(null)
-
-    const syncSliderTime = useCallback(value => {
-        const slider = _slider.current
-        if (!slider) return
-        const timeMillis = normalizeTimelineTime(value)
-        if (Number(slider.value) !== timeMillis) {
-            slider.value = timeMillis
-        }
-    }, [normalizeTimelineTime])
-
     /**
      * Apply a time to the timeline's lightweight playhead path.
      *
@@ -656,7 +642,6 @@ export const ReplayTimelinePreview = forwardRef(({
         const pendingPlayhead = {timeMillis}
         _pendingPlayhead.current = pendingPlayhead
         persistTimelineView({currentTimeMillis: timeMillis})
-        syncSliderTime(timeMillis)
         if (_timeline.current) {
             applyTimelinePlayheadTime(_timeline.current, timeMillis)
             if (_timeline.current.isCurrentTimeNearViewportEdge?.()) {
@@ -678,36 +663,19 @@ export const ReplayTimelinePreview = forwardRef(({
         else {
             _scrubScheduler.current?.request(progress)
         }
-    }, [applyTimelinePlayheadTime, normalizeTimelineTime, persistTimelineView, syncSliderTime, timeline.durationMillis])
+    }, [applyTimelinePlayheadTime, normalizeTimelineTime, persistTimelineView, timeline.durationMillis])
 
     const handleTimelineSeek = useCallback(event => {
         const detail = event?.detail ?? {}
         updateTimelineTime(detail.timeMillis, detail.settled === true)
     }, [updateTimelineTime])
 
-    const handleSliderInput = useCallback(event => {
-        updateTimelineTime(event.target.value)
-    }, [updateTimelineTime])
-
-    const handleSliderChange = useCallback(event => {
-        updateTimelineTime(event.target.value, true)
-    }, [updateTimelineTime])
-
-    const updateHorizontalZoom = useCallback(value => {
+    const handleTimelineZoomChange = useCallback(event => {
         persistVerticalScrollTop(_timeline.current?.verticalScrollTop)
-        const zoomPercent = clampReplayTimelineZoom(value)
+        const zoomPercent = clampReplayTimelineZoom(event?.detail?.zoomPercent)
         setHorizontalZoomPercent(zoomPercent)
         persistTimelineView({zoomPercent})
-        _timeline.current?.setZoom?.(zoomPercent)
     }, [persistTimelineView, persistVerticalScrollTop])
-
-    const handleHorizontalZoomInput = useCallback(event => {
-        updateHorizontalZoom(event.target.value)
-    }, [updateHorizontalZoom])
-
-    const handleHorizontalZoomChange = useCallback(event => {
-        updateHorizontalZoom(event.target.value)
-    }, [updateHorizontalZoom])
 
     useImperativeHandle(ref, () => ({
         handleResize: () => {
@@ -759,7 +727,6 @@ export const ReplayTimelinePreview = forwardRef(({
                                 : [],
                         }]
                 element.currentTimeMillis = 0
-                syncSliderTime(0)
                 console.log('[ReplayTimeline] controlled state end', {
                     debugStage,
                     durationMs: Number(((globalThis.performance?.now?.() ?? Date.now()) - startedAt).toFixed(2)),
@@ -796,7 +763,6 @@ export const ReplayTimelinePreview = forwardRef(({
             }
             element.ensureCurrentTimeVisible?.()
             element.verticalScrollTop = _verticalScrollTop.current
-            syncSliderTime(element.currentTimeMillis)
             console.log('[ReplayTimeline] controlled state end', {
                 debugStage,
                 durationMs: Number(((globalThis.performance?.now?.() ?? Date.now()) - startedAt).toFixed(2)),
@@ -807,7 +773,7 @@ export const ReplayTimelinePreview = forwardRef(({
         return () => {
             cancelled = true
         }
-    }, [detached, initialTimelineTimeMillis, linkedPreparation, persistedTimelineTimeMillis, projection, syncSliderTime, timeline, tracks])
+    }, [detached, initialTimelineTimeMillis, linkedPreparation, persistedTimelineTimeMillis, projection, timeline, tracks])
 
     useEffect(() => {
         const element = _timeline.current
@@ -848,6 +814,14 @@ export const ReplayTimelinePreview = forwardRef(({
     useEffect(() => {
         const element = _timeline.current
         if (!linkedPreparation || !element || getReplayTimelineDebugStage() !== 'full') return undefined
+
+        element.addEventListener('lgs1920-timeline-zoom-change', handleTimelineZoomChange)
+        return () => element.removeEventListener('lgs1920-timeline-zoom-change', handleTimelineZoomChange)
+    }, [handleTimelineZoomChange, linkedPreparation])
+
+    useEffect(() => {
+        const element = _timeline.current
+        if (!linkedPreparation || !element || getReplayTimelineDebugStage() !== 'full') return undefined
         const projectionDurationMillis = projection.durationMillis
         let playbackSyncScheduled = false
         let scheduledFrameId = null
@@ -869,7 +843,6 @@ export const ReplayTimelinePreview = forwardRef(({
                 if (element.isCurrentTimeNearViewportEdge?.()) {
                     element.ensureCurrentTimeVisible?.()
                 }
-                syncSliderTime(currentTimeMillis)
             }
             element.playing = replayStore.playing === true
         }
@@ -911,7 +884,7 @@ export const ReplayTimelinePreview = forwardRef(({
             playbackSyncScheduled = false
             scheduledFrameId = null
         }
-    }, [applyTimelinePlayheadTime, linkedPreparation, projection.durationMillis, syncSliderTime])
+    }, [applyTimelinePlayheadTime, linkedPreparation, projection.durationMillis])
 
     useEffect(() => {
         if (linkedPreparation) return undefined
@@ -955,58 +928,6 @@ export const ReplayTimelinePreview = forwardRef(({
                                   data-replay-timeline-debug={getReplayTimelineDebugStage()}
                                   ref={_timeline}
                                   aria-label="Replay tracks">
-                    <span slot="timeline-ruler"
-                          className="replay-timeline-preview__scrubber lgs-widget-no-drag"
-                          data-timeline-ruler-fixed=""
-                          data-widget-capture="exclude"
-                          onClick={event => event.stopPropagation()}>
-                        <span className="replay-timeline-preview__scrubber-control">
-                            <WaSlider aria-label="Replay timeline time"
-                                      label-at-start
-                                      width-auto
-                                      ref={_slider}
-                                      size="s"
-                                      variant="brand"
-                                      withTooltip
-                                      valueFormatter={formatSliderValue}
-                                      min={sliderMinMillis}
-                                      max={sliderMaxMillis}
-                                      step={Math.max(1, Number(timeline.frameIntervalMillis) || 1)}
-                                      defaultValue={initialTimelineTimeMillis}
-                                      onInput={handleSliderInput}
-                                      onChange={handleSliderChange}>
-                                <WaIcon slot="label"
-                                        name="clock"
-                                        variant="regular"
-                                        size="s"
-                                        label=""
-                                        aria-hidden="true"/>
-                            </WaSlider>
-                        </span>
-                    </span>
-                    <span slot="timeline-controls"
-                          className="replay-timeline-preview__zoom lgs-widget-no-drag"
-                          data-widget-capture="exclude">
-                        <WaIcon className="replay-timeline-preview__zoom-icon"
-                                name="arrows-left-right"
-                                variant="regular"
-                                size="s"
-                                label=""
-                                aria-hidden="true"/>
-                        <WaSlider aria-label="Horizontal timeline zoom"
-                                  className="replay-timeline-preview__zoom-slider"
-                                  data-testid="replay-timeline-zoom-slider"
-                                  size="s"
-                                  variant="brand"
-                                  withTooltip
-                                  valueFormatter={formatZoomValue}
-                                  min={REPLAY_TIMELINE_ZOOM.minPercent}
-                                  max={REPLAY_TIMELINE_ZOOM.maxPercent}
-                                  step={REPLAY_TIMELINE_ZOOM.sliderStepPercent}
-                                  value={horizontalZoomPercent}
-                                  onInput={handleHorizontalZoomInput}
-                                  onChange={handleHorizontalZoomChange}/>
-                    </span>
                     {headerActions && (
                         <span slot="header-actions"
                               className="replay-timeline-preview__header-actions lgs-widget-no-drag"

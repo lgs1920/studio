@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -71,7 +71,6 @@ export const REPLAY_TIMELINE_ZOOM = Object.freeze({
     maxPercent:     500,
     minPercent:     -50,
     stepPercent:    20,
-    sliderStepPercent: 1,
 })
 
 /**

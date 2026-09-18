@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-14
  *
  *
  * Copyright © 2026 LGS1920
@@ -60,7 +60,6 @@ describe('replayTimelineUtils', () => {
         expect(resolveReplayTimelineMinimumWidth()).toBe(352)
         expect(resolveReplayTimelineMinimumDimensions(3)).toEqual({width: 352, height: 204, layoutHeight: 122})
         expect(REPLAY_TIMELINE_UI.scaleIntervalMillis).toBe(200)
-        expect(REPLAY_TIMELINE_ZOOM.sliderStepPercent).toBe(1)
         expect(editorData[0].classNames).toEqual(['widget-row', 'replay-timeline-row-index-0'])
         expect(editorData[1].classNames).toEqual(['replay-timeline-row-index-1'])
         expect(resolveReplayTimelineLegendTransform(48)).toBe('translateY(-48px)')
