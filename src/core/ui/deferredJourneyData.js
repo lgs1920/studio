@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-24
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,21 +16,25 @@
 
 import { TrackUtils } from '@Utils/cesium/TrackUtils'
 import { UIToast }    from '@Utils/UIToast'
-import { preCache }   from '@zumer/snapdom'
+import { snapdom }     from '@zumer/snapdom'
 
 /**
- * Pre-caches SnapDOM resources and embedded fonts before capture begins.
+ * Prepare SnapDOM capture intent handling before capture begins.
  *
- * @param {object} options - Pre-cache options.
- * @param {Element|Document} options.root - Document subtree scanned for capture resources.
- * @returns {Promise<void>} Resolves when SnapDOM finishes pre-caching resources.
+ * SnapDOM 3 embeds fonts and caches eligible resources during capture. Its
+ * replacement for the removed pre-cache hook arms intent-based capture
+ * preparation and does not take a document root or capture options.
+ *
+ * @param {object} options - Preparation options retained for API compatibility.
+ * @param {Element|Document} options.root - Root retained for callers using the previous contract.
+ * @returns {Promise<void>} Resolves after SnapDOM capture preparation is armed.
  */
-export const precacheSnapdomAssets = ({
-                                          root = document.body,
-                                      } = {}) => preCache(root, {
-                                          embedFonts: true,
-                                          fontStylesheetDomains: ['fonts.googleapis.com'],
-                                      })
+export const precacheSnapdomAssets = (options = {}) => {
+    const root = options.root === undefined ? document.body : options.root
+    if (!root) return Promise.resolve()
+    snapdom.preCapture()
+    return Promise.resolve()
+}
 
 export const runDeferredJourneyDataLoad = async ({
                                                      trackUtils = TrackUtils,

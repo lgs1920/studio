@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-24
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-18
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,12 +16,14 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const {preCacheMock} = vi.hoisted(() => ({
-    preCacheMock: vi.fn(async () => undefined),
+const {preCaptureMock} = vi.hoisted(() => ({
+    preCaptureMock: vi.fn(),
 }))
 
 vi.mock('@zumer/snapdom', () => ({
-    preCache: preCacheMock,
+    snapdom: {
+        preCapture: preCaptureMock,
+    },
 }))
 
 import { precacheSnapdomAssets, runDeferredJourneyDataLoad } from '@Core/ui/deferredJourneyData'
@@ -56,18 +58,15 @@ const dependencies = ({journeys = []} = {}) => ({
 
 describe('deferred journey data loading', () => {
     beforeEach(() => {
-        preCacheMock.mockClear()
+        preCaptureMock.mockClear()
     })
 
-    it('pre-caches SnapDOM fonts against the requested document root', async () => {
+    it('arms SnapDOM v3 capture preparation', async () => {
         const root = document.createElement('main')
 
         await precacheSnapdomAssets({root})
 
-        expect(preCacheMock).toHaveBeenCalledWith(root, {
-            embedFonts: true,
-            fontStylesheetDomains: ['fonts.googleapis.com'],
-        })
+        expect(preCaptureMock).toHaveBeenCalledOnce()
     })
 
     it('loads remaining journeys, refreshes groups and POI indexes', async () => {

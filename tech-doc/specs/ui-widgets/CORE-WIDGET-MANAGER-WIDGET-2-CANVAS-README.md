@@ -2,6 +2,8 @@ Here is the complete Markdown code for the `tech-doc/specs/CORE-WIDGET-MANAGER-W
 
 # Widget2Canvas — High-Performance DOM-to-Canvas Mirroring
 
+The implementation uses `@zumer/snapdom` `3.0.0`.
+
 A lightweight, production-ready class that replaces a DOM widget with a perfectly synced canvas
 using [@zumer/snapdom](https://github.com/zumer/snapdom).
 
@@ -45,6 +47,34 @@ Rules:
 - If no zone is marked, `Widget2Canvas` falls back to a full-widget capture
 
 This contract is especially important for video/replay widgets, where the visible DOM and the recorded canvas must stay aligned without stacking old and new text.
+
+## SnapDOM 3 capture contract
+
+SnapDOM 3 automatically reuses eligible unchanged captures and can recapture
+only affected subtrees when a local change is observable. `Widget2Canvas` keeps
+explicit static and dynamic zones around that behavior so Replay can decide
+which parts are allowed to change for a canonical frame.
+
+The application also follows the v3 migration rules:
+
+- `snapdom.preCapture()` is used for capture-intent preparation;
+- the removed v2 `preCache`, `fast`, `burst`, and `compress` options are not
+  part of the capture contract;
+- `invalidate: true` is reserved for changes SnapDOM cannot observe, such as
+  selected programmatic CSSOM updates;
+- v3 automatic font embedding and resource caching reduce repeated setup work,
+  but do not remove the cost of rasterizing a changed DOM subtree;
+- `width` and `height` are treated as final output dimensions when supplied,
+  while `scale` and `dpr` control raster resolution when explicit dimensions are
+  not used;
+- `capture.meta` geometry is retained when the canvas mirror is positioned, so
+  viewBox size and content offsets do not distort the widget during composition.
+
+For Replay recording, a static widget zone should be captured once per layout
+revision. A dynamic zone should be refreshed only after its canonical Replay
+frame state changes. If a refresh is already running, the newest requested
+state must remain queued and replace obsolete intermediate work before the next
+canvas update.
 
 ---
 
@@ -180,6 +210,10 @@ const mirror = useWidget2Canvas(widgetRef)
 
 - **Avoid rapid mutations** — batch DOM updates when possible
 - **Use `scale: 1`** for maximum speed (unless exporting high-DPI)
+- **Reuse unchanged captures** — let SnapDOM 3 retain eligible results and
+  invalidate only when an unobservable change requires it
+- **Refresh dynamic zones selectively** — do not snapshot a complete widget for
+  every Replay frame when only one dynamic part changed
 - **Call `destroy()`** on component unmount to prevent memory leaks
 
 ---
