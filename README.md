@@ -200,6 +200,19 @@ The Skills are stored in the agent-independent [skills/](skills/) directory and 
 Commit preparation and release work are also covered by the [Git commit quality](skills/lgs-1920-studio-git-commit-quality/SKILL.md)
 and [release changelog](skills/lgs-1920-studio-release-changelog/SKILL.md) Skills.
 
+The shared baseline and cross-repository delivery guidance are maintained in
+[agent-guidance/](agent-guidance/). After cloning, activate the repository
+hooks once with:
+
+```bash
+bun run git:hooks:install
+```
+
+During local development, provider directories may be links. The pre-commit
+hook materializes them as physical files for the commit, while the
+post-commit hook restores the local links. The same pre-commit hook updates
+staged source-file headers. A standalone clone remains self-contained.
+
 ## Technology Stack
 
 This README only highlights the main runtime pieces. Technical documentation is centralized in

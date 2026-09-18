@@ -1,0 +1,1 @@
+../../agent-guidance/PROJECT_RULES.common.md

@@ -14,12 +14,13 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {readFileSync, writeFileSync} from 'node:fs'
+import {existsSync, lstatSync, readFileSync, writeFileSync} from 'node:fs'
 import {basename, extname} from 'node:path'
 import {spawnSync} from 'node:child_process'
 
-const SOURCE_EXTENSIONS = new Set(['.css', '.js', '.jsx', '.ts', '.tsx'])
-const VITEST_DIRECTIVE_PATTERN = /^\/\/ @vitest-environment[^\n]*\n?/
+const SOURCE_EXTENSIONS = new Set(['.cjs', '.css', '.js', '.jsx', '.mjs', '.ts', '.tsx'])
+const IGNORED_PATH_PREFIXES = ['demo/dist/', 'dist/', 'node_modules/']
+const IGNORED_PATHS = new Set(['demo/webawesome.css'])
 const PROJECT_HEADER_PATTERN = /^\/\*\*+[\s\S]*?This file is part of the LGS1920\/studio project\.[\s\S]*?\n \*{3,}\/\s*/
 
 /**
@@ -64,6 +65,8 @@ export const getCurrentDate = () => {
  * @returns {boolean} True when the file extension is supported.
  */
 export const isSupportedSourceFile = filePath => SOURCE_EXTENSIONS.has(extname(filePath).toLowerCase())
+    && !IGNORED_PATHS.has(filePath)
+    && !IGNORED_PATH_PREFIXES.some(prefix => filePath.startsWith(prefix))
 
 /**
  * Return the last non-empty line from command output.
@@ -130,6 +133,19 @@ export const buildHeader = (filePath, createdDate, modifiedDate) => `/**********
  ******************************************************************************/`
 
 /**
+ * Return the interpreter and test directives that must precede a header.
+ *
+ * @param {string} content Current source content.
+ * @returns {string} Preserved prefix.
+ */
+const getPreservedPrefix = content => {
+    const shebang = content.match(/^#![^\n]*\n/)?.[0] ?? ''
+    const remainder = content.slice(shebang.length)
+    const vitestDirective = remainder.match(/^\/\/ @vitest-environment[^\n]*\n?/)?.[0] ?? ''
+    return shebang + vitestDirective
+}
+
+/**
  * Replace or insert the canonical project header in source content.
  *
  * @param {string} content - Current file content.
@@ -139,12 +155,12 @@ export const buildHeader = (filePath, createdDate, modifiedDate) => `/**********
  * @returns {string} Updated file content.
  */
 export const updateHeader = (content, filePath, createdDate, modifiedDate) => {
-    const vitestDirective = content.match(VITEST_DIRECTIVE_PATTERN)?.[0] ?? ''
-    const contentAfterDirective = content.slice(vitestDirective.length)
-    const contentWithoutHeader = contentAfterDirective.replace(PROJECT_HEADER_PATTERN, '').replace(/^\n+/, '')
+    const prefix = getPreservedPrefix(content)
+    const contentAfterPrefix = content.slice(prefix.length).replace(/^\n+/, '')
+    const contentWithoutHeader = contentAfterPrefix.replace(PROJECT_HEADER_PATTERN, '').replace(/^\n+/, '')
     const header = buildHeader(filePath, createdDate, modifiedDate)
 
-    return `${vitestDirective}${header}\n\n${contentWithoutHeader}`
+    return `${prefix}${header}\n\n${contentWithoutHeader}`
 }
 
 /**
@@ -174,6 +190,8 @@ export const isWorktreeSynchronized = filePath => runGit(['diff', '--quiet', '--
  * @returns {boolean} True when the file already matched or was updated successfully.
  */
 export const processFile = (filePath, checkOnly, stageChanges) => {
+    if (!existsSync(filePath) || !lstatSync(filePath).isFile()) return true
+
     const currentDate = getCurrentDate()
     const createdDate = getCreatedDate(filePath, currentDate)
     const modifiedDate = hasCurrentChange(filePath) ? currentDate : getLastCommittedDate(filePath, currentDate)
@@ -193,7 +211,7 @@ export const processFile = (filePath, checkOnly, stageChanges) => {
     writeFileSync(filePath, updatedContent)
 
     if (stageChanges) {
-        const stageResult = runGit(['add', '--', filePath])
+        const stageResult = runGit(['add', '-f', '--', filePath])
         if (stageResult.status !== 0) {
             console.error(stageResult.stderr.trim() || `Unable to stage ${filePath}`)
             return false
