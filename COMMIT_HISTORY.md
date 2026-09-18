@@ -2508,3 +2508,67 @@
 ## 2026-09-14 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/74f5f7dfd5ed9550718298115f5894e28bd7671f)
 
 - Recorded automatically from Git history.
+
+## 2026-09-14 — [`fix(replay): avoid timeline recenter on slider input`](https://github.com/lgs1920/studio/commit/974062ac50ffe8c377985ece7c30ab5e6ef5a3c2)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`feat(timeline): use standalone timeline package`](https://github.com/lgs1920/studio/commit/13c2a62081429f017cdbeb8e669ca2593b85bac6)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`chore(timeline): remove obsolete editor patch`](https://github.com/lgs1920/studio/commit/2cde656afc3e2347b9224b14df343e63da5991bb)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`docs(timeline): update extracted timeline references`](https://github.com/lgs1920/studio/commit/dae531a751387b80bbe727d3c6f52372c16c0013)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`fix(replay): persist timeline vertical scroll`](https://github.com/lgs1920/studio/commit/f443c0e33fbe19d539e5a9c1922c70cc253d46f0)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`docs(replay): update timeline todo`](https://github.com/lgs1920/studio/commit/4a8813dc5157f394b6321635384766d908dce620)
+
+- Recorded automatically from Git history.
+
+## 2026-09-14 — [`fix(webawesome): avoid duplicate custom element registration`](https://github.com/lgs1920/studio/commit/85a0e9c410052a21af741787a2f6b57a8f9f92bf)
+
+- Recorded automatically from Git history.
+
+## 2026-09-18 — [`chore(deps): refresh project dependencies`](https://github.com/lgs1920/studio/commit/8d043bb18af21caf58eec31d2381610af294a6a8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-18 — [`refactor(capture): migrate SnapDOM integration to v3`](https://github.com/lgs1920/studio/commit/7019268a05ccf723aee8a6a47b39ddc4d4696f53)
+
+- Recorded automatically from Git history.
+
+## 2026-09-18 — [`refactor(replay): delegate timeline controls to standalone component`](https://github.com/lgs1920/studio/commit/1405d9dcedaf3fd75193d3aa56afaf8fd776fac9)
+
+- Recorded automatically from Git history.
+
+## 2026-09-18 — [`refactor(shortcuts): group entries by user-facing themes`](https://github.com/lgs1920/studio/commit/e634b5cb1d08fcc0a10580a5aa9e75a891b26c28)
+
+- Recorded automatically from Git history.
+
+## 2026-09-18 — [`docs(replay): document recording loops and time-ranged visibility`](https://github.com/lgs1920/studio/commit/3348657f4869bdc67dbe1237c8b8edff36c63e54)
+
+- Recorded automatically from Git history.
+
+## 2026-09-18 — [`docs(replay): define basic and expert replay modes`](https://github.com/lgs1920/studio/commit/bcdd63d9bd21ffcbb9c2bbada095684758aaa378)
+
+- Recorded automatically from Git history.
+
+## 2026-09-18 — [`chore(repo): add shared guidance and managed hooks`](https://github.com/lgs1920/studio/commit/6f590b25b185b516bd6b3385dda09b06d415403a)
+
+- Recorded automatically from Git history.
+
+## 2026-09-18 — [`fix(repo): make Git hooks portable`](https://github.com/lgs1920/studio/commit/a41204b1526a62ec934410bd2a9b021aac4e2293)
+
+- Recorded automatically from Git history.
+
+## 2026-09-18 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/df9a15d1b62afbd2a0802d121b1419c4ed85ce9a)
+
+- Recorded automatically from Git history.
