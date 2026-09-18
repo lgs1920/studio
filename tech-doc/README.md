@@ -30,6 +30,7 @@ below by engineering domain rather than storage directory.
 ### Planned
 
 - [Replay Timeline performance audit and improvement proposals](todo/CORE-REPLAY-TIMELINE-PERFORMANCE-AUDIT.md)
+- [Replay recording loops and time-ranged object visibility](todo/CORE-REPLAY-RECORDING-LOOPS-AND-TIME-RANGED-OBJECTS.md)
 - [Replay start camera editor and clip synchronization](specs/replay-video/CORE-REPLAY-START-CAMERA-EDITOR-SPEC.md)
 - [Replay Timeline preview](todo/CORE-REPLAY-TIMELINE-PREVIEW-SPEC.md) — TODO, 1.0.0
 - [Replay track timeline editor](todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) — TODO, 1.0.0 preview / 1.1.0 editor
