@@ -5,10 +5,10 @@ shared baseline is `PROJECT_RULES.common.md`. Shared skills live under
 `skills/`. Each repository keeps its own project-specific `PROJECT_RULES.md`
 and adds the baseline before reading it.
 
-During local development, the target repositories may link their common
-guidance and provider-specific skill directories to this source. Their Git
-hooks materialize those paths as physical files before a commit, so a cloned
-repository remains self-contained and does not depend on this directory.
+During local development, target repositories may link common guidance and
+provider-specific skill directories to an external source. Their Git hooks
+materialize those external paths as physical files before a commit, so a
+cloned repository remains self-contained and does not depend on that source.
 
 After cloning a repository, activate its hooks once with:
 

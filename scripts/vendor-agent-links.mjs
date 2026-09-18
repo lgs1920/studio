@@ -1,8 +1,23 @@
 #!/usr/bin/env bun
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: vendor-agent-links.mjs
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-09-18
+ * Last modified: 2026-09-18
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
 
 import {cpSync, existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, rmSync, symlinkSync, writeFileSync} from 'node:fs'
 import {execFileSync} from 'node:child_process'
-import {dirname, isAbsolute, join, resolve} from 'node:path'
+import {dirname, isAbsolute, join, relative, resolve} from 'node:path'
 import process from 'node:process'
 
 const repositoryRoot = resolve(import.meta.dirname, '..')
@@ -42,11 +57,12 @@ const getTrackedPaths = pathSpec => runGit(['ls-files', '-z', '--', pathSpec])
 /**
  * Find configured guidance paths that are symbolic links in the checkout.
  *
- * @returns {{pathValue: string, absolutePath: string}[]} Active guidance links.
+ * @returns {{pathValue: string, absolutePath: string, linkTarget: string, sourcePath: string}[]} Active external guidance links.
  */
 const getManagedLinks = () => readConfiguration().managedPaths
-    .map(pathValue => ({pathValue, absolutePath: join(repositoryRoot, pathValue)}))
-    .filter(({absolutePath}) => existsSync(absolutePath) && lstatSync(absolutePath).isSymbolicLink())
+    .map(readManagedLink)
+    .filter(link => link !== null)
+    .filter(({sourcePath}) => !isRepositoryPath(sourcePath))
 
 /**
  * Persist link information between the pre-commit and post-commit hooks.
@@ -70,6 +86,35 @@ const readState = () => {
 }
 
 /**
+ * Check whether a resolved link target is inside this repository.
+ *
+ * @param {string} absolutePath Resolved filesystem path.
+ * @returns {boolean} Whether the path belongs to this repository.
+ */
+const isRepositoryPath = absolutePath => {
+    const relativePath = relative(repositoryRoot, absolutePath)
+    return relativePath === '' || (!relativePath.startsWith('..') && !isAbsolute(relativePath))
+}
+
+/**
+ * Resolve a symbolic link target from a configured repository path.
+ *
+ * @param {string} pathValue Repository-relative symbolic link path.
+ * @returns {{pathValue: string, absolutePath: string, linkTarget: string, sourcePath: string} | null} Link details.
+ */
+const readManagedLink = pathValue => {
+    const absolutePath = join(repositoryRoot, pathValue)
+    if (!existsSync(absolutePath) || !lstatSync(absolutePath).isSymbolicLink()) return null
+
+    const linkTarget = readlinkSync(absolutePath)
+    const sourcePath = isAbsolute(linkTarget)
+        ? linkTarget
+        : resolve(dirname(absolutePath), linkTarget)
+
+    return {pathValue, absolutePath, linkTarget, sourcePath}
+}
+
+/**
  * Remove a file, directory, or symbolic link without following the link.
  *
  * @param {string} absolutePath Path to remove.
@@ -83,12 +128,7 @@ const removePath = absolutePath => rmSync(absolutePath, {force: true, recursive:
  * @returns {void}
  */
 const materialize = () => {
-    const links = getManagedLinks().map(({pathValue, absolutePath}) => {
-        const linkTarget = readlinkSync(absolutePath)
-        const sourcePath = isAbsolute(linkTarget)
-            ? linkTarget
-            : resolve(dirname(absolutePath), linkTarget)
-
+    const links = getManagedLinks().map(({pathValue, linkTarget, sourcePath}) => {
         if (!existsSync(sourcePath)) {
             throw new Error(`Guidance link target does not exist: ${pathValue} -> ${linkTarget}`)
         }
@@ -145,11 +185,22 @@ const restore = () => {
  * @returns {void}
  */
 const check = () => {
-    const symlinkEntries = runGit(['ls-files', '-s', '--']).split('\n').filter(line => line.startsWith('120000 '))
-    const managedPaths = new Set(readConfiguration().managedPaths)
-    const unexpectedPaths = symlinkEntries
+    const symlinkEntries = runGit(['ls-files', '-s', '--'])
+        .split('\n')
+        .filter(line => line.startsWith('120000 '))
         .map(line => line.slice(line.indexOf('\t') + 1))
-        .filter(pathValue => managedPaths.has(pathValue))
+    const managedPaths = new Set(readConfiguration().managedPaths)
+    const unexpectedPaths = symlinkEntries.filter(pathValue => {
+        if (!managedPaths.has(pathValue)) return false
+
+        const linkTarget = runGit(['show', `:${pathValue}`]).trim()
+        const absolutePath = join(repositoryRoot, pathValue)
+        const sourcePath = isAbsolute(linkTarget)
+            ? linkTarget
+            : resolve(dirname(absolutePath), linkTarget)
+
+        return !isRepositoryPath(sourcePath)
+    })
 
     if (unexpectedPaths.length > 0) {
         throw new Error(`Guidance links are still staged: ${unexpectedPaths.join(', ')}`)

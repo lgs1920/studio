@@ -208,10 +208,11 @@ hooks once with:
 bun run git:hooks:install
 ```
 
-During local development, provider directories may be links. The pre-commit
-hook materializes them as physical files for the commit, while the
-post-commit hook restores the local links. The same pre-commit hook updates
-staged source-file headers. A standalone clone remains self-contained.
+During local development, provider directories may link to an external source.
+The pre-commit hook materializes those external links as physical files for the
+commit, while the post-commit hook restores the local links. The same
+pre-commit hook updates staged source-file headers. A standalone clone remains
+self-contained.
 
 ## Technology Stack
 

@@ -2,4 +2,15 @@
 
 set -e
 
+bunInstallDirectory="${BUN_INSTALL:-${HOME:-}/.bun}"
+if [ -x "$bunInstallDirectory/bin/bun" ]; then
+    PATH="$bunInstallDirectory/bin:$PATH"
+    export PATH
+fi
+
+if ! command -v bun >/dev/null 2>&1; then
+    echo "error: Bun is required by the LGS1920 Git hooks. Add Bun to PATH or set BUN_INSTALL." >&2
+    exit 1
+fi
+
 bun scripts/vendor-agent-links.mjs restore
