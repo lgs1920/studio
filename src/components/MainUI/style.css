@@ -753,6 +753,10 @@ body.mobile .orbit-widget-body {
     --hero-route-path-color: var(--wa-color-brand-60);
     --hero-route-glow-color: var(--wa-color-brand);
     --hero-route-poi-color: rgb(103, 165, 13);
+    --welcome-logo-top: 42%;
+    --welcome-slogan-offset: 4.3rem;
+    --welcome-cta-offset: 12rem;
+    --welcome-status-offset: 15.5rem;
     inset: 0;
 }
 
@@ -1033,28 +1037,24 @@ body.mobile .orbit-widget-body {
 
 .welcome-hero-shell {
     z-index: 4;
-    display: grid;
-    place-items: center;
-    width: min(1240px, calc(100vw - 2rem));
-    margin-inline: auto;
+    width: 100%;
+    margin: 0;
     padding: max(var(--top), var(--lgs-gutter)) 0 max(var(--bottom), var(--lgs-gutter));
 }
 
 .welcome-hero-content {
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    justify-content: center;
-    width: min(28rem, 100%);
-    min-width: 0;
-    gap: var(--lgs-gutter);
+    position: absolute;
+    inset: 0;
 }
 
 .welcome-hero-content .welcome-logo {
-    position: relative;
+    position: absolute;
+    top: var(--welcome-logo-top);
+    left: 50%;
     display: block;
     width: min(220px, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter))) !important;
-    margin-inline: auto;
+    margin: 0;
+    transform: translate(-50%, -50%);
 }
 
 .welcome-hero-content .welcome-logo img {
@@ -1064,11 +1064,14 @@ body.mobile .orbit-widget-body {
 }
 
 .welcome-hero-content .welcome-slogan {
+    position: absolute;
+    top: calc(var(--welcome-logo-top) + var(--welcome-slogan-offset));
+    left: 50%;
     display: block;
-    width: 100%;
+    width: min(28rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
     height: auto;
-    max-width: min(28rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
-    margin: 0 0 var(--lgs-gutter);
+    margin: 0;
+    transform: translateX(-50%);
     color: var(--wa-color-brand-fill-loud);
     filter: drop-shadow(0 2px 14px var(--lgs-dark-color-90));
 }
@@ -1082,11 +1085,14 @@ body.mobile .orbit-widget-body {
 }
 
 .welcome-enter-call-for-action {
+    position: absolute;
+    top: calc(var(--welcome-logo-top) + var(--welcome-cta-offset));
+    left: 50%;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    width: 100%;
-    max-width: 28rem;
+    width: min(28rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
+    transform: translateX(-50%);
     gap: var(--lgs-gutter-s);
 }
 
@@ -1111,9 +1117,12 @@ body.mobile .orbit-widget-body {
 }
 
 .welcome-initialization-callout {
-    width: 100%;
-    max-width: 28rem;
+    position: absolute;
+    top: calc(var(--welcome-logo-top) + var(--welcome-status-offset));
+    left: 50%;
+    width: min(28rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
     margin: 0;
+    transform: translateX(-50%);
     color: color-mix(in oklab, var(--wa-color-text-normal) 72%, transparent);
     font-size: var(--lgs-font-size-s);
     line-height: 1.35;
@@ -1127,8 +1136,10 @@ body.mobile .orbit-widget-body {
         padding-block: max(var(--top), var(--lgs-gutter-s)) max(var(--bottom), var(--lgs-gutter-s));
     }
 
-    .welcome-hero-content {
-        gap: var(--lgs-gutter-s);
+    #welcome-hero {
+        --welcome-slogan-offset: 3.4rem;
+        --welcome-cta-offset: 8.8rem;
+        --welcome-status-offset: 12.5rem;
     }
 
     .welcome-hero-content .welcome-logo {
