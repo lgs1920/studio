@@ -233,7 +233,7 @@ export class StartupDataLoader {
                 await TrackUtils.draw(track, {
                     action:       DRAWING_FROM_DB,
                     forcedToHide: journey.visible === false,
-                    renderMode:   'entities',
+                    renderMode:   'primitive',
                 })
             }
             else {
