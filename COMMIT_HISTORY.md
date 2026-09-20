@@ -2572,3 +2572,39 @@
 ## 2026-09-18 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/df9a15d1b62afbd2a0802d121b1419c4ed85ce9a)
 
 - Recorded automatically from Git history.
+
+## 2026-09-20 — [`feat(replay): expose timeline controls`](https://github.com/lgs1920/studio/commit/495dbc30cc659512980ea17850a52318d9097b70)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`fix(replay): preserve playhead during clip edits`](https://github.com/lgs1920/studio/commit/97c01f80ac7cb4ae2fefd9fce620aad3ac23a6e5)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`docs: consolidate specifications and audit implementation status`](https://github.com/lgs1920/studio/commit/bd92895dc725b900408dd4d9a6ff5e23e3d9d6e7)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`docs(rules): correct standalone timeline source path`](https://github.com/lgs1920/studio/commit/8aff7c8f10847e0b22f358b8cd56b0f26c907ceb)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`chore(repo): sync GitNexus guidance`](https://github.com/lgs1920/studio/commit/2d0211ff2f54f62be182d151127fd5538f532cd0)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`feat(startup): load initialization data in a worker`](https://github.com/lgs1920/studio/commit/788f7c7616e8a3d15770b8ef07fd3dbba52d41e7)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`refactor(startup): simplify boot splash and welcome screen`](https://github.com/lgs1920/studio/commit/ae2ddfa01cede9d844822aa10c150d1c91663be3)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`fix(replay): detach reactive timeline tracks`](https://github.com/lgs1920/studio/commit/37567c2c022c44a1efcb040f1f259a0a2e4aa5ef)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`docs(startup): document initialization audit`](https://github.com/lgs1920/studio/commit/448db2dd1106efaeeec2cece1b24c65e3c81465f)
+
+- Recorded automatically from Git history.
