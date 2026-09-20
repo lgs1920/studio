@@ -14,6 +14,7 @@ implementation documents. Implemented and historical documents belong under
 
 ## Journeys, Tracks, and Data
 
+- [Startup intro to track display audit](CORE-STARTUP-INTRO-TO-TRACK-DISPLAY-AUDIT.md)
 - [Journey import formats](JOURNEY_IMPORT_FORMATS_SPEC.md)
 - [Cloud synchronization](CLOUD-SYNC-TODO.md)
 - [Journey and track map selection](CORE-JOURNEY-CLICK-OVERLAY-SELECTION-SPEC.md)
