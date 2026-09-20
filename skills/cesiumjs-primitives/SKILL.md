@@ -9,7 +9,7 @@ description: "CesiumJS primitives and geometry - Primitive, GeometryInstance, Ap
 For Studio work, follow the autonomy and approval rules in [PROJECT_RULES.md](../../PROJECT_RULES.md#1-core-directives). Preserve the task-specific safeguards below.
 
 
-> **Applies to:** CesiumJS v1.144+ (ES module imports, `??` instead of `defaultValue`)
+> **Applies to:** CesiumJS v1.145+ (ES module imports, `??` instead of `defaultValue`)
 
 ## Architecture
 
@@ -203,6 +203,14 @@ if (picked?.collection === points) {
 In 1.143, `BufferPointCollection` no longer leaks `outlineColor` into the fill
 when `outlineWidth` is `0`. Set the width to `0` to disable outlines; remove
 transparent-outline workarounds that would otherwise complicate batching.
+
+### CesiumJS 1.145 draped buffer collections
+
+CesiumJS 1.145 adds `heightReference` to `BufferPrimitiveCollection`, inherited
+by `BufferPolylineCollection` and `BufferPolygonCollection`. Use
+`HeightReference.CLAMP_TO_GROUND` when a buffer polyline or polygon must follow
+the globe or 3D Tiles surface. The collection exposes the setting as a
+read-only property after construction.
 
 ## GeoJsonPrimitive (Experimental, 1.142+)
 

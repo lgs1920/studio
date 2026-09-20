@@ -9,9 +9,9 @@ description: "CesiumJS models, glTF, and particle effects - Model, KHR_meshopt_c
 For Studio work, follow the autonomy and approval rules in [PROJECT_RULES.md](../../PROJECT_RULES.md#1-core-directives). Preserve the task-specific safeguards below.
 
 
-Version baseline: CesiumJS v1.144.
+Version baseline: CesiumJS v1.145.
 
-CesiumJS 1.144 supports the Bentley planar-fill glTF material extension for
+CesiumJS 1.145 supports the Bentley planar-fill glTF material extension for
 CAD-style assets and reduces JavaScript heap use for models using
 `EXT_mesh_primitive_edge_visibility`. Use the built-in model pipeline when the
 asset declares these extensions; do not recreate them in a custom shader.

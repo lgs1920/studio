@@ -1,6 +1,6 @@
 # glTF Compatibility Reference
 
-Version baseline: CesiumJS 1.144. Read this reference when loading compressed glTF,
+Version baseline: CesiumJS 1.145. Read this reference when loading compressed glTF,
 CAD/design-model content, or glTF embedded in 3D Tiles. These features are
 asset-driven and use CesiumJS's built-in model pipeline; they do not require
 custom shaders or decoder setup.

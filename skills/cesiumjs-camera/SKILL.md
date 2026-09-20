@@ -9,7 +9,7 @@ description: "CesiumJS camera control - Camera, flyTo, lookAt, setView, ScreenSp
 For Studio work, follow the autonomy and approval rules in [PROJECT_RULES.md](../../PROJECT_RULES.md#1-core-directives). Preserve the task-specific safeguards below.
 
 
-> **Baseline:** CesiumJS v1.144.0 -- ES module imports (`import { ... } from "cesium";`). Verify camera APIs against the latest official reference documentation: <https://cesium.com/learn/cesiumjs/ref-doc/>.
+> **Baseline:** CesiumJS v1.145.0 -- ES module imports (`import { ... } from "cesium";`). Verify camera APIs against the latest official reference documentation: <https://cesium.com/learn/cesiumjs/ref-doc/>.
 
 ## Controller Framework (CesiumJS 1.144+)
 
