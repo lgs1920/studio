@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-03
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -1278,7 +1278,7 @@ export class TrackUtils {
         __.ui.cameraManager.settings = lgs.theJourney.cameraOrigin
     }
 
-    static readCurrentFromDB = async () => {
+    static readCurrentFromDB = async ({loadJourney, alreadyDrawn = false} = {}) => {
         const currentJourneyName = await lgs.db.lgs1920.get(CURRENT_JOURNEY, CURRENT_STORE)
 
         if (!currentJourneyName) {
@@ -1289,7 +1289,7 @@ export class TrackUtils {
             return null
         }
 
-        const currentJourney = await Journey.readFromDB(currentJourneyName)
+        const currentJourney = await (loadJourney ?? Journey.readFromDB)(currentJourneyName)
 
         if (!currentJourney) {
             lgs.stores.main.readyForTheShow = true
@@ -1311,11 +1311,13 @@ export class TrackUtils {
         lgs.theTrack?.addToEditor()
 
         TrackUtils.setProfileVisibility(currentJourney)
-        await currentJourney.prepareDrawing()
-        await currentJourney.draw({
-                                      action: DRAWING_FROM_DB,
-                                      mode:   FOCUS_ON_FEATURE,
-                                  })
+        if (!alreadyDrawn) {
+            await currentJourney.prepareDrawing()
+            await currentJourney.draw({
+                                          action: DRAWING_FROM_DB,
+                                          mode:   FOCUS_ON_FEATURE,
+                                      })
+        }
 
         __.ui.cameraManager.settings = currentJourney.cameraOrigin
 

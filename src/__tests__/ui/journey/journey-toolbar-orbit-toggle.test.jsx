@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-14
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,7 +24,7 @@ vi.mock('@Components/ToggleStateIcon', () => ({
 }))
 
 vi.mock('@Editor/journey/JourneySelector', () => ({
-    JourneySelector: () => <div data-testid="journey-selector"/>,
+    JourneySelector: ({disabled}) => <div data-testid="journey-selector" data-disabled={disabled}/>,
 }))
 
 vi.mock('@Editor/Utils', () => ({
@@ -59,6 +59,7 @@ describe('JourneyToolbar orbit toggle', () => {
                 focus: vi.fn(),
                 updateVisibility: vi.fn(),
             },
+            getJourneyBySlug: vi.fn(() => ({slug: 'journey-a'})),
             theJourneyEditorProxy: proxy({
                 journey: {
                     visible: true,
@@ -158,5 +159,12 @@ describe('JourneyToolbar orbit toggle', () => {
             resetCamera: true,
             rotate:      false,
         }))
+    })
+
+    it('disables journey selection while an editor journey is not loaded', () => {
+        globalThis.lgs.getJourneyBySlug.mockReturnValue(undefined)
+        const {container} = render(<JourneyToolbar/>)
+
+        expect(container.querySelector('[data-testid="journey-selector"]')?.getAttribute('data-disabled')).toBe('true')
     })
 })

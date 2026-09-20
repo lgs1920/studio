@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-24
- * Last modified: 2026-09-18
+ * Last modified: 2026-09-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import { TrackUtils } from '@Utils/cesium/TrackUtils'
 import { UIToast }    from '@Utils/UIToast'
 import { snapdom }     from '@zumer/snapdom'
+import { yieldStartupTask } from './startup/StartupWorkerClient'
 
 /**
  * Prepare SnapDOM capture intent handling before capture begins.
@@ -42,11 +43,32 @@ export const runDeferredJourneyDataLoad = async ({
                                                      poiManager = __.ui.poiManager,
                                                      precacheAssets = precacheSnapdomAssets,
                                                      uiToast = UIToast,
+                                                     startupLoader = null,
+                                                     currentPOIsReady = false,
+                                                     onCurrentJourneyReady,
+                                                     onJourneysReady,
                                                  } = {}) => {
-    const journeys = await trackUtils.readRemainingFromDB()
-    await poiManager.readAllFromDB({ensureLocations: false})
+    if (startupLoader && !currentPOIsReady) {
+        await startupLoader.loadPOIs({currentOnly: true, includeStarter: false})
+        onCurrentJourneyReady?.()
+        await yieldStartupTask()
+    }
+
+    const journeys = startupLoader
+        ? await startupLoader.loadRemainingJourneys()
+        : await trackUtils.readRemainingFromDB()
+    onJourneysReady?.(journeys)
+
+    if (startupLoader) {
+        await startupLoader.loadPOIs()
+    }
+    else {
+        await poiManager.readAllFromDB({ensureLocations: false})
+    }
     await journeyGroupManager.initialize()
-    poiManager.rebuildJourneyIndex()
+    if (!startupLoader) {
+        poiManager.rebuildJourneyIndex()
+    }
     await poiManager.ensureAllPOILocations()
 
     if (journeys.length > 0) {

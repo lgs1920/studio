@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,36 +21,17 @@ import { AppUpdate }    from '@Components/AppUpdate'
  * Renders the map, UI components, and PWA installation button
  * @returns {JSX.Element} The LGS1920 component
  */
-import {
-    MapLayer,
-}                       from '@Components/cesium/MapLayer'
-import { Base3DLayer }  from '@Components/cesium/Base3DLayer'
-import { Base3DLoadingOverlay } from '@Components/cesium/Base3DLoadingOverlay'
-import { Tiles3DLayer } from '@Components/cesium/Tiles3DLayer'
-import {
-    ensureViewer,
-    Viewer,
-}                       from '@Components/cesium/Viewer'
+import {AppSurface} from '@Components/AppSurface'
+import {ensureViewer} from '@Components/cesium/Viewer'
 import {
     InitErrorMessage,
 }                       from '@Components/InitErrorMessage'
-import {
-    MainUI,
-}                       from '@Components/MainUI/MainUI.jsx'
-import { Toast } from '@Components/Toast'
 import '@shoelace-style/shoelace/dist/themes/light.css'
-import ResponsiveDevice from '@Components/MainUI/ResponsiveDevice'
-import {
-    SelectionIndicator,
-}                       from '@Components/MainUI/SelectionIndicator'
-import {
-    ToolsUI,
-}                       from '@Components/MainUI/ToolsUI'
 import {
     WelcomeHero,
 }                       from '@Components/MainUI/WelcomeHero'
 import {
-    APP_EVENT, BASE_ENTITY, CURRENT_JOURNEY, OVERLAY_ENTITY, POI_STARTER_TYPE,
+    APP_EVENT, CURRENT_JOURNEY, POI_STARTER_TYPE,
 }                       from '@Core/constants'
 import {
     LayersAndTerrainManager,
@@ -61,12 +42,10 @@ import {
     getStartupOrbitSettings,
 }                       from '@Core/ui/cameraStartup'
 import { runDeferredJourneyDataLoad } from '@Core/ui/deferredJourneyData'
+import { StartupDataLoader } from '@Core/ui/startup/StartupDataLoader'
 import {
     TerrainUtils,
 }                       from '@Utils/cesium/TerrainUtils'
-import {
-    TrackUtils,
-}                       from '@Utils/cesium/TrackUtils'
 import {
     UIToast,
 }                       from '@Utils/UIToast'
@@ -75,113 +54,25 @@ import {
 }                       from 'react'
 import { useSnapshot } from 'valtio'
 
-const APP_SURFACE_READY_TIMEOUT = 1500
 const INITIAL_FOCUS_READY_TIMEOUT = 2500
-const INITIALIZATION_STEPS = [
-    {id: 'backend', label: 'Checking backend connection'},
-    {id: 'application', label: 'Loading application configuration'},
-    {id: 'services', label: 'Starting application services'},
-    {id: 'data', label: 'Loading terrain and journeys'},
-    {id: 'camera', label: 'Preparing the initial map view'},
-    {id: 'surface', label: 'Rendering the Studio interface'},
-    {id: 'ready', label: 'Finalizing Studio launch'},
-]
-
-const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve))
-
-const waitForAppSurfaceReady = () => new Promise(resolve => {
-    const scene = lgs?.scene
-
-    if (!scene) {
-        nextFrame().then(resolve)
-        return
-    }
-
-    let done = false
-    const cleanup = []
-
-    const finish = () => {
-        if (done) {
-            return
-        }
-
-        done = true
-        cleanup.forEach(remove => remove?.())
-        resolve()
-    }
-
-    const timeout = window.setTimeout(finish, APP_SURFACE_READY_TIMEOUT)
-    cleanup.push(() => window.clearTimeout(timeout))
-
-    cleanup.push(scene.postRender.addEventListener(finish))
-
-    scene.requestRender?.()
-    nextFrame().then(() => {
-        scene.requestRender?.()
-        return nextFrame()
-    }).then(finish)
-})
-
-const AppSurface = ({onReady}) => {
-    useEffect(() => {
-        let cancelled = false
-
-        const ready = async () => {
-            await nextFrame()
-            await nextFrame()
-            await waitForAppSurfaceReady()
-
-            if (!cancelled) {
-                onReady?.()
-            }
-        }
-
-        ready()
-
-        return () => {
-            cancelled = true
-        }
-    }, [onReady])
-
-    useEffect(() => {
-        return () => {
-            __.ui.replay?.stop?.({emit: false})
-            __.ui.replay?.restoreJourneyToolbarVisibility?.()
-        }
-    }, [])
-
-    return (
-        <>
-            <div id="drawer-root" className="drawer-wrapper"/>
-            <ToolsUI/>
-            <MainUI/>
-            <ResponsiveDevice/>
-            <MapLayer type={BASE_ENTITY}/>
-            <MapLayer type={OVERLAY_ENTITY}/>
-            <Viewer/>
-            <Base3DLayer/>
-            <Base3DLoadingOverlay/>
-            <Tiles3DLayer/>
-            <SelectionIndicator/>
-            <Toast/>
-        </>
-    )
-}
 
 export const LGS1920 = () => {
     // State to track initialization status and errors
     const [initStatus, setInitStatus] = useState(null)
     const [initError, setInitError] = useState(null)
-    const [initializationStep, setInitializationStep] = useState(0)
     const [appVisible, setAppVisible] = useState(false)
     const [initialFocusReady, setInitialFocusReady] = useState(false)
+    const [currentJourneyReady, setCurrentJourneyReady] = useState(false)
     const [appSurfaceReady, setAppSurfaceReady] = useState(false)
     const deferredJourneyDataStarted = useRef(false)
+    const startupDataLoader = useRef(null)
+    const appReadyToastShown = useRef(false)
     const appUpdateStore = globalThis.__?.updater?.store
         ?? globalThis.lgs?.stores?.ui?.appUpdate
     const appUpdate = useSnapshot(appUpdateStore)
     const appReady = initStatus === true
         && initialFocusReady
+        && currentJourneyReady
         && appSurfaceReady
         && !appUpdate.isUpdateCheckPending
         && !appUpdate.isAutomaticUpdateInProgress
@@ -192,16 +83,6 @@ export const LGS1920 = () => {
         setAppVisible(true)
     }, [])
 
-    /**
-     * Advances the welcome screen to the currently running initialization step.
-     *
-     * @param {number} stepIndex - Zero-based index of the active initialization step.
-     * @returns {void}
-     */
-    const advanceInitializationStep = useCallback((stepIndex) => {
-        setInitializationStep(Math.min(Math.max(stepIndex, 0), INITIALIZATION_STEPS.length - 1))
-    }, [])
-
     const markAppSurfaceReady = useCallback(() => {
         setAppSurfaceReady(true)
     }, [])
@@ -210,11 +91,9 @@ export const LGS1920 = () => {
      * Initializes the application and sets the theme
      * @returns {Promise<{status: boolean, error?: Error}>} The initialization result
      */
-    const initializeApp = async () => {
+    const initializeApp = useCallback(async () => {
         try {
-            const initResult = await __.app.init({
-                onBackendReady: () => advanceInitializationStep(1),
-            })
+            const initResult = await __.app.init()
             if (initResult.status) {
                 __.app.setTheme()
             }
@@ -223,7 +102,7 @@ export const LGS1920 = () => {
         catch (error) {
             return {status: false, error}
         }
-    }
+    }, [])
 
     /**
      * Initializes UI managers and layers
@@ -243,11 +122,31 @@ export const LGS1920 = () => {
      */
     const initializeData = async lgs => {
         await TerrainUtils.changeTerrain(lgs.settings.layers.terrain)
-        await TrackUtils.readCurrentFromDB()
+        startupDataLoader.current = new StartupDataLoader(lgs.db.lgs1920.dbName)
+        const currentJourney = await startupDataLoader.current.loadCurrentJourney()
+        await startupDataLoader.current.loadPOIs({
+                                                  currentOnly: true,
+                                                  includeStarter: false,
+                                                  journey: currentJourney,
+                                              })
+
+        if (!currentJourney) {
+            lgs.theJourney = null
+            lgs.theTrack = null
+            lgs.stores.main.readyForTheShow = true
+        }
+        else if (lgs.theJourney?.slug !== currentJourney.slug || !lgs.stores.main.readyForTheShow) {
+            throw new Error('The current journey did not reach the ready state')
+        }
+
+        setCurrentJourneyReady(true)
         await __.ui.widgetCache.init()
     }
 
-    const initializeDeferredJourneyData = useCallback(() => runDeferredJourneyDataLoad(), [])
+    const initializeDeferredJourneyData = useCallback(() => runDeferredJourneyDataLoad({
+                                                                                          startupLoader: startupDataLoader.current,
+                                                                                          currentPOIsReady: true,
+                                                                                      }), [])
 
     /**
      * Sets up the starter POI if not present
@@ -294,10 +193,12 @@ export const LGS1920 = () => {
         const starterFocused = focusTarget === starter || target?.element === POI_STARTER_TYPE || (!currentJourney && target?.id === starter?.id)
         const journeyFocused = focusTarget === currentJourney || target?.element === CURRENT_JOURNEY
 
-        await __.ui.poiManager.initializeStartupPOIs({
-                                                        includeStarter: starterFocused,
-                                                        journey:        journeyFocused ? currentJourney : null,
-                                                    })
+        if (!startupDataLoader.current) {
+            await __.ui.poiManager.initializeStartupPOIs({
+                                                            includeStarter: starterFocused,
+                                                            journey:        journeyFocused ? currentJourney : null,
+                                                        })
+        }
 
         if (starterFocused) {
             await setupStarterPOI(lgs)
@@ -370,7 +271,6 @@ export const LGS1920 = () => {
                 const lgs = window.lgs
 
                 // Initialize app
-                advanceInitializationStep(0)
                 const initResult = await initializeApp()
                 setInitError(initResult.error)
 
@@ -384,7 +284,6 @@ export const LGS1920 = () => {
                     return
                 }
                 // Initialize managers and layers
-                advanceInitializationStep(2)
                 await initializeManagersAndLayers(lgs)
 
                 // Attach drawer events
@@ -394,14 +293,12 @@ export const LGS1920 = () => {
                 document.body.classList.add(lgs.platform)
 
                 // Initialize data (terrain, journeys, POIs)
-                advanceInitializationStep(3)
                 await initializeData(lgs)
 
                 // Set up starter target from settings. It is persisted only if the first view needs it.
                 const starter = await setupStarterPOI(lgs, {persist: false})
 
                 // Configure camera
-                advanceInitializationStep(4)
                 const {focusTarget, cameraStore} = await configureStartupCamera({
                                                                                     context:        lgs,
                                                                                     starter,
@@ -416,7 +313,6 @@ export const LGS1920 = () => {
 
                 // Mark UI as initialized
                 __.app.uiInit = true
-                advanceInitializationStep(5)
                 setInitStatus(true)
 
                 // log starting information
@@ -434,11 +330,11 @@ export const LGS1920 = () => {
             }
         }
 
-        initialize()
-    }, [advanceInitializationStep, initializeStartupPOIs, setupStarterPOI])
+        void initialize()
+    }, [initializeApp, initializeStartupPOIs, setupStarterPOI])
 
     useEffect(() => {
-        if (deferredJourneyDataStarted.current || initStatus !== true || !initialFocusReady || !appSurfaceReady) {
+        if (deferredJourneyDataStarted.current || initStatus !== true || !initialFocusReady || !appVisible) {
             return
         }
 
@@ -450,7 +346,19 @@ export const LGS1920 = () => {
                               text:    error.message,
                           })
         })
-    }, [appSurfaceReady, initStatus, initialFocusReady, initializeDeferredJourneyData])
+    }, [appVisible, initStatus, initialFocusReady, initializeDeferredJourneyData])
+
+    useEffect(() => {
+        if (!appVisible || !appReady || !lgs.theJourney || appReadyToastShown.current) {
+            return
+        }
+
+        appReadyToastShown.current = true
+        UIToast.success({
+                          caption: 'Studio ready',
+                          text:    'Gameplay is ready.',
+                      })
+    }, [appReady, appVisible])
 
     return (
         <>
@@ -464,10 +372,7 @@ export const LGS1920 = () => {
                 <WelcomeHero
                     initComplete={initStatus === true}
                     appReady={appReady}
-                    initializationProgress={{
-                        activeStep: appReady ? INITIALIZATION_STEPS.length - 1 : initializationStep,
-                        steps: INITIALIZATION_STEPS,
-                    }}
+                    showMedia={false}
                     onEnter={revealApp}
                 />
             )}

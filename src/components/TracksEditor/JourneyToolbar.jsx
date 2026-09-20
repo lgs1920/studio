@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-03-29
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -55,6 +55,8 @@ export const JourneyToolbar = (props) => {
     const journeyLoaderStore = lgs.stores.ui.mainUI.journeyLoader
     const $editorStore = lgs.theJourneyEditorProxy
     const editorStore = useSnapshot($editorStore)
+    const journeySelectionDisabled = typeof lgs.getJourneyBySlug === 'function'
+        && journeyEditor.list.some(slug => !lgs.getJourneyBySlug(slug))
 
     const replayState = useSnapshot(lgs.stores.replay)
     const replayActive = replayState.active || replayState.playing || replayState.paused
@@ -92,6 +94,9 @@ export const JourneyToolbar = (props) => {
      * @param {Event} event - The change event from the journey selector
      */
     const newJourneySelection = async (event) => {
+        if (journeySelectionDisabled) {
+            return
+        }
         await Utils.updateJourneyEditor(event.target.value, {})
     }
 
@@ -210,6 +215,7 @@ export const JourneyToolbar = (props) => {
                 <WaCard className="journey-toolbar lgs--toolbar wa-theme-lgs1920-on-map"
                         ref={_journeyToolbar}>
                     <JourneySelector onChange={newJourneySelection}
+                                     disabled={journeySelectionDisabled}
                                      single="true"
                                      closeOnOutsidePointerDown
                                      size="s"
