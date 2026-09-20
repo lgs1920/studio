@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-03
- * Last modified: 2026-05-03
+ * Last modified: 2026-09-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -161,6 +161,11 @@ export const trackRenderSmoothingKey = (track, options = {}) => {
     const smoothing = effectiveTrackRenderSmoothing(track, options)
 
     return `${smoothing.enabled ? 1 : 0}:${smoothing.step}`
+}
+
+export const cachePreparedTrackRenderContent = (track, renderContent, renderSmoothing) => {
+    const bucket = getWeakMapBucket(renderedTrackContentCache, track?.content)
+    bucket?.set(trackRenderSmoothingKey(track, {renderSmoothing}), renderContent)
 }
 
 export const smoothCoordinateSegment = (coordinates, step) => {

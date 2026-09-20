@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -473,7 +473,9 @@ export const trackDataSourceReady = source => {
         return false
     }
 
-    return source.show === false || source.entities?.values?.some(entity => entity.polyline)
+    return source.show === false
+           || Boolean(source.__lgsTrackPrimitive)
+           || source.entities?.values?.some(entity => entity.polyline)
 }
 
 export const snapshotTrackSourcesReady = trackDrawings => {
