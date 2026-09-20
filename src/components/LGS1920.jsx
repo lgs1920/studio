@@ -43,6 +43,7 @@ import {
 }                       from '@Core/ui/cameraStartup'
 import { runDeferredJourneyDataLoad } from '@Core/ui/deferredJourneyData'
 import { StartupDataLoader } from '@Core/ui/startup/StartupDataLoader'
+import {markStartup, measureStartup} from '@Core/ui/startup/startupTelemetry'
 import {
     TerrainUtils,
 }                       from '@Utils/cesium/TerrainUtils'
@@ -77,16 +78,14 @@ export const LGS1920 = () => {
         && !appUpdate.isAutomaticUpdateInProgress
 
     const revealApp = useCallback(() => {
+        markStartup('app-revealed')
         document.body.classList.remove('lgs-app-booting')
         document.body.classList.add('lgs-app-visible')
-        UIToast.success({
-                          caption: 'Studio ready',
-                          text:    'Gameplay is ready.',
-                      })
         setAppVisible(true)
     }, [])
 
     const markAppSurfaceReady = useCallback(() => {
+        markStartup('surface-ready')
         setAppSurfaceReady(true)
     }, [])
 
@@ -96,7 +95,10 @@ export const LGS1920 = () => {
      */
     const initializeApp = useCallback(async () => {
         try {
+            markStartup('app-init-start')
             const initResult = await __.app.init()
+            markStartup('app-init-end', {status: initResult.status})
+            measureStartup('app-init', 'app-init-start', 'app-init-end')
             if (initResult.status) {
                 __.app.setTheme()
             }
@@ -113,9 +115,12 @@ export const LGS1920 = () => {
      * @returns {Promise<void>}
      */
     const initializeManagersAndLayers = async lgs => {
+        markStartup('managers-init-start')
         await lgs.initManagers()
         __.layersAndTerrainManager = new LayersAndTerrainManager()
         ensureViewer()
+        markStartup('managers-init-end')
+        measureStartup('managers-init', 'managers-init-start', 'managers-init-end')
     }
 
     /**
@@ -124,14 +129,30 @@ export const LGS1920 = () => {
      * @returns {Promise<void>}
      */
     const initializeData = async lgs => {
-        await TerrainUtils.changeTerrain(lgs.settings.layers.terrain)
+        markStartup('terrain-init-start')
+        void TerrainUtils.changeTerrain(lgs.settings.layers.terrain)
+            .then(() => {
+                markStartup('terrain-init-end', {status: 'ready'})
+                measureStartup('terrain-init', 'terrain-init-start', 'terrain-init-end')
+            })
+            .catch(error => {
+                console.warn('[LGS1920] Terrain startup deferred:', error)
+                markStartup('terrain-init-end', {status: 'fallback', error: error?.message})
+                measureStartup('terrain-init', 'terrain-init-start', 'terrain-init-end')
+            })
+
         startupDataLoader.current = new StartupDataLoader(lgs.db.lgs1920.dbName)
+        markStartup('current-journey-init-start')
         const currentJourney = await startupDataLoader.current.loadCurrentJourney()
-        await startupDataLoader.current.loadPOIs({
-                                                  currentOnly: true,
-                                                  includeStarter: false,
-                                                  journey: currentJourney,
-                                              })
+        if (!startupDataLoader.current.currentPOIsReady) {
+            await startupDataLoader.current.loadPOIs({
+                                                      currentOnly: true,
+                                                      includeStarter: false,
+                                                      journey: currentJourney,
+                                                  })
+        }
+        markStartup('current-journey-init-end', {journey: currentJourney?.slug ?? null})
+        measureStartup('current-journey-init', 'current-journey-init-start', 'current-journey-init-end')
 
         if (!currentJourney) {
             lgs.theJourney = null
@@ -143,7 +164,6 @@ export const LGS1920 = () => {
         }
 
         setCurrentJourneyReady(true)
-        await __.ui.widgetCache.init()
     }
 
     const initializeDeferredJourneyData = useCallback(() => runDeferredJourneyDataLoad({
@@ -172,7 +192,7 @@ export const LGS1920 = () => {
         type:        POI_STARTER_TYPE,
     }), [])
 
-    const setupStarterPOI = useCallback(async (lgs, {persist = true} = {}) => {
+    const setupStarterPOI = useCallback(async (lgs, {persist = true, resolveLocation = true} = {}) => {
         let starter = __.ui.poiManager.starter ?? createStarterFromSettings(lgs)
         if (!persist) {
             return starter
@@ -185,7 +205,9 @@ export const LGS1920 = () => {
             starter = await __.ui.poiManager.add(starter, false, true)
         }
 
-        await __.ui.poiManager.ensurePOILocation(starter.id)
+        if (resolveLocation) {
+            await __.ui.poiManager.ensurePOILocation(starter.id)
+        }
         lgs.stores.main.components.pois.current = starter.id
         return starter
     }, [createStarterFromSettings])
@@ -204,7 +226,7 @@ export const LGS1920 = () => {
         }
 
         if (starterFocused) {
-            await setupStarterPOI(lgs)
+            await setupStarterPOI(lgs, {resolveLocation: Boolean(currentJourney)})
         }
     }, [setupStarterPOI])
 
@@ -236,6 +258,7 @@ export const LGS1920 = () => {
             })
             window.dispatchEvent(initEvent)
             setInitialFocusReady(true)
+            markStartup('camera-focus-ready')
         }
 
         const persistedStarter = __.ui.poiManager.starter
@@ -256,6 +279,7 @@ export const LGS1920 = () => {
             rpm:      startupOrbitSettings.rpm,
             callback: markInitialFocusReady,
         })
+        markStartup('camera-focus-start')
         __.ui.sceneManager.focus(cameraStore.target, focusOptions)
         focusReadyTimeout = window.setTimeout(
             () => markInitialFocusReady(cameraStore.target),
@@ -317,6 +341,9 @@ export const LGS1920 = () => {
                 // Mark UI as initialized
                 __.app.uiInit = true
                 setInitStatus(true)
+                void __.ui.widgetCache.init().catch(error => {
+                    console.warn('[LGS1920] Widget cache hydration failed:', error)
+                })
 
                 // log starting information
                 console.log(`LGS1920 ${lgs.versions.studio} has been loaded and is ready on ${lgs.platform} platform !`)
@@ -335,6 +362,14 @@ export const LGS1920 = () => {
 
         void initialize()
     }, [initializeApp, initializeStartupPOIs, setupStarterPOI])
+
+    useEffect(() => () => startupDataLoader.current?.dispose(), [])
+
+    useEffect(() => {
+        if (appReady) {
+            markStartup('enter-available')
+        }
+    }, [appReady])
 
     useEffect(() => {
         if (deferredJourneyDataStarted.current || initStatus !== true || !initialFocusReady || !appVisible) {

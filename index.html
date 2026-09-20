@@ -45,6 +45,7 @@
     <meta content="#000000" name="msapplication-TileColor">
     <script>
         (function () {
+            window.performance?.mark?.('lgs.startup.static-shell')
             const root = document.documentElement
             const storedTheme = localStorage.getItem('theme') || 'system'
             const storedBrandColor = localStorage.getItem('brandColor') || 'yellow'

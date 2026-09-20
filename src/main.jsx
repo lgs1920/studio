@@ -18,6 +18,14 @@ import './assets/css/app.css?v=1.0.5'
 import './assets/css/themes/wa-lgs1920.css'
 import './assets/css/animations.css'
 
+const markStartup = name => {
+    const performanceObject = globalThis.performance
+    if (performanceObject?.mark) {
+        performanceObject.mark(`lgs.startup.${name}`)
+    }
+}
+
+markStartup('main-bootstrap-start')
 
 /**
  * Patch pour Shoelace ResizeObserver bug
@@ -45,6 +53,7 @@ const bootstrap = async () => {
     const splashImage = document.querySelector('#lgs-boot-splash .lgs-boot-splash-background-image')
     const hasVideo = media.applyWelcomeBackgroundToVideo(splashVideo, welcomeBackgroundMedia, {load: false})
     media.applyWelcomeBackgroundToImage(splashImage, welcomeBackgroundMedia)
+    markStartup('startup-media-ready')
 
     if (hasVideo && splashElement && splashVideo) {
         let videoReady = false
@@ -110,6 +119,7 @@ const bootstrap = async () => {
     createRoot(document.getElementById('lgs1920-container')).render(
         <LGS1920/>,
     )
+    markStartup('react-mounted')
 
     void UIUtils.importFonts().catch(error => {
         console.warn('Unable to load Google Fonts.', error)

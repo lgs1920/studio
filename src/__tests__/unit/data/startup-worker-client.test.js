@@ -14,10 +14,23 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {StartupWorkerClient} from '@Core/ui/startup/StartupWorkerClient'
+import {StartupWorkerClient, yieldStartupIdleTask} from '@Core/ui/startup/StartupWorkerClient'
 import {describe, expect, it, vi} from 'vitest'
 
 describe('startup worker client', () => {
+    it('uses an idle callback for deferred startup work', async () => {
+        const requestIdleCallback = vi.fn(callback => {
+            callback()
+            return 1
+        })
+        vi.stubGlobal('requestIdleCallback', requestIdleCallback)
+
+        await yieldStartupIdleTask()
+
+        expect(requestIdleCallback).toHaveBeenCalledWith(expect.any(Function), {timeout: 500})
+        vi.unstubAllGlobals()
+    })
+
     it('wraps application requests in the worker protocol envelope', async () => {
         const worker = {
             onmessage:   null,

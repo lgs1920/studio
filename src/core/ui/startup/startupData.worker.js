@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 import {openDB} from 'idb'
-import {streamStartupJourney, streamStartupPOIs} from './startupData.js'
+import {decodeStartupJourney, streamStartupJourney, streamStartupPOIs} from './startupData.js'
 
 let nextPacketId = 0
 const acknowledgements = new Map()
@@ -71,7 +71,59 @@ self.onmessage = async event => {
         if (requestType === 'journey') {
             const value = await reader.get('journeys', message.key)
             if (value) {
-                await streamStartupJourney(value, emit, message)
+                let primaryReady = false
+                const emitPrimaryPOIs = async journey => {
+                    if (!message.primary || primaryReady) {
+                        return
+                    }
+
+                    primaryReady = true
+                    const keys = await reader.keys('pois')
+                    const trackKeys = [...(journey?.tracks instanceof Map
+                                           ? journey.tracks.keys()
+                                           : Object.keys(journey?.tracks ?? {}))]
+                    const parents = [journey.slug, ...trackKeys]
+                    let firstBatch = true
+                    await streamStartupPOIs((async function* () {
+                        for await (const batch of reader.scan('pois', keys)) {
+                            yield batch.map(item => item?.data ?? item)
+                        }
+                    })(), emit, {
+                        currentOnly:  true,
+                        excluded:     message.excluded,
+                        includeStarter: message.includeStarter,
+                        onBatch:      async () => {
+                            if (firstBatch) {
+                                firstBatch = false
+                                await emit({type: 'primary-ready'})
+                            }
+                        },
+                        onComplete:   async () => {
+                            if (firstBatch) {
+                                await emit({type: 'primary-ready'})
+                            }
+                        },
+                        parents,
+                        starterType:  message.starterType,
+                    })
+                }
+
+                const decoded = message.primary ? decodeStartupJourney(value) : null
+                await streamStartupJourney(value, emit, {
+                    ...message,
+                    onTrackEnd: async ({firstTrack}) => {
+                        if (firstTrack) {
+                            await emitPrimaryPOIs(decoded)
+                        }
+                    },
+                    preferredTrackKey: message.currentTrackKey,
+                })
+                if (message.primary && !primaryReady) {
+                    await emitPrimaryPOIs(decoded)
+                }
+            }
+            else if (message.primary) {
+                await emit({type: 'primary-ready'})
             }
         }
         else if (requestType === 'journey-keys') {

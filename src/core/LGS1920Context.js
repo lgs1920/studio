@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-03
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -68,6 +68,7 @@ import {SceneManager} from './ui/SceneManager'
 import {JourneyReplayRunner} from './ui/JourneyReplayRunner'
 import {JourneyReplayMode} from './ui/replay/JourneyReplayMode'
 import {JourneyReplayVideoSync} from './ui/replay/JourneyReplayVideoSync'
+import {markStartup, measureStartup} from './ui/startup/startupTelemetry'
 
 export class LGS1920Context {
     /** @type {Proxy} */
@@ -409,7 +410,10 @@ export class LGS1920Context {
         this.databaseSyncManager?.setDatabases(this.db)
         __.ui.databaseSyncManager = this.databaseSyncManager
 
+        markStartup('database-sync-start')
         await this.databaseSyncManager?.bootstrap?.()
+        markStartup('database-sync-end')
+        measureStartup('database-sync', 'database-sync-start', 'database-sync-end')
         const syncStartupWarning = this.databaseSyncManager?.startupWarning
         if (syncStartupWarning) {
             window.setTimeout(() => UIToast.warning(syncStartupWarning), 0)

@@ -61,17 +61,26 @@ const chunk = (items, size) => {
     return result
 }
 
-const trackEntries = journey => {
+const trackEntries = (journey, preferredTrackKey = null) => {
     const tracks = journey?.tracks
-    if (tracks instanceof Map) {
-        return [...tracks.entries()]
+    const entries = tracks instanceof Map
+                    ? [...tracks.entries()]
+                    : Array.isArray(tracks)
+                      ? tracks
+                            .filter(item => item && Object.prototype.hasOwnProperty.call(item, 'key'))
+                            .map(item => [item.key, item.value])
+                      : Object.entries(tracks ?? {})
+
+    if (preferredTrackKey === null || preferredTrackKey === undefined) {
+        return entries
     }
-    if (Array.isArray(tracks)) {
-        return tracks
-            .filter(item => item && Object.prototype.hasOwnProperty.call(item, 'key'))
-            .map(item => [item.key, item.value])
+
+    const preferredIndex = entries.findIndex(([key]) => String(key) === String(preferredTrackKey))
+    if (preferredIndex <= 0) {
+        return entries
     }
-    return Object.entries(tracks ?? {})
+
+    return [entries[preferredIndex], ...entries.slice(0, preferredIndex), ...entries.slice(preferredIndex + 1)]
 }
 
 const geometrySegments = content => {
@@ -99,6 +108,11 @@ export const streamStartupObject = async (value, emit, options = {}) => {
 export const streamStartupGeometry = async (content, emit, options = {}) => {
     const batchSize = options.batchSize ?? GEOMETRY_BATCH_SIZE
     const segments = geometrySegments(content)
+    if (segments.length === 0 && content?.geometry) {
+        await emit({type: 'geometry', geometry: content.geometry})
+        return
+    }
+
     for (let segmentIndex = 0; segmentIndex < segments.length; segmentIndex++) {
         const segment = segments[segmentIndex] ?? []
         for (const points of chunk(segment, batchSize)) {
@@ -113,21 +127,30 @@ export const streamStartupGeometry = async (content, emit, options = {}) => {
 
 export const streamStartupJourney = async (value, emit, options = {}) => {
     const journey = decodeStartupJourney(value)
-    const entries = trackEntries(journey)
+    const entries = trackEntries(journey, options.preferredTrackKey)
     const tracks = {...journey, tracks: undefined}
     delete tracks.tracks
 
     await emit({type: 'journey', data: tracks})
-    for (const [key, rawTrack] of entries) {
+    for (let index = 0; index < entries.length; index++) {
+        const [key, rawTrack] = entries[index]
         const track = decodeStartupJourney(rawTrack)
         const content = track?.content
         const trackWithoutContent = {...track}
         delete trackWithoutContent.content
+        const contentMetadata = {...(content ?? {})}
+        delete contentMetadata.geometry
+        trackWithoutContent.contentMetadata = contentMetadata
         trackWithoutContent.contentProperties = content?.properties ?? {}
         trackWithoutContent.geometryType = content?.geometry?.type ?? 'LineString'
         await emit({type: 'track', key, data: trackWithoutContent})
         await streamStartupGeometry(content, emit, options)
         await emit({type: 'track-end', key})
+        await options.onTrackEnd?.({
+                                    firstTrack: index === 0,
+                                    key,
+                                    trackCount: entries.length,
+                                })
     }
     await emit({type: 'journey-end'})
 }
@@ -162,14 +185,20 @@ export const streamStartupPOIs = async (values, emit, request = {}) => {
             }
             records.push(poi)
             if (records.length >= (request.batchSize ?? POI_BATCH_SIZE)) {
-                await emit({type: 'pois', items: records.splice(0)})
+                const items = records.splice(0)
+                await emit({type: 'pois', items})
+                await request.onBatch?.(items)
             }
         }
     }
 
     if (records.length > 0) {
-        await emit({type: 'pois', items: records})
+        const items = records.splice(0)
+        await emit({type: 'pois', items})
+        await request.onBatch?.(items)
     }
+
+    await request.onComplete?.()
 }
 
 export {JOURNEY_BATCH_SIZE, GEOMETRY_BATCH_SIZE, POI_BATCH_SIZE}

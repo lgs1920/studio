@@ -17,7 +17,7 @@
 import { TrackUtils } from '@Utils/cesium/TrackUtils'
 import { UIToast }    from '@Utils/UIToast'
 import { snapdom }     from '@zumer/snapdom'
-import { yieldStartupTask } from './startup/StartupWorkerClient'
+import { yieldStartupIdleTask, yieldStartupTask } from './startup/StartupWorkerClient'
 
 /**
  * Prepare SnapDOM capture intent handling before capture begins.
@@ -48,6 +48,8 @@ export const runDeferredJourneyDataLoad = async ({
                                                      onCurrentJourneyReady,
                                                      onJourneysReady,
                                                  } = {}) => {
+    await yieldStartupIdleTask()
+
     if (startupLoader && !currentPOIsReady) {
         await startupLoader.loadPOIs({currentOnly: true, includeStarter: false})
         onCurrentJourneyReady?.()
@@ -60,16 +62,29 @@ export const runDeferredJourneyDataLoad = async ({
     onJourneysReady?.(journeys)
 
     if (startupLoader) {
+        await yieldStartupIdleTask()
         await startupLoader.loadPOIs()
     }
     else {
         await poiManager.readAllFromDB({ensureLocations: false})
     }
+    await yieldStartupIdleTask()
     await journeyGroupManager.initialize()
     if (!startupLoader) {
         poiManager.rebuildJourneyIndex()
     }
-    await poiManager.ensureAllPOILocations()
+    if (poiManager.list?.keys && poiManager.ensurePOILocation) {
+        const ids = Array.from(poiManager.list.keys())
+        for (let index = 0; index < ids.length; index++) {
+            await poiManager.ensurePOILocation(ids[index])
+            if ((index + 1) % 8 === 0) {
+                await yieldStartupIdleTask()
+            }
+        }
+    }
+    else {
+        await poiManager.ensureAllPOILocations()
+    }
 
     if (journeys.length > 0) {
         uiToast.success({
@@ -78,5 +93,6 @@ export const runDeferredJourneyDataLoad = async ({
                         })
     }
 
+    await yieldStartupIdleTask()
     await precacheAssets()
 }

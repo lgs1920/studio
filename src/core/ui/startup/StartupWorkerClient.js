@@ -24,6 +24,25 @@ export const yieldStartupTask = () => globalThis.scheduler?.yield
     ? globalThis.scheduler.yield()
     : new Promise(resolve => setTimeout(resolve, 0))
 
+/**
+ * Give the browser an idle window before deferred startup work.
+ * The timeout keeps the queue moving in busy tabs.
+ */
+export const yieldStartupIdleTask = () => {
+    if (typeof globalThis.requestIdleCallback === 'function') {
+        return new Promise(resolve => globalThis.requestIdleCallback(resolve, {timeout: 500}))
+    }
+
+    return new Promise(resolve => {
+        if (typeof globalThis.requestAnimationFrame === 'function') {
+            globalThis.requestAnimationFrame(() => setTimeout(resolve, 0))
+            return
+        }
+
+        setTimeout(resolve, 16)
+    })
+}
+
 export class StartupWorkerClient {
     #worker
     #pending = null

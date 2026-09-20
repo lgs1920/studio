@@ -16,17 +16,22 @@
 
 import {CustomDataSource, GeoJsonDataSource} from 'cesium'
 import {
-    CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, DRAWING_FROM_DB, FOCUS_ON_FEATURE, NO_FOCUS, POI_STARTER_TYPE,
+    CURRENT_JOURNEY, CURRENT_STORE, CURRENT_TRACK, DRAWING_FROM_DB, POI_STARTER_TYPE,
 } from '@Core/constants'
 import {Journey} from '@Core/Journey'
 import {MapPOI} from '@Core/MapPOI'
 import {Track} from '@Core/Track'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
-import {StartupWorkerClient, yieldStartupTask} from './StartupWorkerClient'
+import {markStartup, measureStartup} from './startupTelemetry'
+import {StartupWorkerClient, yieldStartupIdleTask, yieldStartupTask} from './StartupWorkerClient'
 
 const appendGeometry = (geometry, packet) => {
+    if (packet.geometry) {
+        return packet.geometry
+    }
+
     if (!geometry) {
-        return
+        return geometry
     }
 
     if (!Array.isArray(geometry.coordinates)) {
@@ -35,18 +40,25 @@ const appendGeometry = (geometry, packet) => {
 
     if (geometry.type === 'LineString') {
         geometry.coordinates.push(...packet.coordinates)
-        return
+        return geometry
     }
 
     geometry.coordinates[packet.segment] ??= []
     geometry.coordinates[packet.segment].push(...packet.coordinates)
+    return geometry
 }
 
-const trackContent = (track, geometry) => ({
-    type: 'Feature',
-    properties: track.contentProperties ?? {name: track.title},
-    geometry: geometry ?? track.geometry ?? {type: 'LineString', coordinates: []},
-})
+const trackContent = (track, geometry) => {
+    const content = {...(track.contentMetadata ?? {})}
+    delete content.geometry
+
+    return {
+        ...content,
+        type:       content.type ?? 'Feature',
+        properties: content.properties ?? track.contentProperties ?? {name: track.title},
+        geometry:   geometry ?? track.geometry ?? {type: track.geometryType ?? 'LineString', coordinates: []},
+    }
+}
 
 /**
  * Hydrate only the primary journey synchronously, then let the worker feed the
@@ -56,6 +68,10 @@ export class StartupDataLoader {
     #client
     #database
     #loadedJourneySlugs = new Set()
+    #activeJourneyCompletion = Promise.resolve()
+    #deferredTrackQueue = []
+    #deferredTrackDrainPromise = null
+    #currentPOIsReady = false
 
     constructor(database, client) {
         this.#database = database
@@ -93,7 +109,75 @@ export class StartupDataLoader {
         }
     }
 
-    loadJourney = async (key, {current = false} = {}) => {
+    get currentPOIsReady() {
+        return this.#currentPOIsReady
+    }
+
+    #waitForActiveJourney = async () => {
+        await this.#activeJourneyCompletion
+    }
+
+    #installPOIs = items => {
+        for (const data of items ?? []) {
+            if (!data?.id || __.ui.poiManager.list.has(data.id)) {
+                continue
+            }
+            const poi = new MapPOI(data)
+            __.ui.poiManager.list.set(poi.id, poi)
+            __.ui.poiManager.addToJourneyIndex(poi.id, poi)
+        }
+        lgs.scene?.requestRender?.()
+    }
+
+    #enqueueDeferredTrack = (journey, track, source) => {
+        if (journey?.visible === false || track?.visible === false || !source) {
+            return
+        }
+
+        source.__lgsStartupDeferredTrack = true
+        source.show = false
+        this.#deferredTrackQueue.push({journey, source, track})
+    }
+
+    #drainDeferredTracks = async () => {
+        if (this.#deferredTrackDrainPromise) {
+            return this.#deferredTrackDrainPromise
+        }
+
+        this.#deferredTrackDrainPromise = (async () => {
+            while (this.#deferredTrackQueue.length > 0) {
+                const item = this.#deferredTrackQueue.shift()
+                await yieldStartupIdleTask()
+
+                if (item.journey.visible === false || item.track.visible === false) {
+                    item.source.__lgsStartupDeferredTrack = false
+                    continue
+                }
+
+                await TrackUtils.draw(item.track, {
+                    action:       DRAWING_FROM_DB,
+                    forcedToHide: false,
+                    renderMode:   'primitive',
+                })
+                await yieldStartupTask()
+            }
+        })().finally(() => {
+            this.#deferredTrackDrainPromise = null
+        })
+
+        return this.#deferredTrackDrainPromise
+    }
+
+    #keepDeferredTracksHidden = journey => {
+        journey?.tracks?.forEach(track => {
+            const source = lgs.viewer.dataSources.getByName(track.slug)[0]
+            if (source?.__lgsStartupDeferredTrack) {
+                source.show = false
+            }
+        })
+    }
+
+    loadJourney = async (key, {current = false, currentTrackKey = null} = {}) => {
         if (!key || this.#loadedJourneySlugs.has(key)) {
             return lgs.getJourneyBySlug?.(key) ?? null
         }
@@ -107,16 +191,85 @@ export class StartupDataLoader {
         let geometry = null
         let trackData = null
         let trackKey = null
+        let firstTrackReady = false
+        let firstTrackResolve
+        let firstTrackReject
+        const primaryReady = new Promise((resolve, reject) => {
+            firstTrackResolve = resolve
+            firstTrackReject = reject
+        })
 
-        await this.#requestFromWorker({
+        const ensureJourneyDataSource = async () => {
+            if (!lgs.viewer.dataSources.getByName(journey.slug)[0]) {
+                await lgs.viewer.dataSources.add(new CustomDataSource(journey.slug))
+            }
+        }
+
+        const prepareCurrentJourney = async () => {
+            if (!current || lgs.theJourney === journey) {
+                return
+            }
+
+            lgs.theJourney = journey
+            lgs.theJourney.addToEditor()
+            TrackUtils.setProfileVisibility(journey)
+        }
+
+        const installTrack = async track => {
+            journey.globalSettings()
+            await ensureJourneyDataSource()
+            if (!lgs.viewer.dataSources.getByName(track.slug)[0]) {
+                await lgs.viewer.dataSources.add(new GeoJsonDataSource(track.slug))
+            }
+
+            const isPrimaryTrack = current && !firstTrackReady
+            if (current && (isPrimaryTrack || `${track.slug}` === `${currentTrackKey}`)) {
+                lgs.theTrack = track
+                lgs.theTrack.addToEditor()
+                TrackUtils.setProfileVisibility(journey)
+            }
+
+            if (current && isPrimaryTrack) {
+                await TrackUtils.draw(track, {
+                    action:       DRAWING_FROM_DB,
+                    forcedToHide: journey.visible === false,
+                    renderMode:   'entities',
+                })
+            }
+            else {
+                const source = lgs.viewer.dataSources.getByName(track.slug)[0]
+                this.#enqueueDeferredTrack(journey, track, source)
+            }
+
+            if (isPrimaryTrack) {
+                firstTrackReady = true
+                lgs.stores.main.readyForTheShow = true
+                markStartup('current-track-drawn', {
+                    journey: journey.slug,
+                    track:   track.slug,
+                })
+                measureStartup('current-track', 'current-journey-init-start', 'current-track-drawn')
+            }
+        }
+
+        const completion = this.#requestFromWorker({
             database:    this.#database,
             defaults:    {renderSmoothing: globalThis.lgs?.settings?.getJourney?.renderSmoothing},
             key,
+            currentTrackKey,
+            excluded:    [...(__.ui.poiManager.list?.keys?.() ?? [])],
+            includeStarter: false,
+            primary:     current,
+            starterType: POI_STARTER_TYPE,
             type:        'journey',
         }, async packet => {
             if (packet.type === 'journey') {
                 journey = Journey.deserialize({object: {...packet.data, tracks: [{__type: 'Map'}]}, reset: true})
                 journey.cameraOrigin = journey.camera
+                journey.globalSettings()
+                lgs.saveJourneyInContext(journey)
+                await prepareCurrentJourney()
+                await ensureJourneyDataSource()
                 return
             }
 
@@ -129,7 +282,7 @@ export class StartupDataLoader {
 
             if (packet.type === 'geometry') {
                 geometry ??= {type: trackData?.geometryType ?? 'LineString', coordinates: []}
-                appendGeometry(geometry, packet)
+                geometry = appendGeometry(geometry, packet)
                 return
             }
 
@@ -141,44 +294,73 @@ export class StartupDataLoader {
                 })
                 track.parent = track.parent ?? journey.slug
                 journey.tracks.set(trackKey ?? track.slug, track)
-                if (!currentTrack) {
+                if (!currentTrack || `${track.slug}` === `${currentTrackKey}` || !currentTrackKey) {
                     currentTrack = track
                 }
+                if (!current || firstTrackReady) {
+                    await yieldStartupIdleTask()
+                }
+                await installTrack(track)
                 trackData = null
                 geometry = null
-                await yieldStartupTask()
+                await (current && !firstTrackReady ? yieldStartupTask() : yieldStartupIdleTask())
+                return
+            }
+
+            if (packet.type === 'pois') {
+                this.#installPOIs(packet.items)
+                if (current && !this.#currentPOIsReady) {
+                    this.#currentPOIsReady = true
+                    markStartup('current-pois-first-batch', {count: packet.items?.length ?? 0})
+                }
+                return
+            }
+
+            if (packet.type === 'primary-ready' && current) {
+                if (!firstTrackReady) {
+                    lgs.stores.main.readyForTheShow = true
+                }
+                this.#currentPOIsReady = true
+                markStartup('current-primary-ready', {journey: journey?.slug ?? key})
+                measureStartup('current-primary', 'current-journey-init-start', 'current-primary-ready')
+                firstTrackResolve(journey)
             }
         })
+
+        this.#activeJourneyCompletion = completion
+        void completion.catch(error => {
+            if (current) {
+                firstTrackReject(error)
+            }
+            else {
+                firstTrackResolve(null)
+            }
+            this.#activeJourneyCompletion = Promise.resolve()
+        })
+
+        if (current) {
+            await primaryReady
+        }
+        else {
+            await completion
+        }
 
         if (!journey) {
             return null
         }
 
         journey.globalSettings()
-        lgs.saveJourneyInContext(journey)
-
-        if (!lgs.viewer.dataSources.getByName(journey.slug)[0]) {
-            await lgs.viewer.dataSources.add(new CustomDataSource(journey.slug))
-        }
-        for (const track of journey.tracks.values()) {
-            if (!lgs.viewer.dataSources.getByName(track.slug)[0]) {
-                await lgs.viewer.dataSources.add(new GeoJsonDataSource(track.slug))
-            }
-        }
 
         if (current || !lgs.theJourney) {
             lgs.theJourney = journey
-            lgs.stores.main.readyForTheShow = true
             lgs.theJourney.addToEditor()
-            lgs.theTrack = journey.tracks.get(await lgs.db.lgs1920.get(CURRENT_TRACK, CURRENT_STORE)) ?? currentTrack
+            lgs.theTrack = journey.tracks.get(currentTrackKey) ?? currentTrack
             lgs.theTrack?.addToEditor()
             TrackUtils.setProfileVisibility(journey)
         }
 
-        await journey.draw({
-            action: DRAWING_FROM_DB,
-            mode:   current ? FOCUS_ON_FEATURE : NO_FOCUS,
-        })
+        journey.updateVisibility(current ? journey.visible !== false : false)
+        this.#keepDeferredTracksHidden(journey)
         this.#loadedJourneySlugs.add(journey.slug)
         await yieldStartupTask()
         return journey
@@ -187,11 +369,13 @@ export class StartupDataLoader {
     loadCurrentJourney = async () => {
         const key = await lgs.db.lgs1920.get(CURRENT_JOURNEY, CURRENT_STORE)
         if (!key || !this.#client) {
+            this.#currentPOIsReady = false
             return TrackUtils.readCurrentFromDB()
         }
 
         try {
-            const journey = await this.loadJourney(key, {current: true})
+            const currentTrackKey = await lgs.db.lgs1920.get(CURRENT_TRACK, CURRENT_STORE)
+            const journey = await this.loadJourney(key, {current: true, currentTrackKey})
             if (journey) {
                 return journey
             }
@@ -200,18 +384,20 @@ export class StartupDataLoader {
             return TrackUtils.readCurrentFromDB()
         }
         catch (error) {
+            this.#currentPOIsReady = false
             console.warn('[StartupDataLoader] Current journey worker load failed, using the legacy loader:', error)
             return TrackUtils.readCurrentFromDB()
         }
     }
 
     loadRemainingJourneys = async () => {
-        if (!this.#client) {
-            return TrackUtils.readRemainingFromDB()
-        }
-        const journeys = []
-        let keys = []
         try {
+            await this.#waitForActiveJourney()
+            if (!this.#client) {
+                return TrackUtils.readRemainingFromDB()
+            }
+            const journeys = []
+            let keys = []
             await this.#requestFromWorker({
                 database:    this.#database,
                 type:        'journey-keys',
@@ -225,24 +411,29 @@ export class StartupDataLoader {
                 if (this.#loadedJourneySlugs.has(key) || lgs.journeys.has(key)) {
                     continue
                 }
+                await yieldStartupIdleTask()
                 const journey = await this.loadJourney(key)
                 if (journey) {
                     journeys.push(journey)
                 }
-                await yieldStartupTask()
+                await yieldStartupIdleTask()
             }
+            void this.#drainDeferredTracks()
+            return journeys
         }
         catch (error) {
             console.warn('[StartupDataLoader] Remaining journey worker load failed, using the legacy loader:', error)
             return TrackUtils.readRemainingFromDB()
         }
-        return journeys
     }
 
     loadPOIs = async ({currentOnly = false, journey = lgs.theJourney, includeStarter = true} = {}) => {
+        await this.#waitForActiveJourney()
         if (!this.#client) {
             if (currentOnly) {
-                return __.ui.poiManager.readStartupPOIsFromDB({includeStarter, journey})
+                const result = await __.ui.poiManager.readStartupPOIsFromDB({includeStarter, journey})
+                this.#currentPOIsReady = true
+                return result
             }
             return __.ui.poiManager.readAllFromDB({ensureLocations: false})
         }
@@ -265,15 +456,13 @@ export class StartupDataLoader {
                 if (packet.type !== 'pois') {
                     return
                 }
-                for (const data of packet.items ?? []) {
-                    if (!data?.id || __.ui.poiManager.list.has(data.id)) {
-                        continue
-                    }
-                    const poi = new MapPOI(data)
-                    __.ui.poiManager.list.set(poi.id, poi)
-                    __.ui.poiManager.addToJourneyIndex(poi.id, poi)
+                this.#installPOIs(packet.items)
+                if (currentOnly) {
+                    this.#currentPOIsReady = true
                 }
-                lgs.scene?.requestRender?.()
+                else {
+                    await yieldStartupIdleTask()
+                }
             })
         }
         catch (error) {
