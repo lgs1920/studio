@@ -2608,3 +2608,47 @@
 ## 2026-09-20 — [`docs(startup): document initialization audit`](https://github.com/lgs1920/studio/commit/448db2dd1106efaeeec2cece1b24c65e3c81465f)
 
 - Recorded automatically from Git history.
+
+## 2026-09-20 — [`fix(startup): show gameplay toast on enter`](https://github.com/lgs1920/studio/commit/756bf2bbdd0a936395a24d0c7d50d3f3bae58f18)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`docs(rules): require JSDoc for named functions`](https://github.com/lgs1920/studio/commit/8d7bb1cc71040f7f69034d647d6d63ab002aa83b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`fix(startup): anchor welcome actions below branding`](https://github.com/lgs1920/studio/commit/7faf819a24347ae344c60e69ef827d99bfbc506c)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`fix(startup): match splash slogan rendering`](https://github.com/lgs1920/studio/commit/36111b8e7d8ab9b14b1694504ee5bd9ea47aa156)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`fix(startup): use matching SVG slogan in splash and init`](https://github.com/lgs1920/studio/commit/3fd8b7e6ac3b38e2586d81a1d2b9a458005eacc1)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`fix(startup): align splash overlay with CTA readiness`](https://github.com/lgs1920/studio/commit/700ce8d4be3277cc8fa35aaf09c8f427fd0e523d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`fix(startup): restore welcome video rotation`](https://github.com/lgs1920/studio/commit/02020c47ddfca11c4bffc2dc5bcf3baa29e4aac8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`feat(startup): prioritize current journey loading`](https://github.com/lgs1920/studio/commit/b6a0537da715e30015116f8ecec696f24fc3de84)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`perf(cesium): optimize track rendering`](https://github.com/lgs1920/studio/commit/6bb68dd0c424ad53fb778134a742c1acdee2d7c7)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`docs(startup): refresh initialization audit`](https://github.com/lgs1920/studio/commit/168cc55affb83a54f64fca222e0005ec77a50a4b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`Merge remote-tracking branch 'origin/feature/webworker-init' into feature/webworker-init`](https://github.com/lgs1920/studio/commit/21318675d7028a379e6cba20adbe22b177f1a2ad)
+
+- Recorded automatically from Git history.
