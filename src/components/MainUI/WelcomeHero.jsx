@@ -14,6 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { SloganSvg }                                         from '@Components/MainUI/SloganSvg'
 import { WelcomeHeroControls }                               from '@Components/MainUI/WelcomeHeroControls'
 import { WelcomeHeroRoute }                                  from '@Components/MainUI/WelcomeHeroRoute'
 import {
@@ -22,7 +23,6 @@ import {
     getBannerMediaSource,
     WELCOME_BACKGROUND_PLAYBACK_RATE,
 }                                                               from '@Assets/media/welcome-background-media'
-import { SLOGAN }                                             from '@Core/constants'
 import { formatBuildInfo }                                    from '@Utils/BuildInfoUtils'
 import {
     WaButton, WaFormatDate, WaIcon,
@@ -278,9 +278,7 @@ export const WelcomeHero = ({
                         <source media="(max-width: 700px)" srcSet="/assets/logo/logo-vertical.png"/>
                         <img src="/assets/logo/logo-horizontal.png" alt="LGS1920 Studio logo"/>
                     </picture>
-                    <div className="welcome-slogan" role="img" aria-label="Slogan">
-                        {SLOGAN}
-                    </div>
+                    <SloganSvg className="welcome-slogan"/>
 
                     <div id="welcome-enter-call-for-action" className="welcome-enter-call-for-action">
                         <WaButton

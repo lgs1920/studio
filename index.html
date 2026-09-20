@@ -195,13 +195,10 @@
             top: calc(42% + 4.3rem);
             left: 50%;
             width: min(28rem, calc(100vw - 2rem));
-            transform: translateX(-50%) rotate(-8deg) skewX(-14deg);
+            height: auto;
+            transform: translateX(-50%);
             color: #f0c800;
-            font-family: "Cookie", cursive;
-            font-size: clamp(1.4rem, 3.8vw, 2.6rem);
-            line-height: 1.05;
-            text-align: center;
-            text-shadow: 0 1px 0 #000, 0 0 14px rgba(0, 0, 0, 0.72);
+            filter: drop-shadow(0 0 14px rgba(0, 0, 0, 0.72));
             transition: opacity 180ms ease;
         }
 
@@ -217,7 +214,6 @@
 
             #lgs-boot-splash-slogan {
                 top: calc(42% + 3.4rem);
-                font-size: clamp(1.1rem, 5vw, 1.7rem);
             }
         }
 
@@ -258,7 +254,25 @@
            autoplay muted loop playsinline preload="auto">
     </video>
     <img id="lgs-boot-splash-logo" src="/assets/logo/logo-horizontal.png" alt="LGS1920 Studio" decoding="async">
-    <div id="lgs-boot-splash-slogan">Replay Your World Outdoors.</div>
+    <svg id="lgs-boot-splash-slogan"
+         viewBox="0 0 720 180"
+         role="img"
+         aria-label="LGS1920 slogan"
+         xmlns="http://www.w3.org/2000/svg">
+        <title>LGS1920 slogan</title>
+        <g transform="translate(360 90) rotate(-8) skewX(-14)">
+            <text
+                x="0"
+                y="0"
+                text-anchor="middle"
+                dominant-baseline="central"
+                fill="currentColor"
+                font-family="Cookie, cursive"
+                font-size="64">
+                Replay Your World Outdoors.
+            </text>
+        </g>
+    </svg>
 </div>
 <div id="lgs1920-container"></div>
 

@@ -49,7 +49,7 @@ const registerBootSplashMediaLoadingTests = () => {
         expect(startupImage).not.toBeNull()
         expect(startupImage?.querySelector('[data-welcome-background-startup]')).not.toBeNull()
         expect(splashLogo?.getAttribute('src')).toBe('/assets/logo/logo-horizontal.png')
-        expect(splashSlogan?.textContent).toBe('Replay Your World Outdoors.')
+        expect(splashSlogan?.querySelector('text')?.textContent.trim()).toBe('Replay Your World Outdoors.')
 
         const splashStyle = indexDocument.querySelector('style')?.textContent ?? ''
         expect(splashStyle).toContain('#lgs-boot-splash .lgs-boot-splash-background')

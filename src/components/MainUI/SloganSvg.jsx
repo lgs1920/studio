@@ -35,7 +35,7 @@ export const SloganSvg = ({className = '', title = 'LGS1920 slogan'}) => {
                     dominantBaseline="central"
                     fill="currentColor"
                     fontFamily="var(--lgs-slogan-font-family)"
-                    fontSize="84"
+                    fontSize="64"
                 >
                     {SLOGAN}
                 </text>
