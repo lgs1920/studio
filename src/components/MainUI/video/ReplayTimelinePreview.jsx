@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-18
+ * Last modified: 2026-09-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -212,10 +212,7 @@ const hasPublishedReplayFrame = replay => replay?.dynamicFrameState != null
  * @param {Array} tracks - Public timeline tracks.
  * @returns {Array} Detached track snapshot.
  */
-const cloneReplayTimelineTracks = tracks => (Array.isArray(tracks) ? tracks : []).map(track => ({
-    ...track,
-    clips: (Array.isArray(track?.clips) ? track.clips : []).map(clip => ({...clip})),
-}))
+const cloneReplayTimelineTracks = tracks => JSON.parse(JSON.stringify(Array.isArray(tracks) ? tracks : []))
 
 /**
  * Build the shared Replay edit state from a Timeline event.
@@ -564,9 +561,11 @@ export const ReplayTimelinePreview = forwardRef(({
         hostNoDragClass: 'lgs-widget-no-drag',
     }), [horizontalZoomPercent, hasPersistedZoom, keyboardZoomActive, preparedTimeline, projection.signature, projection.durationMillis, projection.fps, projection.source.frameCount, projection.source.frameIntervalMs])
     const baseTracks = useMemo(() => toDisplayTracks(projection.tracks), [projection])
-    const tracks = Array.isArray(preparationTimeline?.tracks)
-        ? preparationTimeline.tracks
-        : baseTracks
+    const preparationTracks = preparationTimeline?.tracks
+    // Detach nested Valtio read proxies before the component snapshots edits for undo/redo.
+    const tracks = useMemo(() => cloneReplayTimelineTracks(
+        Array.isArray(preparationTracks) ? preparationTracks : baseTracks,
+    ), [preparationTracks, baseTracks])
     const sliderMinMillis = Number.isFinite(Number(timeline.rangeStartMillis))
         ? Number(timeline.rangeStartMillis)
         : 0

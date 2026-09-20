@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-08
- * Last modified: 2026-09-14
+ * Last modified: 2026-09-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -342,6 +342,44 @@ describe('Replay timeline widget interaction isolation', () => {
         lgs.stores.ui.widget.current.id = null
         pointerDown(timeline.shadowRoot.querySelector('[data-surface]'))
         expect(lgs.stores.ui.widget.current.id).toBeNull()
+    })
+
+    it.each(['move', 'trim'])('finishes a %s with reactive preparation metadata', async mode => {
+        lgs.stores.replay.preparationTimeline = {
+            timeline: {durationMillis: 10_000, rangeEndMillis: 10_000},
+            tracks: [{id: 'editable', clips: [{
+                id: 'editable-clip', start: 1, end: 4,
+                metadata: {widgetId: 'text-widget', clip: {duration: 3}},
+            }]}],
+        }
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timeline = container.querySelector('lgs1920-timeline')
+        await waitFor(() => expect(timeline.shadowRoot.querySelector('[data-clip-id="editable-clip"]')).not.toBeNull())
+        const surface = timeline.shadowRoot.querySelector('[data-surface]')
+        vi.spyOn(surface, 'getBoundingClientRect').mockReturnValue({left: 0, top: 0, right: 900, bottom: 200, width: 900, height: 200})
+        const clip = timeline.shadowRoot.querySelector('[data-clip-id="editable-clip"]')
+        const target = mode === 'trim' ? clip.querySelector('[data-clip-handle="end"]') : clip
+        expect(target).not.toBeNull()
+        /** Dispatch one step of a complete pointer gesture. */
+        const dispatch = async (element, type, x) => {
+            const event = new MouseEvent(type, {bubbles: true, composed: true, clientX: x, clientY: 50, button: 0})
+            Object.defineProperty(event, 'pointerId', {value: 1})
+            await act(async () => { element.dispatchEvent(event) })
+        }
+        const changes = vi.fn()
+        timeline.addEventListener('lgs1920-timeline-clip-change', changes)
+        await dispatch(target, 'pointerdown', 60)
+        await dispatch(window, 'pointermove', 120)
+        await dispatch(window, 'pointerup', 120)
+        expect(changes).toHaveBeenCalledOnce()
+        const committed = JSON.stringify(timeline.tracks)
+        await dispatch(window, 'pointermove', 240)
+        await dispatch(window, 'pointerup', 240)
+        expect(JSON.stringify(timeline.tracks)).toBe(committed)
+        expect(changes).toHaveBeenCalledOnce()
+        await waitFor(() => expect(lgs.stores.replay.preparationTimeline.tracks[0].clips[0])
+            .toMatchObject(timeline.tracks[0].clips[0]))
+        expect(() => structuredClone(timeline.tracks)).not.toThrow()
     })
 
     it('keeps the widget shell when the empty timeline diagnostic is enabled', () => {
