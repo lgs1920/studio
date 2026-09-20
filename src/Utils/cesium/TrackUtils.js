@@ -1303,7 +1303,7 @@ export class TrackUtils {
                                           || source.__lgsRenderSmoothingKey !== smoothingKey
                                           || source.__lgsTrackRenderMode !== nextRenderMode
                 if (needsGeometryLoad) {
-                    const renderContent = getTrackRenderContent(track)
+                    const renderContent = getTrackRenderContent(track, {forRender: true})
                     if (usePrimitive) {
                         TrackUtils.removeTrackStyleEntities(source)
                         source.entities.removeAll()

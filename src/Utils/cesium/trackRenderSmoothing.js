@@ -27,6 +27,9 @@ const MULTI_LINE_STRING = 'MultiLineString'
 const renderedTrackContentCache = new WeakMap()
 const MAX_SMOOTHED_SEGMENT_POINTS = 4096
 
+/** Maximum coordinate count submitted to the Cesium rendering path. */
+export const MAX_RENDER_POINTS = 4096
+
 const finiteNumber = value => {
     if (value === null || value === undefined || value === '') {
         return undefined
@@ -109,6 +112,58 @@ const chaikinPass = segment => {
     return result
 }
 
+/**
+ * Sample a coordinate sequence uniformly while preserving both endpoints.
+ *
+ * @param {Array<Array<number>>} coordinates - Coordinate sequence to sample.
+ * @param {number} maxPoints - Maximum number of coordinates to retain.
+ * @returns {Array<Array<number>>} The original or sampled coordinate sequence.
+ */
+const sampleCoordinates = (coordinates, maxPoints) => {
+    if (!Array.isArray(coordinates) || coordinates.length <= maxPoints) {
+        return coordinates
+    }
+
+    const lastIndex = coordinates.length - 1
+    const step = lastIndex / (maxPoints - 1)
+
+    return Array.from({length: maxPoints}, (_, index) => coordinates[Math.round(index * step)])
+}
+
+/**
+ * Limit line geometry coordinates before they are submitted to Cesium.
+ *
+ * @param {object} geometry - GeoJSON line geometry.
+ * @param {number} maxPoints - Maximum number of coordinates to retain.
+ * @returns {object} The original or limited geometry.
+ */
+const limitGeometryPoints = (geometry, maxPoints) => {
+    if (!geometry || !Array.isArray(geometry.coordinates)) {
+        return geometry
+    }
+
+    if (geometry.type === LINE_STRING) {
+        const coordinates = sampleCoordinates(geometry.coordinates, maxPoints)
+        return coordinates === geometry.coordinates ? geometry : {...geometry, coordinates}
+    }
+
+    if (geometry.type !== MULTI_LINE_STRING) {
+        return geometry
+    }
+
+    const totalPoints = geometry.coordinates.reduce((total, segment) => total + (segment?.length ?? 0), 0)
+    if (totalPoints <= maxPoints) {
+        return geometry
+    }
+
+    const coordinates = geometry.coordinates.map(segment => {
+        const segmentLimit = Math.max(2, Math.floor((maxPoints * (segment?.length ?? 0)) / totalPoints))
+        return sampleCoordinates(segment, segmentLimit)
+    })
+
+    return {...geometry, coordinates}
+}
+
 export const normalizeTrackRenderSmoothing = (value = undefined, fallback = TRACK_RENDER_SMOOTHING_DEFAULT) => {
     const fallbackSettings = {
         ...TRACK_RENDER_SMOOTHING_DEFAULT,
@@ -165,7 +220,7 @@ export const trackRenderSmoothingKey = (track, options = {}) => {
 
 export const cachePreparedTrackRenderContent = (track, renderContent, renderSmoothing) => {
     const bucket = getWeakMapBucket(renderedTrackContentCache, track?.content)
-    bucket?.set(trackRenderSmoothingKey(track, {renderSmoothing}), renderContent)
+    bucket?.set(`${trackRenderSmoothingKey(track, {renderSmoothing})}:full`, renderContent)
 }
 
 export const smoothCoordinateSegment = (coordinates, step) => {
@@ -185,24 +240,34 @@ export const smoothCoordinateSegment = (coordinates, step) => {
 export const getTrackRenderContent = (track, options = {}) => {
     const content = track?.content
     const geometry = content?.geometry
+    const forRender = options.forRender === true
     const smoothing = effectiveTrackRenderSmoothing(track, options)
 
-    if (!smoothing.enabled || !geometry || ![LINE_STRING, MULTI_LINE_STRING].includes(geometry.type)) {
+    if ((!smoothing.enabled && !forRender) || !geometry || ![LINE_STRING, MULTI_LINE_STRING].includes(geometry.type)) {
         return content
     }
 
-    const smoothingKey = trackRenderSmoothingKey(track, options)
+    const smoothingKey = `${trackRenderSmoothingKey(track, options)}:${forRender ? 'render' : 'full'}`
     const cachedContent = getWeakMapBucket(renderedTrackContentCache, content)?.get(smoothingKey)
     if (cachedContent) {
         return cachedContent
     }
 
-    const renderContent = deepClone(content)
+    let renderContent = content
+    if (smoothing.enabled) {
+        renderContent = deepClone(content)
+        renderContent.geometry.coordinates = geometry.type === LINE_STRING
+                                             ? smoothCoordinateSegment(geometry.coordinates, smoothing.step)
+                                             : (geometry.coordinates ?? [])
+                                                 .map(segment => smoothCoordinateSegment(segment, smoothing.step))
+    }
 
-    renderContent.geometry.coordinates = geometry.type === LINE_STRING
-                                         ? smoothCoordinateSegment(geometry.coordinates, smoothing.step)
-                                         : (geometry.coordinates ?? [])
-                                             .map(segment => smoothCoordinateSegment(segment, smoothing.step))
+    if (forRender) {
+        const limitedGeometry = limitGeometryPoints(renderContent.geometry, MAX_RENDER_POINTS)
+        if (limitedGeometry !== renderContent.geometry) {
+            renderContent = {...renderContent, geometry: limitedGeometry}
+        }
+    }
 
     getWeakMapBucket(renderedTrackContentCache, content)?.set(smoothingKey, renderContent)
 

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-03
- * Last modified: 2026-05-03
+ * Last modified: 2026-09-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,8 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-    getTrackRenderContent, normalizeTrackRenderSmoothing, resolveTrackRenderSmoothing, trackRenderSmoothingKey,
+    getTrackRenderContent, MAX_RENDER_POINTS, normalizeTrackRenderSmoothing, resolveTrackRenderSmoothing,
+    trackRenderSmoothingKey,
 }                                                from '@Utils/cesium/trackRenderSmoothing'
 
 const makeTrack = (renderSmoothing = undefined) => ({
@@ -84,6 +85,22 @@ describe('track render smoothing', () => {
         expect(renderContent.geometry.coordinates.length).toBeLessThanOrEqual(4096)
         expect(renderContent.geometry.coordinates[0]).toEqual([6, 45, 100])
         expect(renderContent.geometry.coordinates.at(-1)).toEqual([6.199, 45.199, 299])
+    })
+
+    it('caps Cesium render geometry without changing the stored track', () => {
+        const track = makeTrack()
+        track.content.geometry.coordinates = Array.from({length: MAX_RENDER_POINTS * 4}, (_, index) => [
+            6 + (index * 0.0001),
+            45 + (index * 0.0001),
+            100 + index,
+        ])
+
+        const renderContent = getTrackRenderContent(track, {forRender: true})
+
+        expect(renderContent.geometry.coordinates).toHaveLength(MAX_RENDER_POINTS)
+        expect(renderContent.geometry.coordinates[0]).toEqual(track.content.geometry.coordinates[0])
+        expect(renderContent.geometry.coordinates.at(-1)).toEqual(track.content.geometry.coordinates.at(-1))
+        expect(track.content.geometry.coordinates).toHaveLength(MAX_RENDER_POINTS * 4)
     })
 
     it('can force smoothing for replay without mutating stored track settings', () => {
