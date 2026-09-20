@@ -66,7 +66,6 @@ export const LGS1920 = () => {
     const [appSurfaceReady, setAppSurfaceReady] = useState(false)
     const deferredJourneyDataStarted = useRef(false)
     const startupDataLoader = useRef(null)
-    const appReadyToastShown = useRef(false)
     const appUpdateStore = globalThis.__?.updater?.store
         ?? globalThis.lgs?.stores?.ui?.appUpdate
     const appUpdate = useSnapshot(appUpdateStore)
@@ -80,6 +79,10 @@ export const LGS1920 = () => {
     const revealApp = useCallback(() => {
         document.body.classList.remove('lgs-app-booting')
         document.body.classList.add('lgs-app-visible')
+        UIToast.success({
+                          caption: 'Studio ready',
+                          text:    'Gameplay is ready.',
+                      })
         setAppVisible(true)
     }, [])
 
@@ -347,18 +350,6 @@ export const LGS1920 = () => {
                           })
         })
     }, [appVisible, initStatus, initialFocusReady, initializeDeferredJourneyData])
-
-    useEffect(() => {
-        if (!appVisible || !appReady || !lgs.theJourney || appReadyToastShown.current) {
-            return
-        }
-
-        appReadyToastShown.current = true
-        UIToast.success({
-                          caption: 'Studio ready',
-                          text:    'Gameplay is ready.',
-                      })
-    }, [appReady, appVisible])
 
     return (
         <>
