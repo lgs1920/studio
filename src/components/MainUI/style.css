@@ -1067,21 +1067,15 @@ body.mobile .orbit-widget-body {
     position: absolute;
     top: calc(var(--welcome-logo-top) + var(--welcome-slogan-offset));
     left: 50%;
-    display: block;
     width: min(28rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
-    height: auto;
     margin: 0;
-    transform: translateX(-50%);
-    color: var(--wa-color-brand-fill-loud);
-    filter: drop-shadow(0 2px 14px var(--lgs-dark-color-90));
-}
-
-.welcome-hero-content .welcome-slogan text {
-    font-size: clamp(3.5rem, calc(2.25 * var(--lgs-gutter)), 5rem);
-}
-
-.welcome-hero-content .welcome-slogan-stroke {
-    opacity: 1;
+    transform: translateX(-50%) rotate(-8deg) skewX(-14deg);
+    color: #f0c800;
+    font-family: var(--lgs-slogan-font-family);
+    font-size: clamp(1.4rem, 3.8vw, 2.6rem);
+    line-height: 1.05;
+    text-align: center;
+    text-shadow: 0 1px 0 #000, 0 0 14px rgba(0, 0, 0, .72);
 }
 
 .welcome-enter-call-for-action {
