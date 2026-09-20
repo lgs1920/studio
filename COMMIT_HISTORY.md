@@ -2572,3 +2572,19 @@
 ## 2026-09-18 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/df9a15d1b62afbd2a0802d121b1419c4ed85ce9a)
 
 - Recorded automatically from Git history.
+
+## 2026-09-20 — [`feat(replay): expose timeline controls`](https://github.com/lgs1920/studio/commit/495dbc30cc659512980ea17850a52318d9097b70)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`fix(replay): preserve playhead during clip edits`](https://github.com/lgs1920/studio/commit/97c01f80ac7cb4ae2fefd9fce620aad3ac23a6e5)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`docs: consolidate specifications and audit implementation status`](https://github.com/lgs1920/studio/commit/bd92895dc725b900408dd4d9a6ff5e23e3d9d6e7)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`docs(rules): correct standalone timeline source path`](https://github.com/lgs1920/studio/commit/8aff7c8f10847e0b22f358b8cd56b0f26c907ceb)
+
+- Recorded automatically from Git history.
