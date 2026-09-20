@@ -363,7 +363,6 @@ export const LGS1920 = () => {
                 <WelcomeHero
                     initComplete={initStatus === true}
                     appReady={appReady}
-                    showMedia={false}
                     onEnter={revealApp}
                 />
             )}
