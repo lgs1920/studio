@@ -2652,3 +2652,11 @@
 ## 2026-09-20 — [`Merge remote-tracking branch 'origin/feature/webworker-init' into feature/webworker-init`](https://github.com/lgs1920/studio/commit/21318675d7028a379e6cba20adbe22b177f1a2ad)
 
 - Recorded automatically from Git history.
+
+## 2026-09-20 — [`fix(ci): use published timeline package`](https://github.com/lgs1920/studio/commit/0f7aa0d3fc049730f4025a11303ccfdd64846569)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`Merge remote-tracking branch 'origin/feature/webworker-init' into feature/webworker-init`](https://github.com/lgs1920/studio/commit/8f1ff021369661953f19757bb59ee71c25abb6a7)
+
+- Recorded automatically from Git history.
