@@ -89,6 +89,13 @@ export const WelcomeHero = ({
         return () => splashElement?.classList.remove('lgs-boot-splash-react-ready')
     }, [])
 
+    useEffect(() => {
+        const splashElement = document.querySelector('#lgs-boot-splash')
+        splashElement?.classList.toggle('lgs-boot-splash-cta-ready', readyToEnter)
+
+        return () => splashElement?.classList.remove('lgs-boot-splash-cta-ready')
+    }, [readyToEnter])
+
     const changeWelcomeVideo = useCallback(() => {
         if (!canChangeVideo || incomingVideoChoice) {
             const activeVideo = activeVideoSlot === 'primary'
@@ -269,7 +276,6 @@ export const WelcomeHero = ({
                 )}
             </div>}
             <WelcomeHeroRoute/>
-            <div className="welcome-hero-scrim" aria-hidden="true"/>
             <WelcomeHeroControls/>
 
             <div className="welcome-hero-shell">

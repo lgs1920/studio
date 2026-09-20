@@ -49,6 +49,7 @@ const registerBootSplashMediaLoadingTests = () => {
         expect(startupImage).not.toBeNull()
         expect(startupImage?.querySelector('[data-welcome-background-startup]')).not.toBeNull()
         expect(splashLogo?.getAttribute('src')).toBe('/assets/logo/logo-horizontal.png')
+        expect(splashSlogan?.querySelector('title')).toBeNull()
         expect(splashSlogan?.querySelector('text')?.textContent.trim()).toBe('Replay Your World Outdoors.')
 
         const splashStyle = indexDocument.querySelector('style')?.textContent ?? ''
@@ -62,6 +63,10 @@ const registerBootSplashMediaLoadingTests = () => {
         expect(splashStyle).toContain('z-index: calc(var(--lgs-toast-zindex, 2147483647) - 3);\n            overflow: hidden;')
         expect(splashStyle).toContain('#lgs-startup-background::after')
         expect(splashStyle).toContain('#lgs-boot-splash::after')
+        expect(splashStyle).toContain('opacity: 1;')
+        expect(splashStyle).toContain('#lgs-boot-splash.lgs-boot-splash-cta-ready::after')
+        expect(splashStyle).toContain('opacity: 0.3;')
+        expect(splashStyle).toContain('transition: opacity 1200ms ease;')
         expect(splashStyle).toContain('linear-gradient(90deg, rgba(0, 0, 0, 0.48)')
         expect(splashStyle).not.toContain('rgba(20, 35, 28, 0.18)')
         expect(splashStyle).not.toContain('blur(')

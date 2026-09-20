@@ -173,8 +173,14 @@
             background:
                 linear-gradient(90deg, rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.24) 46%, rgba(0, 0, 0, 0.04) 100%),
                 linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.14) 48%, rgba(0, 0, 0, 0.54));
+            opacity: 1;
             pointer-events: none;
+            transition: opacity 1200ms ease;
             inset: 0;
+        }
+
+        #lgs-boot-splash.lgs-boot-splash-cta-ready::after {
+            opacity: 0.3;
         }
 
         #lgs-boot-splash-logo {
@@ -259,7 +265,6 @@
          role="img"
          aria-label="LGS1920 slogan"
          xmlns="http://www.w3.org/2000/svg">
-        <title>LGS1920 slogan</title>
         <g transform="translate(360 90) rotate(-8) skewX(-14)">
             <text
                 x="0"

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-14
+ * Last modified: 2026-09-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,6 +29,7 @@ describe('welcome hero video transitions', () => {
 
     it('does not apply the removed green overlay to the welcome hero', () => {
         expect(styleSource).not.toContain('rgba(20, 35, 28, 0.18)')
-        expect(styleSource).toContain('linear-gradient(90deg, rgba(0, 0, 0, 0.48)')
+        expect(styleSource).not.toContain('.welcome-hero-scrim')
+        expect(styleSource).not.toContain('linear-gradient(90deg, rgba(0, 0, 0, 0.48)')
     })
 })

@@ -762,7 +762,6 @@ body.mobile .orbit-widget-body {
 
 .welcome-hero-media,
 .welcome-hero-route,
-.welcome-hero-scrim,
 .welcome-hero-shell {
     position: absolute;
     inset: 0;
@@ -978,14 +977,6 @@ body.mobile .orbit-widget-body {
     --hero-route-path-color: rgb(49, 90, 130);
     --hero-route-glow-color: rgb(219, 234, 254);
     --hero-route-poi-color: rgb(219, 234, 254);
-}
-
-.welcome-hero-scrim {
-    z-index: 1;
-    background:
-        linear-gradient(90deg, rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.24) 46%, rgba(0, 0, 0, 0.04) 100%),
-        linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.14) 48%, rgba(0, 0, 0, 0.54));
-    pointer-events: none;
 }
 
 .welcome-hero-controls {
