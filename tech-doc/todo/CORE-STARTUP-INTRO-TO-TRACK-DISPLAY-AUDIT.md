@@ -1,7 +1,7 @@
 # Startup Audit: Intro to Track Display
 
 **Date:** 2026-09-20
-**Status:** Audit completed; P0 corrective pass implemented; browser validation pending
+**Status:** Audit completed; P0/P1 corrective pass implemented; browser validation pending
 **Scope:** Static intro, bootstrap, application initialization, Cesium viewer, terrain, current journey, current POIs, camera focus, and first track rendering.
 
 This audit describes the current worktree implementation. It does not treat the progressive startup worker as production-ready until the browser validation and broader data-fidelity tests are complete.
@@ -19,15 +19,15 @@ This audit describes the current worktree implementation. It does not treat the 
 | Current POIs | **IMPROVED** | The current journey POIs are loaded once before readiness; the deferred path skips that duplicate scan. |
 | Camera focus | **PARTIAL** | Focus has a callback and a 2.5 second fallback, but readiness is not tied to a verified rendered current track. |
 | Current track rendering | **UNVERIFIED through worker** | The legacy path calls `prepareDrawing()` and then `Journey.draw()`. The worker path reconstructs data and creates equivalent data sources manually, but has no dedicated regression test. |
-| Secondary journeys | **PARTIAL** | Loading is deferred, but each journey is still deserialized, converted to Cesium data sources, styled, and drawn on the main thread. |
+| Secondary journeys | **IMPROVED** | Journey and track data are streamed and registered, while Cesium geometry stays deferred until the journey or track is explicitly selected. |
 | Terrain and 3D layers | **PARTIAL** | Terrain is awaited on the critical path. Base 3D, 3D Tiles, and imagery start from the surface and are not included in a precise readiness contract. |
-| Observability | **KO** | There are no startup performance marks covering first intro, worker packets, first current track, camera focus, surface readiness, and Enter availability. |
+| Observability | **PARTIAL** | Startup marks now cover the shell, media, React, sync, terrain, current track, POIs, camera, surface, and Enter. Browser traces and duration measures remain to be collected. |
 
 The urgent worker protocol mismatch is fixed in the current worktree. The primary journey and its current POIs now complete before readiness is reported, and worker failures fall back to the legacy database readers. Browser validation with a real multi-journey local database remains required.
 
 ## Priority review
 
-The current worker does not yet provide progressive display for the primary journey. `StartupDataLoader.loadJourney()` consumes all journey and track packets first, then creates the Cesium data sources and calls `journey.draw()`. A large current journey therefore remains a single blocking unit even though its IndexedDB read runs in a worker. `Journey.draw()` then waits for all tracks in that journey through `Promise.all()`.
+The worker now provides a progressive first display: `StartupDataLoader.loadJourney()` prioritizes the persisted current track and keeps later track geometry out of the initial Cesium path. The remaining track packets can still be reconstructed without forcing `Journey.draw()` to render every track before the interface is usable.
 
 The startup chain also contains three independent delays before the entry button can be enabled:
 
@@ -40,7 +40,7 @@ The no-journey path has its own unnecessary dependency. `setupStarterPOI()` can 
 The implementation priority is therefore:
 
 1. **P0 — Measure the actual boot gates.** Add marks around configuration, sync bootstrap, terrain, current journey packet completion, first current track source, first current POI batch, camera focus, surface readiness, and Enter availability. Run this against an empty database, a large current journey, several journeys with many POIs, a linked folder, slow terrain, and worker failure.
-2. **P0 — Make the primary journey progressive.** Reconstruct and draw the persisted current track as soon as its packets are complete. Create the remaining current journey tracks afterward, with yields between Cesium source loads. Readiness must be based on the first visible current track and the required initial POI batch, not on the complete journey.
+2. **P0 — Make the primary journey progressive.** Reconstruct and draw the persisted current track as soon as its packets are complete. Keep the remaining current journey tracks available as data and create their Cesium geometry when selected. Readiness is based on the first visible current track and the required initial POI batch.
 3. **P0 — Remove external services from the first visible track gate.** Terrain must have a bounded fallback policy. The current track must be displayable on the available globe or ellipsoid while terrain resolves; terrain refinement can update clamping and request another render.
 4. **P0 — Keep synchronization consistent without freezing the interface.** The linked-folder import must either complete before the database snapshot is selected or expose a documented snapshot policy. It must not silently clear the local data and then hold the intro indefinitely while importing a large profile.
 5. **P1 — Make the empty-workspace path independent.** Do not resolve or persist the starter location before entry unless it is required for the first camera frame. Use the configured coordinates immediately and resolve descriptive location data later.
@@ -104,7 +104,7 @@ Cesium remains mounted and hidden behind the intro while the current journey, tr
 
 ### Secondary Cesium layers are not awaited by the initial React state
 
-`MapLayer`, `Base3DLayer`, and `Tiles3DLayer` start their provider or tileset work from React effects. Their asynchronous readiness is not used as the main `appReady` condition. This is compatible with keeping secondary map resources outside the current journey's critical path, although their network and rendering work can still compete with the first display.
+`MapLayer`, `Base3DLayer`, and `Tiles3DLayer` start their provider or tileset work from React effects. Their asynchronous readiness is not used as the main `appReady` condition. Secondary track geometry is also kept out of the initial Cesium render path, although provider and terrain work can still compete with the first display.
 
 ## Problems and risks
 
@@ -128,9 +128,9 @@ loadCurrentJourney() -> no hydrated journey -> currentJourneyReady = true
 
 This explains why the UI can appear initialized while the current journey or its tracks are absent.
 
-### P0 — Readiness could be reported without a usable current journey — improved
+### P0 — Readiness could be reported without a usable current journey — fixed in code
 
-`initializeData()` now waits for the current journey and current-only POI load, then verifies that the resolved journey is installed as `lgs.theJourney` and that the application store is ready before setting `currentJourneyReady`. The journey drawing is awaited by `StartupDataLoader` before this point.
+`initializeData()` now waits for the first usable current track and the first current POI batch, then verifies that the resolved journey is installed as `lgs.theJourney` and that the application store is ready before setting `currentJourneyReady`. The worker prioritizes the persisted current track, draws it as soon as its packets are complete, and reconstructs later tracks without creating their Cesium geometry during startup.
 
 The remaining limitation is that there is no browser-level assertion that the first rendered Cesium frame contains the current track. The following checks still belong in the next regression test:
 
@@ -150,37 +150,41 @@ The worker is used to load the primary journey during initialization. `StartupDa
 
 For the primary journey, the worker should be an optimization boundary. It must not become the only path that can display an existing local journey.
 
-### P1 — Terrain is still on the critical path
+### P0 — Terrain blocked the primary journey — fixed in code
 
-`initializeData()` awaits `TerrainUtils.changeTerrain()` before loading the current journey. `TerrainUtils.setTerrain()` can wait for an external Cesium terrain provider or an Ion resource. A slow provider, an unavailable network, an expired credential, or a blocked terrain request therefore delays current track loading and Enter availability.
+`initializeData()` now starts `TerrainUtils.changeTerrain()` without awaiting it. `TerrainUtils.setTerrain()` can wait for an external Cesium terrain provider or an Ion resource, so a slow provider no longer delays current track loading and Enter availability.
 
-The current catch path only has a specific fallback for some user-token authorization errors. It does not define a bounded startup policy for slow or unavailable terrain. The audit must decide whether terrain is required before the first track display. The recommended policy is to display the current track on the available globe or ellipsoid, then replace or refine terrain asynchronously.
+The available globe or ellipsoid is used while terrain resolves. A successful terrain assignment updates the scene and requests subsequent Cesium rendering; a failed deferred request is logged and leaves the fallback terrain active.
 
-### P1 — Current POI ownership was duplicated — improved
+### P0 — Current POI ownership was duplicated — fixed in code
 
-The initialization path now lets `StartupDataLoader` install the current POIs before the camera focus. `runDeferredJourneyDataLoad()` receives `currentPOIsReady: true` and skips the second current-only scan. The legacy POI read remains the fallback when the worker is unavailable.
+The worker now emits the current POIs immediately after the prioritized track. `StartupDataLoader` installs batches as they arrive and releases the first readiness gate after the first batch. `runDeferredJourneyDataLoad()` receives `currentPOIsReady: true` and waits for the active primary request before loading the remaining data. The legacy POI read remains the fallback when the worker is unavailable.
 
-The manager's map prevents some duplicate objects from being retained, but it does not prevent the duplicate IndexedDB scan or the duplicate filtering work. The primary POI path needs one owner and one completion signal.
+The primary POI path now has one worker owner and one completion signal. Remaining POI batches continue through the active worker request.
 
-### P1 — Main-thread work remains heavy after the worker
+### P0 — Persistent-folder synchronization remains a consistency gate
 
-The worker moves IndexedDB reads, decoding, filtering, and packetization away from the main thread. It does not move Cesium mutations away from the main thread. For each secondary journey, `StartupDataLoader.loadJourney()` still creates `Journey` and `Track` instances, adds Cesium data sources, invokes `Journey.draw()`, loads GeoJSON, applies track styles, and requests a render on the main thread.
+`DatabaseSyncManager.bootstrap()` remains awaited before the local database is read when a linked profile may replace the local snapshot. This keeps the imported profile and the in-memory current journey consistent. The intro remains visible during this asynchronous work, and dedicated startup marks now expose its duration. Moving this import behind readiness would require a reload or a live reconciliation protocol before it is safe.
 
-The deferred promise is not awaited by the React render, but work inside that promise can still produce long main-thread tasks and visible interaction stalls. `poiManager.ensureAllPOILocations()` and `journeyGroupManager.initialize()` are also run after the data load without an explicit per-frame budget.
+### P1 — Main-thread work remains heavy after the worker — fixed in code
 
-### P1 — The worker path reconstructs only a reduced track feature
+The worker moves IndexedDB reads, decoding, filtering, and packetization away from the main thread. Cesium mutations remain on the main thread, so the startup loader now limits them to the first current track. For later journeys and later tracks, it creates the data model and empty datasources only; `Utils.updateJourneyEditor()` and track selection trigger the draw for the selected item.
 
-`startupData.js` removes the original `content` and sends geometry chunks plus `contentProperties` and `geometryType`. `StartupDataLoader` rebuilds a `Feature` from these fields. This is sufficient for a simple `LineString` or `MultiLineString`, but it needs validation against all persisted track content variants.
+The deferred promise is not awaited by the React render, but work inside that promise can still produce long main-thread tasks and visible interaction stalls. The startup path now waits for an idle window before each secondary journey, between secondary POI batches, before group initialization, between location resolutions, and before SnapDOM preparation. The first current track keeps its fast path; all later tracks stay outside that render path until explicit selection. When a selected large track is rendered, compatible styles can use Cesium `GeoJsonPrimitive` buffer collections, while dash or underlay styling keeps the entity fallback.
 
-Potentially lost or altered information includes feature-level metadata, non-line geometry, custom properties, and any coordinate-related arrays stored outside `geometry.coordinates`. The legacy path reads the serialized track as a whole and therefore has different fidelity characteristics.
+### P1 — The worker path reconstructs only a reduced track feature — fixed in code
 
-### P1 — Smoothing ownership is not proved
+`startupData.js` removes the geometry from the original `content`, but now keeps the complete feature metadata and sends non-line geometry as a complete geometry packet. `StartupDataLoader` restores the metadata, properties, feature identifiers, bounding box, and source geometry before Cesium rendering.
 
-The application contains track-render smoothing and a cache for prepared render content. The startup worker streams source coordinates, but the audit did not find a dedicated end-to-end test proving that the worker startup path preserves source coordinates, applies the configured smoothing policy, and uses the prepared render content only for display. This needs a focused contract test before the worker becomes the default path.
+The contract still streams line and multi-line coordinates in batches. The source track remains separate from the prepared render content, so coordinate-related arrays remain available to replay and statistics.
 
-### P2 — Startup lifecycle does not dispose the worker
+### P1 — Smoothing ownership is not proved — covered by tests
 
-`StartupWorkerClient` exposes `dispose()`, but the `LGS1920` component does not dispose the `StartupDataLoader` when the component unmounts or initialization is abandoned. A retry, hot reload, or surface replacement can leave a worker and pending IndexedDB operation alive.
+The render smoothing tests prove that smoothing creates cached render content without mutating the stored source coordinates. The startup worker contract test now also covers feature metadata and non-line geometry; browser validation remains required for a large local database.
+
+### P2 — Startup lifecycle does not dispose the worker — fixed in code
+
+`LGS1920` disposes the `StartupDataLoader` when the component unmounts, which terminates the worker and rejects its pending request.
 
 ### P2 — The intro contract and PWA documentation disagree
 
@@ -222,11 +226,11 @@ The legacy path is:
 
 This path is conceptually coherent and should remain the reference behavior for the fallback implementation.
 
-The worker path is intended to perform the same sequence incrementally, but its current status is not equivalent:
+The worker path now performs the primary sequence incrementally, but its current status is not yet browser-verified:
 
 - worker dispatch now uses the explicit request envelope; a focused client test covers the message type;
 - the loader creates data sources manually instead of using the shared `prepareDrawing()` contract;
-- the loader verifies the current journey/store readiness before the application readiness flag is set, but still lacks a first-render assertion;
+- the loader verifies the current journey/store readiness before the application readiness flag is set and prioritizes the first track, but still lacks a first-render assertion;
 - the loader reconstructs a reduced feature object;
 - no browser test proves that a real local database reaches visible current track entities.
 
@@ -236,12 +240,12 @@ The worker path is intended to perform the same sequence incrementally, but its 
 
 1. **Fix and specify the worker protocol — implemented.** Requests now use `{type: 'request', requestType: 'journey'}` and the client regression test covers the envelope. Tests for `journey-keys`, `pois`, `ack`, worker error, and disposal remain useful follow-up coverage.
 2. **Add a primary fallback — implemented.** Worker creation and request failures fall back to the known main-thread readers for the current journey, remaining journeys, and POIs.
-3. **Make readiness truthful — partially implemented.** The current journey, current-only POIs, journey/store state, and awaited journey drawing now precede `currentJourneyReady`. A browser assertion for current track entities and the first render is still required.
-4. **Validate the single primary POI owner.** The worker loader now installs the current POIs before readiness and the deferred path skips the current-only request. Keep this contract covered by an end-to-end startup test.
+3. **Make readiness truthful — implemented in code.** The prioritized current track, first current POI batch, journey/store state, and camera preparation now precede `currentJourneyReady`. A browser assertion for current track entities and the first render is still required.
+4. **Validate the single primary POI owner — implemented in code.** The worker loader installs the current POIs in batches before the first readiness signal, and the deferred path waits for the active primary request before loading the remainder. Keep this contract covered by an end-to-end startup test.
 
 ### Phase 1 — Measure the critical path
 
-5. Add `performance.mark()` and `performance.measure()` entries at each startup boundary listed above. Include a database-size summary such as journey count, current track count, and POI count without logging route content.
+5. **Add startup marks — implemented in code.** Marks now cover the shell, media, React mount, app initialization, manager and sync initialization, terrain, current journey, track, POI, camera, surface, reveal, and Enter. Add duration measures and database-size summaries during browser validation.
 6. Capture a startup trace on representative cases: empty database, one small journey, one large journey, several journeys with many POIs, slow terrain, unavailable terrain, and worker failure.
 7. Record the first long task after the intro appears and after Enter becomes available. Separate React evaluation, IndexedDB, Cesium source loading, terrain, imagery, 3D Tiles, and POI location work.
 
@@ -249,8 +253,8 @@ The worker path is intended to perform the same sequence incrementally, but its 
 
 8. Keep the static intro independent from React and heavy module evaluation.
 9. Move only the minimum required work before current journey readiness: application context, database access, current journey, current track sources, associated POIs, and camera target preparation.
-10. Treat terrain, imagery, base 3D, 3D Tiles, groups, secondary journeys, all remaining POI locations, and SnapDOM preparation as background work unless a product requirement proves they are needed for the first track frame.
-11. If terrain is needed for correct clamping, use a bounded policy: display a clearly defined fallback state while terrain resolves, then reapply ground clamping and request a render after terrain becomes available.
+10. Treat terrain, imagery, base 3D, 3D Tiles, groups, secondary journeys, all remaining POI locations, and SnapDOM preparation as background work unless a product requirement proves they are needed for the first track frame — implemented for terrain, widget cache, and SnapDOM; browser validation remains.
+11. Keep the documented bounded terrain policy: display on the available globe or ellipsoid while terrain resolves, then apply the resolved terrain asynchronously.
 
 ### Phase 3 — Make background work cooperative
 
