@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,24 +35,6 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
         : <button {...props}>{children}</button>,
     WaFormatDate: ({date, ...props}) => <time {...props}>{date}</time>,
     WaIcon: () => null,
-    WaPopup: ({children, active, anchor, placement, distance, flip, shift, sync, ...props}) => (
-        <div
-            data-testid="welcome-initialization-popup"
-            data-active={active}
-            data-anchor={anchor}
-            data-placement={placement}
-            data-distance={distance}
-            data-flip={flip}
-            data-shift={shift}
-            data-sync={sync}
-            {...props}
-        >
-            {children}
-        </div>
-    ),
-    WaProgressBar: ({children, label, value, ...props}) => (
-        <div role="progressbar" aria-label={label} aria-valuenow={value} {...props}>{children}</div>
-    ),
 }))
 
 import { WelcomeHero } from '@Components/MainUI/WelcomeHero'
@@ -119,6 +101,7 @@ describe('WelcomeHero', () => {
         const button = screen.getByRole('button', {name: /Enter Studio/})
 
         expect(button.disabled).toBe(true)
+        expect(screen.getByText('Studio is getting ready and loading your data. Please wait.')).toBeTruthy()
         expect(screen.queryByRole('progressbar')).toBeNull()
 
         fireEvent.click(button)
@@ -126,161 +109,29 @@ describe('WelcomeHero', () => {
         expect(onEnter).not.toHaveBeenCalled()
     })
 
-    it('shows the current initialization step and overall progress', () => {
+    it('removes the initialization callout when Studio is ready', () => {
         globalThis.lgs = {
             versions: {studio: '1.0.0'},
             build: {id: 'build-42'},
         }
 
-        render(
-            <WelcomeHero
-                initializationProgress={{
-                    activeStep: 1,
-                    steps: [
-                        {id: 'backend', label: 'Checking backend connection'},
-                        {id: 'application', label: 'Loading application configuration'},
-                        {id: 'services', label: 'Starting application services'},
-                        {id: 'data', label: 'Loading terrain and journeys'},
-                        {id: 'camera', label: 'Preparing the initial map view'},
-                        {id: 'surface', label: 'Rendering the Studio interface'},
-                        {id: 'ready', label: 'Finalizing Studio launch'},
-                    ],
-                }}
-            />
-        )
+        render(<WelcomeHero initComplete appReady/>)
 
-        expect(screen.getByRole('progressbar', {name: 'Studio initialization: 10%'})
-            .getAttribute('aria-valuenow')).toBe('10')
-        expect(screen.getByText('Preparing studio')).toBeTruthy()
-        expect(screen.getByTestId('welcome-initialization-popup')).toMatchObject({
-            dataset: {
-                active:    'true',
-                anchor:    'welcome-enter-call-for-action',
-                placement: 'bottom-start',
-                distance:  '8',
-                flip:      'true',
-                shift:     'true',
-                sync:      'width',
-            },
-        })
-        expect(document.querySelector('#welcome-enter-call-for-action')).toBeTruthy()
-        expect(document.querySelectorAll('.welcome-initialization-step').length).toBe(7)
-        expect(document.querySelector('.welcome-initialization-steps-frame')).toBeTruthy()
-        expect(document.querySelector('.welcome-initialization-scrollbar')).toBeTruthy()
-        expect(document.querySelector('.welcome-initialization-steps')?.getAttribute('style'))
-            .toContain('translateY(-0.41rem)')
-        expect(document.querySelector('.welcome-initialization-scrollbar-thumb')?.getAttribute('style'))
-            .toContain('top: 4.29%')
-        expect(screen.getByText('Checking backend connection').parentElement
-            .classList.contains('is-complete')).toBe(true)
-        expect(screen.getByText('Loading application configuration').parentElement
-            .classList.contains('is-active')).toBe(true)
-        expect(screen.getByText('Starting application services').parentElement
-            .classList.contains('is-complete')).toBe(false)
-        expect(screen.getByText('Loading terrain and journeys').parentElement
-            .classList.contains('welcome-initialization-step')).toBe(true)
-        expect(screen.getByText('In progress')).toBeTruthy()
+        expect(screen.queryByText('Studio is getting ready and loading your data. Please wait.')).toBeNull()
+        expect(screen.queryByRole('progressbar')).toBeNull()
+        expect(screen.getByRole('button', {name: /Enter Studio/}).disabled).toBe(false)
     })
 
-    it('shows the initialization progress in development', () => {
+    it('leaves the startup video to the static splash', () => {
         globalThis.lgs = {
-            platform: 'development',
-            versions: {studio: '1.0.0'},
-            build: {id: 'build-42'},
+            configuration: {website: {domain: 'lgs1920.fr', protocol: 'https'}},
         }
 
-        render(
-            <WelcomeHero
-                initializationProgress={{
-                    activeStep: 1,
-                    steps: [
-                        {id: 'backend', label: 'Checking backend connection'},
-                        {id: 'application', label: 'Loading application configuration'},
-                        {id: 'services', label: 'Starting application services'},
-                    ],
-                }}
-            />
-        )
+        render(<WelcomeHero showMedia={false}/>)
 
-        expect(screen.getByRole('progressbar')).toBeTruthy()
-        expect(screen.getByText('Loading application configuration')).toBeTruthy()
-    })
-
-    it('keeps completed initialization steps visible for three seconds', () => {
-        vi.useFakeTimers()
-        globalThis.lgs = {
-            versions: {studio: '1.0.0'},
-            build: {id: 'build-42'},
-        }
-
-        render(
-            <WelcomeHero
-                initComplete
-                appReady
-                initializationProgress={{
-                    activeStep: 5,
-                    steps: [
-                        {id: 'backend', label: 'Checking backend connection'},
-                        {id: 'application', label: 'Loading application configuration'},
-                        {id: 'services', label: 'Starting application services'},
-                        {id: 'data', label: 'Loading terrain and journeys'},
-                        {id: 'camera', label: 'Preparing the initial map view'},
-                        {id: 'surface', label: 'Rendering the Studio interface'},
-                        {id: 'ready', label: 'Finalizing Studio launch'},
-                    ],
-                }}
-            />
-        )
-
-        expect(screen.getByText('Finalizing Studio launch')).toBeTruthy()
-        expect(screen.getByText('Studio gameplay is ready, enjoy !')).toBeTruthy()
-        expect(screen.getByRole('progressbar', {name: 'Studio initialization: 100%'})
-            .getAttribute('aria-valuenow')).toBe('100')
-        expect(document.querySelector('.welcome-initialization-scrollbar-thumb')?.getAttribute('style'))
-            .toContain('top: 42.86%')
-
-        act(() => {
-            vi.advanceTimersByTime(2999)
-        })
-        expect(screen.getByText('Finalizing Studio launch')).toBeTruthy()
-
-        act(() => {
-            vi.advanceTimersByTime(1)
-        })
-        expect(screen.queryByText('Finalizing Studio launch')).toBeNull()
-        expect(screen.queryByTestId('welcome-initialization-popup')).toBeNull()
-    })
-
-    it('keeps the progress at 60 percent until Studio is ready', () => {
-        globalThis.lgs = {
-            versions: {studio: '1.0.0'},
-            build: {id: 'build-42'},
-        }
-
-        render(
-            <WelcomeHero
-                initComplete
-                initializationProgress={{
-                    activeStep: 4,
-                    steps: [
-                        {id: 'backend', label: 'Checking backend connection'},
-                        {id: 'application', label: 'Loading application configuration'},
-                        {id: 'services', label: 'Starting application services'},
-                        {id: 'data', label: 'Loading terrain and journeys'},
-                        {id: 'camera', label: 'Preparing the initial map view'},
-                        {id: 'surface', label: 'Rendering the Studio interface'},
-                        {id: 'ready', label: 'Finalizing Studio launch'},
-                    ],
-                }}
-            />
-        )
-
-        expect(screen.getByRole('progressbar', {name: 'Studio initialization: 60%'})
-            .getAttribute('aria-valuenow')).toBe('60')
-        expect(document.querySelector('.welcome-initialization-steps')?.getAttribute('style'))
-            .toContain('translateY(-2.43rem)')
-        expect(document.querySelector('.welcome-initialization-scrollbar-thumb')?.getAttribute('style'))
-            .toContain('top: 25.71%')
+        expect(document.querySelector('.welcome-hero-video')).toBeNull()
+        expect(document.querySelector('.welcome-logo')).toBeTruthy()
+        expect(screen.getByLabelText('Slogan')).toBeTruthy()
     })
 
     it('renders the resolved video and falls back to the resolved image', () => {

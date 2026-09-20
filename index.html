@@ -8,7 +8,7 @@
   ~ email: studio@lgs1920.fr
   ~
   ~ Created on: 2026-04-27
-  ~ Last modified: 2026-09-14
+  ~ Last modified: 2026-09-20
   ~
   ~
   ~ Copyright © 2026 LGS1920
@@ -126,7 +126,7 @@
 
         #lgs-boot-splash {
             position: fixed;
-            z-index: 2;
+            z-index: calc(var(--lgs-toast-zindex, 2147483647) - 3);
             overflow: hidden;
             transition: opacity 450ms ease, visibility 450ms ease;
             pointer-events: none;
@@ -136,11 +136,9 @@
             opacity: 0;
         }
 
-        @media (display-mode: standalone) {
-            body.lgs-app-booting #lgs-boot-splash {
-                visibility: visible;
-                opacity: 1;
-            }
+        body.lgs-app-booting #lgs-boot-splash {
+            visibility: visible;
+            opacity: 1;
         }
 
         #lgs-boot-splash .lgs-boot-splash-background {
@@ -182,20 +180,51 @@
         #lgs-boot-splash-logo {
             position: absolute;
             z-index: 3;
-            top: 12vh;
+            top: 42%;
             left: 50%;
-            width: min(72vw, 520px);
+            width: min(220px, calc(100vw - 2rem));
             height: auto;
-            transform: translateX(-50%);
+            transform: translate(-50%, -50%);
             filter: drop-shadow(0 0 18px rgba(0, 0, 0, 0.55));
+            transition: opacity 180ms ease;
         }
 
-        @media (display-mode: standalone) {
-            body.lgs-app-booting #cesium-viewer {
-                visibility: hidden;
-                pointer-events: none;
-                opacity: 0;
+        #lgs-boot-splash-slogan {
+            position: absolute;
+            z-index: 3;
+            top: calc(42% + 4.3rem);
+            left: 50%;
+            width: min(28rem, calc(100vw - 2rem));
+            transform: translateX(-50%) rotate(-8deg) skewX(-14deg);
+            color: #f0c800;
+            font-family: "Cookie", cursive;
+            font-size: clamp(1.4rem, 3.8vw, 2.6rem);
+            line-height: 1.05;
+            text-align: center;
+            text-shadow: 0 1px 0 #000, 0 0 14px rgba(0, 0, 0, 0.72);
+            transition: opacity 180ms ease;
+        }
+
+        #lgs-boot-splash.lgs-boot-splash-react-ready #lgs-boot-splash-logo,
+        #lgs-boot-splash.lgs-boot-splash-react-ready #lgs-boot-splash-slogan {
+            opacity: 0;
+        }
+
+        @media (max-width: 700px) {
+            #lgs-boot-splash-logo {
+                width: min(150px, calc(100vw - 2rem));
             }
+
+            #lgs-boot-splash-slogan {
+                top: calc(42% + 3.4rem);
+                font-size: clamp(1.1rem, 5vw, 1.7rem);
+            }
+        }
+
+        body.lgs-app-booting #cesium-viewer {
+            visibility: hidden;
+            pointer-events: none;
+            opacity: 0;
         }
 
         body:not(.lgs-app-booting) #lgs-boot-splash {
@@ -229,6 +258,7 @@
            autoplay muted loop playsinline preload="auto">
     </video>
     <img id="lgs-boot-splash-logo" src="/assets/logo/logo-horizontal.png" alt="LGS1920 Studio" decoding="async">
+    <div id="lgs-boot-splash-slogan">Replay Your World Outdoors.</div>
 </div>
 <div id="lgs1920-container"></div>
 

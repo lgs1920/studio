@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-21
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -39,6 +39,7 @@ const registerBootSplashMediaLoadingTests = () => {
         const splashImage = indexDocument.querySelector('#lgs-boot-splash [data-welcome-background-fallback]')
         const startupImage = indexDocument.querySelector('#lgs-startup-background')
         const splashLogo = indexDocument.querySelector('#lgs-boot-splash-logo')
+        const splashSlogan = indexDocument.querySelector('#lgs-boot-splash-slogan')
 
         expect(unsupportedMediaPreloadLinks).toHaveLength(0)
         expect(splashVideo).not.toBeNull()
@@ -48,6 +49,7 @@ const registerBootSplashMediaLoadingTests = () => {
         expect(startupImage).not.toBeNull()
         expect(startupImage?.querySelector('[data-welcome-background-startup]')).not.toBeNull()
         expect(splashLogo?.getAttribute('src')).toBe('/assets/logo/logo-horizontal.png')
+        expect(splashSlogan?.textContent).toBe('Replay Your World Outdoors.')
 
         const splashStyle = indexDocument.querySelector('style')?.textContent ?? ''
         expect(splashStyle).toContain('#lgs-boot-splash .lgs-boot-splash-background')
@@ -57,7 +59,7 @@ const registerBootSplashMediaLoadingTests = () => {
         expect(splashStyle).toContain('#lgs-boot-splash video')
         expect(splashStyle).toContain('#lgs-startup-background')
         expect(splashStyle).toContain('#lgs-startup-background img,\n        #lgs-boot-splash .lgs-boot-splash-background')
-        expect(splashStyle).toContain('z-index: 2;\n            overflow: hidden;')
+        expect(splashStyle).toContain('z-index: calc(var(--lgs-toast-zindex, 2147483647) - 3);\n            overflow: hidden;')
         expect(splashStyle).toContain('#lgs-startup-background::after')
         expect(splashStyle).toContain('#lgs-boot-splash::after')
         expect(splashStyle).toContain('linear-gradient(90deg, rgba(0, 0, 0, 0.48)')

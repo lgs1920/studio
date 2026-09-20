@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -274,7 +274,7 @@ export const preloadWelcomeBackgroundMedia = selection => {
  * @param {{videoSources?: Array<object>}} selection - Resolved media selection.
  * @returns {boolean} Whether a video source was applied.
  */
-export const applyWelcomeBackgroundToVideo = (videoElement, selection) => {
+export const applyWelcomeBackgroundToVideo = (videoElement, selection, {load = true} = {}) => {
     if (!videoElement) {
         return false
     }
@@ -291,7 +291,7 @@ export const applyWelcomeBackgroundToVideo = (videoElement, selection) => {
     videoElement.hidden = videoSources.length === 0
     videoElement.playbackRate = WELCOME_BACKGROUND_PLAYBACK_RATE
 
-    if (videoSources.length > 0) {
+    if (videoSources.length > 0 && load) {
         try {
             videoElement.load()
         }

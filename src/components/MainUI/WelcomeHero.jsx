@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,22 +25,18 @@ import {
 }                                                               from '@Assets/media/welcome-background-media'
 import { formatBuildInfo }                                    from '@Utils/BuildInfoUtils'
 import {
-    WaButton, WaFormatDate, WaIcon, WaPopup, WaProgressBar,
+    WaButton, WaFormatDate, WaIcon,
 }                                                               from '@web.awesome.me/webawesome-pro/dist/react'
 import { useCallback, useEffect, useRef, useState }            from 'react'
 
 const WELCOME_BACKGROUND_MEDIA = getWelcomeBackgroundMedia()
 const WELCOME_VIDEO_CROSSFADE_DURATION = 2300
 const WELCOME_VIDEO_CROSSFADE_LEAD_SECONDS = 3
-const INITIALIZATION_PROGRESS_VALUES = [0, 10, 20, 40, 60, 80, 90]
-const INITIALIZATION_VISIBLE_STEP_COUNT = 4
-const INITIALIZATION_STEP_PITCH_REM = 1.35
-const INITIALIZATION_COMPLETION_DISPLAY_MS = 3000
 
 /**
  * Renders the persistent Studio welcome hero.
  *
- * @param {{initComplete?: boolean, appReady?: boolean, onEnter?: () => void, backgroundMedia?: object}} props - Hero state, entry callback, and resolved background media.
+ * @param {{initComplete?: boolean, appReady?: boolean, onEnter?: () => void, backgroundMedia?: object, showMedia?: boolean}} props - Hero state, entry callback, resolved background media, and media visibility.
  * @returns {JSX.Element} Persistent welcome hero.
  */
 export const WelcomeHero = ({
@@ -48,12 +44,11 @@ export const WelcomeHero = ({
                              appReady = false,
                              onEnter,
                              backgroundMedia = WELCOME_BACKGROUND_MEDIA,
-                             initializationProgress = null,
+                             showMedia = true,
                          }) => {
     const _welcomeVideo = useRef(null)
     const _incomingWelcomeVideo = useRef(null)
     const _crossfadeTimer = useRef(null)
-    const _initializationCompletionTimer = useRef(null)
     const [activeVideoSlot, setActiveVideoSlot] = useState('primary')
     const [primaryVideoChoice, setPrimaryVideoChoice] = useState(() => backgroundMedia.id
         ? bannerMediaCatalog.outdoor.find(choice => choice.id === backgroundMedia.id)
@@ -67,29 +62,9 @@ export const WelcomeHero = ({
     const [imageState, setImageState] = useState(
         backgroundMedia.imageSources.length > 0 ? 'ready' : 'unavailable'
     )
-    const [showInitializationProgress, setShowInitializationProgress] = useState(true)
     const readyToEnter = initComplete && appReady
-    const initializationSteps = initializationProgress?.steps ?? []
-    const activeInitializationStep = readyToEnter
-        ? initializationSteps.length
-        : Math.min(Math.max(initializationProgress?.activeStep ?? 0, 0), initializationSteps.length)
-    const initializationPercentage = readyToEnter
-        ? 100
-        : INITIALIZATION_PROGRESS_VALUES[activeInitializationStep] ?? 0
-    const initializationProgressRatio = initializationPercentage / 100
-    const initializationScrollRange = Math.max(initializationSteps.length - INITIALIZATION_VISIBLE_STEP_COUNT, 0)
-    const initializationVisibleStart = initializationScrollRange * initializationProgressRatio
-    const initializationScrollbarThumbSize = initializationSteps.length > INITIALIZATION_VISIBLE_STEP_COUNT
-        ? Math.max((INITIALIZATION_VISIBLE_STEP_COUNT / initializationSteps.length) * 100, 18)
-        : 100
-    const initializationScrollbarThumbOffset = initializationScrollRange > 0
-        ? initializationProgressRatio * (100 - initializationScrollbarThumbSize)
-        : 0
-    const initializationStepsTransform = initializationVisibleStart === 0
-        ? 'translateY(0rem)'
-        : `translateY(-${(initializationVisibleStart * INITIALIZATION_STEP_PITCH_REM).toFixed(2)}rem)`
-    const videoReady = videoState === 'ready'
-    const imageVisible = !videoReady && imageState === 'ready'
+    const videoReady = showMedia && videoState === 'ready'
+    const imageVisible = showMedia && !videoReady && imageState === 'ready'
     const studioVersion = lgs.versions?.studio ?? 'Unknown version'
     const buildDate = lgs.build?.date ?? lgs.build?.buildTime
     const buildInfo = formatBuildInfo(lgs.build)
@@ -106,6 +81,13 @@ export const WelcomeHero = ({
         ? currentVideoSource
         : getBannerMediaSource(secondaryVideoChoice)
     const canChangeVideo = videoChoices.length > 1 && Boolean(activeVideoChoice)
+
+    useEffect(() => {
+        const splashElement = document.querySelector('#lgs-boot-splash')
+        splashElement?.classList.add('lgs-boot-splash-react-ready')
+
+        return () => splashElement?.classList.remove('lgs-boot-splash-react-ready')
+    }, [])
 
     const changeWelcomeVideo = useCallback(() => {
         if (!canChangeVideo || incomingVideoChoice) {
@@ -183,29 +165,6 @@ export const WelcomeHero = ({
     }, [])
 
     useEffect(() => {
-        if (_initializationCompletionTimer.current) {
-            window.clearTimeout(_initializationCompletionTimer.current)
-            _initializationCompletionTimer.current = null
-        }
-
-        if (!readyToEnter) {
-            return
-        }
-
-        _initializationCompletionTimer.current = window.setTimeout(() => {
-            setShowInitializationProgress(false)
-            _initializationCompletionTimer.current = null
-        }, INITIALIZATION_COMPLETION_DISPLAY_MS)
-
-        return () => {
-            if (_initializationCompletionTimer.current) {
-                window.clearTimeout(_initializationCompletionTimer.current)
-                _initializationCompletionTimer.current = null
-            }
-        }
-    }, [readyToEnter])
-
-    useEffect(() => {
         if (_welcomeVideo.current) {
             _welcomeVideo.current.playbackRate = WELCOME_BACKGROUND_PLAYBACK_RATE
         }
@@ -224,92 +183,13 @@ export const WelcomeHero = ({
         onEnter?.()
     }, [onEnter, readyToEnter])
 
-    /**
-     * Renders the initialization progress shown while Studio is becoming ready.
-     *
-     * @returns {object|null} Initialization progress or nothing when no progress was provided.
-     */
-    const renderInitializationProgress = () => {
-        if (initializationSteps.length === 0
-            || (readyToEnter && !showInitializationProgress)) {
-            return null
-        }
-
-        return (
-            <WaPopup
-                className="welcome-initialization-popup"
-                active
-                anchor="welcome-enter-call-for-action"
-                placement="bottom-start"
-                distance={8}
-                flip
-                shift
-                sync="width"
-            >
-                <div className="welcome-initialization" aria-label="Studio initialization progress" aria-live="polite">
-                    <div className="welcome-initialization-header">
-                        <span>{readyToEnter ? 'Studio gameplay is ready, enjoy !' : 'Preparing studio'}</span>
-                        <span>{initializationPercentage}%</span>
-                    </div>
-                    <WaProgressBar
-                        className="welcome-initialization-progress"
-                        value={initializationPercentage}
-                        label={`Studio initialization: ${initializationPercentage}%`}
-                    />
-                    <div className="welcome-initialization-steps-frame">
-                        <div className="welcome-initialization-steps-viewport">
-                            <ol
-                                className="welcome-initialization-steps"
-                                style={{transform: initializationStepsTransform}}
-                            >
-                                {initializationSteps.map((step, index) => {
-                                    const isComplete = index < activeInitializationStep
-                                    const isActive = index === activeInitializationStep
-                                    const status = isComplete ? 'Complete' : isActive ? 'In progress' : 'Waiting'
-
-                                    return (
-                                        <li
-                                            className={`welcome-initialization-step${isComplete ? ' is-complete' : ''}${isActive ? ' is-active' : ''}`}
-                                            aria-current={isActive ? 'step' : undefined}
-                                            key={step.id}
-                                        >
-                                            <WaIcon
-                                                name={isComplete ? 'circle-check' : isActive ? 'gear' : 'circle'}
-                                                variant="regular"
-                                                animation={isActive ? 'spin' : ''}
-                                                aria-hidden="true"
-                                            />
-                                            <span className="welcome-initialization-step-label">{step.label}</span>
-                                            <span className="welcome-initialization-step-status">{status}</span>
-                                        </li>
-                                    )
-                                })}
-                            </ol>
-                        </div>
-                        {initializationSteps.length > INITIALIZATION_VISIBLE_STEP_COUNT && (
-                            <div className="welcome-initialization-scrollbar" aria-hidden="true">
-                                <span
-                                    className="welcome-initialization-scrollbar-thumb"
-                                    style={{
-                                        height: `${initializationScrollbarThumbSize.toFixed(2)}%`,
-                                        top: `${initializationScrollbarThumbOffset.toFixed(2)}%`,
-                                    }}
-                                />
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </WaPopup>
-        )
-    }
-
     return (
         <div id="welcome-hero"
              className={`lgs-theme${videoReady ? ' welcome-hero-video-ready' : ''}${imageVisible ? ' welcome-hero-image-visible' : ''}${videoTransitioning ? ' welcome-hero-video-transitioning' : ''}${incomingVideoReady ? ' welcome-hero-video-crossfade-ready' : ''}`}
              aria-busy={!readyToEnter}>
-            <div className="welcome-hero-media"
-                 style={{backgroundColor: backgroundMedia.fallbackColor}}
-                 aria-hidden="true">
+            {showMedia && <div className="welcome-hero-media"
+                               style={{backgroundColor: backgroundMedia.fallbackColor}}
+                               aria-hidden="true">
                 {backgroundMedia.imageSources[0] && (
                     <img
                         className="welcome-hero-image"
@@ -357,8 +237,8 @@ export const WelcomeHero = ({
                     </video>
                     </>
                 )}
-            </div>
-            {backgroundMedia.credit?.label && backgroundMedia.credit?.url && (
+            </div>}
+            {showMedia && backgroundMedia.credit?.label && backgroundMedia.credit?.url && (
                 <div className="welcome-hero-media-credit">
                     <a
                         href={backgroundMedia.credit.url}
@@ -369,7 +249,7 @@ export const WelcomeHero = ({
                     </a>
                 </div>
             )}
-            <div
+            {showMedia && <div
                 className="welcome-hero-build-info"
                 aria-label={`Studio version ${studioVersion}, build ${buildInfo}`}
             >
@@ -387,7 +267,7 @@ export const WelcomeHero = ({
                 ) : (
                     <span>{buildInfo}</span>
                 )}
-            </div>
+            </div>}
             <WelcomeHeroRoute/>
             <div className="welcome-hero-scrim" aria-hidden="true"/>
             <WelcomeHeroControls/>
@@ -430,7 +310,11 @@ export const WelcomeHero = ({
                             {'Enter Studio'}
                         </WaButton>
                     </div>
-                    {renderInitializationProgress()}
+                    {!readyToEnter && (
+                        <p className="welcome-initialization-callout" role="status">
+                    Studio is getting ready and loading your data. Please wait.
+                        </p>
+                    )}
                 </section>
             </div>
         </div>

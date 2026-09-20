@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -1110,129 +1110,15 @@ body.mobile .orbit-widget-body {
     gap: var(--lgs-gutter-xs);
 }
 
-.welcome-initialization {
-    display: flex;
-    flex-direction: column;
+.welcome-initialization-callout {
     width: 100%;
     max-width: 28rem;
-    min-width: 0;
-    padding: var(--lgs-gutter-s);
-    border: 1px solid var(--wa-color-surface-border);
-    border-radius: var(--lgs-border-radius-s);
-    color: var(--wa-color-text-normal);
-    background: var(--lgs-theme-background-color);
-    box-shadow: 0 0.8rem 2rem rgba(0, 0, 0, .16);
-    backdrop-filter: blur(var(--lgs-blur));
-    gap: var(--lgs-gutter-xs);
-
-    & .welcome-initialization-header {
-        display: flex;
-        justify-content: space-between;
-        font-size: var(--lgs-font-size-s);
-        font-weight: normal;
-        letter-spacing: .02em;
-    }
-
-    & wa-progress-bar {
-        margin: 0;
-        /* Progress track height for the welcome initialization indicator. */
-        --track-height: .35rem;
-    }
-
-    & .welcome-initialization-steps-frame {
-        display: grid;
-        height: calc((1.25rem * 4) + (.1rem * 3));
-        min-height: 0;
-        grid-template-columns: minmax(0, 1fr) .22rem;
-        gap: var(--lgs-gutter-xs);
-        overflow: hidden;
-    }
-
-    & .welcome-initialization-steps-viewport {
-        min-height: 0;
-        overflow: hidden;
-    }
-
-    & .welcome-initialization-steps {
-        display: flex;
-        flex-direction: column;
-        margin: 0;
-        padding: 0;
-        list-style: none;
-        transition: transform 420ms cubic-bezier(.22, 1, .36, 1);
-        gap: .1rem;
-        will-change: transform;
-    }
-
-    & .welcome-initialization-scrollbar {
-        position: relative;
-        display: flex;
-        justify-content: center;
-        width: .22rem;
-        border-radius: 999px;
-        background: var(--lgs-scrollbar-track-color);
-    }
-
-    & .welcome-initialization-scrollbar-thumb {
-        position: absolute;
-        inset-inline: 0;
-        top: 0;
-        display: block;
-        width: 100%;
-        min-height: .7rem;
-        border-radius: 999px;
-        background: var(--lgs-scrollbar-thumb-color);
-        box-shadow: 0 0 .35rem color-mix(in srgb, var(--lgs-scrollbar-thumb-color) 60%, transparent);
-        transition: height 420ms cubic-bezier(.22, 1, .36, 1), top 420ms cubic-bezier(.22, 1, .36, 1);
-    }
-
-    & .welcome-initialization-step {
-        display: grid;
-        align-items: center;
-        height: 1.25rem;
-        min-height: 1.25rem;
-        grid-template-columns: 1rem minmax(0, 1fr) auto;
-        color: color-mix(in oklab, var(--wa-color-text-normal) 56%, transparent);
-        font-size: var(--lgs-font-size-s);
-        line-height: 1.25;
-        gap: var(--lgs-gutter-xs);
-    }
-
-    & .welcome-initialization-step wa-icon {
-        font-size: .82rem;
-        text-align: center;
-    }
-
-    & .welcome-initialization-step-label {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    & .welcome-initialization-step.is-active {
-        color: var(--wa-color-brand-60);
-    }
-
-    & .welcome-initialization-step.is-complete {
-        color: color-mix(in oklab, var(--wa-color-text-normal) 76%, transparent);
-    }
-
-    & .welcome-initialization-step.is-complete wa-icon {
-        color: var(--wa-color-brand-60);
-    }
-
-    & .welcome-initialization-step-status {
-        font-size: .68rem;
-        white-space: nowrap;
-        opacity: .76;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .welcome-initialization-steps,
-    .welcome-initialization-scrollbar-thumb {
-        transition: none !important;
-    }
+    margin: 0;
+    color: color-mix(in oklab, var(--wa-color-text-normal) 72%, transparent);
+    font-size: var(--lgs-font-size-s);
+    line-height: 1.35;
+    text-align: center;
+    text-shadow: 0 1px .35rem rgba(0, 0, 0, .68);
 }
 
 @media (max-width: 700px) {
