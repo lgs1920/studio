@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-20
+ * Last modified: 2026-09-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,10 +21,6 @@ vi.mock('@Components/MainUI/LogoSvg', () => ({
     LogoSvg: () => <div aria-label="Logo"/>,
 }))
 
-vi.mock('@Components/MainUI/SloganSvg', () => ({
-    SloganSvg: () => <div aria-label="Slogan"/>,
-}))
-
 vi.mock('@Components/MainUI/WelcomeHeroControls', () => ({
     WelcomeHeroControls: () => <div aria-label="Welcome hero controls"/>,
 }))
@@ -34,9 +30,10 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
         ? <a href={href} {...props}>{children}</a>
         : <button {...props}>{children}</button>,
     WaFormatDate: ({date, ...props}) => <time {...props}>{date}</time>,
-    WaIcon: () => null,
+    WaIcon: ({name, animation, ...props}) => <span data-animation={animation} data-icon={name} {...props}/>,
 }))
 
+import { WelcomeBranding } from '@Components/MainUI/WelcomeBranding'
 import { WelcomeHero } from '@Components/MainUI/WelcomeHero'
 
 describe('WelcomeHero', () => {
@@ -59,8 +56,6 @@ describe('WelcomeHero', () => {
         render(<WelcomeHero initComplete appReady onEnter={onEnter}/>)
 
         expect(screen.queryByText('Shape your next journey')).toBeNull()
-        expect(document.querySelector('.welcome-logo img')?.getAttribute('src')).toBe('/assets/logo/logo-horizontal.png')
-        expect(document.querySelector('.welcome-logo source')?.getAttribute('srcset')).toBe('/assets/logo/logo-vertical.png')
         expect(document.querySelector('.welcome-hero-route-canvas')).toBeTruthy()
         expect(document.querySelector('.welcome-hero-build-info')?.textContent).toContain('1.0.0')
         expect(document.querySelector('.welcome-hero-build-info')?.textContent).toContain('build-42')
@@ -120,9 +115,10 @@ describe('WelcomeHero', () => {
         expect(screen.queryByText('Studio is getting ready and loading your data. Please wait.')).toBeNull()
         expect(screen.queryByRole('progressbar')).toBeNull()
         expect(screen.getByRole('button', {name: /Enter Studio/}).disabled).toBe(false)
+        expect(document.querySelector('.welcome-enter-call-for-action')).toBeTruthy()
     })
 
-    it('leaves the startup video to the static splash', () => {
+    it('leaves startup media and branding to the static splash', () => {
         globalThis.lgs = {
             configuration: {website: {domain: 'lgs1920.fr', protocol: 'https'}},
         }
@@ -130,8 +126,8 @@ describe('WelcomeHero', () => {
         render(<WelcomeHero showMedia={false}/>)
 
         expect(document.querySelector('.welcome-hero-video')).toBeNull()
-        expect(document.querySelector('.welcome-logo')).toBeTruthy()
-        expect(screen.getByLabelText('Slogan')).toBeTruthy()
+        expect(document.querySelector('.welcome-branding')).toBeNull()
+        expect(screen.queryByLabelText('LGS1920 slogan')).toBeNull()
     })
 
     it('renders the resolved video and falls back to the resolved image', () => {
@@ -209,5 +205,41 @@ describe('WelcomeHero', () => {
         expect(document.querySelector('.welcome-hero-video-active')).toBe(incomingVideo)
         expect(play).toHaveBeenCalledOnce()
         expect(document.querySelector('#welcome-hero')?.classList.contains('welcome-hero-video-transitioning')).toBe(false)
+    })
+})
+
+describe('WelcomeBranding', () => {
+    it('renders the logo, slogan, and loading cog while the CTA enters', () => {
+        render(<WelcomeBranding/>)
+
+        expect(document.querySelector('.welcome-branding-logo img')?.getAttribute('src'))
+            .toBe('/assets/logo/logo-horizontal.png')
+        expect(document.querySelector('.welcome-branding-logo source')?.getAttribute('srcset'))
+            .toBe('/assets/logo/logo-vertical.png')
+        expect(document.querySelector('.welcome-branding-cog [data-icon="gear"]')?.getAttribute('data-animation'))
+            .toBe('spin')
+        expect(document.querySelector('.welcome-branding-cog [data-icon="gear"]')?.getAttribute('canvas'))
+            .toBe('auto')
+        expect(document.querySelector('.welcome-branding-cog [data-icon="gear"]')?.getAttribute('variant'))
+            .toBe('regular')
+        expect(document.querySelector('.welcome-branding-cog [data-icon="gear"]')?.getAttribute('style'))
+            .toBeNull()
+        expect(document.querySelector('.welcome-branding')?.classList.contains('welcome-branding-cta-visible')).toBe(false)
+        expect(screen.getByLabelText('LGS1920 slogan')).toBeTruthy()
+    })
+
+    it('takes over the static splash branding for its own lifecycle', () => {
+        const splashElement = document.createElement('div')
+        splashElement.id = 'lgs-boot-splash'
+        document.body.append(splashElement)
+
+        const {unmount} = render(<WelcomeBranding/>)
+
+        expect(splashElement.classList.contains('lgs-boot-splash-react-ready')).toBe(true)
+
+        unmount()
+
+        expect(splashElement.classList.contains('lgs-boot-splash-react-ready')).toBe(false)
+        splashElement.remove()
     })
 })

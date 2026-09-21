@@ -8,13 +8,12 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-20
+ * Last modified: 2026-09-21
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { SloganSvg }                                         from '@Components/MainUI/SloganSvg'
 import { WelcomeHeroControls }                               from '@Components/MainUI/WelcomeHeroControls'
 import { WelcomeHeroRoute }                                  from '@Components/MainUI/WelcomeHeroRoute'
 import {
@@ -81,13 +80,6 @@ export const WelcomeHero = ({
         ? currentVideoSource
         : getBannerMediaSource(secondaryVideoChoice)
     const canChangeVideo = videoChoices.length > 1 && Boolean(activeVideoChoice)
-
-    useEffect(() => {
-        const splashElement = document.querySelector('#lgs-boot-splash')
-        splashElement?.classList.add('lgs-boot-splash-react-ready')
-
-        return () => splashElement?.classList.remove('lgs-boot-splash-react-ready')
-    }, [])
 
     useEffect(() => {
         const splashElement = document.querySelector('#lgs-boot-splash')
@@ -280,12 +272,6 @@ export const WelcomeHero = ({
 
             <div className="welcome-hero-shell">
                 <section className="welcome-hero-content" aria-label="LGS1920 Studio launch">
-                    <picture className="welcome-logo">
-                        <source media="(max-width: 700px)" srcSet="/assets/logo/logo-vertical.png"/>
-                        <img src="/assets/logo/logo-horizontal.png" alt="LGS1920 Studio logo"/>
-                    </picture>
-                    <SloganSvg className="welcome-slogan"/>
-
                     <div id="welcome-enter-call-for-action" className="welcome-enter-call-for-action">
                         <WaButton
                             className="welcome-site-button"

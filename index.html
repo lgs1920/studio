@@ -8,7 +8,7 @@
   ~ email: studio@lgs1920.fr
   ~
   ~ Created on: 2026-04-27
-  ~ Last modified: 2026-09-20
+  ~ Last modified: 2026-09-21
   ~
   ~
   ~ Copyright © 2026 LGS1920
@@ -129,6 +129,9 @@
             position: fixed;
             z-index: calc(var(--lgs-toast-zindex, 2147483647) - 3);
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             transition: opacity 450ms ease, visibility 450ms ease;
             pointer-events: none;
             background: #050807;
@@ -193,7 +196,6 @@
             height: auto;
             transform: translate(-50%, -50%);
             filter: drop-shadow(0 0 18px rgba(0, 0, 0, 0.55));
-            transition: opacity 180ms ease;
         }
 
         #lgs-boot-splash-slogan {
@@ -206,12 +208,45 @@
             transform: translateX(-50%);
             color: #f0c800;
             filter: drop-shadow(0 0 14px rgba(0, 0, 0, 0.72));
-            transition: opacity 180ms ease;
+        }
+
+        #lgs-boot-splash .welcome-branding-cog {
+            z-index: 3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.3rem;
+            height: 1.3rem;
+            margin-top: calc(42vh + 3.35rem);
+            color: var(--wa-color-brand);
+        }
+
+        #lgs-boot-splash .welcome-branding-cog > wa-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.3rem;
+            height: 1.3rem;
+            min-width: 1.3rem;
+            min-height: 1.3rem;
+            font-size: 1.3rem;
+            line-height: 1;
+            transform-origin: center center;
+            filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.72));
+            /* Sets the Web Awesome cog rotation duration. */
+            --animation-duration: 3s;
+        }
+
+        #lgs-boot-splash.lgs-boot-splash-react-ready .welcome-branding-cog,
+        #lgs-boot-splash.lgs-boot-splash-cta-ready .welcome-branding-cog {
+            visibility: hidden;
+            opacity: 0;
         }
 
         #lgs-boot-splash.lgs-boot-splash-react-ready #lgs-boot-splash-logo,
         #lgs-boot-splash.lgs-boot-splash-react-ready #lgs-boot-splash-slogan {
             opacity: 0;
+            visibility: hidden;
         }
 
         @media (max-width: 700px) {
@@ -260,6 +295,12 @@
            data-welcome-background-media
            autoplay muted loop playsinline preload="auto">
     </video>
+    <span class="welcome-branding-cog" aria-hidden="true">
+        <wa-icon name="gear"
+                 canvas="auto"
+                 variant="regular"
+                 animation="spin"></wa-icon>
+    </span>
     <img id="lgs-boot-splash-logo" src="/assets/logo/logo-horizontal.png" alt="LGS1920 Studio" decoding="async">
     <svg id="lgs-boot-splash-slogan"
          viewBox="0 0 720 180"

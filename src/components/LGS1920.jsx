@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-20
+ * Last modified: 2026-09-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,6 +27,9 @@ import {
     InitErrorMessage,
 }                       from '@Components/InitErrorMessage'
 import '@shoelace-style/shoelace/dist/themes/light.css'
+import {
+    WelcomeBranding,
+}                       from '@Components/MainUI/WelcomeBranding'
 import {
     WelcomeHero,
 }                       from '@Components/MainUI/WelcomeHero'
@@ -395,11 +398,15 @@ export const LGS1920 = () => {
             {initStatus === true && <AppSurface onReady={markAppSurfaceReady}/>}
 
             {!initError && !appVisible && (
-                <WelcomeHero
-                    initComplete={initStatus === true}
-                    appReady={appReady}
-                    onEnter={revealApp}
-                />
+                <>
+                    <WelcomeBranding/>
+                    <WelcomeHero
+                        initComplete={initStatus === true}
+                        appReady={appReady}
+                        onEnter={revealApp}
+                        showMedia={false}
+                    />
+                </>
             )}
 
         </>

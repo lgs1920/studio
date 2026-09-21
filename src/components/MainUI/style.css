@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-20
+ * Last modified: 2026-09-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -753,8 +753,7 @@ body.mobile .orbit-widget-body {
     --hero-route-path-color: var(--wa-color-brand-60);
     --hero-route-glow-color: var(--wa-color-brand);
     --hero-route-poi-color: rgb(103, 165, 13);
-    --welcome-logo-top: 42%;
-    --welcome-slogan-offset: 4.3rem;
+    --welcome-content-top: 42%;
     --welcome-cta-offset: 12rem;
     --welcome-status-offset: 15.5rem;
     inset: 0;
@@ -783,6 +782,77 @@ body.mobile .orbit-widget-body {
     line-height: 1.2;
     text-align: right;
     text-shadow: 0 1px .35rem rgba(0, 0, 0, .68);
+}
+
+.welcome-branding {
+    position: fixed;
+    z-index: calc(var(--lgs-toast-zindex) - 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+    inset: 0;
+}
+
+.welcome-branding-logo {
+    position: absolute;
+    top: 42%;
+    left: 50%;
+    display: block;
+    width: min(220px, calc(100vw - 2rem));
+    margin: 0;
+    transform: translate(-50%, -50%);
+    filter: drop-shadow(0 0 18px rgba(0, 0, 0, .55));
+}
+
+.welcome-branding-logo img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.welcome-branding-slogan {
+    position: absolute;
+    top: calc(42% + 4.3rem);
+    left: 50%;
+    display: block;
+    width: min(28rem, calc(100vw - 2rem));
+    height: auto;
+    transform: translateX(-50%);
+    color: #f0c800;
+    filter: drop-shadow(0 0 14px rgba(0, 0, 0, .72));
+}
+
+.welcome-branding-cog {
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.3rem;
+    height: 1.3rem;
+    margin-top: calc(42vh + 3.35rem);
+    color: var(--wa-color-brand);
+}
+
+.welcome-branding-cog > wa-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.3rem;
+    height: 1.3rem;
+    min-width: 1.3rem;
+    min-height: 1.3rem;
+    font-size: 1.3rem;
+    line-height: 1;
+    transform-origin: center center;
+    filter: drop-shadow(0 0 10px rgba(0, 0, 0, .72));
+    /* Sets the Web Awesome cog rotation duration. */
+    --animation-duration: 3s;
+}
+
+#lgs-boot-splash.lgs-boot-splash-cta-ready ~ #lgs1920-container .welcome-branding-cog {
+    visibility: hidden;
+    opacity: 0;
 }
 
 .welcome-hero-media-credit {
@@ -1038,38 +1108,9 @@ body.mobile .orbit-widget-body {
     inset: 0;
 }
 
-.welcome-hero-content .welcome-logo {
-    position: absolute;
-    top: var(--welcome-logo-top);
-    left: 50%;
-    display: block;
-    width: min(220px, calc(100vw - 2rem)) !important;
-    margin: 0;
-    transform: translate(-50%, -50%);
-}
-
-.welcome-hero-content .welcome-logo img {
-    display: block;
-    width: 100%;
-    height: auto;
-}
-
-.welcome-hero-content .welcome-slogan {
-    position: absolute;
-    top: calc(var(--welcome-logo-top) + var(--welcome-slogan-offset));
-    left: 50%;
-    display: block;
-    width: min(28rem, calc(100vw - 2rem));
-    height: auto;
-    margin: 0;
-    transform: translateX(-50%);
-    color: #f0c800;
-    filter: drop-shadow(0 0 14px rgba(0, 0, 0, .72));
-}
-
 .welcome-enter-call-for-action {
     position: absolute;
-    top: calc(var(--welcome-logo-top) + var(--welcome-cta-offset));
+    top: calc(var(--welcome-content-top) + var(--welcome-cta-offset));
     left: 50%;
     display: flex;
     flex-wrap: wrap;
@@ -1077,6 +1118,18 @@ body.mobile .orbit-widget-body {
     width: min(28rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
     transform: translateX(-50%);
     gap: var(--lgs-gutter-s);
+    animation: welcome-cta-appear 420ms cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes welcome-cta-appear {
+    from {
+        transform: translate(-50%, .55rem) scale(.98);
+    }
+
+    to {
+        transform: translate(-50%, 0) scale(1);
+        opacity: 1;
+    }
 }
 
 .welcome-enter-call-for-action wa-button::part(base) {
@@ -1101,7 +1154,7 @@ body.mobile .orbit-widget-body {
 
 .welcome-initialization-callout {
     position: absolute;
-    top: calc(var(--welcome-logo-top) + var(--welcome-status-offset));
+    top: calc(var(--welcome-content-top) + var(--welcome-status-offset));
     left: 50%;
     width: min(28rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
     margin: 0;
@@ -1120,17 +1173,25 @@ body.mobile .orbit-widget-body {
     }
 
     #welcome-hero {
-        --welcome-slogan-offset: 3.4rem;
         --welcome-cta-offset: 8.8rem;
         --welcome-status-offset: 12.5rem;
     }
 
-    .welcome-hero-content .welcome-logo {
-        width: min(150px, calc(100vw - 2rem)) !important;
+    .welcome-branding-logo {
+        width: min(150px, calc(100vw - 2rem));
     }
 
-    .welcome-hero-content .welcome-slogan {
+    .welcome-branding-slogan {
+        top: calc(42% + 3.4rem);
         max-width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .welcome-enter-call-for-action {
+        animation: none;
+        opacity: 1;
+        transform: translateX(-50%);
     }
 }
 
