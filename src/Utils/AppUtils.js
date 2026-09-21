@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,6 +29,33 @@ import { EventEmitter }             from '../assets/libs/EventEmitter/EventEmitt
 import { CountApi }                  from './CountApi'
 import { IonLayerUtils }             from './cesium/IonLayerUtils'
 import {registerLGS1920IconLibrary} from './LGS1920IconLibrary'
+
+/**
+ * Parse a JSON resource and preserve HTTP failures as actionable errors.
+ *
+ * @param {Response|Object} response - Fetch response to parse.
+ * @param {string} resource - Resource name used in the diagnostic message.
+ * @returns {Promise<Object>} Parsed JSON payload.
+ * @throws {Error} When the resource is unavailable or contains invalid JSON.
+ */
+const parseJsonResource = async (response, resource) => {
+    if (response?.ok === false) {
+        const status = [response.status, response.statusText].filter(Boolean).join(' ')
+        const error = new Error(`Unable to load ${resource}${status ? ` (${status})` : ''}`)
+        error.code = 'JSON_RESOURCE_UNAVAILABLE'
+        throw error
+    }
+
+    try {
+        return await response.json()
+    }
+    catch (cause) {
+        const error = new Error(`Invalid JSON response from ${resource}`)
+        error.code = 'INVALID_JSON_RESPONSE'
+        error.cause = cause
+        throw error
+    }
+}
 
 export class AppUtils {
     static THEME_STORAGE_KEY = 'theme'
@@ -263,7 +290,7 @@ export class AppUtils {
 
         // Resolve the backend endpoint before loading the remaining application services.
         lgs.servers = await fetch(SERVERS, {cache: 'no-store'}).then(
-            res => res.json(),
+            response => parseJsonResource(response, SERVERS),
         )
         lgs.platform = lgs.servers.platform
         lgs.BACKEND_API = `${lgs.servers.studio.proxy}${lgs.servers.backend.protocol}://${lgs.servers.backend.domain}:${lgs.servers.backend.port}`
@@ -354,7 +381,7 @@ export class AppUtils {
             )
 
         lgs.build = await fetch(BUILD, {cache: 'no-store'}).then(
-            res => res.json(),
+            response => parseJsonResource(response, BUILD),
         )
 
         lgs.createDB()
