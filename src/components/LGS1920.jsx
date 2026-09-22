@@ -374,7 +374,7 @@ export const LGS1920 = () => {
     }, [appReady])
 
     useEffect(() => {
-        if (deferredJourneyDataStarted.current || initStatus !== true || !initialFocusReady || !appVisible) {
+        if (deferredJourneyDataStarted.current || !appReady) {
             return
         }
 
@@ -386,7 +386,7 @@ export const LGS1920 = () => {
                               text:    error.message,
                           })
         })
-    }, [appVisible, initStatus, initialFocusReady, initializeDeferredJourneyData])
+    }, [appReady, initializeDeferredJourneyData])
 
     return (
         <>

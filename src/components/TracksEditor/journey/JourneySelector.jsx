@@ -28,8 +28,6 @@ import { TrackStylePreview }                                              from '
 
 const GROUPS_EXPANDED_KEY = 'lgs1920-journey-selector-groups-expanded'
 
-const STARTUP_TRACE_ENABLED = true
-
 const naturalSortJourneys = (a, b) =>
     a.title.localeCompare(b.title, undefined, {numeric: true, sensitivity: 'base'})
 
@@ -179,14 +177,6 @@ export const JourneySelector = memo(({
     const shouldRenderSelect = allowEmptyOption || journeys.length > 1
 
     const handleChange = useCallback(event => {
-        if (STARTUP_TRACE_ENABLED) {
-            console.log('[StartupTrace] journey-selector-change', {
-                at:       performance.now(),
-                disabled,
-                value:    event.target.value,
-                journeys: journeys.length,
-            })
-        }
         if (syncEditorSelection && event.target.value) {
             $journeyEditor.theJourney = event.target.value
         }
@@ -198,29 +188,11 @@ export const JourneySelector = memo(({
     const handleTreeSelection = useCallback(event => {
         const selectedItem = event.detail.selection[0]
         if (!selectedItem) {
-            if (STARTUP_TRACE_ENABLED) {
-                console.log('[StartupTrace] journey-selector-tree-empty-selection', {
-                    at: performance.now(),
-                })
-            }
             return
         }
         const slug = selectedItem.dataset.slug
         if (!slug) {
-            if (STARTUP_TRACE_ENABLED) {
-                console.log('[StartupTrace] journey-selector-tree-selection-without-slug', {
-                    at: performance.now(),
-                })
-            }
             return
-        }
-        if (STARTUP_TRACE_ENABLED) {
-            console.log('[StartupTrace] journey-selector-tree-selection', {
-                at:       performance.now(),
-                disabled,
-                journeys: journeys.length,
-                slug,
-            })
         }
         setTreeOpen(false)
         if (syncEditorSelection) {
@@ -248,15 +220,6 @@ export const JourneySelector = memo(({
     }, [])
 
     const handleToggleTree = useCallback(() => {
-        if (STARTUP_TRACE_ENABLED) {
-            console.log('[StartupTrace] journey-selector-toggle-tree', {
-                at:       performance.now(),
-                disabled,
-                journeys: journeys.length,
-                nextOpen: !treeOpen,
-                treeOpen,
-            })
-        }
         if (disabled) {
             return
         }

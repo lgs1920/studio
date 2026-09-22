@@ -21,11 +21,10 @@ import {
 import {Journey} from '@Core/Journey'
 import {MapPOI} from '@Core/MapPOI'
 import {Track} from '@Core/Track'
+import {getGlobalHideOtherJourneys} from '@Core/ui/JourneyVisibility'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
 import {markStartup, measureStartup} from './startupTelemetry'
 import {StartupWorkerClient, yieldStartupIdleTask, yieldStartupTask} from './StartupWorkerClient'
-
-const STARTUP_TRACE_ENABLED = () => globalThis.lgs?.stores?.main?.readyForTheShow === true
 
 const appendGeometry = (geometry, packet) => {
     if (packet.geometry) {
@@ -77,25 +76,22 @@ const yieldSecondaryJourneyRender = () => {
 const hasPendingUserInput = () => globalThis.navigator?.scheduling?.isInputPending?.({includeContinuous: true}) === true
 
 /**
- * Hydrate the primary journey first, then feed each journey through its own
- * worker while acknowledged packets keep main-thread work bounded.
+ * Hydrate the primary journey first, then reuse one worker for the remaining
+ * journey queue while acknowledged packets keep main-thread work bounded.
  */
 export class StartupDataLoader {
     #client
-    #clientWasInjected = false
     #database
     #loadedJourneySlugs = new Set()
     #activeJourneyCompletion = Promise.resolve()
     #deferredTrackQueue = []
     #deferredTrackDrainPromise = null
-    #journeyClients = new Set()
     #currentPOIsReady = false
 
     constructor(database, client) {
         this.#database = database
         if (client !== undefined) {
             this.#client = client
-            this.#clientWasInjected = true
             return
         }
 
@@ -113,57 +109,6 @@ export class StartupDataLoader {
         }
     }
 
-    #createJourneyClient = () => {
-        if (this.#clientWasInjected) {
-            if (STARTUP_TRACE_ENABLED()) {
-                console.log('[StartupTrace] journey-worker reuse injected client', {
-                    at: performance.now(),
-                })
-            }
-            return this.#client
-        }
-
-        if (typeof Worker !== 'function') {
-            if (STARTUP_TRACE_ENABLED()) {
-                console.log('[StartupTrace] journey-worker unavailable, no Worker global', {
-                    at: performance.now(),
-                })
-            }
-            return this.#client
-        }
-
-        try {
-            const client = new StartupWorkerClient()
-            this.#journeyClients.add(client)
-            if (STARTUP_TRACE_ENABLED()) {
-                console.log('[StartupTrace] journey-worker created', {
-                    activeJourneyWorkers: this.#journeyClients.size,
-                    at:                   performance.now(),
-                })
-            }
-            return client
-        }
-        catch (error) {
-            console.warn('[StartupDataLoader] Journey worker unavailable, using the shared startup worker:', error)
-            return this.#client
-        }
-    }
-
-    #releaseJourneyClient = client => {
-        if (!client || client === this.#client || this.#clientWasInjected) {
-            return
-        }
-
-        this.#journeyClients.delete(client)
-        if (STARTUP_TRACE_ENABLED()) {
-            console.log('[StartupTrace] journey-worker released', {
-                activeJourneyWorkers: this.#journeyClients.size,
-                at:                   performance.now(),
-            })
-        }
-        client.dispose?.()
-    }
-
     #requestFromWorker = async (request, consume, client = this.#client) => {
         if (!client) {
             throw new Error('Startup data worker is unavailable')
@@ -174,7 +119,7 @@ export class StartupDataLoader {
         }
         catch (error) {
             client.dispose?.(error)
-            if (client === this.#client && !this.#clientWasInjected) {
+            if (client === this.#client) {
                 this.#client = null
             }
             throw error
@@ -186,17 +131,7 @@ export class StartupDataLoader {
     }
 
     #waitForActiveJourney = async () => {
-        if (STARTUP_TRACE_ENABLED()) {
-            console.log('[StartupTrace] wait-primary-start', {
-                at: performance.now(),
-            })
-        }
         await this.#activeJourneyCompletion
-        if (STARTUP_TRACE_ENABLED()) {
-            console.log('[StartupTrace] wait-primary-end', {
-                at: performance.now(),
-            })
-        }
     }
 
     #installPOIs = items => {
@@ -212,107 +147,45 @@ export class StartupDataLoader {
     }
 
     #enqueueDeferredTrack = (journey, track, source) => {
-        if (journey?.visible === false || track?.visible === false || !source) {
-            if (STARTUP_TRACE_ENABLED()) {
-                console.log('[StartupTrace] deferred-track-skip-enqueue', {
-                    at:      performance.now(),
-                    journey: journey?.slug,
-                    source:  Boolean(source),
-                    track:   track?.slug,
-                })
-            }
+        if (track?.visible === false || !source) {
             return
         }
 
         source.__lgsStartupDeferredTrack = true
         source.show = false
         this.#deferredTrackQueue.push({journey, source, track})
-        if (STARTUP_TRACE_ENABLED()) {
-            console.log('[StartupTrace] deferred-track-enqueue', {
-                at:          performance.now(),
-                journey:     journey.slug,
-                queueLength: this.#deferredTrackQueue.length,
-                track:       track.slug,
-            })
-        }
+        void this.#drainDeferredTracks().catch(error => {
+            console.warn('[StartupDataLoader] Deferred journey render failed:', error)
+        })
     }
 
     #drainDeferredTracks = async () => {
         if (this.#deferredTrackDrainPromise) {
-            if (STARTUP_TRACE_ENABLED()) {
-                console.log('[StartupTrace] deferred-render-join-existing-drain', {
-                    at:          performance.now(),
-                    queueLength: this.#deferredTrackQueue.length,
-                })
-            }
             return this.#deferredTrackDrainPromise
         }
 
         this.#deferredTrackDrainPromise = (async () => {
-            if (STARTUP_TRACE_ENABLED()) {
-                console.log('[StartupTrace] deferred-render-drain-start', {
-                    at:          performance.now(),
-                    queueLength: this.#deferredTrackQueue.length,
-                })
-            }
             while (this.#deferredTrackQueue.length > 0) {
                 const item = this.#deferredTrackQueue.shift()
                 await yieldSecondaryJourneyRender()
 
                 if (hasPendingUserInput()) {
-                    if (STARTUP_TRACE_ENABLED()) {
-                        console.log('[StartupTrace] deferred-render-yield-user-input', {
-                            at:          performance.now(),
-                            journey:     item.journey.slug,
-                            queueLength: this.#deferredTrackQueue.length + 1,
-                            track:       item.track.slug,
-                        })
-                    }
                     this.#deferredTrackQueue.unshift(item)
                     continue
                 }
 
-                if (item.journey.visible === false || item.track.visible === false) {
+                if (item.track.visible === false) {
                     item.source.__lgsStartupDeferredTrack = false
-                    if (STARTUP_TRACE_ENABLED()) {
-                        console.log('[StartupTrace] deferred-render-skip-hidden', {
-                            at:      performance.now(),
-                            journey: item.journey.slug,
-                            track:   item.track.slug,
-                        })
-                    }
                     continue
-                }
-
-                const drawStart = performance.now()
-                if (STARTUP_TRACE_ENABLED()) {
-                    console.log('[StartupTrace] deferred-render-draw-start', {
-                        at:          drawStart,
-                        journey:     item.journey.slug,
-                        queueLength: this.#deferredTrackQueue.length,
-                        track:       item.track.slug,
-                    })
                 }
                 await TrackUtils.draw(item.track, {
                     action:       DRAWING_FROM_DB,
-                    forcedToHide: false,
+                    forcedToHide: item.journey.visible === false
+                                  || (getGlobalHideOtherJourneys() && item.journey.slug !== lgs.theJourney?.slug),
                     renderMode:   'primitive',
                 })
-                if (STARTUP_TRACE_ENABLED()) {
-                    console.log('[StartupTrace] deferred-render-draw-end', {
-                        at:       performance.now(),
-                        duration: performance.now() - drawStart,
-                        journey:  item.journey.slug,
-                        track:    item.track.slug,
-                    })
-                }
                 item.source.__lgsStartupDeferredTrack = false
                 await yieldStartupTask()
-            }
-            if (STARTUP_TRACE_ENABLED()) {
-                console.log('[StartupTrace] deferred-render-drain-end', {
-                    at: performance.now(),
-                })
             }
         })().finally(() => {
             this.#deferredTrackDrainPromise = null
@@ -322,37 +195,11 @@ export class StartupDataLoader {
     }
 
     loadJourney = async (key, {current = false, currentTrackKey = null} = {}) => {
-        const loadStart = performance.now()
-        if (STARTUP_TRACE_ENABLED()) {
-            console.log('[StartupTrace] journey-load-start', {
-                at:              loadStart,
-                current,
-                currentTrackKey,
-                key,
-            })
-        }
         if (!key || this.#loadedJourneySlugs.has(key)) {
-            if (STARTUP_TRACE_ENABLED()) {
-                console.log('[StartupTrace] journey-load-skip-existing', {
-                    at:      performance.now(),
-                    current,
-                    key,
-                    loaded:  this.#loadedJourneySlugs.has(key),
-                    present: Boolean(lgs.getJourneyBySlug?.(key)),
-                })
-            }
             return lgs.getJourneyBySlug?.(key) ?? null
         }
 
-        const journeyClient = this.#createJourneyClient()
-        if (!journeyClient) {
-            if (STARTUP_TRACE_ENABLED()) {
-                console.log('[StartupTrace] journey-load-legacy-no-client', {
-                    at:      performance.now(),
-                    current,
-                    key,
-                })
-            }
+        if (!this.#client) {
             return current ? TrackUtils.readCurrentFromDB({alreadyDrawn: false}) : null
         }
 
@@ -385,15 +232,6 @@ export class StartupDataLoader {
         }
 
         const installTrack = async track => {
-            const installStart = performance.now()
-            if (STARTUP_TRACE_ENABLED()) {
-                console.log('[StartupTrace] track-install-start', {
-                    at:      installStart,
-                    current,
-                    journey: journey?.slug,
-                    track:   track.slug,
-                })
-            }
             journey.globalSettings()
             await ensureJourneyDataSource()
             if (!lgs.viewer.dataSources.getByName(track.slug)[0]) {
@@ -408,27 +246,11 @@ export class StartupDataLoader {
             }
 
             if (current && isPrimaryTrack) {
-                const primaryDrawStart = performance.now()
-                if (STARTUP_TRACE_ENABLED()) {
-                    console.log('[StartupTrace] primary-track-draw-start', {
-                        at:      primaryDrawStart,
-                        journey: journey.slug,
-                        track:   track.slug,
-                    })
-                }
                 await TrackUtils.draw(track, {
                     action:       DRAWING_FROM_DB,
                     forcedToHide: journey.visible === false,
                     renderMode:   'primitive',
                 })
-                if (STARTUP_TRACE_ENABLED()) {
-                    console.log('[StartupTrace] primary-track-draw-end', {
-                        at:       performance.now(),
-                        duration: performance.now() - primaryDrawStart,
-                        journey:  journey.slug,
-                        track:    track.slug,
-                    })
-                }
             }
             else {
                 const source = lgs.viewer.dataSources.getByName(track.slug)[0]
@@ -444,15 +266,6 @@ export class StartupDataLoader {
                 })
                 measureStartup('current-track', 'current-journey-init-start', 'current-track-drawn')
             }
-            if (STARTUP_TRACE_ENABLED()) {
-                console.log('[StartupTrace] track-install-end', {
-                    at:       performance.now(),
-                    current,
-                    duration: performance.now() - installStart,
-                    journey:  journey.slug,
-                    track:    track.slug,
-                })
-            }
         }
 
         const completion = this.#requestFromWorker({
@@ -466,15 +279,6 @@ export class StartupDataLoader {
             starterType: POI_STARTER_TYPE,
             type:        'journey',
         }, async packet => {
-            if (STARTUP_TRACE_ENABLED() && packet.type !== 'geometry') {
-                console.log('[StartupTrace] journey-worker-packet', {
-                    at:      performance.now(),
-                    current,
-                    journey: journey?.slug ?? key,
-                    packet:  packet.type,
-                    track:   packet.key ?? trackKey,
-                })
-            }
             if (packet.type === 'journey') {
                 journey = Journey.deserialize({object: {...packet.data, tracks: [{__type: 'Map'}]}, reset: true})
                 journey.cameraOrigin = journey.camera
@@ -537,16 +341,7 @@ export class StartupDataLoader {
                 measureStartup('current-primary', 'current-journey-init-start', 'current-primary-ready')
                 firstTrackResolve(journey)
             }
-        }, journeyClient).finally(() => {
-            if (STARTUP_TRACE_ENABLED()) {
-                console.log('[StartupTrace] journey-worker-completion-finally', {
-                    at:       performance.now(),
-                    current,
-                    duration: performance.now() - loadStart,
-                    journey:  journey?.slug ?? key,
-                })
-            }
-            this.#releaseJourneyClient(journeyClient)
+        }).finally(() => {
         })
 
         if (current) {
@@ -583,29 +378,17 @@ export class StartupDataLoader {
             TrackUtils.setProfileVisibility(journey)
         }
 
-        journey.updateVisibility(current ? journey.visible !== false : false)
+        const isCurrentJourney = current || journey.slug === lgs.theJourney?.slug
+        const journeyVisible = journey.visible !== false
+                               && (!getGlobalHideOtherJourneys() || isCurrentJourney)
+        journey.updateVisibility(journeyVisible)
         this.#loadedJourneySlugs.add(journey.slug)
         await yieldStartupTask()
-        if (STARTUP_TRACE_ENABLED()) {
-            console.log('[StartupTrace] journey-load-end', {
-                at:       performance.now(),
-                current,
-                duration: performance.now() - loadStart,
-                journey:  journey.slug,
-                tracks:   journey.tracks?.size,
-            })
-        }
         return journey
     }
 
     loadCurrentJourney = async () => {
         const key = await lgs.db.lgs1920.get(CURRENT_JOURNEY, CURRENT_STORE)
-        if (STARTUP_TRACE_ENABLED()) {
-            console.log('[StartupTrace] current-journey-key', {
-                at:  performance.now(),
-                key,
-            })
-        }
         if (!key || !this.#client) {
             this.#currentPOIsReady = false
             return TrackUtils.readCurrentFromDB()
@@ -629,25 +412,12 @@ export class StartupDataLoader {
     }
 
     loadRemainingJourneys = async () => {
-        const remainingStart = performance.now()
-        if (STARTUP_TRACE_ENABLED()) {
-            console.log('[StartupTrace] remaining-journeys-start', {
-                at: performance.now(),
-            })
-        }
         lgs.stores.main.journeysReady = false
         try {
             await this.#waitForActiveJourney()
             if (!this.#client) {
                 const journeys = TrackUtils.readRemainingFromDB()
                 lgs.stores.main.journeysReady = true
-                if (STARTUP_TRACE_ENABLED()) {
-                    console.log('[StartupTrace] remaining-journeys-legacy-no-client', {
-                        at:       performance.now(),
-                        duration: performance.now() - remainingStart,
-                        loaded:   journeys?.length ?? 0,
-                    })
-                }
                 return journeys
             }
             let keys = []
@@ -661,62 +431,26 @@ export class StartupDataLoader {
                 keys = packet.keys ?? []
             })
             const pendingKeys = keys.filter(key => !this.#loadedJourneySlugs.has(key) && !lgs.journeys.has(key))
-            if (STARTUP_TRACE_ENABLED()) {
-                console.log('[StartupTrace] remaining-journeys-keys', {
-                    at:      performance.now(),
-                    keys,
-                    pending: pendingKeys,
-                })
-            }
-            const results = await Promise.allSettled(pendingKeys.map(async key => {
-                if (STARTUP_TRACE_ENABLED()) {
-                    console.log('[StartupTrace] remaining-journey-task-start', {
-                        at:  performance.now(),
-                        key,
-                    })
-                }
+            const journeys = []
+            for (const key of pendingKeys) {
                 await yieldStartupIdleTask()
                 const journey = await this.loadJourney(key)
                 await this.#drainDeferredTracks().catch(error => {
                     console.warn('[StartupDataLoader] Deferred journey render failed:', error)
                 })
                 await yieldStartupTask()
-                if (STARTUP_TRACE_ENABLED()) {
-                    console.log('[StartupTrace] remaining-journey-task-end', {
-                        at:      performance.now(),
-                        journey: journey?.slug,
-                        key,
-                    })
+                if (journey) {
+                    journeys.push(journey)
                 }
-                return journey
-            }))
-            const failedJourney = results.find(result => result.status === 'rejected')
-            if (failedJourney) {
-                throw failedJourney.reason
             }
 
             lgs.stores.main.journeysReady = true
-            if (STARTUP_TRACE_ENABLED()) {
-                console.log('[StartupTrace] remaining-journeys-ready', {
-                    at:       performance.now(),
-                    duration: performance.now() - remainingStart,
-                    loaded:   results.filter(result => result.status === 'fulfilled' && result.value).length,
-                    rejected: results.filter(result => result.status === 'rejected').length,
-                })
-            }
-            return results.map(result => result.value).filter(Boolean)
+            return journeys
         }
         catch (error) {
             console.warn('[StartupDataLoader] Remaining journey worker load failed, using the legacy loader:', error)
             const journeys = TrackUtils.readRemainingFromDB()
             lgs.stores.main.journeysReady = true
-            if (STARTUP_TRACE_ENABLED()) {
-                console.log('[StartupTrace] remaining-journeys-fallback-ready', {
-                    at:       performance.now(),
-                    duration: performance.now() - remainingStart,
-                    loaded:   journeys?.length ?? 0,
-                })
-            }
             return journeys
         }
     }
@@ -770,7 +504,5 @@ export class StartupDataLoader {
 
     dispose = () => {
         this.#client?.dispose()
-        this.#journeyClients.forEach(client => client.dispose?.())
-        this.#journeyClients.clear()
     }
 }

@@ -33,8 +33,6 @@ import {
 import { useEffect, useRef, useState } from 'react'
 import { useSnapshot }                                               from 'valtio'
 
-const STARTUP_TRACE_ENABLED = true
-
 /**
  * A toolbar component for managing journey-related actions, such as selecting journeys, toggling visibility, focusing,
  * rotating, and dragging the toolbar.
@@ -75,22 +73,6 @@ export const JourneyToolbar = (props) => {
     const [isDragging, setIsDragging] = useState(false)
 
     useEffect(() => {
-        if (!STARTUP_TRACE_ENABLED) {
-            return
-        }
-
-        console.log('[StartupTrace] journey-toolbar-state', {
-            at:                   performance.now(),
-            journeyCount:         journeyEditor.list.length,
-            journeySelectionDisabled,
-            journeysReady,
-            missingJourneys:      typeof lgs.getJourneyBySlug === 'function'
-                                  ? journeyEditor.list.filter(slug => !lgs.getJourneyBySlug(slug))
-                                  : [],
-        })
-    }, [journeyEditor.list, journeySelectionDisabled, journeysReady])
-
-    useEffect(() => {
         const syncVisibility = () => {
             setJourneyToolbarTemporarilyHidden(__.ui.replay?.isJourneyToolbarTemporarilyHidden?.() === true)
         }
@@ -115,28 +97,9 @@ export const JourneyToolbar = (props) => {
      */
     const newJourneySelection = async (event) => {
         if (journeySelectionDisabled) {
-            if (STARTUP_TRACE_ENABLED) {
-                console.log('[StartupTrace] journey-toolbar-selection-blocked', {
-                    at:              performance.now(),
-                    journeysReady,
-                    requestedJourney: event.target.value,
-                })
-            }
             return
         }
-        if (STARTUP_TRACE_ENABLED) {
-            console.log('[StartupTrace] journey-toolbar-selection-start', {
-                at:              performance.now(),
-                requestedJourney: event.target.value,
-            })
-        }
         await Utils.updateJourneyEditor(event.target.value, {})
-        if (STARTUP_TRACE_ENABLED) {
-            console.log('[StartupTrace] journey-toolbar-selection-end', {
-                at:              performance.now(),
-                requestedJourney: event.target.value,
-            })
-        }
     }
 
     /**
