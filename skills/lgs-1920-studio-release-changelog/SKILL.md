@@ -22,10 +22,12 @@ authoritative where it conflicts.
 2. Determine the exact target version and the previous release boundary from
    verified repository evidence. Do not invent versions, references, dates,
    issue numbers, release membership, or user-facing outcomes.
-3. Group the complete closed-issue dataset by owning application and delivered
-   area. Derive the proposed major improvements from the areas with the most
-   completed work, then order them by volume and user-visible impact. Do not
-   elevate isolated minor fixes over larger delivered areas.
+3. Compare the complete closed-issue dataset with the previous release and
+   group related work by the product-level transformation it delivers. Derive
+   concise major improvements from those outcomes, ordered by user impact.
+   Consolidate implementation details under their broader result: Timeline
+   work, for example, supports a video-creation overhaul when that is the
+   delivered change.
 4. Present the proposed release scope, major-improvement text, and complete
    closed-issue list to the user. Wait for explicit validation before creating,
    renaming, or editing any changelog file.
