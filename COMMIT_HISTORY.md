@@ -2729,3 +2729,39 @@
 
 - # Conflicts:
 - #	COMMIT_HISTORY.md
+
+## 2026-09-22 — [`docs: refine release changelog rules`](https://github.com/lgs1920/studio/commit/4e9ae6632725d28a9ca96833401ff5c30b9eeea9)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`docs(changelog): require proposal validation`](https://github.com/lgs1920/studio/commit/50a2482e099257ce4ee9b77c5b9bfbc6d5d26f33)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`docs: prioritize changelog outcomes`](https://github.com/lgs1920/studio/commit/71906579389ab38079bea1ddfb5cfbb3a15d48b9)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`docs(changelog): group work by product outcome`](https://github.com/lgs1920/studio/commit/42e2eb3033b76799e49ca662dd034c1ee958829f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`docs(changelog): update 1.0.0 release draft`](https://github.com/lgs1920/studio/commit/5cf437eb2e23cc503d2f05a3d6e1acc2788e004e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`docs: cap changelog issue lists`](https://github.com/lgs1920/studio/commit/8f0b2bb265c09af8290273315fa2c97373f9d4e8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`docs(changelog): cap displayed closed issues`](https://github.com/lgs1920/studio/commit/758e78c2b23b68439595d61e95dcd8bfcbe7a120)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`docs(changelog): shorten 1.0.0 issue lists`](https://github.com/lgs1920/studio/commit/20e4192c2d781b0138adad8042a5b87219e28596)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/da39ce5654dec9a39f753236fad8fb4ef6cea7fe)
+
+- Recorded automatically from Git history.
