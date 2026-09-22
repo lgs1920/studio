@@ -271,7 +271,7 @@ const isPointInCurrentView = point => {
     return Rectangle.contains(visibleRectangle, Cartographic.fromDegrees(longitude, latitude))
 }
 
-export const TrackData = memo(() => {
+export const TrackData = memo(({compactAfterProfile = false, showWidgetControls = true}) => {
     const _rootRef = useRef(null)
     const _statsPoiIds = useRef([])
     const [copyValue, setCopyValue] = useState('')
@@ -788,21 +788,27 @@ export const TrackData = memo(() => {
     }
 
     return (
-        <div ref={_rootRef} className="track-data-container">
-            <div className="journey-profile-chart-menu">
-                <WaSwitch
-                    size="xs"
-                    label-at-start
-                    width-auto
-                    checked={journeyStats.show}
-                    onChange={toggleStatsWidget}
-                >
-                    {'Add Data widget on scene'}
-                </WaSwitch>
+        <div ref={_rootRef} className={`track-data-container${compactAfterProfile ? ' is-compact-after-profile' : ''}`}>
+            <div className="journey-profile-chart-menu track-data-header">
+                <h3 className="track-data-title">
+                    <WaIcon name="chart-line" variant="regular"/>
+                    <span>{'Insights'}</span>
+                </h3>
+                {showWidgetControls && (
+                    <WaSwitch
+                        size="xs"
+                        label-at-start
+                        width-auto
+                        checked={journeyStats.show}
+                        onChange={toggleStatsWidget}
+                    >
+                        {'Add Data widget on scene'}
+                    </WaSwitch>
+                )}
 
                 {lgs.theJourney.hasOneTrack() && (
                     <>
-                        {journeyStats.show &&
+                        {showWidgetControls && journeyStats.show &&
                             <>
                                 <WaTooltip for="edit-stats-widget-in-settings">{'Edit widget'}</WaTooltip>
                                 <WaButton
@@ -815,15 +821,17 @@ export const TrackData = memo(() => {
                             </>
                         }
 
-                        <WaCopyButton
-                            onWaCopy={handleCopySuccess}
-                            value={copyValue}
-                            copyLabel={'Copy data'}
-                            success-label={'Copied!'}
-                            variant="brand"
-                            size="s"
-                            appearance="plain"
-                        />
+                        <div className="track-data-copy-action">
+                            <WaCopyButton
+                                onWaCopy={handleCopySuccess}
+                                value={copyValue}
+                                copyLabel={'Copy data'}
+                                success-label={'Copied!'}
+                                variant="brand"
+                                size="s"
+                                appearance="plain"
+                            />
+                        </div>
                     </>
                 )
                 }

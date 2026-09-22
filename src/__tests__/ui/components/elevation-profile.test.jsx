@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-14
- * Last modified: 2026-06-14
+ * Created on: 2026-06-15
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -160,5 +160,20 @@ describe('ElevationProfile', () => {
             expect(screen.getByTestId('profile-chart')).not.toBeNull()
             expect(screen.getByTestId('profile-chart').dataset.hasData).toBe('true')
         })
+    })
+
+    it('keeps elevation controls while hiding Profile widget controls on request', async () => {
+        render(<ElevationProfile
+            default="file-content"
+            label="Elevation Source:"
+            servers={[{id: 'file-content', label: 'File', icon: 'chart'}]}
+            showWidgetControls={false}
+        />)
+
+        await waitFor(() => expect(screen.getByTestId('profile-chart')).not.toBeNull())
+
+        expect(screen.getByTestId('select')).not.toBeNull()
+        expect(screen.queryByText('Add Profile widget on scene')).toBeNull()
+        expect(screen.queryByRole('button', {name: /edit widget/i})).toBeNull()
     })
 })

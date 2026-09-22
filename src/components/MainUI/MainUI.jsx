@@ -31,7 +31,6 @@ import { EditorPanelButton } from '@Editor/EditorPanelButton'
 import { VideoButton }       from '@Components/MainUI/video/VideoButton'
 import { VideoDownloadAndShareDialog } from '@Components/MainUI/video/VideoDownloadAndShareDialog'
 import { ReplayRecordingMonitorWidget } from '@Components/MainUI/video/ReplayRecordingMonitorWidget'
-import { TextButton }        from '@Components/Text/TextButton'
 import { TracksEditor }                         from '@Components/TracksEditor/TracksEditor'
 import { JourneyGroupsDrawer }                  from '@Editor/groups/JourneyGroupsDrawer'
 import { JourneyReplayButton }         from '@Components/JourneyReplay/JourneyReplayButton'
@@ -259,7 +258,6 @@ export const MainUI = memo(() => {
                                     <POIEditButton tooltip={tooltipDir}/>
                                     <EditorPanelButton tooltip={tooltipDir}/>
                                     {/* <ProfileButton tooltip={tooltipDir}/> */}
-                                    <TextButton tooltip={tooltipDir}/>
                                     <InformationButton tooltip={tooltipDir}/>
                                     <SupportUIButton tooltip={tooltipDir}/>
                                 </div>

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-14
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,8 +20,8 @@ import { proxy } from 'valtio'
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => {
     const Stub = ({children, ...props}) => <div {...props}>{children}</div>
-    return new Proxy({default: Stub}, {
-        get: () => Stub,
+    return new Proxy({default: Stub, WaTooltip: () => null}, {
+        get: (target, property) => target[property] ?? Stub,
     })
 })
 
@@ -74,6 +74,24 @@ vi.mock('@Components/MainUI/video/ReplayRecordingMonitorWidget', () => ({
 }))
 vi.mock('@Components/MainUI/SyncLinkBadge', () => ({
     SyncLinkBadge: () => <div data-testid="sync-link-badge"/>,
+}))
+vi.mock('@Components/MainUI/SupportUIButton', () => ({
+    SupportUIButton: () => null,
+}))
+vi.mock('@Components/MainUI/SceneModeSelector', () => ({
+    SceneModeSelector: () => null,
+}))
+vi.mock('@Components/MainUI/CameraTarget', () => ({
+    CameraTarget: () => null,
+}))
+vi.mock('@Components/MainUI/credits/CreditsBar', () => ({
+    CreditsBar: () => null,
+}))
+vi.mock('@Components/InformationPanel/CodeDependenciesDrawer', () => ({
+    CodeDependenciesDrawer: () => null,
+}))
+vi.mock('@Components/MainUI/widgets/management/WidgetManagementDrawer', () => ({
+    WidgetManagementDrawer: () => null,
 }))
 vi.mock('@Components/Text/TextButton', () => ({
     TextButton: () => <div data-testid="text-button"/>,
@@ -314,5 +332,14 @@ describe('MainUI replay mask', () => {
 
         expect(container.querySelector('#lgs-main-ui')).toBeNull()
         expect(screen.getByTestId('camera-adjustment-overlay')).not.toBeNull()
+    })
+
+    it('does not expose the Text widget entry in the visible main UI', () => {
+        lgs.stores.replay.mainUiHidden = false
+
+        render(<MainUI/>)
+
+        expect(screen.queryByTestId('text-button')).toBeNull()
+        expect(document.querySelector('#lgs-main-ui')).not.toBeNull()
     })
 })

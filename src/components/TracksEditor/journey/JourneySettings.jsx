@@ -691,7 +691,7 @@ export const JourneySettings = () => {
                                 <WaIcon name="rectangle-list" variant="regular"/> Data
                             </WaTab>
                             <WaTab slot="nav" panel={EDIT} active={__.ui.drawerManager.tabActive(EDIT)}>
-                                <WaIcon name={EDIT_JOURNEY_ICON} variant="regular"/> Edit
+                                <WaIcon name={EDIT_JOURNEY_ICON} variant="regular"/> Style
                             </WaTab>
                             <WaTab slot="nav" panel={POIS} active={__.ui.drawerManager.tabActive(POIS)}>
                                 <WaIcon name="location-dot" variant="regular"/> POIs
@@ -706,8 +706,12 @@ export const JourneySettings = () => {
                                             label={'Elevation Source:'}
                                             onChange={computeElevation}
                                             servers={serverList}
+                                            showWidgetControls={false}
                                         />
-                                        {journey.tracks.size === 1 ? <TrackData/> : <JourneyData/>}
+                                        {journey.tracks.size === 1
+                                            ? <TrackData compactAfterProfile showWidgetControls={false}/>
+                                            : <JourneyData/>
+                                        }
                                         <TrackSettings/>
                                     </WaCard>
                                 </LGSScrollbars>

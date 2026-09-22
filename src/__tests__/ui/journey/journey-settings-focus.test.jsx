@@ -7,17 +7,20 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-19
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { JourneySettings } from '@Editor/journey/JourneySettings'
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
+
+const trackDataMock = vi.hoisted(() => vi.fn())
+const elevationProfileMock = vi.hoisted(() => vi.fn())
 
 vi.mock('@Components/MainUI/LGSScrollbars', () => ({LGSScrollbars: ({children}) => <div>{children}</div>}))
 vi.mock('@Components/MainUI/MapPOI/MapPOIEditListActions', () => ({MapPOIEditListActions: () => null}))
@@ -50,7 +53,12 @@ vi.mock('@Core/Journey', () => ({
 vi.mock('@Core/ui/Export', () => ({Export: {toFile: vi.fn()}}))
 vi.mock('@Editor/journey/RemoveJourney', () => ({RemoveJourney: () => null}))
 vi.mock('@Editor/groups/JourneyGroupsInfo', () => ({JourneyGroupsInfo: () => null}))
-vi.mock('@Editor/track/TrackData', () => ({TrackData: () => null}))
+vi.mock('@Editor/track/TrackData', () => ({
+    TrackData: props => {
+        trackDataMock(props)
+        return null
+    },
+}))
 vi.mock('@Editor/track/TrackPoints', () => ({TrackPoints: () => null}))
 vi.mock('@Editor/track/TrackSettings', () => ({TrackSettings: () => null}))
 vi.mock('@Editor/track/TrackStyleSettings', () => ({TrackStyleSettings: () => null}))
@@ -83,7 +91,12 @@ vi.mock('@Utils/ExportAsReport', () => ({
 }))
 vi.mock('@Utils/UIToast', () => ({UIToast: {error: vi.fn(), notify: vi.fn(), success: vi.fn()}}))
 vi.mock('@Utils/TextUtils', () => ({decodeHTMLEntities: value => value}))
-vi.mock('@Components/MainUI/ElevationProfile', () => ({ElevationProfile: () => null}))
+vi.mock('@Components/MainUI/ElevationProfile', () => ({
+    ElevationProfile: props => {
+        elevationProfileMock(props)
+        return null
+    },
+}))
 vi.mock('@Editor/journey/JourneyData', () => ({JourneyData: () => null}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => {
     const Container = ({children, ...props}) => <div {...props}>{children}</div>
@@ -108,6 +121,8 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => {
 
 describe('JourneySettings focus control', () => {
     beforeEach(() => {
+        trackDataMock.mockReset()
+        elevationProfileMock.mockReset()
         const journey = {
             activity:       'hiking',
             description:    '',
@@ -195,6 +210,17 @@ describe('JourneySettings focus control', () => {
         cleanup()
         globalThis.__ = undefined
         globalThis.lgs = undefined
+    })
+
+    it('suppresses Profile and Data widget controls in the Track Editor', () => {
+        render(<JourneySettings/>)
+
+        expect(elevationProfileMock).toHaveBeenCalledWith(expect.objectContaining({showWidgetControls: false}))
+        expect(trackDataMock).toHaveBeenCalledWith(expect.objectContaining({
+            compactAfterProfile: true,
+            showWidgetControls:   false,
+        }))
+        expect(screen.getByText('Style', {exact: true})).toBeTruthy()
     })
 
     it('stops the running orbit and focuses the journey without relaunching rotation', async () => {

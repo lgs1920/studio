@@ -46,6 +46,7 @@ const setProfileWidgetVisible = visible => {
  * @returns {JSX.Element}
  */
 export const ElevationProfile = (props) => {
+    const {showWidgetControls = true} = props
     const $profile = lgs.stores.main.components.profile
     const $unitStore = lgs.settings.unitSystem
     const $journeyEditor = lgs.stores.journeyEditor
@@ -488,28 +489,36 @@ export const ElevationProfile = (props) => {
                 <WaProgressBar indeterminate/>
             ) : (
                  <div className="journey-profile-chart-menu">
-                     <WaSwitch
-                         size="xs"
-                         label-at-start
-                         width-auto
-                         disabled={!hasElevation}
-                         checked={profile.show && hasElevation}
-                         onChange={toggleProfileButton}
-                     >
-                         {'Add Profile widget on scene'}
-                     </WaSwitch>
-                     {hasElevation && (
+                     {showWidgetControls && (
                          <>
-                             <WaTooltip for="edit-profile-widget-in-settings">{'Edit widget'}</WaTooltip>
-                             <WaButton id="edit-profile-widget-in-settings" appearance="plain" variant="brand"
-                                       onClick={openWidgetProfileEditor}>
-                                 <WaIcon variant="regular" name={EDIT_WIDGET_ICON}/>
-                             </WaButton>
-                             <WaTooltip for="snap-profile-widget-in-settings">{'Export to image'}</WaTooltip>
-                             <WaButton id="snap-profile-widget-in-settings" appearance="plain" variant="brand"
-                                       onClick={exportChartToPNG}>
-                                 <WaIcon variant="regular" name="camera"/>
-                             </WaButton>
+                             <WaSwitch
+                                 size="xs"
+                                 label-at-start
+                                 width-auto
+                                 disabled={!hasElevation}
+                                 checked={profile.show && hasElevation}
+                                 onChange={toggleProfileButton}
+                             >
+                                 {'Add Profile widget on scene'}
+                             </WaSwitch>
+                             {hasElevation && showWidgetControls && (
+                                 <>
+                                     <WaTooltip for="edit-profile-widget-in-settings">{'Edit widget'}</WaTooltip>
+                                     <WaButton id="edit-profile-widget-in-settings" appearance="plain" variant="brand"
+                                               onClick={openWidgetProfileEditor}>
+                                         <WaIcon variant="regular" name={EDIT_WIDGET_ICON}/>
+                                     </WaButton>
+                                 </>
+                             )}
+                             {hasElevation && (
+                                 <>
+                                     <WaTooltip for="snap-profile-widget-in-settings">{'Export to image'}</WaTooltip>
+                                     <WaButton id="snap-profile-widget-in-settings" appearance="plain" variant="brand"
+                                               onClick={exportChartToPNG}>
+                                         <WaIcon variant="regular" name="camera"/>
+                                     </WaButton>
+                                 </>
+                             )}
                          </>
                      )}
                  </div>
