@@ -42,11 +42,13 @@ authoritative where it conflicts.
    pattern includes one. Retain only the current draft for the release line;
    never delete published changelogs or rewrite their dates.
 7. Write the validated major improvements in `New Features and Improvements`.
-   List every verified closed issue as an individual entry in `Closed Issues`,
-   grouped by owning repository and sorted by descending closure date. Keep
-   `Remaining Bugs` and `Remaining Features` as filtered GitHub search links,
-   not lists of individual open issues. Retain all four required section headings
-   and omit only application headings without matching entries.
+   List at most the 10 latest verified closed issues for each application in
+   `Closed Issues`, grouped by owning repository and sorted by descending closure
+   date. When an application has more than 10, add `Full list: ` followed by
+   its repository-specific GitHub issues search link. Keep `Remaining Bugs` and
+   `Remaining Features` as filtered GitHub search links, not lists of individual
+   open issues. Retain all four required section headings and omit only
+   application headings without matching entries.
 8. Preserve issue titles' meaning, correct only obvious formatting errors, and
    link moved issues using their final owning URLs. Never create or include a
    Studio mirror of a Site or Backend issue. Report legacy mirrors separately;
