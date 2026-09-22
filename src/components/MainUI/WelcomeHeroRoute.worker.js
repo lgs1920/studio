@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,10 @@ import * as THREE from 'three'
 import {Line2} from 'three/addons/lines/Line2.js'
 import {LineGeometry} from 'three/addons/lines/LineGeometry.js'
 import {LineMaterial} from 'three/addons/lines/LineMaterial.js'
+import {
+    getWelcomeRoutePoiScale,
+    WELCOME_ROUTE_CAMERA_DISTANCE,
+} from './welcomeHeroRouteProjection'
 
 const ROUTE_DURATION = 13_000
 const ROUTE_PATH_SAMPLE_COUNT = 260
@@ -39,6 +43,7 @@ const ROUTE_SHAPE_CYCLE = 5_800
 const MAX_PIXEL_RATIO = 1.35
 const POI_PROGRESS = [0.25, 0.5, 0.75]
 const POI_REVEAL_LEAD = 0.08
+const POI_PROJECTION_INTERVAL = 1000 / 30
 
 const GLOW_VERTEX_SHADER = `
     attribute float aAlpha;
@@ -256,7 +261,16 @@ const createRoute = (routeColor, glowColor) => {
     const group = new THREE.Group()
     group.add(...meshes, routeLine, marker)
 
-    return {group, marker, markerMaterial, neonMaterials, pathPoints, routeMaterial}
+    return {
+        curve,
+        group,
+        marker,
+        markerMaterial,
+        neonMaterials,
+        pathPoints,
+        poiPositions: POI_PROGRESS.map(progress => curve.getPointAt(progress)),
+        routeMaterial,
+    }
 }
 
 let renderer
@@ -297,17 +311,17 @@ const resize = (width, height, pixelRatio) => {
 }
 
 const projectPois = (timestamp) => {
-    if (!route || !viewportWidth || !viewportHeight || timestamp - lastPoiProjectionAt < 66) {
+    if (!route || !viewportWidth || !viewportHeight || timestamp - lastPoiProjectionAt < POI_PROJECTION_INTERVAL) {
         return
     }
 
     lastPoiProjectionAt = timestamp
     sceneRoot.updateMatrixWorld(true)
 
-    POI_PROGRESS.forEach((point, index) => {
-        const pathIndex = Math.min(Math.round(point * (route.pathPoints.length - 1)), route.pathPoints.length - 1)
-        projectedPoiPosition.copy(route.pathPoints[pathIndex])
+    const positions = route.poiPositions.map((position, index) => {
+        projectedPoiPosition.copy(position)
         route.group.localToWorld(projectedPoiPosition)
+        const depthScale = getWelcomeRoutePoiScale(camera.position.z - projectedPoiPosition.z)
         projectedPoiPosition.project(camera)
         const visible = projectedPoiPosition.z > -1
             && projectedPoiPosition.z < 1
@@ -316,14 +330,16 @@ const projectPois = (timestamp) => {
             && projectedPoiPosition.y > -1.15
             && projectedPoiPosition.y < 1.15
 
-        self.postMessage({
-            type: 'poi-position',
+        return {
             index,
             left: (projectedPoiPosition.x * 0.5 + 0.5) * viewportWidth,
+            scale: depthScale,
             top: (-projectedPoiPosition.y * 0.5 + 0.5) * viewportHeight,
             visible,
-        })
+        }
     })
+
+    self.postMessage({type: 'poi-positions', positions})
 }
 
 const rebuild = () => {
@@ -377,9 +393,7 @@ const render = (timestamp) => {
     route.neonMaterials.forEach(material => {
         material.uniforms.uProgress.value = progress
     })
-    const markerPosition = progress * (route.pathPoints.length - 1)
-    const markerIndex = Math.min(Math.floor(markerPosition), route.pathPoints.length - 2)
-    route.marker.position.lerpVectors(route.pathPoints[markerIndex], route.pathPoints[markerIndex + 1], markerPosition - markerIndex)
+    route.curve.getPointAt(progress, route.marker.position)
     route.markerMaterial.uniforms.uSize.value = reducedMotion ? 1.55 : 1.55 + Math.sin(timestamp * 0.008) * 0.1
     sceneRoot.rotation.x = reducedMotion ? 0.42 : 0.46 + Math.sin(timestamp * 0.00025) * 0.18
     sceneRoot.rotation.y = reducedMotion ? -0.62 : Math.sin(timestamp * 0.00032) * 0.68
@@ -411,7 +425,7 @@ self.onmessage = ({data}) => {
         sceneRoot = new THREE.Group()
         scene.add(sceneRoot)
         camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100)
-        camera.position.set(0, 0, 9.5)
+        camera.position.set(0, 0, WELCOME_ROUTE_CAMERA_DISTANCE)
         camera.lookAt(0, 0, 0)
         rebuild()
         resize(data.width, data.height, data.pixelRatio)

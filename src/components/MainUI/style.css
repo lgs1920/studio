@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-21
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -759,6 +759,12 @@ body.mobile .orbit-widget-body {
     inset: 0;
 }
 
+#lgs-boot-splash {
+    --hero-route-path-color: var(--wa-color-brand-60);
+    --hero-route-glow-color: var(--wa-color-brand);
+    --hero-route-poi-color: rgb(103, 165, 13);
+}
+
 .welcome-hero-media,
 .welcome-hero-route,
 .welcome-hero-shell {
@@ -969,27 +975,31 @@ body.mobile .orbit-widget-body {
 
 .welcome-hero-poi {
     position: absolute;
-    left: 50%;
-    top: 50%;
+    --welcome-hero-poi-scale: 1; /* Perspective scale based on the route point depth. */
+    --welcome-hero-poi-x: 50%; /* Projected horizontal route position. */
+    --welcome-hero-poi-y: 50%; /* Projected vertical route position. */
+    left: 0;
+    top: 0;
     visibility: hidden;
     opacity: 0;
-    transform: translate3d(-50%, -100%, 0);
-    transition: opacity 450ms ease, visibility 450ms ease;
+    transform: translate3d(var(--welcome-hero-poi-x), var(--welcome-hero-poi-y), 0) translate3d(-50%, -100%, 0) scale(var(--welcome-hero-poi-scale));
+    transition: opacity 450ms ease, transform 34ms linear, visibility 450ms ease;
+    will-change: transform;
 }
 
 .welcome-hero-poi[data-route-poi-index='0'] {
-    left: 52%;
-    top: 51%;
+    --welcome-hero-poi-x: 52%; /* Initial horizontal route position. */
+    --welcome-hero-poi-y: 51%; /* Initial vertical route position. */
 }
 
 .welcome-hero-poi[data-route-poi-index='1'] {
-    left: 62%;
-    top: 39%;
+    --welcome-hero-poi-x: 62%; /* Initial horizontal route position. */
+    --welcome-hero-poi-y: 39%; /* Initial vertical route position. */
 }
 
 .welcome-hero-poi[data-route-poi-index='2'] {
-    left: 78%;
-    top: 31%;
+    --welcome-hero-poi-x: 78%; /* Initial horizontal route position. */
+    --welcome-hero-poi-y: 31%; /* Initial vertical route position. */
 }
 
 .welcome-hero-poi.is-revealed.is-positioned,
@@ -1002,7 +1012,7 @@ body.mobile .orbit-widget-body {
     display: block;
     color: var(--hero-route-poi-color);
     font-size: clamp(1.7rem, 4vw, 2.55rem);
-    filter: drop-shadow(0 0 .32rem color-mix(in oklab, var(--hero-route-poi-color) 82%, transparent)) drop-shadow(0 0 .72rem color-mix(in oklab, var(--hero-route-poi-color) 88%, transparent));
+    filter: drop-shadow(0 0 .18rem color-mix(in oklab, var(--hero-route-poi-color) 68%, transparent)) drop-shadow(0 0 .45rem color-mix(in oklab, var(--hero-route-poi-color) 74%, transparent));
     transform-origin: center bottom;
 }
 
@@ -1037,13 +1047,31 @@ body.mobile .orbit-widget-body {
     --hero-route-poi-color: rgb(175, 218, 188);
 }
 
+:root[data-season-theme='spring'] #lgs-boot-splash {
+    --hero-route-path-color: rgb(62, 109, 77);
+    --hero-route-glow-color: rgb(175, 218, 188);
+    --hero-route-poi-color: rgb(175, 218, 188);
+}
+
 :root[data-season-theme='fall'] #welcome-hero {
     --hero-route-path-color: rgb(113, 63, 18);
     --hero-route-glow-color: rgb(197, 110, 18);
     --hero-route-poi-color: rgb(197, 110, 18);
 }
 
+:root[data-season-theme='fall'] #lgs-boot-splash {
+    --hero-route-path-color: rgb(113, 63, 18);
+    --hero-route-glow-color: rgb(197, 110, 18);
+    --hero-route-poi-color: rgb(197, 110, 18);
+}
+
 :root[data-season-theme='winter'] #welcome-hero {
+    --hero-route-path-color: rgb(49, 90, 130);
+    --hero-route-glow-color: rgb(219, 234, 254);
+    --hero-route-poi-color: rgb(219, 234, 254);
+}
+
+:root[data-season-theme='winter'] #lgs-boot-splash {
     --hero-route-path-color: rgb(49, 90, 130);
     --hero-route-glow-color: rgb(219, 234, 254);
     --hero-route-poi-color: rgb(219, 234, 254);

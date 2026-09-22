@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-21
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -77,7 +77,6 @@ export const LGS1920 = () => {
         && initialFocusReady
         && currentJourneyReady
         && appSurfaceReady
-        && !appUpdate.isUpdateCheckPending
         && !appUpdate.isAutomaticUpdateInProgress
 
     const revealApp = useCallback(() => {

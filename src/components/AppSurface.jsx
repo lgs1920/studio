@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-09-20
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,15 +29,21 @@ import {useEffect} from 'react'
 
 const APP_SURFACE_READY_TIMEOUT = 1500
 
+/**
+ * Waits for the next browser paint opportunity.
+ *
+ * @returns {Promise<void>} Promise resolved on the next animation frame.
+ */
 const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve))
 
+/**
+ * Resolves when the app surface has had a chance to render, with a timeout
+ * fallback so the welcome CTA cannot remain blocked by a missing render event.
+ *
+ * @returns {Promise<void>} Promise resolved once the surface is ready enough to enter.
+ */
 const waitForAppSurfaceReady = () => new Promise(resolve => {
     const scene = lgs?.scene
-    if (!scene) {
-        nextFrame().then(resolve)
-        return
-    }
-
     let done = false
     const cleanup = []
     const finish = () => {
@@ -51,14 +57,30 @@ const waitForAppSurfaceReady = () => new Promise(resolve => {
 
     const timeout = window.setTimeout(finish, APP_SURFACE_READY_TIMEOUT)
     cleanup.push(() => window.clearTimeout(timeout))
-    cleanup.push(scene.postRender.addEventListener(finish))
+
+    if (!scene) {
+        void nextFrame().then(finish)
+        return
+    }
+
+    const removePostRenderListener = scene.postRender?.addEventListener?.(finish)
+    if (typeof removePostRenderListener === 'function') {
+        cleanup.push(removePostRenderListener)
+    }
+
     scene.requestRender?.()
     nextFrame().then(() => {
         scene.requestRender?.()
         return nextFrame()
-    }).then(finish)
+    }).then(finish, finish)
 })
 
+/**
+ * Renders the map, controls, drawers, and app-level overlays.
+ *
+ * @param {{onReady?: () => void}} props - Surface readiness callback.
+ * @returns {JSX.Element} Mounted application surface.
+ */
 export const AppSurface = ({onReady}) => {
     useEffect(() => {
         let cancelled = false

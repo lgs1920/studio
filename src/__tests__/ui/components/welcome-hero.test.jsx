@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-21
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -192,6 +192,9 @@ describe('WelcomeHero', () => {
         })
         expect(incomingVideo.querySelector('source')?.getAttribute('src')).toBe('/assets/media/20260812-15404528-3840x2160.mp4')
 
+        fireEvent.ended(activeVideo)
+        expect(play).not.toHaveBeenCalled()
+
         fireEvent.canPlay(incomingVideo)
         fireEvent.loadedData(incomingVideo)
         expect(play).toHaveBeenCalledOnce()
@@ -205,6 +208,24 @@ describe('WelcomeHero', () => {
         expect(document.querySelector('.welcome-hero-video-active')).toBe(incomingVideo)
         expect(play).toHaveBeenCalledOnce()
         expect(document.querySelector('#welcome-hero')?.classList.contains('welcome-hero-video-transitioning')).toBe(false)
+    })
+    it('mounts the Three.js route animation in the boot splash', () => {
+        const splashElement = document.createElement('div')
+        splashElement.id = 'lgs-boot-splash'
+        document.body.append(splashElement)
+        globalThis.lgs = {
+            versions: {studio: '1.0.0'},
+            build: {id: 'build-42'},
+            configuration: {website: {domain: 'lgs1920.fr', protocol: 'https'}},
+        }
+        globalThis.__ = {app: {buildUrl: ({domain, protocol}) => `${protocol}://${domain}`}}
+
+        render(<WelcomeHero/>)
+
+        expect(splashElement.querySelector('.welcome-hero-route')).toBeTruthy()
+        expect(splashElement.querySelector('.welcome-hero-route-canvas')).toBeTruthy()
+
+        splashElement.remove()
     })
 })
 

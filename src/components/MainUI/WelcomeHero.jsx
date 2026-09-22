@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-21
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -90,10 +90,6 @@ export const WelcomeHero = ({
 
     const changeWelcomeVideo = useCallback(() => {
         if (!canChangeVideo || incomingVideoChoice) {
-            const activeVideo = activeVideoSlot === 'primary'
-                ? _welcomeVideo.current
-                : _incomingWelcomeVideo.current
-            activeVideo?.play()
             return
         }
 
@@ -267,7 +263,7 @@ export const WelcomeHero = ({
                     <span>{buildInfo}</span>
                 )}
             </div>}
-            <WelcomeHeroRoute/>
+            <WelcomeHeroRoute mountInSplash/>
             <WelcomeHeroControls/>
 
             <div className="welcome-hero-shell">
