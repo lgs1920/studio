@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-08
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,13 +19,13 @@ import { Utils }                       from '@Editor/Utils'
 import { SlButton, SlTooltip }         from '@shoelace-style/shoelace/dist/react'
 import { WaIcon }                      from '@web.awesome.me/webawesome-pro/dist/react'
 import React                           from 'react'
-import { useSnapshot }                 from 'valtio'
+import { useProxyValue }               from '@Utils/ValtioUtils'
 
 
 export const JourneyVisibilityButton = (props) => {
     const placement = props.tooltip ?? 'top'
     const editorStore = lgs.theJourneyEditorProxy
-    const snap = useSnapshot(editorStore)
+    const journeyVisible = useProxyValue(editorStore, editor => editor?.journey?.visible !== false, false)
 
     const setJourneyVisibility = async () => {
         editorStore.journey.visible = !editorStore.journey.visible
@@ -38,10 +38,10 @@ export const JourneyVisibilityButton = (props) => {
             <SlTooltip hoist placement={placement} content={' Journey'}>
                 <SlButton size={'small'} className="square-button" id={'focus-on-current-journey'}
                           onClick={setJourneyVisibility}>
-                    {!snap.journey.visible &&
+                    {!journeyVisible &&
                         <WaIcon slot="prefix" name="eye" variant="regular"/>
                     }
-                    {snap.journey.visible &&
+                    {journeyVisible &&
                         <WaIcon slot="prefix" name="eye-slash" variant="regular"/>
                     }
                 </SlButton>

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-27
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,7 +29,7 @@ import {
     resolveJourneyReplayCameraAngleGuide,
     updateJourneyReplayCameraAngleGuide,
 } from '@Core/ui/replay/JourneyReplayCameraAngleGuide'
-import {useOptionalSnapshot} from '@Utils/ValtioUtils'
+import {useOptionalSnapshot, useProxyValue} from '@Utils/ValtioUtils'
 import {useEffect} from 'react'
 import {useSnapshot} from 'valtio'
 
@@ -46,7 +46,7 @@ export const JourneyReplayCameraAngleGuide = () => {
     const video = useSnapshot(lgs.stores.ui.video)
     const drawers = useSnapshot(lgs.stores.ui.drawers)
     const replaySettings = useOptionalSnapshot(lgs.settings?.ui?.replay, DEFAULT_REPLAY_ANGLE_GUIDE_SETTINGS)
-    const main = useSnapshot(lgs.stores.main)
+    const journeySlug = useProxyValue(lgs.stores.main, main => main.theJourney?.slug ?? null, null)
     const camera = normalizeJourneyReplayCamera(replaySettings.camera)
     const cameraHeadingOffset = camera.headingOffset
     const cameraPositionMode = camera.positionMode
@@ -72,7 +72,7 @@ export const JourneyReplayCameraAngleGuide = () => {
         }
 
         return () => removeJourneyReplayCameraAngleGuide(viewer)
-    }, [cameraPositionMode, editing, main.theJourney])
+    }, [cameraPositionMode, editing, journeySlug])
 
     useEffect(() => {
         if (!editing || cameraPositionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
@@ -90,7 +90,7 @@ export const JourneyReplayCameraAngleGuide = () => {
         if (!updateJourneyReplayCameraAngleGuide(viewer, guide)) {
             mountJourneyReplayCameraAngleGuide(viewer, guide)
         }
-    }, [cameraHeadingOffset, cameraPositionMode, editing, main.theJourney])
+    }, [cameraHeadingOffset, cameraPositionMode, editing, journeySlug])
 
     return null
 }

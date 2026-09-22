@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-18
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 import { JourneyStats }                                             from '@Components/Stats/JourneyStats'
 import { getPreviewChartSize }                                      from '@Components/MainUI/widgets/editor/previewUtils'
 import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS } from '@Utils/UnitUtils'
-import { useOptionalSnapshot }                                      from '@Utils/ValtioUtils'
+import { useOptionalSnapshot, useProxyValue }                       from '@Utils/ValtioUtils'
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                              from 'valtio'
 
@@ -27,9 +27,8 @@ import { useSnapshot }                                              from 'valtio
  */
 export const JourneyStatsWidgetPreview = ({entity, widgetKey = 'journey-stats-widget', mode = 'journey'}) => {
     const MAX_PREVIEW_SCALE = 0.9
-    const main = useSnapshot(lgs.stores.main)
     const journey = lgs.theJourney
-    const journeySlug = main.theJourney?.slug ?? null
+    const journeySlug = useProxyValue(lgs.stores.main, main => main.theJourney?.slug ?? null, null)
 
     const $unitSystem = lgs.settings.unitSystem
     const unitSystem = useSnapshot($unitSystem)

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-20
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ import PanelActions                                  from '@Components/PanelsAct
 import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
 import WaDrawer                                      from '@Components/WaDrawerNonModal'
 import { setGlobalHideOtherJourneys }                from '@Core/ui/JourneyVisibility'
-import { useOptionalSnapshot }                       from '@Utils/ValtioUtils'
+import { useOptionalSnapshot, useProxyValue }         from '@Utils/ValtioUtils'
 import classNames                                    from 'classnames'
 
 import './style.css'
@@ -79,7 +79,7 @@ const JourneyContent = memo(({hideOtherJourneys, onToggleHideOtherJourneys}) => 
 
 export const TracksEditor = memo(() => {
     // Select necessary state properties with safe defaults
-    const {canViewJourneyData} = useSnapshot(lgs.stores.main)
+    const canViewJourneyData = useProxyValue(lgs.stores.main, main => main.canViewJourneyData === true, false)
     const {drawers: {open: drawerOpen}} = useSnapshot(lgs.stores.ui)
     const {hideOtherJourneys: globalHideOtherJourneys} = useOptionalSnapshot(lgs.settings.journey)
 

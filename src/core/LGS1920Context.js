@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-03
- * Last modified: 2026-09-20
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -58,7 +58,7 @@ import {LocalDB} from './db/LocalDB'
 import {MouseEventHandler} from './MouseEventHandler'
 import {editorSettings} from './stores/editorSettings'
 import {main} from './stores/main'
-import {theJourneyEditor} from './stores/theJourneyEditor'
+import {resetJourneyEditor, theJourneyEditor} from './stores/theJourneyEditor'
 import {CameraManager} from './ui/CameraManager'
 import {ionTokenManager} from './ui/IonTokenManager'
 import {JourneyEditor} from './ui/JourneyEditor'
@@ -403,7 +403,7 @@ export class LGS1920Context {
     }
 
     cleanEditor = () => {
-        this.theJourneyEditorProxy = proxy(theJourneyEditor)
+        resetJourneyEditor(this.#theJourneyEditorProxy)
     }
 
     initManagers = async () => {

@@ -35,6 +35,7 @@ implementation documents. Implemented and historical documents belong under
 
 ## User Interface, Widgets, and Branding
 
+- [Valtio state usage and performance audit](CORE-VALTIO-STATE-PERFORMANCE-AUDIT.md)
 - [Arrow widget](ARROW_WIDGET_SPEC.md)
 - [Brand and season swatch reactivity](BRAND_SEASON_SWATCH_REACTIVITY_SPEC.md)
 - [Main UI work](MAINUI-TODO.md)

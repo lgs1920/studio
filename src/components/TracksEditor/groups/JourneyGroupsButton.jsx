@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-06
- * Last modified: 2026-05-06
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { JOURNEY_GROUPS_DRAWER }          from '@Core/constants'
 import { WaButton, WaIcon, WaTooltip }    from '@web.awesome.me/webawesome-pro/dist/react'
+import { useProxyValue }                  from '@Utils/ValtioUtils'
 import { memo, useCallback, useMemo }     from 'react'
 import { useSnapshot }                    from 'valtio'
 
@@ -27,11 +28,14 @@ export const JourneyGroupsButton = memo(({
                                              appearance = 'plain',
                                              filled = false,
                                              stacked = false,
-                                         }) => {
+    }) => {
     const {list} = useSnapshot(lgs.stores.main.components.journeyEditor)
-    const editorStore = useSnapshot(lgs.theJourneyEditorProxy)
+    const currentJourneySlug = useProxyValue(
+        lgs.theJourneyEditorProxy,
+        editor => editor?.journey?.slug ?? lgs.theJourney?.slug ?? null,
+        null,
+    )
     const hasJourneys = list.length > 0
-    const currentJourneySlug = editorStore.journey?.slug ?? lgs.theJourney?.slug ?? null
 
     const buttonClassName = useMemo(() => className || undefined, [className])
 

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2024-04-26
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,8 +37,7 @@ import {
 }                                                   from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord }                                   from 'colord'
 import { useCallback, useEffect, useRef }           from 'react'
-import { useSnapshot }                              from 'valtio'
-import { useOptionalSnapshot }                      from '@Utils/ValtioUtils'
+import { useOptionalSnapshot, useProxyValue }       from '@Utils/ValtioUtils'
 import { Utils }                                    from '../Utils'
 import { TrackStylePreview }                        from './TrackStylePreview'
 
@@ -196,7 +195,30 @@ const assignRenderSmoothing = async (editor, isJourneyScopedSmoothing, smoothing
  */
 export const TrackStyleSettings = ({showTitle = true}) => {
     const $editor = lgs.theJourneyEditorProxy
-    const {journey, track} = useSnapshot($editor)
+    const editorRevision = useProxyValue($editor, editor => {
+        const journey = editor?.journey
+        const track = editor?.track
+        const style = track?.renderStyle ?? {}
+        const journeySmoothing = journey?.renderSmoothing ?? {}
+        const trackSmoothing = track?.renderSmoothing ?? {}
+
+        return [
+            journey?.slug ?? '',
+            journey?.tracks?.size ?? 0,
+            journeySmoothing.enabled === true,
+            journeySmoothing.step ?? '',
+            track?.slug ?? '',
+            track?.visible !== false,
+            track?.color ?? '',
+            track?.thickness ?? '',
+            JSON.stringify(style),
+            trackSmoothing.enabled === true,
+            trackSmoothing.step ?? '',
+        ].join('|')
+    }, '')
+    void editorRevision
+    const journey = $editor.journey
+    const track = $editor.track
 
     const _saveTimeoutRef = useRef(null)
     const isJourneyScopedSmoothing = (journey?.tracks?.size ?? 0) <= 1

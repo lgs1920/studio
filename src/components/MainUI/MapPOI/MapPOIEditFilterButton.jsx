@@ -7,13 +7,15 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2026-03-22
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
+
 import { JOURNEY_EDITOR_DRAWER, POIS_EDITOR_DRAWER } from '@Core/constants'
+import { useProxyValue } from '@Utils/ValtioUtils'
 import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useMemo }  from 'react'
 import { useSnapshot }                 from 'valtio/index'
@@ -25,7 +27,11 @@ const ICON_FILTER_SLASH = 'filter-slash'
 export const MapPOIEditFilterButton = memo(() => {
     const $poi = lgs.settings.poi
     const poi = useSnapshot(lgs.settings.poi)
-    const {showPOIsFilter} = useSnapshot(lgs.stores.journeyEditor)
+    const showPOIsFilter = useProxyValue(
+        lgs.stores.journeyEditor,
+        editor => editor.showPOIsFilter === true,
+        false,
+    )
     const {list} = useSnapshot(lgs.stores.main.components.pois)
     const {drawers: {open: drawerOpen}} = useSnapshot(lgs.stores.ui)
 

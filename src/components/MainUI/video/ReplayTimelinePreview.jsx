@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-20
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,7 +44,7 @@ import {
     groupWidgetEntries,
 } from '@Core/ui/widget-manager/WidgetGroupUtils'
 import {createReplayScrubScheduler} from '@Core/ui/replay/ReplayScrubScheduler'
-import {useOptionalSnapshot} from '@Utils/ValtioUtils'
+import {useOptionalSnapshot, useProxyValue} from '@Utils/ValtioUtils'
 import '@lgs1920/timeline'
 import './replay-timeline-preview.css'
 
@@ -448,13 +448,31 @@ export const ReplayTimelinePreview = forwardRef(({
 }, ref) => {
     const video = useSnapshot(lgs.stores.ui.video)
     const replay = useSnapshot(lgs.stores.replay)
-    const main = useSnapshot(lgs.stores.main)
     const widgetList = useSnapshot(lgs.stores.ui.widget.list)
     const widgetSettings = useOptionalSnapshot(lgs.settings?.widgets, {})
     const replaySettings = useOptionalSnapshot(lgs.settings?.ui?.replay, {})
     const _timeline = useRef(null)
     const videoSettingsButtonId = `replay-timeline-video-settings-${useId().replaceAll(':', '')}`
-    const journey = main?.theJourney ?? lgs.theJourney
+    const journeyProjectionSignature = useProxyValue(lgs.stores.main, main => {
+        const currentJourney = main?.theJourney
+        return JSON.stringify({
+            slug: currentJourney?.slug ?? null,
+            title: currentJourney?.title ?? '',
+            name: currentJourney?.name ?? '',
+            start: currentJourney?.replay?.start ?? [],
+            stop: currentJourney?.replay?.stop ?? [],
+        })
+    }, '{"slug":null,"title":"","name":"","start":[],"stop":[]}')
+    const journeyProjectionInputs = useMemo(() => {
+        try {
+            return JSON.parse(journeyProjectionSignature)
+        } catch {
+            return {slug: null, title: '', name: '', start: [], stop: []}
+        }
+    }, [journeyProjectionSignature])
+    const journey = journeyProjectionInputs.slug
+        ? lgs.getJourneyBySlug?.(journeyProjectionInputs.slug) ?? lgs.theJourney
+        : lgs.theJourney
     const resolvedWidgetOrder = useMemo(() => resolveVideoWidgetOrder(widgetList, widgetSettings), [widgetList, widgetSettings])
     const widgetOrderRevision = useMemo(() => widgetOrderSignature(resolvedWidgetOrder), [resolvedWidgetOrder])
     // The revision intentionally controls when the projection input reference changes.
@@ -480,10 +498,10 @@ export const ReplayTimelinePreview = forwardRef(({
         clips: replaySettings.clips,
         duration: replaySettings.duration,
     }), [replaySettings.clips, replaySettings.duration])
-    const journeyTitle = journey?.title
-    const journeyName = journey?.name
-    const journeyReplayStart = journey?.replay?.start
-    const journeyReplayStop = journey?.replay?.stop
+    const journeyTitle = journeyProjectionInputs.slug ? journeyProjectionInputs.title || journey?.title : journey?.title
+    const journeyName = journeyProjectionInputs.slug ? journeyProjectionInputs.name || journey?.name : journey?.name
+    const journeyReplayStart = journeyProjectionInputs.slug ? journeyProjectionInputs.start : journey?.replay?.start
+    const journeyReplayStop = journeyProjectionInputs.slug ? journeyProjectionInputs.stop : journey?.replay?.stop
     const projectionJourney = useMemo(() => resolvePreparationJourney({
         title: journeyTitle,
         name: journeyName,

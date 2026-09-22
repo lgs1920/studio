@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-11-14
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,19 +18,19 @@ import { REFRESH_DRAWING, UPDATE_JOURNEY_SILENTLY } from '@Core/constants'
 import { Utils }                                    from '@Editor/Utils'
 import { SlButton, SlTooltip }                      from '@shoelace-style/shoelace/dist/react'
 import { WaIcon }                                   from '@web.awesome.me/webawesome-pro/dist/react'
-import { useSnapshot }                              from 'valtio'
+import { useProxyValue }                             from '@Utils/ValtioUtils'
 
 
 export const FocusButton = (props) => {
     const placement = props.tooltip ?? 'right'
     const editorStore = lgs.theJourneyEditorProxy
-    const snap = useSnapshot(editorStore)
+    const journeyVisible = useProxyValue(editorStore, editor => editor?.journey?.visible !== false, false)
 
     const focusOnJourney = async () => {
         if (lgs.stores?.ui?.mainUI?.rotate?.running) {
             await __.ui.cameraManager.stopRotate()
         }
-        if (!snap.journey.visible) {
+        if (!journeyVisible) {
             editorStore.journey.visible = true
             lgs.theJourney.updateVisibility(true)
             await Utils.updateJourney(UPDATE_JOURNEY_SILENTLY)

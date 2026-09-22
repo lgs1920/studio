@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2024-02-24
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,8 +19,8 @@ import { JUST_SAVE }                                 from '@Core/constants'
 import { TrackSelector }                             from '@Editor/track/TrackSelector'
 import { TrackUtils }                                from '@Utils/cesium/TrackUtils'
 import { decodeHTMLEntities }                        from '@Utils/TextUtils'
+import { useProxyValue }                              from '@Utils/ValtioUtils'
 import { WaDivider, WaInput, WaTextarea, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
-import { useSnapshot }                               from 'valtio'
 import { Utils }                                     from '../Utils'
 import { TrackData }                                 from './TrackData'
 import { TrackStyleSettings }                        from './TrackStyleSettings'
@@ -35,9 +35,18 @@ const EDIT_PANEL = 'tab-edit'
  * @returns {JSX.Element} The rendered TrackSettings component
  */
 export const TrackSettings = () => {
-    // Snapshot for reactive state from journey editor store
     const $journeyEditor = lgs.stores.journeyEditor
-    const journeyEditor = useSnapshot($journeyEditor)
+    const editorRevision = useProxyValue($journeyEditor, editor => [
+        editor?.activeTab ?? '',
+        editor?.journey?.slug ?? '',
+        editor?.journey?.tracks?.size ?? 0,
+        editor?.track?.slug ?? '',
+        editor?.track?.title ?? '',
+        editor?.track?.description ?? '',
+        editor?.track?.visible !== false,
+    ].join('|'), '')
+    void editorRevision
+    const journeyEditor = $journeyEditor
 
     /**
      * Updates the track description and saves changes.

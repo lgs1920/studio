@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { normalizeTrackRenderStyle } from '@Utils/cesium/trackRenderStyle'
-import { useOptionalSnapshot }       from '@Utils/ValtioUtils'
 import classNames                    from 'classnames'
 
 export const TrackStylePreview = ({
@@ -24,13 +24,12 @@ export const TrackStylePreview = ({
                                       compact = false,
                                       visible = undefined,
                                       slot = undefined,
-                                  }) => {
-    const trackSnap = useOptionalSnapshot(track)
-    const style = normalizeTrackRenderStyle(renderStyle ?? trackSnap?.renderStyle, {
-        color:     trackSnap?.color,
-        thickness: trackSnap?.thickness,
+}) => {
+    const style = normalizeTrackRenderStyle(renderStyle ?? track?.renderStyle, {
+        color:     track?.color,
+        thickness: track?.thickness,
     })
-    const isVisible = visible ?? trackSnap?.visible
+    const isVisible = visible ?? track?.visible
 
     return (
         <span
