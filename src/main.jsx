@@ -8,30 +8,25 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { createRoot } from 'react-dom/client'
-import { LGS1920 } from '@Components/LGS1920.jsx'
-import { LGS1920Context } from '@Core/LGS1920Context'
 import './assets/css/app.css?v=1.0.5'
 import './assets/css/themes/wa-lgs1920.css'
 import './assets/css/animations.css'
-import { UIUtils } from '@Utils/UIUtils'
-import { AppUtils } from '@Utils/AppUtils'
-import { installNativeContextMenuBlocker } from '@Core/events/NativeContextMenuBlocker'
-import {
-    applyWelcomeBackgroundToImage,
-    applyWelcomeBackgroundToVideo,
-    getWelcomeBackgroundMedia,
-    preloadWelcomeBackgroundMedia,
-}                                                               from '@Assets/media/welcome-background-media'
+import '@web.awesome.me/webawesome-pro/dist/components/icon/icon.js'
 
-installNativeContextMenuBlocker()
+const markStartup = name => {
+    const performanceObject = globalThis.performance
+    if (performanceObject?.mark) {
+        performanceObject.mark(`lgs.startup.${name}`)
+    }
+}
 
+markStartup('main-bootstrap-start')
 
 /**
  * Patch pour Shoelace ResizeObserver bug
@@ -47,23 +42,23 @@ ResizeObserver.prototype.unobserve = function (target) {
 /**
  * Load Google Fonts once at startup
  */
-const bootstrap = () => {
-    const isStandalonePwa = window.matchMedia('(display-mode: standalone)').matches
-    const welcomeBackgroundMedia = getWelcomeBackgroundMedia()
-    preloadWelcomeBackgroundMedia(welcomeBackgroundMedia)
+const bootstrap = async () => {
+    const [media, {installNativeContextMenuBlocker}] = await Promise.all([
+        import('@Assets/media/welcome-background-media'),
+        import('@Core/events/NativeContextMenuBlocker'),
+    ])
+    installNativeContextMenuBlocker()
+    const welcomeBackgroundMedia = media.getWelcomeBackgroundMedia()
     const splashElement = document.querySelector('#lgs-boot-splash')
     const splashVideo = document.querySelector('#lgs-boot-splash video')
     const splashImage = document.querySelector('#lgs-boot-splash .lgs-boot-splash-background-image')
-    const hasVideo = applyWelcomeBackgroundToVideo(splashVideo, welcomeBackgroundMedia)
-    applyWelcomeBackgroundToImage(splashImage, welcomeBackgroundMedia)
+    const hasVideo = media.applyWelcomeBackgroundToVideo(splashVideo, welcomeBackgroundMedia, {load: false})
+    media.applyWelcomeBackgroundToImage(splashImage, welcomeBackgroundMedia)
+    markStartup('startup-media-ready')
 
     if (hasVideo && splashElement && splashVideo) {
-        let videoReady = false
+        let activeSplashChoice = media.bannerMediaCatalog.outdoor.find(choice => choice.id === welcomeBackgroundMedia.id) ?? null
         const revealVideo = () => {
-            if (videoReady) {
-                return
-            }
-
             let playPromise
             try {
                 playPromise = splashVideo.play()
@@ -73,19 +68,36 @@ const bootstrap = () => {
             }
             if (playPromise?.then) {
                 void playPromise.then(() => {
-                    videoReady = true
                     splashElement.classList.add('lgs-boot-splash-video-ready')
                 }).catch(() => {
                 })
                 return
             }
 
-            videoReady = true
             splashElement.classList.add('lgs-boot-splash-video-ready')
         }
 
-        splashVideo.addEventListener('canplay', revealVideo, {once: true})
-        splashVideo.addEventListener('loadeddata', revealVideo, {once: true})
+        const rotateSplashVideo = () => {
+            const nextChoice = media.getNextBannerMediaChoice(
+                media.bannerMediaCatalog,
+                'outdoor',
+                activeSplashChoice?.id ?? welcomeBackgroundMedia.id,
+            )
+            if (!nextChoice) {
+                return
+            }
+
+            activeSplashChoice = nextChoice
+            media.applyWelcomeBackgroundToVideo(splashVideo, {
+                videoSources: [{
+                    src:  media.getBannerMediaSource(nextChoice, welcomeBackgroundMedia.variant === 'mobile'),
+                    type: 'video/mp4',
+                }],
+            })
+        }
+
+        splashVideo.addEventListener('canplay', revealVideo)
+        splashVideo.addEventListener('ended', rotateSplashVideo)
         splashVideo.addEventListener('error', () => {
             splashElement.classList.remove('lgs-boot-splash-video-ready')
         })
@@ -95,8 +107,20 @@ const bootstrap = () => {
         }
     }
 
-    document.body.classList.toggle('lgs-app-booting', isStandalonePwa)
-    document.body.classList.toggle('lgs-app-visible', !isStandalonePwa)
+    const [
+        {createRoot},
+        {LGS1920},
+        {LGS1920Context},
+        {AppUtils},
+        {UIUtils},
+    ] = await Promise.all([
+        import('react-dom/client'),
+        import('@Components/LGS1920.jsx'),
+        import('@Core/LGS1920Context'),
+        import('@Utils/AppUtils'),
+        import('@Utils/UIUtils'),
+    ])
+
     AppUtils.setTheme(localStorage.getItem('theme') || 'system')
 
     if (!window.lgs) {
@@ -109,10 +133,13 @@ const bootstrap = () => {
     createRoot(document.getElementById('lgs1920-container')).render(
         <LGS1920/>,
     )
+    markStartup('react-mounted')
 
     void UIUtils.importFonts().catch(error => {
         console.warn('Unable to load Google Fonts.', error)
     })
 }
 
-bootstrap()
+void bootstrap().catch(error => {
+    console.error('[LGS1920] Bootstrap failed:', error)
+})

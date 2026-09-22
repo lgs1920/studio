@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2024-07-28
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,6 +29,7 @@ import {
 }                                                                   from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import { TrackUtils }                                               from '@Utils/cesium/TrackUtils'
 import { UIToast }                                                  from '@Utils/UIToast'
+import { useProxyValue }                                             from '@Utils/ValtioUtils'
 import {
     WaButton, WaIcon, WaOption, WaProgressBar, WaSelect, WaSwitch, WaTooltip,
 }                                                                   from '@web.awesome.me/webawesome-pro/dist/react'
@@ -51,7 +52,16 @@ export const ElevationProfile = (props) => {
 
     const profile = useSnapshot($profile)
     const {current: unitSystem} = useSnapshot($unitStore)
-    const {journey, isProcessing} = useSnapshot($journeyEditor)
+    const journeyRevision = useProxyValue($journeyEditor, editor => [
+        editor?.journey?.slug ?? '',
+        editor?.journey?.title ?? '',
+        editor?.journey?.elevationServer ?? '',
+        editor?.journey?.hasElevation === true,
+        editor?.isProcessing === true,
+    ].join('|'), '')
+    void journeyRevision
+    const journey = $journeyEditor.journey
+    const isProcessing = $journeyEditor.isProcessing === true
     const widget = useSnapshot(lgs.stores.ui.widget)
 
     const [canShowProgress, setCanShowProgress] = useState(false)

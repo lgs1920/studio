@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-03-29
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,6 +19,7 @@ import {
     FOCUS_ICON, ROTATION_ICON, UPDATE_JOURNEY_SILENTLY,
 } from '@Core/constants'
 import { getGlobalHideOtherJourneys, refreshJourneyVisibility } from '@Core/ui/JourneyVisibility'
+import { useProxyValue }                                          from '@Utils/ValtioUtils'
 import {
     JourneySelector,
 } from '@Editor/journey/JourneySelector'
@@ -54,7 +55,10 @@ export const JourneyToolbar = (props) => {
 
     const journeyLoaderStore = lgs.stores.ui.mainUI.journeyLoader
     const $editorStore = lgs.theJourneyEditorProxy
-    const editorStore = useSnapshot($editorStore)
+    const journeyVisible = useProxyValue($editorStore, editor => Boolean(editor?.journey) && editor.journey.visible !== false, false)
+    const journeysReady = useProxyValue(lgs.stores.main, main => main.journeysReady === true, false)
+    const journeySelectionDisabled = !journeysReady || typeof lgs.getJourneyBySlug === 'function'
+        && journeyEditor.list.some(slug => !lgs.getJourneyBySlug(slug))
 
     const replayState = useSnapshot(lgs.stores.replay)
     const replayActive = replayState.active || replayState.playing || replayState.paused
@@ -92,6 +96,9 @@ export const JourneyToolbar = (props) => {
      * @param {Event} event - The change event from the journey selector
      */
     const newJourneySelection = async (event) => {
+        if (journeySelectionDisabled) {
+            return
+        }
         await Utils.updateJourneyEditor(event.target.value, {})
     }
 
@@ -210,6 +217,7 @@ export const JourneyToolbar = (props) => {
                 <WaCard className="journey-toolbar lgs--toolbar wa-theme-lgs1920-on-map"
                         ref={_journeyToolbar}>
                     <JourneySelector onChange={newJourneySelection}
+                                     disabled={journeySelectionDisabled}
                                      single="true"
                                      closeOnOutsidePointerDown
                                      size="s"
@@ -229,11 +237,11 @@ export const JourneyToolbar = (props) => {
                     <ToggleStateIcon
                         id="visibility-journey-toolbar"
                         onChange={setJourneyVisibility}
-                        initial={editorStore?.journey?.visible}
+                        initial={journeyVisible}
                     />
 
                     <>
-                        {editorStore.journey?.visible &&
+                        {journeyVisible &&
                             <>
                                 <WaTooltip for="rotate-journey-toolbar">
                                     {

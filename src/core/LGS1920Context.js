@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-03
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -58,7 +58,7 @@ import {LocalDB} from './db/LocalDB'
 import {MouseEventHandler} from './MouseEventHandler'
 import {editorSettings} from './stores/editorSettings'
 import {main} from './stores/main'
-import {theJourneyEditor} from './stores/theJourneyEditor'
+import {resetJourneyEditor, theJourneyEditor} from './stores/theJourneyEditor'
 import {CameraManager} from './ui/CameraManager'
 import {ionTokenManager} from './ui/IonTokenManager'
 import {JourneyEditor} from './ui/JourneyEditor'
@@ -68,6 +68,7 @@ import {SceneManager} from './ui/SceneManager'
 import {JourneyReplayRunner} from './ui/JourneyReplayRunner'
 import {JourneyReplayMode} from './ui/replay/JourneyReplayMode'
 import {JourneyReplayVideoSync} from './ui/replay/JourneyReplayVideoSync'
+import {markStartup, measureStartup} from './ui/startup/startupTelemetry'
 
 export class LGS1920Context {
     /** @type {Proxy} */
@@ -402,14 +403,17 @@ export class LGS1920Context {
     }
 
     cleanEditor = () => {
-        this.theJourneyEditorProxy = proxy(theJourneyEditor)
+        resetJourneyEditor(this.#theJourneyEditorProxy)
     }
 
     initManagers = async () => {
         this.databaseSyncManager?.setDatabases(this.db)
         __.ui.databaseSyncManager = this.databaseSyncManager
 
+        markStartup('database-sync-start')
         await this.databaseSyncManager?.bootstrap?.()
+        markStartup('database-sync-end')
+        measureStartup('database-sync', 'database-sync-start', 'database-sync-end')
         const syncStartupWarning = this.databaseSyncManager?.startupWarning
         if (syncStartupWarning) {
             window.setTimeout(() => UIToast.warning(syncStartupWarning), 0)

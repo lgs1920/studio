@@ -8,14 +8,19 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { createPortal } from 'react-dom'
 import { useEffect, useRef } from 'react'
 import { WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import {
+    getWelcomeRoutePoiScale,
+    WELCOME_ROUTE_CAMERA_DISTANCE,
+} from './welcomeHeroRouteProjection'
 
 const ROUTE_POIS = [
     {index: 0, point: 0.25, label: 'Route point 01'},
@@ -130,6 +135,28 @@ const parseRgbColor = (value, fallback) => {
 }
 
 /**
+ * Composites a route POI at its projected canvas position without triggering layout.
+ *
+ * @param {HTMLElement | null} element - POI annotation element.
+ * @param {number} left - Projected horizontal position in pixels.
+ * @param {number} top - Projected vertical position in pixels.
+ * @param {boolean} visible - Whether the projected point is inside the viewport.
+ * @param {number} scale - Perspective scale based on the point depth.
+ * @returns {void}
+ */
+const setPoiScreenPosition = (element, left, top, visible, scale) => {
+    if (!element) {
+        return
+    }
+
+    element.style.setProperty('--welcome-hero-poi-x', `${left}px`)
+    element.style.setProperty('--welcome-hero-poi-y', `${top}px`)
+    element.style.setProperty('--welcome-hero-poi-scale', scale.toFixed(3))
+    element.style.visibility = visible ? 'visible' : 'hidden'
+    element.classList.toggle('is-positioned', visible)
+}
+
+/**
  * Reads a CSS color from the hero so brand and season theme changes are reflected by the route.
  *
  * @param {HTMLElement} layer - Hero route layer.
@@ -182,11 +209,16 @@ const setupRouteWorker = (layer, canvas) => {
         worker.postMessage({type: 'visibility', visible: !document.hidden})
     }
     const onWorkerMessage = ({data}) => {
-        if (data.type === 'poi-position') {
-            const poi = layer.querySelector(`[data-route-poi-index="${data.index}"]`)
-            poi?.style.setProperty('left', `${data.left}px`)
-            poi?.style.setProperty('top', `${data.top}px`)
-            poi?.classList.toggle('is-positioned', data.visible)
+        if (data.type === 'poi-positions') {
+            data.positions.forEach(({index, left, scale, top, visible}) => {
+                setPoiScreenPosition(
+                    layer.querySelector(`[data-route-poi-index="${index}"]`),
+                    left,
+                    top,
+                    visible,
+                    scale,
+                )
+            })
             return
         }
 
@@ -458,7 +490,6 @@ const setupRouteAnimation = (layer, canvas, modules) => {
         return {
             marker,
             markerMaterial,
-            markerPathPoints: routePathPoints,
             neonMaterials,
             poiItems: ROUTE_POIS.map(({index, point}) => ({
                 element: layer.querySelector(`[data-route-poi-index="${index}"]`),
@@ -530,14 +561,7 @@ const setupRouteAnimation = (layer, canvas, modules) => {
         routeState.neonMaterials.forEach(material => {
             material.uniforms.uProgress.value = progress
         })
-        const markerPosition = progress * (routeState.markerPathPoints.length - 1)
-        const markerIndex = Math.min(Math.floor(markerPosition), routeState.markerPathPoints.length - 2)
-        const markerInterpolation = markerPosition - markerIndex
-        routeState.marker.position.lerpVectors(
-            routeState.markerPathPoints[markerIndex],
-            routeState.markerPathPoints[markerIndex + 1],
-            markerInterpolation,
-        )
+        routeState.routeCurve.getPointAt(progress, routeState.marker.position)
         routeState.markerMaterial.uniforms.uSize.value = reducedMotionQuery.matches
             ? 1.55
             : 1.55 + Math.sin(timestamp * 0.008) * 0.1
@@ -558,6 +582,7 @@ const setupRouteAnimation = (layer, canvas, modules) => {
 
             worldPosition.copy(position)
             routeState.routeGroup.localToWorld(worldPosition)
+            const depthScale = getWelcomeRoutePoiScale(camera.position.z - worldPosition.z)
             worldPosition.project(camera)
             const visible = worldPosition.z > -1
                 && worldPosition.z < 1
@@ -565,10 +590,13 @@ const setupRouteAnimation = (layer, canvas, modules) => {
                 && worldPosition.x < 1.15
                 && worldPosition.y > -1.15
                 && worldPosition.y < 1.15
-            element.style.left = `${(worldPosition.x * 0.5 + 0.5) * dimensions.width}px`
-            element.style.top = `${(-worldPosition.y * 0.5 + 0.5) * dimensions.height}px`
-            element.style.visibility = visible ? 'visible' : 'hidden'
-            element.classList.toggle('is-positioned', visible)
+            setPoiScreenPosition(
+                element,
+                (worldPosition.x * 0.5 + 0.5) * dimensions.width,
+                (-worldPosition.y * 0.5 + 0.5) * dimensions.height,
+                visible,
+                depthScale,
+            )
         })
         renderer.render(scene, camera)
     }
@@ -614,7 +642,7 @@ const setupRouteAnimation = (layer, canvas, modules) => {
     }
 
     scene.add(sceneRoot)
-    camera.position.set(0, 0, 9.5)
+    camera.position.set(0, 0, WELCOME_ROUTE_CAMERA_DISTANCE)
     camera.lookAt(0, 0, 0)
     rebuildRoute()
     resize()
@@ -658,7 +686,7 @@ const setupRouteAnimation = (layer, canvas, modules) => {
  *
  * @returns {JSX.Element} Decorative route canvas.
  */
-export const WelcomeHeroRoute = () => {
+export const WelcomeHeroRoute = ({mountInSplash = false}) => {
     const _canvas = useRef(null)
 
     useEffect(() => {
@@ -704,7 +732,7 @@ export const WelcomeHeroRoute = () => {
         }
     }, [])
 
-    return (
+    const route = (
         <div className="welcome-hero-route" data-render-mode="initializing">
             <canvas ref={_canvas} className="welcome-hero-route-canvas" aria-hidden="true"/>
             <div className="welcome-hero-route-annotations" aria-label="Route points">
@@ -724,4 +752,14 @@ export const WelcomeHeroRoute = () => {
             </div>
         </div>
     )
+
+    if (mountInSplash && typeof document !== 'undefined') {
+        const splashElement = document.querySelector('#lgs-boot-splash')
+
+        if (splashElement) {
+            return createPortal(route, splashElement)
+        }
+    }
+
+    return route
 }

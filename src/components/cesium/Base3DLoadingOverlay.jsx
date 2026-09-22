@@ -7,20 +7,19 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-29
- * Last modified on: 2026-06-29
+ * Created on: 2026-06-30
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WaCard, WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useProxyValue }      from '@Utils/ValtioUtils'
 import { memo }                                from 'react'
-import { useSnapshot } from 'valtio'
 
 export const Base3DLoadingOverlay = memo(() => {
-    const {components} = useSnapshot(lgs.stores.main)
-    const base3dLoading = components?.layers?.base3dLoading === true
+    const base3dLoading = useProxyValue(lgs.stores.main, main => main.components?.layers?.base3dLoading === true, false)
 
     if (!base3dLoading) {
         return null

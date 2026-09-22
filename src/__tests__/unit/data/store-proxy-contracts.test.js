@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-05
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 import { editorSettings }             from '@Core/stores/editorSettings'
 import { main }                       from '@Core/stores/main'
 import { StoresManager }              from '@Core/stores/StoresManager'
-import { theJourneyEditor }           from '@Core/stores/theJourneyEditor'
+import { resetJourneyEditor, theJourneyEditor } from '@Core/stores/theJourneyEditor'
 import { ui }                         from '@Core/stores/ui'
 import fs                             from 'node:fs'
 import path                           from 'node:path'
@@ -127,6 +127,28 @@ describe('Valtio store contracts', () => {
 
         expect(proxy(source)).toBe(firstProxy)
         expect(proxy(source).journey).toEqual({slug: 'mutated'})
+    })
+
+    it('resets the journey editor without replacing its proxy identity', () => {
+        const $editor = proxy(theJourneyEditor)
+        const editorIdentity = $editor
+        const flags = $editor.flags
+
+        $editor.journey = {slug: 'journey-a'}
+        $editor.track = {slug: 'track-a'}
+        $editor.activeTab = 'tab-edit'
+        $editor.flags.start = {id: 'start'}
+        $editor.showPOIsFilter = true
+
+        resetJourneyEditor($editor)
+
+        expect($editor).toBe(editorIdentity)
+        expect($editor.flags).toBe(flags)
+        expect($editor.journey).toBeNull()
+        expect($editor.track).toBeNull()
+        expect($editor.activeTab).toBeUndefined()
+        expect($editor.flags).toEqual({start: null, stop: null})
+        expect($editor.showPOIsFilter).toBe(false)
     })
 
     it('keeps POI filtered maps stable when their content is recomputed', () => {

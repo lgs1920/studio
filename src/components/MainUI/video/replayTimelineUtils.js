@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-14
+ * Created on: 2026-08-29
+ * Last modified: 2026-09-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -262,36 +262,4 @@ export const resolveReplayTimelineLegendTransform = scrollTop => {
     const normalizedScrollTop = Number(scrollTop)
     const safeScrollTop = Number.isFinite(normalizedScrollTop) ? Math.max(0, normalizedScrollTop) : 0
     return `translateY(-${safeScrollTop}px)`
-}
-
-/**
- * Relay a track-name press to the package-owned row drag handle.
- *
- * @param {Object} options - Drag relay options.
- * @param {Object|null} options.event - React mouse event from the track legend.
- * @param {number} options.rowIndex - Position of the row in the editor data.
- * @param {HTMLElement|null} options.timelineElement - Timeline package root.
- * @returns {boolean} True when the package drag handle received the event.
- */
-export const relayReplayTimelineRowDrag = ({event, rowIndex, timelineElement} = {}) => {
-    if (!event || event.button !== 0 || !timelineElement) {
-        return false
-    }
-
-    const rowElement = timelineElement.querySelector(`.replay-timeline-row-index-${rowIndex}`)
-    const dragHandle = rowElement?.querySelector('.timeline-editor-edit-row-drag-handle')
-    if (!dragHandle) {
-        return false
-    }
-
-    event.preventDefault()
-    dragHandle.dispatchEvent(new globalThis.MouseEvent('mousedown', {
-        bubbles: true,
-        cancelable: true,
-        button: event.button,
-        buttons: event.buttons,
-        clientX: event.clientX,
-        clientY: event.clientY,
-    }))
-    return true
 }

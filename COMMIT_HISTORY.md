@@ -2572,3 +2572,147 @@
 ## 2026-09-18 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/df9a15d1b62afbd2a0802d121b1419c4ed85ce9a)
 
 - Recorded automatically from Git history.
+
+## 2026-09-20 — [`feat(replay): expose timeline controls`](https://github.com/lgs1920/studio/commit/495dbc30cc659512980ea17850a52318d9097b70)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`fix(replay): preserve playhead during clip edits`](https://github.com/lgs1920/studio/commit/97c01f80ac7cb4ae2fefd9fce620aad3ac23a6e5)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`docs: consolidate specifications and audit implementation status`](https://github.com/lgs1920/studio/commit/bd92895dc725b900408dd4d9a6ff5e23e3d9d6e7)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`docs(rules): correct standalone timeline source path`](https://github.com/lgs1920/studio/commit/8aff7c8f10847e0b22f358b8cd56b0f26c907ceb)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`chore(repo): sync GitNexus guidance`](https://github.com/lgs1920/studio/commit/2d0211ff2f54f62be182d151127fd5538f532cd0)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`feat(startup): load initialization data in a worker`](https://github.com/lgs1920/studio/commit/788f7c7616e8a3d15770b8ef07fd3dbba52d41e7)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`refactor(startup): simplify boot splash and welcome screen`](https://github.com/lgs1920/studio/commit/ae2ddfa01cede9d844822aa10c150d1c91663be3)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`fix(replay): detach reactive timeline tracks`](https://github.com/lgs1920/studio/commit/37567c2c022c44a1efcb040f1f259a0a2e4aa5ef)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`docs(startup): document initialization audit`](https://github.com/lgs1920/studio/commit/448db2dd1106efaeeec2cece1b24c65e3c81465f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`fix(startup): show gameplay toast on enter`](https://github.com/lgs1920/studio/commit/756bf2bbdd0a936395a24d0c7d50d3f3bae58f18)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`docs(rules): require JSDoc for named functions`](https://github.com/lgs1920/studio/commit/8d7bb1cc71040f7f69034d647d6d63ab002aa83b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`fix(startup): anchor welcome actions below branding`](https://github.com/lgs1920/studio/commit/7faf819a24347ae344c60e69ef827d99bfbc506c)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`fix(startup): match splash slogan rendering`](https://github.com/lgs1920/studio/commit/36111b8e7d8ab9b14b1694504ee5bd9ea47aa156)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`fix(startup): use matching SVG slogan in splash and init`](https://github.com/lgs1920/studio/commit/3fd8b7e6ac3b38e2586d81a1d2b9a458005eacc1)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`fix(startup): align splash overlay with CTA readiness`](https://github.com/lgs1920/studio/commit/700ce8d4be3277cc8fa35aaf09c8f427fd0e523d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`fix(startup): restore welcome video rotation`](https://github.com/lgs1920/studio/commit/02020c47ddfca11c4bffc2dc5bcf3baa29e4aac8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`feat(startup): prioritize current journey loading`](https://github.com/lgs1920/studio/commit/b6a0537da715e30015116f8ecec696f24fc3de84)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`perf(cesium): optimize track rendering`](https://github.com/lgs1920/studio/commit/6bb68dd0c424ad53fb778134a742c1acdee2d7c7)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`docs(startup): refresh initialization audit`](https://github.com/lgs1920/studio/commit/168cc55affb83a54f64fca222e0005ec77a50a4b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`Merge remote-tracking branch 'origin/feature/webworker-init' into feature/webworker-init`](https://github.com/lgs1920/studio/commit/21318675d7028a379e6cba20adbe22b177f1a2ad)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`fix(ci): use published timeline package`](https://github.com/lgs1920/studio/commit/0f7aa0d3fc049730f4025a11303ccfdd64846569)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`Merge remote-tracking branch 'origin/feature/webworker-init' into feature/webworker-init`](https://github.com/lgs1920/studio/commit/8f1ff021369661953f19757bb59ee71c25abb6a7)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`fix(deployment): remove duplicate environment configuration keys`](https://github.com/lgs1920/studio/commit/17419d6c6448a198f2fe24ab822863d3d73f0aa9)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`perf(cesium): cap rendered track geometry`](https://github.com/lgs1920/studio/commit/132b0706be397982b166f07aefd33b96d00fb803)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`perf(startup): render deferred tracks with primitives`](https://github.com/lgs1920/studio/commit/eecec4aba7495be9493ed7ecdcb9f6cf87bd7a9a)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`docs(cesium): align skills with 1.145`](https://github.com/lgs1920/studio/commit/edfbe1a5f36532b015ba5c3cdd74007895d7766f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-21 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/cbf9eec38035b81b50a335a06c533b6230351ccc)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-09-21 — [`fix(init): handle offline JSON responses`](https://github.com/lgs1920/studio/commit/907c4e85e609807985c5b5c6b70250d8a6018074)
+
+- Recorded automatically from Git history.
+
+## 2026-09-21 — [`fix(welcome): stabilize splash branding and CTA`](https://github.com/lgs1920/studio/commit/32016bb0ad8efa34d688cea2a4ba6dce985d32a2)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`perf(valtio): narrow reactive UI subscriptions`](https://github.com/lgs1920/studio/commit/bc01c1e6810c2faabb66af2bde09cad55cbde3e0)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`perf(startup): keep journey loading responsive`](https://github.com/lgs1920/studio/commit/e4f43b0b2fc8a60740460a5443619c93f7a315cc)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`fix(welcome): release the startup CTA reliably`](https://github.com/lgs1920/studio/commit/0ba72f09e9926a716ac6275695b517e72f480b7b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`perf(startup): streamline journey loading`](https://github.com/lgs1920/studio/commit/74bd24a40b0528ae2330fcdbbda3e1bf5d608c68)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`Merge remote-tracking branch 'origin/feature/webworker-init' into feature/webworker-init`](https://github.com/lgs1920/studio/commit/904ed533625a892b10ad407109abf3d98131acc5)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`fix(startup): isolate trace cleanup`](https://github.com/lgs1920/studio/commit/e80ce234dd9b4e3b24cc3ba3c70c7dedff1cdc5b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`Branch feature/webworker-init deployed on staging-1.0.0-feature/webworker-init-20260922T102549!`](https://github.com/lgs1920/studio/commit/c2ac5802d5844a916e4fa77f83372a87cd63044d)
+
+- Recorded automatically from Git history.

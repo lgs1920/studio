@@ -8,7 +8,7 @@
   ~ email: studio@lgs1920.fr
   ~
   ~ Created on: 2026-04-27
-  ~ Last modified: 2026-09-14
+  ~ Last modified: 2026-09-21
   ~
   ~
   ~ Copyright © 2026 LGS1920
@@ -45,6 +45,7 @@
     <meta content="#000000" name="msapplication-TileColor">
     <script>
         (function () {
+            window.performance?.mark?.('lgs.startup.static-shell')
             const root = document.documentElement
             const storedTheme = localStorage.getItem('theme') || 'system'
             const storedBrandColor = localStorage.getItem('brandColor') || 'yellow'
@@ -126,8 +127,11 @@
 
         #lgs-boot-splash {
             position: fixed;
-            z-index: 2;
+            z-index: calc(var(--lgs-toast-zindex, 2147483647) - 3);
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             transition: opacity 450ms ease, visibility 450ms ease;
             pointer-events: none;
             background: #050807;
@@ -136,11 +140,9 @@
             opacity: 0;
         }
 
-        @media (display-mode: standalone) {
-            body.lgs-app-booting #lgs-boot-splash {
-                visibility: visible;
-                opacity: 1;
-            }
+        body.lgs-app-booting #lgs-boot-splash {
+            visibility: visible;
+            opacity: 1;
         }
 
         #lgs-boot-splash .lgs-boot-splash-background {
@@ -175,27 +177,92 @@
             background:
                 linear-gradient(90deg, rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.24) 46%, rgba(0, 0, 0, 0.04) 100%),
                 linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.14) 48%, rgba(0, 0, 0, 0.54));
+            opacity: 1;
             pointer-events: none;
+            transition: opacity 1200ms ease;
             inset: 0;
+        }
+
+        #lgs-boot-splash.lgs-boot-splash-cta-ready::after {
+            opacity: 0.3;
         }
 
         #lgs-boot-splash-logo {
             position: absolute;
             z-index: 3;
-            top: 12vh;
+            top: 42%;
             left: 50%;
-            width: min(72vw, 520px);
+            width: min(220px, calc(100vw - 2rem));
             height: auto;
-            transform: translateX(-50%);
+            transform: translate(-50%, -50%);
             filter: drop-shadow(0 0 18px rgba(0, 0, 0, 0.55));
         }
 
-        @media (display-mode: standalone) {
-            body.lgs-app-booting #cesium-viewer {
-                visibility: hidden;
-                pointer-events: none;
-                opacity: 0;
+        #lgs-boot-splash-slogan {
+            position: absolute;
+            z-index: 3;
+            top: calc(42% + 4.3rem);
+            left: 50%;
+            width: min(28rem, calc(100vw - 2rem));
+            height: auto;
+            transform: translateX(-50%);
+            color: #f0c800;
+            filter: drop-shadow(0 0 14px rgba(0, 0, 0, 0.72));
+        }
+
+        #lgs-boot-splash .welcome-branding-cog {
+            z-index: 3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.3rem;
+            height: 1.3rem;
+            margin-top: calc(42vh + 3.35rem);
+            color: var(--wa-color-brand);
+        }
+
+        #lgs-boot-splash .welcome-branding-cog > wa-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.3rem;
+            height: 1.3rem;
+            min-width: 1.3rem;
+            min-height: 1.3rem;
+            font-size: 1.3rem;
+            line-height: 1;
+            transform-origin: center center;
+            filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.72));
+            /* Sets the Web Awesome cog rotation duration. */
+            --animation-duration: 3s;
+        }
+
+        #lgs-boot-splash.lgs-boot-splash-react-ready .welcome-branding-cog,
+        #lgs-boot-splash.lgs-boot-splash-cta-ready .welcome-branding-cog {
+            visibility: hidden;
+            opacity: 0;
+        }
+
+        #lgs-boot-splash.lgs-boot-splash-react-ready #lgs-boot-splash-logo,
+        #lgs-boot-splash.lgs-boot-splash-react-ready #lgs-boot-splash-slogan {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        @media (max-width: 700px) {
+            #lgs-boot-splash-logo {
+                width: min(150px, calc(100vw - 2rem));
             }
+
+            #lgs-boot-splash-slogan {
+                top: calc(42% + 3.4rem);
+            }
+        }
+
+        body.lgs-app-booting #cesium-viewer {
+            visibility: hidden;
+            pointer-events: none;
+            opacity: 0;
         }
 
         body:not(.lgs-app-booting) #lgs-boot-splash {
@@ -226,9 +293,33 @@
          decoding="async">
     <video class="lgs-boot-splash-background"
            data-welcome-background-media
-           autoplay muted loop playsinline preload="auto">
+           autoplay muted playsinline preload="auto">
     </video>
+    <span class="welcome-branding-cog" aria-hidden="true">
+        <wa-icon name="gear"
+                 canvas="auto"
+                 variant="regular"
+                 animation="spin"></wa-icon>
+    </span>
     <img id="lgs-boot-splash-logo" src="/assets/logo/logo-horizontal.png" alt="LGS1920 Studio" decoding="async">
+    <svg id="lgs-boot-splash-slogan"
+         viewBox="0 0 720 180"
+         role="img"
+         aria-label="LGS1920 slogan"
+         xmlns="http://www.w3.org/2000/svg">
+        <g transform="translate(360 90) rotate(-8) skewX(-14)">
+            <text
+                x="0"
+                y="0"
+                text-anchor="middle"
+                dominant-baseline="central"
+                fill="currentColor"
+                font-family="Cookie, cursive"
+                font-size="64">
+                Replay Your World Outdoors.
+            </text>
+        </g>
+    </svg>
 </div>
 <div id="lgs1920-container"></div>
 

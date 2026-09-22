@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,6 +21,7 @@ import {
     getWelcomeBackgroundMedia,
     getWelcomeBackgroundCatalogSchema,
     getBannerMediaChoices,
+    getNextBannerMediaChoice,
     preloadWelcomeBackgroundMedia,
     resolveWelcomeBackgroundMedia,
     selectBannerMedia,
@@ -61,6 +62,13 @@ describe('welcome background media catalog', () => {
     it('supports deterministic random selection from the shared catalog', () => {
         expect(selectBannerMedia(bannerMediaCatalog, 'outdoor', null, () => 0).id).toBe('20260812-10548975')
         expect(selectBannerMedia(bannerMediaCatalog, 'outdoor', null, () => 0.99).id).toBe('8557574-uhd-2560-1440-30fps')
+    })
+
+    it('moves to the next splash video and wraps after the final choice', () => {
+        const choices = getBannerMediaChoices(bannerMediaCatalog, 'outdoor')
+
+        expect(getNextBannerMediaChoice(bannerMediaCatalog, 'outdoor', choices[0].id)?.id).toBe(choices[1].id)
+        expect(getNextBannerMediaChoice(bannerMediaCatalog, 'outdoor', choices[choices.length - 1].id)?.id).toBe(choices[0].id)
     })
 
     it('keeps the resolved selection stable for the current session', () => {

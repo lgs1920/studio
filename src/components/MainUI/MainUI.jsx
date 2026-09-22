@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -60,6 +60,7 @@ import { PanelButton as POIEditButton } from './MapPOI/PanelButton'
 import { SceneModeSelector }            from './SceneModeSelector'
 import { SupportUI }                    from './SupportUI'
 import { SupportUIButton }   from './SupportUIButton'
+import { useProxyValue }                from '@Utils/ValtioUtils'
 import { WidgetManagementDrawer } from './widgets/management/WidgetManagementDrawer'
 import { WidgetEditorPanel } from './widgets/editor/WidgetEditorPanel'
 
@@ -70,7 +71,8 @@ const SECONDARY_ENTRANCE = 'lgs-slide-in-from-right'
 
 export const MainUI = memo(() => {
     const formerDevice = useRef(__.device.isMobile)
-    const {readyForTheShow, theJourney} = useSnapshot(lgs.stores.main)
+    const readyForTheShow = useProxyValue(lgs.stores.main, main => main.readyForTheShow === true, false)
+    const theJourney = useProxyValue(lgs.stores.main, main => main.theJourney !== null, false)
     const geocoderDialog = useSnapshot(lgs.stores.main.components.geocoder.dialog)
     const mainUI = useSnapshot(lgs.stores.ui.mainUI)
     const {drawers, toolBar} = useSnapshot(lgs.settings.ui.menu)

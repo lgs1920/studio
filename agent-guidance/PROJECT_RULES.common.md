@@ -20,5 +20,10 @@ Read this shared baseline before the project-specific `PROJECT_RULES.md`.
 
 - Add deterministic regression coverage for every behavior change at the public boundary.
 - Restore timers, DOM globals, observers, event listeners, mocks, and other process-wide state during test cleanup.
+- All named functions, including private helpers, and exported values must have
+  concise professional English JSDoc. Add concise English comments around
+  delicate phases such as ordering,
+  timing, cancellation, retries, backpressure, resource cleanup, or state
+  transitions. Do not add comments that merely restate obvious code.
 - Validate focused checks first, then the repository checks that cover the changed behavior.
 - Keep implementation documentation aligned with the behavior that is actually implemented.

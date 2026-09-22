@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-03
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,7 +38,7 @@ import {
 import { WIDGET_RADIUS }                                from '@Core/constants'
 import { SlDivider }                                    from '@shoelace-style/shoelace/dist/react'
 import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS, UnitUtils } from '@Utils/UnitUtils'
-import { useOptionalSnapshot }                          from '@Utils/ValtioUtils'
+import { useOptionalSnapshot, useProxyValue }             from '@Utils/ValtioUtils'
 import { WaIcon }                                       from '@web.awesome.me/webawesome-pro/dist/react'
 import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                  from 'valtio'
@@ -165,9 +165,8 @@ const resolveWidgetConfiguration = (widgetKey) => {
  * Maintains layout consistency by preserving slots even when values are zero.
  */
 export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journey', widgetKey = 'journey-stats-widget', widgetsBoard = null}) => {
-    const main = useSnapshot(lgs.stores.main)
     const journey = lgs.theJourney
-    const journeySlug = main.theJourney?.slug ?? null
+    const journeySlug = useProxyValue(lgs.stores.main, main => main.theJourney?.slug ?? null, null)
     const scaleCorrection = useWidgetScaleCorrection(id)
     const [journeyLocationState, setJourneyLocationState] = useState({slug: null, value: ''})
     const widgetRef = useRef(null)

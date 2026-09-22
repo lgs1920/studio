@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -753,12 +753,20 @@ body.mobile .orbit-widget-body {
     --hero-route-path-color: var(--wa-color-brand-60);
     --hero-route-glow-color: var(--wa-color-brand);
     --hero-route-poi-color: rgb(103, 165, 13);
+    --welcome-content-top: 42%;
+    --welcome-cta-offset: 12rem;
+    --welcome-status-offset: 15.5rem;
     inset: 0;
+}
+
+#lgs-boot-splash {
+    --hero-route-path-color: var(--wa-color-brand-60);
+    --hero-route-glow-color: var(--wa-color-brand);
+    --hero-route-poi-color: rgb(103, 165, 13);
 }
 
 .welcome-hero-media,
 .welcome-hero-route,
-.welcome-hero-scrim,
 .welcome-hero-shell {
     position: absolute;
     inset: 0;
@@ -780,6 +788,77 @@ body.mobile .orbit-widget-body {
     line-height: 1.2;
     text-align: right;
     text-shadow: 0 1px .35rem rgba(0, 0, 0, .68);
+}
+
+.welcome-branding {
+    position: fixed;
+    z-index: calc(var(--lgs-toast-zindex) - 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+    inset: 0;
+}
+
+.welcome-branding-logo {
+    position: absolute;
+    top: 42%;
+    left: 50%;
+    display: block;
+    width: min(220px, calc(100vw - 2rem));
+    margin: 0;
+    transform: translate(-50%, -50%);
+    filter: drop-shadow(0 0 18px rgba(0, 0, 0, .55));
+}
+
+.welcome-branding-logo img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.welcome-branding-slogan {
+    position: absolute;
+    top: calc(42% + 4.3rem);
+    left: 50%;
+    display: block;
+    width: min(28rem, calc(100vw - 2rem));
+    height: auto;
+    transform: translateX(-50%);
+    color: #f0c800;
+    filter: drop-shadow(0 0 14px rgba(0, 0, 0, .72));
+}
+
+.welcome-branding-cog {
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.3rem;
+    height: 1.3rem;
+    margin-top: calc(42vh + 3.35rem);
+    color: var(--wa-color-brand);
+}
+
+.welcome-branding-cog > wa-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.3rem;
+    height: 1.3rem;
+    min-width: 1.3rem;
+    min-height: 1.3rem;
+    font-size: 1.3rem;
+    line-height: 1;
+    transform-origin: center center;
+    filter: drop-shadow(0 0 10px rgba(0, 0, 0, .72));
+    /* Sets the Web Awesome cog rotation duration. */
+    --animation-duration: 3s;
+}
+
+#lgs-boot-splash.lgs-boot-splash-cta-ready ~ #lgs1920-container .welcome-branding-cog {
+    visibility: hidden;
+    opacity: 0;
 }
 
 .welcome-hero-media-credit {
@@ -896,27 +975,31 @@ body.mobile .orbit-widget-body {
 
 .welcome-hero-poi {
     position: absolute;
-    left: 50%;
-    top: 50%;
+    --welcome-hero-poi-scale: 1; /* Perspective scale based on the route point depth. */
+    --welcome-hero-poi-x: 50%; /* Projected horizontal route position. */
+    --welcome-hero-poi-y: 50%; /* Projected vertical route position. */
+    left: 0;
+    top: 0;
     visibility: hidden;
     opacity: 0;
-    transform: translate3d(-50%, -100%, 0);
-    transition: opacity 450ms ease, visibility 450ms ease;
+    transform: translate3d(var(--welcome-hero-poi-x), var(--welcome-hero-poi-y), 0) translate3d(-50%, -100%, 0) scale(var(--welcome-hero-poi-scale));
+    transition: opacity 450ms ease, transform 34ms linear, visibility 450ms ease;
+    will-change: transform;
 }
 
 .welcome-hero-poi[data-route-poi-index='0'] {
-    left: 52%;
-    top: 51%;
+    --welcome-hero-poi-x: 52%; /* Initial horizontal route position. */
+    --welcome-hero-poi-y: 51%; /* Initial vertical route position. */
 }
 
 .welcome-hero-poi[data-route-poi-index='1'] {
-    left: 62%;
-    top: 39%;
+    --welcome-hero-poi-x: 62%; /* Initial horizontal route position. */
+    --welcome-hero-poi-y: 39%; /* Initial vertical route position. */
 }
 
 .welcome-hero-poi[data-route-poi-index='2'] {
-    left: 78%;
-    top: 31%;
+    --welcome-hero-poi-x: 78%; /* Initial horizontal route position. */
+    --welcome-hero-poi-y: 31%; /* Initial vertical route position. */
 }
 
 .welcome-hero-poi.is-revealed.is-positioned,
@@ -929,7 +1012,7 @@ body.mobile .orbit-widget-body {
     display: block;
     color: var(--hero-route-poi-color);
     font-size: clamp(1.7rem, 4vw, 2.55rem);
-    filter: drop-shadow(0 0 .32rem color-mix(in oklab, var(--hero-route-poi-color) 82%, transparent)) drop-shadow(0 0 .72rem color-mix(in oklab, var(--hero-route-poi-color) 88%, transparent));
+    filter: drop-shadow(0 0 .18rem color-mix(in oklab, var(--hero-route-poi-color) 68%, transparent)) drop-shadow(0 0 .45rem color-mix(in oklab, var(--hero-route-poi-color) 74%, transparent));
     transform-origin: center bottom;
 }
 
@@ -964,7 +1047,19 @@ body.mobile .orbit-widget-body {
     --hero-route-poi-color: rgb(175, 218, 188);
 }
 
+:root[data-season-theme='spring'] #lgs-boot-splash {
+    --hero-route-path-color: rgb(62, 109, 77);
+    --hero-route-glow-color: rgb(175, 218, 188);
+    --hero-route-poi-color: rgb(175, 218, 188);
+}
+
 :root[data-season-theme='fall'] #welcome-hero {
+    --hero-route-path-color: rgb(113, 63, 18);
+    --hero-route-glow-color: rgb(197, 110, 18);
+    --hero-route-poi-color: rgb(197, 110, 18);
+}
+
+:root[data-season-theme='fall'] #lgs-boot-splash {
     --hero-route-path-color: rgb(113, 63, 18);
     --hero-route-glow-color: rgb(197, 110, 18);
     --hero-route-poi-color: rgb(197, 110, 18);
@@ -976,12 +1071,10 @@ body.mobile .orbit-widget-body {
     --hero-route-poi-color: rgb(219, 234, 254);
 }
 
-.welcome-hero-scrim {
-    z-index: 1;
-    background:
-        linear-gradient(90deg, rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.24) 46%, rgba(0, 0, 0, 0.04) 100%),
-        linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.14) 48%, rgba(0, 0, 0, 0.54));
-    pointer-events: none;
+:root[data-season-theme='winter'] #lgs-boot-splash {
+    --hero-route-path-color: rgb(49, 90, 130);
+    --hero-route-glow-color: rgb(219, 234, 254);
+    --hero-route-poi-color: rgb(219, 234, 254);
 }
 
 .welcome-hero-controls {
@@ -1033,61 +1126,38 @@ body.mobile .orbit-widget-body {
 
 .welcome-hero-shell {
     z-index: 4;
-    display: grid;
-    place-items: center;
-    width: min(1240px, calc(100vw - 2rem));
-    margin-inline: auto;
+    width: 100%;
+    margin: 0;
     padding: max(var(--top), var(--lgs-gutter)) 0 max(var(--bottom), var(--lgs-gutter));
 }
 
 .welcome-hero-content {
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    justify-content: center;
-    width: min(28rem, 100%);
-    min-width: 0;
-    gap: var(--lgs-gutter);
-}
-
-.welcome-hero-content .welcome-logo {
-    position: relative;
-    display: block;
-    width: min(220px, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter))) !important;
-    margin-inline: auto;
-}
-
-.welcome-hero-content .welcome-logo img {
-    display: block;
-    width: 100%;
-    height: auto;
-}
-
-.welcome-hero-content .welcome-slogan {
-    display: block;
-    width: 100%;
-    height: auto;
-    max-width: min(28rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
-    margin: 0 0 var(--lgs-gutter);
-    color: var(--wa-color-brand-fill-loud);
-    filter: drop-shadow(0 2px 14px var(--lgs-dark-color-90));
-}
-
-.welcome-hero-content .welcome-slogan text {
-    font-size: clamp(3.5rem, calc(2.25 * var(--lgs-gutter)), 5rem);
-}
-
-.welcome-hero-content .welcome-slogan-stroke {
-    opacity: 1;
+    position: absolute;
+    inset: 0;
 }
 
 .welcome-enter-call-for-action {
+    position: absolute;
+    top: calc(var(--welcome-content-top) + var(--welcome-cta-offset));
+    left: 50%;
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    width: 100%;
-    max-width: 28rem;
+    width: min(28rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
+    transform: translateX(-50%);
     gap: var(--lgs-gutter-s);
+    animation: welcome-cta-appear 420ms cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes welcome-cta-appear {
+    from {
+        transform: translate(-50%, .55rem) scale(.98);
+    }
+
+    to {
+        transform: translate(-50%, 0) scale(1);
+        opacity: 1;
+    }
 }
 
 .welcome-enter-call-for-action wa-button::part(base) {
@@ -1110,129 +1180,18 @@ body.mobile .orbit-widget-body {
     gap: var(--lgs-gutter-xs);
 }
 
-.welcome-initialization {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    max-width: 28rem;
-    min-width: 0;
-    padding: var(--lgs-gutter-s);
-    border: 1px solid var(--wa-color-surface-border);
-    border-radius: var(--lgs-border-radius-s);
-    color: var(--wa-color-text-normal);
-    background: var(--lgs-theme-background-color);
-    box-shadow: 0 0.8rem 2rem rgba(0, 0, 0, .16);
-    backdrop-filter: blur(var(--lgs-blur));
-    gap: var(--lgs-gutter-xs);
-
-    & .welcome-initialization-header {
-        display: flex;
-        justify-content: space-between;
-        font-size: var(--lgs-font-size-s);
-        font-weight: normal;
-        letter-spacing: .02em;
-    }
-
-    & wa-progress-bar {
-        margin: 0;
-        /* Progress track height for the welcome initialization indicator. */
-        --track-height: .35rem;
-    }
-
-    & .welcome-initialization-steps-frame {
-        display: grid;
-        height: calc((1.25rem * 4) + (.1rem * 3));
-        min-height: 0;
-        grid-template-columns: minmax(0, 1fr) .22rem;
-        gap: var(--lgs-gutter-xs);
-        overflow: hidden;
-    }
-
-    & .welcome-initialization-steps-viewport {
-        min-height: 0;
-        overflow: hidden;
-    }
-
-    & .welcome-initialization-steps {
-        display: flex;
-        flex-direction: column;
-        margin: 0;
-        padding: 0;
-        list-style: none;
-        transition: transform 420ms cubic-bezier(.22, 1, .36, 1);
-        gap: .1rem;
-        will-change: transform;
-    }
-
-    & .welcome-initialization-scrollbar {
-        position: relative;
-        display: flex;
-        justify-content: center;
-        width: .22rem;
-        border-radius: 999px;
-        background: var(--lgs-scrollbar-track-color);
-    }
-
-    & .welcome-initialization-scrollbar-thumb {
-        position: absolute;
-        inset-inline: 0;
-        top: 0;
-        display: block;
-        width: 100%;
-        min-height: .7rem;
-        border-radius: 999px;
-        background: var(--lgs-scrollbar-thumb-color);
-        box-shadow: 0 0 .35rem color-mix(in srgb, var(--lgs-scrollbar-thumb-color) 60%, transparent);
-        transition: height 420ms cubic-bezier(.22, 1, .36, 1), top 420ms cubic-bezier(.22, 1, .36, 1);
-    }
-
-    & .welcome-initialization-step {
-        display: grid;
-        align-items: center;
-        height: 1.25rem;
-        min-height: 1.25rem;
-        grid-template-columns: 1rem minmax(0, 1fr) auto;
-        color: color-mix(in oklab, var(--wa-color-text-normal) 56%, transparent);
-        font-size: var(--lgs-font-size-s);
-        line-height: 1.25;
-        gap: var(--lgs-gutter-xs);
-    }
-
-    & .welcome-initialization-step wa-icon {
-        font-size: .82rem;
-        text-align: center;
-    }
-
-    & .welcome-initialization-step-label {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    & .welcome-initialization-step.is-active {
-        color: var(--wa-color-brand-60);
-    }
-
-    & .welcome-initialization-step.is-complete {
-        color: color-mix(in oklab, var(--wa-color-text-normal) 76%, transparent);
-    }
-
-    & .welcome-initialization-step.is-complete wa-icon {
-        color: var(--wa-color-brand-60);
-    }
-
-    & .welcome-initialization-step-status {
-        font-size: .68rem;
-        white-space: nowrap;
-        opacity: .76;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .welcome-initialization-steps,
-    .welcome-initialization-scrollbar-thumb {
-        transition: none !important;
-    }
+.welcome-initialization-callout {
+    position: absolute;
+    top: calc(var(--welcome-content-top) + var(--welcome-status-offset));
+    left: 50%;
+    width: min(28rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
+    margin: 0;
+    transform: translateX(-50%);
+    color: color-mix(in oklab, var(--wa-color-text-normal) 72%, transparent);
+    font-size: var(--lgs-font-size-s);
+    line-height: 1.35;
+    text-align: center;
+    text-shadow: 0 1px .35rem rgba(0, 0, 0, .68);
 }
 
 @media (max-width: 700px) {
@@ -1241,16 +1200,26 @@ body.mobile .orbit-widget-body {
         padding-block: max(var(--top), var(--lgs-gutter-s)) max(var(--bottom), var(--lgs-gutter-s));
     }
 
-    .welcome-hero-content {
-        gap: var(--lgs-gutter-s);
+    #welcome-hero {
+        --welcome-cta-offset: 8.8rem;
+        --welcome-status-offset: 12.5rem;
     }
 
-    .welcome-hero-content .welcome-logo {
-        width: min(150px, 42vw) !important;
+    .welcome-branding-logo {
+        width: min(150px, calc(100vw - 2rem));
     }
 
-    .welcome-hero-content .welcome-slogan {
+    .welcome-branding-slogan {
+        top: calc(42% + 3.4rem);
         max-width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .welcome-enter-call-for-action {
+        animation: none;
+        opacity: 1;
+        transform: translateX(-50%);
     }
 }
 

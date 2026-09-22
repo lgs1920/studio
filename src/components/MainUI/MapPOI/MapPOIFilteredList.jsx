@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2025-02-20
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,6 +23,7 @@
 
 import { MapPOIListItem }        from '@Components/MainUI/MapPOI/MapPOIListItem'
 import { JOURNEY_EDITOR_DRAWER } from '@Core/constants'
+import { useProxyValue }         from '@Utils/ValtioUtils'
 import { WaCallout, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useEffect, useMemo }          from 'react'
 import { useSnapshot }           from 'valtio'
@@ -103,16 +104,16 @@ export const MapPOIFilteredList = () => {
     const pois = useSnapshot($pois)
     const settings = useSnapshot($settings)
     const drawers = useSnapshot($drawers)
-    const {theJourney} = useSnapshot(lgs.mainProxy)
+    const journeySlug = useProxyValue(lgs.mainProxy, main => main.theJourney?.slug ?? null, null)
 
     const onlyJourney = useMemo(() => drawers.open === JOURNEY_EDITOR_DRAWER, [drawers.open])
 
     const filteredPois = useMemo(
         () => {
-            void theJourney?.slug
+            void journeySlug
             return filterAndSortPois(onlyJourney, settings.filter, pois.list)
         },
-        [onlyJourney, theJourney?.slug, settings.filter, pois.list],
+        [onlyJourney, journeySlug, settings.filter, pois.list],
     )
 
     /**

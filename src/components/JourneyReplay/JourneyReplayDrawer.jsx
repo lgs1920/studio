@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -63,7 +63,7 @@ import { Cartographic } from 'cesium'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal }      from 'react-dom'
 import { useSnapshot }       from 'valtio'
-import { useOptionalSnapshot } from '@Utils/ValtioUtils'
+import { useOptionalSnapshot, useProxyValue } from '@Utils/ValtioUtils'
 import './style.css'
 
 const clampDuration = value => {
@@ -402,7 +402,8 @@ const REPLAY_ADVANCED_CAMERA_SETUP_BUTTON_ID = 'replay-advanced-camera-setup-but
 
 export const JourneyReplayDrawer = memo(() => {
     const {drawers: {open: drawerOpen, navigation: drawerNavigation}} = useSnapshot(lgs.stores.ui)
-    const {theJourney: currentJourney} = useSnapshot(lgs.stores.main)
+    const journeySlug = useProxyValue(lgs.stores.main, main => main.theJourney?.slug ?? null, null)
+    const currentJourney = lgs.theJourney
     const poiList = lgs.stores.main.components.pois.list
     const replayState = useSnapshot(lgs.stores.replay)
     ensureJourneyReplaySettings()
@@ -412,7 +413,6 @@ export const JourneyReplayDrawer = memo(() => {
     const {drawer: drawerPlacement} = useSnapshot(lgs.editorSettingsProxy.menu)
     const swatches = useOptionalSnapshot(lgs.settings.swatches, {list: []}).list.join(';')
     const altitudeUnit = ELEVATION_UNITS[unitSystem] ?? ELEVATION_UNITS[0]
-    const journeySlug = currentJourney?.slug
     const hasJourney = Boolean(journeySlug)
     const previousJourneySlug = useRef(journeySlug)
     const drawerRef = useRef(null)

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-09
- * Last modified: 2026-05-09
+ * Created on: 2025-03-28
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { JOURNEY_EDITOR_DRAWER, JOURNEY_GROUPS_DRAWER, REMOVE_JOURNEY_IN_TOOLBAR } from '@Core/constants'
 import { LGSPopup }                    from '@Components/LGSPopup'
+import { useProxyValue }               from '@Utils/ValtioUtils'
 import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                           from 'valtio'
@@ -32,7 +33,7 @@ export const EditorPanelButton = memo((props) => {
     // Granular snapshots to minimize re-renders
     const {toolBar} = useSnapshot(lgs.settings.ui.menu)
     // Derive boolean to avoid reactivity to nested theJourney properties
-    const hasJourney = useSnapshot(lgs.stores.main).theJourney !== null
+    const hasJourney = useProxyValue(lgs.stores.main, main => main.theJourney !== null, false)
     const [open, setOpen] = useState(false)
     const _popupHost = useRef(null)
     const _triggerClickTimer = useRef(null)

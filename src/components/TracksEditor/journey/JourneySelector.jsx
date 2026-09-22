@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-26
- * Last modified: 2026-05-26
+ * Created on: 2024-02-20
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,6 +22,7 @@ import {
 import classNames                                                         from 'classnames'
 import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                                    from 'valtio'
+import { useProxyValue }                                                   from '@Utils/ValtioUtils'
 import { JourneyGroupColorIcon }                                          from '../groups/JourneyGroupsInfo'
 import { TrackStylePreview }                                              from '../track/TrackStylePreview'
 
@@ -87,10 +88,25 @@ export const JourneySelector = memo(({
     })
 
     const {list, keys} = useSnapshot($journeyEditor)
-    const {journey: theJourney} = useSnapshot($editorStore)
     const {version: groupsVersion} = useSnapshot(lgs.stores.ui.journeyGroups)
+    const editorStateKey = useProxyValue($editorStore, editor => {
+        const journey = editor?.journey
+        const track = editor?.track
+        const renderStyle = track?.renderStyle
+
+        return [
+            journey?.slug ?? '',
+            journey?.title ?? '',
+            journey ? journey.visible !== false : false,
+            track?.slug ?? '',
+            track ? track.visible !== false : false,
+            renderStyle?.color ?? track?.color ?? '',
+            renderStyle?.farPixelWidth ?? track?.thickness ?? '',
+        ].join('|')
+    }, '')
+    void editorStateKey
     const journeyListVersion = keys.journey.list
-    const currentJourney = $editorStore.journey ?? theJourney
+    const currentJourney = $editorStore.journey ?? null
 
     const journeys = useMemo(() => {
         void journeyListVersion
@@ -148,10 +164,10 @@ export const JourneySelector = memo(({
         }
     }, [journeys, groupsVersion])
 
-    const selectedValue = value ?? theJourney?.slug ?? ''
+    const selectedValue = value ?? currentJourney?.slug ?? ''
     const getReactiveJourney = useCallback(
-        journey => theJourney?.slug === journey?.slug ? currentJourney : journey,
-        [currentJourney, theJourney?.slug],
+        journey => currentJourney?.slug === journey?.slug ? currentJourney : journey,
+        [currentJourney],
     )
     const selectedJourney = useMemo(
         () => getReactiveJourney(journeys.find(journey => journey.slug === selectedValue)) ?? (selectedValue ? currentJourney : null),
@@ -167,7 +183,7 @@ export const JourneySelector = memo(({
         if (onChange) {
             onChange(event)
         }
-    }, [onChange, $journeyEditor, syncEditorSelection])
+    }, [disabled, journeys.length, onChange, $journeyEditor, syncEditorSelection])
 
     const handleTreeSelection = useCallback(event => {
         const selectedItem = event.detail.selection[0]
@@ -185,7 +201,7 @@ export const JourneySelector = memo(({
         if (onChange) {
             onChange({target: {value: slug}})
         }
-    }, [onChange, $journeyEditor, syncEditorSelection])
+    }, [disabled, journeys.length, onChange, $journeyEditor, syncEditorSelection])
 
     const handleGroupExpand = useCallback(groupId => {
         setExpandedGroups(prev => {
@@ -211,7 +227,7 @@ export const JourneySelector = memo(({
             setTriggerWidth(_treeTrigger.current.getBoundingClientRect().width)
         }
         setTreeOpen(o => !o)
-    }, [disabled, treeOpen])
+    }, [disabled, journeys.length, treeOpen])
 
     const setSelectRef = useCallback((element) => {
         _select.current = element
@@ -242,7 +258,7 @@ export const JourneySelector = memo(({
         return () => document.removeEventListener('pointerdown', handlePointerDownOutside, true)
     }, [closeOnOutsidePointerDown])
 
-    const renderActivityIcon = useCallback((journey = theJourney) => {
+    const renderActivityIcon = useCallback((journey = currentJourney) => {
         const activity = Journey.activityProfile(journey?.activity, journey?.activitySettings)
 
         return (
@@ -253,17 +269,17 @@ export const JourneySelector = memo(({
                 variant="regular"
             />
         )
-    }, [theJourney])
+    }, [currentJourney])
 
     const renderTrackPreview = useCallback((journey, track) => (
         <TrackStylePreview
-            track={track}
+            renderStyle={track?.renderStyle}
             compact
             visible={journey?.visible !== false && track?.visible !== false}
         />
     ), [])
 
-    const renderJourneyIcons = useCallback((journey = theJourney) => {
+    const renderJourneyIcons = useCallback((journey = currentJourney) => {
         const tracks = Array.from(journey.tracks.values())
         if (tracks.length === 1) {
             return (
@@ -280,7 +296,7 @@ export const JourneySelector = memo(({
                     {tracks.slice(0, 3).map(track => (
                         <TrackStylePreview
                             key={track.slug}
-                            track={track}
+                            renderStyle={track.renderStyle}
                             compact
                             visible={journey.visible !== false && track.visible !== false}
                         />
@@ -289,7 +305,7 @@ export const JourneySelector = memo(({
                 {renderActivityIcon(journey)}
             </span>
         )
-    }, [renderActivityIcon, renderTrackPreview, theJourney])
+    }, [currentJourney, renderActivityIcon, renderTrackPreview])
 
     const renderTreeJourneyItem = useCallback((journey, ungrouped = false) => {
         const rj = getReactiveJourney(journey)

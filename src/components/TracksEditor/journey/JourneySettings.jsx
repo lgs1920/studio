@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-17
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -70,6 +70,7 @@ import {
 import {
     UIToast,
 }                                     from '@Utils/UIToast'
+import { useProxyValue }               from '@Utils/ValtioUtils'
 import { getGlobalHideOtherJourneys, refreshJourneyVisibility } from '@Core/ui/JourneyVisibility'
 import { decodeHTMLEntities }         from '@Utils/TextUtils'
 import {
@@ -178,8 +179,27 @@ export const JourneySettings = () => {
     const $uiRotate = lgs.stores.ui.mainUI.rotate
     const $drawers = lgs.stores.ui.drawers
 
-    // Snapshots
-    const {journey} = useSnapshot($journeyEditor)
+    // Read only the small editor state needed to rerender this panel. A full snapshot
+    // would clone the journey geometry and metrics before the drawer can appear.
+    const journeyRevision = useProxyValue($journeyEditor, editor => {
+        const journey = editor?.journey
+
+        return [
+            editor?.activeTab ?? '',
+            editor?.isProcessing === true,
+            journey?.slug ?? '',
+            journey?.title ?? '',
+            journey?.description ?? '',
+            journey?.activity ?? '',
+            journey?.elevationServer ?? '',
+            journey?.visible !== false,
+            journey?.POIsVisible !== false,
+            journey?.tracks?.size ?? 0,
+            journey?.pois?.size ?? 0,
+        ].join('|')
+    }, '')
+    void journeyRevision
+    const journey = $journeyEditor.journey
     const {running, target} = useSnapshot($uiRotate)
     const {open} = useSnapshot($drawers)
     const journeySlug = journey?.slug ?? null

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-05-01
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,14 +28,13 @@ import {
 }                                                                    from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import './style.css'
 import { TrackUtils }                  from '@Utils/cesium/TrackUtils'
+import { useProxyValue }                from '@Utils/ValtioUtils'
 import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
-import { useSnapshot }                                               from 'valtio'
 
 export const ProfileButton = (props) => {
     const $main = lgs.stores.main
     const $profile = $main.components.profile
-    const main = useSnapshot($main)
-    const profile = main.components.profile
+    const canViewProfile = useProxyValue($main, main => main.canViewProfile === true, false)
 
     // Access the singleton correctly
     const renderer = WidgetDynamicRenderer.instance
@@ -113,7 +112,7 @@ export const ProfileButton = (props) => {
 
     return (
         <>
-            {main.canViewProfile && (
+            {canViewProfile && (
                 <>
                     <WaTooltip for="open-the-main-panel"
                                placement={props.tooltip}>{'Open the journey Profile'}</WaTooltip>

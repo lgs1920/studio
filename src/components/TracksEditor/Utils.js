@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-01
- * Last modified: 2026-05-01
+ * Created on: 2024-02-24
+ * Last modified: 2026-09-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -87,6 +87,15 @@ export class Utils {
         Utils.renderTracksList()
         Utils.renderTrackSettings()
 
+        // Startup keeps secondary journeys as data and defers their Cesium
+        // geometry. Selecting one is the explicit point at which its active
+        // track becomes renderable.
+        await editorStore.track?.draw({
+                                          action,
+                                          forcedToHide: editorStore.journey.visible === false,
+                                          mode:        NO_FOCUS,
+                                      })
+
         //TODO manage 'journey/change' event and externalise profile management
 
         // Profile management
@@ -123,6 +132,12 @@ export class Utils {
         const shouldFocus = !__.ui.drawerManager.consumeSuppressFocusOnOpen?.(editorStore.journey?.slug)
         editorStore.track = lgs.getTrackBySlug(trackSlug)
             editorStore.track.addToContext()
+
+            await editorStore.track.draw({
+                                             action:       DRAWING_FROM_UI,
+                                             forcedToHide: editorStore.journey?.visible === false,
+                                             mode:         NO_FOCUS,
+                                         })
 
             // Force POI in editor
             editorStore.poi = null

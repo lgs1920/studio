@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-01-31
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@ import { Widget }                                                               
 import { JourneyStats }                                                           from '@Components/Stats/JourneyStats'
 import { JOURNEY_WIDGETS, LGS_VISUAL_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { useManagedStylesheet }                                                   from '@Utils/useManagedStylesheet'
-import { useOptionalSnapshot } from '@Utils/ValtioUtils'
+import { useOptionalSnapshot, useProxyValue } from '@Utils/ValtioUtils'
 import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS }               from '@Utils/UnitUtils'
 import { useMemo } from 'react'
 import { useSnapshot }                                                            from 'valtio'
@@ -44,9 +44,8 @@ export const JourneyStatsWidget = ({
                          || (video.editing || video.preRecording || video.recording || video.snapshot || video.finalizing
                              ? VIDEO_WIDGETS_BOARD
                              : '')
-    const main = useSnapshot(lgs.stores.main)
     const journey = lgs.theJourney
-    const journeySlug = main.theJourney?.slug ?? null
+    const journeySlug = useProxyValue(lgs.stores.main, main => main.theJourney?.slug ?? null, null)
 
     const $unitSystem = lgs.settings.unitSystem
     const {current: unitSystem} = useSnapshot($unitSystem)

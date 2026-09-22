@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,11 @@
 import {readFileSync} from 'node:fs'
 import {resolve} from 'node:path'
 import {describe, expect, it} from 'vitest'
+import {
+    getWelcomeRoutePoiScale,
+    WELCOME_ROUTE_CAMERA_DISTANCE,
+    WELCOME_ROUTE_POI_MIN_SCALE,
+} from '@Components/MainUI/welcomeHeroRouteProjection'
 
 const routeFiles = [
     resolve('src/components/MainUI/WelcomeHeroRoute.jsx'),
@@ -56,5 +61,30 @@ describe('welcome hero route edge fade', () => {
         expect(styleSource).toContain(".welcome-hero-route[data-render-mode='fallback'] .welcome-hero-poi")
         expect(styleSource).not.toContain(".welcome-hero-route:not([data-render-mode='worker']) .welcome-hero-poi")
         expect(styleSource.match(/filter: sepia\(0\.2\) saturate\(0\.8\)/g)).toHaveLength(2)
+    })
+
+    it('keeps POIs on curve samples and moves them with composited transforms', () => {
+        const fallbackSource = readFileSync(routeFiles[0], 'utf8')
+        const workerSource = readFileSync(routeFiles[1], 'utf8')
+
+        expect(fallbackSource).toContain('routeCurve.getPointAt(point)')
+        expect(fallbackSource).toContain('routeState.routeCurve.getPointAt(progress, routeState.marker.position)')
+        expect(workerSource).toContain('poiPositions: POI_PROGRESS.map(progress => curve.getPointAt(progress))')
+        expect(workerSource).toContain("self.postMessage({type: 'poi-positions', positions})")
+        expect(workerSource).toContain('route.curve.getPointAt(progress, route.marker.position)')
+        expect(workerSource).not.toContain("type: 'poi-position'")
+        expect(fallbackSource).toContain('getWelcomeRoutePoiScale(camera.position.z - worldPosition.z)')
+        expect(workerSource).toContain('getWelcomeRoutePoiScale(camera.position.z - projectedPoiPosition.z)')
+        expect(styleSource).toContain('--welcome-hero-poi-scale: 1;')
+        expect(styleSource).toContain('translate3d(-50%, -100%, 0) scale(var(--welcome-hero-poi-scale));')
+        expect(styleSource).toContain('will-change: transform;')
+        expect(styleSource).not.toContain(".welcome-hero-poi[data-route-poi-index='0'] {\n    left:")
+    })
+
+    it('shrinks route POIs only after they move behind the scene center', () => {
+        expect(getWelcomeRoutePoiScale(WELCOME_ROUTE_CAMERA_DISTANCE * 0.75)).toBe(1)
+        expect(getWelcomeRoutePoiScale(WELCOME_ROUTE_CAMERA_DISTANCE)).toBe(1)
+        expect(getWelcomeRoutePoiScale(WELCOME_ROUTE_CAMERA_DISTANCE * 1.25)).toBeCloseTo(0.8)
+        expect(getWelcomeRoutePoiScale(WELCOME_ROUTE_CAMERA_DISTANCE * 2)).toBe(WELCOME_ROUTE_POI_MIN_SCALE)
     })
 })

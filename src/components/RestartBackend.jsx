@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-09-22
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import { SlAlert, SlDialog }         from '@shoelace-style/shoelace/dist/react'
 import { WaIcon }                    from '@web.awesome.me/webawesome-pro/dist/react'
-import { useSnapshot }               from 'valtio'
+import { useProxyValue }              from '@Utils/ValtioUtils'
 
 
 /**
@@ -35,11 +35,10 @@ export const RestartBackend = () => {
         }
     }
 
-    const check = useSnapshot(lgs.stores.main)
-    console.log(check.backendRestart)
+    const backendRestart = useProxyValue(lgs.stores.main, main => main.backendRestart === true, false)
     return (
         <SlDialog label={`Trying to restart the backend...`}
-                  open={check.backendRestart}
+                  open={backendRestart}
                   id={'restart-backend'}
                   className={'lgs-theme'}
                   noHeader onSlRequestClose={handleRequestClose}

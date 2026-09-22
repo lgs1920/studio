@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2024-04-26
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,7 +29,7 @@ import {
     WidgetDynamicRenderer,
 }                                                                              from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import { UIToast }                                                             from '@Utils/UIToast'
-import { useOptionalSnapshot }                                     from '@Utils/ValtioUtils'
+import { useOptionalSnapshot, useProxyValue }                                 from '@Utils/ValtioUtils'
 import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import {
     WaButton, WaCopyButton, WaDivider, WaIcon, WaSwitch, WaTooltip,
@@ -37,7 +37,6 @@ import {
 import { Cartographic, Rectangle }                                             from 'cesium'
 import { DateTime }                                                            from 'luxon'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSnapshot }                                                         from 'valtio'
 import { DateInfo }                                                            from '../DateInfo'
 
 const JOURNEY_STATS_FALLBACK = {show: false}
@@ -282,13 +281,27 @@ export const TrackData = memo(() => {
     const $journeyStats = lgs.stores.main.components.journeyStats
     const $journeyEditor = lgs.stores.journeyEditor
 
-    // Snapshots
     const journeyStats = useOptionalSnapshot($journeyStats, JOURNEY_STATS_FALLBACK)
-    const {track} = useSnapshot($journeyEditor)
-    const journeyMetrics = useOptionalSnapshot(lgs.theJourney?.metrics, JOURNEY_METRICS_FALLBACK)
+    const metricsRevision = useProxyValue($journeyEditor, editor => {
+        const track = editor?.track
+        const journeyMetrics = editor?.journey?.metrics ?? {}
+
+        return [
+            track?.slug ?? '',
+            track?.metrics?.points?.length ?? 0,
+            JSON.stringify(track?.metrics?.global ?? {}),
+            JSON.stringify(journeyMetrics.global ?? {}),
+            JSON.stringify(journeyMetrics.external ?? {}),
+            JSON.stringify(journeyMetrics.user ?? {}),
+        ].join('|')
+    }, '')
+    void metricsRevision
+    const track = $journeyEditor.track
+    const journeyMetrics = lgs.theJourney?.metrics ?? JOURNEY_METRICS_FALLBACK
 
     const trackMetrics = track?.metrics?.global
     const metrics = useMemo(() => {
+        void metricsRevision
 
         if (!lgs.theJourney?.hasOneTrack?.()) {
             return trackMetrics
@@ -299,7 +312,7 @@ export const TrackData = memo(() => {
             journeyMetrics.external,
             journeyMetrics.user,
         )
-    }, [journeyMetrics.external, journeyMetrics.user, trackMetrics])
+    }, [journeyMetrics.external, journeyMetrics.user, metricsRevision, trackMetrics])
     const renderer = WidgetDynamicRenderer.instance
 
     const WIDGET_KEY = 'journey-stats-widget'
@@ -536,6 +549,7 @@ export const TrackData = memo(() => {
     }, [$journeyStats, ensureStatsWidget, journeyStats.show, metrics])
 
     const trackDate = useMemo(() => {
+        void metricsRevision
         if (!metrics || isNaN(metrics.duration)) {
             return {}
         }
@@ -549,16 +563,18 @@ export const TrackData = memo(() => {
             start: points[0]?.time,
             stop: points[points.length - 1]?.time,
         }
-    }, [metrics, track?.metrics?.points])
+    }, [metrics, metricsRevision])
 
     const metricPoints = useMemo(() => {
+        void metricsRevision
         return Array.isArray(track?.metrics?.points) ? uniquePointsByCoordinates(track.metrics.points) : []
-    }, [track?.metrics?.points])
+    }, [metricsRevision])
 
     const altitudePoints = useMemo(() => {
+        void metricsRevision
         const extracted = extractTrackAltitudePoints(track)
         return extracted.length > 0 ? extracted : metricPoints
-    }, [metricPoints, track])
+    }, [metricPoints, metricsRevision, track])
 
     const showStatsPOIs = useCallback(async ({
                                                  id,

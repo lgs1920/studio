@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-07
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,6 +38,7 @@ import {
 import Sortable                                                    from 'sortablejs'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSnapshot }                                             from 'valtio'
+import { useProxyValue }                                            from '@Utils/ValtioUtils'
 
 const ADD_POPUP_SUFFIX = 'add-popup-anchor'
 
@@ -553,8 +554,24 @@ const ClipList = ({
 export const JourneyReplayClipsTab = memo(({settings}) => {
     const [addState, setAddState] = useState(emptyAddState())
     const [openClipIds, setOpenClipIds] = useState(() => new Set())
-    const mainStore = useSnapshot(lgs.stores.main)
-    const currentJourney = mainStore?.theJourney ?? lgs.theJourney ?? lgs.stores.main?.theJourney
+    const journeyReplaySignature = useProxyValue(lgs.stores.main, main => {
+        const journey = main?.theJourney
+        return JSON.stringify({
+            slug: journey?.slug ?? null,
+            start: journey?.replay?.start ?? [],
+            stop: journey?.replay?.stop ?? [],
+        })
+    }, '{"slug":null,"start":[],"stop":[]}')
+    const journeyReplayInputs = useMemo(() => {
+        try {
+            return JSON.parse(journeyReplaySignature)
+        } catch {
+            return {slug: null, start: [], stop: []}
+        }
+    }, [journeyReplaySignature])
+    const currentJourney = journeyReplayInputs.slug
+        ? lgs.getJourneyBySlug?.(journeyReplayInputs.slug) ?? lgs.theJourney
+        : lgs.theJourney
     const currentClips = readCurrentClips(settings, currentJourney)
 
     const saveClips = useCallback((nextClips) => {

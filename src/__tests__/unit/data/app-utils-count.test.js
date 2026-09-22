@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-30
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-21
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => ({
     sendVisit: vi.fn(async () => true),
     pingBackend: vi.fn(async () => ({alive: true})),
     registerIconLibraryFromKits: vi.fn(),
+    fetchResponseOverrides: new Map(),
 }))
 
 vi.mock('@Utils/CountApi', () => ({
@@ -89,6 +90,7 @@ import { AppUtils } from '@Utils/AppUtils'
 describe('AppUtils bootstrap count instrumentation', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        mocks.fetchResponseOverrides.clear()
         mocks.pingBackend.mockResolvedValue({alive: true})
         globalThis.__ = {
             app: {
@@ -127,6 +129,11 @@ describe('AppUtils bootstrap count instrumentation', () => {
             setDefaultPOIConfiguration: vi.fn(),
         }
         vi.stubGlobal('fetch', vi.fn(async resource => {
+            const responseOverride = mocks.fetchResponseOverrides.get(resource)
+            if (responseOverride) {
+                return responseOverride
+            }
+
             const responses = {
                 'config.yaml':          'applicationName: Studio\nswatches:\n  list: []\n',
                 'settings.yaml':        'app: {}\nui: {}\nswatches:\n  list: []\n',
@@ -169,5 +176,21 @@ describe('AppUtils bootstrap count instrumentation', () => {
 
         expect(mocks.sendVisit).not.toHaveBeenCalled()
         expect(onBackendReady).not.toHaveBeenCalled()
+    })
+
+    it('reports an unavailable JSON resource instead of exposing a JSON parse error', async () => {
+        mocks.fetchResponseOverrides.set('servers.json', {
+            ok:         false,
+            status:     503,
+            statusText: 'Offline',
+            json:       vi.fn(async () => {
+                throw new SyntaxError("Unexpected token 'O'")
+            }),
+        })
+
+        await expect(AppUtils.init()).rejects.toMatchObject({
+            code:    'JSON_RESOURCE_UNAVAILABLE',
+            message: 'Unable to load servers.json (503 Offline)',
+        })
     })
 })

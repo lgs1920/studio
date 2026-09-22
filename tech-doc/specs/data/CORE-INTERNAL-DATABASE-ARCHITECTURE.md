@@ -124,6 +124,16 @@ database-sync.manifest-signature
 database-sync.status
 ```
 
+## Read-only startup worker
+
+Startup journey and POI restoration also uses a dedicated read-only IndexedDB
+connection in `src/core/ui/startup/startupData.worker.js`, opened only after the
+normal bootstrap. It performs no schema upgrades or writes, filters expired
+records without deleting them, and closes each request's connection. LocalDB
+remains the write and synchronization authority. See
+[Progressive Startup Worker](../CORE-STARTUP-WORKER-IMPLEMENTATION.md) for
+priority, packet limits, cancellation, and validation.
+
 ## LocalDB Record Model
 
 `LocalDB.put(key, value, store, ttl)` stores an out-of-line key and this envelope:

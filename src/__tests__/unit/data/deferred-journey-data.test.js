@@ -8,23 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-24
- * Last modified: 2026-09-18
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-
-const {preCaptureMock} = vi.hoisted(() => ({
-    preCaptureMock: vi.fn(),
-}))
-
-vi.mock('@zumer/snapdom', () => ({
-    snapdom: {
-        preCapture: preCaptureMock,
-    },
-}))
+import { describe, expect, it, vi } from 'vitest'
 
 import { precacheSnapdomAssets, runDeferredJourneyDataLoad } from '@Core/ui/deferredJourneyData'
 
@@ -56,21 +46,26 @@ const dependencies = ({journeys = []} = {}) => ({
     },
 })
 
+const waitForBackgroundStartupTask = () => new Promise(resolve => {
+    setTimeout(resolve, 20)
+})
+
 describe('deferred journey data loading', () => {
-    beforeEach(() => {
-        preCaptureMock.mockClear()
+    it('keeps startup capture preparation disabled during responsiveness diagnostics', async () => {
+        await expect(precacheSnapdomAssets()).resolves.toBeUndefined()
     })
 
-    it('arms SnapDOM v3 capture preparation', async () => {
-        const root = document.createElement('main')
 
-        await precacheSnapdomAssets({root})
-
-        expect(preCaptureMock).toHaveBeenCalledOnce()
-    })
-
-    it('loads remaining journeys, refreshes groups and POI indexes', async () => {
+    it('loads remaining journeys and refreshes UI-critical indexes before background work finishes', async () => {
+        let resolveLocation
+        let resolvePrecache
         const deps = dependencies({journeys: [{slug: 'journey-a'}, {slug: 'journey-b'}]})
+        deps.poiManager.ensureAllPOILocations = vi.fn(() => new Promise(resolve => {
+            resolveLocation = resolve
+        }))
+        deps.precacheAssets = vi.fn(() => new Promise(resolve => {
+            resolvePrecache = resolve
+        }))
 
         await runDeferredJourneyDataLoad(deps)
 
@@ -78,8 +73,16 @@ describe('deferred journey data loading', () => {
         expect(deps.poiManager.readAllFromDB).toHaveBeenCalledWith({ensureLocations: false})
         expect(deps.journeyGroupManager.initialize).toHaveBeenCalledOnce()
         expect(deps.poiManager.rebuildJourneyIndex).toHaveBeenCalledOnce()
+        expect(deps.poiManager.ensureAllPOILocations).not.toHaveBeenCalled()
+        expect(deps.precacheAssets).not.toHaveBeenCalled()
+
+        await waitForBackgroundStartupTask()
+
         expect(deps.poiManager.ensureAllPOILocations).toHaveBeenCalledOnce()
         expect(deps.precacheAssets).toHaveBeenCalledOnce()
+
+        resolveLocation()
+        resolvePrecache()
     })
 
     it('shows a success toast when additional journeys were loaded', async () => {

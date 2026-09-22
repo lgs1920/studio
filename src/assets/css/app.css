@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-20
  *
  *
  * Copyright © 2026 LGS1920
@@ -212,12 +212,10 @@ body {
     background: var(--lgs-dark-color-95);
 }
 
-@media (display-mode: standalone) {
-    body.lgs-app-booting #cesium-viewer {
-        visibility: hidden;
-        pointer-events: none;
-        opacity: 0;
-    }
+body.lgs-app-booting #cesium-viewer {
+    visibility: hidden;
+    pointer-events: none;
+    opacity: 0;
 }
 
 /** Hide the main toolbar */

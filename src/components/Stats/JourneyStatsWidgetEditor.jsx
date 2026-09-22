@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-06
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -53,7 +53,7 @@ import {
     WaTabGroup,
     WaTabPanel,
 }                                                                   from '@web.awesome.me/webawesome-pro/dist/react'
-import { useOptionalSnapshot }                                      from '@Utils/ValtioUtils'
+import { useOptionalSnapshot, useProxyValue }                       from '@Utils/ValtioUtils'
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Sortable                                               from 'sortablejs'
 import { subscribe, useSnapshot }                             from 'valtio'
@@ -77,9 +77,8 @@ export const JourneyStatsWidgetEditor = ({
     mode = 'journey',
     showDataTab = true,
 }) => {
-    const main = useSnapshot(lgs.stores.main)
     const journey = lgs.theJourney
-    const journeySlug = main.theJourney?.slug ?? null
+    const journeySlug = useProxyValue(lgs.stores.main, main => main.theJourney?.slug ?? null, null)
 
     const $unitSystem = lgs.settings.unitSystem
     const unitSystem = useSnapshot($unitSystem).current

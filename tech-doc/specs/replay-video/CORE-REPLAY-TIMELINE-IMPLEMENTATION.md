@@ -321,8 +321,8 @@ or own the HQ clock.
 ## Styling and dependency
 
 The implementation uses the fixed dependency
-`@lgs1920/timeline` at version `0.1.0`, declared in
-[`package.json`](../../../package.json#L55-L63) and installed in `bun.lock`.
+`@lgs1920/timeline` at version `1.1.1`, declared in
+[`package.json`](../../../package.json#L45) and installed in `bun.lock`.
 Web Awesome and FontAwesome remain the application UI and icon authorities.
 
 ## Validation coverage

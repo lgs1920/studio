@@ -9,7 +9,7 @@ description: "CesiumJS core utilities and networking - Resource, Color, Event, R
 For Studio work, follow the autonomy and approval rules in [PROJECT_RULES.md](../../PROJECT_RULES.md#1-core-directives). Preserve the task-specific safeguards below.
 
 
-Version baseline: CesiumJS v1.144+ (ES module imports, `defaultValue` removed in v1.134)
+Version baseline: CesiumJS v1.145+ (ES module imports, `defaultValue` removed in v1.134)
 
 ## Breaking Change: defaultValue Removed (v1.134)
 
