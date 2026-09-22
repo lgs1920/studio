@@ -213,7 +213,7 @@ describe('JourneySettings focus control', () => {
     })
 
     it('suppresses Profile and Data widget controls in the Track Editor', () => {
-        render(<JourneySettings/>)
+        const {container} = render(<JourneySettings/>)
 
         expect(elevationProfileMock).toHaveBeenCalledWith(expect.objectContaining({showWidgetControls: false}))
         expect(trackDataMock).toHaveBeenCalledWith(expect.objectContaining({
@@ -221,6 +221,10 @@ describe('JourneySettings focus control', () => {
             showWidgetControls:   false,
         }))
         expect(screen.getByText('Style', {exact: true})).toBeTruthy()
+        expect(screen.getByText('Details', {exact: true})).toBeTruthy()
+        expect(container.querySelector('.lgs--journey-activity-select')).toBeTruthy()
+        expect(container.querySelector('.lgs--journey-details-card')).toBeTruthy()
+        expect(container.querySelector('.lgs--journey-edit-details .lgs--journey-details-card')).toBeNull()
     })
 
     it('stops the running orbit and focuses the journey without relaunching rotation', async () => {

@@ -483,7 +483,6 @@ wa-tab sl-icon {
     color: var(--wa-form-control-label-color);
 }
 
-.lgs--journey-location-in-settings,
 .track-location {
     font-size: var(--lgs-font-size);
     line-height: var(--wa-form-control-label-line-height);
@@ -494,7 +493,6 @@ wa-tab sl-icon {
     gap: var(--lgs-gutter-xs);
 }
 
-.lgs--journey-location-in-settings wa-icon,
 .track-location wa-icon {
     flex: 0 0 auto;
     color: var(--wa-color-brand);
@@ -512,6 +510,25 @@ wa-tab sl-icon {
     padding: 0;
 }
 
+.lgs--journey-details-card {
+    width: 100%;
+    min-width: 0;
+}
+
+.lgs--journey-details-card::part(body) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
+
+.lgs--journey-activity-section {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: var(--lgs-gutter-xs);
+}
+
 .lgs--journey-edit-details::part(content) {
     min-width: 0;
 }
@@ -520,7 +537,6 @@ wa-tab sl-icon {
     margin-top: 0;
 }
 
-.lgs--journey-location-in-settings span,
 .track-location span {
     overflow: hidden;
     text-overflow: ellipsis;
