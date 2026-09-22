@@ -2700,3 +2700,19 @@
 ## 2026-09-22 — [`fix(welcome): release the startup CTA reliably`](https://github.com/lgs1920/studio/commit/0ba72f09e9926a716ac6275695b517e72f480b7b)
 
 - Recorded automatically from Git history.
+
+## 2026-09-22 — [`perf(startup): streamline journey loading`](https://github.com/lgs1920/studio/commit/74bd24a40b0528ae2330fcdbbda3e1bf5d608c68)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`Merge remote-tracking branch 'origin/feature/webworker-init' into feature/webworker-init`](https://github.com/lgs1920/studio/commit/904ed533625a892b10ad407109abf3d98131acc5)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`fix(startup): isolate trace cleanup`](https://github.com/lgs1920/studio/commit/e80ce234dd9b4e3b24cc3ba3c70c7dedff1cdc5b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`Branch feature/webworker-init deployed on staging-1.0.0-feature/webworker-init-20260922T102549!`](https://github.com/lgs1920/studio/commit/c2ac5802d5844a916e4fa77f83372a87cd63044d)
+
+- Recorded automatically from Git history.
