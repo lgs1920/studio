@@ -57,12 +57,8 @@ const bootstrap = async () => {
     markStartup('startup-media-ready')
 
     if (hasVideo && splashElement && splashVideo) {
-        let videoReady = false
+        let activeSplashChoice = media.bannerMediaCatalog.outdoor.find(choice => choice.id === welcomeBackgroundMedia.id) ?? null
         const revealVideo = () => {
-            if (videoReady) {
-                return
-            }
-
             let playPromise
             try {
                 playPromise = splashVideo.play()
@@ -72,19 +68,36 @@ const bootstrap = async () => {
             }
             if (playPromise?.then) {
                 void playPromise.then(() => {
-                    videoReady = true
                     splashElement.classList.add('lgs-boot-splash-video-ready')
                 }).catch(() => {
                 })
                 return
             }
 
-            videoReady = true
             splashElement.classList.add('lgs-boot-splash-video-ready')
         }
 
-        splashVideo.addEventListener('canplay', revealVideo, {once: true})
-        splashVideo.addEventListener('loadeddata', revealVideo, {once: true})
+        const rotateSplashVideo = () => {
+            const nextChoice = media.getNextBannerMediaChoice(
+                media.bannerMediaCatalog,
+                'outdoor',
+                activeSplashChoice?.id ?? welcomeBackgroundMedia.id,
+            )
+            if (!nextChoice) {
+                return
+            }
+
+            activeSplashChoice = nextChoice
+            media.applyWelcomeBackgroundToVideo(splashVideo, {
+                videoSources: [{
+                    src:  media.getBannerMediaSource(nextChoice, welcomeBackgroundMedia.variant === 'mobile'),
+                    type: 'video/mp4',
+                }],
+            })
+        }
+
+        splashVideo.addEventListener('canplay', revealVideo)
+        splashVideo.addEventListener('ended', rotateSplashVideo)
         splashVideo.addEventListener('error', () => {
             splashElement.classList.remove('lgs-boot-splash-video-ready')
         })

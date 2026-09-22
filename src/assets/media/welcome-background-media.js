@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-20
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -150,6 +150,24 @@ export const selectBannerMedia = (
     }
 
     return availableChoices[Math.min(availableChoices.length - 1, Math.floor(random() * availableChoices.length))]
+}
+
+/**
+ * Returns the catalog choice that follows the current splash video.
+ *
+ * @param {object} catalog - Media catalog containing selectable choices.
+ * @param {string} catalogKey - Catalog category containing the video choices.
+ * @param {string|null} currentId - Identifier of the currently displayed choice.
+ * @returns {object|null} Next choice, wrapping to the first entry when needed.
+ */
+export const getNextBannerMediaChoice = (catalog, catalogKey = 'default', currentId = null) => {
+    const choices = getBannerMediaChoices(catalog, catalogKey).filter(choice => choice.type === 'video')
+    if (choices.length === 0) {
+        return null
+    }
+
+    const currentIndex = choices.findIndex(choice => choice.id === currentId)
+    return choices[(currentIndex + 1) % choices.length]
 }
 
 /**

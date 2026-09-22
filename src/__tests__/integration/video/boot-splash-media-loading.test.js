@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-21
- * Last modified: 2026-09-21
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,6 +20,7 @@ import {describe, expect, it} from 'vitest'
 
 const indexDocument = new JSDOM(readFileSync('index.html', 'utf8')).window.document
 const lgs1920Source = readFileSync('src/components/LGS1920.jsx', 'utf8')
+const mainSource = readFileSync('src/main.jsx', 'utf8')
 
 /**
  * Registers regression coverage for boot splash media loading.
@@ -44,6 +45,8 @@ const registerBootSplashMediaLoadingTests = () => {
         expect(splashVideo).not.toBeNull()
         expect(splashVideo?.hasAttribute('data-welcome-background-media')).toBe(true)
         expect(splashVideo?.getAttribute('preload')).toBe('auto')
+        expect(splashVideo?.hasAttribute('loop')).toBe(false)
+        expect(mainSource).toContain("splashVideo.addEventListener('ended', rotateSplashVideo)")
         expect(splashImage).not.toBeNull()
         expect(startupImage).not.toBeNull()
         expect(startupImage?.querySelector('[data-welcome-background-startup]')).not.toBeNull()
