@@ -26,11 +26,4 @@ describe('startup CTA readiness', () => {
         expect(appReadyDefinition).toContain('!appUpdate.isAutomaticUpdateInProgress')
         expect(appReadyDefinition).not.toContain('isUpdateCheckPending')
     })
-
-    it('starts deferred journeys when the CTA becomes available', () => {
-        const deferredEffect = lgs1920Source.match(/if \(deferredJourneyDataStarted\.current \|\| !appReady\)[\s\S]*?\}, \[appReady, initializeDeferredJourneyData\]\)/u)?.[0] ?? ''
-
-        expect(deferredEffect).toContain('!appReady')
-        expect(deferredEffect).not.toContain('!appVisible')
-    })
 })
