@@ -2660,3 +2660,43 @@
 ## 2026-09-20 — [`Merge remote-tracking branch 'origin/feature/webworker-init' into feature/webworker-init`](https://github.com/lgs1920/studio/commit/8f1ff021369661953f19757bb59ee71c25abb6a7)
 
 - Recorded automatically from Git history.
+
+## 2026-09-20 — [`fix(deployment): remove duplicate environment configuration keys`](https://github.com/lgs1920/studio/commit/17419d6c6448a198f2fe24ab822863d3d73f0aa9)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`perf(cesium): cap rendered track geometry`](https://github.com/lgs1920/studio/commit/132b0706be397982b166f07aefd33b96d00fb803)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`perf(startup): render deferred tracks with primitives`](https://github.com/lgs1920/studio/commit/eecec4aba7495be9493ed7ecdcb9f6cf87bd7a9a)
+
+- Recorded automatically from Git history.
+
+## 2026-09-20 — [`docs(cesium): align skills with 1.145`](https://github.com/lgs1920/studio/commit/edfbe1a5f36532b015ba5c3cdd74007895d7766f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-21 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/cbf9eec38035b81b50a335a06c533b6230351ccc)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-09-21 — [`fix(init): handle offline JSON responses`](https://github.com/lgs1920/studio/commit/907c4e85e609807985c5b5c6b70250d8a6018074)
+
+- Recorded automatically from Git history.
+
+## 2026-09-21 — [`fix(welcome): stabilize splash branding and CTA`](https://github.com/lgs1920/studio/commit/32016bb0ad8efa34d688cea2a4ba6dce985d32a2)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`perf(valtio): narrow reactive UI subscriptions`](https://github.com/lgs1920/studio/commit/bc01c1e6810c2faabb66af2bde09cad55cbde3e0)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`perf(startup): keep journey loading responsive`](https://github.com/lgs1920/studio/commit/e4f43b0b2fc8a60740460a5443619c93f7a315cc)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`fix(welcome): release the startup CTA reliably`](https://github.com/lgs1920/studio/commit/0ba72f09e9926a716ac6275695b517e72f480b7b)
+
+- Recorded automatically from Git history.
