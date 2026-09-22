@@ -21,6 +21,7 @@ import {
 import {Journey} from '@Core/Journey'
 import {MapPOI} from '@Core/MapPOI'
 import {Track} from '@Core/Track'
+import {getGlobalHideOtherJourneys} from '@Core/ui/JourneyVisibility'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
 import {markStartup, measureStartup} from './startupTelemetry'
 import {StartupWorkerClient, yieldStartupIdleTask, yieldStartupTask} from './StartupWorkerClient'
@@ -75,25 +76,22 @@ const yieldSecondaryJourneyRender = () => {
 const hasPendingUserInput = () => globalThis.navigator?.scheduling?.isInputPending?.({includeContinuous: true}) === true
 
 /**
- * Hydrate the primary journey first, then feed each journey through its own
- * worker while acknowledged packets keep main-thread work bounded.
+ * Hydrate the primary journey first, then reuse one worker for the remaining
+ * journey queue while acknowledged packets keep main-thread work bounded.
  */
 export class StartupDataLoader {
     #client
-    #clientWasInjected = false
     #database
     #loadedJourneySlugs = new Set()
     #activeJourneyCompletion = Promise.resolve()
     #deferredTrackQueue = []
     #deferredTrackDrainPromise = null
-    #journeyClients = new Set()
     #currentPOIsReady = false
 
     constructor(database, client) {
         this.#database = database
         if (client !== undefined) {
             this.#client = client
-            this.#clientWasInjected = true
             return
         }
 
@@ -111,35 +109,6 @@ export class StartupDataLoader {
         }
     }
 
-    #createJourneyClient = () => {
-        if (this.#clientWasInjected) {
-            return this.#client
-        }
-
-        if (typeof Worker !== 'function') {
-            return this.#client
-        }
-
-        try {
-            const client = new StartupWorkerClient()
-            this.#journeyClients.add(client)
-            return client
-        }
-        catch (error) {
-            console.warn('[StartupDataLoader] Journey worker unavailable, using the shared startup worker:', error)
-            return this.#client
-        }
-    }
-
-    #releaseJourneyClient = client => {
-        if (!client || client === this.#client || this.#clientWasInjected) {
-            return
-        }
-
-        this.#journeyClients.delete(client)
-        client.dispose?.()
-    }
-
     #requestFromWorker = async (request, consume, client = this.#client) => {
         if (!client) {
             throw new Error('Startup data worker is unavailable')
@@ -150,7 +119,7 @@ export class StartupDataLoader {
         }
         catch (error) {
             client.dispose?.(error)
-            if (client === this.#client && !this.#clientWasInjected) {
+            if (client === this.#client) {
                 this.#client = null
             }
             throw error
@@ -178,13 +147,16 @@ export class StartupDataLoader {
     }
 
     #enqueueDeferredTrack = (journey, track, source) => {
-        if (journey?.visible === false || track?.visible === false || !source) {
+        if (track?.visible === false || !source) {
             return
         }
 
         source.__lgsStartupDeferredTrack = true
         source.show = false
         this.#deferredTrackQueue.push({journey, source, track})
+        void this.#drainDeferredTracks().catch(error => {
+            console.warn('[StartupDataLoader] Deferred journey render failed:', error)
+        })
     }
 
     #drainDeferredTracks = async () => {
@@ -202,13 +174,14 @@ export class StartupDataLoader {
                     continue
                 }
 
-                if (item.journey.visible === false || item.track.visible === false) {
+                if (item.track.visible === false) {
                     item.source.__lgsStartupDeferredTrack = false
                     continue
                 }
                 await TrackUtils.draw(item.track, {
                     action:       DRAWING_FROM_DB,
-                    forcedToHide: false,
+                    forcedToHide: item.journey.visible === false
+                                  || (getGlobalHideOtherJourneys() && item.journey.slug !== lgs.theJourney?.slug),
                     renderMode:   'primitive',
                 })
                 item.source.__lgsStartupDeferredTrack = false
@@ -226,8 +199,7 @@ export class StartupDataLoader {
             return lgs.getJourneyBySlug?.(key) ?? null
         }
 
-        const journeyClient = this.#createJourneyClient()
-        if (!journeyClient) {
+        if (!this.#client) {
             return current ? TrackUtils.readCurrentFromDB({alreadyDrawn: false}) : null
         }
 
@@ -369,8 +341,7 @@ export class StartupDataLoader {
                 measureStartup('current-primary', 'current-journey-init-start', 'current-primary-ready')
                 firstTrackResolve(journey)
             }
-        }, journeyClient).finally(() => {
-            this.#releaseJourneyClient(journeyClient)
+        }).finally(() => {
         })
 
         if (current) {
@@ -407,7 +378,10 @@ export class StartupDataLoader {
             TrackUtils.setProfileVisibility(journey)
         }
 
-        journey.updateVisibility(current ? journey.visible !== false : false)
+        const isCurrentJourney = current || journey.slug === lgs.theJourney?.slug
+        const journeyVisible = journey.visible !== false
+                               && (!getGlobalHideOtherJourneys() || isCurrentJourney)
+        journey.updateVisibility(journeyVisible)
         this.#loadedJourneySlugs.add(journey.slug)
         await yieldStartupTask()
         return journey
@@ -457,22 +431,21 @@ export class StartupDataLoader {
                 keys = packet.keys ?? []
             })
             const pendingKeys = keys.filter(key => !this.#loadedJourneySlugs.has(key) && !lgs.journeys.has(key))
-            const results = await Promise.allSettled(pendingKeys.map(async key => {
+            const journeys = []
+            for (const key of pendingKeys) {
                 await yieldStartupIdleTask()
                 const journey = await this.loadJourney(key)
                 await this.#drainDeferredTracks().catch(error => {
                     console.warn('[StartupDataLoader] Deferred journey render failed:', error)
                 })
                 await yieldStartupTask()
-                return journey
-            }))
-            const failedJourney = results.find(result => result.status === 'rejected')
-            if (failedJourney) {
-                throw failedJourney.reason
+                if (journey) {
+                    journeys.push(journey)
+                }
             }
 
             lgs.stores.main.journeysReady = true
-            return results.map(result => result.value).filter(Boolean)
+            return journeys
         }
         catch (error) {
             console.warn('[StartupDataLoader] Remaining journey worker load failed, using the legacy loader:', error)
@@ -531,7 +504,5 @@ export class StartupDataLoader {
 
     dispose = () => {
         this.#client?.dispose()
-        this.#journeyClients.forEach(client => client.dispose?.())
-        this.#journeyClients.clear()
     }
 }

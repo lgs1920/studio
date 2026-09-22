@@ -79,7 +79,7 @@ vi.mock('@Utils/cesium/TrackUtils', () => ({
 const {StartupDataLoader} = await import('@Core/ui/startup/StartupDataLoader')
 
 describe('startup data loader', () => {
-    it('renders secondary tracks through the deferred Cesium render path', async () => {
+    it('renders secondary tracks even when hide other journeys keeps them hidden', async () => {
         const sources = new Map()
         const database = 'studio-db'
         const previousLgs = globalThis.lgs
@@ -97,7 +97,9 @@ describe('startup data loader', () => {
             journeys:             new Map(),
             saveJourneyInContext: journey => globalThis.lgs.journeys.set(journey.slug, journey),
             scene:                {requestRender: vi.fn()},
+            settings:              {journey: {hideOtherJourneys: true}},
             stores:               {main: {journeysReady: false, readyForTheShow: false}},
+            theJourney:           {slug: 'current-journey'},
             viewer:               {
                 dataSources: {
                     add:      async source => sources.set(source.name, source),
@@ -137,7 +139,7 @@ describe('startup data loader', () => {
             expect(mocks.draw).toHaveBeenCalledOnce()
             expect(mocks.draw).toHaveBeenCalledWith(expect.objectContaining({slug: 'track-a'}), {
                 action:       3,
-                forcedToHide: false,
+                forcedToHide: true,
                 renderMode:   'primitive',
             })
             expect(postTask).toHaveBeenCalledWith(expect.any(Function), {priority: 'background'})
@@ -152,27 +154,19 @@ describe('startup data loader', () => {
         }
     })
 
-    it('allocates one worker for each secondary journey', async () => {
+    it('reuses one worker for the secondary journey queue', async () => {
         const sources = new Map()
         const workers = []
         const previousLgs = globalThis.lgs
         const previousNamespace = globalThis.__
         const previousScheduler = globalThis.scheduler
-        let activeJourneyWorkers = 0
-        let maxActiveJourneyWorkers = 0
 
         class WorkerStub {
             constructor() {
                 this.onmessage = null
                 this.onmessageerror = null
                 this.onerror = null
-                this.isJourneyWorker = false
-                this.terminate = vi.fn(() => {
-                    if (this.isJourneyWorker) {
-                        activeJourneyWorkers--
-                        this.isJourneyWorker = false
-                    }
-                })
+                this.terminate = vi.fn()
                 this.pendingPackets = []
                 workers.push(this)
             }
@@ -193,9 +187,6 @@ describe('startup data loader', () => {
                     ]
                 }
                 else {
-                    this.isJourneyWorker = true
-                    activeJourneyWorkers++
-                    maxActiveJourneyWorkers = Math.max(maxActiveJourneyWorkers, activeJourneyWorkers)
                     this.pendingPackets = [
                         {data: {slug: message.key, tracks: [{__type: 'Map'}]}, type: 'journey'},
                         {
@@ -253,9 +244,7 @@ describe('startup data loader', () => {
             const loader = new StartupDataLoader('studio-db')
 
             await expect(loader.loadRemainingJourneys()).resolves.toHaveLength(2)
-            expect(workers).toHaveLength(3)
-            expect(workers.slice(1).every(worker => worker.terminate.mock.calls.length === 1)).toBe(true)
-            expect(maxActiveJourneyWorkers).toBe(2)
+            expect(workers).toHaveLength(1)
             expect(globalThis.lgs.stores.main.journeysReady).toBe(true)
             await vi.waitFor(() => expect(mocks.draw).toHaveBeenCalledTimes(2))
         }
