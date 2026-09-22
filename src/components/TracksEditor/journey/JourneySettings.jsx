@@ -733,15 +733,10 @@ export const JourneySettings = () => {
                                 <LGSScrollbars>
                                     <WaCard className="lgs--track-data lgs--journey-edit-card" appearance="plain">
                                         <div className="lgs--details-list lgs--journey-edit-details-list">
-                                            <WaDetails
-                                                small
-                                                open
-                                                className="lgs--details-hoverable lgs--journey-edit-details"
-                                            >
-                                                <span slot="summary">Track style</span>
+                                            <WaCard className="lgs--journey-track-style-card" appearance="plain">
                                                 {journey.tracks.size === 1 && <TrackStyleSettings showTitle={false}/>}
                                                 <TrackSettings/>
-                                            </WaDetails>
+                                            </WaCard>
                                         </div>
                                     </WaCard>
                                 </LGSScrollbars>

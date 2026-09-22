@@ -33,7 +33,7 @@ import {
     sanitizeNumericControlValue,
 }                                                   from '@Components/MainUI/widgets/editor/elements/sliderUtils'
 import {
-    WaColorPicker, WaDivider, WaNumberInput, WaOption, WaSelect, WaSlider, WaSwitch,
+    WaColorPicker, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider, WaSwitch,
 }                                                   from '@web.awesome.me/webawesome-pro/dist/react'
 import { colord }                                   from 'colord'
 import { useCallback, useEffect, useRef }           from 'react'
@@ -69,7 +69,7 @@ const composeColorValue = (color, opacity) => {
 
 const TrackStyleField = ({label, hint, className = '', children}) => (
     <div className={`lgs--track-style-field ${className}`.trim()}>
-        <span className="lgs--track-style-label">{label}</span>
+        {label && <span className="lgs--track-style-label">{label}</span>}
         {children}
         {hint && <span className="lgs--track-style-input-hint">{hint}</span>}
     </div>
@@ -468,33 +468,12 @@ export const TrackStyleSettings = ({showTitle = true}) => {
             {showTitle && <WaDivider/>}
             <section className="lgs--track-style-section">
                 {showTitle && <h3 className="lgs--track-style-title">Track style</h3>}
-                <WaSwitch
-                    className="lgs--track-style-switch"
-                    label-at-start
-                    size="xs"
-                    checked={smoothing.enabled}
-                    onInput={handleSmoothingEnabled}
-                >
-                    <span>Smooth render</span>
-                </WaSwitch>
-                {smoothing.enabled && (
-                    <div className="lgs--track-style-subsection">
-                        <div className="lgs--track-style-field-grid is-single">
-                            <TrackStyleNumberField
-                                label="Step"
-                                hint="Visual smoothing passes applied only to the rendered track."
-                                min={TRACK_RENDER_SMOOTHING_MIN_STEP}
-                                max={TRACK_RENDER_SMOOTHING_MAX_STEP}
-                                step={1}
-                                value={smoothing.step}
-                                onInput={handleSmoothingStep}
-                            />
-                        </div>
-                    </div>
-                )}
-                <WaDivider/>
+                <h3 className="track-data-title">
+                    <WaIcon name="swatchbook" variant="regular"/>
+                    <span>Preset</span>
+                </h3>
                 <TrackStyleField
-                    label="Preset"
+                    label=""
                     hint="Choose a starting style. Manual changes switch it to Custom."
                     className="lgs--track-style-preset-field"
                 >
@@ -557,10 +536,41 @@ export const TrackStyleSettings = ({showTitle = true}) => {
                     className="lgs--track-style-switch"
                     label-at-start
                     size="xs"
+                    checked={smoothing.enabled}
+                    onInput={handleSmoothingEnabled}
+                >
+                    <span className="lgs--track-style-switch-title">
+                        <WaIcon name="wave-sine" variant="regular"/>
+                        <span>Smooth render</span>
+                    </span>
+                </WaSwitch>
+                {smoothing.enabled && (
+                    <div className="lgs--track-style-subsection">
+                        <div className="lgs--track-style-field-grid is-single">
+                            <TrackStyleNumberField
+                                label="Step"
+                                hint="Visual smoothing passes applied only to the rendered track."
+                                min={TRACK_RENDER_SMOOTHING_MIN_STEP}
+                                max={TRACK_RENDER_SMOOTHING_MAX_STEP}
+                                step={1}
+                                value={smoothing.step}
+                                onInput={handleSmoothingStep}
+                            />
+                        </div>
+                    </div>
+                )}
+                <WaDivider/>
+                <WaSwitch
+                    className="lgs--track-style-switch"
+                    label-at-start
+                    size="xs"
                     checked={renderStyle.underlay.enabled}
                     onInput={handleUnderlayEnabled}
                 >
-                    <span>Underlay</span>
+                    <span className="lgs--track-style-switch-title">
+                        <WaIcon name="highlighter-line" variant="regular"/>
+                        <span>Underlay</span>
+                    </span>
                 </WaSwitch>
                 {renderStyle.underlay.enabled && (
                     <TrackStyleControlGroup
@@ -602,7 +612,10 @@ export const TrackStyleSettings = ({showTitle = true}) => {
                     checked={renderStyle.dash.enabled}
                     onInput={handleDashEnabled}
                 >
-                    <span>Dashes</span>
+                    <span className="lgs--track-style-switch-title">
+                        <WaIcon name="grip-lines" variant="regular"/>
+                        <span>Dash Lines</span>
+                    </span>
                 </WaSwitch>
                 {renderStyle.dash.enabled && (
                     <div className="lgs--track-style-dash-grid lgs--track-style-subsection">

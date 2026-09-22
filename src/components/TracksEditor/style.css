@@ -354,6 +354,15 @@ wa-tab sl-icon {
     margin-left: auto;
 }
 
+.lgs--track-style-switch-title {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
+    font-size: var(--lgs-font-size);
+    font-weight: 600;
+    line-height: 1.2;
+}
+
 .lgs--track-style-section > wa-divider {
     --spacing: 0;
     margin-block: var(--lgs-gutter-xs);
@@ -516,6 +525,12 @@ wa-tab sl-icon {
 }
 
 .lgs--journey-details-card::part(body) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
+
+.lgs--journey-track-style-card::part(body) {
     display: flex;
     flex-direction: column;
     gap: var(--lgs-gutter-s);
