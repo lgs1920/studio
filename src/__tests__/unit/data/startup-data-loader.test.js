@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-09-20
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -79,7 +79,7 @@ vi.mock('@Utils/cesium/TrackUtils', () => ({
 const {StartupDataLoader} = await import('@Core/ui/startup/StartupDataLoader')
 
 describe('startup data loader', () => {
-    it('renders secondary tracks through the capped Cesium render path', async () => {
+    it('renders secondary tracks through the deferred Cesium render path', async () => {
         const sources = new Map()
         const database = 'studio-db'
         const previousLgs = globalThis.lgs
@@ -89,6 +89,7 @@ describe('startup data loader', () => {
         const drawCompleted = new Promise(resolve => {
             resolveDraw = resolve
         })
+        const postTask = vi.fn(async callback => callback())
 
         mocks.draw.mockImplementationOnce(() => resolveDraw())
 
@@ -96,7 +97,7 @@ describe('startup data loader', () => {
             journeys:             new Map(),
             saveJourneyInContext: journey => globalThis.lgs.journeys.set(journey.slug, journey),
             scene:                {requestRender: vi.fn()},
-            stores:               {main: {readyForTheShow: false}},
+            stores:               {main: {journeysReady: false, readyForTheShow: false}},
             viewer:               {
                 dataSources: {
                     add:      async source => sources.set(source.name, source),
@@ -109,7 +110,7 @@ describe('startup data loader', () => {
             callback()
             return 1
         })
-        globalThis.scheduler = {yield: async () => {}}
+        globalThis.scheduler = {postTask, yield: async () => {}}
 
         const client = {
             request: vi.fn(async (request, consume) => {
@@ -131,6 +132,7 @@ describe('startup data loader', () => {
             const loader = new StartupDataLoader(database, client)
 
             await expect(loader.loadRemainingJourneys()).resolves.toHaveLength(1)
+            expect(globalThis.lgs.stores.main.journeysReady).toBe(true)
             await drawCompleted
             expect(mocks.draw).toHaveBeenCalledOnce()
             expect(mocks.draw).toHaveBeenCalledWith(expect.objectContaining({slug: 'track-a'}), {
@@ -138,6 +140,124 @@ describe('startup data loader', () => {
                 forcedToHide: false,
                 renderMode:   'primitive',
             })
+            expect(postTask).toHaveBeenCalledWith(expect.any(Function), {priority: 'background'})
+        }
+        finally {
+            globalThis.lgs = previousLgs
+            globalThis.__ = previousNamespace
+            globalThis.scheduler = previousScheduler
+            vi.unstubAllGlobals()
+            mocks.draw.mockReset()
+            mocks.setProfileVisibility.mockReset()
+        }
+    })
+
+    it('allocates one worker for each secondary journey', async () => {
+        const sources = new Map()
+        const workers = []
+        const previousLgs = globalThis.lgs
+        const previousNamespace = globalThis.__
+        const previousScheduler = globalThis.scheduler
+        let activeJourneyWorkers = 0
+        let maxActiveJourneyWorkers = 0
+
+        class WorkerStub {
+            constructor() {
+                this.onmessage = null
+                this.onmessageerror = null
+                this.onerror = null
+                this.isJourneyWorker = false
+                this.terminate = vi.fn(() => {
+                    if (this.isJourneyWorker) {
+                        activeJourneyWorkers--
+                        this.isJourneyWorker = false
+                    }
+                })
+                this.pendingPackets = []
+                workers.push(this)
+            }
+
+            postMessage = message => {
+                if (message.type === 'ack') {
+                    queueMicrotask(() => this.sendNext())
+                    return
+                }
+                if (message.type !== 'request') {
+                    return
+                }
+
+                if (message.requestType === 'journey-keys') {
+                    this.pendingPackets = [
+                        {keys: ['journey-a', 'journey-b'], type: 'journey-keys'},
+                        {result: true, type: 'done'},
+                    ]
+                }
+                else {
+                    this.isJourneyWorker = true
+                    activeJourneyWorkers++
+                    maxActiveJourneyWorkers = Math.max(maxActiveJourneyWorkers, activeJourneyWorkers)
+                    this.pendingPackets = [
+                        {data: {slug: message.key, tracks: [{__type: 'Map'}]}, type: 'journey'},
+                        {
+                            data: {
+                                geometryType: 'LineString',
+                                key:          `${message.key}-track`,
+                                slug:         `${message.key}-track`,
+                                title:        `${message.key} track`,
+                            },
+                            key:  `${message.key}-track`,
+                            type: 'track',
+                        },
+                        {coordinates: [[1, 1], [2, 2]], type: 'geometry'},
+                        {key: `${message.key}-track`, type: 'track-end'},
+                        {result: true, type: 'done'},
+                    ]
+                }
+                this.sendNext()
+            }
+
+            sendNext = () => {
+                const next = this.pendingPackets.shift()
+                if (!next) {
+                    return
+                }
+                if (next.type === 'done') {
+                    this.onmessage?.({data: next})
+                    return
+                }
+                this.onmessage?.({data: {data: next, id: next.id ?? 1, type: 'packet'}})
+            }
+        }
+
+        globalThis.lgs = {
+            journeys:             new Map(),
+            saveJourneyInContext: journey => globalThis.lgs.journeys.set(journey.slug, journey),
+            scene:                {requestRender: vi.fn()},
+            stores:               {main: {journeysReady: false, readyForTheShow: false}},
+            viewer:               {
+                dataSources: {
+                    add:      async source => sources.set(source.name, source),
+                    getByName: name => [sources.get(name)].filter(Boolean),
+                },
+            },
+        }
+        globalThis.__ = {ui: {poiManager: {list: new Map()}}}
+        vi.stubGlobal('Worker', WorkerStub)
+        vi.stubGlobal('requestIdleCallback', callback => {
+            callback()
+            return 1
+        })
+        globalThis.scheduler = {yield: async () => {}}
+
+        try {
+            const loader = new StartupDataLoader('studio-db')
+
+            await expect(loader.loadRemainingJourneys()).resolves.toHaveLength(2)
+            expect(workers).toHaveLength(3)
+            expect(workers.slice(1).every(worker => worker.terminate.mock.calls.length === 1)).toBe(true)
+            expect(maxActiveJourneyWorkers).toBe(2)
+            expect(globalThis.lgs.stores.main.journeysReady).toBe(true)
+            await vi.waitFor(() => expect(mocks.draw).toHaveBeenCalledTimes(2))
         }
         finally {
             globalThis.lgs = previousLgs

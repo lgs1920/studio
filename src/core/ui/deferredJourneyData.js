@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-24
- * Last modified: 2026-09-20
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,27 +16,60 @@
 
 import { TrackUtils } from '@Utils/cesium/TrackUtils'
 import { UIToast }    from '@Utils/UIToast'
-import { snapdom }     from '@zumer/snapdom'
 import { yieldStartupIdleTask, yieldStartupTask } from './startup/StartupWorkerClient'
 
+const POI_LOCATION_BATCH_SIZE = 2
+
 /**
- * Prepare SnapDOM capture intent handling before capture begins.
+ * Keep startup capture preparation disabled while startup responsiveness is diagnosed.
  *
- * SnapDOM 3 embeds fonts and caches eligible resources during capture. Its
- * replacement for the removed pre-cache hook arms intent-based capture
- * preparation and does not take a document root or capture options.
- *
- * @param {object} options - Preparation options retained for API compatibility.
- * @param {Element|Document} options.root - Root retained for callers using the previous contract.
- * @returns {Promise<void>} Resolves after SnapDOM capture preparation is armed.
+ * @returns {Promise<void>} Resolved promise so callers can keep the same flow.
  */
-export const precacheSnapdomAssets = (options = {}) => {
-    const root = options.root === undefined ? document.body : options.root
-    if (!root) return Promise.resolve()
-    snapdom.preCapture()
-    return Promise.resolve()
+export const precacheSnapdomAssets = () => Promise.resolve()
+
+/**
+ * Resolve POI locations in small background batches so startup follow-up work
+ * does not monopolize interactions after the app becomes visible.
+ *
+ * @param {object} poiManager - POI manager used by Studio.
+ * @returns {Promise<void>} Promise resolved when the background pass finishes.
+ */
+const resolvePoiLocationsInBackground = async poiManager => {
+    await yieldStartupIdleTask()
+
+    if (poiManager.list?.keys && poiManager.ensurePOILocation) {
+        const ids = Array.from(poiManager.list.keys())
+        for (let index = 0; index < ids.length; index++) {
+            await poiManager.ensurePOILocation(ids[index])
+            if ((index + 1) % POI_LOCATION_BATCH_SIZE === 0) {
+                await yieldStartupIdleTask()
+            }
+        }
+        return
+    }
+
+    await poiManager.ensureAllPOILocations()
 }
 
+/**
+ * Run non-critical startup follow-up work without blocking the UI flow.
+ *
+ * @param {Promise<void>} task - Background task to run.
+ * @param {string} label - Diagnostic label for failures.
+ * @returns {void}
+ */
+const runStartupBackgroundTask = (task, label) => {
+    void task.catch(error => {
+        console.warn(`[LGS1920] ${label} failed:`, error)
+    })
+}
+
+/**
+ * Load secondary journey data after the app is visible.
+ *
+ * @param {object} options - Deferred loading dependencies.
+ * @returns {Promise<void>} Promise resolved when UI-critical deferred data is ready.
+ */
 export const runDeferredJourneyDataLoad = async ({
                                                      trackUtils = TrackUtils,
                                                      journeyGroupManager = __.ui.journeyGroupManager,
@@ -73,18 +106,8 @@ export const runDeferredJourneyDataLoad = async ({
     if (!startupLoader) {
         poiManager.rebuildJourneyIndex()
     }
-    if (poiManager.list?.keys && poiManager.ensurePOILocation) {
-        const ids = Array.from(poiManager.list.keys())
-        for (let index = 0; index < ids.length; index++) {
-            await poiManager.ensurePOILocation(ids[index])
-            if ((index + 1) % 8 === 0) {
-                await yieldStartupIdleTask()
-            }
-        }
-    }
-    else {
-        await poiManager.ensureAllPOILocations()
-    }
+
+    runStartupBackgroundTask(resolvePoiLocationsInBackground(poiManager), 'Deferred POI location resolution')
 
     if (journeys.length > 0) {
         uiToast.success({
@@ -93,6 +116,8 @@ export const runDeferredJourneyDataLoad = async ({
                         })
     }
 
-    await yieldStartupIdleTask()
-    await precacheAssets()
+    runStartupBackgroundTask((async () => {
+        await yieldStartupIdleTask()
+        await precacheAssets()
+    })(), 'Deferred capture asset preparation')
 }

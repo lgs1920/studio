@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-14
- * Last modified: 2026-09-20
+ * Last modified: 2026-09-22
  *
  *
  * Copyright © 2026 LGS1920
@@ -89,13 +89,14 @@ describe('JourneyToolbar orbit toggle', () => {
                     paused:  false,
                     orbitAllowed: true,
                 }),
-                main: {
+                main: proxy({
+                    journeysReady: true,
                     components: proxy({
                         journeyEditor: proxy({
                             list: [1],
                         }),
                     }),
-                },
+                }),
                 ui: proxy({
                     mainUI: proxy({
                         rotate: proxy({
@@ -163,6 +164,13 @@ describe('JourneyToolbar orbit toggle', () => {
 
     it('disables journey selection while an editor journey is not loaded', () => {
         globalThis.lgs.getJourneyBySlug.mockReturnValue(undefined)
+        const {container} = render(<JourneyToolbar/>)
+
+        expect(container.querySelector('[data-testid="journey-selector"]')?.getAttribute('data-disabled')).toBe('true')
+    })
+
+    it('disables journey selection until every journey is ready', () => {
+        globalThis.lgs.stores.main.journeysReady = false
         const {container} = render(<JourneyToolbar/>)
 
         expect(container.querySelector('[data-testid="journey-selector"]')?.getAttribute('data-disabled')).toBe('true')
