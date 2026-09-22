@@ -28,7 +28,6 @@ import { PanoramaWidget } from '@Components/MainUI/PanoramaWidget'
 import { OrbitWidget }       from '@Components/MainUI/OrbitWidget'
 import { OrbitButton }       from '@Components/MainUI/OrbitButton'
 import { EditorPanelButton } from '@Editor/EditorPanelButton'
-import { VideoButton }       from '@Components/MainUI/video/VideoButton'
 import { VideoDownloadAndShareDialog } from '@Components/MainUI/video/VideoDownloadAndShareDialog'
 import { ReplayRecordingMonitorWidget } from '@Components/MainUI/video/ReplayRecordingMonitorWidget'
 import { TracksEditor }                         from '@Components/TracksEditor/TracksEditor'
@@ -269,11 +268,6 @@ export const MainUI = memo(() => {
                                         <OrbitButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                         {!videoCaptureActive && <FullScreenButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>}
                                         <div className="video-entry-actions">
-                                            <VideoButton
-                                                tooltip={toolBar.fromStart ? 'left' : 'right'}
-                                                className="square-button"
-                                                appearance="filled"
-                                            />
                                             <JourneyReplayButton
                                                 id="launch-the-replay-video"
                                                 tooltip={toolBar.fromStart ? 'left' : 'right'}
