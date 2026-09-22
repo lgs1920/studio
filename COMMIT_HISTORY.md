@@ -2716,3 +2716,16 @@
 ## 2026-09-22 — [`Branch feature/webworker-init deployed on staging-1.0.0-feature/webworker-init-20260922T102549!`](https://github.com/lgs1920/studio/commit/c2ac5802d5844a916e4fa77f83372a87cd63044d)
 
 - Recorded automatically from Git history.
+
+## 2026-09-22 — [`fix(welcome): rotate splash videos`](https://github.com/lgs1920/studio/commit/850f1098e8324dcef23c57b7c24e730d5107cdc3)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`Merge branch 'feature/webworker-init' into 1.0.0`](https://github.com/lgs1920/studio/commit/e2aa915fd849b2da8ae03fbe8bd67ef1fcfe1145)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/a96eb47283a3984aeae058445aa51a84ce581be3)
+
+- # Conflicts:
+- #	COMMIT_HISTORY.md
