@@ -31,3 +31,7 @@ When the journey change and focus happen immediately within the change immediacy
 Otherwise, scale the blur duration with the journey change duration.
 
 Create a feature issue for `1.0.0/backlog/LGS1920/chdenat`.
+
+Add a Cancel (X) action beside the browser recording Stop button. Selecting it
+must close Replay, delete all recorded data, and avoid offering the recording
+for saving or export.
