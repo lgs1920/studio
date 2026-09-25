@@ -2769,3 +2769,59 @@
 ## 2026-09-22 — [`feat(ui): simplify widget entry points (#523)`](https://github.com/lgs1920/studio/commit/96afa6f56cb840c2c12fa1e7216217f81c2550f8)
 
 - Recorded automatically from Git history.
+
+## 2026-09-22 — [`refactor(ui): reorganize journey details sections`](https://github.com/lgs1920/studio/commit/acb638eda9b9b28b20b3da7e3a7b47974784fa75)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`style(ui): refine track style sections`](https://github.com/lgs1920/studio/commit/e32c8432aacb3cc5fd8f64fdf316497f36a6086c)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`fix(ui): remove standard video entry button`](https://github.com/lgs1920/studio/commit/b872e326eeb4705f0ee86cbdae51f2a313c58958)
+
+- Recorded automatically from Git history.
+
+## 2026-09-24 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/1c0aca09ae050ecdd63c8def62dc2d50c9570b4e)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-09-25 — [`chore(deps): update frontend dependencies`](https://github.com/lgs1920/studio/commit/8b0a7dca6031457254452acca16cfb80b8c10974)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`docs: refresh replay TODO entries`](https://github.com/lgs1920/studio/commit/bbbdb04b65b5717b474d4448a5ae2dfa80fee0de)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`feat(replay): add Simple and Expert user modes`](https://github.com/lgs1920/studio/commit/fc359f1f45f61cef28c0e495ce9cc0c3ba407ea5)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`fix(crop): restore interactive crop zone handles`](https://github.com/lgs1920/studio/commit/e0070678903e4ad5ee80020dc32d3ca82bb5ffbe)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`fix(replay): filter video widgets during capture`](https://github.com/lgs1920/studio/commit/f7b4946037b5b98a041f177102651c2b42e4729e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`fix(startup): time out stalled worker requests`](https://github.com/lgs1920/studio/commit/cd4da8d458812a1167cc588aadf405080fdf3078)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`fix(cesium): harden viewer startup and surface readiness`](https://github.com/lgs1920/studio/commit/b26119f89245da16c224549d69a1e61f93b95786)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`refactor(ui): remove obsolete video entry widgets`](https://github.com/lgs1920/studio/commit/0d9a5c664683b5418c7a9bac0acdc9e80f622bf6)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`fix(replay): report timeline preparation failures`](https://github.com/lgs1920/studio/commit/e873ae15dc7e012522bced28ae6c2bb663fa6659)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`Merge remote-tracking branch 'origin/feature/replay-user-modes' into feature/replay-user-modes`](https://github.com/lgs1920/studio/commit/643d9aa07bf7a9736684e991b63c5dddae507343)
+
+- Recorded automatically from Git history.
