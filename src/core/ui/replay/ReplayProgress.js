@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-29
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 /**
- * Replay progress helpers shared by live playback and Draft recording UI.
+ * Replay progress helpers shared by interactive playback and the export UI.
  */
 
 const finiteNumber = value => {
@@ -50,16 +50,16 @@ export const clampReplayProgress = value => {
 }
 
 /**
- * Return the complete Draft timeline duration from the available replay data.
+ * Return the complete Interactive timeline duration from the available replay data.
  *
- * The prepared video timeline includes Draft start and stop clips. The replay
+ * The prepared video timeline includes Interactive start and stop clips. The replay
  * duration plus enabled start and stop clips is retained as a fallback while
  * the deferred export plan is being prepared.
  *
  * @param {Object} options - Timeline duration candidates.
- * @param {*} options.videoTimelineDurationMillis - Full Draft video duration.
+ * @param {*} options.videoTimelineDurationMillis - Full Interactive video duration.
  * @param {*} options.replayDurationMillis - Journey replay playback duration.
- * @param {Object|null} options.clips - Optional Draft start and stop clips.
+ * @param {Object|null} options.clips - Optional Interactive start and stop clips.
  * @returns {number|null} The usable duration, or null when none is available.
  */
 export const resolveReplayTimelineDuration = ({
@@ -85,7 +85,7 @@ export const resolveReplayTimelineDuration = ({
  * Resolve normalized progress from a frame timeline or elapsed timeline time.
  *
  * Frame progress is preferred because it represents the exact rendered frame.
- * Elapsed time is the canonical fallback for real-time Draft recording, where
+ * Elapsed time is the canonical fallback for real-time Interactive recording, where
  * the recorder owns the complete timeline including start and stop clips.
  *
  * @param {Object} options - Progress candidates.

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import {describe, expect, it} from 'vitest'
 import {
-    createReplayRenderContext, createReplayRenderModeContract, REPLAY_RENDER_MODE_DRAFT,
+    createReplayRenderContext, createReplayRenderModeContract, REPLAY_RENDER_MODE_INTERACTIVE,
     REPLAY_RENDER_MODE_HQ,
 } from '@Core/ui/replay/ReplayRenderModeContract'
 import {updateReplayFrameRenderContract} from '@Core/ui/replay/JourneyReplayRuntime'
@@ -39,7 +39,7 @@ describe('Replay render mode contract', () => {
         pixelBudget:      921600,
     }
 
-    it('keeps visual inputs identical while isolating Draft and HQ scheduling', () => {
+    it('keeps visual inputs identical while isolating Interactive and HQ scheduling', () => {
         const common = {
             logicalFrame,
             cameraPose: {heading: 0.5, pitch: -0.75, roll: 0.35, cameraHeight: 1000},
@@ -51,18 +51,18 @@ describe('Replay render mode contract', () => {
             renderSpec,
             visibleOverlayIds: ['journey-stats-widget'],
         }
-        const draft = createReplayRenderModeContract({renderMode: REPLAY_RENDER_MODE_DRAFT, ...common})
+        const interactive = createReplayRenderModeContract({renderMode: REPLAY_RENDER_MODE_INTERACTIVE, ...common})
         const hq = createReplayRenderModeContract({renderMode: REPLAY_RENDER_MODE_HQ, ...common})
 
-        expect(draft.logicalFrame).toEqual(hq.logicalFrame)
-        expect(draft.cameraPose).toEqual(hq.cameraPose)
-        expect(draft.cameraPose.roll).toBeCloseTo(0.35, 8)
-        expect(draft.trackPath).toEqual(hq.trackPath)
-        expect(draft.trackPath).toBe(common.trackPath)
+        expect(interactive.logicalFrame).toEqual(hq.logicalFrame)
+        expect(interactive.cameraPose).toEqual(hq.cameraPose)
+        expect(interactive.cameraPose.roll).toBeCloseTo(0.35, 8)
+        expect(interactive.trackPath).toEqual(hq.trackPath)
+        expect(interactive.trackPath).toBe(common.trackPath)
         expect(hq.trackPath).toBe(common.trackPath)
-        expect(draft.renderSpec).toEqual(hq.renderSpec)
-        expect(draft.initialCameraState).toEqual(hq.initialCameraState)
-        expect(draft.scheduling).toEqual({realtime: true, frameByFrame: false})
+        expect(interactive.renderSpec).toEqual(hq.renderSpec)
+        expect(interactive.initialCameraState).toEqual(hq.initialCameraState)
+        expect(interactive.scheduling).toEqual({realtime: true, frameByFrame: false})
         expect(hq.scheduling).toEqual({realtime: false, frameByFrame: true})
     })
 
@@ -92,7 +92,7 @@ describe('Replay render mode contract', () => {
             dynamicFrameState: {
                 sample: {progress: 0.5},
                 renderContract: createReplayRenderModeContract({
-                    renderMode: REPLAY_RENDER_MODE_DRAFT,
+                    renderMode: REPLAY_RENDER_MODE_INTERACTIVE,
                     logicalFrame: {sample: {progress: 0.5}, progress: 0.5},
                     trackPath: [[[2, 48, 100], [2.1, 48.1, 120]]],
                     initialCameraState: {
@@ -114,7 +114,7 @@ describe('Replay render mode contract', () => {
         const contract = updateReplayFrameRenderContract({store, logicalFrame})
 
         expect(contract).toEqual(expect.objectContaining({
-            renderMode: REPLAY_RENDER_MODE_DRAFT,
+            renderMode: REPLAY_RENDER_MODE_INTERACTIVE,
             cameraPose: logicalFrame.cameraPose,
             trackPath: [[[2, 48, 100], [2.1, 48.1, 120]]],
             initialCameraState: expect.objectContaining({

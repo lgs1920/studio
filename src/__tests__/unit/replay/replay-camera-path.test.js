@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-26
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -1032,7 +1032,7 @@ describe('Journey replay camera paths', () => {
     })
 
     it.each([REPLAY_CAMERA_POSITION_BEHIND, REPLAY_CAMERA_POSITION_AHEAD])(
-        'resolves identical Draft and HQ Dynamic frames in %s position mode',
+        'resolves identical Interactive and HQ Dynamic frames in %s position mode',
         positionMode => {
             vi.stubGlobal('lgs', {
                 settings: {
@@ -1111,11 +1111,11 @@ describe('Journey replay camera paths', () => {
                 }
             }
 
-            const draft = resolveFrame(false)
+            const interactive = resolveFrame(false)
             const hq = resolveFrame(true)
-            expect(draft.frame).toEqual(hq.frame)
-            expect(draft.view).toEqual(hq.view)
-            expect(draft.view.sample).toEqual(predictedSample)
+            expect(interactive.frame).toEqual(hq.frame)
+            expect(interactive.view).toEqual(hq.view)
+            expect(interactive.view.sample).toEqual(predictedSample)
         },
     )
 
@@ -2246,7 +2246,7 @@ describe('Journey replay camera paths', () => {
         }))
     })
 
-    it('treats invalid Draft projections as hard camera collisions', () => {
+    it('treats invalid Interactive projections as hard camera collisions', () => {
         const {mode, call} = makeMode()
         const sample = {
             progress:   0.5,
@@ -2296,7 +2296,7 @@ describe('Journey replay camera paths', () => {
         }))
     })
 
-    it('treats a missing live Draft projection as a hard camera collision', () => {
+    it('treats a missing live Interactive projection as a hard camera collision', () => {
         const {mode, call} = makeMode()
         call.cesiumScene = vi.fn(() => null)
         const collision = cameraCollisionForSample(mode, {
@@ -2798,7 +2798,7 @@ describe('Journey replay camera paths', () => {
         })
     })
 
-    it('caps constrained path compilation work before Draft playback starts', () => {
+    it('caps constrained path compilation work before Interactive interactive starts', () => {
         const frameForSample = vi.fn(sample => ({
             destination: new Cartesian3(sample.markerX, 0, 0),
             direction:   new Cartesian3(0, 1, 0),
@@ -3031,7 +3031,7 @@ describe('Journey replay camera paths', () => {
         expect(point.y).toBeLessThanOrEqual(65)
     })
 
-    it('returns the same constrained path frame for Draft and HQ progress', () => {
+    it('returns the same constrained path frame for Interactive and HQ progress', () => {
         const path = buildConstrainedReplayCameraPath({
             sampleAtProgress: progress => ({
                 progress,
@@ -3069,17 +3069,17 @@ describe('Journey replay camera paths', () => {
             lookaheadSeconds: 1,
         })
 
-        const draftFrame = sampleConstrainedReplayCameraPath(path, 0.625)
+        const interactiveFrame = sampleConstrainedReplayCameraPath(path, 0.625)
         const hqFrame = sampleConstrainedReplayCameraPath(path, 0.625)
 
-        expect(draftFrame.destination).toEqual(hqFrame.destination)
-        expect(draftFrame.direction).toEqual(hqFrame.direction)
-        expect(draftFrame.up).toEqual(hqFrame.up)
+        expect(interactiveFrame.destination).toEqual(hqFrame.destination)
+        expect(interactiveFrame.direction).toEqual(hqFrame.direction)
+        expect(interactiveFrame.up).toEqual(hqFrame.up)
     })
 
-    it('preserves the compiled path between Draft cleanup and HQ preparation', () => {
+    it('preserves the compiled path between Interactive cleanup and HQ preparation', () => {
         const constrainedReplayCameraPath = {
-            key:  'shared-draft-hq-path',
+            key:  'shared-interactive-hq-path',
             path: {frames: []},
         }
         const mode = {

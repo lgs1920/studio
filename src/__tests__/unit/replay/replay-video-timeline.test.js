@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-01
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import {JourneyReplayPlaybackController} from '@Core/ui/replay/JourneyReplayPlaybackController'
 import {
-    buildReplayVideoTimeline, resolveDraftReplayCameraCadence, resolveReplayVideoFramePhase,
+    buildReplayVideoTimeline, resolveReplayCameraCadence, resolveReplayVideoFramePhase,
 } from '@Core/ui/replay/ReplayVideoTimeline'
 import {describe, expect, it} from 'vitest'
 
@@ -38,17 +38,17 @@ const replayClips = {
 }
 
 describe('ReplayVideoTimeline', () => {
-    it('reduces only Draft camera calculations according to replay duration', () => {
-        expect(resolveDraftReplayCameraCadence({durationMillis: 30_000, captureFps: 30})).toEqual(expect.objectContaining({
+    it('reduces only Interactive camera calculations according to replay duration', () => {
+        expect(resolveReplayCameraCadence({durationMillis: 30_000, captureFps: 30})).toEqual(expect.objectContaining({
             captureFps:     30,
             cameraFps:      15,
             reductionFactor: 2,
         }))
-        expect(resolveDraftReplayCameraCadence({durationMillis: 120_000, captureFps: 30})).toEqual(expect.objectContaining({
+        expect(resolveReplayCameraCadence({durationMillis: 120_000, captureFps: 30})).toEqual(expect.objectContaining({
             cameraFps:       12,
             reductionFactor: 2.5,
         }))
-        expect(resolveDraftReplayCameraCadence({durationMillis: 240_000, captureFps: 30})).toEqual(expect.objectContaining({
+        expect(resolveReplayCameraCadence({durationMillis: 240_000, captureFps: 30})).toEqual(expect.objectContaining({
             cameraFps:       10,
             reductionFactor: 3,
         }))
@@ -109,7 +109,7 @@ describe('ReplayVideoTimeline', () => {
         }))
     })
 
-    it('publishes the same absolute clock from Draft as the shared export timeline', () => {
+    it('publishes the same absolute clock from Interactive as the shared export timeline', () => {
         const previousLgs = globalThis.lgs
         const frames = []
         let now = 0
@@ -149,12 +149,12 @@ describe('ReplayVideoTimeline', () => {
 
             now = 2000
             frames.shift()()
-            const draftPhase = globalThis.lgs.stores.replay.dynamicFrameState.phase
+            const interactivePhase = globalThis.lgs.stores.replay.dynamicFrameState.phase
             const exportPhase = resolveReplayVideoFramePhase({
                 timeline: controller.videoTimeline,
-                frameTimeMs: draftPhase.frameTimeMs,
+                frameTimeMs: interactivePhase.frameTimeMs,
             })
-            expect(draftPhase).toEqual(exportPhase)
+            expect(interactivePhase).toEqual(exportPhase)
 
             now = 4000
             frames.shift()()

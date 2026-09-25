@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -262,7 +262,7 @@ export const startCameraTransition = (mode, {
                 })
                 : null
 
-            const draftTiming = globalThis.lgs?.stores?.ui?.video?.recording === true
+            const interactiveTiming = globalThis.lgs?.stores?.ui?.video?.recording === true
                                 || globalThis.lgs?.stores?.ui?.video?.preRecording === true
             if (transferPath) {
                 try {
@@ -271,7 +271,7 @@ export const startCameraTransition = (mode, {
                         target: frame.target,
                         scene: call.cesiumScene?.(),
                         duration: Math.max(0, Number(duration) || 0),
-                        cadence: draftTiming ? 'time' : 'frame',
+                        cadence: interactiveTiming ? 'time' : 'frame',
                         complete: () => settle(true),
                         cancel:   () => settle(false),
                     })

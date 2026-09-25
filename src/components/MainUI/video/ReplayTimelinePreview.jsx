@@ -29,6 +29,7 @@ import {WaButton, WaIcon, WaTooltip} from '@web.awesome.me/webawesome-pro/dist/r
 import {
     CREDITS_WIDGET,
     LOGO_WIDGET,
+    MULTI_PURPOSE_WIDGETS,
     REPLAY_RECORDING_MONITOR_WIDGET_ID,
     REPLAY_TIMELINE_WIDGET,
     VIDEO_CROP_ZONE,
@@ -43,6 +44,8 @@ import {
 import {
     groupWidgetEntries,
 } from '@Core/ui/widget-manager/WidgetGroupUtils'
+import {WidgetDynamicRenderer} from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+import {REPLAY_VIDEO_WIDGET_TYPES} from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import {createReplayScrubScheduler} from '@Core/ui/replay/ReplayScrubScheduler'
 import {useOptionalSnapshot, useProxyValue} from '@Utils/ValtioUtils'
 import '@lgs1920/timeline'
@@ -486,6 +489,22 @@ export const ReplayTimelinePreview = forwardRef(({
                                && !video.recording
                                && !video.recordingHQ
                                && !video.finalizing
+
+    useEffect(() => {
+        if (!linkedPreparation || !globalThis.__?.widgets?.get || !globalThis.__?.ui?.widgetManager) {
+            return
+        }
+
+        const renderer = WidgetDynamicRenderer.instance
+        REPLAY_VIDEO_WIDGET_TYPES.forEach(widgetType => {
+            void renderer.renderWidget(MULTI_PURPOSE_WIDGETS, widgetType, {
+                widgetsBoard: VIDEO_WIDGETS_BOARD,
+                forceRefresh: true,
+            }).catch(error => {
+                console.error(`[LGS1920][ReplayWidgets] Failed to register ${widgetType}`, error)
+            })
+        })
+    }, [linkedPreparation])
 
     const projectionReplay = useMemo(() => ({
         deferredExportPlan: replay.deferredExportPlan,

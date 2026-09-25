@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-24
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -109,7 +109,7 @@ describe('canonical replay camera definition', () => {
         expect(pose.canonical).toBe(true)
     })
 
-    it('resolves the sample once before evaluating the same camera for Draft and HQ', () => {
+    it('resolves the sample once before evaluating the same camera for Interactive and HQ', () => {
         const cameraDefinition = createCameraFixture()
         const timeline = buildReplayVideoTimeline({replayDurationMillis: 1000, fps: 10})
         const definition = createReplayDefinition({timeline, cameraDefinition})
@@ -129,19 +129,19 @@ describe('canonical replay camera definition', () => {
         }))
         const resolver = new ReplayFrameResolver({plan, resolveSample, resolveCameraPose})
 
-        const draft = resolver.resolveAtTimeSync(400, {renderMode: 'draft'})
+        const interactive = resolver.resolveAtTimeSync(400, {renderMode: 'interactive'})
         const hq = resolver.resolveAtTimeSync(400, {renderMode: 'hq'})
 
         expect(resolveSample).toHaveBeenCalledTimes(2)
         expect(resolveCameraPose).toHaveBeenCalledTimes(2)
         expect(resolveCameraPose.mock.calls[0][0].sample).toBe(sample)
-        expect(draft.scene.cameraPose).toEqual(hq.scene.cameraPose)
-        expect(draft.scene.cameraCommand).toEqual(hq.scene.cameraCommand)
-        expect(draft.scene.cameraCommand).toEqual(expect.objectContaining({
+        expect(interactive.scene.cameraPose).toEqual(hq.scene.cameraPose)
+        expect(interactive.scene.cameraCommand).toEqual(hq.scene.cameraCommand)
+        expect(interactive.scene.cameraCommand).toEqual(expect.objectContaining({
             type: 'set-target-view',
             rangeMeters: expect.any(Number),
         }))
-        expect(draft.resolved).toBe(false)
+        expect(interactive.resolved).toBe(false)
         expect(hq.resolved).toBe(false)
     })
 })

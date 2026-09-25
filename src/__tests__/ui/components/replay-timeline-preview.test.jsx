@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-18
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,6 +19,10 @@ import {createRef, Profiler} from 'react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {proxy} from 'valtio'
 import {proxyMap} from 'valtio/utils'
+
+const widgetRendererHarness = vi.hoisted(() => ({
+    renderWidget: vi.fn(async () => null),
+}))
 
 vi.mock('@lgs1920/timeline', () => ({}))
 
@@ -38,11 +42,21 @@ vi.mock('@Components/MainUI/video/toolbox/VideoRecordingSettingsMenus', () => ({
                                                             className={className}/>,
 }))
 
+vi.mock('@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender', () => ({
+    WidgetDynamicRenderer: {
+        instance: widgetRendererHarness,
+    },
+}))
+
 import {ReplayTimelinePreview} from '@Components/MainUI/video/ReplayTimelinePreview'
 
 describe('ReplayTimelinePreview', () => {
     beforeEach(() => {
+        widgetRendererHarness.renderWidget.mockClear()
         globalThis.__ = {
+            widgets: {
+                get: vi.fn(() => ({widgets: new Map()})),
+            },
             ui: {
                 replay: {
                     enterReplayPreparation: vi.fn(async () => true),
@@ -178,6 +192,21 @@ describe('ReplayTimelinePreview', () => {
             clip.editable === false && clip.resizable === false
         ))).toBe(true)
         expect(globalThis.__.ui.replay.enterReplayPreparation).toHaveBeenCalledTimes(1)
+    })
+
+    it('registers Credits for the video board before building the preparation tracks', async () => {
+        render(<ReplayTimelinePreview/>)
+
+        await waitFor(() => {
+            expect(widgetRendererHarness.renderWidget).toHaveBeenCalledWith(
+                'multi-purpose-widgets',
+                'credits-widget',
+                {
+                    widgetsBoard: 'video-crop-zone',
+                    forceRefresh: true,
+                },
+            )
+        })
     })
 
     it('persists timeline seek events from the timeline time slider', async () => {

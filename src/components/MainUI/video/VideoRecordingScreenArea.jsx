@@ -61,16 +61,16 @@ const positiveFinite = value => {
 }
 
 /**
- * Resolve the duration displayed by the Draft recording monitor.
+ * Resolve the duration displayed by the Interactive recording monitor.
  *
- * @param {Object} options - Draft duration candidates.
+ * @param {Object} options - Interactive duration candidates.
  * @param {Object} options.replay - Replay snapshot.
  * @param {*} options.maxDuration - Maximum ordinary recording duration in minutes.
  * @param {*} options.controllerDurationSeconds - Current replay controller duration.
  * @param {Object|null} options.clips - Optional replay start and stop clips.
- * @returns {number|null} Draft duration in milliseconds.
+ * @returns {number|null} Interactive duration in milliseconds.
  */
-const resolveDraftVideoDurationMillis = ({
+const resolveInteractiveVideoDurationMillis = ({
     replay,
     maxDuration,
     controllerDurationSeconds,
@@ -116,7 +116,7 @@ export const VideoRecordingScreenArea = memo(() => {
     const video = useSnapshot($video)
     const replay = useSnapshot(lgs.stores.replay)
     const {maxSize, maxDuration} = useSnapshot(lgs.settings.ui.video)
-    const draftVideoDurationMillis = resolveDraftVideoDurationMillis({
+    const interactiveVideoDurationMillis = resolveInteractiveVideoDurationMillis({
         replay,
         maxDuration,
         controllerDurationSeconds: __.ui?.replay?.controller?.duration,
@@ -225,12 +225,12 @@ export const VideoRecordingScreenArea = memo(() => {
 
         if (typeof replay?.captureCameraState === 'function' && !replay.savedCameraState) {
             const cameraCaptureStartedAt = globalThis.performance?.now?.() ?? Date.now()
-            replayVideoTraceDebug('draft.recording.replay-camera.capture.start', {
+            replayVideoTraceDebug('interactive.recording.replay-camera.capture.start', {
                 captureMode: renderSpec?.captureMode ?? $video.captureMode ?? lgs.settings.ui.video.captureMode ?? 'speed',
                 startToken:   _recordingStartToken.current,
             })
             replay.captureCameraState()
-            replayVideoTraceDebug('draft.recording.replay-camera.capture.end', {
+            replayVideoTraceDebug('interactive.recording.replay-camera.capture.end', {
                 elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - cameraCaptureStartedAt,
                 startToken: _recordingStartToken.current,
             })
@@ -321,7 +321,7 @@ export const VideoRecordingScreenArea = memo(() => {
 
     const initializeRecorder = useCallback(async (startToken) => {
         const initializeStartedAt = globalThis.performance?.now?.() ?? Date.now()
-        replayVideoTraceDebug('draft.recording.initialize.start', {
+        replayVideoTraceDebug('interactive.recording.initialize.start', {
             captureMode: $video.captureMode ?? lgs.settings.ui.video.captureMode ?? 'speed',
             captureFps:   ScreenMediaRecorder.FPS[$video.fps] ?? null,
             syncRequested: isJourneyReplaySyncRequested(),
@@ -329,11 +329,11 @@ export const VideoRecordingScreenArea = memo(() => {
         })
         try {
             const uiPrepareStartedAt = globalThis.performance?.now?.() ?? Date.now()
-            replayVideoTraceDebug('draft.recording.ui.prepare.start', {
+            replayVideoTraceDebug('interactive.recording.ui.prepare.start', {
                 startToken,
             })
             prepareVideoCaptureUi()
-            replayVideoTraceDebug('draft.recording.ui.prepare.end', {
+            replayVideoTraceDebug('interactive.recording.ui.prepare.end', {
                 elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - uiPrepareStartedAt,
                 startToken,
             })
@@ -341,13 +341,13 @@ export const VideoRecordingScreenArea = memo(() => {
             $video.settings = {quality: $video.quality, fps: $video.fps}
 
             const cropSyncStartedAt = globalThis.performance?.now?.() ?? Date.now()
-            replayVideoTraceDebug('draft.recording.crop.sync.start', {
+            replayVideoTraceDebug('interactive.recording.crop.sync.start', {
                 phase: 'before-record',
                 persist: false,
                 startToken,
             })
             const videoFrame = await syncVideoCropFrame('before-record')
-            replayVideoTraceDebug('draft.recording.crop.sync.end', {
+            replayVideoTraceDebug('interactive.recording.crop.sync.end', {
                 elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - cropSyncStartedAt,
                 hasVideoFrame: Boolean(videoFrame),
                 startToken,
@@ -369,7 +369,7 @@ export const VideoRecordingScreenArea = memo(() => {
             const selectedFps = renderSpec.fps
             if (isJourneyReplaySyncRequested()) {
                 const replayBridgeStartedAt = globalThis.performance?.now?.() ?? Date.now()
-                replayVideoTraceDebug('draft.recording.replay-bridge.start', {
+                replayVideoTraceDebug('interactive.recording.replay-bridge.start', {
                     captureMode: renderSpec.captureMode,
                     captureFps: selectedFps,
                     startToken,
@@ -377,14 +377,14 @@ export const VideoRecordingScreenArea = memo(() => {
                 if (!await prepareJourneyReplayForRecording(renderSpec)) {
                     return false
                 }
-                replayVideoTraceDebug('draft.recording.replay-bridge.end', {
+                replayVideoTraceDebug('interactive.recording.replay-bridge.end', {
                     elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - replayBridgeStartedAt,
                     startToken,
                     syncRequested: true,
                 })
 
                 const sceneRestoreStartedAt = globalThis.performance?.now?.() ?? Date.now()
-                replayVideoTraceDebug('draft.recording.scene-restore.wait.start', {
+                replayVideoTraceDebug('interactive.recording.scene-restore.wait.start', {
                     timeoutMs: VIDEO_RECORDER_INITIALIZE_TIMEOUT_MS,
                     startToken,
                 })
@@ -393,7 +393,7 @@ export const VideoRecordingScreenArea = memo(() => {
                     VIDEO_RECORDER_INITIALIZE_TIMEOUT_MS,
                     'Replay scene restoration timed out before video recording.',
                 )
-                replayVideoTraceDebug('draft.recording.scene-restore.wait.end', {
+                replayVideoTraceDebug('interactive.recording.scene-restore.wait.end', {
                     elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - sceneRestoreStartedAt,
                     startToken,
                 })
@@ -416,7 +416,7 @@ export const VideoRecordingScreenArea = memo(() => {
                 .concat('', `Recorded on ${recordingDateLabel}`)
                 .join('\n')
             const recordingMetadata = {
-                status: 'draft',
+                status: 'ready',
                 artist: lgs.servers.studio.name,
                 date: recordingDate,
                 album: 'Your Adventures',
@@ -428,14 +428,14 @@ export const VideoRecordingScreenArea = memo(() => {
                     '©pub': 'LGS1920 Studio',
                     '©too': 'Mediabunny',
                 },
-                ...(journeyTitle ? {title: `${journeyTitle} (draft version)`} : {}),
+                ...(journeyTitle ? {title: journeyTitle} : {}),
                 ...(lgs.theJourney?.title ? {description: lgs.theJourney.title} : {}),
             }
             if (isJourneyReplaySyncRequested()) {
-                // Prepare the deferred master export as soon as the draft starts.
+                // Prepare the deferred master export as soon as the interactive starts.
                 // This only stores a compact context and warms the codec/config.
                 const deferredExportPrepareStartedAt = globalThis.performance?.now?.() ?? Date.now()
-                replayVideoTraceDebug('draft.recording.deferred-export.plan.start', {
+                replayVideoTraceDebug('interactive.recording.deferred-export.plan.start', {
                     captureMode: renderSpec.captureMode,
                     dimensions: renderSpec.dimensions,
                     startToken,
@@ -451,7 +451,7 @@ export const VideoRecordingScreenArea = memo(() => {
                     renderSpec,
                     mediaMetadata: recordingMetadata,
                 })
-                replayVideoTraceDebug('draft.recording.deferred-export.plan.end', {
+                replayVideoTraceDebug('interactive.recording.deferred-export.plan.end', {
                     elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - deferredExportPrepareStartedAt,
                     hasExporter: Boolean(exporter),
                     hasPlan: Boolean(plan),
@@ -460,7 +460,7 @@ export const VideoRecordingScreenArea = memo(() => {
                 plan.runtime.status = 'warming'
                 plan.runtime.preparedAt = plan.runtime.preparedAt ?? new Date().toISOString()
                 const deferredExportWarmStartedAt = globalThis.performance?.now?.() ?? Date.now()
-                replayVideoTraceDebug('draft.recording.deferred-export.warm.start', {
+                replayVideoTraceDebug('interactive.recording.deferred-export.warm.start', {
                     captureMode: renderSpec.captureMode,
                     dimensions: renderSpec.dimensions,
                     startToken,
@@ -472,7 +472,7 @@ export const VideoRecordingScreenArea = memo(() => {
                     dimensions: renderSpec.dimensions,
                     browser: __.device.browser,
                 }).then(result => {
-                    replayVideoTraceDebug('draft.recording.deferred-export.warm.end', {
+                    replayVideoTraceDebug('interactive.recording.deferred-export.warm.end', {
                         elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - deferredExportWarmStartedAt,
                         hasOutputConfig: Boolean(result?.outputConfig),
                         runtimeStatus: result?.plan?.runtime?.status ?? null,
@@ -480,7 +480,7 @@ export const VideoRecordingScreenArea = memo(() => {
                     })
                     return result
                 }).catch(error => {
-                    replayVideoTraceDebug('draft.recording.deferred-export.warm.error', {
+                    replayVideoTraceDebug('interactive.recording.deferred-export.warm.error', {
                         elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - deferredExportWarmStartedAt,
                         message: error?.message ?? null,
                         name: error?.name ?? null,
@@ -518,8 +518,8 @@ export const VideoRecordingScreenArea = memo(() => {
             _composer.current = composer
 
             startReplayRecordingMonitor({
-                mode: 'draft',
-                videoDurationMillis: draftVideoDurationMillis,
+                mode: 'interactive',
+                videoDurationMillis: interactiveVideoDurationMillis,
             })
 
             if (renderSpec.captureMode === 'quality') {
@@ -527,19 +527,19 @@ export const VideoRecordingScreenArea = memo(() => {
             }
 
             // The final recorder frame must be composed from the current Cesium
-            // canvas. This is required for Draft as well as HQ: without the
-            // callback, Draft can submit the previous compositor frame even when
+            // canvas. This is required for Interactive as well as HQ: without the
+            // callback, Interactive can submit the previous compositor frame even when
             // the replay trace is still visible on the source canvas.
             __.recorder.setFrameCaptureReady(async () => {
                 return flushComposerOverlays().then(async () => {
                     buildFinalComposerOverlays(composer, renderSpec.cropRect, renderSpec.outputDpr)
                     // The replay runtime has already rendered the final Cesium frame.
-                    // Waiting for another rAF makes Draft duration depend on browser
+                    // Waiting for another rAF makes Interactive duration depend on browser
                     // throttling when the replay UI is hidden.
                     await composer.renderFrame({waitForNextFrame: false})
                     publishReplayRecordingMonitorFrame({
                         canvas: composer.getCanvas(),
-                        mode: 'draft',
+                        mode: 'interactive',
                         phase: 'recording',
                         progress: lgs.stores.replay?.progress,
                     })
@@ -553,11 +553,11 @@ export const VideoRecordingScreenArea = memo(() => {
             await composer.renderFrame({waitForNextFrame: true})
             publishReplayRecordingMonitorFrame({
                 canvas: composer.getCanvas(),
-                mode: 'draft',
+                mode: 'interactive',
                 phase: 'recording',
                 progress: lgs.stores.replay?.progress,
             })
-            replayVideoTraceDebug('draft.recording.composer.first-frame.end', {
+            replayVideoTraceDebug('interactive.recording.composer.first-frame.end', {
                 elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - firstComposerFrameStartedAt,
                 startToken,
             })
@@ -571,13 +571,13 @@ export const VideoRecordingScreenArea = memo(() => {
         }
         finally {
             const elapsedMs = (globalThis.performance?.now?.() ?? Date.now()) - initializeStartedAt
-            replayVideoTraceDebug('draft.recording.initialize.end', {
+            replayVideoTraceDebug('interactive.recording.initialize.end', {
                 elapsedMs,
                 startToken,
                 syncRequested: isJourneyReplaySyncRequested(),
             })
         }
-    }, [draftVideoDurationMillis, maxDuration, maxSize, disposeComposer, stopOverlaysRefresh, buildComposerOverlays, buildFinalComposerOverlays, flushComposerOverlays, syncVideoCropFrame, prepareJourneyReplayForRecording, isJourneyReplaySyncRequested, $video])
+    }, [interactiveVideoDurationMillis, maxDuration, maxSize, disposeComposer, stopOverlaysRefresh, buildComposerOverlays, buildFinalComposerOverlays, flushComposerOverlays, syncVideoCropFrame, prepareJourneyReplayForRecording, isJourneyReplaySyncRequested, $video])
 
     const markRecordingStarted = useCallback(() => {
         if (!$video.preRecording && $video.recording) {
@@ -618,12 +618,12 @@ export const VideoRecordingScreenArea = memo(() => {
             }
 
             const recorderStartStartedAt = globalThis.performance?.now?.() ?? Date.now()
-            replayVideoTraceDebug('draft.recorder.start.begin', {
+            replayVideoTraceDebug('interactive.recorder.start.begin', {
                 startToken,
             })
             await __.recorder.startVideo()
             const recorderStartElapsedMs = (globalThis.performance?.now?.() ?? Date.now()) - recorderStartStartedAt
-            replayVideoTraceDebug('draft.recorder.start.end', {
+            replayVideoTraceDebug('interactive.recorder.start.end', {
                 elapsedMs: recorderStartElapsedMs,
                 startToken,
             })
@@ -825,7 +825,7 @@ export const VideoRecordingScreenArea = memo(() => {
         const hStarted = () => {
             markRecordingStarted()
             requestWakeLock()
-            updateReplayRecordingMonitor({mode: 'draft', phase: 'recording'})
+            updateReplayRecordingMonitor({mode: 'interactive', phase: 'recording'})
         }
         __.recorder.addEventListener(ScreenMediaRecorder.events.STOP, hStopped)
         __.recorder.addEventListener(ScreenMediaRecorder.events.CANCEL, hStopped)
@@ -835,7 +835,7 @@ export const VideoRecordingScreenArea = memo(() => {
         __.recorder.addEventListener(ScreenMediaRecorder.events.START, hStarted)
         const hInfo = event => {
             updateReplayRecordingMonitor({
-                mode: 'draft',
+                mode: 'interactive',
                 phase: 'recording',
                 elapsedMillis: event.detail?.duration,
                 size: event.detail?.size,

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -181,7 +181,7 @@ export const buildReplayFrameState = ({
 /**
  * Refresh the visual contract attached to the active replay frame.
  *
- * Draft publishes its frame before the Cesium adapter has applied the camera
+ * Interactive publishes its frame before the Cesium adapter has applied the camera
  * pose. This helper lets the live path publish the completed logical frame
  * without changing the scheduling or capture owner.
  *
@@ -211,7 +211,7 @@ export const updateReplayFrameRenderContract = ({
                              }
                              : previousContract.logicalFrame ?? null
     const renderContract = createReplayRenderModeContract({
-        renderMode:        previousContract.renderMode ?? 'draft',
+        renderMode:        previousContract.renderMode ?? 'interactive',
         logicalFrame:      nextLogicalFrame,
         cameraPose:        cameraPose === undefined
                            ? nextLogicalFrame?.cameraPose ?? previousContract.cameraPose ?? null
@@ -463,7 +463,7 @@ export const publishReplayClipFrameState = ({
             phase,
             source:          'clip',
             updatedAt:       now,
-            renderMode:      'draft',
+            renderMode:      'interactive',
             intentResolved,
             cameraPose,
             cameraCommand,

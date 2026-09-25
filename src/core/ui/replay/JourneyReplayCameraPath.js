@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-26
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -326,7 +326,7 @@ export const selectCameraTransferMode = (distanceMeters, thresholdKm = CAMERA_TR
  * Build a reusable camera transfer path between two Cartesian3 positions.
  *
  * The returned object exposes a deterministic `sampleAt` function and a sampled
- * point cache so the same path can be replayed in live preview, draft export,
+ * point cache so the same path can be replayed in live preview, interactive export,
  * or HQ export.
  *
  * @param {object} options - Path construction options.

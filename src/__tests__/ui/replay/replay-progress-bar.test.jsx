@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-14
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -124,7 +124,7 @@ describe('JourneyReplayProgressBar', () => {
         expect(screen.getByRole('button', {name: 'Journey Replay settings'}).disabled).toBe(true)
     })
 
-    it('uses Draft frame progress instead of distance progress', () => {
+    it('uses Interactive frame progress instead of distance progress', () => {
         globalThis.lgs.stores.replay.recordingSync = true
         globalThis.lgs.stores.replay.active = true
         globalThis.lgs.stores.replay.playing = true

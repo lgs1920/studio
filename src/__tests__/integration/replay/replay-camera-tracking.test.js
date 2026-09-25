@@ -1757,7 +1757,7 @@ describe('replay camera tracking', () => {
         }
     })
 
-    it('keeps navigation collision recentering live in a replay-synced Draft', () => {
+    it('keeps navigation collision recentering live in a replay-synced Interactive', () => {
         vi.useFakeTimers()
         const journey = makeJourney([
                                         makeTrack({

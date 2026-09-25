@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -114,15 +114,15 @@ describe('JourneyReplayVideoSync', () => {
             expect(replay.setTerrainHeightLookupBypass).toHaveBeenLastCalledWith(false)
             expect(replay.setTerrainHeightLookupTrace).toHaveBeenLastCalledWith(false)
             expect(traceEvents).toEqual(expect.arrayContaining([
-                'draft.recorder.start.received',
-                'draft.replay.start.scheduled',
-                'draft.replay.terrain.lookup.bypass.start',
-                'draft.replay.camera.prepared',
-                'draft.replay.start.begin',
-                'draft.replay.terrain.lookup.bypass.end',
-                'draft.replay.start.end',
+                'interactive.recorder.start.received',
+                'interactive.replay.start.scheduled',
+                'interactive.replay.terrain.lookup.bypass.start',
+                'interactive.replay.camera.prepared',
+                'interactive.replay.start.begin',
+                'interactive.replay.terrain.lookup.bypass.end',
+                'interactive.replay.start.end',
             ]))
-            expect(traceEntries.find(entry => entry.event === 'draft.replay.start.end')?.data).toEqual(expect.objectContaining({
+            expect(traceEntries.find(entry => entry.event === 'interactive.replay.start.end')?.data).toEqual(expect.objectContaining({
                 succeeded: true,
                 errored: false,
             }))

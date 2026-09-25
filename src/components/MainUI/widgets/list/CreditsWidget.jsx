@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-14
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -121,7 +121,7 @@ export const CreditsWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
         }
     }, [container, id, widgetsBoard, zIndex])
 
-    // Render in widget editor and during draft recording capture.
+    // Render in the widget editor and during Replay video capture.
     if (!shouldRender || !container) {
         return null
     }

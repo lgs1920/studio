@@ -87,8 +87,8 @@
 
 ## Video
 
-- action: Video recording
-  description: Opens video setup, then starts recording when setup is already open.
+- action: Replay video
+  description: Opens Replay settings to prepare a video.
   id: video-recording
   keys:
     - Alt+Shift+V

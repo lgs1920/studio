@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -142,7 +142,7 @@ export class JourneyReplayPlaybackController {
             visibleOverlayIds: replayState?.deferredExportPlan?.runtime?.context?.visibleOverlayIds ?? [],
             trackPathDescriptor,
             qualityPolicy: replayState?.readiness ?? null,
-            source: 'draft',
+            source: 'interactive',
         })
         this.#renderPlan = createReplayRenderPlan({
             definition: this.#replayDefinition,
@@ -247,7 +247,7 @@ export class JourneyReplayPlaybackController {
     ) ?? null
 
     /**
-     * Resolve a Draft frame phase from the shared absolute video timeline.
+     * Resolve a Interactive frame phase from the shared absolute video timeline.
      *
      * @param {number} frameTimeMs - Absolute timeline time in milliseconds.
      * @param {Object} options - Phase resolution options.
@@ -557,7 +557,7 @@ export class JourneyReplayPlaybackController {
             },
             phase,
             sample,
-            renderMode: 'draft',
+            renderMode: 'interactive',
             source: 'controller',
             resolved: false,
             renderSpec: deferredRenderContract?.renderSpec
@@ -567,7 +567,7 @@ export class JourneyReplayPlaybackController {
                                ?? store.deferredExportPlan?.runtime?.context?.visibleOverlayIds
                                ?? undefined,
         }) ?? null
-        // Shared live draft tick for replay-driven widgets.
+        // Shared interactive tick for replay-driven widgets.
         store.liveSample = sample
         store.dynamicStatsTick = frameNow
         store.replayFramePhase = phase
@@ -593,7 +593,7 @@ export class JourneyReplayPlaybackController {
             phase,
             source:          'controller',
             updatedAt:       frameNow,
-            renderMode:      'draft',
+            renderMode:      'interactive',
             trackPath:       deferredRenderContract?.trackPath ?? null,
             initialCameraState,
             renderSpec:      deferredRenderContract?.renderSpec

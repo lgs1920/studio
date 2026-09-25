@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,6 @@
 
 import {
     CURRENT_MAP_POINT, CURRENT_POI, REPLAY_DRAWER, SCENE_MODE_2D, SETTINGS_EDITOR_DRAWER, SHORTCUTS_CATALOG,
-    VIDEO_CROP_ZONE,
 }                                                       from '@Core/constants'
 import { hasActiveAppShortcutBlocker }                  from '@Core/events/shortcutBlockers'
 import { MapTarget }                                    from '@Core/MapTarget'
@@ -326,44 +325,6 @@ const openUserProfileSettings = () => {
         tab: 'manage-user-profile',
     })
     return true
-}
-
-const resolveRecorderToolbarPosition = () => ({
-    left:     window.innerWidth / 2,
-    top:      window.innerHeight / 2,
-    attachTo: 'bottom',
-})
-
-const launchVideoRecording = () => {
-    const video = lgs.stores.ui.video
-
-    if (video.recording || video.preRecording || video.snapshot || video.finalizing) {
-        return false
-    }
-
-    if (!video.editing) {
-        video.editing = true
-        lgs.stores.ui.mainUI.callForActions.active = false
-        __.ui.drawerManager?.close?.()
-        return true
-    }
-
-    return __.ui.widgetManager.syncCropDimensionsFromElement(VIDEO_CROP_ZONE, true, 'before-recording')
-        .then(() => {
-            const toolbarPosition = resolveRecorderToolbarPosition()
-            Object.assign(video, {
-                editing:      false,
-                finalizing:   false,
-                paused:       false,
-                position:     toolbarPosition,
-                preRecording: true,
-                recording:    false,
-                toolbarPosition,
-            })
-            __.ui.widgetManager.windowResizing = false
-            __.ui.drawerManager?.close?.()
-            return true
-        })
 }
 
 const setPoiAnimated = async (target, animated) => {
@@ -824,7 +785,7 @@ const SHORTCUT_ACTIONS = {
     'profile-settings-show': openUserProfileSettings,
     'replay-management-show': openJourneyReplayManagement,
     'widget-management-show': openWidgetManagement,
-    'video-recording':      launchVideoRecording,
+    'video-recording':      openJourneyReplayManagement,
     'orbit-toggle':         toggleRotation,
     'orbit-widget-toggle':  toggleOrbitWidgetVisibility,
     'panorama-toggle':      togglePanorama,

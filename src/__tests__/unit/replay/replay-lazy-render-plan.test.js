@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-24
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -111,7 +111,7 @@ describe('lazy replay render plan', () => {
         const {resolver, sampleSpy, trackPath} = createLazyFixture()
 
         const intent = resolver.resolveAtTimeSync(750, {
-            renderMode: 'draft',
+            renderMode: 'interactive',
             source: 'scrub',
         })
 
@@ -147,18 +147,18 @@ describe('lazy replay render plan', () => {
         expect(sampleSpy).toHaveBeenCalledTimes(1)
     })
 
-    it('produces equivalent Draft and HQ visual intent at the same time', () => {
+    it('produces equivalent Interactive and HQ visual intent at the same time', () => {
         const {resolver} = createLazyFixture()
 
-        const draft = resolver.resolveAtTimeSync(400, {renderMode: 'draft', source: 'draft'})
+        const interactive = resolver.resolveAtTimeSync(400, {renderMode: 'interactive', source: 'interactive'})
         const hq = resolver.resolveAtTimeSync(400, {renderMode: 'hq', source: 'hq'})
 
-        expect(draft.frame).toEqual(hq.frame)
-        expect(draft.timeline).toEqual(hq.timeline)
-        expect(draft.replay).toEqual(hq.replay)
-        expect(draft.scene).toEqual(hq.scene)
-        expect(draft.composition).toEqual(hq.composition)
-        expect(replayFrameIntentToLogicalFrame(draft)).toEqual(expect.objectContaining({
+        expect(interactive.frame).toEqual(hq.frame)
+        expect(interactive.timeline).toEqual(hq.timeline)
+        expect(interactive.replay).toEqual(hq.replay)
+        expect(interactive.scene).toEqual(hq.scene)
+        expect(interactive.composition).toEqual(hq.composition)
+        expect(replayFrameIntentToLogicalFrame(interactive)).toEqual(expect.objectContaining({
             progress: 0.4,
             frameTimeMs: 400,
         }))

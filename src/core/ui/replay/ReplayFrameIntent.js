@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-24
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@
 
 import {
     normalizeReplayRenderMode,
-    REPLAY_RENDER_MODE_DRAFT,
+    REPLAY_RENDER_MODE_INTERACTIVE,
 } from './ReplayRenderModeContract'
 
 export const REPLAY_FRAME_INTENT_VERSION = 1
@@ -80,7 +80,7 @@ const normalizeProgress = value => Math.max(0, Math.min(1, optionalFiniteNumber(
  */
 const buildReplayFrameIntentId = ({
                                       planId = null,
-                                      renderMode = REPLAY_RENDER_MODE_DRAFT,
+                                      renderMode = REPLAY_RENDER_MODE_INTERACTIVE,
                                       source = 'replay',
                                       frameId = null,
                                       frameIndex = null,
@@ -105,7 +105,7 @@ const buildReplayFrameIntentId = ({
 export const createReplayFrameIntent = ({
                                              planId = null,
                                              resolved = false,
-                                             renderMode = REPLAY_RENDER_MODE_DRAFT,
+                                             renderMode = REPLAY_RENDER_MODE_INTERACTIVE,
                                              source = 'replay',
                                              frameId = null,
                                              frameIndex = null,
@@ -224,7 +224,7 @@ export const createReplayFrameIntentFromState = (frameState, {
     return createReplayFrameIntent({
         planId,
         resolved,
-        renderMode: renderContract?.renderMode ?? frameState.renderMode ?? REPLAY_RENDER_MODE_DRAFT,
+        renderMode: renderContract?.renderMode ?? frameState.renderMode ?? REPLAY_RENDER_MODE_INTERACTIVE,
         source: frameState.source,
         frameId: frameState.frameId,
         frameIndex: frameState.frameIndex ?? frameState.index,

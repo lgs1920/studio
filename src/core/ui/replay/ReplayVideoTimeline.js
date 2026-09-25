@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-01
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 /**
- * Shared replay timeline used by Draft playback and HQ export.
+ * Shared Replay timeline used by interactive playback and video export.
  *
  * The timeline is deliberately independent from a render owner. It describes
  * the ordered pre-Replay, Replay, and post-Replay phases so every renderer can
@@ -27,14 +27,14 @@ import {normalizeJourneyReplayClips, REPLAY_CLIP_SLOT_POST_REPLAY, REPLAY_CLIP_S
 const DEFAULT_FPS = 30
 
 /**
- * Resolve the reduced Draft camera calculation cadence.
+ * Resolve the reduced Interactive camera calculation cadence.
  *
  * @param {Object} options - Cadence options.
  * @param {number} options.durationMillis - Replay duration in milliseconds.
  * @param {number} options.captureFps - Capture frame rate.
  * @returns {Object} Capture and camera cadence metadata.
  */
-export const resolveDraftReplayCameraCadence = ({
+export const resolveReplayCameraCadence = ({
     durationMillis = 0,
     captureFps = DEFAULT_FPS,
 } = {}) => {

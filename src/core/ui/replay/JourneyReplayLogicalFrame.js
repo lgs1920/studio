@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,7 +30,7 @@ const finiteNumber = value => {
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
 
 /**
- * Build the logical frame consumed by Draft and HQ replay rendering.
+ * Build the logical frame consumed by Interactive and HQ replay rendering.
  *
  * @param {Object} options - Logical frame inputs.
  * @returns {Object} A renderer-independent replay frame.

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-24
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,8 +27,8 @@ import {
 describe('ReplaySessionOwnership', () => {
     it('invalidates an older lifecycle when a new replay begins', () => {
         const owner = {}
-        const first = beginReplaySessionOwnership(owner, {source: 'draft'})
-        const second = beginReplaySessionOwnership(owner, {source: 'draft'})
+        const first = beginReplaySessionOwnership(owner, {source: 'interactive'})
+        const second = beginReplaySessionOwnership(owner, {source: 'interactive'})
 
         expect(first.id).not.toBe(second.id)
         expect(ownsReplaySession(owner, first)).toBe(false)

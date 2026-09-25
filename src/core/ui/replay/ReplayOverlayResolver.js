@@ -158,7 +158,7 @@ export const resolveReplayExportFrameState = (replay = defaultReplayStore()) => 
 /**
  * Return the active dynamic replay frame, regardless of its producer.
  *
- * Draft recording publishes `dynamicFrameState` from the playback controller.
+ * Interactive recording publishes `dynamicFrameState` from the interactive controller.
  * HQ export publishes `runtime.frameState` from the deferred exporter.
  */
 export const resolveReplayDynamicFrameState = (replay = defaultReplayStore()) => (

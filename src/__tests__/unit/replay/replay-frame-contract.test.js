@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-24
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -80,7 +80,7 @@ describe('ReplayFrameIntent', () => {
 
     it('builds a resolved intent from the completed logical camera frame', () => {
         const renderContract = createReplayRenderModeContract({
-            renderMode: 'draft',
+            renderMode: 'interactive',
             logicalFrame: {
                 sample: {progress: 0.25},
                 progress: 0.25,
@@ -120,7 +120,7 @@ describe('ReplayFramePublisher', () => {
         source: 'controller',
     }
 
-    it('keeps pending Draft state separate from the last resolved visual frame', () => {
+    it('keeps pending Interactive state separate from the last resolved visual frame', () => {
         const replay = {}
         const pending = publishReplayFrameState({
             replay,

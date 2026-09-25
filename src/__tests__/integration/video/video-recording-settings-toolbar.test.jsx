@@ -126,7 +126,7 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(screen.getByRole('button', {name: 'Ratio: 16:9'})).not.toBeNull()
         expect(screen.getByRole('button', {name: 'High · 30 FPS'})).not.toBeNull()
         expect(screen.getByRole('button', {name: 'High · 30 FPS'}).querySelector('[data-icon="ranking-star"]')).not.toBeNull()
-        expect(screen.getByRole('button', {name: 'Record'})).not.toBeNull()
+        expect(screen.queryByRole('button', {name: 'Record'})).toBeNull()
         expect(screen.getByRole('button', {name: 'Cancel'})).not.toBeNull()
         expect(screen.getByRole('toolbar', {name: 'Video recording settings'})).not.toBeNull()
     })
@@ -156,7 +156,7 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(screen.queryByRole('button', {name: 'Ratio: 16:9'})).toBeNull()
         expect(screen.queryByRole('button', {name: 'High · 30 FPS'})).toBeNull()
         expect(screen.getByRole('button', {name: 'Journey Replay Settings'})).not.toBeNull()
-        expect(screen.getByRole('button', {name: 'Record'})).not.toBeNull()
+        expect(screen.getByRole('button', {name: 'Create Replay video'})).not.toBeNull()
         expect(screen.getByRole('button', {name: 'Cancel'})).not.toBeNull()
     })
 
@@ -201,13 +201,13 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(screen.getByRole('button', {name: 'Journey Replay Settings'}).querySelector('[data-icon="sliders"]')).not.toBeNull()
         expect(document.querySelectorAll('.video-recording-settings-separator')).toHaveLength(2)
         expect(document.getElementById('launch-the-replay-editor-from-video')?.classList).toContain('video-recording-settings-action')
-        expect(document.getElementById('video-start-recording')?.classList).toContain('video-recording-settings-action')
+        expect(document.getElementById('video-start-hq-export')?.classList).toContain('video-recording-settings-action')
 
         fireEvent.click(screen.getByRole('button', {name: 'Journey Replay Settings'}))
         expect(globalThis.__.ui.drawerManager.open).toHaveBeenCalledWith('replay-drawer')
     })
 
-    it('replaces Draft recording with direct HQ export during timeline preparation', () => {
+    it('starts Replay export from expert preparation', () => {
         globalThis.lgs.stores.replay.recordingSync = true
         globalThis.lgs.stores.ui.video.timelinePreviewActive = true
         const requestHqExport = vi.fn()
@@ -216,59 +216,24 @@ describe('VideoRecordingSettingsToolbar', () => {
         render(<VideoRecordingSettingsToolbar/>)
 
         expect(screen.queryByRole('button', {name: 'Record'})).toBeNull()
-        expect(screen.getByRole('button', {name: 'Create HQ video'})).not.toBeNull()
-        fireEvent.click(screen.getByRole('button', {name: 'Create HQ video'}))
+        expect(screen.getByRole('button', {name: 'Create Replay video'})).not.toBeNull()
+        fireEvent.click(screen.getByRole('button', {name: 'Create Replay video'}))
         expect(requestHqExport).toHaveBeenCalledTimes(1)
 
         globalThis.window.removeEventListener('lgs:video:start-hq-export', requestHqExport)
     })
 
-    it('waits for crop persistence before starting capture', async () => {
-        let resolveCropSync = null
-        globalThis.__.ui.widgetManager.syncCropDimensionsFromElement = vi.fn(() => new Promise(resolve => {
-            resolveCropSync = resolve
-        }))
-        render(<VideoRecordingSettingsToolbar/>)
-
-        const transition = fireEvent.click(screen.getByRole('button', {name: 'Record'}))
-        expect(transition).toBe(true)
-        expect(globalThis.lgs.stores.ui.video.editing).toBe(true)
-        expect(prepareVideoCaptureUi).not.toHaveBeenCalled()
-
-        resolveCropSync()
-        await vi.waitFor(() => expect(prepareVideoCaptureUi).toHaveBeenCalledTimes(1))
-        expect(globalThis.__.ui.replay.prepareReplayCamera).not.toHaveBeenCalled()
-        expect(globalThis.lgs.stores.ui.video.editing).toBe(false)
-        expect(globalThis.lgs.stores.ui.video.preRecording).toBe(true)
-    })
-
-    it('prepares the Replay camera only for a synchronized video', async () => {
-        globalThis.lgs.stores.replay.recordingSync = true
-        render(<VideoRecordingSettingsToolbar/>)
-
-        fireEvent.click(screen.getByRole('button', {name: 'Record'}))
-
-        await vi.waitFor(() => expect(globalThis.__.ui.replay.prepareReplayCamera).toHaveBeenCalledWith({
-            journey: globalThis.lgs.theJourney,
-        }))
-    })
-
-    it('arms Simple Replay only when the video launch action is pressed', async () => {
+    it('starts Replay export from simple preparation without arming live recording', () => {
         globalThis.lgs.stores.replay.simplePreparationActive = true
+        const requestExport = vi.fn()
+        globalThis.window.addEventListener('lgs:video:start-hq-export', requestExport)
         render(<VideoRecordingSettingsToolbar/>)
 
-        fireEvent.click(screen.getByRole('button', {name: 'Record'}))
-
-        await vi.waitFor(() => expect(globalThis.__.ui.replayVideoSync.arm).toHaveBeenCalledWith({
-            recorder:          globalThis.__.recorder,
-            replay:            globalThis.__.ui.replay,
-            store:             globalThis.lgs.stores.replay,
-            autoStopRecording: true,
-            resetToStart:      true,
-        }))
-        expect(globalThis.__.ui.replay.prepareReplayCamera).toHaveBeenCalledWith({
-            journey: globalThis.lgs.theJourney,
-        })
+        expect(screen.queryByRole('button', {name: 'Record'})).toBeNull()
+        fireEvent.click(screen.getByRole('button', {name: 'Create Replay video'}))
+        expect(requestExport).toHaveBeenCalledTimes(1)
+        expect(globalThis.__.ui.replayVideoSync.arm).not.toHaveBeenCalled()
+        globalThis.window.removeEventListener('lgs:video:start-hq-export', requestExport)
     })
 
     it('waits for crop persistence before cancelling video setup', async () => {

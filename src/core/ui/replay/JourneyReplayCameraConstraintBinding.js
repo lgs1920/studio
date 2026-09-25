@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-26
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -224,7 +224,7 @@ export const constrainedReplayCameraPathKey = (mode, {
 }
 
 /**
- * Resolve the single constrained path shared by Draft and HQ replay.
+ * Resolve the single constrained path shared by Interactive and HQ replay.
  *
  * @param {object} mode - Replay camera mode.
  * @param {object} options - Current replay settings.

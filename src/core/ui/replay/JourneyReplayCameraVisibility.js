@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -148,7 +148,7 @@ export const rememberNominalCameraView =  (mode, view) => {
 /**
  * Reset transient camera interpolation state.
  *
- * The compiled constrained path is preserved by default so Draft and HQ can
+ * The compiled constrained path is preserved by default so Interactive and HQ can
  * consume the exact same in-memory path. Sampler replacement explicitly
  * invalidates it through the full camera-controller reset.
  *

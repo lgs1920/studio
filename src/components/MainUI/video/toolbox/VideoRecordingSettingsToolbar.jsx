@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 import { LGSPopup } from '@Components/LGSPopup'
-import { cancelVideoEditing, prepareVideoCaptureUi, prepareVideoEditingUi } from '@Components/MainUI/video/videoEditingCleanup'
+import { cancelVideoEditing, prepareVideoEditingUi } from '@Components/MainUI/video/videoEditingCleanup'
 import { REPLAY_DRAWER, VIDEO_CROP_ZONE } from '@Core/constants'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
@@ -48,9 +48,8 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false, layout = 
                               && !video.recording
                               && !video.snapshot
                               && !video.finalizing
-    const linkedTimelinePreparation = replay.recordingSync === true
-                                      && video.timelinePreviewActive === true
     const simplePreparation = replay.simplePreparationActive === true
+    const replayPreparation = replay.recordingSync === true || simplePreparation
     const showVideoOptions = mode !== 'actions'
     const showActions = mode !== 'video-options'
 
@@ -129,44 +128,6 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false, layout = 
         await syncCropFrame('editing-exit')
         cancelVideoEditing()
     }, [syncCropFrame])
-
-    /**
-     * Starts video capture after the current crop has been persisted.
-     * @returns {Promise<void>} Completion promise.
-     */
-    const handleVideoRecording = useCallback(async () => {
-        if (!__.recorder) {
-            console.warn('[VideoRecordingSettingsToolbar] Recorder not initialized')
-            return
-        }
-
-        if (simplePreparation) {
-            __.ui.replayVideoSync?.arm?.({
-                recorder:          __.recorder,
-                replay:            __.ui.replay,
-                store:             lgs.stores.replay,
-                autoStopRecording: true,
-                resetToStart:      true,
-            })
-        }
-
-        const cameraPreparation = (replay.recordingSync === true || simplePreparation)
-            ? Promise.resolve(__.ui.replay?.prepareReplayCamera?.({journey: lgs.theJourney}))
-            : Promise.resolve(true)
-        await syncCropFrame('before-recording')
-        const prepared = await cameraPreparation
-        if (prepared === false) {
-            return
-        }
-        prepareVideoCaptureUi()
-        Object.assign($video, {
-            editing:      false,
-            preRecording: true,
-            recording:    false,
-            finalizing:   false,
-            paused:       false,
-        })
-    }, [$video, replay.recordingSync, simplePreparation, syncCropFrame])
 
     /**
      * Requests direct HQ export from the linked Replay preparation view.
@@ -348,33 +309,20 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false, layout = 
 
                 {showActions ? replaySettingsAction : null}
 
-                {showActions && linkedTimelinePreparation ? (
+                {showActions && replayPreparation && (
                     <WaButton
                         id="video-start-hq-export"
                         size="s"
                         variant="brand"
                         appearance="plain"
                         className="video-recording-settings-action video-recorder-start-recording"
-                        aria-label="Create HQ video"
+                        aria-label="Create Replay video"
                         onClick={handleHqExport}
                     >
                         <WaIcon name="clapperboard-play" label=""/>
-                        <span>{'Create HQ'}</span>
+                        <span>{'Create Replay'}</span>
                     </WaButton>
-                ) : showActions ? (
-                    <WaButton
-                        id="video-start-recording"
-                        size="s"
-                        variant="brand"
-                        appearance="plain"
-                        className="video-recording-settings-action video-recorder-start-recording"
-                        aria-label="Record"
-                        onClick={() => void handleVideoRecording()}
-                    >
-                        <WaIcon name="clapperboard-play" label=""/>
-                        <span>{'Record'}</span>
-                    </WaButton>
-                ) : null}
+                )}
 
                 {showActions ? <span className="video-recording-settings-separator" aria-hidden="true"/> : null}
 

@@ -1637,7 +1637,7 @@ export const prepareReplayDeferredExportPlan = ({
 /**
  * Warm a previously prepared export plan by resolving the codec/config.
  *
- * This is intentionally asynchronous so it can run while the live draft is
+ * This is intentionally asynchronous so it can run while interactive Replay is
  * already recording.
  */
 export const warmReplayDeferredExportPlan = async ({
@@ -1938,12 +1938,12 @@ export const runReplayDeferredMp4Export = async ({
     installReplayExportRuntimeControls({plan, abortController})
 
     try {
-        // Always leave a previous Draft scene before preparing HQ. This restores
+        // Always leave a previous Interactive scene before preparing HQ. This restores
         // the original track and camera focus when the user switches modes or
         // aborts between the two exports.
         const restoreStartedAt = runtimeNow()
         let restoreSucceeded = false
-        replayVideoTraceDebug('export.draft.restore.start', {
+        replayVideoTraceDebug('export.interactive.restore.start', {
             force: true,
             hasRestorePlaybackScene: typeof replayMode?.restorePlaybackScene === 'function',
         })
@@ -1954,7 +1954,7 @@ export const runReplayDeferredMp4Export = async ({
             restoreSucceeded = true
         }
         finally {
-            replayVideoTraceDebug('export.draft.restore.end', {
+            replayVideoTraceDebug('export.interactive.restore.end', {
                 elapsedMs: runtimeNow() - restoreStartedAt,
                 restored: restoreSucceeded,
                 hasRestorePlaybackScene: typeof replayMode?.restorePlaybackScene === 'function',
@@ -2027,8 +2027,8 @@ export const runReplayDeferredMp4Export = async ({
                         message: error?.message ?? String(error),
                     })
                     uiToast?.warning?.({
-                        caption: 'HQ Video',
-                        text:    'Isolated HQ rendering is unavailable. The visible map will be used.',
+                        caption: 'Replay video',
+                        text:    'Isolated Replay rendering is unavailable. The visible map will be used.',
                     })
                 }
             }
@@ -2343,8 +2343,8 @@ export const runReplayDeferredMp4Export = async ({
         }
         exportSucceeded = true
         uiToast?.success?.({
-            caption: 'HQ Video',
-            text:    'HQ Video generated.',
+            caption: 'Replay video',
+            text:    'Replay video generated.',
         })
         return {
             ...result,

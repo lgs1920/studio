@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -182,7 +182,7 @@ const pathHeadingForSample = sample => {
 /**
  * Resolve the deterministic banking response for a replay camera sample.
  *
- * The local turn is measured over a metric sampler window so Draft and HQ see
+ * The local turn is measured over a metric sampler window so Interactive and HQ see
  * the same curvature. Speed is compared with the journey average, stationary
  * samples stay level, and the result is eased and clamped to 45 degrees.
  *

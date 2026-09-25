@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-05
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -199,17 +199,17 @@ export const JourneyReplayProgressBar = memo(({
     const hasJourneyTime = hasPlaybackSample && totalMillis !== null && totalMillis > 0 && elapsedMillis !== null
     const totalDistance = hasPlaybackSample ? replay.totalDistance ?? 0 : 0
     const distanceUnit = DISTANCE_UNITS[unitSystem] ?? km
-    const draftFrameState = replay.dynamicFrameState
-    const draftPlaybackProgress = replay.recordingSync === true
+    const interactiveFrameState = replay.dynamicFrameState
+    const interactiveInteractiveProgress = replay.recordingSync === true
                                   ? resolveReplayTimelineProgress({
-                                      frameIndex:    draftFrameState?.replayFrameIndex ?? draftFrameState?.frameIndex,
-                                      frameCount:    draftFrameState?.replayFrameCount ?? draftFrameState?.frameCount,
-                                      elapsedMillis: draftFrameState?.elapsedMillis ?? elapsedMillis,
-                                      durationMillis: draftFrameState?.durationMillis ?? totalMillis,
+                                      frameIndex:    interactiveFrameState?.replayFrameIndex ?? interactiveFrameState?.frameIndex,
+                                      frameCount:    interactiveFrameState?.replayFrameCount ?? interactiveFrameState?.frameCount,
+                                      elapsedMillis: interactiveFrameState?.elapsedMillis ?? elapsedMillis,
+                                      durationMillis: interactiveFrameState?.durationMillis ?? totalMillis,
                                       fallback:      direction < 0 ? 1 - progress : progress,
                                   })
                                   : null
-    const playbackProgress = draftPlaybackProgress
+    const interactiveProgress = interactiveInteractiveProgress
                             ?? playbackProgressFromSample({
                                 sample: hasPlaybackSample ? replay.sample : null,
                                 totalDistance,

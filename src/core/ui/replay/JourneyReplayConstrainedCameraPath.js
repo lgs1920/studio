@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-26
- * Last modified: 2026-07-26
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -136,7 +136,7 @@ const normalizeCartesian = (value, fallback) => {
 /**
  * Interpolate a complete camera frame.
  *
- * Position and orientation are interpolated together so Draft and HQ consume
+ * Position and orientation are interpolated together so Interactive and HQ consume
  * the same pose for a given replay progress.
  *
  * @param {object} start - Start camera frame.
@@ -515,7 +515,7 @@ const navigationLandingZone = triggerZone => zoneFromBounds(
  * Project a Cartesian target through a candidate camera frame.
  *
  * This projection is independent from Cesium's currently rendered camera. It
- * removes the one-frame delay that previously made Draft and HQ evaluate
+ * removes the one-frame delay that previously made Interactive and HQ evaluate
  * different Z1/Z2 collisions.
  *
  * @param {object} options - Projection options.
@@ -866,7 +866,7 @@ export const sampleConstrainedReplayCameraPath = (path, progress = 0) => {
  *
  * The compiler is intentionally independent from the live Cesium camera. It
  * receives deterministic nominal frames and marker targets, then stores one
- * in-memory result that can be sampled by Draft and HQ.
+ * in-memory result that can be sampled by Interactive and HQ.
  *
  * @param {object} options - Compiler options.
  * @param {number[]} [options.progresses] - Preferred source progress density.

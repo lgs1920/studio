@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -141,7 +141,7 @@ export class JourneyReplayVideoSync {
 
             try {
                 // Publish the exact terminal sample before the recorder reads
-                // the composited canvas for its final Draft frame.
+                // the composited canvas for its final Interactive frame.
                 replay?.seek?.(1)
                 await waitForAnimationFrame()
                 await waitForAnimationFrame()
@@ -198,7 +198,7 @@ export class JourneyReplayVideoSync {
                 this.#setVideoSafeMode(false)
                 return
             }
-            replayVideoTraceDebug('draft.replay.start.begin', {
+            replayVideoTraceDebug('interactive.replay.start.begin', {
                 armed: this.#armed,
                 resetToStart: this.#resetToStart === true,
                 captureMode: this.#captureMode,
@@ -211,7 +211,7 @@ export class JourneyReplayVideoSync {
             try {
                 this.#replay?.setTerrainHeightLookupTrace?.(true)
                 this.#replay?.setTerrainHeightLookupBypass?.(true)
-                replayVideoTraceDebug('draft.replay.terrain.lookup.bypass.start', {
+                replayVideoTraceDebug('interactive.replay.terrain.lookup.bypass.start', {
                     generation: startGeneration,
                     previousBypass: previousTerrainHeightLookupBypass,
                     previousTrace: previousTerrainHeightLookupTrace,
@@ -221,7 +221,7 @@ export class JourneyReplayVideoSync {
                     this.#replay.stop?.({emit: false})
                 }
                 await waitForAnimationFrame()
-                replayVideoTraceDebug('draft.replay.camera.prepared', {
+                replayVideoTraceDebug('interactive.replay.camera.prepared', {
                     generation: startGeneration,
                     hasPrepareReplayCamera: typeof this.#replay?.prepareReplayCamera === 'function',
                 })
@@ -242,7 +242,7 @@ export class JourneyReplayVideoSync {
             }
             catch (error) {
                 startError = error
-                replayVideoTraceDebug('draft.replay.start.error', {
+                replayVideoTraceDebug('interactive.replay.start.error', {
                     elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startStartedAt,
                     generation: startGeneration,
                     message: error?.message ?? null,
@@ -254,7 +254,7 @@ export class JourneyReplayVideoSync {
             finally {
                 this.#replay?.setTerrainHeightLookupBypass?.(previousTerrainHeightLookupBypass)
                 this.#replay?.setTerrainHeightLookupTrace?.(previousTerrainHeightLookupTrace)
-                replayVideoTraceDebug('draft.replay.terrain.lookup.bypass.end', {
+                replayVideoTraceDebug('interactive.replay.terrain.lookup.bypass.end', {
                     generation: startGeneration,
                     restoredBypass: previousTerrainHeightLookupBypass,
                     restoredTrace: previousTerrainHeightLookupTrace,
@@ -263,7 +263,7 @@ export class JourneyReplayVideoSync {
                     this.#replayCaptureActive = false
                 }
                 this.#replayStartPending = false
-                replayVideoTraceDebug('draft.replay.start.end', {
+                replayVideoTraceDebug('interactive.replay.start.end', {
                     elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startStartedAt,
                     generation: startGeneration,
                     armed: this.#armed,
@@ -279,7 +279,7 @@ export class JourneyReplayVideoSync {
         }
 
         const handleRecorderStart = () => {
-            replayVideoTraceDebug('draft.recorder.start.received', {
+            replayVideoTraceDebug('interactive.recorder.start.received', {
                 armed: this.#armed,
                 captureMode: this.#captureMode,
                 captureFps: this.#captureFps,
@@ -288,7 +288,7 @@ export class JourneyReplayVideoSync {
             this.#setVideoCaptureCadence()
             this.#cancelPendingStart()
             this.#replayStartPending = true
-            replayVideoTraceDebug('draft.replay.start.scheduled', {
+            replayVideoTraceDebug('interactive.replay.start.scheduled', {
                 captureMode: this.#captureMode,
                 captureFps: this.#captureFps,
                 generation: this.#captureGeneration,

@@ -8,17 +8,17 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 /**
- * Shared visual contract for Draft and HQ replay rendering.
+ * Shared visual contract for Replay playback and video export.
  */
 
-export const REPLAY_RENDER_MODE_DRAFT = 'draft'
+export const REPLAY_RENDER_MODE_INTERACTIVE = 'interactive'
 export const REPLAY_RENDER_MODE_HQ = 'hq'
 export const REPLAY_RENDER_MODE_CONTRACT_VERSION = 1
 
@@ -110,20 +110,20 @@ const cloneCameraState = cameraState => {
  */
 export const normalizeReplayRenderMode = mode => mode === REPLAY_RENDER_MODE_HQ
     ? REPLAY_RENDER_MODE_HQ
-    : REPLAY_RENDER_MODE_DRAFT
+    : REPLAY_RENDER_MODE_INTERACTIVE
 
 /**
- * Build the shared visual contract consumed by Draft and HQ.
+ * Build the shared visual contract consumed by playback and export.
  *
  * Scheduling and encoding remain outside this object. The output profile is
  * kept separate from the render mode so resolution changes do not alter the
- * meaning of Draft or HQ.
+ * meaning of playback or export.
  *
  * @param {Object} options - Contract inputs.
  * @returns {Object} Shared replay render contract.
  */
 export const createReplayRenderModeContract = ({
-                                                   renderMode = REPLAY_RENDER_MODE_DRAFT,
+                                                   renderMode = REPLAY_RENDER_MODE_INTERACTIVE,
                                                    logicalFrame = null,
                                                    cameraPose = null,
                                                    trackPath = null,
@@ -146,7 +146,7 @@ export const createReplayRenderModeContract = ({
         visibleOverlayIds: normalizeOverlayIds(visibleOverlayIds),
         outputProfile: cloneValue(outputProfile),
         scheduling: {
-            realtime:    mode === REPLAY_RENDER_MODE_DRAFT,
+            realtime:    mode === REPLAY_RENDER_MODE_INTERACTIVE,
             frameByFrame: mode === REPLAY_RENDER_MODE_HQ,
         },
     }

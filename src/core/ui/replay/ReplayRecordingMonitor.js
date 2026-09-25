@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-24
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 /**
- * Shared state for the transient Draft and Replay HQ recording monitor.
+ * Shared state for the transient Interactive and Replay HQ recording monitor.
  */
 
 const listeners = new Set()
@@ -65,13 +65,13 @@ export const subscribeReplayRecordingMonitor = listener => {
 export const getReplayRecordingMonitorSnapshot = () => snapshot
 
 /**
- * Start a monitor lifecycle for Draft or HQ recording.
+ * Start a monitor lifecycle for Interactive or HQ recording.
  *
  * @param {Object} options - Monitor mode and optional frame metadata.
  * @returns {Object} Current monitor snapshot.
  */
 export const startReplayRecordingMonitor = ({
-    mode = 'draft',
+    mode = 'interactive',
     frameCount = null,
     videoDurationMillis = null,
 } = {}) => {

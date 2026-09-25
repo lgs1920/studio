@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-29
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,7 +44,7 @@ describe('replay progress helpers', () => {
         expect(clampReplayProgress('invalid')).toBe(0)
     })
 
-    it('prefers the complete Draft video timeline over journey duration', () => {
+    it('prefers the complete Interactive video timeline over journey duration', () => {
         expect(resolveReplayTimelineDuration({
             videoTimelineDurationMillis: 3000,
             replayDurationMillis:       1000,

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -39,7 +39,7 @@ export const REPLAY_TRACKING_NAVIGATION_MIN_ZONE_RATIO = 0.05
 export const REPLAY_TRACKING_DYNAMIC_MIN_ZONE_RATIO = 0.3
 const REPLAY_TRACKING_CALCULATION_LAG_SECONDS = 0.18
 const REPLAY_TRACKING_SHORT_CAPTURE_WINDOW_MULTIPLIER = 4
-export const REPLAY_DRAFT_LOOKAHEAD_FPS = 15
+export const REPLAY_INTERACTIVE_LOOKAHEAD_FPS = 15
 export const REPLAY_HQ_LOOKAHEAD_FPS = 60
 
 export const clamp = (value, min, max) => Math.max(min, Math.min(max, value))
@@ -255,7 +255,7 @@ export const replayFrameLeadSeconds = ({fps = 30, frameIntervalMs = null} = {}) 
  * @returns {number} Frame lead in seconds.
  */
 export const replayCameraFrameLeadSeconds = ({
-                                                 renderMode = 'draft',
+                                                 renderMode = 'interactive',
                                                  fps = null,
                                                  frameIntervalMs = null,
                                              } = {}) => {
@@ -264,7 +264,7 @@ export const replayCameraFrameLeadSeconds = ({
                           : finiteNumber(fps)
     return replayFrameLeadSeconds({
         fps: configuredFps
-              ?? (renderMode === 'hq' ? REPLAY_HQ_LOOKAHEAD_FPS : REPLAY_DRAFT_LOOKAHEAD_FPS),
+              ?? (renderMode === 'hq' ? REPLAY_HQ_LOOKAHEAD_FPS : REPLAY_INTERACTIVE_LOOKAHEAD_FPS),
         frameIntervalMs,
     })
 }

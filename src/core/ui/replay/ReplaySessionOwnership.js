@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-24
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -48,7 +48,7 @@ export const beginReplaySessionOwnership = (owner, metadata = {}) => {
     const lease = Object.freeze({
         id: `replay-session-${sequence}`,
         sequence,
-        source: metadata?.source ?? 'draft',
+        source: metadata?.source ?? 'interactive',
         startedAt: globalThis.performance?.now?.() ?? Date.now(),
     })
     replaySessionOwnershipByOwner.set(owner, {sequence, lease})

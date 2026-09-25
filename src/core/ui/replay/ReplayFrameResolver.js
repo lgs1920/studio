@@ -7,22 +7,22 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-24
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 /**
- * On-demand resolver shared by Draft, HQ, and interactive scrubbing.
+ * On-demand resolver shared by Interactive, HQ, and interactive scrubbing.
  */
 
 import {createReplayFrameIntent} from './ReplayFrameIntent'
 import {createReplayCameraCommand} from './ReplayCameraCommand'
 import {ReplayFrameTimeline} from './ReplayFrameTimeline'
 import {isReplayRenderPlan} from './ReplayRenderPlan'
-import {createReplayRenderModeContract, REPLAY_RENDER_MODE_DRAFT} from './ReplayRenderModeContract'
+import {createReplayRenderModeContract, REPLAY_RENDER_MODE_INTERACTIVE} from './ReplayRenderModeContract'
 import {resolveReplayVideoFramePhase} from './ReplayVideoTimeline'
 
 /**
@@ -177,7 +177,7 @@ export class ReplayFrameResolver {
     }
 
     /**
-     * Reject asynchronous contributions from the synchronous Draft resolver.
+     * Reject asynchronous contributions from the synchronous Interactive resolver.
      *
      * @param {*} value - Resolver contribution.
      * @param {string} name - Contribution name.
@@ -216,7 +216,7 @@ export class ReplayFrameResolver {
             // A logical camera pose is still only an intent. Scene adapters
             // explicitly mark the frame resolved after applying and qualifying it.
             resolved: values.resolved ?? false,
-            renderMode: values.renderMode ?? REPLAY_RENDER_MODE_DRAFT,
+            renderMode: values.renderMode ?? REPLAY_RENDER_MODE_INTERACTIVE,
             source: values.source ?? definition.source ?? 'replay',
             frameId: values.frameId ?? frame?.index ?? null,
             frameIndex: frame?.index ?? phase?.frameIndex ?? null,
@@ -252,7 +252,7 @@ export class ReplayFrameResolver {
     }
 
     /**
-     * Resolve one frame synchronously for Draft playback and immediate scrubbing.
+     * Resolve one frame synchronously for interactive Replay and immediate scrubbing.
      *
      * @param {Object} options - Frame and override options.
      * @returns {Object} Canonical replay frame intent.

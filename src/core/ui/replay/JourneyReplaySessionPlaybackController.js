@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -128,7 +128,7 @@ import {
 } from './JourneyReplaySessionShared'
 
 /**
- * Ensure linked replay diagnostics are visible before either Draft or HQ
+ * Ensure linked replay diagnostics are visible before either Interactive or HQ
  * rendering starts.
  *
  * @param {object} mode - Replay mode.
@@ -400,7 +400,7 @@ export const start = (mode, options = {}) => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
     const startStartedAt = globalThis.performance?.now?.() ?? Date.now()
     const traceStartStep = (step, extra = {}) => {
-        replayVideoTraceDebug('draft.replay.start.stage', {
+        replayVideoTraceDebug('interactive.replay.start.stage', {
             step,
             elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startStartedAt,
             ...extra,
@@ -409,7 +409,7 @@ export const start = (mode, options = {}) => {
     if (state.sceneRestorePromise) {
         call.cancelPendingSceneRestore()
     }
-    const replaySessionLease = beginReplaySessionOwnership(mode, {source: 'draft'})
+    const replaySessionLease = beginReplaySessionOwnership(mode, {source: 'interactive'})
     state.renderer.clear()
     call.bindCesiumCameraBridge()
     state.deferPlaybackCameraRestore = false
@@ -578,7 +578,7 @@ export const start = (mode, options = {}) => {
                     state.deferStartCameraRecenter = false
                     state.skipNextImmediateStartRecenter = true
                     // Do not compile the constrained camera path synchronously here.
-                    // That bulk compilation freezes Draft and HQ replay startup.
+                    // That bulk compilation freezes Interactive and HQ replay startup.
                     traceStartStep('controller.start.begin', {phase: 'start-clips'})
                     startResult = state.controller.start({
                         progress: options.progress ?? 0,
@@ -602,7 +602,7 @@ export const start = (mode, options = {}) => {
                 skipNextImmediateStartRecenter: state.skipNextImmediateStartRecenter,
             })
             // Do not compile the constrained camera path synchronously here.
-            // That bulk compilation freezes Draft and HQ replay startup.
+            // That bulk compilation freezes Interactive and HQ replay startup.
             traceStartStep('controller.start.begin', {phase: 'no-start-clips'})
             startResult = state.controller.start({
                 progress: options.progress ?? 0,
@@ -800,7 +800,7 @@ export const seek = (mode, progress, options = {}) => {
     const intent = publishedIntent
                 ?? state.controller.resolveFrameAtProgress?.(progress, {
                     source: 'scrub',
-                    renderMode: 'draft',
+                    renderMode: 'interactive',
                     resolved: true,
                 })
                 ?? null

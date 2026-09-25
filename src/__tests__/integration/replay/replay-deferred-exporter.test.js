@@ -258,7 +258,7 @@ describe('ReplayDeferredExporter', () => {
         expect(replay.deferredExportPlan).toBe(result.plan)
     })
 
-    it('builds the shared draft and HQ video render spec from crop, fps, quality, and dpr', () => {
+    it('builds the shared interactive and HQ video render spec from crop, fps, quality, and dpr', () => {
         const spec = buildReplayVideoRenderSpec({
             cropRect: {left: 10, top: 20, width: 640, height: 360},
             video: {
@@ -1054,8 +1054,8 @@ describe('ReplayDeferredExporter', () => {
                 'export.camera.ownership.end',
                 'export.run.start',
                 'export.run.end',
-                'export.draft.restore.start',
-                'export.draft.restore.end',
+                'export.interactive.restore.start',
+                'export.interactive.restore.end',
                 'export.scene.prepare.start',
                 'export.scene.prepare.end',
                 'export.widgets.wait.start',
@@ -1073,7 +1073,7 @@ describe('ReplayDeferredExporter', () => {
         }
     })
 
-    it('restores the Draft scene when HQ preparation fails', async () => {
+    it('restores the Interactive scene when HQ preparation fails', async () => {
         const restorePlaybackScene = vi.fn(() => Promise.resolve())
         const preparePlaybackSceneForExport = vi.fn(async () => {
             throw new Error('HQ preparation failed')

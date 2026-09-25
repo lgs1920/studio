@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-24
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,7 +23,7 @@ import {
     isResolvedReplayFrameIntent,
 } from './ReplayFrameIntent'
 
-export const REPLAY_FRAME_PUBLICATION_TARGET_DRAFT = 'draft'
+export const REPLAY_FRAME_PUBLICATION_TARGET_INTERACTIVE = 'interactive'
 export const REPLAY_FRAME_PUBLICATION_TARGET_HQ = 'hq'
 
 /**
@@ -47,7 +47,7 @@ export const attachReplayFrameIntent = (frameState, options = {}) => {
 }
 
 /**
- * Publish one Draft or HQ frame while preserving compatibility store fields.
+ * Publish one playback or export frame while preserving compatibility store fields.
  *
  * @param {Object} options - Publication destination and frame data.
  * @returns {Object|null} Published frame state.
@@ -55,7 +55,7 @@ export const attachReplayFrameIntent = (frameState, options = {}) => {
 export const publishReplayFrameState = ({
                                             replay = globalThis.lgs?.stores?.replay ?? null,
                                             plan = null,
-                                            target = REPLAY_FRAME_PUBLICATION_TARGET_DRAFT,
+                                            target = REPLAY_FRAME_PUBLICATION_TARGET_INTERACTIVE,
                                             frameState = null,
                                             intentOptions = {},
                                         } = {}) => {

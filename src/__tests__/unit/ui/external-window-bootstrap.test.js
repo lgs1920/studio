@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-11
- * Last modified: 2026-09-14
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,7 +23,10 @@ const {registerLGS1920IconLibrary} = vi.hoisted(() => ({
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/button/button.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/card/card.js', () => ({}))
+vi.mock('@web.awesome.me/webawesome-pro/dist/components/divider/divider.js', () => ({}))
 vi.mock('@web.awesome.me/webawesome-pro/dist/components/icon/icon.js', () => ({}))
+vi.mock('@web.awesome.me/webawesome-pro/dist/components/progress-bar/progress-bar.js', () => ({}))
+vi.mock('@web.awesome.me/webawesome-pro/dist/components/tooltip/tooltip.js', () => ({}))
 vi.mock('@lgs1920/timeline', () => ({}))
 vi.mock('../../../Utils/LGS1920IconLibrary', () => ({registerLGS1920IconLibrary}))
 
@@ -32,5 +35,14 @@ describe('external window bootstrap', () => {
         await import('../../../external-window-bootstrap.js')
 
         expect(registerLGS1920IconLibrary).toHaveBeenCalledOnce()
+    })
+
+    it('reveals the document after the external resources are ready', async () => {
+        document.documentElement.style.visibility = 'hidden'
+
+        await import('../../../external-window-bootstrap.js?reveal-test')
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+
+        expect(document.documentElement.style.visibility).toBe('')
     })
 })

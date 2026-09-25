@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -299,7 +299,7 @@ export const dispose = (mode, ) => {
  * @param {object} mode - Replay session mode.
  * @param {object} [options] - Reset options.
  * @param {boolean} [options.preserveSavedCameraState=false] - Preserve the entry camera state.
- * @param {boolean} [options.preserveConstrainedPath=true] - Preserve the Draft/HQ shared path.
+ * @param {boolean} [options.preserveConstrainedPath=true] - Preserve the Interactive/HQ shared path.
  * @returns {void}
  */
 export const resetCameraController = (mode, {
@@ -607,7 +607,7 @@ export const restorePlaybackSceneInternal = (mode, ) => {
             // visibility captured before replay after focus has settled.
             call.restoreCurrentJourneyVisibility()
             // Restoring the journey focus above changes the live Cesium view.
-            // Reapply the exact camera captured before Draft/HQ playback so a
+            // Reapply the exact camera captured before Replay playback so a
             // subsequent export does not inherit the focus angle.
             if (!state.cameraStateRestoredBeforeSceneCleanup) {
                 call.restoreCameraState()
@@ -807,13 +807,13 @@ export const bindRenderer = (mode, ) => {
             state.controller.on(REPLAY_EVENT_START, detail => {
                 const startListenerStartedAt = globalThis.performance?.now?.() ?? Date.now()
                 let listenerError = null
-                replayVideoTraceDebug('draft.replay.start.listener.begin', {
+                replayVideoTraceDebug('interactive.replay.start.listener.begin', {
                     progress: detail?.progress ?? null,
                     hasSampler: Boolean(detail?.sampler),
                 })
                 try {
                     const traceStep = (step, extra = {}) => {
-                        replayVideoTraceDebug('draft.replay.start.listener.step', {
+                        replayVideoTraceDebug('interactive.replay.start.listener.step', {
                             step,
                             elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startListenerStartedAt,
                             progress: detail?.progress ?? null,
@@ -893,7 +893,7 @@ export const bindRenderer = (mode, ) => {
                     call.abortPlaybackAfterListenerError(error)
                 }
                 finally {
-                    replayVideoTraceDebug('draft.replay.start.listener.end', {
+                    replayVideoTraceDebug('interactive.replay.start.listener.end', {
                         elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startListenerStartedAt,
                         progress: detail?.progress ?? null,
                         hasSampler: Boolean(detail?.sampler),
@@ -905,7 +905,7 @@ export const bindRenderer = (mode, ) => {
                 const updateListenerStartedAt = globalThis.performance?.now?.() ?? Date.now()
                 try {
                     const traceUpdateStep = (step, extra = {}) => {
-                        replayVideoTraceDebug('draft.replay.update.listener.step', {
+                        replayVideoTraceDebug('interactive.replay.update.listener.step', {
                             step,
                             elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - updateListenerStartedAt,
                             progress: detail?.progress ?? null,
@@ -966,7 +966,7 @@ export const bindRenderer = (mode, ) => {
                     call.abortPlaybackAfterListenerError(error)
                 }
                 finally {
-                    replayVideoTraceDebug('draft.replay.update.listener.end', {
+                    replayVideoTraceDebug('interactive.replay.update.listener.end', {
                         elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - updateListenerStartedAt,
                         progress: detail?.progress ?? null,
                         hasSampler: Boolean(detail?.sampler),
@@ -1072,7 +1072,7 @@ export const bindRenderer = (mode, ) => {
                     const recordingSync = replayStore()?.recordingSync === true || recorder?.isRecording?.() === true
                     if (recordingSync) {
                         if (token === state.clipSequenceToken) {
-                            // The draft recorder captures the final Cesium frame
+                            // The interactive recorder captures the final Cesium frame
                             // asynchronously from this notification. Keep the
                             // completed trace rendered while that capture runs.
                             notifyStopClipsComplete()
@@ -1086,7 +1086,7 @@ export const bindRenderer = (mode, ) => {
                     // Without an active recorder there is no media frame to
                     // protect with animation-frame delays. Finish immediately
                     // so replay cleanup and journey restoration are observable
-                    // on the same exit path as Draft and HQ.
+                    // on the same exit path as Interactive and HQ.
                     if (token === state.clipSequenceToken) {
                         notifyStopClipsComplete()
                         if (typeof afterFrame === 'function') {

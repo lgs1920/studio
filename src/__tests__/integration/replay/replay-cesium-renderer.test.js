@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -620,7 +620,7 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(Number.isFinite(cursorSize)).toBe(true)
     })
 
-    it('keeps the complete point set for the Draft trace', () => {
+    it('keeps the complete point set for the Interactive trace', () => {
         const dataSources = makeDataSources()
         const replay = defaultJourneyReplaySettings()
         installReplayGlobals({dataSources, replay})

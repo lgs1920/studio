@@ -1717,7 +1717,7 @@ export const JourneyReplayDrawer = memo(() => {
                                                                 <WaSelect
                                                                     appearance="filled"
                                                                     label="Camera tile preloading"
-                                                                    hint="Preload initial camera views before HQ export starts."
+                                                                    hint="Preload initial camera views before Replay export starts."
                                                                     label-at-start
                                                                     size="s"
                                                                     value={String(camera.playback.tilePreloadHorizonMs)}

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-24
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -49,7 +49,7 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaButton: ({appearance, children, size: _size, variant: _variant, ...props}) => (
         <button type="button" data-appearance={appearance} {...props}>{children}</button>
     ),
-    WaIcon: ({animation, className, label, name}) => <span className={className} data-animation={animation} data-icon={name} data-label={label}/>,
+    WaIcon: ({animation, className, label, library, name}) => <span className={className} data-animation={animation} data-icon={name} data-icon-library={library} data-label={label}/>,
     WaDivider: ({className}) => <hr className={className}/>,
     WaProgressBar: ({children, label, value, ...props}) => (
         <div
@@ -117,25 +117,11 @@ describe('ReplayRecordingMonitorWidget', () => {
         globalThis.lgs = undefined
         delete document.pictureInPictureEnabled
         delete globalThis.HTMLVideoElement?.prototype?.requestPictureInPicture
+        globalThis.documentPictureInPicture = undefined
         document.pictureInPictureElement = null
         document.exitPictureInPicture = undefined
+        document.head.querySelector('[data-replay-recording-pip-preload]')?.remove()
     })
-
-    /**
-     * Install the browser capabilities required by the PiP integration test.
-     *
-     * @returns {void} Nothing.
-     */
-    const enablePictureInPicture = () => {
-        Object.defineProperty(document, 'pictureInPictureEnabled', {
-            configurable: true,
-            value: true,
-        })
-        Object.defineProperty(globalThis.HTMLVideoElement.prototype, 'requestPictureInPicture', {
-            configurable: true,
-            value: vi.fn().mockResolvedValue(undefined),
-        })
-    }
 
     it('does not render an independent Replay transport widget', () => {
         render(<ReplayRecordingMonitorWidget/>)
@@ -144,6 +130,18 @@ describe('ReplayRecordingMonitorWidget', () => {
         expect(screen.queryByTestId('replay-progress')).toBeNull()
         expect(screen.queryByLabelText('Pause Journey Replay')).toBeNull()
         expect(screen.queryByLabelText('Start Journey Replay')).toBeNull()
+    })
+
+    it('preloads the Recording Picture-in-Picture bootstrap while recording', async () => {
+        startReplayRecordingMonitor({mode: 'hq'})
+
+        render(<ReplayRecordingMonitorWidget/>)
+
+        await waitFor(() => {
+            expect(document.head.querySelector('[data-replay-recording-pip-preload]')).not.toBeNull()
+        })
+        expect(document.head.querySelector('[data-replay-recording-pip-preload]')?.getAttribute('rel'))
+            .toBe('modulepreload')
     })
 
     it('hides normal replay transport while synchronized recording owns the surface', () => {
@@ -186,7 +184,6 @@ describe('ReplayRecordingMonitorWidget', () => {
         render(<ReplayRecordingMonitorWidget/>)
 
         expect(screen.getByText('Recording')).not.toBeNull()
-        expect(screen.getByText('4/10')).not.toBeNull()
         expect(screen.getByText('00:07')).not.toBeNull()
         expect(screen.getByText('00:04 / 00:10')).not.toBeNull()
         expect(screen.getByText('1.5 MB')).not.toBeNull()
@@ -196,7 +193,8 @@ describe('ReplayRecordingMonitorWidget', () => {
         expect(screen.queryByText('Remaining time')).toBeNull()
         expect(document.querySelector('[data-icon="clapperboard-play"]')).toBeNull()
         expect(document.querySelector('[data-icon="stopwatch"]')).not.toBeNull()
-        expect(document.querySelector('[data-icon="images"]')).not.toBeNull()
+        expect(screen.queryByText('4/10')).toBeNull()
+        expect(document.querySelector('[data-icon="images"]')).toBeNull()
         expect(document.querySelector('[data-icon="films"]')).not.toBeNull()
         expect(document.querySelector('[data-icon="hard-drive"]')).not.toBeNull()
         expect(widgetHarness.config.icon).toBe('clapperboard-play')
@@ -204,7 +202,7 @@ describe('ReplayRecordingMonitorWidget', () => {
         expect(widgetHarness.config.resizable).toBe(true)
         expect(widgetHarness.config.showControlBox).toBe(true)
         expect(widgetHarness.config.attachTo).toBe('bottom-right')
-        expect(widgetHarness.config.min).toEqual({width: 360, height: 380})
+        expect(widgetHarness.config.min).toEqual({width: 360, height: 280})
         expect(widgetHarness.config.contextMenu.canRemove).toBe(false)
         expect(widgetHarness.config.preserveChildrenWhenCollapsed).toBe(true)
         expect(screen.queryByRole('button', {name: 'Open recording monitor in Picture-in-Picture'})).toBeNull()
@@ -216,14 +214,16 @@ describe('ReplayRecordingMonitorWidget', () => {
         const header = document.querySelector('.replay-recording-monitor-header')
         expect(header.children[0].className).toContain('video-recorder-indicator')
         expect(header.children[1].className).toContain('replay-recording-monitor-title')
-        expect(header.querySelector('#replay-monitor-cancel')).not.toBeNull()
+        expect(header.querySelector('#replay-monitor-cancel')).toBeNull()
         expect(header.querySelector('[data-icon="clapperboard-play"]')).toBeNull()
 
         const metrics = document.querySelector('.replay-recording-monitor-metrics')
+        expect(metrics.querySelector('.replay-recording-monitor-metric-remaining')).not.toBeNull()
         expect(metrics.querySelector('.replay-recording-monitor-metric-size')).not.toBeNull()
         expect(metrics.querySelector('.replay-recording-monitor-metric-duration')).not.toBeNull()
-        expect(metrics.querySelector('.replay-recording-monitor-metric-frames')).not.toBeNull()
-        expect(document.querySelector('.replay-recording-monitor-divider')).not.toBeNull()
+        expect(document.querySelector('.replay-recording-monitor-divider')).toBeNull()
+        expect(metrics.nextElementSibling?.className).toContain('replay-recording-progress')
+        expect(metrics.nextElementSibling?.nextElementSibling?.className).toContain('replay-recording-monitor-controls')
 
         const controlGroups = document.querySelectorAll('.replay-recording-monitor-control-group')
         expect(controlGroups).toHaveLength(3)
@@ -233,13 +233,13 @@ describe('ReplayRecordingMonitorWidget', () => {
         expect(controlGroups[2].querySelector('#replay-monitor-pip')).toBeNull()
 
         const pauseButton = screen.getByRole('button', {name: 'Pause recording'})
-        const cancelButton = screen.getByRole('button', {name: 'Cancel recording'})
+        const stopButton = screen.getByRole('button', {name: 'Cancel Replay export'})
         expect(pauseButton.textContent).toBe('')
-        expect(cancelButton.textContent).toBe('')
+        expect(stopButton.textContent).toBe('')
 
         fireEvent.click(pauseButton)
         fireEvent.click(screen.getByRole('button', {name: 'Take replay snapshot'}))
-        fireEvent.click(cancelButton)
+        fireEvent.click(stopButton)
 
         expect(pauseExport).toHaveBeenCalledTimes(1)
         expect(abortExport).toHaveBeenCalledTimes(1)
@@ -277,9 +277,9 @@ describe('ReplayRecordingMonitorWidget', () => {
         expect(document.querySelector('.video-recorder-indicator.recording')).not.toBeNull()
     })
 
-    it('calculates Draft duration and progress from recorder elapsed time', () => {
+    it('calculates Interactive duration and progress from recorder elapsed time', () => {
         startReplayRecordingMonitor({
-            mode: 'draft',
+            mode: 'interactive',
             videoDurationMillis: 10000,
         })
         updateReplayRecordingMonitor({
@@ -296,37 +296,67 @@ describe('ReplayRecordingMonitorWidget', () => {
         expect(screen.queryByTitle('Processed frames')).toBeNull()
     })
 
-    it('closes Picture-in-Picture on cancellation', async () => {
+    it('closes the whole Recording Picture-in-Picture window on Stop', async () => {
         const abortExport = vi.fn()
-        const exitPictureInPicture = vi.fn().mockResolvedValue(undefined)
+        const externalDocument = document.implementation.createHTMLDocument('Recording')
+        const externalWindow = {
+            document: externalDocument,
+            close:     vi.fn(),
+            addEventListener:    vi.fn(),
+            removeEventListener: vi.fn(),
+        }
         globalThis.lgs.stores.replay.deferredExportPlan = {runtime: {abortExport}}
-        document.exitPictureInPicture = exitPictureInPicture
+        globalThis.documentPictureInPicture = {
+            requestWindow: vi.fn().mockResolvedValue(externalWindow),
+        }
         startReplayRecordingMonitor({mode: 'hq'})
 
         render(<ReplayRecordingMonitorWidget/>)
-        const monitorVideo = document.querySelector('.replay-recording-monitor video')
-        document.pictureInPictureElement = monitorVideo
+        fireEvent.click(screen.getByRole('button', {name: 'Open Recording window in Picture-in-Picture'}))
 
-        fireEvent.click(screen.getByRole('button', {name: 'Cancel recording'}))
+        await waitFor(() => {
+            expect(externalDocument.body.querySelector('.replay-recording-monitor')).not.toBeNull()
+            expect(externalDocument.body.querySelector('#replay-monitor-stop')).not.toBeNull()
+            expect(externalDocument.body.querySelector('.replay-recording-monitor-preview canvas')).not.toBeNull()
+        })
 
-        await waitFor(() => expect(exitPictureInPicture).toHaveBeenCalledTimes(1))
+        externalDocument.body.querySelector('#replay-monitor-stop')
+            .dispatchEvent(new Event('click', {bubbles: true}))
+
+        await waitFor(() => expect(externalWindow.close).toHaveBeenCalledTimes(1))
         expect(abortExport).toHaveBeenCalledTimes(1)
     })
 
-    it('requests widget expansion when returning from Picture-in-Picture', async () => {
-        enablePictureInPicture()
+    it('opens the complete Recording surface in Document Picture-in-Picture', async () => {
+        const externalDocument = document.implementation.createHTMLDocument('Recording')
+        const externalWindow = {
+            document: externalDocument,
+            close:     vi.fn(),
+            addEventListener:    vi.fn(),
+            removeEventListener: vi.fn(),
+        }
+        globalThis.documentPictureInPicture = {
+            requestWindow: vi.fn().mockResolvedValue(externalWindow),
+        }
         startReplayRecordingMonitor({mode: 'hq'})
         render(<ReplayRecordingMonitorWidget/>)
-        const monitorVideo = document.querySelector('.replay-recording-monitor video')
-        Object.defineProperty(monitorVideo, 'requestPictureInPicture', {
-            configurable: true,
-            value: vi.fn().mockResolvedValue(undefined),
+
+        fireEvent.click(screen.getByRole('button', {name: 'Open Recording window in Picture-in-Picture'}))
+
+        await waitFor(() => {
+            expect(externalWindow.document.body.querySelector('.replay-recording-monitor-metrics')).not.toBeNull()
+            expect(externalWindow.document.body.querySelector('.replay-recording-progress')).not.toBeNull()
+            expect(externalWindow.document.body.querySelector('.replay-recording-monitor-controls')).not.toBeNull()
         })
+        await waitFor(() => expect(externalWindow.document.documentElement.style.visibility).toBe(''))
+        expect(globalThis.documentPictureInPicture.requestWindow).toHaveBeenCalledWith({width: 480, height: 400})
+        expect(externalWindow.document.body.style.backgroundColor).toBe('transparent')
+        expect(externalDocument.body.querySelector('#replay-monitor-pip')).toBeNull()
+        const closePipButton = externalDocument.body.querySelector('#replay-monitor-pip-close')
+        expect(closePipButton).not.toBeNull()
+        expect(closePipButton?.querySelector('[data-icon="picture-in-picture-out"]')?.getAttribute('data-icon-library')).toBe('lgs1920')
 
-        fireEvent.click(screen.getByRole('button', {name: 'Open recording monitor in Picture-in-Picture'}))
-        document.pictureInPictureElement = monitorVideo
-        fireEvent(window, new Event('focus'))
-
-        await waitFor(() => expect(widgetHarness.expandRequestKey).toBe(1))
+        closePipButton?.dispatchEvent(new Event('click', {bubbles: true}))
+        await waitFor(() => expect(externalWindow.close).toHaveBeenCalledTimes(1))
     })
 })
