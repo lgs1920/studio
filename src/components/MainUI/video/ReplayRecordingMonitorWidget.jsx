@@ -240,10 +240,8 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
 
     const monitorConfig = useMemo(() => ({
         id:             REPLAY_RECORDING_MONITOR_WIDGET_ID,
-        container:      pictureInPictureWindow?.document?.documentElement
-                        ?? (typeof document !== 'undefined' ? document.documentElement : null),
-        boundsContainer: pictureInPictureWindow?.document?.documentElement
-                         ?? (typeof document !== 'undefined' ? document.documentElement : null),
+        container:      typeof document !== 'undefined' ? document.documentElement : null,
+        boundsContainer: typeof document !== 'undefined' ? document.documentElement : null,
         top:            '100%',
         left:           '100%',
         attachTo:       'bottom-right',
@@ -269,7 +267,7 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
             canPosition: true,
         },
         zIndex:         MONITOR_WIDGET_Z_INDEX,
-    }), [pictureInPictureWindow])
+    }), [])
 
     useEffect(() => {
         const canvas = _canvas.current
@@ -496,21 +494,21 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
             )}
         </aside>
     )
+    const renderedSurface = pictureInPictureWindow?.document?.body
+                           ? createPortal(surface, pictureInPictureWindow.document.body)
+                           : surface
     const widget = (
         <Widget
             isVisible={true}
-            className="replay-recording-monitor-widget-shell"
+            className={`replay-recording-monitor-widget-shell${pictureInPictureWindow ? ' is-picture-in-picture' : ''}`}
             config={monitorConfig}
         >
-            {surface}
+            {renderedSurface}
         </Widget>
     )
 
-    const widgetHost = pictureInPictureWindow?.document?.body
-                       ?? (typeof document !== 'undefined' ? document.body : null)
-
-    return widgetHost
-           ? createPortal(widget, widgetHost)
+    return typeof document !== 'undefined' && document.body
+           ? createPortal(widget, document.body)
            : widget
 }
 
