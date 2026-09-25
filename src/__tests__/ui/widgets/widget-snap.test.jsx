@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-18
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -539,6 +539,7 @@ describe('Widget snap behavior', () => {
             id:        'video-crop-zone',
             type:      LGS_VISUAL_WIDGET,
             isCropper: true,
+            resizable: true,
         })
 
         expect(container.querySelector('.lgs-widget-container')?.style.pointerEvents).toBe('none')
@@ -590,11 +591,13 @@ describe('Widget snap behavior', () => {
             id:        'video-crop-zone',
             type:      LGS_VISUAL_WIDGET,
             isCropper: true,
+            resizable: true,
         })
 
         expect(container.querySelector('.lgs-widget-container')?.style.pointerEvents).toBe('none')
         expect(container.querySelector('.lgs-widget')?.classList.contains('crop-pass-through')).toBe(true)
         expect(latestMoveableProps().style).toEqual({opacity: 1, pointerEvents: 'auto'})
+        expect(latestMoveableProps().useResizeObserver).toBe(true)
     })
 
     it('recognizes the cropper base identifier while its runtime identifier is being resolved', () => {
@@ -605,11 +608,38 @@ describe('Widget snap behavior', () => {
             id:        'video-crop-zone',
             type:      LGS_VISUAL_WIDGET,
             isCropper: true,
+            resizable: true,
         })
 
         expect(latestMoveableProps().style).toEqual({opacity: 1, pointerEvents: 'auto'})
         expect(latestMoveableProps().renderDirections).toEqual(['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'])
         expect(latestMoveableProps().zoom).toBe(1)
+    })
+
+    it('keeps crop handles usable during recording preparation and hides them during capture', () => {
+        installGlobals()
+        lgs.stores.ui.video.preRecording = true
+
+        const {rerender} = render(
+            <Widget isVisible={true} config={{
+                id: 'video-crop-zone', group: 'test-widgets', type: LGS_VISUAL_WIDGET,
+                isCropper: true, resizable: true, forceControlBox: true,
+            }}><div>content</div></Widget>,
+        )
+
+        expect(latestMoveableProps().resizable).toBe(true)
+        expect(latestMoveableProps().style.pointerEvents).toBe('auto')
+
+        lgs.stores.ui.video.recording = true
+        rerender(
+            <Widget isVisible={true} config={{
+                id: 'video-crop-zone', group: 'test-widgets', type: LGS_VISUAL_WIDGET,
+                isCropper: true, resizable: true, forceControlBox: true,
+            }}><div>content</div></Widget>,
+        )
+
+        expect(latestMoveableProps().resizable).toBe(false)
+        expect(latestMoveableProps().style.pointerEvents).toBe('none')
     })
 
     it('selects a cropper when a selection request is received', async () => {

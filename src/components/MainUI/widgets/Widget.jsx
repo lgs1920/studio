@@ -38,7 +38,7 @@ import {resolveWidgetResizeLimits} from '@Core/ui/widget-manager/widgetResizeUti
 import { useOptionalSnapshot }     from '@Utils/ValtioUtils'
 import { WaIcon }                 from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                 from 'classnames'
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Moveable                   from 'react-moveable'
 import { useSnapshot }            from 'valtio'
 import { resolveActiveWidgetZIndex } from './widgetZIndex'
@@ -416,6 +416,7 @@ const WidgetHost = ({
     const _prevRotate = useRef(0)
     const _suppressClickUntil = useRef(0)
     const _w2c = useRef(null)
+    const _initialCropDimensionsApplied = useRef(false)
     const previewOnly = useContext(WidgetPreviewContext)
 
     // UI state
@@ -594,7 +595,7 @@ const WidgetHost = ({
     const synchronizedRecording = (video.recording === true || video.recordingHQ === true)
                                   && globalThis.lgs?.stores?.replay?.recordingSync === true
     const interactionLocked = previewOnly
-                              || ((video.preRecording || video.recording || video.snapshot || video.finalizing)
+                              || (((video.preRecording && !config.isCropper) || video.recording || video.recordingHQ || video.snapshot || video.finalizing)
                                   && config.type === LGS_VISUAL_WIDGET)
     const inputBlocked = previewOnly
                          || ((synchronizedRecording || video.snapshot || video.finalizing)
@@ -609,6 +610,7 @@ const WidgetHost = ({
     const canScale = canInteract && !effectiveCollapsed && (config?.scalable ?? false)
     const canRotate = canInteract && !effectiveCollapsed && (config?.rotatable ?? false)
     const forceControlBox = config?.forceControlBox === true && !effectiveLocked
+    const showMoveableControls = (isSelected || forceControlBox) && (!config.isCropper || canResize)
 
     // Snapping logic
     const snapSettings = useMemo(() => {
@@ -1829,6 +1831,24 @@ const WidgetHost = ({
         }
     }, [showGhostOnly])
 
+    useLayoutEffect(() => {
+        if (!config.isCropper || _initialCropDimensionsApplied.current || !_widget.current) {
+            return
+        }
+
+        const crop = config.cropDimensions
+        if (!crop || !(crop.width > 0) || !(crop.height > 0)) {
+            return
+        }
+
+        _initialCropDimensionsApplied.current = true
+        _widget.current.style.left = `${crop.left}px`
+        _widget.current.style.top = `${crop.top}px`
+        _widget.current.style.width = `${crop.width}px`
+        _widget.current.style.height = `${crop.height}px`
+        _moveable.current?.updateRect()
+    }, [config.cropDimensions?.height, config.cropDimensions?.left, config.cropDimensions?.top, config.cropDimensions?.width, config.isCropper, widgetId])
+
     if (!isVisible) {
         return null
     }
@@ -1918,8 +1938,8 @@ const WidgetHost = ({
             <Moveable
                 className={classNames('lgs-widget-control-box', moveableClassName)}
                 style={{
-                    opacity:      (isSelected || forceControlBox) ? 1 : 0,
-                    pointerEvents: (isSelected || forceControlBox) ? 'auto' : 'none',
+                    opacity:      showMoveableControls ? 1 : 0,
+                    pointerEvents: showMoveableControls ? 'auto' : 'none',
                 }}
                 container={actualContainer ?? lgs.canvas}
                 origin={false}
@@ -1971,11 +1991,11 @@ const WidgetHost = ({
                 snapDirections={canSnapWidget ? {top: true, right: true, bottom: true, left: true, center: canSnapCenter, middle: canSnapCenter} : false}
                 elementSnapDirections={canSnapWidget ? {top: true, left: true, bottom: true, right: true, center: canSnapCenter, middle: canSnapCenter} : false}
                 maxSnapElementGuidelineDistance={canSnapWidget ? 10 : 0}
-                renderDirections={config.isCropper && (isSelected || forceControlBox) ? CROP_RESIZE_DIRECTIONS : controlBox.renderDirections}
-                zoom={config.isCropper && (isSelected || forceControlBox) ? 1 : controlBox.zoom}
+                renderDirections={config.isCropper && showMoveableControls ? CROP_RESIZE_DIRECTIONS : controlBox.renderDirections}
+                zoom={config.isCropper && showMoveableControls ? 1 : controlBox.zoom}
                 onRender={(event) => !config.isCropper && (event.target.style.cssText += event.cssText)}
                 useMutationObserver={false}
-                useResizeObserver={false}
+                useResizeObserver={Boolean(config.isCropper)}
             />
         </div>
     )

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-01-26
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -370,9 +370,15 @@ export class WidgetCoreControls {
 
         let left
         let top
-        if ((config.fromDB || config.fromRuntime || config.isCropper) && hasRuntimePosition) {
+        if ((config.fromDB || config.fromRuntime) && hasRuntimePosition) {
             left = config.position.left
             top = config.position.top
+        }
+        else if (config.isCropper &&
+            Number.isFinite(config.cropDimensions?.left) &&
+            Number.isFinite(config.cropDimensions?.top)) {
+            left = config.cropDimensions.left
+            top = config.cropDimensions.top
         }
         else {
             left = config.isCropper
@@ -1166,6 +1172,13 @@ export class WidgetCoreControls {
 
         if (config.rotate && config.rotate !== 0) {
             __.ui.widgetManager.transform.setRotate(element, config.rotate)
+        }
+
+        // Crop dimensions are restored directly on the target element, so refresh
+        // Moveable after the final transform is in place to keep the handles aligned.
+        if (config.isCropper) {
+            moveable.current.updateRect()
+            requestAnimationFrame(() => moveable.current?.updateRect())
         }
 
         config.skipInitialElementResizeSync = Boolean(config.fromDB || config.fromRuntime)

@@ -46,6 +46,7 @@ export const Cropper = memo(({overlay = false, hideVideoWidgets = false, hideWid
     const _overlay = useRef(null)
     const cropper = useSnapshot(context)
     const video = useSnapshot(lgs.stores.ui.video)
+    const replay = useSnapshot(lgs.stores.replay)
     const [overlayElement, setOverlayElement] = useState(null)
     const [crop, setCrop] = useState(() => {
         const config = __.ui.widgetManager.getWidgetConfig(context.id)
@@ -54,7 +55,9 @@ export const Cropper = memo(({overlay = false, hideVideoWidgets = false, hideWid
                : {left: 0, top: 0, width: 0, height: 0}
     })
     const captureActive = Boolean(video.preRecording || video.recording || video.snapshot || video.finalizing)
-    const interactiveCrop = cropper.ratioEditor === true || simplePreparationActive === true
+    const interactiveCrop = cropper.ratioEditor === true
+                            || simplePreparationActive === true
+                            || (video.editing === true && replay.recordingSync === true)
 
     useEffect(() => {
         if (_overlay.current) {
@@ -122,6 +125,7 @@ export const Cropper = memo(({overlay = false, hideVideoWidgets = false, hideWid
                             infoComponent={options.infoComponent}
                             overlay={overlayElement}
                             context={context}
+                            cropDimensions={crop}
                             selectionRequestKey={cropper.selectionRequestKey ?? 0}
                         />
                 )}

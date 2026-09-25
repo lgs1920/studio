@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-14
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -243,6 +243,12 @@
 .lgs-widget-control-box.crop-moveable-on-map .moveable-control,
 .lgs-widget-control-box.crop-moveable-on-map .moveable-line {
     z-index: calc(var(--crop-zindex) + 1) !important;
+}
+
+.lgs-widget-control-box.crop-moveable-on-map .moveable-control,
+.lgs-widget-control-box.crop-moveable-on-map .moveable-line {
+    pointer-events: auto !important;
+    touch-action: none;
 }
 
 /*******************************************************************************

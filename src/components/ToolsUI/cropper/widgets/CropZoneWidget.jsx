@@ -28,6 +28,7 @@ import { CropZone }              from './CropZone'
  * @param {React.ReactNode} [props.infoComponent=null] - Component to display additional information
  * @param {boolean} [props.infoPosition=true] - Whether to show the info component at the default position
  * @param {boolean} [props.overlay=false] - Whether to display an overlay outside the crop zone
+ * @param {Object|null} [props.cropDimensions=null] - Initial crop dimensions used before widget setup completes
  * @param {number} [props.selectionRequestKey=0] - Changes request selection of the crop widget
  * @param {Object} props.context - Valtio proxy context containing crop zone configuration
  * @param {string} props.context.id - Unique identifier for the widget
@@ -42,6 +43,7 @@ export const CropZoneWidget = memo(({
                                         infoComponent = null,
                                         infoPosition = true,
                                         overlay = false,
+                                        cropDimensions = null,
                                         context,
                                         selectionRequestKey = 0,
                                     }) => {
@@ -76,6 +78,7 @@ export const CropZoneWidget = memo(({
             draggable:        !lockToCenter,
             snappable:        true,
             outsideOverlay:   overlay,
+            cropDimensions:   cropDimensions?.width > 0 && cropDimensions?.height > 0 ? cropDimensions : undefined,
             margin:           lgs?.gutter?.xs ?? 8,
             resizeFromCenter: true,
             throttleResize: 1,
@@ -87,7 +90,7 @@ export const CropZoneWidget = memo(({
             group:            CROP_TOOLS_WIDGETS,
             ratio:            initialRatio,
         }
-    }, [$context.id, $context.forceEven, lockToCenter, overlay])
+    }, [$context.id, $context.forceEven, cropDimensions?.height, cropDimensions?.left, cropDimensions?.top, cropDimensions?.width, lockToCenter, overlay])
 
     useEffect(() => {
         if (!lockToCenter || typeof document === 'undefined') {
