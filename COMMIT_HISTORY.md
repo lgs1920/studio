@@ -2833,3 +2833,11 @@
 ## 2026-09-25 — [`Merge remote-tracking branch 'origin/feature/replay-user-modes' into feature/replay-user-modes`](https://github.com/lgs1920/studio/commit/102f25440bc85666807a4349c0aa21436994f836)
 
 - Recorded automatically from Git history.
+
+## 2026-09-25 — [`docs: expand Web Awesome kit integration guide`](https://github.com/lgs1920/studio/commit/18476e635c56b2f06af4109d9acdbcda9550b43f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`Merge remote-tracking branch 'origin/feature/replay-user-modes' into feature/replay-user-modes`](https://github.com/lgs1920/studio/commit/2c02a484553e34cd554f5a4311624fe383f4922e)
+
+- Recorded automatically from Git history.
