@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-15
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,6 +25,7 @@ import {
     WIDGET_LAYER_STEP, WIDGETS_EDITOR_DRAWER,
 }                                from '@Core/constants'
 import { Export }                from '@Core/ui/Export'
+import { isReplayVideoWidgetAllowed } from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import { WidgetDBManager }       from '@Core/ui/widget-manager/WidgetDBManager'
 import { WidgetRotatable }       from '@Core/ui/widget-manager/WidgetRotatable'
@@ -1111,7 +1112,8 @@ export class WidgetManager {
         }
 
         const entries = [...lgs.stores.ui.widget.list.entries()]
-            .filter(([, entry]) => entry?.widgetsBoard === widgetsBoard)
+            .filter(([widgetId, entry]) => entry?.widgetsBoard === widgetsBoard
+                && (widgetsBoard !== VIDEO_WIDGETS_BOARD || isReplayVideoWidgetAllowed(widgetId)))
 
         let refreshed = 0
         for (const [widgetId, entry] of entries) {

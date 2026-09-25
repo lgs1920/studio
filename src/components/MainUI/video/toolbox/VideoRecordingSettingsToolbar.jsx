@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-20
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,6 +50,7 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false, layout = 
                               && !video.finalizing
     const linkedTimelinePreparation = replay.recordingSync === true
                                       && video.timelinePreviewActive === true
+    const simplePreparation = replay.simplePreparationActive === true
     const showVideoOptions = mode !== 'actions'
     const showActions = mode !== 'video-options'
 
@@ -139,7 +140,17 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false, layout = 
             return
         }
 
-        const cameraPreparation = replay.recordingSync === true
+        if (simplePreparation) {
+            __.ui.replayVideoSync?.arm?.({
+                recorder:          __.recorder,
+                replay:            __.ui.replay,
+                store:             lgs.stores.replay,
+                autoStopRecording: true,
+                resetToStart:      true,
+            })
+        }
+
+        const cameraPreparation = (replay.recordingSync === true || simplePreparation)
             ? Promise.resolve(__.ui.replay?.prepareReplayCamera?.({journey: lgs.theJourney}))
             : Promise.resolve(true)
         await syncCropFrame('before-recording')
@@ -155,7 +166,7 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false, layout = 
             finalizing:   false,
             paused:       false,
         })
-    }, [$video, replay.recordingSync, syncCropFrame])
+    }, [$video, replay.recordingSync, simplePreparation, syncCropFrame])
 
     /**
      * Requests direct HQ export from the linked Replay preparation view.

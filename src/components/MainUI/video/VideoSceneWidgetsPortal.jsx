@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-28
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,12 @@
 
 import { DynamicWidget } from '@Components/MainUI/widgets/DynamicWidget'
 import { WidgetPreviewContext } from '@Components/MainUI/widgets/Widget'
-import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { MULTI_PURPOSE_WIDGETS, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+import {
+    filterReplayVideoWidgetKeys,
+    REPLAY_VIDEO_WIDGET_TYPES,
+} from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import { memo, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useSnapshot } from 'valtio'
@@ -32,13 +37,17 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
                               || video.recording === true
                               || video.snapshot === true
                               || video.finalizing === true
-    const previewOnly = video.editing === true && video.cropper?.widgetEditor === false
     const synchronizedRecording = (video.recording === true || video.recordingHQ === true)
                                   && replay.recordingSync === true
+    const previewOnly = videoCaptureActive || synchronizedRecording
+    const restrictedWidgetPhase = videoCaptureActive || replay.simplePreparationActive === true
     const _rehydrateKey = useRef('')
-    const widgetEntries = Array.from(list.entries())
+    const allWidgetEntries = Array.from(list.entries())
         .filter(([, props]) => props?.widgetsBoard === VIDEO_WIDGETS_BOARD)
         .sort(([, a], [, b]) => (b.zIndex || 0) - (a.zIndex || 0))
+    const widgetEntries = restrictedWidgetPhase
+        ? allWidgetEntries.filter(([key]) => filterReplayVideoWidgetKeys([key]).length > 0)
+        : allWidgetEntries
     const widgetIds = widgetEntries.map(([key]) => key).join('|')
 
     const [boardElement, setBoardElement] = useState(null)
@@ -108,7 +117,29 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     }, [boardElement])
 
     useEffect(() => {
-        if (!boardReady || hidden || !videoCaptureActive || widgetEntries.length === 0) {
+        if (hidden || !boardReady || typeof document === 'undefined') {
+            return
+        }
+
+        const renderer = WidgetDynamicRenderer.instance
+        const registeredWidgetTypes = new Set(
+            widgetIds.split('|').filter(Boolean).map(widgetId => widgetId.split('#')[0]),
+        )
+        for (const widgetType of REPLAY_VIDEO_WIDGET_TYPES) {
+            const alreadyRegistered = registeredWidgetTypes.has(widgetType)
+            if (!alreadyRegistered) {
+                void renderer.renderWidget(MULTI_PURPOSE_WIDGETS, widgetType, {
+                    widgetsBoard: VIDEO_WIDGETS_BOARD,
+                    forceRefresh: true,
+                }).catch(error => {
+                    console.error(`[LGS1920][ReplayWidgets] Failed to mount ${widgetType}`, error)
+                })
+            }
+        }
+    }, [boardReady, hidden, widgetIds])
+
+    useEffect(() => {
+        if (!boardReady || hidden || !videoCaptureActive || !widgetIds) {
             return
         }
 
@@ -153,7 +184,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
             }}
         >
             {widgetEntries.map(([key, props]) => (
-                <div key={key} style={{pointerEvents: synchronizedRecording ? 'none' : 'auto'}}>
+                <div key={key} style={{pointerEvents: previewOnly ? 'none' : 'auto'}}>
                     <DynamicWidget
                         id={key}
                         props={props}

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { resolveVideoOverlayVisibility } from '@Core/ui/replay/ReplayOverlayResolver'
+import { getReplayVideoWidgetKeys } from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import { normalizeReplayVideoCropRect } from '@Core/ui/replay/ReplayVideoRenderSpec'
 import { replayVideoTraceDebug } from '@Core/ui/replay/ReplayVideoTraceDebug'
 import { Widget2Canvas } from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
@@ -140,13 +141,10 @@ export const resolveReplayVideoWidgetScale = (el, configScale) => {
 }
 
 const getSortedVideoWidgetKeys = ({widgetKeys = null, widgetsBoard = VIDEO_WIDGETS_BOARD} = {}) => {
-    if (widgetKeys?.length) {
-        return widgetKeys
-    }
-
-    return [...(globalThis.__?.ui?.widgetCache?.getAll?.({widgetsBoard})?.entries?.() ?? [])]
-        .sort((a, b) => (a[1].zIndex || 0) - (b[1].zIndex || 0))
-        .map(entry => entry[0])
+    return getReplayVideoWidgetKeys({
+        widgetKeys: widgetKeys?.length ? widgetKeys : null,
+        widgetsBoard,
+    })
 }
 
 /**

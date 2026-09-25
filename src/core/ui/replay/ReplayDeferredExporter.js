@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { getReplayVideoWidgetKeys } from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import {
     normalizeJourneyReplayClips, REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP,
 }                              from '@Core/ui/replay/JourneyReplayClips'
@@ -420,7 +421,14 @@ export const captureReplayDeferredExportContext = ({
     const normalizedCropRect = normalizeReplayVideoCropRect(replay?.videoCropRect)
     const widgetCache = globalThis.__?.ui?.widgetCache ?? null
     const widgetManager = globalThis.__?.ui?.widgetManager ?? null
-    const widgetEntries = [...(widgetCache?.getAll?.({widgetsBoard})?.entries?.() ?? [])]
+    const cachedEntries = [...(widgetCache?.getAll?.({widgetsBoard})?.entries?.() ?? [])]
+    const cachedEntryById = new Map(cachedEntries)
+    const widgetEntries = widgetsBoard === VIDEO_WIDGETS_BOARD
+                         ? getReplayVideoWidgetKeys({widgetsBoard}).map(widgetId => [
+                             widgetId,
+                             widgetCache?.get?.(widgetId) ?? cachedEntryById.get(widgetId),
+                         ])
+                         : cachedEntries
     const overlays = widgetEntries.map(([widgetId, entry]) => {
         const widgetEl = widgetManager?.getElementById?.(widgetId) ?? entry?.element ?? null
         const visible = Boolean(entry?.mounted ?? widgetEl)
@@ -2092,7 +2100,7 @@ export const runReplayDeferredMp4Export = async ({
             sample: controller?.currentSample?.() ?? replay?.sample ?? null,
         })
 
-        const widgetKeys = [...(globalThis.__?.ui?.widgetCache?.getAll?.({widgetsBoard: VIDEO_WIDGETS_BOARD})?.keys?.() ?? [])]
+        const widgetKeys = getReplayVideoWidgetKeys()
         await waitForReplayWidgetsReady({widgetKeys})
         await prewarmReplayScenePrefix({
             plan,

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -137,7 +137,7 @@ describe('getReplayVideoOverlayMetrics', () => {
             ui: {
                 widgetCache: {
                     getAll: vi.fn(() => new Map([
-                        ['journey-stats-widget', {mounted: true}],
+                    ['compass-widget', {mounted: true}],
                     ])),
                 },
                 widgetManager: {
@@ -152,7 +152,7 @@ describe('getReplayVideoOverlayMetrics', () => {
         buildReplayVideoComposerOverlays({
             composer,
             cropRect: {left: 0, top: 0, width: 320, height: 180},
-            widgetKeys: ['journey-stats-widget'],
+            widgetKeys: ['compass-widget'],
             skipVisibilityChecks: true,
         })
 
@@ -196,7 +196,7 @@ describe('getReplayVideoOverlayMetrics', () => {
             composer,
             cropRect: {left: 10, top: 20, width: 320, height: 180},
             coordinateScale: {x: 2, y: 0.5},
-            widgetKeys: ['scaled-widget'],
+            widgetKeys: ['compass-widget'],
             skipVisibilityChecks: true,
         })
 
@@ -243,7 +243,7 @@ describe('getReplayVideoOverlayMetrics', () => {
         buildReplayVideoComposerOverlays({
             composer,
             cropRect: {left: 0, top: 0, width: 320, height: 180},
-            widgetKeys: ['stats-widget'],
+            widgetKeys: ['compass-widget'],
             skipVisibilityChecks: true,
         })
 

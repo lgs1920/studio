@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -68,6 +68,9 @@ describe('VideoRecordingSettingsToolbar', () => {
                 replay: {
                     prepareReplayCamera: vi.fn(async () => true),
                 },
+                replayVideoSync: {
+                    arm: vi.fn(),
+                },
                 widgetManager: {
                     windowResizing: false,
                     getElementById: vi.fn(() => document.createElement('div')),
@@ -105,7 +108,7 @@ describe('VideoRecordingSettingsToolbar', () => {
                         cropper: proxy({}),
                     }),
                 }),
-                replay: proxy({recordingSync: false}),
+                replay: proxy({recordingSync: false, simplePreparationActive: false}),
             },
         }
     })
@@ -248,6 +251,24 @@ describe('VideoRecordingSettingsToolbar', () => {
         await vi.waitFor(() => expect(globalThis.__.ui.replay.prepareReplayCamera).toHaveBeenCalledWith({
             journey: globalThis.lgs.theJourney,
         }))
+    })
+
+    it('arms Simple Replay only when the video launch action is pressed', async () => {
+        globalThis.lgs.stores.replay.simplePreparationActive = true
+        render(<VideoRecordingSettingsToolbar/>)
+
+        fireEvent.click(screen.getByRole('button', {name: 'Record'}))
+
+        await vi.waitFor(() => expect(globalThis.__.ui.replayVideoSync.arm).toHaveBeenCalledWith({
+            recorder:          globalThis.__.recorder,
+            replay:            globalThis.__.ui.replay,
+            store:             globalThis.lgs.stores.replay,
+            autoStopRecording: true,
+            resetToStart:      true,
+        }))
+        expect(globalThis.__.ui.replay.prepareReplayCamera).toHaveBeenCalledWith({
+            journey: globalThis.lgs.theJourney,
+        })
     })
 
     it('waits for crop persistence before cancelling video setup', async () => {

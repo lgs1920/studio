@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-09-10
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import { DynamicWidget } from '@Components/MainUI/widgets/DynamicWidget'
 import { JOURNEY_WIDGETS, SCENE_WIDGETS_BOARD } from '@Core/constants'
 import { WaCard } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { createPortal } from 'react-dom'
 import { useSnapshot } from 'valtio'
 
@@ -27,6 +28,8 @@ import { useSnapshot } from 'valtio'
  */
 export const DetachedWidgetPortal = () => {
     const widget = useSnapshot(lgs.stores.ui.widget)
+    const video = useOptionalSnapshot(lgs.stores.ui.video)
+    const replay = useOptionalSnapshot(lgs.stores.replay)
     const widgetId = widget.undocked?.id ?? null
     const portalState = __.ui.widgetWindowManager?.getPortalState(widgetId)
     const widgetEntry = widgetId ? widget.list?.get(widgetId) : null
@@ -43,7 +46,14 @@ export const DetachedWidgetPortal = () => {
         detached:     true,
     }
 
-    if (!widgetId
+    const replayVideoPhase = video.preRecording
+                              || video.recording
+                              || video.snapshot
+                              || video.finalizing
+                              || replay.simplePreparationActive
+
+    if (replayVideoPhase
+        || !widgetId
         || !portalState?.container
         || !portalState.container.isConnected) {
         return null

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-30
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ import { CropOverlay }                                          from '@Component
 import { DefinedCropZone }       from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
 import {
     APP_KEY, CROP_TOOLS_WIDGETS, LGS_PROJECT, MINUTE, SECOND, VIDEO_CROP_ZONE,
-    VIDEO_TOOLS_WIDGETS, WIDGET_MOUNT_TIMEOUT, VIDEO_WIDGETS_BOARD,
+    VIDEO_TOOLS_WIDGETS, WIDGET_MOUNT_TIMEOUT,
 } from '@Core/constants'
 import { prepareReplayDeferredExportPlan, warmReplayDeferredExportPlan } from '@Core/ui/replay/ReplayDeferredExporter'
 import { resolveReplayTimelineDuration } from '@Core/ui/replay/ReplayProgress'
@@ -31,6 +31,7 @@ import {
 }                                                                  from '@Core/ui/replay/ReplayVideoOverlayComposer'
 import { buildReplayVideoRenderSpec } from '@Core/ui/replay/ReplayVideoRenderSpec'
 import { replayVideoTraceDebug } from '@Core/ui/replay/ReplayVideoTraceDebug'
+import { getReplayVideoWidgetKeys } from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import {
     publishReplayRecordingMonitorFrame,
     startReplayRecordingMonitor,
@@ -267,7 +268,7 @@ export const VideoRecordingScreenArea = memo(() => {
         buildReplayVideoComposerOverlays({
             composer,
             cropRect,
-            widgetKeys,
+            widgetKeys: widgetKeys ?? getReplayVideoWidgetKeys(),
             metricsCache: _metricsCache.current,
         })
     }, [])
@@ -276,12 +277,13 @@ export const VideoRecordingScreenArea = memo(() => {
         buildReplayVideoComposerOverlays({
             composer,
             cropRect,
+            widgetKeys: getReplayVideoWidgetKeys(),
             metricsCache: _metricsCache.current,
         })
     }, [])
 
     const flushComposerOverlays = useCallback((widgetKeys = null) => (
-        flushReplayVideoOverlayCanvases({widgetKeys})
+        flushReplayVideoOverlayCanvases({widgetKeys: widgetKeys ?? getReplayVideoWidgetKeys()})
     ), [])
 
     const isWidgetReadyForRecording = useCallback((widgetId) => {
@@ -738,7 +740,7 @@ export const VideoRecordingScreenArea = memo(() => {
         if (!$video.preRecording && !$video.snapshot) {
             return
         }
-        const keys = [...__.ui.widgetCache.getAll({widgetsBoard: VIDEO_WIDGETS_BOARD}).keys()]
+        const keys = getReplayVideoWidgetKeys()
         if (!keys.length) {
             if ($video.preRecording) {
                 void handleStartRecording()
