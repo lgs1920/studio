@@ -562,3 +562,272 @@ bunx --bun vitest run \
 5. Use the named lgs1920 library in detached browser documents.
 6. Give icon-only controls an accessible name independently of the registry.
 7. Add focused tests when changing kit order, family mapping, normalization, or fallback behavior.
+
+## Generic reference implementation
+
+The following examples deliberately use neutral names. They separate the reusable resolver from
+the application-specific kit configuration.
+
+### File 1: generic resolver
+
+This file knows how to index definitions and register Web Awesome libraries. It does not import a
+specific kit and does not contain an application name:
+
+```js
+import {icon as renderFontAwesomeIcon} from '@fortawesome/fontawesome-svg-core'
+import {
+    getIconLibrary,
+    registerIconLibrary,
+} from '@web.awesome.me/webawesome-pro/dist/components/icon/library.js'
+
+const FAMILY_BY_PREFIX = {
+    fab: 'brands',
+    fad: 'duotone',
+    fak: 'classic',
+    fakd: 'duotone',
+}
+
+const VARIANT_PREFIXES = ['thin', 'light', 'regular', 'solid']
+const defaultIconLibrary = getIconLibrary('default')
+
+const buildDefinitionMap = kits => {
+    const definitions = new Map()
+
+    kits.forEach(kit => {
+        const icons = kit.icons ?? kit
+
+        Object.values(icons).forEach(definition => {
+            if (!definition?.iconName) return
+
+            const match = definition.iconName.match(
+                new RegExp('^(' + VARIANT_PREFIXES.join('|') + ')-(.+)$'),
+            )
+            const name = match?.[2] ?? definition.iconName
+            const variant = kit.variant ?? match?.[1] ?? '*'
+            const family = kit.family ?? FAMILY_BY_PREFIX[definition.prefix] ?? 'classic'
+            const key = family + ':' + variant + ':' + name
+
+            if (!definitions.has(key)) {
+                definitions.set(key, definition)
+            }
+        })
+    })
+
+    return definitions
+}
+
+const findDefinition = (definitions, name, family = 'classic', variant = 'solid') => (
+    definitions.get(family + ':' + variant + ':' + name)
+    ?? definitions.get(family + ':*:' + name)
+)
+
+const createResolver = (definitions, libraryName) => (name, family, variant) => {
+    const definition = findDefinition(definitions, name, family, variant)
+
+    if (!definition) {
+        throw new Error('Unknown icon in library ' + libraryName + ': ' + name)
+    }
+
+    const svg = renderFontAwesomeIcon(definition)?.html?.join('')
+
+    if (!svg) {
+        throw new Error('Unable to render icon in library ' + libraryName + ': ' + name)
+    }
+
+    return 'data:image/svg+xml,' + encodeURIComponent(svg)
+}
+
+/**
+ * Register ordered Font Awesome kit modules as a Web Awesome library.
+ *
+ * @param {string} libraryName - Name exposed through the Web Awesome library property.
+ * @param {Array<Object>} kits - Ordered kit modules or kit registrations.
+ * @returns {void}
+ */
+export const registerIconLibraryFromKits = (libraryName, kits) => {
+    if (!defaultIconLibrary) {
+        throw new Error('Web Awesome default icon library is not registered')
+    }
+
+    if (!libraryName || !Array.isArray(kits)) {
+        throw new Error('A library name and an ordered kit array are required')
+    }
+
+    const definitions = buildDefinitionMap(kits)
+    const resolveCustomIcon = createResolver(definitions, libraryName)
+
+    registerIconLibrary(libraryName, {
+        resolver: resolveCustomIcon,
+    })
+
+    // Extend the default resolver: custom kits first, standard Web Awesome icons second.
+    registerIconLibrary('default', {
+        resolver: (name, family, variant, autoWidth) => (
+            findDefinition(definitions, name, family, variant)
+                ? resolveCustomIcon(name, family, variant)
+                : defaultIconLibrary.resolver(name, family, variant, autoWidth)
+        ),
+        mutator: defaultIconLibrary.mutator,
+        spriteSheet: defaultIconLibrary.spriteSheet,
+    })
+}
+```
+
+The project implementation of this generic mechanism is
+[useWebAwesomeKits.js](../../../src/Utils/useWebAwesomeKits.js). Its current library constant and
+error wording are application-specific details that can be moved to the adapter shown below if
+the resolver is made fully reusable.
+
+### File 2: application kit registration
+
+This file is the only application-specific part. It imports the concrete kit package, maps each
+module to a family, and chooses the public library name:
+
+```js
+import * as classicIcons from '@awesome.me/kit-example/icons/kit/custom'
+import * as duotoneIcons from '@awesome.me/kit-example/icons/kit-duotone/custom'
+import {registerIconLibraryFromKits} from './icon-kit-resolver'
+
+export const ICON_LIBRARY = 'custom-icons'
+
+export const ICON_KITS = [
+    {family: 'classic', icons: classicIcons},
+    {family: 'duotone', icons: duotoneIcons},
+]
+
+/**
+ * Register the application icon kits.
+ *
+ * @returns {void}
+ */
+export const registerApplicationIconLibrary = () => {
+    registerIconLibraryFromKits(ICON_LIBRARY, ICON_KITS)
+}
+```
+
+The application bootstrap calls the adapter once before rendering icons:
+
+```js
+import {registerApplicationIconLibrary} from './icon-kit-registration'
+
+registerApplicationIconLibrary()
+```
+
+This separation means that changing the kit package or family mapping only affects the adapter.
+The resolver remains reusable for another application and another library name.
+
+The registration extends Web Awesome's default library as well as creating the named custom
+library. Therefore the library property is optional when the icon is rendered in the same
+document where registerApplicationIconLibrary() ran:
+
+```jsx
+<WaIcon name="camera-sliders" variant="regular" />
+```
+
+The default resolver checks the registered kit first. If it finds camera-sliders, it renders the
+kit definition. If it does not find the name, it delegates to Web Awesome's original resolver.
+This is the normal usage for application components.
+
+The library property is required when the icon is rendered in another document that has its own
+Web Awesome registry, such as a detached window:
+
+```jsx
+<WaIcon
+    library="custom-icons"
+    name="camera-sliders"
+    variant="regular"
+/>
+```
+
+## Generic usage examples
+
+### React component using the default resolver
+
+```jsx
+import {WaIcon} from '@web.awesome.me/webawesome-pro/dist/react'
+
+export const CameraIcon = () => (
+    <WaIcon name="camera-sliders" variant="regular" />
+)
+```
+
+This is enough after registerApplicationIconLibrary() has run in the same document. The
+application does not need to repeat the custom library name on every icon.
+
+### React component with an explicit custom library
+
+Use the library property when rendering in a detached document or when the component must select
+the custom registry explicitly:
+
+```jsx
+import {WaIcon} from '@web.awesome.me/webawesome-pro/dist/react'
+
+export const DetachedCameraIcon = () => (
+    <WaIcon
+        library="custom-icons"
+        name="camera-sliders"
+        variant="regular"
+    />
+)
+```
+
+### Standard Web Awesome icon
+
+An icon that is absent from the custom kits is delegated to the original Web Awesome resolver:
+
+```jsx
+import {WaIcon} from '@web.awesome.me/webawesome-pro/dist/react'
+
+export const StandardHouseIcon = () => (
+    <WaIcon name="house" variant="solid" />
+)
+```
+
+### Native custom element
+
+The same library contract works without React:
+
+```html
+<wa-icon
+    library="custom-icons"
+    name="camera-sliders"
+    variant="regular">
+</wa-icon>
+```
+
+### Standard JavaScript registration
+
+The registration does not depend on React. It can be called from a normal JavaScript bootstrap:
+
+```js
+import {registerApplicationIconLibrary} from './icon-kit-registration'
+
+registerApplicationIconLibrary()
+
+const icon = document.createElement('wa-icon')
+icon.setAttribute('name', 'camera-sliders')
+icon.setAttribute('variant', 'regular')
+document.body.append(icon)
+```
+
+This standard Web Component form uses the extended default resolver, so it also finds the kit
+icon without a library attribute when registration has run in the same document. An explicit
+library attribute can be added when the document is detached:
+
+```js
+const icon = document.createElement('wa-icon')
+icon.setAttribute('library', 'custom-icons')
+icon.setAttribute('name', 'camera-sliders')
+icon.setAttribute('variant', 'regular')
+document.body.append(icon)
+```
+
+### Generic family and variant selection
+
+```jsx
+<WaIcon name="camera-sliders" family="classic" variant="regular" />
+<WaIcon name="cave-in-mountains" family="duotone" variant="regular" />
+```
+
+The public name remains the kebab-case Font Awesome icon name. JavaScript export names such as
+faCameraSliders and internal prefixes such as fak are never passed to the component.
