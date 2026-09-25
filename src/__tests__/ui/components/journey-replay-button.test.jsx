@@ -7,14 +7,14 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-28
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {cleanup, fireEvent, render, screen} from '@testing-library/react'
+import {cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {proxy} from 'valtio'
 
@@ -52,6 +52,11 @@ describe('JourneyReplayButton synchronized video entry point', () => {
                 },
                 replay: proxy({recordingSync: false}),
             },
+            settings: {
+                ui: {
+                    replay: proxy({userMode: 'basic', simple: null}),
+                },
+            },
         }
     })
 
@@ -83,5 +88,35 @@ describe('JourneyReplayButton synchronized video entry point', () => {
         expect(globalThis.lgs.stores.ui.video.editing).toBe(true)
         expect(globalThis.__.ui.drawerManager.open).not.toHaveBeenCalled()
         expect(screen.getByRole('button').querySelector('[data-icon="drone"]')).not.toBeNull()
+    })
+
+    it('prepares Basic Replay on the map and exposes video launch controls', async () => {
+        const enterReplayPreparation = vi.fn()
+        globalThis.__.ui.replay = {enterReplayPreparation}
+        render(
+            <JourneyReplayButton
+                id="launch-basic-replay"
+                mode="basic"
+                ariaLabel="Basic Replay"
+            />,
+        )
+
+        fireEvent.click(screen.getByRole('button', {name: 'Basic Replay'}))
+
+        expect(screen.queryByRole('dialog')).toBeNull()
+        expect(enterReplayPreparation).toHaveBeenCalledWith(expect.objectContaining({
+            journey: globalThis.lgs.theJourney,
+            shouldApply: expect.any(Function),
+        }))
+        expect(globalThis.__.ui.replayVideoSync.arm).not.toHaveBeenCalled()
+        expect(globalThis.lgs.stores.ui.video.editing).toBe(true)
+        expect(globalThis.lgs.settings.ui.replay.simple.camera.heading).toBe(0)
+        expect(globalThis.lgs.settings.ui.replay.simple.camera.headingOffset).toBe(0)
+        expect(globalThis.lgs.stores.replay.simplePreparationActive).toBe(true)
+        await waitFor(() => {
+            expect(screen.getByRole('button', {name: 'Start Basic Replay'}).querySelector('[data-icon="video-down-to-line"]')).not.toBeNull()
+        })
+
+        expect(globalThis.lgs.settings.ui.replay.userMode).toBe('basic')
     })
 })

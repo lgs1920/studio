@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-08
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -110,6 +110,8 @@ export class Journey extends MapElement {
             this.replay = options.replay ?? {
                 start: [],
                 stop:  [],
+                simple: null,
+                expert: null,
             }
         }
 
@@ -301,6 +303,12 @@ export class Journey extends MapElement {
         instance.replay = {
             start: Array.isArray(instance.replay?.start) ? instance.replay.start : [],
             stop:  Array.isArray(instance.replay?.stop) ? instance.replay.stop : [],
+            ...(instance.replay?.simple && typeof instance.replay.simple === 'object'
+                ? {simple: instance.replay.simple}
+                : {}),
+            ...(instance.replay?.expert && typeof instance.replay.expert === 'object'
+                ? {expert: instance.replay.expert}
+                : {}),
         }
 
         // Transform Tracks from object to class

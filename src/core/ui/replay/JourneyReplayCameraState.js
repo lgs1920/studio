@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,6 +44,7 @@ import {
 } from './JourneyReplayProgressionStyle'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
 import {replayCameraFor, replaySceneFor, replayViewerFor} from './ReplayRenderTarget'
+import {REPLAY_USER_MODE_BASIC} from './ReplayUserModeConstants'
 
 import {
     REPLAY_HEADING_TRANSITION_DURATION_SECONDS,
@@ -700,10 +701,20 @@ export const persistCameraSettings =  (mode, updates) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const current = getJourneyReplaySettings().camera
+        const replaySettings = getJourneyReplaySettings()
+        const current = replaySettings.camera
+        const isBasicMode = replaySettings.userMode === REPLAY_USER_MODE_BASIC
         const next = normalizeJourneyReplayCamera({
             ...current,
             ...updates,
+            ...(isBasicMode
+                ? {
+                    altitudeMode: REPLAY_CAMERA_ALTITUDE_CONSTANT,
+                    heading: 0,
+                    headingOffset: 0,
+                    positionMode: REPLAY_CAMERA_POSITION_SYSTEM,
+                }
+                : {}),
             hysteresis: {
                 ...(current?.hysteresis ?? {}),
                 ...(updates?.hysteresis ?? {}),
@@ -712,6 +723,20 @@ export const persistCameraSettings =  (mode, updates) => {
 
         if (globalThis.lgs?.settings?.ui?.replay) {
             globalThis.lgs.settings.ui.replay.camera = next
+            if (isBasicMode) {
+                const simple = globalThis.lgs.settings.ui.replay.simple ?? {}
+                globalThis.lgs.settings.ui.replay.simple = {
+                    ...simple,
+                    camera: {
+                        ...(simple.camera ?? {}),
+                        ...next,
+                        altitudeMode: REPLAY_CAMERA_ALTITUDE_CONSTANT,
+                        heading: 0,
+                        headingOffset: 0,
+                        positionMode: REPLAY_CAMERA_POSITION_SYSTEM,
+                    },
+                }
+            }
         }
         if (globalThis.lgs?.stores?.replay) {
             globalThis.lgs.stores.replay.camera = next

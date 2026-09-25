@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-21
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -436,7 +436,7 @@ export class AppUtils {
         })
         await Promise.all(promises)
 
-        Object.assign(lgs.stores.replay, ensureJourneyReplaySettings())
+        Object.assign(lgs.stores.replay, ensureJourneyReplaySettings({resetTransient: true}))
 
         await ionTokenManager.load()
 

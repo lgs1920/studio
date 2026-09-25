@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-19
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -40,6 +40,10 @@ export const ToolsUI = () => {
     const $cropper = lgs.stores.ui.video.cropper
     const _journeyToolbarHiddenByVideoEditor = useRef(false)
     const _replayPreparationActive = useRef(false)
+
+    useEffect(() => {
+        console.error(`[LGS1920][Diagnostics] ToolsUI rendered editing=${video.editing} simple=${replay.simplePreparationActive} recordingSync=${replay.recordingSync}`)
+    }, [replay.recordingSync, replay.simplePreparationActive, video.editing])
     const renderLinkedTimeline = video.editing === true
         && video.timelinePreviewActive === true
         && replay.recordingSync === true
@@ -84,11 +88,13 @@ export const ToolsUI = () => {
 
         _replayPreparationActive.current = true
         let transitionActive = true
-        void __.ui.replay?.enterReplayPreparation?.({
+        void Promise.resolve(__.ui.replay?.enterReplayPreparation?.({
             journey:    lgs.theJourney,
             shouldApply: () => transitionActive
                            && lgs.stores.ui.video.editing === true
                            && lgs.stores.replay.recordingSync === true,
+        })).catch(error => {
+            console.error('[LGS1920][Diagnostics] linked replay preparation failed', error)
         })
 
         return () => {
@@ -112,12 +118,70 @@ export const ToolsUI = () => {
         return () => appContainer.classList.remove('lgs-video-crop-input-mode')
     }, [video.editing, video.preRecording, video.recording, video.snapshot, video.finalizing])
 
+    useEffect(() => {
+        if (video.editing !== true || replay.simplePreparationActive !== true) {
+            return undefined
+        }
+
+        const describeElement = element => {
+            if (!(element instanceof Element)) {
+                return null
+            }
+
+            const rect = element.getBoundingClientRect()
+            const style = globalThis.getComputedStyle(element)
+            return {
+                tag:           element.tagName.toLowerCase(),
+                id:            element.id || null,
+                className:     typeof element.className === 'string' ? element.className : null,
+                pointerEvents: style.pointerEvents,
+                position:      style.position,
+                zIndex:        style.zIndex,
+                rect:          {
+                    left:   Math.round(rect.left),
+                    top:    Math.round(rect.top),
+                    width:  Math.round(rect.width),
+                    height: Math.round(rect.height),
+                },
+            }
+        }
+
+        const inspectPointerTarget = event => {
+            const point = {x: event.clientX ?? 0, y: event.clientY ?? 0}
+            const stack = document.elementsFromPoint?.(point.x, point.y) ?? []
+            console.warn('[LGS1920][SimpleReplay] pointer diagnostic', {
+                type:       event.type,
+                target:     describeElement(event.target),
+                topElement: describeElement(document.elementFromPoint?.(point.x, point.y)),
+                stack:      stack.slice(0, 12).map(describeElement),
+                cesium:     describeElement(document.querySelector('#cesium-viewer canvas')),
+                tools:      describeElement(document.querySelector('#lgs-tools-ui')),
+            })
+        }
+
+        document.addEventListener('pointerdown', inspectPointerTarget, true)
+        document.addEventListener('mousedown', inspectPointerTarget, true)
+        document.addEventListener('click', inspectPointerTarget, true)
+        document.addEventListener('wheel', inspectPointerTarget, {capture: true, passive: true})
+
+        console.info('[LGS1920][SimpleReplay] pointer diagnostics enabled')
+        return () => {
+            document.removeEventListener('pointerdown', inspectPointerTarget, true)
+            document.removeEventListener('mousedown', inspectPointerTarget, true)
+            document.removeEventListener('click', inspectPointerTarget, true)
+            document.removeEventListener('wheel', inspectPointerTarget, true)
+        }
+    }, [replay.simplePreparationActive, video.editing])
+
     return (
         <div id="lgs-tools-ui">
             {video.editing ? (
                 <>
                     <Cropper overlay source={lgs.canvas}
                              context={$cropper} className="video-cropper"
+                             hideVideoWidgets={false}
+                             hideWidgetPanel={replay.simplePreparationActive === true}
+                             simplePreparationActive={replay.simplePreparationActive === true}
                              renderRatioWidget={false}
                              options={{infoComponent: <VideoSettingsInfo/>}}/>
                     {!(video.timelinePreviewActive === true && replay.recordingSync === true) && (

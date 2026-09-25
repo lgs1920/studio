@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-09-22
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,6 +50,10 @@ import {
 }                 from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { normalizeJourneyReplayClips } from '@Core/ui/replay/JourneyReplayClips'
 import { normalizeJourneyReplayPOISettings } from '@Core/ui/replay/JourneyReplayPOISettings'
+import {
+    resetExpertReplayFromSimple,
+    resolveSimpleReplaySettings,
+} from '@Core/ui/replay/ReplayUserModes'
 import { isJourneyReplayCameraActive } from '@Core/ui/replay/JourneyReplayRuntime'
 import { ELEVATION_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import {
@@ -403,7 +407,7 @@ const REPLAY_ADVANCED_CAMERA_SETUP_BUTTON_ID = 'replay-advanced-camera-setup-but
 export const JourneyReplayDrawer = memo(() => {
     const {drawers: {open: drawerOpen, navigation: drawerNavigation}} = useSnapshot(lgs.stores.ui)
     const journeySlug = useProxyValue(lgs.stores.main, main => main.theJourney?.slug ?? null, null)
-    const currentJourney = lgs.theJourney
+    const currentJourney = lgs.theJourney ?? lgs.stores.main.theJourney
     const poiList = lgs.stores.main.components.pois.list
     const replayState = useSnapshot(lgs.stores.replay)
     ensureJourneyReplaySettings()
@@ -1036,6 +1040,31 @@ export const JourneyReplayDrawer = memo(() => {
         setActiveTab(tab)
     }, [])
 
+    /**
+     * Reset the current journey's Expert camera and presentation from Simple Replay.
+     *
+     * @returns {Promise<void>} Resolves after the explicit reset is persisted.
+     */
+    const resetExpertFromSimple = useCallback(async () => {
+        if (!currentJourney) {
+            return
+        }
+
+        const simple = resolveSimpleReplaySettings({
+            journey: currentJourney.replay?.simple,
+            user: replaySettings.simple,
+        })
+        const replay = resetExpertReplayFromSimple(currentJourney, simple)
+        currentJourney.replay = replay
+        await currentJourney.persistToDatabase?.()
+        lgs.settings.ui.replay.camera = replay.expert.camera
+        lgs.settings.ui.replay.progression = replay.expert.progression
+        lgs.settings.ui.replay.profileInfo = replay.expert.profileInfo
+        lgs.stores.replay.camera = replay.expert.camera
+        lgs.stores.replay.progression = replay.expert.progression
+        lgs.stores.replay.profileInfo = replay.expert.profileInfo
+    }, [currentJourney, replaySettings.simple])
+
     const updateHideOtherJourneys = useCallback((event) => {
         const enabled = Boolean(event?.target?.checked)
         lgs.settings.ui.replay.hideOtherJourneys = enabled
@@ -1326,6 +1355,16 @@ export const JourneyReplayDrawer = memo(() => {
                                     onClick={() => setAdvancedCameraPopupOpen(!advancedCameraPopupOpen)}
                                 >
                                     <WaIcon name="camera-sliders" size="l"/>
+                                </WaButton>
+                                <WaButton
+                                    size="s"
+                                    appearance="outlined"
+                                    variant="brand"
+                                    aria-label="Reset Expert Replay from Simple Replay"
+                                    onClick={resetExpertFromSimple}
+                                >
+                                    <WaIcon name="arrow-rotate-left" variant="regular"/>
+                                    {' Reset from Simple Replay'}
                                 </WaButton>
                             </>
                         )}

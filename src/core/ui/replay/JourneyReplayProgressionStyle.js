@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified: 2026-09-14
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import { defaultJourneyReplayClips, normalizeJourneyReplayClips } from './Journe
 import {
     TRACK_RENDER_SMOOTHING_MAX_STEP, TRACK_RENDER_SMOOTHING_MIN_STEP, normalizeTrackRenderSmoothing,
 } from '@Utils/cesium/trackRenderSmoothing'
+import {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT} from './ReplayUserModeConstants'
 
 export const REPLAY_PROGRESSION_FILL_MIN_WIDTH = 1
 export const REPLAY_PROGRESSION_FILL_MAX_WIDTH = 10
@@ -204,6 +205,8 @@ export const REPLAY_CAMERA_PRESETS = Object.freeze([
 ])
 
 export const defaultJourneyReplaySettings = () => ({
+    userMode:   REPLAY_USER_MODE_BASIC,
+    simple:     null,
     duration:    DEFAULT_REPLAY_DURATION,
     poiDistance: DEFAULT_REPLAY_POI_DISTANCE,
     hideAllPoisDuringJourneyReplay: false,
@@ -589,6 +592,12 @@ export const normalizeJourneyReplaySettings = (settings = {}) => {
         : null
 
     return {
+        userMode:   settings?.userMode === REPLAY_USER_MODE_EXPERT
+                     ? REPLAY_USER_MODE_EXPERT
+                     : REPLAY_USER_MODE_BASIC,
+        simple:     settings?.simple && typeof settings.simple === 'object'
+                    ? JSON.parse(JSON.stringify(settings.simple))
+                    : null,
         duration:    Math.max(1, duration),
         poiDistance: clampJourneyReplayNumber(
             settings?.poiDistance,
@@ -637,6 +646,50 @@ export const normalizeJourneyReplaySettings = (settings = {}) => {
     }
 }
 
+const resolveReplaySimpleSettingsForRuntime = ({journey, user} = {}) => {
+    const product = {
+        camera: {
+            ...defaultJourneyReplayCameraStyle(),
+            positionMode: 'system',
+            altitudeMode: 'constant',
+        },
+        presentation: {
+            progression: {
+                ...defaultJourneyReplayProgressionStyle(),
+                fill: {
+                    ...DEFAULT_REPLAY_PROGRESSION.fill,
+                    color: '#ff2525',
+                },
+                border: {
+                    ...DEFAULT_REPLAY_PROGRESSION.border,
+                    color: '#ff2525',
+                },
+            },
+            profileInfo: defaultJourneyReplayProfileInfoStyle(),
+        },
+    }
+    const camera = normalizeJourneyReplayCamera({
+        ...product.camera,
+        ...(user?.camera ?? {}),
+        ...(journey?.camera ?? {}),
+        altitudeMode: 'constant',
+    })
+    const presentation = {
+        progression: normalizeJourneyReplayProgressionStyle({
+            ...product.presentation.progression,
+            ...(user?.presentation?.progression ?? {}),
+            ...(journey?.presentation?.progression ?? {}),
+        }),
+        profileInfo: normalizeJourneyReplayProfileInfo({
+            ...product.presentation.profileInfo,
+            ...(user?.presentation?.profileInfo ?? {}),
+            ...(journey?.presentation?.profileInfo ?? {}),
+        }),
+    }
+
+    return {camera, presentation}
+}
+
 const cameraPresetKeyFromHysteresis = hysteresis => REPLAY_CAMERA_PRESETS.find(preset => {
     const presetHysteresis = preset.camera?.hysteresis ?? {}
     return presetHysteresis.marginRatio === hysteresis?.marginRatio
@@ -658,16 +711,46 @@ export const getJourneyReplayCameraPresetUpdates = presetKey => {
 }
 
 export const getJourneyReplaySettings = () => normalizeJourneyReplaySettings(
-    globalThis.lgs?.settings?.ui?.replay
-    ?? globalThis.lgs?.configuration?.ui?.replay,
+    (() => {
+        const settings = normalizeJourneyReplaySettings(
+            globalThis.lgs?.settings?.ui?.replay
+            ?? globalThis.lgs?.configuration?.ui?.replay,
+        )
+        const journeyReplay = globalThis.lgs?.theJourney?.replay
+        const simple = resolveReplaySimpleSettingsForRuntime({
+            journey: journeyReplay?.simple,
+            user: settings.simple,
+        })
+        if (settings.userMode === REPLAY_USER_MODE_BASIC) {
+            return {
+                ...settings,
+                camera: simple.camera,
+                progression: simple.presentation.progression,
+                profileInfo: simple.presentation.profileInfo,
+            }
+        }
+
+        const expert = journeyReplay?.expert
+        return expert
+            ? {
+                ...settings,
+                camera: expert.camera ?? settings.camera,
+                progression: expert.progression ?? settings.progression,
+                profileInfo: expert.profileInfo ?? settings.profileInfo,
+            }
+            : settings
+    })(),
 )
 
-export const ensureJourneyReplaySettings = () => {
+export const ensureJourneyReplaySettings = ({resetTransient = false} = {}) => {
     const ui = globalThis.lgs?.settings?.ui
     if (!ui) {
         return defaultJourneyReplaySettings()
     }
 
     ui.replay = normalizeJourneyReplaySettings(ui.replay)
+    if (resetTransient) {
+        ui.replay.recordingSync = false
+    }
     return ui.replay
 }
