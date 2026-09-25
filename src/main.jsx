@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-22
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -113,18 +113,27 @@ const bootstrap = async () => {
         {LGS1920Context},
         {AppUtils},
         {UIUtils},
+        {ensureViewerBaseWithRetry},
     ] = await Promise.all([
         import('react-dom/client'),
         import('@Components/LGS1920.jsx'),
         import('@Core/LGS1920Context'),
         import('@Utils/AppUtils'),
         import('@Utils/UIUtils'),
+        import('@Components/cesium/Viewer'),
     ])
 
     AppUtils.setTheme(localStorage.getItem('theme') || 'system')
 
     if (!window.lgs) {
         window.lgs = new LGS1920Context()
+    }
+
+    try {
+        await ensureViewerBaseWithRetry()
+    }
+    catch (error) {
+        console.error('[LGS1920][Cesium] Early viewer bootstrap failed; startup will retry.', error)
     }
 
     /**

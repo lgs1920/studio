@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-22
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -89,6 +89,17 @@ export const LGS1920 = () => {
     const markAppSurfaceReady = useCallback(() => {
         markStartup('surface-ready')
         setAppSurfaceReady(true)
+    }, [])
+
+    const handleAppSurfaceError = useCallback(error => {
+        console.error('[LGS1920] Cesium surface failed to become ready:', error)
+        setInitError(error)
+        setInitStatus(false)
+        document.body.classList.remove('lgs-app-booting')
+        UIToast.error({
+                          caption: 'LGS1920 was stopped because Cesium could not be displayed!',
+                          text:    error.message,
+                      })
     }, [])
 
     /**
@@ -394,7 +405,7 @@ export const LGS1920 = () => {
 
             <AppUpdate updateDialogEnabled={appVisible}/>
 
-            {initStatus === true && <AppSurface onReady={markAppSurfaceReady}/>}
+            {initStatus === true && <AppSurface onReady={markAppSurfaceReady} onError={handleAppSurfaceError}/>}
 
             {!initError && !appVisible && (
                 <>

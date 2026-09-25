@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-05-16
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -189,7 +189,15 @@ const MapLayerImagery = ({imageryProvider, isBase, layerId, collection}) => {
             lgs.viewer.scene.requestRender()
         }
 
-        void addLayer()
+        void addLayer().catch(error => {
+            if (!cancelled) {
+                console.warn('Cesium imagery layer failed to load', {
+                    layerId,
+                    layerKind: isBase ? BASE_ENTITY : OVERLAY_ENTITY,
+                    error:     error?.message ?? String(error),
+                })
+            }
+        })
 
         return () => {
             cancelled = true
