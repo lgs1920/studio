@@ -18,6 +18,7 @@ import {
     defaultSimpleReplaySettings,
     hasExpertReplayConfiguration,
     initializeExpertReplayFromSimple,
+    normalizeSimpleReplaySettings,
     normalizeReplayUserMode,
     resetExpertReplayFromSimple,
     resolveSimpleReplaySettings,
@@ -44,6 +45,22 @@ describe('Replay user modes', () => {
         expect(resolved.camera.altitude).toBe(900)
         expect(resolved.camera.heading).toBe(45)
         expect(resolved.camera.altitudeMode).toBe('constant')
+    })
+
+    it('keeps Simple Replay in progressive Navigation mode behind the journey without camera debug', () => {
+        const defaults = defaultSimpleReplaySettings()
+        const normalized = normalizeSimpleReplaySettings({
+            camera: {debug: true, positionMode: 'ahead'},
+            marker: {mode: 'trace'},
+            trace: {mode: 'full'},
+        })
+
+        expect(defaults.camera).toMatchObject({debug: false, positionMode: 'behind'})
+        expect(defaults.marker.mode).toBe('navigation')
+        expect(defaults.trace.mode).toBe('progressive')
+        expect(normalized.camera).toMatchObject({debug: false, positionMode: 'behind'})
+        expect(normalized.marker.mode).toBe('navigation')
+        expect(normalized.trace.mode).toBe('progressive')
     })
 
     it('initializes Expert once and preserves it on mode switches', () => {

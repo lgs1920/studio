@@ -650,8 +650,17 @@ const resolveReplaySimpleSettingsForRuntime = ({journey, user} = {}) => {
     const product = {
         camera: {
             ...defaultJourneyReplayCameraStyle(),
-            positionMode: 'system',
+            positionMode: REPLAY_CAMERA_POSITION_BEHIND,
             altitudeMode: 'constant',
+            debug: false,
+        },
+        marker: {
+            ...defaultJourneyReplayMarkerStyle(),
+            mode: REPLAY_MARKER_MODE_NAVIGATION,
+        },
+        trace: {
+            ...defaultJourneyReplayTraceStyle(),
+            mode: REPLAY_TRACE_MODE_PROGRESSIVE,
         },
         presentation: {
             progression: {
@@ -673,6 +682,20 @@ const resolveReplaySimpleSettingsForRuntime = ({journey, user} = {}) => {
         ...(user?.camera ?? {}),
         ...(journey?.camera ?? {}),
         altitudeMode: 'constant',
+        positionMode: REPLAY_CAMERA_POSITION_BEHIND,
+        debug: false,
+    })
+    const marker = normalizeJourneyReplayMarker({
+        ...product.marker,
+        ...(user?.marker ?? {}),
+        ...(journey?.marker ?? {}),
+        mode: REPLAY_MARKER_MODE_NAVIGATION,
+    })
+    const trace = normalizeJourneyReplayTrace({
+        ...product.trace,
+        ...(user?.trace ?? {}),
+        ...(journey?.trace ?? {}),
+        mode: REPLAY_TRACE_MODE_PROGRESSIVE,
     })
     const presentation = {
         progression: normalizeJourneyReplayProgressionStyle({
@@ -687,7 +710,7 @@ const resolveReplaySimpleSettingsForRuntime = ({journey, user} = {}) => {
         }),
     }
 
-    return {camera, presentation}
+    return {camera, marker, trace, presentation}
 }
 
 const cameraPresetKeyFromHysteresis = hysteresis => REPLAY_CAMERA_PRESETS.find(preset => {
@@ -725,6 +748,8 @@ export const getJourneyReplaySettings = () => normalizeJourneyReplaySettings(
             return {
                 ...settings,
                 camera: simple.camera,
+                marker: simple.marker,
+                trace: simple.trace,
                 progression: simple.presentation.progression,
                 profileInfo: simple.presentation.profileInfo,
             }

@@ -18,10 +18,17 @@ import {
     DEFAULT_REPLAY_CAMERA,
     DEFAULT_REPLAY_PROGRESSION,
     DEFAULT_REPLAY_PROFILE_INFO,
+    REPLAY_CAMERA_POSITION_BEHIND,
+    REPLAY_MARKER_MODE_NAVIGATION,
+    REPLAY_TRACE_MODE_PROGRESSIVE,
     defaultJourneyReplayCameraStyle,
+    defaultJourneyReplayMarkerStyle,
+    defaultJourneyReplayTraceStyle,
     normalizeJourneyReplayCamera,
+    normalizeJourneyReplayMarker,
     normalizeJourneyReplayProgressionStyle,
     normalizeJourneyReplayProfileInfo,
+    normalizeJourneyReplayTrace,
 } from './JourneyReplayProgressionStyle'
 
 import {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT} from './ReplayUserModeConstants'
@@ -49,8 +56,9 @@ export const normalizeReplayUserMode = mode => mode === REPLAY_USER_MODE_EXPERT
 export const defaultSimpleReplaySettings = () => ({
     camera: {
         ...defaultJourneyReplayCameraStyle(),
-        positionMode: 'system',
+        positionMode: REPLAY_CAMERA_POSITION_BEHIND,
         altitudeMode: 'constant',
+        debug: false,
         altitude: DEFAULT_REPLAY_CAMERA.altitude,
         heading: DEFAULT_REPLAY_CAMERA.heading,
         pitch: DEFAULT_REPLAY_CAMERA.pitch,
@@ -74,6 +82,14 @@ export const defaultSimpleReplaySettings = () => ({
             color: '#ffffff',
         },
     },
+    marker: {
+        ...defaultJourneyReplayMarkerStyle(),
+        mode: REPLAY_MARKER_MODE_NAVIGATION,
+    },
+    trace: {
+        ...defaultJourneyReplayTraceStyle(),
+        mode: REPLAY_TRACE_MODE_PROGRESSIVE,
+    },
 })
 
 /**
@@ -88,6 +104,8 @@ export const normalizeSimpleReplaySettings = (settings = {}) => {
         ...defaults.camera,
         ...(settings?.camera ?? {}),
         altitudeMode: 'constant',
+        positionMode: REPLAY_CAMERA_POSITION_BEHIND,
+        debug: false,
     })
     const presentation = settings?.presentation ?? {}
 
@@ -114,6 +132,16 @@ export const normalizeSimpleReplaySettings = (settings = {}) => {
                 ...(presentation.profileInfo ?? {}),
             }),
         },
+        marker: normalizeJourneyReplayMarker({
+            ...defaults.marker,
+            ...(settings?.marker ?? {}),
+            mode: REPLAY_MARKER_MODE_NAVIGATION,
+        }),
+        trace: normalizeJourneyReplayTrace({
+            ...defaults.trace,
+            ...(settings?.trace ?? {}),
+            mode: REPLAY_TRACE_MODE_PROGRESSIVE,
+        }),
     }
 }
 
@@ -136,6 +164,16 @@ export const resolveSimpleReplaySettings = ({journey, user, product} = {}) => no
         ...(product?.presentation ?? {}),
         ...(user?.presentation ?? {}),
         ...(journey?.presentation ?? {}),
+    },
+    marker: {
+        ...(product?.marker ?? {}),
+        ...(user?.marker ?? {}),
+        ...(journey?.marker ?? {}),
+    },
+    trace: {
+        ...(product?.trace ?? {}),
+        ...(user?.trace ?? {}),
+        ...(journey?.trace ?? {}),
     },
 })
 

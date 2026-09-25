@@ -712,7 +712,8 @@ export const persistCameraSettings =  (mode, updates) => {
                     altitudeMode: REPLAY_CAMERA_ALTITUDE_CONSTANT,
                     heading: 0,
                     headingOffset: 0,
-                    positionMode: REPLAY_CAMERA_POSITION_SYSTEM,
+                    positionMode: REPLAY_CAMERA_POSITION_BEHIND,
+                    debug: false,
                 }
                 : {}),
             hysteresis: {
@@ -733,7 +734,8 @@ export const persistCameraSettings =  (mode, updates) => {
                         altitudeMode: REPLAY_CAMERA_ALTITUDE_CONSTANT,
                         heading: 0,
                         headingOffset: 0,
-                        positionMode: REPLAY_CAMERA_POSITION_SYSTEM,
+                        positionMode: REPLAY_CAMERA_POSITION_BEHIND,
+                        debug: false,
                     },
                 }
             }
