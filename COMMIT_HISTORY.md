@@ -2825,3 +2825,11 @@
 ## 2026-09-25 — [`Merge remote-tracking branch 'origin/feature/replay-user-modes' into feature/replay-user-modes`](https://github.com/lgs1920/studio/commit/643d9aa07bf7a9736684e991b63c5dddae507343)
 
 - Recorded automatically from Git history.
+
+## 2026-09-25 — [`test(replay): align integration fixtures with user modes`](https://github.com/lgs1920/studio/commit/4aee595ebecc06852102869592adb749222636d6)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`Merge remote-tracking branch 'origin/feature/replay-user-modes' into feature/replay-user-modes`](https://github.com/lgs1920/studio/commit/102f25440bc85666807a4349c0aa21436994f836)
+
+- Recorded automatically from Git history.
