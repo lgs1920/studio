@@ -236,6 +236,329 @@ bunx --bun vitest run \
     src/__tests__/unit/data/app-utils-count.test.js
 ```
 
-The implementation uses Web Awesome Pro `3.12.0`. Consult the [Web Awesome icon
+The implementation uses Web Awesome Pro `3.14.0`. Consult the [Web Awesome icon
 documentation](https://webawesome.com/docs/components/icon) when the library or wrapper API
 changes.
+
+## Complete implementation guide
+
+This section describes the complete path from the kit package to a rendered icon and provides
+copyable examples for the common integration cases.
+
+### Source map
+
+| Responsibility | Source |
+| --- | --- |
+| Kit module imports and family mapping | [LGS1920IconLibrary.js](../../../src/Utils/LGS1920IconLibrary.js#L17-L32) |
+| Application library name | [useWebAwesomeKits.js](../../../src/Utils/useWebAwesomeKits.js#L23) |
+| Definition registry | [buildIconDefinitions](../../../src/Utils/useWebAwesomeKits.js#L37-L68) |
+| Definition lookup | [findIconDefinition](../../../src/Utils/useWebAwesomeKits.js#L71-L83) |
+| SVG rendering | [createIconResolver](../../../src/Utils/useWebAwesomeKits.js#L86-L105) |
+| Web Awesome registration | [registerIconLibraryFromKits](../../../src/Utils/useWebAwesomeKits.js#L128-L152) |
+| Main application initialization | [AppUtils.js](../../../src/Utils/AppUtils.js#L389-L392) |
+| Detached-window initialization | [external-window-bootstrap.js](../../../src/external-window-bootstrap.js#L20-L26) |
+| Custom-kit icon usage | [ReplayTimelineWidget.jsx](../../../src/components/MainUI/widgets/list/ReplayTimelineWidget.jsx#L95-L98) |
+| Resolver tests | [use-web-awesome-kits.test.js](../../../src/__tests__/unit/utils/use-web-awesome-kits.test.js) |
+
+### End-to-end loading flow
+
+The kit is loaded as JavaScript modules during bundling and module evaluation:
+
+```mermaid
+flowchart TD
+    A[kit package in package.json] --> B[kit module imports]
+    B --> C[LGS1920_ICON_KITS]
+    C --> D[registerLGS1920IconLibrary]
+    D --> E[registerIconLibraryFromKits]
+    E --> F[definition map]
+    F --> G[lgs1920 resolver]
+    F --> H[extended default resolver]
+    G --> I[explicit library icon]
+    H --> J[normal WaIcon]
+```
+
+The concrete imports are located in [LGS1920IconLibrary.js](../../../src/Utils/LGS1920IconLibrary.js#L17-L18):
+
+```js
+import * as kitIcons from '@awesome.me/kit-eb5c406148/icons/kit/custom'
+import * as kitDuotoneIcons from '@awesome.me/kit-eb5c406148/icons/kit-duotone/custom'
+```
+
+These modules contain Font Awesome definitions. They are not React components and they are not
+rendered SVG strings. SVG data is produced on demand by createIconResolver.
+
+The root HTML also contains the kit identifier in [index.html](../../../index.html#L18), but
+runtime registration depends on the npm imports above. Changing the HTML attribute alone does
+not register the icon definitions.
+
+### Application registration
+
+The application associates each imported module with a Web Awesome family:
+
+```js
+export const LGS1920_ICON_KITS = [
+    {family: 'classic', icons: kitIcons},
+    {family: 'duotone', icons: kitDuotoneIcons},
+]
+```
+
+The registration function delegates to the generic resolver:
+
+```js
+export const registerLGS1920IconLibrary = () => {
+    registerIconLibraryFromKits(LGS1920_ICON_LIBRARY, LGS1920_ICON_KITS)
+}
+```
+
+See [LGS1920IconLibrary.js](../../../src/Utils/LGS1920IconLibrary.js#L21-L32). The public
+library name is the constant [LGS1920_ICON_LIBRARY](../../../src/Utils/useWebAwesomeKits.js#L23),
+whose value is lgs1920.
+
+The normal application startup calls the registration after core initialization:
+
+```js
+// src/Utils/AppUtils.js
+registerLGS1920IconLibrary()
+```
+
+The call is at [AppUtils.js](../../../src/Utils/AppUtils.js#L391-L392). It must run before a
+custom-kit icon is rendered.
+
+### Detached browser context
+
+A detached widget has its own document, custom-element registry, and Web Awesome icon-library
+registry. The detached bootstrap therefore imports the icon element and registers the kit again:
+
+```js
+// src/external-window-bootstrap.js
+import '@web.awesome.me/webawesome-pro/dist/components/icon/icon.js'
+import {registerLGS1920IconLibrary} from './Utils/LGS1920IconLibrary'
+
+registerLGS1920IconLibrary()
+```
+
+The source is [external-window-bootstrap.js](../../../src/external-window-bootstrap.js#L20-L26).
+Components rendered in that document should select the named library explicitly.
+
+## Practical component examples
+
+### Default application resolver
+
+Use the normal Web Awesome React wrapper for an icon that can resolve through the extended
+default library:
+
+```jsx
+import {WaIcon} from '@web.awesome.me/webawesome-pro/dist/react'
+
+export const ReplaySetupIcon = () => (
+    <WaIcon name="camera-sliders" variant="regular" />
+)
+```
+
+The component does not need a library property in the main application document because custom
+definitions are checked before Web Awesome's original default resolver.
+
+### Explicit custom library
+
+Use the named application library when the rendering context is detached:
+
+```jsx
+import {WaIcon} from '@web.awesome.me/webawesome-pro/dist/react'
+
+export const DetachedReplaySetupIcon = () => (
+    <WaIcon
+        library="lgs1920"
+        name="picture-in-picture-out"
+        variant="regular"
+    />
+)
+```
+
+Application code can use the shared constant instead of duplicating the library name:
+
+```jsx
+import {WaIcon} from '@web.awesome.me/webawesome-pro/dist/react'
+import {LGS1920_ICON_LIBRARY} from '@Utils/useWebAwesomeKits'
+
+export const DetachedReplaySetupIcon = () => (
+    <WaIcon library={LGS1920_ICON_LIBRARY}
+            name="picture-in-picture-out"
+            variant="regular" />
+)
+```
+
+The real Replay Timeline usage is in
+[ReplayTimelineWidget.jsx](../../../src/components/MainUI/widgets/list/ReplayTimelineWidget.jsx#L95-L98).
+
+### Family and variant selection
+
+The family property selects the kit family, while variant selects the style:
+
+```jsx
+<WaIcon name="camera-sliders" family="classic" variant="regular" />
+<WaIcon name="cave-in-mountains" family="duotone" variant="regular" />
+<WaIcon name="github" family="brands" />
+```
+
+The default family is classic. The resolver uses solid as the default variant for an exact lookup.
+
+### Dynamic icon values
+
+Dynamic values must contain public kebab-case names:
+
+```jsx
+const action = {
+    icon: 'camera-sliders',
+    variant: 'regular',
+}
+
+export const DynamicActionIcon = () => (
+    <WaIcon name={action.icon} variant={action.variant} />
+)
+```
+
+Do not pass JavaScript export names such as faCameraSliders, or internal prefixes such as fak and
+fakd, through the name property.
+
+### Accessible icon-only action
+
+The icon registry does not supply accessible text. The surrounding control must provide it:
+
+```jsx
+<WaButton aria-label="Reattach to widget" appearance="plain" variant="neutral">
+    <WaIcon library="lgs1920" name="picture-in-picture-out" variant="regular" />
+</WaButton>
+```
+
+The reusable implementation is
+[WidgetWindowActionButton.jsx](../../../src/components/MainUI/widgets/WidgetWindowActionButton.jsx).
+It forwards an optional library, applies the action label to the button, and renders a tooltip.
+
+## Resolver behavior in detail
+
+[registerIconLibraryFromKits](../../../src/Utils/useWebAwesomeKits.js#L128-L152) creates two
+registrations:
+
+1. The named lgs1920 library resolves definitions indexed from the supplied kit list.
+2. The default library is extended to check the kit first, then delegate missing names to
+   Web Awesome's original resolver.
+
+Definitions are indexed by:
+
+```text
+family:variant:name
+```
+
+For example:
+
+```text
+classic:regular:cave-in-mountains
+duotone:regular:cave-in-mountains
+classic:*:camera-sliders
+```
+
+The lookup order is:
+
+1. exact family, variant, and name;
+2. family and name with a wildcard variant;
+3. the original Web Awesome resolver, only through the extended default library.
+
+The map is built by
+[buildIconDefinitions](../../../src/Utils/useWebAwesomeKits.js#L37-L68), and lookup is
+implemented by [findIconDefinition](../../../src/Utils/useWebAwesomeKits.js#L71-L83).
+
+Generated custom exports can encode a style in the internal icon name. For example,
+regular-cave-in-mountains becomes the public name cave-in-mountains with variant regular. The
+supported style prefixes are defined in
+[useWebAwesomeKits.js](../../../src/Utils/useWebAwesomeKits.js#L32).
+
+## Adding another kit module
+
+New kit modules belong in
+[LGS1920IconLibrary.js](../../../src/Utils/LGS1920IconLibrary.js), not in UI components:
+
+```js
+import * as kitIcons from '@awesome.me/kit-eb5c406148/icons/kit/custom'
+import * as kitDuotoneIcons from '@awesome.me/kit-eb5c406148/icons/kit-duotone/custom'
+import * as kitBrands from '@awesome.me/kit-eb5c406148/icons/kit-brands/custom'
+
+export const LGS1920_ICON_KITS = [
+    {family: 'classic', icons: kitIcons},
+    {family: 'duotone', icons: kitDuotoneIcons},
+    {family: 'brands', icons: kitBrands},
+]
+```
+
+If a module contains one style only, provide its variant explicitly:
+
+```js
+const additionalKits = [
+    {family: 'classic', variant: 'regular', icons: classicRegularIcons},
+    {family: 'classic', variant: 'solid', icons: classicSolidIcons},
+]
+```
+
+The first matching definition wins for an identical family, variant, and public name. Kit order
+is therefore part of the behavior and requires a focused test when intentionally changed.
+
+## Fallback and failure behavior
+
+The extended default resolver supports both kit and standard icons:
+
+```jsx
+// Resolved from the application kit
+<WaIcon name="camera-sliders" variant="regular" />
+
+// Delegated to Web Awesome when absent from the application kit
+<WaIcon name="house" variant="solid" />
+```
+
+The fallback is implemented by
+[createDefaultIconResolver](../../../src/Utils/useWebAwesomeKits.js#L108-L118).
+
+The named lgs1920 resolver is strict. An unknown custom name throws an error such as
+Unknown LGS1920 icon: unknown-name. Use the named resolver when absence should fail immediately;
+use the extended default resolver for ordinary application icons.
+
+If an icon is empty or remains a placeholder, verify the following:
+
+1. registerLGS1920IconLibrary() ran before rendering.
+2. The public name is kebab case.
+3. family and variant match the loaded kit definition.
+4. The detached document ran
+   [external-window-bootstrap.js](../../../src/external-window-bootstrap.js#L20-L26).
+5. The kit package is installed from the configured Font Awesome registry.
+
+The registration preserves Web Awesome's original mutator and sprite sheet at
+[useWebAwesomeKits.js](../../../src/Utils/useWebAwesomeKits.js#L148-L152), which is required
+for standard Web Awesome behavior to keep working.
+
+## Testing
+
+The focused resolver suite in
+[use-web-awesome-kits.test.js](../../../src/__tests__/unit/utils/use-web-awesome-kits.test.js)
+covers classic and duotone resolution, variants, wildcard definitions, kit order, default
+fallback, invalid public names, and input validation.
+
+The UI suite in
+[widget-window-action-button.test.jsx](../../../src/__tests__/ui/components/widget-window-action-button.test.jsx)
+verifies that custom icons receive the explicit library and ordinary icons do not.
+
+Run the focused tests with:
+
+```bash
+bunx --bun vitest run \
+    src/__tests__/unit/utils/use-web-awesome-kits.test.js \
+    src/__tests__/ui/components/widget-window-action-button.test.jsx \
+    src/__tests__/unit/data/app-utils-count.test.js
+```
+
+## Rules for future changes
+
+1. Keep kit imports centralized at the application registration boundary.
+2. Pass every kit module to registerIconLibraryFromKits() with an explicit family.
+3. Use public Font Awesome names in kebab case in UI components.
+4. Keep family, variant, and library selection separate from button appearance.
+5. Use the named lgs1920 library in detached browser documents.
+6. Give icon-only controls an accessible name independently of the registry.
+7. Add focused tests when changing kit order, family mapping, normalization, or fallback behavior.
