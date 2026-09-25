@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-30
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,8 +33,8 @@ describe('CountApi', () => {
         await Promise.all([
             CountApi.sendVisit(),
             CountApi.sendJourney(),
-            CountApi.sendDraftVideo(),
-            CountApi.sendHqVideo(),
+            CountApi.sendVideo(false),
+            CountApi.sendVideo(true),
         ])
 
         expect(globalThis.fetch).toHaveBeenCalledTimes(4)
@@ -47,8 +47,14 @@ describe('CountApi', () => {
         }
         expect(globalThis.fetch).toHaveBeenNthCalledWith(1, 'https://backend.example.test/api/count/visit', expectedRequest)
         expect(globalThis.fetch).toHaveBeenNthCalledWith(2, 'https://backend.example.test/api/count/journey', expectedRequest)
-        expect(globalThis.fetch).toHaveBeenNthCalledWith(3, 'https://backend.example.test/api/count/video/draft', expectedRequest)
-        expect(globalThis.fetch).toHaveBeenNthCalledWith(4, 'https://backend.example.test/api/count/video/hq', expectedRequest)
+        expect(globalThis.fetch).toHaveBeenNthCalledWith(3, 'https://backend.example.test/api/count/video', {
+            ...expectedRequest,
+            body: JSON.stringify({timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', expert: false}),
+        })
+        expect(globalThis.fetch).toHaveBeenNthCalledWith(4, 'https://backend.example.test/api/count/video', {
+            ...expectedRequest,
+            body: JSON.stringify({timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', expert: true}),
+        })
     })
 
     it('sends one visit event per application session while counting repeated journey loads', async () => {
@@ -71,14 +77,14 @@ describe('CountApi', () => {
             .mockResolvedValueOnce({ok: false})
 
         await expect(CountApi.sendJourney()).resolves.toBe(false)
-        await expect(CountApi.sendDraftVideo()).resolves.toBe(false)
+        await expect(CountApi.sendVideo(true)).resolves.toBe(false)
         expect(globalThis.fetch).toHaveBeenCalledTimes(2)
     })
 
     it('does not fail when the backend is not configured', async () => {
         delete globalThis.lgs
 
-        await expect(CountApi.sendHqVideo()).resolves.toBe(false)
+        await expect(CountApi.sendVideo(false)).resolves.toBe(false)
         expect(globalThis.fetch).not.toHaveBeenCalled()
     })
 })

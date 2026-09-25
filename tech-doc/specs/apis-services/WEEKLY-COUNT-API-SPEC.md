@@ -2,7 +2,7 @@
 
 Status: implemented across Studio, Backend, and Site
 
-Date reviewed: 2026-08-24
+Date reviewed: 2026-09-25
 
 ## Purpose
 
@@ -11,8 +11,8 @@ in Backend, and publishes read-only statistics through Site. It tracks:
 
 - Studio visits;
 - successfully loaded journeys;
-- successfully produced Draft videos;
-- successfully produced HQ videos.
+- successfully produced videos;
+- the subset of videos exported in Expert Replay mode.
 
 The current implementation does not expose or retain a unique-visitor metric.
 The original rolling seven-day and IP-based proposal was superseded by
@@ -24,8 +24,11 @@ time-zone-aware calendar aggregates.
 
 - `POST /count/visit` once per application session;
 - `POST /count/journey` after each successful journey load;
-- `POST /count/video/draft` after successful Draft production;
-- `POST /count/video/hq` after successful HQ production.
+- `POST /count/video` after a successful export, with the required boolean
+  `expert` property indicating Expert Replay mode.
+
+The event body also includes the browser time zone when available, for example
+`{"timeZone":"Europe/Paris","expert":true}`.
 
 Each request includes the browser IANA time zone when available. Requests omit
 credentials, use keep-alive delivery, do not block the user flow, and return a
@@ -41,8 +44,7 @@ serializes persistence and aggregation.
 
 - `POST /count/visit`
 - `POST /count/journey`
-- `POST /count/video/draft`
-- `POST /count/video/hq`
+- `POST /count/video`
 
 ### Read routes
 
@@ -58,7 +60,8 @@ Current period routes accept an optional `timeZone` query parameter. Explicit
 keys use `dd-mm-yyyy`, `yyyy-Www`, `mm-yy`, and `yyyy` formats.
 
 The complete snapshot contains lifetime totals plus daily, weekly, monthly, and
-yearly aggregate maps. Video values are separated into `draft` and `hq`.
+yearly aggregate maps. Video rows contain `videos.total` for every successful
+export and `videos.expert` for the subset exported in Expert Replay mode.
 
 ## Site consumer
 

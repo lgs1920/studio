@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-30
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,8 +22,7 @@
 const COUNT_EVENT_PATHS = Object.freeze({
     visit:      'visit',
     journey:    'journey',
-    draftVideo: 'video/draft',
-    hqVideo:    'video/hq',
+    video:      'video',
 })
 
 let visitEventSent = false
@@ -61,9 +60,10 @@ const getCountEventUrl = eventPath => {
  * Sends one anonymous count event and its calendar time zone without blocking the caller.
  *
  * @param {string} eventPath - Relative count event path
+ * @param {object} [eventData={}] Additional event properties.
  * @returns {Promise<boolean>} Whether the request was accepted by the browser and backend
  */
-const postCountEvent = eventPath => {
+const postCountEvent = (eventPath, eventData = {}) => {
     const url = getCountEventUrl(eventPath)
     const fetchImplementation = globalThis.fetch
     if (!url || typeof fetchImplementation !== 'function') {
@@ -75,7 +75,7 @@ const postCountEvent = eventPath => {
             method:      'POST',
             credentials: 'omit',
             headers:     {'Content-Type': 'application/json'},
-            body:        JSON.stringify({timeZone: getClientTimeZone()}),
+            body:        JSON.stringify({timeZone: getClientTimeZone(), ...eventData}),
             keepalive:   true,
         }))
             .then(response => response?.ok !== false)
@@ -112,18 +112,12 @@ export class CountApi {
     static sendJourney = () => postCountEvent(COUNT_EVENT_PATHS.journey)
 
     /**
-     * Records one successfully produced draft video.
+     * Records one successfully completed video export.
      *
+     * @param {boolean} expert Whether the export used Expert Replay mode.
      * @returns {Promise<boolean>} Whether the request was accepted by the browser and backend
      */
-    static sendDraftVideo = () => postCountEvent(COUNT_EVENT_PATHS.draftVideo)
-
-    /**
-     * Records one successfully completed HQ video export.
-     *
-     * @returns {Promise<boolean>} Whether the request was accepted by the browser and backend
-     */
-    static sendHqVideo = () => postCountEvent(COUNT_EVENT_PATHS.hqVideo)
+    static sendVideo = (expert = false) => postCountEvent(COUNT_EVENT_PATHS.video, {expert})
 
     /**
      * Resets in-memory session guards for isolated tests.
