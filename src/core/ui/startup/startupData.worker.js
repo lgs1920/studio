@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-09-20
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,20 +19,60 @@ import {decodeStartupJourney, streamStartupJourney, streamStartupPOIs} from './s
 
 let nextPacketId = 0
 const acknowledgements = new Map()
+const cancelledRequests = new Set()
 
 const acknowledge = id => {
-    const resolve = acknowledgements.get(id)
-    if (resolve) {
+    const acknowledgement = acknowledgements.get(id)
+    if (acknowledgement) {
         acknowledgements.delete(id)
-        resolve()
+        acknowledgement.resolve()
     }
 }
 
-const emit = data => new Promise(resolve => {
+/**
+ * Rejects acknowledgements belonging to a cancelled request.
+ * @param {number} requestId - Request identifier.
+ * @returns {void}
+ */
+const cancelRequest = requestId => {
+    cancelledRequests.add(requestId)
+    acknowledgements.forEach((acknowledgement, id) => {
+        if (acknowledgement.requestId !== requestId) {
+            return
+        }
+
+        acknowledgements.delete(id)
+        acknowledgement.reject(new DOMException('Startup data request cancelled', 'AbortError'))
+    })
+}
+
+/**
+ * Emits a packet and waits for its acknowledgement.
+ * @param {object} data - Packet payload.
+ * @param {number} requestId - Request identifier.
+ * @returns {Promise<void>} Promise resolved when the client acknowledges the packet.
+ */
+const emit = (data, requestId) => new Promise((resolve, reject) => {
+    if (cancelledRequests.has(requestId)) {
+        reject(new DOMException('Startup data request cancelled', 'AbortError'))
+        return
+    }
+
     const id = ++nextPacketId
-    acknowledgements.set(id, resolve)
+    acknowledgements.set(id, {reject, requestId, resolve})
     self.postMessage({type: 'packet', id, data})
 })
+
+/**
+ * Throws when a request has been cancelled.
+ * @param {number} requestId - Request identifier.
+ * @returns {void}
+ */
+const throwIfCancelled = requestId => {
+    if (cancelledRequests.has(requestId)) {
+        throw new DOMException('Startup data request cancelled', 'AbortError')
+    }
+}
 
 const openReader = async name => {
     const db = await openDB(name)
@@ -60,13 +100,20 @@ self.onmessage = async event => {
         acknowledge(message.id)
         return
     }
+    if (message?.type === 'cancel') {
+        cancelRequest(message.requestId)
+        return
+    }
     if (message?.type !== 'request') {
         return
     }
 
+    const requestId = message.requestId
+    const emitForRequest = data => emit(data, requestId)
     let reader
     try {
         reader = await openReader(message.database)
+        throwIfCancelled(requestId)
         const requestType = message.requestType ?? message.type
         if (requestType === 'journey') {
             const value = await reader.get('journeys', message.key)
@@ -88,19 +135,19 @@ self.onmessage = async event => {
                         for await (const batch of reader.scan('pois', keys)) {
                             yield batch.map(item => item?.data ?? item)
                         }
-                    })(), emit, {
+                    })(), emitForRequest, {
                         currentOnly:  true,
                         excluded:     message.excluded,
                         includeStarter: message.includeStarter,
                         onBatch:      async () => {
                             if (firstBatch) {
                                 firstBatch = false
-                                await emit({type: 'primary-ready'})
+                                await emitForRequest({type: 'primary-ready'})
                             }
                         },
                         onComplete:   async () => {
                             if (firstBatch) {
-                                await emit({type: 'primary-ready'})
+                            await emitForRequest({type: 'primary-ready'})
                             }
                         },
                         parents,
@@ -109,7 +156,7 @@ self.onmessage = async event => {
                 }
 
                 const decoded = message.primary ? decodeStartupJourney(value) : null
-                await streamStartupJourney(value, emit, {
+                await streamStartupJourney(value, emitForRequest, {
                     ...message,
                     onTrackEnd: async ({firstTrack}) => {
                         if (firstTrack) {
@@ -123,11 +170,11 @@ self.onmessage = async event => {
                 }
             }
             else if (message.primary) {
-                await emit({type: 'primary-ready'})
+                    await emitForRequest({type: 'primary-ready'})
             }
         }
         else if (requestType === 'journey-keys') {
-            await emit({type: 'journey-keys', keys: await reader.keys('journeys')})
+            await emitForRequest({type: 'journey-keys', keys: await reader.keys('journeys')})
         }
         else if (requestType === 'pois') {
             const keys = await reader.keys('pois')
@@ -135,14 +182,18 @@ self.onmessage = async event => {
                 for await (const batch of reader.scan('pois', keys)) {
                     yield batch.map(value => value?.data ?? value)
                 }
-            })(), emit, message)
+            })(), emitForRequest, message)
         }
+        throwIfCancelled(requestId)
         self.postMessage({type: 'done', result: true})
     }
     catch (error) {
-        self.postMessage({type: 'error', message: error?.message ?? String(error)})
+        if (!cancelledRequests.has(requestId)) {
+            self.postMessage({type: 'error', message: error?.message ?? String(error)})
+        }
     }
     finally {
         reader?.close()
+        cancelledRequests.delete(requestId)
     }
 }
