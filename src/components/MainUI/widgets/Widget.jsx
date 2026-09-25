@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-19
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -608,6 +608,7 @@ const WidgetHost = ({
     const canResize = canInteract && !effectiveCollapsed && (config?.resizable ?? false)
     const canScale = canInteract && !effectiveCollapsed && (config?.scalable ?? false)
     const canRotate = canInteract && !effectiveCollapsed && (config?.rotatable ?? false)
+    const forceControlBox = config?.forceControlBox === true && !effectiveLocked
 
     // Snapping logic
     const snapSettings = useMemo(() => {
@@ -1917,8 +1918,8 @@ const WidgetHost = ({
             <Moveable
                 className={classNames('lgs-widget-control-box', moveableClassName)}
                 style={{
-                    opacity:      isSelected && !effectiveLocked ? 1 : 0,
-                    pointerEvents: isSelected && !effectiveLocked ? 'auto' : 'none',
+                    opacity:      (isSelected || forceControlBox) ? 1 : 0,
+                    pointerEvents: (isSelected || forceControlBox) ? 'auto' : 'none',
                 }}
                 container={actualContainer ?? lgs.canvas}
                 origin={false}
@@ -1970,8 +1971,8 @@ const WidgetHost = ({
                 snapDirections={canSnapWidget ? {top: true, right: true, bottom: true, left: true, center: canSnapCenter, middle: canSnapCenter} : false}
                 elementSnapDirections={canSnapWidget ? {top: true, left: true, bottom: true, right: true, center: canSnapCenter, middle: canSnapCenter} : false}
                 maxSnapElementGuidelineDistance={canSnapWidget ? 10 : 0}
-                renderDirections={config.isCropper && isSelected ? CROP_RESIZE_DIRECTIONS : controlBox.renderDirections}
-                zoom={config.isCropper && isSelected ? 1 : controlBox.zoom}
+                renderDirections={config.isCropper && (isSelected || forceControlBox) ? CROP_RESIZE_DIRECTIONS : controlBox.renderDirections}
+                zoom={config.isCropper && (isSelected || forceControlBox) ? 1 : controlBox.zoom}
                 onRender={(event) => !config.isCropper && (event.target.style.cssText += event.cssText)}
                 useMutationObserver={false}
                 useResizeObserver={false}

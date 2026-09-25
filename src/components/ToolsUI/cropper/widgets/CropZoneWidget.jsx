@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-10-03
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -69,8 +69,10 @@ export const CropZoneWidget = memo(({
             attachTo:         'center',
             type:             LGS_VISUAL_WIDGET,
             isCropper:        true,
+            canLock:          false,
             resizable:        true,
             showControlBox:   true,
+            forceControlBox:  true,
             draggable:        !lockToCenter,
             snappable:        true,
             outsideOverlay:   overlay,

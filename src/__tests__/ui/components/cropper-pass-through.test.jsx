@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 
 vi.mock('@Components/MainUI/video/VideoSceneWidgetsPortal', () => ({
-    VideoSceneWidgetsPortal: () => null,
+    VideoSceneWidgetsPortal: ({hidden = false}) => <div data-testid="video-scene-widgets-portal" data-hidden={hidden}/>,
 }))
 
 vi.mock('@Components/MainUI/widgets/WidgetsPanel', () => ({
@@ -134,6 +134,14 @@ describe('Cropper pointer pass-through', () => {
         )
 
         expect(container.querySelector('.crop-overlay-blockers')).toBeNull()
+    })
+
+    it('does not mount video widgets when Simple Replay is active', () => {
+        const context = proxy({id: 'video-crop-zone'})
+        const {container} = render(<Cropper overlay hideVideoWidgets context={context}/>)
+
+        expect(container.querySelector('.crop-overlay')).not.toBeNull()
+        expect(container.querySelector('[data-testid="video-scene-widgets-portal"]')?.dataset.hidden).toBe('true')
     })
 
 })

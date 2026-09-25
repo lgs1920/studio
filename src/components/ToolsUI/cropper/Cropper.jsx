@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-14
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -40,7 +40,7 @@ import { CropZoneWidget }        from './widgets/CropZoneWidget'
 import { CropZoneInfoPopup }     from './widgets/CropZoneInfoPopup'
 import './style.css'
 
-export const Cropper = memo(({overlay = false, className = '', context, options = {}, children, renderRatioWidget = true}) => {
+export const Cropper = memo(({overlay = false, hideVideoWidgets = false, hideWidgetPanel = false, simplePreparationActive = false, className = '', context, options = {}, children, renderRatioWidget = true}) => {
 
     const _cropperContainer = useRef(null)
     const _overlay = useRef(null)
@@ -53,7 +53,8 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                ? {...config.cropDimensions}
                : {left: 0, top: 0, width: 0, height: 0}
     })
-    const hideWidgetPanel = Boolean(video.preRecording || video.recording || video.snapshot || video.finalizing)
+    const captureActive = Boolean(video.preRecording || video.recording || video.snapshot || video.finalizing)
+    const interactiveCrop = cropper.ratioEditor === true || simplePreparationActive === true
 
     useEffect(() => {
         if (_overlay.current) {
@@ -103,7 +104,7 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                     pointerEvents: 'none',
                 }}
             >
-                {overlayElement && !cropper.ratioEditor && (
+            {overlayElement && !interactiveCrop && (
                     <DefinedCropZone
                         className={[className, cropper.ratioEditor ? 'defined-crop-zone-hidden' : ''].filter(Boolean).join(' ')}
                         infoPosition={options.infoPosition}
@@ -112,7 +113,7 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                         context={context}>
                     </DefinedCropZone>
                 )}
-                {overlayElement && cropper.ratioEditor && (
+            {overlayElement && interactiveCrop && (
                         <CropZoneWidget
                             className={className}
                             containerClassName="crop-moveable-container-on-map"
@@ -142,7 +143,7 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                     </div>
                 )}
                 {children}
-                {!hideWidgetPanel && (
+                {!captureActive && !hideWidgetPanel && !simplePreparationActive && (
                     <WidgetsPanel id="widget-deck" context={context} groups={[MULTI_PURPOSE_WIDGETS, JOURNEY_WIDGETS]}/>
                 )}
             </div>
@@ -150,7 +151,7 @@ export const Cropper = memo(({overlay = false, className = '', context, options 
                 <CropZoneInfoPopup id={context.id} infoComponent={options.infoComponent} showDimensions={options.infoPosition}/>
             )}
             {/* Crop and video widgets remain mounted together during composition. */}
-            <VideoSceneWidgetsPortal context={context}/>
+            <VideoSceneWidgetsPortal context={context} hidden={hideVideoWidgets}/>
         </>
     )
 })
