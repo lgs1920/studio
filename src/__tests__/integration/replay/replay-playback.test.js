@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,12 +31,13 @@ import {
     JourneyReplayPlaybackController,
 }                                                                      from '@Core/ui/replay/JourneyReplayPlaybackController'
 import {
-    defaultJourneyReplaySettings, REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
+    defaultJourneyReplaySettings as defaultJourneyReplaySettingsBase, REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
     REPLAY_CAMERA_HEADING_OFFSET_MAX, REPLAY_CAMERA_POSITION_AHEAD, REPLAY_CAMERA_POSITION_BEHIND, REPLAY_CAMERA_POSITION_SYSTEM,
     REPLAY_CAMERA_PRESET_DEFAULT, REPLAY_CAMERA_PRESET_ULTRA_SMOOTH,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
     getJourneyReplayCameraPresetKey, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplaySettings,
 }                                                                      from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import { REPLAY_USER_MODE_EXPERT }                                    from '@Core/ui/replay/ReplayUserModeConstants'
 import { gpx }                                                         from '@tmcw/togeojson'
 import { JSDOM }                                                       from 'jsdom'
 import { applyGpxStyleExtensionProperties, extractLgsTrackProperties } from '@Utils/JourneyGpxUtils'
@@ -66,6 +67,16 @@ vi.mock('@Components/Toast', () => ({
 
 
 import {makeJourney, makeTrack} from '../../unit/replay/replay-phase1-fixtures'
+
+/**
+ * Build legacy integration settings with the Expert replay camera contract.
+ *
+ * @returns {Object} Expert replay settings.
+ */
+const defaultJourneyReplaySettings = () => ({
+    ...defaultJourneyReplaySettingsBase(),
+    userMode: REPLAY_USER_MODE_EXPERT,
+})
 
 describe('replay phase 1 playback controller', () => {
     it('advances from elapsed time rather than point count', () => {

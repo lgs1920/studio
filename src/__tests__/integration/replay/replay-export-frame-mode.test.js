@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,13 +18,14 @@ import { JourneyReplayMode }          from '@Core/ui/replay/JourneyReplayMode'
 import { JourneyReplayPlaybackController } from '@Core/ui/replay/JourneyReplayPlaybackController'
 import { REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP } from '@Core/ui/replay/JourneyReplayClips'
 import {
-    defaultJourneyReplaySettings,
+    defaultJourneyReplaySettings as defaultJourneyReplaySettingsBase,
     REPLAY_CAMERA_POSITION_AHEAD,
     REPLAY_CAMERA_POSITION_BEHIND,
     REPLAY_CAMERA_POSITION_SYSTEM,
     REPLAY_MARKER_MODE_HYSTERESIS,
     REPLAY_MARKER_MODE_NAVIGATION,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import {REPLAY_USER_MODE_EXPERT} from '@Core/ui/replay/ReplayUserModeConstants'
 import { Cartesian3, Cartographic } from 'cesium'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -80,6 +81,16 @@ const makeDataSources = () => ({
 })
 
 const replaySource = dataSources => dataSources.getByName('replay#journey#gpx')[0]
+
+/**
+ * Build legacy integration settings with the Expert replay camera contract.
+ *
+ * @returns {Object} Expert replay settings.
+ */
+const defaultJourneyReplaySettings = () => ({
+    ...defaultJourneyReplaySettingsBase(),
+    userMode: REPLAY_USER_MODE_EXPERT,
+})
 
 const visibleTraceEntities = dataSources => replaySource(dataSources)
     ?.entities

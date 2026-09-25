@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -398,7 +398,7 @@ describe('ReplayDeferredExporter', () => {
                 widgetCache: {
                     isMounted: vi.fn(() => true),
                     getAll: vi.fn(() => new Map([
-                        ['journey-overlay#1', {mounted: true}],
+                        ['compass-widget#1', {mounted: true}],
                     ])),
                 },
                 widgetManager: {
@@ -425,7 +425,7 @@ describe('ReplayDeferredExporter', () => {
                 altitude: 900,
             },
             recordingSync: true,
-            visibleOverlayIds: ['journey-overlay#1'],
+            visibleOverlayIds: ['compass-widget#1'],
         })
 
         const freshPlan = prepareReplayDeferredExportPlan({
