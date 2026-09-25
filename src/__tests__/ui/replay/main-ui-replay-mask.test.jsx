@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-14
- * Last modified: 2026-09-22
+ * Last modified: 2026-09-25
  *
  *
  * Copyright © 2026 LGS1920
@@ -63,17 +63,11 @@ vi.mock('@Components/MainUI/OrbitButton', () => ({
 vi.mock('@Editor/EditorPanelButton', () => ({
     EditorPanelButton: () => <div data-testid="editor-panel-button"/>,
 }))
-vi.mock('@Components/MainUI/video/VideoButton', () => ({
-    VideoButton: () => <div data-testid="video-button"/>,
-}))
 vi.mock('@Components/MainUI/video/VideoDownloadAndShareDialog', () => ({
     VideoDownloadAndShareDialog: () => <div data-testid="video-share-dialog"/>,
 }))
 vi.mock('@Components/MainUI/video/ReplayRecordingMonitorWidget', () => ({
     ReplayRecordingMonitorWidget: () => <div data-testid="replay-controls"/>,
-}))
-vi.mock('@Components/MainUI/SyncLinkBadge', () => ({
-    SyncLinkBadge: () => <div data-testid="sync-link-badge"/>,
 }))
 vi.mock('@Components/MainUI/SupportUIButton', () => ({
     SupportUIButton: () => null,
