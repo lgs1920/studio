@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-28
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ import {proxy} from 'valtio'
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaButton: ({children, ...props}) => <button type="button" {...props}>{children}</button>,
-    WaIcon: ({name}) => <span data-icon={name}/>,
+    WaIcon: ({name, rotate}) => <span data-icon={name} data-rotate={rotate}/>,
     WaTooltip: ({children}) => <span>{children}</span>,
 }))
 
@@ -114,9 +114,25 @@ describe('JourneyReplayButton synchronized video entry point', () => {
         expect(globalThis.lgs.settings.ui.replay.simple.camera.headingOffset).toBe(0)
         expect(globalThis.lgs.stores.replay.simplePreparationActive).toBe(true)
         await waitFor(() => {
-            expect(screen.getByRole('button', {name: 'Start Basic Replay'}).querySelector('[data-icon="video-down-to-line"]')).not.toBeNull()
+            const icon = screen.getByRole('button', {name: 'Start Basic Replay'}).querySelector('[data-icon="video-down-to-line"]')
+            expect(icon).not.toBeNull()
+            expect(icon.getAttribute('data-rotate')).toBe('45')
         })
 
         expect(globalThis.lgs.settings.ui.replay.userMode).toBe('basic')
+    })
+
+    it('rotates the Expert Replay icon to 30 degrees', () => {
+        render(
+            <JourneyReplayButton
+                id="launch-expert-replay-icon"
+                mode="expert"
+                ariaLabel="Expert Replay"
+            />,
+        )
+
+        const icon = screen.getByRole('button', {name: 'Expert Replay'}).querySelector('[data-icon="drone"]')
+        expect(icon).not.toBeNull()
+        expect(icon.getAttribute('data-rotate')).toBe('30')
     })
 })

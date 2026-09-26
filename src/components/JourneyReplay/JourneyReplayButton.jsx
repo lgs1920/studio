@@ -140,7 +140,11 @@ export const JourneyReplayButton = (props) => {
             aria-label={buttonAriaLabel}
             aria-pressed={isDrawerOpen}
         >
-            <WaIcon name={isBasicMode ? 'video-down-to-line' : 'drone'} variant="regular"/>
+            <WaIcon
+                name={isBasicMode ? 'video-down-to-line' : 'drone'}
+                rotate={isBasicMode ? 45 : 30}
+                variant="regular"
+            />
         </WaButton>
     )
 
