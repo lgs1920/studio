@@ -8,15 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-22
+ * Last modified: 2026-09-26
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { createPortal } from 'react-dom'
-import { useEffect, useRef } from 'react'
-import { WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { useLayoutEffect, useRef } from 'react'
 import {
     getWelcomeRoutePoiScale,
     WELCOME_ROUTE_CAMERA_DISTANCE,
@@ -182,9 +181,10 @@ const readThemeColor = (layer, property, fallback) => {
  *
  * @param {HTMLElement} layer - Hero route layer.
  * @param {HTMLCanvasElement} canvas - WebGL canvas.
+ * @param {() => void} [onError] - Callback used to start the main-thread fallback.
  * @returns {() => void} Cleanup callback.
  */
-const setupRouteWorker = (layer, canvas) => {
+const setupRouteWorker = (layer, canvas, onError) => {
     const worker = new Worker(new URL('./WelcomeHeroRoute.worker.js', import.meta.url), {type: 'module'})
     const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
     const getPalette = () => ({
@@ -209,6 +209,11 @@ const setupRouteWorker = (layer, canvas) => {
         worker.postMessage({type: 'visibility', visible: !document.hidden})
     }
     const onWorkerMessage = ({data}) => {
+        if (data.type === 'ready') {
+            layer.dataset.routeStatus = 'ready'
+            return
+        }
+
         if (data.type === 'poi-positions') {
             data.positions.forEach(({index, left, scale, top, visible}) => {
                 setPoiScreenPosition(
@@ -229,10 +234,17 @@ const setupRouteWorker = (layer, canvas) => {
         const poi = layer.querySelector(`[data-route-poi-index="${data.index}"]`)
         poi?.classList.toggle('is-revealed', data.revealed)
     }
+    const onWorkerError = (event) => {
+        layer.dataset.routeError = 'worker'
+        layer.dataset.routeStatus = 'error'
+        console.error('[LGS1920][WelcomeRoute] worker failed', event.error ?? event.message ?? event)
+        onError?.()
+    }
     const offscreenCanvas = canvas.transferControlToOffscreen()
     const bounds = layer.getBoundingClientRect()
     const palette = getPalette()
     worker.addEventListener('message', onWorkerMessage)
+    worker.addEventListener('error', onWorkerError)
 
     worker.postMessage({
         type: 'init',
@@ -268,8 +280,13 @@ const setupRouteWorker = (layer, canvas) => {
         paletteObserver.disconnect()
         document.removeEventListener('visibilitychange', postVisibility)
         worker.removeEventListener('message', onWorkerMessage)
+        worker.removeEventListener('error', onWorkerError)
         reducedMotionQuery.removeEventListener('change', onReducedMotionChange)
-        worker.postMessage({type: 'dispose'})
+        try {
+            worker.postMessage({type: 'dispose'})
+        }
+        catch {
+        }
         worker.terminate()
     }
 }
@@ -684,42 +701,91 @@ const setupRouteAnimation = (layer, canvas, modules) => {
 /**
  * Renders the persistent Three.js route backdrop used by the Studio welcome hero.
  *
+ * @param {{mountInSplash?: boolean, useWorker?: boolean}} props - Route mounting options.
  * @returns {JSX.Element} Decorative route canvas.
  */
-export const WelcomeHeroRoute = ({mountInSplash = false}) => {
+export const WelcomeHeroRoute = ({mountInSplash = false, useWorker = true}) => {
+    const suppressRoute = mountInSplash
+        && typeof document !== 'undefined'
+        && Boolean(document.querySelector('[data-lgs-boot-route-host]'))
     const _canvas = useRef(null)
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         let disposed = false
         let cleanup = () => {}
         const layer = _canvas.current?.parentElement
         const canvas = _canvas.current
 
-        if (!layer || !canvas || typeof window.WebGLRenderingContext === 'undefined') {
+        if (!layer || !canvas) {
+            return undefined
+        }
+
+        if (typeof window.WebGLRenderingContext === 'undefined') {
+            layer.dataset.routeError = 'webgl-unavailable'
+            layer.dataset.routeStatus = 'error'
+            console.warn('[LGS1920][WelcomeRoute] WebGL is unavailable in the splash')
             return undefined
         }
 
         const initialize = async () => {
-            try {
-                if (typeof Worker !== 'undefined' && typeof canvas.transferControlToOffscreen === 'function') {
-                    cleanup = setupRouteWorker(layer, canvas)
+            const loadThreeModules = () => Promise.all([
+                import('three'),
+                import('three/addons/lines/Line2.js'),
+                import('three/addons/lines/LineGeometry.js'),
+                import('three/addons/lines/LineMaterial.js'),
+            ]).then(([three, line2, lineGeometry, lineMaterial]) => ({
+                line2,
+                lineGeometry,
+                lineMaterial,
+                three,
+            }))
+            const initializeFallback = async (fallbackCanvas) => {
+                const modules = await loadThreeModules()
+                if (disposed) {
                     return
                 }
 
-                const modules = {
-                    three: await import('three'),
-                    line2: await import('three/addons/lines/Line2.js'),
-                    lineGeometry: await import('three/addons/lines/LineGeometry.js'),
-                    lineMaterial: await import('three/addons/lines/LineMaterial.js'),
+                cleanup = setupRouteAnimation(layer, fallbackCanvas, modules)
+                delete layer.dataset.routeError
+                layer.dataset.renderMode = 'fallback'
+                layer.dataset.routeStatus = 'ready'
+                console.info('[LGS1920][WelcomeRoute] splash renderer ready', {mode: 'fallback'})
+            }
+            let fallbackStarted = false
+            const startMainThreadFallback = () => {
+                if (fallbackStarted || disposed) {
+                    return
                 }
 
-                if (!disposed) {
-                    cleanup = setupRouteAnimation(layer, canvas, modules)
-                    layer.dataset.renderMode = 'fallback'
+                fallbackStarted = true
+                const fallbackCanvas = document.createElement('canvas')
+                fallbackCanvas.className = canvas.className
+                fallbackCanvas.setAttribute('aria-hidden', 'true')
+                canvas.replaceWith(fallbackCanvas)
+                console.info('[LGS1920][WelcomeRoute] switching to main-thread renderer')
+                void initializeFallback(fallbackCanvas).catch(error => {
+                    layer.dataset.routeError = 'true'
+                    layer.dataset.routeStatus = 'error'
+                    console.warn('The Studio hero route fallback could not be initialized', error)
+                })
+            }
+
+            try {
+                const bounds = layer.getBoundingClientRect()
+                console.info('[LGS1920][WelcomeRoute] initializing splash renderer', {
+                    width: bounds.width,
+                    height: bounds.height,
+                })
+                if (useWorker && typeof Worker !== 'undefined' && typeof canvas.transferControlToOffscreen === 'function') {
+                    cleanup = setupRouteWorker(layer, canvas, startMainThreadFallback)
+                    return
                 }
+
+                await initializeFallback(canvas)
             }
             catch (error) {
                 layer.dataset.routeError = 'true'
+                layer.dataset.routeStatus = 'error'
                 console.warn('The Studio hero route animation could not be initialized', error)
             }
         }
@@ -730,7 +796,11 @@ export const WelcomeHeroRoute = ({mountInSplash = false}) => {
             disposed = true
             cleanup()
         }
-    }, [])
+    }, [useWorker])
+
+    if (suppressRoute) {
+        return null
+    }
 
     const route = (
         <div className="welcome-hero-route" data-render-mode="initializing">
@@ -746,7 +816,17 @@ export const WelcomeHeroRoute = ({mountInSplash = false}) => {
                         role="img"
                         aria-label={label}
                     >
-                        <WaIcon name="location-dot" variant="solid" aria-hidden="true"/>
+                        <svg
+                            className="welcome-hero-poi-marker"
+                            aria-hidden="true"
+                            viewBox="0 0 384 512"
+                            xmlns="http://www.w3.org/2000/svg"
+                        >
+                            <path
+                                fill="currentColor"
+                                d="M215.7 499.2C267 435 384 279.4 384 192C384 86 297.9 0 192 0S0 86 0 192c0 87.4 117 243 168.3 307.2c12.3 15.3 35.1 15.3 47.4 0zM192 128a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"
+                            />
+                        </svg>
                     </div>
                 ))}
             </div>

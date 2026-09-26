@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-22
+ * Last modified: 2026-09-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -430,6 +430,7 @@ self.onmessage = ({data}) => {
         rebuild()
         resize(data.width, data.height, data.pixelRatio)
         schedule()
+        self.postMessage({type: 'ready'})
         return
     }
 

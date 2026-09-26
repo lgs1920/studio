@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-21
- * Last modified: 2026-09-22
+ * Last modified: 2026-09-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,6 +21,7 @@ import {describe, expect, it} from 'vitest'
 const indexDocument = new JSDOM(readFileSync('index.html', 'utf8')).window.document
 const lgs1920Source = readFileSync('src/components/LGS1920.jsx', 'utf8')
 const mainSource = readFileSync('src/main.jsx', 'utf8')
+const routeBootstrapSource = readFileSync('src/components/MainUI/WelcomeHeroRouteBootstrap.jsx', 'utf8')
 
 /**
  * Registers regression coverage for boot splash media loading.
@@ -75,6 +76,12 @@ const registerBootSplashMediaLoadingTests = () => {
         expect(splashStyle).toContain('#lgs-boot-splash::after')
         expect(splashStyle).toContain('opacity: 1;')
         expect(splashStyle).toContain('#lgs-boot-splash.lgs-boot-splash-cta-ready::after')
+        expect(splashStyle).toContain('--hero-route-glow-color: var(--wa-color-brand)')
+        expect(splashStyle).toContain('filter: drop-shadow(0 0 8px color-mix(in oklab, var(--hero-route-glow-color) 42%, transparent))')
+        expect(splashStyle).toContain('.welcome-hero-route-annotations')
+        expect(splashStyle).toContain('.welcome-hero-poi.is-revealed.is-positioned')
+        expect(routeBootstrapSource).toContain('splashRouteRoot.render(<WelcomeHeroRoute/>)')
+        expect(readFileSync('src/components/MainUI/WelcomeHeroRoute.jsx', 'utf8')).toContain('welcome-hero-poi-marker')
         expect(splashStyle).toContain('#lgs-boot-splash .welcome-branding-cog > wa-icon')
         expect(splashStyle).toContain('#lgs-boot-splash.lgs-boot-splash-cta-ready .welcome-branding-cog')
         expect(splashStyle).toContain('transform-origin: center center;')

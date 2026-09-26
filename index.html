@@ -8,7 +8,7 @@
   ~ email: studio@lgs1920.fr
   ~
   ~ Created on: 2026-04-27
-  ~ Last modified: 2026-09-21
+  ~ Last modified: 2026-09-26
   ~
   ~
   ~ Copyright © 2026 LGS1920
@@ -247,6 +247,72 @@
         #lgs-boot-splash.lgs-boot-splash-react-ready #lgs-boot-splash-slogan {
             opacity: 0;
             visibility: hidden;
+        }
+
+        /* Keep the welcome route visible before the React application styles load. */
+        #lgs-boot-splash::after {
+            z-index: 1;
+        }
+
+        #lgs-boot-splash > [data-lgs-boot-route-host] {
+            position: absolute;
+            z-index: 2;
+            --hero-route-path-color: rgb(125, 220, 24);
+            --hero-route-glow-color: var(--wa-color-brand);
+            --hero-route-poi-color: rgb(190, 255, 72);
+            isolation: isolate;
+            pointer-events: none;
+            inset: 0;
+        }
+
+        #lgs-boot-splash > [data-lgs-boot-route-host] .welcome-hero-route {
+            position: absolute;
+            z-index: 2;
+            pointer-events: none;
+            inset: 0;
+        }
+
+        #lgs-boot-splash > [data-lgs-boot-route-host] .welcome-hero-route-canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            opacity: .86;
+            filter: drop-shadow(0 0 8px color-mix(in oklab, var(--hero-route-glow-color) 42%, transparent));
+            mix-blend-mode: screen;
+        }
+
+        #lgs-boot-splash > [data-lgs-boot-route-host] .welcome-hero-route-annotations {
+            position: absolute;
+            z-index: 4;
+            pointer-events: none;
+            inset: 0;
+        }
+
+        #lgs-boot-splash > [data-lgs-boot-route-host] .welcome-hero-poi {
+            position: absolute;
+            top: 0;
+            left: 0;
+            visibility: hidden;
+            opacity: 0;
+            color: var(--hero-route-poi-color);
+            transform: translate3d(var(--welcome-hero-poi-x, 50%), var(--welcome-hero-poi-y, 50%), 0) translate3d(-50%, -100%, 0) scale(var(--welcome-hero-poi-scale, 1));
+            transition: opacity 450ms ease, transform 34ms linear, visibility 450ms ease;
+            will-change: transform;
+        }
+
+        #lgs-boot-splash > [data-lgs-boot-route-host] .welcome-hero-poi.is-revealed.is-positioned,
+        #lgs-boot-splash > [data-lgs-boot-route-host] .welcome-hero-route[data-render-mode='fallback'] .welcome-hero-poi {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        #lgs-boot-splash > [data-lgs-boot-route-host] .welcome-hero-poi-marker {
+            display: block;
+            width: clamp(1.5rem, 3.5vw, 2.25rem);
+            height: clamp(1.5rem, 3.5vw, 2.25rem);
+            color: var(--hero-route-poi-color);
+            filter: drop-shadow(0 0 .2rem rgba(190, 255, 72, .82)) drop-shadow(0 0 .52rem rgba(190, 255, 72, .74));
+            transform-origin: center bottom;
         }
 
         @media (max-width: 700px) {

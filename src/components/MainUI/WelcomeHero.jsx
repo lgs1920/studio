@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-22
+ * Last modified: 2026-09-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { WelcomeHeroControls }                               from '@Components/MainUI/WelcomeHeroControls'
 import { WelcomeHeroRoute }                                  from '@Components/MainUI/WelcomeHeroRoute'
+import { stopWelcomeHeroRouteInSplash }                       from '@Components/MainUI/WelcomeHeroRouteBootstrap'
 import {
     bannerMediaCatalog,
     getWelcomeBackgroundMedia,
@@ -87,6 +88,22 @@ export const WelcomeHero = ({
 
         return () => splashElement?.classList.remove('lgs-boot-splash-cta-ready')
     }, [readyToEnter])
+
+    useEffect(() => () => {
+        const stop = () => {
+            if (document.body.classList.contains('lgs-app-booting')) {
+                return
+            }
+
+            stopWelcomeHeroRouteInSplash()
+        }
+        if (typeof queueMicrotask === 'function') {
+            queueMicrotask(stop)
+            return
+        }
+
+        void Promise.resolve().then(stop)
+    }, [])
 
     const changeWelcomeVideo = useCallback(() => {
         if (!canChangeVideo || incomingVideoChoice) {

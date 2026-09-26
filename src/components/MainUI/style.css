@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-22
+ * Last modified: 2026-09-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -1008,15 +1008,22 @@ body.mobile .orbit-widget-body {
     opacity: 1;
 }
 
-.welcome-hero-poi wa-icon {
+.welcome-hero-poi-marker {
     display: block;
+    width: clamp(1.5rem, 3.5vw, 2.25rem);
+    height: clamp(1.5rem, 3.5vw, 2.25rem);
     color: var(--hero-route-poi-color);
-    font-size: clamp(1.7rem, 4vw, 2.55rem);
-    filter: drop-shadow(0 0 .18rem color-mix(in oklab, var(--hero-route-poi-color) 68%, transparent)) drop-shadow(0 0 .45rem color-mix(in oklab, var(--hero-route-poi-color) 74%, transparent));
+    filter: drop-shadow(0 0 .2rem rgba(190, 255, 72, .82)) drop-shadow(0 0 .52rem rgba(190, 255, 72, .74));
     transform-origin: center bottom;
 }
 
-.welcome-hero-poi.is-revealed wa-icon {
+@supports (color: color-mix(in oklab, white, black)) {
+    .welcome-hero-poi-marker {
+        filter: drop-shadow(0 0 .2rem color-mix(in oklab, var(--hero-route-poi-color) 78%, transparent)) drop-shadow(0 0 .52rem color-mix(in oklab, var(--hero-route-poi-color) 72%, transparent));
+    }
+}
+
+.welcome-hero-poi.is-revealed .welcome-hero-poi-marker {
     animation: welcome-hero-poi-beat 3.4s cubic-bezier(.22, 1, .36, 1) both;
 }
 

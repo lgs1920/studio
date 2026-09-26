@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-22
+ * Last modified: 2026-09-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,10 +35,15 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
 
 import { WelcomeBranding } from '@Components/MainUI/WelcomeBranding'
 import { WelcomeHero } from '@Components/MainUI/WelcomeHero'
+import {
+    mountWelcomeHeroRouteInSplash,
+    stopWelcomeHeroRouteInSplash,
+} from '@Components/MainUI/WelcomeHeroRouteBootstrap'
 
 describe('WelcomeHero', () => {
     afterEach(() => {
         cleanup()
+        stopWelcomeHeroRouteInSplash()
         vi.useRealTimers()
         globalThis.lgs = undefined
         globalThis.__ = undefined
@@ -225,6 +230,22 @@ describe('WelcomeHero', () => {
         expect(splashElement.querySelector('.welcome-hero-route')).toBeTruthy()
         expect(splashElement.querySelector('.welcome-hero-route-canvas')).toBeTruthy()
 
+        splashElement.remove()
+    })
+
+    it('mounts the route before the application root is ready and cleans it up', async () => {
+        const splashElement = document.createElement('div')
+        splashElement.id = 'lgs-boot-splash'
+        document.body.append(splashElement)
+
+        expect(mountWelcomeHeroRouteInSplash()).toBe(true)
+        await act(async () => {})
+
+        expect(splashElement.querySelector('[data-lgs-boot-route-host] .welcome-hero-route')).toBeTruthy()
+
+        stopWelcomeHeroRouteInSplash()
+
+        expect(splashElement.querySelector('[data-lgs-boot-route-host]')).toBeNull()
         splashElement.remove()
     })
 })
