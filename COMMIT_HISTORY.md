@@ -2841,3 +2841,51 @@
 ## 2026-09-25 — [`Merge remote-tracking branch 'origin/feature/replay-user-modes' into feature/replay-user-modes`](https://github.com/lgs1920/studio/commit/2c02a484553e34cd554f5a4311624fe383f4922e)
 
 - Recorded automatically from Git history.
+
+## 2026-09-25 — [`docs: clarify generic icon kit resolution`](https://github.com/lgs1920/studio/commit/e02fdebd429ab152050ba8f428b1063f45bb8e9c)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`feat: count videos by replay mode`](https://github.com/lgs1920/studio/commit/770e2558768330e0ba9a64075ba338d5cd566e49)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`feat: set Simple Replay defaults`](https://github.com/lgs1920/studio/commit/d1c3e9acddd5bcb1950ada6dfc3c241ce4d9c6e9)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`fix: keep crop controls usable during Replay preparation`](https://github.com/lgs1920/studio/commit/8c24de5a8f5af16f4a77b7fee157a84b6aec6e2b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`feat: simplify Replay video creation workflow`](https://github.com/lgs1920/studio/commit/d9f48c58f3a1e5f2f8483e3fb4381c5e3cf727e9)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`docs: record Replay cancellation follow-up`](https://github.com/lgs1920/studio/commit/39757568b942957084d918c03aa86898d5a2ea33)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`fix: keep the PiP monitor host in the main document`](https://github.com/lgs1920/studio/commit/420279b00b329c3e3c746410ea311a6d05d45de6)
+
+- Recorded automatically from Git history.
+
+## 2026-09-26 — [`feat: improve Simple Replay preparation settings`](https://github.com/lgs1920/studio/commit/5fa082b67813805b74d815d901f572175447575e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-26 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/42fc8ff9e179c389f211d7cc820418fb2c86a04d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-26 — [`feat: use Web Install API for PWA installation`](https://github.com/lgs1920/studio/commit/dcca71b31503052510e13a2086dd51a4483fc0b6)
+
+- Recorded automatically from Git history.
+
+## 2026-09-26 — [`feat(startup): render welcome route in static splash`](https://github.com/lgs1920/studio/commit/7c715aac57afeb27bf95e58952e12d8f4c3fcde2)
+
+- Recorded automatically from Git history.
+
+## 2026-09-26 — [`Merge remote-tracking branch 'origin/feature/replay-user-modes' into feature/replay-user-modes`](https://github.com/lgs1920/studio/commit/c337c781974babb7c5acb3833fba328a91f03d5f)
+
+- Recorded automatically from Git history.
