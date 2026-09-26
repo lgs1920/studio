@@ -1,5 +1,14 @@
 replay:
   duration: 60
+  simple:
+    duration: 15
+    includeHiddenTracks: false
+    readiness:
+      enabled: false
+      prewarmEnabled: false
+    camera:
+      canDrift: false
+      canRoll: false
   poiDistance: 10000
   direction: 1
   loop: false

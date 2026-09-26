@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-14
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,9 +30,10 @@ import '../style.css'
  * @param {Object} props.context - Cropper state proxy.
  * @param {string} props.cropzoneId - Crop zone widget identifier.
  * @param {boolean} [props.embedded=false] - Render only the choices for an external popup.
+ * @param {boolean} [props.unifiedChoices=false] - Render embedded choices as Web Awesome buttons.
  * @param {boolean} [props.mainTheme=false] - Use the main application theme for embedded menus.
  */
-export const CropRatioEditorToolbar = memo(({context, cropzoneId, embedded = false, mainTheme = false}) => {
+export const CropRatioEditorToolbar = memo(({context, cropzoneId, embedded = false, unifiedChoices = false, mainTheme = false}) => {
     // Use proxy from global state and props
     const $cropper = context
     const $video = lgs.stores.ui.video
@@ -160,17 +161,34 @@ export const CropRatioEditorToolbar = memo(({context, cropzoneId, embedded = fal
                                 <WaTooltip for={`embedded-btn-ratio-${preset.value}`} placement="right">
                                     {`${preset.label}: ${preset.description}`}
                                 </WaTooltip>
-
-                                <li
-                                    id={`embedded-btn-ratio-${preset.value}`}
-                                    role="button"
-                                    tabIndex={0}
-                                    className={classNames('crop-ratio-choice-button', {'is-selected': video.ratio === preset.value})}
-                                    onClick={() => handleChangeRatio(preset)}
-                                    onKeyDown={(event) => handlePresetKeyDown(event, preset)}
-                                >
-                                    <span>{preset.label}</span>
-                                </li>
+                                {unifiedChoices ? (
+                                    <li>
+                                        <WaButton
+                                            id={`embedded-btn-ratio-${preset.value}`}
+                                            size="s"
+                                            variant="neutral"
+                                            appearance={video.ratio === preset.value ? 'outlined' : 'plain'}
+                                            aria-pressed={video.ratio === preset.value}
+                                            className={classNames('video-choice-button crop-ratio-choice-button', {
+                                                'is-selected': video.ratio === preset.value,
+                                            })}
+                                            onClick={() => handleChangeRatio(preset)}
+                                        >
+                                            {preset.label}
+                                        </WaButton>
+                                    </li>
+                                ) : (
+                                    <li
+                                        id={`embedded-btn-ratio-${preset.value}`}
+                                        role="button"
+                                        tabIndex={0}
+                                        className={classNames('crop-ratio-choice-button', {'is-selected': video.ratio === preset.value})}
+                                        onClick={() => handleChangeRatio(preset)}
+                                        onKeyDown={(event) => handlePresetKeyDown(event, preset)}
+                                    >
+                                        <span>{preset.label}</span>
+                                    </li>
+                                )}
                             </Fragment>
                         )
                     ))}

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,11 +29,11 @@ vi.mock('@Components/LGSPopup', () => ({
 }))
 
 vi.mock('@Components/ToolsUI/cropper/widgets/CropRatioEditorToolbar', () => ({
-    CropRatioEditorToolbar: ({mainTheme}) => <div data-testid="ratio-popup-content" data-main-theme={mainTheme}>Ratio choices</div>,
+    CropRatioEditorToolbar: ({mainTheme, unifiedChoices}) => <div data-testid="ratio-popup-content" data-main-theme={mainTheme} data-unified-choices={unifiedChoices}>Ratio choices</div>,
 }))
 
 vi.mock('@Components/MainUI/video/toolbox/VideoPresetToolbar', () => ({
-    VideoPresetToolbar: ({mainTheme}) => <div data-testid="preset-popup-content" data-main-theme={mainTheme}>Preset, FPS and quality choices</div>,
+    VideoPresetToolbar: ({compactSimple, inlineCustom, mainTheme}) => <div data-testid="preset-popup-content" data-compact-simple={compactSimple} data-inline-custom={inlineCustom} data-main-theme={mainTheme}>Preset, FPS and quality choices</div>,
 }))
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
@@ -50,7 +50,6 @@ vi.mock('@Components/MainUI/video/videoEditingCleanup', () => ({
 
 import {
     cancelVideoEditing,
-    prepareVideoCaptureUi,
     prepareVideoEditingUi,
 } from '@Components/MainUI/video/videoEditingCleanup'
 import { VideoRecordingSettingsToolbar } from '@Components/MainUI/video/toolbox/VideoRecordingSettingsToolbar'
@@ -92,6 +91,7 @@ describe('VideoRecordingSettingsToolbar', () => {
             settings: {
                 ui: {
                     video: proxy({fps: 0, quality: 1, ratio: '16x9'}),
+                    replay: proxy({simple: {duration: 15}}),
                 },
             },
             stores: {
@@ -108,7 +108,7 @@ describe('VideoRecordingSettingsToolbar', () => {
                         cropper: proxy({}),
                     }),
                 }),
-                replay: proxy({recordingSync: false, simplePreparationActive: false}),
+                replay: proxy({recordingSync: false, simplePreparationActive: false, duration: 60}),
             },
         }
     })
@@ -149,13 +149,13 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(screen.queryByRole('button', {name: 'Cancel'})).toBeNull()
     })
 
-    it('keeps the settings and replay actions outside the timeline drawer controls', () => {
+    it('keeps only export and cancel actions in the linked timeline toolbar', () => {
         globalThis.lgs.stores.replay.recordingSync = true
         render(<VideoRecordingSettingsToolbar mainTheme mode="actions"/>)
 
         expect(screen.queryByRole('button', {name: 'Ratio: 16:9'})).toBeNull()
         expect(screen.queryByRole('button', {name: 'High · 30 FPS'})).toBeNull()
-        expect(screen.getByRole('button', {name: 'Journey Replay Settings'})).not.toBeNull()
+        expect(screen.queryByRole('button', {name: 'Journey Replay Settings'})).toBeNull()
         expect(screen.getByRole('button', {name: 'Create Replay video'})).not.toBeNull()
         expect(screen.getByRole('button', {name: 'Cancel'})).not.toBeNull()
     })
@@ -189,22 +189,31 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(document.querySelector('.video-recording-settings-popup')?.classList).not.toContain('wa-theme-lgs1920-on-map')
     })
 
-    it('shows the Replay settings sliders only when synchronization is active', () => {
+    it('opens the Simple Replay settings above the widget and applies its selected duration', () => {
+        globalThis.lgs.stores.replay.simplePreparationActive = true
         render(<VideoRecordingSettingsToolbar/>)
+
+        expect(screen.getByText('16:9')).not.toBeNull()
+        expect(screen.getByText('High · 30 FPS')).not.toBeNull()
+        expect(screen.getByText('15s')).not.toBeNull()
+        expect(screen.getByRole('button', {name: 'Replay settings'}).querySelector('[data-icon="gear"]')).not.toBeNull()
         expect(screen.queryByRole('button', {name: 'Journey Replay Settings'})).toBeNull()
+        expect(screen.queryByRole('button', {name: 'Ratio: 16:9'})).toBeNull()
 
-        globalThis.lgs.stores.replay.recordingSync = true
-        cleanup()
-        render(<VideoRecordingSettingsToolbar/>)
+        fireEvent.click(screen.getByRole('button', {name: 'Replay settings'}))
+        expect(screen.getByTestId('settings-popup').dataset.placement).toBe('bottom')
+        expect(screen.getByTestId('ratio-popup-content').dataset.unifiedChoices).toBe('true')
+        expect(screen.getByText('Ratio')).not.toBeNull()
+        expect(screen.getByText('Preset')).not.toBeNull()
+        expect(screen.getByText('Duration')).not.toBeNull()
+        expect(screen.getByRole('button', {name: '15s'}).getAttribute('aria-pressed')).toBe('true')
+        expect(screen.getByTestId('preset-popup-content').dataset.inlineCustom).toBe('false')
+        expect(screen.getByTestId('preset-popup-content').dataset.compactSimple).toBe('true')
 
-        expect(screen.getByRole('button', {name: 'Journey Replay Settings'})).not.toBeNull()
-        expect(screen.getByRole('button', {name: 'Journey Replay Settings'}).querySelector('[data-icon="sliders"]')).not.toBeNull()
-        expect(document.querySelectorAll('.video-recording-settings-separator')).toHaveLength(2)
-        expect(document.getElementById('launch-the-replay-editor-from-video')?.classList).toContain('video-recording-settings-action')
-        expect(document.getElementById('video-start-hq-export')?.classList).toContain('video-recording-settings-action')
-
-        fireEvent.click(screen.getByRole('button', {name: 'Journey Replay Settings'}))
-        expect(globalThis.__.ui.drawerManager.open).toHaveBeenCalledWith('replay-drawer')
+        fireEvent.click(screen.getByRole('button', {name: '20s'}))
+        expect(globalThis.lgs.settings.ui.replay.simple.duration).toBe(20)
+        expect(globalThis.lgs.settings.ui.replay.duration).toBe(20)
+        expect(globalThis.lgs.stores.replay.duration).toBe(20)
     })
 
     it('starts Replay export from expert preparation', () => {

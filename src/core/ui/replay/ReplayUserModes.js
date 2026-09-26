@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import {
     DEFAULT_REPLAY_CAMERA,
     DEFAULT_REPLAY_PROGRESSION,
     DEFAULT_REPLAY_PROFILE_INFO,
+    DEFAULT_SIMPLE_REPLAY_DURATION,
     REPLAY_CAMERA_POSITION_BEHIND,
     REPLAY_MARKER_MODE_NAVIGATION,
     REPLAY_TRACE_MODE_PROGRESSIVE,
@@ -29,6 +30,7 @@ import {
     normalizeJourneyReplayProgressionStyle,
     normalizeJourneyReplayProfileInfo,
     normalizeJourneyReplayTrace,
+    normalizeSimpleReplayDuration,
 } from './JourneyReplayProgressionStyle'
 
 import {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT} from './ReplayUserModeConstants'
@@ -54,6 +56,7 @@ export const normalizeReplayUserMode = mode => mode === REPLAY_USER_MODE_EXPERT
  * @returns {Object} Simple Replay defaults.
  */
 export const defaultSimpleReplaySettings = () => ({
+    duration: DEFAULT_SIMPLE_REPLAY_DURATION,
     camera: {
         ...defaultJourneyReplayCameraStyle(),
         positionMode: REPLAY_CAMERA_POSITION_BEHIND,
@@ -110,6 +113,7 @@ export const normalizeSimpleReplaySettings = (settings = {}) => {
     const presentation = settings?.presentation ?? {}
 
     return {
+        duration: normalizeSimpleReplayDuration(settings?.duration),
         camera: {
             ...camera,
             altitudeMode: 'constant',

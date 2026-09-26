@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,6 +31,10 @@ export const REPLAY_PROFILE_MARKER_BORDER_MAX_WIDTH = 12
 export const REPLAY_LABEL = 'Journey Replay'
 export const DEFAULT_REPLAY_SCOPE = 'all-tracks'
 export const DEFAULT_REPLAY_DURATION = 60
+/** Default duration in seconds for the compact Simple Replay workflow. */
+export const DEFAULT_SIMPLE_REPLAY_DURATION = 15
+/** Supported duration choices in seconds for the compact Simple Replay workflow. */
+export const SIMPLE_REPLAY_DURATIONS = Object.freeze([10, 15, 20, 30])
 export const DEFAULT_REPLAY_POI_DISTANCE = 10000
 export const REPLAY_TRACE_MODE_PROGRESSIVE = 'progressive'
 export const REPLAY_TRACE_MODE_FULL = 'full'
@@ -75,6 +79,17 @@ export const REPLAY_EFFECT_MODES = Object.freeze([
     {key: REPLAY_EFFECT_GLOW, label: 'Glow'},
     {key: REPLAY_EFFECT_NEON, label: 'Neon'},
 ])
+
+/**
+ * Normalize a Simple Replay duration to the supported product choices.
+ *
+ * @param {*} value - Candidate duration in seconds.
+ * @returns {number} Supported Simple Replay duration in seconds.
+ */
+export const normalizeSimpleReplayDuration = value => {
+    const duration = Number(value)
+    return SIMPLE_REPLAY_DURATIONS.includes(duration) ? duration : DEFAULT_SIMPLE_REPLAY_DURATION
+}
 
 export const DEFAULT_REPLAY_PROGRESSION = {
     effect: {mode: REPLAY_EFFECT_NONE},
@@ -616,6 +631,7 @@ export const normalizeJourneyReplaySettings = (settings = {}) => {
         hideAllPoisDuringJourneyReplay: settings?.hideAllPoisDuringJourneyReplay === true,
         animateAllPoisDuringJourneyReplay: settings?.animateAllPoisDuringJourneyReplay === true,
         recordingSync: settings?.recordingSync === true,
+        includeHiddenTracks: settings?.includeHiddenTracks === true,
         readiness:   normalizeJourneyReplayReadiness(settings?.readiness),
         progression: normalizeJourneyReplayProgressionStyle(settings?.progression),
         profileInfo: normalizeJourneyReplayProfileInfo(settings?.profileInfo),
@@ -648,6 +664,12 @@ export const normalizeJourneyReplaySettings = (settings = {}) => {
 
 const resolveReplaySimpleSettingsForRuntime = ({journey, user} = {}) => {
     const product = {
+        duration: 15,
+        includeHiddenTracks: false,
+        readiness: {
+            enabled: false,
+            prewarmEnabled: false,
+        },
         camera: {
             ...defaultJourneyReplayCameraStyle(),
             positionMode: REPLAY_CAMERA_POSITION_BEHIND,
@@ -683,6 +705,8 @@ const resolveReplaySimpleSettingsForRuntime = ({journey, user} = {}) => {
         ...(journey?.camera ?? {}),
         altitudeMode: 'constant',
         positionMode: REPLAY_CAMERA_POSITION_BEHIND,
+        canDrift: false,
+        canRoll: false,
         debug: false,
     })
     const marker = normalizeJourneyReplayMarker({
@@ -710,7 +734,21 @@ const resolveReplaySimpleSettingsForRuntime = ({journey, user} = {}) => {
         }),
     }
 
-    return {camera, marker, trace, presentation}
+    return {
+        duration: normalizeSimpleReplayDuration(user?.duration ?? journey?.duration ?? product.duration),
+        includeHiddenTracks: false,
+        readiness: {
+            ...product.readiness,
+            ...(user?.readiness ?? {}),
+            ...(journey?.readiness ?? {}),
+            enabled: false,
+            prewarmEnabled: false,
+        },
+        camera,
+        marker,
+        trace,
+        presentation,
+    }
 }
 
 const cameraPresetKeyFromHysteresis = hysteresis => REPLAY_CAMERA_PRESETS.find(preset => {
@@ -747,6 +785,9 @@ export const getJourneyReplaySettings = () => normalizeJourneyReplaySettings(
         if (settings.userMode === REPLAY_USER_MODE_BASIC) {
             return {
                 ...settings,
+                duration: simple.duration,
+                includeHiddenTracks: simple.includeHiddenTracks,
+                readiness: normalizeJourneyReplayReadiness(simple.readiness),
                 camera: simple.camera,
                 marker: simple.marker,
                 trace: simple.trace,

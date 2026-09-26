@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,6 +32,7 @@ import {
     TrackUtils,
 }                                                                                          from '@Utils/cesium/TrackUtils'
 import { Journey }                                                                         from '@Core/Journey'
+import { REPLAY_USER_MODE_BASIC }                                                          from './ReplayUserModeConstants'
 import {
     ArcType, Cartesian2, Cartesian3, Cartographic, CatmullRomSpline, Color, ExtrapolationType, JulianDate,
     EasingFunction, HeightReference, HorizontalOrigin, LinearApproximation, Math as CesiumMath, Matrix4,
@@ -168,6 +169,10 @@ export const configure = (mode, options = {}) => {
         }
 
         const replay = getJourneyReplaySettings()
+        const simpleReplay = replay.userMode === REPLAY_USER_MODE_BASIC
+        const includeHiddenTracks = simpleReplay
+            ? false
+            : options.includeHiddenTracks ?? false
         const scope = REPLAY_SCOPE_ALL_TRACKS
         const trackSlug = options.trackSlug ?? globalThis.lgs?.theTrack?.slug ?? store?.trackSlug
         const progression = options.progression ?? replay.progression
@@ -175,13 +180,15 @@ export const configure = (mode, options = {}) => {
         const trace = options.trace ?? replay.trace
         const smoothing = normalizeJourneyReplaySmoothing(options.smoothing ?? replay.smoothing)
         const marker = options.marker ?? replay.marker
-        const camera = options.camera ?? replay.camera
-        const readiness = normalizeJourneyReplayReadiness(options.readiness ?? replay.readiness)
+        const camera = simpleReplay ? replay.camera : options.camera ?? replay.camera
+        const readiness = normalizeJourneyReplayReadiness(simpleReplay
+            ? {...replay.readiness, enabled: false, prewarmEnabled: false}
+            : options.readiness ?? replay.readiness)
         const samplerConfigKey = call.samplerConfigurationKey({
             journey,
             scope,
             trackSlug,
-            includeHiddenTracks: options.includeHiddenTracks ?? false,
+            includeHiddenTracks,
             smoothing,
         })
         const clips = resolveJourneyReplayRuntimeClips({
@@ -195,7 +202,7 @@ export const configure = (mode, options = {}) => {
                 journey,
                 scope,
                 trackSlug,
-                includeHiddenTracks: options.includeHiddenTracks ?? false,
+                includeHiddenTracks,
                 renderSmoothing: smoothing,
             })
             state.samplerConfigKey = samplerConfigKey

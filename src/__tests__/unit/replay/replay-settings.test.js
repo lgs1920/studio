@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,7 +38,7 @@ import {
     REPLAY_READINESS_POLICY_ADAPTIVE, REPLAY_READINESS_POLICY_OFF,
     REPLAY_EFFECT_GLOW, REPLAY_EFFECT_NEON, REPLAY_EFFECT_NONE,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
-    getJourneyReplayCameraPresetKey, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplayReadiness, normalizeJourneyReplaySettings,
+    getJourneyReplayCameraPresetKey, getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplayReadiness, normalizeJourneyReplaySettings,
 }                                                                      from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { gpx }                                                         from '@tmcw/togeojson'
 import { applyGpxStyleExtensionProperties, extractLgsTrackProperties } from '@Utils/JourneyGpxUtils'
@@ -218,6 +218,38 @@ describe('replay settings normalization', () => {
                                                    tilePreloadHorizonMs: 99999,
                                                },
                                            }).playback.tilePreloadHorizonMs).toBe(3000)
+    })
+
+    it('forces Simple Replay camera, hidden-track, and tile-readiness settings', () => {
+        const previousLgs = globalThis.lgs
+        globalThis.lgs = {
+            settings: {
+                ui: {
+                    replay: {
+                        userMode: 'basic',
+                        simple: {
+                            includeHiddenTracks: true,
+                            readiness: {enabled: true, prewarmEnabled: true},
+                            camera: {canDrift: true, canRoll: true},
+                        },
+                    },
+                },
+            },
+        }
+
+        try {
+            expect(getJourneyReplaySettings()).toMatchObject({
+                includeHiddenTracks: false,
+                readiness: {enabled: false, prewarmEnabled: false},
+                camera: {canDrift: false, canRoll: false},
+            })
+        } finally {
+            if (previousLgs === undefined) {
+                delete globalThis.lgs
+            } else {
+                globalThis.lgs = previousLgs
+            }
+        }
     })
 
     it('keeps a default tolerance zone aligned to the window and clamps custom rectangles', () => {

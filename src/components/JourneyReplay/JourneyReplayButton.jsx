@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-05
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-26
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { REPLAY_DRAWER } from '@Core/constants'
-import { REPLAY_LABEL } from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import { normalizeSimpleReplayDuration, REPLAY_LABEL } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {
     defaultSimpleReplaySettings,
     hasExpertReplayConfiguration,
@@ -74,6 +74,7 @@ export const JourneyReplayButton = (props) => {
         if (mode === REPLAY_USER_MODE_BASIC) {
             const simple = {
                 ...(lgs.settings.ui.replay.simple ?? defaultSimpleReplaySettings()),
+                duration: normalizeSimpleReplayDuration(lgs.settings.ui.replay.simple?.duration),
                 camera: {
                     ...(lgs.settings.ui.replay.simple?.camera ?? defaultSimpleReplaySettings().camera),
                     altitudeMode: 'constant',
@@ -84,7 +85,9 @@ export const JourneyReplayButton = (props) => {
             }
             lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_BASIC
             lgs.settings.ui.replay.simple = simple
+            lgs.settings.ui.replay.duration = simple.duration
             lgs.stores.replay.camera = simple.camera
+            lgs.stores.replay.duration = simple.duration
             lgs.stores.replay.simplePreparationActive = true
             if (lgs.stores.ui.video.cropper) {
                 Object.assign(lgs.stores.ui.video.cropper, {

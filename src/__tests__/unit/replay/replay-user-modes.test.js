@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -61,6 +61,19 @@ describe('Replay user modes', () => {
         expect(normalized.camera).toMatchObject({debug: false, positionMode: 'behind'})
         expect(normalized.marker.mode).toBe('navigation')
         expect(normalized.trace.mode).toBe('progressive')
+    })
+
+    it('defaults Simple Replay to 15 seconds and accepts only the supported durations', () => {
+        expect(defaultSimpleReplaySettings().duration).toBe(15)
+        expect(normalizeSimpleReplaySettings({duration: 10}).duration).toBe(10)
+        expect(normalizeSimpleReplaySettings({duration: 20}).duration).toBe(20)
+        expect(normalizeSimpleReplaySettings({duration: 25}).duration).toBe(15)
+
+        const resolved = resolveSimpleReplaySettings({
+            user: {duration: 10},
+            journey: {duration: 30},
+        })
+        expect(resolved.duration).toBe(30)
     })
 
     it('initializes Expert once and preserves it on mode switches', () => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-11-30
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -39,6 +39,7 @@ export const VideoPresetToolbar = memo(({
     embedded = false,
     idPrefix = 'video-preset',
     inlineCustom = false,
+    compactSimple = false,
     mainTheme = false,
 }) => {
     const $video = lgs.stores.ui.video
@@ -158,9 +159,9 @@ export const VideoPresetToolbar = memo(({
             </WaButton>
 
             {value.submenu && inlineCustom && key === 'custom' && open ? (
-                <div className={`video-preset-custom video-preset-custom--inline ${themeClass}`}>
+                <div className={`video-preset-custom video-preset-custom--inline ${compactSimple ? 'video-preset-custom--simple' : ''} ${themeClass}`}>
                     <VideoFPSToolbar choicesOnMap={!mainTheme}/>
-                    <VideoQualityToolbar choicesOnMap={!mainTheme}/>
+                    <VideoQualityToolbar choicesOnMap={!mainTheme} compactSimple={compactSimple}/>
                 </div>
             ) : value.submenu && (
                 <LGSPopup
@@ -172,10 +173,10 @@ export const VideoPresetToolbar = memo(({
                     distance={4}
                     onWaReposition={handlePopupReposition}
                 >
-                    <div className={`video-preset-custom lgs-card ${themeClass}`}
+                    <div className={`video-preset-custom lgs-card ${compactSimple ? 'video-preset-custom--simple' : ''} ${themeClass}`}
                          style={{opacity: mainTheme ? 1 : toolbars.opacity}}>
                         <VideoFPSToolbar choicesOnMap={!mainTheme}/>
-                        <VideoQualityToolbar choicesOnMap={!mainTheme}/>
+                        <VideoQualityToolbar choicesOnMap={!mainTheme} compactSimple={compactSimple}/>
                     </div>
                 </LGSPopup>
             )}
