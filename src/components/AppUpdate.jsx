@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-12
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -81,7 +81,7 @@ const getInstallInstructions = (device = globalThis.__?.device ?? {}) => {
 }
 
 /**
- * Component to manage PWA installation and update banners using Shoelace components.
+ * Component to manage PWA installation and update banners using Web Awesome components.
  * Uses __.updater.store for AppUpdateManager state to handle install prompts and Service Worker updates.
  * @param {string} mode - The display mode ('banner' or other, which enables manual display)
  * @param {boolean} updateDialogEnabled - Whether the PWA update dialog may be displayed.
@@ -116,6 +116,7 @@ export const AppUpdate = ({mode = 'banner', updateDialogEnabled = true}) => {
     const [dismissedUpdateTag, setDismissedUpdateTag] = useState(null)
     const [isApplyingUpdate, setIsApplyingUpdate] = useState(false)
     const browserInstructions = getInstallInstructions(device)
+    const supportsNavigatorInstall = typeof globalThis.navigator?.install === 'function'
 
     // Determine conditions for displaying an action (install or update)
     // IMPORTANT: isInstallRequired now only applies to the automatic 'banner' flow
@@ -152,40 +153,77 @@ export const AppUpdate = ({mode = 'banner', updateDialogEnabled = true}) => {
     }
 
     /**
-     * Handles PWA installation: triggers prompt if available, otherwise shows instructions dialog.
+     * Opens the browser-specific manual installation instructions.
+     */
+    const showManualInstallInstructions = () => {
+        window.setTimeout(() => setShowInstructionsDialog(true), 0)
+    }
+
+    /**
+     * Shows the result of an installation attempt before closing its progress dialog.
+     *
+     * @param {string} message - Result message to display.
+     */
+    const showInstallResult = message => {
+        setInstallError(message)
+        setTimeout(() => setShowInstallingDialog(false), BANNER_HIDE_DELAY_INSTALL * SECOND)
+    }
+
+    /**
+     * Triggers the existing beforeinstallprompt flow when Web Install API is unavailable
+     * or cannot install the application.
+     *
+     * @async
+     */
+    const handleExistingInstallPrompt = async () => {
+        if (!updaterStore.isInstallPromptAvailable) {
+            showManualInstallInstructions()
+            return
+        }
+
+        setShowInstallingDialog(true)
+        setInstallError(null)
+
+        try {
+            await $updaterStore.promptInstall()
+            showInstallResult(updaterStore.installOutcome === 'accepted'
+                ? 'Installation successful!'
+                : 'Installation was cancelled by the user')
+        }
+        catch (error) {
+            showInstallResult(error.message || 'Failed to install the application')
+        }
+    }
+
+    /**
+     * Handles PWA installation through Web Install API, with the existing prompt and
+     * manual instructions as fallbacks.
+     *
      * @async
      */
     const handleInstall = async () => {
         setShowInstallDialog(false)
 
-        if (updaterStore.isInstallPromptAvailable) {
-            setShowInstallingDialog(true)
-            setInstallError(null)
-
-            try {
-                // Trigger the native browser installation prompt
-                await $updaterStore.promptInstall()
-
-                // Handle prompt outcome
-                if (updaterStore.installOutcome !== 'accepted') {
-                    setInstallError('Installation was cancelled by the user')
-                }
-                else {
-                    setInstallError('Installation successful!')
-                }
-
-                // Hide the installing dialog after a delay
-                setTimeout(() => setShowInstallingDialog(false), BANNER_HIDE_DELAY_INSTALL * SECOND)
-            }
-            catch (error) {
-                // Set error and hide dialog
-                setInstallError(error.message || 'Failed to install the application')
-                setTimeout(() => setShowInstallingDialog(false), BANNER_HIDE_DELAY_INSTALL * SECOND)
-            }
+        if (!supportsNavigatorInstall) {
+            await handleExistingInstallPrompt()
+            return
         }
-        else {
-            // Fallback to showing manual instructions
-            setShowInstructionsDialog(true)
+
+        setShowInstallingDialog(true)
+        setInstallError(null)
+
+        try {
+            await globalThis.navigator.install()
+            showInstallResult('Installation successful!')
+        }
+        catch (error) {
+            if (error?.name === 'AbortError') {
+                showInstallResult('Installation was cancelled by the user')
+                return
+            }
+
+            setShowInstallingDialog(false)
+            await handleExistingInstallPrompt()
         }
     }
 
@@ -281,7 +319,7 @@ export const AppUpdate = ({mode = 'banner', updateDialogEnabled = true}) => {
                 open={showUpdateDialog}
                 label={`${APP_STUDIO} update available`}
                 className="lgs-theme lgs-error-dialog app-update-dialog"
-                onWaRequestClose={handleDismissUpdate}
+                onWaHide={handleDismissUpdate}
             >
                 <p>{isUpdateApplying ? 'The update is being installed. Please wait.' : updateMessage}</p>
                 <p>{'The application will restart once the update is complete.'}</p>
@@ -322,14 +360,16 @@ export const AppUpdate = ({mode = 'banner', updateDialogEnabled = true}) => {
             return null
         }
 
-        const primaryActionText = updaterStore.isInstallPromptAvailable ? 'Install' : 'How to Install'
+        const primaryActionText = supportsNavigatorInstall || updaterStore.isInstallPromptAvailable
+            ? 'Install'
+            : 'How to Install'
 
         return (
             <WaDialog
                 open
                 label={`Install ${APP_STUDIO}`}
                 className="lgs-theme app-install-dialog"
-                onWaRequestClose={handleDismissInstall}
+                onWaHide={handleDismissInstall}
             >
                 <p>{`Install ${APP_STUDIO} as an application for a better experience.`}</p>
                 <p>{'You can close this dialog and install it later from your browser address bar or menu.'}</p>
@@ -338,7 +378,7 @@ export const AppUpdate = ({mode = 'banner', updateDialogEnabled = true}) => {
                     {'Later'}
                 </WaButton>
                 <WaButton slot="footer" variant="brand" onClick={handleInstall}>
-                    <WaIcon slot="start" name="mobile-arrow-down" variant="regular"/>
+                    <WaIcon slot="start" name="desktop-arrow-down" variant="regular"/>
                     {primaryActionText}
                 </WaButton>
             </WaDialog>
@@ -436,7 +476,7 @@ export const AppUpdate = ({mode = 'banner', updateDialogEnabled = true}) => {
     const renderInstructionsDialog = () => (
         <WaDialog
             open={showInstructionsDialog}
-            onSlAfterHide={() => setShowInstructionsDialog(false)}
+            onWaAfterHide={() => setShowInstructionsDialog(false)}
         >
             <div slot="label">
                 <WaIcon name={(OS_ICONS[device.os] ?? OS_ICONS.unknown)[0]} family={(OS_ICONS[device.os] ?? OS_ICONS.unknown)[1]} variant="regular"/>
@@ -459,7 +499,7 @@ export const AppUpdate = ({mode = 'banner', updateDialogEnabled = true}) => {
             {renderWebAppUpdateStatus()}
             {mode === 'settings' && !appContext.pwa && (
                 <WaButton variant="brand" onClick={() => setShowInstallDialog(true)}>
-                    <WaIcon slot="start" name="mobile-arrow-down" variant="regular"/>
+                    <WaIcon slot="start" name="desktop-arrow-down" variant="regular"/>
                     {'Open installation dialog'}
                 </WaButton>
             )}

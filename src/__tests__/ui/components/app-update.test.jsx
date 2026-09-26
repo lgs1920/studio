@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-18
+ * Last modified: 2026-09-26
  *
  *
  * Copyright © 2026 LGS1920
@@ -94,6 +94,7 @@ describe('AppUpdate', () => {
     afterEach(() => {
         cleanup()
         window.localStorage.removeItem('lgs-install-prompt-dismissed')
+        delete globalThis.navigator.install
         globalThis.lgs = undefined
         globalThis.__ = undefined
     })
@@ -110,6 +111,74 @@ describe('AppUpdate', () => {
         fireEvent.click(screen.getByRole('button', {name: 'Later'}))
 
         await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    })
+
+    it('uses Web Install API when the browser supports it', async () => {
+        const install = vi.fn().mockResolvedValue(undefined)
+        Object.defineProperty(globalThis.navigator, 'install', {
+            configurable: true,
+            value: install,
+        })
+        setupAppContext({isPwa: false, isUpdateAvailable: false})
+
+        render(<AppUpdate/>)
+        fireEvent.click(await screen.findByRole('button', {name: 'Install'}))
+
+        await waitFor(() => expect(install).toHaveBeenCalledOnce())
+    })
+
+    it('keeps manual installation instructions open after the fallback action', async () => {
+        setupAppContext({isPwa: false, isUpdateAvailable: false})
+
+        render(<AppUpdate/>)
+        fireEvent.click(await screen.findByRole('button', {name: 'How to Install'}))
+
+        expect(await screen.findByText('How to Install LGS1920 Studio')).not.toBeNull()
+        expect(screen.getByRole('button', {name: 'Close'})).not.toBeNull()
+    })
+
+    it('uses the existing native prompt from the fallback flow', async () => {
+        const promptInstall = vi.fn().mockResolvedValue()
+        setupAppContext({isPwa: false, isUpdateAvailable: false})
+        globalThis.__.updater.store.promptInstall = promptInstall
+        globalThis.__.updater.store.isInstallPromptAvailable = true
+
+        render(<AppUpdate/>)
+        fireEvent.click(await screen.findByRole('button', {name: 'Install'}))
+
+        await waitFor(() => expect(promptInstall).toHaveBeenCalledOnce())
+    })
+
+    it('falls back to manual instructions when Web Install API cannot install the app', async () => {
+        const install = vi.fn().mockRejectedValue(new Error('Web Install API unavailable'))
+        Object.defineProperty(globalThis.navigator, 'install', {
+            configurable: true,
+            value: install,
+        })
+        setupAppContext({isPwa: false, isUpdateAvailable: false})
+
+        render(<AppUpdate/>)
+        fireEvent.click(await screen.findByRole('button', {name: 'Install'}))
+
+        expect(await screen.findByText('How to Install LGS1920 Studio')).not.toBeNull()
+    })
+
+    it('uses the existing native prompt when Web Install API cannot install the app', async () => {
+        const install = vi.fn().mockRejectedValue(new Error('Web Install API unavailable'))
+        const promptInstall = vi.fn().mockResolvedValue()
+        Object.defineProperty(globalThis.navigator, 'install', {
+            configurable: true,
+            value: install,
+        })
+        setupAppContext({isPwa: false, isUpdateAvailable: false})
+        globalThis.__.updater.store.promptInstall = promptInstall
+        globalThis.__.updater.store.isInstallPromptAvailable = true
+
+        render(<AppUpdate/>)
+        fireEvent.click(await screen.findByRole('button', {name: 'Install'}))
+
+        await waitFor(() => expect(install).toHaveBeenCalledOnce())
+        await waitFor(() => expect(promptInstall).toHaveBeenCalledOnce())
     })
 
     it('keeps an available PWA update in a persistent dialog until Later is selected', async () => {

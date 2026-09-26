@@ -11,15 +11,16 @@ The boot splash belongs to the installed PWA only. The normal webapp keeps the W
 
 ## Installation
 
-The webapp listens for the browser `beforeinstallprompt` event. When the browser makes installation available, Studio opens a dismissible installation dialog. The user can:
+The webapp uses the Web Install API through `navigator.install()` as its primary installation control when the browser supports it. When the API is unavailable or cannot install the application, Studio falls back to its existing JavaScript installation flow. The user can:
 
-1. start the native installation prompt;
-2. open browser-specific manual instructions when no native prompt is available; or
-3. postpone installation.
+1. start the installation through `navigator.install()`;
+2. start the native installation prompt through the existing `beforeinstallprompt` flow when the Web Install API is unavailable or fails;
+3. open browser-specific manual instructions when no native prompt is available; or
+4. postpone installation.
 
 The installation dialog is not a permanent banner. After it is dismissed, installation can be opened again from the application settings surface. The browser may also expose installation from its address bar or application menu.
 
-Browser-specific instructions are stored in `src/locales/en/pwa-instructions/` and are rendered in the fallback installation dialog.
+Browser-specific instructions are stored in `src/locales/en/pwa-instructions/` and are rendered in the fallback installation dialog. `navigator.install()` requires a user activation, so the call is made directly from the Install button action.
 
 ## Release fingerprint
 
