@@ -35,6 +35,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     // is active, otherwise the portal loops during normal editor use.
     const videoCaptureActive = video.preRecording === true
                               || video.recording === true
+                              || video.recordingHQ === true
                               || video.snapshot === true
                               || video.finalizing === true
     const synchronizedRecording = (video.recording === true || video.recordingHQ === true)

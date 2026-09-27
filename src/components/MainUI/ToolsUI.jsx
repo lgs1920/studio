@@ -72,7 +72,7 @@ export const ToolsUI = () => {
     }, [renderLinkedTimeline])
 
     useEffect(() => {
-        const captureActive = video.preRecording || video.recording || video.snapshot || video.finalizing
+        const captureActive = video.preRecording || video.recording || video.recordingHQ || video.snapshot || video.finalizing
         const preparationActive = video.editing && replay.recordingSync === true && !captureActive
         if (!preparationActive) {
             _replayPreparationActive.current = false
@@ -95,7 +95,7 @@ export const ToolsUI = () => {
         return () => {
             transitionActive = false
         }
-    }, [replay.recordingSync, video.editing, video.finalizing, video.preRecording, video.recording, video.snapshot])
+    }, [replay.recordingSync, video.editing, video.finalizing, video.preRecording, video.recording, video.recordingHQ, video.snapshot])
 
     useEffect(() => {
         const appContainer = document.getElementById('lgs1920-container')
@@ -106,12 +106,13 @@ export const ToolsUI = () => {
         const cropInputMode = video.editing
             || video.preRecording
             || video.recording
+            || video.recordingHQ
             || video.snapshot
             || video.finalizing
         appContainer.classList.toggle('lgs-video-crop-input-mode', cropInputMode)
 
         return () => appContainer.classList.remove('lgs-video-crop-input-mode')
-    }, [video.editing, video.preRecording, video.recording, video.snapshot, video.finalizing])
+    }, [video.editing, video.preRecording, video.recording, video.recordingHQ, video.snapshot, video.finalizing])
 
     useEffect(() => {
         if (video.editing !== true || replay.simplePreparationActive !== true) {
@@ -196,7 +197,7 @@ export const ToolsUI = () => {
             ) : (
 
                 <>
-                    {(video.preRecording || video.recording || video.snapshot || video.finalizing) &&
+                    {(video.preRecording || video.recording || video.recordingHQ || video.snapshot || video.finalizing) &&
                         <VideoRecordingScreenArea/>}
                     <CameraAndTargetPanel/>
                     {usage && <JourneyToolbarWidget id={JOURNEY_TOOLBAR_WIDGET}/>}

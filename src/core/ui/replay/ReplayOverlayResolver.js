@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -223,6 +223,7 @@ export const shouldRenderVideoBoardWidget = ({
     const isVideoCaptureActive = video?.editing
                                   || video?.preRecording
                                   || video?.recording
+                                  || video?.recordingHQ
                                   || video?.snapshot
                                   || video?.finalizing
                                   || isHqExporting

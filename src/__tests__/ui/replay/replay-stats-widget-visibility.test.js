@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-02
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -195,6 +195,18 @@ describe('replay stats widget visibility', () => {
                 status: 'exporting',
             },
         }
+
+        expect(shouldRenderVideoBoardWidget({
+            widgetsBoard: VIDEO_WIDGETS_BOARD,
+            video:        globalThis.lgs.stores.ui.video,
+            replay:       globalThis.lgs.stores.replay,
+        })).toBe(true)
+    })
+
+    it('keeps video widgets mountable from the recordingHQ state before the export plan is published', () => {
+        globalThis.lgs.stores.ui.video.editing = false
+        globalThis.lgs.stores.ui.video.recordingHQ = true
+        globalThis.lgs.stores.replay.deferredExportPlan = null
 
         expect(shouldRenderVideoBoardWidget({
             widgetsBoard: VIDEO_WIDGETS_BOARD,

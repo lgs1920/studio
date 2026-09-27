@@ -143,4 +143,36 @@ describe('VideoSceneWidgetsPortal', () => {
                 .toEqual(['credits-widget#video'])
         })
     })
+
+    it('rehydrates the video board during deterministic HQ recording', async () => {
+        globalThis.lgs.stores.ui.video.editing = false
+        globalThis.lgs.stores.ui.video.recordingHQ = true
+        globalThis.lgs.stores.replay.recordingSync = true
+
+        render(<VideoSceneWidgetsPortal context={proxy({})}/>)
+
+        await waitFor(() => {
+            expect(globalThis.__.ui.widgetManager.rehydrateWidgetsByBoard)
+                .toHaveBeenCalledWith('video-crop-zone')
+        })
+        expect(document.querySelector('.video-scene-widgets-portal-capture')).not.toBeNull()
+        expect(document.querySelector('.video-scene-widgets-portal-input-blocked')).not.toBeNull()
+    })
+
+    it('registers the Replay Credits widget on a fresh crop board', async () => {
+        globalThis.lgs.stores.ui.widget.list.clear()
+
+        render(<VideoSceneWidgetsPortal context={proxy({})}/>)
+
+        await waitFor(() => {
+            expect(portalHarness.renderWidget).toHaveBeenCalledWith(
+                'multi-purpose-widgets',
+                'credits-widget',
+                {
+                    forceRefresh: true,
+                    widgetsBoard: 'video-crop-zone',
+                },
+            )
+        })
+    })
 })
