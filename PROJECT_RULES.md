@@ -96,6 +96,7 @@ This is the canonical source for the project's AI-agent and development rules.
 
 - **Commit Messages:** Must follow the key-based format: `feat`, `fix`, `refactor`, `docs`, `style`, `test`, `chore`.
 - **Commit Logic:** Never create commits automatically. Only create a commit when the user explicitly requests it. Do not stage or commit proactively on your own initiative.
+- **Commit authorization scope:** A previous commit request authorizes only the commit scope explicitly requested at that time. After completing later work, leave changes uncommitted and wait for a new explicit commit request.
 - **Commit Granularity:** Before creating commits, always review the pending changes and group them by coherent theme. Each commit must cover one focused topic to preserve a fine-grained, reviewable history.
 - **Project rules changes:** Every modification to `PROJECT_RULES.md` must be isolated in a dedicated commit, submitted through a dedicated pull request, and merged into `main`.
 - **Local preparation and delivery:** Complete the authorized local edits and applicable checks before requesting any remaining Git authorization. The required commit, pull request, and merge workflow remains mandatory for delivery, but does not prohibit local preparation. Report local readiness and pending delivery steps accurately. Do not stage, commit, push, or merge unless the applicable authorization is already present.
