@@ -37,6 +37,5 @@ must close Replay, delete all recorded data, and avoid offering the recording
 for saving or export.
 par contre le bouton stop permet d'enregistrer de partager ce qui a deja été enregistré
 
-Investigate why the credits widget is not visible during Simple Replay.
 
 Bind the popup opened by the cog icon to the widget instead of the button.
