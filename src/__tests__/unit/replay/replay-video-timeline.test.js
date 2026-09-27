@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-01
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -70,6 +70,28 @@ describe('ReplayVideoTimeline', () => {
         ])
         expect(timeline.durationMillis).toBe(7000)
         expect(timeline.frameCount).toBe(71)
+    })
+
+    it('keeps the complete frame clock for a fifteen-second Replay', () => {
+        const timeline = buildReplayVideoTimeline({
+            replayDurationMillis: 15_000,
+            fps: 30,
+        })
+
+        expect(timeline.replayDurationMillis).toBe(15_000)
+        expect(timeline.durationMillis).toBe(15_000)
+        expect(timeline.frameCount).toBe(451)
+        expect(timeline.frameCount - 1).toBeGreaterThan(3 * 30)
+        expect(resolveReplayVideoFramePhase({
+            timeline,
+            frameTimeMs: 15_000,
+            isFinalSceneFrame: true,
+        })).toEqual(expect.objectContaining({
+            frameIndex: 450,
+            frameCount: 451,
+            frameTimeMs: 15_000,
+            isFinalSceneFrame: true,
+        }))
     })
 
     it('resolves exact phase boundaries including the final stop frame', () => {

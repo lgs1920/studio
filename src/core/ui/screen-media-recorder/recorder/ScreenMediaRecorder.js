@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-10
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,8 +23,8 @@ import { APP_KEY, NAVIGATOR, SECOND } from '@Core/constants'
 import { DateTime }                   from 'luxon'
 import { normalizeMediabunnyMetadataTags } from './MediaMetadata'
 import {
-    BufferTarget, canEncodeVideo, CanvasSource, getEncodableVideoCodecs, Mp4OutputFormat, Output, QUALITY_HIGH,
-    QUALITY_MEDIUM, QUALITY_VERY_HIGH,
+    BufferTarget, canEncodeVideo, getEncodableVideoCodecs, Mp4OutputFormat, Output, QUALITY_HIGH,
+    QUALITY_MEDIUM, QUALITY_VERY_HIGH, VideoSample, VideoSampleSource,
 }                                     from 'mediabunny'
 
 const INFO_INTERVAL_MS = 250
@@ -163,6 +163,7 @@ export class ScreenMediaRecorder extends EventTarget {
     #nextFrameDueMs = 0
     #frameLoopActive = false
     #pendingFrameWrites = new Set()
+    #videoSourceOperation = null
     #encodedFrames = 0
     #encodedPackets = 0
     #currentFps = 0
@@ -525,7 +526,7 @@ export class ScreenMediaRecorder extends EventTarget {
         this.#nextFrameDueMs = this.#captureMode === 'quality' ? 0 : (elapsedMs + this.#frameIntervalMs)
 
         if (this.#captureMode === 'quality') {
-            pendingWrite.finally(() => {
+            void pendingWrite.finally(() => {
                 if (!this.#isRecording || this.#isPaused) {
                     return
                 }
@@ -558,21 +559,56 @@ export class ScreenMediaRecorder extends EventTarget {
         this.#infoInterval = null
         this.#frameLoopActive = false
         this.#pendingFrameWrites.clear()
+        this.#videoSourceOperation = null
         this.#frameCaptureReady = null
     }
 
-    #submitVideoFrame = (timestampSec, durationSec, encodeOptions = undefined) => {
+    #submitVideoFrame = (timestampSec, durationSec, encodeOptions) => {
+        const source = this.#videoSource
+        if (!source) {
+            return null
+        }
+
         let pendingWrite
         try {
-            pendingWrite = Promise.resolve(this.#videoSource.add(timestampSec, durationSec, encodeOptions))
+            // Snapshot the canvas before waiting for encoder backpressure. The
+            // encoder writes remain ordered without replacing a queued frame by
+            // a later canvas state.
+            const sample = new VideoSample(this.#canvas, {
+                timestamp: timestampSec,
+                duration:  durationSec,
+            })
+            const addSample = (invokeImmediately = false) => {
+                if (this.#videoSource !== source || (!this.#isRecording && !this.#isPaused)) {
+                    sample.close()
+                    return undefined
+                }
+                let addResult
+                try {
+                    addResult = invokeImmediately
+                        ? source.add(sample, encodeOptions)
+                        : Promise.resolve().then(() => source.add(sample, encodeOptions))
+                }
+                catch (error) {
+                    sample.close()
+                    throw error
+                }
+                return Promise.resolve(addResult)
+                    .finally(() => sample.close())
+            }
+            pendingWrite = this.#videoSourceOperation === null
+                ? addSample(true)
+                : this.#videoSourceOperation.then(addSample)
         }
         catch (error) {
             this.#handleFrameEncodingError(error)
             return null
         }
 
-        pendingWrite = pendingWrite
-            .catch(error => this.#handleFrameEncodingError(error))
+        this.#videoSourceOperation = pendingWrite.catch(error => {
+            this.#handleFrameEncodingError(error)
+        })
+        pendingWrite = this.#videoSourceOperation
             .finally(() => this.#pendingFrameWrites.delete(pendingWrite))
 
         this.#pendingFrameWrites.add(pendingWrite)
@@ -695,7 +731,7 @@ export class ScreenMediaRecorder extends EventTarget {
                                           target: new BufferTarget(),
                                       })
             await this.#output.setMetadataTags(normalizeMediabunnyMetadataTags(this.#metadata))
-            this.#videoSource = new CanvasSource(this.#canvas, this.#getCanvasSourceConfig(outputConfig, safe))
+            this.#videoSource = new VideoSampleSource(this.#getCanvasSourceConfig(outputConfig, safe))
 
             const maximumPacketCount = Number.isFinite(this.#maxDuration)
                                        ? Math.ceil(this.#maxDuration * this.#fps) + this.#fps
@@ -742,7 +778,7 @@ export class ScreenMediaRecorder extends EventTarget {
             this.#emitInfo(0)
             this.#startMonitoring()
             this.#scheduleNextFrame()
-            this.#submitVideoFrame(0, this.#frameIntervalSec, {keyFrame: true})
+            void this.#submitVideoFrame(0, this.#frameIntervalSec, {keyFrame: true})
 
             this.#startFirstEncodedPacketMonitor()
         }
@@ -782,6 +818,7 @@ export class ScreenMediaRecorder extends EventTarget {
         this.#nextFrameDueMs = 0
         this.#frameLoopActive = false
         this.#pendingFrameWrites.clear()
+        this.#videoSourceOperation = null
         this.#encodedFrames = 0
         this.#encodedPackets = 0
         this.#currentFps = 0
@@ -795,11 +832,11 @@ export class ScreenMediaRecorder extends EventTarget {
     #checkLimits = () => {
         if (this.#recordedDuration >= this.#maxDuration) {
             this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.MAX_DURATION))
-            this.stopVideo()
+            void this.stopVideo()
         }
         else if (this.#sizeBytes >= this.#maxSize) {
             this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.MAX_SIZE))
-            this.stopVideo()
+            void this.stopVideo()
         }
     }
 
@@ -1001,7 +1038,11 @@ export class ScreenMediaRecorder extends EventTarget {
     }
 
     #emitRecorderError = (error) => {
-        const safeError = error instanceof Error ? error : new Error(String(error))
+        const safeError = error instanceof Error
+            ? error
+            : typeof error?.message === 'string'
+                ? Object.assign(new Error(error.message), {name: error.name ?? 'Error'})
+                : new Error(String(error))
         this.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.ERROR, {detail: {error: safeError}}))
         return safeError
     }

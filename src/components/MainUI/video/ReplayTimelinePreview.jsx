@@ -176,9 +176,9 @@ const resolveCaptureFps = (video, replay) => {
  */
 const resolveReplayDurationMillis = (replay, replaySettings = {}) => {
     const candidates = [
-        replay?.deferredExportPlan?.videoTimeline?.replayDurationMillis,
         Number(replay?.duration) * 1000,
         Number(replaySettings?.duration) * 1000,
+        replay?.deferredExportPlan?.videoTimeline?.replayDurationMillis,
         DEFAULT_REPLAY_DURATION_MILLIS,
     ]
     return candidates.find(candidate => Number.isFinite(Number(candidate)) && Number(candidate) > 0)
@@ -545,7 +545,8 @@ export const ReplayTimelinePreview = forwardRef(({
         return nextProjection
     }, [projectionJourney, projectionReplay, projectionReplaySettings, video.fps, widgetOrder])
     const preparationTimeline = replay.preparationTimeline
-    const preparedTimeline = preparationTimeline?.timeline ?? null
+    const hasCurrentPreparationTimeline = preparationTimeline?.sourceSignature === projection.signature
+    const preparedTimeline = hasCurrentPreparationTimeline ? preparationTimeline?.timeline ?? null : null
     const persistedTimelineView = replaySettings?.timeline ?? {}
     const persistedZoomPercent = Number(persistedTimelineView.zoomPercent)
     const hasPersistedZoom = Number.isFinite(persistedZoomPercent)
@@ -595,7 +596,7 @@ export const ReplayTimelinePreview = forwardRef(({
         hostNoDragClass: 'lgs-widget-no-drag',
     }), [horizontalZoomPercent, hasPersistedZoom, keyboardZoomActive, preparedTimeline, projection.signature, projection.durationMillis, projection.fps, projection.source.frameCount, projection.source.frameIntervalMs])
     const baseTracks = useMemo(() => toDisplayTracks(projection.tracks), [projection])
-    const preparationTracks = preparationTimeline?.tracks
+    const preparationTracks = hasCurrentPreparationTimeline ? preparationTimeline?.tracks : null
     // Detach nested Valtio read proxies before the component snapshots edits for undo/redo.
     const tracks = useMemo(() => cloneReplayTimelineTracks(
         Array.isArray(preparationTracks) ? preparationTracks : baseTracks,

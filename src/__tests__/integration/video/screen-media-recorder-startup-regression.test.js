@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-29
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,15 @@ import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/Scr
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('mediabunny', () => {
+    class FakeVideoSample {
+        constructor(canvas, init) {
+            this.canvas = canvas
+            this.timestamp = init.timestamp
+            this.duration = init.duration
+            this.close = vi.fn()
+        }
+    }
+
     class FakeBufferTarget {
         constructor() {
             this.buffer = new ArrayBuffer(1024)
@@ -29,14 +38,40 @@ vi.mock('mediabunny', () => {
         constructor(canvas, config) {
             this.canvas = canvas
             this.config = config
-            this.add = vi.fn(() => {
-                if (globalThis.__screenRecorderTestFrameError) {
-                    return Promise.reject(globalThis.__screenRecorderTestFrameError)
+            this.add = vi.fn(() => new Promise((resolve, reject) => {
+                const stats = globalThis.__screenRecorderTestSourceStats
+                if (stats) {
+                    stats.active += 1
+                    stats.maxConcurrent = Math.max(stats.maxConcurrent, stats.active)
                 }
-                config.onEncodedPacket?.()
-                return Promise.resolve()
-            })
+
+                const settle = () => {
+                    if (stats) {
+                        stats.active -= 1
+                    }
+                    if (globalThis.__screenRecorderTestFrameError) {
+                        reject(globalThis.__screenRecorderTestFrameError)
+                        return
+                    }
+                    config.onEncodedPacket?.()
+                    resolve()
+                }
+
+                const delay = Number(globalThis.__screenRecorderTestSourceDelayMs) || 0
+                if (delay > 0) {
+                    setTimeout(settle, delay)
+                }
+                else {
+                    settle()
+                }
+            }))
             this.close = vi.fn(() => Promise.resolve())
+        }
+    }
+
+    class FakeVideoSampleSource extends FakeCanvasSource {
+        constructor(config) {
+            super(null, config)
         }
     }
 
@@ -64,6 +99,8 @@ vi.mock('mediabunny', () => {
         QUALITY_HIGH: 1,
         QUALITY_MEDIUM: 1,
         QUALITY_VERY_HIGH: 1,
+        VideoSample: FakeVideoSample,
+        VideoSampleSource: FakeVideoSampleSource,
         canEncodeVideo: vi.fn(() => globalThis.__screenRecorderTestCodecProbe ?? Promise.resolve(true)),
         getEncodableVideoCodecs: vi.fn(() => Promise.resolve([])),
     }
@@ -90,6 +127,8 @@ describe('ScreenMediaRecorder startup', () => {
         }
         globalThis.__screenRecorderTestCodecProbe = null
         globalThis.__screenRecorderTestFrameError = null
+        globalThis.__screenRecorderTestSourceDelayMs = 0
+        globalThis.__screenRecorderTestSourceStats = null
         let rafCalls = 0
         globalThis.requestAnimationFrame = vi.fn((callback) => {
             rafCalls += 1
@@ -131,6 +170,8 @@ describe('ScreenMediaRecorder startup', () => {
         globalThis.lgs = undefined
         globalThis.__screenRecorderTestCodecProbe = undefined
         globalThis.__screenRecorderTestFrameError = undefined
+        globalThis.__screenRecorderTestSourceDelayMs = undefined
+        globalThis.__screenRecorderTestSourceStats = undefined
         globalThis.requestAnimationFrame = undefined
         globalThis.cancelAnimationFrame = undefined
     })
@@ -225,6 +266,22 @@ describe('ScreenMediaRecorder startup', () => {
 
         expect(frameCaptureReady).toHaveBeenCalled()
         expect(errorHandler).not.toHaveBeenCalled()
+    })
+
+    it('serializes speed-mode frame writes while the encoder applies backpressure', async () => {
+        const stats = {active: 0, maxConcurrent: 0}
+        globalThis.__screenRecorderTestSourceDelayMs = 100
+        globalThis.__screenRecorderTestSourceStats = stats
+
+        await recorder.startVideo()
+        await vi.advanceTimersByTimeAsync(550)
+
+        expect(stats.maxConcurrent).toBe(1)
+        expect(errorHandler).not.toHaveBeenCalled()
+
+        const stopPromise = recorder.stopVideo()
+        await vi.advanceTimersByTimeAsync(2000)
+        await stopPromise
     })
 
     it('prepares the first encoded frame after the recording state is dispatched', async () => {
