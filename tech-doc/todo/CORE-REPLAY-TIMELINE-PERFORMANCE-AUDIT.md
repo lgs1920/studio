@@ -103,7 +103,7 @@ to use the existing scrub scheduler for user seeks and must not create another
 playback clock.
 
 Expected benefit: fewer callbacks, fewer redundant DOM writes, and less React
-or store work during Draft playback.
+or store work during interactive playback.
 
 ### P0: `ensureCurrentTimeVisible()` was added to the per-frame path
 

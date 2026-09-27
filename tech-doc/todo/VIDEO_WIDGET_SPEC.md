@@ -26,7 +26,7 @@ The widget remains host-managed: selection, dragging, scaling, rotation, bounds,
 - Editable and scalable: `true`
 - Removable and lockable: standard widget host behavior
 
-The widget is mounted by `VideoSceneWidgetsPortal` on `VIDEO_WIDGETS_BOARD`. It must remain mounted while the video editor, pre-recording phase, recording phase, or HQ replay export is active.
+The widget is mounted by `VideoSceneWidgetsPortal` on `VIDEO_WIDGETS_BOARD`. It must remain mounted while the video editor, pre-recording phase, recording phase, or Replay export replay export is active.
 
 The component renders a stable HTML video subtree. It must not create a second positioning, scaling, rotation, or persistence system.
 
@@ -166,7 +166,7 @@ The component must use explicit layout and rendering properties:
 - `playsinline`
 - `muted` according to configuration
 
-The video element must not show browser controls in snapshots, replay output, or HQ export. Any editor-only controls must use `lgs-widget-no-drag` and must be rendered outside the captured visual subtree.
+The video element must not show browser controls in snapshots, replay output, or Replay export. Any editor-only controls must use `lgs-widget-no-drag` and must be rendered outside the captured visual subtree.
 
 The widget must remain compatible with the existing `Widget2Canvas` lifecycle. A live video frame must not be represented by a static placeholder canvas when the widget is being recorded.
 
@@ -175,7 +175,7 @@ The widget must remain compatible with the existing `Widget2Canvas` lifecycle. A
 The widget is available only on the video board. It must work in both situations:
 
 - interactive video composition preview
-- replay-driven video recording and HQ deferred export
+- replay-driven video recording and Replay export deferred export
 
 During recording, the widget must remain mounted after the editor closes. It must not be hidden by preview-only conditions once `preRecording`, `recording`, or `finalizing` is active.
 
@@ -183,7 +183,7 @@ The widget is included in the existing overlay ordering and uses the host-manage
 
 The widget must not obscure mandatory composition widgets such as Logo or Credits unless the existing z-index rules explicitly allow it.
 
-## HQ export integration
+## Replay export integration
 
 The current replay compositor accepts canvas-compatible overlay sources and draws them with `CanvasRenderingContext2D.drawImage`. The Video widget requires the compositor to accept an `HTMLVideoElement` as a dynamic source.
 
@@ -284,13 +284,13 @@ The widget must handle:
 - Replay start, pause, resume, seek, stop, and end keep the video synchronized.
 - The video does not advance while replay is paused.
 - A video shorter than the replay is visible only until its configured or natural end, then hidden for the remaining replay frames.
-- The widget remains mounted during recording and deferred HQ export.
+- The widget remains mounted during recording and deferred Replay export.
 - The exported video contains the correct video frame at each replay frame.
 - Video positioning, crop bounds, opacity, rotation, border radius, and z-index match the preview.
 - Browser video controls and editor handles are absent from snapshots and exports.
 - Scene replacement unmounts the old widget without stale listeners, frames, object URLs, or configuration.
 - Mandatory Logo and Credits widgets remain unaffected.
-- Focused tests cover source loading, replay synchronization, seek behavior, pause/resume, video-board mounting, HQ frame composition, cancellation cleanup, and scene replacement.
+- Focused tests cover source loading, replay synchronization, seek behavior, pause/resume, video-board mounting, Replay export frame composition, cancellation cleanup, and scene replacement.
 
 ## Product decisions
 

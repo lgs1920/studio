@@ -267,7 +267,8 @@ The UI must identify whether the current time comes from recorded data, journey 
 
 ## 13. Replay and export
 
-The same time domain must be used by live replay, screenshots, draft video export, and high-quality video export.
+The same time domain must be used by Simple and Expert Replay, screenshots, and
+Replay video export.
 
 For a frame at progress `p`:
 

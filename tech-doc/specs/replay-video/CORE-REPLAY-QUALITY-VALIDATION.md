@@ -41,25 +41,25 @@ narrow crop, and at least one high-resolution output profile.
 ### Camera
 
 - The first replay camera does not depend on an unrelated preview pose.
-- Every deterministic HQ frame applies its resolved camera command.
+- Every deterministic export frame applies its resolved camera command.
 - Start clip endpoints equal the replay-entry command.
 - Stop clips preserve continuity and land on their declared endpoint.
 - Navigation and Dynamic crop decisions are deterministic for the same inputs.
-- Moving the interactive camera cannot change isolated HQ camera poses.
+- Moving the interactive camera cannot change isolated export camera poses.
 - Obsolete cleanup cannot move the camera after session replacement.
 
 ### Trace and marker
 
-- A non-zero HQ replay frame contains visible completed trace geometry.
-- HQ bypasses Draft wall-clock geometry throttling.
+- A non-zero export frame contains visible completed trace geometry.
+- Export rendering does not use interactive-playback wall-clock throttling.
 - The marker follows the same sample used by the trace.
 - Start and stop visibility rules do not leak into the replay phase.
 - The final captured frame contains the declared completed trace.
 
 ### Render target and lifecycle
 
-- Camera, scene, canvas, and data sources resolve to the explicit HQ target.
-- Interactive viewer camera and entities remain unchanged during isolated HQ.
+- Camera, scene, canvas, and data sources resolve to the explicit export target.
+- Interactive viewer camera and entities remain unchanged during isolated export.
 - Initialization failure announces and tests the visible-scene fallback.
 - Success, cancellation, encoding failure, and readiness failure all clear the
   target and destroy the isolated host.
@@ -77,7 +77,6 @@ For every change affecting camera, trace, clips, readiness, crop, overlays,
 render hosts, or encoding:
 
 1. generate a real deferred-export video from an applicable reference journey;
-   confirm ordinary standalone video capture remains unaffected;
 2. inspect trace visibility and progression;
 3. inspect camera movement and phase transitions;
 4. inspect first and final frames;

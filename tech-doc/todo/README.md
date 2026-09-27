@@ -1,7 +1,7 @@
 # Proposed and Pending Implementation
 
 This directory contains only proposed, pending-validation, research, or future
-implementation documents. Implemented and historical documents belong under
+implementation documents. Implemented behavior and current architecture belong under
 [`../specs/`](../specs/).
 
 ## Cesium, Mapping, and Environment
@@ -25,13 +25,13 @@ implementation documents. Implemented and historical documents belong under
 - [Replay track timeline editor](CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md)
 - [POI animation during replay](CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md)
 - [Clip altitude alignment](CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md)
-- [HQ video resolution profiles](HQ_4K_VIDEO_EXPORT_SPEC.md)
+- [Replay video resolution profiles](REPLAY_VIDEO_RESOLUTION_PROFILES_SPEC.md)
 - [Replay Video Widget](VIDEO_WIDGET_SPEC.md)
 - [Drone camera 3D path editor](CORE-DRONE-CAMERA-3D-PATH-EDITOR-SPEC.md)
 - [Camera HPR orientation sphere](CORE-CAMERA-HPR-THREEJS-SPHERE-WIDGET-SPEC.md)
 - [Replay Timeline performance audit and improvement proposals](CORE-REPLAY-TIMELINE-PERFORMANCE-AUDIT.md)
 - [Replay recording loops and time-ranged object visibility](CORE-REPLAY-RECORDING-LOOPS-AND-TIME-RANGED-OBJECTS.md)
-- [Parallel HQ workspace execution analysis](REPLAY-PARALLEL-WORKSPACE-EXECUTION-ANALYSIS.md)
+- [Parallel Replay export workspace analysis](REPLAY-PARALLEL-EXPORT-WORKSPACE-ANALYSIS.md)
 
 ## User Interface, Widgets, and Branding
 

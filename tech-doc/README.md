@@ -3,12 +3,9 @@
 This directory centralizes Studio technical documentation. Documents are grouped
 below by engineering domain rather than storage directory.
 
-- [Latest specification audit — 2026-09-18](SPECS-AUDIT-20260918.md)
-
 - **Current** links point to implemented behavior under [`specs/`](specs/).
 - **Planned** links point to proposals, research, or pending work under
   [`todo/`](todo/).
-- **Historical** documents are retained for context but are not authoritative.
 
 ## Replay, Camera, and Video
 
@@ -19,13 +16,12 @@ below by engineering domain rather than storage directory.
 - [LGS1920 timeline Web Component](specs/replay-video/CORE-LGS1920-TIMELINE-WEBCOMPONENT-SPEC.md)
 - [Replay implementation status](specs/replay-video/CORE-REPLAY-IMPLEMENTATION-STATUS.md)
 - [Replay quality validation](specs/replay-video/CORE-REPLAY-QUALITY-VALIDATION.md)
-- [Replay audit](specs/replay-video/REPLAY-AUDIT.md)
 - [Replay core implementation](specs/replay-video/CORE-UI-REPLAY-README-REPLAY.md)
 - [Replay camera tracking zones](specs/replay-video/REPLAY_CAMERA_TRACKING_ZONES.md)
 - [Drone camera path architecture](specs/replay-video/CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)
 - [Replay trace and marker visual validation](specs/replay-video/CORE-REPLAY-TRACE-MARKER-GLOW-NEON-VALIDATION.md)
 - [Replay trace and marker effects](specs/replay-video/CORE-REPLAY-TRACE-MARKER-GLOW-NEON-SPEC.md)
-- [Screen media recorder](specs/replay-video/CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)
+- [Replay media capture](specs/replay-video/CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)
 - [Canvas overlay composer](specs/replay-video/CORE-SCREEN-MEDIA-RECORDER-COMPOSER-README.md)
 - [Video and replay test-suite failures — 2026-07-25](specs/replay-video/VIDEO_TEST_SUITE_FAILURES_2026-07-25.md)
 
@@ -39,14 +35,8 @@ below by engineering domain rather than storage directory.
 - [Clip altitude alignment](todo/CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md)
 - [Drone camera 3D path editor](todo/CORE-DRONE-CAMERA-3D-PATH-EDITOR-SPEC.md)
 - [Camera HPR orientation sphere](todo/CORE-CAMERA-HPR-THREEJS-SPHERE-WIDGET-SPEC.md)
-- [HQ video resolution profiles](todo/HQ_4K_VIDEO_EXPORT_SPEC.md)
+- [Replay video resolution profiles](todo/REPLAY_VIDEO_RESOLUTION_PROFILES_SPEC.md)
 - [Video widget](todo/VIDEO_WIDGET_SPEC.md)
-
-### Historical
-
-- [Replay/video refactoring analysis](specs/replay-video/JOURNEY-REPLAY-VIDEO-ISSUES.md)
-- [Legacy replay render-mode architecture](specs/replay-video/CORE-REPLAY-RENDER-MODE-ARCHITECTURE.md)
-- [Legacy replay/video architecture](specs/replay-video/CORE-REPLAY-VIDEO-ARCHITECTURE.md)
 
 ## Cesium, Mapping, and Environment
 
@@ -125,10 +115,6 @@ below by engineering domain rather than storage directory.
 - [GitHub Project release and branch workflow](specs/delivery/TECH-GITHUB-PROJECT-RELEASE-WORKFLOW-SPEC.md)
 - [Oxlint TypeScript 7 migration status](specs/delivery/CORE-OXLINT-TYPESCRIPT-7-MIGRATION.md)
 
-### Historical
-
-- [Oxlint TypeScript 7 migration proposal](specs/delivery/OXLINT_TYPESCRIPT_7_MIGRATION_SPEC.md)
-
 ### Planned
 
 - [Bun build and test migration study](todo/CORE-BUN-BUILD-TEST-MIGRATION.md)
@@ -139,11 +125,6 @@ below by engineering domain rather than storage directory.
 ### Current
 
 - [Count API and public statistics](specs/apis-services/WEEKLY-COUNT-API-SPEC.md)
-
-### Historical
-
-- [Backend count API issue](specs/apis-services/WEEKLY-COUNT-API-SERVER-ISSUE.md)
-- [Studio count API issue](specs/apis-services/WEEKLY-COUNT-API-STUDIO-ISSUE.md)
 
 ## Directory Indexes
 

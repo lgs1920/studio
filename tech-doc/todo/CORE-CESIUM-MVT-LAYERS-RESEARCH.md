@@ -426,7 +426,7 @@ The exact schema needs validation before implementation. In particular:
 - Validate the result with Re:Earth terrain, ellipsoid terrain, Ion terrain,
   and the active 3D base where applicable
 
-### 5. Replay and HQ video export
+### 5. Replay and Replay export video export
 
 The current replay scene descriptor captures imagery layers, terrain, and the
 configured 3D base. It does not capture arbitrary vector primitives. An MVT
@@ -483,9 +483,9 @@ with Studio replay and video export.
 
 ### Phase 2: replay and export support
 
-- Extend the scene descriptor and isolated HQ render host
+- Extend the scene descriptor and isolated Replay export render host
 - Include vector providers in readiness tracking
-- Test replay scrubbing, camera jumps, snapshots, and HQ export
+- Test replay scrubbing, camera jumps, snapshots, and Replay export
 - Decide on the network and caching policy for exported video
 
 ### Phase 3: broader provider support

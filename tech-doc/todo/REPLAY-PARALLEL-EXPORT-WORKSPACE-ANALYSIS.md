@@ -1,31 +1,30 @@
-# Replay HQ Parallel Workspace Execution Analysis
+# Replay export Parallel Workspace Execution Analysis
 
-Status: proposed architecture and issue drafts
+Status: proposed architecture and issue specifications
 
 Date: 2026-08-24
 
 ## Scope
 
-The goal is to keep the standard Studio workspace usable while an HQ replay
+The goal is to keep the standard Studio workspace usable while a Replay export
 export is running. The interactive Studio camera, scene editing, and export
 camera must have separate ownership. The export must remain deterministic and
 must not read mutable UI state while frames are being produced.
 
 This document compares two implementation options:
 
-1. Move HQ scheduling and encoding coordination to a dedicated Worker while
-   keeping the isolated Cesium HQ renderer on the main thread.
-2. Move the complete HQ renderer, scheduling, composition, and encoding path to
+1. Move Replay export scheduling and encoding coordination to a dedicated Worker while
+   keeping the isolated Cesium Replay export renderer on the main thread.
+2. Move the complete Replay export renderer, scheduling, composition, and encoding path to
    a dedicated Worker using `OffscreenCanvas`.
 
-There is deliberately no `Visible map camera` mode in either option. The HQ
+There is deliberately no `Visible map camera` mode in either option. The Replay export
 render target remains the dedicated export camera. The question is where that
 dedicated target runs, not which Studio camera is authoritative.
 
 ## Evidence from the current code
 
-The following statements are based on the current workspace, not on the
-historical replay audit alone.
+The following statements are verified against the current Replay source.
 
 - `prepareVideoCaptureUi()` hides the interactive MainUI and sets
   `replay.mainUiHidden = true` in
@@ -43,7 +42,7 @@ historical replay audit alone.
   nodes.
 - The crop board is also part of the current widget/capture infrastructure. It
   must not be removed as a side effect of hiding the editor UI.
-- The current HQ path already uses fixed replay frame timestamps. Moving work
+- The current Replay export path already uses fixed replay frame timestamps. Moving work
   to a Worker must preserve that frame contract; it must not introduce a new
   Worker clock.
 
@@ -51,17 +50,17 @@ The current architecture therefore has a useful render-target boundary, but
 not yet a process boundary. The first option can reuse that boundary. The
 second option must extend it into a serializable Worker protocol.
 
-## Option 1 — Worker for HQ orchestration and encoding
+## Option 1 — Worker for Replay export orchestration and encoding
 
 ### Functional architecture
 
-The main thread keeps the dedicated HQ Cesium host and performs deterministic
+The main thread keeps the dedicated Replay export Cesium host and performs deterministic
 frame rendering. A dedicated Worker owns the expensive non-DOM orchestration:
 
 ```text
 Main thread
   standard Studio workspace and interactive camera
-  dedicated HQ Cesium host and export camera
+  dedicated Replay export Cesium host and export camera
   render target, tile readiness, frame readback
           <---- serializable frame protocol ---->
 Dedicated Worker
@@ -83,14 +82,14 @@ the encoded output and progress events back to the UI.
   encoder coordination no longer occupy the main JavaScript event loop.
 - The standard workspace can remain visible because the export camera already
   belongs to the isolated render target.
-- Interactive camera changes cannot change the HQ camera as long as the export
+- Interactive camera changes cannot change the Replay export camera as long as the export
   snapshot and target remain immutable.
 - The existing Cesium render-target and readiness ownership can be reused
   without making Cesium Worker-compatible in the first delivery.
 
 ### What this does not solve
 
-- Cesium rendering and tile readiness remain on the main thread. A large HQ
+- Cesium rendering and tile readiness remain on the main thread. A large Replay export
   render or a slow tile scene can still create long main-thread tasks.
 - GPU work remains shared with the interactive viewer. A Worker does not create
   a second GPU queue or guarantee faster export.
@@ -104,7 +103,7 @@ the encoded output and progress events back to the UI.
 | Area | Expected result |
 | --- | --- |
 | Workspace JavaScript responsiveness | Better for timeline/encoding work; still affected by Cesium render and readback tasks |
-| HQ wall-clock export time | Possibly better if orchestration was the bottleneck; unchanged if Cesium/tile readiness dominates |
+| Replay export wall-clock export time | Possibly better if orchestration was the bottleneck; unchanged if Cesium/tile readiness dominates |
 | GPU load | Approximately the current isolated-host load, shared with the interactive viewer |
 | Memory | Small protocol buffers plus the current isolated Cesium resources |
 | Tile/network pressure | Approximately current behavior; no automatic reduction |
@@ -130,7 +129,7 @@ Worker alone.
    requests or memory.
 6. Keep cleanup symmetrical for success, cancellation, readiness failure, and
    encoding failure.
-7. Add real Draft/HQ visual validation and responsiveness measurements.
+7. Add real interactive playback/Replay export visual validation and responsiveness measurements.
 
 ### Main risks
 
@@ -142,11 +141,11 @@ Worker alone.
 - Widget snapshots taken after export starts can make the video disagree with
   the visible workspace. The snapshot boundary must be explicit.
 
-## Option 2 — Full HQ renderer and encoder in a Worker
+## Option 2 — Full Replay export renderer and encoder in a Worker
 
 ### Functional architecture
 
-The dedicated Worker owns the complete HQ pipeline. The main thread owns the
+The dedicated Worker owns the complete Replay export pipeline. The main thread owns the
 standard Studio workspace only.
 
 ```text
@@ -170,10 +169,10 @@ render representation before export.
 
 ### What this solves
 
-- Cesium HQ rendering, tile readiness, frame composition, and encoding are no
+- Cesium Replay export rendering, tile readiness, frame composition, and encoding are no
   longer scheduled on the main JavaScript event loop.
 - The standard workspace can remain responsive while the Worker renders and
-  encodes the dedicated HQ output.
+  encodes the dedicated Replay export output.
 - Export camera ownership is physically separated from the interactive Cesium
   viewer runtime.
 - The Worker can apply strict back-pressure between rendering and encoding
@@ -196,7 +195,7 @@ render representation before export.
 | Area | Expected result |
 | --- | --- |
 | Workspace JavaScript responsiveness | Strongest isolation; UI is not blocked by Worker-side render/readiness tasks |
-| HQ wall-clock export time | Could improve if main-thread contention was the bottleneck; may be unchanged or worse if GPU/tile work dominates |
+| Replay export wall-clock export time | Could improve if main-thread contention was the bottleneck; may be unchanged or worse if GPU/tile work dominates |
 | GPU load | A second active render context competes for the same GPU; peak load can increase |
 | Memory | Higher: Worker runtime, Cesium resources, scene resources, frame buffers, and encoded data may coexist |
 | Tile/network pressure | Can increase while the interactive viewer remains active; duplicate resources need a policy |
@@ -282,7 +281,7 @@ responsiveness all need acceptance evidence.
 
 ### Title
 
-`[Feature] Run Replay HQ orchestration and encoding in a dedicated Worker`
+`[Feature] Run Replay export orchestration and encoding in a dedicated Worker`
 
 ### Body
 
@@ -291,25 +290,25 @@ responsiveness all need acceptance evidence.
 
 ## Context
 
-Replay HQ export uses fixed frame timestamps and an isolated Cesium render
+Replay export uses fixed frame timestamps and an isolated Cesium render
 target, but the isolated renderer and export orchestration currently run on the
 main thread. The capture lifecycle also hides the standard Studio UI. This
 prevents the user from continuing to work in the standard workspace while an
-HQ export is running and leaves timeline, readiness, composition, and encoding
+Replay export is running and leaves timeline, readiness, composition, and encoding
 work competing with UI tasks.
 
-The HQ camera must remain the dedicated export camera. This issue does not add
+The Replay export camera must remain the dedicated export camera. This issue does not add
 or restore a `Visible map camera` mode.
 
 ## Requested behavior
 
-Move HQ frame scheduling, export state transitions, progress, cancellation, and
+Move Replay export frame scheduling, export state transitions, progress, cancellation, and
 encoding coordination to a dedicated Worker. Keep the existing isolated Cesium
-HQ renderer on the main thread for this option.
+Replay export renderer on the main thread for this option.
 
 The Worker must consume an immutable, serializable export snapshot. The main
-thread must render only through the dedicated HQ render target and must never
-use the interactive Studio camera as an HQ authority.
+thread must render only through the dedicated Replay export render target and must never
+use the interactive Studio camera as a Replay export authority.
 
 The standard workspace must remain visible and usable during export. Changes to
 the interactive camera or scene must not change the export timeline, crop
@@ -317,12 +316,12 @@ rectangle, dedicated camera, or captured widget state.
 
 ## Acceptance criteria
 
-- The standard Studio workspace remains available during an HQ export.
-- The interactive Studio camera is not used to resolve or apply HQ camera
+- The standard Studio workspace remains available during a Replay export.
+- The interactive Studio camera is not used to resolve or apply Replay export camera
   frames.
 - The Worker owns fixed frame iteration, export progress, cancellation, and
   encoding coordination.
-- The main thread owns only the dedicated HQ render request and returns
+- The main thread owns only the dedicated Replay export render request and returns
   transfer-friendly frame data to the Worker.
 - The export snapshot contains serializable timeline, render-spec, crop, camera,
   and widget-composition inputs and cannot change after the first frame.
@@ -343,7 +342,7 @@ rectangle, dedicated camera, or captured widget state.
   contract; the Worker is not a second replay clock.
 - The crop board remains capture infrastructure even when its editor UI is
   hidden.
-- A real HQ visual run is required because this changes frame scheduling,
+- A real Replay export visual run is required because this changes frame scheduling,
   composition, and encoding ownership.
 
 ## Technical notes
@@ -359,7 +358,7 @@ rectangle, dedicated camera, or captured widget state.
 
 ### Title
 
-`[Feature] Render and encode Replay HQ in a dedicated OffscreenCanvas Worker`
+`[Feature] Render and encode Replay export in a dedicated OffscreenCanvas Worker`
 
 ### Body
 
@@ -368,21 +367,21 @@ rectangle, dedicated camera, or captured widget state.
 
 ## Context
 
-Replay HQ export currently uses a dedicated but main-thread Cesium host. The
+Replay export currently uses a dedicated but main-thread Cesium host. The
 standard workspace cannot be used freely during export because Cesium rendering,
 tile readiness, composition, and encoding still compete with the UI event loop.
 
-This issue proposes full execution isolation: the dedicated HQ Cesium runtime,
+This issue proposes full execution isolation: the dedicated Replay export Cesium runtime,
 fixed frame timeline, scene readiness, composition, and encoding run in a
-Worker. The HQ camera remains dedicated to the export and is never the
+Worker. The Replay export camera remains dedicated to the export and is never the
 interactive Studio camera.
 
 This issue does not add or restore a `Visible map camera` mode.
 
 ## Requested behavior
 
-Create a Worker-side HQ render host using `OffscreenCanvas`. The Worker must
-own the deterministic HQ frame pipeline from the immutable export snapshot to
+Create a Worker-side Replay export render host using `OffscreenCanvas`. The Worker must
+own the deterministic Replay export frame pipeline from the immutable export snapshot to
 the encoded output. The main thread keeps the standard Studio workspace,
 recording monitor, export controls, and final download handling.
 
@@ -399,8 +398,8 @@ before the Worker starts.
 - No DOM node, React object, Valtio proxy, live Cesium object, or application
   singleton crosses the Worker boundary.
 - The standard Studio workspace remains visible and responsive during export.
-- Interactive camera and scene edits cannot change the immutable HQ export
-  snapshot or dedicated HQ camera.
+- Interactive camera and scene edits cannot change the immutable Replay export
+  snapshot or dedicated Replay export camera.
 - Video widget output is deterministic, correctly scaled, and frozen or
   rendered from a declared Worker-compatible representation.
 - Worker back-pressure bounds frame, pixel, and encoded-data memory.
@@ -408,7 +407,7 @@ before the Worker starts.
   completion release the Worker, WebGL context, tile resources, and buffers.
 - The recording monitor receives progress, remaining time, errors, and
   cancellation state without becoming a replay clock or render authority.
-- A real HQ visual validation run proves camera motion, trace and marker
+- A real Replay export visual validation run proves camera motion, trace and marker
   progression, tile quality, widget composition, frame count, duration, and
   first/final frame correctness.
 - The benchmark compares this implementation with the current isolated

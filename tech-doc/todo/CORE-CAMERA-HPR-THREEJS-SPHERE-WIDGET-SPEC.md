@@ -215,7 +215,7 @@ Display mode is a future read-only mode for scene or video composition.
 - Pointer gestures do not change the camera.
 - No selection handles, hover affordances, focus rings, or helper overlays are
   included in captured output.
-- Values are updated from the deterministic replay frame during HQ export.
+- Values are updated from the deterministic replay frame during Replay export.
 
 Control and display modes must share the same Three.js visual model. Only the
 interaction layer and capture policy differ.
@@ -811,7 +811,7 @@ The first implementation must not expose interactive controls in a captured
 video. A later display mode may be available on the video board if all of the
 following are true:
 
-- the output is deterministic for snapshots and HQ export
+- the output is deterministic for snapshots and Replay export
 - interaction handles are removed from the captured subtree
 - the Three.js canvas can be copied by the existing widget composer
 - DPR and renderer dimensions are synchronized with the output resolution
@@ -1009,7 +1009,7 @@ Cover:
 - widget removal disposes Three.js resources
 - widget position and scale persist through the normal manager
 - hidden control widget does not appear in video capture
-- future display mode remains deterministic in snapshot and HQ export
+- future display mode remains deterministic in snapshot and Replay export
 
 ### Manual acceptance tests
 
@@ -1054,6 +1054,6 @@ implementation dependencies except for the approved future Three.js package.
 - [ ] Integrate the widget host without duplicating geometry behavior
 - [ ] Add the keyboard bindings to the shortcuts documentation
 - [ ] Add scene-board integration tests
-- [ ] Validate capture and HQ export before enabling display mode
+- [ ] Validate capture and Replay export before enabling display mode
 - [ ] Update this document into a current implementation specification after
       the feature is released

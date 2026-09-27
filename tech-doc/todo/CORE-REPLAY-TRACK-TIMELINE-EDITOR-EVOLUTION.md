@@ -26,7 +26,7 @@ The work tracked by this specification is delivered in two compatible slices:
 
 ### 1.0.0 — Linked video preparation preview
 
-- Remove the linked Replay Draft recording step from video preparation.
+- Keep Replay video export as an explicit action after preparation.
 - Display a transient `Timeline` widget with one Replay track and one track per
   active video widget, while keeping Logo and Credits fixed at the top.
 - Show `Start`, `Replay`, and `Stop` phase segments on the replay track.
@@ -46,7 +46,7 @@ The delivered preparation behavior is documented in the
 - Replace the existing clip lists with the complete multi-track editor.
 - Add editable widget tracks, clip movement, trimming, overlap validation, effects,
   migration, and mobile editing behavior.
-- Make Draft recording and HQ export consume the normalized timeline.
+- Make interactive playback and deterministic export consume the normalized timeline.
 
 The 1.0.0 preparation surface remains a controlled projection of this future
 model. Its local interactions must not introduce a second persisted data model
@@ -61,18 +61,18 @@ The current replay/video implementation already has several useful building bloc
 - `JourneyReplayClipsTab.jsx` edits two independent clip lists: `journey.replay.start` and `journey.replay.stop`.
 - `JourneyReplayDrawer.jsx` owns the Replay drawer tabs and already supports stacked drawer behavior through `drawerManager.isStacked(REPLAY_DRAWER)`.
 - `ReplayFrameTimeline.js` generates deterministic frame progress from duration and FPS.
-- `ReplayDeferredExporter.js` already builds a start/replay/stop phase sequence for HQ export.
+- `ReplayDeferredExporter.js` already builds a start/replay/stop phase sequence for export.
 - `ReplayOverlayResolver.js` already distinguishes replay video phases and controls replay-driven widget visibility.
 - The widget stack already supports board-scoped widget geometry through `VIDEO_WIDGETS_BOARD`, persisted ratios, `react-moveable`, and the video overlay composer.
-- `CanvasOverlayComposer` already composites video widgets into live recordings and deferred HQ exports.
+- `CanvasOverlayComposer` already composites video widgets into deferred Replay exports.
 
-This means the hard part is not drawing rectangles on a timeline. The hard part is defining a stable timeline data model and making live preview, draft recording, and HQ export consume the same clip state.
+This means the hard part is not drawing rectangles on a timeline. The hard part is defining a stable timeline data model and making interactive playback and Replay export consume the same clip state.
 
-The normalized timeline is the single source of truth for both video workflows:
+The normalized timeline is the single source of truth for playback and export:
 
-- Draft recording uses the timeline for replay synchronization, phase changes, and widget visibility during live capture.
-- HQ export uses the same timeline for deterministic frame generation, replay phases, and widget visibility.
-- Both workflows contain the same single replay clip; they may differ only in capture quality, FPS, and encoding path.
+- Interactive playback uses the timeline for Replay synchronization, phase changes, and widget visibility.
+- MP4 export uses the same timeline for deterministic frame generation, Replay phases, and widget visibility.
+- Playback and export contain the same single Replay clip; output resolution, FPS, and encoding settings belong to export configuration.
 
 ## Product Model
 
@@ -265,7 +265,7 @@ Extend the replay video frame state:
 - if no replay sync is active, video widget visibility remains current behavior;
 - if replay sync is active and a widget has timeline clips, the widget is visible only when at least one clip is active;
 - if a widget has no timeline clip, V1 should keep the current global video-widget behavior for backward compatibility;
-- HQ export frame state wins over live frame state, as it already does today.
+- Export frame state takes precedence over interactive playback state during capture.
 
 `ReplayVideoOverlayComposer` should apply effect output when adding an overlay:
 
@@ -342,7 +342,7 @@ Optional additions:
 
 Advantages:
 
-- Exact fit with the mandatory replay phase, widget visibility, mobile drawer, Draft recording, and HQ export.
+- Exact fit with the mandatory Replay phase, widget visibility, mobile drawer, interactive playback, and export.
 - No calendar/date model translation.
 - No imperative third-party timeline state fighting React/Valtio.
 - Smaller visual integration cost with the current drawer and Web Awesome style.
@@ -380,7 +380,7 @@ Package metadata was checked on 2026-09-18.
 Use the existing `@lgs1920/timeline` Web Component with a Studio-owned
 normalized model and domain adapter.
 
-The project already owns the replay clock, the HQ export frame loop, the widget board, and overlay composition. A third-party timeline can only solve the visible editor surface. It cannot remove the need for a project-specific runtime model.
+The project already owns the Replay clock, export frame loop, widget board, and overlay composition. A third-party timeline can only solve the visible editor surface. It cannot remove the need for a project-specific runtime model.
 
 Recommended compromise:
 
@@ -463,7 +463,7 @@ Future behavior:
 - `slide`: translate from a configured edge.
 - effect presets in `public/replay.yaml`.
 
-Effects must be deterministic and based only on frame time. They must not use independent CSS animation timers during HQ export.
+Effects must be deterministic and based only on frame time. They must not use independent CSS animation timers during export.
 
 ## Implementation Plan
 
@@ -488,7 +488,7 @@ Effects must be deterministic and based only on frame time. They must not use in
 - Render Dynamic Stats and Journey Stats visibility intervals from
   `ReplayOverlayResolver`.
 - Connect cursor, play, pause, and replay to the canonical Replay frame scheduler.
-- Keep the widget outside the captured crop and remove the old linked Draft action.
+- Keep the widget outside the captured crop and keep export as an explicit action.
 
 ### Phase 3: Timeline Drawer UI — 1.1.0
 
@@ -498,12 +498,12 @@ Effects must be deterministic and based only on frame time. They must not use in
 - Implement widget track creation and basic widget clip creation.
 - Implement widget track drag reorder while keeping replay-main pinned as the lowest track.
 - Implement selection and inspector.
-- Lock edits while replay is playing, recording, or HQ export is active.
+- Lock edits while Replay is playing or export is active.
 
 ### Phase 4: Runtime and Overlay Visibility
 
 - Replace the local phase builder in `ReplayDeferredExporter` with the normalized timeline phases.
-- Publish `activeWidgetClips` in live replay dynamic frame state and HQ export frame state.
+- Publish `activeWidgetClips` in interactive Replay and export frame state.
 - Extend `ReplayOverlayResolver` to resolve widget visibility from timeline clips.
 - Extend `ReplayVideoOverlayComposer` overlay options with deterministic opacity/transform output.
 
@@ -513,7 +513,7 @@ Effects must be deterministic and based only on frame time. They must not use in
 - Add touch-specific handle sizes.
 - Test horizontal scroll plus clip drag in the Replay drawer.
 - Ensure selected clip inspector works without covering the timeline controls.
-- Verify draft recording and HQ export render the same widget visibility/effects.
+- Verify interactive playback and export resolve the same widget visibility and effects.
 
 ### Phase 6: Cleanup
 
@@ -526,7 +526,7 @@ Effects must be deterministic and based only on frame time. They must not use in
 Unit:
 
 - timeline normalization;
-- legacy migration;
+- migration of existing journey data;
 - phase derivation;
 - active clip lookup;
 - effect progress calculation;
@@ -545,8 +545,8 @@ Component:
 Integration:
 
 - live replay preview with widget clips;
-- draft recording with widget clips;
-- HQ export with widget clips;
+- interactive playback with widget clips;
+- deterministic export with widget clips;
 - start clip + replay + stop clip + widget overlays;
 - removed widget referenced by a timeline clip;
 - changed replay duration while timeline has widget clips after replay end.
@@ -564,7 +564,7 @@ Manual:
 
 - Editing while replay is running can desynchronize controller state. V1 should lock structural edits during playback/export.
 - Widget geometry and widget timeline are separate concepts. The UI must make it clear that timeline clips control time, while widget edit mode controls screen position and size.
-- HQ export will reveal any non-deterministic effect implementation. Effects must be computed from frame time, not CSS animation clocks.
+- Export will reveal any non-deterministic effect implementation. Effects must be computed from frame time, not CSS animation clocks.
 - A third-party timeline package may look faster at first but can become expensive if it fights the Replay drawer, Web Awesome styling, mobile behavior, and deterministic frame export.
 
 ## External References Checked

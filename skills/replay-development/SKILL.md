@@ -1,19 +1,17 @@
 ---
 name: replay-development
-description: Implement, diagnose, review, or document LGS1920 Studio replay, Draft recording, HQ export, replay camera, trace, clips, scrubbing, scene readiness, overlays, or replay-synchronized widgets.
+description: Implement, diagnose, review, or document LGS1920 Studio Replay playback and export, replay camera, trace, clips, scrubbing, scene readiness, overlays, or replay-synchronized widgets.
 ---
 
 # Replay Development
 
 Read these documents before changing replay behavior:
 
-1. [`REPLAY-AUDIT.md`](../../tech-doc/specs/replay-video/REPLAY-AUDIT.md) for historical findings and
-   architectural rationale.
-2. [`CORE-REPLAY-ARCHITECTURE.md`](../../tech-doc/specs/replay-video/CORE-REPLAY-ARCHITECTURE.md)
+1. [`CORE-REPLAY-ARCHITECTURE.md`](../../tech-doc/specs/replay-video/CORE-REPLAY-ARCHITECTURE.md)
    for current authorities and invariants.
-3. [`CORE-REPLAY-IMPLEMENTATION-STATUS.md`](../../tech-doc/specs/replay-video/CORE-REPLAY-IMPLEMENTATION-STATUS.md)
+2. [`CORE-REPLAY-IMPLEMENTATION-STATUS.md`](../../tech-doc/specs/replay-video/CORE-REPLAY-IMPLEMENTATION-STATUS.md)
    to distinguish implemented, partial, and planned work.
-4. [`CORE-REPLAY-QUALITY-VALIDATION.md`](../../tech-doc/specs/replay-video/CORE-REPLAY-QUALITY-VALIDATION.md)
+3. [`CORE-REPLAY-QUALITY-VALIDATION.md`](../../tech-doc/specs/replay-video/CORE-REPLAY-QUALITY-VALIDATION.md)
    for the applicable validation matrix.
 
 If a referenced local document has moved, search for its filename in the
@@ -26,7 +24,7 @@ inspection.
 
 Preserve these boundaries:
 
-- Draft uses wall-clock scheduling, HQ uses fixed frame timestamps, and scrub is
+- Interactive playback uses wall-clock scheduling, export uses fixed frame timestamps, and scrub is
   a latest-request-wins policy over the shared frame contract.
 - Linked video preparation uses a read-only canonical timeline projection for
   start, replay, stop, and widget actions. Timeline editing must not create a
@@ -36,10 +34,10 @@ Preserve these boundaries:
   resolver and restore transient composition state on every terminal path.
 - Camera, scene, canvas, and data-source writes resolve through the replay
   session's active render target.
-- HQ camera and trace decisions never depend on wall-clock throttling.
-- The interactive viewer must remain independent while an isolated HQ target is
+- Export camera and trace decisions never depend on wall-clock throttling.
+- The interactive viewer must remain independent while an isolated export target is
   active.
-- Stores, recorder events, widgets, and legacy runner state are consumers or
+- Stores, export events, widgets, and compatibility runner state are consumers or
   compatibility projections, not new replay clocks.
 - Qualification and readiness work must be cancellable and bounded; slider
   interaction must not synchronously compile a complete trajectory.

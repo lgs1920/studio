@@ -1,5 +1,9 @@
 # Drone Camera Path Architecture
 
+This document defines the proposed reusable camera path engine and its Replay
+integration. Current runtime behavior is described in
+[`CORE-REPLAY-ARCHITECTURE.md`](CORE-REPLAY-ARCHITECTURE.md).
+
 ## Goal
 
 Define a reusable camera path system that can move the camera from point A to
@@ -11,17 +15,17 @@ default and it is not persisted as a product feature in V1. Journey remains the
 source of truth for replay-driven camera motion, and replay materializes the
 canonical path at runtime from the journey state.
 
-Replay must become a consumer of the same path engine. Draft playback and HQ
-export must evaluate the same canonical path definition for a given journey
-state. Cesium should only be used by adapters and runtime services.
+Simple and Expert must consume the same path engine. Interactive playback and
+Replay export must evaluate the same canonical path definition for a given
+journey state. Cesium should only be used by adapters and runtime services.
 
 ### Canonical replay geometry
 
 Replay route geometry is prepared by `JourneyReplayTurfPath`. Turf is the
 renderer-independent source of truth for geodesic distance, cumulative route
 distance, route position, altitude interpolation, local tangent, and
-look-ahead. The replay sampler consumes this path by metric distance, so Draft,
-HQ, and deferred video rendering receive identical geographic samples.
+look-ahead. The replay sampler consumes this path by metric distance, so
+interactive playback and Replay export receive identical geographic samples.
 
 Cesium is not used to construct, measure, extrapolate, or interpolate the
 replay route. It remains an adapter concern for converting a canonical sample
@@ -44,29 +48,19 @@ runtime files are:
 - `src/Utils/cesium/SceneUtils.js`
 - `src/components/MainUI/PanoramaWidget.jsx`
 
-### Non-blocking Draft and HQ runtime policy
+### Non-blocking interactive playback and Replay export runtime policy
 
-Bulk constrained-path compilation is no longer invoked from Draft playback or
-HQ frame rendering. Compiling up to 2048 samples on the browser main thread
-could keep the recorder `START` event open for tens of seconds, prevent the
-`preRecording` UI state from being painted as active recording, and produce a
-single long `requestAnimationFrame` task.
+Bulk constrained-path compilation does not run during interactive playback or
+Replay export frame rendering. Both paths use bounded camera work for each
+resolved replay update or export frame.
 
-Draft now starts replay in a separate browser task after recorder startup and
-evaluates the existing bounded live camera correction for each replay update.
-HQ evaluates the deterministic camera follower from each explicit export frame
-timestamp. Both paths avoid full-route work in one browser callback.
-
-`buildConstrainedReplayCameraPath(...)` remains available as a pure compiler
-and is still covered by unit tests. It must not return to the Draft or HQ
-critical path until its work is moved off the main thread or split into
+`buildConstrainedReplayCameraPath(...)` remains available as a pure compiler.
+It must not enter the interactive playback or Replay export critical path until
+its work is moved off the main thread or split into
 cooperative chunks with a strict per-task time budget.
 
-The runtime records `camera.path.compile.skipped`,
-`draft.replay.start.scheduled`, and the `draft.recording.*` preparation stages.
-The Draft preparation summaries are also written directly to the browser
-console so a stall can be located without inspecting the in-memory trace
-buffer.
+The runtime records camera-path diagnostics without blocking playback startup
+or export preparation.
 
 The point-to-point runtime pipeline is:
 
@@ -81,7 +75,7 @@ The point-to-point runtime pipeline is:
 
 Continuous journey replay now uses a bounded per-update evaluator on top of the
 same camera frame model. It does not build a complete constrained route during
-Draft startup or while an HQ frame is being rendered. The current contract is:
+interactive playback startup or while a Replay export frame is being rendered. The current contract is:
 
 1. resolve the logical Turf sample at the current replay time;
 2. resolve the metric look-ahead sample from the same sampler;
@@ -94,7 +88,7 @@ Draft startup or while an HQ frame is being rendered. The current contract is:
    recovery; for a predictive violation, target `sampleAtTime(t + 2 s)` with a
    `2 s` transition;
 7. validate every transition sub-frame before applying it;
-8. apply the result through the live Draft adapter or the explicit HQ timestamp.
+8. apply the result through the live interactive playback adapter or the explicit Replay export timestamp.
 
 The target sample and transition duration are deliberately coupled. A target at
 `t + 1 s` with a `2 s` transition leaves the marker ahead of the camera and was
@@ -132,40 +126,11 @@ Continuous journey replay therefore evaluates the following shared logic:
 7. land in the navigation target or dynamic Z2
 8. relax the remaining correction back toward the moving nominal pose
 9. validate the candidate against crop-local Z1/Z2 bounds
-10. apply one frame through the owner of the current clock: Draft or HQ
+10. apply one frame through the owner of the current clock: interactive playback or Replay export
 
 That means the route geometry is Turf/path-driven and the camera application is
 clock-driven. Cesium `camera.flyTo` is not the core primitive for replay or live
 path sampling.
-
-### Root-cause analysis of the stepped replay
-
-The July 26 regression was not caused by the HQ encoder dropping frames. It
-was caused by the camera path supplied to those frames.
-
-Four independent discontinuities had accumulated:
-
-| Defect | Exact cause | Visible result |
-| --- | --- | --- |
-| Angular smoothing bypassed | Constrained compilation requested `cameraViewForSample(...)` with `source: 'drawer'`. That source intentionally bypasses heading hysteresis and `smoothRadians(...)`. Runtime playback still computed a smoothed view, but `JourneyReplayCameraBinding.js` returned early after applying the constrained frame, so that smoothed view was never rendered. | Heading and pitch changes could occur at a compiled node instead of over video time. |
-| Path too sparse | The path contained only 128 to 256 intervals. A 60-second replay therefore changed interpolation segment every approximately `0.47 s` to `0.23 s`. | Position and orientation looked like successive sections, even though every HQ frame was encoded. |
-| Linear frame interpolation | `destination`, `direction`, and `up` were linearly interpolated between adjacent cached frames. Value continuity was preserved, but velocity changed at every interval boundary. | The camera appeared to advance, pause, and restart at segment junctions. |
-| Unbounded terrain redirect | A visible redirect candidate became the new compiled nominal view and could remain active for the complete occluded stretch. There was no mandatory return phase or replay-end release. | A configured pitch near `-45°` could finish near `-66°`. |
-
-The HQ timeline itself is deterministic:
-
-1. `ReplayFrameTimeline` produces monotonically increasing timestamps separated
-   by exactly `1000 / fps`
-2. `ReplayVideoRenderSession.renderAll(...)` awaits and renders every frame in
-   order
-3. `renderReplayExportFrame(...)` seeks the exact progress and updates the
-   camera once for that frame
-4. live camera callbacks are ignored while HQ owns the export camera
-5. the offline encoder uses its quality policy after the pose has been rendered
-
-Slower wall-clock rendering can make export take longer, but it does not skip
-logical camera frames. Correcting encoder cadence alone therefore cannot fix a
-stepped trajectory.
 
 ### Core transfer builder
 
@@ -242,7 +207,7 @@ The projection implemented by
 `destination`, `direction`, and `up`, plus the Cesium frustum and crop
 dimensions. It does not call `worldToWindowCoordinates` on the live camera.
 This removes the asynchronous one-frame discrepancy that previously caused
-Draft and HQ to disagree about Z1/Z2 collisions.
+interactive playback and Replay export to disagree about Z1/Z2 collisions.
 
 Compilation density is derived from both journey-guide density and replay
 duration. The interval count is:
@@ -255,9 +220,9 @@ and is capped at `2048`. A normal 60-second replay therefore compiles `1800`
 intervals and `1801` frames instead of only 128 or 256 intervals. The cap
 prevents unbounded synchronous work on very long journeys.
 
-The raw view is deliberately read without mutable live-camera history, then
+The raw view is deliberately read without mutable live-camera state, then
 smoothed sequentially by the compiler. Heading uses
-`replayHeadingEasingFactor(...)`, pitch uses the historical `0.08` factor, and
+`replayHeadingEasingFactor(...)`, pitch uses the calibrated `0.08` factor, and
 both factors are normalized from their 60 FPS calibration to the elapsed
 logical time between compiled samples. Angular interpolation follows the
 shortest signed arc. A 90-degree desired heading change is therefore distributed
@@ -408,7 +373,7 @@ move camera -> marker reaches landing zone -> freeze camera
             -> marker approaches Z1 edge -> move camera again
 ```
 
-This produced visible movement by sections in Draft and HQ recordings. It also
+This produced visible movement by sections in interactive playback and Replay export recordings. It also
 prevented a cleared terrain redirect from reaching the applied path. For
 example, a nominal pitch near `-45°` could receive a temporary redirect, reach
 approximately `-66°`, and remain there after visibility recovered because the
@@ -432,7 +397,7 @@ The standalone compiler uses a 30-sample-per-second target, a minimum of 256
 intervals, and a maximum of 2048 intervals. The final path uses cubic,
 velocity-continuous sampling and exact-progress validation. This density is
 useful for offline validation, but the cap does not make terrain and
-screen-space work safe for one main-thread callback. Runtime Draft and HQ
+screen-space work safe for one main-thread callback. Runtime interactive playback and Replay export
 therefore do not invoke this bulk compiler.
 
 Terrain redirect search runs once for a continuous occlusion episode. The
@@ -447,7 +412,7 @@ pitch pumping over a long ridge.
 Compiled paths may still be cached by explicit compiler consumers. The cache is
 invalidated when the journey sampler changes, while the cache key also covers
 the guide, camera and marker settings, runtime zones, crop, replay timing, and
-frustum. Draft preparation and HQ export do not create or wait for this cache.
+frustum. interactive playback preparation and Replay export do not create or wait for this cache.
 
 ### Replay safety profile
 
@@ -597,7 +562,7 @@ const transferPath = buildCameraTransferPath({
 
 Continuous replay does not create successive point-to-point transitions.
 `JourneyReplayCameraBinding.js` currently evaluates one bounded correction per
-replay update. Draft uses the live correction cadence and HQ uses the explicit
+replay update. interactive playback uses the live correction cadence and Replay export uses the explicit
 export frame timestamp with the deterministic follower. The bulk constrained
 compiler is not resolved from this binding while it remains synchronous.
 
@@ -630,13 +595,13 @@ distance-aware policy as replay and focus.
   jump with a blur/defocus transition.
 - `roll` is supported by the engine even if the UI does not expose it everywhere
   in V1.
-- Runtime corrections are live-preview behavior by default. Export and HQ can
+- Runtime corrections are live-preview behavior by default. Export and Replay export can
   bake a correction when necessary to guarantee a deterministic shot.
 - Terrain collision avoidance is part of the path contract, not a one-off live
   rescue. When the camera path intersects relief, the compiler must raise the
   camera to a safe altitude, keep sampling ahead until the nominal altitude is
   safe again, and then blend back to the normal path. The resulting correction
-  must be serialized in the path definition so replay, Draft, and HQ can reuse
+  must be serialized in the path definition so replay, interactive playback, and Replay export can reuse
   the same terrain-aware route without recomputing terrain sampling at playback
   time.
 - The path engine must support 3D Bezier geometry as a first-class path
@@ -857,7 +822,7 @@ Bezier 3D paths must support:
 - smooth position interpolation in 3D space
 - independent altitude shaping
 - deterministic export to sampled poses
-- conversion to a canonical runtime path used by Draft, HQ, and replay
+- conversion to a canonical runtime path used by interactive playback, Replay export, and replay
 
 ### Distance-Aware Camera Transfer
 
@@ -1436,9 +1401,9 @@ dynamic tracking. Navigation derives an internal inset landing zone from Z1 to
 avoid immediate retriggering. The extended look-ahead must not perturb a target
 that is already safely inside the landing zone.
 
-Draft and deterministic HQ export must apply the same tracking policy. The
+interactive playback and deterministic Replay export must apply the same tracking policy. The
 current non-blocking runtime evaluates that policy incrementally instead of
-sampling a bulk-compiled cache. Draft uses wall-clock progress and HQ uses its
+sampling a bulk-compiled cache. interactive playback uses wall-clock progress and Replay export uses its
 explicit export timestamp. The long-term architecture still requires one
 cooperatively compiled or off-main-thread path once that compiler can no longer
 freeze browser rendering.
@@ -1804,55 +1769,11 @@ Recommended integration:
 Later, `track-follow` and `bezier-camera` can become generated
 `DroneCameraPath` definitions.
 
-### Difference from the Existing Camera Implementation
+## Runtime and target boundary
 
-The current implementation is not yet a reusable drone-camera engine. Camera
-evaluation and replay-specific correction remain inside `JourneyReplayMode`,
-while `CameraManager` owns persisted global camera state, camera observation,
-orbit behavior, flight locks, and continuous-render optimization. The existing
-replay camera is therefore a sample-driven runtime camera, not an independent
-time-based path model.
-
-The current local camera changes should be understood as an incremental
-stabilization layer for this existing architecture:
-
-| Concern | Existing behavior | Current change | Consequence for the drone architecture |
-| --- | --- | --- | --- |
-| Camera transition in HQ | Deterministic recentering interpolated camera position and orientation with a smooth scalar easing. | Continuous HQ replay uses the deterministic follower at the explicit frame timestamp; point-to-point clips retain their dedicated transition path. | Move continuous correction back to a canonical compiler only after compilation is cooperative or off the main thread. |
-| Navigation and dynamic correction in HQ | Draft transitions and the HQ spring follower could diverge. | Both tracking modes use the same settings, while Draft evaluates live updates and HQ evaluates deterministic export frames without bulk compilation. | Z1/Z2 correction remains part of the canonical path target architecture without blocking current capture startup. |
-| Safe-zone camera movement | The constrained compiler retained one absolute applied frame until the marker threatened Z1 again, creating move-stop-move sections. | Every applied frame is transported with the nominal position and orientation delta before constraints are evaluated. | A constrained path must carry correction offsets over a continuously moving nominal path; it must not use a safe zone as a world-space camera hold. |
-| Compiled angle changes | The constrained path requested the drawer view, bypassing temporal heading and pitch smoothing. | Raw deterministic views are smoothed sequentially with factors normalized to logical replay time before frame construction. | A canonical path must own its temporal smoothing instead of computing a smoothed runtime view that is discarded. |
-| Compiled path cadence | Only 128 to 256 intervals were joined linearly. | Compilation targets 30 samples per second, is bounded to 256–2048 intervals, and runtime sampling is C1-continuous. | Encoder cadence cannot compensate for discontinuous pose velocity. |
-| Pitch after relief or a sharp turn | A redirect could remain active for a complete occluded stretch, so a temporary pitch such as `-66°` could survive until replay end. | Redirect offsets use a bounded smoothstep attack/hold/release cycle, cannot repeat during the same occlusion, and are forced to zero at replay end. | Terrain visibility may request a temporary deformation but cannot redefine the configured pitch indefinitely. |
-| HQ timing input | Camera updates could fall back to phase or sample time. | Updates use the actual export frame timestamp and normalize heading/pitch smoothing against elapsed video time. | The future path engine should receive one explicit logical timestamp and never infer export time from wall-clock state. |
-| HQ recenter duration | Navigation recentering used the normal replay duration. | Continuous Draft and HQ replay share one response duration; the historical `1.8` HQ multiplier remains limited to the legacy fallback. | Keep export-specific timing out of the canonical constrained path. |
-| Replay transfer cadence | Draft capture could require a time-paced transfer instead of a frame-paced update. | Replay camera transfers can now opt into time cadence when draft capture needs wall-clock pacing. | Keep cadence selection in the replay transfer helper, not in the canonical path compiler. |
-| Transition cancellation | Camera transitions assumed RAF-style cancellation only. | Function-based cancellation handles are accepted alongside RAF and timeout handles. | Treat cancellation as a transport concern of the replay controller. |
-| Narrow crop navigation zone | The narrow-crop trigger ratio was `15%`. | The ratio is now `22%`; standard crops remain at `30%`. | This screen-space collision policy stays in replay tracking settings, outside the pure drone path model. |
-| Draft stop frame | Completion notification was deferred to a later animation frame. | During recording, completion and the optional final-frame callback run immediately so the recorder can capture the final Cesium state. | Keep this recorder lifecycle behavior outside the pure path evaluator. |
-| HQ video encoding | HQ output requested `latencyMode: 'realtime'`. | HQ output requests `latencyMode: 'quality'` because export is offline and must avoid stepped frames under encoder pressure. | Encoding policy remains in `ReplayDeferredExporter`; the path engine only guarantees deterministic poses. |
-| Camera timing diagnostics | Camera timing differences between Draft and HQ were difficult to observe. | Replay trace records logical video time, wall time, effective FPS, and camera change start/end durations. | Diagnostics remain outside the pure path evaluator and are removed or disabled for production builds. |
-
-The migration boundary is consequently:
-
-```text
-Current:
-JourneyReplayMode -> camera view calculation -> Cesium camera.setView
-                 -> constrained replay path cache
-CameraManager    -> persisted camera state and global camera services
-
-Target:
-JourneyReplay progress/time -> constrained DroneCameraPath
-                             -> Cesium adapter -> camera.setView
-CameraManager                 -> global camera services and lifecycle
-Replay                         -> phase selection, recorder/export timing
-```
-
-The current changes do not justify replacing `JourneyReplayMode` or
-`CameraManager` yet. They establish behaviors that the future separation must
-retain: deterministic frame timestamps, continuity at transition boundaries,
-smooth correction toward a predicted target, and preservation of the final
-recorded frame.
+The camera path engine resolves poses from Replay progress and delegates
+rendering to the active Cesium adapter. Simple and Expert share the same
+Replay camera definition and export frame contract.
 
 ### Replay, start clips, and stop clips
 
@@ -2065,8 +1986,8 @@ independent imperative `flyTo`, `focus`, or camera animation that can produce a
 different live trajectory from the deterministic export trajectory.
 
 The replay controller remains the owner of replay progress. The same timeline
-and pose evaluator are used by the interactive preview, live Draft recording,
-and frame-by-frame HQ export. Cesium only applies the resulting pose through
+and pose evaluator are used by the interactive preview, live interactive playback recording,
+and frame-by-frame Replay export. Cesium only applies the resulting pose through
 the adapter.
 
 ## 3D Path Editor
@@ -2274,7 +2195,7 @@ package is proposed for this architecture.
   around relief, then visibly returning to `45°`;
 - right-angle journey turn with continuous camera translation and no
   move-stop-move sections before or after the turn;
-- frame-by-frame comparison of Draft and HQ camera position, heading, and pitch
+- frame-by-frame comparison of interactive playback and Replay export camera position, heading, and pitch
   at identical replay progresses;
 - strong acceleration followed by slow final approach;
 - stop during playback restores Cesium controls;
@@ -2305,7 +2226,7 @@ package is proposed for this architecture.
 - Start and stop clips can be expressed as generated drone path definitions.
 - Start clips, replay, and stop clips share one ordered phase timeline with
   continuous pose boundaries.
-- Draft preview, live recording, and HQ export evaluate the same phase pose at
+- interactive playback and Replay export evaluate the same phase pose at
   the same logical time or frame timestamp.
 - Deterministic frame-by-frame video export uses the same path evaluation.
 - Minimal preset selection for replay use, without a 3D editor.
@@ -2321,7 +2242,7 @@ the narrow navigation zone is `237.6 × 422.4` pixels, not a square. Dynamic
 tracking keeps its separate Z1/Z2 configuration, with both zones using the
 same independent width and height ratios.
 
-The target architecture has Draft and HQ consume the same in-memory constrained
+The target architecture has interactive playback and Replay export consume the same in-memory constrained
 path. The compiler tests current and predicted marker samples against runtime
 zones before starting a correction. It projects through candidate frames rather
 than through the asynchronously rendered Cesium camera. Before those
@@ -2344,16 +2265,16 @@ with shared-tangent cubic interpolation rather than independent linear
 segments. Runtime capture does not create or wait for that cache while
 compilation remains synchronous.
 
-### Deterministic HQ camera ownership
+### Deterministic Replay export camera ownership
 
-During deferred HQ export, the video timeline is the only clock that advances
+During deferred Replay export, the video timeline is the only clock that advances
 the replay camera. Each encoded frame supplies an explicit logical timestamp
 and the camera is evaluated at that timestamp. The wall-clock duration of the
 Cesium render, widget composition, or video encoding does not change the camera
 trajectory.
 
 The normal live replay update remains active in the application, but its camera
-application is ignored while HQ owns the export camera. This prevents a delayed
+application is ignored while Replay export owns the export camera. This prevents a delayed
 live callback from overwriting the camera pose selected for the current video
 frame and causing jitter or non-deterministic transitions.
 
@@ -2362,7 +2283,7 @@ Camera transitions and navigation/dynamic followers must use complete Cartesian 
 `camera.setView`, the runtime validates that every component is finite. If a
 transition endpoint is incomplete, the runtime keeps the valid endpoint rather
 than passing an undefined vector to Cesium. This is required because Cesium
-rejects invalid interpolation operands and aborts the whole HQ export.
+rejects invalid interpolation operands and aborts the whole Replay export.
 
 `cameraRecenterFrame` exposes its orthogonalized vertical vector as
 `correctedUp`. The deterministic follower must normalize this external frame
@@ -2370,7 +2291,7 @@ shape to its internal `up` field before integrating the spring state. Reading
 `endFrame.up` directly leaves the follower target undefined and causes Cesium's
 `Cartesian3.subtract` validation to abort the export.
 
-Navigation and dynamic tracking use the replay camera response duration. HQ
+Navigation and dynamic tracking use the replay camera response duration. Replay export
 currently owns a deterministic spring follower for continuous replay so each
 frame stays timestamp-driven without requiring bulk path compilation. Start and
 stop clips keep their own phase durations.
@@ -2379,16 +2300,16 @@ The same validation applies to the smoothed replay trace used by the renderer.
 An incomplete left or right trace position is skipped or replaced by the
 available valid position before interpolation.
 
-HQ may render more slowly than real time. A large wall-clock delta between two
+Replay export may render more slowly than real time. A large wall-clock delta between two
 successive frames is therefore a performance signal, not a camera timing
 change, as long as the logical frame timestamps remain monotonic and use the
 configured frame interval.
 
-After HQ cleanup, the exact Cesium camera state captured before playback is
+After Replay export cleanup, the exact Cesium camera state captured before playback is
 restored after the journey focus cleanup. This prevents the focus angle from
 becoming the starting angle of a subsequent video export.
 
-The first HQ start-clip frame also uses that captured initial heading, pitch,
+The first Replay export start-clip frame also uses that captured initial heading, pitch,
 and height, rather than the live camera state after export preparation. Stop
 clips continue to use the live end-of-replay camera state.
 
@@ -2444,7 +2365,7 @@ clips continue to use the live end-of-replay camera state.
    - Panorama
    - Replay-derived path
 3. Define replay integration.
-   - One path definition for Draft and HQ
+   - One path definition for interactive playback and Replay export
    - Replay path generated from journey state
    - Same evaluator in both modes
 4. Define the distance-aware transfer policy.

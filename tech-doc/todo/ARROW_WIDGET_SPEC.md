@@ -19,7 +19,7 @@ The widget remains host-managed: selection, dragging, scaling, rotation, bounds,
 - Editable and scalable: `true`
 - Removable and lockable: standard widget host behavior
 
-The component renders a stable SVG subtree so resizing, rotation, snapshots, and HQ video export do not depend on canvas redraws or asynchronous content. Controls and on-canvas handles use `lgs-widget-no-drag` so they do not start host dragging.
+The component renders a stable SVG subtree so resizing, rotation, snapshots, and Replay export video export do not depend on canvas redraws or asynchronous content. Controls and on-canvas handles use `lgs-widget-no-drag` so they do not start host dragging.
 
 ## Configuration model
 
@@ -147,7 +147,7 @@ Handle dragging must:
 - persist through the widget manager at gesture end
 - support keyboard movement with accessible labels and arrow-key increments
 
-The editor exposes a numeric rotation field, but it writes `rotate` through the existing widget transform contract. Handles appear only while the widget is selected or while the editor preview is active. They are excluded from snapshots, replay output, and HQ video export.
+The editor exposes a numeric rotation field, but it writes `rotate` through the existing widget transform contract. Handles appear only while the widget is selected or while the editor preview is active. They are excluded from snapshots, replay output, and Replay export video export.
 
 ## Editor UI
 
@@ -187,7 +187,7 @@ Reset restores the instance to catalog defaults without deleting it. Editing a s
 
 `ArrowWidget` resolves its configuration through the standard Valtio snapshot pattern and renders only the visual content. It must not duplicate positioning, resizing, rotation, grid snapping, or persistence logic.
 
-The SVG uses explicit `viewBox`, `stroke`, `stroke-width`, `stroke-linecap`, `stroke-linejoin`, and `vector-effect` values for deterministic scene rendering, video composition, browser snapshots, and HQ export.
+The SVG uses explicit `viewBox`, `stroke`, `stroke-width`, `stroke-linecap`, `stroke-linejoin`, and `vector-effect` values for deterministic scene rendering, video composition, browser snapshots, and Replay export.
 
 The DOM structure remains stable while a handle is dragged. At gesture end, the normalized configuration is persisted and synchronized with the widget manager. Missing or invalid values fall back to catalog defaults for compatibility with older scenes.
 
@@ -202,6 +202,6 @@ The DOM structure remains stable while a handle is dragged. At gesture end, the 
 - A straight end renders correctly when no arrowhead is selected.
 - Rounded and semicircular terminals are visually distinct and do not overlap the line.
 - Multiple arrows can coexist, be selected independently, reordered, locked, moved, scaled, and persisted.
-- Handle overlays are absent from scene snapshots and HQ video exports.
+- Handle overlays are absent from scene snapshots and Replay export video exports.
 - Scene replacement unmounts old Arrow instances without stale handles or configuration.
 - Focused tests cover scene and video boards, editor reset, handle persistence, crop bounds, rotation, and export cleanup.

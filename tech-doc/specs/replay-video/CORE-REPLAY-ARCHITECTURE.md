@@ -7,20 +7,19 @@ Date: 2026-08-24
 ## Purpose
 
 This document is the canonical description of the replay implementation. It
-describes the code that currently exists. Historical findings and the rationale
-for the ongoing refactoring remain in [`REPLAY-AUDIT.md`](REPLAY-AUDIT.md).
-Planned work is tracked in the replay status document and in explicitly marked
+describes the code that currently exists. Planned work is tracked in the replay
+status document and in explicitly marked
 TODO specifications stored beside the current replay documentation.
 
-## User modes and capture paths
+## Simple and Expert modes
 
 Simple and Expert are user-facing Replay configurations over the same Replay
 session, frame resolver, and camera/runtime. Simple applies a restricted
 preparation and widget policy; Expert exposes additional camera and replay
-controls. These modes do not select different replay engines. The live
-`ScreenMediaRecorder` remains connected for ordinary video capture. Linked
-Simple and Expert Replay recordings use the deferred MP4 exporter and fixed
-frame timestamps, then open the standard video preview and sharing dialog.
+controls. These modes do not select different replay engines. All video files
+are produced by the deferred MP4 exporter from fixed Replay frame timestamps,
+then opened in the standard video preview and sharing dialog. `ReplayMediaCapture`
+handles screenshots and completed-media handoff.
 
 ## Functional architecture
 
@@ -55,7 +54,7 @@ start/replay/stop phases. `ReplayFrameResolver` resolves a canonical frame inten
 for a requested logical time. `ReplayFramePublisher` publishes complete resolved
 frames to consumers.
 
-The Valtio replay store and recorder events are projections for UI and legacy
+The Valtio replay store and media handoff events are projections for UI and
 integration. They are not authoritative clocks for rendering.
 
 ### Session and lifecycle
@@ -65,14 +64,15 @@ controllers coordinate playback, scene state, camera state, clips, rendering,
 and cleanup. `ReplaySessionOwnership` prevents obsolete asynchronous cleanup
 from restoring or moving the camera after a newer session owns replay.
 
-`JourneyReplayRunner` is a legacy authority still required by existing
+`JourneyReplayRunner` remains a compatibility authority for existing
 consumers. New replay behavior must not be added to it.
 
 ### Camera
 
 The current camera stack resolves the nominal tracking view, crop containment,
 terrain visibility, pitch correction, and transitions. Canonical
-`ReplayCameraCommand` values cross the Draft, HQ, scrub, and clip boundary.
+`ReplayCameraCommand` values cross interactive playback, export, scrub, and
+clip boundaries.
 `ReplayCesiumCameraAdapter` is the deterministic Cesium application boundary.
 
 Interactive playback may use live camera behavior. Deferred export uses
@@ -112,9 +112,10 @@ Transient slider requests apply immediately and coalesce to the latest request.
 A settled request uses `ReplaySceneFrameQualifier`, supports cancellation, and
 waits within bounded readiness budgets.
 
-HQ scene readiness belongs to the HQ host. Moving replay and clip frames use
-bounded moving-frame readiness; holds and final frames may request settled
-quality. Readiness delays export wall time but never changes logical video time.
+Export scene readiness belongs to the isolated render host. Moving replay and
+clip frames use bounded moving-frame readiness; holds and final frames may
+request settled quality. Readiness delays export wall time but never changes
+logical video time.
 
 ### Composition and encoding
 
@@ -152,8 +153,8 @@ Picture-in-Picture before terminal cleanup.
 - Cancellation and every terminal exporter path release the target and destroy
   isolated Cesium resources.
 - Dynamic widgets consume the published logical frame instead of private timers.
-- The video-board compass consumes the published HQ camera pose while HQ is
-  active; it never reads the interactive Studio camera for HQ composition.
+- The video-board compass consumes the published export camera pose while an
+  export is active; it never reads the interactive Studio camera for composition.
 - Replay transport and recording progress are not duplicated across independent
   floating HUDs.
 
@@ -168,5 +169,4 @@ authoritative status and target release for every extension is maintained in
 
 - [Replay implementation status](CORE-REPLAY-IMPLEMENTATION-STATUS.md)
 - [Replay quality validation](CORE-REPLAY-QUALITY-VALIDATION.md)
-- [Replay audit](REPLAY-AUDIT.md)
 - [Camera tracking zones](REPLAY_CAMERA_TRACKING_ZONES.md)

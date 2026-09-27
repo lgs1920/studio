@@ -15,8 +15,6 @@ in Backend, and publishes read-only statistics through Site. It tracks:
 - the subset of videos exported in Expert Replay mode.
 
 The current implementation does not expose or retain a unique-visitor metric.
-The original rolling seven-day and IP-based proposal was superseded by
-time-zone-aware calendar aggregates.
 
 ## Studio producer
 
@@ -82,6 +80,3 @@ refresh without caching count responses.
 - Studio: `src/__tests__/unit/data/count-api.test.js`
 - Backend: `tests/count.test.js`
 - Site: `tests/stats.test.js`
-
-The original implementation issue documents are retained beside this document
-as historical delivery records. They are not the current API contract.

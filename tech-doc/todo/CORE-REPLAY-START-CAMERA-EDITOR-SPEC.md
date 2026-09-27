@@ -127,7 +127,7 @@ The editor must not silently turn a manual `behind` or `ahead` adjustment into
 ### 3.3 Automatic replay ownership
 
 During automatic replay playback, the replay runtime owns the canonical replay
-camera pose. During HQ export, the recording camera owns the rendered export
+camera pose. During Replay export, the recording camera owns the rendered export
 pose. Automatic camera poses must not overwrite the persisted manual start
 camera settings.
 
@@ -174,26 +174,15 @@ Examples:
 The old camera state may still be captured for restoration after replay, but it
 must not define the replay start pose.
 
-### 3.5 HQ recording modes
+### 3.5 Replay export camera ownership
 
-HQ replay must use an offscreen recording camera by default. This camera follows
-the canonical replay pose and the resolved start clip plan independently from
-the camera shown in the interactive map.
+Simple and Expert use the same isolated export camera. It follows the canonical
+Replay pose and resolved start-clip plan independently from the interactive map
+camera. The render target is fixed for the lifetime of an export.
 
-The user may choose a visible recording mode before starting the HQ export. The
-selected mode must not change during an active export, because switching the
-render target or camera ownership mid-export could create discontinuities in
-the resulting video.
-
-Both modes must expose the same progress state, including preparation,
-rendering, encoding, completion, and failure. The progress UI must identify the
-active mode and must not imply that moving the interactive map camera changes
-the offscreen recording.
-
-When the offscreen mode is active, navigation in the interactive map affects
-only the preview camera. It must not alter replay timing, start clips, the
-recording camera, or the exported video. The visible recording mode may instead
-capture the interactive camera by explicit user choice.
+The progress UI reports preparation, rendering, encoding, completion, and
+failure. Interactive map navigation does not alter Replay timing, start clips,
+the export camera, or the resulting video.
 
 ## 4. Proposed camera model
 
@@ -203,7 +192,7 @@ The implementation must distinguish the logical replay/recording camera from
 the interactive preview camera:
 
 ```text
-replay settings + clips -> recordingCamera -> HQ export
+replay settings + clips -> recordingCamera -> Replay export
 user map interaction    -> previewCamera   -> interactive map
 ```
 
@@ -214,7 +203,7 @@ visible viewer by swapping cameras during capture is not the default design,
 because it risks preview flicker and frame-synchronization errors.
 
 The recording camera must use the same canonical pose resolver and start clip
-plan as Draft playback. The preview camera may temporarily diverge through the
+plan as interactive playback. The preview camera may temporarily diverge through the
 editor override without changing the recording camera.
 
 ### 4.2 Persisted settings
@@ -241,7 +230,7 @@ Cesium's `HeadingPitchRange`. A drawer control may use the product label
 
 Backward-compatible normalization must keep existing `altitude` settings
 working for profiles created before this feature. When `range` is absent, the
-runtime derives it from the legacy altitude and pitch model once, then uses the
+runtime derives it from the current altitude and pitch settings once, then uses the
 normalized range for the anchored editor and replay start pose.
 
 The persisted `roll` value has a default of `0` and has no direct drawer or map
@@ -327,8 +316,8 @@ The drawer should expose the same canonical values as the map editor:
 The drawer must not expose a standalone roll field. Roll remains editable only
 through persisted start-clip data or other existing clip configuration.
 
-Text input drafts may remain local while a field is focused. A remote map
-update must not overwrite an active text draft. On commit, the value must pass
+Uncommitted text input may remain local while a field is focused. A remote map
+update must not overwrite an active text input. On commit, the value must pass
 through the canonical camera command.
 
 Opening the Replay drawer automatically focuses the camera editor on the
@@ -355,7 +344,7 @@ explicitly. It must not call the live camera state as a substitute for either
 value. A start clip may provide a persisted non-zero roll parameter; the final
 clip endpoint must carry that roll into the effective replay start pose.
 
-The HQ renderer and Draft playback must use the same start clip plan and the
+The Replay export renderer and interactive playback must use the same start clip plan and the
 same final replay start pose. Only their frame scheduling and capture path may
 differ.
 
@@ -378,11 +367,10 @@ start/clip state.
 | --- | --- | --- |
 | Drawer camera edit | Canonical camera command | Yes |
 | Authorized map camera edit | Canonical camera command | Yes |
-| Preview navigation during HQ export | Preview camera | No |
+| Preview navigation during Replay export | Preview camera | No |
 | Replay tracking frame | Replay camera resolver | No |
 | Start clip frame | Start clip planner | No |
-| HQ offscreen export frame | Recording camera and shared replay resolver | No |
-| HQ visible recording frame | Explicitly selected recording mode | No |
+| Replay export frame | Isolated Replay camera and shared pose resolver | No |
 | Programmatic Cesium event | No authority | No |
 | Camera restoration after replay | Saved scene state | No, unless explicitly edited by user |
 
@@ -423,7 +411,7 @@ playback owns the camera, unless the explicit editor mode is active.
 - Add the start-anchor focus action.
 - Add heading, pitch, and zoom controls consistent with the map editor.
 - Do not add a standalone roll control.
-- Preserve focused text drafts during external updates.
+- Preserve focused text input during external updates.
 
 ### Phase 5: Adapt start clips
 
@@ -432,14 +420,12 @@ playback owns the camera, unless the explicit editor mode is active.
 - Make the last start clip frame equal the canonical replay start pose.
 - Remove the current deferred replay recenter as a competing authority.
 
-### Phase 6: Validate Draft and HQ parity
+### Phase 6: Validate Simple and Expert camera behavior
 
-- Verify Draft and HQ use the same pose and clip plan.
-- Make offscreen recording the default HQ mode.
-- Add an explicit visible-recording mode selected before export starts.
-- Expose preparation, rendering, encoding, completion, and failure progress for
-  both HQ modes.
-- Verify preview camera navigation does not alter offscreen export output.
+- Verify Simple and Expert use the same camera pose and clip plan.
+- Verify export uses the isolated Replay camera in both modes.
+- Expose preparation, rendering, encoding, completion, and failure progress.
+- Verify preview camera navigation does not alter export output.
 - Verify no camera setting is persisted by automatic playback.
 - Validate restoration after cancellation, replay stop, and completed replay.
 
@@ -459,18 +445,17 @@ playback owns the camera, unless the explicit editor mode is active.
 - Drawer edits update the map state.
 - Map edits update the drawer state.
 - Map pan cannot move the replay start anchor.
-- Drawer drafts survive external Cesium notifications while focused.
+- Focused drawer text survives external Cesium notifications.
 - `Behind` and `Ahead` preserve their mode when heading is edited.
 
 ### Integration tests
 
 - Replay without start clips begins on the canonical start pose.
 - Replay with one or more start clips ends the clips on the canonical pose.
-- Draft and HQ produce the same logical camera poses.
-- HQ defaults to offscreen recording with a dedicated recording camera.
-- The user can choose visible recording before starting HQ export.
-- Export progress identifies the current phase and advances for either mode.
-- Moving the preview camera during offscreen HQ export does not change the
+- Simple and Expert produce the same logical camera poses.
+- Both configurations export through the isolated Replay camera.
+- Export progress identifies the current phase.
+- Moving the preview camera during offscreen Replay export does not change the
   exported camera path or replay timing.
 - Automatic camera frames do not overwrite persisted settings.
 - Manual camera editing is not lost after pause/resume.
@@ -499,7 +484,5 @@ playback owns the camera, unless the explicit editor mode is active.
    replay start anchor. No separate external arrival camera is required.
 4. Opening the Replay drawer automatically focuses the camera editor on the
    relevant replay anchor.
-5. For Replay HQ, offscreen recording with a dedicated recording camera is the
-   default. A visible-recording mode may be selected before export, with shared
-   progress reporting. The recording mode cannot be switched during an active
-   export.
+5. Simple and Expert share the isolated Replay export camera and progress
+   reporting. Camera ownership remains fixed during an active export.

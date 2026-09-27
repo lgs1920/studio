@@ -1,5 +1,7 @@
 # Replay Core
 
+Simple and Expert Replay both use deterministic deferred MP4 export.
+
 This directory contains the runtime core for the replay mode.
 
 The implementation is split into a small set of focused modules:
@@ -8,29 +10,29 @@ The implementation is split into a small set of focused modules:
 - `JourneyReplayPlaybackController`: drives play, pause, resume, stop, and progress.
 - `JourneyReplayCesiumRenderer`: draws the cursor, trace, guides, and Cesium overlays.
 - `JourneyReplayMode`: orchestrates sampler, playback, renderer, and camera behavior.
-- `JourneyReplayVideoSync`: bridges recorder events with replay playback for video capture.
+- `ReplayMediaCapture`: encodes Replay screenshots and hands completed media to the shared preview dialog; Replay MP4 files are produced by `ReplayDeferredExporter`.
 - `ReplayOverlayResolver`: resolves replay-driven widget and overlay visibility for video capture.
-- `JourneyReplayCameraPath`: builds replay camera transfers and can switch to a time cadence when draft capture needs wall-clock pacing.
+- `JourneyReplayCameraPath`: builds replay camera transfers for interactive playback and export.
 - `JourneyReplayCameraState`: stores the active camera transition handle and cancels RAF, timeout, or function-based cancel tokens.
 - `JourneyReplayCameraUpdateCache`: provides the ephemeral per-update memoization buckets used by the replay camera visibility and collision helpers.
 - `JourneyReplayCameraTrackingBinding`: drives the active shared Navigation/Dynamic camera resolver, reuses the per-update cache, and emits fine-grained traces around visibility and tracking decisions.
-- `JourneyReplayCameraPitchController`: owns the logical-time temporary pitch lifecycle shared by Draft and HQ.
+- `JourneyReplayCameraPitchController`: owns the logical-time temporary pitch lifecycle shared by playback and export.
 - `JourneyReplayCameraBinding`: provides the live Cesium camera bridge and transition plumbing, and re-exports the active tracking entry points.
-- `JourneyReplayCameraOverlay`: renders the replay diagnostics canvas used by HQ export to capture Z1/Z2 and camera timing traces.
+- `JourneyReplayCameraOverlay`: renders the replay diagnostics canvas used by export to capture Z1/Z2 and camera timing traces.
 - `JourneyReplaySessionSceneController`: logs the replay update phases at a finer granularity so camera timing, renderer work, and POI sync can be separated in the browser console and trace buffer.
-- `ReplayVideoOverlayComposer`: builds the draft/HQ overlay list and keeps replay diagnostics canvases in the HQ composer even when they are hidden in the DOM.
+- `ReplayVideoOverlayComposer`: builds the Replay export overlay list and includes replay diagnostics canvases even when hidden in the DOM.
 - `ReplayFrameTimeline`: generates deterministic replay frames from duration and fps.
 - `ReplayVideoRenderSession`: renders replay frames through a caller-provided pipeline.
 - `ReplayDeferredExporter`: wraps the render session and returns a master-export manifest plus rendered frames.
-- `captureReplayDeferredExportContext`: records a lightweight, non-frame export context snapshot, including the saved draft camera/focus state used to keep Draft and HQ aligned at export start.
-- `warmReplayDeferredExportPlan`: pre-resolves the MP4 codec/config while the draft is starting.
+- `captureReplayDeferredExportContext`: records a lightweight, non-frame export context snapshot, including the saved interactive camera/focus state used to align the export start.
+- `warmReplayDeferredExportPlan`: pre-resolves the MP4 codec/config before export.
 - `resolveReplayDeferredExportPlan`: reuses the warm plan only when the export context still matches, including the captured camera snapshot.
 - `exportReplayDeferredMp4`: renders the master MP4 and returns the blob without forcing a download.
-- `runReplayDeferredMp4Export`: prepares, renders, encodes, and downloads a master MP4 export. The initial HQ scene restore preserves the draft focus snapshot so the export starts from the same visual target.
-- The final video dialog starts the HQ export explicitly and switches its share/download actions to the HQ blob once the export completes.
+- `runReplayDeferredMp4Export`: prepares, renders, encodes, and downloads a master MP4 export. The initial scene restore preserves the interactive focus snapshot so the export starts from the same visual target.
+- The final video dialog previews the completed Replay export and provides share/download actions.
 - `ReplayRecordingMonitorWidget` is the single transient transport surface hosted by
   the generic Widget manager: it hosts ordinary replay controls, then switches
-  to the final composed Draft/HQ frame, recording metrics, and icon-only
+  to the final composed Replay frame, export metrics, and icon-only
   lifecycle actions during capture. Widget position, reduction, and removal
   remain manager-owned, and terminal recording cleanup exits Picture-in-Picture.
 - `JourneyReplayDebug`: exposes debug snapshots and diagnostic logging.
@@ -235,18 +237,6 @@ controller.on(REPLAY_EVENT_UPDATE, sample => {
 controller.start()
 ```
 
-## `JourneyReplayVideoSync.js`
-
-Bridges the video recorder lifecycle with replay playback when the user enables sync mode from the drawer.
-
-### Responsibilities
-
-- arm/disarm sync from the UI toggle;
-- start the replay on `ScreenMediaRecorder.events.START`;
-- mirror recorder pause/resume;
-- stop the replay when the recorder stops or cancels;
-- stop the recorder when the replay reaches the end and auto-stop is enabled.
-
 ## `JourneyReplayPathSampler.js`
 
 Builds a stable path representation from the journey.
@@ -321,7 +311,7 @@ High-level orchestration for the replay feature.
 - bind the playback controller and renderer;
 - relay `start`, `pause`, `resume`, `stop`, and `seek`;
 - keep Cesium camera behavior in sync with the runtime;
-- resolve the shared logical camera pose for Draft and HQ;
+- resolve the shared logical camera pose for playback and export;
 - run Navigation Z1 prediction or Dynamic Z1/Z2 look-ahead selection;
 - run the shared temporary pitch state machine when the current nominal marker view is hidden;
 - apply one complete target-locked camera frame through the Cesium adapter;
@@ -345,8 +335,9 @@ replay.start()
 ### Camera algorithm
 
 `JourneyReplayCameraTrackingBinding` is the active camera authority for both
-Draft and HQ. It resolves a nominal renderer-independent pose from the current
-logical sample, then gives temporary visibility correction first priority. If
+interactive playback and export. It resolves a nominal renderer-independent
+pose from the current logical sample, then gives temporary visibility
+correction first priority. If
 no pitch correction owns the frame, it applies the selected tracking behavior:
 
 - Navigation keeps an initialized camera stable while the marker remains in
@@ -363,7 +354,7 @@ component and speed-dependent roll (lateral displacement remains diagnostic).
 The camera capability flags are normalized with `true` defaults and gate their
 features independently: `canDrift` enables turn drift, `canFixHiddenMarker`
 enables temporary hidden-marker pitch/terrain correction, and `canRoll` enables
-speed/curvature banking. Draft and HQ use the same flag values.
+speed/curvature banking. Playback and export use the same flag values.
 
 ### Temporary pitch correction
 
@@ -496,7 +487,7 @@ Relevant settings path:
 
 ### Tile readiness and camera preloading
 
-HQ Replay export can wait for visible terrain, imagery, and 3D Tiles before
+Replay export can wait for visible terrain, imagery, and 3D Tiles before
 encoding a frame. The Replay drawer exposes this behavior under **Tile
 readiness**:
 
@@ -505,7 +496,7 @@ readiness**:
 - custom readiness exposes separate maximum waits while the camera is moving
   and after it settles; and
 - **Camera tile preloading** selects a bounded initial look-ahead of `off`,
-  `500 ms`, `1 s`, `2 s`, or `3 s` before HQ capture starts.
+  `500 ms`, `1 s`, `2 s`, or `3 s` before export starts.
 
 The normalized defaults keep readiness enabled with the `adaptive` policy, a
 1-second moving wait, a 5-second settled wait, and a 1-second camera preload

@@ -226,7 +226,7 @@ Measure before broad refactoring:
 - Replay callbacks and frame synchronization work per second;
 - snapshot and selector call counts in development builds;
 - settings serialization time and IndexedDB write frequency;
-- dropped frames during Draft playback;
+- dropped frames during interactive playback;
 - behavior with a Journey containing several thousand coordinates.
 
 The baseline should distinguish initial mount, editing, normal playback, and

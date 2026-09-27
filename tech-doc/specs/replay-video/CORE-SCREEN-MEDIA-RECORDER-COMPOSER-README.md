@@ -4,17 +4,17 @@ title: CanvasOverlayComposer
 
 # CanvasOverlayComposer — Detailed Guide
 
-This document explains how `CanvasOverlayComposer` works, why it exists, and how it is wired into the recording flow. It
+This document explains how `CanvasOverlayComposer` works, why it exists, and how it is wired into Replay screenshots. It
 is intentionally long and explicit so you can maintain it without re-reading the entire code.
 
 ## Overview
 
-`CanvasOverlayComposer` is a high‑performance compositor used for recording:
+`CanvasOverlayComposer` is a compositor used to prepare Replay media:
 
 - It renders a **source canvas** (the main WebGL/scene output).
 - It draws **overlay canvases** (widgets) on top.
 - It optionally applies a **backdrop blur** inside rounded rectangles.
-- It produces a **single output canvas** for the recorder.
+- It produces a **single output canvas** for screenshot capture.
 
 The implementation is tuned for:
 
@@ -30,7 +30,9 @@ The implementation is tuned for:
     - The current output buffer is blurred and drawn inside the clip.
 3. **Overlay content** is drawn on top.
 
-The output canvas becomes the recording input (`ScreenMediaRecorder.setCanvas()`).
+The output canvas is passed to `ReplayMediaCapture.captureScreenshot()` for a
+PNG snapshot. Replay MP4 video uses the deterministic frame renderer and does
+not pass through this compositor's former real-time recorder input path.
 
 ## Key Concepts
 
@@ -38,7 +40,7 @@ The output canvas becomes the recording input (`ScreenMediaRecorder.setCanvas()`
 
 - **Source canvas**: the original WebGL/scene canvas (`lgs.canvas`).
 - **Output canvas**: a new 2D canvas owned by `CanvasOverlayComposer`.
-- Only the output is passed to the recorder.
+- The output is passed to screenshot capture.
 
 ### 2) Backdrop Blur
 
@@ -139,10 +141,10 @@ Updates the throttle target at runtime.
 
 ```js
 const out = composer.getCanvas()
-recorder.setCanvas(out)
+await globalThis.__.mediaCapture.captureScreenshot(out)
 ```
 
-Returns the output canvas used by the recorder.
+Returns the output canvas for the requested screenshot.
 
 ### dispose
 
@@ -152,15 +154,12 @@ Stops the rAF loop and releases references.
 composer.dispose()
 ```
 
-## How It Is Used in Recording
+## How It Is Used for Screenshots
 
 In `VideoRecordingScreenArea.jsx`:
 
-- The recorder is initialized with:
-    - `fps` from user settings
-    - `timeslice` (softened to reduce event overhead)
-- The composer is created once per record/snapshot.
-- Overlays are rebuilt on a **rAF‑controlled timer** (every `OVERLAYS_REFRESH_MS`).
+- The composer is created once per screenshot.
+- Replay overlays are flushed before the still frame is rendered.
 - Overlay metrics (blur/radius/shadow) are cached for `METRICS_CACHE_TTL_MS`.
 
 This keeps the overlay list fresh without constant allocations.
@@ -177,14 +176,14 @@ This keeps the overlay list fresh without constant allocations.
 
 The code resolves `--lgs-blur-s` via `getComputedStyle(el)`.
 
-## Example: Basic Recording Setup
+## Example: Replay Screenshot Setup
 
 ```js
 const composer = new CanvasOverlayComposer(lgs.canvas, {
     clip:             {x, y, width, height},
     width,
     height,
-    fps:              ScreenMediaRecorder.FPS[$video.fps],
+    fps:              REPLAY_VIDEO_FPS[$video.fps],
     flushWebGLBuffer: () => lgs.scene.render()
 })
 
@@ -194,11 +193,10 @@ widgets.forEach(widget => {
 })
 composer.endUpdate()
 
-recorder.setCanvas(composer.getCanvas())
-recorder.startVideo()
+await globalThis.__.mediaCapture.captureScreenshot(composer.getCanvas())
 ```
 
-## Example: Live Overlay Refresh
+## Example: Refreshing Overlays Before a Screenshot
 
 ```js
 const refresh = () => {

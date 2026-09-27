@@ -10,14 +10,14 @@ Target release: Unplanned
 
 This document evaluates two related Replay recording needs:
 
-1. make recording and HQ export loops faster, especially when scene objects
+1. make recording and Replay export loops faster, especially when scene objects
    contain both static and changing parts;
 2. allow an object or widget to become visible at a defined time for a defined
    duration during Replay.
 
 The proposal preserves the current Replay boundaries. `ReplayVideoTimeline` and
 `ReplayFrameTimeline` remain the time authorities, the published Replay frame
-remains the shared input for dynamic consumers, and Draft, HQ, and scrubbing
+remains the shared input for dynamic consumers, and interactive playback, Replay export, and scrubbing
 continue to resolve the same logical visual state.
 
 This is a future-work document. It does not describe an implemented feature.
@@ -29,11 +29,11 @@ Replay domain:
 
 | Policy | Time source | Main purpose |
 | --- | --- | --- |
-| Draft recording | Monotonic wall time | Responsive real-time capture |
-| HQ export | Fixed video frame timestamps | Deterministic MP4 production |
+| interactive playback recording | Monotonic wall time | Responsive real-time capture |
+| Replay export | Fixed video frame timestamps | Deterministic MP4 production |
 | Scrubbing | Latest slider request | Manual positioning |
 
-HQ export already uses an isolated render host by default. Dynamic widgets are
+Replay export already uses an isolated render host by default. Dynamic widgets are
 expected to consume the canonical Replay frame, while the overlay resolver
 decides Replay-driven visibility. The current preparation timeline is a
 read-only projection. A persisted editable multi-track authoring model remains
@@ -46,7 +46,7 @@ The main performance constraints are therefore known:
 - DOM widgets may require canvas snapshots before composition;
 - scene readiness must not wait for the full settled budget on every moving
   frame;
-- Draft and HQ must not create a second Replay clock while optimizing their
+- interactive playback and Replay export must not create a second Replay clock while optimizing their
   loops.
 
 See [Replay architecture](../specs/replay-video/CORE-REPLAY-ARCHITECTURE.md),
@@ -67,7 +67,7 @@ The recording loop should be split into four phases with different ownership:
    using bounded back-pressure.
 
 The loop must never use the recorder's wall clock to decide the content of an
-HQ frame. The recorder or encoder may affect export wall time, but it must not
+Replay export frame. The recorder or encoder may affect export wall time, but it must not
 alter the logical video timestamp, duplicate a visual frame as a timing
 workaround, or create a second timeline.
 
@@ -106,7 +106,7 @@ should happen before the first captured frame whenever possible.
 
 ### Proposed frame loop
 
-The future HQ loop should follow this shape:
+The future Replay export loop should follow this shape:
 
 ```text
 prepare export snapshot
@@ -147,7 +147,7 @@ timeline revision:
 - build an interval index for time-ranged object visibility;
 - identify frames that require a settled scene qualification, such as first,
   last, phase-boundary, hold, or final frames;
-- prewarm only through the dedicated HQ render target and only when the
+- prewarm only through the dedicated Replay export render target and only when the
   benchmark shows that prewarming reduces total export time.
 
 Prewarming must remain bounded. Moving the real scene camera through future
@@ -166,7 +166,7 @@ applyState(objectRuntime, objectFrameState) -> changed
 
 `resolveState` may use the journey sample, local clip time, or a keyframed
 definition. It must not read a private timer, current wall time, mutable React
-state, or the interactive camera when rendering HQ.
+state, or the interactive camera when rendering Replay export.
 
 `applyState` should preserve runtime identity and return whether a visible value
 actually changed. It may update:
@@ -188,7 +188,7 @@ order is:
 2. retain a separate static completed trace for stop clips and final frames;
 3. use a projected 2D trace overlay for phases where Cesium ground geometry is
    not required, provided visual validation accepts the result;
-4. keep the chosen representation consistent between Draft and HQ whenever
+4. keep the chosen representation consistent between interactive playback and Replay export whenever
    pixel parity is required.
 
 The final choice must be benchmarked on imagery, terrain, 3D Tiles, and dense
@@ -250,9 +250,9 @@ optimize Cesium entities, terrain, imagery, 3D Tiles, or the Replay camera.
 Those resources still require the separate scene and readiness strategy
 described above.
 
-### Faster Draft recording
+### Faster interactive playback recording
 
-Draft recording is real-time capture. Its optimization target is responsiveness
+interactive playback recording is real-time capture. Its optimization target is responsiveness
 and stable duration, not maximum offline throughput.
 
 The current speed mode should continue to:
@@ -274,8 +274,8 @@ The main gains should come from reducing work before the compositor is called:
   subtrees, while keeping explicit dirty-zone boundaries in `Widget2Canvas`;
 - update dynamic widget mirrors from one Replay frame publication;
 - avoid rebuilding scene entities when only a variable field changed;
-- reduce expensive camera qualification cadence in long journeys only for Draft,
-  while keeping HQ frame application frame-accurate;
+- reduce expensive camera qualification cadence in long journeys only for interactive playback,
+  while keeping Replay export frame application frame-accurate;
 - keep output dimensions and pixel budgets explicit so the recorder does not
   accidentally capture high-DPR pixels at an unsustainable rate.
 
@@ -283,9 +283,9 @@ The quality mode may wait for a ready frame, but it should be treated as a
 quality-throughput tradeoff. It cannot be the default answer to a slow loop
 because waiting for every frame makes the recording slower by design.
 
-### Faster HQ export
+### Faster Replay export
 
-HQ export can run faster than real time only after the per-frame work is made
+Replay export can run faster than real time only after the per-frame work is made
 bounded and predictable. The following order is recommended:
 
 1. measure frame time by category: frame resolution, camera, Cesium render,
@@ -506,7 +506,7 @@ object items are a different concept:
 
 When the editable timeline is introduced, moving or resizing an object item
 must update its normalized range, invalidate the timeline signature, and cause
-Draft and HQ to rebuild their derived plans. It must not mutate a live capture
+interactive playback and Replay export to rebuild their derived plans. It must not mutate a live capture
 in progress. A timeline change during recording should either be rejected or
 apply only to the next recording lifecycle.
 
@@ -529,7 +529,7 @@ Record, for representative imagery, terrain, 3D Tiles, and dense journeys:
 - peak memory, pending encoder writes, and cancellation latency;
 - visual quality of first, transition, moving, and final frames.
 
-The benchmark must distinguish Draft real-time capture from HQ offline export.
+The benchmark must distinguish interactive playback real-time capture from Replay export offline export.
 
 ### Phase 1: compile and classify
 
@@ -546,7 +546,7 @@ with the benchmark-selected mutable representation.
 ### Phase 3: add time-ranged visibility
 
 Add normalized items, replay-relative and video-relative time bases, half-open
-interval resolution, effect progress, overlay-resolver integration, and Draft/HQ
+interval resolution, effect progress, overlay-resolver integration, and interactive playback/Replay export
 frame payload parity.
 
 ### Phase 4: expose authoring
@@ -569,14 +569,14 @@ The feature and optimization work should be considered valid only when all of
 the following are demonstrated:
 
 - one logical timestamp resolves one complete, reproducible frame;
-- Draft and HQ resolve identical object visibility at selected timestamps;
+- interactive playback and Replay export resolve identical object visibility at selected timestamps;
 - an item authored at `X` seconds for `Y` seconds is visible throughout its
   declared interval and hidden at its end boundary;
 - start and stop clip duration changes update absolute object timing correctly;
 - repeated Replay passes reset local state without restarting the recorder;
 - variable object parts update without recreating unchanged resources;
 - no private object timer or second Replay clock is introduced;
-- HQ frame count and encoded duration remain unchanged by readiness retries or
+- Replay export frame count and encoded duration remain unchanged by readiness retries or
   encoder back-pressure;
 - moving-frame readiness is bounded and settled qualification is reserved for
   declared quality frames;
@@ -596,5 +596,5 @@ implementation:
 - whether overlapping items for one target should be rejected or composited;
 - whether enter and exit effects are limited to `none` and `fade` initially;
 - which trace representation meets the visual-quality and speed targets;
-- whether faster HQ export or lower main-thread impact is the primary product
+- whether faster Replay export or lower main-thread impact is the primary product
   objective for Worker evaluation.

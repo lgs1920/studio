@@ -23,12 +23,11 @@ non-recording preparation surface before any video capture. Simple and Expert
 use the same Replay session and timeline projection; user mode controls the
 available preparation features. The canonical Replay
 clock remains the authority for the playhead, scrubbing, playback, and
-visibility projection. The generic video recording flow remains unchanged when
-Replay/video synchronization is not enabled.
+visibility projection. Replay preparation is the only video creation flow;
+Simple and Expert both export from this Replay state.
 
-The preparation surface does not initialize `ScreenMediaRecorder`, create a
-Draft media blob, or encode video. It stays outside the captured video board,
-while the surrounding video editor keeps ownership of settings, recording,
+The preparation surface does not encode a video. It stays outside the captured
+video board, while the surrounding Replay editor keeps ownership of settings,
 export, and cleanup. Local timeline controls may move or resize projected clips
 and reorder widget rows, but those interactions do not create a second
 persisted timeline model or replace the existing Replay clip editors.
@@ -309,7 +308,7 @@ Cancelling linked preparation clears the timeline flag, pauses Replay, leaves
 Replay preparation, and restores the regular video UI through
 `videoEditingCleanup.js`.
 
-## HQ export boundary
+## Deterministic export boundary
 
 The linked Replay recording action consumes the prepared timeline and launches
 the deferred Replay exporter. The timeline itself does not encode media or own

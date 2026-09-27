@@ -12,30 +12,29 @@ and Dynamic (`hysteresis`) marker modes. It is the canonical specification for:
 - renderer-independent nominal camera poses;
 - Navigation and Dynamic tracking zones;
 - temporary visibility pitch correction;
-- Draft and HQ camera parity;
+- camera parity between interactive playback and deterministic export;
 - camera-frame ownership during tracking and correction.
 
 Trace mode is outside this contract because it does not track the replay marker
 with the camera. Start and stop clips may explicitly define other camera poses
 and are also outside the temporary visibility-correction lifecycle.
 
-## 1. Shared Draft and HQ contract
+## 1. Shared playback and export contract
 
-Draft and HQ call the same camera resolver. The render mode changes only the
-source of logical time and frame scheduling:
+Interactive playback and deferred Replay export call the same camera
+resolver. They differ in their source of logical time and frame scheduling:
 
-| Concern | Draft | HQ |
+| Concern | Interactive playback | Deferred Replay export |
 | --- | --- | --- |
-| Logical time | Live replay playback | Deterministic export frame timestamp |
-| Capture | Live recorder | Sequential offline exporter |
+| Logical time | Replay playback clock | Deterministic export frame timestamp |
+| Video output | None | Sequential Replay MP4 exporter |
 | Camera resolver | `JourneyReplayCameraTrackingBinding` | `JourneyReplayCameraTrackingBinding` |
 | Nominal pose | `resolveJourneyReplayLogicalCameraPose` | `resolveJourneyReplayLogicalCameraPose` |
 | Pitch correction | Shared state machine | Shared state machine |
 
 For identical settings, replay data, viewport, and logical timestamp, both
-modes must resolve the same camera decision. Draft is allowed to sample fewer
-timestamps because of its lower frame rate; it is not allowed to use a
-different visibility, pitch, drift, or tracking algorithm.
+paths resolve the same camera decision. Video files are produced only by the
+deferred Replay exporter.
 
 No complete constrained camera path is compiled synchronously before replay or
 export. The active resolver works from the current logical frame and bounded
@@ -65,7 +64,7 @@ Navigation and Dynamic use this same resolver. Neither tracking mode may force
 ### 2.1 Camera capability flags
 
 The normalized `ui.replay.camera` settings expose three independent boolean
-capabilities. They default to `true` and are shared by Draft and HQ:
+capabilities. They default to `true` and are shared by playback and export:
 
 | Setting | Effect when `false` |
 | --- | --- |
@@ -74,7 +73,7 @@ capabilities. They default to `true` and are shared by Draft and HQ:
 | `canRoll` | disables speed/curvature-based banking and keeps camera roll at zero |
 
 Changing one capability must not alter the other camera settings or select a
-different resolver for Draft and HQ.
+different resolver for playback and export.
 
 ## 3. Temporary visibility correction
 
@@ -273,11 +272,12 @@ inside Z1. The minimum transition horizon is also limited by the remaining
 logical replay time.
 
 The actual logical-frame interval is used when available. Otherwise the active
-resolver uses the configured replay capture FPS and falls back to the Draft
-look-ahead default of 15 FPS. The math helper also exposes a 60 FPS HQ fallback
-for callers that explicitly select `renderMode: 'hq'`, but the active tracking
-binding normally receives the HQ frame interval directly. These timing inputs
-change temporal sampling only; the camera rules remain shared.
+resolver uses the configured replay capture FPS and falls back to the
+interactive look-ahead default of 15 FPS. The math helper also exposes a 60 FPS
+export fallback for callers that explicitly select export rendering, but the
+active tracking binding normally receives the export frame interval directly.
+These timing inputs change temporal sampling only; the camera rules remain
+shared.
 
 ## 7. Turn drift
 
@@ -295,7 +295,7 @@ camera displacement. The `canDrift` capability gates this drift envelope.
 
 The constrained-path compiler also uses one shared 1.5-second drift response
 for both modes. That compiler is not the active per-frame camera authority and
-must not block Draft startup or HQ preparation.
+must not block playback startup or export preparation.
 
 ## 7.1 Speed-dependent banking
 
@@ -307,9 +307,9 @@ and speed factors, and clamps the result to ±45 degrees. Straight, stationary,
 or invalid samples resolve to zero roll.
 
 The resulting roll rotates the camera up vector around its viewing direction.
-The calculation is part of the shared logical pose, so Draft and HQ apply the
-same banking decision. `canRoll: false` bypasses the calculation and restores a
-zero-roll pose.
+The calculation is part of the shared logical pose, so playback and export
+apply the same banking decision. `canRoll: false` bypasses the calculation and
+restores a zero-roll pose.
 
 ## 8. Camera ownership and frame application
 
@@ -335,7 +335,7 @@ camera updates until replay tracking regains ownership.
 
 The tolerance-zone overlay displays the current runtime zones and timing data
 for Navigation and Dynamic. It is diagnostic only and is not a second source of
-tracking decisions. HQ composition can capture the overlay canvas even when it
+tracking decisions. Export composition can capture the overlay canvas even when it
 is hidden in the normal DOM layout.
 
 Fine-grained camera traces expose logical time, marker mode, visibility phase,
