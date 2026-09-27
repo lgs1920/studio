@@ -527,7 +527,6 @@ export const ReplayTimelinePreview = forwardRef(({
         },
     }), [journeyTitle, journeyName, journeyReplayStart, journeyReplayStop])
     const projection = useMemo(() => {
-        const startedAt = globalThis.performance?.now?.() ?? Date.now()
         const nextProjection = buildReplayPreparationTimeline({
             videoTimeline: projectionReplay.deferredExportPlan?.videoTimeline ?? null,
             replayDurationMillis: resolveReplayDurationMillis(projectionReplay, projectionReplaySettings),
@@ -536,11 +535,6 @@ export const ReplayTimelinePreview = forwardRef(({
             clips: resolvePreparationClips(projectionReplay, projectionJourney, projectionReplaySettings.clips),
             journeyTitle: projectionJourney.title,
             widgetOrder,
-        })
-        console.log('[ReplayTimeline] projection built', {
-            durationMs: Number(((globalThis.performance?.now?.() ?? Date.now()) - startedAt).toFixed(2)),
-            tracks: nextProjection.tracks.length,
-            actions: nextProjection.tracks.reduce((count, track) => count + track.actions.length, 0),
         })
         return nextProjection
     }, [projectionJourney, projectionReplay, projectionReplaySettings, video.fps, widgetOrder])
@@ -744,8 +738,6 @@ export const ReplayTimelinePreview = forwardRef(({
             if (cancelled) return
             const element = _timeline.current
             if (!element || !element.isConnected) return
-            const startedAt = globalThis.performance?.now?.() ?? Date.now()
-            console.log('[ReplayTimeline] controlled state start', {debugStage})
 
             if (['surface', 'track', 'clip', 'data'].includes(debugStage)) {
                 element.timeline = {...timeline, showBuildingOverlay: true}
@@ -762,10 +754,6 @@ export const ReplayTimelinePreview = forwardRef(({
                                 : [],
                         }]
                 element.currentTimeMillis = 0
-                console.log('[ReplayTimeline] controlled state end', {
-                    debugStage,
-                    durationMs: Number(((globalThis.performance?.now?.() ?? Date.now()) - startedAt).toFixed(2)),
-                })
                 return
             }
 
@@ -802,10 +790,6 @@ export const ReplayTimelinePreview = forwardRef(({
             element.ensureCurrentTimeVisible?.()
             element.verticalScrollTop = _verticalScrollTop.current
             _preservedPlayheadTimeMillis.current = null
-            console.log('[ReplayTimeline] controlled state end', {
-                debugStage,
-                durationMs: Number(((globalThis.performance?.now?.() ?? Date.now()) - startedAt).toFixed(2)),
-            })
         }
 
         void applyControlledState()

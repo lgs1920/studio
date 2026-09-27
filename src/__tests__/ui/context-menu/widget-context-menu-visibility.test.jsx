@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-29
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -61,6 +61,7 @@ describe('WidgetContextMenu visibility', () => {
                         contextMenu: {},
                     })),
                     hasCapabilities: vi.fn(() => false),
+                    setConfig: vi.fn(),
                     toggleWidgetVisibility: vi.fn(),
                 },
                 widgetWindowManager: {
@@ -104,11 +105,17 @@ describe('WidgetContextMenu visibility', () => {
         lgs.stores.ui.widget.list.set(timelineId, {visible: true})
         __.ui.widgetManager.getWidgetConfig.mockReturnValue({
             canHide: false,
-            canLock: false,
+            canLock: true,
+            locked: false,
             contextMenu: {canDockable: true},
         })
 
         render(<WidgetContextMenu targetId={timelineId} menuRef={{current: null}}/>)
+        expect(screen.getByText('Lock')).toBeTruthy()
+        expect(screen.queryByText('Hide')).toBeNull()
+        expect(screen.queryByText('Show')).toBeNull()
+        fireEvent.click(screen.getByText('Lock'))
+        expect(__.ui.widgetManager.setConfig).toHaveBeenCalledWith(timelineId, expect.objectContaining({locked: true}))
         fireEvent.click(screen.getByText('Dock to bottom'))
 
         expect(lgs.stores.ui.widget.docked.id).toBe(timelineId)

@@ -196,7 +196,7 @@ widgets:
     canDetach: true
     timelineColor: "blue"
     mandatory: false
-    canHide: true
+    canHide: false
     max: 1
     component: "ReplayTimelineWidget"
     type: "lgs-visual-widget"

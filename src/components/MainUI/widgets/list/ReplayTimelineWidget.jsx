@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-29
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -186,7 +186,8 @@ const HostedReplayTimelineWidget = ({id, zIndex, docked, detached}) => {
         persist:       !docked,
         transient:     true,
         mandatory:     false,
-        canLock:       false,
+        canHide:       false,
+        canLock:       true,
         draggable:     !docked,
         min:           {width: REPLAY_TIMELINE_UI.minWidth, height: REPLAY_TIMELINE_UI.minHeight},
         max:           {width: REPLAY_TIMELINE_UI.maxWidth, height: REPLAY_TIMELINE_UI.maxHeight},
