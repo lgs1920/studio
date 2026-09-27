@@ -1,12 +1,16 @@
-# Replay Render Mode Architecture — Draft vs High Quality
+# Historical Replay Render Proposal — Draft vs High Quality
 
 Status: superseded by the current replay architecture and status documents
 
-This document is retained as historical design context. Use
-[`CORE-REPLAY-ARCHITECTURE.md`](CORE-REPLAY-ARCHITECTURE.md) for the
-current Draft, HQ, and scrub architecture and
+This document is retained as historical design context. Its Draft/HQ labels
+and product flows predate the current Simple/Expert user modes. Simple and
+Expert configure the same Replay mechanism; they do not choose separate replay
+render modes. The live recorder handles ordinary video; linked Simple and
+Expert Replay recordings use the deferred frame-by-frame MP4 exporter. Use
+[`CORE-REPLAY-ARCHITECTURE.md`](CORE-REPLAY-ARCHITECTURE.md)
+for current runtime architecture and
 [`CORE-REPLAY-IMPLEMENTATION-STATUS.md`](CORE-REPLAY-IMPLEMENTATION-STATUS.md)
-for remaining work.
+for current gaps.
 
 Date: 2026-07-28
 

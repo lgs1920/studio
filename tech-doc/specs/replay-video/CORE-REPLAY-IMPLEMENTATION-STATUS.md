@@ -2,7 +2,7 @@
 
 Status: current implementation inventory
 
-Date: 2026-09-18
+Date: 2026-09-27
 
 ## Purpose
 
@@ -10,11 +10,43 @@ This document separates delivered replay capabilities from partial and planned
 work. It must be updated when replay architecture changes. Detailed rationale
 and issue analysis remain in [`REPLAY-AUDIT.md`](REPLAY-AUDIT.md).
 
+## Replay user modes
+
+Simple and Expert are user-facing configuration modes for the same Replay
+session, frame resolver, camera/runtime, and timeline. They do not select
+separate replay engines. Simple applies a restricted preparation and widget
+policy; Expert exposes the additional camera and replay controls. The terms
+Draft and HQ describe historical design proposals or distinct capture
+implementations, not current user-facing Replay modes.
+
+The live `ScreenMediaRecorder` path remains available for ordinary video
+capture. Simple and Expert Replay recording now invoke the deferred MP4
+exporter, publish deterministic frame progress to the Replay monitor, and hand
+the completed MP4 to the standard preview and sharing dialog.
+
+Simple/Expert support is present but incomplete:
+
+- Expert settings are initialized from Simple settings on first entry, but
+  drawer edits are not consistently written back to the persisted
+  `journey.replay.expert` configuration.
+- The Simple launch path stores `positionMode: 'system'`, while the effective
+  Simple camera resolver forces a behind-camera position. Persisted and
+  applied settings can therefore disagree.
+- Some Simple behavior is keyed to transient
+  `replay.simplePreparationActive`, while other behavior reads persisted
+  `userMode`. Render plans and context signatures do not consistently include
+  the effective mode/configuration, leaving widget policy and cached plans
+  vulnerable to stale mode state.
+- Simple defaults differ between runtime normalization and
+  `public/replay.yaml`; align the defaults so imported and freshly-created
+  settings resolve consistently.
+
 ## Implemented on `refactor/replay-architecture`
 
 - Versioned replay definition, render plan, frame intent, and frame result
   contracts.
-- Shared frame resolution and publication boundaries for Draft, HQ, and scrub.
+- Shared frame resolution and publication boundaries for Replay playback,
+  capture, and scrub.
 - Canonical renderer-independent camera definitions and commands.
 - Deterministic Cesium camera command application.
 - Real-time progress slider with coalesced latest-request-wins scrubbing.
@@ -22,11 +54,12 @@ and issue analysis remain in [`REPLAY-AUDIT.md`](REPLAY-AUDIT.md).
 - Explicit replay session ownership and guarded cleanup.
 - Canonical camera-command continuity across transitions and clips.
 - Explicit owner-scoped viewer, scene, and canvas render targets.
-- Isolated no-loop HQ `CesiumWidget` with scene descriptor replication and
-  announced visible-scene fallback.
-- Dedicated HQ camera selection (`Dedicated camera` or `Visible map camera`)
-  fixed for the duration of an export.
-- Unified transient Replay transport and Draft/HQ recording monitor hosted by
+- Isolated no-loop export `CesiumWidget` implementation with scene descriptor
+  replication and visible-scene fallback, connected to Simple and Expert Replay
+  recording.
+- Deterministic Replay MP4 export at fixed frame timestamps, with monitor
+  pause/cancel controls and preview/share handoff.
+- Unified transient Replay transport and live-recording monitor hosted by
   the generic Widget manager. It retains normal replay scrubbing, playback,
   snapshot, and settings controls, then switches to the exact composed encoder
   frame, progress, dynamic duration/remaining-time metrics, icon-only lifecycle
@@ -74,7 +107,7 @@ subject to the validation gates below.
 | TODO | 1.0.0 follow-up | Connect Timeline transport and domain commands, including Dry Run, Action Mode, clip double-click navigation, and persisted visibility/order changes | [Timeline implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md) |
 | TODO | 1.1.0 | Replace separated clip controls with the normalized editable multi-track replay timeline | [Track timeline editor](../../todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) |
 | TODO | 1.1.0 | Persist timeline authoring and make Draft/HQ consume the edited domain model | [Track timeline editor](../../todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) |
-| TODO | Unplanned | Add persisted Basic and Expert Replay user modes with the corresponding camera and timeline entry points | [Replay specification audit](../../SPECS-AUDIT-20260918.md) |
+| PARTIAL | Unplanned | Finish Simple/Expert settings ownership, effective-mode propagation, and consistent Simple defaults | [Replay specification audit](../../SPECS-AUDIT-20260918.md) |
 | TODO | 1.1.0 | Drive POI animation and displayed fields from canonical replay time | [POI animation](../../todo/CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md) |
 | TODO | 1.1.0 | Align clip altitude inputs and continuity across reordered sequences | [Clip altitude alignment](../../todo/CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md) |
 | TODO | 1.1.0 | Add explicit Automatic, 720p, 1080p, and 4K HQ output profiles with capability checks | [HQ resolution profiles](../../todo/HQ_4K_VIDEO_EXPORT_SPEC.md) |
@@ -90,5 +123,5 @@ retire `JourneyReplayRunner` after all compatibility consumers have moved.
 
 Replay work is not complete merely because unit tests pass. The applicable
 checks in [Replay Quality Validation](CORE-REPLAY-QUALITY-VALIDATION.md) must pass,
-including a real Draft or HQ visual run for changes that affect pixels, timing,
-camera, scene readiness, overlays, or encoding.
+including a real Replay/capture visual run for changes that affect pixels,
+timing, camera, scene readiness, overlays, or encoding.

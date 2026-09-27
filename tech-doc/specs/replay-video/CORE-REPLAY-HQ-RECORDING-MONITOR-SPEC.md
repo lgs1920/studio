@@ -1,13 +1,18 @@
 # Replay HQ Recording Camera and Monitoring
 
-Status: **IMPLEMENTED**
+Status note (2026-09-27): Draft/HQ are historical capture-path labels, not
+current Simple/Expert Replay modes. Both user modes use the same Replay
+session. Linked Replay recording now uses the deferred MP4 exporter and this
+monitor. Current implementation gaps are tracked in
+[`CORE-REPLAY-IMPLEMENTATION-STATUS.md`](CORE-REPLAY-IMPLEMENTATION-STATUS.md).
 
-The isolated HQ render host, independent camera ownership, and transient live
-recording monitor are implemented. The monitor displays the composed frame
-submitted to the encoder for both Draft and linked Replay HQ export. It offers
-an inline fallback surface and Picture-in-Picture when the browser permits it.
-The same transient surface now owns ordinary Replay transport and replaces the
-former duplicated floating Replay/HQ controls HUD.
+Status: **IMPLEMENTED — deferred-export progress, pause, cancel, and live frame preview wired**
+
+The isolated deferred-export host and transient recording monitor are
+implemented. During deferred MP4 export, the monitor displays the composed
+frame and progress and offers pause, cancellation, an inline fallback surface,
+and Picture-in-Picture when the browser permits it. The same transient surface
+owns ordinary Replay transport.
 
 The remaining limitation is that the monitor is not a replacement for the
 finalized video preview dialog.

@@ -18,8 +18,10 @@ future persisted multi-track authoring model described in
 [`CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md`](../../todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md).
 
 This document is also the current record of the former 1.0.0 Replay Timeline
-preview scope. In linked video preparation, the timeline replaces the Draft
-recording step with a non-recording preparation surface. The canonical Replay
+preview scope. In linked video preparation, the timeline provides a
+non-recording preparation surface before any video capture. Simple and Expert
+use the same Replay session and timeline projection; user mode controls the
+available preparation features. The canonical Replay
 clock remains the authority for the playhead, scrubbing, playback, and
 visibility projection. The generic video recording flow remains unchanged when
 Replay/video synchronization is not enabled.
@@ -309,14 +311,11 @@ Replay preparation, and restores the regular video UI through
 
 ## HQ export boundary
 
-The timeline preview does not expose an export action in timeline mode.
-The dialog owns
-the export lifecycle in
-[`VideoDownloadAndShareDialog.jsx`](../../../src/components/MainUI/video/VideoDownloadAndShareDialog.jsx#L495-L620).
-It preserves the previous timeline flag, hides the dialog while exporting,
-uses the deferred Replay exporter, and restores editing, capture, and timeline
-state on both success and failure. The timeline itself does not encode media
-or own the HQ clock.
+The linked Replay recording action consumes the prepared timeline and launches
+the deferred Replay exporter. The timeline itself does not encode media or own
+a capture clock. The exporter resolves each output frame from the shared
+timeline and hands the resulting MP4 to the video preview dialog; see
+[`CORE-REPLAY-IMPLEMENTATION-STATUS.md`](CORE-REPLAY-IMPLEMENTATION-STATUS.md).
 
 ## Styling and dependency
 
@@ -352,21 +351,22 @@ bunx vitest run \
 ```
 
 Because the timeline changes playback, visibility, and the captured scene
-boundary, a real visual Draft or HQ validation remains necessary for changes
-that affect generated pixels or timing. See
+boundary, a real visual Replay and live-capture validation remains necessary
+for changes that affect generated pixels or timing. See
 [`CORE-REPLAY-QUALITY-VALIDATION.md`](CORE-REPLAY-QUALITY-VALIDATION.md).
 
 ## Delivered versus future work
 
 Delivered:
 
-- linked Replay preparation without starting Draft recording;
+- linked Replay preparation without starting video capture;
 - normalized multi-track projection;
 - canonical Replay phase and frame-time reuse;
 - interactive Web Component rendering with compact reference geometry;
 - native clip editing that prevents overlap by default and fits clips to free intervals;
 - movable/resizable transient timeline widget host;
-- HQ export handoff with restoration of preparation state.
+- preparation-state cleanup and restoration;
+- deferred-export handoff from the linked Replay recording action.
 
 Future or not delivered by this implementation:
 
@@ -377,5 +377,4 @@ Future or not delivered by this implementation:
   timeline;
 - connecting timeline playback, scrubbing, visibility, ordering, menus, clip
   navigation, and editing controllers;
-- making Draft recording and HQ export consume a future editable timeline
-  model.
+- making export consume a future persisted, editable timeline domain model.

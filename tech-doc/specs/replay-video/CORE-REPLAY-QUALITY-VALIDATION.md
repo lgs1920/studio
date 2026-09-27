@@ -1,12 +1,16 @@
 # Replay Quality Validation
 
-Status: required replay validation contract
+Status: validation contract for interactive Replay and deterministic Replay
+video export
 
 Date: 2026-08-24
 
 ## Purpose
 
-Replay correctness is visual and temporal. Mock-only validation cannot establish
+Simple and Expert configure the same Replay mechanism. Capture paths consume
+that Replay state; they are not user-facing Replay modes. Linked Replay video
+uses the deterministic deferred MP4 exporter. Replay correctness is visual and
+temporal. Mock-only validation cannot establish
 that a generated video contains the trace, follows the camera, waits for the
 right scene, or preserves phase continuity. Apply this matrix proportionally to
 every replay change.
@@ -28,7 +32,8 @@ narrow crop, and at least one high-resolution output profile.
 ### Frame and timeline
 
 - A logical timestamp resolves the expected phase and progress.
-- Draft and HQ intents match at selected timestamps.
+- Interactive playback and deferred-export intents match at selected
+  timestamps.
 - Scrub requests are latest-request-wins and obsolete qualification is aborted.
 - Holds preserve logical time and fixed camera state.
 - First, phase-boundary, last replay, and final scene frames are exact.
@@ -71,7 +76,8 @@ narrow crop, and at least one high-resolution output profile.
 For every change affecting camera, trace, clips, readiness, crop, overlays,
 render hosts, or encoding:
 
-1. generate a real HQ video from an applicable reference journey;
+1. generate a real deferred-export video from an applicable reference journey;
+   confirm ordinary standalone video capture remains unaffected;
 2. inspect trace visibility and progression;
 3. inspect camera movement and phase transitions;
 4. inspect first and final frames;
@@ -87,7 +93,8 @@ substitute for visual evidence.
 - Slider dragging must not compile a complete trajectory or block the main
   thread.
 - Settled scrub qualification must be cancellable and bounded.
-- HQ frame work may increase export wall time but must not change video time.
+- Deferred-export frame work may increase export wall time but must not change
+  video time.
 - Long-journey tests must measure maximum main-thread task duration and memory.
 - Isolated host creation and destruction must not leak WebGL contexts.
 
