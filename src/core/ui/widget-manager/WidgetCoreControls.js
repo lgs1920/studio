@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-01-26
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -73,7 +73,11 @@ export class WidgetCoreControls {
                 height: nextBoardRect.height,
             }
             : nextBoardRect
-        const source = measured?.width > 0 && measured?.height > 0 ? measured : fallback
+        // Crop updates provide the cropper's current dimensions in its own
+        // coordinate space. Prefer that value to the live DOM measurement,
+        // which can still report the cropper's temporary 1–2 px layout while
+        // React and ResizeObserver settle.
+        const source = fallback ?? (measured?.width > 0 && measured?.height > 0 ? measured : null)
         if (!source || source.width <= 0 || source.height <= 0) {
             return 0
         }
@@ -121,8 +125,8 @@ export class WidgetCoreControls {
 
             const currentScaleX = Number.isFinite(Number(config.scale?.x)) && Number(config.scale.x) > 0 ? Number(config.scale.x) : 1
             const currentScaleY = Number.isFinite(Number(config.scale?.y)) && Number(config.scale.y) > 0 ? Number(config.scale.y) : 1
-            // This is intentionally not constrained by minScale or the
-            // widget minimum dimensions: the crop is the hard boundary.
+            // Anchored widgets fit inside the crop while respecting their
+            // configured scale limits whenever the crop has enough room.
             const fixedWidget = Boolean(forcedAnchor)
             const baseWidth = rect.width / currentScaleX
             const baseHeight = rect.height / currentScaleY
@@ -131,11 +135,13 @@ export class WidgetCoreControls {
                 boardRect.width / (fixedWidget ? baseWidth : rect.width),
                 boardRect.height / (fixedWidget ? baseHeight : rect.height),
             ), 0, 1)
+            const fitScale = Math.min(boardRect.width / baseWidth, boardRect.height / baseHeight)
+            const minimumScale = Number.isFinite(Number(config.minScale)) ? Number(config.minScale) : 0
+            const maximumScale = Number.isFinite(Number(config.maxScale)) ? Number(config.maxScale) : Number.POSITIVE_INFINITY
             const fixedScale = Math.max(0, Math.min(
-                currentScaleX,
-                currentScaleY,
-                boardRect.width / baseWidth,
-                boardRect.height / baseHeight,
+                fitScale,
+                maximumScale,
+                Math.max(minimumScale, Math.min(currentScaleX, currentScaleY)),
             ))
             const nextScale = {
                 x: fixedWidget ? fixedScale : currentScaleX * scaleFactor,

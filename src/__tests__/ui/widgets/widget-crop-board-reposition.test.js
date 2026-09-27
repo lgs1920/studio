@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-19
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -356,6 +356,52 @@ describe('crop board widget repositioning', () => {
         expect(config.position.top).toBeCloseTo(295)
         expect(config.scale).toEqual({x: 0.5, y: 0.5})
         expect(manager.transform.setScale).not.toHaveBeenCalled()
+    })
+
+    it('uses the updated crop dimensions and recovers credits from a transient tiny scale', () => {
+        const liveCrop = document.createElement('div')
+        document.body.appendChild(liveCrop)
+        liveCrop.setAttribute('data-widget-id', VIDEO_CROP_ZONE)
+        liveCrop.getBoundingClientRect = vi.fn(() => ({
+            left: 0, top: 0, width: 2, height: 2, right: 2, bottom: 2,
+        }))
+        manager.getElementById = vi.fn(() => liveCrop)
+        widget.style.left = '1px'
+        widget.style.top = '1px'
+        widget.getBoundingClientRect = vi.fn(() => ({
+            left: 1, top: 1, width: 1, height: 0.5, right: 2, bottom: 1.5,
+        }))
+        const cropConfig = {
+            id: VIDEO_CROP_ZONE,
+            container: board,
+            cropDimensions: {left: 0, top: 0, width: 600, height: 400},
+        }
+        const config = {
+            id: 'credits-widget#video',
+            type: LGS_WIDGET,
+            widgetsBoard: VIDEO_WIDGETS_BOARD,
+            element: widget,
+            container: board,
+            position: {left: 1, top: 1},
+            dimensions: {width: 100, height: 50},
+            scale: {x: 0.01, y: 0.01},
+            minScale: 0.8,
+            maxScale: 2,
+            margin: 5,
+            persist: true,
+        }
+        registry.setConfig(cropConfig.id, cropConfig)
+        registry.setConfig(config.id, config)
+
+        expect(controls.repositionWidgetsForBoard(
+            VIDEO_WIDGETS_BOARD,
+            cropConfig.cropDimensions,
+        )).toBe(1)
+
+        expect(config.scale).toEqual({x: 0.8, y: 0.8})
+        expect(manager.transform.setScale).toHaveBeenCalledWith(widget, 0.8, 0.8)
+        expect(manager.saveWidgetPosition).toHaveBeenCalledWith(config.id, config)
+        liveCrop.remove()
     })
 
     it('resizes only a widget larger than the crop', () => {
