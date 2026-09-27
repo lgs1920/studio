@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-19
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -1611,6 +1611,7 @@ const WidgetHost = ({
                 resizable:      config.resizable ?? false,
                 resizeToContent: config.resizeToContent ?? null,
                 rotatable:      config.rotatable ?? false,
+                scale:          config.scale ?? {x: 1, y: 1},
                 scalable:       config.scalable ?? false,
                 showControlBox: config.showControlBox ?? true,
                 snap:           config.snap ?? false,
