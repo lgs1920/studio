@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,7 +23,8 @@ import {createReplayCameraCommand} from './ReplayCameraCommand'
 import {isResolvedReplayFrameIntent} from './ReplayFrameIntent'
 import {attachReplayFrameIntent, publishReplayFrameState} from './ReplayFramePublisher'
 import {createReplayRenderModeContract} from './ReplayRenderModeContract'
-import {getJourneyReplaySettings} from './JourneyReplayProgressionStyle'
+import {getJourneyReplaySettings, normalizeJourneyReplayCamera} from './JourneyReplayProgressionStyle'
+import {REPLAY_USER_MODE_BASIC} from './ReplayUserModeConstants'
 
 /**
  * Converts a value to a finite number.
@@ -252,6 +253,31 @@ export const updateReplayFrameRenderContract = ({
 export const replayStore = () => globalThis.lgs?.stores?.replay
 
 /**
+ * Résout les réglages caméra utilisés par la préparation et la capture Replay.
+ *
+ * La préparation Simple met à jour la caméra d’exécution alors que les
+ * réglages effectifs restent ceux de la configuration produit. La capture
+ * doit reprendre cette caméra préparée et le mode Basic ne doit jamais
+ * activer les diagnostics.
+ *
+ * @returns {Object} Réglages caméra normalisés pour le Replay courant.
+ */
+export const currentJourneyReplayCameraSettings = () => {
+    const settings = getJourneyReplaySettings()
+    const store = replayStore()
+    const simplePreparation = store?.simplePreparationActive === true
+    const basicMode = settings.userMode === REPLAY_USER_MODE_BASIC || simplePreparation
+    const camera = simplePreparation && store?.camera
+        ? {...settings.camera, ...store.camera}
+        : settings.camera
+
+    return normalizeJourneyReplayCamera({
+        ...camera,
+        ...(basicMode ? {debug: false} : {}),
+    })
+}
+
+/**
  * Returns whether replay playback currently owns camera updates.
  *
  * A configured sampler may still expose a sample after replay playback has
@@ -340,9 +366,12 @@ export const currentJourneyReplaySample = controller => controller?.currentSampl
 export const currentJourneyReplayPoiBehavior = () => {
     const settings = getJourneyReplaySettings()
     const store = replayStore()
+    const simpleMode = store?.simplePreparationActive === true
     return {
-        hideAllPoisDuringJourneyReplay: settings.hideAllPoisDuringJourneyReplay === true || store?.hideAllPoisDuringJourneyReplay === true,
-        animateAllPoisDuringJourneyReplay: settings.animateAllPoisDuringJourneyReplay === true || store?.animateAllPoisDuringJourneyReplay === true,
+        hideAllPoisDuringJourneyReplay: settings.hideAllPoisDuringJourneyReplay === true
+                                        || (!simpleMode && store?.hideAllPoisDuringJourneyReplay === true),
+        animateAllPoisDuringJourneyReplay: settings.animateAllPoisDuringJourneyReplay === true
+                                           || (!simpleMode && store?.animateAllPoisDuringJourneyReplay === true),
     }
 }
 

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,14 +18,19 @@ import {
     COMPASS_WIDGET,
     CREDITS_WIDGET,
     LOGO_WIDGET,
+    REPLAY_RECORDING_MONITOR_WIDGET_ID,
+    REPLAY_TIMELINE_WIDGET,
+    VIDEO_CROP_ZONE,
     VIDEO_WIDGETS_BOARD,
 } from '@Core/constants'
 
 /**
- * Widget types that may be present on a Replay video surface.
+ * Widget types that must be registered automatically on a Replay video
+ * surface, even when the user has not added an instance yet. Expert Replay
+ * accepts other content widgets already registered on the video board.
  *
- * Credits and Logo are composition infrastructure. Compass is the only
- * user-facing widget retained for Replay preparation and capture.
+ * These structural widgets belong to the capture/editor infrastructure and
+ * must never be projected into the recorded image.
  */
 export const REPLAY_VIDEO_WIDGET_TYPES = Object.freeze([
     COMPASS_WIDGET,
@@ -33,18 +38,45 @@ export const REPLAY_VIDEO_WIDGET_TYPES = Object.freeze([
     LOGO_WIDGET,
 ])
 
-const REPLAY_VIDEO_WIDGET_TYPE_SET = new Set(REPLAY_VIDEO_WIDGET_TYPES)
+/**
+ * Widget types retained by Simple Replay video composition.
+ */
+export const REPLAY_VIDEO_SIMPLE_WIDGET_TYPES = Object.freeze([
+    COMPASS_WIDGET,
+    CREDITS_WIDGET,
+    LOGO_WIDGET,
+])
+
+const REPLAY_VIDEO_SIMPLE_WIDGET_TYPE_SET = new Set(REPLAY_VIDEO_SIMPLE_WIDGET_TYPES)
+
+const REPLAY_VIDEO_NON_CONTENT_TYPES = new Set([
+    VIDEO_CROP_ZONE,
+    REPLAY_RECORDING_MONITOR_WIDGET_ID,
+    REPLAY_TIMELINE_WIDGET,
+])
 
 export const getReplayVideoWidgetType = widgetId => typeof widgetId === 'string'
     ? widgetId.split('#')[0]
     : ''
 
-export const isReplayVideoWidgetAllowed = widgetId => REPLAY_VIDEO_WIDGET_TYPE_SET.has(
-    getReplayVideoWidgetType(widgetId),
-)
+const isSimpleReplayActive = () => globalThis.lgs?.stores?.replay?.simplePreparationActive === true
 
-export const filterReplayVideoWidgetKeys = widgetKeys => [...new Set(widgetKeys ?? [])]
-    .filter(isReplayVideoWidgetAllowed)
+export const isReplayVideoWidgetAllowed = (widgetId, {simpleReplay = isSimpleReplayActive()} = {}) => {
+    const widgetType = getReplayVideoWidgetType(widgetId)
+    if (!widgetType || REPLAY_VIDEO_NON_CONTENT_TYPES.has(widgetType)) {
+        return false
+    }
+
+    return simpleReplay
+        ? REPLAY_VIDEO_SIMPLE_WIDGET_TYPE_SET.has(widgetType)
+        : true
+}
+
+export const filterReplayVideoWidgetKeys = (widgetKeys, options = {}) => {
+    const simpleReplay = options.simpleReplay ?? isSimpleReplayActive()
+    return [...new Set(widgetKeys ?? [])]
+        .filter(widgetId => isReplayVideoWidgetAllowed(widgetId, {simpleReplay}))
+}
 
 /**
  * Return the currently registered video widget instances allowed in Replay.
@@ -52,18 +84,29 @@ export const filterReplayVideoWidgetKeys = widgetKeys => [...new Set(widgetKeys 
  * @param {Object} options - Widget lookup options.
  * @param {string[]|null} [options.widgetKeys=null] - Optional explicit IDs.
  * @param {string} [options.widgetsBoard=VIDEO_WIDGETS_BOARD] - Widget board.
+ * @param {boolean|undefined} [options.simpleReplay] - Restrict to Simple Replay widgets.
  * @returns {string[]} Allowed widget instance IDs.
  */
 export const getReplayVideoWidgetKeys = ({
     widgetKeys = null,
     widgetsBoard = VIDEO_WIDGETS_BOARD,
+    simpleReplay = isSimpleReplayActive(),
 } = {}) => {
     if (Array.isArray(widgetKeys)) {
-        return filterReplayVideoWidgetKeys(widgetKeys)
+        return filterReplayVideoWidgetKeys(widgetKeys, {simpleReplay})
     }
 
-    return [...(globalThis.__?.ui?.widgetCache?.getAll?.({widgetsBoard})?.entries?.() ?? [])]
-        .filter(([widgetId]) => isReplayVideoWidgetAllowed(widgetId))
+    const entries = new Map(
+        globalThis.lgs?.stores?.ui?.widget?.list?.entries?.()
+        ?? [],
+    )
+    for (const [widgetId, entry] of globalThis.__?.ui?.widgetCache?.getAll?.({widgetsBoard})?.entries?.() ?? []) {
+        entries.set(widgetId, {...entries.get(widgetId), ...entry})
+    }
+
+    return [...entries.entries()]
+        .filter(([widgetId, entry]) => entry?.widgetsBoard === widgetsBoard
+            && isReplayVideoWidgetAllowed(widgetId, {simpleReplay}))
         .sort(([, left], [, right]) => (left?.zIndex || 0) - (right?.zIndex || 0))
         .map(([widgetId]) => widgetId)
 }

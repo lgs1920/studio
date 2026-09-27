@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-09-26
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -149,14 +149,14 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(screen.queryByRole('button', {name: 'Cancel'})).toBeNull()
     })
 
-    it('keeps only export and cancel actions in the linked timeline toolbar', () => {
+    it('keeps only the cancel action in the linked timeline toolbar', () => {
         globalThis.lgs.stores.replay.recordingSync = true
         render(<VideoRecordingSettingsToolbar mainTheme mode="actions"/>)
 
         expect(screen.queryByRole('button', {name: 'Ratio: 16:9'})).toBeNull()
         expect(screen.queryByRole('button', {name: 'High · 30 FPS'})).toBeNull()
         expect(screen.queryByRole('button', {name: 'Journey Replay Settings'})).toBeNull()
-        expect(screen.getByRole('button', {name: 'Create Replay video'})).not.toBeNull()
+        expect(screen.queryByRole('button', {name: 'Create Replay video'})).toBeNull()
         expect(screen.getByRole('button', {name: 'Cancel'})).not.toBeNull()
     })
 
@@ -216,33 +216,13 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(globalThis.lgs.stores.replay.duration).toBe(20)
     })
 
-    it('starts Replay export from expert preparation', () => {
-        globalThis.lgs.stores.replay.recordingSync = true
-        globalThis.lgs.stores.ui.video.timelinePreviewActive = true
-        const requestHqExport = vi.fn()
-        globalThis.window.addEventListener('lgs:video:start-hq-export', requestHqExport)
-
-        render(<VideoRecordingSettingsToolbar/>)
-
-        expect(screen.queryByRole('button', {name: 'Record'})).toBeNull()
-        expect(screen.getByRole('button', {name: 'Create Replay video'})).not.toBeNull()
-        fireEvent.click(screen.getByRole('button', {name: 'Create Replay video'}))
-        expect(requestHqExport).toHaveBeenCalledTimes(1)
-
-        globalThis.window.removeEventListener('lgs:video:start-hq-export', requestHqExport)
-    })
-
-    it('starts Replay export from simple preparation without arming live recording', () => {
+    it('does not expose a second Replay export action during simple preparation', () => {
         globalThis.lgs.stores.replay.simplePreparationActive = true
-        const requestExport = vi.fn()
-        globalThis.window.addEventListener('lgs:video:start-hq-export', requestExport)
         render(<VideoRecordingSettingsToolbar/>)
 
         expect(screen.queryByRole('button', {name: 'Record'})).toBeNull()
-        fireEvent.click(screen.getByRole('button', {name: 'Create Replay video'}))
-        expect(requestExport).toHaveBeenCalledTimes(1)
+        expect(screen.queryByRole('button', {name: 'Create Replay video'})).toBeNull()
         expect(globalThis.__.ui.replayVideoSync.arm).not.toHaveBeenCalled()
-        globalThis.window.removeEventListener('lgs:video:start-hq-export', requestExport)
     })
 
     it('waits for crop persistence before cancelling video setup', async () => {

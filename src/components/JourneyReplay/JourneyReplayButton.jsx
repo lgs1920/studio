@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-05
- * Last modified: 2026-09-26
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { REPLAY_DRAWER } from '@Core/constants'
+import { cancelVideoEditing } from '@Components/MainUI/video/videoEditingCleanup'
 import { normalizeSimpleReplayDuration, REPLAY_LABEL } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {
     defaultSimpleReplaySettings,
@@ -62,11 +63,6 @@ export const JourneyReplayButton = (props) => {
     const buttonAriaLabel = isBasicPreparationActive ? 'Start Basic Replay' : ariaLabel
     const buttonTooltipText = isBasicPreparationActive ? 'Start Basic Replay' : tooltipText
     const handleClick = useCallback(() => {
-        console.error('[LGS1920][Diagnostics] replay button click', {
-            mode,
-            editing: lgs.stores.ui.video.editing,
-            simplePreparationActive: lgs.stores.replay.simplePreparationActive,
-        })
         if (typeof onClick === 'function') {
             onClick()
             return
@@ -78,6 +74,7 @@ export const JourneyReplayButton = (props) => {
                 camera: {
                     ...(lgs.settings.ui.replay.simple?.camera ?? defaultSimpleReplaySettings().camera),
                     altitudeMode: 'constant',
+                    debug: false,
                     heading: 0,
                     headingOffset: 0,
                     positionMode: 'system',
@@ -101,12 +98,16 @@ export const JourneyReplayButton = (props) => {
             void Promise.resolve(__.ui.replay?.enterReplayPreparation?.({
                 journey: lgs.theJourney,
                 shouldApply: () => lgs.stores.replay.simplePreparationActive === true,
-            })).catch(error => {
-                console.error('[LGS1920][Diagnostics] simple replay preparation failed', error)
-            })
+            })).catch(() => undefined)
             return
         }
         if (mode === REPLAY_USER_MODE_EXPERT) {
+            const videoEditing = lgs.stores.ui.video.editing === true
+            const replayPreparationActive = lgs.stores.replay.simplePreparationActive === true
+                                             || lgs.stores.ui.video.timelinePreviewActive === true
+            if (videoEditing || replayPreparationActive) {
+                cancelVideoEditing()
+            }
             lgs.stores.replay.simplePreparationActive = false
             lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_EXPERT
             const journey = lgs.theJourney
@@ -125,6 +126,11 @@ export const JourneyReplayButton = (props) => {
                 lgs.stores.replay.progression = replay.expert.progression
                 lgs.stores.replay.profileInfo = replay.expert.profileInfo
             }
+            const expertCamera = journey?.replay?.expert?.camera
+            if (expertCamera) {
+                lgs.settings.ui.replay.camera = expertCamera
+                lgs.stores.replay.camera = expertCamera
+            }
         }
         __.ui.drawerManager.open(REPLAY_DRAWER)
     }, [mode, onClick])
@@ -142,7 +148,7 @@ export const JourneyReplayButton = (props) => {
         >
             <WaIcon
                 name={isBasicMode ? 'video-down-to-line' : 'drone'}
-                rotate={isBasicMode ? 45 : 30}
+                rotate={isBasicMode ? 45 : 0}
                 variant="regular"
             />
         </WaButton>

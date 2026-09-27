@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -68,6 +68,7 @@ describe('replay camera diagnostics overlay', () => {
 
     it('keeps one visible diagnostics canvas while camera updates redraw it', () => {
         const settings = defaultJourneyReplaySettings()
+        settings.userMode = 'expert'
         settings.camera.debug = true
         const container = document.createElement('div')
         document.body.appendChild(container)
@@ -140,6 +141,8 @@ describe('replay camera diagnostics overlay', () => {
 
     it('does not mount linked diagnostics when debug camera is disabled', () => {
         const settings = defaultJourneyReplaySettings()
+        settings.camera.debug = true
+        settings.simple = {camera: {debug: false}}
         const container = document.createElement('div')
         document.body.appendChild(container)
         const state = {
@@ -170,6 +173,7 @@ describe('replay camera diagnostics overlay', () => {
 
     it('restores linked diagnostics visibility when preparing the HQ scene', async () => {
         const settings = defaultJourneyReplaySettings()
+        settings.userMode = 'expert'
         settings.camera.debug = true
         const setVisible = vi.fn()
         const updateOverlay = vi.fn()

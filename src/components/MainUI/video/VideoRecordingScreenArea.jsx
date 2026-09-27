@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-30
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,7 +22,6 @@ import {
     APP_KEY, CROP_TOOLS_WIDGETS, LGS_PROJECT, MINUTE, SECOND, VIDEO_CROP_ZONE,
     VIDEO_TOOLS_WIDGETS, WIDGET_MOUNT_TIMEOUT,
 } from '@Core/constants'
-import { prepareReplayDeferredExportPlan, warmReplayDeferredExportPlan } from '@Core/ui/replay/ReplayDeferredExporter'
 import { resolveReplayTimelineDuration } from '@Core/ui/replay/ReplayProgress'
 import {
     buildReplayVideoComposerOverlays,
@@ -82,12 +81,10 @@ const resolveInteractiveVideoDurationMillis = ({
     const configuredReplayDurationMillis = positiveFinite(replay?.duration) === null
                                            ? null
                                            : positiveFinite(replay?.duration) * 1000
-    const replayDurationMillis = positiveFinite(replay?.deferredExportPlan?.videoTimeline?.replayDurationMillis)
-                                  ?? controllerReplayDurationMillis
+    const replayDurationMillis = controllerReplayDurationMillis
                                   ?? configuredReplayDurationMillis
                                   ?? positiveFinite(replay?.durationMillis)
     const replayTimelineDurationMillis = resolveReplayTimelineDuration({
-        videoTimelineDurationMillis: replay?.deferredExportPlan?.videoTimeline?.durationMillis,
         replayDurationMillis,
         clips,
     })
@@ -431,65 +428,6 @@ export const VideoRecordingScreenArea = memo(() => {
                 ...(journeyTitle ? {title: journeyTitle} : {}),
                 ...(lgs.theJourney?.title ? {description: lgs.theJourney.title} : {}),
             }
-            if (isJourneyReplaySyncRequested()) {
-                // Prepare the deferred master export as soon as the interactive starts.
-                // This only stores a compact context and warms the codec/config.
-                const deferredExportPrepareStartedAt = globalThis.performance?.now?.() ?? Date.now()
-                replayVideoTraceDebug('interactive.recording.deferred-export.plan.start', {
-                    captureMode: renderSpec.captureMode,
-                    dimensions: renderSpec.dimensions,
-                    startToken,
-                })
-                const {exporter, plan} = prepareReplayDeferredExportPlan({
-                    replay: lgs.stores.replay,
-                    journey: lgs.theJourney,
-                    controller: __.ui.replay?.controller ?? null,
-                    fps: selectedFps,
-                    label: `${lgs.theJourney?.slug ?? lgs.stores.replay?.journeySlug ?? 'replay'}-master-export`,
-                    dimensions: renderSpec.dimensions,
-                    captureMode: renderSpec.captureMode,
-                    renderSpec,
-                    mediaMetadata: recordingMetadata,
-                })
-                replayVideoTraceDebug('interactive.recording.deferred-export.plan.end', {
-                    elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - deferredExportPrepareStartedAt,
-                    hasExporter: Boolean(exporter),
-                    hasPlan: Boolean(plan),
-                    startToken,
-                })
-                plan.runtime.status = 'warming'
-                plan.runtime.preparedAt = plan.runtime.preparedAt ?? new Date().toISOString()
-                const deferredExportWarmStartedAt = globalThis.performance?.now?.() ?? Date.now()
-                replayVideoTraceDebug('interactive.recording.deferred-export.warm.start', {
-                    captureMode: renderSpec.captureMode,
-                    dimensions: renderSpec.dimensions,
-                    startToken,
-                })
-                plan.runtime.warmPromise = warmReplayDeferredExportPlan({
-                    exporter,
-                    plan,
-                    replay: lgs.stores.replay,
-                    dimensions: renderSpec.dimensions,
-                    browser: __.device.browser,
-                }).then(result => {
-                    replayVideoTraceDebug('interactive.recording.deferred-export.warm.end', {
-                        elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - deferredExportWarmStartedAt,
-                        hasOutputConfig: Boolean(result?.outputConfig),
-                        runtimeStatus: result?.plan?.runtime?.status ?? null,
-                        startToken,
-                    })
-                    return result
-                }).catch(error => {
-                    replayVideoTraceDebug('interactive.recording.deferred-export.warm.error', {
-                        elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - deferredExportWarmStartedAt,
-                        message: error?.message ?? null,
-                        name: error?.name ?? null,
-                        startToken,
-                    })
-                    throw error
-                })
-            }
-
             __.recorder.initialize({
                 maxSize: maxSize * 1048576,
                 maxDuration: maxDuration * MINUTE,
@@ -527,9 +465,7 @@ export const VideoRecordingScreenArea = memo(() => {
             }
 
             // The final recorder frame must be composed from the current Cesium
-            // canvas. This is required for Interactive as well as HQ: without the
-            // callback, Interactive can submit the previous compositor frame even when
-            // the replay trace is still visible on the source canvas.
+            // canvas so the same cropped frame feeds the recorder and monitor.
             __.recorder.setFrameCaptureReady(async () => {
                 return flushComposerOverlays().then(async () => {
                     buildFinalComposerOverlays(composer, renderSpec.cropRect, renderSpec.outputDpr)

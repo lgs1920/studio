@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -551,6 +551,7 @@ describe('JourneyReplayDrawer', () => {
     })
 
     it('shows the debug camera switch as a Replay setting and keeps it disabled by default', async () => {
+        globalThis.lgs.settings.ui.replay.userMode = 'expert'
         const view = render(<JourneyReplayDrawer/>)
         fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
 

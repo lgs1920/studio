@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -59,10 +59,10 @@ import {
     resolveReplayTileSpeedLevel,
 }                              from '@Core/ui/replay/ReplaySceneTileReadiness'
 import {
-    buildReplayFrameState,
+    buildReplayFrameState, currentJourneyReplayCameraSettings,
 }                              from '@Core/ui/replay/JourneyReplayRuntime'
 import {
-    normalizeJourneyReplayCamera, normalizeJourneyReplayReadiness,
+    normalizeJourneyReplayReadiness,
 }                              from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {
     IsolatedHqReplayRenderHost,
@@ -1512,7 +1512,7 @@ export const prepareReplayDeferredExportPlan = ({
     const trackPathDescriptor = createReplayTrackPathDescriptor(trackPath)
     const startProgress = Number(direction) < 0 ? 1 : 0
     const cameraDefinition = createReplayCameraDefinition({
-        cameraSettings: replay?.camera,
+        cameraSettings: currentJourneyReplayCameraSettings(),
         markerSettings: replay?.marker,
         startAnchor: controller?.sampler?.atProgress?.(startProgress) ?? null,
     })
@@ -2061,10 +2061,7 @@ export const runReplayDeferredMp4Export = async ({
                 replay?.readiness
                 ?? globalThis.lgs?.settings?.ui?.replay?.readiness,
             )
-            const replayCamera = normalizeJourneyReplayCamera(
-                replay?.camera
-                ?? globalThis.lgs?.settings?.ui?.replay?.camera,
-            )
+            const replayCamera = currentJourneyReplayCameraSettings()
             restoreReplaySceneTileCache = prepareReplaySceneTileCache(replayScene)
             replaySceneTileReadinessCoordinator = isolatedRenderHost
                 ? {

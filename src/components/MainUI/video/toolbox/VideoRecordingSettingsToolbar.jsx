@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-20
- * Last modified: 2026-09-26
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -57,7 +57,6 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false, layout = 
                               && !video.snapshot
                               && !video.finalizing
     const simplePreparation = replay.simplePreparationActive === true
-    const replayPreparation = replay.recordingSync === true || simplePreparation
     const showVideoOptions = mode !== 'actions'
     const showActions = mode !== 'video-options'
 
@@ -142,14 +141,6 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false, layout = 
         await syncCropFrame('editing-exit')
         cancelVideoEditing()
     }, [syncCropFrame])
-
-    /**
-     * Requests direct HQ export from the linked Replay preparation view.
-     * @returns {void} Nothing.
-     */
-    const handleHqExport = useCallback(() => {
-        globalThis.window?.dispatchEvent(new globalThis.CustomEvent('lgs:video:start-hq-export'))
-    }, [])
 
     /**
      * Store the selected Simple Replay duration for playback and export.
@@ -387,21 +378,6 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false, layout = 
                 </LGSPopup> : null}
 
                 {showActions ? simpleSettingsTrigger : null}
-
-                {showActions && replayPreparation && (
-                    <WaButton
-                        id="video-start-hq-export"
-                        size="s"
-                        variant="brand"
-                        appearance="plain"
-                        className="video-recording-settings-action video-recorder-start-recording"
-                        aria-label="Create Replay video"
-                        onClick={handleHqExport}
-                    >
-                        <WaIcon name="clapperboard-play" label=""/>
-                        <span>{'Create Replay'}</span>
-                    </WaButton>
-                )}
 
                 {showActions ? <span className="video-recording-settings-separator" aria-hidden="true"/> : null}
 

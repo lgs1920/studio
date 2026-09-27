@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -318,7 +318,7 @@ export const MainUI = memo(() => {
                     {mainUI.callForActions.active && <CallForActions/>}
                 </>
             )}
-            {video.editing && replay.simplePreparationActive !== true && <CameraAdjustmentOverlay/>}
+            {video.editing && !videoCaptureActive && <CameraAdjustmentOverlay/>}
             <ContextMenuRenderer/>
             <VideoDownloadAndShareDialog/>
             <ReplayRecordingMonitorWidget/>

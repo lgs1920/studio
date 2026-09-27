@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
     buildReplayVideoComposerOverlays,
     getReplayVideoOverlayMetrics,
+    isReplayVideoWidgetReady,
     resolveReplayVideoWidgetScale,
 } from '@Core/ui/replay/ReplayVideoOverlayComposer'
 import { Widget2Canvas } from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
@@ -76,7 +77,7 @@ describe('getReplayVideoOverlayMetrics', () => {
         globalThis.getComputedStyle = originalGetComputedStyle
     })
 
-    it('includes hidden replay diagnostics canvases in the HQ composer', () => {
+    it('does not include hidden replay diagnostics canvases in the video', () => {
         const container = document.createElement('div')
         const diagnosticsCanvas = document.createElement('canvas')
         diagnosticsCanvas.hidden = true
@@ -102,8 +103,34 @@ describe('getReplayVideoOverlayMetrics', () => {
         })
 
         expect(composer.beginUpdate).toHaveBeenCalledOnce()
-        expect(composer.addOverlay).toHaveBeenCalledOnce()
+        expect(composer.addOverlay).not.toHaveBeenCalled()
         expect(composer.endUpdate).toHaveBeenCalledOnce()
+    })
+
+    it('includes visible replay diagnostics canvases in the video', () => {
+        const container = document.createElement('div')
+        const diagnosticsCanvas = document.createElement('canvas')
+        diagnosticsCanvas.dataset.replayVideoOverlayCanvas = 'true'
+        container.appendChild(diagnosticsCanvas)
+
+        const composer = {
+            addOverlay: vi.fn(),
+            beginUpdate: vi.fn(),
+            endUpdate: vi.fn(),
+        }
+
+        globalThis.lgs = {
+            viewer: {
+                container,
+            },
+        }
+
+        buildReplayVideoComposerOverlays({
+            composer,
+            cropRect: {left: 0, top: 0, width: 320, height: 180},
+            widgetKeys: ['unused-widget'],
+        })
+
         expect(composer.addOverlay).toHaveBeenCalledWith(
             diagnosticsCanvas,
             expect.objectContaining({
@@ -307,5 +334,62 @@ describe('getReplayVideoOverlayMetrics', () => {
         expect(composer.beginUpdate).toHaveBeenCalledOnce()
         expect(composer.addOverlay).not.toHaveBeenCalled()
         expect(composer.endUpdate).toHaveBeenCalledOnce()
+    })
+})
+
+describe('Replay video widget capture canvas resolution', () => {
+    afterEach(() => {
+        globalThis.__ = undefined
+        globalThis.lgs = undefined
+    })
+
+    it('resolves the Widget2Canvas sibling used by mounted widgets', () => {
+        const container = document.createElement('div')
+        const widgetElement = document.createElement('div')
+        const captureCanvas = document.createElement('canvas')
+        captureCanvas.className = 'lgs-widget-canvas'
+        captureCanvas.width = 160
+        captureCanvas.height = 90
+        container.append(captureCanvas, widgetElement)
+
+        const composer = {
+            addOverlay: vi.fn(),
+            beginUpdate: vi.fn(),
+            endUpdate: vi.fn(),
+        }
+
+        globalThis.lgs = {
+            viewer: {
+                container: document.createElement('div'),
+            },
+        }
+        globalThis.__ = {
+            ui: {
+                widgetCache: {
+                    isMounted: vi.fn(() => true),
+                },
+                widgetManager: {
+                    getElementById: vi.fn(() => widgetElement),
+                    getWidgetConfig: vi.fn(() => ({position: {left: 12, top: 24}})),
+                },
+            },
+        }
+
+        buildReplayVideoComposerOverlays({
+            composer,
+            cropRect: {left: 0, top: 0, width: 320, height: 180},
+            widgetKeys: ['credits-widget#video'],
+        })
+
+        expect(isReplayVideoWidgetReady('credits-widget#video')).toBe(true)
+        expect(composer.addOverlay).toHaveBeenCalledWith(
+            captureCanvas,
+            expect.objectContaining({
+                x: 12,
+                y: 24,
+                w: 160,
+                h: 90,
+            }),
+        )
     })
 })

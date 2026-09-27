@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -200,6 +200,7 @@ describe('ReplayRecordingMonitorWidget', () => {
         expect(widgetHarness.config.icon).toBe('clapperboard-play')
         expect(widgetHarness.config.canReduce).toBe(true)
         expect(widgetHarness.config.resizable).toBe(true)
+        expect(widgetHarness.config.ratio).toBe('0x0')
         expect(widgetHarness.config.showControlBox).toBe(true)
         expect(widgetHarness.config.attachTo).toBe('bottom-right')
         expect(widgetHarness.config.min).toEqual({width: 360, height: 280})

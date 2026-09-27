@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -53,6 +53,7 @@ import { normalizeJourneyReplayPOISettings } from '@Core/ui/replay/JourneyReplay
 import {
     resetExpertReplayFromSimple,
     resolveSimpleReplaySettings,
+    REPLAY_USER_MODE_EXPERT,
 } from '@Core/ui/replay/ReplayUserModes'
 import { isJourneyReplayCameraActive } from '@Core/ui/replay/JourneyReplayRuntime'
 import { ELEVATION_UNITS, UnitUtils } from '@Utils/UnitUtils'
@@ -445,7 +446,10 @@ export const JourneyReplayDrawer = memo(() => {
         .length, [clips.start, clips.stop])
     const remainingUseDefinedTrackStyle = trace.remaining.useDefinedTrackStyle !== false
     const remainingColor = toOpaqueColorValue(trace.remaining.color)
-    const camera = normalizeJourneyReplayCamera(replaySettings.camera)
+    const camera = normalizeJourneyReplayCamera({
+        ...replaySettings.camera,
+        ...(replaySettings.userMode === REPLAY_USER_MODE_EXPERT ? {} : {debug: false}),
+    })
     const readiness = normalizeJourneyReplayReadiness(replaySettings.readiness)
     const [activeTab, setActiveTab] = useState(REPLAY_TAB_RUNNER)
     const [advancedCameraPopupOpen, setAdvancedCameraPopupOpen] = useState(false)
@@ -781,8 +785,12 @@ export const JourneyReplayDrawer = memo(() => {
     }, [updateReadiness])
 
     const updateDebugCamera = useCallback(event => {
-        updateCamera({debug: getChecked(event)})
-    }, [updateCamera])
+        updateCamera({
+            debug: replaySettings.userMode === REPLAY_USER_MODE_EXPERT
+                ? getChecked(event)
+                : false,
+        })
+    }, [replaySettings.userMode, updateCamera])
 
     useEffect(() => () => {
         if (cameraUpdateSourceClearTimer.current !== null) {

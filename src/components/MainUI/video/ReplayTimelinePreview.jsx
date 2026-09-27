@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -947,9 +947,7 @@ export const ReplayTimelinePreview = forwardRef(({
             journey: lgs.theJourney,
             shouldApply: () => lgs.stores.ui.video.timelinePreviewActive === true
                            && lgs.stores.replay.recordingSync === true,
-        })).catch(error => {
-            console.error('[LGS1920][Diagnostics] timeline replay preparation failed', error)
-        })
+        })).catch(() => undefined)
     }, [linkedPreparation, projection.signature])
 
     if (!linkedPreparation) {

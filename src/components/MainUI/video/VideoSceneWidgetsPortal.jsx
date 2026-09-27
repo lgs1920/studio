@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-28
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -39,15 +39,14 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
                               || video.finalizing === true
     const synchronizedRecording = (video.recording === true || video.recordingHQ === true)
                                   && replay.recordingSync === true
+    const simpleReplay = replay.simplePreparationActive === true
     const previewOnly = videoCaptureActive || synchronizedRecording
-    const restrictedWidgetPhase = videoCaptureActive || replay.simplePreparationActive === true
     const _rehydrateKey = useRef('')
     const allWidgetEntries = Array.from(list.entries())
         .filter(([, props]) => props?.widgetsBoard === VIDEO_WIDGETS_BOARD)
         .sort(([, a], [, b]) => (b.zIndex || 0) - (a.zIndex || 0))
-    const widgetEntries = restrictedWidgetPhase
-        ? allWidgetEntries.filter(([key]) => filterReplayVideoWidgetKeys([key]).length > 0)
-        : allWidgetEntries
+    const widgetEntries = allWidgetEntries
+        .filter(([key]) => filterReplayVideoWidgetKeys([key], {simpleReplay}).length > 0)
     const widgetIds = widgetEntries.map(([key]) => key).join('|')
 
     const [boardElement, setBoardElement] = useState(null)
@@ -154,7 +153,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
 
         __.ui.widgetManager.invalidateRuntimeByBoard(VIDEO_WIDGETS_BOARD)
         void __.ui.widgetManager.rehydrateWidgetsByBoard(VIDEO_WIDGETS_BOARD)
-    }, [boardReady, hidden, videoCaptureActive, widgetIds])
+    }, [boardReady, hidden, simpleReplay, videoCaptureActive, widgetIds])
 
     useEffect(() => {
         if (!videoCaptureActive) {

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-26
- * Last modified: 2026-05-26
+ * Created on: 2026-04-27
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -54,11 +54,11 @@
     --lgs-card-on-map-hover-outline: 1px solid var(--lgs-card-on-map-hover-outline-color);
     --lgs-card-on-map-hover-outline-offset: 0;
     --lgs-card-on-map-hover-color: var(--lgs-text-on-color);
-    --lgs-card-on-map-selected-bg-color: color-mix(in oklab, var(--wa-color-brand) 10%, var(--lgs-card-on-map-bg-color) 90%);
+    --lgs-card-on-map-selected-bg-color: color-mix(in oklab, var(--wa-color-brand) 18%, var(--lgs-card-on-map-bg-color) 82%);
     --lgs-card-on-map-selected-bg-image: none;
     --lgs-card-on-map-selected-bg-blend-mode: normal;
     --lgs-card-on-map-selected-bg: var(--lgs-card-on-map-selected-bg-color);
-    --lgs-card-on-map-selected-border-color: var(--lgs-card-on-map-border-color);
+    --lgs-card-on-map-selected-border-color: var(--lgs-card-on-map-hover-outline-color);
     --lgs-card-on-map-selected-color: var(--lgs-text-on-color);
     --lgs-widget-collapsed-icon-color: var(--wa-color-brand-on-quiet);
     --lgs-disabled-color: color-mix(in oklab, var(--lgs-text-on-color) 50%, transparent);
@@ -349,7 +349,7 @@
     color: var(--lgs-card-on-map-selected-color);
     border-color: var(--lgs-card-on-map-selected-border-color);
     border-radius: var(--lgs-on-map-interactive-radius, var(--lgs-border-radius-xs)) !important;
-    outline-color: transparent;
+    outline-color: var(--lgs-card-on-map-selected-border-color);
     background-color: var(--lgs-card-on-map-selected-bg-color) !important;
     background-image: var(--lgs-card-on-map-selected-bg-image) !important;
     background-blend-mode: var(--lgs-card-on-map-selected-bg-blend-mode);

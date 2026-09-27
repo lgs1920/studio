@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-09-26
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,6 +25,9 @@ import {
     REPLAY_USER_MODE_BASIC,
     REPLAY_USER_MODE_EXPERT,
 } from '@Core/ui/replay/ReplayUserModes'
+import {
+    normalizeJourneyReplaySettings,
+} from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {describe, expect, it} from 'vitest'
 
 describe('Replay user modes', () => {
@@ -61,6 +64,17 @@ describe('Replay user modes', () => {
         expect(normalized.camera).toMatchObject({debug: false, positionMode: 'behind'})
         expect(normalized.marker.mode).toBe('navigation')
         expect(normalized.trace.mode).toBe('progressive')
+    })
+
+    it('forces camera debug off in Basic settings while preserving the stored Expert value', () => {
+        expect(normalizeJourneyReplaySettings({
+            userMode: REPLAY_USER_MODE_BASIC,
+            camera: {debug: true},
+        }).camera.debug).toBe(false)
+        expect(normalizeJourneyReplaySettings({
+            userMode: REPLAY_USER_MODE_EXPERT,
+            camera: {debug: true},
+        }).camera.debug).toBe(true)
     })
 
     it('defaults Simple Replay to 15 seconds and accepts only the supported durations', () => {

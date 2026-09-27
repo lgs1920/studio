@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-14
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,6 @@
 import { Compass }                                        from '@Components/MainUI/compass/Compass'
 import { Widget }                                         from '@Components/MainUI/widgets/Widget'
 import { HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS, VIDEO_WIDGETS_BOARD } from '@Core/constants'
-import { REPLAY_USER_MODE_BASIC } from '@Core/ui/replay/ReplayUserModeConstants'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { useMemo }             from 'react'
 import { useSnapshot }         from 'valtio'
@@ -35,13 +34,9 @@ export const CompassWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
     // Get snapshot of context
     const contextState = useOptionalSnapshot(context, COMPASS_WIDGET_CONTEXT_FALLBACK)
     const video = useSnapshot(lgs.stores.ui.video)
-    const replay = useOptionalSnapshot(lgs.stores.replay)
-    const replaySettings = useOptionalSnapshot(lgs.settings?.ui?.replay)
     const widgetEditor = contextState.widgetEditor || detached
     const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
-    const simpleReplayMode = replay.simplePreparationActive === true
-                              || (replay.recordingSync === true && replaySettings.userMode === REPLAY_USER_MODE_BASIC)
-    const fixedVideoCompass = widgetsBoard === VIDEO_WIDGETS_BOARD && simpleReplayMode
+    const fixedVideoCompass = widgetsBoard === VIDEO_WIDGETS_BOARD
     const showDuringVideoCapture = widgetsBoard === VIDEO_WIDGETS_BOARD
         && (video.editing || video.preRecording || video.recording || video.recordingHQ || video.snapshot || video.finalizing)
     const container = useMemo(() => __.ui.widgetManager.resolveWidgetsBoardContainer(widgetsBoard), [widgetsBoard])

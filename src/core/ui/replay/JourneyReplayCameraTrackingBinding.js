@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-03
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@
  * Shared logical replay camera tracking for Interactive and HQ rendering.
  */
 
-import {finiteNumber} from './JourneyReplayRuntime'
+import {currentJourneyReplayCameraSettings, finiteNumber} from './JourneyReplayRuntime'
 import {
     replayAdaptiveTrackingTiming,
     replayCameraFrameLeadSeconds,
@@ -565,11 +565,7 @@ export const updateCamera = (mode, {
         viewer.trackedEntity = undefined
     }
 
-    const cameraSettings = normalizeJourneyReplayCamera(
-        globalThis.lgs?.settings?.ui?.replay?.camera
-        ?? globalThis.lgs?.stores?.replay?.camera
-        ?? settings.camera,
-    )
+    const cameraSettings = currentJourneyReplayCameraSettings()
     if (cameraSettings.canFixHiddenMarker === false) {
         resetReplayCameraPitchCorrection(mode)
     }
@@ -794,7 +790,7 @@ export const updateCamera = (mode, {
             : navigationCameraView
         const viewport = call.viewportRectForCesiumSurface()
         const runtimeTracking = replayRuntimeTrackingSettings(
-            globalThis.lgs?.settings?.ui?.replay?.camera ?? cameraSettings,
+            cameraSettings,
             viewport,
             adaptiveTrackingTiming,
         )
@@ -950,7 +946,7 @@ export const updateCamera = (mode, {
     if (markerSettings.mode === REPLAY_MARKER_MODE_HYSTERESIS) {
         const viewport = call.viewportRectForCesiumSurface()
         const runtimeTracking = replayRuntimeTrackingSettings(
-            globalThis.lgs?.settings?.ui?.replay?.camera ?? cameraSettings,
+            cameraSettings,
             viewport,
             adaptiveTrackingTiming,
         )

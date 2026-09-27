@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-26
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -43,8 +43,9 @@ import {
 }                                                                                          from './JourneyReplayCesiumRenderer'
 import { REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP, normalizeJourneyReplayClips } from './JourneyReplayClips'
 import {
-    currentJourneyReplayPoiBehavior, currentJourneyReplaySample, finiteNumber, isJourneyReplayTraceActive,
-    publishReplayClipFrameState, replayStore, resetRuntimeProgress, resolveJourneyReplayRuntimeClips,
+    currentJourneyReplayCameraSettings, currentJourneyReplayPoiBehavior, currentJourneyReplaySample, finiteNumber,
+    isJourneyReplayTraceActive, publishReplayClipFrameState, replayStore, resetRuntimeProgress,
+    resolveJourneyReplayRuntimeClips,
 } from './JourneyReplayRuntime'
 import {createJourneyReplayLogicalFrame} from './JourneyReplayLogicalFrame'
 import {replaySceneFrameQualifierFor} from './ReplaySceneFrameQualifier'
@@ -141,13 +142,7 @@ const ensureReplayVideoDiagnosticsOverlay = mode => {
         return false
     }
 
-    const replaySettings = getJourneyReplaySettings()
-    const runtimeStore = replayStore()
-    const replayCameraSettings = normalizeJourneyReplayCamera(
-        globalThis.lgs?.settings?.ui?.replay?.camera
-        ?? runtimeStore?.camera
-        ?? replaySettings.camera,
-    )
+    const replayCameraSettings = currentJourneyReplayCameraSettings()
     if (replayCameraSettings.debug !== true) {
         call.removeToleranceZoneOverlay()
         call.setToleranceZoneOverlayVisible(false)
@@ -303,9 +298,7 @@ export const prepareReplayCamera = async (mode, {
     state.replayPreparationSample = sample
 
     const replaySettings = getJourneyReplaySettings()
-    const cameraSettings = normalizeJourneyReplayCamera(
-        globalThis.lgs?.stores?.replay?.camera ?? replaySettings.camera,
-    )
+    const cameraSettings = currentJourneyReplayCameraSettings()
     const markerSettings = normalizeJourneyReplayMarker(
         globalThis.lgs?.stores?.replay?.marker ?? replaySettings.marker,
     )
@@ -891,9 +884,7 @@ const refreshPreparationCamera = (mode, sample, options = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
     const replaySettings = getJourneyReplaySettings()
-    const cameraSettings = normalizeJourneyReplayCamera(
-        globalThis.lgs?.stores?.replay?.camera ?? replaySettings.camera,
-    )
+    const cameraSettings = currentJourneyReplayCameraSettings()
     const markerSettings = normalizeJourneyReplayMarker(
         globalThis.lgs?.stores?.replay?.marker ?? replaySettings.marker,
     )

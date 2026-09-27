@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -106,66 +106,6 @@ const waitForAppSurfaceReady = () => new Promise(resolve => {
  * @returns {JSX.Element} Mounted application surface.
  */
 export const AppSurface = ({onReady, onError}) => {
-    useEffect(() => {
-        console.error('[LGS1920][Diagnostics] AppSurface mounted')
-
-        const inspectPointerTarget = event => {
-            const target = event.target instanceof Element ? event.target : null
-            const point = {x: event.clientX ?? 0, y: event.clientY ?? 0}
-            const topElement = document.elementFromPoint?.(point.x, point.y)
-            const stack = document.elementsFromPoint?.(point.x, point.y) ?? []
-            console.error('[LGS1920][Diagnostics] app pointer', {
-                type: event.type,
-                point,
-                target: target?.tagName?.toLowerCase() ?? null,
-                targetId: target?.id ?? null,
-                topElement: topElement?.tagName?.toLowerCase() ?? null,
-                topElementId: topElement?.id ?? null,
-                stack: stack.slice(0, 12).map(element => ({
-                    tag: element.tagName.toLowerCase(),
-                    id: element.id || null,
-                    className: typeof element.className === 'string' ? element.className : null,
-                    pointerEvents: getComputedStyle(element).pointerEvents,
-                    position: getComputedStyle(element).position,
-                    zIndex: getComputedStyle(element).zIndex,
-                })),
-                editing: lgs.stores.ui.video.editing,
-                simplePreparationActive: lgs.stores.replay.simplePreparationActive,
-            })
-        }
-
-        window.addEventListener('pointerdown', inspectPointerTarget, true)
-        window.addEventListener('mousedown', inspectPointerTarget, true)
-        window.addEventListener('click', inspectPointerTarget, true)
-        const reportUnhandledRejection = event => {
-            const reason = event.reason
-            const reasonText = reason instanceof Error
-                ? `${reason.name}: ${reason.message}`
-                : String(reason)
-            console.error(`[LGS1920][Diagnostics] unhandled rejection: ${reasonText}`)
-            console.error('[LGS1920][Diagnostics] rejection stack:', reason?.stack ?? '(no stack)')
-            console.error('[LGS1920][Diagnostics] rejection value:', reason)
-        }
-        const reportRuntimeError = event => {
-            console.error('[LGS1920][Diagnostics] runtime error', {
-                message: event.message,
-                filename: event.filename,
-                line: event.lineno,
-                column: event.colno,
-                error: event.error,
-            })
-        }
-        window.addEventListener('unhandledrejection', reportUnhandledRejection)
-        window.addEventListener('error', reportRuntimeError)
-        return () => {
-            window.removeEventListener('pointerdown', inspectPointerTarget, true)
-            window.removeEventListener('mousedown', inspectPointerTarget, true)
-            window.removeEventListener('click', inspectPointerTarget, true)
-            window.removeEventListener('unhandledrejection', reportUnhandledRejection)
-            window.removeEventListener('error', reportRuntimeError)
-        }
-    }, [])
-
     useEffect(() => {
         let cancelled = false
         void (async () => {

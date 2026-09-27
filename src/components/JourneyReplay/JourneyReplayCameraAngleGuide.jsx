@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-09-22
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,6 +29,7 @@ import {
     resolveJourneyReplayCameraAngleGuide,
     updateJourneyReplayCameraAngleGuide,
 } from '@Core/ui/replay/JourneyReplayCameraAngleGuide'
+import {isJourneyReplayVideoCaptureActive} from '@Core/ui/replay/JourneyReplayRuntime'
 import {useOptionalSnapshot, useProxyValue} from '@Utils/ValtioUtils'
 import {useEffect} from 'react'
 import {useSnapshot} from 'valtio'
@@ -50,7 +51,15 @@ export const JourneyReplayCameraAngleGuide = () => {
     const camera = normalizeJourneyReplayCamera(replaySettings.camera)
     const cameraHeadingOffset = camera.headingOffset
     const cameraPositionMode = camera.positionMode
-    const editing = video.editing === true || drawers.open === REPLAY_DRAWER
+    const captureActive = video.preRecording !== true && (
+        video.recording === true
+        || video.recordingHQ === true
+        || video.snapshot === true
+        || video.finalizing === true
+        || isJourneyReplayVideoCaptureActive()
+    )
+    const editing = !captureActive
+                    && (video.editing === true || drawers.open === REPLAY_DRAWER)
 
     useEffect(() => {
         const viewer = lgs.viewer

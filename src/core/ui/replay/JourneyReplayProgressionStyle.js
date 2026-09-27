@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified: 2026-09-26
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -600,6 +600,9 @@ export const normalizeJourneyReplayReadiness = (readiness = {}) => {
 }
 
 export const normalizeJourneyReplaySettings = (settings = {}) => {
+    const userMode = settings?.userMode === REPLAY_USER_MODE_EXPERT
+        ? REPLAY_USER_MODE_EXPERT
+        : REPLAY_USER_MODE_BASIC
     const duration = finiteNumber(settings?.duration) ?? DEFAULT_REPLAY_DURATION
     const clips = normalizeJourneyReplayClips(settings?.clips)
     const timelineSettings = settings?.timeline && typeof settings.timeline === 'object'
@@ -607,9 +610,7 @@ export const normalizeJourneyReplaySettings = (settings = {}) => {
         : null
 
     return {
-        userMode:   settings?.userMode === REPLAY_USER_MODE_EXPERT
-                     ? REPLAY_USER_MODE_EXPERT
-                     : REPLAY_USER_MODE_BASIC,
+        userMode,
         simple:     settings?.simple && typeof settings.simple === 'object'
                     ? JSON.parse(JSON.stringify(settings.simple))
                     : null,
@@ -638,7 +639,10 @@ export const normalizeJourneyReplaySettings = (settings = {}) => {
         trace:       normalizeJourneyReplayTrace(settings?.trace),
         smoothing:   normalizeJourneyReplaySmoothing(settings?.smoothing),
         marker:      normalizeJourneyReplayMarker(settings?.marker),
-        camera:      normalizeJourneyReplayCamera(settings?.camera),
+        camera:      normalizeJourneyReplayCamera({
+            ...(settings?.camera ?? {}),
+            ...(userMode === REPLAY_USER_MODE_BASIC ? {debug: false} : {}),
+        }),
         clips:       clips,
         ...(timelineSettings ? {
             timeline: {

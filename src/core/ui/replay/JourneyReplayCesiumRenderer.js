@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -903,10 +903,12 @@ export class JourneyReplayCesiumRenderer {
 
     #style = () => {
         const settings = getJourneyReplaySettings()
+        const replayStore = globalThis.lgs?.stores?.replay
+        const simpleMode = replayStore?.simplePreparationActive === true
         const progression = normalizeJourneyReplayProgressionStyle(
-            globalThis.lgs?.stores?.replay?.progression ?? settings.progression,
+            simpleMode ? settings.progression : replayStore?.progression ?? settings.progression,
         )
-        const trace = normalizeJourneyReplayTrace(globalThis.lgs?.stores?.replay?.trace ?? settings.trace)
+        const trace = normalizeJourneyReplayTrace(simpleMode ? settings.trace : replayStore?.trace ?? settings.trace)
         const fill = progression.fill
         const border = progression.border
         const remaining = trace.remaining

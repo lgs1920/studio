@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,7 +22,9 @@ import {Math as CesiumMath} from 'cesium'
 import {CameraUtils} from '@Utils/cesium/CameraUtils'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
 import {REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP, normalizeJourneyReplayClips} from './JourneyReplayClips'
-import {finiteNumber, replayStore, currentJourneyReplaySample} from './JourneyReplayRuntime'
+import {
+    currentJourneyReplayCameraSettings, currentJourneyReplaySample, finiteNumber, replayStore,
+} from './JourneyReplayRuntime'
 import {
     clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForPositionMode, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
 } from './JourneyReplayCameraMath'
@@ -103,7 +105,7 @@ export const replayExportBaseView = (mode, {sample, progress = 0, cameraSettings
 
         const settings = getJourneyReplaySettings()
         const markerSettings = normalizeJourneyReplayMarker(globalThis.lgs?.stores?.replay?.marker ?? settings.marker)
-        const resolvedCameraSettings = cameraSettings ?? normalizeJourneyReplayCamera(globalThis.lgs?.stores?.replay?.camera ?? settings.camera)
+        const resolvedCameraSettings = cameraSettings ?? currentJourneyReplayCameraSettings()
         if (usesLogicalReplayClipTrajectory(state, call)) {
             return resolveJourneyReplayLogicalCameraPose({
                 sample,
@@ -251,7 +253,7 @@ export const resolveJourneyReplayClipCameraPlan = (mode, {
         }
 
         const settings = getJourneyReplaySettings()
-        const replayCamera = normalizeJourneyReplayCamera(globalThis.lgs?.stores?.replay?.camera ?? settings.camera)
+        const replayCamera = currentJourneyReplayCameraSettings()
         const clipCamera = call.cameraSettingsForClip(clip)
         const duration = Math.max(0, Number(clip?.params?.duration ?? clipCamera?.duration ?? 0))
         const anchorProgress = slot === REPLAY_CLIP_SLOT_STOP ? 1 : 0
@@ -851,7 +853,7 @@ export const placeCameraAtPlaybackStart = (mode, sample, progress = 0) => {
         }
 
         const settings = getJourneyReplaySettings()
-        const cameraSettings = normalizeJourneyReplayCamera(globalThis.lgs?.stores?.replay?.camera ?? settings.camera)
+        const cameraSettings = currentJourneyReplayCameraSettings()
         const markerSettings = normalizeJourneyReplayMarker({
             ...(globalThis.lgs?.stores?.replay?.marker ?? settings.marker),
             position: null,
@@ -901,7 +903,7 @@ export const cameraSettingsForClip = (mode, clip = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const current = normalizeJourneyReplayCamera(globalThis.lgs?.stores?.replay?.camera ?? getJourneyReplaySettings().camera)
+        const current = currentJourneyReplayCameraSettings()
         const params = clip?.params ?? {}
         return normalizeJourneyReplayCamera({
             ...current,
@@ -917,7 +919,7 @@ export const introHeadingForProgress = (mode, progress = 0) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const cameraSettings = normalizeJourneyReplayCamera(globalThis.lgs?.stores?.replay?.camera ?? getJourneyReplaySettings().camera)
+        const cameraSettings = currentJourneyReplayCameraSettings()
         if (cameraSettings.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
             return degreesToRadians(cameraSettings.heading) ?? finiteNumber((call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera?.heading) ?? 0
         }
@@ -933,7 +935,7 @@ export const clipReplayHeadingForProgress = (mode, {progress = 0, cameraSettings
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const settings = normalizeJourneyReplayCamera(cameraSettings ?? globalThis.lgs?.stores?.replay?.camera ?? getJourneyReplaySettings().camera)
+        const settings = normalizeJourneyReplayCamera(cameraSettings ?? currentJourneyReplayCameraSettings())
         if (settings.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
             return degreesToRadians(settings.heading) ?? finiteNumber(fallbackHeading) ?? 0
         }

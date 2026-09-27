@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-28
- * Last modified: 2026-09-26
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,6 +33,7 @@ describe('JourneyReplayButton synchronized video entry point', () => {
                 drawerManager: {
                     isCurrent: vi.fn(() => false),
                     open: vi.fn(),
+                    close: vi.fn(),
                 },
                 replayVideoSync: {
                     arm: vi.fn(),
@@ -112,6 +113,7 @@ describe('JourneyReplayButton synchronized video entry point', () => {
         expect(globalThis.lgs.stores.ui.video.editing).toBe(true)
         expect(globalThis.lgs.settings.ui.replay.simple.camera.heading).toBe(0)
         expect(globalThis.lgs.settings.ui.replay.simple.camera.headingOffset).toBe(0)
+        expect(globalThis.lgs.settings.ui.replay.simple.camera.debug).toBe(false)
         expect(globalThis.lgs.stores.replay.simplePreparationActive).toBe(true)
         await waitFor(() => {
             const icon = screen.getByRole('button', {name: 'Start Basic Replay'}).querySelector('[data-icon="video-down-to-line"]')
@@ -122,7 +124,7 @@ describe('JourneyReplayButton synchronized video entry point', () => {
         expect(globalThis.lgs.settings.ui.replay.userMode).toBe('basic')
     })
 
-    it('rotates the Expert Replay icon to 30 degrees', () => {
+    it('keeps the Expert Replay icon upright', () => {
         render(
             <JourneyReplayButton
                 id="launch-expert-replay-icon"
@@ -133,6 +135,70 @@ describe('JourneyReplayButton synchronized video entry point', () => {
 
         const icon = screen.getByRole('button', {name: 'Expert Replay'}).querySelector('[data-icon="drone"]')
         expect(icon).not.toBeNull()
-        expect(icon.getAttribute('data-rotate')).toBe('30')
+        expect(icon.getAttribute('data-rotate')).toBe('0')
+    })
+
+    it('loads the stored Expert camera when entering Expert Replay', () => {
+        const expertCamera = {debug: true, positionMode: 'ahead'}
+        globalThis.lgs.theJourney.replay = {expert: {camera: expertCamera}}
+        globalThis.lgs.settings.ui.replay.userMode = 'basic'
+
+        render(
+            <JourneyReplayButton
+                id="launch-expert-replay"
+                mode="expert"
+                ariaLabel="Expert Replay"
+            />,
+        )
+
+        const icon = screen.getByRole('button', {name: 'Expert Replay'}).querySelector('[data-icon="drone"]')
+        expect(icon).not.toBeNull()
+
+        fireEvent.click(screen.getByRole('button', {name: 'Expert Replay'}))
+
+        expect(globalThis.lgs.settings.ui.replay.camera).toMatchObject(expertCamera)
+        expect(globalThis.lgs.stores.replay.camera).toMatchObject(expertCamera)
+        expect(globalThis.__.ui.drawerManager.open).toHaveBeenCalledWith('replay-drawer')
+    })
+
+    it('leaves video preparation before opening Expert Replay', () => {
+        const pause = vi.fn()
+        const leaveReplayPreparation = vi.fn()
+        const disarm = vi.fn()
+        const disposeByGroup = vi.fn()
+        const restoreAllHiddenWidgetsExcept = vi.fn()
+        const hide = vi.fn()
+        globalThis.__.ui.replay = {pause, leaveReplayPreparation}
+        globalThis.__.ui.replayVideoSync = {disarm}
+        globalThis.__.ui.widgetManager = {disposeByGroup}
+        globalThis.__.ui.widgetCache = {restoreAllHiddenWidgetsExcept}
+        globalThis.__.ui.contextMenu = {hide}
+        globalThis.lgs.stores.ui.video.editing = true
+        globalThis.lgs.stores.ui.video.timelinePreviewActive = true
+        globalThis.lgs.stores.replay.recordingSync = true
+        globalThis.lgs.stores.replay.simplePreparationActive = true
+
+        render(
+            <JourneyReplayButton
+                id="launch-expert-replay-from-video"
+                mode="expert"
+                ariaLabel="Expert Replay"
+            />,
+        )
+
+        fireEvent.click(screen.getByRole('button', {name: 'Expert Replay'}))
+
+        expect(globalThis.lgs.stores.ui.video.editing).toBe(false)
+        expect(globalThis.lgs.stores.ui.video.timelinePreviewActive).toBe(false)
+        expect(globalThis.lgs.stores.replay.recordingSync).toBe(false)
+        expect(globalThis.lgs.stores.replay.simplePreparationActive).toBe(false)
+        expect(pause).toHaveBeenCalledOnce()
+        expect(leaveReplayPreparation).toHaveBeenCalledOnce()
+        expect(disarm).toHaveBeenCalledOnce()
+        expect(disposeByGroup).toHaveBeenCalledOnce()
+        expect(restoreAllHiddenWidgetsExcept).toHaveBeenCalledOnce()
+        expect(hide).toHaveBeenCalledOnce()
+        expect(globalThis.__.ui.drawerManager.close).toHaveBeenCalledOnce()
+        expect(globalThis.__.ui.drawerManager.open).toHaveBeenCalledWith('replay-drawer')
     })
 })

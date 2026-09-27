@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-14
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -321,6 +321,7 @@ describe('MainUI replay mask', () => {
 
     it('keeps the camera adjustment overlay visible during video preparation', () => {
         lgs.stores.ui.video.editing = true
+        lgs.stores.replay.simplePreparationActive = true
 
         const {container} = render(<MainUI/>)
 

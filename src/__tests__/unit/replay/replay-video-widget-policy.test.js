@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,9 +25,10 @@ import {afterEach, describe, expect, it} from 'vitest'
 describe('Replay video widget policy', () => {
     afterEach(() => {
         globalThis.__ = undefined
+        globalThis.lgs = undefined
     })
 
-    it('keeps only Compass, Credits, and Logo widget instances', () => {
+    it('allows every content widget and excludes capture infrastructure', () => {
         expect(REPLAY_VIDEO_WIDGET_TYPES).toEqual([
             'compass-widget',
             'credits-widget',
@@ -36,28 +37,71 @@ describe('Replay video widget policy', () => {
         expect(filterReplayVideoWidgetKeys([
             'journey-stats-widget#1',
             'compass-widget#1',
+            'credits-widget#video',
             'logo-widget',
+            'text-widget#title',
+            'video-crop-zone',
+            'replay-timeline-widget',
             'compass-widget#1',
-        ])).toEqual(['compass-widget#1', 'logo-widget'])
+        ])).toEqual([
+            'journey-stats-widget#1',
+            'compass-widget#1',
+            'credits-widget#video',
+            'logo-widget',
+            'text-widget#title',
+        ])
         expect(isReplayVideoWidgetAllowed('credits-widget#video')).toBe(true)
+        expect(isReplayVideoWidgetAllowed('compass-widget#1')).toBe(true)
+        expect(isReplayVideoWidgetAllowed('logo-widget')).toBe(true)
+        expect(isReplayVideoWidgetAllowed('journey-stats-widget#1')).toBe(true)
+        expect(isReplayVideoWidgetAllowed('text-widget#title')).toBe(true)
+        expect(filterReplayVideoWidgetKeys([
+            'journey-stats-widget#1',
+            'compass-widget#1',
+            'credits-widget#video',
+            'logo-widget',
+            'text-widget#title',
+        ], {simpleReplay: true})).toEqual([
+            'compass-widget#1',
+            'credits-widget#video',
+            'logo-widget',
+        ])
+        expect(isReplayVideoWidgetAllowed('journey-stats-widget#1', {simpleReplay: true})).toBe(false)
+        expect(isReplayVideoWidgetAllowed('text-widget#title', {simpleReplay: true})).toBe(false)
+        expect(isReplayVideoWidgetAllowed('video-crop-zone')).toBe(false)
         expect(isReplayVideoWidgetAllowed('replay-timeline-widget')).toBe(false)
     })
 
-    it('filters the cache before composing the video widget stack', () => {
+    it('collects every content widget registered on the video board', () => {
         globalThis.__ = {
             ui: {
                 widgetCache: {
                     getAll: () => new Map([
-                        ['journey-stats-widget', {zIndex: 6000}],
-                        ['logo-widget', {zIndex: 10001}],
-                        ['compass-widget#1', {zIndex: 5000}],
+                        ['journey-stats-widget', {widgetsBoard: 'video-crop-zone', zIndex: 6000}],
+                        ['logo-widget', {widgetsBoard: 'video-crop-zone', zIndex: 10001}],
+                        ['compass-widget#1', {widgetsBoard: 'video-crop-zone', zIndex: 5000}],
+                        ['video-crop-zone', {widgetsBoard: 'video-crop-zone', zIndex: 1}],
                     ]),
                 },
             },
         }
+        globalThis.lgs = {
+            stores: {
+                ui: {
+                    widget: {
+                        list: new Map([
+                            ['journey-stats-widget', {widgetsBoard: 'video-crop-zone', zIndex: 6000}],
+                            ['text-widget#title', {widgetsBoard: 'video-crop-zone', zIndex: 4000}],
+                        ]),
+                    },
+                },
+            },
+        }
 
-        expect(getReplayVideoWidgetKeys()).toEqual([
+        expect(getReplayVideoWidgetKeys({simpleReplay: false})).toEqual([
+            'text-widget#title',
             'compass-widget#1',
+            'journey-stats-widget',
             'logo-widget',
         ])
     })

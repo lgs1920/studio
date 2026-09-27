@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,7 +31,7 @@ import {
     applyReplayCesiumCameraCommand,
     replayCesiumCameraFrameAboveTerrain,
 } from './ReplayCesiumCameraAdapter'
-import {finiteNumber, replayStore} from './JourneyReplayRuntime'
+import {currentJourneyReplayCameraSettings, finiteNumber, replayStore} from './JourneyReplayRuntime'
 import {
     clamp, lerp, hasFiniteLonLat, projectReplayTargetInCameraFrame, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
 } from './JourneyReplayCameraMath'
@@ -759,7 +759,7 @@ export const updateCameraSettingsFromCesiumControls = (mode, sample, {altitudeMo
         const terrainHeight = call.terrainHeightForLonLat(sample?.longitude, sample?.latitude)
         const anchoredPose = cameraPoseAroundReplayAnchor(camera, sample)
         const cameraHeight = anchoredPose?.height ?? finiteNumber(camera.positionCartographic?.height)
-        const currentCameraSettings = normalizeJourneyReplayCamera(globalThis.lgs?.stores?.replay?.camera ?? getJourneyReplaySettings().camera)
+        const currentCameraSettings = currentJourneyReplayCameraSettings()
         const currentAltitude = currentCameraSettings.altitude
         const pitchRadians = anchoredPose?.pitch ?? finiteNumber(camera.pitch)
         const headingRadians = anchoredPose?.heading ?? finiteNumber(camera.heading)
@@ -849,7 +849,7 @@ export const syncCameraDrawerFromSettings = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const camera = normalizeJourneyReplayCamera(globalThis.lgs?.stores?.replay?.camera ?? getJourneyReplaySettings().camera)
+        const camera = currentJourneyReplayCameraSettings()
         if (globalThis.lgs?.settings?.ui?.replay) {
             globalThis.lgs.settings.ui.replay.camera = camera
         }

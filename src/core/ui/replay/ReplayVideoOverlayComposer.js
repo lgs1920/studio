@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -190,6 +190,26 @@ const resolveMetrics = ({widgetId, widgetEl, metricsCache = null, metricsCacheTt
 }
 
 /**
+ * Resolve the raster canvas generated for a widget.
+ *
+ * Widget2Canvas inserts its canvas beside the captured widget content, so the
+ * capture canvas can be either a descendant or a sibling of the widget node.
+ *
+ * @param {HTMLElement|null} widgetElement - Mounted widget root.
+ * @returns {HTMLCanvasElement|null} Resolved capture canvas.
+ */
+const resolveWidgetCaptureCanvas = widgetElement => {
+    const descendantCanvas = widgetElement?.querySelector?.('.lgs-widget-canvas')
+    if (descendantCanvas instanceof HTMLCanvasElement) {
+        return descendantCanvas
+    }
+
+    const siblingCanvas = Array.from(widgetElement?.parentElement?.children ?? [])
+        .find(element => element !== widgetElement && element.classList?.contains('lgs-widget-canvas'))
+    return siblingCanvas instanceof HTMLCanvasElement ? siblingCanvas : null
+}
+
+/**
  * Build the canvas overlays used by replay video composition.
  *
  * @param {object} options - Overlay build options.
@@ -258,14 +278,10 @@ export const buildReplayVideoComposerOverlays = ({
         }
 
         const elementStyle = getComputedStyleSafe(element)
-        const isReplayDiagnosticsCanvas = element.dataset?.replayVideoOverlayCanvas === 'true'
         if (
-            !isReplayDiagnosticsCanvas
-            && (
-                element.hidden === true
-                || elementStyle?.display === 'none'
-                || elementStyle?.visibility === 'hidden'
-            )
+            element.hidden === true
+            || elementStyle?.display === 'none'
+            || elementStyle?.visibility === 'hidden'
         ) {
             continue
         }
@@ -296,8 +312,8 @@ export const buildReplayVideoComposerOverlays = ({
             continue
         }
 
-        const canvasEl = widgetEl?.querySelector?.('.lgs-widget-canvas')
-        if (!(canvasEl instanceof HTMLCanvasElement)) {
+        const canvasEl = resolveWidgetCaptureCanvas(widgetEl)
+        if (!canvasEl) {
             continue
         }
 
@@ -362,5 +378,5 @@ export const isReplayVideoWidgetReady = widgetId => {
         return false
     }
 
-    return Boolean(element.querySelector?.('.lgs-widget-canvas'))
+    return Boolean(resolveWidgetCaptureCanvas(element))
 }

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-19
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -41,9 +41,6 @@ export const ToolsUI = () => {
     const _journeyToolbarHiddenByVideoEditor = useRef(false)
     const _replayPreparationActive = useRef(false)
 
-    useEffect(() => {
-        console.error(`[LGS1920][Diagnostics] ToolsUI rendered editing=${video.editing} simple=${replay.simplePreparationActive} recordingSync=${replay.recordingSync}`)
-    }, [replay.recordingSync, replay.simplePreparationActive, video.editing])
     const renderLinkedTimeline = video.editing === true
         && video.timelinePreviewActive === true
         && replay.recordingSync === true
@@ -93,9 +90,7 @@ export const ToolsUI = () => {
             shouldApply: () => transitionActive
                            && lgs.stores.ui.video.editing === true
                            && lgs.stores.replay.recordingSync === true,
-        })).catch(error => {
-            console.error('[LGS1920][Diagnostics] linked replay preparation failed', error)
-        })
+        })).catch(() => undefined)
 
         return () => {
             transitionActive = false

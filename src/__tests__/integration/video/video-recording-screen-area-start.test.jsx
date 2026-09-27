@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -54,11 +54,6 @@ vi.mock('@Utils/UIToast', () => ({
         warning: vi.fn(),
         error:   vi.fn(),
     },
-}))
-
-vi.mock('@Core/ui/replay/ReplayDeferredExporter', () => ({
-    prepareReplayDeferredExportPlan: vi.fn(() => ({exporter: {}, plan: {runtime: {}}})),
-    warmReplayDeferredExportPlan:    vi.fn(() => Promise.resolve({plan: {runtime: {status: 'ready'}}})),
 }))
 
 vi.mock('@Core/ui/replay/ReplayVideoOverlayComposer', () => ({
@@ -248,17 +243,17 @@ describe('VideoRecordingScreenArea start flow', () => {
         const traceEntries = globalThis.__lgsReplayVideoTrace ?? []
         const traceEvents = traceEntries.map(entry => entry.event)
         expect(traceEvents).toEqual(expect.arrayContaining([
-            'draft.recording.initialize.start',
-            'draft.recording.ui.prepare.start',
-            'draft.recording.ui.prepare.end',
-            'draft.recording.crop.sync.start',
-            'draft.recording.crop.sync.end',
-            'draft.recording.composer.first-frame.end',
-            'draft.recording.initialize.end',
-            'draft.recorder.start.begin',
-            'draft.recorder.start.end',
+            'interactive.recording.initialize.start',
+            'interactive.recording.ui.prepare.start',
+            'interactive.recording.ui.prepare.end',
+            'interactive.recording.crop.sync.start',
+            'interactive.recording.crop.sync.end',
+            'interactive.recording.composer.first-frame.end',
+            'interactive.recording.initialize.end',
+            'interactive.recorder.start.begin',
+            'interactive.recorder.start.end',
         ]))
-        expect(traceEntries.find(entry => entry.event === 'draft.recording.initialize.end')?.data).toEqual(expect.objectContaining({
+        expect(traceEntries.find(entry => entry.event === 'interactive.recording.initialize.end')?.data).toEqual(expect.objectContaining({
             syncRequested: false,
         }))
         expect(globalThis.__.ui.replayVideoSync.arm).not.toHaveBeenCalled()
@@ -273,13 +268,13 @@ describe('VideoRecordingScreenArea start flow', () => {
         expect(CanvasOverlayComposer.mock.instances[0].setContinuousRendering).toHaveBeenCalledWith(false)
         expect(recorder.initialize).toHaveBeenCalledWith(expect.objectContaining({
             metadata: expect.objectContaining({
-                title:   'Journey title (draft version)',
+                title:   'Journey title',
                 comment: expect.stringMatching(/^Journey title\nJune 1, 2026 10:00 AM - 11:00 AM\nAnnecy - Aoste\n\nRecorded on \d{4}-\d{2}-\d{2}$/),
             }),
         }))
     })
 
-    it('captures the draft camera before arming a linked replay recording', async () => {
+    it('captures the main camera before arming a linked replay recording', async () => {
         globalThis.lgs.settings.ui.replay.recordingSync = true
         globalThis.lgs.stores.replay.recordingSync = true
 
@@ -298,8 +293,8 @@ describe('VideoRecordingScreenArea start flow', () => {
 
         const traceEntries = globalThis.__lgsReplayVideoTrace ?? []
         expect(traceEntries.map(entry => entry.event)).toEqual(expect.arrayContaining([
-            'draft.recording.replay-camera.capture.start',
-            'draft.recording.replay-camera.capture.end',
+            'interactive.recording.replay-camera.capture.start',
+            'interactive.recording.replay-camera.capture.end',
         ]))
     })
 

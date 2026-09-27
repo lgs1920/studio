@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -42,7 +42,8 @@ import {
 }                                                                                          from './JourneyReplayCesiumRenderer'
 import { REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP, normalizeJourneyReplayClips } from './JourneyReplayClips'
 import {
-    currentJourneyReplayPoiBehavior, currentJourneyReplaySample, finiteNumber, isJourneyReplayTraceActive,
+    currentJourneyReplayCameraSettings, currentJourneyReplayPoiBehavior, currentJourneyReplaySample, finiteNumber,
+    isJourneyReplayTraceActive,
     isJourneyReplayVideoCaptureActive, publishReplayClipFrameState, replayStore, resetRuntimeProgress, resolveJourneyReplayRuntimeClips,
     updateReplayFrameRenderContract,
 } from './JourneyReplayRuntime'
@@ -76,7 +77,7 @@ import {
     REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET, REPLAY_CAMERA_POSITION_AHEAD,
     REPLAY_CAMERA_HEADING_OFFSET_MAX, REPLAY_CAMERA_HEADING_OFFSET_MIN, REPLAY_CAMERA_POSITION_SYSTEM,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION,
-    REPLAY_MARKER_MODE_TRACE, getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker,
+    REPLAY_MARKER_MODE_TRACE, getJourneyReplaySettings, normalizeJourneyReplayMarker,
     normalizeJourneyReplayProgressionStyle, normalizeJourneyReplaySmoothing, normalizeJourneyReplayTrace,
 }                                                                                          from './JourneyReplayProgressionStyle'
 
@@ -471,10 +472,7 @@ export const captureCameraState = (mode, {sample = null} = {}) => {
 export const capturePlaybackCameraSettings = (mode, ) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-        state.playbackStartCameraSettings = normalizeJourneyReplayCamera(
-            globalThis.lgs?.stores?.replay?.camera
-            ?? getJourneyReplaySettings().camera,
-        )
+        state.playbackStartCameraSettings = currentJourneyReplayCameraSettings()
         if (globalThis.lgs?.stores?.replay) {
             globalThis.lgs.stores.replay.cameraUserAdjusted = false
         }
@@ -824,12 +822,7 @@ export const bindRenderer = (mode, ) => {
                     state.lastPlaybackUpdateProgressKey = null
                     traceStep('set-tolerance-zone-visible.begin')
                     call.setToleranceZoneOverlayVisible(true)
-                    const replaySettings = getJourneyReplaySettings()
-                    const startCameraSettings = normalizeJourneyReplayCamera(
-                        globalThis.lgs?.stores?.replay?.camera
-                        ?? globalThis.lgs?.settings?.ui?.replay?.camera
-                        ?? replaySettings.camera,
-                    )
+                    const startCameraSettings = currentJourneyReplayCameraSettings()
                     call.updateToleranceZoneOverlay(startCameraSettings.hysteresis)
                     traceStep('set-tolerance-zone-visible.end')
                     traceStep('hide-journey-toolbar.begin')
@@ -862,10 +855,7 @@ export const bindRenderer = (mode, ) => {
                     if (!state.deferStartCameraRecenter) {
                         if (state.skipNextImmediateStartRecenter) {
                             state.skipNextImmediateStartRecenter = false
-                            const replaySettings = getJourneyReplaySettings()
-                            const startCameraSettings = normalizeJourneyReplayCamera(
-                                globalThis.lgs?.stores?.replay?.camera ?? replaySettings.camera,
-                            )
+                            const startCameraSettings = currentJourneyReplayCameraSettings()
                             traceStep('update-tolerance-zone-overlay.begin')
                             call.updateToleranceZoneOverlay(startCameraSettings.hysteresis)
                             traceStep('update-tolerance-zone-overlay.end')
