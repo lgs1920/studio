@@ -35,6 +35,7 @@ Create a feature issue for `1.0.0/backlog/LGS1920/chdenat`.
 Add a Cancel (X) action beside the browser recording Stop button. Selecting it
 must close Replay, delete all recorded data, and avoid offering the recording
 for saving or export.
+par contre le bouton stop permet d'enregistrer de partager ce qui a deja été enregistré
 
 Investigate why the credits widget is not visible during Simple Replay.
 
