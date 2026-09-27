@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-26
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -45,6 +45,18 @@ const ROUTE_SHAPE_STRETCH = 0.16
 const ROUTE_SHAPE_SQUEEZE = 0.09
 const ROUTE_SHAPE_CYCLE = 5_800
 const ROUTE_MAX_PIXEL_RATIO = 1.35
+
+const welcomeRouteModulesPromise = Promise.all([
+    import('three'),
+    import('three/addons/lines/Line2.js'),
+    import('three/addons/lines/LineGeometry.js'),
+    import('three/addons/lines/LineMaterial.js'),
+]).then(([three, line2, lineGeometry, lineMaterial]) => ({
+    line2,
+    lineGeometry,
+    lineMaterial,
+    three,
+}))
 
 const GLOW_VERTEX_SHADER = `
     attribute float aAlpha;
@@ -266,7 +278,7 @@ const setupRouteWorker = (layer, canvas, onError) => {
         layer.querySelectorAll('[data-route-poi]').forEach(poi => poi.classList.remove('is-revealed'))
         worker.postMessage({type: 'palette', ...getPalette()})
     })
-    paletteObserver.observe(document.documentElement, {attributes: true, attributeFilter: ['data-brand-color', 'data-season-theme']})
+    paletteObserver.observe(document.documentElement, {attributes: true, attributeFilter: ['class', 'data-brand-color', 'data-season-theme']})
     document.addEventListener('visibilitychange', postVisibility)
     const onReducedMotionChange = (event) => {
         worker.postMessage({type: 'reduced-motion', value: event.matches})
@@ -677,7 +689,7 @@ const setupRouteAnimation = (layer, canvas, modules) => {
         applyPalette()
         render(0)
     })
-    paletteObserver.observe(root, {attributes: true, attributeFilter: ['data-brand-color', 'data-season-theme']})
+    paletteObserver.observe(root, {attributes: true, attributeFilter: ['class', 'data-brand-color', 'data-season-theme']})
     document.addEventListener('visibilitychange', restart)
     reducedMotionQuery.addEventListener('change', restart)
     restart()
@@ -728,17 +740,12 @@ export const WelcomeHeroRoute = ({mountInSplash = false, useWorker = true}) => {
         }
 
         const initialize = async () => {
-            const loadThreeModules = () => Promise.all([
-                import('three'),
-                import('three/addons/lines/Line2.js'),
-                import('three/addons/lines/LineGeometry.js'),
-                import('three/addons/lines/LineMaterial.js'),
-            ]).then(([three, line2, lineGeometry, lineMaterial]) => ({
-                line2,
-                lineGeometry,
-                lineMaterial,
-                three,
-            }))
+            /**
+             * Returns the Three.js modules prefetched while the static splash mounts.
+             *
+             * @returns {Promise<object>} Loaded Three.js modules.
+             */
+            const loadThreeModules = () => welcomeRouteModulesPromise
             const initializeFallback = async (fallbackCanvas) => {
                 const modules = await loadThreeModules()
                 if (disposed) {

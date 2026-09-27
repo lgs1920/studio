@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-26
- * Last modified: 2026-09-26
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -41,7 +41,7 @@ export const mountWelcomeHeroRouteInSplash = () => {
     splashRouteHost.dataset.lgsBootRouteStatus = 'mounting'
     splashElement.append(splashRouteHost)
     splashRouteRoot = createRoot(splashRouteHost)
-    flushSync(() => splashRouteRoot.render(<WelcomeHeroRoute/>))
+    flushSync(() => splashRouteRoot.render(<WelcomeHeroRoute useWorker={false}/>))
     splashRouteHost.dataset.lgsBootRouteStatus = 'mounted'
     globalThis.performance?.mark?.('lgs.startup.splash-route-root-mounted')
     return true

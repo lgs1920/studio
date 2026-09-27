@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-21
- * Last modified: 2026-09-26
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -76,12 +76,20 @@ const registerBootSplashMediaLoadingTests = () => {
         expect(splashStyle).toContain('#lgs-boot-splash::after')
         expect(splashStyle).toContain('opacity: 1;')
         expect(splashStyle).toContain('#lgs-boot-splash.lgs-boot-splash-cta-ready::after')
-        expect(splashStyle).toContain('--hero-route-glow-color: var(--wa-color-brand)')
+        expect(splashStyle).toContain('--hero-route-path-color: var(--wa-color-brand, rgb(234, 198, 115))')
+        expect(splashStyle).toContain('--hero-route-glow-color: var(--wa-color-brand, rgb(234, 198, 115))')
+        expect(splashStyle).toContain('--hero-route-poi-color: rgb(175, 218, 188)')
+        expect(splashStyle).toContain('drop-shadow(0 0 .32rem color-mix(in oklab, var(--hero-route-poi-color) 82%, transparent))')
+        expect(splashStyle).toContain('drop-shadow(0 0 .72rem color-mix(in oklab, var(--hero-route-poi-color) 88%, transparent))')
         expect(splashStyle).toContain('filter: drop-shadow(0 0 8px color-mix(in oklab, var(--hero-route-glow-color) 42%, transparent))')
         expect(splashStyle).toContain('.welcome-hero-route-annotations')
         expect(splashStyle).toContain('.welcome-hero-poi.is-revealed.is-positioned')
-        expect(routeBootstrapSource).toContain('splashRouteRoot.render(<WelcomeHeroRoute/>)')
-        expect(readFileSync('src/components/MainUI/WelcomeHeroRoute.jsx', 'utf8')).toContain('welcome-hero-poi-marker')
+        expect(routeBootstrapSource).toContain('splashRouteRoot.render(<WelcomeHeroRoute useWorker={false}/>)')
+        const routeSource = readFileSync('src/components/MainUI/WelcomeHeroRoute.jsx', 'utf8')
+        expect(routeSource).toContain('const welcomeRouteModulesPromise = Promise.all([')
+        expect(routeSource).toContain('const loadThreeModules = () => welcomeRouteModulesPromise')
+        expect(routeSource).toContain("attributeFilter: ['class', 'data-brand-color', 'data-season-theme']")
+        expect(routeSource).toContain('welcome-hero-poi-marker')
         expect(splashStyle).toContain('#lgs-boot-splash .welcome-branding-cog > wa-icon')
         expect(splashStyle).toContain('#lgs-boot-splash.lgs-boot-splash-cta-ready .welcome-branding-cog')
         expect(splashStyle).toContain('transform-origin: center center;')

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-26
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -750,9 +750,9 @@ body.mobile .orbit-widget-body {
     overflow: hidden;
     color: var(--lgs-text-on-color);
     background-color: transparent;
-    --hero-route-path-color: var(--wa-color-brand-60);
-    --hero-route-glow-color: var(--wa-color-brand);
-    --hero-route-poi-color: rgb(103, 165, 13);
+    --hero-route-path-color: var(--wa-color-brand, rgb(234, 198, 115));
+    --hero-route-glow-color: var(--wa-color-brand, rgb(234, 198, 115));
+    --hero-route-poi-color: var(--wa-color-green-60, rgb(103, 165, 13));
     --welcome-content-top: 42%;
     --welcome-cta-offset: 12rem;
     --welcome-status-offset: 15.5rem;
@@ -760,9 +760,9 @@ body.mobile .orbit-widget-body {
 }
 
 #lgs-boot-splash {
-    --hero-route-path-color: var(--wa-color-brand-60);
-    --hero-route-glow-color: var(--wa-color-brand);
-    --hero-route-poi-color: rgb(103, 165, 13);
+    --hero-route-path-color: var(--wa-color-brand, rgb(234, 198, 115));
+    --hero-route-glow-color: var(--wa-color-brand, rgb(234, 198, 115));
+    --hero-route-poi-color: var(--wa-color-green-60, rgb(103, 165, 13));
 }
 
 .welcome-hero-media,
@@ -1013,13 +1013,13 @@ body.mobile .orbit-widget-body {
     width: clamp(1.5rem, 3.5vw, 2.25rem);
     height: clamp(1.5rem, 3.5vw, 2.25rem);
     color: var(--hero-route-poi-color);
-    filter: drop-shadow(0 0 .2rem rgba(190, 255, 72, .82)) drop-shadow(0 0 .52rem rgba(190, 255, 72, .74));
+    filter: drop-shadow(0 0 .32rem var(--hero-route-poi-color)) drop-shadow(0 0 .72rem var(--hero-route-poi-color));
     transform-origin: center bottom;
 }
 
 @supports (color: color-mix(in oklab, white, black)) {
     .welcome-hero-poi-marker {
-        filter: drop-shadow(0 0 .2rem color-mix(in oklab, var(--hero-route-poi-color) 78%, transparent)) drop-shadow(0 0 .52rem color-mix(in oklab, var(--hero-route-poi-color) 72%, transparent));
+        filter: drop-shadow(0 0 .32rem color-mix(in oklab, var(--hero-route-poi-color) 82%, transparent)) drop-shadow(0 0 .72rem color-mix(in oklab, var(--hero-route-poi-color) 88%, transparent));
     }
 }
 
@@ -1049,38 +1049,26 @@ body.mobile .orbit-widget-body {
 }
 
 :root[data-season-theme='spring'] #welcome-hero {
-    --hero-route-path-color: rgb(62, 109, 77);
-    --hero-route-glow-color: rgb(175, 218, 188);
     --hero-route-poi-color: rgb(175, 218, 188);
 }
 
 :root[data-season-theme='spring'] #lgs-boot-splash {
-    --hero-route-path-color: rgb(62, 109, 77);
-    --hero-route-glow-color: rgb(175, 218, 188);
     --hero-route-poi-color: rgb(175, 218, 188);
 }
 
 :root[data-season-theme='fall'] #welcome-hero {
-    --hero-route-path-color: rgb(113, 63, 18);
-    --hero-route-glow-color: rgb(197, 110, 18);
     --hero-route-poi-color: rgb(197, 110, 18);
 }
 
 :root[data-season-theme='fall'] #lgs-boot-splash {
-    --hero-route-path-color: rgb(113, 63, 18);
-    --hero-route-glow-color: rgb(197, 110, 18);
     --hero-route-poi-color: rgb(197, 110, 18);
 }
 
 :root[data-season-theme='winter'] #welcome-hero {
-    --hero-route-path-color: rgb(49, 90, 130);
-    --hero-route-glow-color: rgb(219, 234, 254);
     --hero-route-poi-color: rgb(219, 234, 254);
 }
 
 :root[data-season-theme='winter'] #lgs-boot-splash {
-    --hero-route-path-color: rgb(49, 90, 130);
-    --hero-route-glow-color: rgb(219, 234, 254);
     --hero-route-poi-color: rgb(219, 234, 254);
 }
 

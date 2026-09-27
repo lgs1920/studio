@@ -8,7 +8,7 @@
   ~ email: studio@lgs1920.fr
   ~
   ~ Created on: 2026-04-27
-  ~ Last modified: 2026-09-26
+  ~ Last modified: 2026-09-27
   ~
   ~
   ~ Copyright © 2026 LGS1920
@@ -49,10 +49,14 @@
             const root = document.documentElement
             const storedTheme = localStorage.getItem('theme') || 'system'
             const storedBrandColor = localStorage.getItem('brandColor') || 'yellow'
+            const storedSeasonTheme = localStorage.getItem('onMapTheme') || 'default'
             const allowedBrandColors = new Set(['yellow', 'orange', 'red', 'pink', 'purple', 'blue', 'green', 'gray'])
+            const allowedSeasonThemes = new Set(['default', 'spring', 'fall', 'winter'])
             const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
             const isDark = storedTheme === 'dark' || (storedTheme === 'system' && mediaQuery.matches)
             const brandColor = allowedBrandColors.has(storedBrandColor) ? storedBrandColor : 'yellow'
+            const normalizedSeasonTheme = storedSeasonTheme === 'autumn' ? 'fall' : storedSeasonTheme
+            const seasonTheme = allowedSeasonThemes.has(normalizedSeasonTheme) ? normalizedSeasonTheme : 'default'
             const prefixesToReset = ['sl-theme-', 'wa-brand-', 'wa-palette-', 'wa-neutral-', 'wa-success-', 'wa-warning-', 'wa-danger-']
             const classesToRemove = Array.from(root.classList).filter((className) => {
                 if (className === 'wa-theme-premium') {
@@ -71,6 +75,8 @@
             }
 
             root.classList.add('wa-theme-lgs1920', `wa-brand-${brandColor}`)
+            root.dataset.brandColor = brandColor
+            root.dataset.seasonTheme = seasonTheme
             root.classList.toggle('wa-dark', isDark)
             root.classList.toggle('wa-light', !isDark)
         })()
@@ -257,12 +263,24 @@
         #lgs-boot-splash > [data-lgs-boot-route-host] {
             position: absolute;
             z-index: 2;
-            --hero-route-path-color: rgb(125, 220, 24);
-            --hero-route-glow-color: var(--wa-color-brand);
-            --hero-route-poi-color: rgb(190, 255, 72);
+            --hero-route-path-color: var(--wa-color-brand, rgb(234, 198, 115));
+            --hero-route-glow-color: var(--wa-color-brand, rgb(234, 198, 115));
+            --hero-route-poi-color: var(--wa-color-green-60, rgb(103, 165, 13));
             isolation: isolate;
             pointer-events: none;
             inset: 0;
+        }
+
+        html[data-season-theme='spring'] #lgs-boot-splash > [data-lgs-boot-route-host] {
+            --hero-route-poi-color: rgb(175, 218, 188);
+        }
+
+        html[data-season-theme='fall'] #lgs-boot-splash > [data-lgs-boot-route-host] {
+            --hero-route-poi-color: rgb(197, 110, 18);
+        }
+
+        html[data-season-theme='winter'] #lgs-boot-splash > [data-lgs-boot-route-host] {
+            --hero-route-poi-color: rgb(219, 234, 254);
         }
 
         #lgs-boot-splash > [data-lgs-boot-route-host] .welcome-hero-route {
@@ -311,8 +329,14 @@
             width: clamp(1.5rem, 3.5vw, 2.25rem);
             height: clamp(1.5rem, 3.5vw, 2.25rem);
             color: var(--hero-route-poi-color);
-            filter: drop-shadow(0 0 .2rem rgba(190, 255, 72, .82)) drop-shadow(0 0 .52rem rgba(190, 255, 72, .74));
+            filter: drop-shadow(0 0 .32rem var(--hero-route-poi-color)) drop-shadow(0 0 .72rem var(--hero-route-poi-color));
             transform-origin: center bottom;
+        }
+
+        @supports (color: color-mix(in oklab, white, black)) {
+            #lgs-boot-splash > [data-lgs-boot-route-host] .welcome-hero-poi-marker {
+                filter: drop-shadow(0 0 .32rem color-mix(in oklab, var(--hero-route-poi-color) 82%, transparent)) drop-shadow(0 0 .72rem color-mix(in oklab, var(--hero-route-poi-color) 88%, transparent));
+            }
         }
 
         @media (max-width: 700px) {
