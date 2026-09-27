@@ -14,6 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
+import { JourneyReplayButton } from '@Components/JourneyReplay/JourneyReplayButton'
 import { LGSPopup } from '@Components/LGSPopup'
 import {
     cancelVideoEditing,
@@ -427,6 +428,24 @@ export const VideoRecordingSettingsToolbar = memo(({
                 </LGSPopup> : null}
 
                 {showActions ? replaySettingsTrigger : null}
+
+                {showActions && timelineSettings ? (
+                    <>
+                        <span className="video-recording-settings-separator" aria-hidden="true"/>
+                        <JourneyReplayButton
+                            id="launch-the-replay-editor-from-timeline"
+                            tooltip="top"
+                            tooltipText="Journey Replay Settings"
+                            tooltipPlacement="top"
+                            tooltipStyle="wa"
+                            variant="brand"
+                            appearance="plain"
+                            className="video-recording-settings-action video-recording-settings-replay"
+                            showOnlyWhenLinked
+                            ariaLabel="Journey Replay Settings"
+                        />
+                    </>
+                ) : null}
 
                 {showActions && simplePreparation ? (
                     <WaButton

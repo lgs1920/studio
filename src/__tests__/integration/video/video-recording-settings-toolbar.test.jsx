@@ -224,6 +224,7 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(screen.getByText('16:9')).not.toBeNull()
         expect(screen.getByText('High · 30 FPS')).not.toBeNull()
         expect(screen.getByRole('button', {name: 'Replay settings'}).querySelector('[data-icon="gear"]')).not.toBeNull()
+        expect(screen.getByRole('button', {name: 'Journey Replay Settings'})).not.toBeNull()
         expect(screen.queryByText('15s')).toBeNull()
         expect(screen.queryByText('Duration')).toBeNull()
 
