@@ -18,12 +18,6 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 
-vi.mock('@Components/JourneyReplay/JourneyReplayButton', () => ({
-    JourneyReplayButton: props => (
-        <button type="button" aria-label={props.ariaLabel} aria-pressed="false">{props.ariaLabel}</button>
-    ),
-}))
-
 vi.mock('@Components/LGSPopup', () => ({
     LGSPopup: ({active, children, placement}) => active ? <div data-testid="settings-popup" data-placement={placement}>{children}</div> : null,
 }))
@@ -64,6 +58,7 @@ describe('VideoRecordingSettingsToolbar', () => {
                     close: vi.fn(),
                     isCurrent: vi.fn(() => false),
                     open: vi.fn(),
+                    toggle: vi.fn(),
                 },
                 replay: {
                     prepareReplayCamera: vi.fn(async () => true),
@@ -221,12 +216,18 @@ describe('VideoRecordingSettingsToolbar', () => {
         globalThis.lgs.stores.replay.recordingSync = true
         render(<VideoRecordingSettingsToolbar mainTheme mode="actions" timelineSettings/>)
 
+        const summary = document.querySelector('.simple-replay-settings-summary')
+        expect(summary.firstElementChild.getAttribute('aria-label')).toBe('Replay settings')
         expect(screen.getByText('16:9')).not.toBeNull()
         expect(screen.getByText('High · 30 FPS')).not.toBeNull()
         expect(screen.getByRole('button', {name: 'Replay settings'}).querySelector('[data-icon="gear"]')).not.toBeNull()
-        expect(screen.getByRole('button', {name: 'Journey Replay Settings'})).not.toBeNull()
+        expect(screen.getByRole('button', {name: 'Journey Replay settings'})).not.toBeNull()
+        expect(screen.getByRole('button', {name: 'Record'})).not.toBeNull()
         expect(screen.queryByText('15s')).toBeNull()
         expect(screen.queryByText('Duration')).toBeNull()
+
+        fireEvent.click(screen.getByRole('button', {name: 'Journey Replay settings'}))
+        expect(globalThis.__.ui.drawerManager.toggle).toHaveBeenCalledWith('replay-drawer')
 
         fireEvent.click(screen.getByRole('button', {name: 'Replay settings'}))
         expect(screen.getByTestId('settings-popup').dataset.placement).toBe('bottom')
@@ -250,6 +251,23 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(globalThis.__.ui.replay.prepareReplayCamera).toHaveBeenCalledWith({
             journey: globalThis.lgs.theJourney,
         })
+        expect(globalThis.__.ui.replayVideoSync.arm).toHaveBeenCalledWith({
+            recorder:          globalThis.__.recorder,
+            replay:            globalThis.__.ui.replay,
+            store:             globalThis.lgs.stores.replay,
+            autoStopRecording: true,
+            resetToStart:      true,
+        })
+    })
+
+    it('exposes the same video launch action during the Expert timeline', async () => {
+        globalThis.lgs.stores.replay.recordingSync = true
+        render(<VideoRecordingSettingsToolbar mode="actions" timelineSettings/>)
+
+        fireEvent.click(screen.getByRole('button', {name: 'Record'}))
+
+        await vi.waitFor(() => expect(globalThis.lgs.stores.ui.video.preRecording).toBe(true))
+        expect(prepareVideoCaptureUi).toHaveBeenCalledTimes(1)
         expect(globalThis.__.ui.replayVideoSync.arm).toHaveBeenCalledWith({
             recorder:          globalThis.__.recorder,
             replay:            globalThis.__.ui.replay,

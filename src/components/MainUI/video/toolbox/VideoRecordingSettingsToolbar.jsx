@@ -14,14 +14,13 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { JourneyReplayButton } from '@Components/JourneyReplay/JourneyReplayButton'
 import { LGSPopup } from '@Components/LGSPopup'
 import {
     cancelVideoEditing,
     prepareVideoCaptureUi,
     prepareVideoEditingUi,
 } from '@Components/MainUI/video/videoEditingCleanup'
-import { VIDEO_CROP_ZONE } from '@Core/constants'
+import { REPLAY_DRAWER, VIDEO_CROP_ZONE } from '@Core/constants'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import {
     DEFAULT_SIMPLE_REPLAY_DURATION,
@@ -156,10 +155,17 @@ export const VideoRecordingSettingsToolbar = memo(({
     }, [syncCropFrame])
 
     /**
-     * Starts the Simple Replay recording after the current crop and camera are ready.
+     * Opens or closes the Replay settings drawer.
+     */
+    const handleReplaySettings = useCallback(() => {
+        __.ui.drawerManager.toggle(REPLAY_DRAWER)
+    }, [])
+
+    /**
+     * Starts the Replay recording after the current crop and camera are ready.
      * @returns {Promise<void>} Completion promise.
      */
-    const handleSimpleReplayRecording = useCallback(async () => {
+    const handleReplayRecording = useCallback(async () => {
         if (!__.recorder) {
             console.warn('[VideoRecordingSettingsToolbar] Recorder not initialized')
             return
@@ -284,6 +290,17 @@ export const VideoRecordingSettingsToolbar = memo(({
     const replaySettingsTrigger = compactReplaySettings ? (
         <>
             <div className="simple-replay-settings-summary" aria-label="Current Replay settings">
+                <WaButton
+                    id={replaySettingsTriggerId}
+                    size="s"
+                    variant="brand"
+                    appearance={openPopup === SIMPLE_SETTINGS_POPUP ? 'outlined' : 'plain'}
+                    aria-label="Replay settings"
+                    aria-expanded={openPopup === SIMPLE_SETTINGS_POPUP}
+                    onClick={() => togglePopup(SIMPLE_SETTINGS_POPUP)}
+                >
+                    <WaIcon name="gear" variant="regular" label=""/>
+                </WaButton>
                 <span className="simple-replay-settings-summary__item">
                     <WaIcon name="crop-simple" label=""/>
                     <span>{currentRatio?.label ?? video.ratio}</span>
@@ -298,17 +315,6 @@ export const VideoRecordingSettingsToolbar = memo(({
                         <span>{`${simpleDuration}s`}</span>
                     </span>
                 )}
-                <WaButton
-                    id={replaySettingsTriggerId}
-                    size="s"
-                    variant="brand"
-                    appearance={openPopup === SIMPLE_SETTINGS_POPUP ? 'outlined' : 'plain'}
-                    aria-label="Replay settings"
-                    aria-expanded={openPopup === SIMPLE_SETTINGS_POPUP}
-                    onClick={() => togglePopup(SIMPLE_SETTINGS_POPUP)}
-                >
-                    <WaIcon name="gear" variant="regular" label=""/>
-                </WaButton>
             </div>
             <LGSPopup
                 anchor={replaySettingsTriggerId}
@@ -432,22 +438,22 @@ export const VideoRecordingSettingsToolbar = memo(({
                 {showActions && timelineSettings ? (
                     <>
                         <span className="video-recording-settings-separator" aria-hidden="true"/>
-                        <JourneyReplayButton
-                            id="launch-the-replay-editor-from-timeline"
-                            tooltip="top"
-                            tooltipText="Journey Replay Settings"
-                            tooltipPlacement="top"
-                            tooltipStyle="wa"
+                        <WaButton
+                            id="open-replay-settings-from-timeline"
+                            size="s"
                             variant="brand"
                             appearance="plain"
                             className="video-recording-settings-action video-recording-settings-replay"
-                            showOnlyWhenLinked
-                            ariaLabel="Journey Replay Settings"
-                        />
+                            title="Journey Replay settings"
+                            aria-label="Journey Replay settings"
+                            onClick={handleReplaySettings}
+                        >
+                            <WaIcon name="sliders" variant="regular" label=""/>
+                        </WaButton>
                     </>
                 ) : null}
 
-                {showActions && simplePreparation ? (
+                {showActions && compactReplaySettings ? (
                     <WaButton
                         id="video-start-recording"
                         size="s"
@@ -455,7 +461,7 @@ export const VideoRecordingSettingsToolbar = memo(({
                         appearance="plain"
                         className="video-recording-settings-action video-recorder-start-recording"
                         aria-label="Record"
-                        onClick={() => void handleSimpleReplayRecording()}
+                        onClick={() => void handleReplayRecording()}
                     >
                         <WaIcon name="clapperboard-play" label=""/>
                         <span>{'Record'}</span>
