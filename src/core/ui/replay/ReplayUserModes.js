@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-09-26
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,6 +19,7 @@ import {
     DEFAULT_REPLAY_PROGRESSION,
     DEFAULT_REPLAY_PROFILE_INFO,
     DEFAULT_SIMPLE_REPLAY_DURATION,
+    REPLAY_CAMERA_POSITION_AHEAD,
     REPLAY_CAMERA_POSITION_BEHIND,
     REPLAY_MARKER_MODE_NAVIGATION,
     REPLAY_TRACE_MODE_PROGRESSIVE,
@@ -49,6 +50,18 @@ const clone = value => JSON.parse(JSON.stringify(value))
 export const normalizeReplayUserMode = mode => mode === REPLAY_USER_MODE_EXPERT
     ? REPLAY_USER_MODE_EXPERT
     : REPLAY_USER_MODE_BASIC
+
+/**
+ * Normalize an Expert Replay camera with an explicit journey-relative position.
+ *
+ * @param {Object} camera - Candidate Expert camera settings.
+ * @returns {Object} Normalized Expert camera settings.
+ */
+export const normalizeExpertReplayCamera = (camera = {}) => normalizeJourneyReplayCamera(Object.assign({}, camera, {
+    positionMode: camera?.positionMode === REPLAY_CAMERA_POSITION_AHEAD
+        ? REPLAY_CAMERA_POSITION_AHEAD
+        : REPLAY_CAMERA_POSITION_BEHIND,
+}))
 
 /**
  * Return product defaults for the compact Simple Replay workflow.
@@ -208,7 +221,7 @@ export const initializeExpertReplayFromSimple = (journey, simple) => {
     return {
         ...replay,
         expert: {
-            camera: normalizeJourneyReplayCamera(simple?.camera),
+            camera: normalizeExpertReplayCamera(simple?.camera),
             progression: normalizeJourneyReplayProgressionStyle(simple?.presentation?.progression),
             profileInfo: normalizeJourneyReplayProfileInfo(simple?.presentation?.profileInfo),
         },
@@ -226,7 +239,7 @@ export const resetExpertReplayFromSimple = (journey, simple) => ({
     ...(journey?.replay ?? {}),
     expert: {
         ...journey?.replay?.expert,
-        camera: normalizeJourneyReplayCamera(simple?.camera),
+        camera: normalizeExpertReplayCamera(simple?.camera),
         progression: normalizeJourneyReplayProgressionStyle(simple?.presentation?.progression),
         profileInfo: normalizeJourneyReplayProfileInfo(simple?.presentation?.profileInfo),
     },

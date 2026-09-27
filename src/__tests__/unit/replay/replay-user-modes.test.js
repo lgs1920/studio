@@ -98,6 +98,9 @@ describe('Replay user modes', () => {
 
         expect(hasExpertReplayConfiguration(journey)).toBe(false)
         expect(initialized.expert.camera.altitude).toBe(simple.camera.altitude)
+        expect(initializeExpertReplayFromSimple({replay: {start: [], stop: []}}, {
+            camera: {positionMode: 'system'},
+        }).expert.camera.positionMode).toBe('behind')
         expect(initializeExpertReplayFromSimple(existing, simple)).toBe(existing.replay)
     })
 

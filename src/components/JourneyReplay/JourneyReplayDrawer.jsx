@@ -52,6 +52,7 @@ import { normalizeJourneyReplayClips } from '@Core/ui/replay/JourneyReplayClips'
 import { normalizeJourneyReplayPOISettings } from '@Core/ui/replay/JourneyReplayPOISettings'
 import {
     resetExpertReplayFromSimple,
+    normalizeExpertReplayCamera,
     resolveSimpleReplaySettings,
     REPLAY_USER_MODE_EXPERT,
 } from '@Core/ui/replay/ReplayUserModes'
@@ -446,10 +447,13 @@ export const JourneyReplayDrawer = memo(() => {
         .length, [clips.start, clips.stop])
     const remainingUseDefinedTrackStyle = trace.remaining.useDefinedTrackStyle !== false
     const remainingColor = toOpaqueColorValue(trace.remaining.color)
-    const camera = normalizeJourneyReplayCamera({
-        ...replaySettings.camera,
-        ...(replaySettings.userMode === REPLAY_USER_MODE_EXPERT ? {} : {debug: false}),
-    })
+    const isExpertMode = replaySettings.userMode === REPLAY_USER_MODE_EXPERT
+    const camera = isExpertMode
+        ? normalizeExpertReplayCamera(replaySettings.camera)
+        : normalizeJourneyReplayCamera({
+            ...replaySettings.camera,
+            debug: false,
+        })
     const readiness = normalizeJourneyReplayReadiness(replaySettings.readiness)
     const [activeTab, setActiveTab] = useState(REPLAY_TAB_RUNNER)
     const [advancedCameraPopupOpen, setAdvancedCameraPopupOpen] = useState(false)
@@ -732,6 +736,14 @@ export const JourneyReplayDrawer = memo(() => {
             })
         }
     }, [replayState.active, replayState.paused, replayState.playing, replayState.sample, refreshJourneyReplay, stopRotateIfNeeded])
+
+    useEffect(() => {
+        if (!isExpertMode || replaySettings.camera.positionMode !== REPLAY_CAMERA_POSITION_SYSTEM) {
+            return
+        }
+
+        void updateCamera({positionMode: REPLAY_CAMERA_POSITION_BEHIND})
+    }, [isExpertMode, replaySettings.camera.positionMode, updateCamera])
 
     const updateReadiness = useCallback((updates, {refresh = false} = {}) => {
         const currentReadiness = normalizeJourneyReplayReadiness(lgs.settings.ui.replay.readiness)
@@ -1233,7 +1245,10 @@ export const JourneyReplayDrawer = memo(() => {
     const cameraAngleDisplayOffset = -camera.headingOffset
 
     const updateCameraPositionMode = useCallback((event) => {
-        updateCamera({positionMode: event.target.value})
+        const nextMode = event.target.value === REPLAY_CAMERA_POSITION_AHEAD
+            ? REPLAY_CAMERA_POSITION_AHEAD
+            : REPLAY_CAMERA_POSITION_BEHIND
+        void updateCamera({positionMode: nextMode})
     }, [updateCamera])
 
     const updateCameraHeadingOffset = useCallback((event) => {
@@ -1474,25 +1489,23 @@ export const JourneyReplayDrawer = memo(() => {
                                                         onInput={updatePOIDistance}
                                                         label-at-start/>
                                                 </div>
-                                                <section className="replay-style-subsection">
-                                                    <h4 className="replay-style-subtitle">{'Position'}</h4>
-                                                    <div className="replay-fieldset">
-                                                    <WaSelect appearance="filled"
-                                                        label="Camera position"
-                                                        label-at-start
-                                                        size="s"
-                                                        value={camera.positionMode}
-                                                        onChange={updateCameraPositionMode}
-                                                        className="half-width">
-                                                        <WaOption
-                                                            value={REPLAY_CAMERA_POSITION_SYSTEM}>{'Fixed'}</WaOption>
-                                                    <WaOption
-                                                            value={REPLAY_CAMERA_POSITION_BEHIND}>{'Behind'}</WaOption>
-                                                        <WaOption
-                                                            value={REPLAY_CAMERA_POSITION_AHEAD}>{'Ahead'}</WaOption>
-                                                    </WaSelect>
-                                                    {camera.positionMode !== REPLAY_CAMERA_POSITION_SYSTEM &&
-                                                       <JourneyReplayStyleField>
+                                                {isExpertMode && (
+                                                    <section className="replay-style-subsection">
+                                                        <h4 className="replay-style-subtitle">{'Position'}</h4>
+                                                        <div className="replay-fieldset">
+                                                        <WaSelect appearance="filled"
+                                                            label="Camera position"
+                                                            label-at-start
+                                                            size="s"
+                                                            value={camera.positionMode}
+                                                            onChange={updateCameraPositionMode}
+                                                            className="half-width">
+                                                            <WaOption
+                                                                value={REPLAY_CAMERA_POSITION_BEHIND}>{'Behind'}</WaOption>
+                                                            <WaOption
+                                                                value={REPLAY_CAMERA_POSITION_AHEAD}>{'Ahead'}</WaOption>
+                                                        </WaSelect>
+                                                        <JourneyReplayStyleField>
                                                             <WaSlider
                                                                 label="Camera angle"
                                                                 size="s"
@@ -1506,9 +1519,9 @@ export const JourneyReplayDrawer = memo(() => {
                                                                 onInput={updateCameraHeadingOffset}
                                                             />
                                                         </JourneyReplayStyleField>
-                                                    }
-                                                    </div>
-                                                </section>
+                                                        </div>
+                                                    </section>
+                                                )}
                                                 <WaDivider/>
                                                 <section className="replay-style-subsection">
                                                     <h4 className="replay-style-subtitle">{'Framing'}</h4>

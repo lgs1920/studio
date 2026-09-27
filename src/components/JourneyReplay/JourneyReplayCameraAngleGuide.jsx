@@ -30,12 +30,14 @@ import {
     updateJourneyReplayCameraAngleGuide,
 } from '@Core/ui/replay/JourneyReplayCameraAngleGuide'
 import {isJourneyReplayVideoCaptureActive} from '@Core/ui/replay/JourneyReplayRuntime'
+import {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT} from '@Core/ui/replay/ReplayUserModes'
 import {useOptionalSnapshot, useProxyValue} from '@Utils/ValtioUtils'
 import {useEffect} from 'react'
 import {useSnapshot} from 'valtio'
 
 const DEFAULT_REPLAY_ANGLE_GUIDE_SETTINGS = {
     camera: {headingOffset: 0, positionMode: REPLAY_CAMERA_POSITION_SYSTEM},
+    userMode: REPLAY_USER_MODE_BASIC,
 }
 
 /**
@@ -51,6 +53,7 @@ export const JourneyReplayCameraAngleGuide = () => {
     const camera = normalizeJourneyReplayCamera(replaySettings.camera)
     const cameraHeadingOffset = camera.headingOffset
     const cameraPositionMode = camera.positionMode
+    const expertMode = replaySettings.userMode === REPLAY_USER_MODE_EXPERT
     const captureActive = video.preRecording !== true && (
         video.recording === true
         || video.recordingHQ === true
@@ -63,7 +66,7 @@ export const JourneyReplayCameraAngleGuide = () => {
 
     useEffect(() => {
         const viewer = lgs.viewer
-        if (!editing || cameraPositionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
+        if (!expertMode || !editing || cameraPositionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
             removeJourneyReplayCameraAngleGuide(viewer)
             return undefined
         }
@@ -81,10 +84,10 @@ export const JourneyReplayCameraAngleGuide = () => {
         }
 
         return () => removeJourneyReplayCameraAngleGuide(viewer)
-    }, [cameraPositionMode, editing, journeySlug])
+    }, [cameraPositionMode, editing, expertMode, journeySlug])
 
     useEffect(() => {
-        if (!editing || cameraPositionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
+        if (!expertMode || !editing || cameraPositionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
             return
         }
 
@@ -99,7 +102,7 @@ export const JourneyReplayCameraAngleGuide = () => {
         if (!updateJourneyReplayCameraAngleGuide(viewer, guide)) {
             mountJourneyReplayCameraAngleGuide(viewer, guide)
         }
-    }, [cameraHeadingOffset, cameraPositionMode, editing, journeySlug])
+    }, [cameraHeadingOffset, cameraPositionMode, editing, expertMode, journeySlug])
 
     return null
 }

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,6 +26,7 @@ import {
     normalizeJourneyReplayMarker,
     replayCameraSettingsFromArrowKey,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import {REPLAY_USER_MODE_EXPERT} from '@Core/ui/replay/ReplayUserModes'
 import {
     hasManageableWidgets,
     openWidgetManagementDrawer,
@@ -78,6 +79,9 @@ const isReplayCameraPreparationActive = () => {
     const replay = lgs.stores.replay
     const replayPlaybackActive = Boolean(replay?.playing || replay?.paused)
     if (replayPlaybackActive) {
+        return false
+    }
+    if (lgs.settings?.ui?.replay?.userMode !== REPLAY_USER_MODE_EXPERT) {
         return false
     }
 

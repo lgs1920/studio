@@ -20,6 +20,7 @@ import {
     defaultSimpleReplaySettings,
     hasExpertReplayConfiguration,
     initializeExpertReplayFromSimple,
+    normalizeExpertReplayCamera,
     REPLAY_USER_MODE_BASIC,
     REPLAY_USER_MODE_EXPERT,
     resolveSimpleReplaySettings,
@@ -82,6 +83,7 @@ export const JourneyReplayButton = (props) => {
             lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_BASIC
             lgs.settings.ui.replay.simple = simple
             lgs.settings.ui.replay.duration = simple.duration
+            lgs.settings.ui.replay.camera = simple.camera
             lgs.stores.replay.camera = simple.camera
             lgs.stores.replay.duration = simple.duration
             lgs.stores.replay.simplePreparationActive = true
@@ -104,6 +106,7 @@ export const JourneyReplayButton = (props) => {
             lgs.stores.replay.simplePreparationActive = false
             lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_EXPERT
             const journey = lgs.theJourney
+            let shouldPersistExpertCamera = false
             if (journey && !hasExpertReplayConfiguration(journey)) {
                 const simple = resolveSimpleReplaySettings({
                     journey: journey.replay?.simple,
@@ -111,18 +114,27 @@ export const JourneyReplayButton = (props) => {
                 })
                 const replay = initializeExpertReplayFromSimple(journey, simple)
                 journey.replay = replay
-                void journey.persistToDatabase?.()
-                lgs.settings.ui.replay.camera = replay.expert.camera
-                lgs.settings.ui.replay.progression = replay.expert.progression
-                lgs.settings.ui.replay.profileInfo = replay.expert.profileInfo
-                lgs.stores.replay.camera = replay.expert.camera
-                lgs.stores.replay.progression = replay.expert.progression
-                lgs.stores.replay.profileInfo = replay.expert.profileInfo
+                shouldPersistExpertCamera = true
             }
-            const expertCamera = journey?.replay?.expert?.camera
+            const expertReplay = journey?.replay?.expert
+            const expertCamera = normalizeExpertReplayCamera(expertReplay?.camera)
+            if (expertReplay) {
+                shouldPersistExpertCamera = shouldPersistExpertCamera
+                                          || expertReplay.camera?.positionMode !== expertCamera.positionMode
+                expertReplay.camera = expertCamera
+            }
+            if (shouldPersistExpertCamera) {
+                void journey?.persistToDatabase?.()
+            }
             if (expertCamera) {
                 lgs.settings.ui.replay.camera = expertCamera
                 lgs.stores.replay.camera = expertCamera
+            }
+            if (expertReplay) {
+                lgs.settings.ui.replay.progression = expertReplay.progression
+                lgs.settings.ui.replay.profileInfo = expertReplay.profileInfo
+                lgs.stores.replay.progression = expertReplay.progression
+                lgs.stores.replay.profileInfo = expertReplay.profileInfo
             }
             lgs.settings.ui.replay.recordingSync = true
             lgs.stores.replay.recordingSync = true

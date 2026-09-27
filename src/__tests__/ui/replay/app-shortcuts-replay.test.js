@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -199,9 +199,11 @@ describe('app replay shortcuts', () => {
             headingOffset: 0,
             positionMode:  'behind',
         }
+        globalThis.lgs.settings.ui.replay.userMode = 'expert'
         globalThis.lgs.stores.replay.camera = globalThis.lgs.settings.ui.replay.camera
         globalThis.lgs.stores.ui.video = proxy({editing: true})
         globalThis.lgs.stores.ui.drawers = proxy({open: null})
+        globalThis.lgs.stores.ui.widget = proxy({current: null})
         globalThis.__.ui.replay = {
             refreshCamera: vi.fn(),
         }
@@ -225,6 +227,37 @@ describe('app replay shortcuts', () => {
             preparation: true,
         }))
         expect(globalThis.lgs.stores.replay.cameraUpdateSource).toBe('keyboard')
+        removers.forEach(remove => remove?.())
+        canvas.remove()
+    })
+
+    it('does not adjust the Replay camera from arrows in Basic Replay', async () => {
+        const canvas = document.createElement('canvas')
+        document.body.appendChild(canvas)
+        globalThis.lgs.viewer = {scene: {canvas}}
+        globalThis.lgs.settings.ui.replay.camera = {
+            ...globalThis.lgs.settings.ui.replay.camera,
+            heading:       10,
+            headingOffset: 0,
+            positionMode:  'behind',
+        }
+        globalThis.lgs.stores.replay.camera = globalThis.lgs.settings.ui.replay.camera
+        globalThis.lgs.stores.ui.video = proxy({editing: true})
+        globalThis.lgs.stores.ui.drawers = proxy({open: null})
+        globalThis.lgs.stores.ui.widget = proxy({current: null})
+        globalThis.__.ui.replay = {
+            refreshCamera: vi.fn(),
+        }
+        const {installAppShortcuts} = await import('@Core/events/appShortcuts')
+        const removers = installAppShortcuts({
+            addShortcut: vi.fn(() => vi.fn()),
+        })
+
+        window.dispatchEvent(new KeyboardEvent('keydown', {bubbles: true, cancelable: true, key: 'ArrowRight'}))
+        await Promise.resolve()
+
+        expect(globalThis.lgs.settings.ui.replay.camera.headingOffset).toBe(0)
+        expect(globalThis.__.ui.replay.refreshCamera).not.toHaveBeenCalled()
         removers.forEach(remove => remove?.())
         canvas.remove()
     })

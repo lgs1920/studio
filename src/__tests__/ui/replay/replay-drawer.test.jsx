@@ -405,7 +405,18 @@ describe('JourneyReplayDrawer', () => {
         })
     })
 
-    it('shows advanced camera setup fields in passive mode', () => {
+    it('hides camera position and angle controls in Basic Replay', () => {
+        const view = render(<JourneyReplayDrawer/>)
+        fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
+
+        expect(view.queryByLabelText('Camera position')).toBeNull()
+        expect(view.queryByLabelText('Camera angle')).toBeNull()
+        expect(view.queryByRole('heading', {name: 'Position', level: 4})).toBeNull()
+        expect(view.getByRole('heading', {name: 'Framing', level: 4})).toBeTruthy()
+    })
+
+    it('shows advanced camera position and angle fields in Expert Replay', () => {
+        globalThis.lgs.settings.ui.replay.userMode = 'expert'
         globalThis.lgs.stores.replay.marker.mode = REPLAY_MARKER_MODE_TRACE
         globalThis.lgs.settings.ui.replay.marker.mode = REPLAY_MARKER_MODE_TRACE
         globalThis.lgs.stores.replay.camera.positionMode = 'behind'
@@ -568,6 +579,7 @@ describe('JourneyReplayDrawer', () => {
 
     it('applies the camera angle slider without mutating the Cesium scene', async () => {
         const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
+        globalThis.lgs.settings.ui.replay.userMode = 'expert'
         globalThis.lgs.stores.replay.camera.positionMode = 'behind'
         globalThis.lgs.settings.ui.replay.camera.positionMode = 'behind'
         globalThis.lgs.settings.ui.replay.clips = {

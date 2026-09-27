@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-27
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,6 +21,7 @@ import {
     REPLAY_CAMERA_POSITION_BEHIND,
     REPLAY_CAMERA_POSITION_SYSTEM,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT} from '@Core/ui/replay/ReplayUserModes'
 import { foot, meter, UnitUtils } from '@Utils/UnitUtils'
 import { cameraViewToSlippyLevel } from '@Utils/cesium/CameraLevel'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
@@ -60,6 +61,7 @@ const DEFAULT_REPLAY_OVERLAY_STATE = {
     paused:        false,
     playing:       false,
     recordingSync: false,
+    userMode:      REPLAY_USER_MODE_BASIC,
     camera:        {positionMode: REPLAY_CAMERA_POSITION_SYSTEM, headingOffset: 0},
 }
 
@@ -144,7 +146,8 @@ export const CameraAdjustmentOverlay = memo(({
     const replay = useOptionalSnapshot(lgs.stores?.replay, DEFAULT_REPLAY_OVERLAY_STATE)
     const video = useOptionalSnapshot(lgs.stores?.ui?.video, DEFAULT_VIDEO_OVERLAY_STATE)
     const replayCamera = replay.camera ?? {}
-    const hasReplayCameraAngle = video.editing === true
+    const hasReplayCameraAngle = replay.userMode === REPLAY_USER_MODE_EXPERT
+        && video.editing === true
         && replayCamera.positionMode !== REPLAY_CAMERA_POSITION_SYSTEM
         && Number.isFinite(Number(replayCamera.headingOffset))
     const replayCameraDirection = replayCamera.positionMode === REPLAY_CAMERA_POSITION_AHEAD

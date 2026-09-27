@@ -115,6 +115,9 @@ describe('JourneyReplayButton synchronized video entry point', () => {
         expect(globalThis.lgs.stores.ui.video.editing).toBe(true)
         expect(globalThis.lgs.settings.ui.replay.simple.camera.heading).toBe(0)
         expect(globalThis.lgs.settings.ui.replay.simple.camera.headingOffset).toBe(0)
+        expect(globalThis.lgs.settings.ui.replay.simple.camera.positionMode).toBe('system')
+        expect(globalThis.lgs.settings.ui.replay.camera.positionMode).toBe('system')
+        expect(globalThis.lgs.stores.replay.camera.positionMode).toBe('system')
         expect(globalThis.lgs.settings.ui.replay.simple.camera.debug).toBe(false)
         expect(globalThis.lgs.stores.replay.simplePreparationActive).toBe(true)
         await waitFor(() => {
@@ -124,6 +127,26 @@ describe('JourneyReplayButton synchronized video entry point', () => {
         })
 
         expect(globalThis.lgs.settings.ui.replay.userMode).toBe('basic')
+    })
+
+    it('forces a journey-relative camera position when entering Expert Replay', () => {
+        globalThis.lgs.theJourney.replay = {
+            simple: {camera: {positionMode: 'system'}},
+        }
+
+        render(
+            <JourneyReplayButton
+                id="launch-expert-replay-from-simple-camera"
+                mode="expert"
+                ariaLabel="Expert Replay"
+            />,
+        )
+
+        fireEvent.click(screen.getByRole('button', {name: 'Expert Replay'}))
+
+        expect(globalThis.lgs.theJourney.replay.expert.camera.positionMode).toBe('behind')
+        expect(globalThis.lgs.settings.ui.replay.camera.positionMode).toBe('behind')
+        expect(globalThis.lgs.stores.replay.camera.positionMode).toBe('behind')
     })
 
     it('keeps the Expert Replay icon upright', () => {
