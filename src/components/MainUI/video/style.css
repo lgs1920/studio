@@ -75,6 +75,12 @@
     gap: var(--lgs-gutter-xxs);
 }
 
+.simple-replay-settings-summary__separator {
+    align-self: stretch;
+    margin-inline: var(--lgs-gutter-xs);
+    border-inline-start: 1px solid var(--wa-color-surface-border, var(--lgs-card-on-map-border-color));
+}
+
 .simple-replay-settings-summary__item + .simple-replay-settings-summary__item::before {
     content: '·';
     margin-inline-end: var(--lgs-gutter-xxs);

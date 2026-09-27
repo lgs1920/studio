@@ -193,6 +193,8 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(screen.getByText('High · 30 FPS')).not.toBeNull()
         expect(screen.getByText('15s')).not.toBeNull()
         expect(screen.getByRole('button', {name: 'Replay settings'}).querySelector('[data-icon="gear"]')).not.toBeNull()
+        expect(document.querySelector('.simple-replay-settings-summary__separator')).not.toBeNull()
+        expect(document.querySelector('.simple-replay-settings-summary')?.nextElementSibling?.classList).toContain('video-recording-settings-separator')
         expect(screen.queryByRole('button', {name: 'Journey Replay Settings'})).toBeNull()
         expect(screen.queryByRole('button', {name: 'Ratio: 16:9'})).toBeNull()
 
@@ -221,6 +223,8 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(screen.getByText('16:9')).not.toBeNull()
         expect(screen.getByText('High · 30 FPS')).not.toBeNull()
         expect(screen.getByRole('button', {name: 'Replay settings'}).querySelector('[data-icon="gear"]')).not.toBeNull()
+        expect(document.querySelector('.simple-replay-settings-summary__separator')).not.toBeNull()
+        expect(document.querySelector('.simple-replay-settings-summary')?.nextElementSibling?.classList).toContain('video-recording-settings-separator')
         expect(screen.getByRole('button', {name: 'Journey Replay settings'})).not.toBeNull()
         expect(screen.getByRole('button', {name: 'Record'})).not.toBeNull()
         expect(screen.queryByText('15s')).toBeNull()

@@ -301,6 +301,7 @@ export const VideoRecordingSettingsToolbar = memo(({
                 >
                     <WaIcon name="gear" variant="regular" label=""/>
                 </WaButton>
+                <span className="simple-replay-settings-summary__separator" aria-hidden="true"/>
                 <span className="simple-replay-settings-summary__item">
                     <WaIcon name="crop-simple" label=""/>
                     <span>{currentRatio?.label ?? video.ratio}</span>
@@ -435,9 +436,12 @@ export const VideoRecordingSettingsToolbar = memo(({
 
                 {showActions ? replaySettingsTrigger : null}
 
+                {showActions && compactReplaySettings ? (
+                    <span className="video-recording-settings-separator" aria-hidden="true"/>
+                ) : null}
+
                 {showActions && timelineSettings ? (
                     <>
-                        <span className="video-recording-settings-separator" aria-hidden="true"/>
                         <WaButton
                             id="open-replay-settings-from-timeline"
                             size="s"
