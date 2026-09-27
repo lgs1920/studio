@@ -2,13 +2,13 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: MediaMetadata.js
+ * File: ReplayMediaMetadata.js
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-09-27
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920

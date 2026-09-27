@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-05
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -219,10 +219,10 @@ export const JourneyReplayProgressBar = memo(({
     const overrideProgress = progressOverride === null || progressOverride === undefined
                              ? null
                              : finiteNumber(progressOverride)
-    const displayProgress = overrideProgress !== null ? clampReplayProgress(overrideProgress) : playbackProgress
+    const displayProgress = overrideProgress !== null ? clampReplayProgress(overrideProgress) : interactiveProgress
     const coveredDistance = hasPlaybackSample && replay.sample
                             ? (direction < 0 ? replay.sample.remainingDistance : replay.sample.distanceFromStart)
-                            : totalDistance * playbackProgress
+                            : totalDistance * interactiveProgress
 
     const timeLabel = useMemo(() => {
         if (!showTime) {

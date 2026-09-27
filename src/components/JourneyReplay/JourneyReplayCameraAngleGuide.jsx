@@ -55,8 +55,7 @@ export const JourneyReplayCameraAngleGuide = () => {
     const cameraPositionMode = camera.positionMode
     const expertMode = replaySettings.userMode === REPLAY_USER_MODE_EXPERT
     const captureActive = video.preRecording !== true && (
-        video.recording === true
-        || video.recordingHQ === true
+        video.recordingHQ === true
         || video.snapshot === true
         || video.finalizing === true
         || isJourneyReplayVideoCaptureActive()

@@ -160,7 +160,7 @@ describe('JourneyReplayRuntime', () => {
                 settings: {ui: {replay: {recordingSync: true}}},
                 stores: {
                     replay: {recordingSync: true},
-                    ui: {video: {recording: true}},
+                    ui: {video: {recordingHQ: true}},
                 },
             }
 

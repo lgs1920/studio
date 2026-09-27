@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-08
- * Last modified: 2026-09-20
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -53,15 +53,6 @@ vi.mock('@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas', () => {
 
     return {Widget2Canvas: vi.fn(Widget2CanvasMock)}
 })
-
-vi.mock('@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder', () => ({
-    ScreenMediaRecorder: {
-        events: {
-            STOP:   'stop',
-            CANCEL: 'cancel',
-        },
-    },
-}))
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
@@ -157,7 +148,6 @@ const installGlobals = () => {
     globalThis.__ = {
         app: {parsePx: value => parseFloat(value) || 0},
         widgets: new Map(),
-        recorder: {addEventListener: vi.fn(), removeEventListener: vi.fn()},
         ui: {
             drawerManager: {close: vi.fn()},
             widgetCache: {mount: vi.fn()},

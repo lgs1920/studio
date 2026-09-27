@@ -78,11 +78,6 @@ describe('ReplayRecordingMonitorWidget', () => {
         widgetHarness.expandRequestKey = null
         snapshotHarness.capture.mockReset()
         globalThis.__ = {
-            recorder: {
-                cancelVideo: vi.fn().mockResolvedValue(undefined),
-                pauseVideo: vi.fn(),
-                resumeVideo: vi.fn(),
-            },
         }
         globalThis.lgs = {
             gutter: {s: 8},
@@ -278,13 +273,13 @@ describe('ReplayRecordingMonitorWidget', () => {
         expect(document.querySelector('.video-recorder-indicator.recording')).not.toBeNull()
     })
 
-    it('calculates Interactive duration and progress from recorder elapsed time', () => {
+    it('calculates Replay export duration and remaining time from frame progress', () => {
         startReplayRecordingMonitor({
-            mode: 'interactive',
+            mode: 'hq',
             videoDurationMillis: 10000,
         })
         updateReplayRecordingMonitor({
-            progress: 0.9,
+            progress: 0.125,
             elapsedMillis: 1250,
         })
 

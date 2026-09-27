@@ -34,11 +34,10 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     // Rehydration and invalidation must only run while an actual capture phase
     // is active, otherwise the portal loops during normal editor use.
     const videoCaptureActive = video.preRecording === true
-                              || video.recording === true
                               || video.recordingHQ === true
                               || video.snapshot === true
                               || video.finalizing === true
-    const synchronizedRecording = (video.recording === true || video.recordingHQ === true)
+    const synchronizedRecording = video.recordingHQ === true
                                   && replay.recordingSync === true
     const simpleReplay = replay.simplePreparationActive === true
     const previewOnly = videoCaptureActive || synchronizedRecording
@@ -62,6 +61,17 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
         let cancelled = false
         let frame = null
 
+        const queueBoardResolution = () => {
+            if (cancelled || frame) {
+                return
+            }
+
+            frame = requestAnimationFrame(() => {
+                frame = null
+                resolveBoardElement()
+            })
+        }
+
         const resolveBoardElement = () => {
             if (cancelled) {
                 return
@@ -71,15 +81,22 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
                                     ?? document.querySelector(`#${VIDEO_WIDGETS_BOARD}.defined`)
             setBoardElement(current => current === nextBoardElement ? current : nextBoardElement)
 
-            if (!nextBoardElement) {
-                frame = requestAnimationFrame(resolveBoardElement)
+            if (nextBoardElement && frame) {
+                cancelAnimationFrame(frame)
+                frame = null
+            }
+            else if (!nextBoardElement) {
+                queueBoardResolution()
             }
         }
 
+        const observer = new MutationObserver(resolveBoardElement)
+        observer.observe(document.body, {childList: true, subtree: true})
         resolveBoardElement()
 
         return () => {
             cancelled = true
+            observer.disconnect()
             if (frame) {
                 cancelAnimationFrame(frame)
             }

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-30
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,6 +37,7 @@ vi.mock('@Utils/useManagedStylesheet', () => ({
 
 vi.mock('@Utils/ValtioUtils', () => ({
     useOptionalSnapshot: (value, fallback) => value ?? fallback,
+    useProxyValue: (value, selector, fallback) => selector(value) ?? fallback,
 }))
 
 import {DynamicStatsWidget} from '@Components/Stats/DynamicStatsWidget'

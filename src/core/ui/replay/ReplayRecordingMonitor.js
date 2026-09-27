@@ -15,7 +15,7 @@
  ******************************************************************************/
 
 /**
- * Shared state for the transient Interactive and Replay HQ recording monitor.
+ * Shared state for the transient Replay export monitor.
  */
 
 const listeners = new Set()
@@ -67,13 +67,13 @@ export const subscribeReplayRecordingMonitor = listener => {
 export const getReplayRecordingMonitorSnapshot = () => snapshot
 
 /**
- * Start a monitor lifecycle for Interactive or HQ recording.
+ * Start a monitor lifecycle for a Replay export.
  *
  * @param {Object} options - Monitor mode and optional frame metadata.
  * @returns {Object} Current monitor snapshot.
  */
 export const startReplayRecordingMonitor = ({
-    mode = 'interactive',
+    mode = 'hq',
     frameCount = null,
     videoDurationMillis = null,
 } = {}) => {
@@ -136,7 +136,7 @@ export const publishReplayRecordingMonitorFrame = ({
 }
 
 /**
- * Update monitor progress and recorder metrics without replacing its frame.
+ * Update export progress and metrics without replacing its frame.
  *
  * @param {Object} metrics - Runtime phase, progress, and encoder metrics.
  * @returns {Object} Current monitor snapshot.

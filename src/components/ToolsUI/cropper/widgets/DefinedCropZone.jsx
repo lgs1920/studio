@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-29
- * Last modified: 2026-04-29
+ * Created on: 2025-07-21
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -121,7 +121,7 @@ export const DefinedCropZone = memo(function DefinedCropZone({
         className,
         {
             'video-pre-recording-in-progress': video.preRecording,
-            'video-recording-in-progress':     video.recording,
+            'video-recording-in-progress':     video.recordingHQ,
             'video-finalizing-in-progress': video.finalizing,
             'photo-snapshot-in-progress':      video.snapshot,
             finalizing:                        video.finalizing,

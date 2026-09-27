@@ -576,7 +576,7 @@ export const updateCamera = (mode, {
                                       && !(
                                           globalThis.lgs?.settings?.ui?.replay?.recordingSync === true
                                           || globalThis.lgs?.stores?.replay?.recordingSync === true
-                                          || globalThis.lgs?.stores?.ui?.video?.recording === true
+                                          || globalThis.lgs?.stores?.ui?.video?.recordingHQ === true
                                       )
     if (state.cameraApplyingView) {
         if (!deterministicCamera && source !== 'refresh') {
@@ -653,7 +653,7 @@ export const updateCamera = (mode, {
         logicalFrame.cameraPose = nominalView
     }
 
-    if (exportMode || globalThis.lgs?.stores?.ui?.video?.recording === true) {
+    if (exportMode || globalThis.lgs?.stores?.ui?.video?.recordingHQ === true) {
         call.traceCameraTiming({
             logicalNow,
             exportMode,

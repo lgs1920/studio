@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -262,8 +262,7 @@ export const startCameraTransition = (mode, {
                 })
                 : null
 
-            const interactiveTiming = globalThis.lgs?.stores?.ui?.video?.recording === true
-                                || globalThis.lgs?.stores?.ui?.video?.preRecording === true
+            const interactiveTiming = globalThis.lgs?.stores?.ui?.video?.preRecording === true
             if (transferPath) {
                 try {
                     const cancelTransition = transferPath.flyTo({

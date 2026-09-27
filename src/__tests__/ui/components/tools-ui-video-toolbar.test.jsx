@@ -156,10 +156,10 @@ describe('ToolsUI linked replay video editing', () => {
         const enterReplayPreparation = globalThis.__.ui.replay.enterReplayPreparation
         render(<ToolsUI/>)
 
-        globalThis.lgs.stores.ui.video.recording = true
-        await waitFor(() => expect(globalThis.lgs.stores.ui.video.recording).toBe(true))
+        globalThis.lgs.stores.ui.video.recordingHQ = true
+        await waitFor(() => expect(globalThis.lgs.stores.ui.video.recordingHQ).toBe(true))
 
-        globalThis.lgs.stores.ui.video.recording = false
+        globalThis.lgs.stores.ui.video.recordingHQ = false
         globalThis.lgs.stores.ui.video.editing = true
 
         await waitFor(() => expect(enterReplayPreparation).toHaveBeenCalledWith(expect.objectContaining({

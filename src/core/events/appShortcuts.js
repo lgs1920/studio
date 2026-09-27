@@ -87,7 +87,7 @@ const isReplayCameraPreparationActive = () => {
 
     const videoPreparationActive = video?.editing === true
         && !video.preRecording
-        && !video.recording
+        && !video.recordingHQ
         && !video.snapshot
         && !video.finalizing
     const replayDrawerOpen = lgs.stores.ui?.drawers?.open === REPLAY_DRAWER
@@ -486,7 +486,7 @@ const editSelectedWidget = () => {
 const selectedWidgetContext = () => {
     const video = lgs.stores?.ui?.video
 
-    if (video?.preRecording || video?.recording || video?.snapshot || video?.finalizing) {
+    if (video?.preRecording || video?.recordingHQ || video?.snapshot || video?.finalizing) {
         return null
     }
 

@@ -19,114 +19,34 @@ import { VideoSettingsInfo }                                    from '@Component
 import { CropOverlay }                                          from '@Components/ToolsUI/cropper/CropOverlay'
 import { DefinedCropZone }       from '@Components/ToolsUI/cropper/widgets/DefinedCropZone'
 import {
-    APP_KEY, CROP_TOOLS_WIDGETS, LGS_PROJECT, MINUTE, SECOND, VIDEO_CROP_ZONE,
+    CROP_TOOLS_WIDGETS, VIDEO_CROP_ZONE,
     VIDEO_TOOLS_WIDGETS, WIDGET_MOUNT_TIMEOUT,
 } from '@Core/constants'
-import { resolveReplayTimelineDuration } from '@Core/ui/replay/ReplayProgress'
 import {
     buildReplayVideoComposerOverlays,
     flushReplayVideoOverlayCanvases,
     isReplayVideoWidgetReady,
 }                                                                  from '@Core/ui/replay/ReplayVideoOverlayComposer'
 import { buildReplayVideoRenderSpec } from '@Core/ui/replay/ReplayVideoRenderSpec'
-import { replayVideoTraceDebug } from '@Core/ui/replay/ReplayVideoTraceDebug'
 import { getReplayVideoWidgetKeys } from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import {
-    publishReplayRecordingMonitorFrame,
     REPLAY_DEFERRED_EXPORT_READY_EVENT,
-    startReplayRecordingMonitor,
     stopReplayRecordingMonitor,
-    updateReplayRecordingMonitor,
 } from '@Core/ui/replay/ReplayRecordingMonitor'
 import { exportReplayDeferredMp4 } from '@Core/ui/replay/ReplayDeferredExporter'
 import { CanvasOverlayComposer } from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
-import { ScreenMediaRecorder }   from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import {REPLAY_VIDEO_FPS, REPLAY_VIDEO_QUALITY} from '@Core/ui/replay/ReplayVideoSettings'
 import { WidgetMountErrorDialog } from '@Components/MainUI/video/WidgetMountErrorDialog'
 import { prepareVideoCaptureUi, restoreVideoCaptureUi } from '@Components/MainUI/video/videoEditingCleanup'
 import { UIToast }                                              from '@Utils/UIToast'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }           from 'valtio'
-// Softer recorder timeslice to reduce INFO event overhead.
-const SOFT_TIMESLICE_MS = SECOND * 2
-const VIDEO_RECORDER_INITIALIZE_TIMEOUT_MS = 6000
-
-/**
- * Return a positive finite numeric value or null.
- *
- * @param {*} value - Candidate numeric value.
- * @returns {number|null} Positive finite value.
- */
-const positiveFinite = value => {
-    const numeric = Number(value)
-    return Number.isFinite(numeric) && numeric > 0 ? numeric : null
-}
-
-/**
- * Resolve the duration displayed by the Interactive recording monitor.
- *
- * @param {Object} options - Interactive duration candidates.
- * @param {Object} options.replay - Replay snapshot.
- * @param {*} options.maxDuration - Maximum ordinary recording duration in minutes.
- * @param {*} options.controllerDurationSeconds - Current replay controller duration.
- * @param {Object|null} options.clips - Optional replay start and stop clips.
- * @returns {number|null} Interactive duration in milliseconds.
- */
-const resolveInteractiveVideoDurationMillis = ({
-    replay,
-    maxDuration,
-    controllerDurationSeconds,
-    clips,
-} = {}) => {
-    const controllerReplayDurationMillis = positiveFinite(controllerDurationSeconds) === null
-                                            ? null
-                                            : positiveFinite(controllerDurationSeconds) * 1000
-    const configuredReplayDurationMillis = positiveFinite(replay?.duration) === null
-                                           ? null
-                                           : positiveFinite(replay?.duration) * 1000
-    const replayDurationMillis = controllerReplayDurationMillis
-                                  ?? configuredReplayDurationMillis
-                                  ?? positiveFinite(replay?.durationMillis)
-    const replayTimelineDurationMillis = resolveReplayTimelineDuration({
-        replayDurationMillis,
-        clips,
-    })
-
-    return replayTimelineDurationMillis
-           ?? (positiveFinite(maxDuration) ?? 0) * MINUTE * 1000
-}
-
-const withTimeout = async (promise, timeoutMs, message) => {
-    let timeoutId = null
-    try {
-        return await Promise.race([
-                                      promise,
-                                      new Promise((_, reject) => {
-                                          timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs)
-                                      }),
-                                  ])
-    }
-    finally {
-        clearTimeout(timeoutId)
-    }
-}
 
 export const VideoRecordingScreenArea = memo(() => {
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
-    const replay = useSnapshot(lgs.stores.replay)
-    const {maxSize, maxDuration} = useSnapshot(lgs.settings.ui.video)
-    const interactiveVideoDurationMillis = resolveInteractiveVideoDurationMillis({
-        replay,
-        maxDuration,
-        controllerDurationSeconds: __.ui?.replay?.controller?.duration,
-        clips: replay.clips ?? lgs.settings?.ui?.replay?.clips,
-    })
     const _cropZone = useRef(null)
-    const _composer = useRef(null)
     const _pendingFinish = useRef(null)
-    const _overlaysRefreshRafId = useRef(null)
-    const _metricsCache = useRef(new Map())
-    const _wakeLock = useRef(null)
     const _recordingStartToken = useRef(0)
     const [mountTimeoutOpen, setMountTimeoutOpen] = useState(false)
     const [mountTimeoutError, setMountTimeoutError] = useState({missing: [], timeoutMs: WIDGET_MOUNT_TIMEOUT})
@@ -198,54 +118,8 @@ export const VideoRecordingScreenArea = memo(() => {
     const isJourneyReplaySyncRequested = useCallback(() => (
         lgs.stores.replay.recordingSync === true
         || lgs.settings?.ui?.replay?.recordingSync === true
+        || lgs.stores.replay.simplePreparationActive === true
     ), [])
-
-    const prepareJourneyReplayForRecording = useCallback(async (renderSpec = null) => {
-        if (!isJourneyReplaySyncRequested()) {
-            // A standard video must not prepare, start, or otherwise affect Replay.
-            const replayVideoSync = __.ui.replayVideoSync
-            if (replayVideoSync?.isArmed?.() === true) {
-                replayVideoSync.disarm?.()
-            }
-            return true
-        }
-
-        const cameraManager = __.ui.cameraManager
-        cameraManager?.stopPanoramic?.()
-        if (cameraManager?.isRotating?.()) {
-            await cameraManager.stopRotate()
-        }
-
-        const replay = __.ui.replay
-        const prepared = await replay?.prepareReplayCamera?.({journey: lgs.theJourney})
-        if (prepared === false) {
-            return false
-        }
-
-        if (typeof replay?.captureCameraState === 'function' && !replay.savedCameraState) {
-            const cameraCaptureStartedAt = globalThis.performance?.now?.() ?? Date.now()
-            replayVideoTraceDebug('interactive.recording.replay-camera.capture.start', {
-                captureMode: renderSpec?.captureMode ?? $video.captureMode ?? lgs.settings.ui.video.captureMode ?? 'speed',
-                startToken:   _recordingStartToken.current,
-            })
-            replay.captureCameraState()
-            replayVideoTraceDebug('interactive.recording.replay-camera.capture.end', {
-                elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - cameraCaptureStartedAt,
-                startToken: _recordingStartToken.current,
-            })
-        }
-
-        __.ui.replayVideoSync?.arm?.({
-            recorder:          __.recorder,
-            replay:            __.ui.replay,
-            store:             lgs.stores.replay,
-            autoStopRecording: true,
-            resetToStart:      true,
-            captureMode:       renderSpec?.captureMode ?? $video.captureMode ?? lgs.settings.ui.video.captureMode ?? 'speed',
-            captureFps:        renderSpec?.fps ?? ScreenMediaRecorder.FPS[$video.fps],
-        })
-        return true
-    }, [isJourneyReplaySyncRequested, $video])
 
     const exportJourneyReplayFrameByFrame = useCallback(async ({renderSpec, startToken}) => {
         const abortController = new AbortController()
@@ -264,7 +138,6 @@ export const VideoRecordingScreenArea = memo(() => {
 
         Object.assign($video, {
             preRecording: false,
-            recording:    false,
             recordingHQ:  true,
             finalizing:   false,
             paused:       false,
@@ -302,7 +175,7 @@ export const VideoRecordingScreenArea = memo(() => {
                         fps: result.plan?.videoTimeline?.fps ?? renderSpec.fps,
                         averageFps: result.plan?.videoTimeline?.fps ?? renderSpec.fps,
                         dimensions,
-                        quality: ScreenMediaRecorder.QUALITY[$video.quality] ?? {name: 'Replay HQ'},
+                        quality: REPLAY_VIDEO_QUALITY[$video.quality] ?? {name: 'Replay HQ'},
                         ratio: {label: `${dimensions.width}×${dimensions.height}`},
                         metadata: mediaMetadata,
                         mimeType: result.blob.type || 'video/mp4',
@@ -324,7 +197,6 @@ export const VideoRecordingScreenArea = memo(() => {
             if (startToken === _recordingStartToken.current) {
                 Object.assign($video, {
                     preRecording: false,
-                    recording:    false,
                     recordingHQ:  false,
                     finalizing:   false,
                     paused:       false,
@@ -336,37 +208,12 @@ export const VideoRecordingScreenArea = memo(() => {
         }
     }, [$video])
 
-    // Dispose composer and release references.
-    const disposeComposer = useCallback(() => {
-        _composer.current?.dispose()
-        _composer.current = null
-    }, [])
-
-    // Stop live overlay refresh.
-    const stopOverlaysRefresh = useCallback(() => {
-        if (_overlaysRefreshRafId.current) {
-            cancelAnimationFrame(_overlaysRefreshRafId.current)
-            _overlaysRefreshRafId.current = null
-        }
-        _metricsCache.current.clear()
-    }, [])
-
-    // Rebuild overlay list with pooled objects.
     const buildComposerOverlays = useCallback((composer, cropRect, widgetKeys) => {
         buildReplayVideoComposerOverlays({
             composer,
             cropRect,
             widgetKeys: widgetKeys ?? getReplayVideoWidgetKeys(),
-            metricsCache: _metricsCache.current,
-        })
-    }, [])
-
-    const buildFinalComposerOverlays = useCallback((composer, cropRect) => {
-        buildReplayVideoComposerOverlays({
-            composer,
-            cropRect,
-            widgetKeys: getReplayVideoWidgetKeys(),
-            metricsCache: _metricsCache.current,
+            metricsCache: new Map(),
         })
     }, [])
 
@@ -378,73 +225,21 @@ export const VideoRecordingScreenArea = memo(() => {
         return isReplayVideoWidgetReady(widgetId)
     }, [])
 
-    const requestWakeLock = useCallback(async () => {
-        try {
-            if (!('wakeLock' in navigator)) {
-                return
-            }
-            if (_wakeLock.current) {
-                return
-            }
-            _wakeLock.current = await navigator.wakeLock.request('screen')
-            _wakeLock.current.addEventListener('release', () => {
-                _wakeLock.current = null
-            })
+    const handleStartRecording = useCallback(async () => {
+        const startToken = _recordingStartToken.current + 1
+        _recordingStartToken.current = startToken
+        if (!isJourneyReplaySyncRequested()) {
+            Object.assign($video, {preRecording: false, finalizing: false, editing: true})
+            UIToast.error({caption: 'Replay video', text: 'Video export requires an active Replay preparation.'})
+            return
         }
-        catch {
-            // Wake Lock is best-effort only.
-            _wakeLock.current = null
-        }
-    }, [])
 
-    const releaseWakeLock = useCallback(async () => {
         try {
-            await _wakeLock.current?.release?.()
-        }
-        catch {
-            // Wake Lock may already be released.
-        }
-        _wakeLock.current = null
-    }, [])
-
-    const initializeRecorder = useCallback(async (startToken) => {
-        const initializeStartedAt = globalThis.performance?.now?.() ?? Date.now()
-        replayVideoTraceDebug('interactive.recording.initialize.start', {
-            captureMode: $video.captureMode ?? lgs.settings.ui.video.captureMode ?? 'speed',
-            captureFps:   ScreenMediaRecorder.FPS[$video.fps] ?? null,
-            syncRequested: isJourneyReplaySyncRequested(),
-            startToken,
-        })
-        try {
-            const uiPrepareStartedAt = globalThis.performance?.now?.() ?? Date.now()
-            replayVideoTraceDebug('interactive.recording.ui.prepare.start', {
-                startToken,
-            })
             prepareVideoCaptureUi()
-            replayVideoTraceDebug('interactive.recording.ui.prepare.end', {
-                elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - uiPrepareStartedAt,
-                startToken,
-            })
-
             $video.settings = {quality: $video.quality, fps: $video.fps}
-
-            const cropSyncStartedAt = globalThis.performance?.now?.() ?? Date.now()
-            replayVideoTraceDebug('interactive.recording.crop.sync.start', {
-                phase: 'before-record',
-                persist: false,
-                startToken,
-            })
-            const videoFrame = await syncVideoCropFrame('before-record')
-            replayVideoTraceDebug('interactive.recording.crop.sync.end', {
-                elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - cropSyncStartedAt,
-                hasVideoFrame: Boolean(videoFrame),
-                startToken,
-            })
-            if (!videoFrame) {
-                return false
-            }
-            if (startToken !== _recordingStartToken.current) {
-                return false
+            const videoFrame = await syncVideoCropFrame('before-replay-export')
+            if (!videoFrame || startToken !== _recordingStartToken.current) {
+                return
             }
 
             const renderSpec = buildReplayVideoRenderSpec({
@@ -454,230 +249,16 @@ export const VideoRecordingScreenArea = memo(() => {
                 device: __.device,
                 sourceCanvas: lgs.canvas,
             })
-            const selectedFps = renderSpec.fps
-            if (isJourneyReplaySyncRequested()) {
-                const replayBridgeStartedAt = globalThis.performance?.now?.() ?? Date.now()
-                replayVideoTraceDebug('interactive.recording.replay-bridge.start', {
-                    captureMode: renderSpec.captureMode,
-                    captureFps: selectedFps,
-                    startToken,
-                })
-                if (!await prepareJourneyReplayForRecording(renderSpec)) {
-                    return false
-                }
-                replayVideoTraceDebug('interactive.recording.replay-bridge.end', {
-                    elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - replayBridgeStartedAt,
-                    startToken,
-                    syncRequested: true,
-                })
-
-                const sceneRestoreStartedAt = globalThis.performance?.now?.() ?? Date.now()
-                replayVideoTraceDebug('interactive.recording.scene-restore.wait.start', {
-                    timeoutMs: VIDEO_RECORDER_INITIALIZE_TIMEOUT_MS,
-                    startToken,
-                })
-                await withTimeout(
-                    Promise.resolve(__.ui.replay?.waitForSceneRestore?.()),
-                    VIDEO_RECORDER_INITIALIZE_TIMEOUT_MS,
-                    'Replay scene restoration timed out before video recording.',
-                )
-                replayVideoTraceDebug('interactive.recording.scene-restore.wait.end', {
-                    elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - sceneRestoreStartedAt,
-                    startToken,
-                })
-            }
-            if (startToken !== _recordingStartToken.current) {
-                return false
-            }
-
-            if (isJourneyReplaySyncRequested()) {
-                void exportJourneyReplayFrameByFrame({renderSpec, startToken})
-                return 'deferred-replay-export'
-            }
-
-            const recordingDate = new Date()
-            const recordingDateLabel = recordingDate.toLocaleDateString('sv-SE')
-            const journeyTitle = lgs.theJourney?.title?.trim() || ''
-            const journeyDate = lgs.theJourney?.getDate?.()
-            const formattedJourneyDate = __.ui?.ui?.formatJourneyDurationDates?.(journeyDate) ?? {}
-            const journeyDateTime = [formattedJourneyDate.prefix, formattedJourneyDate.sufix]
-                .filter(Boolean)
-                .join(' ')
-            const journeyLocation = lgs.theJourney?.location?.trim() || ''
-            const recordingComment = [journeyTitle, journeyDateTime, journeyLocation]
-                .filter(Boolean)
-                .concat('', `Recorded on ${recordingDateLabel}`)
-                .join('\n')
-            const recordingMetadata = {
-                status: 'ready',
-                artist: lgs.servers.studio.name,
-                date: recordingDate,
-                album: 'Your Adventures',
-                genre: 'Adventures Replay',
-                publisher: 'LGS1920 Studio',
-                encodedBy: 'Mediabunny',
-                comment: recordingComment,
-                raw: {
-                    '©pub': 'LGS1920 Studio',
-                    '©too': 'Mediabunny',
-                },
-                ...(journeyTitle ? {title: journeyTitle} : {}),
-                ...(lgs.theJourney?.title ? {description: lgs.theJourney.title} : {}),
-            }
-            __.recorder.initialize({
-                maxSize: maxSize * 1048576,
-                maxDuration: maxDuration * MINUTE,
-                quality: ScreenMediaRecorder.QUALITY[$video.quality].value,
-                filename: APP_KEY,
-                fps: selectedFps,
-                timeslice: SOFT_TIMESLICE_MS,
-                dimensions: renderSpec.dimensions,
-                ratio: videoFrame.ratio.value,
-                captureMode: renderSpec.captureMode,
-                metadata: recordingMetadata,
-                useWebGL: true,
-            })
-
-            const {width, height} = renderSpec.cropRect
-            disposeComposer()
-            stopOverlaysRefresh()
-            const composer = new CanvasOverlayComposer(lgs.canvas, {
-                clip: renderSpec.composerClip,
-                width,
-                height,
-                fps: selectedFps,
-                outputDpr: renderSpec.outputDpr,
-                flushWebGLBuffer: () => lgs.scene.render(),
-            })
-            _composer.current = composer
-
-            startReplayRecordingMonitor({
-                mode: 'interactive',
-                videoDurationMillis: interactiveVideoDurationMillis,
-            })
-
-            if (renderSpec.captureMode === 'quality') {
-                composer.setFps(0)
-            }
-
-            // The final recorder frame must be composed from the current Cesium
-            // canvas so the same cropped frame feeds the recorder and monitor.
-            __.recorder.setFrameCaptureReady(async () => {
-                return flushComposerOverlays().then(async () => {
-                    buildFinalComposerOverlays(composer, renderSpec.cropRect, renderSpec.outputDpr)
-                    // The replay runtime has already rendered the final Cesium frame.
-                    // Waiting for another rAF makes Interactive duration depend on browser
-                    // throttling when the replay UI is hidden.
-                    await composer.renderFrame({waitForNextFrame: false})
-                    publishReplayRecordingMonitorFrame({
-                        canvas: composer.getCanvas(),
-                        mode: 'interactive',
-                        phase: 'recording',
-                        progress: lgs.stores.replay?.progress,
-                    })
-                    return true
-                })
-            })
-
-            await flushComposerOverlays()
-            buildComposerOverlays(composer, renderSpec.cropRect)
-            const firstComposerFrameStartedAt = globalThis.performance?.now?.() ?? Date.now()
-            await composer.renderFrame({waitForNextFrame: true})
-            publishReplayRecordingMonitorFrame({
-                canvas: composer.getCanvas(),
-                mode: 'interactive',
-                phase: 'recording',
-                progress: lgs.stores.replay?.progress,
-            })
-            replayVideoTraceDebug('interactive.recording.composer.first-frame.end', {
-                elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - firstComposerFrameStartedAt,
-                startToken,
-            })
-            if (startToken !== _recordingStartToken.current) {
-                composer.dispose()
-                return false
-            }
-            __.recorder.setCanvas(composer.getCanvas())
-            composer.setContinuousRendering?.(false)
-            return true
+            void exportJourneyReplayFrameByFrame({renderSpec, startToken})
         }
-        finally {
-            const elapsedMs = (globalThis.performance?.now?.() ?? Date.now()) - initializeStartedAt
-            replayVideoTraceDebug('interactive.recording.initialize.end', {
-                elapsedMs,
-                startToken,
-                syncRequested: isJourneyReplaySyncRequested(),
-            })
-        }
-    }, [interactiveVideoDurationMillis, maxDuration, maxSize, disposeComposer, stopOverlaysRefresh, buildComposerOverlays, buildFinalComposerOverlays, flushComposerOverlays, syncVideoCropFrame, prepareJourneyReplayForRecording, isJourneyReplaySyncRequested, exportJourneyReplayFrameByFrame, $video])
-
-    const markRecordingStarted = useCallback(() => {
-        if (!$video.preRecording && $video.recording) {
-            return
-        }
-        Object.assign($video, {
-            preRecording: false,
-            recording:    true,
-            finalizing:   false,
-            paused:       false,
-            size:         0,
-        })
-        UIToast.warning({caption: 'Video Recording', text: 'ON AIR!'})
-    }, [$video])
-
-    const handleVideoRecording = useCallback(async () => {
-        const startToken = _recordingStartToken.current + 1
-        _recordingStartToken.current = startToken
-        try {
-            const ready = await withTimeout(
-                initializeRecorder(startToken),
-                VIDEO_RECORDER_INITIALIZE_TIMEOUT_MS,
-                'Video recording initialization timed out on this browser.',
-            )
-            if (ready === 'deferred-replay-export') {
-                return
+        catch (error) {
+            if (startToken === _recordingStartToken.current) {
+                Object.assign($video, {preRecording: false, recordingHQ: false, finalizing: false, editing: true})
+                restoreVideoCaptureUi()
             }
-            if (!ready) {
-                Object.assign($video, {
-                    preRecording: false,
-                    recording:    false,
-                    finalizing:   false,
-                    editing:      true,
-                    size:         0,
-                })
-                return
-            }
-
-            if (startToken !== _recordingStartToken.current) {
-                return
-            }
-
-            const recorderStartStartedAt = globalThis.performance?.now?.() ?? Date.now()
-            replayVideoTraceDebug('interactive.recorder.start.begin', {
-                startToken,
-            })
-            await __.recorder.startVideo()
-            const recorderStartElapsedMs = (globalThis.performance?.now?.() ?? Date.now()) - recorderStartStartedAt
-            replayVideoTraceDebug('interactive.recorder.start.end', {
-                elapsedMs: recorderStartElapsedMs,
-                startToken,
-            })
-
-            markRecordingStarted()
+            UIToast.error({caption: 'Replay video', text: error?.message ?? 'Replay video could not be started.'})
         }
-        catch (e) {
-            _recordingStartToken.current += 1
-            disposeComposer()
-            stopOverlaysRefresh()
-            stopReplayRecordingMonitor()
-            Object.assign($video, {preRecording: false, recording: false, finalizing: false, editing: true, size: 0})
-            UIToast.error({text: e?.message ?? 'Video recording could not be started.'})
-        }
-    }, [$video, initializeRecorder, markRecordingStarted, disposeComposer, stopOverlaysRefresh])
-
-    const handleStartRecording = useCallback(async () => {
-        await handleVideoRecording()
-    }, [handleVideoRecording])
+    }, [$video, exportJourneyReplayFrameByFrame, isJourneyReplaySyncRequested, syncVideoCropFrame])
 
     const handlePhotoSnapshot = useCallback(async () => {
         prepareVideoCaptureUi()
@@ -686,7 +267,7 @@ export const VideoRecordingScreenArea = memo(() => {
             Object.assign($video, {snapshot: false, finalizing: false})
             return
         }
-        const selectedFps = ScreenMediaRecorder.FPS[$video.fps]
+        const selectedFps = REPLAY_VIDEO_FPS[$video.fps]
         const {top: y, left: x, width, height} = videoFrame.cropDimensions
         let composer = null
 
@@ -699,21 +280,14 @@ export const VideoRecordingScreenArea = memo(() => {
             await flushComposerOverlays()
             buildComposerOverlays(composer, videoFrame.cropDimensions)
             await composer.renderFrame({waitForNextFrame: true})
-            __.recorder.initialize({
-                                       maxSize:     maxSize * 1048576,
-                                       maxDuration: maxDuration * MINUTE,
-                                       quality:     ScreenMediaRecorder.QUALITY[$video.quality].value,
-                                       filename:    APP_KEY,
-                                       fps: selectedFps,
-                                       timeslice:   SOFT_TIMESLICE_MS,
-                                       ratio:       videoFrame.ratio.value,
-                                       metadata:    {
-                                           artist: lgs.servers.studio.name,
-                                           date:   new Date(),
-                                           album:  LGS_PROJECT,
-                                       },
-                                   })
-            await __.recorder.captureScreenshot(composer.getCanvas())
+            await __.mediaCapture.captureScreenshot(composer.getCanvas(), {
+                ratio: videoFrame.ratio,
+                metadata: {
+                    artist: lgs.servers.studio.name,
+                    date: new Date(),
+                    album: 'Your Adventures',
+                },
+            })
             Object.assign($video, {snapshot: false, finalizing: false})
         }
         catch (e) {
@@ -723,7 +297,7 @@ export const VideoRecordingScreenArea = memo(() => {
         finally {
             composer?.dispose()
         }
-    }, [$video, maxSize, maxDuration, buildComposerOverlays, flushComposerOverlays, syncVideoCropFrame])
+    }, [$video, buildComposerOverlays, flushComposerOverlays, syncVideoCropFrame])
 
     const waitingForAllWidgets = useCallback((widgets, onReady) => {
         if (!widgets?.length) {
@@ -827,97 +401,23 @@ export const VideoRecordingScreenArea = memo(() => {
     }, [handleStartRecording, handlePhotoSnapshot, $video.preRecording, $video.snapshot, isWidgetReadyForRecording, waitingForAllWidgets])
 
     useEffect(() => {
-        const hStopped = event => {
-            disposeComposer()
-            stopOverlaysRefresh()
-            releaseWakeLock()
-            stopReplayRecordingMonitor()
-            updateJourneyReplayVideoCropRect(null)
-            const stopState = {
-                preRecording: false,
-                recording:    false,
-                paused:       false,
-                size:         0,
-            }
-            if (event?.type === ScreenMediaRecorder.events.CANCEL) {
-                restoreVideoCaptureUi()
-                Object.assign(stopState, {
-                    editing:   true,
-                    finalizing: false,
-                })
-            }
-            Object.assign($video, stopState)
-        }
-        const hPaused = () => {
-            stopOverlaysRefresh()
-            releaseWakeLock()
-            updateReplayRecordingMonitor({paused: true})
-        }
-        const hResumed = () => {
-            requestWakeLock()
-            updateReplayRecordingMonitor({paused: false})
-        }
-        const hStarted = () => {
-            markRecordingStarted()
-            requestWakeLock()
-            updateReplayRecordingMonitor({mode: 'interactive', phase: 'recording'})
-        }
-        __.recorder.addEventListener(ScreenMediaRecorder.events.STOP, hStopped)
-        __.recorder.addEventListener(ScreenMediaRecorder.events.CANCEL, hStopped)
-        __.recorder.addEventListener(ScreenMediaRecorder.events.FINALIZE, hStopped)
-        __.recorder.addEventListener(ScreenMediaRecorder.events.PAUSE, hPaused)
-        __.recorder.addEventListener(ScreenMediaRecorder.events.RESUME, hResumed)
-        __.recorder.addEventListener(ScreenMediaRecorder.events.START, hStarted)
-        const hInfo = event => {
-            updateReplayRecordingMonitor({
-                mode: 'interactive',
-                phase: 'recording',
-                elapsedMillis: event.detail?.duration,
-                size: event.detail?.size,
-                paused: event.detail?.isPaused,
-            })
-        }
-        __.recorder.addEventListener(ScreenMediaRecorder.events.INFO, hInfo)
-        const handleVisibility = () => {
-            if (document.visibilityState === 'visible' && __.recorder.isRecording?.()) {
-                requestWakeLock()
-            }
-        }
-        document.addEventListener('visibilitychange', handleVisibility)
-        return () => {
-            __.recorder.removeEventListener(ScreenMediaRecorder.events.STOP, hStopped)
-            __.recorder.removeEventListener(ScreenMediaRecorder.events.CANCEL, hStopped)
-            __.recorder.removeEventListener(ScreenMediaRecorder.events.FINALIZE, hStopped)
-            __.recorder.removeEventListener(ScreenMediaRecorder.events.PAUSE, hPaused)
-            __.recorder.removeEventListener(ScreenMediaRecorder.events.RESUME, hResumed)
-            __.recorder.removeEventListener(ScreenMediaRecorder.events.START, hStarted)
-            __.recorder.removeEventListener(ScreenMediaRecorder.events.INFO, hInfo)
-            document.removeEventListener('visibilitychange', handleVisibility)
-            updateJourneyReplayVideoCropRect(null)
-        }
-    }, [disposeComposer, stopOverlaysRefresh, requestWakeLock, releaseWakeLock, markRecordingStarted, updateJourneyReplayVideoCropRect, restoreVideoCaptureUi, $video])
-
-    useEffect(() => {
         __.ui.widgetManager.windowResizing = false
 
-        const metricsCache = _metricsCache.current
         return () => {
             __.ui.widgetManager.disposeByGroup(VIDEO_TOOLS_WIDGETS, false)
             __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGETS, true)
-            disposeComposer()
-            stopOverlaysRefresh()
-            releaseWakeLock()
+            updateJourneyReplayVideoCropRect(null)
             __.ui.widgetManager.windowResizing = true
-            metricsCache.clear()
         }
-    }, [disposeComposer, stopOverlaysRefresh, releaseWakeLock])
+    }, [updateJourneyReplayVideoCropRect])
 
     if (!isValidCrop) {
         return null
     }
 
-    const synchronizedRecording = video.recording
-                                  && lgs.stores.replay.recordingSync === true
+    const synchronizedRecording = video.recordingHQ
+                                  && (lgs.stores.replay.recordingSync === true
+                                      || lgs.stores.replay.simplePreparationActive === true)
 
     return (
         <>
@@ -934,7 +434,6 @@ export const VideoRecordingScreenArea = memo(() => {
                                     }} onCancel={() => {
                 setMountTimeoutOpen(false)
                 _pendingFinish.current = null
-                void __.recorder?.cancelVideo?.()
                 $video.preRecording = false
                 $video.finalizing = false
                 $video.editing = true

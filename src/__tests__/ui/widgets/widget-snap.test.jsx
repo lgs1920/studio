@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-18
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -63,15 +63,6 @@ vi.mock('@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas', () => {
 
     return {Widget2Canvas: vi.fn(Widget2CanvasMock)}
 })
-
-vi.mock('@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder', () => ({
-    ScreenMediaRecorder: {
-        events: {
-            STOP:   'stop',
-            CANCEL: 'cancel',
-        },
-    },
-}))
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaIcon: ({name}) => <span data-icon={name}/>,
@@ -142,10 +133,6 @@ const installGlobals = ({grid = {enabled: false, size: 30, snap: true}} = {}) =>
             parsePx: value => parseFloat(value) || 0,
         },
         widgets: new Map(),
-        recorder: {
-            addEventListener:    vi.fn(),
-            removeEventListener: vi.fn(),
-        },
         ui: {
             drawerManager: {
                 close: vi.fn(),
@@ -556,7 +543,7 @@ describe('Widget snap behavior', () => {
         expect(view.container.querySelector('.lgs-widget')?.classList.contains('recording-locked')).toBe(false)
 
         lgs.stores.ui.video.preRecording = false
-        lgs.stores.ui.video.recording = true
+        lgs.stores.ui.video.recordingHQ = true
         view.rerender(
             <Widget isVisible={true} config={{
                 id:             'snap-widget',
@@ -630,7 +617,7 @@ describe('Widget snap behavior', () => {
         expect(latestMoveableProps().resizable).toBe(true)
         expect(latestMoveableProps().style.pointerEvents).toBe('auto')
 
-        lgs.stores.ui.video.recording = true
+        lgs.stores.ui.video.recordingHQ = true
         rerender(
             <Widget isVisible={true} config={{
                 id: 'video-crop-zone', group: 'test-widgets', type: LGS_VISUAL_WIDGET,

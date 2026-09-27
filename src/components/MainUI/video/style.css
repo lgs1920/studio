@@ -14,20 +14,6 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-.video-recorder-widget {
-    font-size: var(--lgs-font-size-s);
-    position: relative;
-    z-index: var(--lgs-video-recorder-toolbar-zindex);
-
-
-    &::part(body) {
-        display: flex;
-        align-items: center;
-        flex-direction: row;
-        gap: 0;
-    }
-}
-
 .widget-mount-error-dialog {
     /* Shoelace's default dialog layer is below the on-map widget layers. */
     --sl-z-index-dialog: var(--lgs-error-dialog-zindex);
@@ -48,7 +34,6 @@
     opacity: 1;
 }
 
-.lgs-widget.video-recorder-widget-shell,
 .lgs-widget.video-recording-settings-widget-shell {
     margin: 0;
 }
@@ -361,61 +346,6 @@
 
 .video-choice-buttons wa-button.video-choice-button > wa-icon[slot='end'] {
     font-size: 0.875em;
-}
-
-.video-recorder-widget .duration,
-.video-recorder-widget .size,
-.video-recorder-widget .video-recorder-spacer {
-    display: inline-flex;
-    width: max-content;
-    margin-right: var(--lgs-gutter-s);
-    border-right: 1px solid var(--lgs-card-on-map-border-color);
-    padding-inline-end: var(--lgs-gutter-s);
-}
-
-.video-recorder-widget .video-recorder-spacer {
-    align-self: stretch;
-}
-
-.video-recorder-widget .duration,
-.video-recorder-widget .size {
-    color: var(--lgs-button-plain-color);
-    white-space: nowrap;
-}
-
-.video-recorder-widget button {margin: 0;}
-
-.video-recorder-widget .video-recorder-action::part(base) {
-    min-width: calc(var(--lgs-dimension-s) - 2 * var(--lgs-gutter-xxs));
-    min-height: calc(var(--lgs-dimension-s) - 2 * var(--lgs-gutter-xxs));
-    padding: 0;
-}
-
-.video-recorder-widget.video-recorder-widget-recording .video-recorder-action::part(base) {
-    min-width: var(--lgs-dimension);
-    min-height: var(--lgs-dimension);
-}
-
-.video-recorder-widget .video-recorder-action wa-icon {
-    font-size: var(--lgs-font-size);
-}
-
-.video-recorder-widget.video-recorder-widget-recording .video-recorder-action wa-icon {
-    font-size: var(--lgs-font-size-m);
-}
-
-.video-recorder-widget.video-recorder-widget-recording .lgs-cancel-recording::part(base) {
-    min-width: calc(var(--lgs-dimension-s) - 2 * var(--lgs-gutter-xxs));
-    min-height: calc(var(--lgs-dimension-s) - 2 * var(--lgs-gutter-xxs));
-}
-
-.video-recorder-widget.video-recorder-widget-recording .lgs-cancel-recording wa-icon {
-    font-size: var(--lgs-font-size);
-}
-
-.video-recorder-widget .lgs-cancel-recording::part(base) {
-    border-right: none;
-    border-radius: var(--lgs-on-map-border-radius, var(--lgs-border-radius-s));
 }
 
 .video-recorder-indicator {
@@ -894,11 +824,4 @@
         justify-content: flex-end;
     }
 
-    .video-recorder-widget .video-recorder-spacer {
-        display: none;
-    }
-
-    .video-recorder-widget .video-recorder-start-recording > span {
-        display: none;
-    }
 }

@@ -218,14 +218,14 @@ export const MainUI = memo(() => {
             return
         }
 
-        if (theJourney || video.editing || video.recording || video.preRecording || video.snapshot || video.finalizing) {
+        if (theJourney || video.editing || video.recordingHQ || video.preRecording || video.snapshot || video.finalizing) {
             lgs.stores.ui.mainUI.callForActions.active = false
         }
-    }, [theJourney, mainUI.callForActions.active, video.editing, video.recording, video.preRecording, video.snapshot, video.finalizing])
+    }, [theJourney, mainUI.callForActions.active, video.editing, video.recordingHQ, video.preRecording, video.snapshot, video.finalizing])
 
     const tooltipDir = toolBar.fromStart ? 'right' : 'left'
     const {primaryEntrance, secondaryEntrance} = arrangeDrawers()
-    const videoCaptureActive = video.preRecording || video.recording || video.snapshot || video.finalizing
+    const videoCaptureActive = video.preRecording || video.recordingHQ || video.snapshot || video.finalizing
     const isJourneyReplayUiHidden = replay.mainUiHidden === true
 
     return (
@@ -248,7 +248,7 @@ export const MainUI = memo(() => {
                                     <SupportUIButton tooltip={tooltipDir}/>
                                 </div>
                                 <div id="secondary-buttons-bar" className={secondaryEntrance}>
-                                    {!video.recording && <Compass sensitivity={100}/>}
+                                    {!video.recordingHQ && <Compass sensitivity={100}/>}
                                     <div id="secondary-buttons-bar-content">
                                         <SceneModeSelector tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                         <GeocodingButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
@@ -289,7 +289,7 @@ export const MainUI = memo(() => {
 
                                 </div>
                                 <div id="bottom-right-ui">
-                                    {!video.recording && <CreditsBar/>}
+                                    {!video.recordingHQ && <CreditsBar/>}
                                 </div>
                             </>
                         )}
@@ -308,7 +308,7 @@ export const MainUI = memo(() => {
                         <JourneyReplayDrawer/>
                         <MapPOIEditPanel/>
                         {replay.simplePreparationActive !== true
-                         && !video.preRecording && !video.recording && !video.snapshot && !video.finalizing && (
+                         && !video.preRecording && !video.recordingHQ && !video.snapshot && !video.finalizing && (
                             <WidgetManagementDrawer/>
                         )}
                         <WidgetEditorPanel/>

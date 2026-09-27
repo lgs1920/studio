@@ -175,4 +175,5 @@ describe('VideoSceneWidgetsPortal', () => {
             )
         })
     })
+
 })

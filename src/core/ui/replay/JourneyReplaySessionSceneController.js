@@ -1058,13 +1058,14 @@ export const bindRenderer = (mode, ) => {
                     }))
                 }
                 const notifyStopClipsCompleteAfterFinalWidgetFrame = (afterFrame = null) => {
-                    const recorder = globalThis.__?.recorder ?? null
-                    const recordingSync = replayStore()?.recordingSync === true || recorder?.isRecording?.() === true
-                    if (recordingSync) {
+                    const video = globalThis.lgs?.stores?.ui?.video
+                    const replayExportActive = replayStore()?.recordingSync === true
+                                               || video?.recordingHQ === true
+                                               || video?.finalizing === true
+                    if (replayExportActive) {
                         if (token === state.clipSequenceToken) {
-                            // The interactive recorder captures the final Cesium frame
-                            // asynchronously from this notification. Keep the
-                            // completed trace rendered while that capture runs.
+                            // Keep the completed Replay trace visible while the final
+                            // deferred export frame is composed and encoded.
                             notifyStopClipsComplete()
                             if (typeof afterFrame === 'function') {
                                 afterFrame()
@@ -1073,10 +1074,10 @@ export const bindRenderer = (mode, ) => {
                         return
                     }
 
-                    // Without an active recorder there is no media frame to
+                    // Without an active Replay export there is no media frame to
                     // protect with animation-frame delays. Finish immediately
                     // so replay cleanup and journey restoration are observable
-                    // on the same exit path as Interactive and HQ.
+                    // on the same exit path as Replay playback.
                     if (token === state.clipSequenceToken) {
                         notifyStopClipsComplete()
                         if (typeof afterFrame === 'function') {
@@ -1094,11 +1095,11 @@ export const bindRenderer = (mode, ) => {
                     call.removeToleranceZoneOverlay()
                     call.setToleranceZoneOverlayVisible(false)
                     call.setContinuousRender(false)
-                    const recorder = globalThis.__?.recorder ?? null
-                    if (replayStore()?.recordingSync === true || recorder?.isRecording?.() === true) {
-                        // The recorder still needs the Cesium source canvas for
-                        // its asynchronous final-frame capture. Do not clear
-                        // the replay trace while recording is still active.
+                    const video = globalThis.lgs?.stores?.ui?.video
+                    if (replayStore()?.recordingSync === true
+                        || video?.recordingHQ === true
+                        || video?.finalizing === true) {
+                        // The deferred export still needs the final Replay frame.
                         state.sceneRestoreDeferred = true
                         return
                     }

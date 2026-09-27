@@ -24,9 +24,6 @@ import {
     WIDGETS_CAPABILITIES, WIDGETS_EDITOR_DRAWER,
 } from '@Core/constants'
 import {
-    ScreenMediaRecorder,
-}                                 from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
-import {
     Widget2Canvas,
 }                                 from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
 import {
@@ -592,10 +589,10 @@ const WidgetHost = ({
         }
     }, [config.widgetsBoard, isTargetingBoard])
 
-    const synchronizedRecording = (video.recording === true || video.recordingHQ === true)
+    const synchronizedRecording = video.recordingHQ === true
                                   && globalThis.lgs?.stores?.replay?.recordingSync === true
     const interactionLocked = previewOnly
-                              || (((video.preRecording && !config.isCropper) || video.recording || video.recordingHQ || video.snapshot || video.finalizing)
+                              || (((video.preRecording && !config.isCropper) || video.recordingHQ || video.snapshot || video.finalizing)
                                   && config.type === LGS_VISUAL_WIDGET)
     const inputBlocked = previewOnly
                          || ((synchronizedRecording || video.snapshot || video.finalizing)
@@ -603,7 +600,6 @@ const WidgetHost = ({
     // The crop surface is visual only. Moveable renders its handles in a
     // separate sibling control box, so the empty crop area can reach Cesium.
     const cropPassThrough = Boolean(config.isCropper)
-    const showGhostOnly = Boolean(config?.showGhostDuringRecording) && video.recording && config.type === LGS_VISUAL_WIDGET
     const canInteract = !effectiveLocked && (!interactionLocked || isReplayRecordingMonitor)
     const canDrag = canInteract && (config?.draggable ?? true)
     const canResize = canInteract && !effectiveCollapsed && (config?.resizable ?? false)
@@ -1553,7 +1549,6 @@ const WidgetHost = ({
         }
 
         let cancelled = false
-        const clean = () => _w2c.current?.destroy()
 
         const init = async () => {
             if (cancelled || !_widget.current) {
@@ -1725,13 +1720,11 @@ const WidgetHost = ({
                     }
                     const canvas = mirror.getCanvas?.()
                     if (canvas) {
-                        canvas.style.visibility = showGhostOnly ? 'visible' : 'hidden'
+                        canvas.style.visibility = 'hidden'
                     }
                     if (_widget.current) {
-                        _widget.current.style.visibility = showGhostOnly ? 'hidden' : 'visible'
+                        _widget.current.style.visibility = 'visible'
                     }
-                    __.recorder.addEventListener(ScreenMediaRecorder.events.STOP, clean)
-                    __.recorder.addEventListener(ScreenMediaRecorder.events.CANCEL, clean)
                 }
                 else if (_w2c.current) {
                     _w2c.current.destroy()
@@ -1773,8 +1766,6 @@ const WidgetHost = ({
                 }
                 _initialized.current = false
             }
-            __.recorder.removeEventListener(ScreenMediaRecorder.events.STOP, clean)
-            __.recorder.removeEventListener(ScreenMediaRecorder.events.CANCEL, clean)
         }
     }, [isVisible, config, widgetId, actualContainer])
 
@@ -1825,12 +1816,12 @@ const WidgetHost = ({
     useEffect(() => {
         const canvas = _w2c.current?.getCanvas?.()
         if (canvas) {
-            canvas.style.visibility = showGhostOnly ? 'visible' : 'hidden'
+            canvas.style.visibility = 'hidden'
         }
         if (_widget.current) {
-            _widget.current.style.visibility = showGhostOnly ? 'hidden' : 'visible'
+            _widget.current.style.visibility = 'visible'
         }
-    }, [showGhostOnly])
+    }, [interactionLocked])
 
     useLayoutEffect(() => {
         if (!config.isCropper || _initialCropDimensionsApplied.current || !_widget.current) {

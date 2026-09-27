@@ -29,7 +29,6 @@ import {LGS1920_ICON_LIBRARY} from '@Utils/useWebAwesomeKits'
 import {WaButton, WaIcon, WaProgressBar, WaTooltip} from '@web.awesome.me/webawesome-pro/dist/react'
 import {createPortal} from 'react-dom'
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore} from 'react'
-import {useSnapshot} from 'valtio'
 import './replay-recording-monitor.css'
 
 const MONITOR_WIDGET_POSITION_KEY = 'replay-recording-monitor-window-v5'
@@ -201,7 +200,6 @@ const ReplayRecordingProgress = ({percentage}) => (
  * @returns {JSX.Element|null} Monitor widget content.
  */
 const ReplayRecordingMonitorSurface = ({snapshot}) => {
-    const video = useSnapshot(lgs.stores.ui.video)
     const _canvas = useRef(null)
     const _pictureInPictureWindow = useRef(null)
     const _pictureInPictureCleanup = useRef(null)
@@ -330,42 +328,25 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
     }, [closePictureInPicture, handlePictureInPictureClosed])
 
     const togglePause = useCallback(() => {
-        if (snapshot.mode === 'hq') {
-            const runtime = globalThis.lgs?.stores?.replay?.deferredExportPlan?.runtime
-            if (snapshot.paused) {
-                runtime?.resumeExport?.()
-            }
-            else {
-                runtime?.pauseExport?.()
-            }
-        }
-        else if (snapshot.paused) {
-            globalThis.__?.recorder?.resumeVideo?.()
+        const runtime = globalThis.lgs?.stores?.replay?.deferredExportPlan?.runtime
+        if (snapshot.paused) {
+            runtime?.resumeExport?.()
         }
         else {
-            globalThis.__?.recorder?.pauseVideo?.()
+            runtime?.pauseExport?.()
         }
         updateReplayRecordingMonitor({paused: !snapshot.paused})
-    }, [snapshot.mode, snapshot.paused])
+    }, [snapshot.paused])
 
     const stopRecording = useCallback(async () => {
         closePictureInPicture()
         try {
-            if (snapshot.mode === 'hq') {
-                globalThis.lgs?.stores?.replay?.deferredExportPlan?.runtime?.abortExport?.()
-            }
-            else {
-                const videoStore = globalThis.lgs?.stores?.ui?.video
-                if (videoStore) {
-                    videoStore.finalizing = true
-                }
-                await globalThis.__?.recorder?.stopVideo?.()
-            }
+            globalThis.lgs?.stores?.replay?.deferredExportPlan?.runtime?.abortExport?.()
         }
         finally {
             stopReplayRecordingMonitor()
         }
-    }, [closePictureInPicture, snapshot.mode])
+    }, [closePictureInPicture])
 
     const takeSnapshot = useCallback(() => {
         void captureReplayCropSnapshot()
@@ -378,11 +359,9 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
     const totalVideoDuration = Number.isFinite(Number(snapshot.videoDurationMillis))
                                ? Math.max(0, Number(snapshot.videoDurationMillis))
                                : null
-    const progressValue = snapshot.mode === 'interactive' && totalVideoDuration > 0
-                          ? Math.max(0, Math.min(1, snapshot.elapsedMillis / totalVideoDuration))
-                          : snapshot.progress
+    const progressValue = snapshot.progress
     const progress = Math.round(progressValue * 100)
-    const generatedVideoDuration = snapshot.mode === 'hq' && totalVideoDuration !== null
+    const generatedVideoDuration = totalVideoDuration !== null
                                    ? totalVideoDuration * progressValue
                                    : snapshot.elapsedMillis
     const remainingMillis = snapshot.estimatedRemainingMillis !== null
@@ -394,9 +373,8 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
     const generatedVideoLabel = totalVideoDuration === null
                                 ? formatDuration(generatedVideoDuration)
                                 : `${formatDuration(generatedVideoDuration)} / ${formatDuration(totalVideoDuration)}`
-    const isPreparing = snapshot.phase === 'preparing' || (snapshot.mode !== 'hq' && video.preRecording)
+    const isPreparing = snapshot.phase === 'preparing'
     const isFinalizing = snapshot.phase === 'finalizing'
-                         || (snapshot.mode !== 'hq' && video.finalizing)
                          || progress >= 100
     const indicatorState = isFinalizing
                           ? 'finalizing'
@@ -464,7 +442,7 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
                             />
                             <MonitorIconButton
                                 id="replay-monitor-stop"
-                                label={snapshot.mode === 'hq' ? 'Cancel Replay export' : 'Stop recording'}
+                                label="Cancel Replay export"
                                 icon="stop"
                                 appearance="plain"
                                 onClick={stopRecording}

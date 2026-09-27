@@ -21,7 +21,12 @@ import {
     prepareVideoEditingUi,
 } from '@Components/MainUI/video/videoEditingCleanup'
 import { REPLAY_DRAWER, VIDEO_CROP_ZONE } from '@Core/constants'
-import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import {
+    DEFAULT_REPLAY_VIDEO_FPS_INDEX,
+    DEFAULT_REPLAY_VIDEO_QUALITY_INDEX,
+    REPLAY_VIDEO_FPS,
+    REPLAY_VIDEO_QUALITY,
+} from '@Core/ui/replay/ReplayVideoSettings'
 import {
     DEFAULT_SIMPLE_REPLAY_DURATION,
     normalizeSimpleReplayDuration,
@@ -64,7 +69,7 @@ export const VideoRecordingSettingsToolbar = memo(({
     const _cropSyncPromise = useRef(null)
     const shouldShowToolbar = video.editing === true
                               && !video.preRecording
-                              && !video.recording
+                              && !video.recordingHQ
                               && !video.snapshot
                               && !video.finalizing
     const simplePreparation = replay.simplePreparationActive === true
@@ -73,11 +78,11 @@ export const VideoRecordingSettingsToolbar = memo(({
     const showActions = mode !== 'video-options'
 
     const currentRatio = lgs.configuration.videoFormats.find(format => format.value === video.ratio)
-    const fullQualityName = ScreenMediaRecorder.QUALITY[video.quality]?.name?.replace(/\s+Quality$/, '') ?? 'Medium'
+    const fullQualityName = REPLAY_VIDEO_QUALITY[video.quality]?.name?.replace(/\s+Quality$/, '') ?? 'Medium'
     const currentQuality = compactReplaySettings
         ? ['Med', 'High', 'Ultra'][video.quality] ?? fullQualityName
         : fullQualityName
-    const currentFPS = ScreenMediaRecorder.FPS[video.fps] ?? ScreenMediaRecorder.FPS[ScreenMediaRecorder.DEFAULT_FPS_INDEX]
+    const currentFPS = REPLAY_VIDEO_FPS[video.fps] ?? REPLAY_VIDEO_FPS[DEFAULT_REPLAY_VIDEO_FPS_INDEX]
     const simpleDuration = normalizeSimpleReplayDuration(
         replaySettings?.simple?.duration ?? DEFAULT_SIMPLE_REPLAY_DURATION,
     )
@@ -166,7 +171,7 @@ export const VideoRecordingSettingsToolbar = memo(({
      * @returns {Promise<void>} Completion promise.
      */
     const handleReplayRecording = useCallback(async () => {
-        if (!__.recorder) {
+        if (!__.mediaCapture) {
             console.warn('[VideoRecordingSettingsToolbar] Recorder not initialized')
             return
         }
@@ -177,18 +182,10 @@ export const VideoRecordingSettingsToolbar = memo(({
             return
         }
 
-        __.ui.replayVideoSync?.arm?.({
-            recorder:          __.recorder,
-            replay:            __.ui.replay,
-            store:             lgs.stores.replay,
-            autoStopRecording: true,
-            resetToStart:      true,
-        })
         prepareVideoCaptureUi()
         Object.assign($video, {
             editing:      false,
             preRecording: true,
-            recording:    false,
             finalizing:   false,
             paused:       false,
         })
@@ -212,14 +209,14 @@ export const VideoRecordingSettingsToolbar = memo(({
     useEffect(() => {
         const safeFPS = Number.isInteger(lgs.settings.ui.video?.fps)
             && lgs.settings.ui.video.fps >= 0
-            && lgs.settings.ui.video.fps < ScreenMediaRecorder.FPS.length
+            && lgs.settings.ui.video.fps < REPLAY_VIDEO_FPS.length
             ? lgs.settings.ui.video.fps
-            : ScreenMediaRecorder.DEFAULT_FPS_INDEX
+            : DEFAULT_REPLAY_VIDEO_FPS_INDEX
         const safeQuality = Number.isInteger(lgs.settings.ui.video?.quality)
             && lgs.settings.ui.video.quality >= 0
-            && lgs.settings.ui.video.quality < ScreenMediaRecorder.QUALITY.length
+            && lgs.settings.ui.video.quality < REPLAY_VIDEO_QUALITY.length
             ? lgs.settings.ui.video.quality
-            : ScreenMediaRecorder.DEFAULT_QUALITY_INDEX
+            : DEFAULT_REPLAY_VIDEO_QUALITY_INDEX
 
         if ($video.fps !== safeFPS) {
             $video.fps = safeFPS

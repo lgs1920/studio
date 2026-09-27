@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -1805,7 +1805,7 @@ describe('replay camera tracking', () => {
             },
             stores:     {
                 replay: proxy({progress: 0, camera: replay.camera, recordingSync: true}),
-                ui:     {video: {recording: true}},
+                ui:     {video: {recordingHQ: true}},
             },
             viewer:     {trackedEntity: null, canvas, camera},
             scene:      {

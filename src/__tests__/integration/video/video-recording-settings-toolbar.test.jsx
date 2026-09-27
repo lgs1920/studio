@@ -63,9 +63,6 @@ describe('VideoRecordingSettingsToolbar', () => {
                 replay: {
                     prepareReplayCamera: vi.fn(async () => true),
                 },
-                replayVideoSync: {
-                    arm: vi.fn(),
-                },
                 widgetManager: {
                     windowResizing: false,
                     getElementById: vi.fn(() => document.createElement('div')),
@@ -73,7 +70,7 @@ describe('VideoRecordingSettingsToolbar', () => {
                     toCenter: vi.fn(),
                 },
             },
-            recorder: {},
+            mediaCapture: {},
         }
 
         globalThis.lgs = {
@@ -255,13 +252,6 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(globalThis.__.ui.replay.prepareReplayCamera).toHaveBeenCalledWith({
             journey: globalThis.lgs.theJourney,
         })
-        expect(globalThis.__.ui.replayVideoSync.arm).toHaveBeenCalledWith({
-            recorder:          globalThis.__.recorder,
-            replay:            globalThis.__.ui.replay,
-            store:             globalThis.lgs.stores.replay,
-            autoStopRecording: true,
-            resetToStart:      true,
-        })
     })
 
     it('exposes the same video launch action during the Expert timeline', async () => {
@@ -272,13 +262,6 @@ describe('VideoRecordingSettingsToolbar', () => {
 
         await vi.waitFor(() => expect(globalThis.lgs.stores.ui.video.preRecording).toBe(true))
         expect(prepareVideoCaptureUi).toHaveBeenCalledTimes(1)
-        expect(globalThis.__.ui.replayVideoSync.arm).toHaveBeenCalledWith({
-            recorder:          globalThis.__.recorder,
-            replay:            globalThis.__.ui.replay,
-            store:             globalThis.lgs.stores.replay,
-            autoStopRecording: true,
-            resetToStart:      true,
-        })
     })
 
     it('waits for crop persistence before cancelling video setup', async () => {

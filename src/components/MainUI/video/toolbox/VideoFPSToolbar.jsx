@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2025-09-23
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@
  * File: VideoFPSToolbar.jsx
  ******************************************************************************/
 
-import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import {REPLAY_VIDEO_FPS} from '@Core/ui/replay/ReplayVideoSettings'
 import classNames         from 'classnames'
 import { WaButton }                           from '@web.awesome.me/webawesome-pro/dist/react'
 import { Fragment, memo, useMemo } from 'react'
@@ -28,7 +28,7 @@ export const VideoFPSToolbar = memo(({choicesOnMap = false}) => {
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
     const fpsChoices = useMemo(
-        () => [...ScreenMediaRecorder.FPS].sort((a, b) => a - b),
+        () => [...REPLAY_VIDEO_FPS].sort((a, b) => a - b),
         [],
     )
 
@@ -48,7 +48,7 @@ export const VideoFPSToolbar = memo(({choicesOnMap = false}) => {
                 'video-choice-buttons video-choice-buttons-on-map': choicesOnMap,
             })}>
                 {fpsChoices.map((fps) => {
-                    const index = ScreenMediaRecorder.FPS.indexOf(fps)
+                    const index = REPLAY_VIDEO_FPS.indexOf(fps)
                     return (
                         <Fragment key={index}>
                             <WaButton

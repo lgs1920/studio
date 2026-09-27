@@ -7,14 +7,19 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-15
+ * Created on: 2026-07-16
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { NAVIGATOR } from '@Core/constants'
-import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import {
+    DEFAULT_REPLAY_VIDEO_FPS_INDEX,
+    DEFAULT_REPLAY_VIDEO_QUALITY_INDEX,
+    REPLAY_VIDEO_FPS,
+} from '@Core/ui/replay/ReplayVideoSettings'
 
 const VIDEO_PIXEL_BUDGETS_BY_FPS = {
     15: 3_600_000,
@@ -97,15 +102,15 @@ export const replayVideoComposerClipFromCropRect = cropRect => {
 export const computeReplayVideoRecordingOutput = ({
                                                        cropWidth,
                                                        cropHeight,
-                                                       fps = ScreenMediaRecorder.FPS[ScreenMediaRecorder.DEFAULT_FPS_INDEX],
-                                                       qualityIndex = ScreenMediaRecorder.DEFAULT_QUALITY_INDEX,
+                                                       fps = REPLAY_VIDEO_FPS[DEFAULT_REPLAY_VIDEO_FPS_INDEX],
+                                                       qualityIndex = DEFAULT_REPLAY_VIDEO_QUALITY_INDEX,
                                                        deviceDpr = globalThis.__?.device?.dpr ?? globalThis.devicePixelRatio ?? 1,
                                                        browser = globalThis.__?.device?.browser,
                                                        mobile = globalThis.__?.device?.mobile === true,
                                                    } = {}) => {
     const baseWidth = Math.max(2, Math.round(Number(cropWidth) || 0))
     const baseHeight = Math.max(2, Math.round(Number(cropHeight) || 0))
-    const safeFps = ScreenMediaRecorder.FPS.includes(Number(fps)) ? Number(fps) : ScreenMediaRecorder.FPS[ScreenMediaRecorder.DEFAULT_FPS_INDEX]
+    const safeFps = REPLAY_VIDEO_FPS.includes(Number(fps)) ? Number(fps) : REPLAY_VIDEO_FPS[DEFAULT_REPLAY_VIDEO_FPS_INDEX]
     const nativeDpr = Math.max(1, Number(deviceDpr) || 1)
     const isHighDpr = nativeDpr > 1.25
     const platformDprCap = mobile
@@ -154,13 +159,13 @@ export const buildReplayVideoRenderSpec = ({
         ?? (sourceCanvas ? {left: 0, top: 0, width: sourceCanvas.width, height: sourceCanvas.height} : null),
     )
     const selectedFps = finiteNumber(fps, null)
-                        ?? ScreenMediaRecorder.FPS[video?.fps]
-                        ?? ScreenMediaRecorder.FPS[settings?.fps]
-                        ?? ScreenMediaRecorder.FPS[ScreenMediaRecorder.DEFAULT_FPS_INDEX]
+                        ?? REPLAY_VIDEO_FPS[video?.fps]
+                        ?? REPLAY_VIDEO_FPS[settings?.fps]
+                        ?? REPLAY_VIDEO_FPS[DEFAULT_REPLAY_VIDEO_FPS_INDEX]
     const selectedQualityIndex = finiteNumber(qualityIndex, null)
                                  ?? finiteNumber(video?.quality, null)
                                  ?? finiteNumber(settings?.quality, null)
-                                 ?? ScreenMediaRecorder.DEFAULT_QUALITY_INDEX
+                                 ?? DEFAULT_REPLAY_VIDEO_QUALITY_INDEX
     const selectedCaptureMode = captureMode
                                 ?? video?.captureMode
                                 ?? settings?.captureMode
@@ -194,7 +199,7 @@ export const buildReplayVideoRenderSpec = ({
 
     return {
         fps:          selectedFps,
-        fpsIndex:     ScreenMediaRecorder.FPS.indexOf(selectedFps),
+        fpsIndex:     REPLAY_VIDEO_FPS.indexOf(selectedFps),
         qualityIndex: selectedQualityIndex,
         captureMode:  selectedCaptureMode === 'quality' ? 'quality' : 'speed',
         cropRect:     normalizedCrop,

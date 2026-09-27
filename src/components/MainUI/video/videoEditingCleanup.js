@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -39,7 +39,7 @@ export const prepareVideoCaptureUi = () => {
     const replayStore = globalThis.lgs?.stores?.replay
     if (replayStore) {
         // The capture canvas must stay free of the interactive MainUI for both
-        // standalone videos and replay-linked recordings.
+        // Replay exports and screenshots.
         replayStore.mainUiHidden = true
     }
 }
@@ -65,7 +65,6 @@ export const cancelVideoEditing = () => {
     if (linkedTimelinePreparation || simplePreparation) {
         __.ui.replay?.pause?.()
         __.ui.replay?.leaveReplayPreparation?.()
-        __.ui.replayVideoSync?.disarm?.()
         lgs.stores.replay.recordingSync = false
         lgs.stores.replay.simplePreparationActive = false
         videoStore.timelinePreviewActive = false

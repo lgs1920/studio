@@ -16,17 +16,7 @@
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
-
-const countMocks = vi.hoisted(() => ({
-    sendVideo:      vi.fn(async () => true),
-}))
-
-vi.mock('@Utils/CountApi', () => ({
-    CountApi: {
-        sendVideo:      countMocks.sendVideo,
-    },
-}))
+import { REPLAY_DEFERRED_EXPORT_READY_EVENT } from '@Core/ui/replay/ReplayRecordingMonitor'
 
 vi.mock('@Components/MainUI/video/RecordingInfo', () => ({
     RecordingInfo: ({mediaData}) => (
@@ -179,7 +169,6 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', async () => {
 
 import { cancelVideoEditing } from '@Components/MainUI/video/videoEditingCleanup'
 import { VideoDownloadAndShareDialog } from '@Components/MainUI/video/VideoDownloadAndShareDialog'
-import { REPLAY_DEFERRED_EXPORT_READY_EVENT } from '@Core/ui/replay/ReplayRecordingMonitor'
 
 class FakeRecorder extends EventTarget {
     constructor() {
@@ -233,13 +222,10 @@ describe('VideoDownloadAndShareDialog', () => {
         globalThis.navigator.share = vi.fn(async () => undefined)
 
         globalThis.__ = {
-            recorder,
+            mediaCapture: recorder,
             ui: {
                 replay: {
                     restorePlaybackScene: vi.fn(),
-                },
-                replayVideoSync: {
-                    stopJourneyReplay: vi.fn(),
                 },
                 widgetManager: {
                     syncCropDimensionsFromElement: vi.fn(async () => null),
@@ -296,9 +282,11 @@ describe('VideoDownloadAndShareDialog', () => {
     const openDialog = async () => {
         render(<VideoDownloadAndShareDialog/>)
         await act(async () => {
-            recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.STOP, {
+            window.dispatchEvent(new CustomEvent(REPLAY_DEFERRED_EXPORT_READY_EVENT, {
                 detail: {
                     blob: new Blob(['video'], {type: 'video/mp4'}),
+                    filename: 'recording.mp4',
+                    mediaData: recorder.mediaData,
                 },
             }))
         })
@@ -311,7 +299,6 @@ describe('VideoDownloadAndShareDialog', () => {
         })
         expect(globalThis.__.ui.replay.restorePlaybackScene).toHaveBeenCalledTimes(1)
         expect(globalThis.__.ui.replay.restorePlaybackScene).toHaveBeenCalledWith({force: true})
-        expect(globalThis.__.ui.replayVideoSync.stopJourneyReplay).toHaveBeenCalledWith({deferSceneRestore: false})
         expect(cancelVideoEditing).toHaveBeenCalledTimes(1)
         expect(globalThis.URL.revokeObjectURL).toHaveBeenCalledWith('blob:recording')
         expect(recorder.releaseMedia).toHaveBeenCalledTimes(1)
@@ -327,14 +314,6 @@ describe('VideoDownloadAndShareDialog', () => {
         })
 
         await expectDialogCleanup()
-    })
-
-    it('counts a standalone video once as a non-Expert export', async () => {
-        globalThis.lgs.stores.replay.recordingSync = false
-        await openDialog()
-
-        expect(countMocks.sendVideo).toHaveBeenCalledOnce()
-        expect(countMocks.sendVideo).toHaveBeenCalledWith(false)
     })
 
     it('uses the same cleanup for the native dialog close button', async () => {
@@ -365,9 +344,11 @@ describe('VideoDownloadAndShareDialog', () => {
 
         render(<VideoDownloadAndShareDialog/>)
         await act(async () => {
-            recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.STOP, {
+            window.dispatchEvent(new CustomEvent(REPLAY_DEFERRED_EXPORT_READY_EVENT, {
                 detail: {
                     blob: new Blob(['video'], {type: 'video/mp4'}),
+                    filename: 'recording.mp4',
+                    mediaData: recorder.mediaData,
                 },
             }))
             await Promise.resolve()
@@ -404,7 +385,7 @@ describe('VideoDownloadAndShareDialog', () => {
         expect(screen.queryByTestId('video-preview-dialog')).not.toBeNull()
     })
 
-    it('shares the live recording by default', async () => {
+    it('shares the Replay export by default', async () => {
         await openDialog()
 
 
@@ -422,6 +403,7 @@ describe('VideoDownloadAndShareDialog', () => {
 
     it('downloads the available Replay video without a version suffix', async () => {
         await openDialog()
+        const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
 
         expect(screen.getByRole('button', {name: 'Download'}).getAttribute('appearance')).toBe('filled')
 
@@ -429,9 +411,8 @@ describe('VideoDownloadAndShareDialog', () => {
             fireEvent.click(screen.getByRole('button', {name: 'Download'}))
         })
 
-        expect(recorder.download).toHaveBeenCalledWith({
-            filename: 'recording.mp4',
-        })
+        expect(anchorClick).toHaveBeenCalledOnce()
+        expect(anchorClick.mock.instances[0]?.download).toBe('recording.mp4')
     })
 
     it('previews and downloads the frame-by-frame Replay export', async () => {
@@ -467,30 +448,6 @@ describe('VideoDownloadAndShareDialog', () => {
 
         expect(anchorClick).toHaveBeenCalledTimes(1)
         expect(anchorClick.mock.instances[0]?.download).toBe('journey-replay.mp4')
-    })
-
-    it('keeps standalone videos independent from replay', async () => {
-        globalThis.lgs.stores.replay = {}
-
-        await openDialog()
-
-        expect(screen.getByLabelText('File name input').value).toBe('recording')
-        expect(globalThis.__.ui.replayVideoSync.stopJourneyReplay).not.toHaveBeenCalled()
-        expect(globalThis.__.ui.replay.restorePlaybackScene).not.toHaveBeenCalled()
-
-        await act(async () => {
-            fireEvent.click(screen.getByRole('button', {name: 'Share'}))
-        })
-
-        expect(globalThis.navigator.share.mock.calls[0][0].files[0].name).toBe('recording.mp4')
-
-        await act(async () => {
-            fireEvent.click(screen.getByRole('button', {name: 'Download'}))
-        })
-
-        expect(recorder.download).toHaveBeenCalledWith({
-            filename: 'recording.mp4',
-        })
     })
 
     it('preserves video metadata in the recording information', async () => {

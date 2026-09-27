@@ -79,12 +79,10 @@ import {
 import {
     CanvasOverlayComposer,
 }                              from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
-import {
-    ScreenMediaRecorder,
-}                              from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import {REPLAY_VIDEO_FPS} from '@Core/ui/replay/ReplayVideoSettings'
 import {
     normalizeMediabunnyMetadataTags,
-}                              from '@Core/ui/screen-media-recorder/recorder/MediaMetadata'
+}                              from '@Core/ui/replay/ReplayMediaMetadata'
 import {
     UIToast,
 }                              from '@Utils/UIToast'
@@ -136,7 +134,7 @@ const defaultReplayController = () => globalThis.__?.ui?.replay?.controller ?? n
 const defaultReplayMode = () => globalThis.__?.ui?.replay ?? null
 const defaultReplayExportFps = () => {
     const configured = globalThis.lgs?.stores?.ui?.video?.fps
-    return ScreenMediaRecorder.FPS?.[configured] ?? configured ?? 30
+    return REPLAY_VIDEO_FPS?.[configured] ?? configured ?? 30
 }
 
 /**

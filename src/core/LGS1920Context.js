@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-03
- * Last modified: 2026-09-22
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -42,7 +42,7 @@ import {Geocoder} from '@Core/ui/Geocoder'
 import {JourneyGroupManager} from '@Core/ui/JourneyGroupManager'
 import {MenuManager} from '@Core/ui/MenuManager'
 import {POIManager} from '@Core/ui/POIManager'
-import {ScreenMediaRecorder} from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import {ReplayMediaCapture} from '@Core/ui/replay/ReplayMediaCapture'
 import {WidgetCache} from '@Core/ui/widget-manager/WidgetCache'
 import {WidgetManager} from '@Core/ui/widget-manager/WidgetManager'
 import {WidgetWindowManager} from '@Core/ui/widget-manager/WidgetWindowManager'
@@ -67,7 +67,6 @@ import {Profiler} from './ui/Profiler'
 import {SceneManager} from './ui/SceneManager'
 import {JourneyReplayRunner} from './ui/JourneyReplayRunner'
 import {JourneyReplayMode} from './ui/replay/JourneyReplayMode'
-import {JourneyReplayVideoSync} from './ui/replay/JourneyReplayVideoSync'
 import {markStartup, measureStartup} from './ui/startup/startupTelemetry'
 
 export class LGS1920Context {
@@ -428,7 +427,6 @@ export class LGS1920Context {
 
         __.ui.replayRunner = new JourneyReplayRunner()
         __.ui.replay = new JourneyReplayMode()
-        __.ui.replayVideoSync = new JourneyReplayVideoSync()
         __.ui.journeyGroupManager = new JourneyGroupManager()
         __.ui.cameraManager = new CameraManager()
         __.ui.drawerManager = new PanelManager()
@@ -451,7 +449,7 @@ export class LGS1920Context {
 
         __.tools = new AppToolsManager() // TODO use ui.tools instead of ui.ui
         __.device = new DeviceManager()
-        __.recorder = new ScreenMediaRecorder()
+        __.mediaCapture = new ReplayMediaCapture()
         __.updater = new AppUpdateManager()
 
 

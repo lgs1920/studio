@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-22
- * Last modified: 2026-09-26
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@
  * File: VideoQualityToolbar.jsx
  ******************************************************************************/
 
-import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import {REPLAY_VIDEO_QUALITY} from '@Core/ui/replay/ReplayVideoSettings'
 import classNames   from 'classnames'
 import { WaButton, WaTooltip }          from '@web.awesome.me/webawesome-pro/dist/react'
 import { Fragment } from 'react'
@@ -44,7 +44,7 @@ export const VideoQualityToolbar = ({choicesOnMap = false, compactSimple = false
             <div className={classNames('buttons-bar-on-map', {
                 'video-choice-buttons video-choice-buttons-on-map': choicesOnMap,
             })}>
-                {ScreenMediaRecorder.QUALITY.map(({name, short}, index) => (
+                {REPLAY_VIDEO_QUALITY.map(({name, short}, index) => (
                     <Fragment key={index}>
                         <WaTooltip placement="bottom" for={`q-${index}`}>{name}</WaTooltip>
                         <WaButton

@@ -482,7 +482,6 @@ export const ReplayTimelinePreview = forwardRef(({
                                && video.timelinePreviewActive === true
                                && replay.recordingSync === true
                                && !video.preRecording
-                               && !video.recording
                                && !video.recordingHQ
                                && !video.finalizing
 

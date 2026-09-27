@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -72,7 +72,7 @@ describe('ReplayRecordingMonitor', () => {
     it('notifies subscribers and clears the frame on terminal cleanup', () => {
         const listener = vi.fn()
         const unsubscribe = subscribeReplayRecordingMonitor(listener)
-        startReplayRecordingMonitor({mode: 'interactive'})
+        startReplayRecordingMonitor({mode: 'hq'})
         stopReplayRecordingMonitor()
         unsubscribe()
 

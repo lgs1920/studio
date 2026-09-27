@@ -53,7 +53,7 @@ export const JourneyReplayButton = (props) => {
     const isLinked = replay.recordingSync === true
     const isDrawerOpen = selected !== undefined ? selected : __.ui.drawerManager?.isCurrent?.(REPLAY_DRAWER) === true
     const visible = lgs.theJourney
-                  && !video.recording
+                  && !video.recordingHQ
                   && !video.preRecording
                   && !video.snapshot
                   && (!showOnlyWhenLinked || isLinked)
@@ -87,6 +87,8 @@ export const JourneyReplayButton = (props) => {
             lgs.stores.replay.camera = simple.camera
             lgs.stores.replay.duration = simple.duration
             lgs.stores.replay.simplePreparationActive = true
+            lgs.settings.ui.replay.recordingSync = false
+            lgs.stores.replay.recordingSync = false
             if (lgs.stores.ui.video.cropper) {
                 Object.assign(lgs.stores.ui.video.cropper, {
                     ratioEditor:  true,
