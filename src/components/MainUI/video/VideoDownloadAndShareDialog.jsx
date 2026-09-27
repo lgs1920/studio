@@ -24,6 +24,7 @@
 import { RecordingInfo } from '@Components/MainUI/video/RecordingInfo'
 import { LGSPopup }      from '@Components/LGSPopup'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import { REPLAY_DEFERRED_EXPORT_READY_EVENT } from '@Core/ui/replay/ReplayRecordingMonitor'
 import { cancelVideoEditing } from '@Components/MainUI/video/videoEditingCleanup'
 import { CountApi } from '@Utils/CountApi'
 import {
@@ -86,6 +87,7 @@ export const VideoDownloadAndShareDialog = () => {
     const [canDownloadAndShare, setCanDownloadAndShare] = useState(false)
     const [isRecordingInfoOpen, setIsRecordingInfoOpen] = useState(false)
     const [mediaUrl, setMediaUrl] = useState(null)
+    const [deferredMediaData, setDeferredMediaData] = useState(null)
     const _mainVideo = useRef(null)
     const _blurredVideo = useRef(null)
     const _recordingInfoButton = useRef(null)
@@ -101,8 +103,12 @@ export const VideoDownloadAndShareDialog = () => {
             URL.revokeObjectURL(url)
         }
     }, [])
-    const getVideoExtension = useCallback(() => __.recorder.mediaData?.extension || lgs.settings.ui.video.format, [])
-    const getVideoMimeType = useCallback(() => __.recorder.mediaData?.mimeType || 'video/mp4', [])
+    const getVideoExtension = useCallback(() => deferredMediaData?.extension
+        || __.recorder.mediaData?.extension
+        || lgs.settings.ui.video.format, [deferredMediaData])
+    const getVideoMimeType = useCallback(() => deferredMediaData?.mimeType
+        || __.recorder.mediaData?.mimeType
+        || 'video/mp4', [deferredMediaData])
     const getRecorderFilenameStem = useCallback((fallback = DEFAULT_VIDEO_FILENAME) => (
         sanitizeFilenameStem(__.recorder.filename?.({}) || fallback, fallback)
     ), [])
@@ -150,6 +156,9 @@ export const VideoDownloadAndShareDialog = () => {
         }
 
         try {
+            if (deferredMediaData) {
+                return {...fallback, ...deferredMediaData}
+            }
             const data = __.recorder?.mediaData
             if (!data || typeof data !== 'object') {
                 return fallback
@@ -185,7 +194,7 @@ export const VideoDownloadAndShareDialog = () => {
         catch {
             return fallback
         }
-    }, [])
+    }, [deferredMediaData])
 
     /**
      * Initialize stop recording handler with blob validation.
@@ -213,6 +222,7 @@ export const VideoDownloadAndShareDialog = () => {
             setMediaUrl(url)
             setFilename(safeFilename)
             setCanDownloadAndShare(true)
+            setDeferredMediaData(null)
             const replayVideoLinked = globalThis.lgs?.stores?.replay?.recordingSync === true
                                       || globalThis.lgs?.stores?.replay?.simplePreparationActive === true
             if (!replayVideoLinked) {
@@ -242,6 +252,7 @@ export const VideoDownloadAndShareDialog = () => {
                 setMediaUrl(imageUrl)
                 setFilename(safeFilename)
                 setCanDownloadAndShare(true)
+                setDeferredMediaData(null)
                 setDialogOpen(true)
             }
             catch (error) {
@@ -254,13 +265,43 @@ export const VideoDownloadAndShareDialog = () => {
             }
         }
 
+        const handleDeferredReplayExport = async (event) => {
+            const {blob, filename = DEFAULT_VIDEO_FILENAME, mediaData = {}} = event.detail ?? {}
+            if (!(blob instanceof Blob) || blob.size <= 0) {
+                UIToast.error({caption: 'Replay video', text: 'The generated video is empty.'})
+                return
+            }
+
+            releaseMediaUrl()
+            const url = URL.createObjectURL(blob)
+            const safeFilename = sanitizeFilenameStem(`${filename}`.replace(/\.[^.]+$/, ''), DEFAULT_VIDEO_FILENAME)
+            _mediaBlob.current = {
+                blob,
+                url,
+                filename: safeFilename,
+                type: ScreenMediaRecorder.VIDEO,
+                source: 'deferred-replay',
+                mediaData,
+            }
+            __.recorder.type = ScreenMediaRecorder.VIDEO
+            setDeferredMediaData(mediaData)
+            _dialogCleanupDone.current = false
+            setMediaUrl(url)
+            setFilename(safeFilename)
+            setCanDownloadAndShare(true)
+            await prepareReplaySceneForDialog()
+            setDialogOpen(true)
+        }
+
 
         __.recorder.addEventListener(ScreenMediaRecorder.events.STOP, handleStopRecording)
         __.recorder.addEventListener(ScreenMediaRecorder.events.CAPTURED, handleCapture)
+        globalThis.window?.addEventListener(REPLAY_DEFERRED_EXPORT_READY_EVENT, handleDeferredReplayExport)
 
         return () => {
             __.recorder.removeEventListener(ScreenMediaRecorder.events.STOP, handleStopRecording)
             __.recorder.removeEventListener(ScreenMediaRecorder.events.CAPTURED, handleCapture)
+            globalThis.window?.removeEventListener(REPLAY_DEFERRED_EXPORT_READY_EVENT, handleDeferredReplayExport)
             releaseMediaUrl()
             void __.recorder?.releaseMedia?.()
         }
@@ -466,9 +507,15 @@ export const VideoDownloadAndShareDialog = () => {
                     return
                 }
                 const downloadFilename = buildMediaFilename(media.filename, media.extension || getVideoExtension(), DEFAULT_VIDEO_FILENAME)
-                await __.recorder.download({
-                                               filename: downloadFilename,
-                                           })
+                if (_mediaBlob.current.source === 'deferred-replay') {
+                    const link = document.createElement('a')
+                    link.href = _mediaBlob.current.url
+                    link.download = downloadFilename
+                    link.click()
+                }
+                else {
+                    await __.recorder.download({filename: downloadFilename})
+                }
             }
             else {
                 await __.recorder.download({
@@ -514,6 +561,7 @@ export const VideoDownloadAndShareDialog = () => {
         setCanDownloadAndShare(false)
         setFilename('')
         void __.recorder?.releaseMedia?.()
+        setDeferredMediaData(null)
     }, [prepareReplaySceneForDialog, releaseMediaUrl])
 
     /**

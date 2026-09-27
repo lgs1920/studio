@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,6 +19,8 @@
  */
 
 const listeners = new Set()
+
+export const REPLAY_DEFERRED_EXPORT_READY_EVENT = 'lgs-replay-deferred-export-ready'
 
 let state = {
     active: false,

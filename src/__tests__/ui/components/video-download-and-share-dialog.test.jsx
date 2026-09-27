@@ -179,6 +179,7 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', async () => {
 
 import { cancelVideoEditing } from '@Components/MainUI/video/videoEditingCleanup'
 import { VideoDownloadAndShareDialog } from '@Components/MainUI/video/VideoDownloadAndShareDialog'
+import { REPLAY_DEFERRED_EXPORT_READY_EVENT } from '@Core/ui/replay/ReplayRecordingMonitor'
 
 class FakeRecorder extends EventTarget {
     constructor() {
@@ -431,6 +432,41 @@ describe('VideoDownloadAndShareDialog', () => {
         expect(recorder.download).toHaveBeenCalledWith({
             filename: 'recording.mp4',
         })
+    })
+
+    it('previews and downloads the frame-by-frame Replay export', async () => {
+        render(<VideoDownloadAndShareDialog/>)
+        const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
+
+        await act(async () => {
+            window.dispatchEvent(new CustomEvent(REPLAY_DEFERRED_EXPORT_READY_EVENT, {
+                detail: {
+                    blob: new Blob(['frame-by-frame video'], {type: 'video/mp4'}),
+                    filename: 'journey-replay.mp4',
+                    mediaData: {
+                        size: 20,
+                        duration: 2000,
+                        fps: 30,
+                        dimensions: {width: 1280, height: 720},
+                        quality: {name: 'High'},
+                        ratio: {label: '16:9'},
+                        metadata: {status: 'ready'},
+                        mimeType: 'video/mp4',
+                        extension: 'mp4',
+                    },
+                },
+            }))
+        })
+
+        expect(screen.getByLabelText('File name input').value).toBe('journey-replay')
+        expect(screen.getByTestId('recording-info').getAttribute('data-dimensions')).toBe('1280x720')
+
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', {name: 'Download'}))
+        })
+
+        expect(anchorClick).toHaveBeenCalledTimes(1)
+        expect(anchorClick.mock.instances[0]?.download).toBe('journey-replay.mp4')
     })
 
     it('keeps standalone videos independent from replay', async () => {

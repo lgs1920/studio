@@ -33,10 +33,12 @@ import { replayVideoTraceDebug } from '@Core/ui/replay/ReplayVideoTraceDebug'
 import { getReplayVideoWidgetKeys } from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import {
     publishReplayRecordingMonitorFrame,
+    REPLAY_DEFERRED_EXPORT_READY_EVENT,
     startReplayRecordingMonitor,
     stopReplayRecordingMonitor,
     updateReplayRecordingMonitor,
 } from '@Core/ui/replay/ReplayRecordingMonitor'
+import { exportReplayDeferredMp4 } from '@Core/ui/replay/ReplayDeferredExporter'
 import { CanvasOverlayComposer } from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 import { ScreenMediaRecorder }   from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import { WidgetMountErrorDialog } from '@Components/MainUI/video/WidgetMountErrorDialog'
@@ -245,6 +247,95 @@ export const VideoRecordingScreenArea = memo(() => {
         return true
     }, [isJourneyReplaySyncRequested, $video])
 
+    const exportJourneyReplayFrameByFrame = useCallback(async ({renderSpec, startToken}) => {
+        const abortController = new AbortController()
+        const recordingDate = new Date()
+        const journeyTitle = lgs.theJourney?.title?.trim() || ''
+        const mediaMetadata = {
+            status: 'ready',
+            artist: lgs.servers.studio.name,
+            date: recordingDate,
+            album: 'Your Adventures',
+            genre: 'Adventures Replay',
+            publisher: 'LGS1920 Studio',
+            encodedBy: 'Mediabunny',
+            ...(journeyTitle ? {title: journeyTitle, description: journeyTitle} : {}),
+        }
+
+        Object.assign($video, {
+            preRecording: false,
+            recording:    false,
+            recordingHQ:  true,
+            finalizing:   false,
+            paused:       false,
+            editing:      false,
+        })
+
+        try {
+            const result = await exportReplayDeferredMp4({
+                replay:       lgs.stores.replay,
+                journey:      lgs.theJourney,
+                controller:   __.ui.replay?.controller,
+                replayMode:   __.ui.replay,
+                fps:          renderSpec.fps,
+                dimensions:   renderSpec.dimensions,
+                captureMode:  'deferred-master',
+                sourceCanvas: lgs.canvas,
+                signal:       abortController.signal,
+                abortController,
+                mediaMetadata,
+                filename:     `${journeyTitle || lgs.theJourney?.slug || 'replay'}.mp4`,
+            })
+
+            if (!(result?.blob instanceof Blob) || result.blob.size <= 0) {
+                throw new Error('Replay export did not produce a video file.')
+            }
+
+            const dimensions = result.plan?.dimensions ?? renderSpec.dimensions
+            globalThis.window?.dispatchEvent?.(new CustomEvent(REPLAY_DEFERRED_EXPORT_READY_EVENT, {
+                detail: {
+                    blob: result.blob,
+                    filename: result.filename,
+                    mediaData: {
+                        size: result.blob.size,
+                        duration: result.plan?.videoTimeline?.durationMillis ?? 0,
+                        fps: result.plan?.videoTimeline?.fps ?? renderSpec.fps,
+                        averageFps: result.plan?.videoTimeline?.fps ?? renderSpec.fps,
+                        dimensions,
+                        quality: ScreenMediaRecorder.QUALITY[$video.quality] ?? {name: 'Replay HQ'},
+                        ratio: {label: `${dimensions.width}×${dimensions.height}`},
+                        metadata: mediaMetadata,
+                        mimeType: result.blob.type || 'video/mp4',
+                        extension: 'mp4',
+                        frameCount: result.plan?.manifest?.frameCount ?? null,
+                    },
+                },
+            }))
+        }
+        catch (error) {
+            if (error?.name !== 'AbortError') {
+                UIToast.error({
+                    caption: 'Replay video',
+                    text: error?.message ?? 'Replay video could not be generated.',
+                })
+            }
+        }
+        finally {
+            if (startToken === _recordingStartToken.current) {
+                Object.assign($video, {
+                    preRecording: false,
+                    recording:    false,
+                    recordingHQ:  false,
+                    finalizing:   false,
+                    paused:       false,
+                    editing:      true,
+                })
+                restoreVideoCaptureUi()
+            }
+            stopReplayRecordingMonitor()
+        }
+    }, [$video])
+
     // Dispose composer and release references.
     const disposeComposer = useCallback(() => {
         _composer.current?.dispose()
@@ -399,6 +490,11 @@ export const VideoRecordingScreenArea = memo(() => {
                 return false
             }
 
+            if (isJourneyReplaySyncRequested()) {
+                void exportJourneyReplayFrameByFrame({renderSpec, startToken})
+                return 'deferred-replay-export'
+            }
+
             const recordingDate = new Date()
             const recordingDateLabel = recordingDate.toLocaleDateString('sv-SE')
             const journeyTitle = lgs.theJourney?.title?.trim() || ''
@@ -513,7 +609,7 @@ export const VideoRecordingScreenArea = memo(() => {
                 syncRequested: isJourneyReplaySyncRequested(),
             })
         }
-    }, [interactiveVideoDurationMillis, maxDuration, maxSize, disposeComposer, stopOverlaysRefresh, buildComposerOverlays, buildFinalComposerOverlays, flushComposerOverlays, syncVideoCropFrame, prepareJourneyReplayForRecording, isJourneyReplaySyncRequested, $video])
+    }, [interactiveVideoDurationMillis, maxDuration, maxSize, disposeComposer, stopOverlaysRefresh, buildComposerOverlays, buildFinalComposerOverlays, flushComposerOverlays, syncVideoCropFrame, prepareJourneyReplayForRecording, isJourneyReplaySyncRequested, exportJourneyReplayFrameByFrame, $video])
 
     const markRecordingStarted = useCallback(() => {
         if (!$video.preRecording && $video.recording) {
@@ -538,6 +634,9 @@ export const VideoRecordingScreenArea = memo(() => {
                 VIDEO_RECORDER_INITIALIZE_TIMEOUT_MS,
                 'Video recording initialization timed out on this browser.',
             )
+            if (ready === 'deferred-replay-export') {
+                return
+            }
             if (!ready) {
                 Object.assign($video, {
                     preRecording: false,

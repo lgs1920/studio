@@ -20,6 +20,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 import { proxyMap } from 'valtio/utils'
 
+const replayExportMocks = vi.hoisted(() => ({
+    exportReplay: vi.fn(),
+}))
+
 vi.mock('@Components/MainUI/video/toolbox/VideoRecorderWidget', () => ({
     VideoRecorderWidget: () => <div data-testid="video-recorder-widget"/>,
 }))
@@ -60,6 +64,10 @@ vi.mock('@Core/ui/replay/ReplayVideoOverlayComposer', () => ({
     buildReplayVideoComposerOverlays: vi.fn(),
     flushReplayVideoOverlayCanvases: vi.fn(async () => undefined),
     isReplayVideoWidgetReady:         vi.fn(() => true),
+}))
+
+vi.mock('@Core/ui/replay/ReplayDeferredExporter', () => ({
+    exportReplayDeferredMp4: replayExportMocks.exportReplay,
 }))
 
 vi.mock('@Core/ui/replay/ReplayVideoRenderSpec', () => ({
@@ -110,6 +118,15 @@ describe('VideoRecordingScreenArea start flow', () => {
 
     beforeEach(() => {
         vi.clearAllMocks()
+        replayExportMocks.exportReplay.mockResolvedValue({
+            blob: new Blob(['encoded replay'], {type: 'video/mp4'}),
+            filename: 'journey-replay.mp4',
+            plan: {
+                dimensions: {width: 640, height: 360},
+                manifest: {frameCount: 2},
+                videoTimeline: {durationMillis: 33.33, fps: 30},
+            },
+        })
         globalThis.requestAnimationFrame = vi.fn(callback => {
             queueMicrotask(() => callback(globalThis.performance?.now?.() ?? 0))
             return 1
@@ -290,12 +307,41 @@ describe('VideoRecordingScreenArea start flow', () => {
             replay: globalThis.__.ui.replay,
             store:  globalThis.lgs.stores.replay,
         }))
+        await waitFor(() => expect(replayExportMocks.exportReplay).toHaveBeenCalledTimes(1))
+        expect(replayExportMocks.exportReplay).toHaveBeenCalledWith(expect.objectContaining({
+            replay: globalThis.lgs.stores.replay,
+            journey: globalThis.lgs.theJourney,
+            replayMode: globalThis.__.ui.replay,
+            fps: 30,
+            dimensions: {width: 640, height: 360},
+            captureMode: 'deferred-master',
+        }))
+        expect(recorder.startVideo).not.toHaveBeenCalled()
+        await waitFor(() => expect(globalThis.lgs.stores.ui.video.recordingHQ).toBe(false))
+        expect(globalThis.lgs.stores.ui.video.editing).toBe(true)
 
         const traceEntries = globalThis.__lgsReplayVideoTrace ?? []
         expect(traceEntries.map(entry => entry.event)).toEqual(expect.arrayContaining([
             'interactive.recording.replay-camera.capture.start',
             'interactive.recording.replay-camera.capture.end',
         ]))
+    })
+
+    it('restores the Replay editor after the deterministic export is cancelled', async () => {
+        replayExportMocks.exportReplay.mockRejectedValueOnce(Object.assign(new Error('Export cancelled'), {name: 'AbortError'}))
+        globalThis.lgs.settings.ui.replay.recordingSync = true
+        globalThis.lgs.stores.replay.recordingSync = true
+
+        render(<VideoRecordingScreenArea/>)
+
+        await waitFor(() => {
+            expect(replayExportMocks.exportReplay).toHaveBeenCalledTimes(1)
+            expect(globalThis.lgs.stores.ui.video.recordingHQ).toBe(false)
+        })
+
+        expect(globalThis.lgs.stores.ui.video.editing).toBe(true)
+        expect(globalThis.lgs.stores.ui.video.preRecording).toBe(false)
+        expect(recorder.startVideo).not.toHaveBeenCalled()
     })
 
 })
