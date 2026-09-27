@@ -15,7 +15,6 @@
  ******************************************************************************/
 
 import { REPLAY_DRAWER } from '@Core/constants'
-import { cancelVideoEditing } from '@Components/MainUI/video/videoEditingCleanup'
 import { normalizeSimpleReplayDuration, REPLAY_LABEL } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {
     defaultSimpleReplaySettings,
@@ -102,12 +101,6 @@ export const JourneyReplayButton = (props) => {
             return
         }
         if (mode === REPLAY_USER_MODE_EXPERT) {
-            const videoEditing = lgs.stores.ui.video.editing === true
-            const replayPreparationActive = lgs.stores.replay.simplePreparationActive === true
-                                             || lgs.stores.ui.video.timelinePreviewActive === true
-            if (videoEditing || replayPreparationActive) {
-                cancelVideoEditing()
-            }
             lgs.stores.replay.simplePreparationActive = false
             lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_EXPERT
             const journey = lgs.theJourney
@@ -131,6 +124,19 @@ export const JourneyReplayButton = (props) => {
                 lgs.settings.ui.replay.camera = expertCamera
                 lgs.stores.replay.camera = expertCamera
             }
+            lgs.settings.ui.replay.recordingSync = true
+            lgs.stores.replay.recordingSync = true
+            lgs.stores.ui.video.timelinePreviewActive = true
+            if (lgs.stores.ui.video.cropper) {
+                Object.assign(lgs.stores.ui.video.cropper, {
+                    ratioEditor:  true,
+                    widgetEditor: true,
+                    draggable:    true,
+                    resizable:    true,
+                })
+            }
+            lgs.stores.ui.video.editing = true
+            return
         }
         __.ui.drawerManager.open(REPLAY_DRAWER)
     }, [mode, onClick])

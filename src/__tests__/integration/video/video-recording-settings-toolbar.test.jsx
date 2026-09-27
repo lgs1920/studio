@@ -50,6 +50,7 @@ vi.mock('@Components/MainUI/video/videoEditingCleanup', () => ({
 
 import {
     cancelVideoEditing,
+    prepareVideoCaptureUi,
     prepareVideoEditingUi,
 } from '@Components/MainUI/video/videoEditingCleanup'
 import { VideoRecordingSettingsToolbar } from '@Components/MainUI/video/toolbox/VideoRecordingSettingsToolbar'
@@ -216,13 +217,45 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(globalThis.lgs.stores.replay.duration).toBe(20)
     })
 
-    it('does not expose a second Replay export action during simple preparation', () => {
+    it('uses the Simple Replay gear popup for the Expert timeline without duration', () => {
+        globalThis.lgs.stores.replay.recordingSync = true
+        render(<VideoRecordingSettingsToolbar mainTheme mode="actions" timelineSettings/>)
+
+        expect(screen.getByText('16:9')).not.toBeNull()
+        expect(screen.getByText('High · 30 FPS')).not.toBeNull()
+        expect(screen.getByRole('button', {name: 'Replay settings'}).querySelector('[data-icon="gear"]')).not.toBeNull()
+        expect(screen.queryByText('15s')).toBeNull()
+        expect(screen.queryByText('Duration')).toBeNull()
+
+        fireEvent.click(screen.getByRole('button', {name: 'Replay settings'}))
+        expect(screen.getByTestId('settings-popup').dataset.placement).toBe('bottom')
+        expect(screen.getByTestId('ratio-popup-content').dataset.unifiedChoices).toBe('true')
+        expect(screen.getByTestId('preset-popup-content').dataset.compactSimple).toBe('true')
+        expect(screen.queryByText('Duration')).toBeNull()
+    })
+
+    it('exposes the video launch action during simple preparation', async () => {
         globalThis.lgs.stores.replay.simplePreparationActive = true
         render(<VideoRecordingSettingsToolbar/>)
 
-        expect(screen.queryByRole('button', {name: 'Record'})).toBeNull()
+        expect(screen.getByRole('button', {name: 'Record'})).not.toBeNull()
         expect(screen.queryByRole('button', {name: 'Create Replay video'})).toBeNull()
-        expect(globalThis.__.ui.replayVideoSync.arm).not.toHaveBeenCalled()
+
+        fireEvent.click(screen.getByRole('button', {name: 'Record'}))
+
+        await vi.waitFor(() => expect(globalThis.lgs.stores.ui.video.preRecording).toBe(true))
+        expect(globalThis.lgs.stores.ui.video.editing).toBe(false)
+        expect(prepareVideoCaptureUi).toHaveBeenCalledTimes(1)
+        expect(globalThis.__.ui.replay.prepareReplayCamera).toHaveBeenCalledWith({
+            journey: globalThis.lgs.theJourney,
+        })
+        expect(globalThis.__.ui.replayVideoSync.arm).toHaveBeenCalledWith({
+            recorder:          globalThis.__.recorder,
+            replay:            globalThis.__.ui.replay,
+            store:             globalThis.lgs.stores.replay,
+            autoStopRecording: true,
+            resetToStart:      true,
+        })
     })
 
     it('waits for crop persistence before cancelling video setup', async () => {

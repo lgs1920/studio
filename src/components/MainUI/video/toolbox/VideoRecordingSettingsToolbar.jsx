@@ -15,7 +15,11 @@
  ******************************************************************************/
 
 import { LGSPopup } from '@Components/LGSPopup'
-import { cancelVideoEditing, prepareVideoEditingUi } from '@Components/MainUI/video/videoEditingCleanup'
+import {
+    cancelVideoEditing,
+    prepareVideoCaptureUi,
+    prepareVideoEditingUi,
+} from '@Components/MainUI/video/videoEditingCleanup'
 import { VIDEO_CROP_ZONE } from '@Core/constants'
 import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
 import {
@@ -24,7 +28,7 @@ import {
     SIMPLE_REPLAY_DURATIONS,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { WaButton, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useSnapshot } from 'valtio'
 import { VideoRecordingSettingsMenuContent } from './VideoRecordingSettingsMenus'
 import '../style.css'
@@ -39,9 +43,15 @@ const SIMPLE_SETTINGS_POPUP = 'simple-settings'
  * @param {boolean} [props.mainTheme=false] - Use the main application theme instead of the on-map theme.
  * @param {string} [props.layout='default'] - Presentation layout context.
  * @param {'all'|'actions'|'video-options'} [props.mode='all'] - Controls rendered by the toolbar.
+ * @param {boolean} [props.timelineSettings=false] - Render the compact Replay settings popup for the Expert timeline.
  * @component
  */
-export const VideoRecordingSettingsToolbar = memo(({mainTheme = false, layout = 'default', mode = 'all'} = {}) => {
+export const VideoRecordingSettingsToolbar = memo(({
+    mainTheme = false,
+    layout = 'default',
+    mode = 'all',
+    timelineSettings = false,
+} = {}) => {
     const $video = lgs.stores.ui.video
     const $cropper = $video.cropper
     const $replay = lgs.stores.replay
@@ -50,6 +60,7 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false, layout = 
     const video = useSnapshot($video)
     const [openPopup, setOpenPopup] = useState(null)
     const [popupDirections, setPopupDirections] = useState({ratio: 'bottom', preset: 'bottom'})
+    const replaySettingsTriggerId = `replay-settings-trigger-${useId().replaceAll(':', '')}`
     const _cropSyncPromise = useRef(null)
     const shouldShowToolbar = video.editing === true
                               && !video.preRecording
@@ -57,12 +68,13 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false, layout = 
                               && !video.snapshot
                               && !video.finalizing
     const simplePreparation = replay.simplePreparationActive === true
+    const compactReplaySettings = simplePreparation || timelineSettings
     const showVideoOptions = mode !== 'actions'
     const showActions = mode !== 'video-options'
 
     const currentRatio = lgs.configuration.videoFormats.find(format => format.value === video.ratio)
     const fullQualityName = ScreenMediaRecorder.QUALITY[video.quality]?.name?.replace(/\s+Quality$/, '') ?? 'Medium'
-    const currentQuality = simplePreparation
+    const currentQuality = compactReplaySettings
         ? ['Med', 'High', 'Ultra'][video.quality] ?? fullQualityName
         : fullQualityName
     const currentFPS = ScreenMediaRecorder.FPS[video.fps] ?? ScreenMediaRecorder.FPS[ScreenMediaRecorder.DEFAULT_FPS_INDEX]
@@ -141,6 +153,39 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false, layout = 
         await syncCropFrame('editing-exit')
         cancelVideoEditing()
     }, [syncCropFrame])
+
+    /**
+     * Starts the Simple Replay recording after the current crop and camera are ready.
+     * @returns {Promise<void>} Completion promise.
+     */
+    const handleSimpleReplayRecording = useCallback(async () => {
+        if (!__.recorder) {
+            console.warn('[VideoRecordingSettingsToolbar] Recorder not initialized')
+            return
+        }
+
+        await syncCropFrame('before-recording')
+        const prepared = await __.ui.replay?.prepareReplayCamera?.({journey: lgs.theJourney})
+        if (prepared === false) {
+            return
+        }
+
+        __.ui.replayVideoSync?.arm?.({
+            recorder:          __.recorder,
+            replay:            __.ui.replay,
+            store:             lgs.stores.replay,
+            autoStopRecording: true,
+            resetToStart:      true,
+        })
+        prepareVideoCaptureUi()
+        Object.assign($video, {
+            editing:      false,
+            preRecording: true,
+            recording:    false,
+            finalizing:   false,
+            paused:       false,
+        })
+    }, [$video, syncCropFrame])
 
     /**
      * Store the selected Simple Replay duration for playback and export.
@@ -235,7 +280,7 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false, layout = 
         return null
     }
 
-    const simpleSettingsTrigger = simplePreparation ? (
+    const replaySettingsTrigger = compactReplaySettings ? (
         <>
             <div className="simple-replay-settings-summary" aria-label="Current Replay settings">
                 <span className="simple-replay-settings-summary__item">
@@ -246,12 +291,14 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false, layout = 
                     <WaIcon name="ranking-star" label=""/>
                     <span>{`${currentQuality} · ${currentFPS} FPS`}</span>
                 </span>
-                <span className="simple-replay-settings-summary__item">
-                    <WaIcon name="clock" label=""/>
-                    <span>{`${simpleDuration}s`}</span>
-                </span>
+                {simplePreparation && (
+                    <span className="simple-replay-settings-summary__item">
+                        <WaIcon name="clock" label=""/>
+                        <span>{`${simpleDuration}s`}</span>
+                    </span>
+                )}
                 <WaButton
-                    id="simple-replay-settings-trigger"
+                    id={replaySettingsTriggerId}
                     size="s"
                     variant="brand"
                     appearance={openPopup === SIMPLE_SETTINGS_POPUP ? 'outlined' : 'plain'}
@@ -263,7 +310,7 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false, layout = 
                 </WaButton>
             </div>
             <LGSPopup
-                anchor="simple-replay-settings-trigger"
+                anchor={replaySettingsTriggerId}
                 active={openPopup === SIMPLE_SETTINGS_POPUP}
                 onRequestClose={() => setOpenPopup(null)}
                 placement="bottom"
@@ -291,23 +338,25 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false, layout = 
                                                            compactSimple
                                                            mainTheme={mainTheme}/>
                     </div>
-                    <div className="simple-replay-settings-row" role="group" aria-label="Duration">
-                        <WaIcon name="clock" label=""/>
-                        <span className="simple-replay-settings-row__label">{'Duration'}</span>
-                        <div className="simple-replay-duration-buttons">
-                            {SIMPLE_REPLAY_DURATIONS.map(duration => (
-                                <WaButton key={duration}
-                                          className={`video-choice-button${simpleDuration === duration ? ' is-selected' : ''}`}
-                                          size="s"
-                                          variant="neutral"
-                                          appearance={simpleDuration === duration ? 'outlined' : 'plain'}
-                                          aria-pressed={simpleDuration === duration}
-                                          onClick={() => handleSimpleDurationChange(duration)}>
-                                    {`${duration}s`}
-                                </WaButton>
-                            ))}
+                    {simplePreparation && (
+                        <div className="simple-replay-settings-row" role="group" aria-label="Duration">
+                            <WaIcon name="clock" label=""/>
+                            <span className="simple-replay-settings-row__label">{'Duration'}</span>
+                            <div className="simple-replay-duration-buttons">
+                                {SIMPLE_REPLAY_DURATIONS.map(duration => (
+                                    <WaButton key={duration}
+                                              className={`video-choice-button${simpleDuration === duration ? ' is-selected' : ''}`}
+                                              size="s"
+                                              variant="neutral"
+                                              appearance={simpleDuration === duration ? 'outlined' : 'plain'}
+                                              aria-pressed={simpleDuration === duration}
+                                              onClick={() => handleSimpleDurationChange(duration)}>
+                                        {`${duration}s`}
+                                    </WaButton>
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </LGSPopup>
         </>
@@ -377,7 +426,22 @@ export const VideoRecordingSettingsToolbar = memo(({mainTheme = false, layout = 
                     </div>
                 </LGSPopup> : null}
 
-                {showActions ? simpleSettingsTrigger : null}
+                {showActions ? replaySettingsTrigger : null}
+
+                {showActions && simplePreparation ? (
+                    <WaButton
+                        id="video-start-recording"
+                        size="s"
+                        variant="brand"
+                        appearance="plain"
+                        className="video-recording-settings-action video-recorder-start-recording"
+                        aria-label="Record"
+                        onClick={() => void handleSimpleReplayRecording()}
+                    >
+                        <WaIcon name="clapperboard-play" label=""/>
+                        <span>{'Record'}</span>
+                    </WaButton>
+                ) : null}
 
                 {showActions ? <span className="video-recording-settings-separator" aria-hidden="true"/> : null}
 

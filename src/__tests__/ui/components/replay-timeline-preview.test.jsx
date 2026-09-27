@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-27
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,13 +33,8 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
 }))
 
 vi.mock('@Components/MainUI/video/toolbox/VideoRecordingSettingsToolbar', () => ({
-    VideoRecordingSettingsToolbar: () => <div data-testid="video-recording-settings-toolbar"/>,
-}))
-
-vi.mock('@Components/MainUI/video/toolbox/VideoRecordingSettingsMenus', () => ({
-    VideoRecordingSettingsMenus: ({slot, className}) => <div data-testid="video-recording-settings-menu-content"
-                                                            slot={slot}
-                                                            className={className}/>,
+    VideoRecordingSettingsToolbar: ({timelineSettings}) => <div data-testid="video-recording-settings-toolbar"
+                                                               data-timeline-settings={String(timelineSettings)}/>,
 }))
 
 vi.mock('@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender', () => ({
@@ -163,9 +158,10 @@ describe('ReplayTimelinePreview', () => {
         expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-min-height')).toBe('156px')
         expect(timelineElement.parentElement.style.getPropertyValue('--lgs-replay-timeline-layout-min-height')).toBe('74px')
         expect(container.querySelector('[slot="custom-menu"] [data-testid="video-recording-settings-toolbar"]')).not.toBeNull()
-        expect(container.querySelector('[slot="custom-menu"] [data-additional-content-toggle]')).not.toBeNull()
-        expect(container.querySelector('[slot="additional-content"][data-testid="video-recording-settings-menu-content"]')).not.toBeNull()
-        expect(container.querySelector('[slot="additional-content-label"]')?.textContent).toBe('Video settings')
+        expect(container.querySelector('[slot="custom-menu"] [data-testid="video-recording-settings-toolbar"]')?.dataset.timelineSettings).toBe('true')
+        expect(container.querySelector('[slot="custom-menu"] [data-additional-content-toggle]')).toBeNull()
+        expect(container.querySelector('[slot="additional-content"]')).toBeNull()
+        expect(container.querySelector('[slot="additional-content-label"]')).toBeNull()
         expect(timelineElement.querySelector('[slot="legend-ruler"]')).toBeNull()
         expect(timelineElement.playing).toBe(false)
         expect(timelineElement.clipOptions).toBeUndefined()

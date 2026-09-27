@@ -22,10 +22,9 @@
  * introduced.
  */
 
-import {forwardRef, useCallback, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState} from 'react'
+import {forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState} from 'react'
 import {useSnapshot} from 'valtio'
 import {subscribeKey} from 'valtio/utils'
-import {WaButton, WaIcon, WaTooltip} from '@web.awesome.me/webawesome-pro/dist/react'
 import {
     CREDITS_WIDGET,
     LOGO_WIDGET,
@@ -37,7 +36,6 @@ import {
 } from '@Core/constants'
 import {REPLAY_TIMELINE_COLOR_SWATCHES, REPLAY_TIMELINE_UI, REPLAY_TIMELINE_ZOOM, clampReplayTimelineZoom} from './replayTimelineUtils'
 import {VideoRecordingSettingsToolbar} from './toolbox/VideoRecordingSettingsToolbar'
-import {VideoRecordingSettingsMenus} from './toolbox/VideoRecordingSettingsMenus'
 import {
     buildReplayPreparationTimeline,
 } from '@Core/ui/replay/ReplayPreparationTimeline'
@@ -455,7 +453,6 @@ export const ReplayTimelinePreview = forwardRef(({
     const widgetSettings = useOptionalSnapshot(lgs.settings?.widgets, {})
     const replaySettings = useOptionalSnapshot(lgs.settings?.ui?.replay, {})
     const _timeline = useRef(null)
-    const videoSettingsButtonId = `replay-timeline-video-settings-${useId().replaceAll(':', '')}`
     const journeyProjectionSignature = useProxyValue(lgs.stores.main, main => {
         const currentJourney = main?.theJourney
         return JSON.stringify({
@@ -982,23 +979,8 @@ export const ReplayTimelinePreview = forwardRef(({
                     )}
                     <span slot="custom-menu"
                           className="replay-timeline-preview__custom-menu lgs-widget-no-drag">
-                        <WaButton appearance="plain"
-                                  id={videoSettingsButtonId}
-                                  aria-label="Video settings"
-                                  data-additional-content-toggle=""
-                                  size="s"
-                                  variant="brand">
-                            <WaIcon name="video" variant="regular" label=""/>
-                        </WaButton>
-                        <WaTooltip for={videoSettingsButtonId} placement="bottom">{'Video settings'}</WaTooltip>
-                        <VideoRecordingSettingsToolbar mainTheme mode="actions"/>
+                        <VideoRecordingSettingsToolbar mainTheme mode="actions" timelineSettings/>
                     </span>
-                    <span slot="additional-content-label">Video settings</span>
-                    <VideoRecordingSettingsMenus slot="additional-content"
-                                                 className="replay-timeline-preview__additional-content lgs-widget-no-drag"
-                                                 context={lgs.stores.ui.video.cropper}
-                                                 cropzoneId={VIDEO_CROP_ZONE}
-                                                 mainTheme/>
                 </lgs1920-timeline>
             )}
         </section>

@@ -49,13 +49,15 @@ describe('JourneyReplayButton synchronized video entry point', () => {
                         preRecording: false,
                         snapshot: false,
                         editing: false,
+                        timelinePreviewActive: false,
+                        cropper: proxy({}),
                     }),
                 },
-                replay: proxy({recordingSync: false}),
+                replay: proxy({recordingSync: false, simplePreparationActive: false}),
             },
             settings: {
                 ui: {
-                    replay: proxy({userMode: 'basic', simple: null}),
+                    replay: proxy({userMode: 'basic', simple: null, recordingSync: false}),
                 },
             },
         }
@@ -138,7 +140,7 @@ describe('JourneyReplayButton synchronized video entry point', () => {
         expect(icon.getAttribute('data-rotate')).toBe('0')
     })
 
-    it('loads the stored Expert camera when entering Expert Replay', () => {
+    it('opens Expert Replay in the crop zone with all widgets and the timeline', () => {
         const expertCamera = {debug: true, positionMode: 'ahead'}
         globalThis.lgs.theJourney.replay = {expert: {camera: expertCamera}}
         globalThis.lgs.settings.ui.replay.userMode = 'basic'
@@ -158,47 +160,18 @@ describe('JourneyReplayButton synchronized video entry point', () => {
 
         expect(globalThis.lgs.settings.ui.replay.camera).toMatchObject(expertCamera)
         expect(globalThis.lgs.stores.replay.camera).toMatchObject(expertCamera)
-        expect(globalThis.__.ui.drawerManager.open).toHaveBeenCalledWith('replay-drawer')
-    })
-
-    it('leaves video preparation before opening Expert Replay', () => {
-        const pause = vi.fn()
-        const leaveReplayPreparation = vi.fn()
-        const disarm = vi.fn()
-        const disposeByGroup = vi.fn()
-        const restoreAllHiddenWidgetsExcept = vi.fn()
-        const hide = vi.fn()
-        globalThis.__.ui.replay = {pause, leaveReplayPreparation}
-        globalThis.__.ui.replayVideoSync = {disarm}
-        globalThis.__.ui.widgetManager = {disposeByGroup}
-        globalThis.__.ui.widgetCache = {restoreAllHiddenWidgetsExcept}
-        globalThis.__.ui.contextMenu = {hide}
-        globalThis.lgs.stores.ui.video.editing = true
-        globalThis.lgs.stores.ui.video.timelinePreviewActive = true
-        globalThis.lgs.stores.replay.recordingSync = true
-        globalThis.lgs.stores.replay.simplePreparationActive = true
-
-        render(
-            <JourneyReplayButton
-                id="launch-expert-replay-from-video"
-                mode="expert"
-                ariaLabel="Expert Replay"
-            />,
-        )
-
-        fireEvent.click(screen.getByRole('button', {name: 'Expert Replay'}))
-
-        expect(globalThis.lgs.stores.ui.video.editing).toBe(false)
-        expect(globalThis.lgs.stores.ui.video.timelinePreviewActive).toBe(false)
-        expect(globalThis.lgs.stores.replay.recordingSync).toBe(false)
+        expect(globalThis.lgs.settings.ui.replay.userMode).toBe('expert')
+        expect(globalThis.lgs.settings.ui.replay.recordingSync).toBe(true)
+        expect(globalThis.lgs.stores.replay.recordingSync).toBe(true)
         expect(globalThis.lgs.stores.replay.simplePreparationActive).toBe(false)
-        expect(pause).toHaveBeenCalledOnce()
-        expect(leaveReplayPreparation).toHaveBeenCalledOnce()
-        expect(disarm).toHaveBeenCalledOnce()
-        expect(disposeByGroup).toHaveBeenCalledOnce()
-        expect(restoreAllHiddenWidgetsExcept).toHaveBeenCalledOnce()
-        expect(hide).toHaveBeenCalledOnce()
-        expect(globalThis.__.ui.drawerManager.close).toHaveBeenCalledOnce()
-        expect(globalThis.__.ui.drawerManager.open).toHaveBeenCalledWith('replay-drawer')
+        expect(globalThis.lgs.stores.ui.video.editing).toBe(true)
+        expect(globalThis.lgs.stores.ui.video.timelinePreviewActive).toBe(true)
+        expect(globalThis.lgs.stores.ui.video.cropper).toMatchObject({
+            ratioEditor: true,
+            widgetEditor: true,
+            draggable: true,
+            resizable: true,
+        })
+        expect(globalThis.__.ui.drawerManager.open).not.toHaveBeenCalled()
     })
 })
