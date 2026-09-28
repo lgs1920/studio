@@ -83,6 +83,10 @@
     </script>
     <script>
         (() => {
+            if ('%VITE_PWA_DEV%' === 'true') {
+                return
+            }
+
             const developmentHosts = new Set(['localhost', '127.0.0.1', '::1', '[::1]', 'dev.lgs1920.fr'])
             if (location.port !== '5173' || !developmentHosts.has(location.hostname) || !('serviceWorker' in navigator)) {
                 return

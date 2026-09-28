@@ -32,6 +32,7 @@ const DEV_PROXY_ALLOWED_TARGETS = new Set([
     'http://wms.pcn.minambiente.it:80',
 ])
 const PROJECT_ROOT = import.meta.dirname
+process.env.VITE_PWA_DEV ??= 'false'
 
 /**
  * Injects current git branch name into a local JSON file for development tracking.
@@ -236,8 +237,7 @@ export default defineConfig({
             manifest: false,
             manifestFilename: 'manifest.webmanifest',
             devOptions: {
-                enabled: true,
-                type: 'module'
+                enabled: false,
             }
         }),
         mdPlugin({mode: [Mode.HTML, Mode.MARKDOWN]}),
@@ -255,11 +255,6 @@ export default defineConfig({
         // @ts-expect-error Vite accepts this editor integration option at runtime.
         launchEditor: 'webstorm',
         strictPort: true,
-        headers: {
-            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0',
-        }
     },
 
     build: {

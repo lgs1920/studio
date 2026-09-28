@@ -40,7 +40,8 @@ This is the canonical source for the project's AI-agent and development rules.
 - **Custom behavior:** Prefer native Web Awesome APIs. Use minimal custom handling when necessary to implement the requested behavior and the native API is insufficient.
 - **CSS:** Use nested syntax with `&` selector. Every CSS custom property must have an English comment explaining its purpose.
 - **Backend:** Runtime must be **Bun**. Server framework must be **Elysia**.
-- **Vite:** Never run `bun run dev` manually. `vite build` is allowed.
+- **Vite:** Agents must not start `bun run dev`; `vite build` is allowed. Keep the PWA service worker disabled during routine development because it intercepts Vite requests.
+- **PWA cache testing:** Developers can enable the local service worker with `VITE_PWA_DEV=true bun run dev`. In Edge DevTools, inspect **Application > Service Workers** and **Cache Storage**, leave **Bypass for network** disabled, and load target resources online before testing them offline. Restart without the flag afterward to remove the local development worker.
 
 ### Timeline isolation
 
