@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-27
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -113,13 +113,10 @@ describe('VideoSceneWidgetsPortal', () => {
                 .toEqual(['credits-widget#video', 'text-widget#title'])
         })
 
-        expect(portalHarness.renderWidget).toHaveBeenCalledWith(
+        expect(portalHarness.renderWidget).not.toHaveBeenCalledWith(
             'multi-purpose-widgets',
             'compass-widget',
-            {
-                forceRefresh: true,
-                widgetsBoard: 'video-crop-zone',
-            },
+            expect.anything(),
         )
         expect(portalHarness.renderWidget).toHaveBeenCalledWith(
             'multi-purpose-widgets',
@@ -142,6 +139,35 @@ describe('VideoSceneWidgetsPortal', () => {
                 .sort((left, right) => left.localeCompare(right)))
                 .toEqual(['credits-widget#video'])
         })
+
+        expect(portalHarness.renderWidget).toHaveBeenCalledWith(
+            'multi-purpose-widgets',
+            'compass-widget',
+            {
+                forceRefresh: true,
+                widgetsBoard: 'video-crop-zone',
+            },
+        )
+    })
+
+    it('renders Compass in Expert Replay when it is already on the video board', async () => {
+        globalThis.lgs.stores.ui.widget.list.set('compass-widget#video', {
+            widgetsBoard: 'video-crop-zone',
+            zIndex: 5000,
+        })
+
+        render(<VideoSceneWidgetsPortal context={proxy({})}/>)
+
+        await waitFor(() => {
+            expect(Array.from(document.querySelectorAll('[data-testid="dynamic-widget"]'))
+                .map(element => element.dataset.widgetId))
+                .toContain('compass-widget#video')
+        })
+        expect(portalHarness.renderWidget).not.toHaveBeenCalledWith(
+            'multi-purpose-widgets',
+            'compass-widget',
+            expect.anything(),
+        )
     })
 
     it('rehydrates the video board during deterministic HQ recording', async () => {
@@ -159,7 +185,7 @@ describe('VideoSceneWidgetsPortal', () => {
         expect(document.querySelector('.video-scene-widgets-portal-input-blocked')).not.toBeNull()
     })
 
-    it('registers the Replay Credits widget on a fresh crop board', async () => {
+    it('registers required Replay widgets on a fresh Expert crop board without forcing Compass', async () => {
         globalThis.lgs.stores.ui.widget.list.clear()
 
         render(<VideoSceneWidgetsPortal context={proxy({})}/>)
@@ -174,6 +200,11 @@ describe('VideoSceneWidgetsPortal', () => {
                 },
             )
         })
+        expect(portalHarness.renderWidget).not.toHaveBeenCalledWith(
+            'multi-purpose-widgets',
+            'compass-widget',
+            expect.anything(),
+        )
     })
 
 })

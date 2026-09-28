@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -42,7 +42,7 @@ import {
     groupWidgetEntries,
 } from '@Core/ui/widget-manager/WidgetGroupUtils'
 import {WidgetDynamicRenderer} from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
-import {REPLAY_VIDEO_WIDGET_TYPES} from '@Core/ui/replay/ReplayVideoWidgetPolicy'
+import {getReplayVideoWidgetTypes} from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import {createReplayScrubScheduler} from '@Core/ui/replay/ReplayScrubScheduler'
 import {useOptionalSnapshot, useProxyValue} from '@Utils/ValtioUtils'
 import '@lgs1920/timeline'
@@ -491,7 +491,7 @@ export const ReplayTimelinePreview = forwardRef(({
         }
 
         const renderer = WidgetDynamicRenderer.instance
-        REPLAY_VIDEO_WIDGET_TYPES.forEach(widgetType => {
+        getReplayVideoWidgetTypes({simpleReplay: replay.simplePreparationActive === true}).forEach(widgetType => {
             void renderer.renderWidget(MULTI_PURPOSE_WIDGETS, widgetType, {
                 widgetsBoard: VIDEO_WIDGETS_BOARD,
                 forceRefresh: true,
@@ -499,7 +499,7 @@ export const ReplayTimelinePreview = forwardRef(({
                 console.error(`[LGS1920][ReplayWidgets] Failed to register ${widgetType}`, error)
             })
         })
-    }, [linkedPreparation])
+    }, [linkedPreparation, replay.simplePreparationActive])
 
     const projectionReplay = useMemo(() => ({
         deferredExportPlan: replay.deferredExportPlan,

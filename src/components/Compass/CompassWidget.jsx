@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-14
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -34,9 +34,11 @@ export const CompassWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
     // Get snapshot of context
     const contextState = useOptionalSnapshot(context, COMPASS_WIDGET_CONTEXT_FALLBACK)
     const video = useSnapshot(lgs.stores.ui.video)
+    const replay = useSnapshot(lgs.stores.replay)
     const widgetEditor = contextState.widgetEditor || detached
     const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
     const fixedVideoCompass = widgetsBoard === VIDEO_WIDGETS_BOARD
+    const simpleReplay = replay.simplePreparationActive === true
     const showDuringVideoCapture = widgetsBoard === VIDEO_WIDGETS_BOARD
         && (video.editing || video.preRecording || video.recordingHQ || video.snapshot || video.finalizing)
     const container = useMemo(() => __.ui.widgetManager.resolveWidgetsBoardContainer(widgetsBoard), [widgetsBoard])
@@ -48,15 +50,16 @@ export const CompassWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
             contextMenu:  {
                 canReset:    true,
                 canPosition: !fixedVideoCompass,
-                canRemove:   !fixedVideoCompass,
+                canRemove:   !fixedVideoCompass || !simpleReplay,
                 canEdit:     true,
                 canDetach:   !fixedVideoCompass,
             },
             top:          '0px',
-            left:         '100%',
+            left:         fixedVideoCompass ? '0px' : '100%',
             type:         LGS_VISUAL_WIDGET,
             group:        MULTI_PURPOSE_WIDGETS,
-            attachTo:     fixedVideoCompass ? 'top-right' : 'right',
+            attachTo:     fixedVideoCompass ? 'top-left' : 'right',
+            positionKey:  fixedVideoCompass ? 'video-crop-top-left-v2' : undefined,
             draggable:    !fixedVideoCompass,
             resizable:    !fixedVideoCompass,
             scalable:     !fixedVideoCompass,
@@ -70,14 +73,15 @@ export const CompassWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
             min:          {width: 50},
             max:          {width: 300},
             snap:         'svg',
-            margin:       fixedVideoCompass ? 5 : (lgs.gutter?.xs ?? 5),
+            margin:       fixedVideoCompass ? (lgs.gutter?.s ?? 8) : (lgs.gutter?.xs ?? 5),
             widgetsBoard: widgetsBoard,
             zIndex:       zIndex,
         }
-    }, [container, fixedVideoCompass, id, widgetsBoard, zIndex])
+    }, [container, fixedVideoCompass, id, simpleReplay, widgetsBoard, zIndex])
 
-    // Render only when widgetEditor is true and container is defined
-    if ((!widgetEditor && !showDuringVideoCapture) || !container) {
+    // The Replay video portal owns this mandatory overlay and can render it
+    // while editor/capture flags transition between Simple and Expert modes.
+    if ((!fixedVideoCompass && !widgetEditor && !showDuringVideoCapture) || !container) {
         return null
     }
 

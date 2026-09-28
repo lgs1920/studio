@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-19
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { LGS_VISUAL_WIDGET, LGS_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { COMPASS_WIDGET, LGS_VISUAL_WIDGET, LGS_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { WidgetCoreControls } from '@Core/ui/widget-manager/WidgetCoreControls'
 import { WidgetCoreRegistry } from '@Core/ui/widget-manager/WidgetCoreRegistry'
 import { WidgetPosition } from '@Core/ui/widget-manager/WidgetPosition'
@@ -77,7 +77,7 @@ describe('crop board widget repositioning', () => {
         expect(setControlBoxProps).toHaveBeenCalledWith({renderDirections: [], zoom: 0, opacity: 0})
     })
 
-    it('does not move a widget that fits in the new crop', () => {
+    it('preserves a widget position relative to the previous crop when the crop changes', () => {
         widget.style.left = '400px'
         widget.style.top = '250px'
         widget.getBoundingClientRect = vi.fn(() => ({left: 400, top: 250, width: 200, height: 100, right: 600, bottom: 350}))
@@ -104,13 +104,13 @@ describe('crop board widget repositioning', () => {
             {left: 0, top: 0, width: 1000, height: 600},
         )
 
-        expect(changed).toBe(0)
-        expect(config.position.left).toBe(400)
-        expect(config.position.top).toBe(250)
-        expect(widget.style.left).toBe('400px')
+        expect(changed).toBe(1)
+        expect(config.position.left).toBeCloseTo(240)
+        expect(config.position.top).toBeCloseTo(400 * (250 / 600))
+        expect(widget.style.left).toBe('240px')
     })
 
-    it('does not persist a widget that fits without a real layout change', () => {
+    it('persists the widget position when a crop resize changes its relative placement', () => {
         widget.style.left = '400px'
         widget.style.top = '250px'
         widget.getBoundingClientRect = vi.fn(() => ({left: 400, top: 250, width: 200, height: 100, right: 600, bottom: 350}))
@@ -136,8 +136,8 @@ describe('crop board widget repositioning', () => {
             {left: 0, top: 0, width: 1000, height: 600},
         )
 
-        expect(changed).toBe(0)
-        expect(manager.saveWidgetPosition).not.toHaveBeenCalled()
+        expect(changed).toBe(1)
+        expect(manager.saveWidgetPosition).toHaveBeenCalledWith(config.id, config)
     })
 
     it('clamps persisted scene widgets inside the scene bounds on initialization', () => {
@@ -273,9 +273,8 @@ describe('crop board widget repositioning', () => {
             {left: 200, top: 120, width: 600, height: 400},
         )
 
-        // The widget still fits, so its live position is unchanged.
-        expect(config.position.left).toBe(500)
-        expect(config.position.top).toBe(300)
+        expect(config.position.left).toBeCloseTo(350 + (200 / 600) * 500)
+        expect(config.position.top).toBeCloseTo(200 + (130 / 400) * 300)
     })
 
     it('does not move widgets belonging to another board', () => {
@@ -304,7 +303,8 @@ describe('crop board widget repositioning', () => {
             dimensions: {width: 200, height: 100},
             scale: {x: 1, y: 1},
             attachTo: 'bottom-right',
-            margin: 8,
+            margin: 5,
+            edgeMargins: {bottom: 8},
             draggable: false,
             resizable: false,
             scalable: false,
@@ -316,9 +316,9 @@ describe('crop board widget repositioning', () => {
             {left: 0, top: 0, width: 600, height: 400},
             {left: 0, top: 0, width: 1000, height: 600},
         )).toBe(1)
-        expect(config.position.left).toBeCloseTo(392)
+        expect(config.position.left).toBeCloseTo(395)
         expect(config.position.top).toBeCloseTo(292)
-        expect(parseFloat(widget.style.left)).toBeCloseTo(392)
+        expect(parseFloat(widget.style.left)).toBeCloseTo(395)
         expect(widget.style.top).toBe('292px')
         expect(manager.saveWidgetPosition).not.toHaveBeenCalled()
     })
@@ -356,6 +356,35 @@ describe('crop board widget repositioning', () => {
         expect(config.position.top).toBeCloseTo(295)
         expect(config.scale).toEqual({x: 0.5, y: 0.5})
         expect(manager.transform.setScale).not.toHaveBeenCalled()
+    })
+
+    it('keeps the video compass visible at its relative position when the crop is resized', () => {
+        widget.style.left = '8px'
+        widget.style.top = '8px'
+        widget.getBoundingClientRect = vi.fn(() => ({
+            left: 8, top: 8, width: 100, height: 50, right: 108, bottom: 58,
+        }))
+        const config = {
+            id: COMPASS_WIDGET + '#video',
+            widgetsBoard: VIDEO_WIDGETS_BOARD,
+            element: widget,
+            position: {left: 8, top: 8},
+            dimensions: {width: 100, height: 50},
+            scale: {x: 1, y: 1},
+            margin: 8,
+            persist: false,
+        }
+        registry.setConfig(config.id, config)
+
+        expect(controls.repositionWidgetsForBoard(
+            VIDEO_WIDGETS_BOARD,
+            {left: 100, top: 50, width: 600, height: 400},
+            {left: 0, top: 0, width: 1000, height: 600},
+        )).toBe(1)
+        expect(config.position.left).toBeCloseTo(104.8)
+        expect(config.position.top).toBeCloseTo(50 + ((8 / 600) * 400))
+        expect(widget.style.left).toBe('104.8px')
+        expect(widget.style.top).toBe(`${config.position.top}px`)
     })
 
     it('uses the updated crop dimensions and recovers credits from a transient tiny scale', () => {

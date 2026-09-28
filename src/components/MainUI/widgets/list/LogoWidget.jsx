@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import { LogoSvg }                                     from '@Components/MainUI/LogoSvg'
 import { Widget }                                      from '@Components/MainUI/widgets/Widget'
-import { HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS } from '@Core/constants'
 import { shouldRenderVideoBoardWidget }                from '@Core/ui/replay/ReplayOverlayResolver'
 import { useOptionalSnapshot }                         from '@Utils/ValtioUtils'
 import { useMemo }                                     from 'react'
@@ -52,6 +52,7 @@ export const LogoWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsB
     )
     const siteUrl = __.app.buildUrl(lgs?.configuration?.website || 'https://lgs1920.fr')
     const logoWidgetMargin = lgs.gutter?.xs ?? 5
+    const logoWidgetBottomMargin = lgs.gutter?.s ?? 8
 
     const config = useMemo(() => {
         return {
@@ -69,6 +70,7 @@ export const LogoWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsB
             type:            LGS_VISUAL_WIDGET,
             group:           MULTI_PURPOSE_WIDGETS,
             margin:          logoWidgetMargin,
+            edgeMargins:     {bottom: logoWidgetBottomMargin},
             attachTo:        'bottom-right',
             anchorOnScale:   'bottom-right',
             draggable:       false,
@@ -91,7 +93,7 @@ export const LogoWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsB
             widgetsBoard:    widgetsBoard,
             zIndex:          zIndex ?? LOGO_WIDGET_Z_INDEX,
         }
-    }, [container, id, logoWidgetMargin, widgetsBoard, zIndex])
+    }, [container, id, logoWidgetBottomMargin, logoWidgetMargin, widgetsBoard, zIndex])
 
     if (!shouldRender || !container) {
         return null

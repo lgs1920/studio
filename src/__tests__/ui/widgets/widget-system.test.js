@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-30
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -275,6 +275,31 @@ describe('Widget registry ratio resolution', () => {
         expect(config.visible).toBe(false)
     })
 
+    it('ignores a saved widget position from an older video compass anchor', async () => {
+        __.ui.widgetManager.getWidgetPosition.mockResolvedValue({
+            leftRatio: 82,
+            topRatio:  12,
+            width:    100,
+            height:   100,
+            positionKey: 'video-crop-top-right-v1',
+        })
+
+        const config = await new WidgetCoreRegistry().retrieveConfig({}, {
+            id:          'compass-widget#video',
+            attachTo:    'top-left',
+            container:   document.body,
+            left:        '0px',
+            margin:      8,
+            persist:     true,
+            positionKey: 'video-crop-top-left-v2',
+            top:         '0px',
+            widgetsBoard: VIDEO_WIDGETS_BOARD,
+        })
+
+        expect(config.fromDB).toBe(false)
+        expect(config.positionKey).toBe('video-crop-top-left-v2')
+    })
+
     it('keeps an explicit visual widget ratio instead of the global widget ratio', async () => {
         const registry = new WidgetCoreRegistry()
         const element = {}
@@ -311,6 +336,7 @@ describe('Widget registry ratio resolution', () => {
             scalable:      true,
             min:           {width: 10, height: 10},
             max:           {width: 500, height: 500},
+            contextMenu:   {canRemove: false},
             container:     document.body,
         })
 
@@ -322,6 +348,7 @@ describe('Widget registry ratio resolution', () => {
             resizable:       true,
             constrainResizeToContent: false,
             resizeToContent: {height: true},
+            contextMenu:     {canRemove: true},
             scalable:        false,
         })
 
@@ -331,6 +358,7 @@ describe('Widget registry ratio resolution', () => {
         expect(config.max).toEqual({width: 900})
         expect(config.resizeToContent).toEqual({height: true})
         expect(config.constrainResizeToContent).toBe(false)
+        expect(config.contextMenu.canRemove).toBe(true)
     })
 
     it('migrates old persisted global ratios when an explicit widget ratio is requested', async () => {

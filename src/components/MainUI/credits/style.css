@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-11-11
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,6 +44,8 @@
 
 .lgs-widget.lgs-credits-widget {
     min-width: max-content;
+    /* Ignore an obsolete persisted inline width; Credits tracks live providers. */
+    width: max-content !important;
 }
 
 .credits-bar.credits-bar-widget-mode {

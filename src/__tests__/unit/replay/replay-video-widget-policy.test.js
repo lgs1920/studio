@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,9 +16,11 @@
 
 import {
     filterReplayVideoWidgetKeys,
+    getReplayVideoWidgetTypes,
     getReplayVideoWidgetKeys,
     isReplayVideoWidgetAllowed,
     REPLAY_VIDEO_WIDGET_TYPES,
+    REPLAY_VIDEO_SIMPLE_WIDGET_TYPES,
 } from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import {afterEach, describe, expect, it} from 'vitest'
 
@@ -28,12 +30,21 @@ describe('Replay video widget policy', () => {
         globalThis.lgs = undefined
     })
 
-    it('allows every content widget and excludes capture infrastructure', () => {
+    it('requires Compass in Simple Replay and leaves it optional in Expert Replay', () => {
         expect(REPLAY_VIDEO_WIDGET_TYPES).toEqual([
+            'credits-widget',
+            'logo-widget',
+        ])
+        expect(REPLAY_VIDEO_SIMPLE_WIDGET_TYPES).toEqual([
             'compass-widget',
             'credits-widget',
             'logo-widget',
         ])
+        expect(getReplayVideoWidgetTypes({simpleReplay: false})).toBe(REPLAY_VIDEO_WIDGET_TYPES)
+        expect(getReplayVideoWidgetTypes({simpleReplay: true})).toBe(REPLAY_VIDEO_SIMPLE_WIDGET_TYPES)
+    })
+
+    it('allows every content widget and excludes capture infrastructure', () => {
         expect(filterReplayVideoWidgetKeys([
             'journey-stats-widget#1',
             'compass-widget#1',

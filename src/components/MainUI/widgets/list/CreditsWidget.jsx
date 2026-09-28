@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-14
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import { CreditsBar }                          from '@Components/MainUI/credits/CreditsBar'
 import { Widget }                              from '@Components/MainUI/widgets/Widget'
-import { HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS } from '@Core/constants'
 import { shouldRenderVideoBoardWidget }        from '@Core/ui/replay/ReplayOverlayResolver'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { useEffect, useMemo, useRef } from 'react'
@@ -113,6 +113,7 @@ export const CreditsWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
             persist:         true,
             transient:       true,
             dynamic:         true,
+            fitContentWidth: true,
             ttl:             HOUR,
             mandatory:       true,
             stopPropagation: true,

@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-27
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,6 +28,9 @@ vi.mock('@Components/MainUI/widgets/Widget', () => ({
         <div
             data-attach-to={config.attachTo}
             data-can-position={String(config.contextMenu.canPosition)}
+            data-can-remove={String(config.contextMenu.canRemove)}
+            data-margin={config.margin}
+            data-position-key={config.positionKey}
             data-testid="widget"
         >
             {children}
@@ -45,9 +48,10 @@ describe('CompassWidget video placement', () => {
     beforeEach(() => {
         globalThis.lgs = {
             stores: {
+                replay: proxy({simplePreparationActive: true}),
                 ui: {
                     video: proxy({
-                        editing:      true,
+                        editing:      false,
                         finalizing:   false,
                         preRecording: false,
                         recording:    false,
@@ -56,7 +60,7 @@ describe('CompassWidget video placement', () => {
                     }),
                 },
             },
-            gutter: {xs: 5},
+            gutter: {s: 8, xs: 5},
         }
         globalThis.__ = {
             ui: {
@@ -73,16 +77,32 @@ describe('CompassWidget video placement', () => {
         globalThis.lgs = undefined
     })
 
-    it('locks the compass to the top-right of the video crop board', () => {
+    it('renders the mandatory Replay compass when editor and capture flags are inactive', () => {
         render(
             <CompassWidget
-                context={{widgetEditor: true, widgetsBoard: 'video-crop-zone'}}
+                context={{widgetEditor: false, widgetsBoard: 'video-crop-zone'}}
                 id="compass-widget"
             />,
         )
 
         const widget = screen.getByTestId('widget')
-        expect(widget.getAttribute('data-attach-to')).toBe('top-right')
+        expect(widget.getAttribute('data-attach-to')).toBe('top-left')
         expect(widget.getAttribute('data-can-position')).toBe('false')
+        expect(widget.getAttribute('data-can-remove')).toBe('false')
+        expect(widget.getAttribute('data-margin')).toBe('8')
+        expect(widget.getAttribute('data-position-key')).toBe('video-crop-top-left-v2')
+    })
+
+    it('allows removing the optional Compass in Expert Replay', () => {
+        globalThis.lgs.stores.replay.simplePreparationActive = false
+
+        render(
+            <CompassWidget
+                context={{widgetEditor: false, widgetsBoard: 'video-crop-zone'}}
+                id="compass-widget#video"
+            />,
+        )
+
+        expect(screen.getByTestId('widget').getAttribute('data-can-remove')).toBe('true')
     })
 })

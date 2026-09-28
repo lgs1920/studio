@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-28
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ import { MULTI_PURPOSE_WIDGETS, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import {
     filterReplayVideoWidgetKeys,
-    REPLAY_VIDEO_WIDGET_TYPES,
+    getReplayVideoWidgetTypes,
 } from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import { memo, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -142,7 +142,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
         const registeredWidgetTypes = new Set(
             widgetIds.split('|').filter(Boolean).map(widgetId => widgetId.split('#')[0]),
         )
-        for (const widgetType of REPLAY_VIDEO_WIDGET_TYPES) {
+        for (const widgetType of getReplayVideoWidgetTypes({simpleReplay})) {
             const alreadyRegistered = registeredWidgetTypes.has(widgetType)
             if (!alreadyRegistered) {
                 void renderer.renderWidget(MULTI_PURPOSE_WIDGETS, widgetType, {
@@ -153,7 +153,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
                 })
             }
         }
-    }, [boardReady, hidden, widgetIds])
+    }, [boardReady, hidden, simpleReplay, widgetIds])
 
     useEffect(() => {
         if (!boardReady || hidden || !videoCaptureActive || !widgetIds) {

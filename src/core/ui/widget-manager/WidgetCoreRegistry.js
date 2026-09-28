@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-01-26
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -502,10 +502,12 @@ export class WidgetCoreRegistry {
                 dimensions:             {width: 0, height: 0},
                 dynamic:                initialConfig.dynamic ?? false,
                 draggable:              initialConfig.draggable ?? true,
+                edgeMargins:            initialConfig.edgeMargins ?? null,
                 element:                initialConfig.element,
                 elementObserver:        null,
                 expandedDimensions:     initialConfig.expandedDimensions ?? null,
                 expandedInlineDimensions: initialConfig.expandedInlineDimensions ?? null,
+                fitContentWidth:        initialConfig.fitContentWidth ?? false,
                 group:                  initialConfig.group ?? null,
                 widgetGroup:             initialConfig.widgetGroup ?? null,
                 icon:                   initialConfig.icon ?? null,
@@ -557,6 +559,9 @@ export class WidgetCoreRegistry {
         }
         else {
             config = this.#widgets.get(elementId)
+            if (initialConfig.contextMenu !== undefined) {
+                config.contextMenu = this.cloneContext(initialConfig.contextMenu, WIDGETS_CAPABILITIES)
+            }
             if (initialConfig.outsideOverlay) {
                 config.outsideOverlay = initialConfig.outsideOverlay
             }
@@ -634,6 +639,12 @@ export class WidgetCoreRegistry {
             }
             if (initialConfig.constrainResizeToContent !== undefined) {
                 config.constrainResizeToContent = initialConfig.constrainResizeToContent
+            }
+            if (initialConfig.fitContentWidth !== undefined) {
+                config.fitContentWidth = initialConfig.fitContentWidth
+            }
+            if (initialConfig.edgeMargins !== undefined) {
+                config.edgeMargins = initialConfig.edgeMargins
             }
             if (initialConfig.persist !== undefined) {
                 config.persist = initialConfig.persist

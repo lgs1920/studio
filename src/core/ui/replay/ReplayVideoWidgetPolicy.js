@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,21 +25,20 @@ import {
 } from '@Core/constants'
 
 /**
- * Widget types that must be registered automatically on a Replay video
- * surface, even when the user has not added an instance yet. Expert Replay
- * accepts other content widgets already registered on the video board.
+ * Widget types that must be registered automatically on every Replay video
+ * surface. Expert Replay accepts other content widgets already registered on
+ * the video board and does not force the compass into the composition.
  *
  * These structural widgets belong to the capture/editor infrastructure and
  * must never be projected into the recorded image.
  */
 export const REPLAY_VIDEO_WIDGET_TYPES = Object.freeze([
-    COMPASS_WIDGET,
     CREDITS_WIDGET,
     LOGO_WIDGET,
 ])
 
 /**
- * Widget types retained by Simple Replay video composition.
+ * Widget types required by Simple Replay video composition.
  */
 export const REPLAY_VIDEO_SIMPLE_WIDGET_TYPES = Object.freeze([
     COMPASS_WIDGET,
@@ -60,6 +59,17 @@ export const getReplayVideoWidgetType = widgetId => typeof widgetId === 'string'
     : ''
 
 const isSimpleReplayActive = () => globalThis.lgs?.stores?.replay?.simplePreparationActive === true
+
+/**
+ * Return the widget types that Replay must register for the active mode.
+ *
+ * @param {Object} options - Replay widget policy options.
+ * @param {boolean} [options.simpleReplay] - Whether Simple Replay is active.
+ * @returns {string[]} Required widget type identifiers.
+ */
+export const getReplayVideoWidgetTypes = ({simpleReplay = isSimpleReplayActive()} = {}) => (
+    simpleReplay ? REPLAY_VIDEO_SIMPLE_WIDGET_TYPES : REPLAY_VIDEO_WIDGET_TYPES
+)
 
 export const isReplayVideoWidgetAllowed = (widgetId, {simpleReplay = isSimpleReplayActive()} = {}) => {
     const widgetType = getReplayVideoWidgetType(widgetId)

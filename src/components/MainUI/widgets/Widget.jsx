@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-19
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -1580,8 +1580,10 @@ const WidgetHost = ({
                 cropDimensions: config.cropDimensions ?? {left: 0, top: 0, width: 0, height: 0},
                 dynamic:        config.dynamic ?? false,
                 draggable:      config.draggable ?? true,
+                edgeMargins: config.edgeMargins ?? null,
                 expandedDimensions: config.expandedDimensions ?? null,
                 expandedInlineDimensions: config.expandedInlineDimensions ?? null,
+                fitContentWidth: config.fitContentWidth ?? false,
                 forceEven:      config.forceEven ?? false,
                 group:          config.group ?? null,
                 widgetGroup:    config.widgetGroup ?? null,

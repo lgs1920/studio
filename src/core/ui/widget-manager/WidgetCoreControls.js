@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-01-26
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -49,11 +49,10 @@ export class WidgetCoreControls {
     }
 
     /**
-     * Keeps video widgets inside the crop using edge percentages.
-     * Percentages are calculated from the live widget rectangle; persisted
-     * anchors and the previous crop are deliberately ignored.
+     * Keeps video widgets inside the crop and carries their relative position
+     * forward when the crop changes dimensions.
      */
-    repositionWidgetsForBoard = (widgetsBoard, nextBoardRect = null) => {
+    repositionWidgetsForBoard = (widgetsBoard, nextBoardRect = null, previousBoardRect = null) => {
         if (widgetsBoard !== VIDEO_WIDGETS_BOARD || typeof document === 'undefined') {
             return 0
         }
@@ -73,6 +72,14 @@ export class WidgetCoreControls {
                 height: nextBoardRect.height,
             }
             : nextBoardRect
+        const previousFallback = previousBoardRect && container
+            ? {
+                left: container.left + previousBoardRect.left,
+                top: container.top + previousBoardRect.top,
+                width: previousBoardRect.width,
+                height: previousBoardRect.height,
+            }
+            : previousBoardRect
         // Crop updates provide the cropper's current dimensions in its own
         // coordinate space. Prefer that value to the live DOM measurement,
         // which can still report the cropper's temporary 1–2 px layout while
@@ -82,6 +89,9 @@ export class WidgetCoreControls {
             return 0
         }
 
+        const hasPreviousBoardRect = previousFallback?.width > 0 && previousFallback?.height > 0
+        const positionSource = hasPreviousBoardRect ? previousFallback : source
+
         const boardRect = {
             left: source.left ?? 0,
             top: source.top ?? 0,
@@ -89,6 +99,12 @@ export class WidgetCoreControls {
             height: source.height,
             right: source.right ?? (source.left ?? 0) + source.width,
             bottom: source.bottom ?? (source.top ?? 0) + source.height,
+        }
+        const positionRect = {
+            left: positionSource.left ?? 0,
+            top: positionSource.top ?? 0,
+            width: positionSource.width,
+            height: positionSource.height,
         }
         const clamp = (value, min, max) => Math.max(min, Math.min(value, max))
         let adapted = 0
@@ -119,9 +135,12 @@ export class WidgetCoreControls {
                 : widgetType === LOGO_WIDGET
                     ? 'bottom-right'
                     : null
-            if (fits && !forcedAnchor) {
+            if (fits && !forcedAnchor && !hasPreviousBoardRect) {
                 continue
             }
+
+            const relativeLeft = ((rect.left - positionRect.left) / positionRect.width) * 100
+            const relativeTop = ((rect.top - positionRect.top) / positionRect.height) * 100
 
             const currentScaleX = Number.isFinite(Number(config.scale?.x)) && Number(config.scale.x) > 0 ? Number(config.scale.x) : 1
             const currentScaleY = Number.isFinite(Number(config.scale?.y)) && Number(config.scale.y) > 0 ? Number(config.scale.y) : 1
@@ -154,16 +173,24 @@ export class WidgetCoreControls {
             const renderedWidthRatio = (renderedWidth / boardRect.width) * 100
             const renderedHeightRatio = (renderedHeight / boardRect.height) * 100
             const margin = Number.isFinite(Number(config.margin)) ? Number(config.margin) : 0
-            const marginLeftRatio = (margin / boardRect.width) * 100
-            const marginTopRatio = (margin / boardRect.height) * 100
-            const nextLeft = forcedAnchor === 'bottom-left'
+            const edgeMargins = config.edgeMargins ?? {}
+            const edgeMargin = edge => Number.isFinite(Number(edgeMargins[edge]))
+                ? Number(edgeMargins[edge])
+                : margin
+            const marginLeftRatio = (edgeMargin('left') / boardRect.width) * 100
+            const marginRightRatio = (edgeMargin('right') / boardRect.width) * 100
+            const marginTopRatio = (edgeMargin('top') / boardRect.height) * 100
+            const marginBottomRatio = (edgeMargin('bottom') / boardRect.height) * 100
+            const nextLeft = forcedAnchor === 'bottom-left' || forcedAnchor === 'top-left'
                 ? marginLeftRatio
                 : forcedAnchor === 'bottom-right'
-                    ? Math.max(0, 100 - renderedWidthRatio - marginLeftRatio)
-                    : clamp(left, 0, 100 - renderedWidthRatio)
-            const nextTop = forcedAnchor
-                ? Math.max(0, 100 - renderedHeightRatio - marginTopRatio)
-                : clamp(top, 0, 100 - renderedHeightRatio)
+                    ? Math.max(0, 100 - renderedWidthRatio - marginRightRatio)
+                    : clamp(hasPreviousBoardRect ? relativeLeft : left, 0, 100 - renderedWidthRatio)
+            const nextTop = forcedAnchor === 'top-left'
+                ? marginTopRatio
+                : forcedAnchor
+                    ? Math.max(0, 100 - renderedHeightRatio - marginBottomRatio)
+                    : clamp(hasPreviousBoardRect ? relativeTop : top, 0, 100 - renderedHeightRatio)
             const screenLeft = boardRect.left + (nextLeft / 100) * boardRect.width
             const screenTop = boardRect.top + (nextTop / 100) * boardRect.height
             const currentLeft = Number.parseFloat(element.style.left || '')
@@ -497,7 +524,9 @@ export class WidgetCoreControls {
 
             if (config.skipInitialElementResizeSync) {
                 config.skipInitialElementResizeSync = false
-                return
+                if (!config.fitContentWidth) {
+                    return
+                }
             }
 
             const computedStyle = window.getComputedStyle(element)
@@ -1153,7 +1182,7 @@ export class WidgetCoreControls {
             Number.isFinite(config.dimensions?.height) &&
             config.dimensions.width > 0 &&
             config.dimensions.height > 0) {
-            element.style.width = `${config.dimensions.width}px`
+            element.style.width = config.fitContentWidth ? '' : `${config.dimensions.width}px`
             element.style.height = `${config.dimensions.height}px`
         }
 
