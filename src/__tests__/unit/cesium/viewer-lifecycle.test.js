@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,9 +35,21 @@ const {FakeViewer, fakeCanvasEventManager} = vi.hoisted(() => {
             this.container = container
             this.destroyed = false
             this.camera = {changed: createEvent()}
+            const canvasListeners = new Map()
+            const canvas = {
+                addEventListener: vi.fn((eventName, listener) => {
+                    const listeners = canvasListeners.get(eventName) ?? new Set()
+                    listeners.add(listener)
+                    canvasListeners.set(eventName, listeners)
+                }),
+                removeEventListener: vi.fn((eventName, listener) => {
+                    canvasListeners.get(eventName)?.delete(listener)
+                }),
+                dispatch: (eventName, event = {}) => canvasListeners.get(eventName)?.forEach(listener => listener(event)),
+            }
             this.scene = {
                 camera:                      this.camera,
-                canvas:                      document.createElement('canvas'),
+                canvas,
                 globe:                       {},
                 postRender:                  createEvent(),
                 renderError:                 createEvent(),
@@ -124,6 +136,7 @@ describe('Cesium viewer lifecycle', () => {
         globalThis.lgs = undefined
         globalThis.__ = undefined
         globalThis.document = undefined
+        vi.useRealTimers()
         vi.restoreAllMocks()
     })
 
@@ -181,5 +194,57 @@ describe('Cesium viewer lifecycle', () => {
         expect(globalThis.lgs.viewer).toBe(nextViewer)
         expect(FakeViewer.instances).toHaveLength(2)
         expect(fakeCanvasEventManager).toHaveBeenCalledTimes(2)
+        expect(previousViewer.scene.canvas.removeEventListener).toHaveBeenCalledTimes(2)
+    })
+
+    it('restarts the default render loop after a bounded render error', async () => {
+        vi.useFakeTimers()
+        vi.spyOn(console, 'error').mockImplementation(() => {})
+        vi.spyOn(console, 'warn').mockImplementation(() => {})
+        const viewer = ensureViewerBase()
+        viewer.useDefaultRenderLoop = false
+
+        viewer.scene.renderError.raise(viewer.scene, new Error('shader failure'))
+        await vi.advanceTimersByTimeAsync(0)
+
+        expect(viewer.useDefaultRenderLoop).toBe(true)
+        expect(viewer.forceResize).toHaveBeenCalledTimes(2)
+        expect(viewer.scene.requestRender).toHaveBeenCalledTimes(2)
+
+        viewer.useDefaultRenderLoop = false
+        viewer.scene.renderError.raise(viewer.scene, new Error('shader failure'))
+        await vi.advanceTimersByTimeAsync(0)
+        viewer.useDefaultRenderLoop = false
+        viewer.scene.renderError.raise(viewer.scene, new Error('shader failure'))
+        await vi.advanceTimersByTimeAsync(0)
+
+        expect(viewer.useDefaultRenderLoop).toBe(false)
+        expect(viewer.forceResize).toHaveBeenCalledTimes(3)
+        expect(viewer.scene.requestRender).toHaveBeenCalledTimes(3)
+
+        viewer.scene.postRender.raise()
+        viewer.useDefaultRenderLoop = false
+        viewer.scene.renderError.raise(viewer.scene, new Error('shader failure'))
+        await vi.advanceTimersByTimeAsync(0)
+
+        expect(viewer.useDefaultRenderLoop).toBe(true)
+        expect(viewer.forceResize).toHaveBeenCalledTimes(4)
+        expect(viewer.scene.requestRender).toHaveBeenCalledTimes(4)
+    })
+
+    it('resumes rendering after the WebGL context is restored', async () => {
+        vi.useFakeTimers()
+        vi.spyOn(console, 'error').mockImplementation(() => {})
+        vi.spyOn(console, 'warn').mockImplementation(() => {})
+        const viewer = ensureViewerBase()
+        viewer.useDefaultRenderLoop = false
+
+        viewer.scene.canvas.dispatch('webglcontextlost', {statusMessage: 'context lost'})
+        viewer.scene.canvas.dispatch('webglcontextrestored')
+        await vi.advanceTimersByTimeAsync(0)
+
+        expect(viewer.useDefaultRenderLoop).toBe(true)
+        expect(viewer.forceResize).toHaveBeenCalledTimes(2)
+        expect(viewer.scene.requestRender).toHaveBeenCalledTimes(2)
     })
 })

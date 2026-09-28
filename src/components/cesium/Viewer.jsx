@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-12-11
- * Last modified: 2026-09-25
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,6 +27,7 @@ let cameraUpdateInProgress = false
 let cameraTerrainCorrectionInProgress = false
 
 const VIEWER_BASE_COLOR = Color.fromCssColorString('hsla(125, 87%, 18%, 0.95)')
+const MAX_RENDER_RECOVERY_ATTEMPTS = 2
 
 const isViewerDestroyed = viewer => {
     if (!viewer || typeof viewer.isDestroyed !== 'function') {
@@ -47,14 +48,89 @@ const describeCesiumError = error => ({
     stack:   error?.stack,
 })
 
+/**
+ * Releases pending recovery work and listeners owned by the previous viewer.
+ *
+ * @returns {void} Nothing.
+ */
+const disposeViewerLifecycle = () => {
+    if (!viewerLifecycle) {
+        return
+    }
+
+    if (viewerLifecycle.renderRecoveryTimer !== null) {
+        globalThis.clearTimeout(viewerLifecycle.renderRecoveryTimer)
+    }
+    viewerLifecycle.disposers.forEach(dispose => dispose())
+}
+
+/**
+ * Replaces the state associated with the active Cesium viewer.
+ *
+ * @param {Viewer} viewer - Viewer that owns the new lifecycle.
+ * @returns {void} Nothing.
+ */
 const resetViewerLifecycle = viewer => {
+    disposeViewerLifecycle()
     viewerLifecycle = {
         viewer,
         cameraUpdateHandlerAttached: false,
         canvasEventsInitialized:     false,
         renderErrorAttached:         false,
         canvasErrorListenersAttached: false,
+        renderRecoveryAttempts:      0,
+        renderRecoveryTimer:          null,
+        webglContextLost:             false,
+        disposers:                    [],
     }
+}
+
+/**
+ * Schedules a bounded restart of Cesium's default render loop.
+ *
+ * @param {Viewer} viewer - Viewer whose render loop should be restarted.
+ * @param {{countAttempt?: boolean}} options - Whether the recovery uses the render-error retry budget.
+ * @returns {void} Nothing.
+ */
+const scheduleViewerRecovery = (viewer, {countAttempt = true} = {}) => {
+    const lifecycle = viewerLifecycle
+    if (!lifecycle || lifecycle.viewer !== viewer || isViewerDestroyed(viewer)) {
+        return
+    }
+
+    if (countAttempt && lifecycle.renderRecoveryAttempts >= MAX_RENDER_RECOVERY_ATTEMPTS) {
+        console.error('[LGS1920][Cesium] Render recovery limit reached; waiting for a successful render or context restoration.')
+        return
+    }
+
+    if (lifecycle.renderRecoveryTimer !== null) {
+        return
+    }
+
+    if (countAttempt) {
+        lifecycle.renderRecoveryAttempts += 1
+    }
+    lifecycle.renderRecoveryTimer = globalThis.setTimeout(() => {
+        if (viewerLifecycle !== lifecycle) {
+            return
+        }
+
+        lifecycle.renderRecoveryTimer = null
+        if (isViewerDestroyed(viewer)) {
+            return
+        }
+
+        if (lifecycle.webglContextLost) {
+            return
+        }
+
+        viewer.useDefaultRenderLoop = true
+        viewer.forceResize?.()
+        viewer.scene.requestRender?.()
+        console.warn('[LGS1920][Cesium] Render loop recovery requested.', {
+            attempt: countAttempt ? lifecycle.renderRecoveryAttempts : 'context-restored',
+        })
+    }, 0)
 }
 
 const constrainCameraAboveTerrain = () => {
@@ -142,28 +218,58 @@ const attachViewerDiagnostics = viewer => {
     const scene = viewer.scene
 
     if (!viewerLifecycle.renderErrorAttached) {
-        scene.renderError?.addEventListener?.((renderScene, error) => {
+        const removeRenderErrorListener = scene.renderError?.addEventListener?.((renderScene, error) => {
             console.error('[LGS1920][Cesium] Scene render failed.', {
                 sceneDestroyed: renderScene?.isDestroyed?.(),
                 error:         describeCesiumError(error),
             })
+            scheduleViewerRecovery(viewer)
         })
+
+        if (typeof removeRenderErrorListener === 'function') {
+            viewerLifecycle.disposers.push(removeRenderErrorListener)
+        }
+
+        const removePostRenderListener = scene.postRender?.addEventListener?.(() => {
+            if (viewerLifecycle?.viewer === viewer) {
+                if (viewerLifecycle.renderRecoveryTimer !== null) {
+                    globalThis.clearTimeout(viewerLifecycle.renderRecoveryTimer)
+                    viewerLifecycle.renderRecoveryTimer = null
+                }
+                viewerLifecycle.renderRecoveryAttempts = 0
+            }
+        })
+        if (typeof removePostRenderListener === 'function') {
+            viewerLifecycle.disposers.push(removePostRenderListener)
+        }
         viewerLifecycle.renderErrorAttached = true
     }
 
     if (!viewerLifecycle.canvasErrorListenersAttached && scene.canvas?.addEventListener) {
         const reportContextLost = event => {
+            if (viewerLifecycle?.viewer === viewer) {
+                viewerLifecycle.webglContextLost = true
+            }
             console.error('[LGS1920][Cesium] WebGL context lost.', {
                 statusMessage: event?.statusMessage,
             })
         }
 
         const reportContextRestored = () => {
-            console.warn('[LGS1920][Cesium] WebGL context restored; requesting a render.')
-            scene.requestRender?.()
+            if (viewerLifecycle?.viewer !== viewer) {
+                return
+            }
+
+            viewerLifecycle.webglContextLost = false
+            console.warn('[LGS1920][Cesium] WebGL context restored; restarting the render loop.')
+            scheduleViewerRecovery(viewer, {countAttempt: false})
         }
         scene.canvas.addEventListener('webglcontextlost', reportContextLost)
         scene.canvas.addEventListener('webglcontextrestored', reportContextRestored)
+        viewerLifecycle.disposers.push(() => {
+            scene.canvas.removeEventListener?.('webglcontextlost', reportContextLost)
+            scene.canvas.removeEventListener?.('webglcontextrestored', reportContextRestored)
+        })
         viewerLifecycle.canvasErrorListenersAttached = true
     }
 
