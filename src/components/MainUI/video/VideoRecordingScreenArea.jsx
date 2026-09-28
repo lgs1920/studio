@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-30
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,6 +30,7 @@ import {
 import { buildReplayVideoRenderSpec } from '@Core/ui/replay/ReplayVideoRenderSpec'
 import { getReplayVideoWidgetKeys } from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import {
+    REPLAY_DEFERRED_EXPORT_CANCEL_EVENT,
     REPLAY_DEFERRED_EXPORT_READY_EVENT,
     stopReplayRecordingMonitor,
 } from '@Core/ui/replay/ReplayRecordingMonitor'
@@ -37,7 +38,9 @@ import { exportReplayDeferredMp4 } from '@Core/ui/replay/ReplayDeferredExporter'
 import { CanvasOverlayComposer } from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 import {REPLAY_VIDEO_FPS, REPLAY_VIDEO_QUALITY} from '@Core/ui/replay/ReplayVideoSettings'
 import { WidgetMountErrorDialog } from '@Components/MainUI/video/WidgetMountErrorDialog'
-import { prepareVideoCaptureUi, restoreVideoCaptureUi } from '@Components/MainUI/video/videoEditingCleanup'
+import {
+    cancelVideoRecording, prepareVideoCaptureUi, restoreVideoCaptureUi,
+} from '@Components/MainUI/video/videoEditingCleanup'
 import { UIToast }                                              from '@Utils/UIToast'
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { useSnapshot }           from 'valtio'
@@ -51,6 +54,27 @@ export const VideoRecordingScreenArea = memo(() => {
     const [mountTimeoutOpen, setMountTimeoutOpen] = useState(false)
     const [mountTimeoutError, setMountTimeoutError] = useState({missing: [], timeoutMs: WIDGET_MOUNT_TIMEOUT})
     const [mountTimeoutAction, setMountTimeoutAction] = useState('record')
+
+    /**
+     * Invalidate pending export completion updates before cancellation tears down this screen.
+     * @returns {void} Nothing.
+     */
+    const invalidateRecording = useCallback(() => {
+        _recordingStartToken.current += 1
+    }, [])
+
+    /**
+     * Cancel the active browser recording and restore Replay preparation.
+     * @returns {void} Nothing.
+     */
+    const handleCancelRecording = useCallback(() => {
+        void cancelVideoRecording({invalidateRecording}).finally(stopReplayRecordingMonitor)
+    }, [invalidateRecording])
+
+    useEffect(() => {
+        globalThis.window?.addEventListener(REPLAY_DEFERRED_EXPORT_CANCEL_EVENT, handleCancelRecording)
+        return () => globalThis.window?.removeEventListener(REPLAY_DEFERRED_EXPORT_CANCEL_EVENT, handleCancelRecording)
+    }, [handleCancelRecording])
 
     const updateJourneyReplayVideoCropRect = useCallback((cropRect = null) => {
         const replayStore = lgs.stores?.replay
@@ -145,7 +169,7 @@ export const VideoRecordingScreenArea = memo(() => {
         })
 
         try {
-            const result = await exportReplayDeferredMp4({
+            const exportPromise = exportReplayDeferredMp4({
                 replay:       lgs.stores.replay,
                 journey:      lgs.theJourney,
                 controller:   __.ui.replay?.controller,
@@ -159,19 +183,29 @@ export const VideoRecordingScreenArea = memo(() => {
                 mediaMetadata,
                 filename:     `${journeyTitle || lgs.theJourney?.slug || 'replay'}.mp4`,
             })
+            const exportRuntime = lgs.stores.replay.deferredExportPlan?.runtime
+            if (exportRuntime) {
+                exportRuntime.exportPromise = exportPromise
+            }
+            const result = await exportPromise
 
             if (!(result?.blob instanceof Blob) || result.blob.size <= 0) {
                 throw new Error('Replay export did not produce a video file.')
             }
 
             const dimensions = result.plan?.dimensions ?? renderSpec.dimensions
+            const renderedFrames = Array.isArray(result.frames) ? result.frames : []
+            const lastRenderedFrame = renderedFrames.at(-1)
+            const recordedDurationMillis = lastRenderedFrame
+                                          ? lastRenderedFrame.frameTimeMs + lastRenderedFrame.frameIntervalMs
+                                          : result.plan?.videoTimeline?.durationMillis ?? 0
             globalThis.window?.dispatchEvent?.(new CustomEvent(REPLAY_DEFERRED_EXPORT_READY_EVENT, {
                 detail: {
                     blob: result.blob,
                     filename: result.filename,
                     mediaData: {
                         size: result.blob.size,
-                        duration: result.plan?.videoTimeline?.durationMillis ?? 0,
+                        duration: recordedDurationMillis,
                         fps: result.plan?.videoTimeline?.fps ?? renderSpec.fps,
                         averageFps: result.plan?.videoTimeline?.fps ?? renderSpec.fps,
                         dimensions,
@@ -180,7 +214,7 @@ export const VideoRecordingScreenArea = memo(() => {
                         metadata: mediaMetadata,
                         mimeType: result.blob.type || 'video/mp4',
                         extension: 'mp4',
-                        frameCount: result.plan?.manifest?.frameCount ?? null,
+                        frameCount: result.frameCount ?? renderedFrames.length,
                     },
                 },
             }))

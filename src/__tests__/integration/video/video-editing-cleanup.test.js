@@ -8,14 +8,20 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { cancelVideoEditing, prepareVideoCaptureUi, prepareVideoEditingUi, restoreVideoCaptureUi } from '@Components/MainUI/video/videoEditingCleanup'
+import {
+    cancelVideoEditing,
+    cancelVideoRecording,
+    prepareVideoCaptureUi,
+    prepareVideoEditingUi,
+    restoreVideoCaptureUi,
+} from '@Components/MainUI/video/videoEditingCleanup'
 import { CROP_TOOLS_WIDGETS, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 
 describe('cancelVideoEditing', () => {
@@ -120,5 +126,55 @@ describe('cancelVideoEditing', () => {
         expect(__.ui.replay.leaveReplayPreparation).toHaveBeenCalledTimes(1)
         expect(lgs.stores.ui.video.timelinePreviewActive).toBe(false)
         expect(lgs.stores.replay.recordingSync).toBe(false)
+    })
+
+    it.each(['simple', 'expert'])('discards the active %s Replay recording and closes Replay', async mode => {
+        const abortExport = vi.fn()
+        const invalidateRecording = vi.fn()
+        const linkedPreparation = mode === 'expert'
+        Object.assign(lgs.stores.ui.video, {
+            editing: true,
+            preRecording: true,
+            recordingHQ: true,
+            paused: true,
+            size: 512,
+            timelinePreviewActive: linkedPreparation,
+        })
+        Object.assign(lgs.stores.replay, {
+            active: true,
+            playing: true,
+            paused: true,
+            recordingSync: linkedPreparation,
+            simplePreparationActive: !linkedPreparation,
+            mainUiHidden: true,
+            deferredExportPlan: {runtime: {abortExport}},
+        })
+        __.ui.replay = {
+            leaveReplayPreparation: vi.fn(),
+            pause: vi.fn(),
+        }
+
+        await cancelVideoRecording({invalidateRecording})
+
+        expect(invalidateRecording).toHaveBeenCalledTimes(1)
+        expect(abortExport).toHaveBeenCalledTimes(1)
+        expect(lgs.stores.replay.deferredExportPlan).toBeNull()
+        expect(lgs.stores.replay.recordingSync).toBe(false)
+        expect(lgs.stores.replay.simplePreparationActive).toBe(false)
+        expect(lgs.stores.replay.active).toBe(false)
+        expect(lgs.stores.replay.playing).toBe(false)
+        expect(lgs.stores.replay.paused).toBe(false)
+        expect(lgs.stores.replay.preparationTimeline).toBeNull()
+        expect(lgs.stores.ui.video).toEqual(expect.objectContaining({
+            editing: false,
+            preRecording: false,
+            recordingHQ: false,
+            paused: false,
+            size: 0,
+            timelinePreviewActive: false,
+        }))
+        expect(__.ui.replay.leaveReplayPreparation).toHaveBeenCalledTimes(1)
+        expect(__.ui.drawerManager.close).toHaveBeenCalledTimes(1)
+        expect(lgs.stores.replay.mainUiHidden).toBe(false)
     })
 })

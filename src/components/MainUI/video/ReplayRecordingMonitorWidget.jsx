@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import {Widget} from '@Components/MainUI/widgets/Widget'
 import '@Components/MainUI/video/style.css'
 import {captureReplayCropSnapshot} from '@Core/ui/ReplayCropSnapshot'
 import {
+    REPLAY_DEFERRED_EXPORT_CANCEL_EVENT,
     getReplayRecordingMonitorSnapshot,
     stopReplayRecordingMonitor,
     subscribeReplayRecordingMonitor,
@@ -338,14 +339,27 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
         updateReplayRecordingMonitor({paused: !snapshot.paused})
     }, [snapshot.paused])
 
-    const stopRecording = useCallback(async () => {
+    /**
+     * Stop after the current frame and keep the partial video for sharing.
+     * @returns {void} Nothing.
+     */
+    const stopRecording = useCallback(() => {
         closePictureInPicture()
-        try {
-            globalThis.lgs?.stores?.replay?.deferredExportPlan?.runtime?.abortExport?.()
+        const runtime = globalThis.lgs?.stores?.replay?.deferredExportPlan?.runtime
+        if (typeof runtime?.stopExport === 'function') {
+            runtime.stopExport()
+            updateReplayRecordingMonitor({phase: 'finalizing', paused: false})
         }
-        finally {
-            stopReplayRecordingMonitor()
-        }
+    }, [closePictureInPicture])
+
+    /**
+     * Discard the export and close the transient Replay recording surface.
+     * @returns {void} Nothing.
+     */
+    const cancelRecording = useCallback(() => {
+        closePictureInPicture()
+        globalThis.window?.dispatchEvent?.(new Event(REPLAY_DEFERRED_EXPORT_CANCEL_EVENT))
+        stopReplayRecordingMonitor()
     }, [closePictureInPicture])
 
     const takeSnapshot = useCallback(() => {
@@ -442,10 +456,17 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
                             />
                             <MonitorIconButton
                                 id="replay-monitor-stop"
-                                label="Cancel Replay export"
+                                label="Stop recording and save or share"
                                 icon="stop"
                                 appearance="plain"
                                 onClick={stopRecording}
+                            />
+                            <MonitorIconButton
+                                id="replay-monitor-cancel"
+                                label="Cancel recording and close Replay"
+                                icon="xmark"
+                                appearance="plain"
+                                onClick={cancelRecording}
                             />
                         </div>
                         <div className="replay-recording-monitor-control-group replay-recording-monitor-control-group-end">

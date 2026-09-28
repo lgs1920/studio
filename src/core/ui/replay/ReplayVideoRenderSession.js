@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -196,10 +196,10 @@ export class ReplayVideoRenderSession {
      * This keeps the export deterministic and gives the caller a hook for each
      * rendered frame.
      *
-     * @param {{signal?: AbortSignal|null, onFrame?: Function|null}} options
+     * @param {{signal?: AbortSignal|null, onFrame?: Function|null, shouldStop?: Function|null}} options
      * @returns {Promise<Array<object>>}
      */
-    renderAll = async ({signal = null, onFrame = null} = {}) => {
+    renderAll = async ({signal = null, onFrame = null, shouldStop = null} = {}) => {
         const frames = []
         for (let index = 0; index < this.#timeline.frameCount; index += 1) {
             if (signal?.aborted) {
@@ -210,6 +210,9 @@ export class ReplayVideoRenderSession {
             frames.push(rendered)
             if (typeof onFrame === 'function') {
                 await onFrame(rendered)
+            }
+            if (frames.length > 0 && typeof shouldStop === 'function' && shouldStop(rendered, frames.length)) {
+                break
             }
         }
 

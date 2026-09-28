@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -535,6 +535,62 @@ describe('ReplayDeferredExporter', () => {
         expect(frames[0]).toBe(0)
         expect(frames).toContain('on:0')
         expect(Output.instances.at(-1).setMetadataTags).toHaveBeenCalledWith(mediaMetadata)
+    })
+
+    it('finalizes a shareable partial mp4 after a graceful stop request', async () => {
+        Output.instances.length = 0
+        const renderedFrameIndexes = []
+        const exporter = new ReplayDeferredExporter({
+            timeline: {durationMillis: 1000, fps: 10},
+        })
+
+        const result = await exporter.exportMp4({
+            dimensions: {width: 640, height: 360},
+            buildCanvas: () => ({
+                width: 0,
+                height: 0,
+                getContext: () => ({}),
+            }),
+            renderFrame: async ({frame}) => {
+                renderedFrameIndexes.push(frame.index)
+                return null
+            },
+            shouldStop: (_frame, processedFrames) => processedFrames === 2,
+        })
+
+        expect(result.frameCount).toBe(2)
+        expect(result.frames.map(frame => frame.index)).toEqual([0, 1])
+        expect(renderedFrameIndexes).toEqual([0, 1])
+        expect(result.blob).toBeInstanceOf(Blob)
+        expect(result.blob.size).toBeGreaterThan(0)
+        expect(Output.instances.at(-1).finalize).toHaveBeenCalledTimes(1)
+        expect(Output.instances.at(-1).cancel).not.toHaveBeenCalled()
+    })
+
+    it('cancels the encoder output without finalizing or creating a video blob', async () => {
+        Output.instances.length = 0
+        const abortController = new AbortController()
+        abortController.abort()
+        const renderFrame = vi.fn(async () => null)
+        const exporter = new ReplayDeferredExporter({
+            timeline: {durationMillis: 1000, fps: 10},
+        })
+
+        await expect(exporter.exportMp4({
+            dimensions: {width: 640, height: 360},
+            signal: abortController.signal,
+            buildCanvas: () => ({
+                width: 0,
+                height: 0,
+                getContext: () => ({}),
+            }),
+            renderFrame,
+        })).rejects.toMatchObject({name: 'AbortError'})
+
+        expect(renderFrame).not.toHaveBeenCalled()
+        expect(Output.instances.at(-1).finalize).not.toHaveBeenCalled()
+        expect(Output.instances.at(-1).cancel).toHaveBeenCalledTimes(1)
+        expect(Output.instances.at(-1).target.buffer).toBeNull()
     })
 
     it('cancels the output when the codec fails during frame encoding', async () => {

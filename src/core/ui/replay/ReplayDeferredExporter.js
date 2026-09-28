@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -889,6 +889,7 @@ const initializeReplayExportCreationProgress = ({plan = null} = {}) => {
         exportPaused:                   false,
         exportPausedAt:                 null,
         exportPausedDurationMillis:     0,
+        exportStopRequested:            false,
         exportUpdatedAt:                now,
     })
 
@@ -940,9 +941,25 @@ const installReplayExportRuntimeControls = ({plan = null, abortController = null
         runtime.exportPausedAt = null
         runtime.exportUpdatedAt = now
     }
+    /**
+     * Finish the current encoded frame, then finalize the partial Replay video.
+     * @returns {void} Nothing.
+     */
+    runtime.stopExport = () => {
+        if (runtime.status !== 'exporting' || runtime.exportStopRequested === true) {
+            return
+        }
+
+        runtime.exportStopRequested = true
+        runtime.exportUpdatedAt = runtimeNow()
+        if (runtime.exportPaused === true) {
+            runtime.resumeExport()
+        }
+    }
     runtime.abortExport = () => {
         const controller = abortController ?? runtime.abortController ?? null
         controller?.abort?.()
+        return runtime.exportPromise ?? Promise.resolve()
     }
 
     return runtime
@@ -1194,6 +1211,7 @@ export class ReplayDeferredExporter {
                            renderFrame = null,
                            buildCanvas = null,
                            onFileSize = null,
+                           shouldStop = null,
                        } = {}) => {
         if (typeof renderFrame !== 'function') {
             throw new Error('ReplayDeferredExporter.exportMp4 requires a renderFrame callback.')
@@ -1384,6 +1402,7 @@ export class ReplayDeferredExporter {
             const renderedFrames = []
             const frames = await this.#session.renderAll({
                 signal,
+                shouldStop,
                 onFrame: async rendered => {
                     nextFrameTimestamp = rendered.frameTimeMs / 1000
                     const renderResult = await renderFrame({
@@ -1416,6 +1435,14 @@ export class ReplayDeferredExporter {
                 },
             })
 
+            if (signal?.aborted) {
+                throw new DOMException('The Replay export was cancelled.', 'AbortError')
+            }
+            keepAliveStopped = true
+            if (keepAliveTimer !== null) {
+                clearTimeout(keepAliveTimer)
+                keepAliveTimer = null
+            }
             await source.close()
             await output.finalize()
             outputFinalized = true
@@ -2113,6 +2140,7 @@ export const runReplayDeferredMp4Export = async ({
 
         const result = await exporter.exportMp4({
             signal,
+            shouldStop: () => plan.runtime?.exportStopRequested === true,
             label: plan.label,
             metadata: plan.mediaMetadata ?? mediaMetadata ?? metadata ?? {},
             dimensions: outputDimensions,
@@ -2286,7 +2314,9 @@ export const runReplayDeferredMp4Export = async ({
                 publishReplayRecordingMonitorFrame({
                     canvas,
                     mode: 'hq',
-                    phase: phase?.kind ?? 'rendering',
+                    phase: plan.runtime?.exportStopRequested === true
+                           ? 'finalizing'
+                           : phase?.kind ?? 'rendering',
                     progress: monitorProgressForFrame({
                         frame,
                         frameCount: frame?.frameCount ?? plan.manifest?.frameCount,
@@ -2300,7 +2330,7 @@ export const runReplayDeferredMp4Export = async ({
                 const exportRuntime = updateReplayExportCreationProgress({plan, frame})
                 updateReplayRecordingMonitor({
                     mode: 'hq',
-                    phase: 'encoding',
+                    phase: plan.runtime?.exportStopRequested === true ? 'finalizing' : 'encoding',
                     progress: monitorProgressForFrame({
                         frame,
                         frameCount: frame?.frameCount ?? plan.manifest?.frameCount,
@@ -2318,18 +2348,29 @@ export const runReplayDeferredMp4Export = async ({
         if (signal?.aborted) {
             throw new DOMException('The HQ export was aborted.', 'AbortError')
         }
-        updateReplayExportCreationProgress({
-            plan,
-            frame: {
-                index:      Math.max(0, (finiteNumber(plan.manifest?.frameCount, 1) ?? 1) - 1),
-                frameCount: finiteNumber(plan.manifest?.frameCount, null),
-            },
-            force: true,
-        })
+        const expectedFrameCount = Math.max(0, finiteNumber(plan.manifest?.frameCount, result.frameCount) ?? 0)
+        const renderedFrameCount = Math.max(0, finiteNumber(result.frameCount, result.frames?.length ?? 0) ?? 0)
+        const wasStoppedEarly = plan.runtime?.exportStopRequested === true
+                               && renderedFrameCount < expectedFrameCount
+        if (renderedFrameCount > 0) {
+            updateReplayExportCreationProgress({
+                plan,
+                frame: {
+                    index:      renderedFrameCount - 1,
+                    frameCount: expectedFrameCount,
+                },
+                force: true,
+            })
+        }
         updateReplayRecordingMonitor({
             mode:     'hq',
             phase:    'finalizing',
-            progress: 1,
+            progress: wasStoppedEarly && expectedFrameCount > 0
+                      ? clampProgress(renderedFrameCount / expectedFrameCount)
+                      : 1,
+            frameIndex: renderedFrameCount > 0 ? renderedFrameCount - 1 : null,
+            frameCount: expectedFrameCount,
+            processedFrames: renderedFrameCount,
         })
 
         const exportFilename = filename ?? `${plan.label}.mp4`
@@ -2382,8 +2423,10 @@ export const runReplayDeferredMp4Export = async ({
                 plan.runtime.status = 'warm'
             }
             plan.runtime.abortController = null
+            plan.runtime.exportPromise = null
             plan.runtime.pauseExport = null
             plan.runtime.resumeExport = null
+            plan.runtime.stopExport = null
             plan.runtime.abortExport = null
             plan.runtime.exportPaused = false
             plan.runtime.exportPausedAt = null

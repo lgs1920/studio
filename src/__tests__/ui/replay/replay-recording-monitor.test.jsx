@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -67,6 +67,8 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
 
 import {ReplayRecordingMonitorWidget} from '@Components/MainUI/video/ReplayRecordingMonitorWidget'
 import {
+    REPLAY_DEFERRED_EXPORT_CANCEL_EVENT,
+    getReplayRecordingMonitorSnapshot,
     startReplayRecordingMonitor,
     stopReplayRecordingMonitor,
     updateReplayRecordingMonitor,
@@ -107,6 +109,7 @@ describe('ReplayRecordingMonitorWidget', () => {
 
     afterEach(() => {
         cleanup()
+        vi.restoreAllMocks()
         stopReplayRecordingMonitor()
         globalThis.__ = undefined
         globalThis.lgs = undefined
@@ -155,10 +158,12 @@ describe('ReplayRecordingMonitorWidget', () => {
 
     it('uses the Widget manager contract and routes icon-only recording actions', () => {
         const pauseExport = vi.fn()
+        const stopExport = vi.fn()
         const abortExport = vi.fn()
         globalThis.lgs.stores.replay.deferredExportPlan = {
             runtime: {
                 pauseExport,
+                stopExport,
                 abortExport,
             },
         }
@@ -226,20 +231,31 @@ describe('ReplayRecordingMonitorWidget', () => {
         expect(controlGroups[0].querySelector('#replay-monitor-snapshot')).not.toBeNull()
         expect(controlGroups[1].querySelector('#replay-monitor-pause')).not.toBeNull()
         expect(controlGroups[1].querySelector('#replay-monitor-stop')).not.toBeNull()
+        expect(controlGroups[1].querySelector('#replay-monitor-cancel')).not.toBeNull()
         expect(controlGroups[2].querySelector('#replay-monitor-pip')).toBeNull()
 
         const pauseButton = screen.getByRole('button', {name: 'Pause recording'})
-        const stopButton = screen.getByRole('button', {name: 'Cancel Replay export'})
+        const stopButton = screen.getByRole('button', {name: 'Stop recording and save or share'})
+        const cancelButton = screen.getByRole('button', {name: 'Cancel recording and close Replay'})
         expect(pauseButton.textContent).toBe('')
         expect(stopButton.textContent).toBe('')
+        expect(cancelButton.textContent).toBe('')
+
+        const dispatchEvent = vi.spyOn(globalThis.window, 'dispatchEvent')
 
         fireEvent.click(pauseButton)
         fireEvent.click(screen.getByRole('button', {name: 'Take replay snapshot'}))
         fireEvent.click(stopButton)
+        expect(stopExport).toHaveBeenCalledTimes(1)
+        expect(abortExport).not.toHaveBeenCalled()
+        expect(getReplayRecordingMonitorSnapshot().active).toBe(true)
+        fireEvent.click(cancelButton)
 
         expect(pauseExport).toHaveBeenCalledTimes(1)
-        expect(abortExport).toHaveBeenCalledTimes(1)
+        expect(abortExport).not.toHaveBeenCalled()
+        expect(dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({type: REPLAY_DEFERRED_EXPORT_CANCEL_EVENT}))
         expect(snapshotHarness.capture).toHaveBeenCalledTimes(1)
+        expect(getReplayRecordingMonitorSnapshot().active).toBe(false)
     })
 
     it('uses blinking warning states for preparation and finalization', async () => {
@@ -293,6 +309,7 @@ describe('ReplayRecordingMonitorWidget', () => {
     })
 
     it('closes the whole Recording Picture-in-Picture window on Stop', async () => {
+        const stopExport = vi.fn()
         const abortExport = vi.fn()
         const externalDocument = document.implementation.createHTMLDocument('Recording')
         const externalWindow = {
@@ -301,7 +318,7 @@ describe('ReplayRecordingMonitorWidget', () => {
             addEventListener:    vi.fn(),
             removeEventListener: vi.fn(),
         }
-        globalThis.lgs.stores.replay.deferredExportPlan = {runtime: {abortExport}}
+        globalThis.lgs.stores.replay.deferredExportPlan = {runtime: {stopExport, abortExport}}
         globalThis.documentPictureInPicture = {
             requestWindow: vi.fn().mockResolvedValue(externalWindow),
         }
@@ -320,7 +337,39 @@ describe('ReplayRecordingMonitorWidget', () => {
             .dispatchEvent(new Event('click', {bubbles: true}))
 
         await waitFor(() => expect(externalWindow.close).toHaveBeenCalledTimes(1))
-        expect(abortExport).toHaveBeenCalledTimes(1)
+        expect(stopExport).toHaveBeenCalledTimes(1)
+        expect(abortExport).not.toHaveBeenCalled()
+    })
+
+    it('closes the Recording Picture-in-Picture window and dispatches cancellation from X', async () => {
+        const abortExport = vi.fn()
+        const externalDocument = document.implementation.createHTMLDocument('Recording')
+        const externalWindow = {
+            document: externalDocument,
+            close:     vi.fn(),
+            addEventListener:    vi.fn(),
+            removeEventListener: vi.fn(),
+        }
+        const dispatchEvent = vi.spyOn(globalThis.window, 'dispatchEvent')
+        globalThis.lgs.stores.replay.deferredExportPlan = {runtime: {abortExport}}
+        globalThis.documentPictureInPicture = {
+            requestWindow: vi.fn().mockResolvedValue(externalWindow),
+        }
+        startReplayRecordingMonitor({mode: 'hq'})
+
+        render(<ReplayRecordingMonitorWidget/>)
+        fireEvent.click(screen.getByRole('button', {name: 'Open Recording window in Picture-in-Picture'}))
+
+        await waitFor(() => {
+            expect(externalDocument.body.querySelector('#replay-monitor-cancel')).not.toBeNull()
+        })
+        externalDocument.body.querySelector('#replay-monitor-cancel')
+            .dispatchEvent(new Event('click', {bubbles: true}))
+
+        await waitFor(() => expect(externalWindow.close).toHaveBeenCalledTimes(1))
+        expect(abortExport).not.toHaveBeenCalled()
+        expect(dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({type: REPLAY_DEFERRED_EXPORT_CANCEL_EVENT}))
+        expect(getReplayRecordingMonitorSnapshot().active).toBe(false)
     })
 
     it('opens the complete Recording surface in Document Picture-in-Picture', async () => {
