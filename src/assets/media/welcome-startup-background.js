@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-18
- * Last modified: 2026-09-26
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -57,5 +57,4 @@ applyStartupBackground()
 
 if (mountWelcomeHeroRouteInSplash()) {
     globalThis.performance?.mark?.('lgs.startup.splash-route-mounted')
-    console.info('[LGS1920][WelcomeRoute] mounted in static splash')
 }

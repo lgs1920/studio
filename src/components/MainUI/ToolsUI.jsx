@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-19
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -115,61 +115,6 @@ export const ToolsUI = () => {
 
         return () => appContainer.classList.remove('lgs-video-crop-input-mode')
     }, [video.editing, video.preRecording, video.recordingHQ, video.snapshot, video.finalizing])
-
-    useEffect(() => {
-        if (video.editing !== true || replay.simplePreparationActive !== true) {
-            return undefined
-        }
-
-        const describeElement = element => {
-            if (!(element instanceof Element)) {
-                return null
-            }
-
-            const rect = element.getBoundingClientRect()
-            const style = globalThis.getComputedStyle(element)
-            return {
-                tag:           element.tagName.toLowerCase(),
-                id:            element.id || null,
-                className:     typeof element.className === 'string' ? element.className : null,
-                pointerEvents: style.pointerEvents,
-                position:      style.position,
-                zIndex:        style.zIndex,
-                rect:          {
-                    left:   Math.round(rect.left),
-                    top:    Math.round(rect.top),
-                    width:  Math.round(rect.width),
-                    height: Math.round(rect.height),
-                },
-            }
-        }
-
-        const inspectPointerTarget = event => {
-            const point = {x: event.clientX ?? 0, y: event.clientY ?? 0}
-            const stack = document.elementsFromPoint?.(point.x, point.y) ?? []
-            console.warn('[LGS1920][SimpleReplay] pointer diagnostic', {
-                type:       event.type,
-                target:     describeElement(event.target),
-                topElement: describeElement(document.elementFromPoint?.(point.x, point.y)),
-                stack:      stack.slice(0, 12).map(describeElement),
-                cesium:     describeElement(document.querySelector('#cesium-viewer canvas')),
-                tools:      describeElement(document.querySelector('#lgs-tools-ui')),
-            })
-        }
-
-        document.addEventListener('pointerdown', inspectPointerTarget, true)
-        document.addEventListener('mousedown', inspectPointerTarget, true)
-        document.addEventListener('click', inspectPointerTarget, true)
-        document.addEventListener('wheel', inspectPointerTarget, {capture: true, passive: true})
-
-        console.info('[LGS1920][SimpleReplay] pointer diagnostics enabled')
-        return () => {
-            document.removeEventListener('pointerdown', inspectPointerTarget, true)
-            document.removeEventListener('mousedown', inspectPointerTarget, true)
-            document.removeEventListener('click', inspectPointerTarget, true)
-            document.removeEventListener('wheel', inspectPointerTarget, true)
-        }
-    }, [replay.simplePreparationActive, video.editing])
 
     return (
         <div id="lgs-tools-ui">

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-28
  *
  *
  * Copyright © 2026 LGS1920
@@ -249,7 +249,6 @@ const setupRouteWorker = (layer, canvas, onError) => {
     const onWorkerError = (event) => {
         layer.dataset.routeError = 'worker'
         layer.dataset.routeStatus = 'error'
-        console.error('[LGS1920][WelcomeRoute] worker failed', event.error ?? event.message ?? event)
         onError?.()
     }
     const offscreenCanvas = canvas.transferControlToOffscreen()
@@ -735,7 +734,6 @@ export const WelcomeHeroRoute = ({mountInSplash = false, useWorker = true}) => {
         if (typeof window.WebGLRenderingContext === 'undefined') {
             layer.dataset.routeError = 'webgl-unavailable'
             layer.dataset.routeStatus = 'error'
-            console.warn('[LGS1920][WelcomeRoute] WebGL is unavailable in the splash')
             return undefined
         }
 
@@ -756,7 +754,6 @@ export const WelcomeHeroRoute = ({mountInSplash = false, useWorker = true}) => {
                 delete layer.dataset.routeError
                 layer.dataset.renderMode = 'fallback'
                 layer.dataset.routeStatus = 'ready'
-                console.info('[LGS1920][WelcomeRoute] splash renderer ready', {mode: 'fallback'})
             }
             let fallbackStarted = false
             const startMainThreadFallback = () => {
@@ -769,7 +766,6 @@ export const WelcomeHeroRoute = ({mountInSplash = false, useWorker = true}) => {
                 fallbackCanvas.className = canvas.className
                 fallbackCanvas.setAttribute('aria-hidden', 'true')
                 canvas.replaceWith(fallbackCanvas)
-                console.info('[LGS1920][WelcomeRoute] switching to main-thread renderer')
                 void initializeFallback(fallbackCanvas).catch(error => {
                     layer.dataset.routeError = 'true'
                     layer.dataset.routeStatus = 'error'
@@ -778,11 +774,6 @@ export const WelcomeHeroRoute = ({mountInSplash = false, useWorker = true}) => {
             }
 
             try {
-                const bounds = layer.getBoundingClientRect()
-                console.info('[LGS1920][WelcomeRoute] initializing splash renderer', {
-                    width: bounds.width,
-                    height: bounds.height,
-                })
                 if (useWorker && typeof Worker !== 'undefined' && typeof canvas.transferControlToOffscreen === 'function') {
                     cleanup = setupRouteWorker(layer, canvas, startMainThreadFallback)
                     return
