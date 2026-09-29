@@ -15,9 +15,8 @@
  ******************************************************************************/
 
 import { REPLAY_DRAWER } from '@Core/constants'
-import { normalizeSimpleReplayDuration, REPLAY_LABEL } from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import { REPLAY_LABEL } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {
-    defaultSimpleReplaySettings,
     hasExpertReplayConfiguration,
     initializeExpertReplayFromSimple,
     normalizeExpertReplayCamera,
@@ -63,22 +62,23 @@ export const JourneyReplayButton = (props) => {
     const buttonAriaLabel = isBasicPreparationActive ? 'Start Basic Replay' : ariaLabel
     const buttonTooltipText = isBasicPreparationActive ? 'Start Basic Replay' : tooltipText
     const handleClick = useCallback(() => {
+        const journey = lgs.stores.main?.theJourney ?? lgs.theJourney
+        if (!journey) {
+            return
+        }
         if (typeof onClick === 'function') {
             onClick()
             return
         }
         if (mode === REPLAY_USER_MODE_BASIC) {
-            const simple = {
-                ...(lgs.settings.ui.replay.simple ?? defaultSimpleReplaySettings()),
-                duration: normalizeSimpleReplayDuration(lgs.settings.ui.replay.simple?.duration),
-                camera: {
-                    ...(lgs.settings.ui.replay.simple?.camera ?? defaultSimpleReplaySettings().camera),
-                    altitudeMode: 'constant',
-                    debug: false,
-                    heading: 0,
-                    headingOffset: 0,
-                    positionMode: 'system',
-                },
+            const simple = resolveSimpleReplaySettings({
+                journey: journey.replay?.simple,
+                user: lgs.settings.ui.replay.simple,
+            })
+            simple.camera = {
+                ...simple.camera,
+                altitudeMode: 'constant',
+                debug: false,
             }
             lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_BASIC
             lgs.stores.replay.userMode = REPLAY_USER_MODE_BASIC
@@ -100,7 +100,7 @@ export const JourneyReplayButton = (props) => {
             }
             lgs.stores.ui.video.editing = true
             void Promise.resolve(__.ui.replay?.enterReplayPreparation?.({
-                journey: lgs.theJourney,
+                journey,
                 shouldApply: () => lgs.stores.replay.simplePreparationActive === true,
             })).catch(() => undefined)
             return
@@ -109,7 +109,6 @@ export const JourneyReplayButton = (props) => {
             lgs.stores.replay.simplePreparationActive = false
             lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_EXPERT
             lgs.stores.replay.userMode = REPLAY_USER_MODE_EXPERT
-            const journey = lgs.theJourney
             let shouldPersistExpertCamera = false
             if (journey && !hasExpertReplayConfiguration(journey)) {
                 const simple = resolveSimpleReplaySettings({

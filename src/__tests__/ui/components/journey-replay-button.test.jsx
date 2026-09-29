@@ -69,6 +69,12 @@ describe('JourneyReplayButton synchronized video entry point', () => {
     it('prepares Basic Replay on the map and exposes video launch controls', async () => {
         const enterReplayPreparation = vi.fn()
         globalThis.__.ui.replay = {enterReplayPreparation}
+        globalThis.lgs.settings.ui.replay.simple = {
+            camera: {headingOffset: 8, pitch: -48, positionMode: 'behind'},
+        }
+        globalThis.lgs.theJourney.replay = {
+            simple: {camera: {headingOffset: -24, pitch: -48, positionMode: 'behind'}},
+        }
         render(
             <JourneyReplayButton
                 id="launch-basic-replay"
@@ -85,11 +91,19 @@ describe('JourneyReplayButton synchronized video entry point', () => {
             shouldApply: expect.any(Function),
         }))
         expect(globalThis.lgs.stores.ui.video.editing).toBe(true)
-        expect(globalThis.lgs.settings.ui.replay.simple.camera.heading).toBe(0)
-        expect(globalThis.lgs.settings.ui.replay.simple.camera.headingOffset).toBe(0)
-        expect(globalThis.lgs.settings.ui.replay.simple.camera.positionMode).toBe('system')
-        expect(globalThis.lgs.settings.ui.replay.camera.positionMode).toBe('system')
-        expect(globalThis.lgs.stores.replay.camera.positionMode).toBe('system')
+        expect(globalThis.lgs.settings.ui.replay.simple.camera).toMatchObject({
+            headingOffset: -24,
+            pitch: -48,
+            positionMode: 'behind',
+        })
+        expect(globalThis.lgs.settings.ui.replay.camera).toMatchObject({
+            headingOffset: -24,
+            positionMode: 'behind',
+        })
+        expect(globalThis.lgs.stores.replay.camera).toMatchObject({
+            headingOffset: -24,
+            positionMode: 'behind',
+        })
         expect(globalThis.lgs.settings.ui.replay.simple.camera.debug).toBe(false)
         expect(globalThis.lgs.stores.replay.simplePreparationActive).toBe(true)
         await waitFor(() => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,6 +50,29 @@ describe('Journey replay logical camera pose', () => {
         expect(pose.pitch).toBeCloseTo(-Math.PI / 4)
         expect(pose.cameraHeight).toBe(420)
         expect(pose.logical).toBe(true)
+    })
+
+    it('applies the configured Basic camera angle relative to the trace heading', () => {
+        const axisHeading = Math.PI / 2
+        const pose = resolveJourneyReplayLogicalCameraPose({
+            sample: {
+                progress: 0.5,
+                longitude: 2,
+                latitude: 48,
+                altitude: 120,
+            },
+            axisHeading,
+            cameraSettings: {
+                positionMode: 'behind',
+                headingOffset: 30,
+                altitudeMode: 'constant',
+                altitude: 1000,
+                pitch: -60,
+            },
+            markerSettings: {},
+        })
+
+        expect(pose.heading).toBeCloseTo(axisHeading + (Math.PI / 6))
     })
 
     it('uses the predicted path heading for HQ Navigation system mode', () => {

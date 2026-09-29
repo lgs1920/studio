@@ -45,7 +45,7 @@ import {
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
 import {replayCameraFor, replaySceneFor, replayViewerFor} from './ReplayRenderTarget'
 import {REPLAY_USER_MODE_BASIC} from './ReplayUserModeConstants'
-import {syncJourneyExpertReplayCamera} from './ReplayUserModes'
+import {syncJourneyExpertReplayCamera, syncJourneySimpleReplayCamera} from './ReplayUserModes'
 
 import {
     REPLAY_HEADING_TRANSITION_DURATION_SECONDS,
@@ -711,8 +711,6 @@ export const persistCameraSettings =  (mode, updates) => {
             ...(isBasicMode
                 ? {
                     altitudeMode: REPLAY_CAMERA_ALTITUDE_CONSTANT,
-                    heading: 0,
-                    headingOffset: 0,
                     positionMode: REPLAY_CAMERA_POSITION_BEHIND,
                     debug: false,
                 }
@@ -733,8 +731,6 @@ export const persistCameraSettings =  (mode, updates) => {
                         ...(simple.camera ?? {}),
                         ...next,
                         altitudeMode: REPLAY_CAMERA_ALTITUDE_CONSTANT,
-                        heading: 0,
-                        headingOffset: 0,
                         positionMode: REPLAY_CAMERA_POSITION_BEHIND,
                         debug: false,
                     },
@@ -746,6 +742,9 @@ export const persistCameraSettings =  (mode, updates) => {
         }
         if (!isBasicMode) {
             syncJourneyExpertReplayCamera(next)
+        }
+        else {
+            syncJourneySimpleReplayCamera(next)
         }
 
         return next

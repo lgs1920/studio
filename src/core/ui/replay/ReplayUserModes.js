@@ -41,6 +41,7 @@ export const DEFAULT_REPLAY_USER_MODE = REPLAY_USER_MODE_BASIC
 
 const clone = value => JSON.parse(JSON.stringify(value))
 const expertCameraPersistTimers = new WeakMap()
+const simpleCameraPersistTimers = new WeakMap()
 const EXPERT_CAMERA_PERSIST_DELAY_MS = 250
 
 /**
@@ -117,6 +118,49 @@ export const syncJourneyExpertReplayCamera = (camera) => {
         }
         expertCameraPersistTimers.set(journey, setTimeout(() => {
             expertCameraPersistTimers.delete(journey)
+            void journey.persistToDatabase()
+        }, EXPERT_CAMERA_PERSIST_DELAY_MS))
+    }
+
+    return nextCamera
+}
+
+/**
+ * Keep an explicitly configured journey Simple camera in sync with its live
+ * preparation edits, then persist it after a short quiet period.
+ *
+ * @param {Object} camera - Complete normalized camera settings.
+ * @returns {Object|null} The synchronized camera, or null without journey-level Simple settings.
+ */
+export const syncJourneySimpleReplayCamera = (camera) => {
+    const lgs = globalThis.lgs
+    const journey = lgs?.stores?.main?.theJourney ?? lgs?.theJourney
+    const replay = journey?.replay
+    const simple = replay?.simple
+    if (!journey || !simple || typeof simple !== 'object') {
+        return null
+    }
+
+    const nextCamera = normalizeJourneyReplayCamera(Object.assign({}, simple.camera, camera, {
+        altitudeMode: 'constant',
+        positionMode: REPLAY_CAMERA_POSITION_BEHIND,
+        debug: false,
+    }))
+    journey.replay = {
+        ...replay,
+        simple: {
+            ...simple,
+            camera: nextCamera,
+        },
+    }
+
+    if (typeof journey.persistToDatabase === 'function') {
+        const pendingTimer = simpleCameraPersistTimers.get(journey)
+        if (pendingTimer !== undefined) {
+            clearTimeout(pendingTimer)
+        }
+        simpleCameraPersistTimers.set(journey, setTimeout(() => {
+            simpleCameraPersistTimers.delete(journey)
             void journey.persistToDatabase()
         }, EXPERT_CAMERA_PERSIST_DELAY_MS))
     }

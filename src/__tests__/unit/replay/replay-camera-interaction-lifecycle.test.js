@@ -145,6 +145,47 @@ describe('JourneyReplay camera interaction lifecycle', () => {
         }
     })
 
+    it('persists the Basic camera angle relative to the replay trace', () => {
+        const settings = defaultJourneyReplaySettings()
+        const camera = {...settings.camera, headingOffset: 0, positionMode: 'behind'}
+        const persistToDatabase = vi.fn()
+        const journey = {
+            replay: {simple: {camera: {...camera, headingOffset: -12}}},
+            persistToDatabase,
+        }
+        settings.userMode = 'basic'
+        settings.simple = {camera}
+        globalThis.lgs = {
+            settings: {ui: {replay: settings}},
+            stores: {replay: {camera}},
+            theJourney: journey,
+        }
+        vi.useFakeTimers()
+
+        try {
+            const next = persistCameraSettings({
+                [JOURNEY_REPLAY_INTERNAL_CALL]: {},
+                [JOURNEY_REPLAY_INTERNAL_STATE]: {},
+            }, {headingOffset: 32})
+
+            expect(next).toMatchObject({headingOffset: 32, positionMode: 'behind'})
+            expect(globalThis.lgs.settings.ui.replay.simple.camera).toMatchObject({
+                headingOffset: 32,
+                positionMode: 'behind',
+            })
+            expect(journey.replay.simple.camera).toMatchObject({
+                headingOffset: 32,
+                positionMode: 'behind',
+            })
+            expect(globalThis.lgs.stores.replay.camera).toMatchObject({headingOffset: 32})
+            vi.advanceTimersByTime(250)
+            expect(persistToDatabase).toHaveBeenCalledOnce()
+        }
+        finally {
+            vi.useRealTimers()
+        }
+    })
+
     it('ignores unauthorised Cesium move events once replay is inactive', () => {
         const replay = defaultJourneyReplaySettings()
         const cameraListeners = {}
