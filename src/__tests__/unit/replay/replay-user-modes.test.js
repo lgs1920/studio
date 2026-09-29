@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,13 +22,15 @@ import {
     normalizeReplayUserMode,
     resetExpertReplayFromSimple,
     resolveSimpleReplaySettings,
+    syncJourneyExpertReplayCamera,
     REPLAY_USER_MODE_BASIC,
     REPLAY_USER_MODE_EXPERT,
 } from '@Core/ui/replay/ReplayUserModes'
 import {
+    getJourneyReplaySettings,
     normalizeJourneyReplaySettings,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
-import {describe, expect, it} from 'vitest'
+import {describe, expect, it, vi} from 'vitest'
 
 describe('Replay user modes', () => {
     it('defaults to Basic and normalizes unknown modes', () => {
@@ -111,5 +113,76 @@ describe('Replay user modes', () => {
 
         expect(reset.expert.camera.altitude).toBe(simple.camera.altitude)
         expect(reset.expert.timeline.zoomPercent).toBe(50)
+    })
+
+    it('uses and persists the edited Expert camera as the journey replay camera', () => {
+        const previousLgs = globalThis.lgs
+        const persistToDatabase = vi.fn()
+        const journey = {
+            replay: {
+                expert: {
+                    camera: {altitude: 900, pitch: -60},
+                    timeline: {zoomPercent: 70},
+                },
+            },
+            persistToDatabase,
+        }
+        globalThis.lgs = {
+            settings: {
+                ui: {
+                    replay: {
+                        userMode: REPLAY_USER_MODE_EXPERT,
+                        camera: {altitude: 900, pitch: -60},
+                    },
+                },
+            },
+            stores: {replay: {}},
+            theJourney: journey,
+        }
+        vi.useFakeTimers()
+
+        try {
+            syncJourneyExpertReplayCamera({altitude: 2400, pitch: -42})
+
+            expect(journey.replay.expert.camera).toMatchObject({altitude: 2400, pitch: -42})
+            expect(journey.replay.expert.timeline).toEqual({zoomPercent: 70})
+            expect(globalThis.lgs.stores.replay.camera).toMatchObject({altitude: 2400, pitch: -42})
+            expect(getJourneyReplaySettings().camera).toMatchObject({altitude: 2400, pitch: -42})
+            expect(persistToDatabase).not.toHaveBeenCalled()
+
+            vi.advanceTimersByTime(250)
+            expect(persistToDatabase).toHaveBeenCalledOnce()
+        } finally {
+            vi.useRealTimers()
+            if (previousLgs === undefined) {
+                delete globalThis.lgs
+            } else {
+                globalThis.lgs = previousLgs
+            }
+        }
+    })
+
+    it('does not synchronize Expert camera edits while Simple Replay is active', () => {
+        const previousLgs = globalThis.lgs
+        const journey = {
+            replay: {expert: {camera: {altitude: 900, pitch: -60}}},
+            persistToDatabase: vi.fn(),
+        }
+        globalThis.lgs = {
+            settings: {ui: {replay: {userMode: REPLAY_USER_MODE_BASIC}}},
+            theJourney: journey,
+        }
+
+        try {
+            expect(syncJourneyExpertReplayCamera({altitude: 2400, pitch: -42})).toBeNull()
+            expect(journey.replay.expert.camera).toEqual({altitude: 900, pitch: -60})
+            expect(journey.persistToDatabase).not.toHaveBeenCalled()
+        } finally {
+            if (previousLgs === undefined) {
+                delete globalThis.lgs
+            } else {
+                globalThis.lgs = previousLgs
+            }
+        }
     })
 })

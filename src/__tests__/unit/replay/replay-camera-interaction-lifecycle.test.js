@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 import {Cartesian3} from 'cesium'
 import {defaultJourneyReplaySettings, REPLAY_MARKER_MODE_HYSTERESIS} from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {bindMarkerInteractions} from '@Core/ui/replay/JourneyReplayCameraBinding'
-import {updateCameraFromCesiumControls} from '@Core/ui/replay/JourneyReplayCameraState'
+import {persistCameraSettings, updateCameraFromCesiumControls} from '@Core/ui/replay/JourneyReplayCameraState'
 import {applyCameraFrame} from '@Core/ui/replay/JourneyReplayCameraTransition'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from '@Core/ui/replay/JourneyReplayInternal'
 import {afterEach, describe, expect, it, vi} from 'vitest'
@@ -99,6 +99,50 @@ describe('JourneyReplay camera interaction lifecycle', () => {
         expect(call.startCameraLiveSyncLoop).not.toHaveBeenCalled()
         expect(call.updateCameraFromCesiumControls).not.toHaveBeenCalled()
         expect(refreshCamera).not.toHaveBeenCalled()
+    })
+
+    it('synchronizes manual Expert camera settings with the journey replay configuration', () => {
+        const previousLgs = globalThis.lgs
+        const persistToDatabase = vi.fn()
+        const camera = {...defaultJourneyReplaySettings().camera, altitude: 900, pitch: -60, positionMode: 'behind'}
+        const journey = {
+            replay: {expert: {camera}},
+            persistToDatabase,
+        }
+        globalThis.lgs = {
+            settings: {
+                ui: {
+                    replay: {
+                        ...defaultJourneyReplaySettings(),
+                        userMode: 'expert',
+                        camera,
+                    },
+                },
+            },
+            stores: {replay: {camera}},
+            theJourney: journey,
+        }
+        vi.useFakeTimers()
+
+        try {
+            const next = persistCameraSettings({
+                [JOURNEY_REPLAY_INTERNAL_CALL]: {},
+                [JOURNEY_REPLAY_INTERNAL_STATE]: {},
+            }, {altitude: 2200, pitch: -36})
+
+            expect(next).toMatchObject({altitude: 2200, pitch: -36})
+            expect(journey.replay.expert.camera).toMatchObject({altitude: 2200, pitch: -36})
+
+            vi.advanceTimersByTime(250)
+            expect(persistToDatabase).toHaveBeenCalledOnce()
+        } finally {
+            vi.useRealTimers()
+            if (previousLgs === undefined) {
+                delete globalThis.lgs
+            } else {
+                globalThis.lgs = previousLgs
+            }
+        }
     })
 
     it('ignores unauthorised Cesium move events once replay is inactive', () => {

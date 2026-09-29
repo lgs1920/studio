@@ -2,7 +2,7 @@
 
 Status: current implementation inventory
 
-Date: 2026-09-27
+Date: 2026-09-29
 
 ## Purpose
 
@@ -26,9 +26,11 @@ handoff; it does not encode video.
 
 Simple/Expert support is present but incomplete:
 
-- Expert settings are initialized from Simple settings on first entry, but
-  drawer edits are not consistently written back to the persisted
-  `journey.replay.expert` configuration.
+- Expert camera settings are initialized from Simple settings on first entry.
+  Camera edits from the drawer and direct map interaction now synchronize with
+  `journey.replay.expert.camera` and persist after editing settles. Progression
+  and profile-info drawer edits are still not consistently written back to the
+  journey configuration.
 - The Simple launch path stores `positionMode: 'system'`, while the effective
   Simple camera resolver forces a behind-camera position. Persisted and
   applied settings can therefore disagree.

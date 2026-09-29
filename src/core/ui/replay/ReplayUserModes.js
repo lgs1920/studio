@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -40,6 +40,8 @@ export {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT}
 export const DEFAULT_REPLAY_USER_MODE = REPLAY_USER_MODE_BASIC
 
 const clone = value => JSON.parse(JSON.stringify(value))
+const expertCameraPersistTimers = new WeakMap()
+const EXPERT_CAMERA_PERSIST_DELAY_MS = 250
 
 /**
  * Normalize a persisted Replay user mode.
@@ -62,6 +64,65 @@ export const normalizeExpertReplayCamera = (camera = {}) => normalizeJourneyRepl
         ? REPLAY_CAMERA_POSITION_AHEAD
         : REPLAY_CAMERA_POSITION_BEHIND,
 }))
+
+/**
+ * Synchronize an Expert camera edit with the current journey and persist it
+ * after a short quiet period so slider movement does not write every frame.
+ *
+ * @param {Object} camera - Complete normalized camera settings.
+ * @returns {Object|null} The synchronized camera, or null outside Expert mode.
+ */
+export const syncJourneyExpertReplayCamera = (camera) => {
+    const lgs = globalThis.lgs
+    const replaySettings = lgs?.settings?.ui?.replay
+    const journey = lgs?.theJourney
+    if (replaySettings?.userMode !== REPLAY_USER_MODE_EXPERT || !journey) {
+        return null
+    }
+
+    const replay = journey.replay ?? {}
+    const expert = replay.expert ?? {}
+    const nextCamera = normalizeExpertReplayCamera(Object.assign(
+        {},
+        expert.camera,
+        camera,
+        {
+            hysteresis: {
+                ...(expert.camera?.hysteresis ?? {}),
+                ...(camera?.hysteresis ?? {}),
+            },
+            playback: {
+                ...(expert.camera?.playback ?? {}),
+                ...(camera?.playback ?? {}),
+            },
+        },
+    ))
+
+    journey.replay = {
+        ...replay,
+        expert: {
+            ...expert,
+            camera: nextCamera,
+        },
+    }
+    replaySettings.camera = nextCamera
+    if (lgs?.stores?.replay) {
+        lgs.stores.replay.camera = nextCamera
+    }
+
+    if (typeof journey.persistToDatabase === 'function') {
+        const pendingTimer = expertCameraPersistTimers.get(journey)
+        if (pendingTimer !== undefined) {
+            clearTimeout(pendingTimer)
+        }
+        expertCameraPersistTimers.set(journey, setTimeout(() => {
+            expertCameraPersistTimers.delete(journey)
+            void journey.persistToDatabase()
+        }, EXPERT_CAMERA_PERSIST_DELAY_MS))
+    }
+
+    return nextCamera
+}
 
 /**
  * Return product defaults for the compact Simple Replay workflow.

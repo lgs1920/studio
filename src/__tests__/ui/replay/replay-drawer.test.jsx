@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -334,6 +334,33 @@ describe('JourneyReplayDrawer', () => {
         await waitFor(() => {
             expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBe(-20)
             expect(globalThis.lgs.stores.replay.camera.pitch).toBe(-20)
+        })
+    })
+
+    it('writes Expert camera preparation edits back to the current journey', async () => {
+        const camera = {
+            ...defaultJourneyReplaySettings().camera,
+            positionMode: 'behind',
+        }
+        const journey = {
+            slug: 'journey-a',
+            replay: {expert: {camera}},
+            persistToDatabase: vi.fn(),
+        }
+        globalThis.lgs.theJourney = journey
+        globalThis.lgs.settings.ui.replay.userMode = 'expert'
+        globalThis.lgs.settings.ui.replay.camera = camera
+        globalThis.lgs.stores.replay.camera = proxy({...camera})
+
+        const view = render(<JourneyReplayDrawer/>)
+        const pitchInput = view.getByLabelText('Pitch (deg)')
+        fireEvent.focus(pitchInput)
+        fireEvent.input(pitchInput, {target: {value: '-38'}})
+
+        await waitFor(() => {
+            expect(globalThis.lgs.theJourney.replay.expert.camera.pitch).toBe(-38)
+            expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBe(-38)
+            expect(globalThis.lgs.stores.replay.camera.pitch).toBe(-38)
         })
     })
 

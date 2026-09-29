@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -45,6 +45,7 @@ import {
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
 import {replayCameraFor, replaySceneFor, replayViewerFor} from './ReplayRenderTarget'
 import {REPLAY_USER_MODE_BASIC} from './ReplayUserModeConstants'
+import {syncJourneyExpertReplayCamera} from './ReplayUserModes'
 
 import {
     REPLAY_HEADING_TRANSITION_DURATION_SECONDS,
@@ -742,6 +743,9 @@ export const persistCameraSettings =  (mode, updates) => {
         }
         if (globalThis.lgs?.stores?.replay) {
             globalThis.lgs.stores.replay.camera = next
+        }
+        if (!isBasicMode) {
+            syncJourneyExpertReplayCamera(next)
         }
 
         return next

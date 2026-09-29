@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -54,6 +54,7 @@ import {
     resetExpertReplayFromSimple,
     normalizeExpertReplayCamera,
     resolveSimpleReplaySettings,
+    syncJourneyExpertReplayCamera,
     REPLAY_USER_MODE_EXPERT,
 } from '@Core/ui/replay/ReplayUserModes'
 import { isJourneyReplayCameraActive } from '@Core/ui/replay/JourneyReplayRuntime'
@@ -712,6 +713,9 @@ export const JourneyReplayDrawer = memo(() => {
         const nextCamera = mergeCamera(lgs.settings.ui.replay.camera, updates)
         lgs.settings.ui.replay.camera = nextCamera
         lgs.stores.replay.camera = nextCamera
+        if (isExpertMode) {
+            syncJourneyExpertReplayCamera(nextCamera)
+        }
         lgs.stores.replay.cameraUpdateSource = 'drawer'
         if (cameraUpdateSourceClearTimer.current !== null) {
             clearTimeout(cameraUpdateSourceClearTimer.current)
@@ -735,7 +739,7 @@ export const JourneyReplayDrawer = memo(() => {
                 source:             'drawer',
             })
         }
-    }, [replayState.active, replayState.paused, replayState.playing, replayState.sample, refreshJourneyReplay, stopRotateIfNeeded])
+    }, [isExpertMode, replayState.active, replayState.paused, replayState.playing, replayState.sample, refreshJourneyReplay, stopRotateIfNeeded])
 
     useEffect(() => {
         if (!isExpertMode || replaySettings.camera.positionMode !== REPLAY_CAMERA_POSITION_SYSTEM) {
