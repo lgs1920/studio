@@ -25,7 +25,7 @@ import {
 }                                                               from '@Assets/media/welcome-background-media'
 import { formatBuildInfo }                                    from '@Utils/BuildInfoUtils'
 import {
-    WaButton, WaFormatDate, WaIcon,
+    WaAnimation, WaButton, WaFormatDate, WaIcon,
 }                                                               from '@web.awesome.me/webawesome-pro/dist/react'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
@@ -61,6 +61,7 @@ export const WelcomeHero = ({
                          }) => {
     const _welcomeVideo = useRef(null)
     const _incomingWelcomeVideo = useRef(null)
+    const _ctaAnimation = useRef(null)
     const _crossfadeTimer = useRef(null)
     const [activeVideoSlot, setActiveVideoSlot] = useState('primary')
     const [primaryVideoChoice, setPrimaryVideoChoice] = useState(() => backgroundMedia.id
@@ -76,6 +77,9 @@ export const WelcomeHero = ({
         backgroundMedia.imageSources.length > 0 ? 'ready' : 'unavailable'
     )
     const [showReadyMessage, setShowReadyMessage] = useState(false)
+    const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => (
+        globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false
+    ))
     const readyToEnter = initComplete && appReady
     const initializationMessage = updateInProgress
         ? 'Applying the Studio update…'
@@ -98,6 +102,26 @@ export const WelcomeHero = ({
         ? currentVideoSource
         : getBannerMediaSource(secondaryVideoChoice)
     const canChangeVideo = videoChoices.length > 1 && Boolean(activeVideoChoice)
+
+    useEffect(() => {
+        const reducedMotionQuery = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')
+        if (!reducedMotionQuery) {
+            return undefined
+        }
+
+        /** Keep the CTA animation aligned with the user's current motion preference. */
+        const updateReducedMotionPreference = () => setPrefersReducedMotion(reducedMotionQuery.matches)
+        updateReducedMotionPreference()
+        reducedMotionQuery.addEventListener?.('change', updateReducedMotionPreference)
+
+        return () => reducedMotionQuery.removeEventListener?.('change', updateReducedMotionPreference)
+    }, [])
+
+    useEffect(() => {
+        if (!prefersReducedMotion && _ctaAnimation.current) {
+            _ctaAnimation.current.play = true
+        }
+    }, [prefersReducedMotion])
 
     useEffect(() => {
         const splashElement = document.querySelector('#lgs-boot-splash')
@@ -233,6 +257,38 @@ export const WelcomeHero = ({
         onEnter?.()
     }, [onEnter, readyToEnter])
 
+    const callToActionButtons = (
+        <div id="welcome-enter-call-for-action" className="welcome-enter-call-for-action">
+            <div className="welcome-enter-call-for-action-inner">
+                <WaButton
+                    className="welcome-site-button"
+                    appearance="outlined"
+                    variant="neutral"
+                    size="m"
+                    href={websiteUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                >
+                    <WaIcon slot="start" name="globe-pointer" variant="regular"/>
+                    {'Visit Our Site'}
+                </WaButton>
+                <WaButton
+                    className="welcome-enter-button"
+                    variant="brand"
+                    size="m"
+                    disabled={!readyToEnter}
+                    onClick={enterStudio}
+                >
+                    <WaIcon slot="start"
+                            name="clapperboard-play"
+                            variant="regular"
+                            aria-hidden="true"/>
+                    {'Enter Studio'}
+                </WaButton>
+            </div>
+        </div>
+    )
+
     return (
         <div id="welcome-hero"
              className={`lgs-theme${videoReady ? ' welcome-hero-video-ready' : ''}${imageVisible ? ' welcome-hero-image-visible' : ''}${videoTransitioning ? ' welcome-hero-video-transitioning' : ''}${incomingVideoReady ? ' welcome-hero-video-crossfade-ready' : ''}`}
@@ -323,33 +379,18 @@ export const WelcomeHero = ({
 
             <div className="welcome-hero-shell">
                 <section className="welcome-hero-content" aria-label="LGS1920 Studio launch">
-                    <div id="welcome-enter-call-for-action" className="welcome-enter-call-for-action">
-                        <WaButton
-                            className="welcome-site-button"
-                            appearance="outlined"
-                            variant="neutral"
-                            size="m"
-                            href={websiteUrl}
-                            target="_blank"
-                            rel="noreferrer"
+                    {prefersReducedMotion ? callToActionButtons : (
+                        <WaAnimation
+                            ref={_ctaAnimation}
+                            name="fadeInUp"
+                            duration={650}
+                            easing="ease-out"
+                            fill="both"
+                            iterations={1}
                         >
-                            <WaIcon slot="start" name="globe-pointer" variant="regular"/>
-                            {'Visit Our Site'}
-                        </WaButton>
-                        <WaButton
-                            className="welcome-enter-button"
-                            variant="brand"
-                            size="m"
-                            disabled={!readyToEnter}
-                            onClick={enterStudio}
-                        >
-                            <WaIcon slot="start"
-                                    name="clapperboard-play"
-                                    variant="regular"
-                                    aria-hidden="true"/>
-                            {'Enter Studio'}
-                        </WaButton>
-                    </div>
+                            {callToActionButtons}
+                        </WaAnimation>
+                    )}
                     {(!readyToEnter || showReadyMessage) && (
                         <p className="welcome-initialization-message welcome-initialization-callout" role="status">
                             {readyToEnter ? WELCOME_READY_MESSAGE : initializationMessage}

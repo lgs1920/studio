@@ -25,14 +25,32 @@ vi.mock('@Components/MainUI/WelcomeHeroControls', () => ({
     WelcomeHeroControls: () => <div aria-label="Welcome hero controls"/>,
 }))
 
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
-    WaButton: ({children, href, ...props}) => href
-        ? <a href={href} {...props}>{children}</a>
-        : <button {...props}>{children}</button>,
-    WaFormatDate: ({date, ...props}) => <time {...props}>{date}</time>,
-    WaIcon: ({name, animation, ...props}) => <span data-animation={animation} data-icon={name} {...props}/>,
-    WaSpinner: props => <wa-spinner {...props}/>,
-}))
+vi.mock('@web.awesome.me/webawesome-pro/dist/react', async () => {
+    const {forwardRef} = await import('react')
+
+    return {
+        WaAnimation: forwardRef(({children, delay, duration, easing, fill, iterations, name, play}, ref) => (
+            <wa-animation
+                ref={ref}
+                data-name={name}
+                data-duration={duration}
+                data-delay={delay}
+                data-easing={easing}
+                data-fill={fill}
+                data-iterations={iterations}
+                data-play={play === undefined ? 'unset' : String(play)}
+            >
+                {children}
+            </wa-animation>
+        )),
+        WaButton: ({children, href, ...props}) => href
+            ? <a href={href} {...props}>{children}</a>
+            : <button {...props}>{children}</button>,
+        WaFormatDate: ({date, ...props}) => <time {...props}>{date}</time>,
+        WaIcon: ({name, animation, ...props}) => <span data-animation={animation} data-icon={name} {...props}/>,
+        WaSpinner: props => <wa-spinner {...props}/>,
+    }
+})
 
 import { WelcomeBranding } from '@Components/MainUI/WelcomeBranding'
 import { WelcomeHero } from '@Components/MainUI/WelcomeHero'
@@ -45,6 +63,7 @@ describe('WelcomeHero', () => {
     afterEach(() => {
         cleanup()
         stopWelcomeHeroRouteInSplash()
+        vi.unstubAllGlobals()
         document.querySelector('#lgs-boot-splash-status')?.remove()
         vi.useRealTimers()
         globalThis.lgs = undefined
@@ -76,6 +95,49 @@ describe('WelcomeHero', () => {
         fireEvent.click(enterButton)
 
         expect(onEnter).toHaveBeenCalledTimes(1)
+    })
+
+    it('uses one finite Web Awesome fade-in-up animation for the splash CTA group', () => {
+        globalThis.lgs = {
+            versions: {studio: '1.0.0'},
+            configuration: {website: {domain: 'lgs1920.fr', protocol: 'https'}},
+        }
+        globalThis.__ = {app: {buildUrl: ({domain, protocol}) => `${protocol}://${domain}`}}
+
+        const {rerender} = render(<WelcomeHero initComplete appReady/>)
+
+        const animations = [...document.querySelectorAll('wa-animation')]
+        expect(animations).toHaveLength(1)
+        expect(animations[0].dataset.name).toBe('fadeInUp')
+        expect(animations.every(animation => animation.dataset.duration === '650')).toBe(true)
+        expect(animations.every(animation => animation.dataset.iterations === '1')).toBe(true)
+        expect(animations[0].dataset.play).toBe('unset')
+        expect(animations[0].play).toBe(true)
+        expect(animations[0].querySelectorAll('.welcome-enter-call-for-action-inner > *')).toHaveLength(2)
+
+        // Web Awesome clears `play` when the finite animation finishes.
+        animations[0].play = false
+        rerender(<WelcomeHero initComplete={false} appReady={false}/>)
+        expect(animations[0].play).toBe(false)
+    })
+
+    it('skips splash CTA animation when reduced motion is preferred', () => {
+        vi.stubGlobal('matchMedia', vi.fn(() => ({
+            matches: true,
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+        })))
+        globalThis.lgs = {
+            versions: {studio: '1.0.0'},
+            configuration: {website: {domain: 'lgs1920.fr', protocol: 'https'}},
+        }
+        globalThis.__ = {app: {buildUrl: ({domain, protocol}) => `${protocol}://${domain}`}}
+
+        render(<WelcomeHero initComplete appReady/>)
+
+        expect(document.querySelectorAll('wa-animation')).toHaveLength(0)
+        expect(screen.getByRole('link', {name: /Visit Our Site/})).toBeTruthy()
+        expect(screen.getByRole('button', {name: /Enter Studio/})).toBeTruthy()
     })
 
     it('renders the build date with Web Awesome', () => {

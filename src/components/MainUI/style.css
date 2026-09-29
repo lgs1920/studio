@@ -1147,25 +1147,17 @@ body.mobile .orbit-widget-body {
 .welcome-enter-call-for-action {
     position: absolute;
     top: calc(var(--welcome-content-top) + var(--welcome-cta-offset));
-    left: 50%;
+    right: 0;
+    left: 0;
+    margin-inline: auto;
+    width: min(28rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
+}
+
+.welcome-enter-call-for-action-inner {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    width: min(28rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
-    transform: translateX(-50%);
     gap: var(--lgs-gutter-s);
-    animation: welcome-cta-appear 420ms cubic-bezier(.22, 1, .36, 1) both;
-}
-
-@keyframes welcome-cta-appear {
-    from {
-        transform: translate(-50%, .55rem) scale(.98);
-    }
-
-    to {
-        transform: translate(-50%, 0) scale(1);
-        opacity: 1;
-    }
 }
 
 .welcome-enter-call-for-action .welcome-site-button::part(base) {
@@ -1208,14 +1200,6 @@ body.mobile .orbit-widget-body {
     .welcome-branding-slogan {
         top: calc(42% + 3.4rem);
         max-width: 100%;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .welcome-enter-call-for-action {
-        animation: none;
-        opacity: 1;
-        transform: translateX(-50%);
     }
 }
 
