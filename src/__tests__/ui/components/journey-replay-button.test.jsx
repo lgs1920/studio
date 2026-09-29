@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-28
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -99,6 +99,7 @@ describe('JourneyReplayButton synchronized video entry point', () => {
         })
 
         expect(globalThis.lgs.settings.ui.replay.userMode).toBe('basic')
+        expect(globalThis.lgs.stores.replay.userMode).toBe('basic')
     })
 
     it('forces a journey-relative camera position when entering Expert Replay', () => {
@@ -119,6 +120,7 @@ describe('JourneyReplayButton synchronized video entry point', () => {
         expect(globalThis.lgs.theJourney.replay.expert.camera.positionMode).toBe('behind')
         expect(globalThis.lgs.settings.ui.replay.camera.positionMode).toBe('behind')
         expect(globalThis.lgs.stores.replay.camera.positionMode).toBe('behind')
+        expect(globalThis.lgs.stores.replay.userMode).toBe('expert')
     })
 
     it('keeps the Expert Replay icon upright', () => {
@@ -156,6 +158,7 @@ describe('JourneyReplayButton synchronized video entry point', () => {
         expect(globalThis.lgs.settings.ui.replay.camera).toMatchObject(expertCamera)
         expect(globalThis.lgs.stores.replay.camera).toMatchObject(expertCamera)
         expect(globalThis.lgs.settings.ui.replay.userMode).toBe('expert')
+        expect(globalThis.lgs.stores.replay.userMode).toBe('expert')
         expect(globalThis.lgs.settings.ui.replay.recordingSync).toBe(true)
         expect(globalThis.lgs.stores.replay.recordingSync).toBe(true)
         expect(globalThis.lgs.stores.replay.simplePreparationActive).toBe(false)

@@ -29,13 +29,8 @@ consumption remain open.
 When a drawer is open during a journey change, apply a progressive blur and then restore the normal state.
 When the journey change and focus happen immediately within the change immediacy window, use a synchronized flash while hiding the old journey and showing the new one.
 Otherwise, scale the blur duration with the journey change duration.
-
 Create a feature issue for `1.0.0/backlog/LGS1920/chdenat`.
 
-Add a Cancel (X) action beside the browser recording Stop button. Selecting it
-must close Replay, delete all recorded data, and avoid offering the recording
-for saving or export.
-par contre le bouton stop permet d'enregistrer de partager ce qui a deja été enregistré
 
 
 Bind the popup opened by the cog icon to the widget instead of the button.

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-05
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -81,6 +81,7 @@ export const JourneyReplayButton = (props) => {
                 },
             }
             lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_BASIC
+            lgs.stores.replay.userMode = REPLAY_USER_MODE_BASIC
             lgs.settings.ui.replay.simple = simple
             lgs.settings.ui.replay.duration = simple.duration
             lgs.settings.ui.replay.camera = simple.camera
@@ -107,6 +108,7 @@ export const JourneyReplayButton = (props) => {
         if (mode === REPLAY_USER_MODE_EXPERT) {
             lgs.stores.replay.simplePreparationActive = false
             lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_EXPERT
+            lgs.stores.replay.userMode = REPLAY_USER_MODE_EXPERT
             const journey = lgs.theJourney
             let shouldPersistExpertCamera = false
             if (journey && !hasExpertReplayConfiguration(journey)) {

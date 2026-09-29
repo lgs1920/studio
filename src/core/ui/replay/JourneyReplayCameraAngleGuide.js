@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-27
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -211,13 +211,55 @@ const bearingBetween = (start, end) => {
 }
 
 /**
- * Resolve the departure bearing over the first 300 metres of the trace.
- * Using an interpolated real trace position avoids a point-count-dependent
- * angle when the source sampling density changes.
+ * Resolve a live direction from the source points surrounding the replay
+ * sample. When no live sample is available, the departure bearing is resolved
+ * over the first 300 metres of the trace.
  *
- * @param {Array<Object>} points - Valid trace points in order.
- * @returns {number} Departure bearing in radians.
+ * @param {Object} sample - Current replay sample.
+ * @returns {{anchor: Object, axisHeading: number, cameraGroundHeight: number, directionPoint: Object}|null} Live guide direction.
  */
+const directionFromReplaySample = sample => {
+    const anchor = mapPositionFrom(sample)
+    if (!anchor) {
+        return null
+    }
+
+    const startPoint = mapPositionFrom(sample.source?.startPoint)
+    const endPoint = mapPositionFrom(sample.source?.endPoint)
+    const hasForwardPoint = endPoint && mapDistanceBetween(anchor, endPoint) > 1
+    const hasPreviousPoint = startPoint && mapDistanceBetween(startPoint, anchor) > 1
+    const axisHeading = hasForwardPoint
+        ? bearingBetween(anchor, endPoint)
+        : hasPreviousPoint ? bearingBetween(startPoint, anchor) : null
+    if (!Number.isFinite(axisHeading)) {
+        return null
+    }
+
+    const angularDistance = CAMERA_ANGLE_GUIDE_DEPARTURE_DISTANCE_METERS / EARTH_RADIUS_METERS
+    const startLatitude = anchor.latitude * Math.PI / 180
+    const startLongitude = anchor.longitude * Math.PI / 180
+    const destinationLatitude = Math.asin(
+        (Math.sin(startLatitude) * Math.cos(angularDistance))
+        + (Math.cos(startLatitude) * Math.sin(angularDistance) * Math.cos(axisHeading)),
+    )
+    const destinationLongitude = startLongitude + Math.atan2(
+        Math.sin(axisHeading) * Math.sin(angularDistance) * Math.cos(startLatitude),
+        Math.cos(angularDistance) - (Math.sin(startLatitude) * Math.sin(destinationLatitude)),
+    )
+    const cameraGroundHeight = hasForwardPoint ? endPoint.height : anchor.height
+
+    return {
+        anchor,
+        axisHeading,
+        cameraGroundHeight,
+        directionPoint: {
+            height:    anchor.height,
+            latitude:  destinationLatitude * 180 / Math.PI,
+            longitude: destinationLongitude * 180 / Math.PI,
+        },
+    }
+}
+
 const departureHeadingFrom = points => bearingBetween(points[0], departurePointFrom(points))
 
 /**
@@ -235,26 +277,29 @@ const displayAngleFrom = value => {
 }
 
 /**
- * Resolve the map guide geometry from the first coordinate of the first trace.
+ * Resolve live map guide geometry from the replay sample, or the departure
+ * geometry while Replay is being prepared.
  *
  * @param {Object} options - Guide options.
  * @param {Object|null} options.journey - Journey containing the route.
  * @param {Object} options.camera - Replay camera settings.
+ * @param {Object|null} [options.sample=null] - Current replay sample.
  * @returns {Object|null} Renderer-independent guide geometry.
  */
-export const resolveJourneyReplayCameraAngleGuide = ({journey, camera} = {}) => {
+export const resolveJourneyReplayCameraAngleGuide = ({journey, camera, sample = null} = {}) => {
     const positionMode = camera?.positionMode
     if (!journey || positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
         return null
     }
 
-    const direction = firstTrackDirection(firstTrackSegment(firstTrackFrom(journey)))
+    const direction = directionFromReplaySample(sample)
+        ?? firstTrackDirection(firstTrackSegment(firstTrackFrom(journey)))
     if (!direction) {
         return null
     }
 
-    const anchor = direction.start
-    const axisHeading = departureHeadingFrom(direction.points)
+    const anchor = direction.anchor ?? direction.start
+    const axisHeading = direction.axisHeading ?? departureHeadingFrom(direction.points)
     const angleDegrees = displayAngleFrom(camera?.headingOffset)
     const baseHeading = positionMode === REPLAY_CAMERA_POSITION_AHEAD
         ? axisHeading + Math.PI
@@ -266,10 +311,10 @@ export const resolveJourneyReplayCameraAngleGuide = ({journey, camera} = {}) => 
         anchor,
         angleDegrees,
         axisHeading,
-        cameraGroundHeight: direction.next.height,
+        cameraGroundHeight: direction.cameraGroundHeight ?? direction.next.height,
         cameraHeading,
         coneHeading: cameraHeading + Math.PI,
-        coneHeight: Math.max(direction.start.height, direction.next.height) + CAMERA_ANGLE_GUIDE_ELEVATION_OFFSET_METERS,
+        coneHeight: Math.max(anchor.height, direction.cameraGroundHeight ?? direction.next.height) + CAMERA_ANGLE_GUIDE_ELEVATION_OFFSET_METERS,
         directionPoint: direction.directionPoint,
         mode: positionMode === REPLAY_CAMERA_POSITION_AHEAD ? 'Ahead' : 'Behind',
         offsetRadians: angleRadians,
@@ -340,6 +385,48 @@ const coneLengthFrom = (viewer, anchor, currentLength = CAMERA_ANGLE_GUIDE_CAMER
     }
     catch {
         return safeCurrentLength
+    }
+}
+
+/**
+ * Resolve the world-space anchors and transforms used to draw a guide.
+ *
+ * @param {Object} viewer - Cesium viewer.
+ * @param {Object} guide - Renderer-independent guide geometry.
+ * @param {number} currentConeLength - Current viewport-capped cone length.
+ * @returns {Object} World-space overlay geometry.
+ */
+const worldGeometryFrom = (viewer, guide, currentConeLength = CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS) => {
+    const groundAnchor = Cartesian3.fromDegrees(guide.anchor.longitude, guide.anchor.latitude, guide.anchor.height)
+    const coneHeight = Number.isFinite(guide.coneHeight) ? guide.coneHeight : guide.anchor.height
+    const anchor = Cartesian3.fromDegrees(guide.anchor.longitude, guide.anchor.latitude, coneHeight)
+    const visibilityAnchor = Cartesian3.fromDegrees(
+        guide.anchor.longitude,
+        guide.anchor.latitude,
+        guide.anchor.height + CAMERA_ANGLE_GUIDE_ELEVATION_OFFSET_METERS,
+    )
+    const transform = Transforms.eastNorthUpToFixedFrame(anchor)
+    const groundTransform = Transforms.eastNorthUpToFixedFrame(groundAnchor)
+    const directionPosition = guide.directionPoint
+        ? Cartesian3.fromDegrees(
+            guide.directionPoint.longitude,
+            guide.directionPoint.latitude,
+            coneHeight,
+        )
+        : positionAtHeading(
+            transform,
+            guide.axisHeading,
+            CAMERA_ANGLE_GUIDE_DEPARTURE_DISTANCE_METERS,
+        )
+
+    return {
+        anchor,
+        coneLength: coneLengthFrom(viewer, anchor, currentConeLength),
+        directionPosition,
+        groundAnchor,
+        groundTransform,
+        transform,
+        visibilityAnchor,
     }
 }
 
@@ -1218,27 +1305,7 @@ export const mountJourneyReplayCameraAngleGuide = (viewer, guide, colors = {}) =
     }
 
     removeJourneyReplayCameraAngleGuide(viewer)
-    const groundAnchor = Cartesian3.fromDegrees(guide.anchor.longitude, guide.anchor.latitude, guide.anchor.height)
-    const coneHeight = Number.isFinite(guide.coneHeight) ? guide.coneHeight : guide.anchor.height
-    const anchor = Cartesian3.fromDegrees(guide.anchor.longitude, guide.anchor.latitude, coneHeight)
-    const visibilityAnchor = Cartesian3.fromDegrees(
-        guide.anchor.longitude,
-        guide.anchor.latitude,
-        guide.anchor.height + CAMERA_ANGLE_GUIDE_ELEVATION_OFFSET_METERS,
-    )
-    const transform = Transforms.eastNorthUpToFixedFrame(anchor)
-    const groundTransform = Transforms.eastNorthUpToFixedFrame(groundAnchor)
-    const directionPosition = guide.directionPoint
-        ? Cartesian3.fromDegrees(
-            guide.directionPoint.longitude,
-            guide.directionPoint.latitude,
-            coneHeight,
-        )
-        : positionAtHeading(
-            transform,
-            guide.axisHeading,
-            CAMERA_ANGLE_GUIDE_DEPARTURE_DISTANCE_METERS,
-        )
+    const worldGeometry = worldGeometryFrom(viewer, guide)
     const brandColorValue = typeof colors === 'string'
         ? colors
         : colors?.brandColor ?? colors?.headingColor
@@ -1260,19 +1327,11 @@ export const mountJourneyReplayCameraAngleGuide = (viewer, guide, colors = {}) =
         return false
     }
 
-    const record = {
-        anchor,
-        ...overlayParts,
-        groundAnchor,
-        groundTransform,
+    const record = Object.assign({}, worldGeometry, overlayParts, {
         guide,
         depthProbePending: true,
-        directionPosition,
-        coneLength: coneLengthFrom(viewer, anchor),
         projectionRetryCount: 0,
-        transform,
-        visibilityAnchor,
-    }
+    })
     cameraAngleGuideRecords.set(viewer, record)
     record.removeCameraChangedListener = viewer.camera?.changed?.addEventListener?.(() => {
         record.depthProbePending = true
@@ -1313,14 +1372,18 @@ export const mountJourneyReplayCameraAngleGuide = (viewer, guide, colors = {}) =
  */
 export const updateJourneyReplayCameraAngleGuide = (viewer, guide) => {
     const record = viewer ? cameraAngleGuideRecords.get(viewer) : null
-    if (!record || !guide || guideGeometryKeyFrom(record.guide) !== guideGeometryKeyFrom(guide)) {
+    if (!record || !guide || record.guide.mode !== guide.mode) {
         return false
     }
 
+    const geometryChanged = guideGeometryKeyFrom(record.guide) !== guideGeometryKeyFrom(guide)
     const angleChanged = record.guide.coneHeading !== guide.coneHeading
         || record.guide.angleDegrees !== guide.angleDegrees
+    if (geometryChanged) {
+        Object.assign(record, worldGeometryFrom(viewer, guide, record.coneLength))
+    }
     record.guide = guide
-    if (angleChanged) {
+    if (geometryChanged || angleChanged) {
         record.depthProbePending = true
     }
     updateGuideGeometry(viewer, record, false)

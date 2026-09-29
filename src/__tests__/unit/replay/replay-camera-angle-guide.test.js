@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-27
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -119,6 +119,30 @@ describe('replay camera angle map guide', () => {
         expect(guide.directionPoint.latitude).toBeCloseTo(expectedCoordinate, 8)
         expect(guide.directionPoint.longitude).toBeCloseTo(expectedCoordinate, 8)
         expect(guide.axisHeading).toBeCloseTo(Math.PI / 4, 6)
+    })
+
+    it('follows the active replay sample and the local trace direction', () => {
+        const guide = resolveJourneyReplayCameraAngleGuide({
+            camera: {
+                headingOffset: 15,
+                positionMode:  'behind',
+            },
+            journey,
+            sample: {
+                longitude:  2.5,
+                latitude:   48.5,
+                altitude:   150,
+                source: {
+                    startPoint: {longitude: 2.49, latitude: 48.5, altitude: 145},
+                    endPoint:   {longitude: 2.51, latitude: 48.5, altitude: 155},
+                },
+            },
+        })
+
+        expect(guide.anchor).toEqual({height: 150, latitude: 48.5, longitude: 2.5})
+        expect(guide.axisHeading).toBeCloseTo(Math.PI / 2, 3)
+        expect(guide.directionPoint.longitude).toBeGreaterThan(guide.anchor.longitude)
+        expect(guide.angleDegrees).toBe(-15)
     })
 
     it('mounts a synchronized DOM cone with solid circular icons', () => {
@@ -326,6 +350,23 @@ describe('replay camera angle map guide', () => {
             camera: {headingOffset: 12, positionMode: 'ahead'},
             journey,
         }))).toBe(true)
+        const guidePositionBeforePlayback = outerPath.getAttribute('d')
+        const movingGuide = resolveJourneyReplayCameraAngleGuide({
+            camera: {headingOffset: 12, positionMode: 'ahead'},
+            journey,
+            sample: {
+                longitude:  2.002,
+                latitude:   48.002,
+                altitude:   120,
+                source: {
+                    startPoint: {longitude: 2.001, latitude: 48.001, altitude: 110},
+                    endPoint:   {longitude: 2.003, latitude: 48.003, altitude: 130},
+                },
+            },
+        })
+        expect(updateJourneyReplayCameraAngleGuide(viewer, movingGuide)).toBe(true)
+        expect(container.querySelector('.replay-camera-angle-guide-dom')).toBe(overlay)
+        expect(outerPath.getAttribute('d')).not.toBe(guidePositionBeforePlayback)
         occludeDeparture = true
         postRenderListener()
         expect(overlay.style.visibility).toBe('hidden')
