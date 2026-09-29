@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-09-28
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -78,7 +78,7 @@ export const LogoWidget = ({id, context, zIndex, widgetsBoard: persistedWidgetsB
             minScale:        1,
             maxScale:        1.8,
             scale:           {x: 1.2, y: 1.2},
-            ratio:           {aspectRatio: 1.5033, locked: true},
+            ratio:           {aspectRatio: 1.3388, locked: true},
             scalable:        true,
             rotatable:       false,
             showControlBox:  true,

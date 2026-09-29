@@ -8,15 +8,15 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 :root {
-    --lgs-logo-widget-height: calc(1.105 * var(--lgs-line-dimension, 32px));
-    --lgs-logo-widget-width: calc(var(--lgs-logo-widget-height) * 1.5033);
+    --lgs-logo-widget-height: calc(1.2408 * var(--lgs-line-dimension, 32px));
+    --lgs-logo-widget-width: calc(var(--lgs-logo-widget-height) * 1.3388);
 }
 
 .lgs-logo-widget-shell {
