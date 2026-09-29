@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-09-28
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -159,14 +159,14 @@ const preparePictureInPictureDocument = externalWindow => {
  * @param {string} [props.className] - Additional button class names.
  * @returns {JSX.Element} Icon-only button.
  */
-const MonitorIconButton = ({id, label, icon, library, className = '', ...buttonProps}) => (
+const MonitorIconButton = ({id, label, tooltipLabel = label, showTitle = true, icon, library, className = '', ...buttonProps}) => (
     <span className="replay-recording-monitor-button-wrapper lgs-widget-no-drag">
-        <WaTooltip for={id}>{label}</WaTooltip>
+        <WaTooltip for={id}>{tooltipLabel}</WaTooltip>
         <WaButton
             id={id}
             className={`replay-recording-monitor-icon-button lgs-widget-no-drag${className ? ` ${className}` : ''}`}
             size="s"
-            title={label}
+            title={showTitle ? label : undefined}
             aria-label={label}
             {...buttonProps}
         >
@@ -450,6 +450,8 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
                             <MonitorIconButton
                                 id="replay-monitor-pause"
                                 label={snapshot.paused ? 'Resume recording' : 'Pause recording'}
+                                tooltipLabel={snapshot.paused ? 'Resume' : 'Pause'}
+                                showTitle={false}
                                 icon={snapshot.paused ? 'play' : 'pause'}
                                 appearance="plain"
                                 onClick={togglePause}
@@ -457,6 +459,8 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
                             <MonitorIconButton
                                 id="replay-monitor-stop"
                                 label="Stop recording and save or share"
+                                tooltipLabel="Stop"
+                                showTitle={false}
                                 icon="stop"
                                 appearance="plain"
                                 onClick={stopRecording}
@@ -464,6 +468,8 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
                             <MonitorIconButton
                                 id="replay-monitor-cancel"
                                 label="Cancel recording and close Replay"
+                                tooltipLabel="Cancel"
+                                showTitle={false}
                                 icon="xmark"
                                 appearance="plain"
                                 onClick={cancelRecording}

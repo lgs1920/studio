@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-09-28
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -240,6 +240,12 @@ describe('ReplayRecordingMonitorWidget', () => {
         expect(pauseButton.textContent).toBe('')
         expect(stopButton.textContent).toBe('')
         expect(cancelButton.textContent).toBe('')
+        expect(pauseButton.hasAttribute('title')).toBe(false)
+        expect(stopButton.hasAttribute('title')).toBe(false)
+        expect(cancelButton.hasAttribute('title')).toBe(false)
+        expect(document.querySelector('#replay-monitor-pause')?.previousElementSibling?.textContent).toBe('Pause')
+        expect(document.querySelector('#replay-monitor-stop')?.previousElementSibling?.textContent).toBe('Stop')
+        expect(document.querySelector('#replay-monitor-cancel')?.previousElementSibling?.textContent).toBe('Cancel')
 
         const dispatchEvent = vi.spyOn(globalThis.window, 'dispatchEvent')
 

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-20
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,7 +32,7 @@ import {
     normalizeSimpleReplayDuration,
     SIMPLE_REPLAY_DURATIONS,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
-import { WaButton, WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useSnapshot } from 'valtio'
 import { VideoRecordingSettingsMenuContent } from './VideoRecordingSettingsMenus'
@@ -287,12 +287,13 @@ export const VideoRecordingSettingsToolbar = memo(({
     const replaySettingsTrigger = compactReplaySettings ? (
         <>
             <div className="simple-replay-settings-summary" aria-label="Current Replay settings">
+                <WaTooltip for={replaySettingsTriggerId} placement="top">{'Video Settings'}</WaTooltip>
                 <WaButton
                     id={replaySettingsTriggerId}
                     size="s"
                     variant="brand"
                     appearance={openPopup === SIMPLE_SETTINGS_POPUP ? 'outlined' : 'plain'}
-                    aria-label="Replay settings"
+                    aria-label="Video Settings"
                     aria-expanded={openPopup === SIMPLE_SETTINGS_POPUP}
                     onClick={() => togglePopup(SIMPLE_SETTINGS_POPUP)}
                 >
@@ -439,14 +440,16 @@ export const VideoRecordingSettingsToolbar = memo(({
 
                 {showActions && timelineSettings ? (
                     <>
+                        <WaTooltip for="open-replay-settings-from-timeline" placement="top">
+                            {'Replay Settings'}
+                        </WaTooltip>
                         <WaButton
                             id="open-replay-settings-from-timeline"
                             size="s"
                             variant="brand"
                             appearance="plain"
                             className="video-recording-settings-action video-recording-settings-replay"
-                            title="Journey Replay settings"
-                            aria-label="Journey Replay settings"
+                            aria-label="Replay Settings"
                             onClick={handleReplaySettings}
                         >
                             <WaIcon name="sliders" variant="regular" label=""/>
@@ -455,33 +458,41 @@ export const VideoRecordingSettingsToolbar = memo(({
                 ) : null}
 
                 {showActions && compactReplaySettings ? (
-                    <WaButton
-                        id="video-start-recording"
-                        size="s"
-                        variant="brand"
-                        appearance="plain"
-                        className="video-recording-settings-action video-recorder-start-recording"
-                        aria-label="Record"
-                        onClick={() => void handleReplayRecording()}
-                    >
-                        <WaIcon name="clapperboard-play" label=""/>
-                        <span>{'Record'}</span>
-                    </WaButton>
+                    <>
+                        <WaTooltip for="video-start-recording" placement="top">{'Start Record'}</WaTooltip>
+                        <WaButton
+                            id="video-start-recording"
+                            size="s"
+                            variant="brand"
+                            appearance="plain"
+                            className="video-recording-settings-action video-recorder-start-recording"
+                            aria-label="Record"
+                            onClick={() => void handleReplayRecording()}
+                        >
+                            <WaIcon name="clapperboard-play" label=""/>
+                            <span>{'Record'}</span>
+                        </WaButton>
+                    </>
                 ) : null}
 
                 {showActions ? <span className="video-recording-settings-separator" aria-hidden="true"/> : null}
 
-                {showActions ? <WaButton
-                    id="video-cancel-editing"
-                    size="s"
-                    appearance="plain"
-                    className="video-recording-settings-cancel"
-                    aria-label="Cancel"
-                    onClick={() => void handleCancel()}
-                >
-                    <WaIcon name="xmark" label=""/>
-                    <span>{'Cancel'}</span>
-                </WaButton> : null}
+                {showActions ? (
+                    <>
+                        <WaTooltip for="video-cancel-editing" placement="top">{'Cancel'}</WaTooltip>
+                        <WaButton
+                            id="video-cancel-editing"
+                            size="s"
+                            appearance="plain"
+                            className="video-recording-settings-cancel"
+                            aria-label="Cancel"
+                            onClick={() => void handleCancel()}
+                        >
+                            <WaIcon name="xmark" label=""/>
+                            <span>{'Cancel'}</span>
+                        </WaButton>
+                    </>
+                ) : null}
             </div>
         </div>
     )

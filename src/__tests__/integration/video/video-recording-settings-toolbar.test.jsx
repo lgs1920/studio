@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,7 +33,7 @@ vi.mock('@Components/MainUI/video/toolbox/VideoPresetToolbar', () => ({
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaButton: ({children, ...props}) => <button type="button" {...props}>{children}</button>,
     WaIcon: ({name}) => <span data-icon={name}/>,
-    WaTooltip: ({children}) => <span>{children}</span>,
+    WaTooltip: ({children, for: targetId}) => <span data-tooltip-for={targetId}>{children}</span>,
 }))
 
 vi.mock('@Components/MainUI/video/videoEditingCleanup', () => ({
@@ -189,13 +189,16 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(screen.getByText('16:9')).not.toBeNull()
         expect(screen.getByText('High · 30 FPS')).not.toBeNull()
         expect(screen.getByText('15s')).not.toBeNull()
-        expect(screen.getByRole('button', {name: 'Replay settings'}).querySelector('[data-icon="gear"]')).not.toBeNull()
+        expect(screen.getByRole('button', {name: 'Video Settings'}).querySelector('[data-icon="gear"]')).not.toBeNull()
+        expect(document.querySelector(`[data-tooltip-for="${screen.getByRole('button', {name: 'Video Settings'}).id}"]`)?.textContent).toBe('Video Settings')
+        expect(document.querySelector('[data-tooltip-for="video-start-recording"]')?.textContent).toBe('Start Record')
+        expect(document.querySelector('[data-tooltip-for="video-cancel-editing"]')?.textContent).toBe('Cancel')
         expect(document.querySelector('.simple-replay-settings-summary__separator')).not.toBeNull()
         expect(document.querySelector('.simple-replay-settings-summary')?.nextElementSibling?.classList).toContain('video-recording-settings-separator')
         expect(screen.queryByRole('button', {name: 'Journey Replay Settings'})).toBeNull()
         expect(screen.queryByRole('button', {name: 'Ratio: 16:9'})).toBeNull()
 
-        fireEvent.click(screen.getByRole('button', {name: 'Replay settings'}))
+        fireEvent.click(screen.getByRole('button', {name: 'Video Settings'}))
         expect(screen.getByTestId('settings-popup').dataset.placement).toBe('bottom')
         expect(screen.getByTestId('ratio-popup-content').dataset.unifiedChoices).toBe('true')
         expect(screen.getByText('Ratio')).not.toBeNull()
@@ -216,21 +219,25 @@ describe('VideoRecordingSettingsToolbar', () => {
         render(<VideoRecordingSettingsToolbar mainTheme mode="actions" timelineSettings/>)
 
         const summary = document.querySelector('.simple-replay-settings-summary')
-        expect(summary.firstElementChild.getAttribute('aria-label')).toBe('Replay settings')
+        expect(summary.querySelector('button')?.getAttribute('aria-label')).toBe('Video Settings')
         expect(screen.getByText('16:9')).not.toBeNull()
         expect(screen.getByText('High · 30 FPS')).not.toBeNull()
-        expect(screen.getByRole('button', {name: 'Replay settings'}).querySelector('[data-icon="gear"]')).not.toBeNull()
+        expect(screen.getByRole('button', {name: 'Video Settings'}).querySelector('[data-icon="gear"]')).not.toBeNull()
+        expect(document.querySelector('[data-tooltip-for="open-replay-settings-from-timeline"]')?.textContent).toBe('Replay Settings')
         expect(document.querySelector('.simple-replay-settings-summary__separator')).not.toBeNull()
         expect(document.querySelector('.simple-replay-settings-summary')?.nextElementSibling?.classList).toContain('video-recording-settings-separator')
-        expect(screen.getByRole('button', {name: 'Journey Replay settings'})).not.toBeNull()
+        const replaySettingsButton = screen.getByRole('button', {name: 'Replay Settings'})
+        expect(replaySettingsButton.hasAttribute('title')).toBe(false)
         expect(screen.getByRole('button', {name: 'Record'})).not.toBeNull()
+        expect(document.querySelector('[data-tooltip-for="video-start-recording"]')?.textContent).toBe('Start Record')
+        expect(document.querySelector('[data-tooltip-for="video-cancel-editing"]')?.textContent).toBe('Cancel')
         expect(screen.queryByText('15s')).toBeNull()
         expect(screen.queryByText('Duration')).toBeNull()
 
-        fireEvent.click(screen.getByRole('button', {name: 'Journey Replay settings'}))
+        fireEvent.click(screen.getByRole('button', {name: 'Replay Settings'}))
         expect(globalThis.__.ui.drawerManager.toggle).toHaveBeenCalledWith('replay-drawer')
 
-        fireEvent.click(screen.getByRole('button', {name: 'Replay settings'}))
+        fireEvent.click(screen.getByRole('button', {name: 'Video Settings'}))
         expect(screen.getByTestId('settings-popup').dataset.placement).toBe('bottom')
         expect(screen.getByTestId('ratio-popup-content').dataset.unifiedChoices).toBe('true')
         expect(screen.getByTestId('preset-popup-content').dataset.compactSimple).toBe('true')
