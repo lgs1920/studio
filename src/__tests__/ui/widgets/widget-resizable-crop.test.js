@@ -23,7 +23,7 @@ describe('WidgetResizable crop lifecycle', () => {
         globalThis.lgs = undefined
     })
 
-    it('keeps the live crop config and dispatches only the final resize update', async () => {
+    it('masks crop widgets only after dimensions change and dispatches only the final resize update', async () => {
         const originalRequestAnimationFrame = globalThis.requestAnimationFrame
         let pendingFrame = null
         globalThis.requestAnimationFrame = vi.fn(callback => {
@@ -91,7 +91,18 @@ describe('WidgetResizable crop lifecycle', () => {
                 direction: [1, 1],
                 setFixedDirection: vi.fn(),
             })
-            expect(lgs.stores.ui.video.cropper.resizing).toBe(true)
+            expect(lgs.stores.ui.video.cropper.resizing).toBe(false)
+            resizable.onResize({
+                width:     200,
+                height:    112,
+                direction: [1, 1],
+                drag:      {beforeDist: [0, 0]},
+            }, {
+                widget: {current: target},
+                child:  {current: null},
+            }, vi.fn())
+            expect(lgs.stores.ui.video.cropper.resizing).toBe(false)
+
             resizable.onResize({
                 width:     240,
                 height:    135,
@@ -102,6 +113,7 @@ describe('WidgetResizable crop lifecycle', () => {
                 child:  {current: null},
             }, vi.fn())
 
+            expect(lgs.stores.ui.video.cropper.resizing).toBe(true)
             expect(pendingFrame).toEqual(expect.any(Function))
             pendingFrame()
             expect(widgetCropper.applyCropToOverlay).toHaveBeenCalledWith(config)
