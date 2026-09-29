@@ -7,7 +7,7 @@ description: Build or style LGS1920 interfaces with Web Awesome 3, FontAwesome, 
 
 Use this skill for new or redesigned UI. Inspect nearby components, theme tokens, existing Web Awesome usage, and `.aiassistant/rules/development-standards.md` first.
 
-The project baseline is Web Awesome Pro `3.12.0`, matching the package manifest
+The project baseline is Web Awesome Pro `3.14.0`, matching the package manifest
 and lockfile. When the installed Web Awesome version changes, review the
 affected legacy component guidance, tokens, patterns, and React wrapper APIs
 against the official changelog and component references. Update this skill and
@@ -17,12 +17,13 @@ verification as follow-up work.
 
 Workflow:
 
-1. Reuse the closest existing Web Awesome component and interaction pattern.
-2. Keep layout responsive and consistent with the project drawer, toolbar, and on-map conventions.
-3. Use Web Awesome tokens and project CSS variables. Every new CSS custom property needs an English purpose comment.
-4. Preserve keyboard access, disabled and selected contrast, focus behavior, labels, and loading or error states.
-5. Use FontAwesome icons through the existing integration and add shortcut documentation when introducing shortcuts.
-6. Test the component at narrow and wide layouts and in light or dark theme contexts when relevant.
+1. Inspect the installed Web Awesome components, APIs, React wrappers, and official references before designing a custom UI solution. Prefer a suitable Web Awesome component or utility.
+2. Implement custom UI behavior only when Web Awesome cannot meet the requirement; validate that limitation against the installed component references and briefly explain why custom behavior is necessary before implementation.
+3. Keep layout responsive and consistent with the project drawer, toolbar, and on-map conventions.
+4. Use Web Awesome tokens and project CSS variables. Every new CSS custom property needs an English purpose comment.
+5. Preserve keyboard access, disabled and selected contrast, focus behavior, labels, and loading or error states.
+6. Use FontAwesome icons through the existing integration and add shortcut documentation when introducing shortcuts.
+7. Test the component at narrow and wide layouts and in light or dark theme contexts when relevant.
 
 ## Icons
 
