@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-14
- * Last modified: 2026-09-28
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -48,23 +48,26 @@ export const CompassWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
         return {
             container,
             contextMenu:  {
-                canReset:    true,
-                canPosition: !fixedVideoCompass,
-                canRemove:   !fixedVideoCompass || !simpleReplay,
+                canReset:    !simpleReplay,
+                canPosition: !fixedVideoCompass && !simpleReplay,
+                canRemove:   !simpleReplay,
                 canEdit:     true,
                 canDetach:   !fixedVideoCompass,
             },
+            canHide:      !simpleReplay,
+            canLock:      !simpleReplay,
             top:          '0px',
             left:         fixedVideoCompass ? '0px' : '100%',
             type:         LGS_VISUAL_WIDGET,
             group:        MULTI_PURPOSE_WIDGETS,
             attachTo:     fixedVideoCompass ? 'top-left' : 'right',
             positionKey:  fixedVideoCompass ? 'video-crop-top-left-v2' : undefined,
-            draggable:    !fixedVideoCompass,
-            resizable:    !fixedVideoCompass,
-            scalable:     !fixedVideoCompass,
-            rotatable:    !fixedVideoCompass,
-            showControlBox: !fixedVideoCompass,
+            draggable:    !fixedVideoCompass && !simpleReplay,
+            resizable:    !fixedVideoCompass && !simpleReplay,
+            scalable:     !fixedVideoCompass && !simpleReplay,
+            rotatable:    !fixedVideoCompass && !simpleReplay,
+            snappable:    !simpleReplay,
+            showControlBox: !fixedVideoCompass && !simpleReplay,
             id,
             persist:      true,
             transient:    true,

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-19
- * Last modified: 2026-09-28
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -383,6 +383,7 @@ export const Widget = props => {
  * @param {string}  [props.containerClassName='']   - Additional CSS classes for the widget container
  * @param {React.ReactNode} props.children          - Widget visual content
  * @param {Object} props.config                     - Complete widget configuration object
+ * @param {boolean} [props.config.contextMenuEnabled=true] - Whether this widget can open its context menu
  * @param {React.RefObject} [props.childRef]        - Optional forwarded ref to inner content
  * @param {number|string|null} [props.expandRequestKey=null] - Changes request host-managed expansion
  * @param {number} [props.selectionRequestKey=0]    - Changes request cropper selection
@@ -1160,7 +1161,7 @@ const WidgetHost = ({
     }, [blockDoubleClick, canReduce, toggleCollapsed])
 
     const openContextMenu = useCallback((event) => {
-        if (hasNoDragInPath(event)) {
+        if (config.contextMenuEnabled === false || hasNoDragInPath(event)) {
             return
         }
 
@@ -1178,7 +1179,7 @@ const WidgetHost = ({
         lgs.stores.ui.contextMenu.type = 'widget'
         lgs.stores.ui.contextMenu.targetId = widgetId
         lgs.stores.ui.contextMenu.position = {x: clientX, y: clientY}
-    }, [config.docked, interactionLocked, isReplayRecordingMonitor, widgetId])
+    }, [config.contextMenuEnabled, config.docked, interactionLocked, isReplayRecordingMonitor, widgetId])
 
     const pointerInteractionsRef = usePointerInteractions({
                                                               onDoubleTap:           handleDoubleClick,

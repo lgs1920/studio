@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-14
- * Last modified: 2026-09-28
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,6 +38,7 @@ export const CreditsWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
     const contextState = useOptionalSnapshot(context, CREDITS_WIDGET_CONTEXT_FALLBACK)
     const video = useSnapshot(lgs.stores.ui.video)
     const replay = useSnapshot(lgs.stores.replay)
+    const simpleReplay = replay.simplePreparationActive === true
     const widgetEditor = contextState.widgetEditor
     const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
     const shouldRender = shouldRenderVideoBoardWidget({
@@ -90,6 +91,7 @@ export const CreditsWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
         return {
             container,
             captureExclude: ['[data-widget-capture="exclude"]'],
+            contextMenuEnabled: !simpleReplay,
             contextMenu:     {
                 canReset:    true,
                 canMaximize: false,
@@ -120,7 +122,7 @@ export const CreditsWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
             widgetsBoard:    widgetsBoard,
             zIndex:          zIndex ?? 10000,
         }
-    }, [container, id, widgetsBoard, zIndex])
+    }, [container, id, simpleReplay, widgetsBoard, zIndex])
 
     // Render in the widget editor and during Replay video capture.
     if (!shouldRender || !container) {

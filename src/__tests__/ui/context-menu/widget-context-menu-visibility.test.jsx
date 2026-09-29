@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -61,6 +61,7 @@ describe('WidgetContextMenu visibility', () => {
                         contextMenu: {},
                     })),
                     hasCapabilities: vi.fn(() => false),
+                    editWidget: vi.fn(),
                     setConfig: vi.fn(),
                     toggleWidgetVisibility: vi.fn(),
                 },
@@ -98,6 +99,34 @@ describe('WidgetContextMenu visibility', () => {
 
         expect(screen.queryByText('Hide')).toBeNull()
         expect(screen.queryByText('Show')).toBeNull()
+    })
+
+    it('keeps editing available when Replay disables Compass interactions', () => {
+        __.ui.widgetManager.getWidgetConfig.mockReturnValue({
+            canHide: false,
+            canLock: false,
+            contextMenu: {
+                canEdit: true,
+                canPosition: false,
+                canRemove: false,
+                canReset: false,
+            },
+        })
+        __.ui.widgetManager.hasCapabilities.mockReturnValue(true)
+
+        const {container} = render(<WidgetContextMenu targetId={widgetId} menuRef={{current: null}}/>)
+
+        expect(screen.getByText('Edit')).toBeTruthy()
+        expect(screen.queryByText('Lock')).toBeNull()
+        expect(screen.queryByText('Unlock')).toBeNull()
+        expect(screen.queryByText('Hide')).toBeNull()
+        expect(screen.queryByText('Show')).toBeNull()
+        expect(container.querySelector('.widget-grid-one-line')).toBeNull()
+        expect(container.querySelector('.widget-grid-position')).toBeNull()
+
+        fireEvent.click(screen.getByText('Edit'))
+
+        expect(__.ui.widgetManager.editWidget).toHaveBeenCalledWith(widgetId, {toggle: true})
     })
 
     it('renders the top docking action for the dockable Replay Timeline', () => {
