@@ -22,6 +22,7 @@ const indexDocument = new JSDOM(readFileSync('index.html', 'utf8')).window.docum
 const startupStyle = readFileSync('src/assets/css/startup-shell.css', 'utf8')
 const lgs1920Source = readFileSync('src/components/LGS1920.jsx', 'utf8')
 const mainSource = readFileSync('src/main.jsx', 'utf8')
+const startupBackgroundSource = readFileSync('src/assets/media/welcome-startup-background.js', 'utf8')
 const routeBootstrapSource = readFileSync('src/components/MainUI/WelcomeHeroRouteBootstrap.jsx', 'utf8')
 
 /**
@@ -41,6 +42,7 @@ const registerBootSplashMediaLoadingTests = () => {
         )
         const splashVideo = indexDocument.querySelector('#lgs-boot-splash video')
         const splashImage = indexDocument.querySelector('#lgs-boot-splash [data-welcome-background-fallback]')
+        const splashCredit = indexDocument.querySelector('#lgs-boot-splash-media-credit')
         const startupImage = indexDocument.querySelector('#lgs-startup-background')
 
         expect(unsupportedMediaPreloadLinks).toHaveLength(0)
@@ -49,6 +51,12 @@ const registerBootSplashMediaLoadingTests = () => {
         expect(splashVideo?.getAttribute('preload')).toBe('auto')
         expect(splashVideo?.hasAttribute('loop')).toBe(false)
         expect(mainSource).toContain("splashVideo.addEventListener('ended', rotateSplashVideo)")
+        expect(splashCredit).not.toBeNull()
+        expect(splashCredit?.parentElement?.id).not.toBe('lgs-boot-splash')
+        expect(splashCredit?.getAttribute('target')).toBe('_blank')
+        expect(splashCredit?.getAttribute('rel')).toContain('noopener')
+        expect(startupBackgroundSource).toContain('applyWelcomeMediaCredit(splashCredit, selectedChoice)')
+        expect(mainSource).toContain('media.applyWelcomeMediaCredit(splashCredit, nextChoice)')
         expect(splashImage).not.toBeNull()
         expect(startupImage).not.toBeNull()
         expect(startupImage?.querySelector('[data-welcome-background-startup]')).not.toBeNull()
@@ -78,6 +86,9 @@ const registerBootSplashMediaLoadingTests = () => {
         expect(splashStyle).toContain('&::after')
         expect(splashStyle).toContain('opacity: 1;')
         expect(splashStyle).toContain('&.lgs-boot-splash-cta-ready::after')
+        expect(splashStyle).toContain('transition-delay: 3s;')
+        expect(splashStyle).toContain('#lgs-boot-splash-media-credit')
+        expect(splashStyle).toContain('body:not(.lgs-app-booting) #lgs-boot-splash-media-credit')
         expect(splashStyle).toContain('--hero-route-path-color: var(--wa-color-brand, rgb(234, 198, 115))')
         expect(splashStyle).toContain('--hero-route-glow-color: var(--wa-color-brand, rgb(234, 198, 115))')
         expect(splashStyle).toContain('--hero-route-poi-color: rgb(175, 218, 188)')

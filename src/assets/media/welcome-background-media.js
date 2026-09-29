@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-22
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -342,6 +342,32 @@ export const applyWelcomeBackgroundToImage = (imageElement, selection) => {
 
     imageElement.src = imageSource.src
     imageElement.hidden = false
+    return true
+}
+
+/**
+ * Applies the active welcome media attribution to a splash credit link.
+ *
+ * @param {HTMLAnchorElement|null} creditLink - Splash attribution link.
+ * @param {object|null} choice - Active catalog choice.
+ * @returns {boolean} Whether an attribution link was applied.
+ */
+export const applyWelcomeMediaCredit = (creditLink, choice) => {
+    if (!creditLink) {
+        return false
+    }
+
+    const credit = choice?.credit
+    if (!credit?.label || !credit?.url) {
+        creditLink.removeAttribute('href')
+        creditLink.textContent = ''
+        creditLink.hidden = true
+        return false
+    }
+
+    creditLink.href = credit.url
+    creditLink.textContent = credit.label
+    creditLink.hidden = false
     return true
 }
 

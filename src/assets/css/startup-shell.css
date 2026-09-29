@@ -143,6 +143,7 @@ body:not(.lgs-app-booting) {
 
     &.lgs-boot-splash-cta-ready::after {
         opacity: 0.3;
+        transition-delay: 3s;
     }
 
     & .welcome-branding-spinner {
@@ -297,6 +298,40 @@ body:not(.lgs-app-booting) {
         /* Sets route marker and spinner track colors for the winter theme. */
         --hero-route-poi-color: rgb(219, 234, 254);
     }
+}
+
+#lgs-boot-splash-media-credit {
+    position: fixed;
+    right: .55rem;
+    bottom: .42rem;
+    z-index: calc(var(--lgs-toast-zindex, 2147483647) - 2);
+    display: inline-block;
+    max-width: min(42%, 24rem);
+    pointer-events: auto;
+    color: rgba(255, 255, 255, .78);
+    font-size: .58rem;
+    line-height: 1.2;
+    text-align: right;
+    text-shadow: 0 1px .35rem rgba(0, 0, 0, .68);
+    text-decoration: underline;
+    text-decoration-color: rgba(255, 255, 255, .42);
+    text-underline-offset: .14em;
+    transition: opacity 450ms ease, visibility 450ms ease;
+
+    &:hover,
+    &:focus-visible {
+        color: #fff;
+    }
+}
+
+#lgs-boot-splash-media-credit[hidden] {
+    display: none;
+}
+
+body:not(.lgs-app-booting) #lgs-boot-splash-media-credit {
+    visibility: hidden;
+    pointer-events: none;
+    opacity: 0;
 }
 
 body.lgs-app-booting {

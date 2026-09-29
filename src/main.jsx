@@ -58,12 +58,14 @@ const bootstrap = async () => {
     const splashElement = document.querySelector('#lgs-boot-splash')
     const splashVideo = document.querySelector('#lgs-boot-splash video')
     const splashImage = document.querySelector('#lgs-boot-splash .lgs-boot-splash-background-image')
+    const splashCredit = document.querySelector('#lgs-boot-splash-media-credit')
     const hasVideo = media.applyWelcomeBackgroundToVideo(splashVideo, welcomeBackgroundMedia, {load: false})
     media.applyWelcomeBackgroundToImage(splashImage, welcomeBackgroundMedia)
+    let activeSplashChoice = media.bannerMediaCatalog.outdoor.find(choice => choice.id === welcomeBackgroundMedia.id) ?? null
+    media.applyWelcomeMediaCredit(splashCredit, activeSplashChoice)
     markStartup('startup-media-ready')
 
     if (hasVideo && splashElement && splashVideo) {
-        let activeSplashChoice = media.bannerMediaCatalog.outdoor.find(choice => choice.id === welcomeBackgroundMedia.id) ?? null
         const revealVideo = () => {
             let playPromise
             try {
@@ -100,6 +102,7 @@ const bootstrap = async () => {
                     type: 'video/mp4',
                 }],
             })
+            media.applyWelcomeMediaCredit(splashCredit, nextChoice)
         }
 
         splashVideo.addEventListener('canplay', revealVideo)
