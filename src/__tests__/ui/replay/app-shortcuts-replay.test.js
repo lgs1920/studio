@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,6 +30,12 @@ const SHORTCUTS_YAML = `
   id: orbit-toggle
   keys:
     - Alt+Shift+O
+  scope: App
+- action: Open Replay settings
+  description: Opens Replay settings for the selected Journey.
+  id: replay-management-show
+  keys:
+    - Alt+Shift+R
   scope: App
 `
 
@@ -93,6 +99,7 @@ describe('app replay shortcuts', () => {
                 }),
                 ui: proxy({
                     mainUI: proxy({
+                        callForActions: proxy({active: true}),
                         rotate: proxy({
                             running: false,
                             target:   null,
@@ -116,6 +123,9 @@ describe('app replay shortcuts', () => {
                 sceneManager: {
                     target: {element: 'track', longitude: 2, latitude: 48, height: 120},
                     focus: vi.fn(async () => undefined),
+                },
+                drawerManager: {
+                    open: vi.fn(),
                 },
             },
         }
@@ -260,5 +270,27 @@ describe('app replay shortcuts', () => {
         expect(globalThis.__.ui.replay.refreshCamera).not.toHaveBeenCalled()
         removers.forEach(remove => remove?.())
         canvas.remove()
+    })
+
+    it('does not open Replay from its shortcut without a selected Journey', async () => {
+        globalThis.lgs.theJourney = null
+        globalThis.lgs.stores.main.theJourney = null
+        const callbacks = new Map()
+        const {installAppShortcuts} = await import('@Core/events/appShortcuts')
+        installAppShortcuts({
+            addShortcut: vi.fn((target, keys, callback) => {
+                callbacks.set(keys.join(','), callback)
+                return vi.fn()
+            }),
+        })
+
+        await callbacks.get('Alt+Shift+R')({
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+            stopImmediatePropagation: vi.fn(),
+        })
+
+        expect(globalThis.__.ui.drawerManager.open).not.toHaveBeenCalled()
+        expect(globalThis.lgs.stores.ui.mainUI.callForActions.active).toBe(true)
     })
 })

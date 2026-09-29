@@ -26,6 +26,7 @@ import {
 } from '@Core/ui/replay/ReplayUserModes'
 import { TunnelTooltip } from '@Components/Tunnel/Tunnel'
 import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import {useProxyValue} from '@Utils/ValtioUtils'
 import { useCallback } from 'react'
 import { useSnapshot } from 'valtio'
 
@@ -33,6 +34,7 @@ export const JourneyReplayButton = (props) => {
     const $video = lgs.stores.ui.video
     const replay = useSnapshot(lgs.stores.replay)
     const video = useSnapshot($video)
+    const journeySlug = useProxyValue(lgs.stores.main, main => main.theJourney?.slug ?? null, null)
     const {
         id = 'launch-the-replay-editor',
         tooltip = 'right',
@@ -51,7 +53,8 @@ export const JourneyReplayButton = (props) => {
     } = props ?? {}
     const isLinked = replay.recordingSync === true
     const isDrawerOpen = selected !== undefined ? selected : __.ui.drawerManager?.isCurrent?.(REPLAY_DRAWER) === true
-    const visible = lgs.theJourney
+    const currentJourney = lgs.stores.main?.theJourney ?? lgs.theJourney
+    const visible = Boolean(journeySlug ?? currentJourney?.slug)
                   && !video.recordingHQ
                   && !video.preRecording
                   && !video.snapshot
@@ -175,27 +178,25 @@ export const JourneyReplayButton = (props) => {
         </WaButton>
     )
 
-    return (
-        <>
-            {visible &&
-                tooltipStyle === 'tunnel'
-                    ? (
-                        <TunnelTooltip
-                            anchorId={id}
-                            tooltip={buttonTooltipText}
-                            icon={isBasicMode ? 'video-down-to-line' : 'drone'}
-                            placement={tooltipPlacement}
-                        >
-                            {button}
-                        </TunnelTooltip>
-                    )
-                    : (
-                        <>
-                            <WaTooltip for={id} placement={tooltipPlacement}>{buttonTooltipText}</WaTooltip>
-                            {button}
-                        </>
-                    )
-            }
-        </>
-    )
+    if (!visible) {
+        return null
+    }
+
+    return tooltipStyle === 'tunnel'
+        ? (
+            <TunnelTooltip
+                anchorId={id}
+                tooltip={buttonTooltipText}
+                icon={isBasicMode ? 'video-down-to-line' : 'drone'}
+                placement={tooltipPlacement}
+            >
+                {button}
+            </TunnelTooltip>
+        )
+        : (
+            <>
+                <WaTooltip for={id} placement={tooltipPlacement}>{buttonTooltipText}</WaTooltip>
+                {button}
+            </>
+        )
 }

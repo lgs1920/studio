@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -157,7 +157,9 @@ export const configure = (mode, options = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         const store = replayStore()
-        const journey = options.journey ?? globalThis.lgs?.theJourney
+        const journey = options.journey
+            ?? globalThis.lgs?.theJourney
+            ?? globalThis.lgs?.stores?.main?.theJourney
 
         if (!journey) {
             return null
@@ -243,10 +245,20 @@ export const configure = (mode, options = {}) => {
  * @returns {Promise<boolean>} Whether the replay anchor was prepared.
  */
 export const prepareReplayCamera = async (mode, {
-                                               journey = globalThis.lgs?.theJourney ?? null,
+                                               journey = globalThis.lgs?.theJourney
+                                                   ?? globalThis.lgs?.stores?.main?.theJourney
+                                                   ?? null,
                                            } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    if (!journey) {
+        return false
+    }
+    const sampler = call.configure({journey, progress: 0})
+    const sample = sampler?.atProgress?.(0) ?? null
+    if (!sample) {
+        return false
+    }
     const cameraManager = globalThis.__?.ui?.cameraManager
     const liveCamera = replayCameraFor(mode)
     const liveCameraPosition = liveCamera?.positionWC ?? liveCamera?.position
@@ -284,16 +296,11 @@ export const prepareReplayCamera = async (mode, {
         : null
     call.cancelActiveCameraFlight?.()
     globalThis.lgs?.camera?.cancelFlight?.()
-    const sampler = call.configure({journey, progress: 0}) ?? state.sampler
     if (savedCameraState) {
         state.savedCameraState = savedCameraState
     }
     if (replayEntryCameraState) {
         state.replayEntryCameraState = replayEntryCameraState
-    }
-    const sample = sampler?.atProgress?.(0) ?? null
-    if (!sample) {
-        return false
     }
     state.replayPreparationSample = sample
 
@@ -398,6 +405,12 @@ export const leaveReplayPreparation = (mode) => {
 export const start = (mode, options = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const journey = options.journey
+        ?? globalThis.lgs?.theJourney
+        ?? globalThis.lgs?.stores?.main?.theJourney
+    if (!journey) {
+        return null
+    }
     const startStartedAt = globalThis.performance?.now?.() ?? Date.now()
     const traceStartStep = (step, extra = {}) => {
         replayVideoTraceDebug('interactive.replay.start.stage', {

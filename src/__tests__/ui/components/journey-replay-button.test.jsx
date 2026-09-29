@@ -186,4 +186,22 @@ describe('JourneyReplayButton synchronized video entry point', () => {
         })
         expect(globalThis.__.ui.drawerManager.open).not.toHaveBeenCalled()
     })
+
+    it.each([
+        ['Basic', 'basic', 'wa'],
+        ['Expert', 'expert', 'tunnel'],
+    ])('hides the %s Replay entry point when no Journey is selected', (label, mode, tooltipStyle) => {
+        globalThis.lgs.theJourney = null
+
+        render(
+            <JourneyReplayButton
+                id={`launch-${mode}-replay-without-journey`}
+                mode={mode}
+                tooltipStyle={tooltipStyle}
+                ariaLabel={`${label} Replay`}
+            />,
+        )
+
+        expect(screen.queryByRole('button', {name: `${label} Replay`})).toBeNull()
+    })
 })

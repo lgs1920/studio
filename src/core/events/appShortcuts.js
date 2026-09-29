@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -309,6 +309,9 @@ const openJourneyGroups = () => {
 }
 
 const openJourneyReplayManagement = () => {
+    if (!(lgs.stores.main?.theJourney ?? lgs.theJourney)) {
+        return false
+    }
     lgs.stores.ui.mainUI.callForActions.active = false
     __.ui.drawerManager?.open?.(REPLAY_DRAWER)
     return true
