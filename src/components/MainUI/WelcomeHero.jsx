@@ -334,7 +334,7 @@ export const WelcomeHero = ({
                         </WaButton>
                     </div>
                     {!readyToEnter && (
-                        <p className="welcome-initialization-callout" role="status">
+                        <p className="welcome-initialization-message welcome-initialization-callout" role="status">
                             {initializationMessage}
                         </p>
                     )}

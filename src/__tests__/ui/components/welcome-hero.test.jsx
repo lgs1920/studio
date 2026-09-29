@@ -104,16 +104,18 @@ describe('WelcomeHero', () => {
         const {rerender} = render(<WelcomeHero initComplete={false} appReady={false} onEnter={onEnter}/>)
 
         const button = screen.getByRole('button', {name: /Enter Studio/})
+        const initializationMessage = screen.getByRole('status')
 
         expect(button.disabled).toBe(true)
-        expect(screen.getByText('Starting Studio services…')).toBeTruthy()
+        expect(initializationMessage.textContent).toBe('Starting Studio services…')
+        expect(initializationMessage.classList.contains('welcome-initialization-message')).toBe(true)
         expect(splashStatusElement.textContent).toBe('Starting Studio services…')
         expect(document.querySelector('.welcome-enter-button [data-icon="clapperboard-play"]')).toBeTruthy()
         expect(screen.queryByRole('progressbar')).toBeNull()
 
         rerender(<WelcomeHero initComplete={false} appReady={false} initializationStep="journey" onEnter={onEnter}/>)
         expect(splashStatusElement.textContent).toBe('Loading your current journey…')
-        expect(screen.getByText('Loading your current journey…')).toBeTruthy()
+        expect(initializationMessage.textContent).toBe('Loading your current journey…')
 
         fireEvent.click(button)
 

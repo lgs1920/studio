@@ -1168,18 +1168,16 @@ body.mobile .orbit-widget-body {
     }
 }
 
-.welcome-enter-call-for-action wa-button::part(base) {
-    backdrop-filter: blur(var(--lgs-blur));
-}
-
-.welcome-site-button::part(base) {
+.welcome-enter-call-for-action .welcome-site-button::part(base) {
     color: var(--lgs-text-on-color);
     border-color: color-mix(in oklab, var(--lgs-text-on-color) 58%, transparent);
     background-color: color-mix(in oklab, var(--lgs-dark-color-95) 42%, transparent);
+    backdrop-filter: blur(8px);
 }
 
 .welcome-enter-button::part(base) {
     min-width: 8rem;
+    backdrop-filter: blur(var(--lgs-blur));
 }
 
 .welcome-enter-call-for-action wa-button::part(label) {
@@ -1189,17 +1187,7 @@ body.mobile .orbit-widget-body {
 }
 
 .welcome-initialization-callout {
-    position: absolute;
     top: calc(var(--welcome-content-top) + var(--welcome-status-offset));
-    left: 50%;
-    width: min(28rem, calc(100vw - var(--lgs-gutter) - var(--lgs-gutter)));
-    margin: 0;
-    transform: translateX(-50%);
-    color: color-mix(in oklab, var(--wa-color-text-normal) 72%, transparent);
-    font-size: var(--lgs-font-size-s);
-    line-height: 1.35;
-    text-align: center;
-    text-shadow: 0 1px .35rem rgba(0, 0, 0, .68);
 }
 
 @media (max-width: 700px) {

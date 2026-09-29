@@ -64,6 +64,21 @@ body:not(.lgs-app-booting) {
     }
 }
 
+.welcome-initialization-message {
+    position: absolute;
+    left: 50%;
+    width: min(28rem, calc(100vw - var(--lgs-gutter, 1rem) - var(--lgs-gutter, 1rem)));
+    margin: 0;
+    transform: translateX(-50%);
+    color: color-mix(in oklab, var(--wa-color-text-normal, white) 72%, transparent);
+    font-family: var(--lgs-font-family, "Open Sans", sans-serif);
+    font-size: var(--lgs-font-size-s, .75rem);
+    font-weight: var(--wa-font-weight-body, 400);
+    line-height: 1.35;
+    text-align: center;
+    text-shadow: 0 1px .35rem rgba(0, 0, 0, .68);
+}
+
 #lgs-boot-splash {
     position: fixed;
     z-index: calc(var(--lgs-toast-zindex, 2147483647) - 3);
@@ -166,15 +181,6 @@ body:not(.lgs-app-booting) {
         position: absolute;
         z-index: 4;
         top: calc(42% + 15.5rem);
-        left: 50%;
-        width: min(28rem, calc(100vw - 2rem));
-        margin: 0;
-        transform: translateX(-50%);
-        color: color-mix(in oklab, var(--wa-color-text-normal, white) 72%, transparent);
-        font-size: var(--lgs-font-size-s, .875rem);
-        line-height: 1.35;
-        text-align: center;
-        text-shadow: 0 1px .35rem rgba(0, 0, 0, .68);
     }
 
     &.lgs-boot-splash-cta-ready #lgs-boot-splash-status {

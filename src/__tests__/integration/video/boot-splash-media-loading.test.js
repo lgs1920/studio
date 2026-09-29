@@ -62,6 +62,7 @@ const registerBootSplashMediaLoadingTests = () => {
         expect(splashSlogan?.querySelector('text')?.textContent.trim()).toBe('Replay Your World Outdoors.')
         expect(splashSpinner).not.toBeNull()
         expect(splashSpinner?.getAttribute('style')).toBeNull()
+        expect(splashStatus?.classList.contains('welcome-initialization-message')).toBe(true)
         expect(splashStatus?.textContent).toBe('Starting Studio services…')
         expect(startupStylesheet).not.toBeNull()
 
@@ -81,6 +82,9 @@ const registerBootSplashMediaLoadingTests = () => {
         expect(splashStyle).toContain('--hero-route-glow-color: var(--wa-color-brand, rgb(234, 198, 115))')
         expect(splashStyle).toContain('--hero-route-poi-color: rgb(175, 218, 188)')
         expect(splashStyle).toContain('--track-color: var(--hero-route-poi-color)')
+        expect(splashStyle).toContain('.welcome-initialization-message')
+        expect(splashStyle).toContain('font-family: var(--lgs-font-family, "Open Sans", sans-serif);')
+        expect(splashStyle).toContain('font-size: var(--lgs-font-size-s, .75rem);')
         expect(splashStyle).toContain('drop-shadow(0 0 .32rem color-mix(in oklab, var(--hero-route-poi-color) 82%, transparent))')
         expect(splashStyle).toContain('drop-shadow(0 0 .72rem color-mix(in oklab, var(--hero-route-poi-color) 88%, transparent))')
         expect(splashStyle).toContain('filter: drop-shadow(0 0 8px color-mix(in oklab, var(--hero-route-glow-color) 42%, transparent))')
