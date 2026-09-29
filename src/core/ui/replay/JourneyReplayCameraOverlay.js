@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -548,6 +548,11 @@ export const updateToleranceZoneOverlay =  (mode, hysteresis) => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
     state.lastToleranceZoneHysteresis = hysteresis
+    if (!state.toleranceZoneOverlayVisible) {
+        removeToleranceZoneOverlay(mode)
+        return
+    }
+
     state.toleranceZoneOverlay?.remove?.()
     state.toleranceZoneOverlay = null
     const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer

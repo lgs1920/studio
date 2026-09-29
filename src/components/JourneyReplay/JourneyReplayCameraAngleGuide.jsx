@@ -20,6 +20,7 @@
 
 import {REPLAY_DRAWER} from '@Core/constants'
 import {
+    getJourneyReplaySettings,
     normalizeJourneyReplayCamera,
     REPLAY_CAMERA_POSITION_SYSTEM,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
@@ -29,10 +30,14 @@ import {
     resolveJourneyReplayCameraAngleGuide,
     updateJourneyReplayCameraAngleGuide,
 } from '@Core/ui/replay/JourneyReplayCameraAngleGuide'
-import {isJourneyReplayVideoCaptureActive} from '@Core/ui/replay/JourneyReplayRuntime'
-import {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT} from '@Core/ui/replay/ReplayUserModes'
+import {isJourneyReplayCameraActive, isJourneyReplayVideoCaptureActive} from '@Core/ui/replay/JourneyReplayRuntime'
+import {
+    REPLAY_USER_MODE_BASIC,
+    syncJourneyExpertReplayCamera,
+    syncJourneySimpleReplayCamera,
+} from '@Core/ui/replay/ReplayUserModes'
 import {useOptionalSnapshot, useProxyValue} from '@Utils/ValtioUtils'
-import {useEffect} from 'react'
+import {useCallback, useEffect} from 'react'
 import {useSnapshot} from 'valtio'
 
 const DEFAULT_REPLAY_ANGLE_GUIDE_SETTINGS = {
@@ -41,8 +46,8 @@ const DEFAULT_REPLAY_ANGLE_GUIDE_SETTINGS = {
 }
 
 /**
- * Mount the 3D camera guide during Expert preparation and animate it along the
- * trace during interactive Replay.
+ * Mount the 3D camera guide during Replay preparation and animate it along the
+ * trace during Simple or Expert playback.
  *
  * @returns {null} This component renders no DOM content.
  */
@@ -52,11 +57,10 @@ export const JourneyReplayCameraAngleGuide = () => {
     const replay = useSnapshot(lgs.stores.replay)
     const replaySettings = useOptionalSnapshot(lgs.settings?.ui?.replay, DEFAULT_REPLAY_ANGLE_GUIDE_SETTINGS)
     const journeySlug = useProxyValue(lgs.stores.main, main => main.theJourney?.slug ?? null, null)
-    const camera = normalizeJourneyReplayCamera(replaySettings.camera)
+    const camera = normalizeJourneyReplayCamera(getJourneyReplaySettings().camera ?? replaySettings.camera)
     const cameraHeadingOffset = camera.headingOffset
     const cameraPositionMode = camera.positionMode
-    const expertMode = replaySettings.userMode === REPLAY_USER_MODE_EXPERT
-    const replaying = expertMode && replay.active === true
+    const replaying = isJourneyReplayCameraActive(replay)
     const replaySample = replaying ? replay.liveSample ?? replay.sample : null
     const captureActive = video.preRecording !== true && (
         video.recordingHQ === true
@@ -66,31 +70,52 @@ export const JourneyReplayCameraAngleGuide = () => {
     )
     const guideVisible = !captureActive
                          && (video.editing === true || drawers.open === REPLAY_DRAWER || replaying)
+    /**
+     * Persist camera-guide adjustments without moving the Cesium camera.
+     *
+     * @param {Object} updates - Camera settings changed by the guide.
+     * @returns {void}
+     */
+    const updateCameraFromGuide = useCallback((updates) => {
+        const settings = lgs.settings.ui.replay
+        const replaySettings = getJourneyReplaySettings()
+        const nextCamera = normalizeJourneyReplayCamera({...replaySettings.camera, ...updates})
+        settings.camera = nextCamera
+        if (settings.userMode === REPLAY_USER_MODE_BASIC) {
+            settings.simple = {...settings.simple, camera: nextCamera}
+            syncJourneySimpleReplayCamera(nextCamera)
+        }
+        else {
+            syncJourneyExpertReplayCamera(nextCamera)
+        }
+        lgs.stores.replay.camera = nextCamera
+    }, [])
 
     useEffect(() => {
         const viewer = lgs.viewer
-        if (!expertMode || !guideVisible || cameraPositionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
+        if (!guideVisible || cameraPositionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
             removeJourneyReplayCameraAngleGuide(viewer)
             return undefined
         }
 
         const journey = lgs.stores.main.theJourney
+        const currentCamera = normalizeJourneyReplayCamera(getJourneyReplaySettings().camera)
         const guide = resolveJourneyReplayCameraAngleGuide({
             camera: {
-                headingOffset: lgs.settings?.ui?.replay?.camera?.headingOffset ?? 0,
+                headingOffset: currentCamera.headingOffset,
                 positionMode:  cameraPositionMode,
             },
             journey,
         })
-        if (!mountJourneyReplayCameraAngleGuide(viewer, guide)) {
+        if (!mountJourneyReplayCameraAngleGuide(viewer, guide, {}, {onCameraChange: updateCameraFromGuide})) {
             removeJourneyReplayCameraAngleGuide(viewer)
         }
 
         return () => removeJourneyReplayCameraAngleGuide(viewer)
-    }, [cameraPositionMode, expertMode, guideVisible, journeySlug])
+    }, [cameraPositionMode, guideVisible, journeySlug, updateCameraFromGuide])
 
     useEffect(() => {
-        if (!expertMode || !guideVisible || cameraPositionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
+        if (!guideVisible || cameraPositionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
             return
         }
 
@@ -107,10 +132,10 @@ export const JourneyReplayCameraAngleGuide = () => {
             removeJourneyReplayCameraAngleGuide(viewer)
             return
         }
-        if (!updateJourneyReplayCameraAngleGuide(viewer, guide)) {
-            mountJourneyReplayCameraAngleGuide(viewer, guide)
+        if (!updateJourneyReplayCameraAngleGuide(viewer, guide, {onCameraChange: updateCameraFromGuide})) {
+            mountJourneyReplayCameraAngleGuide(viewer, guide, {}, {onCameraChange: updateCameraFromGuide})
         }
-    }, [cameraHeadingOffset, cameraPositionMode, expertMode, guideVisible, journeySlug, replaySample])
+    }, [cameraHeadingOffset, cameraPositionMode, guideVisible, journeySlug, replaySample, updateCameraFromGuide])
 
     return null
 }

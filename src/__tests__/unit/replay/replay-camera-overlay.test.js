@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,6 +19,7 @@ import { defaultJourneyReplaySettings } from '@Core/ui/replay/JourneyReplayProgr
 import { JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE } from '@Core/ui/replay/JourneyReplayInternal'
 import { updateToleranceZoneOverlay } from '@Core/ui/replay/JourneyReplayCameraOverlay'
 import { isReplayVideoLinked } from '@Core/ui/replay/JourneyReplayClipController'
+import { JourneyReplaySessionController } from '@Core/ui/replay/JourneyReplaySessionController'
 import { preparePlaybackSceneForExport } from '@Core/ui/replay/JourneyReplaySessionPlaybackController'
 
 vi.hoisted(() => {
@@ -53,6 +54,52 @@ afterEach(() => {
 })
 
 describe('replay camera diagnostics overlay', () => {
+    it('starts hidden until Replay explicitly enables diagnostics', () => {
+        const controller = {on: vi.fn(() => () => {})}
+        const mode = new JourneyReplaySessionController({controller, renderer: {}})
+        const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+
+        expect(state.toleranceZoneOverlayVisible).toBe(false)
+
+        state.unbind.forEach(unbind => unbind())
+    })
+
+    it('does not create diagnostic overlays while they are hidden', () => {
+        const container = document.createElement('div')
+        document.body.appendChild(container)
+        const cameraChanged = {
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+        }
+        const settings = defaultJourneyReplaySettings()
+        const state = {
+            lastToleranceZoneHysteresis: null,
+            toleranceZoneOverlay: null,
+            toleranceZoneOverlayCanvas: null,
+            toleranceZoneOverlayVisible: false,
+            toleranceZoneOverlayCameraChangedRemove: null,
+        }
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: state,
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {
+                viewportRectForCesiumSurface: () => ({left: 0, top: 0, width: 1000, height: 800}),
+            },
+        }
+        globalThis.lgs = {
+            settings: {ui: {replay: settings}},
+            stores: {replay: {recordingSync: false}},
+            viewer: {camera: {changed: cameraChanged}, container},
+        }
+
+        updateToleranceZoneOverlay(mode, settings.camera.hysteresis)
+
+        expect(state.lastToleranceZoneHysteresis).toEqual(settings.camera.hysteresis)
+        expect(state.toleranceZoneOverlay).toBeNull()
+        expect(state.toleranceZoneOverlayCanvas).toBeNull()
+        expect(container.querySelector('.replay-tolerance-zone-overlay')).toBeNull()
+        expect(cameraChanged.addEventListener).not.toHaveBeenCalled()
+    })
+
     it('reports a video link only when replay-video sync is enabled', () => {
         globalThis.lgs = {
             settings: {ui: {replay: {recordingSync: false}}},

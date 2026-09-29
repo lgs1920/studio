@@ -49,10 +49,22 @@ const CAMERA_ANGLE_GUIDE_INNER_HEIGHT_RATIO = 0.95
 const CAMERA_ANGLE_GUIDE_INNER_ARC_FLATTENING = 0.32
 const CAMERA_ANGLE_GUIDE_ICON_SIZE = 28
 const CAMERA_ANGLE_GUIDE_ICON_GAP_PIXELS = 28
+const CAMERA_ANGLE_GUIDE_TRACE_ARROW_LENGTH_PIXELS = 184
+const CAMERA_ANGLE_GUIDE_TRACE_ARROW_HEAD_LENGTH_PIXELS = 17
+const CAMERA_ANGLE_GUIDE_TRACE_ARROW_HEAD_HALF_WIDTH_PIXELS = 10
+const CAMERA_ANGLE_GUIDE_TRACE_ARROW_STROKE_PIXELS = 3
+const CAMERA_ANGLE_GUIDE_TRACE_ARROW_HEAD_STROKE_PIXELS = 2
+const CAMERA_ANGLE_GUIDE_TRACE_ARROW_ICON_GAP_PIXELS = 6
+const CAMERA_ANGLE_GUIDE_ANGLE_ARC_RADIUS_PIXELS = 42
+const CAMERA_ANGLE_GUIDE_ANGLE_ARC_SEGMENTS = 16
+const CAMERA_ANGLE_GUIDE_MIN_CAMERA_ALTITUDE_METERS = 10
+const CAMERA_ANGLE_GUIDE_MAX_CAMERA_ALTITUDE_METERS = 100000
+const CAMERA_ANGLE_GUIDE_MIN_CONE_SCALE = 0.25
+const CAMERA_ANGLE_GUIDE_MAX_CONE_SCALE = 3.5
 const CAMERA_ANGLE_GUIDE_ELEVATION_OFFSET_METERS = 5
 const CAMERA_ANGLE_GUIDE_PICK_HEIGHT_TOLERANCE_METERS = 12
 const CAMERA_ANGLE_GUIDE_DEPTH_CLEARANCE_METERS = 8
-const CAMERA_ANGLE_GUIDE_CONE_ALPHA = 0.8
+const CAMERA_ANGLE_GUIDE_CONE_ALPHA = 0.32
 const CAMERA_ANGLE_GUIDE_OVERLAY_CLASS = 'replay-camera-angle-guide-dom'
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg'
 const DEFAULT_CAMERA_ANGLE_GUIDE_COLOR = '#ff6a00'
@@ -75,6 +87,7 @@ const guideGeometryKeyFrom = guide => [
     guide?.directionPoint?.latitude,
     guide?.directionPoint?.height,
     guide?.cameraGroundHeight,
+    guide?.cameraAltitude,
     guide?.coneHeight,
     guide?.axisHeading,
 ].map(value => Number.isFinite(Number(value)) ? Number(value).toFixed(12) : '').join('|')
@@ -273,7 +286,8 @@ const displayAngleFrom = value => {
     if (!Number.isFinite(numericValue)) {
         return 0
     }
-    return Math.max(REPLAY_CAMERA_HEADING_OFFSET_MIN, Math.min(REPLAY_CAMERA_HEADING_OFFSET_MAX, -numericValue))
+    const clampedValue = Math.max(REPLAY_CAMERA_HEADING_OFFSET_MIN, Math.min(REPLAY_CAMERA_HEADING_OFFSET_MAX, -numericValue))
+    return Math.round(clampedValue)
 }
 
 /**
@@ -312,6 +326,7 @@ export const resolveJourneyReplayCameraAngleGuide = ({journey, camera, sample = 
         angleDegrees,
         axisHeading,
         cameraGroundHeight: direction.cameraGroundHeight ?? direction.next.height,
+        cameraAltitude: camera?.altitude,
         cameraHeading,
         coneHeading: cameraHeading + Math.PI,
         coneHeight: Math.max(anchor.height, direction.cameraGroundHeight ?? direction.next.height) + CAMERA_ANGLE_GUIDE_ELEVATION_OFFSET_METERS,
@@ -319,6 +334,7 @@ export const resolveJourneyReplayCameraAngleGuide = ({journey, camera, sample = 
         mode: positionMode === REPLAY_CAMERA_POSITION_AHEAD ? 'Ahead' : 'Behind',
         offsetRadians: angleRadians,
         baseHeading,
+        activityIcon: journey.activitySettings?.icon ?? 'person-hiking',
     }
 }
 
@@ -369,7 +385,7 @@ const coneLengthFrom = (viewer, anchor, currentLength = CAMERA_ANGLE_GUIDE_CAMER
     const width = Number(scene?.drawingBufferWidth ?? viewer?.canvas?.clientWidth)
     const height = Number(scene?.drawingBufferHeight ?? viewer?.canvas?.clientHeight)
     const safeCurrentLength = Number.isFinite(currentLength) && currentLength > 0
-        ? Math.min(CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS, currentLength)
+        ? currentLength
         : CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS
     if (!camera?.getPixelSize || !Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
         return safeCurrentLength
@@ -396,14 +412,25 @@ const coneLengthFrom = (viewer, anchor, currentLength = CAMERA_ANGLE_GUIDE_CAMER
  * @param {number} currentConeLength - Current viewport-capped cone length.
  * @returns {Object} World-space overlay geometry.
  */
-const worldGeometryFrom = (viewer, guide, currentConeLength = CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS) => {
+const worldGeometryFrom = (viewer, guide, currentConeLength = null) => {
     const groundAnchor = Cartesian3.fromDegrees(guide.anchor.longitude, guide.anchor.latitude, guide.anchor.height)
-    const coneHeight = Number.isFinite(guide.coneHeight) ? guide.coneHeight : guide.anchor.height
+    const guideHeight = Number.isFinite(guide.coneHeight) ? guide.coneHeight : guide.anchor.height
+    let anchorTerrainHeight = null
+    try {
+        anchorTerrainHeight = viewer?.scene?.globe?.getHeight?.(Cartographic.fromCartesian(groundAnchor)) ?? null
+    }
+    catch {
+        anchorTerrainHeight = null
+    }
+    const coneHeight = Math.max(
+        guideHeight - CAMERA_ANGLE_GUIDE_ELEVATION_OFFSET_METERS,
+        Number.isFinite(anchorTerrainHeight) ? anchorTerrainHeight : Number.NEGATIVE_INFINITY,
+    ) + CAMERA_ANGLE_GUIDE_ELEVATION_OFFSET_METERS
     const anchor = Cartesian3.fromDegrees(guide.anchor.longitude, guide.anchor.latitude, coneHeight)
     const visibilityAnchor = Cartesian3.fromDegrees(
         guide.anchor.longitude,
         guide.anchor.latitude,
-        guide.anchor.height + CAMERA_ANGLE_GUIDE_ELEVATION_OFFSET_METERS,
+        coneHeight,
     )
     const transform = Transforms.eastNorthUpToFixedFrame(anchor)
     const groundTransform = Transforms.eastNorthUpToFixedFrame(groundAnchor)
@@ -418,10 +445,9 @@ const worldGeometryFrom = (viewer, guide, currentConeLength = CAMERA_ANGLE_GUIDE
             guide.axisHeading,
             CAMERA_ANGLE_GUIDE_DEPARTURE_DISTANCE_METERS,
         )
-
     return {
         anchor,
-        coneLength: coneLengthFrom(viewer, anchor, currentConeLength),
+        coneLength: coneLengthFrom(viewer, anchor, currentConeLength ?? CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS),
         directionPosition,
         groundAnchor,
         groundTransform,
@@ -437,7 +463,7 @@ const worldGeometryFrom = (viewer, guide, currentConeLength = CAMERA_ANGLE_GUIDE
  * @param {Cartesian3} anchor - Reference position in world coordinates.
  * @returns {number} Gap in metres.
  */
-const iconGapFrom = (viewer, anchor) => {
+const iconGapFrom = (viewer, anchor, pixelGap = CAMERA_ANGLE_GUIDE_ICON_GAP_PIXELS) => {
     const scene = viewer?.scene
     const camera = viewer?.camera
     // The returned value is in Cesium world metres. The pixel gap is expressed
@@ -451,7 +477,7 @@ const iconGapFrom = (viewer, anchor) => {
     try {
         const metersPerPixel = camera.getPixelSize(new BoundingSphere(anchor, 1), width, height)
         return Number.isFinite(metersPerPixel) && metersPerPixel > 0
-            ? metersPerPixel * CAMERA_ANGLE_GUIDE_ICON_GAP_PIXELS
+            ? metersPerPixel * pixelGap
             : 20
     }
     catch {
@@ -562,10 +588,10 @@ const cssThemeColorFrom = (propertyName, fallback) => {
  * @param {Color} color - Source color.
  * @returns {Color} Less luminous opaque color.
  */
-const lessLuminousColorFrom = color => new Color(
-    color.red * CAMERA_ANGLE_GUIDE_LESS_LUMINOUS_FACTOR,
-    color.green * CAMERA_ANGLE_GUIDE_LESS_LUMINOUS_FACTOR,
-    color.blue * CAMERA_ANGLE_GUIDE_LESS_LUMINOUS_FACTOR,
+const lessLuminousColorFrom = (color, factor = CAMERA_ANGLE_GUIDE_LESS_LUMINOUS_FACTOR) => new Color(
+    color.red * factor,
+    color.green * factor,
+    color.blue * factor,
     1,
 )
 
@@ -695,25 +721,6 @@ const recenterProjectedBase = (baseLeft, baseRight, baseCenter) => {
 }
 
 /**
- * Rotate a projected point around a projected Cesium anchor.
- *
- * @param {{x: number, y: number}} point - Projected point in CSS pixels.
- * @param {{x: number, y: number}} center - Projected rotation center in CSS pixels.
- * @param {number} angle - Rotation angle in radians.
- * @returns {{x: number, y: number}} Rotated CSS pixel point.
- */
-const rotateProjectedPoint = (point, center, angle) => {
-    const cosine = Math.cos(angle)
-    const sine = Math.sin(angle)
-    const x = point.x - center.x
-    const y = point.y - center.y
-    return {
-        x: center.x + (x * cosine) - (y * sine),
-        y: center.y + (x * sine) + (y * cosine),
-    }
-}
-
-/**
  * Return the shortest signed angle from one DOM direction to another.
  *
  * @param {number} from - Current DOM angle in radians.
@@ -742,17 +749,48 @@ const domAngleFrom = (origin, direction) => {
 }
 
 /**
- * Interpolate a projected point along a segment.
+ * Resolve angle arc positions in the map's local tangent plane.
  *
- * @param {{x: number, y: number}} start - Segment start.
- * @param {{x: number, y: number}} end - Segment end.
- * @param {number} ratio - Segment interpolation ratio.
- * @returns {{x: number, y: number}} Interpolated point.
+ * @param {Matrix4} transform - ENU frame at the replay position.
+ * @param {number} baselineHeading - Tangent-relative camera baseline.
+ * @param {number} cameraHeading - Configured camera direction.
+ * @param {number} radius - Arc radius in map metres.
+ * @returns {{positions: Array<Cartesian3>}} World-space arc.
  */
-const interpolateProjectedPoint = (start, end, ratio) => ({
-    x: start.x + ((end.x - start.x) * ratio),
-    y: start.y + ((end.y - start.y) * ratio),
-})
+const angleArcGeometryFrom = (transform, baselineHeading, cameraHeading, radius) => {
+    const delta = domAngleDeltaFrom(baselineHeading, cameraHeading)
+    const positions = Array.from({length: CAMERA_ANGLE_GUIDE_ANGLE_ARC_SEGMENTS + 1}, (_, index) => positionAtHeading(
+        transform,
+        baselineHeading + (delta * index / CAMERA_ANGLE_GUIDE_ANGLE_ARC_SEGMENTS),
+        radius,
+    ))
+    return {
+        positions,
+    }
+}
+
+/**
+ * Convert projected map points to an SVG polyline path.
+ *
+ * @param {Array<{x: number, y: number}>} points - Projected map-plane points.
+ * @returns {string} SVG path data.
+ */
+const svgPolylinePathFrom = points => points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ')
+
+/**
+ * Keep text aligned with the projected trace while preventing upside-down text.
+ *
+ * @param {number|null} angle - Projected trace direction in radians.
+ * @returns {number} Readable SVG text rotation in degrees.
+ */
+const readableMapTextRotationFrom = angle => {
+    if (!Number.isFinite(angle)) {
+        return 0
+    }
+    const halfTurn = Math.PI
+    const normalized = ((angle + (Math.PI / 2)) % halfTurn + halfTurn) % halfTurn - (Math.PI / 2)
+    return normalized * 180 / Math.PI
+}
 
 /**
  * Format the configured camera angle for the guide label.
@@ -765,7 +803,7 @@ const angleLabelFrom = angleDegrees => {
     if (!Number.isFinite(value)) {
         return ''
     }
-    const roundedValue = Math.round(value * 10) / 10
+    const roundedValue = Math.round(value)
     return `${roundedValue > 0 ? '+' : ''}${roundedValue}°`
 }
 
@@ -868,7 +906,7 @@ const svgStrokeAttributesFrom = (color, width = 1) => ({
 /**
  * Position an HTML icon at projected map coordinates.
  *
- * @param {HTMLImageElement} icon - DOM icon element.
+ * @param {HTMLElement} icon - DOM icon element.
  * @param {{x: number, y: number}|null} point - Projected position.
  * @param {number|null} heading - Projected DOM heading in radians.
  * @returns {void}
@@ -878,12 +916,45 @@ const positionGuideIcon = (icon, point, heading = null) => {
         icon.style.display = 'none'
         return
     }
-    icon.style.display = 'block'
+    icon.style.display = icon.dataset.visibleDisplay ?? 'block'
     icon.style.left = `${point.x}px`
     icon.style.top = `${point.y}px`
     icon.style.transform = Number.isFinite(heading)
         ? `translate(-50%, -50%) rotate(${heading}rad)`
         : 'translate(-50%, -50%)'
+}
+
+/**
+ * Resolve the trace arrow and activity marker in the map's local tangent plane.
+ *
+ * @param {Matrix4} transform - ENU frame at the replay position.
+ * @param {number} heading - Trace tangent bearing in radians.
+ * @param {number} metresPerPixel - Map-plane scale at the replay position.
+ * @returns {Object} World-space arrow and activity marker positions.
+ */
+const traceArrowGeometryFrom = (transform, heading, metresPerPixel) => {
+    const arrowHalfLength = CAMERA_ANGLE_GUIDE_TRACE_ARROW_LENGTH_PIXELS / 2
+    const iconOffset = arrowHalfLength
+        + CAMERA_ANGLE_GUIDE_TRACE_ARROW_ICON_GAP_PIXELS
+        + (CAMERA_ANGLE_GUIDE_ICON_SIZE / 2)
+    const arrowStartOffset = -arrowHalfLength
+    const arrowTipOffset = arrowHalfLength
+    const arrowHeadBaseOffset = arrowTipOffset - CAMERA_ANGLE_GUIDE_TRACE_ARROW_HEAD_LENGTH_PIXELS
+    const arrowStart = positionAtHeading(transform, heading, arrowStartOffset * metresPerPixel)
+    const arrowTip = positionAtHeading(transform, heading, arrowTipOffset * metresPerPixel)
+    const arrowHeadBase = positionAtHeading(transform, heading, arrowHeadBaseOffset * metresPerPixel)
+    const arrowHeadHalfWidth = CAMERA_ANGLE_GUIDE_TRACE_ARROW_HEAD_HALF_WIDTH_PIXELS * metresPerPixel
+
+    return {
+        activityIcon: positionAtHeading(transform, heading, -iconOffset * metresPerPixel),
+        arrowHead: [
+            arrowTip,
+            positionAtHeadingOffset(transform, heading, arrowHeadBaseOffset * metresPerPixel, arrowHeadHalfWidth),
+            positionAtHeadingOffset(transform, heading, arrowHeadBaseOffset * metresPerPixel, -arrowHeadHalfWidth),
+        ],
+        arrowStart,
+        arrowEnd: arrowHeadBase,
+    }
 }
 
 /**
@@ -1009,6 +1080,12 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
     }
     const coneHeading = record.guide.coneHeading
     record.coneLength = coneLengthFrom(viewer, record.anchor, record.coneLength)
+    const coneScale = Number.isFinite(record.guide.cameraAltitude)
+        ? Math.max(
+            CAMERA_ANGLE_GUIDE_MIN_CONE_SCALE,
+            Math.min(CAMERA_ANGLE_GUIDE_MAX_CONE_SCALE, record.guide.cameraAltitude / CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS),
+        )
+        : 1
     const geometry = coneGeometryFrom(
         viewer,
         record.anchor,
@@ -1016,7 +1093,7 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
         record.groundTransform,
         record.guide,
         coneHeading,
-        record.coneLength,
+        record.coneLength * coneScale,
     )
     const outer = geometry.outer.map(position => projectGuidePosition(viewer, overlay, position))
     const inner = geometry.inner.map(position => projectGuidePosition(viewer, overlay, position))
@@ -1034,46 +1111,64 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
     }
 
     const rotationCenter = outerBaseCenter
-    const currentConeAngle = rotationCenter ? domAngleFrom(rotationCenter, outer[2]) : null
     const traceAngle = rotationCenter && traceDirection
         ? domAngleFrom(rotationCenter, traceDirection)
         : null
-    const desiredConeAngle = traceAngle === null
-        ? null
-        : traceAngle + (record.guide.mode === 'Ahead' ? 0 : Math.PI) + record.guide.offsetRadians
-    const domRotation = currentConeAngle === null || desiredConeAngle === null
-        ? 0
-        : domAngleDeltaFrom(currentConeAngle, desiredConeAngle)
-    const rotatedOuter = rotationCenter
-        ? outer.map(point => rotateProjectedPoint(point, rotationCenter, domRotation))
-        : outer
-    const rotatedInner = rotationCenter
-        ? inner.map(point => rotateProjectedPoint(point, rotationCenter, domRotation))
-        : inner
-    const rotatedInnerBaseCenter = rotationCenter && innerBaseCenter
-        ? rotateProjectedPoint(innerBaseCenter, rotationCenter, domRotation)
-        : innerBaseCenter
-    const rotatedCameraGround = rotationCenter && cameraGround
-        ? rotateProjectedPoint(cameraGround, rotationCenter, domRotation)
-        : cameraGround
-    const rotatedVideoIcon = rotationCenter && videoIcon
-        ? rotateProjectedPoint(videoIcon, rotationCenter, domRotation)
-        : videoIcon
-    const [outerLeft, outerRight, tip] = rotatedOuter
-    const [innerOuterLeft, innerOuterRight, innerTip] = rotatedInner
+    const [outerLeft, outerRight, tip] = outer
+    const [innerOuterLeft, innerOuterRight, innerTip] = inner
     const [left, right] = recenterProjectedBase(outerLeft, outerRight, outerBaseCenter)
-    const [innerLeft, innerRight] = recenterProjectedBase(innerOuterLeft, innerOuterRight, rotatedInnerBaseCenter)
-    const angleLabelPoint = rotatedInnerBaseCenter && innerTip
-        ? interpolateProjectedPoint(rotatedInnerBaseCenter, innerTip, 0.24)
+    const [innerLeft, innerRight] = recenterProjectedBase(innerOuterLeft, innerOuterRight, innerBaseCenter)
+    const baselineHeading = record.guide.axisHeading
+    const angleArcWorld = rotationCenter
+        ? angleArcGeometryFrom(
+            record.transform,
+            baselineHeading,
+            record.guide.coneHeading,
+            iconGapFrom(viewer, record.anchor, CAMERA_ANGLE_GUIDE_ANGLE_ARC_RADIUS_PIXELS) * coneScale,
+        )
+        : null
+    const angleArcPoints = angleArcWorld?.positions.map(position => projectGuidePosition(viewer, overlay, position))
+    const angleArcLabel = rotationCenter && tip
+        ? {
+            x: rotationCenter.x + ((tip.x - rotationCenter.x) * 0.5),
+            y: rotationCenter.y + ((tip.y - rotationCenter.y) * 0.5),
+        }
+        : null
+    const angleArc = angleArcPoints?.every(Boolean) && angleArcLabel
+        ? {label: angleArcLabel, path: svgPolylinePathFrom(angleArcPoints)}
         : null
     const innerGradientAxis = svgGradientAxisFrom(innerTip, innerLeft, innerRight)
-    elements.outer.setAttribute('d', svgConePathFrom(left, right, tip))
+    const outerPath = svgConePathFrom(left, right, tip)
+    elements.interactionPath.setAttribute('d', outerPath)
+    elements.outer.setAttribute('d', outerPath)
     elements.inner.setAttribute('d', svgConePathFrom(
         innerLeft,
         innerRight,
         innerTip,
         CAMERA_ANGLE_GUIDE_INNER_ARC_FLATTENING,
     ))
+    elements.cameraAxis.setAttribute('x1', rotationCenter.x)
+    elements.cameraAxis.setAttribute('y1', rotationCenter.y)
+    elements.cameraAxis.setAttribute('x2', videoIcon?.x ?? tip.x)
+    elements.cameraAxis.setAttribute('y2', videoIcon?.y ?? tip.y)
+    elements.cameraAxis.style.display = 'block'
+    if (angleArc) {
+        elements.angleArc.setAttribute('d', angleArc.path)
+        elements.angleArc.style.display = 'block'
+        elements.angleLabel.textContent = angleLabelFrom(record.guide.angleDegrees)
+        elements.angleLabel.setAttribute('x', angleArc.label.x)
+        elements.angleLabel.setAttribute('y', angleArc.label.y)
+        const cameraAxisAngle = domAngleFrom(rotationCenter, tip)
+        const textRotation = readableMapTextRotationFrom(
+            Number.isFinite(cameraAxisAngle) ? cameraAxisAngle + (Math.PI / 2) : null,
+        )
+        elements.angleLabel.setAttribute('transform', `rotate(${textRotation} ${angleArc.label.x} ${angleArc.label.y})`)
+        elements.angleLabel.style.display = 'block'
+    }
+    else {
+        elements.angleArc.style.display = 'none'
+        elements.angleLabel.style.display = 'none'
+    }
     elements.innerGradient.setAttribute('x1', innerGradientAxis.start.x)
     elements.innerGradient.setAttribute('y1', innerGradientAxis.start.y)
     elements.innerGradient.setAttribute('x2', innerGradientAxis.end.x)
@@ -1086,23 +1181,11 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
     elements.rightSide.setAttribute('y1', right.y)
     elements.rightSide.setAttribute('x2', tip.x)
     elements.rightSide.setAttribute('y2', tip.y)
-    if (angleLabelPoint) {
-        elements.angleLabel.textContent = angleLabelFrom(record.guide.angleDegrees)
-        elements.angleLabel.setAttribute('x', angleLabelPoint.x)
-        elements.angleLabel.setAttribute('y', angleLabelPoint.y)
-        const coneAngle = domAngleFrom(rotatedInnerBaseCenter, innerTip)
-        const perpendicularAngle = coneAngle === null ? 270 : (coneAngle * 180 / Math.PI) + 270
-        elements.angleLabel.setAttribute('transform', `rotate(${perpendicularAngle} ${angleLabelPoint.x} ${angleLabelPoint.y})`)
-        elements.angleLabel.style.display = 'block'
-    }
-    else {
-        elements.angleLabel.style.display = 'none'
-    }
-    if (rotatedCameraGround && rotatedVideoIcon) {
-        elements.cameraElevation.setAttribute('x1', rotatedCameraGround.x)
-        elements.cameraElevation.setAttribute('y1', rotatedCameraGround.y)
-        elements.cameraElevation.setAttribute('x2', rotatedVideoIcon.x)
-        elements.cameraElevation.setAttribute('y2', rotatedVideoIcon.y)
+    if (cameraGround && videoIcon) {
+        elements.cameraElevation.setAttribute('x1', cameraGround.x)
+        elements.cameraElevation.setAttribute('y1', cameraGround.y)
+        elements.cameraElevation.setAttribute('x2', videoIcon.x)
+        elements.cameraElevation.setAttribute('y2', videoIcon.y)
         elements.cameraElevation.style.display = 'block'
     }
     else {
@@ -1113,10 +1196,43 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
         : null
     positionGuideIcon(
         elements.videoIcon,
-        rotatedVideoIcon,
+        videoIcon,
         projectedConeHeading === null ? null : projectedConeHeading + Math.PI,
     )
+    const traceArrowWorld = traceArrowGeometryFrom(
+        record.transform,
+        record.guide.axisHeading,
+        iconGapFrom(viewer, record.anchor, 1),
+    )
+    const traceArrow = {
+        activityIcon: projectGuidePosition(viewer, overlay, traceArrowWorld.activityIcon),
+        arrowHead: traceArrowWorld.arrowHead.map(position => projectGuidePosition(viewer, overlay, position)),
+        arrowStart: projectGuidePosition(viewer, overlay, traceArrowWorld.arrowStart),
+        arrowEnd: projectGuidePosition(viewer, overlay, traceArrowWorld.arrowEnd),
+    }
+    if ([traceArrow.activityIcon, traceArrow.arrowStart, traceArrow.arrowEnd, ...traceArrow.arrowHead].every(Boolean)) {
+        elements.traceArrow.style.display = 'block'
+        elements.traceArrowHead.style.display = 'block'
+        elements.traceArrow.setAttribute('x1', traceArrow.arrowStart.x)
+        elements.traceArrow.setAttribute('y1', traceArrow.arrowStart.y)
+        elements.traceArrow.setAttribute('x2', traceArrow.arrowEnd.x)
+        elements.traceArrow.setAttribute('y2', traceArrow.arrowEnd.y)
+        const [arrowTip, arrowLeft, arrowRight] = traceArrow.arrowHead
+        elements.traceArrowHead.setAttribute('d', [
+            `M ${arrowTip.x} ${arrowTip.y}`,
+            `L ${arrowLeft.x} ${arrowLeft.y}`,
+            `L ${arrowRight.x} ${arrowRight.y}`,
+            'Z',
+        ].join(' '))
+        positionGuideIcon(elements.activityIcon, traceArrow.activityIcon, traceAngle)
+    }
+    else {
+        elements.traceArrow.style.display = 'none'
+        elements.traceArrowHead.style.display = 'none'
+        positionGuideIcon(elements.activityIcon, null)
+    }
     elements.svg.setAttribute('viewBox', `0 0 ${width} ${height}`)
+    record.projectedAnchor = outerBaseCenter
     overlay.style.visibility = 'visible'
     return 'drawn'
 }
@@ -1130,7 +1246,7 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
  * @param {Color} options.aheadColor - Cone side and drone color.
  * @returns {{overlay: HTMLElement, elements: Object}|null} Created overlay.
  */
-const createGuideOverlay = ({viewer, headingColor, aheadColor}) => {
+const createGuideOverlay = ({viewer, headingColor, aheadColor, activityIconName}) => {
     const container = viewer?.container ?? viewer?.scene?.canvas?.parentElement
     if (!container || typeof document === 'undefined') {
         return null
@@ -1163,8 +1279,18 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor}) => {
         pointerEvents: 'none',
         position:     'absolute',
         top:          '0',
+        touchAction:  'none',
+        userSelect:   'none',
         width:        '100%',
     })
+    svg.style.cursor = 'grab'
+    const interactionPath = createSvgElement('path', {
+        'data-part': 'cone-drag-target',
+        fill: 'transparent',
+        'pointer-events': 'fill',
+    })
+    interactionPath.style.cursor = 'grab'
+    interactionPath.style.pointerEvents = 'fill'
     const outer = createSvgElement('path', {
         'data-part': 'outer',
         fill:       'none',
@@ -1173,6 +1299,7 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor}) => {
         'data-part': 'inner',
         fill:        `url(#replay-camera-angle-guide-inner-gradient-${++cameraAngleGuideGradientCounter})`,
     })
+    inner.style.pointerEvents = 'fill'
     const innerGradientId = inner.getAttribute('fill').slice(5, -1)
     const innerGradient = createSvgElement('linearGradient', {
         id:            innerGradientId,
@@ -1199,6 +1326,35 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor}) => {
     const leftSide = createLine(aheadColor)
     const rightSide = createLine(aheadColor)
     const cameraElevation = createLine(aheadColor)
+    const cameraAxis = createLine(aheadColor)
+    cameraAxis.setAttribute('data-part', 'camera-position-axis')
+    cameraAxis.setAttribute('stroke', cssColorFrom(headingColor))
+    cameraAxis.setAttribute('stroke-width', '2')
+    cameraAxis.setAttribute('stroke-dasharray', '5 4')
+    cameraAxis.setAttribute('opacity', '0.9')
+    const angleArc = createSvgElement('path', {
+        'data-part': 'camera-angle-arc',
+        fill: 'none',
+        stroke: cssColorFrom(headingColor),
+        'stroke-dasharray': '6 5',
+        'stroke-linecap': 'round',
+        'stroke-width': '3',
+    })
+    const traceArrow = createSvgElement(
+        'line',
+        svgStrokeAttributesFrom(headingColor, CAMERA_ANGLE_GUIDE_TRACE_ARROW_STROKE_PIXELS),
+    )
+    traceArrow.setAttribute('data-part', 'trace-direction-arrow')
+    traceArrow.setAttribute('stroke-dasharray', '6 5')
+    traceArrow.setAttribute('stroke-linecap', 'round')
+    const traceArrowHead = createSvgElement('path', {
+        'data-part': 'trace-direction-arrow-head',
+        fill: cssColorFrom(headingColor),
+        stroke: cssColorFrom(headingColor),
+        'stroke-linejoin': 'round',
+        'stroke-linecap': 'round',
+        'stroke-width': CAMERA_ANGLE_GUIDE_TRACE_ARROW_HEAD_STROKE_PIXELS,
+    })
     const angleLabel = createSvgElement('text', {
         'data-part':       'angle-label',
         'dominant-baseline': 'middle',
@@ -1209,9 +1365,13 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor}) => {
     angleLabel.style.fontFamily = 'system-ui, sans-serif'
     angleLabel.style.fontSize = '14px'
     angleLabel.style.fontWeight = '700'
+    angleLabel.style.paintOrder = 'stroke'
     angleLabel.style.pointerEvents = 'none'
     angleLabel.style.userSelect = 'none'
-    svg.append(definitions, outer, inner, leftSide, rightSide, cameraElevation, angleLabel)
+    angleLabel.setAttribute('stroke', 'rgba(0, 0, 0, 0.9)')
+    angleLabel.setAttribute('stroke-width', '4')
+    angleLabel.setAttribute('stroke-linejoin', 'round')
+    svg.append(definitions, interactionPath, outer, inner, leftSide, rightSide, cameraAxis, cameraElevation, angleArc, traceArrow, traceArrowHead, angleLabel)
 
     const createIcon = (image) => {
         const icon = document.createElement('img')
@@ -1229,12 +1389,46 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor}) => {
         return icon
     }
     const videoIcon = createIcon(iconDataUriFrom(faVideo, aheadColor))
-    overlay.append(svg, videoIcon)
+    videoIcon.style.pointerEvents = 'auto'
+    videoIcon.style.cursor = 'grab'
+    const activityIcon = document.createElement('div')
+    activityIcon.setAttribute('data-part', 'trace-activity-icon')
+    activityIcon.setAttribute('aria-hidden', 'true')
+    activityIcon.dataset.visibleDisplay = 'flex'
+    Object.assign(activityIcon.style, {
+        alignItems:   'center',
+        background:   '#ffffff',
+        border:       `2px solid ${cssColorFrom(aheadColor)}`,
+        borderRadius: '50%',
+        boxSizing:    'border-box',
+        display:      'none',
+        height:       `${CAMERA_ANGLE_GUIDE_ICON_SIZE}px`,
+        justifyContent: 'center',
+        pointerEvents: 'none',
+        position:     'absolute',
+        width:        `${CAMERA_ANGLE_GUIDE_ICON_SIZE}px`,
+    })
+    const activityGlyph = document.createElement('wa-icon')
+    activityGlyph.setAttribute('data-part', 'trace-activity-glyph')
+    activityGlyph.setAttribute('aria-hidden', 'true')
+    activityGlyph.setAttribute('name', activityIconName || 'person-hiking')
+    activityGlyph.setAttribute('variant', 'solid')
+    Object.assign(activityGlyph.style, {
+        color:    cssColorFrom(aheadColor),
+        fontSize: `${CAMERA_ANGLE_GUIDE_ICON_SIZE * 0.48}px`,
+        height:   `${CAMERA_ANGLE_GUIDE_ICON_SIZE * 0.48}px`,
+        width:    `${CAMERA_ANGLE_GUIDE_ICON_SIZE * 0.48}px`,
+    })
+    activityIcon.append(activityGlyph)
+    overlay.append(svg, videoIcon, activityIcon)
     container.appendChild(overlay)
     return {
         elements: {
             angleLabel,
+            angleArc,
+            cameraAxis,
             cameraElevation,
+            interactionPath,
             videoIcon,
             innerGradient,
             inner,
@@ -1242,6 +1436,10 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor}) => {
             outer,
             rightSide,
             svg,
+            traceArrow,
+            traceArrowHead,
+            activityIcon,
+            activityGlyph,
         },
         overlay,
     }
@@ -1268,6 +1466,224 @@ const updateGuideGeometry = (viewer, record, checkDepth = true) => {
 }
 
 /**
+ * Bind pointer dragging to camera-angle adjustments on the cone hit area.
+ *
+ * @param {Object} viewer - Cesium viewer.
+ * @param {Object} record - Mounted guide record.
+ * @returns {void}
+ */
+const bindGuideDragInteractions = (viewer, record) => {
+    const hitArea = record.elements.svg
+    /**
+     * Convert pointer coordinates to overlay-local pixels.
+     *
+     * @param {PointerEvent} event - Pointer event.
+     * @returns {{x: number, y: number}} Overlay-local point.
+     */
+    const pointerPositionFrom = event => {
+        const rect = record.overlay.getBoundingClientRect()
+        return {x: event.clientX - rect.left, y: event.clientY - rect.top}
+    }
+
+    /**
+     * Resolve the trace-relative bearing under a pointer from the map surface.
+     *
+     * @param {PointerEvent} event - Pointer event.
+     * @returns {number|null} Map-plane bearing in radians.
+     */
+    const mapBearingFromPointer = event => {
+        const scene = viewer.scene
+        const canvas = scene?.canvas
+        const rect = canvas?.getBoundingClientRect?.()
+        const width = Number(scene?.drawingBufferWidth ?? canvas?.width)
+        const height = Number(scene?.drawingBufferHeight ?? canvas?.height)
+        if (!rect || rect.width <= 0 || rect.height <= 0 || width <= 0 || height <= 0) {
+            return null
+        }
+        const canvasPoint = new Cartesian2(
+            (event.clientX - rect.left) * width / rect.width,
+            (event.clientY - rect.top) * height / rect.height,
+        )
+        let worldPosition = null
+        try {
+            const ray = viewer.camera?.getPickRay?.(canvasPoint)
+            worldPosition = ray ? scene.globe?.pick?.(ray, scene) : null
+            if (!isFiniteCartesianPosition(worldPosition) && scene.pickPositionSupported === true) {
+                worldPosition = scene.pickPosition?.(canvasPoint) ?? null
+            }
+        }
+        catch {
+            worldPosition = null
+        }
+        if (!isFiniteCartesianPosition(worldPosition)) {
+            return null
+        }
+        const pickedPosition = Cartographic.fromCartesian(worldPosition)
+        if (!pickedPosition) {
+            return null
+        }
+        return bearingBetween(record.guide.anchor, {
+            latitude: pickedPosition.latitude * 180 / Math.PI,
+            longitude: pickedPosition.longitude * 180 / Math.PI,
+        })
+    }
+
+    /**
+     * Begin rotating the camera by dragging the cone.
+     *
+     * @param {PointerEvent} event - Pointer event.
+     * @returns {void}
+     */
+    const pointerDownListener = event => {
+        if (event.button !== 0 || !record.projectedAnchor || typeof record.onCameraChange !== 'function') {
+            return
+        }
+        const point = pointerPositionFrom(event)
+        const deltaX = point.x - record.projectedAnchor.x
+        const deltaY = point.y - record.projectedAnchor.y
+        if (Math.hypot(deltaX, deltaY) < 1) {
+            return
+        }
+        const cameraController = viewer.scene?.screenSpaceCameraController
+        record.dragState = {
+            pointerId: event.pointerId,
+            altitudeDraggable: event.currentTarget !== record.elements.videoIcon,
+            startAngle: Math.atan2(deltaY, deltaX),
+            startAltitude: record.guide.cameraAltitude ?? CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS,
+            startRadius: Math.hypot(deltaX, deltaY),
+            startOffset: record.guide.offsetRadians,
+            startMapAngle: mapBearingFromPointer(event),
+            cameraController,
+            previousRotateEnabled: cameraController?.enableRotate,
+        }
+        if (cameraController && typeof cameraController.enableRotate === 'boolean') {
+            cameraController.enableRotate = false
+        }
+        event.preventDefault()
+        event.stopPropagation()
+        event.stopImmediatePropagation?.()
+        hitArea.style.cursor = 'grabbing'
+        record.elements.videoIcon.style.cursor = 'grabbing'
+        record.elements.interactionPath.style.cursor = 'grabbing'
+        record.elements.inner.style.cursor = 'grabbing'
+        hitArea.setPointerCapture?.(event.pointerId)
+        globalThis.addEventListener?.('pointermove', pointerMoveListener, true)
+        globalThis.addEventListener?.('pointerup', pointerUpListener, true)
+        globalThis.addEventListener?.('pointercancel', pointerUpListener, true)
+        record.dragState.removePointerListeners = () => {
+            globalThis.removeEventListener?.('pointermove', pointerMoveListener, true)
+            globalThis.removeEventListener?.('pointerup', pointerUpListener, true)
+            globalThis.removeEventListener?.('pointercancel', pointerUpListener, true)
+        }
+    }
+
+    /**
+     * Recalculate the camera heading from the current drag direction.
+     *
+     * @param {PointerEvent} event - Pointer event.
+     * @returns {void}
+     */
+    const pointerMoveListener = event => {
+        const dragState = record.dragState
+        if (!dragState || (dragState.pointerId !== undefined && event.pointerId !== dragState.pointerId)) {
+            return
+        }
+        event.preventDefault()
+        event.stopPropagation()
+        event.stopImmediatePropagation?.()
+        const point = pointerPositionFrom(event)
+        const deltaX = point.x - record.projectedAnchor.x
+        const deltaY = point.y - record.projectedAnchor.y
+        if (Math.hypot(deltaX, deltaY) < 1) {
+            return
+        }
+        const mapAngle = mapBearingFromPointer(event)
+        const angle = Math.atan2(deltaY, deltaX)
+        const angleDelta = Number.isFinite(dragState.startMapAngle) && Number.isFinite(mapAngle)
+            ? domAngleDeltaFrom(dragState.startMapAngle, mapAngle)
+            : domAngleDeltaFrom(dragState.startAngle, angle)
+        const offset = dragState.startOffset + angleDelta
+        const rawDegrees = offset * 180 / Math.PI
+        const headingOffset = ((rawDegrees + 180) % 360 + 360) % 360 - 180
+        const altitude = dragState.altitudeDraggable
+            ? Math.max(
+                CAMERA_ANGLE_GUIDE_MIN_CAMERA_ALTITUDE_METERS,
+                Math.min(
+                    CAMERA_ANGLE_GUIDE_MAX_CAMERA_ALTITUDE_METERS,
+                    dragState.startAltitude * Math.hypot(deltaX, deltaY) / dragState.startRadius,
+                ),
+            )
+            : dragState.startAltitude
+        const offsetRadians = headingOffset * Math.PI / 180
+        record.guide = {
+            ...record.guide,
+            angleDegrees: displayAngleFrom(headingOffset),
+            cameraAltitude: altitude,
+            cameraHeading: record.guide.baseHeading + offsetRadians,
+            coneHeading: record.guide.baseHeading + offsetRadians + Math.PI,
+            offsetRadians,
+        }
+        updateGuideGeometry(viewer, record, false)
+        dragState.pendingUpdates = {
+            altitude,
+            headingOffset,
+        }
+    }
+
+    /**
+     * Finish a drag and restore Cesium's map rotation control.
+     *
+     * @param {Object|null} [event] - Pointer event ending the drag.
+     * @returns {void}
+     */
+    const finishDrag = (event = null) => {
+        const dragState = record.dragState
+        if (!dragState || (event?.pointerId !== undefined && event.pointerId !== dragState.pointerId)) {
+            return
+        }
+        record.dragState = null
+        dragState.removePointerListeners?.()
+        if (dragState.cameraController && typeof dragState.previousRotateEnabled === 'boolean') {
+            dragState.cameraController.enableRotate = dragState.previousRotateEnabled
+        }
+        hitArea.style.cursor = 'grab'
+        record.elements.videoIcon.style.cursor = 'grab'
+        record.elements.interactionPath.style.cursor = 'grab'
+        record.elements.inner.style.cursor = 'grab'
+        if (event && hitArea.hasPointerCapture?.(event.pointerId)) {
+            hitArea.releasePointerCapture(event.pointerId)
+        }
+        if (event && dragState.pendingUpdates) {
+            record.onCameraChange?.(dragState.pendingUpdates)
+        }
+    }
+
+    /**
+     * End the active cone drag and release pointer capture.
+     *
+     * @param {PointerEvent} event - Pointer event.
+     * @returns {void}
+     */
+    const pointerUpListener = event => {
+        if (!record.dragState || (record.dragState.pointerId !== undefined && event.pointerId !== record.dragState.pointerId)) {
+            return
+        }
+        event.preventDefault()
+        event.stopPropagation()
+        event.stopImmediatePropagation?.()
+        finishDrag(event)
+    }
+
+    hitArea.addEventListener('pointerdown', pointerDownListener)
+    record.elements.videoIcon.addEventListener('pointerdown', pointerDownListener)
+    record.removeDragListeners = () => {
+        finishDrag()
+        hitArea.removeEventListener('pointerdown', pointerDownListener)
+        record.elements.videoIcon.removeEventListener('pointerdown', pointerDownListener)
+    }
+}
+
+/**
  * Remove the currently mounted map guide for a viewer.
  *
  * @param {Object|null} viewer - Cesium viewer.
@@ -1283,6 +1699,7 @@ export const removeJourneyReplayCameraAngleGuide = viewer => {
     record.removeCameraChangedListener?.()
     record.removePostRenderListener?.()
     record.removeCameraMoveStartListener?.()
+    record.removeDragListeners?.()
     if (record.canvasWheelListener) {
         viewer.scene?.canvas?.removeEventListener?.('wheel', record.canvasWheelListener, true)
     }
@@ -1297,9 +1714,10 @@ export const removeJourneyReplayCameraAngleGuide = viewer => {
  * @param {Object} viewer - Cesium viewer.
  * @param {Object} guide - Resolved guide geometry.
  * @param {Object|string} colors - Heading and ahead colors, or one legacy color.
+ * @param {Object} callbacks - Optional camera interaction callbacks.
  * @returns {boolean} Whether the 3D guide was mounted.
  */
-export const mountJourneyReplayCameraAngleGuide = (viewer, guide, colors = {}) => {
+export const mountJourneyReplayCameraAngleGuide = (viewer, guide, colors = {}, callbacks = {}) => {
     if (!viewer?.scene?.canvas || !guide?.anchor) {
         return false
     }
@@ -1320,6 +1738,7 @@ export const mountJourneyReplayCameraAngleGuide = (viewer, guide, colors = {}) =
     const coneColor = guide.mode === 'Ahead' ? aheadColor : headingColor
     const overlayParts = createGuideOverlay({
         aheadColor,
+        activityIconName: guide.activityIcon,
         headingColor: coneColor,
         viewer,
     })
@@ -1329,6 +1748,7 @@ export const mountJourneyReplayCameraAngleGuide = (viewer, guide, colors = {}) =
 
     const record = Object.assign({}, worldGeometry, overlayParts, {
         guide,
+        onCameraChange: callbacks.onCameraChange,
         depthProbePending: true,
         projectionRetryCount: 0,
     })
@@ -1358,6 +1778,7 @@ export const mountJourneyReplayCameraAngleGuide = (viewer, guide, colors = {}) =
     }
     viewer.scene.canvas.addEventListener?.('wheel', record.canvasWheelListener, true)
     globalThis.addEventListener?.('resize', record.resizeListener)
+    bindGuideDragInteractions(viewer, record)
     updateGuideGeometry(viewer, record, false)
     viewer.scene?.requestRender?.()
     return true
@@ -1370,15 +1791,21 @@ export const mountJourneyReplayCameraAngleGuide = (viewer, guide, colors = {}) =
  * @param {Object|null} guide - New resolved replay camera guide.
  * @returns {boolean} Whether the mounted guide was updated.
  */
-export const updateJourneyReplayCameraAngleGuide = (viewer, guide) => {
+export const updateJourneyReplayCameraAngleGuide = (viewer, guide, callbacks = {}) => {
     const record = viewer ? cameraAngleGuideRecords.get(viewer) : null
     if (!record || !guide || record.guide.mode !== guide.mode) {
         return false
+    }
+    if (typeof callbacks.onCameraChange === 'function') {
+        record.onCameraChange = callbacks.onCameraChange
     }
 
     const geometryChanged = guideGeometryKeyFrom(record.guide) !== guideGeometryKeyFrom(guide)
     const angleChanged = record.guide.coneHeading !== guide.coneHeading
         || record.guide.angleDegrees !== guide.angleDegrees
+    if (record.guide.activityIcon !== guide.activityIcon) {
+        record.elements.activityGlyph.setAttribute('name', guide.activityIcon || 'person-hiking')
+    }
     if (geometryChanged) {
         Object.assign(record, worldGeometryFrom(viewer, guide, record.coneLength))
     }

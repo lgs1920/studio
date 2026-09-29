@@ -22,9 +22,12 @@ const guideHarness = vi.hoisted(() => ({
     mount:   vi.fn(() => true),
     remove:  vi.fn(),
     resolve: vi.fn(({camera, sample}) => ({
+        angleDegrees: -(camera.headingOffset ?? 0),
         anchor: sample
             ? {height: sample.altitude, latitude: sample.latitude, longitude: sample.longitude}
             : {height: 0, latitude: 48, longitude: 2},
+        coneHeading: camera.headingOffset ?? 0,
+        followViewerHeading: Boolean(sample),
         mode: camera.positionMode === 'ahead' ? 'Ahead' : 'Behind',
     })),
     update: vi.fn(() => true),
@@ -38,6 +41,9 @@ vi.mock('@Core/ui/replay/JourneyReplayCameraAngleGuide', () => ({
 }))
 
 vi.mock('@Core/ui/replay/JourneyReplayRuntime', () => ({
+    isJourneyReplayCameraActive: replay => Boolean(
+        replay?.active || replay?.playing || replay?.paused || replay?.clipSequenceActive,
+    ),
     isJourneyReplayVideoCaptureActive: () => false,
 }))
 
@@ -47,6 +53,7 @@ afterEach(() => {
     cleanup()
     vi.clearAllMocks()
     globalThis.lgs = undefined
+    globalThis.__ = undefined
 })
 
 describe('JourneyReplayCameraAngleGuide component', () => {
@@ -55,6 +62,13 @@ describe('JourneyReplayCameraAngleGuide component', () => {
             slug:   'journey-a',
             tracks: new Map(),
         }
+        const replaySettings = proxy({
+            userMode: 'expert',
+            camera: {
+                headingOffset: 20,
+                positionMode:  'behind',
+            },
+        })
         const replay = proxy({
             active:        false,
             liveSample:    null,
@@ -64,13 +78,7 @@ describe('JourneyReplayCameraAngleGuide component', () => {
         globalThis.lgs = {
             settings: {
                 ui: {
-                    replay: proxy({
-                        userMode: 'expert',
-                        camera: {
-                            headingOffset: 20,
-                            positionMode:  'behind',
-                        },
-                    }),
+                    replay: replaySettings,
                 },
             },
             stores: {
@@ -109,11 +117,227 @@ describe('JourneyReplayCameraAngleGuide component', () => {
 
         await waitFor(() => {
             expect(guideHarness.mount).toHaveBeenCalled()
+            expect(guideHarness.mount).toHaveBeenCalledWith(
+                expect.anything(),
+                expect.objectContaining({mode: 'Behind'}),
+                {},
+                expect.objectContaining({onCameraChange: expect.any(Function)}),
+            )
             expect(guideHarness.resolve).toHaveBeenLastCalledWith(expect.objectContaining({sample}))
             expect(guideHarness.update).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({
                 anchor: {height: 150, latitude: 48.5, longitude: 2.5},
                 mode:   'Behind',
+            }), expect.objectContaining({onCameraChange: expect.any(Function)}))
+        })
+
+        act(() => {
+            replaySettings.camera.headingOffset = 35
+        })
+
+        await waitFor(() => {
+            expect(guideHarness.resolve).toHaveBeenLastCalledWith(expect.objectContaining({
+                camera: expect.objectContaining({headingOffset: 35}),
+                sample,
+            }))
+            expect(guideHarness.update).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({
+                angleDegrees: -35,
+                coneHeading: 35,
+            }), expect.objectContaining({onCameraChange: expect.any(Function)}))
+        })
+        expect(guideHarness.mount).toHaveBeenCalledTimes(1)
+    })
+
+    it('keeps the camera cone available during preparation when the stored user mode is stale', async () => {
+        globalThis.lgs = {
+            settings: {
+                ui: {
+                    replay: proxy({
+                        userMode: 'basic',
+                        camera: {
+                            headingOffset: 10,
+                            positionMode:  'behind',
+                        },
+                    }),
+                },
+            },
+            stores: {
+                main: proxy({theJourney: {slug: 'journey-a', tracks: new Map()}}),
+                replay: proxy({active: false, liveSample: null, sample: null}),
+                ui: {
+                    drawers: proxy({open: null}),
+                    video: proxy({
+                        editing:      true,
+                        preRecording: false,
+                        recordingHQ:  false,
+                        snapshot:     false,
+                        finalizing:   false,
+                    }),
+                },
+            },
+            viewer: {},
+        }
+
+        render(<JourneyReplayCameraAngleGuide/>)
+
+        await waitFor(() => expect(guideHarness.mount).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+                anchor: {height: 0, latitude: 48, longitude: 2},
+                mode:   'Behind',
+            }),
+            {},
+            expect.objectContaining({onCameraChange: expect.any(Function)}),
+        ))
+    })
+
+    it('shows the cone during Simple Replay using its effective trace-relative camera', async () => {
+        const sample = {
+            longitude:  2.5,
+            latitude:   48.5,
+            altitude:   150,
+            source: {
+                startPoint: {longitude: 2.49, latitude: 48.5, altitude: 145},
+                endPoint:   {longitude: 2.51, latitude: 48.5, altitude: 155},
+            },
+        }
+        globalThis.lgs = {
+            settings: {
+                ui: {
+                    replay: proxy({
+                        userMode: 'basic',
+                        camera: {
+                            headingOffset: 0,
+                            positionMode:  'system',
+                        },
+                    }),
+                },
+            },
+            stores: {
+                main: proxy({theJourney: {slug: 'journey-a', tracks: new Map()}}),
+                replay: proxy({active: false, liveSample: null, sample: null, simplePreparationActive: true}),
+                ui: {
+                    drawers: proxy({open: null}),
+                    video: proxy({
+                        editing:      true,
+                        preRecording: false,
+                        recordingHQ:  false,
+                        snapshot:     false,
+                        finalizing:   false,
+                    }),
+                },
+            },
+            viewer: {},
+        }
+
+        render(<JourneyReplayCameraAngleGuide/>)
+
+        await waitFor(() => {
+            expect(guideHarness.mount).toHaveBeenCalledWith(
+                expect.anything(),
+                expect.objectContaining({mode: 'Behind'}),
+                {},
+                expect.objectContaining({onCameraChange: expect.any(Function)}),
+            )
+            expect(guideHarness.resolve).toHaveBeenLastCalledWith(expect.objectContaining({
+                camera: expect.objectContaining({positionMode: 'behind'}),
             }))
         })
+
+        act(() => {
+            globalThis.lgs.stores.replay.active = true
+            globalThis.lgs.stores.replay.liveSample = sample
+            globalThis.lgs.stores.replay.sample = sample
+        })
+
+        await waitFor(() => {
+            expect(guideHarness.resolve).toHaveBeenLastCalledWith(expect.objectContaining({
+                camera: expect.objectContaining({positionMode: 'behind'}),
+                sample,
+            }))
+        })
+    })
+
+    it('persists dragged cone angle and altitude through Simple camera settings', async () => {
+        const simpleCamera = {
+            altitude: 1200,
+            headingOffset: 0,
+            positionMode: 'behind',
+        }
+        const journey = {
+            replay: {simple: {camera: {...simpleCamera}}},
+            slug: 'journey-a',
+            tracks: new Map(),
+        }
+        const settings = proxy({
+            userMode: 'basic',
+            camera: {...simpleCamera},
+            simple: {camera: {...simpleCamera}},
+        })
+        const refresh = vi.fn()
+        const refreshCamera = vi.fn()
+        globalThis.__ = {ui: {replay: {refresh, refreshCamera}}}
+        globalThis.lgs = {
+            settings: {ui: {replay: settings}},
+            stores: {
+                main: proxy({theJourney: journey}),
+                replay: proxy({active: false, liveSample: null, sample: null}),
+                ui: {
+                    drawers: proxy({open: null}),
+                    video: proxy({editing: true, preRecording: false, recordingHQ: false, snapshot: false, finalizing: false}),
+                },
+            },
+            viewer: {},
+        }
+
+        render(<JourneyReplayCameraAngleGuide/>)
+        await waitFor(() => expect(guideHarness.mount).toHaveBeenCalled())
+        act(() => {
+            guideHarness.mount.mock.calls.at(-1)[3].onCameraChange({altitude: 600, headingOffset: 30})
+        })
+
+        expect(settings.simple.camera).toMatchObject({altitude: 600, headingOffset: 30})
+        expect(journey.replay.simple.camera).toMatchObject({altitude: 600, headingOffset: 30})
+        expect(globalThis.lgs.stores.replay.camera).toMatchObject({altitude: 600, headingOffset: 30})
+        expect(refresh).not.toHaveBeenCalled()
+        expect(refreshCamera).not.toHaveBeenCalled()
+    })
+
+    it('persists an Expert camera angle without moving Cesium', async () => {
+        const journey = {replay: {expert: {camera: {altitude: 900, headingOffset: 0, positionMode: 'behind'}}}}
+        const refresh = vi.fn()
+        const refreshCamera = vi.fn()
+        globalThis.__ = {ui: {replay: {refresh, refreshCamera}}}
+        const settings = proxy({
+            userMode: 'expert',
+            camera: {altitude: 900, headingOffset: 0, positionMode: 'behind'},
+        })
+        globalThis.lgs = {
+            theJourney: journey,
+            settings: {ui: {replay: settings}},
+            stores: {
+                main: proxy({theJourney: journey}),
+                replay: proxy({active: false, liveSample: null, sample: null}),
+                ui: {
+                    drawers: proxy({open: null}),
+                    video: proxy({editing: true, preRecording: false, recordingHQ: false, snapshot: false, finalizing: false}),
+                },
+            },
+            viewer: {},
+        }
+
+        render(<JourneyReplayCameraAngleGuide/>)
+        await waitFor(() => expect(guideHarness.mount).toHaveBeenCalled())
+        act(() => {
+            guideHarness.mount.mock.calls.at(-1)[3].onCameraChange({
+                altitude: 900,
+                headingOffset: -40,
+            })
+        })
+
+        expect(settings.camera).toMatchObject({altitude: 900, headingOffset: -40})
+        expect(journey.replay.expert.camera).toMatchObject({altitude: 900, headingOffset: -40})
+        expect(globalThis.lgs.stores.replay.camera).toMatchObject({altitude: 900, headingOffset: -40})
+        expect(refresh).not.toHaveBeenCalled()
+        expect(refreshCamera).not.toHaveBeenCalled()
     })
 })
