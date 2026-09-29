@@ -44,6 +44,11 @@ ResizeObserver.prototype.unobserve = function (target) {
  * Load Google Fonts once at startup
  */
 const bootstrap = async () => {
+    const uiUtilsPromise = import('@Utils/UIUtils')
+    void uiUtilsPromise.then(({UIUtils}) => UIUtils.importFonts()).catch(error => {
+        console.warn('Unable to load Google Fonts.', error)
+    })
+
     const [media, {installNativeContextMenuBlocker}] = await Promise.all([
         import('@Assets/media/welcome-background-media'),
         import('@Core/events/NativeContextMenuBlocker'),
@@ -113,14 +118,12 @@ const bootstrap = async () => {
         {LGS1920},
         {LGS1920Context},
         {AppUtils},
-        {UIUtils},
         {ensureViewerBaseWithRetry},
     ] = await Promise.all([
         import('react-dom/client'),
         import('@Components/LGS1920.jsx'),
         import('@Core/LGS1920Context'),
         import('@Utils/AppUtils'),
-        import('@Utils/UIUtils'),
         import('@Components/cesium/Viewer'),
     ])
 
@@ -144,10 +147,6 @@ const bootstrap = async () => {
         <LGS1920/>,
     )
     markStartup('react-mounted')
-
-    void UIUtils.importFonts().catch(error => {
-        console.warn('Unable to load Google Fonts.', error)
-    })
 }
 
 void bootstrap().catch(error => {
