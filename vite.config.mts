@@ -32,7 +32,6 @@ const DEV_PROXY_ALLOWED_TARGETS = new Set([
     'http://wms.pcn.minambiente.it:80',
 ])
 const PROJECT_ROOT = import.meta.dirname
-process.env.VITE_PWA_DEV ??= 'false'
 
 /**
  * Injects current git branch name into a local JSON file for development tracking.
@@ -237,7 +236,8 @@ export default defineConfig({
             manifest: false,
             manifestFilename: 'manifest.webmanifest',
             devOptions: {
-                enabled: false,
+                enabled: true,
+                type: 'module',
             }
         }),
         mdPlugin({mode: [Mode.HTML, Mode.MARKDOWN]}),

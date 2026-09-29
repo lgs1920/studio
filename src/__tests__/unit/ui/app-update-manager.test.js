@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-18
- * Last modified: 2026-09-28
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,8 +17,16 @@
 import {afterEach, describe, expect, it, vi} from 'vitest'
 
 describe('AppUpdateManager webapp updates', () => {
+    const serviceWorkerDescriptor = Object.getOwnPropertyDescriptor(navigator, 'serviceWorker')
+
     afterEach(() => {
         globalThis.lgs = undefined
+        if (serviceWorkerDescriptor) {
+            Object.defineProperty(navigator, 'serviceWorker', serviceWorkerDescriptor)
+        }
+        else {
+            delete navigator.serviceWorker
+        }
         vi.unstubAllEnvs()
         vi.resetModules()
     })
@@ -67,40 +75,8 @@ describe('AppUpdateManager webapp updates', () => {
         expect(waitingWorker.postMessage).toHaveBeenCalledWith({type: 'SKIP_WAITING'})
     })
 
-    it('skips service worker registration in development by default', async () => {
+    it('registers the app service worker in development', async () => {
         vi.stubEnv('DEV', true)
-        vi.stubEnv('VITE_PWA_DEV', 'false')
-        const serviceWorker = {
-            addEventListener: vi.fn(),
-            getRegistration: vi.fn(),
-            register: vi.fn(),
-        }
-
-        Object.defineProperty(navigator, 'serviceWorker', {
-            configurable: true,
-            value: serviceWorker,
-        })
-        globalThis.lgs = {
-            pwa: false,
-            stores: {
-                ui: {
-                    appUpdate: {},
-                },
-            },
-        }
-
-        const {AppUpdateManager} = await import('@Core/ui/AppUpdateManager')
-        new AppUpdateManager()
-        await Promise.resolve()
-        await Promise.resolve()
-
-        expect(serviceWorker.getRegistration).not.toHaveBeenCalled()
-        expect(serviceWorker.register).not.toHaveBeenCalled()
-    })
-
-    it('registers the app service worker in development when PWA testing is enabled', async () => {
-        vi.stubEnv('DEV', true)
-        vi.stubEnv('VITE_PWA_DEV', 'true')
         const serviceWorkerListeners = new Map()
         const registration = {
             addEventListener: vi.fn(),

@@ -81,68 +81,6 @@
             root.classList.toggle('wa-light', !isDark)
         })()
     </script>
-    <script>
-        (() => {
-            if ('%VITE_PWA_DEV%' === 'true') {
-                return
-            }
-
-            const developmentHosts = new Set(['localhost', '127.0.0.1', '::1', '[::1]', 'dev.lgs1920.fr'])
-            if (location.port !== '5173' || !developmentHosts.has(location.hostname) || !('serviceWorker' in navigator)) {
-                return
-            }
-
-            const cleanupAttemptKey = `lgs.dev-service-worker-cleanup:${location.origin}`
-            let cleanupAttempts = 0
-            try {
-                cleanupAttempts = Number(sessionStorage.getItem(cleanupAttemptKey) ?? 0)
-            }
-            catch {
-                return
-            }
-
-            /**
-             * Identifies the service workers that can intercept Vite development modules.
-             *
-             * @param {ServiceWorker|null} worker - Candidate registered worker.
-             * @returns {boolean} Whether the worker belongs to the app's PWA registration.
-             */
-            const isDevelopmentServiceWorker = worker => {
-                if (!worker?.scriptURL) {
-                    return false
-                }
-
-                const workerUrl = new URL(worker.scriptURL)
-                return workerUrl.origin === location.origin
-                    && ['/service-worker-pwa.js', '/dev-sw.js'].includes(workerUrl.pathname)
-            }
-
-            void navigator.serviceWorker.getRegistrations().then(async registrations => {
-                const developmentRegistrations = registrations.filter(registration => [
-                    registration.active,
-                    registration.waiting,
-                    registration.installing,
-                ].some(isDevelopmentServiceWorker))
-                const hasDevelopmentController = isDevelopmentServiceWorker(navigator.serviceWorker.controller)
-
-                if (!hasDevelopmentController && developmentRegistrations.length === 0) {
-                    sessionStorage.removeItem(cleanupAttemptKey)
-                    return
-                }
-
-                if (cleanupAttempts >= 1) {
-                    console.error('[LGS1920][PWA] A development service worker still controls Vite resources after cleanup.')
-                    return
-                }
-
-                sessionStorage.setItem(cleanupAttemptKey, '1')
-                await Promise.all(developmentRegistrations.map(registration => registration.unregister()))
-                window.location.reload()
-            }).catch(error => {
-                console.error('[LGS1920][PWA] Could not remove the stale development service worker.', error)
-            })
-        })()
-    </script>
     <style>
         html,
         body {

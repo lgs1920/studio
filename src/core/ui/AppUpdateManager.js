@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-27
- * Last modified: 2026-09-28
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -259,11 +259,6 @@ export class AppUpdateManager {
 
     #setupSWUpdateListener = () => {
         if (!('serviceWorker' in navigator) || !navigator.serviceWorker.addEventListener) {
-            this.#completeInitialUpdateCheck()
-            return
-        }
-
-        if (import.meta.env.DEV && import.meta.env.VITE_PWA_DEV !== 'true') {
             this.#completeInitialUpdateCheck()
             return
         }
