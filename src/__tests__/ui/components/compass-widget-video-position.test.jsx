@@ -35,6 +35,8 @@ vi.mock('@Components/MainUI/widgets/Widget', () => ({
             data-can-reset={String(config.contextMenu.canReset)}
             data-draggable={String(config.draggable)}
             data-margin={config.margin}
+            data-max-scale={config.maxScale}
+            data-min-scale={config.minScale}
             data-position-key={config.positionKey}
             data-resizable={String(config.resizable)}
             data-scalable={String(config.scalable)}
@@ -104,6 +106,8 @@ describe('CompassWidget video placement', () => {
         expect(widget.getAttribute('data-can-reset')).toBe('false')
         expect(widget.getAttribute('data-draggable')).toBe('false')
         expect(widget.getAttribute('data-margin')).toBe('8')
+        expect(widget.getAttribute('data-min-scale')).toBe('1')
+        expect(widget.getAttribute('data-max-scale')).toBe('1')
         expect(widget.getAttribute('data-position-key')).toBe('video-crop-top-left-v2')
         expect(widget.getAttribute('data-resizable')).toBe('false')
         expect(widget.getAttribute('data-scalable')).toBe('false')

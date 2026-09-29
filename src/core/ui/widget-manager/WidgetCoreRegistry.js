@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-01-26
- * Last modified: 2026-09-28
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -59,6 +59,19 @@ export class WidgetCoreRegistry {
         }
 
         return {leftRatio, topRatio}
+    }
+
+    #clampScaleToConfiguredRange = (value, axis, minScale, maxScale) => {
+        const resolveLimit = (limit, fallback) => {
+            const raw = typeof limit === 'object' ? limit?.[axis] : limit
+            const numeric = Number(raw)
+            return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback
+        }
+        const minimum = resolveLimit(minScale, 0)
+        const maximum = Math.max(minimum, resolveLimit(maxScale, Number.POSITIVE_INFINITY))
+        const saved = Number(value)
+        const scale = Number.isFinite(saved) && saved > 0 ? saved : 1
+        return Math.max(minimum, Math.min(maximum, scale))
     }
 
     /**
@@ -742,7 +755,7 @@ export class WidgetCoreRegistry {
                         config.dimensions = {width, height}
                     }
                 }
-                config.scale = savedWidget.scale || {x: 1, y: 1}
+                config.scale = savedWidget.scale ?? {x: 1, y: 1}
                 config.rotate = savedWidget.rotate || 0
                 const requestedRatioValue = this.#getRatioValue(initialConfig.ratio)
                 const defaultRatioValue = this.#getRatioValue(lgs.configuration.widgetRatio)
@@ -766,6 +779,13 @@ export class WidgetCoreRegistry {
                     config.zIndex = savedWidget.zIndex
                 }
 
+            }
+        }
+
+        if (!config.isCropper) {
+            config.scale = {
+                x: this.#clampScaleToConfiguredRange(config.scale?.x, 'x', config.minScale, config.maxScale),
+                y: this.#clampScaleToConfiguredRange(config.scale?.y, 'y', config.minScale, config.maxScale),
             }
         }
 

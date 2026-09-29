@@ -73,6 +73,9 @@ export const CompassWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
             transient:    true,
             dynamic:      true,
             ttl:          HOUR,
+            // Crop resizing must not persist a temporary downscale for the fixed video compass.
+            minScale:     fixedVideoCompass ? 1 : undefined,
+            maxScale:     fixedVideoCompass ? 1 : undefined,
             min:          {width: 50},
             max:          {width: 300},
             snap:         'svg',

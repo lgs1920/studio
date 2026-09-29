@@ -499,7 +499,8 @@ body.lgs-app-booting #cesium-viewer {
 /* Keep overlay widgets hidden until the resized crop has been repositioned. */
 .video-scene-widgets-portal {
     &.video-scene-widgets-portal-resizing {
-        visibility: hidden;
+        opacity: 0;
+        pointer-events: none;
     }
 }
 

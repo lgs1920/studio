@@ -387,6 +387,35 @@ describe('crop board widget repositioning', () => {
         expect(widget.style.top).toBe(`${config.position.top}px`)
     })
 
+    it('restores the fixed compass scale after a transiently small crop', () => {
+        widget.style.left = '8px'
+        widget.style.top = '8px'
+        widget.getBoundingClientRect = vi.fn(() => ({
+            left: 8, top: 8, width: 1, height: 0.5, right: 9, bottom: 8.5,
+        }))
+        const config = {
+            id: COMPASS_WIDGET + '#video',
+            widgetsBoard: VIDEO_WIDGETS_BOARD,
+            element: widget,
+            position: {left: 8, top: 8},
+            dimensions: {width: 100, height: 50},
+            scale: {x: 0.01, y: 0.01},
+            minScale: 1,
+            maxScale: 1,
+            margin: 8,
+            persist: false,
+        }
+        registry.setConfig(config.id, config)
+
+        expect(controls.repositionWidgetsForBoard(
+            VIDEO_WIDGETS_BOARD,
+            {left: 0, top: 0, width: 600, height: 400},
+        )).toBe(1)
+
+        expect(config.scale).toEqual({x: 1, y: 1})
+        expect(manager.transform.setScale).toHaveBeenCalledWith(widget, 1, 1)
+    })
+
     it('uses the updated crop dimensions and recovers credits from a transient tiny scale', () => {
         const liveCrop = document.createElement('div')
         document.body.appendChild(liveCrop)
