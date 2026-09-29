@@ -83,7 +83,7 @@ const registerBootSplashMediaLoadingTests = () => {
         expect(splashStyle).toContain('--hero-route-poi-color: rgb(175, 218, 188)')
         expect(splashStyle).toContain('--track-color: var(--hero-route-poi-color)')
         expect(splashStyle).toContain('.welcome-initialization-message')
-        expect(splashStyle).toContain('font-family: var(--lgs-font-family, "Open Sans", sans-serif);')
+        expect(splashStyle).toContain('font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;')
         expect(splashStyle).toContain('font-size: var(--lgs-font-size-s, .75rem);')
         expect(splashStyle).toContain('drop-shadow(0 0 .32rem color-mix(in oklab, var(--hero-route-poi-color) 82%, transparent))')
         expect(splashStyle).toContain('drop-shadow(0 0 .72rem color-mix(in oklab, var(--hero-route-poi-color) 88%, transparent))')

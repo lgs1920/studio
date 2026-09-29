@@ -32,6 +32,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 const WELCOME_BACKGROUND_MEDIA = getWelcomeBackgroundMedia()
 const WELCOME_VIDEO_CROSSFADE_DURATION = 2300
 const WELCOME_VIDEO_CROSSFADE_LEAD_SECONDS = 3
+const WELCOME_READY_MESSAGE_DURATION = 5000
+const WELCOME_READY_MESSAGE = 'LGS1920 Studio playground is ready...'
 
 /** Maps startup phases to clear welcome-screen status messages. */
 const INITIALIZATION_MESSAGES = {
@@ -73,6 +75,7 @@ export const WelcomeHero = ({
     const [imageState, setImageState] = useState(
         backgroundMedia.imageSources.length > 0 ? 'ready' : 'unavailable'
     )
+    const [showReadyMessage, setShowReadyMessage] = useState(false)
     const readyToEnter = initComplete && appReady
     const initializationMessage = updateInProgress
         ? 'Applying the Studio update…'
@@ -109,6 +112,20 @@ export const WelcomeHero = ({
             splashStatusElement.textContent = initializationMessage
         }
     }, [initializationMessage])
+
+    useEffect(() => {
+        if (!readyToEnter) {
+            setShowReadyMessage(false)
+            return
+        }
+
+        setShowReadyMessage(true)
+        const readyMessageTimer = window.setTimeout(() => {
+            setShowReadyMessage(false)
+        }, WELCOME_READY_MESSAGE_DURATION)
+
+        return () => window.clearTimeout(readyMessageTimer)
+    }, [readyToEnter])
 
     useEffect(() => () => {
         const stop = () => {
@@ -333,9 +350,9 @@ export const WelcomeHero = ({
                             {'Enter Studio'}
                         </WaButton>
                     </div>
-                    {!readyToEnter && (
+                    {(!readyToEnter || showReadyMessage) && (
                         <p className="welcome-initialization-message welcome-initialization-callout" role="status">
-                            {initializationMessage}
+                            {readyToEnter ? WELCOME_READY_MESSAGE : initializationMessage}
                         </p>
                     )}
                 </section>
