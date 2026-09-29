@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -763,6 +763,11 @@ body.mobile .orbit-widget-body {
     --hero-route-path-color: var(--wa-color-brand, rgb(234, 198, 115));
     --hero-route-glow-color: var(--wa-color-brand, rgb(234, 198, 115));
     --hero-route-poi-color: var(--wa-color-green-60, rgb(103, 165, 13));
+
+    &.lgs-boot-splash-cta-ready ~ #lgs1920-container .welcome-branding-spinner {
+        visibility: hidden;
+        opacity: 0;
+    }
 }
 
 .welcome-hero-media,
@@ -798,67 +803,63 @@ body.mobile .orbit-widget-body {
     align-items: center;
     pointer-events: none;
     inset: 0;
-}
+    /* Supplies the default route color to the spinner track before season overrides. */
+    --hero-route-poi-color: var(--wa-color-green-60, rgb(103, 165, 13));
 
-.welcome-branding-logo {
-    position: absolute;
-    top: 42%;
-    left: 50%;
-    display: block;
-    width: min(220px, calc(100vw - 2rem));
-    margin: 0;
-    transform: translate(-50%, -50%);
-    filter: drop-shadow(0 0 18px rgba(0, 0, 0, .55));
-}
+    & > .welcome-branding-spinner {
+        z-index: 1;
+        display: flex;
+        flex: none;
+        align-items: center;
+        justify-content: center;
+        width: 3.5rem;
+        height: 3.5rem;
+        margin-top: calc(42vh + 3.35rem);
+        box-sizing: border-box;
+        overflow: visible;
+        color: var(--wa-color-brand, white);
 
-.welcome-branding-logo img {
-    display: block;
-    width: 100%;
-    height: auto;
-}
+        & > wa-spinner {
+            /* Web Awesome derives the SVG dimensions and animation from font-size. */
+            flex: none;
+            font-size: 2.8rem;
+            filter: drop-shadow(0 0 10px rgba(0, 0, 0, .72));
+            --track-width: 2px;
+            /* Matches the spinner indicator to the active brand color. */
+            --indicator-color: var(--wa-color-brand, white);
+            /* Matches the spinner track to the route color for the active season. */
+            --track-color: var(--hero-route-poi-color);
+        }
+    }
 
-.welcome-branding-slogan {
-    position: absolute;
-    top: calc(42% + 4.3rem);
-    left: 50%;
-    display: block;
-    width: min(28rem, calc(100vw - 2rem));
-    height: auto;
-    transform: translateX(-50%);
-    color: #f0c800;
-    filter: drop-shadow(0 0 14px rgba(0, 0, 0, .72));
-}
+    & .welcome-branding-logo {
+        position: absolute;
+        top: 42%;
+        left: 50%;
+        display: block;
+        width: min(220px, calc(100vw - 2rem));
+        margin: 0;
+        transform: translate(-50%, -50%);
+        filter: drop-shadow(0 0 18px rgba(0, 0, 0, .55));
+    }
 
-.welcome-branding-cog {
-    z-index: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.3rem;
-    height: 1.3rem;
-    margin-top: calc(42vh + 3.35rem);
-    color: var(--wa-color-brand);
-}
+    & .welcome-branding-logo img {
+        display: block;
+        width: 100%;
+        height: auto;
+    }
 
-.welcome-branding-cog > wa-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.3rem;
-    height: 1.3rem;
-    min-width: 1.3rem;
-    min-height: 1.3rem;
-    font-size: 1.3rem;
-    line-height: 1;
-    transform-origin: center center;
-    filter: drop-shadow(0 0 10px rgba(0, 0, 0, .72));
-    /* Sets the Web Awesome cog rotation duration. */
-    --animation-duration: 3s;
-}
-
-#lgs-boot-splash.lgs-boot-splash-cta-ready ~ #lgs1920-container .welcome-branding-cog {
-    visibility: hidden;
-    opacity: 0;
+    & .welcome-branding-slogan {
+        position: absolute;
+        top: calc(42% + 4.3rem);
+        left: 50%;
+        display: block;
+        width: min(28rem, calc(100vw - 2rem));
+        height: auto;
+        transform: translateX(-50%);
+        color: #f0c800;
+        filter: drop-shadow(0 0 14px rgba(0, 0, 0, .72));
+    }
 }
 
 .welcome-hero-media-credit {
@@ -1052,24 +1053,36 @@ body.mobile .orbit-widget-body {
     --hero-route-poi-color: rgb(175, 218, 188);
 }
 
-:root[data-season-theme='spring'] #lgs-boot-splash {
-    --hero-route-poi-color: rgb(175, 218, 188);
+:root[data-season-theme='spring'] {
+    & #lgs-boot-splash,
+    & #lgs1920-container .welcome-branding {
+        /* Sets route marker and spinner track colors for the spring theme. */
+        --hero-route-poi-color: rgb(175, 218, 188);
+    }
 }
 
 :root[data-season-theme='fall'] #welcome-hero {
     --hero-route-poi-color: rgb(197, 110, 18);
 }
 
-:root[data-season-theme='fall'] #lgs-boot-splash {
-    --hero-route-poi-color: rgb(197, 110, 18);
+:root[data-season-theme='fall'] {
+    & #lgs-boot-splash,
+    & #lgs1920-container .welcome-branding {
+        /* Sets route marker and spinner track colors for the fall theme. */
+        --hero-route-poi-color: rgb(197, 110, 18);
+    }
 }
 
 :root[data-season-theme='winter'] #welcome-hero {
     --hero-route-poi-color: rgb(219, 234, 254);
 }
 
-:root[data-season-theme='winter'] #lgs-boot-splash {
-    --hero-route-poi-color: rgb(219, 234, 254);
+:root[data-season-theme='winter'] {
+    & #lgs-boot-splash,
+    & #lgs1920-container .welcome-branding {
+        /* Sets route marker and spinner track colors for the winter theme. */
+        --hero-route-poi-color: rgb(219, 234, 254);
+    }
 }
 
 .welcome-hero-controls {

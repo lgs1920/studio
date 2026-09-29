@@ -8,7 +8,7 @@
   ~ email: studio@lgs1920.fr
   ~
   ~ Created on: 2026-04-27
-  ~ Last modified: 2026-09-28
+  ~ Last modified: 2026-09-29
   ~
   ~
   ~ Copyright © 2026 LGS1920
@@ -81,285 +81,7 @@
             root.classList.toggle('wa-light', !isDark)
         })()
     </script>
-    <style>
-        html,
-        body {
-            width: 100%;
-            height: 100%;
-            margin: 0;
-            background: #050807;
-        }
-
-        #cesium-viewer,
-        #lgs1920-container {
-            position: absolute;
-            inset: 0;
-        }
-
-        #lgs-startup-background img,
-        #lgs-boot-splash .lgs-boot-splash-background {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            filter: sepia(0.2) saturate(0.8);
-            object-fit: cover;
-            object-position: center bottom;
-            pointer-events: none;
-        }
-
-        #lgs-startup-background {
-            position: fixed;
-            z-index: 2;
-            overflow: hidden;
-            transition: opacity 350ms ease, visibility 350ms ease;
-            inset: 0;
-        }
-
-        body:not(.lgs-app-booting) #lgs-startup-background {
-            visibility: hidden;
-            opacity: 0;
-        }
-
-        #lgs-startup-background::after {
-            position: absolute;
-            z-index: 1;
-            content: "";
-            background:
-                linear-gradient(90deg, rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.24) 46%, rgba(0, 0, 0, 0.04) 100%),
-                linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.14) 48%, rgba(0, 0, 0, 0.54));
-            pointer-events: none;
-            inset: 0;
-        }
-
-        #lgs-boot-splash {
-            position: fixed;
-            z-index: calc(var(--lgs-toast-zindex, 2147483647) - 3);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            transition: opacity 450ms ease, visibility 450ms ease;
-            pointer-events: none;
-            background: #050807;
-            inset: 0;
-            visibility: hidden;
-            opacity: 0;
-        }
-
-        body.lgs-app-booting #lgs-boot-splash {
-            visibility: visible;
-            opacity: 1;
-        }
-
-        #lgs-boot-splash .lgs-boot-splash-background {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            transition: opacity 250ms ease;
-        }
-
-        #lgs-boot-splash .lgs-boot-splash-background-image {
-            z-index: 0;
-            opacity: 1;
-        }
-
-        #lgs-boot-splash video {
-            z-index: 1;
-            opacity: 0;
-        }
-
-        #lgs-boot-splash.lgs-boot-splash-video-ready video {
-            opacity: 1;
-        }
-
-        #lgs-boot-splash.lgs-boot-splash-video-ready .lgs-boot-splash-background-image {
-            opacity: 0;
-        }
-
-        #lgs-boot-splash::after {
-            position: absolute;
-            z-index: 2;
-            content: "";
-            background:
-                linear-gradient(90deg, rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.24) 46%, rgba(0, 0, 0, 0.04) 100%),
-                linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.14) 48%, rgba(0, 0, 0, 0.54));
-            opacity: 1;
-            pointer-events: none;
-            transition: opacity 1200ms ease;
-            inset: 0;
-        }
-
-        #lgs-boot-splash.lgs-boot-splash-cta-ready::after {
-            opacity: 0.3;
-        }
-
-        #lgs-boot-splash-logo {
-            position: absolute;
-            z-index: 3;
-            top: 42%;
-            left: 50%;
-            width: min(220px, calc(100vw - 2rem));
-            height: auto;
-            transform: translate(-50%, -50%);
-            filter: drop-shadow(0 0 18px rgba(0, 0, 0, 0.55));
-        }
-
-        #lgs-boot-splash-slogan {
-            position: absolute;
-            z-index: 3;
-            top: calc(42% + 4.3rem);
-            left: 50%;
-            width: min(28rem, calc(100vw - 2rem));
-            height: auto;
-            transform: translateX(-50%);
-            color: #f0c800;
-            filter: drop-shadow(0 0 14px rgba(0, 0, 0, 0.72));
-        }
-
-        #lgs-boot-splash .welcome-branding-cog {
-            z-index: 3;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 1.3rem;
-            height: 1.3rem;
-            margin-top: calc(42vh + 3.35rem);
-            color: var(--wa-color-brand);
-        }
-
-        #lgs-boot-splash .welcome-branding-cog > wa-icon {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 1.3rem;
-            height: 1.3rem;
-            min-width: 1.3rem;
-            min-height: 1.3rem;
-            font-size: 1.3rem;
-            line-height: 1;
-            transform-origin: center center;
-            filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.72));
-            /* Sets the Web Awesome cog rotation duration. */
-            --animation-duration: 3s;
-        }
-
-        #lgs-boot-splash.lgs-boot-splash-react-ready .welcome-branding-cog,
-        #lgs-boot-splash.lgs-boot-splash-cta-ready .welcome-branding-cog {
-            visibility: hidden;
-            opacity: 0;
-        }
-
-        #lgs-boot-splash.lgs-boot-splash-react-ready #lgs-boot-splash-logo,
-        #lgs-boot-splash.lgs-boot-splash-react-ready #lgs-boot-splash-slogan {
-            opacity: 0;
-            visibility: hidden;
-        }
-
-        /* Keep the welcome route visible before the React application styles load. */
-        #lgs-boot-splash::after {
-            z-index: 1;
-        }
-
-        #lgs-boot-splash > [data-lgs-boot-route-host] {
-            position: absolute;
-            z-index: 2;
-            --hero-route-path-color: var(--wa-color-brand, rgb(234, 198, 115));
-            --hero-route-glow-color: var(--wa-color-brand, rgb(234, 198, 115));
-            --hero-route-poi-color: var(--wa-color-green-60, rgb(103, 165, 13));
-            isolation: isolate;
-            pointer-events: none;
-            inset: 0;
-        }
-
-        html[data-season-theme='spring'] #lgs-boot-splash > [data-lgs-boot-route-host] {
-            --hero-route-poi-color: rgb(175, 218, 188);
-        }
-
-        html[data-season-theme='fall'] #lgs-boot-splash > [data-lgs-boot-route-host] {
-            --hero-route-poi-color: rgb(197, 110, 18);
-        }
-
-        html[data-season-theme='winter'] #lgs-boot-splash > [data-lgs-boot-route-host] {
-            --hero-route-poi-color: rgb(219, 234, 254);
-        }
-
-        #lgs-boot-splash > [data-lgs-boot-route-host] .welcome-hero-route {
-            position: absolute;
-            z-index: 2;
-            pointer-events: none;
-            inset: 0;
-        }
-
-        #lgs-boot-splash > [data-lgs-boot-route-host] .welcome-hero-route-canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-            opacity: .86;
-            filter: drop-shadow(0 0 8px color-mix(in oklab, var(--hero-route-glow-color) 42%, transparent));
-            mix-blend-mode: screen;
-        }
-
-        #lgs-boot-splash > [data-lgs-boot-route-host] .welcome-hero-route-annotations {
-            position: absolute;
-            z-index: 4;
-            pointer-events: none;
-            inset: 0;
-        }
-
-        #lgs-boot-splash > [data-lgs-boot-route-host] .welcome-hero-poi {
-            position: absolute;
-            top: 0;
-            left: 0;
-            visibility: hidden;
-            opacity: 0;
-            color: var(--hero-route-poi-color);
-            transform: translate3d(var(--welcome-hero-poi-x, 50%), var(--welcome-hero-poi-y, 50%), 0) translate3d(-50%, -100%, 0) scale(var(--welcome-hero-poi-scale, 1));
-            transition: opacity 450ms ease, transform 34ms linear, visibility 450ms ease;
-            will-change: transform;
-        }
-
-        #lgs-boot-splash > [data-lgs-boot-route-host] .welcome-hero-poi.is-revealed.is-positioned,
-        #lgs-boot-splash > [data-lgs-boot-route-host] .welcome-hero-route[data-render-mode='fallback'] .welcome-hero-poi {
-            visibility: visible;
-            opacity: 1;
-        }
-
-        #lgs-boot-splash > [data-lgs-boot-route-host] .welcome-hero-poi-marker {
-            display: block;
-            width: clamp(1.5rem, 3.5vw, 2.25rem);
-            height: clamp(1.5rem, 3.5vw, 2.25rem);
-            color: var(--hero-route-poi-color);
-            filter: drop-shadow(0 0 .32rem var(--hero-route-poi-color)) drop-shadow(0 0 .72rem var(--hero-route-poi-color));
-            transform-origin: center bottom;
-        }
-
-        @supports (color: color-mix(in oklab, white, black)) {
-            #lgs-boot-splash > [data-lgs-boot-route-host] .welcome-hero-poi-marker {
-                filter: drop-shadow(0 0 .32rem color-mix(in oklab, var(--hero-route-poi-color) 82%, transparent)) drop-shadow(0 0 .72rem color-mix(in oklab, var(--hero-route-poi-color) 88%, transparent));
-            }
-        }
-
-        @media (max-width: 700px) {
-            #lgs-boot-splash-logo {
-                width: min(150px, calc(100vw - 2rem));
-            }
-
-            #lgs-boot-splash-slogan {
-                top: calc(42% + 3.4rem);
-            }
-        }
-
-        body.lgs-app-booting #cesium-viewer {
-            visibility: hidden;
-            pointer-events: none;
-            opacity: 0;
-        }
-
-        body:not(.lgs-app-booting) #lgs-boot-splash {
-            visibility: hidden;
-            opacity: 0;
-        }
-    </style>
+    <link href="/src/assets/css/startup-shell.css" rel="stylesheet">
 
     <!-- Favicon for browsers -->
     <link href="/assets/icons/app-icons/windows11/Square44x44Logo.targetsize-16.png" rel="icon" sizes="16x16" type="image/png">
@@ -385,11 +107,8 @@
            data-welcome-background-media
            autoplay muted playsinline preload="auto">
     </video>
-    <span class="welcome-branding-cog" aria-hidden="true">
-        <wa-icon name="gear"
-                 canvas="auto"
-                 variant="regular"
-                 animation="spin"></wa-icon>
+    <span class="welcome-branding-spinner" aria-hidden="true">
+        <wa-spinner></wa-spinner>
     </span>
     <img id="lgs-boot-splash-logo" src="/assets/logo/logo-horizontal.png" alt="LGS1920 Studio" decoding="async">
     <svg id="lgs-boot-splash-slogan"
@@ -410,6 +129,7 @@
             </text>
         </g>
     </svg>
+    <p id="lgs-boot-splash-status">Starting Studio services…</p>
 </div>
 <div id="lgs1920-container"></div>
 

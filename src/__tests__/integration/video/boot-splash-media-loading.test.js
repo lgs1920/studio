@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-21
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,6 +19,7 @@ import {JSDOM} from 'jsdom'
 import {describe, expect, it} from 'vitest'
 
 const indexDocument = new JSDOM(readFileSync('index.html', 'utf8')).window.document
+const startupStyle = readFileSync('src/assets/css/startup-shell.css', 'utf8')
 const lgs1920Source = readFileSync('src/components/LGS1920.jsx', 'utf8')
 const mainSource = readFileSync('src/main.jsx', 'utf8')
 const routeBootstrapSource = readFileSync('src/components/MainUI/WelcomeHeroRouteBootstrap.jsx', 'utf8')
@@ -53,32 +54,33 @@ const registerBootSplashMediaLoadingTests = () => {
         expect(startupImage?.querySelector('[data-welcome-background-startup]')).not.toBeNull()
         const splashLogo = indexDocument.querySelector('#lgs-boot-splash-logo')
         const splashSlogan = indexDocument.querySelector('#lgs-boot-splash-slogan')
-        const splashCog = indexDocument.querySelector('#lgs-boot-splash .welcome-branding-cog wa-icon')
+        const splashSpinner = indexDocument.querySelector('#lgs-boot-splash .welcome-branding-spinner wa-spinner')
+        const splashStatus = indexDocument.querySelector('#lgs-boot-splash-status')
+        const startupStylesheet = indexDocument.querySelector('link[rel="stylesheet"][href="/src/assets/css/startup-shell.css"]')
         expect(splashLogo?.getAttribute('src')).toBe('/assets/logo/logo-horizontal.png')
         expect(splashSlogan?.querySelector('title')).toBeNull()
         expect(splashSlogan?.querySelector('text')?.textContent.trim()).toBe('Replay Your World Outdoors.')
-        expect(splashCog?.getAttribute('name')).toBe('gear')
-        expect(splashCog?.getAttribute('canvas')).toBe('auto')
-        expect(splashCog?.getAttribute('variant')).toBe('regular')
-        expect(splashCog?.getAttribute('animation')).toBe('spin')
-        expect(splashCog?.getAttribute('style')).toBeNull()
+        expect(splashSpinner).not.toBeNull()
+        expect(splashSpinner?.getAttribute('style')).toBeNull()
+        expect(splashStatus?.textContent).toBe('Starting Studio services…')
+        expect(startupStylesheet).not.toBeNull()
 
-        const splashStyle = indexDocument.querySelector('style')?.textContent ?? ''
-        expect(splashStyle).toContain('#lgs-boot-splash .lgs-boot-splash-background')
+        const splashStyle = startupStyle
+        expect(splashStyle).toContain('& .lgs-boot-splash-background')
         expect(splashStyle).toContain('filter: sepia(0.2) saturate(0.8)')
-        expect(splashStyle).toContain('#lgs-boot-splash .lgs-boot-splash-background-image')
+        expect(splashStyle).toContain('& .lgs-boot-splash-background-image')
         expect(splashStyle).toContain('opacity: 1;')
-        expect(splashStyle).toContain('#lgs-boot-splash video')
+        expect(splashStyle).toContain('& video')
         expect(splashStyle).toContain('#lgs-startup-background')
-        expect(splashStyle).toContain('#lgs-startup-background img,\n        #lgs-boot-splash .lgs-boot-splash-background')
-        expect(splashStyle).toContain('z-index: calc(var(--lgs-toast-zindex, 2147483647) - 3);\n            overflow: hidden;')
-        expect(splashStyle).toContain('#lgs-startup-background::after')
-        expect(splashStyle).toContain('#lgs-boot-splash::after')
+        expect(splashStyle).toContain('& img')
+        expect(splashStyle).toContain('z-index: calc(var(--lgs-toast-zindex, 2147483647) - 3);')
+        expect(splashStyle).toContain('&::after')
         expect(splashStyle).toContain('opacity: 1;')
-        expect(splashStyle).toContain('#lgs-boot-splash.lgs-boot-splash-cta-ready::after')
+        expect(splashStyle).toContain('&.lgs-boot-splash-cta-ready::after')
         expect(splashStyle).toContain('--hero-route-path-color: var(--wa-color-brand, rgb(234, 198, 115))')
         expect(splashStyle).toContain('--hero-route-glow-color: var(--wa-color-brand, rgb(234, 198, 115))')
         expect(splashStyle).toContain('--hero-route-poi-color: rgb(175, 218, 188)')
+        expect(splashStyle).toContain('--track-color: var(--hero-route-poi-color)')
         expect(splashStyle).toContain('drop-shadow(0 0 .32rem color-mix(in oklab, var(--hero-route-poi-color) 82%, transparent))')
         expect(splashStyle).toContain('drop-shadow(0 0 .72rem color-mix(in oklab, var(--hero-route-poi-color) 88%, transparent))')
         expect(splashStyle).toContain('filter: drop-shadow(0 0 8px color-mix(in oklab, var(--hero-route-glow-color) 42%, transparent))')
@@ -90,11 +92,14 @@ const registerBootSplashMediaLoadingTests = () => {
         expect(routeSource).toContain('const loadThreeModules = () => welcomeRouteModulesPromise')
         expect(routeSource).toContain("attributeFilter: ['class', 'data-brand-color', 'data-season-theme']")
         expect(routeSource).toContain('welcome-hero-poi-marker')
-        expect(splashStyle).toContain('#lgs-boot-splash .welcome-branding-cog > wa-icon')
-        expect(splashStyle).toContain('#lgs-boot-splash.lgs-boot-splash-cta-ready .welcome-branding-cog')
-        expect(splashStyle).toContain('transform-origin: center center;')
+        expect(splashStyle).toContain('& .welcome-branding-spinner')
+        expect(splashStyle).toContain('& > wa-spinner')
+        expect(splashStyle).toContain('&.lgs-boot-splash-cta-ready .welcome-branding-spinner')
+        expect(splashStyle).toContain('width: 3.5rem;')
+        expect(splashStyle).toContain('font-size: 2.8rem;')
+        expect(splashStyle).toContain('flex: none;')
         expect(splashStyle).toContain('display: flex;')
-        expect(splashStyle).toContain('color: var(--wa-color-brand);')
+        expect(splashStyle).toContain('color: var(--wa-color-brand, white);')
         expect(splashStyle).toContain('opacity: 0.3;')
         expect(splashStyle).toContain('transition: opacity 1200ms ease;')
         expect(splashStyle).not.toContain('transition: opacity 180ms ease, visibility 180ms ease;')

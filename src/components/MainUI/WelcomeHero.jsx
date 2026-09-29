@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-26
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,21 +27,32 @@ import { formatBuildInfo }                                    from '@Utils/Build
 import {
     WaButton, WaFormatDate, WaIcon,
 }                                                               from '@web.awesome.me/webawesome-pro/dist/react'
-import { useCallback, useEffect, useRef, useState }            from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 const WELCOME_BACKGROUND_MEDIA = getWelcomeBackgroundMedia()
 const WELCOME_VIDEO_CROSSFADE_DURATION = 2300
 const WELCOME_VIDEO_CROSSFADE_LEAD_SECONDS = 3
 
+/** Maps startup phases to clear welcome-screen status messages. */
+const INITIALIZATION_MESSAGES = {
+    application: 'Starting Studio services…',
+    map:         'Preparing the map and tools…',
+    journey:     'Loading your current journey…',
+    camera:      'Positioning the map…',
+    scene:       'Finalizing the map view…',
+}
+
 /**
  * Renders the persistent Studio welcome hero.
  *
- * @param {{initComplete?: boolean, appReady?: boolean, onEnter?: () => void, backgroundMedia?: object, showMedia?: boolean}} props - Hero state, entry callback, resolved background media, and media visibility.
+ * @param {{initComplete?: boolean, appReady?: boolean, initializationStep?: string, updateInProgress?: boolean, onEnter?: () => void, backgroundMedia?: object, showMedia?: boolean}} props - Hero state, startup progress, entry callback, resolved background media, and media visibility.
  * @returns {JSX.Element} Persistent welcome hero.
  */
 export const WelcomeHero = ({
                              initComplete = false,
                              appReady = false,
+                             initializationStep = 'application',
+                             updateInProgress = false,
                              onEnter,
                              backgroundMedia = WELCOME_BACKGROUND_MEDIA,
                              showMedia = true,
@@ -63,6 +74,9 @@ export const WelcomeHero = ({
         backgroundMedia.imageSources.length > 0 ? 'ready' : 'unavailable'
     )
     const readyToEnter = initComplete && appReady
+    const initializationMessage = updateInProgress
+        ? 'Applying the Studio update…'
+        : INITIALIZATION_MESSAGES[initializationStep] ?? INITIALIZATION_MESSAGES.application
     const videoReady = showMedia && videoState === 'ready'
     const imageVisible = showMedia && !videoReady && imageState === 'ready'
     const studioVersion = lgs.versions?.studio ?? 'Unknown version'
@@ -88,6 +102,13 @@ export const WelcomeHero = ({
 
         return () => splashElement?.classList.remove('lgs-boot-splash-cta-ready')
     }, [readyToEnter])
+
+    useLayoutEffect(() => {
+        const splashStatusElement = document.querySelector('#lgs-boot-splash-status')
+        if (splashStatusElement) {
+            splashStatusElement.textContent = initializationMessage
+        }
+    }, [initializationMessage])
 
     useEffect(() => () => {
         const stop = () => {
@@ -305,19 +326,16 @@ export const WelcomeHero = ({
                             disabled={!readyToEnter}
                             onClick={enterStudio}
                         >
-                            <WaIcon
-                                slot="start"
-                                name={readyToEnter ? 'clapperboard-play' : 'gear'}
-                                variant="regular"
-                                animation={readyToEnter ? '' : 'spin'}
-                                aria-hidden="true"
-                            />
+                            <WaIcon slot="start"
+                                    name="clapperboard-play"
+                                    variant="regular"
+                                    aria-hidden="true"/>
                             {'Enter Studio'}
                         </WaButton>
                     </div>
                     {!readyToEnter && (
                         <p className="welcome-initialization-callout" role="status">
-                    Studio is getting ready and loading your data. Please wait.
+                            {initializationMessage}
                         </p>
                     )}
                 </section>

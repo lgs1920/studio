@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-21
- * Last modified: 2026-09-21
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { SloganSvg } from '@Components/MainUI/SloganSvg'
-import { WaIcon } from '@web.awesome.me/webawesome-pro/dist/react'
+import { WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useLayoutEffect } from 'react'
 
 /**
@@ -37,11 +37,8 @@ export const WelcomeBranding = () => {
                 <source media="(max-width: 700px)" srcSet="/assets/logo/logo-vertical.png"/>
                 <img src="/assets/logo/logo-horizontal.png" alt="LGS1920 Studio logo"/>
             </picture>
-            <span className="welcome-branding-cog" aria-hidden="true">
-                <WaIcon name="gear"
-                        canvas="auto"
-                        variant="regular"
-                        animation="spin"/>
+            <span className="welcome-branding-spinner" aria-hidden="true">
+                <WaSpinner/>
             </span>
             <SloganSvg className="welcome-branding-slogan"/>
         </div>

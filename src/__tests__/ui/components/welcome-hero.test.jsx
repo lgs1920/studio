@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-26
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,6 +31,7 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
         : <button {...props}>{children}</button>,
     WaFormatDate: ({date, ...props}) => <time {...props}>{date}</time>,
     WaIcon: ({name, animation, ...props}) => <span data-animation={animation} data-icon={name} {...props}/>,
+    WaSpinner: props => <wa-spinner {...props}/>,
 }))
 
 import { WelcomeBranding } from '@Components/MainUI/WelcomeBranding'
@@ -44,6 +45,7 @@ describe('WelcomeHero', () => {
     afterEach(() => {
         cleanup()
         stopWelcomeHeroRouteInSplash()
+        document.querySelector('#lgs-boot-splash-status')?.remove()
         vi.useRealTimers()
         globalThis.lgs = undefined
         globalThis.__ = undefined
@@ -91,18 +93,27 @@ describe('WelcomeHero', () => {
 
     it('does not allow entering Studio before the application is ready', () => {
         const onEnter = vi.fn()
+        const splashStatusElement = document.createElement('p')
+        splashStatusElement.id = 'lgs-boot-splash-status'
+        document.body.append(splashStatusElement)
         globalThis.lgs = {
             versions: {studio: '1.0.0'},
             build: {id: 'build-42'},
         }
 
-        render(<WelcomeHero initComplete={false} appReady={false} onEnter={onEnter}/>)
+        const {rerender} = render(<WelcomeHero initComplete={false} appReady={false} onEnter={onEnter}/>)
 
         const button = screen.getByRole('button', {name: /Enter Studio/})
 
         expect(button.disabled).toBe(true)
-        expect(screen.getByText('Studio is getting ready and loading your data. Please wait.')).toBeTruthy()
+        expect(screen.getByText('Starting Studio services…')).toBeTruthy()
+        expect(splashStatusElement.textContent).toBe('Starting Studio services…')
+        expect(document.querySelector('.welcome-enter-button [data-icon="clapperboard-play"]')).toBeTruthy()
         expect(screen.queryByRole('progressbar')).toBeNull()
+
+        rerender(<WelcomeHero initComplete={false} appReady={false} initializationStep="journey" onEnter={onEnter}/>)
+        expect(splashStatusElement.textContent).toBe('Loading your current journey…')
+        expect(screen.getByText('Loading your current journey…')).toBeTruthy()
 
         fireEvent.click(button)
 
@@ -117,7 +128,7 @@ describe('WelcomeHero', () => {
 
         render(<WelcomeHero initComplete appReady/>)
 
-        expect(screen.queryByText('Studio is getting ready and loading your data. Please wait.')).toBeNull()
+        expect(screen.queryByText('Starting Studio services…')).toBeNull()
         expect(screen.queryByRole('progressbar')).toBeNull()
         expect(screen.getByRole('button', {name: /Enter Studio/}).disabled).toBe(false)
         expect(document.querySelector('.welcome-enter-call-for-action')).toBeTruthy()
@@ -251,21 +262,14 @@ describe('WelcomeHero', () => {
 })
 
 describe('WelcomeBranding', () => {
-    it('renders the logo, slogan, and loading cog while the CTA enters', () => {
+    it('renders the logo, slogan, and loading spinner while the CTA enters', () => {
         render(<WelcomeBranding/>)
 
         expect(document.querySelector('.welcome-branding-logo img')?.getAttribute('src'))
             .toBe('/assets/logo/logo-horizontal.png')
         expect(document.querySelector('.welcome-branding-logo source')?.getAttribute('srcset'))
             .toBe('/assets/logo/logo-vertical.png')
-        expect(document.querySelector('.welcome-branding-cog [data-icon="gear"]')?.getAttribute('data-animation'))
-            .toBe('spin')
-        expect(document.querySelector('.welcome-branding-cog [data-icon="gear"]')?.getAttribute('canvas'))
-            .toBe('auto')
-        expect(document.querySelector('.welcome-branding-cog [data-icon="gear"]')?.getAttribute('variant'))
-            .toBe('regular')
-        expect(document.querySelector('.welcome-branding-cog [data-icon="gear"]')?.getAttribute('style'))
-            .toBeNull()
+        expect(document.querySelector('.welcome-branding-spinner wa-spinner')).toBeTruthy()
         expect(document.querySelector('.welcome-branding')?.classList.contains('welcome-branding-cta-visible')).toBe(false)
         expect(screen.getByLabelText('LGS1920 slogan')).toBeTruthy()
     })
