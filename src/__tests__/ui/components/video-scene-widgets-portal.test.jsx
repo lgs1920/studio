@@ -9,13 +9,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-27
- * Last modified: 2026-09-28
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {cleanup, render, waitFor} from '@testing-library/react'
+import {act, cleanup, render, waitFor} from '@testing-library/react'
 import {proxy} from 'valtio'
 import {proxyMap} from 'valtio/utils'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
@@ -80,6 +80,7 @@ describe('VideoSceneWidgetsPortal', () => {
                         preRecording: false,
                         recording:    false,
                         snapshot:     false,
+                        cropper:      proxy({resizing: false}),
                     }),
                     widget: {
                         list: proxyMap([
@@ -148,6 +149,25 @@ describe('VideoSceneWidgetsPortal', () => {
                 widgetsBoard: 'video-crop-zone',
             },
         )
+    })
+
+    it('hides crop-board widgets while the crop zone is resizing', async () => {
+        const cropperContext = lgs.stores.ui.video.cropper
+        cropperContext.resizing = true
+
+        render(<VideoSceneWidgetsPortal context={cropperContext}/>)
+
+        await waitFor(() => {
+            expect(document.querySelector('.video-scene-widgets-portal-resizing')).not.toBeNull()
+        })
+
+        act(() => {
+            cropperContext.resizing = false
+        })
+
+        await waitFor(() => {
+            expect(document.querySelector('.video-scene-widgets-portal-resizing')).toBeNull()
+        })
     })
 
     it('renders Compass in Expert Replay when it is already on the video board', async () => {

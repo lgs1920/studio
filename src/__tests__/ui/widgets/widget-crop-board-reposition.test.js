@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-19
- * Last modified: 2026-09-28
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -358,7 +358,7 @@ describe('crop board widget repositioning', () => {
         expect(manager.transform.setScale).not.toHaveBeenCalled()
     })
 
-    it('keeps the video compass visible at its relative position when the crop is resized', () => {
+    it('forces the video compass to the crop top-left with its configured margin', () => {
         widget.style.left = '8px'
         widget.style.top = '8px'
         widget.getBoundingClientRect = vi.fn(() => ({
@@ -381,9 +381,9 @@ describe('crop board widget repositioning', () => {
             {left: 100, top: 50, width: 600, height: 400},
             {left: 0, top: 0, width: 1000, height: 600},
         )).toBe(1)
-        expect(config.position.left).toBeCloseTo(104.8)
-        expect(config.position.top).toBeCloseTo(50 + ((8 / 600) * 400))
-        expect(widget.style.left).toBe('104.8px')
+        expect(config.position.left).toBeCloseTo(108)
+        expect(config.position.top).toBeCloseTo(58)
+        expect(widget.style.left).toBe('108px')
         expect(widget.style.top).toBe(`${config.position.top}px`)
     })
 

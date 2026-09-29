@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-01-26
- * Last modified: 2026-09-28
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { CREDITS_WIDGET, LGS_VISUAL_WIDGET, LOGO_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { COMPASS_WIDGET, CREDITS_WIDGET, LGS_VISUAL_WIDGET, LOGO_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { v4 as uuid }        from 'uuid'
 import { fitWidgetDimensionsToBounds, isNonDistortingWidget } from './widgetResizeUtils'
 
@@ -130,11 +130,13 @@ export class WidgetCoreControls {
             const bottom = 100 - top - height
             const fits = left >= 0 && top >= 0 && right >= 0 && bottom >= 0
             const widgetType = config.id.split('#')[0]
-            const forcedAnchor = widgetType === CREDITS_WIDGET
-                ? 'bottom-left'
-                : widgetType === LOGO_WIDGET
-                    ? 'bottom-right'
-                    : null
+            const forcedAnchor = widgetType === COMPASS_WIDGET
+                ? 'top-left'
+                : widgetType === CREDITS_WIDGET
+                    ? 'bottom-left'
+                    : widgetType === LOGO_WIDGET
+                        ? 'bottom-right'
+                        : null
             if (fits && !forcedAnchor && !hasPreviousBoardRect) {
                 continue
             }

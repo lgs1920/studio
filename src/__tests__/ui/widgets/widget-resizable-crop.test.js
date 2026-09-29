@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-23
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,6 +20,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 describe('WidgetResizable crop lifecycle', () => {
     afterEach(() => {
         globalThis.__ = undefined
+        globalThis.lgs = undefined
     })
 
     it('keeps the live crop config and dispatches only the final resize update', async () => {
@@ -68,6 +69,7 @@ describe('WidgetResizable crop lifecycle', () => {
             applyCropToOverlay: vi.fn(),
             dispatchCropUpdate: vi.fn(),
         }
+        globalThis.lgs = {stores: {ui: {video: {cropper: {resizing: false}}}}}
         globalThis.__ = {
             app: {
                 parsePx: value => Number.parseFloat(value) || 0,
@@ -89,6 +91,7 @@ describe('WidgetResizable crop lifecycle', () => {
                 direction: [1, 1],
                 setFixedDirection: vi.fn(),
             })
+            expect(lgs.stores.ui.video.cropper.resizing).toBe(true)
             resizable.onResize({
                 width:     240,
                 height:    135,
@@ -114,6 +117,10 @@ describe('WidgetResizable crop lifecycle', () => {
                 height: 135,
             })
             expect(widgetCropper.dispatchCropUpdate).toHaveBeenCalledWith(config, 'end')
+            expect(lgs.stores.ui.video.cropper.resizing).toBe(true)
+            expect(pendingFrame).toEqual(expect.any(Function))
+            pendingFrame()
+            expect(lgs.stores.ui.video.cropper.resizing).toBe(false)
             expect(widgetManager.saveWidgetPosition).toHaveBeenCalledWith(config.id, config)
             expect(__.ui.widgetManager.setConfig).toHaveBeenCalledWith(config.id, config)
         }

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-28
- * Last modified: 2026-09-28
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,14 +22,18 @@ import {
     filterReplayVideoWidgetKeys,
     getReplayVideoWidgetTypes,
 } from '@Core/ui/replay/ReplayVideoWidgetPolicy'
+import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { memo, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useSnapshot } from 'valtio'
+
+const VIDEO_WIDGETS_CONTEXT_FALLBACK = {resizing: false}
 
 export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     const list = useSnapshot(lgs.stores.ui.widget.list)
     const video = useSnapshot(lgs.stores.ui.video)
     const replay = useSnapshot(lgs.stores.replay)
+    const cropperState = useOptionalSnapshot(context, VIDEO_WIDGETS_CONTEXT_FALLBACK)
     // The editor can stay open while the video widgets are shown in preview.
     // Rehydration and invalidation must only run while an actual capture phase
     // is active, otherwise the portal loops during normal editor use.
@@ -191,7 +195,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     return createPortal(
         <WidgetPreviewContext.Provider value={previewOnly}>
             <div
-            className={`video-scene-widgets-portal${previewOnly ? ' video-scene-widgets-portal-preview' : ''}${videoCaptureActive ? ' video-scene-widgets-portal-capture' : ''}${synchronizedRecording ? ' video-scene-widgets-portal-input-blocked' : ''}`}
+            className={`video-scene-widgets-portal${previewOnly ? ' video-scene-widgets-portal-preview' : ''}${videoCaptureActive ? ' video-scene-widgets-portal-capture' : ''}${synchronizedRecording ? ' video-scene-widgets-portal-input-blocked' : ''}${cropperState.resizing ? ' video-scene-widgets-portal-resizing' : ''}`}
             data-widgets-board={VIDEO_WIDGETS_BOARD}
             style={{
                 position: 'fixed',

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-20
+ * Last modified: 2026-09-29
  *
  *
  * Copyright © 2026 LGS1920
@@ -494,6 +494,13 @@ body.lgs-app-booting #cesium-viewer {
 .video-scene-widgets-portal-input-blocked .lgs-widget-container,
 .video-scene-widgets-portal-input-blocked .lgs-widget-container * {
     pointer-events: none !important;
+}
+
+/* Keep overlay widgets hidden until the resized crop has been repositioned. */
+.video-scene-widgets-portal {
+    &.video-scene-widgets-portal-resizing {
+        visibility: hidden;
+    }
 }
 
 .lgs-widget-control-box * {
