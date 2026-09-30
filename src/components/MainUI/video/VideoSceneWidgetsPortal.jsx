@@ -44,6 +44,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     const synchronizedRecording = video.recordingHQ === true
                                   && replay.recordingSync === true
     const simpleReplay = replay.simplePreparationActive === true
+    const replayPlaybackActive = replay.playing === true || replay.paused === true
     const previewOnly = videoCaptureActive || synchronizedRecording
     const _rehydrateKey = useRef('')
     const allWidgetEntries = Array.from(list.entries())
@@ -195,7 +196,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     return createPortal(
         <WidgetPreviewContext.Provider value={previewOnly}>
             <div
-            className={`video-scene-widgets-portal${previewOnly ? ' video-scene-widgets-portal-preview' : ''}${videoCaptureActive ? ' video-scene-widgets-portal-capture' : ''}${synchronizedRecording ? ' video-scene-widgets-portal-input-blocked' : ''}${cropperState.resizing ? ' video-scene-widgets-portal-resizing' : ''}`}
+            className={`video-scene-widgets-portal${previewOnly ? ' video-scene-widgets-portal-preview' : ''}${videoCaptureActive ? ' video-scene-widgets-portal-capture' : ''}${synchronizedRecording || replayPlaybackActive ? ' video-scene-widgets-portal-input-blocked' : ''}${cropperState.resizing ? ' video-scene-widgets-portal-resizing' : ''}`}
             data-widgets-board={VIDEO_WIDGETS_BOARD}
             style={{
                 position: 'fixed',
@@ -205,7 +206,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
             }}
         >
             {widgetEntries.map(([key, props]) => (
-                <div key={key} style={{pointerEvents: previewOnly ? 'none' : 'auto'}}>
+                <div key={key} style={{pointerEvents: previewOnly || replayPlaybackActive ? 'none' : 'auto'}}>
                     <DynamicWidget
                         id={key}
                         props={props}

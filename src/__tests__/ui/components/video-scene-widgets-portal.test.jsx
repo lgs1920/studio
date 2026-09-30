@@ -8,7 +8,7 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-30
+ * Created on: 2026-09-27
  * Last modified: 2026-09-30
  *
  *
@@ -203,6 +203,19 @@ describe('VideoSceneWidgetsPortal', () => {
         })
         expect(document.querySelector('.video-scene-widgets-portal-capture')).not.toBeNull()
         expect(document.querySelector('.video-scene-widgets-portal-input-blocked')).not.toBeNull()
+    })
+
+    it.each(['playing', 'paused'])('blocks video widget input while Replay is %s', async replayState => {
+        globalThis.lgs.stores.replay[replayState] = true
+
+        render(<VideoSceneWidgetsPortal context={proxy({})}/> )
+
+        await waitFor(() => {
+            expect(document.querySelector('.video-scene-widgets-portal-input-blocked')).not.toBeNull()
+        })
+        expect(document.querySelector('.video-scene-widgets-portal [data-testid="dynamic-widget"]')
+            ?.parentElement?.style.pointerEvents)
+            .toBe('none')
     })
 
     it('registers required Replay widgets on a fresh Expert crop board without forcing Compass', async () => {

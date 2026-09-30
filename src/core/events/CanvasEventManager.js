@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-03-22
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -191,8 +191,8 @@ export class CanvasEventManager {
     }
 
     /**
-     * Prevents pointer and mouse input from reaching Cesium while synchronized
-     * video recording owns the scene camera.
+     * Prevents pointer and mouse input from reaching Cesium while Replay
+     * playback or synchronized video recording owns the scene camera.
      * @private
      */
     #setupSynchronizedInputGuard() {

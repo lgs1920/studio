@@ -102,7 +102,7 @@ const installGlobals = ({grid = {enabled: false, size: 30, snap: true}} = {}) =>
             },
         },
         stores: {
-            replay: proxy({recordingSync: false}),
+            replay: proxy({recordingSync: false, playing: false, paused: false}),
             ui: proxy({
                 contextMenu: {
                     visible:  false,
@@ -568,6 +568,25 @@ describe('Widget snap behavior', () => {
             </Widget>,
         )
         expect(view.container.querySelector('.lgs-widget')?.classList.contains('recording-locked')).toBe(true)
+    })
+
+    it.each(['playing', 'paused'])('blocks widget mouse interaction while Replay is %s', replayState => {
+        installGlobals()
+        const props = {
+            isVisible: true,
+            config:    {id: 'snap-widget', group: 'test-widgets', draggable: true},
+            children:  <button type="button">Widget action</button>,
+        }
+        const view = render(<Widget {...props}/> )
+
+        lgs.stores.replay[replayState] = true
+        view.rerender(<Widget {...props}/> )
+
+        const container = view.container.querySelector('.lgs-widget-container')
+        expect(container?.classList.contains('replay-playback-input-blocked')).toBe(true)
+        expect(container?.style.pointerEvents).toBe('none')
+        expect(latestMoveableProps().draggable).toBe(false)
+        expect(latestMoveableProps().style.pointerEvents).toBe('none')
     })
 
     it('keeps the selected cropper content transparent while preserving its moveable handles', () => {

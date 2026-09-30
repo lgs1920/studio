@@ -496,6 +496,11 @@ body.lgs-app-booting #cesium-viewer {
     pointer-events: none !important;
 }
 
+.lgs-widget-container.replay-playback-input-blocked,
+.lgs-widget-container.replay-playback-input-blocked * {
+    pointer-events: none !important;
+}
+
 /* Keep overlay widgets hidden until the resized crop has been repositioned. */
 .video-scene-widgets-portal {
     &.video-scene-widgets-portal-resizing {

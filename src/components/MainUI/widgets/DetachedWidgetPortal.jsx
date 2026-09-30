@@ -51,6 +51,8 @@ export const DetachedWidgetPortal = () => {
                               || video.snapshot
                               || video.finalizing
                               || replay.simplePreparationActive
+                              || replay.playing
+                              || replay.paused
 
     if (replayVideoPhase
         || !widgetId

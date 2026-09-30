@@ -153,6 +153,25 @@ describe('CanvasEventManager', () => {
         expect(event.defaultPrevented).toBe(true)
     })
 
+    it.each(['playing', 'paused'])('blocks canvas input while Replay is %s', replayState => {
+        const canvasInput = vi.fn()
+        const cesiumAction = vi.fn()
+        const controller = viewer.scene.screenSpaceCameraController
+        manager.onMouseDown(cesiumAction)
+        canvas.addEventListener('pointerdown', canvasInput)
+        globalThis.lgs.stores.replay[replayState] = true
+
+        const event = new PointerEvent('pointerdown', {bubbles: true, cancelable: true})
+        canvas.dispatchEvent(event)
+
+        expect(canvasInput).not.toHaveBeenCalled()
+        inputActions.get(`${ScreenSpaceEventType.LEFT_DOWN}:`)({position: {x: 10, y: 20}})
+        expect(cesiumAction).not.toHaveBeenCalled()
+        expect(event.defaultPrevented).toBe(true)
+        expect(controller.enableInputs).toBe(false)
+        expect(controller.enableZoom).toBe(false)
+    })
+
     it('applies the exact video phase matrix to Cesium actions and camera controls', () => {
         const down = vi.fn()
         const controller = viewer.scene.screenSpaceCameraController

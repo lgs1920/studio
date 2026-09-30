@@ -28,29 +28,32 @@ const CAMERA_INPUT_PROPERTIES = [
 /**
  * Returns the runtime state that controls access to Cesium input.
  *
- * Only an active synchronized Replay export blocks Cesium. Video preparation
- * and Replay export without the sync link leave scene
+ * Active Replay playback and synchronized Replay export block Cesium.
+ * Video preparation and Replay export without the sync link leave scene
  * and camera input available.
  *
- * @returns {{preRecording: boolean, recordingHQ: boolean, recordingSync: boolean, blocked: boolean}} Cesium input state.
+ * @returns {{preRecording: boolean, recordingHQ: boolean, recordingSync: boolean, replayPlaybackActive: boolean, blocked: boolean}} Cesium input state.
  */
 export const getCesiumInputState = () => {
     const video = globalThis.lgs?.stores?.ui?.video
+    const replay = globalThis.lgs?.stores?.replay
     const recordingHQ = video?.recordingHQ === true
-    const recordingSync = globalThis.lgs?.stores?.replay?.recordingSync === true
+    const recordingSync = replay?.recordingSync === true
+    const replayPlaybackActive = replay?.playing === true || replay?.paused === true
 
     return {
         preRecording: video?.preRecording === true,
         recordingHQ,
         recordingSync,
-        blocked:      recordingHQ && recordingSync,
+        replayPlaybackActive,
+        blocked:      replayPlaybackActive || (recordingHQ && recordingSync),
     }
 }
 
 /**
  * Returns whether Cesium scene and camera input must currently be blocked.
  *
- * @returns {boolean} True only during synchronized recording.
+ * @returns {boolean} True during Replay playback or synchronized recording.
  */
 export const isCesiumInputBlocked = () => getCesiumInputState().blocked
 
@@ -135,7 +138,7 @@ export class CesiumInputGate {
     }
 
     /**
-     * Restores the camera input configuration captured before synchronized recording.
+     * Restores the camera input configuration captured before Replay input was blocked.
      *
      * @returns {void}
      * @private
@@ -155,7 +158,7 @@ export class CesiumInputGate {
      * Synchronizes native Cesium camera input with the current video phase.
      *
      * Reapplying disabled flags while blocked prevents camera flights from
-     * reopening one input category during synchronized recording.
+     * reopening one input category during blocked Replay playback or recording.
      *
      * @returns {boolean} True when Cesium input is blocked.
      */
