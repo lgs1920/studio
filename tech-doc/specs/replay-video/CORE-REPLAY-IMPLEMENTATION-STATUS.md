@@ -110,7 +110,7 @@ subject to the validation gates below.
 | PARTIAL / TODO | 1.0.0 | Complete synchronized replay-start camera editing while preserving the implemented canonical camera and clip continuity | [Start camera editor](../../todo/CORE-REPLAY-START-CAMERA-EDITOR-SPEC.md) |
 | TODO | 1.0.0 | Validate isolated Replay export on fixed imagery, terrain, and 3D Tiles journeys; prove camera parity, resource teardown, and visual quality | [Replay quality validation](CORE-REPLAY-QUALITY-VALIDATION.md) |
 | IMPLEMENTED | 1.0.0 | Deliver linked Replay preparation as a compact controlled Timeline preview | [Timeline implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md) |
-| TODO | 1.0.0 follow-up | Connect Timeline transport and domain commands, including Dry Run, Action Mode, clip double-click navigation, and persisted visibility/order changes | [Timeline implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md) |
+| PARTIAL / TODO | 1.0.0 follow-up | Connect remaining Timeline domain commands, Action Mode, clip double-click navigation, and persisted visibility/order changes | [Timeline implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md) |
 | TODO | 1.1.0 | Replace separated clip controls with the normalized editable multi-track replay timeline | [Track timeline editor](../../todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) |
 | TODO | 1.1.0 | Persist timeline authoring and make Replay playback and export consume the edited domain model | [Track timeline editor](../../todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) |
 | PARTIAL | Unplanned | Finish Simple/Expert settings ownership, effective-mode propagation, and consistent Simple defaults | [Replay user modes](#replay-user-modes) |

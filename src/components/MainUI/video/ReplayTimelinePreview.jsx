@@ -697,6 +697,56 @@ export const ReplayTimelinePreview = forwardRef(({
         updateTimelineTime(detail.timeMillis, detail.settled === true)
     }, [updateTimelineTime])
 
+    /**
+     * Start or resume interactive Replay from the timeline's requested time.
+     *
+     * @param {CustomEvent} event - Timeline playback request.
+     * @returns {*} Replay start or resume result.
+     */
+    const handleTimelinePlay = useCallback(event => {
+        const replayMode = __.ui.replay
+        const detail = event?.detail ?? {}
+        const durationMillis = Number(timeline.durationMillis)
+        const timeMillis = normalizeTimelineTime(detail.timeMillis)
+        const progress = durationMillis > 0 ? timeMillis / durationMillis : 0
+
+        lgs.stores.replay.toolbarVisible = true
+        if (lgs.stores.replay.paused === true) {
+            return replayMode?.resume?.()
+        }
+
+        return replayMode?.start?.({progress})
+    }, [normalizeTimelineTime, timeline.durationMillis])
+
+    /**
+     * Pause the canonical interactive Replay clock.
+     *
+     * @returns {*} Replay pause result.
+     */
+    const handleTimelinePause = useCallback(() => __.ui.replay?.pause?.(), [])
+
+    /**
+     * Stop interactive Replay and hide its transport toolbar.
+     *
+     * @returns {*} Replay stop result.
+     */
+    const handleTimelineStop = useCallback(() => {
+        const result = __.ui.replay?.stop?.()
+        lgs.stores.replay.toolbarVisible = false
+        return result
+    }, [])
+
+    /**
+     * Seek Replay to the start position requested by the timeline.
+     *
+     * @param {CustomEvent} event - Timeline restart request.
+     * @returns {void} Nothing.
+     */
+    const handleTimelineRestart = useCallback(event => {
+        const detail = event?.detail ?? {}
+        updateTimelineTime(detail.timeMillis, true)
+    }, [updateTimelineTime])
+
     const handleTimelineZoomChange = useCallback(event => {
         persistVerticalScrollTop(_timeline.current?.verticalScrollTop)
         const zoomPercent = clampReplayTimelineZoom(event?.detail?.zoomPercent)
@@ -835,6 +885,27 @@ export const ReplayTimelinePreview = forwardRef(({
         element.addEventListener('lgs1920-timeline-seek', handleTimelineSeek)
         return () => element.removeEventListener('lgs1920-timeline-seek', handleTimelineSeek)
     }, [handleTimelineSeek, linkedPreparation])
+
+    useEffect(() => {
+        const element = _timeline.current
+        if (!linkedPreparation || !element || getReplayTimelineDebugStage() !== 'full') return undefined
+
+        const transportEvents = [
+            ['lgs1920-timeline-play', handleTimelinePlay],
+            ['lgs1920-timeline-pause', handleTimelinePause],
+            ['lgs1920-timeline-stop', handleTimelineStop],
+            ['lgs1920-timeline-restart', handleTimelineRestart],
+        ]
+        transportEvents.forEach(([name, handler]) => {
+            element.addEventListener(name, handler)
+        })
+
+        return () => {
+            transportEvents.forEach(([name, handler]) => {
+                element.removeEventListener(name, handler)
+            })
+        }
+    }, [handleTimelinePause, handleTimelinePlay, handleTimelineRestart, handleTimelineStop, linkedPreparation])
 
     useEffect(() => {
         const element = _timeline.current

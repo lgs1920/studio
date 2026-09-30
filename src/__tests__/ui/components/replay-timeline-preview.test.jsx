@@ -55,6 +55,10 @@ describe('ReplayTimelinePreview', () => {
             ui: {
                 replay: {
                     enterReplayPreparation: vi.fn(async () => true),
+                    start: vi.fn(),
+                    resume: vi.fn(),
+                    pause: vi.fn(),
+                    stop: vi.fn(),
                     seek: vi.fn(),
                 },
                 widgetManager: {
@@ -108,7 +112,10 @@ describe('ReplayTimelinePreview', () => {
                 replay: proxy({
                     recordingSync: true,
                     direction: 1,
+                    active: false,
+                    paused: false,
                     playing: false,
+                    toolbarVisible: false,
                     dynamicFrameState: {frameTimeMs: 1000},
                     clips: {catalog: {}, start: [], stop: []},
                 }),
@@ -230,6 +237,49 @@ describe('ReplayTimelinePreview', () => {
             settled: true,
             source: 'timeline-scrub',
         }))
+    })
+
+    it('routes timeline transport requests to interactive Replay without starting video capture', async () => {
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-play', {
+            detail: {timeMillis: 1_000, source: 'timeline-play'},
+        }))
+
+        expect(globalThis.__.ui.replay.start).toHaveBeenCalledWith({progress: 0.25})
+        expect(globalThis.lgs.stores.replay.toolbarVisible).toBe(true)
+
+        globalThis.lgs.stores.replay.paused = true
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-play', {
+            detail: {timeMillis: 0, source: 'timeline-play'},
+        }))
+        expect(globalThis.__.ui.replay.resume).toHaveBeenCalledOnce()
+
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-pause'))
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-stop'))
+        expect(globalThis.__.ui.replay.pause).toHaveBeenCalledOnce()
+        expect(globalThis.__.ui.replay.stop).toHaveBeenCalledOnce()
+        expect(globalThis.lgs.stores.replay.toolbarVisible).toBe(false)
+        expect(globalThis.lgs.stores.ui.video.preRecording).toBe(false)
+        expect(globalThis.lgs.stores.ui.video.recordingHQ).toBe(false)
+    })
+
+    it('routes the timeline start control through the canonical settled scrub scheduler', async () => {
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-restart', {
+            detail: {timeMillis: 0, source: 'go-to-start'},
+        }))
+
+        await waitFor(() => {
+            expect(globalThis.__.ui.replay.seek).toHaveBeenCalledWith(0, expect.objectContaining({
+                settled: true,
+                source: 'timeline-scrub',
+            }))
+        })
+        expect(timelineElement.currentTimeMillis).toBe(0)
     })
 
     it('does not recenter the timeline when a seek stays inside the viewport', async () => {

@@ -74,6 +74,13 @@ export const VideoRecordingSettingsToolbar = memo(({
                               && !video.finalizing
     const simplePreparation = replay.simplePreparationActive === true
     const compactReplaySettings = simplePreparation || timelineSettings
+    const dryRunActive = timelineSettings
+                        && replay.recordingSync === true
+                        && replay.active === true
+                        && !video.preRecording
+                        && !video.recordingHQ
+                        && !video.snapshot
+                        && !video.finalizing
     const showVideoOptions = mode !== 'actions'
     const showActions = mode !== 'video-options'
 
@@ -171,6 +178,9 @@ export const VideoRecordingSettingsToolbar = memo(({
      * @returns {Promise<void>} Completion promise.
      */
     const handleReplayRecording = useCallback(async () => {
+        if (timelineSettings && $replay.recordingSync === true && $replay.active === true) {
+            return
+        }
         if (!__.mediaCapture) {
             console.warn('[VideoRecordingSettingsToolbar] Recorder not initialized')
             return
@@ -189,7 +199,7 @@ export const VideoRecordingSettingsToolbar = memo(({
             finalizing:   false,
             paused:       false,
         })
-    }, [$video, syncCropFrame])
+    }, [$replay, $video, syncCropFrame, timelineSettings])
 
     /**
      * Store the selected Simple Replay duration for playback and export.
@@ -467,6 +477,7 @@ export const VideoRecordingSettingsToolbar = memo(({
                             appearance="plain"
                             className="video-recording-settings-action video-recorder-start-recording"
                             aria-label="Record"
+                            disabled={dryRunActive}
                             onClick={() => void handleReplayRecording()}
                         >
                             <WaIcon name="clapperboard-play" label=""/>

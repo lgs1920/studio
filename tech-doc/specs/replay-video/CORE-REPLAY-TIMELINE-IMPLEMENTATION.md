@@ -12,9 +12,9 @@ normalized data projection, the user interface, the editor integrations, and
 the tests that protect the behavior.
 
 The delivered feature is a controlled preparation projection with local
-timeline interactions. The Web Component emits the public interaction events,
-while Replay application controllers remain disconnected. It is not yet the
-future persisted multi-track authoring model described in
+timeline interactions. The Web Component emits public interaction events, and
+the React adapter routes transport and seek requests to the canonical Replay
+controller. It is not yet the future persisted multi-track authoring model described in
 [`CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md`](../../todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md).
 
 This document is also the current record of the former 1.0.0 Replay Timeline
@@ -53,7 +53,8 @@ buildReplayPreparationTimeline()
 LGS1920Timeline Web Component
         |
         +--> controlled display of projected tracks and clips
-        +--> public timeline events; application controllers remain external
+        +--> public timeline events routed through the React adapter
+        +--> interactive Replay transport and scrub commands
 ```
 
 The linked entry point is started in
@@ -205,12 +206,14 @@ controls, while the Settings, Replay, recording, and cancel actions remain in
 the header toolbar. The drawer controls use a horizontal layout that becomes
 vertical when the drawer is narrow.
 
-Replay seek, zoom, local edit projection, and preparation cleanup are connected
-in this step. Replay transport commands, double-click navigation, domain-level
-visibility and ordering persistence, and the future `journey.replay.timeline`
-authoring model are not connected. The Web Component handles local controls,
-title editing, visibility actions, track/clip drags, and emits their public
-events; the host still owns the remaining persistence and domain commands.
+Replay transport, seek, zoom, local edit projection, and preparation cleanup
+are connected. Timeline playback uses interactive Replay only; it does not
+start video capture. The Record action is disabled while linked Replay is
+playing or paused. Double-click navigation, domain-level visibility and
+ordering persistence, and the future `journey.replay.timeline` authoring model
+are not connected. The Web Component handles local controls, title editing,
+visibility actions, track/clip drags, and emits their public events; the host
+still owns the remaining persistence and domain commands.
 
 Clip pointer movement and resizing snap the edited edge to the nearest major
 ruler unit inside an eight-pixel magnetic threshold. Holding `Shift` while
@@ -329,13 +332,13 @@ Web Awesome and FontAwesome remain the application UI and icon authorities.
 | --- | --- |
 | Projection phases, durations, signatures, visibility intervals, track order, fixed rows | [`replay-preparation-timeline.test.js`](../../../src/__tests__/unit/replay/replay-preparation-timeline.test.js) |
 | Layout constants, row selectors, legend transform | [`replay-timeline-utils.test.js`](../../../src/__tests__/ui/components/replay-timeline-utils.test.js) |
-| Controlled projection rendering, interaction flags, labels, ordering, duration, and cleanup | [`replay-timeline-preview.test.jsx`](../../../src/__tests__/ui/components/replay-timeline-preview.test.jsx) |
+| Controlled projection rendering, interaction flags, labels, ordering, duration, transport, and cleanup | [`replay-timeline-preview.test.jsx`](../../../src/__tests__/ui/components/replay-timeline-preview.test.jsx) |
 | CSS integration, compact layout parts, drag-area geometry, and interaction selectors | [`replay-timeline-preview.test.jsx`](../../../src/__tests__/ui/components/replay-timeline-preview.test.jsx) |
 | Web Component rendering, interactions, drag lifecycle, and event suppression | [`LGS1920Timeline.test.js`](../../../../timeline/test/LGS1920Timeline.test.js) |
 | Widget host dimensions and runtime invalidation | [`replay-timeline-widget.test.jsx`](../../../src/__tests__/ui/components/replay-timeline-widget.test.jsx) |
 | Clip creation, editing, ordering, removal, and stable anchors | [`replay-clips-tab.test.jsx`](../../../src/__tests__/ui/replay/replay-clips-tab.test.jsx) |
 | Drawer tabs, nested targets, stacked restoration, and toggle close behavior | [`panel-manager.test.js`](../../../src/__tests__/ui/widgets/panel-manager.test.js) |
-| Linked toolbar and video preparation cleanup | [`video-recording-settings-toolbar.test.jsx`](../../../src/__tests__/integration/video/video-recording-settings-toolbar.test.jsx) and `video-editing-cleanup.test.js` |
+| Linked toolbar, dry-run recording lockout, and video preparation cleanup | [`video-recording-settings-toolbar.test.jsx`](../../../src/__tests__/integration/video/video-recording-settings-toolbar.test.jsx) and `video-editing-cleanup.test.js` |
 
 Run the focused suites before broader validation:
 

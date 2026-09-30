@@ -101,7 +101,14 @@ describe('VideoRecordingSettingsToolbar', () => {
                         cropper: proxy({}),
                     }),
                 }),
-                replay: proxy({recordingSync: false, simplePreparationActive: false, duration: 60}),
+                replay: proxy({
+                    recordingSync: false,
+                    simplePreparationActive: false,
+                    active: false,
+                    playing: false,
+                    paused: false,
+                    duration: 60,
+                }),
             },
         }
     })
@@ -269,6 +276,23 @@ describe('VideoRecordingSettingsToolbar', () => {
 
         await vi.waitFor(() => expect(globalThis.lgs.stores.ui.video.preRecording).toBe(true))
         expect(prepareVideoCaptureUi).toHaveBeenCalledTimes(1)
+    })
+
+    it('disables video recording while linked interactive Replay is active or paused', async () => {
+        globalThis.lgs.stores.replay.recordingSync = true
+        globalThis.lgs.stores.replay.active = true
+        globalThis.lgs.stores.replay.paused = true
+        render(<VideoRecordingSettingsToolbar mode="actions" timelineSettings/>)
+
+        const recordButton = screen.getByRole('button', {name: 'Record'})
+        expect(recordButton.disabled).toBe(true)
+        fireEvent.click(recordButton)
+        expect(globalThis.__.ui.replay.prepareReplayCamera).not.toHaveBeenCalled()
+        expect(prepareVideoCaptureUi).not.toHaveBeenCalled()
+        expect(globalThis.lgs.stores.ui.video.preRecording).toBe(false)
+
+        globalThis.lgs.stores.replay.active = false
+        await vi.waitFor(() => expect(recordButton.disabled).toBe(false))
     })
 
     it('waits for crop persistence before cancelling video setup', async () => {
