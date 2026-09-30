@@ -3057,3 +3057,59 @@
 ## 2026-09-29 — [`Merge remote-tracking branch 'origin/feature/replay-user-modes' into feature/replay-user-modes`](https://github.com/lgs1920/studio/commit/1dad2cddc3c74f3aedb3ef333816af679a03d64f)
 
 - Recorded automatically from Git history.
+
+## 2026-09-29 — [`fix(replay): apply Basic camera angle to journey trace`](https://github.com/lgs1920/studio/commit/5efbdee6959858dfa04cb5b454c67fd05cf66a92)
+
+- Recorded automatically from Git history.
+
+## 2026-09-29 — [`fix(video): add preparation and recording tooltips`](https://github.com/lgs1920/studio/commit/fd9fdb28c47a4b910dbc0f355cc36dbe52bba752)
+
+- Recorded automatically from Git history.
+
+## 2026-09-29 — [`fix(startup): prevent CTA animation replay`](https://github.com/lgs1920/studio/commit/afc09c58734d2566af0d718ce441c2f54692a125)
+
+- Recorded automatically from Git history.
+
+## 2026-09-29 — [`fix(replay): keep camera guide interactions predictable`](https://github.com/lgs1920/studio/commit/8b9a9252de5c7e78d90a0c26fd08d61fdcf74e4a)
+
+- Recorded automatically from Git history.
+
+## 2026-09-29 — [`fix(replay): require a selected Journey`](https://github.com/lgs1920/studio/commit/c9761252b52629987ad380df696967e299e99045)
+
+- Recorded automatically from Git history.
+
+## 2026-09-29 — [`feat(startup): show welcome media attribution`](https://github.com/lgs1920/studio/commit/46b115a6f12a529d359f0beac5d3864fb7537c28)
+
+- Recorded automatically from Git history.
+
+## 2026-09-29 — [`fix(logo): match widget ratio to vertical logo`](https://github.com/lgs1920/studio/commit/23ceecc57795e832ef66992da9559378047bbdea)
+
+- Recorded automatically from Git history.
+
+## 2026-09-29 — [`fix(widgets): resolve group for detached widgets`](https://github.com/lgs1920/studio/commit/4da2cfc0a1a3198fa8bc34dfcc03051ab301e7fd)
+
+- Recorded automatically from Git history.
+
+## 2026-09-29 — [`docs: require Web Awesome first for UI changes`](https://github.com/lgs1920/studio/commit/3b03c24b2eefe931f0c07faac7507dff9aa840cc)
+
+- Recorded automatically from Git history.
+
+## 2026-09-29 — [`chore(deps): update project dependencies`](https://github.com/lgs1920/studio/commit/dcaafa808e61fdd30c2933e4d06641edb4919563)
+
+- Recorded automatically from Git history.
+
+## 2026-09-30 — [`style(splash): increase initialization text size`](https://github.com/lgs1920/studio/commit/63b6d5bc8df6dc6cf784c40875082c6d2511a657)
+
+- Recorded automatically from Git history.
+
+## 2026-09-30 — [`feat(replay): enforce visibility and clip rules by mode`](https://github.com/lgs1920/studio/commit/bfa7514f718bdd62b183b0c27632d33b1c4d0f29)
+
+- Recorded automatically from Git history.
+
+## 2026-09-30 — [`feat(replay): draw departure simulation in camera guide`](https://github.com/lgs1920/studio/commit/8fac4d739c5fe04966e2fcdf524a65f1657e1e20)
+
+- Recorded automatically from Git history.
+
+## 2026-09-30 — [`Merge remote-tracking branch 'origin/feature/replay-user-modes' into feature/replay-user-modes`](https://github.com/lgs1920/studio/commit/71a0bcd01acb756239fb6df257dbf9e353f67b6d)
+
+- Recorded automatically from Git history.
