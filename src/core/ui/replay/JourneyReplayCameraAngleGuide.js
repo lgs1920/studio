@@ -61,6 +61,7 @@ const CAMERA_ANGLE_GUIDE_LOOP_CLOSURE_DISTANCE_METERS = 100
 const CAMERA_ANGLE_GUIDE_ANGLE_ARC_BASE_RATIO = 0.4
 const CAMERA_ANGLE_GUIDE_ANGLE_ARC_SEGMENTS = 16
 const CAMERA_ANGLE_GUIDE_ANGLE_ARC_EDGE_CLEARANCE_PIXELS = 6
+const CAMERA_ANGLE_GUIDE_SNAP_MARKER_RADIUS_PIXELS = 5
 const CAMERA_ANGLE_GUIDE_ANGLE_LABEL_OFFSET_PIXELS = 20
 const CAMERA_ANGLE_GUIDE_MIN_CAMERA_ALTITUDE_METERS = 10
 const CAMERA_ANGLE_GUIDE_MAX_CAMERA_ALTITUDE_METERS = 100000
@@ -1602,10 +1603,22 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
     elements.cameraAxis.style.display = 'block'
     if (angleArc) {
         elements.angleArc.setAttribute('d', angleArc.path)
+        const snapActive = record.dragState?.snapActive === true
+        elements.angleArc.setAttribute('stroke-dasharray', snapActive ? 'none' : '6 5')
+        elements.angleArc.setAttribute('stroke-width', snapActive ? '5' : '3')
         elements.angleArc.style.display = 'block'
+        if (snapActive && simulationPoint) {
+            elements.angleSnapMarker.setAttribute('cx', simulationPoint.x)
+            elements.angleSnapMarker.setAttribute('cy', simulationPoint.y)
+            elements.angleSnapMarker.style.display = 'block'
+        }
+        else {
+            elements.angleSnapMarker.style.display = 'none'
+        }
     }
     else {
         elements.angleArc.style.display = 'none'
+        elements.angleSnapMarker.style.display = 'none'
     }
     if (angleArcLabel) {
         elements.angleLabel.textContent = angleLabelFrom(record.guide.angleDegrees)
@@ -1831,6 +1844,15 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor, activityIconName}
         'stroke-width': '3',
     })
     angleArc.setAttribute('clip-path', `url(#${angleArcClipId})`)
+    const angleSnapMarker = createSvgElement('circle', {
+        'data-part': 'camera-angle-snap-marker',
+        fill: cssColorFrom(headingColor),
+        r: CAMERA_ANGLE_GUIDE_SNAP_MARKER_RADIUS_PIXELS,
+        stroke: '#ffffff',
+        'stroke-width': '2',
+    })
+    angleSnapMarker.style.display = 'none'
+    angleSnapMarker.style.pointerEvents = 'none'
     const createRoutePath = (part, dashed = false) => createSvgElement('path', {
         'data-part': part,
         fill: 'none',
@@ -1894,6 +1916,7 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor, activityIconName}
         cameraAxis,
         angleArc,
         angleLabel,
+        angleSnapMarker,
         tipDragTarget,
     )
     routeSvg.append(routeDefinitions, routeAfter, routeStartMarker)
@@ -1952,6 +1975,7 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor, activityIconName}
         elements: {
             angleLabel,
             angleArc,
+            angleSnapMarker,
             angleArcClipShape,
             cameraAxis,
             interactionPath,
@@ -2120,8 +2144,10 @@ const bindGuideDragInteractions = (viewer, record) => {
      * @returns {void}
      */
     const dragModifierKeyDownListener = event => {
-        if (record.dragState && event.key === 'Shift') {
+        if (record.dragState?.angleDraggable && event.key === 'Shift') {
             record.dragState.shiftPressed = true
+            record.dragState.snapActive = true
+            updateGuideGeometry(viewer, record, false)
         }
     }
 
@@ -2132,8 +2158,10 @@ const bindGuideDragInteractions = (viewer, record) => {
      * @returns {void}
      */
     const dragModifierKeyUpListener = event => {
-        if (record.dragState && event.key === 'Shift') {
+        if (record.dragState?.angleDraggable && event.key === 'Shift') {
             record.dragState.shiftPressed = false
+            record.dragState.snapActive = false
+            updateGuideGeometry(viewer, record, false)
         }
     }
 
@@ -2166,7 +2194,8 @@ const bindGuideDragInteractions = (viewer, record) => {
             : 0
         const offset = dragState.startOffset + angleDelta
         const rawDegrees = offset * 180 / Math.PI
-        const shiftPressed = event.shiftKey === true || dragState.shiftPressed
+        const shiftPressed = dragState.angleDraggable && (event.shiftKey === true || dragState.shiftPressed)
+        dragState.snapActive = shiftPressed
         const dragDegrees = shiftPressed
             ? Math.round(rawDegrees / CAMERA_ANGLE_GUIDE_DRAG_SNAP_STEP_DEGREES)
                 * CAMERA_ANGLE_GUIDE_DRAG_SNAP_STEP_DEGREES
@@ -2210,6 +2239,7 @@ const bindGuideDragInteractions = (viewer, record) => {
         }
         record.dragState = null
         dragState.removePointerListeners?.()
+        updateGuideGeometry(viewer, record, false)
         if (dragState.cameraController && typeof dragState.previousRotateEnabled === 'boolean') {
             dragState.cameraController.enableRotate = dragState.previousRotateEnabled
         }

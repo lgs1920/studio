@@ -549,7 +549,15 @@ describe('replay camera angle map guide', () => {
             projectedAnchor.y + (Math.sin(snappedDragAngle) * 50),
         ))
         expect(overlay.querySelector('text[data-part="angle-label"]').textContent).toBe('-30°')
+        const cameraAngleArc = overlay.querySelector('[data-part="camera-angle-arc"]')
+        const snapMarker = overlay.querySelector('[data-part="camera-angle-snap-marker"]')
+        expect(cameraAngleArc.getAttribute('stroke-dasharray')).toBe('none')
+        expect(cameraAngleArc.getAttribute('stroke-width')).toBe('5')
+        expect(snapMarker.style.display).toBe('block')
         window.dispatchEvent(new KeyboardEvent('keyup', {key: 'Shift', bubbles: true}))
+        expect(cameraAngleArc.getAttribute('stroke-dasharray')).toBe('6 5')
+        expect(cameraAngleArc.getAttribute('stroke-width')).toBe('3')
+        expect(snapMarker.style.display).toBe('none')
         cameraGuideSvg.dispatchEvent(pointerEvent(
             'pointerup',
             projectedAnchor.x + (Math.cos(snappedDragAngle) * 50),
