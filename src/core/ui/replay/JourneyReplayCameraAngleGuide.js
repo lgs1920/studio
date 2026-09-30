@@ -43,6 +43,7 @@ export {replayCameraSettingsFromArrowKey}
 const CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS = 1200
 const CAMERA_ANGLE_GUIDE_CONE_BASE_HALF_WIDTH_METERS = 240
 const CAMERA_ANGLE_GUIDE_DEPARTURE_DISTANCE_METERS = 300
+const CAMERA_ANGLE_GUIDE_ACTIVITY_DISTANCE_METERS = 200
 const EARTH_RADIUS_METERS = 6378137
 const CAMERA_ANGLE_GUIDE_MAX_SCREEN_RATIO = 0.2
 const CAMERA_ANGLE_GUIDE_INNER_HEIGHT_RATIO = 0.95
@@ -52,9 +53,9 @@ const CAMERA_ANGLE_GUIDE_ICON_GAP_PIXELS = 28
 const CAMERA_ANGLE_GUIDE_ROUTE_STROKE_PIXELS = 3
 const CAMERA_ANGLE_GUIDE_ROUTE_DASH_LENGTH_PIXELS = 16
 const CAMERA_ANGLE_GUIDE_ROUTE_DASH_GAP_PIXELS = 4.8
-const CAMERA_ANGLE_GUIDE_ACTIVITY_ICON_GAP_PIXELS = 4
 const CAMERA_ANGLE_GUIDE_MAX_ROUTE_POINTS = 16
 const CAMERA_ANGLE_GUIDE_ROUTE_WINDOW_METERS = 600
+const CAMERA_ANGLE_GUIDE_ROUTE_START_MARKER_RADIUS_PIXELS = CAMERA_ANGLE_GUIDE_ROUTE_STROKE_PIXELS * 1.5
 const CAMERA_ANGLE_GUIDE_LOOP_CLOSURE_DISTANCE_METERS = 100
 const CAMERA_ANGLE_GUIDE_ANGLE_ARC_BASE_RATIO = 0.4
 const CAMERA_ANGLE_GUIDE_ANGLE_ARC_SEGMENTS = 16
@@ -278,6 +279,7 @@ const journeyRouteSegmentsFrom = journey => {
             ])
         const points = fromEnd ? sampled.reverse() : sampled
         return {
+            activityPoint: departurePointFrom(validPoints, CAMERA_ANGLE_GUIDE_ACTIVITY_DISTANCE_METERS),
             points,
             segmentIndex: segment.segmentIndex,
             trackIndex: segment.trackIndex,
@@ -349,6 +351,9 @@ const routePartsFrom = segments => {
     const first = firstSegment[0] ?? null
     return {
         after: firstSegment.length > 1 ? [firstSegment] : [],
+        activityPoint: segments[0]?.activityPoint ?? (firstSegment.length > 1
+            ? departurePointFrom(firstSegment, CAMERA_ANGLE_GUIDE_ACTIVITY_DISTANCE_METERS)
+            : first),
         positionKey: segments.map(segment => `${segment.trackSlug ?? ''}:${segment.segmentIndex}:${segment.points.length}`).join('|'),
         start: first,
     }
@@ -404,7 +409,9 @@ const directionFromReplaySample = sample => {
     }
 }
 
-const departureHeadingFrom = points => bearingBetween(points[0], departurePointFrom(points))
+const departureTangentHeadingFrom = points => points.length > 1
+    ? bearingBetween(points[0], points[1])
+    : null
 
 /**
  * Clamp the user-facing angle while preserving the drawer sign convention.
@@ -445,11 +452,12 @@ export const resolveJourneyReplayCameraAngleGuide = ({journey, camera, pois, sam
     }
 
     const anchor = direction.anchor ?? direction.start
-    const axisHeading = direction.axisHeading ?? departureHeadingFrom(direction.points)
-    const angleDegrees = displayAngleFrom(camera?.headingOffset)
     const routeSegments = journeyRouteSegmentsFrom(journey)
     const looped = journeyIsLooped(journey, pois, routeSegments)
     const routeParts = routePartsFrom(routeSegments)
+    const departureRoute = routeParts.after[0] ?? direction.points
+    const axisHeading = direction.axisHeading ?? departureTangentHeadingFrom(departureRoute)
+    const angleDegrees = displayAngleFrom(camera?.headingOffset)
     const baseHeading = positionMode === REPLAY_CAMERA_POSITION_AHEAD
         ? axisHeading + Math.PI
         : axisHeading
@@ -471,6 +479,7 @@ export const resolveJourneyReplayCameraAngleGuide = ({journey, camera, pois, sam
         offsetRadians: angleRadians,
         baseHeading,
         activityIcon: journey.activitySettings?.icon ?? 'person-hiking',
+        activityPoint: routeParts.activityPoint,
         routeAfter: routeParts.after,
         routePositionKey: routeParts.positionKey,
         routeStart: routeParts.start,
@@ -572,7 +581,6 @@ const worldGeometryFrom = (viewer, guide, currentConeLength = null) => {
         coneHeight,
     )
     const transform = Transforms.eastNorthUpToFixedFrame(anchor)
-    const groundTransform = Transforms.eastNorthUpToFixedFrame(groundAnchor)
     const directionPosition = guide.directionPoint
         ? Cartesian3.fromDegrees(
             guide.directionPoint.longitude,
@@ -589,7 +597,6 @@ const worldGeometryFrom = (viewer, guide, currentConeLength = null) => {
         coneLength: coneLengthFrom(viewer, anchor, currentConeLength ?? CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS),
         directionPosition,
         groundAnchor,
-        groundTransform,
         transform,
         visibilityAnchor,
     }
@@ -637,38 +644,17 @@ const iconGapFrom = (viewer, anchor, pixelGap = CAMERA_ANGLE_GUIDE_ICON_GAP_PIXE
 }
 
 /**
- * Set the ellipsoid height of a world position without changing its longitude or latitude.
- *
- * @param {Cartesian3} position - World position.
- * @param {number} height - Ellipsoid height in metres.
- * @returns {Cartesian3} Position at the requested height, or the original position.
- */
-const positionAtHeight = (position, height) => {
-    if (!position || !Number.isFinite(height)) {
-        return position
-    }
-
-    const cartographic = Cartographic.fromCartesian(position)
-    if (!cartographic) {
-        return position
-    }
-    cartographic.height = height
-    return Cartographic.toCartesian(cartographic)
-}
-
-/**
  * Resolve the cone vertices from the fixed anchor and tangent orientation.
  *
  * @param {Object} viewer - Cesium viewer.
  * @param {Cartesian3} anchor - Cone anchor in world coordinates.
  * @param {Matrix4} transform - ENU transform at the elevated cone anchor.
- * @param {Matrix4} groundTransform - ENU transform at the trace ground anchor.
  * @param {Object} guide - Resolved guide geometry.
  * @param {number} coneHeading - Current cone heading in radians.
  * @param {number|null} coneLength - Optional viewport-capped cone length.
- * @returns {{cameraEnd: Cartesian3, cameraGroundPosition: Cartesian3, videoIconPosition: Cartesian3, inner: Array<Cartesian3>, innerBaseCenter: Cartesian3, outer: Array<Cartesian3>, outerBaseCenter: Cartesian3}} Cone vertices.
+ * @returns {{cameraEnd: Cartesian3, videoIconPosition: Cartesian3, inner: Array<Cartesian3>, innerBaseCenter: Cartesian3, outer: Array<Cartesian3>, outerBaseCenter: Cartesian3}} Cone vertices.
  */
-const coneGeometryFrom = (viewer, anchor, transform, groundTransform, guide, coneHeading = guide.coneHeading, coneLength = null) => {
+const coneGeometryFrom = (viewer, anchor, transform, guide, coneHeading = guide.coneHeading, coneLength = null) => {
     const length = Number.isFinite(coneLength) && coneLength > 0
         ? coneLength
         : coneLengthFrom(viewer, anchor)
@@ -683,13 +669,8 @@ const coneGeometryFrom = (viewer, anchor, transform, groundTransform, guide, con
     const innerBaseLeft = positionAtHeadingOffset(transform, coneHeading, innerBaseOffset, -innerBaseHalfWidth)
     const innerBaseRight = positionAtHeadingOffset(transform, coneHeading, innerBaseOffset, innerBaseHalfWidth)
     const innerBaseCenter = positionAtHeading(transform, coneHeading, innerBaseOffset)
-    const cameraGroundPosition = positionAtHeight(
-        positionAtHeading(groundTransform, coneHeading, length + iconGap),
-        guide.cameraGroundHeight,
-    )
     return {
         cameraEnd:             outerTip,
-        cameraGroundPosition,
         videoIconPosition,
         inner:                 [innerBaseLeft, innerBaseRight, outerTip],
         innerBaseCenter,
@@ -869,6 +850,24 @@ const recenterProjectedBase = (baseLeft, baseRight, baseCenter) => {
         {x: baseLeft.x + offset.x, y: baseLeft.y + offset.y},
         {x: baseRight.x + offset.x, y: baseRight.y + offset.y},
     ]
+}
+
+/**
+ * Widen a projected cone base around its fixed center.
+ *
+ * @param {Array<{x: number, y: number}>} endpoints - Base endpoints.
+ * @param {{x: number, y: number}|null} center - Projected base center.
+ * @param {number} scale - Width multiplier.
+ * @returns {Array<{x: number, y: number}>} Widened endpoints.
+ */
+const widenProjectedBase = (endpoints, center, scale) => {
+    if (!center || !Number.isFinite(scale) || scale <= 1) {
+        return endpoints
+    }
+    return endpoints.map(point => ({
+        x: center.x + ((point.x - center.x) * scale),
+        y: center.y + ((point.y - center.y) * scale),
+    }))
 }
 
 /**
@@ -1052,19 +1051,25 @@ const sideInsetClipPathFrom = (vertices, inset, width, height) => {
 }
 
 /**
- * Place the angle label on the base side of the arc along the camera axis.
+ * Place the angle label between the arc and cone tip along the camera axis.
  *
  * @param {{x: number, y: number}} center - Projected simulation departure.
  * @param {{x: number, y: number}} cameraPoint - Projected camera direction.
  * @param {number} arcRadius - Projected arc radius in CSS pixels.
- * @returns {{x: number, y: number}|null} Label position on the base side of the arc.
+ * @returns {{x: number, y: number}|null} Label position between the arc and cone tip.
  */
 const angleArcLabelFrom = (center, cameraPoint, arcRadius) => {
     const cameraHeading = domAngleFrom(center, cameraPoint)
     if (cameraHeading === null || arcRadius <= 0) {
         return null
     }
-    const labelRadius = Math.max(4, arcRadius - CAMERA_ANGLE_GUIDE_ANGLE_LABEL_OFFSET_PIXELS)
+    const cameraRadius = Math.hypot(cameraPoint.x - center.x, cameraPoint.y - center.y)
+    const availableGap = cameraRadius - arcRadius
+    if (availableGap <= 0) {
+        return null
+    }
+    const labelOffset = Math.min(CAMERA_ANGLE_GUIDE_ANGLE_LABEL_OFFSET_PIXELS, availableGap / 2)
+    const labelRadius = arcRadius + labelOffset
     return {
         x: center.x + (Math.cos(cameraHeading) * labelRadius),
         y: center.y + (Math.sin(cameraHeading) * labelRadius),
@@ -1096,6 +1101,76 @@ const svgBezierPathFrom = points => {
     const last = points.at(-1)
     commands.push(`L ${last.x} ${last.y}`)
     return commands.join(' ')
+}
+
+/**
+ * Sample the same quadratic route used by the SVG path renderer.
+ *
+ * @param {Array<{x: number, y: number}>} points - Projected route waypoints.
+ * @returns {Array<{x: number, y: number}>} Points along the rendered curve.
+ */
+const svgBezierSamplesFrom = points => {
+    if (points.length < 2) {
+        return points
+    }
+    const subdivisions = 8
+    const samples = [points[0]]
+    let start = points[0]
+    for (let index = 1; index < points.length - 1; index += 1) {
+        const control = points[index]
+        const next = points[index + 1]
+        const end = {x: (control.x + next.x) / 2, y: (control.y + next.y) / 2}
+        for (let step = 1; step <= subdivisions; step += 1) {
+            const ratio = step / subdivisions
+            const inverse = 1 - ratio
+            samples.push({
+                x: (inverse ** 2 * start.x) + (2 * inverse * ratio * control.x) + (ratio ** 2 * end.x),
+                y: (inverse ** 2 * start.y) + (2 * inverse * ratio * control.y) + (ratio ** 2 * end.y),
+            })
+        }
+        start = end
+    }
+    const last = points.at(-1)
+    for (let step = 1; step <= subdivisions; step += 1) {
+        const ratio = step / subdivisions
+        samples.push({
+            x: start.x + ((last.x - start.x) * ratio),
+            y: start.y + ((last.y - start.y) * ratio),
+        })
+    }
+    return samples
+}
+
+/**
+ * Find the closest point on a sampled route to a projected trace position.
+ *
+ * @param {Array<{x: number, y: number}>} points - Sampled SVG curve.
+ * @param {{x: number, y: number}|null} target - Projected 200 metre trace point.
+ * @returns {{x: number, y: number}|null} Closest point on the rendered curve.
+ */
+const closestRoutePointFrom = (points, target) => {
+    if (!target || points.length === 0) {
+        return null
+    }
+    let closest = null
+    let closestDistance = Infinity
+    for (let index = 1; index < points.length; index += 1) {
+        const start = points[index - 1]
+        const end = points[index]
+        const deltaX = end.x - start.x
+        const deltaY = end.y - start.y
+        const lengthSquared = (deltaX ** 2) + (deltaY ** 2)
+        const ratio = lengthSquared > 0
+            ? Math.max(0, Math.min(1, (((target.x - start.x) * deltaX) + ((target.y - start.y) * deltaY)) / lengthSquared))
+            : 0
+        const point = {x: start.x + (ratio * deltaX), y: start.y + (ratio * deltaY)}
+        const distance = Math.hypot(target.x - point.x, target.y - point.y)
+        if (distance < closestDistance) {
+            closest = point
+            closestDistance = distance
+        }
+    }
+    return closest
 }
 
 /**
@@ -1170,7 +1245,7 @@ const readableMapTextRotationFrom = angle => {
 }
 
 /**
- * Format the configured camera angle for the guide label.
+ * Format the supplementary angle to 180 degrees for the guide label.
  *
  * @param {number} angleDegrees - Display angle in degrees.
  * @returns {string} Formatted angle label.
@@ -1180,8 +1255,12 @@ const angleLabelFrom = angleDegrees => {
     if (!Number.isFinite(value)) {
         return ''
     }
-    const roundedValue = Math.round(value)
-    return `${roundedValue > 0 ? '+' : ''}${roundedValue}°`
+    const normalizedValue = Math.round(value) === 0 ? 0 : value
+    const supplementaryValue = normalizedValue === 0
+        ? 180
+        : Math.sign(normalizedValue) * (180 - Math.abs(normalizedValue))
+    const roundedValue = Math.round(supplementaryValue)
+    return `${roundedValue > 0 && normalizedValue !== 0 ? '+' : ''}${roundedValue}°`
 }
 
 /**
@@ -1302,28 +1381,6 @@ const positionGuideIcon = (icon, point, heading = null) => {
 }
 
 /**
- * Move the activity icon behind the simulation start while keeping a small gap.
- *
- * @param {{x: number, y: number}|null} routeStart - Projected simulation start.
- * @param {{x: number, y: number}|null} routeNext - Next projected route point.
- * @returns {{x: number, y: number}|null} Icon center with its edge offset from the route.
- */
-const activityIconPositionFrom = (routeStart, routeNext) => {
-    if (!routeStart || !routeNext) {
-        return null
-    }
-    const directionLength = Math.hypot(routeNext.x - routeStart.x, routeNext.y - routeStart.y)
-    if (directionLength <= 0) {
-        return routeStart
-    }
-    const offset = (CAMERA_ANGLE_GUIDE_ICON_SIZE / 2) + CAMERA_ANGLE_GUIDE_ACTIVITY_ICON_GAP_PIXELS
-    return {
-        x: routeStart.x - (((routeNext.x - routeStart.x) / directionLength) * offset),
-        y: routeStart.y - (((routeNext.y - routeStart.y) / directionLength) * offset),
-    }
-}
-
-/**
  * Check whether a Cesium Cartesian contains finite coordinates.
  *
  * @param {Cartesian3|null} position - Cartesian position.
@@ -1431,6 +1488,7 @@ const isGuideWorldPositionVisible = (viewer, overlay, position, checkDepth) => {
  */
 const updateGuideOverlay = (viewer, record, checkDepth = true) => {
     const {overlay, elements} = record
+    elements.angleLabel.textContent = angleLabelFrom(record.guide.angleDegrees)
     const overlayRect = overlay.getBoundingClientRect?.() ?? {}
     const width = Number(overlayRect.width) || overlay.clientWidth || viewer.scene.canvas?.clientWidth || 1
     const height = Number(overlayRect.height) || overlay.clientHeight || viewer.scene.canvas?.clientHeight || 1
@@ -1460,7 +1518,6 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
         viewer,
         record.anchor,
         record.transform,
-        record.groundTransform,
         record.guide,
         coneHeading,
         record.coneLength * coneScale,
@@ -1469,7 +1526,6 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
     const inner = geometry.inner.map(position => projectGuidePosition(viewer, overlay, position))
     const outerBaseCenter = projectGuidePosition(viewer, overlay, geometry.outerBaseCenter)
     const innerBaseCenter = projectGuidePosition(viewer, overlay, geometry.innerBaseCenter)
-    const cameraGround = projectGuidePosition(viewer, overlay, geometry.cameraGroundPosition)
     const videoIcon = projectGuidePosition(viewer, overlay, geometry.videoIconPosition)
 
     if (outer.some(point => !point) || inner.some(point => !point)) {
@@ -1482,15 +1538,35 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
     const rotationCenter = outerBaseCenter
     const [outerLeft, outerRight, tip] = outer
     const [innerOuterLeft, innerOuterRight, innerTip] = inner
-    const [left, right] = recenterProjectedBase(outerLeft, outerRight, outerBaseCenter)
-    const [innerLeft, innerRight] = recenterProjectedBase(innerOuterLeft, innerOuterRight, innerBaseCenter)
+    const normalizedCameraAngle = Math.min(1, Math.abs(record.guide.angleDegrees ?? 0) / 140)
+    const baseWidthScale = 1.2 + (1.8 * (normalizedCameraAngle ** 2))
+    const [left, right] = widenProjectedBase(
+        recenterProjectedBase(outerLeft, outerRight, outerBaseCenter),
+        outerBaseCenter,
+        baseWidthScale,
+    )
+    const [innerLeft, innerRight] = widenProjectedBase(
+        recenterProjectedBase(innerOuterLeft, innerOuterRight, innerBaseCenter),
+        innerBaseCenter,
+        baseWidthScale,
+    )
     const projectedRoute = projectedRouteSectionsFrom(
         viewer,
         overlay,
         record.guide.routeAfter ?? [],
         record.routeHeightOffset,
     )[0]
-    const requestedArcRadius = Math.hypot(right.x - left.x, right.y - left.y) * CAMERA_ANGLE_GUIDE_ANGLE_ARC_BASE_RATIO
+    const cameraDirectionPoint = videoIcon ?? tip
+    const cameraHeading = domAngleFrom(rotationCenter, cameraDirectionPoint)
+    const departureTangentHeading = projectedRoute?.length > 1
+        ? domAngleFrom(projectedRoute[0], projectedRoute[1])
+        : null
+    const displayedAngle = cameraHeading !== null && departureTangentHeading !== null
+        ? domAngleDeltaFrom(cameraHeading, departureTangentHeading) * 180 / Math.PI
+        : record.guide.angleDegrees
+    elements.angleLabel.textContent = angleLabelFrom(displayedAngle)
+    const requestedArcRadius = Math.hypot(outerRight.x - outerLeft.x, outerRight.y - outerLeft.y)
+        * CAMERA_ANGLE_GUIDE_ANGLE_ARC_BASE_RATIO
     const angleArcClipPath = sideInsetClipPathFrom(
         [left, tip, right],
         CAMERA_ANGLE_GUIDE_ANGLE_ARC_EDGE_CLEARANCE_PIXELS,
@@ -1509,13 +1585,14 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
     const angleArcPoints = rotationCenter && simulationPoint && tip
         ? angleArcPointsFrom(rotationCenter, simulationPoint, tip)
         : null
-    const angleArc = angleArcPoints && angleArcLabel
-        ? {label: angleArcLabel, path: svgPolylinePathFrom(angleArcPoints)}
+    const angleArc = angleArcPoints
+        ? {path: svgPolylinePathFrom(angleArcPoints)}
         : null
     const innerGradientAxis = svgGradientAxisFrom(innerTip, innerLeft, innerRight)
     const outerPath = svgConePathFrom(left, right, tip)
     elements.angleArcClipShape.setAttribute('d', angleArcClipPath)
     elements.interactionPath.setAttribute('d', outerPath)
+    elements.outer.setAttribute('data-base-width-scale', baseWidthScale)
     elements.tipDragTarget.setAttribute('cx', tip.x)
     elements.tipDragTarget.setAttribute('cy', tip.y)
     elements.outer.setAttribute('d', outerPath)
@@ -1538,7 +1615,7 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
         elements.angleArc.style.display = 'none'
     }
     if (angleArcLabel) {
-        elements.angleLabel.textContent = angleLabelFrom(record.guide.angleDegrees)
+        elements.angleLabel.textContent = angleLabelFrom(displayedAngle)
         elements.angleLabel.setAttribute('x', angleArcLabel.x)
         elements.angleLabel.setAttribute('y', angleArcLabel.y)
         const cameraAxisAngle = domAngleFrom(rotationCenter, tip)
@@ -1563,16 +1640,6 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
     elements.rightSide.setAttribute('y1', right.y)
     elements.rightSide.setAttribute('x2', tip.x)
     elements.rightSide.setAttribute('y2', tip.y)
-    if (cameraGround && videoIcon) {
-        elements.cameraElevation.setAttribute('x1', cameraGround.x)
-        elements.cameraElevation.setAttribute('y1', cameraGround.y)
-        elements.cameraElevation.setAttribute('x2', videoIcon.x)
-        elements.cameraElevation.setAttribute('y2', videoIcon.y)
-        elements.cameraElevation.style.display = 'block'
-    }
-    else {
-        elements.cameraElevation.style.display = 'none'
-    }
     const projectedConeHeading = rotationCenter && tip
         ? domAngleFrom(rotationCenter, tip)
         : null
@@ -1611,8 +1678,27 @@ const updateRouteGuideOverlay = (viewer, record, width, height) => {
         : 'none')
     elements.routeAfter.style.display = routeAfterPath ? 'block' : 'none'
     const routeStart = projectedRoute[0]?.[0] ?? null
-    const routeNext = projectedRoute[0]?.[1] ?? null
-    positionGuideIcon(elements.activityIcon, activityIconPositionFrom(routeStart, routeNext))
+    if (routeStart) {
+        elements.routeStartMarker.setAttribute('cx', routeStart.x)
+        elements.routeStartMarker.setAttribute('cy', routeStart.y)
+        elements.routeStartMarker.style.display = 'block'
+    }
+    else {
+        elements.routeStartMarker.style.display = 'none'
+    }
+    const activityPoint = record.guide.activityPoint
+    const activityPosition = activityPoint
+        ? projectGuidePosition(viewer, overlay, Cartesian3.fromDegrees(
+            activityPoint.longitude,
+            activityPoint.latitude,
+            activityPoint.height + record.routeHeightOffset,
+        ))
+        : null
+    const activityCurvePoint = closestRoutePointFrom(
+        svgBezierSamplesFrom(projectedRoute[0] ?? []),
+        activityPosition,
+    )
+    positionGuideIcon(elements.activityIcon, activityCurvePoint)
     elements.routeSvg.setAttribute('viewBox', `0 0 ${width} ${height}`)
     elements.routeSvg.style.visibility = 'visible'
 }
@@ -1737,7 +1823,6 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor, activityIconName}
     const createLine = color => createSvgElement('line', svgStrokeAttributesFrom(color))
     const leftSide = createLine(aheadColor)
     const rightSide = createLine(aheadColor)
-    const cameraElevation = createLine(aheadColor)
     const cameraAxis = createLine(aheadColor)
     cameraAxis.setAttribute('data-part', 'camera-position-axis')
     cameraAxis.setAttribute('stroke', cssColorFrom(headingColor))
@@ -1766,6 +1851,11 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor, activityIconName}
     })
     const routeAfter = createRoutePath('journey-route-after')
     routeAfter.setAttribute('stroke-linecap', 'butt')
+    const routeStartMarker = createSvgElement('circle', {
+        'data-part': 'journey-route-start',
+        fill: cssColorFrom(headingColor),
+        r: CAMERA_ANGLE_GUIDE_ROUTE_START_MARKER_RADIUS_PIXELS,
+    })
     const routeArrowMarkerId = `replay-camera-angle-guide-route-arrow-${++cameraAngleGuideArrowCounter}`
     const routeArrowMarker = createSvgElement('marker', {
         id: routeArrowMarkerId,
@@ -1809,12 +1899,11 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor, activityIconName}
         leftSide,
         rightSide,
         cameraAxis,
-        cameraElevation,
         angleArc,
         angleLabel,
         tipDragTarget,
     )
-    routeSvg.append(routeDefinitions, routeAfter)
+    routeSvg.append(routeDefinitions, routeAfter, routeStartMarker)
 
     const createIcon = (image) => {
         const icon = document.createElement('img')
@@ -1849,6 +1938,7 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor, activityIconName}
         justifyContent: 'center',
         pointerEvents: 'none',
         position:     'absolute',
+        zIndex:       '3',
         width:        `${CAMERA_ANGLE_GUIDE_ICON_SIZE}px`,
     })
     const activityGlyph = document.createElement('wa-icon')
@@ -1871,7 +1961,6 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor, activityIconName}
             angleArc,
             angleArcClipShape,
             cameraAxis,
-            cameraElevation,
             interactionPath,
             tipDragTarget,
             videoIcon,
@@ -1883,6 +1972,7 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor, activityIconName}
             svg,
             routeSvg,
             routeAfter,
+            routeStartMarker,
             activityIcon,
             activityGlyph,
         },
@@ -2054,7 +2144,8 @@ const bindGuideDragInteractions = (viewer, record) => {
             : 0
         const offset = dragState.startOffset + angleDelta
         const rawDegrees = offset * 180 / Math.PI
-        const headingOffset = ((rawDegrees + 180) % 360 + 360) % 360 - 180
+        const dragDegrees = event.shiftKey ? Math.round(rawDegrees / 5) * 5 : rawDegrees
+        const headingOffset = ((dragDegrees + 180) % 360 + 360) % 360 - 180
         const altitude = dragState.altitudeDraggable
             ? Math.max(
                 CAMERA_ANGLE_GUIDE_MIN_CAMERA_ALTITUDE_METERS,

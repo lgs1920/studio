@@ -346,6 +346,12 @@
     - ArrowLeft
     - ArrowRight
   scope: Replay camera setup
+- action: Snap replay camera angle while dragging
+  description: Hold Shift while dragging the camera guide to snap its angle to 5-degree increments.
+  id: replay-camera-angle-snap-shift-drag
+  keys:
+    - Shift+Left drag
+  scope: Replay camera setup
 
 ########################################
 # Application and panel commands
