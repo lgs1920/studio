@@ -3118,3 +3118,23 @@
 
 - # Conflicts:
 - #	COMMIT_HISTORY.md
+
+## 2026-09-30 — [`fix(replay): capture video from main Cesium viewer`](https://github.com/lgs1920/studio/commit/e0e8b8346693fa4383efee680139b739a583fbc3)
+
+- Recorded automatically from Git history.
+
+## 2026-09-30 — [`docs(replay): explain Simple and Expert camera modes`](https://github.com/lgs1920/studio/commit/bbabbda0c1b272c2b3df983e2a628c40f4bc65c3)
+
+- Recorded automatically from Git history.
+
+## 2026-09-30 — [`fix(replay): refine camera angle guide geometry and drag`](https://github.com/lgs1920/studio/commit/43e7e412d8a7cbf67918b3a0f4bcd400fae9d112)
+
+- Recorded automatically from Git history.
+
+## 2026-09-30 — [`fix(replay): stabilize exported and monitor video frames`](https://github.com/lgs1920/studio/commit/ebc74a7714f43c38b3e4fd54240d7adbc81e3dbb)
+
+- Recorded automatically from Git history.
+
+## 2026-09-30 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/20dfa1f15ce812b998dc9e4894703ba8c83a167b)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
