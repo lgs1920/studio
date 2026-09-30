@@ -32,7 +32,7 @@ import {
     TrackUtils,
 }                                                                                          from '@Utils/cesium/TrackUtils'
 import { Journey }                                                                         from '@Core/Journey'
-import { REPLAY_USER_MODE_BASIC }                                                          from './ReplayUserModeConstants'
+import {isJourneyReplayBasicMode}                                                            from './ReplayUserModeConstants'
 import {
     ArcType, Cartesian2, Cartesian3, Cartographic, CatmullRomSpline, Color, ExtrapolationType, JulianDate,
     EasingFunction, HeightReference, HorizontalOrigin, LinearApproximation, Math as CesiumMath, Matrix4,
@@ -166,7 +166,7 @@ export const configure = (mode, options = {}) => {
         }
 
         const replay = getJourneyReplaySettings()
-        const simpleReplay = replay.userMode === REPLAY_USER_MODE_BASIC
+        const simpleReplay = isJourneyReplayBasicMode()
         const includeHiddenTracks = simpleReplay
             ? false
             : options.includeHiddenTracks ?? false
@@ -372,8 +372,7 @@ export const enterReplayPreparation = async (mode, {
         return false
     }
 
-    const simplePreparation = globalThis.lgs?.stores?.replay?.simplePreparationActive === true
-                               || getJourneyReplaySettings().userMode === REPLAY_USER_MODE_BASIC
+    const simplePreparation = isJourneyReplayBasicMode()
     if (simplePreparation) {
         call.hideOtherJourneysVisibility()
     }
@@ -453,7 +452,7 @@ export const start = (mode, options = {}) => {
     call.resetCameraInterpolationState()
     traceStartStep('reset-camera-interpolation-state.end')
 
-        const shouldHideOtherJourneys = getJourneyReplaySettings().userMode === REPLAY_USER_MODE_BASIC
+        const shouldHideOtherJourneys = isJourneyReplayBasicMode()
                                         || (options.hideOtherJourneys ?? getJourneyReplayHideOtherJourneys())
         const videoReplayLinked = call.isReplayVideoLinked()
         state.logicalCameraTrajectory = false
@@ -762,7 +761,7 @@ export const preparePlaybackSceneForExport = async (mode, {
         call.setJourneyReplayOrbitAllowed(false)
         call.restoreOtherJourneysVisibility()
         call.hideCurrentJourneyVisibility()
-        if (getJourneyReplaySettings().userMode === REPLAY_USER_MODE_BASIC || hideOtherJourneys) {
+        if (isJourneyReplayBasicMode() || hideOtherJourneys) {
             call.hideOtherJourneysVisibility()
         }
         if (sampler?.hasSamples) {

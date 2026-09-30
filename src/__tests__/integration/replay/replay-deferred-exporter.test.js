@@ -30,6 +30,7 @@ import {
 import { buildReplayVideoRenderSpec } from '@Core/ui/replay/ReplayVideoRenderSpec'
 import { CanvasOverlayComposer } from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import {REPLAY_USER_MODE_EXPERT} from '@Core/ui/replay/ReplayUserModeConstants'
 
 const mediabunnyMocks = vi.hoisted(() => ({
     failNextCanvasAdd: false,
@@ -257,6 +258,30 @@ describe('ReplayDeferredExporter', () => {
             dimensions: {width: 1920, height: 1080},
         })
         expect(replay.deferredExportPlan).toBe(result.plan)
+    })
+
+    it('omits configured start and stop clips from a Simple Replay export timeline', () => {
+        globalThis.lgs = {
+            settings: {ui: {replay: {userMode: REPLAY_USER_MODE_EXPERT}}},
+        }
+        const replay = {
+            simplePreparationActive: true,
+            clips: {
+                catalog: {},
+                start:   [{clipId: 'zoom-in', enabled: true, params: {duration: 5}}],
+                stop:    [{clipId: 'zoom-out', enabled: true, params: {duration: 3}}],
+            },
+        }
+
+        const {plan} = prepareReplayDeferredExportPlan({
+            replay,
+            journey: {slug: 'simple-journey'},
+            controller: {duration: 12.5, direction: 1},
+            fps: 30,
+        })
+
+        expect(plan.videoTimeline.phases.map(phase => phase.kind)).toEqual(['replay'])
+        expect(plan.videoTimeline.durationMillis).toBe(12500)
     })
 
     it('builds the shared interactive and HQ video render spec from crop, fps, quality, and dpr', () => {

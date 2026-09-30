@@ -98,11 +98,24 @@ describe('Replay preparation visibility and clip rules', () => {
             },
         }
 
-        vi.stubGlobal('lgs', {settings: {ui: {replay: {userMode: REPLAY_USER_MODE_BASIC}}}})
+        vi.stubGlobal('lgs', {
+            settings: {ui: {replay: {userMode: REPLAY_USER_MODE_BASIC}}},
+            stores:   {replay: {userMode: REPLAY_USER_MODE_EXPERT, simplePreparationActive: false}},
+        })
         expect(clipListForSlot(mode, REPLAY_CLIP_SLOT_START)).toEqual([])
         expect(clipListForSlot(mode, REPLAY_CLIP_SLOT_STOP)).toEqual([])
 
         lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_EXPERT
+        lgs.stores.replay.simplePreparationActive = true
+        expect(clipListForSlot(mode, REPLAY_CLIP_SLOT_START)).toEqual([])
+        expect(clipListForSlot(mode, REPLAY_CLIP_SLOT_STOP)).toEqual([])
+
+        lgs.stores.replay.simplePreparationActive = false
+        lgs.stores.replay.userMode = REPLAY_USER_MODE_BASIC
+        expect(clipListForSlot(mode, REPLAY_CLIP_SLOT_START)).toEqual([])
+        expect(clipListForSlot(mode, REPLAY_CLIP_SLOT_STOP)).toEqual([])
+
+        lgs.stores.replay.userMode = REPLAY_USER_MODE_EXPERT
         expect(clipListForSlot(mode, REPLAY_CLIP_SLOT_START)).toBe(startClips)
         expect(clipListForSlot(mode, REPLAY_CLIP_SLOT_STOP)).toBe(stopClips)
     })

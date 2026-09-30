@@ -22,7 +22,7 @@ import {Math as CesiumMath} from 'cesium'
 import {CameraUtils} from '@Utils/cesium/CameraUtils'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
 import {REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP, normalizeJourneyReplayClips} from './JourneyReplayClips'
-import {REPLAY_USER_MODE_BASIC} from './ReplayUserModeConstants'
+import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
 import {
     currentJourneyReplayCameraSettings, currentJourneyReplaySample, finiteNumber, replayStore,
 } from './JourneyReplayRuntime'
@@ -836,7 +836,7 @@ export const clipListForSlot = (mode, slot) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        if (getJourneyReplaySettings()?.userMode === REPLAY_USER_MODE_BASIC) {
+        if (isJourneyReplayBasicMode()) {
             return []
         }
 

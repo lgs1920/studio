@@ -80,6 +80,7 @@ import {
     CanvasOverlayComposer,
 }                              from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 import {REPLAY_VIDEO_FPS} from '@Core/ui/replay/ReplayVideoSettings'
+import {REPLAY_USER_MODE_BASIC, isJourneyReplayBasicMode} from '@Core/ui/replay/ReplayUserModeConstants'
 import {
     normalizeMediabunnyMetadataTags,
 }                              from '@Core/ui/replay/ReplayMediaMetadata'
@@ -385,12 +386,22 @@ const normalizeReplayWidgetIds = (widgetIds = []) => (
         .sort()
 )
 
-const resolveReplayExportClips = ({replay = defaultReplayStore()} = {}) => normalizeJourneyReplayClips(
-    replay?.clips
-    ?? globalThis.lgs?.stores?.replay?.clips
-    ?? globalThis.lgs?.settings?.ui?.replay?.clips
-    ?? {},
-)
+const resolveReplayExportClips = ({replay = defaultReplayStore()} = {}) => {
+    const clips = normalizeJourneyReplayClips(
+        replay?.clips
+        ?? globalThis.lgs?.stores?.replay?.clips
+        ?? globalThis.lgs?.settings?.ui?.replay?.clips
+        ?? {},
+    )
+
+    if (replay?.userMode === REPLAY_USER_MODE_BASIC
+        || replay?.simplePreparationActive === true
+        || isJourneyReplayBasicMode()) {
+        return {...clips, start: [], stop: []}
+    }
+
+    return clips
+}
 
 /**
  * Capture the compact runtime state used to validate a deferred export plan.
