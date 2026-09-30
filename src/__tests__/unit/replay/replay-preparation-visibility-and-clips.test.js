@@ -16,6 +16,7 @@
 
 import {afterEach, describe, expect, it, vi} from 'vitest'
 import {hideJourneyReplayPOIsForPreparation, restoreJourneyReplayPOIVisibility} from '@Core/ui/replay/JourneyReplayVisibilityController'
+import {enterReplayPreparation} from '@Core/ui/replay/JourneyReplaySessionPlaybackController'
 import {clipListForSlot} from '@Core/ui/replay/JourneyReplayClipController'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from '@Core/ui/replay/JourneyReplayInternal'
 import {REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP} from '@Core/ui/replay/JourneyReplayClips'
@@ -49,6 +50,42 @@ describe('Replay preparation visibility and clip rules', () => {
         restoreJourneyReplayPOIVisibility(mode)
         expect(poi.entityVisible).toBe(true)
         expect(state.replayPOIVisibilityState.size).toBe(0)
+    })
+
+    it('keeps POIs hidden when camera preparation is not ready yet', async () => {
+        const poi = {id: 'poi-pending-camera', visible: true, entityVisible: true}
+        const state = {
+            preparationTransitionToken: 0,
+            replayPOIVisibilityState: new Map(),
+            sceneRestorePromise: null,
+        }
+        const call = {
+            configure: vi.fn(() => ({})),
+            replayPOICandidates: () => [poi],
+            isPOIVisibleBeforePlayback: () => poi.entityVisible,
+            setPOIEntityVisibility: (item, visible) => {
+                item.entityVisible = visible
+            },
+        }
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: state,
+            [JOURNEY_REPLAY_INTERNAL_CALL]: call,
+        }
+        vi.stubGlobal('lgs', {
+            settings: {ui: {replay: {userMode: REPLAY_USER_MODE_EXPERT}}},
+            stores: {
+                main: {components: {pois: {list: new Map([[poi.id, poi]])}}},
+                replay: {simplePreparationActive: false},
+            },
+            scene: {requestRender: vi.fn()},
+        })
+
+        await expect(enterReplayPreparation(mode, {journey: {}})).resolves.toBe(false)
+        expect(poi.entityVisible).toBe(false)
+        expect(state.replayPOIVisibilityState.get(poi.id)).toEqual({visible: true})
+
+        restoreJourneyReplayPOIVisibility(mode)
+        expect(poi.entityVisible).toBe(true)
     })
 
     it('ignores start and stop clips in Simple mode while keeping Expert clips', () => {

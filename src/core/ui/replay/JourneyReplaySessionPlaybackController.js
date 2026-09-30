@@ -382,9 +382,6 @@ export const enterReplayPreparation = async (mode, {
 
     const prepared = await prepareReplayCamera(mode, {journey})
     const preparationSucceeded = prepared === true && isCurrentTransition()
-    if (!preparationSucceeded) {
-        JourneyReplayVisibilityController.restoreJourneyReplayPOIVisibility(mode)
-    }
     return preparationSucceeded
 }
 
