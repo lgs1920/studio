@@ -539,7 +539,7 @@ describe('replay camera angle map guide', () => {
             camera: {headingOffset: 133, positionMode: 'ahead'},
             journey: tracedJourney,
         }))).toBe(true)
-        const snappedDragAngle = 17 * Math.PI / 180
+        const snappedDragAngle = 16 * Math.PI / 180
         const cameraChangeCallsBeforeShiftDrag = cameraChangeListener.mock.calls.length
         dragTarget.dispatchEvent(pointerEvent('pointerdown', projectedAnchor.x + 50, projectedAnchor.y))
         window.dispatchEvent(new KeyboardEvent('keydown', {key: 'Shift', bubbles: true}))
@@ -548,7 +548,7 @@ describe('replay camera angle map guide', () => {
             projectedAnchor.x + (Math.cos(snappedDragAngle) * 50),
             projectedAnchor.y + (Math.sin(snappedDragAngle) * 50),
         ))
-        expect(overlay.querySelector('text[data-part="angle-label"]').textContent).toBe('-32°')
+        expect(overlay.querySelector('text[data-part="angle-label"]').textContent).toBe('-30°')
         window.dispatchEvent(new KeyboardEvent('keyup', {key: 'Shift', bubbles: true}))
         cameraGuideSvg.dispatchEvent(pointerEvent(
             'pointerup',
@@ -556,7 +556,7 @@ describe('replay camera angle map guide', () => {
             projectedAnchor.y + (Math.sin(snappedDragAngle) * 50),
         ))
         expect(cameraChangeListener).toHaveBeenCalledTimes(cameraChangeCallsBeforeShiftDrag + 1)
-        expect(cameraChangeListener.mock.lastCall[0].headingOffset).toBe(148)
+        expect(cameraChangeListener.mock.lastCall[0].headingOffset).toBe(150)
         expect(Object.values(cesiumPointerListeners).every(listener => listener.mock.calls.length === 0)).toBe(true)
         for (const [type, listener] of Object.entries(cesiumPointerListeners)) {
             container.removeEventListener(type, listener)
@@ -579,7 +579,7 @@ describe('replay camera angle map guide', () => {
         const angleLabel = overlay.querySelector('text[data-part="angle-label"]')
         const cameraAxis = overlay.querySelector('[data-part="camera-position-axis"]')
         expect(angleLabel).not.toBeNull()
-        expect(angleLabel.textContent).toBe('-32°')
+        expect(angleLabel.textContent).toBe('-30°')
         expect(angleLabel.getAttribute('fill')).toBe('rgb(0,184,184)')
         expect(angleLabel.getAttribute('opacity')).toBe('1')
         expect(angleLabel.getAttribute('transform')).toMatch(/^rotate\(/)

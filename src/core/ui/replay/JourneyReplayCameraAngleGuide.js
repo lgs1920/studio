@@ -1557,15 +1557,7 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
         record.guide.routeAfter ?? [],
         record.routeHeightOffset,
     )[0]
-    const cameraDirectionPoint = videoIcon ?? tip
-    const cameraHeading = domAngleFrom(rotationCenter, cameraDirectionPoint)
-    const departureTangentHeading = projectedRoute?.length > 1
-        ? domAngleFrom(projectedRoute[0], projectedRoute[1])
-        : null
-    const displayedAngle = cameraHeading !== null && departureTangentHeading !== null
-        ? domAngleDeltaFrom(cameraHeading, departureTangentHeading) * 180 / Math.PI
-        : record.guide.angleDegrees
-    elements.angleLabel.textContent = angleLabelFrom(displayedAngle)
+    elements.angleLabel.textContent = angleLabelFrom(record.guide.angleDegrees)
     const requestedArcRadius = Math.hypot(outerRight.x - outerLeft.x, outerRight.y - outerLeft.y)
         * CAMERA_ANGLE_GUIDE_ANGLE_ARC_BASE_RATIO
     const angleArcClipPath = sideInsetClipPathFrom(
@@ -1616,7 +1608,7 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
         elements.angleArc.style.display = 'none'
     }
     if (angleArcLabel) {
-        elements.angleLabel.textContent = angleLabelFrom(displayedAngle)
+        elements.angleLabel.textContent = angleLabelFrom(record.guide.angleDegrees)
         elements.angleLabel.setAttribute('x', angleArcLabel.x)
         elements.angleLabel.setAttribute('y', angleArcLabel.y)
         const cameraAxisAngle = domAngleFrom(rotationCenter, tip)
@@ -2172,14 +2164,14 @@ const bindGuideDragInteractions = (viewer, record) => {
                 ? domAngleDeltaFrom(dragState.startMapAngle, mapAngle)
                 : domAngleDeltaFrom(dragState.startAngle, angle)
             : 0
+        const offset = dragState.startOffset + angleDelta
+        const rawDegrees = offset * 180 / Math.PI
         const shiftPressed = event.shiftKey === true || dragState.shiftPressed
-        const angleDeltaDegrees = angleDelta * 180 / Math.PI
-        const snappedDeltaDegrees = shiftPressed
-            ? Math.round(angleDeltaDegrees / CAMERA_ANGLE_GUIDE_DRAG_SNAP_STEP_DEGREES)
+        const dragDegrees = shiftPressed
+            ? Math.round(rawDegrees / CAMERA_ANGLE_GUIDE_DRAG_SNAP_STEP_DEGREES)
                 * CAMERA_ANGLE_GUIDE_DRAG_SNAP_STEP_DEGREES
-            : angleDeltaDegrees
-        const rawDegrees = (dragState.startOffset * 180 / Math.PI) + snappedDeltaDegrees
-        const headingOffset = ((rawDegrees + 180) % 360 + 360) % 360 - 180
+            : rawDegrees
+        const headingOffset = ((dragDegrees + 180) % 360 + 360) % 360 - 180
         const altitude = dragState.altitudeDraggable
             ? Math.max(
                 CAMERA_ANGLE_GUIDE_MIN_CAMERA_ALTITUDE_METERS,
