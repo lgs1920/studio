@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-02
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -182,19 +182,31 @@ describe('replay stats widget visibility', () => {
         expect(isVideoWidgetEditorPhase()).toBe(true)
         globalThis.lgs.stores.ui.video.preRecording = true
         expect(isVideoWidgetEditorPhase()).toBe(true)
-        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.ui.video.recordingHQ = true
         expect(isVideoWidgetEditorPhase()).toBe(false)
     })
 
     it('keeps mandatory video widgets mounted during HQ export', () => {
         globalThis.lgs.stores.ui.video.editing = false
         globalThis.lgs.stores.ui.video.preRecording = false
-        globalThis.lgs.stores.ui.video.recording = false
+        globalThis.lgs.stores.ui.video.recordingHQ = false
         globalThis.lgs.stores.replay.deferredExportPlan = {
             runtime: {
                 status: 'exporting',
             },
         }
+
+        expect(shouldRenderVideoBoardWidget({
+            widgetsBoard: VIDEO_WIDGETS_BOARD,
+            video:        globalThis.lgs.stores.ui.video,
+            replay:       globalThis.lgs.stores.replay,
+        })).toBe(true)
+    })
+
+    it('keeps video widgets mountable from the recordingHQ state before the export plan is published', () => {
+        globalThis.lgs.stores.ui.video.editing = false
+        globalThis.lgs.stores.ui.video.recordingHQ = true
+        globalThis.lgs.stores.replay.deferredExportPlan = null
 
         expect(shouldRenderVideoBoardWidget({
             widgetsBoard: VIDEO_WIDGETS_BOARD,
@@ -248,7 +260,7 @@ describe('replay stats widget visibility', () => {
 
     it('uses the shared dynamic replay frame state for live widget metrics', () => {
         globalThis.lgs.stores.ui.video.editing = false
-        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.ui.video.recordingHQ = true
         globalThis.lgs.stores.replay.playing = false
         globalThis.lgs.stores.replay.dynamicFrameState = {
             active: true,
@@ -282,7 +294,7 @@ describe('replay stats widget visibility', () => {
     })
 
     it('uses the last-two-replay-frame window outside the editor phase', () => {
-        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.ui.video.recordingHQ = true
 
         expect(shouldShowVideoStatsWidget({mode: 'dynamic'})).toBe(true)
 
@@ -298,7 +310,7 @@ describe('replay stats widget visibility', () => {
     })
 
     it('applies clip-phase visibility only to dynamic and journey stats', () => {
-        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.ui.video.recordingHQ = true
         globalThis.lgs.stores.replay.clipSequenceActive = true
         globalThis.lgs.stores.replay.replayFramePhase = {
             kind: 'pre-replay',
@@ -320,7 +332,7 @@ describe('replay stats widget visibility', () => {
     })
 
     it('does not leak stale stop-phase visibility after replay completion', () => {
-        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.ui.video.recordingHQ = true
         globalThis.lgs.stores.replay.active = false
         globalThis.lgs.stores.replay.playing = false
         globalThis.lgs.stores.replay.paused = false
@@ -336,7 +348,7 @@ describe('replay stats widget visibility', () => {
 
     it('prefers the live replay controller over a throttled store snapshot for visibility', () => {
         globalThis.lgs.stores.ui.video.editing = false
-        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.ui.video.recordingHQ = true
         globalThis.lgs.stores.replay.progress = 0.1
         globalThis.__ = {
             ui: {
@@ -366,7 +378,7 @@ describe('replay stats widget visibility', () => {
 
     it('resolves video overlay visibility for stats widgets from the live replay state', () => {
         globalThis.lgs.stores.ui.video.editing = false
-        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.ui.video.recordingHQ = true
         globalThis.lgs.stores.replay.progress = 0.1
         globalThis.__ = {
             ui: {

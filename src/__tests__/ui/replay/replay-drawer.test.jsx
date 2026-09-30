@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -337,6 +337,33 @@ describe('JourneyReplayDrawer', () => {
         })
     })
 
+    it('writes Expert camera preparation edits back to the current journey', async () => {
+        const camera = {
+            ...defaultJourneyReplaySettings().camera,
+            positionMode: 'behind',
+        }
+        const journey = {
+            slug: 'journey-a',
+            replay: {expert: {camera}},
+            persistToDatabase: vi.fn(),
+        }
+        globalThis.lgs.theJourney = journey
+        globalThis.lgs.settings.ui.replay.userMode = 'expert'
+        globalThis.lgs.settings.ui.replay.camera = camera
+        globalThis.lgs.stores.replay.camera = proxy({...camera})
+
+        const view = render(<JourneyReplayDrawer/>)
+        const pitchInput = view.getByLabelText('Pitch (deg)')
+        fireEvent.focus(pitchInput)
+        fireEvent.input(pitchInput, {target: {value: '-38'}})
+
+        await waitFor(() => {
+            expect(globalThis.lgs.theJourney.replay.expert.camera.pitch).toBe(-38)
+            expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBe(-38)
+            expect(globalThis.lgs.stores.replay.camera.pitch).toBe(-38)
+        })
+    })
+
     it('exposes the shared replay effect controls in the Style tab', async () => {
         const view = render(<JourneyReplayDrawer/>)
 
@@ -405,7 +432,18 @@ describe('JourneyReplayDrawer', () => {
         })
     })
 
-    it('shows advanced camera setup fields in passive mode', () => {
+    it('hides camera position and angle controls in Basic Replay', () => {
+        const view = render(<JourneyReplayDrawer/>)
+        fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
+
+        expect(view.queryByLabelText('Camera position')).toBeNull()
+        expect(view.queryByLabelText('Camera angle')).toBeNull()
+        expect(view.queryByRole('heading', {name: 'Position', level: 4})).toBeNull()
+        expect(view.getByRole('heading', {name: 'Framing', level: 4})).toBeTruthy()
+    })
+
+    it('shows advanced camera position and angle fields in Expert Replay', () => {
+        globalThis.lgs.settings.ui.replay.userMode = 'expert'
         globalThis.lgs.stores.replay.marker.mode = REPLAY_MARKER_MODE_TRACE
         globalThis.lgs.settings.ui.replay.marker.mode = REPLAY_MARKER_MODE_TRACE
         globalThis.lgs.stores.replay.camera.positionMode = 'behind'
@@ -551,6 +589,7 @@ describe('JourneyReplayDrawer', () => {
     })
 
     it('shows the debug camera switch as a Replay setting and keeps it disabled by default', async () => {
+        globalThis.lgs.settings.ui.replay.userMode = 'expert'
         const view = render(<JourneyReplayDrawer/>)
         fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
 
@@ -567,6 +606,7 @@ describe('JourneyReplayDrawer', () => {
 
     it('applies the camera angle slider without mutating the Cesium scene', async () => {
         const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
+        globalThis.lgs.settings.ui.replay.userMode = 'expert'
         globalThis.lgs.stores.replay.camera.positionMode = 'behind'
         globalThis.lgs.settings.ui.replay.camera.positionMode = 'behind'
         globalThis.lgs.settings.ui.replay.clips = {
@@ -857,19 +897,30 @@ describe('JourneyReplayDrawer', () => {
     })
 
     it('toggles hiding other journeys from the drawer', async () => {
+        globalThis.lgs.settings.ui.replay.userMode = 'expert'
+        globalThis.lgs.stores.replay.userMode = 'expert'
         const view = render(<JourneyReplayDrawer/>)
         const hideOtherJourneysSwitch = view.getByLabelText('Hide other journeys')
 
-        expect(hideOtherJourneysSwitch.checked).toBe(false)
+        expect(hideOtherJourneysSwitch.checked).toBe(true)
 
         fireEvent.click(hideOtherJourneysSwitch)
 
         await waitFor(() => {
-            expect(globalThis.lgs.stores.replay.hideOtherJourneys).toBe(true)
-            expect(__.ui.replay.setHideOtherJourneys).toHaveBeenCalledWith(true)
-            expect(globalThis.lgs.settings.ui.replay.hideOtherJourneys).toBe(true)
-            expect(hideOtherJourneysSwitch.checked).toBe(true)
+            expect(globalThis.lgs.stores.replay.hideOtherJourneys).toBe(false)
+            expect(__.ui.replay.setHideOtherJourneys).toHaveBeenCalledWith(false)
+            expect(globalThis.lgs.settings.ui.replay.hideOtherJourneys).toBe(false)
+            expect(hideOtherJourneysSwitch.checked).toBe(false)
         })
+    })
+
+    it('does not expose the other-journeys switch in Simple Replay', () => {
+        globalThis.lgs.settings.ui.replay.userMode = 'basic'
+        globalThis.lgs.stores.replay.userMode = 'basic'
+
+        const view = render(<JourneyReplayDrawer/>)
+
+        expect(view.queryByLabelText('Hide other journeys')).toBeNull()
     })
 
     it('shows the total video duration above the tabs', () => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,14 +27,14 @@ import {cameraViewToSlippyLevel} from '@Utils/cesium/CameraLevel'
 import {POIUtils} from '@Utils/cesium/POIUtils'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
 import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
-import {finiteNumber, replayStore} from './JourneyReplayRuntime'
+import {currentJourneyReplayCameraSettings, finiteNumber, replayStore} from './JourneyReplayRuntime'
 import {
     clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForPositionMode, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
 } from './JourneyReplayCameraMath'
 import {
     REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
-    getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker,
+    getJourneyReplaySettings, normalizeJourneyReplayMarker,
 } from './JourneyReplayProgressionStyle'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
 import {replayRenderTargetFor} from './ReplayRenderTarget'
@@ -313,14 +313,9 @@ const resolveReplayDiagnosticsGeometry = (hysteresis, rect) => {
     }
 
     const replaySettings = getJourneyReplaySettings()
-    const marker = normalizeJourneyReplayMarker(globalThis.lgs?.settings?.ui?.replay?.marker
-                                                 ?? globalThis.lgs?.stores?.replay?.marker
-                                                 ?? replaySettings.marker)
-    const cameraSettings = normalizeJourneyReplayCamera(globalThis.lgs?.settings?.ui?.replay?.camera
-                                                        ?? globalThis.lgs?.stores?.replay?.camera
-                                                        ?? replaySettings.camera)
-    const runtimeTracking = replayRuntimeTrackingSettings(globalThis.lgs?.settings?.ui?.replay?.camera
-                                                          ?? cameraSettings, rect)
+    const marker = normalizeJourneyReplayMarker(replaySettings.marker)
+    const cameraSettings = currentJourneyReplayCameraSettings()
+    const runtimeTracking = replayRuntimeTrackingSettings(cameraSettings, rect)
     const outerBounds = marker.mode === REPLAY_MARKER_MODE_NAVIGATION
                         ? replayToleranceZoneBounds(replayCenteredSquareZone(
                             runtimeTracking.navigation.triggerZone.width,
@@ -372,6 +367,8 @@ export const refreshReplayDiagnosticsOverlay = mode => {
         return false
     }
     if (isReplayVideoLinked() && geometry.debug !== true && globalThis.lgs?.viewer?.container) {
+        state.toleranceZoneOverlayVisible = false
+        removeToleranceZoneOverlay(mode)
         return false
     }
 
@@ -551,6 +548,11 @@ export const updateToleranceZoneOverlay =  (mode, hysteresis) => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
     state.lastToleranceZoneHysteresis = hysteresis
+    if (!state.toleranceZoneOverlayVisible) {
+        removeToleranceZoneOverlay(mode)
+        return
+    }
+
     state.toleranceZoneOverlay?.remove?.()
     state.toleranceZoneOverlay = null
     const viewer = call.cesiumViewer?.() ?? globalThis.lgs?.viewer

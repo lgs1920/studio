@@ -237,7 +237,7 @@ export default defineConfig({
             manifestFilename: 'manifest.webmanifest',
             devOptions: {
                 enabled: true,
-                type: 'module'
+                type: 'module',
             }
         }),
         mdPlugin({mode: [Mode.HTML, Mode.MARKDOWN]}),
@@ -255,11 +255,6 @@ export default defineConfig({
         // @ts-expect-error Vite accepts this editor integration option at runtime.
         launchEditor: 'webstorm',
         strictPort: true,
-        headers: {
-            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0',
-        }
     },
 
     build: {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-20
- * Last modified: 2026-09-22
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,6 +30,26 @@ import {useEffect} from 'react'
 const APP_SURFACE_READY_TIMEOUT = 1500
 
 /**
+ * Describes whether the current Cesium surface can accept a completed frame.
+ *
+ * @returns {{surfaceAvailable: boolean, viewer: boolean, scene: boolean, canvas: boolean, viewerDestroyed: boolean}} Surface state.
+ */
+const getCesiumSurfaceState = () => {
+    const scene = globalThis.lgs?.scene
+    const canvas = scene?.canvas
+    const viewer = globalThis.lgs?.viewer
+    const viewerDestroyed = viewer?.isDestroyed?.() === true
+
+    return {
+        surfaceAvailable: !viewerDestroyed && Boolean(scene && canvas),
+        viewer: Boolean(viewer),
+        scene:  Boolean(scene),
+        canvas: Boolean(canvas),
+        viewerDestroyed,
+    }
+}
+
+/**
  * Waits for the next browser paint opportunity.
  *
  * @returns {Promise<void>} Promise resolved on the next animation frame.
@@ -37,65 +57,70 @@ const APP_SURFACE_READY_TIMEOUT = 1500
 const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve))
 
 /**
- * Resolves when the app surface has had a chance to render, with a timeout
- * fallback so the welcome CTA cannot remain blocked by a missing render event.
+ * Resolves only after Cesium completes a frame, or fails when the render never arrives.
  *
- * @returns {Promise<void>} Promise resolved once the surface is ready enough to enter.
+ * @returns {Promise<boolean>} Whether Cesium completed its first render before the timeout.
  */
 const waitForAppSurfaceReady = () => new Promise(resolve => {
-    const scene = lgs?.scene
+    const scene = globalThis.lgs?.scene
     let done = false
     const cleanup = []
-    const finish = () => {
+    const finish = ready => {
         if (done) {
             return
         }
         done = true
         cleanup.forEach(remove => remove?.())
-        resolve()
+        resolve(ready)
     }
 
-    const timeout = window.setTimeout(finish, APP_SURFACE_READY_TIMEOUT)
+    const timeout = window.setTimeout(() => finish(false), APP_SURFACE_READY_TIMEOUT)
     cleanup.push(() => window.clearTimeout(timeout))
 
-    if (!scene) {
-        void nextFrame().then(finish)
-        return
-    }
-
-    const removePostRenderListener = scene.postRender?.addEventListener?.(finish)
+    const removePostRenderListener = scene?.postRender?.addEventListener?.(() => {
+        if (globalThis.lgs?.scene === scene && getCesiumSurfaceState().surfaceAvailable) {
+            finish(true)
+        }
+    })
     if (typeof removePostRenderListener === 'function') {
         cleanup.push(removePostRenderListener)
     }
 
-    scene.requestRender?.()
-    nextFrame().then(() => {
-        scene.requestRender?.()
-        return nextFrame()
-    }).then(finish, finish)
+    scene?.requestRender?.()
 })
 
 /**
  * Renders the map, controls, drawers, and app-level overlays.
  *
- * @param {{onReady?: () => void}} props - Surface readiness callback.
+ * @param {{onReady?: () => void, onError?: (error: Error) => void}} props - Surface readiness callbacks.
  * @returns {JSX.Element} Mounted application surface.
  */
-export const AppSurface = ({onReady}) => {
+export const AppSurface = ({onReady, onError}) => {
     useEffect(() => {
         let cancelled = false
         void (async () => {
             await nextFrame()
             await nextFrame()
-            await waitForAppSurfaceReady()
+            const surfaceReady = await waitForAppSurfaceReady()
             if (!cancelled) {
-                onReady?.()
+                if (surfaceReady) {
+                    onReady?.()
+                }
+                else {
+                    const state = getCesiumSurfaceState()
+                    const error = new Error('[LGS1920][Cesium] Surface readiness timed out: Cesium did not complete its first render.')
+                    console.error('[LGS1920][Cesium] Surface readiness failed.', {
+                        ...state,
+                        error: error.message,
+                    })
+                    onError?.(error)
+                }
             }
         })()
         return () => {
             cancelled = true
         }
-    }, [onReady])
+    }, [onError, onReady])
 
     useEffect(() => () => {
         __.ui.replay?.stop?.({emit: false})

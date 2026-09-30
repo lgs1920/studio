@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-27
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -44,6 +44,7 @@ describe('CameraAdjustmentOverlay', () => {
         globalThis.lgs = {
             stores: {
                 replay: proxy({
+                    userMode: 'expert',
                     camera: {
                         headingOffset: -30,
                         positionMode:  'behind',
@@ -101,10 +102,36 @@ describe('CameraAdjustmentOverlay', () => {
         expect(view.queryByLabelText('Replay camera angle')).toBeNull()
     })
 
+    it('hides the replay camera angle in Basic Replay', () => {
+        globalThis.lgs = {
+            stores: {
+                replay: proxy({
+                    userMode: 'basic',
+                    camera: {headingOffset: -30, positionMode: 'behind'},
+                }),
+                ui: {
+                    video: proxy({editing: true}),
+                },
+            },
+        }
+
+        const view = render(
+            <CameraAdjustmentOverlay
+                config={{id: 'camera-adjustment-widget'}}
+                isVisible
+                values={{height: '1 200 m', level: 'L12', pitch: '-45°'}}
+                visible
+            />,
+        )
+
+        expect(view.queryByLabelText('Replay camera angle')).toBeNull()
+    })
+
     it('renders an upward solid chevron for the replay Ahead angle', () => {
         globalThis.lgs = {
             stores: {
                 replay: proxy({
+                    userMode: 'expert',
                     camera: {
                         headingOffset: 30,
                         positionMode:  'ahead',

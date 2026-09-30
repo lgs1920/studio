@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -79,6 +79,24 @@ describe('ReplayVideoRenderSession', () => {
             logicalFrame: expect.objectContaining({progress: 0}),
             scheduling: {realtime: false, frameByFrame: true},
         }))
+    })
+
+    it('stops after the current rendered frame when requested', async () => {
+        const render = vi.fn(async ({frame}) => frame.index)
+        const onFrame = vi.fn(async () => undefined)
+        const session = new ReplayVideoRenderSession({
+            timeline: {durationMillis: 1000, fps: 10},
+            render,
+        })
+
+        const frames = await session.renderAll({
+            onFrame,
+            shouldStop: (_frame, processedFrames) => processedFrames === 3,
+        })
+
+        expect(frames.map(frame => frame.index)).toEqual([0, 1, 2])
+        expect(onFrame).toHaveBeenCalledTimes(3)
+        expect(render).toHaveBeenCalledTimes(3)
     })
 
     it('can render a single frame deterministically', async () => {

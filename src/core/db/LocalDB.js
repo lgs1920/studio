@@ -7,12 +7,13 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-01-06
- * Last modified: 2026-01-06
+ * Created on: 2024-03-27
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
+
 import { openDB } from 'idb'
 
 const MILLIS = 1000
@@ -125,14 +126,10 @@ export class LocalDB {
             return
         }
         this.#oneTimeRebuilt.add(store)
-        const callId = this.#generateCallId()
-        console.log(`[${callId}] One-time rebuild for "${store}" (migrating index to data.group)...`)
 
-        let itemCount = 0
         await this.#withTransaction(store, 'readwrite', async storeObj => {
             const allItems = await storeObj.getAll()
             const allKeys = await storeObj.getAllKeys()
-            itemCount = allItems.length
 
             await storeObj.clear()
             for (let i = 0; i < allItems.length; i++) {
@@ -140,7 +137,6 @@ export class LocalDB {
             }
         })
 
-        console.log(`[${callId}] One-time rebuild complete for "${store}" (${itemCount} items re-indexed)`)
     }
 
     /**

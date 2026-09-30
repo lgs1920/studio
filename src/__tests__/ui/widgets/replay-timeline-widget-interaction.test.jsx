@@ -9,13 +9,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-08
- * Last modified: 2026-09-20
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {act, cleanup, render, waitFor} from '@testing-library/react'
+import {act, cleanup, fireEvent, render, waitFor} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {proxy} from 'valtio'
 import {proxyMap} from 'valtio/utils'
@@ -53,15 +53,6 @@ vi.mock('@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas', () => {
 
     return {Widget2Canvas: vi.fn(Widget2CanvasMock)}
 })
-
-vi.mock('@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder', () => ({
-    ScreenMediaRecorder: {
-        events: {
-            STOP:   'stop',
-            CANCEL: 'cancel',
-        },
-    },
-}))
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaButton: ({children, ...props}) => <button {...props}>{children}</button>,
@@ -157,7 +148,6 @@ const installGlobals = () => {
     globalThis.__ = {
         app: {parsePx: value => parseFloat(value) || 0},
         widgets: new Map(),
-        recorder: {addEventListener: vi.fn(), removeEventListener: vi.fn()},
         ui: {
             drawerManager: {close: vi.fn()},
             widgetCache: {mount: vi.fn()},
@@ -194,7 +184,7 @@ const installGlobals = () => {
     }
 }
 
-const renderWidget = children => render(
+const renderWidget = (children, configOverrides = {}) => render(
     <Widget isVisible={true} config={{
         id:             'timeline-isolation-widget',
         group:          'test-widgets',
@@ -203,6 +193,7 @@ const renderWidget = children => render(
         draggable:      true,
         resizable:      true,
         handle:         'lgs1920-timeline',
+        ...configOverrides,
     }}>
         {children}
     </Widget>,
@@ -263,6 +254,27 @@ describe('Replay timeline widget interaction isolation', () => {
         pointerDown(container.querySelector('[data-testid="empty-frame"]'))
 
         expect(lgs.stores.ui.widget.current.id).toBe('timeline-isolation-widget#test')
+    })
+
+    it('does not open its context menu when the widget disables it', () => {
+        const {container} = renderWidget(<div/>, {contextMenuEnabled: false})
+
+        fireEvent.contextMenu(container.querySelector('.lgs-widget'), {clientX: 20, clientY: 30})
+
+        expect(lgs.stores.ui.contextMenu.visible).toBe(false)
+    })
+
+    it('keeps the context menu enabled by default', () => {
+        const {container} = renderWidget(<div/>)
+
+        fireEvent.contextMenu(container.querySelector('.lgs-widget'), {clientX: 20, clientY: 30})
+
+        expect(lgs.stores.ui.contextMenu).toMatchObject({
+            visible:  true,
+            type:     'widget',
+            targetId: 'timeline-isolation-widget#test',
+            position: {x: 20, y: 30},
+        })
     })
 
     it('keeps an empty timeline host selectable', () => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-12-01
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,7 +36,7 @@ export const ContextMenuRenderer = () => {
     const video = useSnapshot(lgs.stores.ui.video)
     const replay = useSnapshot(lgs.stores.replay)
     const videoPreparationActive = video.editing === true || video.preRecording === true
-    const synchronizedRecording = (video.recording === true || video.recordingHQ === true)
+    const synchronizedRecording = video.recordingHQ === true
                                   && replay.recordingSync === true
     const monitorContextMenu = contextMenu.type === 'widget'
                                && contextMenu.targetId === REPLAY_RECORDING_MONITOR_WIDGET_ID

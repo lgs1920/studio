@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,28 +18,22 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 
-vi.mock('@Components/JourneyReplay/JourneyReplayButton', () => ({
-    JourneyReplayButton: props => (
-        <button type="button" aria-label={props.ariaLabel} aria-pressed="false">{props.ariaLabel}</button>
-    ),
-}))
-
 vi.mock('@Components/LGSPopup', () => ({
     LGSPopup: ({active, children, placement}) => active ? <div data-testid="settings-popup" data-placement={placement}>{children}</div> : null,
 }))
 
 vi.mock('@Components/ToolsUI/cropper/widgets/CropRatioEditorToolbar', () => ({
-    CropRatioEditorToolbar: ({mainTheme}) => <div data-testid="ratio-popup-content" data-main-theme={mainTheme}>Ratio choices</div>,
+    CropRatioEditorToolbar: ({mainTheme, unifiedChoices}) => <div data-testid="ratio-popup-content" data-main-theme={mainTheme} data-unified-choices={unifiedChoices}>Ratio choices</div>,
 }))
 
 vi.mock('@Components/MainUI/video/toolbox/VideoPresetToolbar', () => ({
-    VideoPresetToolbar: ({mainTheme}) => <div data-testid="preset-popup-content" data-main-theme={mainTheme}>Preset, FPS and quality choices</div>,
+    VideoPresetToolbar: ({compactSimple, inlineCustom, mainTheme}) => <div data-testid="preset-popup-content" data-compact-simple={compactSimple} data-inline-custom={inlineCustom} data-main-theme={mainTheme}>Preset, FPS and quality choices</div>,
 }))
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaButton: ({children, ...props}) => <button type="button" {...props}>{children}</button>,
     WaIcon: ({name}) => <span data-icon={name}/>,
-    WaTooltip: ({children}) => <span>{children}</span>,
+    WaTooltip: ({children, for: targetId}) => <span data-tooltip-for={targetId}>{children}</span>,
 }))
 
 vi.mock('@Components/MainUI/video/videoEditingCleanup', () => ({
@@ -64,6 +58,7 @@ describe('VideoRecordingSettingsToolbar', () => {
                     close: vi.fn(),
                     isCurrent: vi.fn(() => false),
                     open: vi.fn(),
+                    toggle: vi.fn(),
                 },
                 replay: {
                     prepareReplayCamera: vi.fn(async () => true),
@@ -75,7 +70,7 @@ describe('VideoRecordingSettingsToolbar', () => {
                     toCenter: vi.fn(),
                 },
             },
-            recorder: {},
+            mediaCapture: {},
         }
 
         globalThis.lgs = {
@@ -89,6 +84,7 @@ describe('VideoRecordingSettingsToolbar', () => {
             settings: {
                 ui: {
                     video: proxy({fps: 0, quality: 1, ratio: '16x9'}),
+                    replay: proxy({simple: {duration: 15}}),
                 },
             },
             stores: {
@@ -105,7 +101,7 @@ describe('VideoRecordingSettingsToolbar', () => {
                         cropper: proxy({}),
                     }),
                 }),
-                replay: proxy({recordingSync: false}),
+                replay: proxy({recordingSync: false, simplePreparationActive: false, duration: 60}),
             },
         }
     })
@@ -123,7 +119,7 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(screen.getByRole('button', {name: 'Ratio: 16:9'})).not.toBeNull()
         expect(screen.getByRole('button', {name: 'High · 30 FPS'})).not.toBeNull()
         expect(screen.getByRole('button', {name: 'High · 30 FPS'}).querySelector('[data-icon="ranking-star"]')).not.toBeNull()
-        expect(screen.getByRole('button', {name: 'Record'})).not.toBeNull()
+        expect(screen.queryByRole('button', {name: 'Record'})).toBeNull()
         expect(screen.getByRole('button', {name: 'Cancel'})).not.toBeNull()
         expect(screen.getByRole('toolbar', {name: 'Video recording settings'})).not.toBeNull()
     })
@@ -146,14 +142,14 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(screen.queryByRole('button', {name: 'Cancel'})).toBeNull()
     })
 
-    it('keeps the settings and replay actions outside the timeline drawer controls', () => {
+    it('keeps only the cancel action in the linked timeline toolbar', () => {
         globalThis.lgs.stores.replay.recordingSync = true
         render(<VideoRecordingSettingsToolbar mainTheme mode="actions"/>)
 
         expect(screen.queryByRole('button', {name: 'Ratio: 16:9'})).toBeNull()
         expect(screen.queryByRole('button', {name: 'High · 30 FPS'})).toBeNull()
-        expect(screen.getByRole('button', {name: 'Journey Replay Settings'})).not.toBeNull()
-        expect(screen.getByRole('button', {name: 'Record'})).not.toBeNull()
+        expect(screen.queryByRole('button', {name: 'Journey Replay Settings'})).toBeNull()
+        expect(screen.queryByRole('button', {name: 'Create Replay video'})).toBeNull()
         expect(screen.getByRole('button', {name: 'Cancel'})).not.toBeNull()
     })
 
@@ -186,68 +182,93 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(document.querySelector('.video-recording-settings-popup')?.classList).not.toContain('wa-theme-lgs1920-on-map')
     })
 
-    it('shows the Replay settings sliders only when synchronization is active', () => {
+    it('opens the Simple Replay settings above the widget and applies its selected duration', () => {
+        globalThis.lgs.stores.replay.simplePreparationActive = true
         render(<VideoRecordingSettingsToolbar/>)
+
+        expect(screen.getByText('16:9')).not.toBeNull()
+        expect(screen.getByText('High · 30 FPS')).not.toBeNull()
+        expect(screen.getByText('15s')).not.toBeNull()
+        expect(screen.getByRole('button', {name: 'Video Settings'}).querySelector('[data-icon="gear"]')).not.toBeNull()
+        expect(document.querySelector(`[data-tooltip-for="${screen.getByRole('button', {name: 'Video Settings'}).id}"]`)?.textContent).toBe('Video Settings')
+        expect(document.querySelector('[data-tooltip-for="video-start-recording"]')?.textContent).toBe('Start Record')
+        expect(document.querySelector('[data-tooltip-for="video-cancel-editing"]')?.textContent).toBe('Cancel')
+        expect(document.querySelector('.simple-replay-settings-summary__separator')).not.toBeNull()
+        expect(document.querySelector('.simple-replay-settings-summary')?.nextElementSibling?.classList).toContain('video-recording-settings-separator')
         expect(screen.queryByRole('button', {name: 'Journey Replay Settings'})).toBeNull()
+        expect(screen.queryByRole('button', {name: 'Ratio: 16:9'})).toBeNull()
 
-        globalThis.lgs.stores.replay.recordingSync = true
-        cleanup()
-        render(<VideoRecordingSettingsToolbar/>)
+        fireEvent.click(screen.getByRole('button', {name: 'Video Settings'}))
+        expect(screen.getByTestId('settings-popup').dataset.placement).toBe('bottom')
+        expect(screen.getByTestId('ratio-popup-content').dataset.unifiedChoices).toBe('true')
+        expect(screen.getByText('Ratio')).not.toBeNull()
+        expect(screen.getByText('Preset')).not.toBeNull()
+        expect(screen.getByText('Duration')).not.toBeNull()
+        expect(screen.getByRole('button', {name: '15s'}).getAttribute('aria-pressed')).toBe('true')
+        expect(screen.getByTestId('preset-popup-content').dataset.inlineCustom).toBe('false')
+        expect(screen.getByTestId('preset-popup-content').dataset.compactSimple).toBe('true')
 
-        expect(screen.getByRole('button', {name: 'Journey Replay Settings'})).not.toBeNull()
-        expect(screen.getByRole('button', {name: 'Journey Replay Settings'}).querySelector('[data-icon="sliders"]')).not.toBeNull()
-        expect(document.querySelectorAll('.video-recording-settings-separator')).toHaveLength(2)
-        expect(document.getElementById('launch-the-replay-editor-from-video')?.classList).toContain('video-recording-settings-action')
-        expect(document.getElementById('video-start-recording')?.classList).toContain('video-recording-settings-action')
-
-        fireEvent.click(screen.getByRole('button', {name: 'Journey Replay Settings'}))
-        expect(globalThis.__.ui.drawerManager.open).toHaveBeenCalledWith('replay-drawer')
+        fireEvent.click(screen.getByRole('button', {name: '20s'}))
+        expect(globalThis.lgs.settings.ui.replay.simple.duration).toBe(20)
+        expect(globalThis.lgs.settings.ui.replay.duration).toBe(20)
+        expect(globalThis.lgs.stores.replay.duration).toBe(20)
     })
 
-    it('replaces Draft recording with direct HQ export during timeline preparation', () => {
+    it('uses the Simple Replay gear popup for the Expert timeline without duration', () => {
         globalThis.lgs.stores.replay.recordingSync = true
-        globalThis.lgs.stores.ui.video.timelinePreviewActive = true
-        const requestHqExport = vi.fn()
-        globalThis.window.addEventListener('lgs:video:start-hq-export', requestHqExport)
+        render(<VideoRecordingSettingsToolbar mainTheme mode="actions" timelineSettings/>)
 
-        render(<VideoRecordingSettingsToolbar/>)
+        const summary = document.querySelector('.simple-replay-settings-summary')
+        expect(summary.querySelector('button')?.getAttribute('aria-label')).toBe('Video Settings')
+        expect(screen.getByText('16:9')).not.toBeNull()
+        expect(screen.getByText('High · 30 FPS')).not.toBeNull()
+        expect(screen.getByRole('button', {name: 'Video Settings'}).querySelector('[data-icon="gear"]')).not.toBeNull()
+        expect(document.querySelector('[data-tooltip-for="open-replay-settings-from-timeline"]')?.textContent).toBe('Replay Settings')
+        expect(document.querySelector('.simple-replay-settings-summary__separator')).not.toBeNull()
+        expect(document.querySelector('.simple-replay-settings-summary')?.nextElementSibling?.classList).toContain('video-recording-settings-separator')
+        const replaySettingsButton = screen.getByRole('button', {name: 'Replay Settings'})
+        expect(replaySettingsButton.hasAttribute('title')).toBe(false)
+        expect(screen.getByRole('button', {name: 'Record'})).not.toBeNull()
+        expect(document.querySelector('[data-tooltip-for="video-start-recording"]')?.textContent).toBe('Start Record')
+        expect(document.querySelector('[data-tooltip-for="video-cancel-editing"]')?.textContent).toBe('Cancel')
+        expect(screen.queryByText('15s')).toBeNull()
+        expect(screen.queryByText('Duration')).toBeNull()
 
-        expect(screen.queryByRole('button', {name: 'Record'})).toBeNull()
-        expect(screen.getByRole('button', {name: 'Create HQ video'})).not.toBeNull()
-        fireEvent.click(screen.getByRole('button', {name: 'Create HQ video'}))
-        expect(requestHqExport).toHaveBeenCalledTimes(1)
+        fireEvent.click(screen.getByRole('button', {name: 'Replay Settings'}))
+        expect(globalThis.__.ui.drawerManager.toggle).toHaveBeenCalledWith('replay-drawer')
 
-        globalThis.window.removeEventListener('lgs:video:start-hq-export', requestHqExport)
+        fireEvent.click(screen.getByRole('button', {name: 'Video Settings'}))
+        expect(screen.getByTestId('settings-popup').dataset.placement).toBe('bottom')
+        expect(screen.getByTestId('ratio-popup-content').dataset.unifiedChoices).toBe('true')
+        expect(screen.getByTestId('preset-popup-content').dataset.compactSimple).toBe('true')
+        expect(screen.queryByText('Duration')).toBeNull()
     })
 
-    it('waits for crop persistence before starting capture', async () => {
-        let resolveCropSync = null
-        globalThis.__.ui.widgetManager.syncCropDimensionsFromElement = vi.fn(() => new Promise(resolve => {
-            resolveCropSync = resolve
-        }))
+    it('exposes the video launch action during simple preparation', async () => {
+        globalThis.lgs.stores.replay.simplePreparationActive = true
         render(<VideoRecordingSettingsToolbar/>)
 
-        const transition = fireEvent.click(screen.getByRole('button', {name: 'Record'}))
-        expect(transition).toBe(true)
-        expect(globalThis.lgs.stores.ui.video.editing).toBe(true)
-        expect(prepareVideoCaptureUi).not.toHaveBeenCalled()
-
-        resolveCropSync()
-        await vi.waitFor(() => expect(prepareVideoCaptureUi).toHaveBeenCalledTimes(1))
-        expect(globalThis.__.ui.replay.prepareReplayCamera).not.toHaveBeenCalled()
-        expect(globalThis.lgs.stores.ui.video.editing).toBe(false)
-        expect(globalThis.lgs.stores.ui.video.preRecording).toBe(true)
-    })
-
-    it('prepares the Replay camera only for a synchronized video', async () => {
-        globalThis.lgs.stores.replay.recordingSync = true
-        render(<VideoRecordingSettingsToolbar/>)
+        expect(screen.getByRole('button', {name: 'Record'})).not.toBeNull()
+        expect(screen.queryByRole('button', {name: 'Create Replay video'})).toBeNull()
 
         fireEvent.click(screen.getByRole('button', {name: 'Record'}))
 
-        await vi.waitFor(() => expect(globalThis.__.ui.replay.prepareReplayCamera).toHaveBeenCalledWith({
+        await vi.waitFor(() => expect(globalThis.lgs.stores.ui.video.preRecording).toBe(true))
+        expect(globalThis.lgs.stores.ui.video.editing).toBe(false)
+        expect(prepareVideoCaptureUi).toHaveBeenCalledTimes(1)
+        expect(globalThis.__.ui.replay.prepareReplayCamera).toHaveBeenCalledWith({
             journey: globalThis.lgs.theJourney,
-        }))
+        })
+    })
+
+    it('exposes the same video launch action during the Expert timeline', async () => {
+        globalThis.lgs.stores.replay.recordingSync = true
+        render(<VideoRecordingSettingsToolbar mode="actions" timelineSettings/>)
+
+        fireEvent.click(screen.getByRole('button', {name: 'Record'}))
+
+        await vi.waitFor(() => expect(globalThis.lgs.stores.ui.video.preRecording).toBe(true))
+        expect(prepareVideoCaptureUi).toHaveBeenCalledTimes(1)
     })
 
     it('waits for crop persistence before cancelling video setup', async () => {

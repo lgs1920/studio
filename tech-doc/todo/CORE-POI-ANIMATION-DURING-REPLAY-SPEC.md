@@ -266,7 +266,7 @@ Keep `setTimeout` for each POI but register every timer and clear all timers on
 pause, resume, stop, end, and stop-clip completion.
 
 This is a smaller change, but it cannot accurately continue a selected
-animation during a replay pause or produce deterministic HQ export frames. It
+animation during a replay pause or produce deterministic Replay export frames. It
 is rejected as the final architecture, but may be used as a short-lived
 compatibility layer during migration.
 

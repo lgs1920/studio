@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { getReplayVideoWidgetKeys } from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import {
     normalizeJourneyReplayClips, REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP,
 }                              from '@Core/ui/replay/JourneyReplayClips'
@@ -58,10 +59,10 @@ import {
     resolveReplayTileSpeedLevel,
 }                              from '@Core/ui/replay/ReplaySceneTileReadiness'
 import {
-    buildReplayFrameState,
+    buildReplayFrameState, currentJourneyReplayCameraSettings,
 }                              from '@Core/ui/replay/JourneyReplayRuntime'
 import {
-    normalizeJourneyReplayCamera, normalizeJourneyReplayReadiness,
+    normalizeJourneyReplayReadiness,
 }                              from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {
     IsolatedHqReplayRenderHost,
@@ -78,12 +79,10 @@ import {
 import {
     CanvasOverlayComposer,
 }                              from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
-import {
-    ScreenMediaRecorder,
-}                              from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import {REPLAY_VIDEO_FPS} from '@Core/ui/replay/ReplayVideoSettings'
 import {
     normalizeMediabunnyMetadataTags,
-}                              from '@Core/ui/screen-media-recorder/recorder/MediaMetadata'
+}                              from '@Core/ui/replay/ReplayMediaMetadata'
 import {
     UIToast,
 }                              from '@Utils/UIToast'
@@ -135,7 +134,7 @@ const defaultReplayController = () => globalThis.__?.ui?.replay?.controller ?? n
 const defaultReplayMode = () => globalThis.__?.ui?.replay ?? null
 const defaultReplayExportFps = () => {
     const configured = globalThis.lgs?.stores?.ui?.video?.fps
-    return ScreenMediaRecorder.FPS?.[configured] ?? configured ?? 30
+    return REPLAY_VIDEO_FPS?.[configured] ?? configured ?? 30
 }
 
 /**
@@ -420,7 +419,14 @@ export const captureReplayDeferredExportContext = ({
     const normalizedCropRect = normalizeReplayVideoCropRect(replay?.videoCropRect)
     const widgetCache = globalThis.__?.ui?.widgetCache ?? null
     const widgetManager = globalThis.__?.ui?.widgetManager ?? null
-    const widgetEntries = [...(widgetCache?.getAll?.({widgetsBoard})?.entries?.() ?? [])]
+    const cachedEntries = [...(widgetCache?.getAll?.({widgetsBoard})?.entries?.() ?? [])]
+    const cachedEntryById = new Map(cachedEntries)
+    const widgetEntries = widgetsBoard === VIDEO_WIDGETS_BOARD
+                         ? getReplayVideoWidgetKeys({widgetsBoard}).map(widgetId => [
+                             widgetId,
+                             widgetCache?.get?.(widgetId) ?? cachedEntryById.get(widgetId),
+                         ])
+                         : cachedEntries
     const overlays = widgetEntries.map(([widgetId, entry]) => {
         const widgetEl = widgetManager?.getElementById?.(widgetId) ?? entry?.element ?? null
         const visible = Boolean(entry?.mounted ?? widgetEl)
@@ -883,6 +889,7 @@ const initializeReplayExportCreationProgress = ({plan = null} = {}) => {
         exportPaused:                   false,
         exportPausedAt:                 null,
         exportPausedDurationMillis:     0,
+        exportStopRequested:            false,
         exportUpdatedAt:                now,
     })
 
@@ -934,9 +941,25 @@ const installReplayExportRuntimeControls = ({plan = null, abortController = null
         runtime.exportPausedAt = null
         runtime.exportUpdatedAt = now
     }
+    /**
+     * Finish the current encoded frame, then finalize the partial Replay video.
+     * @returns {void} Nothing.
+     */
+    runtime.stopExport = () => {
+        if (runtime.status !== 'exporting' || runtime.exportStopRequested === true) {
+            return
+        }
+
+        runtime.exportStopRequested = true
+        runtime.exportUpdatedAt = runtimeNow()
+        if (runtime.exportPaused === true) {
+            runtime.resumeExport()
+        }
+    }
     runtime.abortExport = () => {
         const controller = abortController ?? runtime.abortController ?? null
         controller?.abort?.()
+        return runtime.exportPromise ?? Promise.resolve()
     }
 
     return runtime
@@ -1188,6 +1211,7 @@ export class ReplayDeferredExporter {
                            renderFrame = null,
                            buildCanvas = null,
                            onFileSize = null,
+                           shouldStop = null,
                        } = {}) => {
         if (typeof renderFrame !== 'function') {
             throw new Error('ReplayDeferredExporter.exportMp4 requires a renderFrame callback.')
@@ -1378,6 +1402,7 @@ export class ReplayDeferredExporter {
             const renderedFrames = []
             const frames = await this.#session.renderAll({
                 signal,
+                shouldStop,
                 onFrame: async rendered => {
                     nextFrameTimestamp = rendered.frameTimeMs / 1000
                     const renderResult = await renderFrame({
@@ -1410,6 +1435,14 @@ export class ReplayDeferredExporter {
                 },
             })
 
+            if (signal?.aborted) {
+                throw new DOMException('The Replay export was cancelled.', 'AbortError')
+            }
+            keepAliveStopped = true
+            if (keepAliveTimer !== null) {
+                clearTimeout(keepAliveTimer)
+                keepAliveTimer = null
+            }
             await source.close()
             await output.finalize()
             outputFinalized = true
@@ -1504,7 +1537,7 @@ export const prepareReplayDeferredExportPlan = ({
     const trackPathDescriptor = createReplayTrackPathDescriptor(trackPath)
     const startProgress = Number(direction) < 0 ? 1 : 0
     const cameraDefinition = createReplayCameraDefinition({
-        cameraSettings: replay?.camera,
+        cameraSettings: currentJourneyReplayCameraSettings(),
         markerSettings: replay?.marker,
         startAnchor: controller?.sampler?.atProgress?.(startProgress) ?? null,
     })
@@ -1629,7 +1662,7 @@ export const prepareReplayDeferredExportPlan = ({
 /**
  * Warm a previously prepared export plan by resolving the codec/config.
  *
- * This is intentionally asynchronous so it can run while the live draft is
+ * This is intentionally asynchronous so it can run while interactive Replay is
  * already recording.
  */
 export const warmReplayDeferredExportPlan = async ({
@@ -1930,12 +1963,12 @@ export const runReplayDeferredMp4Export = async ({
     installReplayExportRuntimeControls({plan, abortController})
 
     try {
-        // Always leave a previous Draft scene before preparing HQ. This restores
+        // Always leave a previous Interactive scene before preparing HQ. This restores
         // the original track and camera focus when the user switches modes or
         // aborts between the two exports.
         const restoreStartedAt = runtimeNow()
         let restoreSucceeded = false
-        replayVideoTraceDebug('export.draft.restore.start', {
+        replayVideoTraceDebug('export.interactive.restore.start', {
             force: true,
             hasRestorePlaybackScene: typeof replayMode?.restorePlaybackScene === 'function',
         })
@@ -1946,7 +1979,7 @@ export const runReplayDeferredMp4Export = async ({
             restoreSucceeded = true
         }
         finally {
-            replayVideoTraceDebug('export.draft.restore.end', {
+            replayVideoTraceDebug('export.interactive.restore.end', {
                 elapsedMs: runtimeNow() - restoreStartedAt,
                 restored: restoreSucceeded,
                 hasRestorePlaybackScene: typeof replayMode?.restorePlaybackScene === 'function',
@@ -2019,8 +2052,8 @@ export const runReplayDeferredMp4Export = async ({
                         message: error?.message ?? String(error),
                     })
                     uiToast?.warning?.({
-                        caption: 'HQ Video',
-                        text:    'Isolated HQ rendering is unavailable. The visible map will be used.',
+                        caption: 'Replay video',
+                        text:    'Isolated Replay rendering is unavailable. The visible map will be used.',
                     })
                 }
             }
@@ -2053,10 +2086,7 @@ export const runReplayDeferredMp4Export = async ({
                 replay?.readiness
                 ?? globalThis.lgs?.settings?.ui?.replay?.readiness,
             )
-            const replayCamera = normalizeJourneyReplayCamera(
-                replay?.camera
-                ?? globalThis.lgs?.settings?.ui?.replay?.camera,
-            )
+            const replayCamera = currentJourneyReplayCameraSettings()
             restoreReplaySceneTileCache = prepareReplaySceneTileCache(replayScene)
             replaySceneTileReadinessCoordinator = isolatedRenderHost
                 ? {
@@ -2092,7 +2122,7 @@ export const runReplayDeferredMp4Export = async ({
             sample: controller?.currentSample?.() ?? replay?.sample ?? null,
         })
 
-        const widgetKeys = [...(globalThis.__?.ui?.widgetCache?.getAll?.({widgetsBoard: VIDEO_WIDGETS_BOARD})?.keys?.() ?? [])]
+        const widgetKeys = getReplayVideoWidgetKeys()
         await waitForReplayWidgetsReady({widgetKeys})
         await prewarmReplayScenePrefix({
             plan,
@@ -2110,6 +2140,7 @@ export const runReplayDeferredMp4Export = async ({
 
         const result = await exporter.exportMp4({
             signal,
+            shouldStop: () => plan.runtime?.exportStopRequested === true,
             label: plan.label,
             metadata: plan.mediaMetadata ?? mediaMetadata ?? metadata ?? {},
             dimensions: outputDimensions,
@@ -2283,7 +2314,9 @@ export const runReplayDeferredMp4Export = async ({
                 publishReplayRecordingMonitorFrame({
                     canvas,
                     mode: 'hq',
-                    phase: phase?.kind ?? 'rendering',
+                    phase: plan.runtime?.exportStopRequested === true
+                           ? 'finalizing'
+                           : phase?.kind ?? 'rendering',
                     progress: monitorProgressForFrame({
                         frame,
                         frameCount: frame?.frameCount ?? plan.manifest?.frameCount,
@@ -2297,7 +2330,7 @@ export const runReplayDeferredMp4Export = async ({
                 const exportRuntime = updateReplayExportCreationProgress({plan, frame})
                 updateReplayRecordingMonitor({
                     mode: 'hq',
-                    phase: 'encoding',
+                    phase: plan.runtime?.exportStopRequested === true ? 'finalizing' : 'encoding',
                     progress: monitorProgressForFrame({
                         frame,
                         frameCount: frame?.frameCount ?? plan.manifest?.frameCount,
@@ -2315,18 +2348,29 @@ export const runReplayDeferredMp4Export = async ({
         if (signal?.aborted) {
             throw new DOMException('The HQ export was aborted.', 'AbortError')
         }
-        updateReplayExportCreationProgress({
-            plan,
-            frame: {
-                index:      Math.max(0, (finiteNumber(plan.manifest?.frameCount, 1) ?? 1) - 1),
-                frameCount: finiteNumber(plan.manifest?.frameCount, null),
-            },
-            force: true,
-        })
+        const expectedFrameCount = Math.max(0, finiteNumber(plan.manifest?.frameCount, result.frameCount) ?? 0)
+        const renderedFrameCount = Math.max(0, finiteNumber(result.frameCount, result.frames?.length ?? 0) ?? 0)
+        const wasStoppedEarly = plan.runtime?.exportStopRequested === true
+                               && renderedFrameCount < expectedFrameCount
+        if (renderedFrameCount > 0) {
+            updateReplayExportCreationProgress({
+                plan,
+                frame: {
+                    index:      renderedFrameCount - 1,
+                    frameCount: expectedFrameCount,
+                },
+                force: true,
+            })
+        }
         updateReplayRecordingMonitor({
             mode:     'hq',
             phase:    'finalizing',
-            progress: 1,
+            progress: wasStoppedEarly && expectedFrameCount > 0
+                      ? clampProgress(renderedFrameCount / expectedFrameCount)
+                      : 1,
+            frameIndex: renderedFrameCount > 0 ? renderedFrameCount - 1 : null,
+            frameCount: expectedFrameCount,
+            processedFrames: renderedFrameCount,
         })
 
         const exportFilename = filename ?? `${plan.label}.mp4`
@@ -2335,8 +2379,8 @@ export const runReplayDeferredMp4Export = async ({
         }
         exportSucceeded = true
         uiToast?.success?.({
-            caption: 'HQ Video',
-            text:    'HQ Video generated.',
+            caption: 'Replay video',
+            text:    'Replay video generated.',
         })
         return {
             ...result,
@@ -2379,8 +2423,10 @@ export const runReplayDeferredMp4Export = async ({
                 plan.runtime.status = 'warm'
             }
             plan.runtime.abortController = null
+            plan.runtime.exportPromise = null
             plan.runtime.pauseExport = null
             plan.runtime.resumeExport = null
+            plan.runtime.stopExport = null
             plan.runtime.abortExport = null
             plan.runtime.exportPaused = false
             plan.runtime.exportPausedAt = null

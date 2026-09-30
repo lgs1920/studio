@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,7 +31,7 @@ import {
     applyReplayCesiumCameraCommand,
     replayCesiumCameraFrameAboveTerrain,
 } from './ReplayCesiumCameraAdapter'
-import {finiteNumber, replayStore} from './JourneyReplayRuntime'
+import {currentJourneyReplayCameraSettings, finiteNumber, replayStore} from './JourneyReplayRuntime'
 import {
     clamp, lerp, hasFiniteLonLat, projectReplayTargetInCameraFrame, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
 } from './JourneyReplayCameraMath'
@@ -44,6 +44,8 @@ import {
 } from './JourneyReplayProgressionStyle'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
 import {replayCameraFor, replaySceneFor, replayViewerFor} from './ReplayRenderTarget'
+import {REPLAY_USER_MODE_BASIC} from './ReplayUserModeConstants'
+import {syncJourneyExpertReplayCamera, syncJourneySimpleReplayCamera} from './ReplayUserModes'
 
 import {
     REPLAY_HEADING_TRANSITION_DURATION_SECONDS,
@@ -700,10 +702,19 @@ export const persistCameraSettings =  (mode, updates) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const current = getJourneyReplaySettings().camera
+        const replaySettings = getJourneyReplaySettings()
+        const current = replaySettings.camera
+        const isBasicMode = replaySettings.userMode === REPLAY_USER_MODE_BASIC
         const next = normalizeJourneyReplayCamera({
             ...current,
             ...updates,
+            ...(isBasicMode
+                ? {
+                    altitudeMode: REPLAY_CAMERA_ALTITUDE_CONSTANT,
+                    positionMode: REPLAY_CAMERA_POSITION_BEHIND,
+                    debug: false,
+                }
+                : {}),
             hysteresis: {
                 ...(current?.hysteresis ?? {}),
                 ...(updates?.hysteresis ?? {}),
@@ -712,9 +723,28 @@ export const persistCameraSettings =  (mode, updates) => {
 
         if (globalThis.lgs?.settings?.ui?.replay) {
             globalThis.lgs.settings.ui.replay.camera = next
+            if (isBasicMode) {
+                const simple = globalThis.lgs.settings.ui.replay.simple ?? {}
+                globalThis.lgs.settings.ui.replay.simple = {
+                    ...simple,
+                    camera: {
+                        ...(simple.camera ?? {}),
+                        ...next,
+                        altitudeMode: REPLAY_CAMERA_ALTITUDE_CONSTANT,
+                        positionMode: REPLAY_CAMERA_POSITION_BEHIND,
+                        debug: false,
+                    },
+                }
+            }
         }
         if (globalThis.lgs?.stores?.replay) {
             globalThis.lgs.stores.replay.camera = next
+        }
+        if (!isBasicMode) {
+            syncJourneyExpertReplayCamera(next)
+        }
+        else {
+            syncJourneySimpleReplayCamera(next)
         }
 
         return next
@@ -732,7 +762,7 @@ export const updateCameraSettingsFromCesiumControls = (mode, sample, {altitudeMo
         const terrainHeight = call.terrainHeightForLonLat(sample?.longitude, sample?.latitude)
         const anchoredPose = cameraPoseAroundReplayAnchor(camera, sample)
         const cameraHeight = anchoredPose?.height ?? finiteNumber(camera.positionCartographic?.height)
-        const currentCameraSettings = normalizeJourneyReplayCamera(globalThis.lgs?.stores?.replay?.camera ?? getJourneyReplaySettings().camera)
+        const currentCameraSettings = currentJourneyReplayCameraSettings()
         const currentAltitude = currentCameraSettings.altitude
         const pitchRadians = anchoredPose?.pitch ?? finiteNumber(camera.pitch)
         const headingRadians = anchoredPose?.heading ?? finiteNumber(camera.heading)
@@ -822,7 +852,7 @@ export const syncCameraDrawerFromSettings = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        const camera = normalizeJourneyReplayCamera(globalThis.lgs?.stores?.replay?.camera ?? getJourneyReplaySettings().camera)
+        const camera = currentJourneyReplayCameraSettings()
         if (globalThis.lgs?.settings?.ui?.replay) {
             globalThis.lgs.settings.ui.replay.camera = camera
         }

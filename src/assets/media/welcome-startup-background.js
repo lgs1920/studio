@@ -7,18 +7,21 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-18
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import {
+    applyWelcomeMediaCredit,
     applyWelcomeBackgroundToImage,
+    bannerMediaCatalog,
     getWelcomeBackgroundMedia,
     preloadWelcomeBackgroundMedia,
 } from '@Assets/media/welcome-background-media'
+import {mountWelcomeHeroRouteInSplash} from '@Components/MainUI/WelcomeHeroRouteBootstrap'
 
 /**
  * Applies the selected welcome image before the React application mounts.
@@ -34,10 +37,13 @@ const applyStartupBackground = () => {
     const backgroundImage = backgroundMedia.imageSources[0]?.src
     const startupImage = document.querySelector('#lgs-startup-background [data-welcome-background-startup]')
     const splashImage = document.querySelector('#lgs-boot-splash .lgs-boot-splash-background-image')
+    const splashCredit = document.querySelector('#lgs-boot-splash-media-credit')
+    const selectedChoice = bannerMediaCatalog.outdoor.find(choice => choice.id === backgroundMedia.id)
 
     preloadWelcomeBackgroundMedia(backgroundMedia)
     applyWelcomeBackgroundToImage(startupImage, backgroundMedia)
     applyWelcomeBackgroundToImage(splashImage, backgroundMedia)
+    applyWelcomeMediaCredit(splashCredit, selectedChoice)
 
     if (!backgroundImage) {
         return
@@ -53,3 +59,7 @@ const applyStartupBackground = () => {
 }
 
 applyStartupBackground()
+
+if (mountWelcomeHeroRouteInSplash()) {
+    globalThis.performance?.mark?.('lgs.startup.splash-route-mounted')
+}

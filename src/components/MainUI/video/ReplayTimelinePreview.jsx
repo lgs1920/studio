@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-22
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,27 +22,27 @@
  * introduced.
  */
 
-import {forwardRef, useCallback, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState} from 'react'
+import {forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState} from 'react'
 import {useSnapshot} from 'valtio'
 import {subscribeKey} from 'valtio/utils'
-import {WaButton, WaIcon, WaTooltip} from '@web.awesome.me/webawesome-pro/dist/react'
 import {
     CREDITS_WIDGET,
     LOGO_WIDGET,
+    MULTI_PURPOSE_WIDGETS,
     REPLAY_RECORDING_MONITOR_WIDGET_ID,
     REPLAY_TIMELINE_WIDGET,
-    VIDEO_CROP_ZONE,
     VIDEO_WIDGETS_BOARD,
 } from '@Core/constants'
 import {REPLAY_TIMELINE_COLOR_SWATCHES, REPLAY_TIMELINE_UI, REPLAY_TIMELINE_ZOOM, clampReplayTimelineZoom} from './replayTimelineUtils'
 import {VideoRecordingSettingsToolbar} from './toolbox/VideoRecordingSettingsToolbar'
-import {VideoRecordingSettingsMenus} from './toolbox/VideoRecordingSettingsMenus'
 import {
     buildReplayPreparationTimeline,
 } from '@Core/ui/replay/ReplayPreparationTimeline'
 import {
     groupWidgetEntries,
 } from '@Core/ui/widget-manager/WidgetGroupUtils'
+import {WidgetDynamicRenderer} from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+import {getReplayVideoWidgetTypes} from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import {createReplayScrubScheduler} from '@Core/ui/replay/ReplayScrubScheduler'
 import {useOptionalSnapshot, useProxyValue} from '@Utils/ValtioUtils'
 import '@lgs1920/timeline'
@@ -175,9 +175,9 @@ const resolveCaptureFps = (video, replay) => {
  */
 const resolveReplayDurationMillis = (replay, replaySettings = {}) => {
     const candidates = [
-        replay?.deferredExportPlan?.videoTimeline?.replayDurationMillis,
         Number(replay?.duration) * 1000,
         Number(replaySettings?.duration) * 1000,
+        replay?.deferredExportPlan?.videoTimeline?.replayDurationMillis,
         DEFAULT_REPLAY_DURATION_MILLIS,
     ]
     return candidates.find(candidate => Number.isFinite(Number(candidate)) && Number(candidate) > 0)
@@ -452,7 +452,6 @@ export const ReplayTimelinePreview = forwardRef(({
     const widgetSettings = useOptionalSnapshot(lgs.settings?.widgets, {})
     const replaySettings = useOptionalSnapshot(lgs.settings?.ui?.replay, {})
     const _timeline = useRef(null)
-    const videoSettingsButtonId = `replay-timeline-video-settings-${useId().replaceAll(':', '')}`
     const journeyProjectionSignature = useProxyValue(lgs.stores.main, main => {
         const currentJourney = main?.theJourney
         return JSON.stringify({
@@ -483,9 +482,24 @@ export const ReplayTimelinePreview = forwardRef(({
                                && video.timelinePreviewActive === true
                                && replay.recordingSync === true
                                && !video.preRecording
-                               && !video.recording
                                && !video.recordingHQ
                                && !video.finalizing
+
+    useEffect(() => {
+        if (!linkedPreparation || !globalThis.__?.widgets?.get || !globalThis.__?.ui?.widgetManager) {
+            return
+        }
+
+        const renderer = WidgetDynamicRenderer.instance
+        getReplayVideoWidgetTypes({simpleReplay: replay.simplePreparationActive === true}).forEach(widgetType => {
+            void renderer.renderWidget(MULTI_PURPOSE_WIDGETS, widgetType, {
+                widgetsBoard: VIDEO_WIDGETS_BOARD,
+                forceRefresh: true,
+            }).catch(error => {
+                console.error(`[LGS1920][ReplayWidgets] Failed to register ${widgetType}`, error)
+            })
+        })
+    }, [linkedPreparation, replay.simplePreparationActive])
 
     const projectionReplay = useMemo(() => ({
         deferredExportPlan: replay.deferredExportPlan,
@@ -511,7 +525,6 @@ export const ReplayTimelinePreview = forwardRef(({
         },
     }), [journeyTitle, journeyName, journeyReplayStart, journeyReplayStop])
     const projection = useMemo(() => {
-        const startedAt = globalThis.performance?.now?.() ?? Date.now()
         const nextProjection = buildReplayPreparationTimeline({
             videoTimeline: projectionReplay.deferredExportPlan?.videoTimeline ?? null,
             replayDurationMillis: resolveReplayDurationMillis(projectionReplay, projectionReplaySettings),
@@ -521,15 +534,11 @@ export const ReplayTimelinePreview = forwardRef(({
             journeyTitle: projectionJourney.title,
             widgetOrder,
         })
-        console.log('[ReplayTimeline] projection built', {
-            durationMs: Number(((globalThis.performance?.now?.() ?? Date.now()) - startedAt).toFixed(2)),
-            tracks: nextProjection.tracks.length,
-            actions: nextProjection.tracks.reduce((count, track) => count + track.actions.length, 0),
-        })
         return nextProjection
     }, [projectionJourney, projectionReplay, projectionReplaySettings, video.fps, widgetOrder])
     const preparationTimeline = replay.preparationTimeline
-    const preparedTimeline = preparationTimeline?.timeline ?? null
+    const hasCurrentPreparationTimeline = preparationTimeline?.sourceSignature === projection.signature
+    const preparedTimeline = hasCurrentPreparationTimeline ? preparationTimeline?.timeline ?? null : null
     const persistedTimelineView = replaySettings?.timeline ?? {}
     const persistedZoomPercent = Number(persistedTimelineView.zoomPercent)
     const hasPersistedZoom = Number.isFinite(persistedZoomPercent)
@@ -579,7 +588,7 @@ export const ReplayTimelinePreview = forwardRef(({
         hostNoDragClass: 'lgs-widget-no-drag',
     }), [horizontalZoomPercent, hasPersistedZoom, keyboardZoomActive, preparedTimeline, projection.signature, projection.durationMillis, projection.fps, projection.source.frameCount, projection.source.frameIntervalMs])
     const baseTracks = useMemo(() => toDisplayTracks(projection.tracks), [projection])
-    const preparationTracks = preparationTimeline?.tracks
+    const preparationTracks = hasCurrentPreparationTimeline ? preparationTimeline?.tracks : null
     // Detach nested Valtio read proxies before the component snapshots edits for undo/redo.
     const tracks = useMemo(() => cloneReplayTimelineTracks(
         Array.isArray(preparationTracks) ? preparationTracks : baseTracks,
@@ -727,8 +736,6 @@ export const ReplayTimelinePreview = forwardRef(({
             if (cancelled) return
             const element = _timeline.current
             if (!element || !element.isConnected) return
-            const startedAt = globalThis.performance?.now?.() ?? Date.now()
-            console.log('[ReplayTimeline] controlled state start', {debugStage})
 
             if (['surface', 'track', 'clip', 'data'].includes(debugStage)) {
                 element.timeline = {...timeline, showBuildingOverlay: true}
@@ -745,10 +752,6 @@ export const ReplayTimelinePreview = forwardRef(({
                                 : [],
                         }]
                 element.currentTimeMillis = 0
-                console.log('[ReplayTimeline] controlled state end', {
-                    debugStage,
-                    durationMs: Number(((globalThis.performance?.now?.() ?? Date.now()) - startedAt).toFixed(2)),
-                })
                 return
             }
 
@@ -785,10 +788,6 @@ export const ReplayTimelinePreview = forwardRef(({
             element.ensureCurrentTimeVisible?.()
             element.verticalScrollTop = _verticalScrollTop.current
             _preservedPlayheadTimeMillis.current = null
-            console.log('[ReplayTimeline] controlled state end', {
-                debugStage,
-                durationMs: Number(((globalThis.performance?.now?.() ?? Date.now()) - startedAt).toFixed(2)),
-            })
         }
 
         void applyControlledState()
@@ -924,11 +923,11 @@ export const ReplayTimelinePreview = forwardRef(({
             return
         }
 
-        void __.ui.replay?.enterReplayPreparation?.({
+        void Promise.resolve(__.ui.replay?.enterReplayPreparation?.({
             journey: lgs.theJourney,
             shouldApply: () => lgs.stores.ui.video.timelinePreviewActive === true
                            && lgs.stores.replay.recordingSync === true,
-        })
+        })).catch(() => undefined)
     }, [linkedPreparation, projection.signature])
 
     if (!linkedPreparation) {
@@ -963,23 +962,8 @@ export const ReplayTimelinePreview = forwardRef(({
                     )}
                     <span slot="custom-menu"
                           className="replay-timeline-preview__custom-menu lgs-widget-no-drag">
-                        <WaButton appearance="plain"
-                                  id={videoSettingsButtonId}
-                                  aria-label="Video settings"
-                                  data-additional-content-toggle=""
-                                  size="s"
-                                  variant="brand">
-                            <WaIcon name="video" variant="regular" label=""/>
-                        </WaButton>
-                        <WaTooltip for={videoSettingsButtonId} placement="bottom">{'Video settings'}</WaTooltip>
-                        <VideoRecordingSettingsToolbar mainTheme mode="actions"/>
+                        <VideoRecordingSettingsToolbar mainTheme mode="actions" timelineSettings/>
                     </span>
-                    <span slot="additional-content-label">Video settings</span>
-                    <VideoRecordingSettingsMenus slot="additional-content"
-                                                 className="replay-timeline-preview__additional-content lgs-widget-no-drag"
-                                                 context={lgs.stores.ui.video.cropper}
-                                                 cropzoneId={VIDEO_CROP_ZONE}
-                                                 mainTheme/>
                 </lgs1920-timeline>
             )}
         </section>

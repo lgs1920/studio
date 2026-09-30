@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,7 +23,8 @@ import {createReplayCameraCommand} from './ReplayCameraCommand'
 import {isResolvedReplayFrameIntent} from './ReplayFrameIntent'
 import {attachReplayFrameIntent, publishReplayFrameState} from './ReplayFramePublisher'
 import {createReplayRenderModeContract} from './ReplayRenderModeContract'
-import {getJourneyReplaySettings} from './JourneyReplayProgressionStyle'
+import {getJourneyReplaySettings, normalizeJourneyReplayCamera} from './JourneyReplayProgressionStyle'
+import {REPLAY_USER_MODE_BASIC} from './ReplayUserModeConstants'
 
 /**
  * Converts a value to a finite number.
@@ -181,7 +182,7 @@ export const buildReplayFrameState = ({
 /**
  * Refresh the visual contract attached to the active replay frame.
  *
- * Draft publishes its frame before the Cesium adapter has applied the camera
+ * Interactive publishes its frame before the Cesium adapter has applied the camera
  * pose. This helper lets the live path publish the completed logical frame
  * without changing the scheduling or capture owner.
  *
@@ -211,7 +212,7 @@ export const updateReplayFrameRenderContract = ({
                              }
                              : previousContract.logicalFrame ?? null
     const renderContract = createReplayRenderModeContract({
-        renderMode:        previousContract.renderMode ?? 'draft',
+        renderMode:        previousContract.renderMode ?? 'interactive',
         logicalFrame:      nextLogicalFrame,
         cameraPose:        cameraPose === undefined
                            ? nextLogicalFrame?.cameraPose ?? previousContract.cameraPose ?? null
@@ -252,6 +253,31 @@ export const updateReplayFrameRenderContract = ({
 export const replayStore = () => globalThis.lgs?.stores?.replay
 
 /**
+ * Résout les réglages caméra utilisés par la préparation et la capture Replay.
+ *
+ * La préparation Simple met à jour la caméra d’exécution alors que les
+ * réglages effectifs restent ceux de la configuration produit. La capture
+ * doit reprendre cette caméra préparée et le mode Basic ne doit jamais
+ * activer les diagnostics.
+ *
+ * @returns {Object} Réglages caméra normalisés pour le Replay courant.
+ */
+export const currentJourneyReplayCameraSettings = () => {
+    const settings = getJourneyReplaySettings()
+    const store = replayStore()
+    const simplePreparation = store?.simplePreparationActive === true
+    const basicMode = settings.userMode === REPLAY_USER_MODE_BASIC || simplePreparation
+    const camera = simplePreparation && store?.camera
+        ? {...settings.camera, ...store.camera}
+        : settings.camera
+
+    return normalizeJourneyReplayCamera({
+        ...camera,
+        ...(basicMode ? {debug: false} : {}),
+    })
+}
+
+/**
  * Returns whether replay playback currently owns camera updates.
  *
  * A configured sampler may still expose a sample after replay playback has
@@ -276,16 +302,15 @@ export const isJourneyReplayVideoCaptureActive = () => {
     const store = replayStore()
     const settings = globalThis.lgs?.settings?.ui?.replay
     const video = globalThis.lgs?.stores?.ui?.video
-    const recorder = globalThis.__?.recorder
-    // recordingSync only describes the replay/video link. It can remain armed
-    // after playback, so it must be combined with an active capture phase.
-    const replayVideoLinked = store?.recordingSync === true || settings?.recordingSync === true
+    // Link state can remain armed after playback, so combine it with a capture phase.
+    const replayVideoLinked = store?.recordingSync === true
+                              || settings?.recordingSync === true
+                              || store?.simplePreparationActive === true
     const videoCaptureActive = video?.preRecording === true
-                                || video?.recording === true
+                                || video?.recordingHQ === true
                                 || video?.snapshot === true
                                 || video?.finalizing === true
-                                || recorder?.isRecording?.() === true
-    const captureStateKnown = Boolean(video) || typeof recorder?.isRecording === 'function'
+    const captureStateKnown = Boolean(video)
 
     return replayVideoLinked && (videoCaptureActive || !captureStateKnown)
 }
@@ -340,9 +365,12 @@ export const currentJourneyReplaySample = controller => controller?.currentSampl
 export const currentJourneyReplayPoiBehavior = () => {
     const settings = getJourneyReplaySettings()
     const store = replayStore()
+    const simpleMode = store?.simplePreparationActive === true
     return {
-        hideAllPoisDuringJourneyReplay: settings.hideAllPoisDuringJourneyReplay === true || store?.hideAllPoisDuringJourneyReplay === true,
-        animateAllPoisDuringJourneyReplay: settings.animateAllPoisDuringJourneyReplay === true || store?.animateAllPoisDuringJourneyReplay === true,
+        hideAllPoisDuringJourneyReplay: settings.hideAllPoisDuringJourneyReplay === true
+                                        || (!simpleMode && store?.hideAllPoisDuringJourneyReplay === true),
+        animateAllPoisDuringJourneyReplay: settings.animateAllPoisDuringJourneyReplay === true
+                                           || (!simpleMode && store?.animateAllPoisDuringJourneyReplay === true),
     }
 }
 
@@ -463,7 +491,7 @@ export const publishReplayClipFrameState = ({
             phase,
             source:          'clip',
             updatedAt:       now,
-            renderMode:      'draft',
+            renderMode:      'interactive',
             intentResolved,
             cameraPose,
             cameraCommand,

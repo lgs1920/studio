@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-30
- * Last modified on: 2026-06-30
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -57,8 +57,16 @@ export const getGlobalHideOtherJourneys = () => globalThis.lgs?.settings?.journe
 
 export const getJourneyReplayHideOtherJourneys = () => {
     const replay = globalThis.lgs?.settings?.ui?.replay
+    if (replay?.userMode === 'basic') {
+        return true
+    }
+
     if (replay?.inheritHideOtherJourneys === false) {
         return replay.hideOtherJourneys === true
+    }
+
+    if (replay?.userMode === 'expert') {
+        return true
     }
 
     if (replay?.hideOtherJourneys === true) {

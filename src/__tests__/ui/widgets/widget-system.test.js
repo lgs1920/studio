@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-30
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -275,6 +275,77 @@ describe('Widget registry ratio resolution', () => {
         expect(config.visible).toBe(false)
     })
 
+    it('ignores a saved widget position from an older video compass anchor', async () => {
+        __.ui.widgetManager.getWidgetPosition.mockResolvedValue({
+            leftRatio: 82,
+            topRatio:  12,
+            width:    100,
+            height:   100,
+            positionKey: 'video-crop-top-right-v1',
+        })
+
+        const config = await new WidgetCoreRegistry().retrieveConfig({}, {
+            id:          'compass-widget#video',
+            attachTo:    'top-left',
+            container:   document.body,
+            left:        '0px',
+            margin:      8,
+            persist:     true,
+            positionKey: 'video-crop-top-left-v2',
+            top:         '0px',
+            widgetsBoard: VIDEO_WIDGETS_BOARD,
+        })
+
+        expect(config.fromDB).toBe(false)
+        expect(config.positionKey).toBe('video-crop-top-left-v2')
+    })
+
+    it('restores persisted fixed-compass scale within its configured bounds', async () => {
+        __.ui.widgetManager.getWidgetPosition.mockResolvedValue({
+            leftRatio:   50,
+            topRatio:    50,
+            width:       100,
+            height:      100,
+            scale:       {x: 0.01, y: 0.01},
+            positionKey: 'video-crop-top-left-v2',
+        })
+
+        const config = await new WidgetCoreRegistry().retrieveConfig({}, {
+            id:          'compass-widget#video',
+            container:   document.body,
+            maxScale:    1,
+            minScale:    1,
+            persist:     true,
+            positionKey: 'video-crop-top-left-v2',
+            widgetsBoard: VIDEO_WIDGETS_BOARD,
+        })
+
+        expect(config.scale).toEqual({x: 1, y: 1})
+    })
+
+    it('clamps an already-mounted compass when the fixed scale bounds are refreshed', async () => {
+        const registry = new WidgetCoreRegistry()
+        const id = 'compass-widget#video'
+        registry.setConfig(id, {
+            id,
+            runtimeReady: true,
+            widgetsBoard: VIDEO_WIDGETS_BOARD,
+            scale: {x: 0.01, y: 0.01},
+            container: document.body,
+        })
+
+        const config = await registry.retrieveConfig({}, {
+            id,
+            container: document.body,
+            maxScale: 1,
+            minScale: 1,
+            persist: true,
+            widgetsBoard: VIDEO_WIDGETS_BOARD,
+        })
+
+        expect(config.scale).toEqual({x: 1, y: 1})
+    })
+
     it('keeps an explicit visual widget ratio instead of the global widget ratio', async () => {
         const registry = new WidgetCoreRegistry()
         const element = {}
@@ -311,6 +382,7 @@ describe('Widget registry ratio resolution', () => {
             scalable:      true,
             min:           {width: 10, height: 10},
             max:           {width: 500, height: 500},
+            contextMenu:   {canRemove: false},
             container:     document.body,
         })
 
@@ -322,6 +394,7 @@ describe('Widget registry ratio resolution', () => {
             resizable:       true,
             constrainResizeToContent: false,
             resizeToContent: {height: true},
+            contextMenu:     {canRemove: true},
             scalable:        false,
         })
 
@@ -331,6 +404,7 @@ describe('Widget registry ratio resolution', () => {
         expect(config.max).toEqual({width: 900})
         expect(config.resizeToContent).toEqual({height: true})
         expect(config.constrainResizeToContent).toBe(false)
+        expect(config.contextMenu.canRemove).toBe(true)
     })
 
     it('migrates old persisted global ratios when an explicit widget ratio is requested', async () => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-19
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -40,6 +40,7 @@ export const ToolsUI = () => {
     const $cropper = lgs.stores.ui.video.cropper
     const _journeyToolbarHiddenByVideoEditor = useRef(false)
     const _replayPreparationActive = useRef(false)
+
     const renderLinkedTimeline = video.editing === true
         && video.timelinePreviewActive === true
         && replay.recordingSync === true
@@ -47,6 +48,7 @@ export const ToolsUI = () => {
 
     useEffect(() => {
         const linkedReplay = replay.recordingSync === true
+            || replay.simplePreparationActive === true
             || lgs.settings?.ui?.replay?.recordingSync === true
         const videoEditing = video.editing === true
         const replayPlaying = replay.active || replay.playing || replay.paused
@@ -71,8 +73,9 @@ export const ToolsUI = () => {
     }, [renderLinkedTimeline])
 
     useEffect(() => {
-        const captureActive = video.preRecording || video.recording || video.snapshot || video.finalizing
-        const preparationActive = video.editing && replay.recordingSync === true && !captureActive
+        const captureActive = video.preRecording || video.recordingHQ || video.snapshot || video.finalizing
+        const replayLinked = replay.recordingSync === true || replay.simplePreparationActive === true
+        const preparationActive = video.editing && replayLinked && !captureActive
         if (!preparationActive) {
             _replayPreparationActive.current = false
             return undefined
@@ -84,17 +87,18 @@ export const ToolsUI = () => {
 
         _replayPreparationActive.current = true
         let transitionActive = true
-        void __.ui.replay?.enterReplayPreparation?.({
+        void Promise.resolve(__.ui.replay?.enterReplayPreparation?.({
             journey:    lgs.theJourney,
             shouldApply: () => transitionActive
                            && lgs.stores.ui.video.editing === true
-                           && lgs.stores.replay.recordingSync === true,
-        })
+                           && (lgs.stores.replay.recordingSync === true
+                               || lgs.stores.replay.simplePreparationActive === true),
+        })).catch(() => undefined)
 
         return () => {
             transitionActive = false
         }
-    }, [replay.recordingSync, video.editing, video.finalizing, video.preRecording, video.recording, video.snapshot])
+    }, [replay.recordingSync, replay.simplePreparationActive, video.editing, video.finalizing, video.preRecording, video.recordingHQ, video.snapshot])
 
     useEffect(() => {
         const appContainer = document.getElementById('lgs1920-container')
@@ -104,13 +108,13 @@ export const ToolsUI = () => {
 
         const cropInputMode = video.editing
             || video.preRecording
-            || video.recording
+            || video.recordingHQ
             || video.snapshot
             || video.finalizing
         appContainer.classList.toggle('lgs-video-crop-input-mode', cropInputMode)
 
         return () => appContainer.classList.remove('lgs-video-crop-input-mode')
-    }, [video.editing, video.preRecording, video.recording, video.snapshot, video.finalizing])
+    }, [video.editing, video.preRecording, video.recordingHQ, video.snapshot, video.finalizing])
 
     return (
         <div id="lgs-tools-ui">
@@ -118,6 +122,9 @@ export const ToolsUI = () => {
                 <>
                     <Cropper overlay source={lgs.canvas}
                              context={$cropper} className="video-cropper"
+                             hideVideoWidgets={false}
+                             hideWidgetPanel={replay.simplePreparationActive === true}
+                             simplePreparationActive={replay.simplePreparationActive === true}
                              renderRatioWidget={false}
                              options={{infoComponent: <VideoSettingsInfo/>}}/>
                     {!(video.timelinePreviewActive === true && replay.recordingSync === true) && (
@@ -137,7 +144,7 @@ export const ToolsUI = () => {
             ) : (
 
                 <>
-                    {(video.preRecording || video.recording || video.snapshot || video.finalizing) &&
+                    {(video.preRecording || video.recordingHQ || video.snapshot || video.finalizing) &&
                         <VideoRecordingScreenArea/>}
                     <CameraAndTargetPanel/>
                     {usage && <JourneyToolbarWidget id={JOURNEY_TOOLBAR_WIDGET}/>}

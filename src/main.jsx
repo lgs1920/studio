@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-22
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import './assets/css/app.css?v=1.0.5'
 import './assets/css/themes/wa-lgs1920.css'
 import './assets/css/animations.css'
 import '@web.awesome.me/webawesome-pro/dist/components/icon/icon.js'
+import '@web.awesome.me/webawesome-pro/dist/components/spinner/spinner.js'
 
 const markStartup = name => {
     const performanceObject = globalThis.performance
@@ -43,6 +44,11 @@ ResizeObserver.prototype.unobserve = function (target) {
  * Load Google Fonts once at startup
  */
 const bootstrap = async () => {
+    const uiUtilsPromise = import('@Utils/UIUtils')
+    void uiUtilsPromise.then(({UIUtils}) => UIUtils.importFonts()).catch(error => {
+        console.warn('Unable to load Google Fonts.', error)
+    })
+
     const [media, {installNativeContextMenuBlocker}] = await Promise.all([
         import('@Assets/media/welcome-background-media'),
         import('@Core/events/NativeContextMenuBlocker'),
@@ -52,12 +58,14 @@ const bootstrap = async () => {
     const splashElement = document.querySelector('#lgs-boot-splash')
     const splashVideo = document.querySelector('#lgs-boot-splash video')
     const splashImage = document.querySelector('#lgs-boot-splash .lgs-boot-splash-background-image')
+    const splashCredit = document.querySelector('#lgs-boot-splash-media-credit')
     const hasVideo = media.applyWelcomeBackgroundToVideo(splashVideo, welcomeBackgroundMedia, {load: false})
     media.applyWelcomeBackgroundToImage(splashImage, welcomeBackgroundMedia)
+    let activeSplashChoice = media.bannerMediaCatalog.outdoor.find(choice => choice.id === welcomeBackgroundMedia.id) ?? null
+    media.applyWelcomeMediaCredit(splashCredit, activeSplashChoice)
     markStartup('startup-media-ready')
 
     if (hasVideo && splashElement && splashVideo) {
-        let activeSplashChoice = media.bannerMediaCatalog.outdoor.find(choice => choice.id === welcomeBackgroundMedia.id) ?? null
         const revealVideo = () => {
             let playPromise
             try {
@@ -94,6 +102,7 @@ const bootstrap = async () => {
                     type: 'video/mp4',
                 }],
             })
+            media.applyWelcomeMediaCredit(splashCredit, nextChoice)
         }
 
         splashVideo.addEventListener('canplay', revealVideo)
@@ -112,19 +121,26 @@ const bootstrap = async () => {
         {LGS1920},
         {LGS1920Context},
         {AppUtils},
-        {UIUtils},
+        {ensureViewerBaseWithRetry},
     ] = await Promise.all([
         import('react-dom/client'),
         import('@Components/LGS1920.jsx'),
         import('@Core/LGS1920Context'),
         import('@Utils/AppUtils'),
-        import('@Utils/UIUtils'),
+        import('@Components/cesium/Viewer'),
     ])
 
     AppUtils.setTheme(localStorage.getItem('theme') || 'system')
 
     if (!window.lgs) {
         window.lgs = new LGS1920Context()
+    }
+
+    try {
+        await ensureViewerBaseWithRetry()
+    }
+    catch (error) {
+        console.error('[LGS1920][Cesium] Early viewer bootstrap failed; startup will retry.', error)
     }
 
     /**
@@ -134,10 +150,6 @@ const bootstrap = async () => {
         <LGS1920/>,
     )
     markStartup('react-mounted')
-
-    void UIUtils.importFonts().catch(error => {
-        console.warn('Unable to load Google Fonts.', error)
-    })
 }
 
 void bootstrap().catch(error => {

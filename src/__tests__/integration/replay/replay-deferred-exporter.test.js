@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,6 +29,7 @@ import {
 } from '@Core/ui/replay/ReplayDeferredExporter'
 import { buildReplayVideoRenderSpec } from '@Core/ui/replay/ReplayVideoRenderSpec'
 import { CanvasOverlayComposer } from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
+import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 
 const mediabunnyMocks = vi.hoisted(() => ({
     failNextCanvasAdd: false,
@@ -258,7 +259,7 @@ describe('ReplayDeferredExporter', () => {
         expect(replay.deferredExportPlan).toBe(result.plan)
     })
 
-    it('builds the shared draft and HQ video render spec from crop, fps, quality, and dpr', () => {
+    it('builds the shared interactive and HQ video render spec from crop, fps, quality, and dpr', () => {
         const spec = buildReplayVideoRenderSpec({
             cropRect: {left: 10, top: 20, width: 640, height: 360},
             video: {
@@ -398,7 +399,7 @@ describe('ReplayDeferredExporter', () => {
                 widgetCache: {
                     isMounted: vi.fn(() => true),
                     getAll: vi.fn(() => new Map([
-                        ['journey-overlay#1', {mounted: true}],
+                        ['compass-widget#1', {mounted: true, widgetsBoard: VIDEO_WIDGETS_BOARD}],
                     ])),
                 },
                 widgetManager: {
@@ -425,7 +426,7 @@ describe('ReplayDeferredExporter', () => {
                 altitude: 900,
             },
             recordingSync: true,
-            visibleOverlayIds: ['journey-overlay#1'],
+            visibleOverlayIds: ['compass-widget#1'],
         })
 
         const freshPlan = prepareReplayDeferredExportPlan({
@@ -534,6 +535,62 @@ describe('ReplayDeferredExporter', () => {
         expect(frames[0]).toBe(0)
         expect(frames).toContain('on:0')
         expect(Output.instances.at(-1).setMetadataTags).toHaveBeenCalledWith(mediaMetadata)
+    })
+
+    it('finalizes a shareable partial mp4 after a graceful stop request', async () => {
+        Output.instances.length = 0
+        const renderedFrameIndexes = []
+        const exporter = new ReplayDeferredExporter({
+            timeline: {durationMillis: 1000, fps: 10},
+        })
+
+        const result = await exporter.exportMp4({
+            dimensions: {width: 640, height: 360},
+            buildCanvas: () => ({
+                width: 0,
+                height: 0,
+                getContext: () => ({}),
+            }),
+            renderFrame: async ({frame}) => {
+                renderedFrameIndexes.push(frame.index)
+                return null
+            },
+            shouldStop: (_frame, processedFrames) => processedFrames === 2,
+        })
+
+        expect(result.frameCount).toBe(2)
+        expect(result.frames.map(frame => frame.index)).toEqual([0, 1])
+        expect(renderedFrameIndexes).toEqual([0, 1])
+        expect(result.blob).toBeInstanceOf(Blob)
+        expect(result.blob.size).toBeGreaterThan(0)
+        expect(Output.instances.at(-1).finalize).toHaveBeenCalledTimes(1)
+        expect(Output.instances.at(-1).cancel).not.toHaveBeenCalled()
+    })
+
+    it('cancels the encoder output without finalizing or creating a video blob', async () => {
+        Output.instances.length = 0
+        const abortController = new AbortController()
+        abortController.abort()
+        const renderFrame = vi.fn(async () => null)
+        const exporter = new ReplayDeferredExporter({
+            timeline: {durationMillis: 1000, fps: 10},
+        })
+
+        await expect(exporter.exportMp4({
+            dimensions: {width: 640, height: 360},
+            signal: abortController.signal,
+            buildCanvas: () => ({
+                width: 0,
+                height: 0,
+                getContext: () => ({}),
+            }),
+            renderFrame,
+        })).rejects.toMatchObject({name: 'AbortError'})
+
+        expect(renderFrame).not.toHaveBeenCalled()
+        expect(Output.instances.at(-1).finalize).not.toHaveBeenCalled()
+        expect(Output.instances.at(-1).cancel).toHaveBeenCalledTimes(1)
+        expect(Output.instances.at(-1).target.buffer).toBeNull()
     })
 
     it('cancels the output when the codec fails during frame encoding', async () => {
@@ -1054,8 +1111,8 @@ describe('ReplayDeferredExporter', () => {
                 'export.camera.ownership.end',
                 'export.run.start',
                 'export.run.end',
-                'export.draft.restore.start',
-                'export.draft.restore.end',
+                'export.interactive.restore.start',
+                'export.interactive.restore.end',
                 'export.scene.prepare.start',
                 'export.scene.prepare.end',
                 'export.widgets.wait.start',
@@ -1073,7 +1130,7 @@ describe('ReplayDeferredExporter', () => {
         }
     })
 
-    it('restores the Draft scene when HQ preparation fails', async () => {
+    it('restores the Interactive scene when HQ preparation fails', async () => {
         const restorePlaybackScene = vi.fn(() => Promise.resolve())
         const preparePlaybackSceneForExport = vi.fn(async () => {
             throw new Error('HQ preparation failed')

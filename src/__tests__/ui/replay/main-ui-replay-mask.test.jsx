@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-14
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,8 +20,8 @@ import { proxy } from 'valtio'
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => {
     const Stub = ({children, ...props}) => <div {...props}>{children}</div>
-    return new Proxy({default: Stub}, {
-        get: () => Stub,
+    return new Proxy({default: Stub, WaTooltip: () => null}, {
+        get: (target, property) => target[property] ?? Stub,
     })
 })
 
@@ -63,17 +63,29 @@ vi.mock('@Components/MainUI/OrbitButton', () => ({
 vi.mock('@Editor/EditorPanelButton', () => ({
     EditorPanelButton: () => <div data-testid="editor-panel-button"/>,
 }))
-vi.mock('@Components/MainUI/video/VideoButton', () => ({
-    VideoButton: () => <div data-testid="video-button"/>,
-}))
 vi.mock('@Components/MainUI/video/VideoDownloadAndShareDialog', () => ({
     VideoDownloadAndShareDialog: () => <div data-testid="video-share-dialog"/>,
 }))
 vi.mock('@Components/MainUI/video/ReplayRecordingMonitorWidget', () => ({
     ReplayRecordingMonitorWidget: () => <div data-testid="replay-controls"/>,
 }))
-vi.mock('@Components/MainUI/SyncLinkBadge', () => ({
-    SyncLinkBadge: () => <div data-testid="sync-link-badge"/>,
+vi.mock('@Components/MainUI/SupportUIButton', () => ({
+    SupportUIButton: () => null,
+}))
+vi.mock('@Components/MainUI/SceneModeSelector', () => ({
+    SceneModeSelector: () => null,
+}))
+vi.mock('@Components/MainUI/CameraTarget', () => ({
+    CameraTarget: () => null,
+}))
+vi.mock('@Components/MainUI/credits/CreditsBar', () => ({
+    CreditsBar: () => null,
+}))
+vi.mock('@Components/InformationPanel/CodeDependenciesDrawer', () => ({
+    CodeDependenciesDrawer: () => null,
+}))
+vi.mock('@Components/MainUI/widgets/management/WidgetManagementDrawer', () => ({
+    WidgetManagementDrawer: () => null,
 }))
 vi.mock('@Components/Text/TextButton', () => ({
     TextButton: () => <div data-testid="text-button"/>,
@@ -309,10 +321,20 @@ describe('MainUI replay mask', () => {
 
     it('keeps the camera adjustment overlay visible during video preparation', () => {
         lgs.stores.ui.video.editing = true
+        lgs.stores.replay.simplePreparationActive = true
 
         const {container} = render(<MainUI/>)
 
         expect(container.querySelector('#lgs-main-ui')).toBeNull()
         expect(screen.getByTestId('camera-adjustment-overlay')).not.toBeNull()
+    })
+
+    it('does not expose the Text widget entry in the visible main UI', () => {
+        lgs.stores.replay.mainUiHidden = false
+
+        render(<MainUI/>)
+
+        expect(screen.queryByTestId('text-button')).toBeNull()
+        expect(document.querySelector('#lgs-main-ui')).not.toBeNull()
     })
 })

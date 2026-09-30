@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-14
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -184,7 +184,12 @@ const toSeconds = millis => millis / 1000
  */
 const normalizeTimelineOptions = options => {
     if (options?.videoTimeline?.phases) {
-        if (!options?.clips) {
+        const hasReplayDurationOverride = options.replayDurationMillis !== undefined
+                                          || options.replayDuration !== undefined
+        const hasFpsOverride = options.fps !== undefined || options.captureFps !== undefined
+        const hasDirectionOverride = options.direction !== undefined
+        const hasClipOverride = options.clips !== undefined
+        if (!hasReplayDurationOverride && !hasFpsOverride && !hasDirectionOverride && !hasClipOverride) {
             return options.videoTimeline
         }
 
@@ -195,10 +200,13 @@ const normalizeTimelineOptions = options => {
                                   ?? 0,
             fps:                options.fps ?? options.videoTimeline.fps ?? 30,
             direction:          options.direction ?? options.videoTimeline.direction ?? 1,
-            clips:              options.clips,
+            clips:              options.clips ?? options.videoTimeline.clips,
         })
 
         return refreshedTimeline.clipSignature === options.videoTimeline.clipSignature
+            && refreshedTimeline.replayDurationMillis === options.videoTimeline.replayDurationMillis
+            && refreshedTimeline.fps === options.videoTimeline.fps
+            && refreshedTimeline.direction === options.videoTimeline.direction
             ? options.videoTimeline
             : refreshedTimeline
     }

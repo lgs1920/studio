@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -42,7 +42,8 @@ import {
 }                                                                                          from './JourneyReplayCesiumRenderer'
 import { REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP, normalizeJourneyReplayClips } from './JourneyReplayClips'
 import {
-    currentJourneyReplayPoiBehavior, currentJourneyReplaySample, finiteNumber, isJourneyReplayTraceActive,
+    currentJourneyReplayCameraSettings, currentJourneyReplayPoiBehavior, currentJourneyReplaySample, finiteNumber,
+    isJourneyReplayTraceActive,
     isJourneyReplayVideoCaptureActive, publishReplayClipFrameState, replayStore, resetRuntimeProgress, resolveJourneyReplayRuntimeClips,
     updateReplayFrameRenderContract,
 } from './JourneyReplayRuntime'
@@ -76,7 +77,7 @@ import {
     REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET, REPLAY_CAMERA_POSITION_AHEAD,
     REPLAY_CAMERA_HEADING_OFFSET_MAX, REPLAY_CAMERA_HEADING_OFFSET_MIN, REPLAY_CAMERA_POSITION_SYSTEM,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION,
-    REPLAY_MARKER_MODE_TRACE, getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker,
+    REPLAY_MARKER_MODE_TRACE, getJourneyReplaySettings, normalizeJourneyReplayMarker,
     normalizeJourneyReplayProgressionStyle, normalizeJourneyReplaySmoothing, normalizeJourneyReplayTrace,
 }                                                                                          from './JourneyReplayProgressionStyle'
 
@@ -299,7 +300,7 @@ export const dispose = (mode, ) => {
  * @param {object} mode - Replay session mode.
  * @param {object} [options] - Reset options.
  * @param {boolean} [options.preserveSavedCameraState=false] - Preserve the entry camera state.
- * @param {boolean} [options.preserveConstrainedPath=true] - Preserve the Draft/HQ shared path.
+ * @param {boolean} [options.preserveConstrainedPath=true] - Preserve the Interactive/HQ shared path.
  * @returns {void}
  */
 export const resetCameraController = (mode, {
@@ -471,10 +472,7 @@ export const captureCameraState = (mode, {sample = null} = {}) => {
 export const capturePlaybackCameraSettings = (mode, ) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-        state.playbackStartCameraSettings = normalizeJourneyReplayCamera(
-            globalThis.lgs?.stores?.replay?.camera
-            ?? getJourneyReplaySettings().camera,
-        )
+        state.playbackStartCameraSettings = currentJourneyReplayCameraSettings()
         if (globalThis.lgs?.stores?.replay) {
             globalThis.lgs.stores.replay.cameraUserAdjusted = false
         }
@@ -607,7 +605,7 @@ export const restorePlaybackSceneInternal = (mode, ) => {
             // visibility captured before replay after focus has settled.
             call.restoreCurrentJourneyVisibility()
             // Restoring the journey focus above changes the live Cesium view.
-            // Reapply the exact camera captured before Draft/HQ playback so a
+            // Reapply the exact camera captured before Replay playback so a
             // subsequent export does not inherit the focus angle.
             if (!state.cameraStateRestoredBeforeSceneCleanup) {
                 call.restoreCameraState()
@@ -807,13 +805,13 @@ export const bindRenderer = (mode, ) => {
             state.controller.on(REPLAY_EVENT_START, detail => {
                 const startListenerStartedAt = globalThis.performance?.now?.() ?? Date.now()
                 let listenerError = null
-                replayVideoTraceDebug('draft.replay.start.listener.begin', {
+                replayVideoTraceDebug('interactive.replay.start.listener.begin', {
                     progress: detail?.progress ?? null,
                     hasSampler: Boolean(detail?.sampler),
                 })
                 try {
                     const traceStep = (step, extra = {}) => {
-                        replayVideoTraceDebug('draft.replay.start.listener.step', {
+                        replayVideoTraceDebug('interactive.replay.start.listener.step', {
                             step,
                             elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startListenerStartedAt,
                             progress: detail?.progress ?? null,
@@ -824,12 +822,7 @@ export const bindRenderer = (mode, ) => {
                     state.lastPlaybackUpdateProgressKey = null
                     traceStep('set-tolerance-zone-visible.begin')
                     call.setToleranceZoneOverlayVisible(true)
-                    const replaySettings = getJourneyReplaySettings()
-                    const startCameraSettings = normalizeJourneyReplayCamera(
-                        globalThis.lgs?.stores?.replay?.camera
-                        ?? globalThis.lgs?.settings?.ui?.replay?.camera
-                        ?? replaySettings.camera,
-                    )
+                    const startCameraSettings = currentJourneyReplayCameraSettings()
                     call.updateToleranceZoneOverlay(startCameraSettings.hysteresis)
                     traceStep('set-tolerance-zone-visible.end')
                     traceStep('hide-journey-toolbar.begin')
@@ -862,10 +855,7 @@ export const bindRenderer = (mode, ) => {
                     if (!state.deferStartCameraRecenter) {
                         if (state.skipNextImmediateStartRecenter) {
                             state.skipNextImmediateStartRecenter = false
-                            const replaySettings = getJourneyReplaySettings()
-                            const startCameraSettings = normalizeJourneyReplayCamera(
-                                globalThis.lgs?.stores?.replay?.camera ?? replaySettings.camera,
-                            )
+                            const startCameraSettings = currentJourneyReplayCameraSettings()
                             traceStep('update-tolerance-zone-overlay.begin')
                             call.updateToleranceZoneOverlay(startCameraSettings.hysteresis)
                             traceStep('update-tolerance-zone-overlay.end')
@@ -893,7 +883,7 @@ export const bindRenderer = (mode, ) => {
                     call.abortPlaybackAfterListenerError(error)
                 }
                 finally {
-                    replayVideoTraceDebug('draft.replay.start.listener.end', {
+                    replayVideoTraceDebug('interactive.replay.start.listener.end', {
                         elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - startListenerStartedAt,
                         progress: detail?.progress ?? null,
                         hasSampler: Boolean(detail?.sampler),
@@ -905,7 +895,7 @@ export const bindRenderer = (mode, ) => {
                 const updateListenerStartedAt = globalThis.performance?.now?.() ?? Date.now()
                 try {
                     const traceUpdateStep = (step, extra = {}) => {
-                        replayVideoTraceDebug('draft.replay.update.listener.step', {
+                        replayVideoTraceDebug('interactive.replay.update.listener.step', {
                             step,
                             elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - updateListenerStartedAt,
                             progress: detail?.progress ?? null,
@@ -966,7 +956,7 @@ export const bindRenderer = (mode, ) => {
                     call.abortPlaybackAfterListenerError(error)
                 }
                 finally {
-                    replayVideoTraceDebug('draft.replay.update.listener.end', {
+                    replayVideoTraceDebug('interactive.replay.update.listener.end', {
                         elapsedMs: (globalThis.performance?.now?.() ?? Date.now()) - updateListenerStartedAt,
                         progress: detail?.progress ?? null,
                         hasSampler: Boolean(detail?.sampler),
@@ -1068,13 +1058,14 @@ export const bindRenderer = (mode, ) => {
                     }))
                 }
                 const notifyStopClipsCompleteAfterFinalWidgetFrame = (afterFrame = null) => {
-                    const recorder = globalThis.__?.recorder ?? null
-                    const recordingSync = replayStore()?.recordingSync === true || recorder?.isRecording?.() === true
-                    if (recordingSync) {
+                    const video = globalThis.lgs?.stores?.ui?.video
+                    const replayExportActive = replayStore()?.recordingSync === true
+                                               || video?.recordingHQ === true
+                                               || video?.finalizing === true
+                    if (replayExportActive) {
                         if (token === state.clipSequenceToken) {
-                            // The draft recorder captures the final Cesium frame
-                            // asynchronously from this notification. Keep the
-                            // completed trace rendered while that capture runs.
+                            // Keep the completed Replay trace visible while the final
+                            // deferred export frame is composed and encoded.
                             notifyStopClipsComplete()
                             if (typeof afterFrame === 'function') {
                                 afterFrame()
@@ -1083,10 +1074,10 @@ export const bindRenderer = (mode, ) => {
                         return
                     }
 
-                    // Without an active recorder there is no media frame to
+                    // Without an active Replay export there is no media frame to
                     // protect with animation-frame delays. Finish immediately
                     // so replay cleanup and journey restoration are observable
-                    // on the same exit path as Draft and HQ.
+                    // on the same exit path as Replay playback.
                     if (token === state.clipSequenceToken) {
                         notifyStopClipsComplete()
                         if (typeof afterFrame === 'function') {
@@ -1104,11 +1095,11 @@ export const bindRenderer = (mode, ) => {
                     call.removeToleranceZoneOverlay()
                     call.setToleranceZoneOverlayVisible(false)
                     call.setContinuousRender(false)
-                    const recorder = globalThis.__?.recorder ?? null
-                    if (replayStore()?.recordingSync === true || recorder?.isRecording?.() === true) {
-                        // The recorder still needs the Cesium source canvas for
-                        // its asynchronous final-frame capture. Do not clear
-                        // the replay trace while recording is still active.
+                    const video = globalThis.lgs?.stores?.ui?.video
+                    if (replayStore()?.recordingSync === true
+                        || video?.recordingHQ === true
+                        || video?.finalizing === true) {
+                        // The deferred export still needs the final Replay frame.
                         state.sceneRestoreDeferred = true
                         return
                     }

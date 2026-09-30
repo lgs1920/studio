@@ -8,13 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { CROP_TOOLS_WIDGETS, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import {resetRuntimeProgress} from '@Core/ui/replay/JourneyReplayRuntime'
 
 export const prepareVideoEditingUi = () => {
     globalThis.__?.ui?.widgetCache?.hideAllExceptBoards?.(VIDEO_WIDGETS_BOARD)
@@ -39,7 +40,7 @@ export const prepareVideoCaptureUi = () => {
     const replayStore = globalThis.lgs?.stores?.replay
     if (replayStore) {
         // The capture canvas must stay free of the interactive MainUI for both
-        // standalone videos and replay-linked recordings.
+        // Replay exports and screenshots.
         replayStore.mainUiHidden = true
     }
 }
@@ -61,10 +62,12 @@ export const restoreVideoCaptureUi = () => {
 export const cancelVideoEditing = () => {
     const videoStore = lgs.stores.ui.video
     const linkedTimelinePreparation = videoStore.timelinePreviewActive === true
-    if (linkedTimelinePreparation) {
+    const simplePreparation = lgs.stores.replay.simplePreparationActive === true
+    if (linkedTimelinePreparation || simplePreparation) {
         __.ui.replay?.pause?.()
         __.ui.replay?.leaveReplayPreparation?.()
         lgs.stores.replay.recordingSync = false
+        lgs.stores.replay.simplePreparationActive = false
         videoStore.timelinePreviewActive = false
     }
     videoStore.editing = false
@@ -73,4 +76,51 @@ export const cancelVideoEditing = () => {
     restoreVideoCaptureUi()
     __.ui.contextMenu.hide()
     __.ui.drawerManager.close()
+}
+
+/**
+ * Cancel the active Replay video export and discard its transient recording data.
+ * @param {Object} [options={}] - Cancellation options.
+ * @param {Function|null} [options.invalidateRecording=null] - Invalidates pending recording UI work.
+ * @returns {Promise<void>} Resolves after the active export releases its render resources.
+ */
+export const cancelVideoRecording = async ({invalidateRecording = null} = {}) => {
+    const replayStore = globalThis.lgs?.stores?.replay
+    const videoStore = globalThis.lgs?.stores?.ui?.video
+    invalidateRecording?.()
+    const exportCompletion = replayStore?.deferredExportPlan?.runtime?.abortExport?.()
+    if (replayStore) {
+        try {
+            await exportCompletion
+        }
+        catch {
+            // The export owner reports failures while cancellation still releases Replay UI state.
+        }
+    }
+    try {
+        if (videoStore) {
+            cancelVideoEditing()
+        }
+    }
+    finally {
+        if (replayStore) {
+            resetRuntimeProgress(replayStore)
+            replayStore.recordingSync = false
+            replayStore.simplePreparationActive = false
+            replayStore.preparationTimeline = null
+            replayStore.deferredExportPlan = null
+        }
+        if (videoStore) {
+            Object.assign(videoStore, {
+                preRecording: false,
+                recordingHQ:  false,
+                snapshot:     false,
+                paused:       false,
+                size:         0,
+                finalizing:   false,
+                timelinePreviewActive: false,
+                editing:      false,
+            })
+        }
+    }
 }

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-12-06
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -124,8 +124,6 @@ export class SceneManager {
             this.morphTo2D(callback)
         }
     }
-
-    test = (sceneMode) => console.log('morph', sceneMode)
 
     noRelief = () => {
         const manager = new LayersAndTerrainManager()

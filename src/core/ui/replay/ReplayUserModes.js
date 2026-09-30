@@ -1,0 +1,351 @@
+/*******************************************************************************
+ *
+ * This file is part of the LGS1920/studio project.
+ *
+ * File: ReplayUserModes.js
+ *
+ * Author : LGS1920 Team
+ * email: studio@lgs1920.fr
+ *
+ * Created on: 2026-09-30
+ * Last modified: 2026-09-30
+ *
+ *
+ * Copyright © 2026 LGS1920
+ ******************************************************************************/
+
+import {
+    DEFAULT_REPLAY_CAMERA,
+    DEFAULT_REPLAY_PROGRESSION,
+    DEFAULT_REPLAY_PROFILE_INFO,
+    DEFAULT_SIMPLE_REPLAY_DURATION,
+    REPLAY_CAMERA_POSITION_AHEAD,
+    REPLAY_CAMERA_POSITION_BEHIND,
+    REPLAY_MARKER_MODE_NAVIGATION,
+    REPLAY_TRACE_MODE_PROGRESSIVE,
+    defaultJourneyReplayCameraStyle,
+    defaultJourneyReplayMarkerStyle,
+    defaultJourneyReplayTraceStyle,
+    normalizeJourneyReplayCamera,
+    normalizeJourneyReplayMarker,
+    normalizeJourneyReplayProgressionStyle,
+    normalizeJourneyReplayProfileInfo,
+    normalizeJourneyReplayTrace,
+    normalizeSimpleReplayDuration,
+} from './JourneyReplayProgressionStyle'
+
+import {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT} from './ReplayUserModeConstants'
+
+export {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT}
+export const DEFAULT_REPLAY_USER_MODE = REPLAY_USER_MODE_BASIC
+
+const clone = value => JSON.parse(JSON.stringify(value))
+const expertCameraPersistTimers = new WeakMap()
+const simpleCameraPersistTimers = new WeakMap()
+const EXPERT_CAMERA_PERSIST_DELAY_MS = 250
+
+/**
+ * Normalize a persisted Replay user mode.
+ *
+ * @param {*} mode - Persisted mode value.
+ * @returns {string} Supported Replay user mode.
+ */
+export const normalizeReplayUserMode = mode => mode === REPLAY_USER_MODE_EXPERT
+    ? REPLAY_USER_MODE_EXPERT
+    : REPLAY_USER_MODE_BASIC
+
+/**
+ * Normalize an Expert Replay camera with an explicit journey-relative position.
+ *
+ * @param {Object} camera - Candidate Expert camera settings.
+ * @returns {Object} Normalized Expert camera settings.
+ */
+export const normalizeExpertReplayCamera = (camera = {}) => normalizeJourneyReplayCamera(Object.assign({}, camera, {
+    positionMode: camera?.positionMode === REPLAY_CAMERA_POSITION_AHEAD
+        ? REPLAY_CAMERA_POSITION_AHEAD
+        : REPLAY_CAMERA_POSITION_BEHIND,
+}))
+
+/**
+ * Synchronize an Expert camera edit with the current journey and persist it
+ * after a short quiet period so slider movement does not write every frame.
+ *
+ * @param {Object} camera - Complete normalized camera settings.
+ * @returns {Object|null} The synchronized camera, or null outside Expert mode.
+ */
+export const syncJourneyExpertReplayCamera = (camera) => {
+    const lgs = globalThis.lgs
+    const replaySettings = lgs?.settings?.ui?.replay
+    const journey = lgs?.theJourney
+    if (replaySettings?.userMode !== REPLAY_USER_MODE_EXPERT || !journey) {
+        return null
+    }
+
+    const replay = journey.replay ?? {}
+    const expert = replay.expert ?? {}
+    const nextCamera = normalizeExpertReplayCamera(Object.assign(
+        {},
+        expert.camera,
+        camera,
+        {
+            hysteresis: {
+                ...(expert.camera?.hysteresis ?? {}),
+                ...(camera?.hysteresis ?? {}),
+            },
+            playback: {
+                ...(expert.camera?.playback ?? {}),
+                ...(camera?.playback ?? {}),
+            },
+        },
+    ))
+
+    journey.replay = {
+        ...replay,
+        expert: {
+            ...expert,
+            camera: nextCamera,
+        },
+    }
+    replaySettings.camera = nextCamera
+    if (lgs?.stores?.replay) {
+        lgs.stores.replay.camera = nextCamera
+    }
+
+    if (typeof journey.persistToDatabase === 'function') {
+        const pendingTimer = expertCameraPersistTimers.get(journey)
+        if (pendingTimer !== undefined) {
+            clearTimeout(pendingTimer)
+        }
+        expertCameraPersistTimers.set(journey, setTimeout(() => {
+            expertCameraPersistTimers.delete(journey)
+            void journey.persistToDatabase()
+        }, EXPERT_CAMERA_PERSIST_DELAY_MS))
+    }
+
+    return nextCamera
+}
+
+/**
+ * Keep an explicitly configured journey Simple camera in sync with its live
+ * preparation edits, then persist it after a short quiet period.
+ *
+ * @param {Object} camera - Complete normalized camera settings.
+ * @returns {Object|null} The synchronized camera, or null without journey-level Simple settings.
+ */
+export const syncJourneySimpleReplayCamera = (camera) => {
+    const lgs = globalThis.lgs
+    const journey = lgs?.stores?.main?.theJourney ?? lgs?.theJourney
+    const replay = journey?.replay
+    const simple = replay?.simple
+    if (!journey || !simple || typeof simple !== 'object') {
+        return null
+    }
+
+    const nextCamera = normalizeJourneyReplayCamera(Object.assign({}, simple.camera, camera, {
+        altitudeMode: 'constant',
+        positionMode: REPLAY_CAMERA_POSITION_BEHIND,
+        debug: false,
+    }))
+    journey.replay = {
+        ...replay,
+        simple: {
+            ...simple,
+            camera: nextCamera,
+        },
+    }
+
+    if (typeof journey.persistToDatabase === 'function') {
+        const pendingTimer = simpleCameraPersistTimers.get(journey)
+        if (pendingTimer !== undefined) {
+            clearTimeout(pendingTimer)
+        }
+        simpleCameraPersistTimers.set(journey, setTimeout(() => {
+            simpleCameraPersistTimers.delete(journey)
+            void journey.persistToDatabase()
+        }, EXPERT_CAMERA_PERSIST_DELAY_MS))
+    }
+
+    return nextCamera
+}
+
+/**
+ * Return product defaults for the compact Simple Replay workflow.
+ *
+ * @returns {Object} Simple Replay defaults.
+ */
+export const defaultSimpleReplaySettings = () => ({
+    duration: DEFAULT_SIMPLE_REPLAY_DURATION,
+    camera: {
+        ...defaultJourneyReplayCameraStyle(),
+        positionMode: REPLAY_CAMERA_POSITION_BEHIND,
+        altitudeMode: 'constant',
+        debug: false,
+        altitude: DEFAULT_REPLAY_CAMERA.altitude,
+        heading: DEFAULT_REPLAY_CAMERA.heading,
+        pitch: DEFAULT_REPLAY_CAMERA.pitch,
+    },
+    presentation: {
+        progression: {
+            ...clone(DEFAULT_REPLAY_PROGRESSION),
+            fill: {
+                ...clone(DEFAULT_REPLAY_PROGRESSION.fill),
+                color: '#ff2525',
+                width: DEFAULT_REPLAY_PROGRESSION.fill.width,
+            },
+            border: {
+                ...clone(DEFAULT_REPLAY_PROGRESSION.border),
+                color: '#ff2525',
+                width: DEFAULT_REPLAY_PROGRESSION.border.width,
+            },
+        },
+        profileInfo: {
+            ...DEFAULT_REPLAY_PROFILE_INFO,
+            color: '#ffffff',
+        },
+    },
+    marker: {
+        ...defaultJourneyReplayMarkerStyle(),
+        mode: REPLAY_MARKER_MODE_NAVIGATION,
+    },
+    trace: {
+        ...defaultJourneyReplayTraceStyle(),
+        mode: REPLAY_TRACE_MODE_PROGRESSIVE,
+    },
+})
+
+/**
+ * Normalize compact Simple Replay settings.
+ *
+ * @param {Object} settings - Candidate settings.
+ * @returns {Object} Normalized settings.
+ */
+export const normalizeSimpleReplaySettings = (settings = {}) => {
+    const defaults = defaultSimpleReplaySettings()
+    const camera = normalizeJourneyReplayCamera({
+        ...defaults.camera,
+        ...(settings?.camera ?? {}),
+        altitudeMode: 'constant',
+        positionMode: REPLAY_CAMERA_POSITION_BEHIND,
+        debug: false,
+    })
+    const presentation = settings?.presentation ?? {}
+
+    return {
+        duration: normalizeSimpleReplayDuration(settings?.duration),
+        camera: {
+            ...camera,
+            altitudeMode: 'constant',
+        },
+        presentation: {
+            progression: normalizeJourneyReplayProgressionStyle({
+                ...defaults.presentation.progression,
+                ...(presentation.progression ?? {}),
+                fill: {
+                    ...defaults.presentation.progression.fill,
+                    ...(presentation.progression?.fill ?? {}),
+                },
+                border: {
+                    ...defaults.presentation.progression.border,
+                    ...(presentation.progression?.border ?? {}),
+                },
+            }),
+            profileInfo: normalizeJourneyReplayProfileInfo({
+                ...defaults.presentation.profileInfo,
+                ...(presentation.profileInfo ?? {}),
+            }),
+        },
+        marker: normalizeJourneyReplayMarker({
+            ...defaults.marker,
+            ...(settings?.marker ?? {}),
+            mode: REPLAY_MARKER_MODE_NAVIGATION,
+        }),
+        trace: normalizeJourneyReplayTrace({
+            ...defaults.trace,
+            ...(settings?.trace ?? {}),
+            mode: REPLAY_TRACE_MODE_PROGRESSIVE,
+        }),
+    }
+}
+
+/**
+ * Resolve Simple Replay settings using journey, user, and product precedence.
+ *
+ * @param {Object} options - Resolution sources.
+ * @returns {Object} Effective Simple Replay settings.
+ */
+export const resolveSimpleReplaySettings = ({journey, user, product} = {}) => normalizeSimpleReplaySettings({
+    ...product,
+    ...user,
+    ...journey,
+    camera: {
+        ...(product?.camera ?? {}),
+        ...(user?.camera ?? {}),
+        ...(journey?.camera ?? {}),
+    },
+    presentation: {
+        ...(product?.presentation ?? {}),
+        ...(user?.presentation ?? {}),
+        ...(journey?.presentation ?? {}),
+    },
+    marker: {
+        ...(product?.marker ?? {}),
+        ...(user?.marker ?? {}),
+        ...(journey?.marker ?? {}),
+    },
+    trace: {
+        ...(product?.trace ?? {}),
+        ...(user?.trace ?? {}),
+        ...(journey?.trace ?? {}),
+    },
+})
+
+/**
+ * Determine whether a journey contains an explicit Expert Replay definition.
+ *
+ * @param {Object} journey - Journey or serialized journey.
+ * @returns {boolean} True when Expert settings exist.
+ */
+export const hasExpertReplayConfiguration = journey => Boolean(
+    journey?.replay?.expert
+    && typeof journey.replay.expert === 'object',
+)
+
+/**
+ * Initialize Expert settings from Simple Replay without replacing existing data.
+ *
+ * @param {Object} journey - Journey data to update.
+ * @param {Object} simple - Effective Simple Replay settings.
+ * @returns {Object} Journey replay data.
+ */
+export const initializeExpertReplayFromSimple = (journey, simple) => {
+    const replay = journey?.replay ?? {}
+    if (hasExpertReplayConfiguration(journey)) {
+        return replay
+    }
+
+    return {
+        ...replay,
+        expert: {
+            camera: normalizeExpertReplayCamera(simple?.camera),
+            progression: normalizeJourneyReplayProgressionStyle(simple?.presentation?.progression),
+            profileInfo: normalizeJourneyReplayProfileInfo(simple?.presentation?.profileInfo),
+        },
+    }
+}
+
+/**
+ * Reset Expert camera and presentation settings from Simple Replay explicitly.
+ *
+ * @param {Object} journey - Journey data to update.
+ * @param {Object} simple - Effective Simple Replay settings.
+ * @returns {Object} Journey replay data.
+ */
+export const resetExpertReplayFromSimple = (journey, simple) => ({
+    ...(journey?.replay ?? {}),
+    expert: {
+        ...journey?.replay?.expert,
+        camera: normalizeExpertReplayCamera(simple?.camera),
+        progression: normalizeJourneyReplayProgressionStyle(simple?.presentation?.progression),
+        profileInfo: normalizeJourneyReplayProfileInfo(simple?.presentation?.profileInfo),
+    },
+})

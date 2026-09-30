@@ -7,21 +7,21 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-28
- * Last modified: 2026-04-28
+ * Created on: 2025-09-12
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import {REPLAY_VIDEO_FPS, REPLAY_VIDEO_QUALITY} from '@Core/ui/replay/ReplayVideoSettings'
 import { useSnapshot }         from 'valtio'
 
 export const VideoSettingsInfo = () => {
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
-    const fps = ScreenMediaRecorder.FPS[video.fps]
-    const quality = ScreenMediaRecorder.QUALITY[video.quality]
+    const fps = REPLAY_VIDEO_FPS[video.fps]
+    const quality = REPLAY_VIDEO_QUALITY[video.quality]
     const ratio = lgs.configuration.videoFormats.find(f => f.value === video.ratio)?.label ?? String(video.ratio)
 
     return (

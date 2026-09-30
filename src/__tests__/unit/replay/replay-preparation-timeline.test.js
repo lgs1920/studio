@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-14
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -175,6 +175,24 @@ describe('ReplayPreparationTimeline', () => {
 
         expect(projection.tracks[0].actions.map(action => action.kind)).toEqual(['pre-replay', 'replay', 'post-replay'])
         expect(projection.durationMillis).toBe(7000)
+    })
+
+    it('refreshes a cached video timeline when the replay duration changes', () => {
+        const cachedTimeline = buildReplayVideoTimeline({
+            replayDurationMillis: 3000,
+            fps: 10,
+            clips,
+        })
+        const projection = buildReplayPreparationTimeline({
+            videoTimeline: cachedTimeline,
+            replayDurationMillis: 15_000,
+            fps: 10,
+            clips,
+        })
+
+        expect(projection.timeline.replayDurationMillis).toBe(15_000)
+        expect(projection.durationMillis).toBe(18_000)
+        expect(projection.source.frameCount).toBe(181)
     })
 
     it('keeps widget tracks separate and follows the supplied bottom-to-top stack order', () => {

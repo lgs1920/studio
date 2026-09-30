@@ -1,19 +1,18 @@
 /*******************************************************************************
  *
  * This file is part of the LGS1920/studio project.
- *  
+ *
  * File: style.css
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-25
- * Last modified: 2026-05-25
+ * Created on: 2024-02-07
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
-
 
 #journey-editor-drawer::part(header-actions) {
     display: flex;
@@ -355,6 +354,15 @@ wa-tab sl-icon {
     margin-left: auto;
 }
 
+.lgs--track-style-switch-title {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
+    font-size: var(--lgs-font-size);
+    font-weight: 600;
+    line-height: 1.2;
+}
+
 .lgs--track-style-section > wa-divider {
     --spacing: 0;
     margin-block: var(--lgs-gutter-xs);
@@ -484,7 +492,6 @@ wa-tab sl-icon {
     color: var(--wa-form-control-label-color);
 }
 
-.lgs--journey-location-in-settings,
 .track-location {
     font-size: var(--lgs-font-size);
     line-height: var(--wa-form-control-label-line-height);
@@ -495,7 +502,6 @@ wa-tab sl-icon {
     gap: var(--lgs-gutter-xs);
 }
 
-.lgs--journey-location-in-settings wa-icon,
 .track-location wa-icon {
     flex: 0 0 auto;
     color: var(--wa-color-brand);
@@ -513,6 +519,31 @@ wa-tab sl-icon {
     padding: 0;
 }
 
+.lgs--journey-details-card {
+    width: 100%;
+    min-width: 0;
+}
+
+.lgs--journey-details-card::part(body) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
+
+.lgs--journey-track-style-card::part(body) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lgs-gutter-s);
+}
+
+.lgs--journey-activity-section {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    gap: var(--lgs-gutter-xs);
+}
+
 .lgs--journey-edit-details::part(content) {
     min-width: 0;
 }
@@ -521,7 +552,6 @@ wa-tab sl-icon {
     margin-top: 0;
 }
 
-.lgs--journey-location-in-settings span,
 .track-location span {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -804,6 +834,14 @@ wa-tab::part(base) {
 
 #journey-settings .editor-preview-zone {
     min-height: 0;
+
+    &.lgs-widget-preview {
+        height: auto;
+
+        & > div {
+            height: auto;
+        }
+    }
 }
 
 .journey-profile-chart-menu {
@@ -811,6 +849,25 @@ wa-tab::part(base) {
     align-items: center;
     justify-content: space-between;
     gap: var(--lgs-gutter-s);
+}
+
+.track-data-container.is-compact-after-profile {
+    margin-top: calc(var(--lgs-gutter-s) * -1);
+}
+
+.track-data-header {
+    justify-content: flex-start;
+}
+
+.track-data-title {
+    display: flex;
+    align-items: center;
+    gap: var(--lgs-gutter-xs);
+    margin: 0;
+}
+
+.track-data-copy-action {
+    margin-left: auto;
 }
 
 .copy-button-wrapper {

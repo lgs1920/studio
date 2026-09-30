@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,6 +16,7 @@
 
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { resolveVideoOverlayVisibility } from '@Core/ui/replay/ReplayOverlayResolver'
+import { getReplayVideoWidgetKeys } from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import { normalizeReplayVideoCropRect } from '@Core/ui/replay/ReplayVideoRenderSpec'
 import { replayVideoTraceDebug } from '@Core/ui/replay/ReplayVideoTraceDebug'
 import { Widget2Canvas } from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
@@ -140,13 +141,10 @@ export const resolveReplayVideoWidgetScale = (el, configScale) => {
 }
 
 const getSortedVideoWidgetKeys = ({widgetKeys = null, widgetsBoard = VIDEO_WIDGETS_BOARD} = {}) => {
-    if (widgetKeys?.length) {
-        return widgetKeys
-    }
-
-    return [...(globalThis.__?.ui?.widgetCache?.getAll?.({widgetsBoard})?.entries?.() ?? [])]
-        .sort((a, b) => (a[1].zIndex || 0) - (b[1].zIndex || 0))
-        .map(entry => entry[0])
+    return getReplayVideoWidgetKeys({
+        widgetKeys: widgetKeys?.length ? widgetKeys : null,
+        widgetsBoard,
+    })
 }
 
 /**
@@ -189,6 +187,26 @@ const resolveMetrics = ({widgetId, widgetEl, metricsCache = null, metricsCacheTt
     const metrics = getReplayVideoOverlayMetrics(widgetEl)
     metricsCache.set(widgetId, {time: now, metrics})
     return metrics
+}
+
+/**
+ * Resolve the raster canvas generated for a widget.
+ *
+ * Widget2Canvas inserts its canvas beside the captured widget content, so the
+ * capture canvas can be either a descendant or a sibling of the widget node.
+ *
+ * @param {HTMLElement|null} widgetElement - Mounted widget root.
+ * @returns {HTMLCanvasElement|null} Resolved capture canvas.
+ */
+const resolveWidgetCaptureCanvas = widgetElement => {
+    const descendantCanvas = widgetElement?.querySelector?.('.lgs-widget-canvas')
+    if (descendantCanvas instanceof HTMLCanvasElement) {
+        return descendantCanvas
+    }
+
+    const siblingCanvas = Array.from(widgetElement?.parentElement?.children ?? [])
+        .find(element => element !== widgetElement && element.classList?.contains('lgs-widget-canvas'))
+    return siblingCanvas instanceof HTMLCanvasElement ? siblingCanvas : null
 }
 
 /**
@@ -260,14 +278,10 @@ export const buildReplayVideoComposerOverlays = ({
         }
 
         const elementStyle = getComputedStyleSafe(element)
-        const isReplayDiagnosticsCanvas = element.dataset?.replayVideoOverlayCanvas === 'true'
         if (
-            !isReplayDiagnosticsCanvas
-            && (
-                element.hidden === true
-                || elementStyle?.display === 'none'
-                || elementStyle?.visibility === 'hidden'
-            )
+            element.hidden === true
+            || elementStyle?.display === 'none'
+            || elementStyle?.visibility === 'hidden'
         ) {
             continue
         }
@@ -298,8 +312,8 @@ export const buildReplayVideoComposerOverlays = ({
             continue
         }
 
-        const canvasEl = widgetEl?.querySelector?.('.lgs-widget-canvas')
-        if (!(canvasEl instanceof HTMLCanvasElement)) {
+        const canvasEl = resolveWidgetCaptureCanvas(widgetEl)
+        if (!canvasEl) {
             continue
         }
 
@@ -364,5 +378,5 @@ export const isReplayVideoWidgetReady = widgetId => {
         return false
     }
 
-    return Boolean(element.querySelector?.('.lgs-widget-canvas'))
+    return Boolean(resolveWidgetCaptureCanvas(element))
 }

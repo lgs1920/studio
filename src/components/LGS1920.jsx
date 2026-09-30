@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-22
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -64,6 +64,7 @@ export const LGS1920 = () => {
     // State to track initialization status and errors
     const [initStatus, setInitStatus] = useState(null)
     const [initError, setInitError] = useState(null)
+    const [initializationStep, setInitializationStep] = useState('application')
     const [appVisible, setAppVisible] = useState(false)
     const [initialFocusReady, setInitialFocusReady] = useState(false)
     const [currentJourneyReady, setCurrentJourneyReady] = useState(false)
@@ -89,6 +90,17 @@ export const LGS1920 = () => {
     const markAppSurfaceReady = useCallback(() => {
         markStartup('surface-ready')
         setAppSurfaceReady(true)
+    }, [])
+
+    const handleAppSurfaceError = useCallback(error => {
+        console.error('[LGS1920] Cesium surface failed to become ready:', error)
+        setInitError(error)
+        setInitStatus(false)
+        document.body.classList.remove('lgs-app-booting')
+        UIToast.error({
+                          caption: 'LGS1920 was stopped because Cesium could not be displayed!',
+                          text:    error.message,
+                      })
     }, [])
 
     /**
@@ -296,6 +308,8 @@ export const LGS1920 = () => {
          */
         const initialize = async () => {
             try {
+                setInitializationStep('application')
+
                 // Initialize context
                 const lgs = window.lgs
 
@@ -313,6 +327,7 @@ export const LGS1920 = () => {
                     return
                 }
                 // Initialize managers and layers
+                setInitializationStep('map')
                 await initializeManagersAndLayers(lgs)
 
                 // Attach drawer events
@@ -322,9 +337,11 @@ export const LGS1920 = () => {
                 document.body.classList.add(lgs.platform)
 
                 // Initialize data (terrain, journeys, POIs)
+                setInitializationStep('journey')
                 await initializeData(lgs)
 
                 // Set up starter target from settings. It is persisted only if the first view needs it.
+                setInitializationStep('camera')
                 const starter = await setupStarterPOI(lgs, {persist: false})
 
                 // Configure camera
@@ -341,6 +358,7 @@ export const LGS1920 = () => {
                 setCameraFocus(lgs, starter, focusTarget, cameraStore)
 
                 // Mark UI as initialized
+                setInitializationStep('scene')
                 __.app.uiInit = true
                 setInitStatus(true)
                 void __.ui.widgetCache.init().catch(error => {
@@ -394,7 +412,7 @@ export const LGS1920 = () => {
 
             <AppUpdate updateDialogEnabled={appVisible}/>
 
-            {initStatus === true && <AppSurface onReady={markAppSurfaceReady}/>}
+            {initStatus === true && <AppSurface onReady={markAppSurfaceReady} onError={handleAppSurfaceError}/>}
 
             {!initError && !appVisible && (
                 <>
@@ -402,6 +420,8 @@ export const LGS1920 = () => {
                     <WelcomeHero
                         initComplete={initStatus === true}
                         appReady={appReady}
+                        initializationStep={initializationStep}
+                        updateInProgress={appUpdate.isAutomaticUpdateInProgress}
                         onEnter={revealApp}
                         showMedia={false}
                     />

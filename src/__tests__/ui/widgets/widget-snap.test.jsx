@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-18
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -63,15 +63,6 @@ vi.mock('@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas', () => {
 
     return {Widget2Canvas: vi.fn(Widget2CanvasMock)}
 })
-
-vi.mock('@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder', () => ({
-    ScreenMediaRecorder: {
-        events: {
-            STOP:   'stop',
-            CANCEL: 'cancel',
-        },
-    },
-}))
 
 vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
     WaIcon: ({name}) => <span data-icon={name}/>,
@@ -142,10 +133,6 @@ const installGlobals = ({grid = {enabled: false, size: 30, snap: true}} = {}) =>
             parsePx: value => parseFloat(value) || 0,
         },
         widgets: new Map(),
-        recorder: {
-            addEventListener:    vi.fn(),
-            removeEventListener: vi.fn(),
-        },
         ui: {
             drawerManager: {
                 close: vi.fn(),
@@ -539,6 +526,7 @@ describe('Widget snap behavior', () => {
             id:        'video-crop-zone',
             type:      LGS_VISUAL_WIDGET,
             isCropper: true,
+            resizable: true,
         })
 
         expect(container.querySelector('.lgs-widget-container')?.style.pointerEvents).toBe('none')
@@ -555,7 +543,7 @@ describe('Widget snap behavior', () => {
         expect(view.container.querySelector('.lgs-widget')?.classList.contains('recording-locked')).toBe(false)
 
         lgs.stores.ui.video.preRecording = false
-        lgs.stores.ui.video.recording = true
+        lgs.stores.ui.video.recordingHQ = true
         view.rerender(
             <Widget isVisible={true} config={{
                 id:             'snap-widget',
@@ -590,11 +578,13 @@ describe('Widget snap behavior', () => {
             id:        'video-crop-zone',
             type:      LGS_VISUAL_WIDGET,
             isCropper: true,
+            resizable: true,
         })
 
         expect(container.querySelector('.lgs-widget-container')?.style.pointerEvents).toBe('none')
         expect(container.querySelector('.lgs-widget')?.classList.contains('crop-pass-through')).toBe(true)
         expect(latestMoveableProps().style).toEqual({opacity: 1, pointerEvents: 'auto'})
+        expect(latestMoveableProps().useResizeObserver).toBe(true)
     })
 
     it('recognizes the cropper base identifier while its runtime identifier is being resolved', () => {
@@ -605,11 +595,38 @@ describe('Widget snap behavior', () => {
             id:        'video-crop-zone',
             type:      LGS_VISUAL_WIDGET,
             isCropper: true,
+            resizable: true,
         })
 
         expect(latestMoveableProps().style).toEqual({opacity: 1, pointerEvents: 'auto'})
         expect(latestMoveableProps().renderDirections).toEqual(['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'])
         expect(latestMoveableProps().zoom).toBe(1)
+    })
+
+    it('keeps crop handles usable during recording preparation and hides them during capture', () => {
+        installGlobals()
+        lgs.stores.ui.video.preRecording = true
+
+        const {rerender} = render(
+            <Widget isVisible={true} config={{
+                id: 'video-crop-zone', group: 'test-widgets', type: LGS_VISUAL_WIDGET,
+                isCropper: true, resizable: true, forceControlBox: true,
+            }}><div>content</div></Widget>,
+        )
+
+        expect(latestMoveableProps().resizable).toBe(true)
+        expect(latestMoveableProps().style.pointerEvents).toBe('auto')
+
+        lgs.stores.ui.video.recordingHQ = true
+        rerender(
+            <Widget isVisible={true} config={{
+                id: 'video-crop-zone', group: 'test-widgets', type: LGS_VISUAL_WIDGET,
+                isCropper: true, resizable: true, forceControlBox: true,
+            }}><div>content</div></Widget>,
+        )
+
+        expect(latestMoveableProps().resizable).toBe(false)
+        expect(latestMoveableProps().style.pointerEvents).toBe('none')
     })
 
     it('selects a cropper when a selection request is received', async () => {

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-09-10
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -100,7 +100,11 @@ export class WidgetWindowManager {
 
         const config = __.ui.widgetManager.getWidgetConfig(widgetId)
         const baseId = typeof widgetId === 'string' ? widgetId.split('#')[0] : widgetId
-        const definition = globalThis.__?.widgets?.get?.(config?.group)?.widgets?.get?.(baseId)
+        const widgetEntry = lgs.stores.ui.widget.list?.get(widgetId)
+        const widgetGroup = config?.group
+                             ?? widgetEntry?.group
+                             ?? __.ui.widgetCache?.get?.(widgetId)?.group
+        const definition = globalThis.__?.widgets?.get?.(widgetGroup)?.widgets?.get?.(baseId)
         const canDetach = config?.contextMenu?.canDetach === true
                        || config?.canDetach === true
                        || definition?.canDetach === true

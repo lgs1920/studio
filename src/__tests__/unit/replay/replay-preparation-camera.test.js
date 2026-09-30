@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-26
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@ import {afterEach, describe, expect, it, vi} from 'vitest'
 import {defaultJourneyReplaySettings} from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from '@Core/ui/replay/JourneyReplayInternal'
 import {lockReplayCameraToAnchor} from '@Core/ui/replay/JourneyReplayCameraState'
-import {enterReplayPreparation, leaveReplayPreparation, prepareReplayCamera, refreshCamera} from '@Core/ui/replay/JourneyReplaySessionPlaybackController'
+import {enterReplayPreparation, leaveReplayPreparation, prepareReplayCamera, refreshCamera, start} from '@Core/ui/replay/JourneyReplaySessionPlaybackController'
 
 afterEach(() => {
     delete globalThis.__
@@ -27,6 +27,31 @@ afterEach(() => {
 })
 
 describe('replay preparation camera', () => {
+    it('does not prepare or start Replay without a Journey, even when an old sampler remains', async () => {
+        const call = {
+            configure:          vi.fn(),
+            captureCameraState: vi.fn(),
+        }
+        const renderer = {clear: vi.fn()}
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                renderer,
+                sampler: {atProgress: vi.fn(() => ({longitude: 2, latitude: 48, altitude: 100}))},
+            },
+            [JOURNEY_REPLAY_INTERNAL_CALL]: call,
+        }
+        globalThis.lgs = {
+            theJourney: null,
+            stores: {main: {theJourney: null}},
+        }
+
+        await expect(prepareReplayCamera(mode)).resolves.toBe(false)
+        expect(start(mode)).toBeNull()
+        expect(call.configure).not.toHaveBeenCalled()
+        expect(call.captureCameraState).not.toHaveBeenCalled()
+        expect(renderer.clear).not.toHaveBeenCalled()
+    })
+
     it('locks Cesium navigation to the replay anchor', () => {
         const target = Cartesian3.fromDegrees(2, 48, 120)
         const destination = Cartesian3.add(target, new Cartesian3(500, 500, 500), new Cartesian3())
@@ -215,6 +240,7 @@ describe('replay preparation camera', () => {
             setReplayPreparationPivot: vi.fn(),
             updateCameraSettingsFromCesiumControls: vi.fn(),
             bindCesiumCameraBridge:   vi.fn(),
+            hideOtherJourneysVisibility: vi.fn(),
         }
         const mode = {
             [JOURNEY_REPLAY_INTERNAL_STATE]: {sceneRestorePromise},
@@ -235,6 +261,7 @@ describe('replay preparation camera', () => {
         resolveSceneRestore()
         await expect(preparation).resolves.toBe(true)
         expect(call.captureCameraState).toHaveBeenCalledOnce()
+        expect(call.hideOtherJourneysVisibility).toHaveBeenCalledOnce()
         expect(call.setReplayPreparationPivot).toHaveBeenCalledWith(sample)
         expect(call.lockReplayCameraToAnchor).toHaveBeenCalledOnce()
     })

@@ -59,7 +59,7 @@ For any new visual widget, verify:
 - scaling and crop-bound adaptation if scalable
 - editor preview and reset behavior if editable
 - scene replacement without stale DOM or state
-- snapshot and HQ video export visibility if captured
+- snapshot and Replay export video export visibility if captured
 - export cancellation and completion cleanup
 
 For dynamic widgets, also verify updates during replay, no stale values after replay ends, and stable output during static capture.

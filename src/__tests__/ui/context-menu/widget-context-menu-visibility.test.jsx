@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-29
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -61,6 +61,8 @@ describe('WidgetContextMenu visibility', () => {
                         contextMenu: {},
                     })),
                     hasCapabilities: vi.fn(() => false),
+                    editWidget: vi.fn(),
+                    setConfig: vi.fn(),
                     toggleWidgetVisibility: vi.fn(),
                 },
                 widgetWindowManager: {
@@ -99,16 +101,50 @@ describe('WidgetContextMenu visibility', () => {
         expect(screen.queryByText('Show')).toBeNull()
     })
 
+    it('keeps editing available when Replay disables Compass interactions', () => {
+        __.ui.widgetManager.getWidgetConfig.mockReturnValue({
+            canHide: false,
+            canLock: false,
+            contextMenu: {
+                canEdit: true,
+                canPosition: false,
+                canRemove: false,
+                canReset: false,
+            },
+        })
+        __.ui.widgetManager.hasCapabilities.mockReturnValue(true)
+
+        const {container} = render(<WidgetContextMenu targetId={widgetId} menuRef={{current: null}}/>)
+
+        expect(screen.getByText('Edit')).toBeTruthy()
+        expect(screen.queryByText('Lock')).toBeNull()
+        expect(screen.queryByText('Unlock')).toBeNull()
+        expect(screen.queryByText('Hide')).toBeNull()
+        expect(screen.queryByText('Show')).toBeNull()
+        expect(container.querySelector('.widget-grid-one-line')).toBeNull()
+        expect(container.querySelector('.widget-grid-position')).toBeNull()
+
+        fireEvent.click(screen.getByText('Edit'))
+
+        expect(__.ui.widgetManager.editWidget).toHaveBeenCalledWith(widgetId, {toggle: true})
+    })
+
     it('renders the top docking action for the dockable Replay Timeline', () => {
         const timelineId = 'replay-timeline-widget#1'
         lgs.stores.ui.widget.list.set(timelineId, {visible: true})
         __.ui.widgetManager.getWidgetConfig.mockReturnValue({
             canHide: false,
-            canLock: false,
+            canLock: true,
+            locked: false,
             contextMenu: {canDockable: true},
         })
 
         render(<WidgetContextMenu targetId={timelineId} menuRef={{current: null}}/>)
+        expect(screen.getByText('Lock')).toBeTruthy()
+        expect(screen.queryByText('Hide')).toBeNull()
+        expect(screen.queryByText('Show')).toBeNull()
+        fireEvent.click(screen.getByText('Lock'))
+        expect(__.ui.widgetManager.setConfig).toHaveBeenCalledWith(timelineId, expect.objectContaining({locked: true}))
         fireEvent.click(screen.getByText('Dock to bottom'))
 
         expect(lgs.stores.ui.widget.docked.id).toBe(timelineId)

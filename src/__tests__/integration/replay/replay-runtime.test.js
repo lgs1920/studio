@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,8 @@
 
 import {REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP} from '@Core/ui/replay/JourneyReplayClips'
 import {
-    finiteNumber, isJourneyReplayCameraActive, isJourneyReplayTraceActive, isJourneyReplayVideoCaptureActive,
+    currentJourneyReplayCameraSettings, currentJourneyReplayPoiBehavior, finiteNumber, isJourneyReplayCameraActive,
+    isJourneyReplayTraceActive, isJourneyReplayVideoCaptureActive,
     publishReplayClipFrameState, resetRuntimeProgress,
 } from '@Core/ui/replay/JourneyReplayRuntime'
 import {describe, expect, it} from 'vitest'
@@ -36,6 +37,93 @@ describe('JourneyReplayRuntime', () => {
         expect(isJourneyReplayCameraActive({active: true})).toBe(true)
         expect(isJourneyReplayCameraActive({paused: true})).toBe(true)
         expect(isJourneyReplayCameraActive({clipSequenceActive: true})).toBe(true)
+    })
+
+    it('uses the prepared Simple camera while forcing diagnostics off', () => {
+        const previousLgs = globalThis.lgs
+        try {
+            globalThis.lgs = {
+                settings: {
+                    ui: {
+                        replay: {
+                            userMode: 'basic',
+                            simple: {
+                                camera: {altitude: 900, pitch: -45, debug: false},
+                            },
+                        },
+                    },
+                },
+                stores: {
+                    replay: {
+                        simplePreparationActive: true,
+                        camera: {altitude: 1250, pitch: -32, debug: true},
+                    },
+                },
+            }
+
+            expect(currentJourneyReplayCameraSettings()).toMatchObject({
+                altitude: 1250,
+                pitch: -32,
+                debug: false,
+            })
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('keeps the stored Expert camera diagnostics setting', () => {
+        const previousLgs = globalThis.lgs
+        try {
+            globalThis.lgs = {
+                settings: {
+                    ui: {
+                        replay: {
+                            userMode: 'expert',
+                            camera: {altitude: 700, debug: true},
+                        },
+                    },
+                },
+                stores: {
+                    replay: {
+                        simplePreparationActive: false,
+                        camera: {altitude: 1100, debug: false},
+                    },
+                },
+            }
+
+            expect(currentJourneyReplayCameraSettings()).toMatchObject({
+                altitude: 700,
+                debug: true,
+            })
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
+    })
+
+    it('ignores stale POI visibility flags from an Expert session in Simple mode', () => {
+        const previousLgs = globalThis.lgs
+        try {
+            globalThis.lgs = {
+                settings: {ui: {replay: {userMode: 'basic'}}},
+                stores: {
+                    replay: {
+                        simplePreparationActive: true,
+                        hideAllPoisDuringJourneyReplay: true,
+                        animateAllPoisDuringJourneyReplay: true,
+                    },
+                },
+            }
+
+            expect(currentJourneyReplayPoiBehavior()).toEqual({
+                hideAllPoisDuringJourneyReplay: false,
+                animateAllPoisDuringJourneyReplay: false,
+            })
+        }
+        finally {
+            globalThis.lgs = previousLgs
+        }
     })
 
     it('does not keep the replay trace visible from a completed linked recording', () => {
@@ -72,7 +160,7 @@ describe('JourneyReplayRuntime', () => {
                 settings: {ui: {replay: {recordingSync: true}}},
                 stores: {
                     replay: {recordingSync: true},
-                    ui: {video: {recording: true}},
+                    ui: {video: {recordingHQ: true}},
                 },
             }
 

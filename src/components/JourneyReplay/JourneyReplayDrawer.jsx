@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-09-22
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,6 +50,13 @@ import {
 }                 from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { normalizeJourneyReplayClips } from '@Core/ui/replay/JourneyReplayClips'
 import { normalizeJourneyReplayPOISettings } from '@Core/ui/replay/JourneyReplayPOISettings'
+import {
+    resetExpertReplayFromSimple,
+    normalizeExpertReplayCamera,
+    resolveSimpleReplaySettings,
+    syncJourneyExpertReplayCamera,
+    REPLAY_USER_MODE_EXPERT,
+} from '@Core/ui/replay/ReplayUserModes'
 import { isJourneyReplayCameraActive } from '@Core/ui/replay/JourneyReplayRuntime'
 import { ELEVATION_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import {
@@ -403,12 +410,11 @@ const REPLAY_ADVANCED_CAMERA_SETUP_BUTTON_ID = 'replay-advanced-camera-setup-but
 export const JourneyReplayDrawer = memo(() => {
     const {drawers: {open: drawerOpen, navigation: drawerNavigation}} = useSnapshot(lgs.stores.ui)
     const journeySlug = useProxyValue(lgs.stores.main, main => main.theJourney?.slug ?? null, null)
-    const currentJourney = lgs.theJourney
+    const currentJourney = lgs.theJourney ?? lgs.stores.main.theJourney
     const poiList = lgs.stores.main.components.pois.list
     const replayState = useSnapshot(lgs.stores.replay)
     ensureJourneyReplaySettings()
     const replaySettings = useSnapshot(lgs.settings.ui.replay)
-    const journeySettings = useOptionalSnapshot(lgs.settings.journey, {hideOtherJourneys: false})
     const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
     const {drawer: drawerPlacement} = useSnapshot(lgs.editorSettingsProxy.menu)
     const swatches = useOptionalSnapshot(lgs.settings.swatches, {list: []}).list.join(';')
@@ -441,7 +447,13 @@ export const JourneyReplayDrawer = memo(() => {
         .length, [clips.start, clips.stop])
     const remainingUseDefinedTrackStyle = trace.remaining.useDefinedTrackStyle !== false
     const remainingColor = toOpaqueColorValue(trace.remaining.color)
-    const camera = normalizeJourneyReplayCamera(replaySettings.camera)
+    const isExpertMode = replaySettings.userMode === REPLAY_USER_MODE_EXPERT
+    const camera = isExpertMode
+        ? normalizeExpertReplayCamera(replaySettings.camera)
+        : normalizeJourneyReplayCamera({
+            ...replaySettings.camera,
+            debug: false,
+        })
     const readiness = normalizeJourneyReplayReadiness(replaySettings.readiness)
     const [activeTab, setActiveTab] = useState(REPLAY_TAB_RUNNER)
     const [advancedCameraPopupOpen, setAdvancedCameraPopupOpen] = useState(false)
@@ -477,9 +489,9 @@ export const JourneyReplayDrawer = memo(() => {
     const animateAllPoisDuringJourneyReplay = replaySettings.animateAllPoisDuringJourneyReplay === true
     const cameraPresetKey = getJourneyReplayCameraPresetKey(camera)
     const marker = normalizeJourneyReplayMarker(replaySettings.marker)
-    const hideOtherJourneys = replayState.inheritHideOtherJourneys === false
+    const hideOtherJourneys = !isExpertMode || (replayState.inheritHideOtherJourneys === false
                                ? replayState.hideOtherJourneys === true
-                               : replayState.hideOtherJourneys === true || journeySettings.hideOtherJourneys === true
+                               : true)
     const durationLocked = replayState.active || replayState.playing || replayState.paused
     const [poiVisibilityOverrides, setPoiVisibilityOverrides] = useState({})
     const [, setPoiRevision] = useState(0)
@@ -700,6 +712,9 @@ export const JourneyReplayDrawer = memo(() => {
         const nextCamera = mergeCamera(lgs.settings.ui.replay.camera, updates)
         lgs.settings.ui.replay.camera = nextCamera
         lgs.stores.replay.camera = nextCamera
+        if (isExpertMode) {
+            syncJourneyExpertReplayCamera(nextCamera)
+        }
         lgs.stores.replay.cameraUpdateSource = 'drawer'
         if (cameraUpdateSourceClearTimer.current !== null) {
             clearTimeout(cameraUpdateSourceClearTimer.current)
@@ -723,7 +738,15 @@ export const JourneyReplayDrawer = memo(() => {
                 source:             'drawer',
             })
         }
-    }, [replayState.active, replayState.paused, replayState.playing, replayState.sample, refreshJourneyReplay, stopRotateIfNeeded])
+    }, [isExpertMode, replayState.active, replayState.paused, replayState.playing, replayState.sample, refreshJourneyReplay, stopRotateIfNeeded])
+
+    useEffect(() => {
+        if (!isExpertMode || replaySettings.camera.positionMode !== REPLAY_CAMERA_POSITION_SYSTEM) {
+            return
+        }
+
+        void updateCamera({positionMode: REPLAY_CAMERA_POSITION_BEHIND})
+    }, [isExpertMode, replaySettings.camera.positionMode, updateCamera])
 
     const updateReadiness = useCallback((updates, {refresh = false} = {}) => {
         const currentReadiness = normalizeJourneyReplayReadiness(lgs.settings.ui.replay.readiness)
@@ -777,8 +800,12 @@ export const JourneyReplayDrawer = memo(() => {
     }, [updateReadiness])
 
     const updateDebugCamera = useCallback(event => {
-        updateCamera({debug: getChecked(event)})
-    }, [updateCamera])
+        updateCamera({
+            debug: replaySettings.userMode === REPLAY_USER_MODE_EXPERT
+                ? getChecked(event)
+                : false,
+        })
+    }, [replaySettings.userMode, updateCamera])
 
     useEffect(() => () => {
         if (cameraUpdateSourceClearTimer.current !== null) {
@@ -1036,6 +1063,31 @@ export const JourneyReplayDrawer = memo(() => {
         setActiveTab(tab)
     }, [])
 
+    /**
+     * Reset the current journey's Expert camera and presentation from Simple Replay.
+     *
+     * @returns {Promise<void>} Resolves after the explicit reset is persisted.
+     */
+    const resetExpertFromSimple = useCallback(async () => {
+        if (!currentJourney) {
+            return
+        }
+
+        const simple = resolveSimpleReplaySettings({
+            journey: currentJourney.replay?.simple,
+            user: replaySettings.simple,
+        })
+        const replay = resetExpertReplayFromSimple(currentJourney, simple)
+        currentJourney.replay = replay
+        await currentJourney.persistToDatabase?.()
+        lgs.settings.ui.replay.camera = replay.expert.camera
+        lgs.settings.ui.replay.progression = replay.expert.progression
+        lgs.settings.ui.replay.profileInfo = replay.expert.profileInfo
+        lgs.stores.replay.camera = replay.expert.camera
+        lgs.stores.replay.progression = replay.expert.progression
+        lgs.stores.replay.profileInfo = replay.expert.profileInfo
+    }, [currentJourney, replaySettings.simple])
+
     const updateHideOtherJourneys = useCallback((event) => {
         const enabled = Boolean(event?.target?.checked)
         lgs.settings.ui.replay.hideOtherJourneys = enabled
@@ -1196,7 +1248,10 @@ export const JourneyReplayDrawer = memo(() => {
     const cameraAngleDisplayOffset = -camera.headingOffset
 
     const updateCameraPositionMode = useCallback((event) => {
-        updateCamera({positionMode: event.target.value})
+        const nextMode = event.target.value === REPLAY_CAMERA_POSITION_AHEAD
+            ? REPLAY_CAMERA_POSITION_AHEAD
+            : REPLAY_CAMERA_POSITION_BEHIND
+        void updateCamera({positionMode: nextMode})
     }, [updateCamera])
 
     const updateCameraHeadingOffset = useCallback((event) => {
@@ -1327,6 +1382,16 @@ export const JourneyReplayDrawer = memo(() => {
                                 >
                                     <WaIcon name="camera-sliders" size="l"/>
                                 </WaButton>
+                                <WaButton
+                                    size="s"
+                                    appearance="outlined"
+                                    variant="brand"
+                                    aria-label="Reset Expert Replay from Simple Replay"
+                                    onClick={resetExpertFromSimple}
+                                >
+                                    <WaIcon name="arrow-rotate-left" variant="regular"/>
+                                    {' Reset from Simple Replay'}
+                                </WaButton>
                             </>
                         )}
                     </PanelActions>
@@ -1337,15 +1402,17 @@ export const JourneyReplayDrawer = memo(() => {
                             <p className="replay-empty-state">{`Import or select a journey to use ${REPLAY_LABEL}.`}</p>
                         ) : (
                              <>
-                                 <WaSwitch
-                                     label-at-start
-                                     size="xs"
-                                     className="replay-hide-other-journeys-switch half-width"
-                                     checked={hideOtherJourneys}
-                                     onChange={updateHideOtherJourneys}
-                                 >
-                                     {'Hide other journeys'}
-                                 </WaSwitch>
+                                 {isExpertMode && (
+                                     <WaSwitch
+                                         label-at-start
+                                         size="xs"
+                                         className="replay-hide-other-journeys-switch half-width"
+                                         checked={hideOtherJourneys}
+                                         onChange={updateHideOtherJourneys}
+                                     >
+                                         {'Hide other journeys'}
+                                     </WaSwitch>
+                                 )}
                                  <div className="replay-total-duration-row" aria-live="polite">
                                      <span className="replay-total-duration-label">{'Total duration (s)'}</span>
                                      <strong className="replay-total-duration-value">{formatSeconds(totalVideoDurationSeconds)}</strong>
@@ -1427,25 +1494,23 @@ export const JourneyReplayDrawer = memo(() => {
                                                         onInput={updatePOIDistance}
                                                         label-at-start/>
                                                 </div>
-                                                <section className="replay-style-subsection">
-                                                    <h4 className="replay-style-subtitle">{'Position'}</h4>
-                                                    <div className="replay-fieldset">
-                                                    <WaSelect appearance="filled"
-                                                        label="Camera position"
-                                                        label-at-start
-                                                        size="s"
-                                                        value={camera.positionMode}
-                                                        onChange={updateCameraPositionMode}
-                                                        className="half-width">
-                                                        <WaOption
-                                                            value={REPLAY_CAMERA_POSITION_SYSTEM}>{'Fixed'}</WaOption>
-                                                    <WaOption
-                                                            value={REPLAY_CAMERA_POSITION_BEHIND}>{'Behind'}</WaOption>
-                                                        <WaOption
-                                                            value={REPLAY_CAMERA_POSITION_AHEAD}>{'Ahead'}</WaOption>
-                                                    </WaSelect>
-                                                    {camera.positionMode !== REPLAY_CAMERA_POSITION_SYSTEM &&
-                                                       <JourneyReplayStyleField>
+                                                {isExpertMode && (
+                                                    <section className="replay-style-subsection">
+                                                        <h4 className="replay-style-subtitle">{'Position'}</h4>
+                                                        <div className="replay-fieldset">
+                                                        <WaSelect appearance="filled"
+                                                            label="Camera position"
+                                                            label-at-start
+                                                            size="s"
+                                                            value={camera.positionMode}
+                                                            onChange={updateCameraPositionMode}
+                                                            className="half-width">
+                                                            <WaOption
+                                                                value={REPLAY_CAMERA_POSITION_BEHIND}>{'Behind'}</WaOption>
+                                                            <WaOption
+                                                                value={REPLAY_CAMERA_POSITION_AHEAD}>{'Ahead'}</WaOption>
+                                                        </WaSelect>
+                                                        <JourneyReplayStyleField>
                                                             <WaSlider
                                                                 label="Camera angle"
                                                                 size="s"
@@ -1459,9 +1524,9 @@ export const JourneyReplayDrawer = memo(() => {
                                                                 onInput={updateCameraHeadingOffset}
                                                             />
                                                         </JourneyReplayStyleField>
-                                                    }
-                                                    </div>
-                                                </section>
+                                                        </div>
+                                                    </section>
+                                                )}
                                                 <WaDivider/>
                                                 <section className="replay-style-subsection">
                                                     <h4 className="replay-style-subtitle">{'Framing'}</h4>
@@ -1678,7 +1743,7 @@ export const JourneyReplayDrawer = memo(() => {
                                                                 <WaSelect
                                                                     appearance="filled"
                                                                     label="Camera tile preloading"
-                                                                    hint="Preload initial camera views before HQ export starts."
+                                                                    hint="Preload initial camera views before Replay export starts."
                                                                     label-at-start
                                                                     size="s"
                                                                     value={String(camera.playback.tilePreloadHorizonMs)}

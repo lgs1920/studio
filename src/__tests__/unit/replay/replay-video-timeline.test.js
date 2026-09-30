@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-01
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import {JourneyReplayPlaybackController} from '@Core/ui/replay/JourneyReplayPlaybackController'
 import {
-    buildReplayVideoTimeline, resolveDraftReplayCameraCadence, resolveReplayVideoFramePhase,
+    buildReplayVideoTimeline, resolveReplayCameraCadence, resolveReplayVideoFramePhase,
 } from '@Core/ui/replay/ReplayVideoTimeline'
 import {describe, expect, it} from 'vitest'
 
@@ -38,17 +38,17 @@ const replayClips = {
 }
 
 describe('ReplayVideoTimeline', () => {
-    it('reduces only Draft camera calculations according to replay duration', () => {
-        expect(resolveDraftReplayCameraCadence({durationMillis: 30_000, captureFps: 30})).toEqual(expect.objectContaining({
+    it('reduces only Interactive camera calculations according to replay duration', () => {
+        expect(resolveReplayCameraCadence({durationMillis: 30_000, captureFps: 30})).toEqual(expect.objectContaining({
             captureFps:     30,
             cameraFps:      15,
             reductionFactor: 2,
         }))
-        expect(resolveDraftReplayCameraCadence({durationMillis: 120_000, captureFps: 30})).toEqual(expect.objectContaining({
+        expect(resolveReplayCameraCadence({durationMillis: 120_000, captureFps: 30})).toEqual(expect.objectContaining({
             cameraFps:       12,
             reductionFactor: 2.5,
         }))
-        expect(resolveDraftReplayCameraCadence({durationMillis: 240_000, captureFps: 30})).toEqual(expect.objectContaining({
+        expect(resolveReplayCameraCadence({durationMillis: 240_000, captureFps: 30})).toEqual(expect.objectContaining({
             cameraFps:       10,
             reductionFactor: 3,
         }))
@@ -70,6 +70,28 @@ describe('ReplayVideoTimeline', () => {
         ])
         expect(timeline.durationMillis).toBe(7000)
         expect(timeline.frameCount).toBe(71)
+    })
+
+    it('keeps the complete frame clock for a fifteen-second Replay', () => {
+        const timeline = buildReplayVideoTimeline({
+            replayDurationMillis: 15_000,
+            fps: 30,
+        })
+
+        expect(timeline.replayDurationMillis).toBe(15_000)
+        expect(timeline.durationMillis).toBe(15_000)
+        expect(timeline.frameCount).toBe(451)
+        expect(timeline.frameCount - 1).toBeGreaterThan(3 * 30)
+        expect(resolveReplayVideoFramePhase({
+            timeline,
+            frameTimeMs: 15_000,
+            isFinalSceneFrame: true,
+        })).toEqual(expect.objectContaining({
+            frameIndex: 450,
+            frameCount: 451,
+            frameTimeMs: 15_000,
+            isFinalSceneFrame: true,
+        }))
     })
 
     it('resolves exact phase boundaries including the final stop frame', () => {
@@ -109,7 +131,7 @@ describe('ReplayVideoTimeline', () => {
         }))
     })
 
-    it('publishes the same absolute clock from Draft as the shared export timeline', () => {
+    it('publishes the same absolute clock from Interactive as the shared export timeline', () => {
         const previousLgs = globalThis.lgs
         const frames = []
         let now = 0
@@ -149,12 +171,12 @@ describe('ReplayVideoTimeline', () => {
 
             now = 2000
             frames.shift()()
-            const draftPhase = globalThis.lgs.stores.replay.dynamicFrameState.phase
+            const interactivePhase = globalThis.lgs.stores.replay.dynamicFrameState.phase
             const exportPhase = resolveReplayVideoFramePhase({
                 timeline: controller.videoTimeline,
-                frameTimeMs: draftPhase.frameTimeMs,
+                frameTimeMs: interactivePhase.frameTimeMs,
             })
-            expect(draftPhase).toEqual(exportPhase)
+            expect(interactivePhase).toEqual(exportPhase)
 
             now = 4000
             frames.shift()()

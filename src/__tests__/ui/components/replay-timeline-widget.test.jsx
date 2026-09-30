@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-29
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -134,7 +134,8 @@ describe('ReplayTimelineWidget dimensions', () => {
         expect(widgetMocks.config.width).toBeUndefined()
         expect(widgetMocks.config.height).toBeUndefined()
         expect(widgetMocks.config.persist).toBe(true)
-        expect(widgetMocks.config.canLock).toBe(false)
+        expect(widgetMocks.config.canHide).toBe(false)
+        expect(widgetMocks.config.canLock).toBe(true)
         expect(widgetMocks.config.constrainResizeToContent).toBe(true)
         expect(widgetMocks.config.min).toEqual({width: 352, height: 156})
         expect(widgetMocks.config.max).toEqual({width: 3840, height: 2160})

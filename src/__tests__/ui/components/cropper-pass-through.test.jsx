@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,8 +19,10 @@ import { cleanup, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 
+const cropZoneWidgetHarness = vi.hoisted(() => ({props: null}))
+
 vi.mock('@Components/MainUI/video/VideoSceneWidgetsPortal', () => ({
-    VideoSceneWidgetsPortal: () => null,
+    VideoSceneWidgetsPortal: ({hidden = false}) => <div data-testid="video-scene-widgets-portal" data-hidden={hidden}/>,
 }))
 
 vi.mock('@Components/MainUI/widgets/WidgetsPanel', () => ({
@@ -36,7 +38,10 @@ vi.mock('../../../components/ToolsUI/cropper/widgets/DefinedCropZone.jsx', () =>
 }))
 
 vi.mock('../../../components/ToolsUI/cropper/widgets/CropZoneWidget.jsx', () => ({
-    CropZoneWidget: () => <div className="crop-zone"/>,
+    CropZoneWidget: props => {
+        cropZoneWidgetHarness.props = props
+        return <div className="crop-zone"/>
+    },
 }))
 
 vi.mock('../../../components/ToolsUI/cropper/widgets/CropZoneInfoPopup.jsx', () => ({
@@ -62,6 +67,7 @@ describe('Cropper pointer pass-through', () => {
                 },
             },
         }
+        cropZoneWidgetHarness.props = null
         globalThis.lgs = {
             stores: {
                 ui: {
@@ -79,6 +85,7 @@ describe('Cropper pointer pass-through', () => {
                         }),
                     }),
                 },
+                replay: proxy({recordingSync: false}),
             },
         }
     })
@@ -134,6 +141,29 @@ describe('Cropper pointer pass-through', () => {
         )
 
         expect(container.querySelector('.crop-overlay-blockers')).toBeNull()
+    })
+
+    it('does not mount video widgets when Simple Replay is active', () => {
+        const context = proxy({id: 'video-crop-zone'})
+        const {container} = render(<Cropper overlay hideVideoWidgets context={context}/>)
+
+        expect(container.querySelector('.crop-overlay')).not.toBeNull()
+        expect(container.querySelector('[data-testid="video-scene-widgets-portal"]')?.dataset.hidden).toBe('true')
+    })
+
+    it('uses the interactive crop widget during linked Replay preparation', () => {
+        globalThis.lgs.stores.replay.recordingSync = true
+        const context = proxy({id: 'video-crop-zone'})
+
+        render(<Cropper overlay context={context}/>)
+
+        expect(cropZoneWidgetHarness.props).not.toBeNull()
+        expect(cropZoneWidgetHarness.props.cropDimensions).toEqual({
+            left:   20,
+            top:    30,
+            width:  640,
+            height: 360,
+        })
     })
 
 })

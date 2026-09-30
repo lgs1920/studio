@@ -9,7 +9,7 @@ Use this skill when several visual systems must produce one consistent scene. In
 
 Workflow:
 
-1. Identify the target board and output: live scene, snapshot, Replay preview, linked preparation timeline, Draft recording, or HQ video.
+1. Identify the target board and output: live scene, snapshot, Replay preview, linked preparation timeline, interactive playback recording, or Replay export video.
 2. Define ownership for map, terrain, journey, POIs, background, widgets, overlays, controls, and the active replay render target.
 3. Preserve mandatory Logo and Credits, their intended anchoring, scaling, attribution, and always-on-top behavior.
 4. Keep UI-only controls out of captured output and keep captured widgets aligned to the active crop zone. Timeline previews may use read-only visual copies of map and widget content.

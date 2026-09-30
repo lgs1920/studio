@@ -15,9 +15,8 @@ It compares two implementation strategies:
 2. GitHub Actions owns the complete deployment workflow and the current script
    is progressively replaced
 
-The document also explains how the migration relates to the Draft/HQ replay
-rendering architecture described in
-[`CORE-REPLAY-RENDER-MODE-ARCHITECTURE.md`](../specs/replay-video/CORE-REPLAY-RENDER-MODE-ARCHITECTURE.md).
+Replay runtime behavior is described in
+[`CORE-REPLAY-ARCHITECTURE.md`](../specs/replay-video/CORE-REPLAY-ARCHITECTURE.md).
 
 The scope is the Studio application. The current deployment class also
 contains backend-specific behavior, but backend migration should be treated as
@@ -49,10 +48,10 @@ The current release layout and `current` symbolic-link strategy should be
 preserved. It already provides a useful foundation for atomic activation and
 rollback.
 
-The migration must not mix deployment migration with the implementation of the
-Draft/HQ render-mode contract. GitHub Actions can validate and deliver the
-rendering code, but it does not replace the browser-side replay scheduler,
-Cesium output adapter, live recorder, or deferred HQ exporter.
+The migration must not mix deployment work with Replay implementation.
+GitHub Actions can validate and deliver the rendering code, but it does not
+replace the browser-side Replay scheduler, Cesium output adapter, or deferred
+Replay exporter.
 
 ## Current baseline
 
@@ -162,37 +161,8 @@ baseline recorded during the first workflow implementation was:
 Coverage is reported without global thresholds. The next quality steps are to
 add targeted behavior tests for the remaining high-risk paths and define
 targeted thresholds after the deployment workflow and those tests have been
-validated. The main identified gaps are deployment failure handling,
-ScreenMediaRecorder cancellation and codec fallback, and persistence failure
-and migration cases.
-
-## Relationship with the Draft/HQ replay architecture
-
-The replay architecture is a runtime rendering architecture, not a server
-deployment architecture.
-
-Draft Mode and HQ Mode execute in the application and must share the same
-renderer-independent logical frame, camera-pose resolution, crop contract,
-widget visibility rules, replay phases, and final-frame semantics. GitHub
-Actions cannot make those two paths visually equivalent. That equivalence must
-be implemented and tested in the Studio source code.
-
-GitHub Actions can support the architecture in four ways:
-
-1. Run deterministic unit and integration tests for the shared replay frame
-   contract.
-2. Run the build that packages the current replay implementation.
-3. Optionally run browser-based smoke tests for the Draft recorder and HQ
-   preparation path.
-4. Prevent an unvalidated replay change from reaching staging or production.
-
-The deployment pipeline must therefore treat the render-mode contract as a
-quality gate, not as a deployment responsibility.
-
-The relevant validation target is parity of the composed frame before video
-encoding. The pipeline must not require Draft and HQ to produce byte-identical
-encoded media, because codec and bitrate behavior are intentionally outside the
-shared visual contract.
+validated. The main identified gaps are deployment failure handling and
+persistence failure and migration cases.
 
 ## Migration goals and non-goals
 
@@ -206,15 +176,15 @@ shared visual contract.
 - make failed deployments observable without hiding the previous release
 - establish a tested rollback operation
 - run replay-contract validation before deployment
-- keep render mode separate from output profile and deployment environment
+- keep Replay output settings separate from deployment environment
 - provide a clear path to migrate the backend later
 
 ### Non-goals
 
 - moving replay rendering to GitHub-hosted servers
-- making Draft Mode temporally deterministic
+- changing Replay playback timing
 - replacing Cesium with a server-side renderer
-- making encoded Draft and HQ media byte-identical
+- making encoded interactive playback and Replay export media byte-identical
 - changing the Studio runtime environment
 - changing the release-directory layout without a separate migration
 - introducing a cloud hosting migration as part of this work
@@ -422,8 +392,7 @@ with the smallest required permission.
 ### When Strategy A is appropriate
 
 Strategy A is appropriate when the immediate priority is to remove local
-deployment dependency with minimal disruption, especially before the replay
-render-mode architecture has finished validation.
+deployment dependency with minimal disruption.
 
 It is not the best final shape if the project requires independently reusable
 build artifacts, multiple deployment consumers, rich rollback control, or
@@ -733,9 +702,9 @@ the appropriate places for deployment metadata.
 The deployment pipeline should verify the replay architecture in layers:
 
 1. Pure tests for logical replay frame and camera-pose resolution.
-2. Parity tests proving Draft and HQ resolve the same composed frame state.
-3. Tests proving Draft does not depend on Cesium flight or focus completion.
-4. Warm HQ plan invalidation tests.
+2. Parity tests proving interactive playback and Replay export resolve the same composed frame state.
+3. Tests proving interactive playback does not depend on Cesium flight or focus completion.
+4. Warm Replay export plan invalidation tests.
 5. Final-frame and stop-clip tests for both modes.
 6. Browser smoke tests for the user-facing recording and export dialogs when
    the required browser environment is available.
@@ -918,17 +887,17 @@ Rollback workflow and reusable deployment modules remain follow-up work.
 ### Replay files affected indirectly
 
 The deployment migration should not change replay behavior by itself. The
-render-mode implementation may change the following files independently:
+Replay implementation changes may affect these files independently:
 
 - `src/core/ui/replay/ReplayVideoRenderSpec.js`
 - `src/core/ui/replay/ReplayOverlayResolver.js`
 - `src/core/ui/replay/ReplayVideoRenderSession.js`
 - `src/core/ui/replay/ReplayDeferredExporter.js`
-- `src/core/ui/replay/JourneyReplayVideoSync.js`
-- `src/core/ui/screen-media-recorder/recorder/ScreenMediaRecorder.js`
+- `src/core/ui/replay/JourneyReplayRuntime.js`
+- `src/core/ui/replay/ReplayRecordingMonitor.js`
 - `src/core/ui/screen-media-recorder/composer/CanvasOverlayComposer.js`
 
-Those changes must pass the render-contract quality gates before a deployment
+Those changes must pass the Replay quality gates before a deployment
 workflow can promote them.
 
 ## Security requirements
@@ -1040,8 +1009,8 @@ The migration is ready for production when:
 
 - a workflow deploys the exact requested source SHA
 - the workflow runs full tests, lint, and production build before deployment
-- replay render-contract tests pass before promotion
-- Draft/HQ parity is checked on composed frame state rather than encoded bytes
+- Replay playback and export tests pass before promotion
+- Replay output tests validate the composed frame before encoding
 - the workflow does not depend on Cesium callbacks for logical replay timing
 - production requires an explicit protected-environment approval
 - secrets are stored in GitHub environments and are absent from logs
@@ -1069,8 +1038,6 @@ The following items remain outside the first Studio implementation:
 
 ## Related documents
 
-- [Replay render mode architecture](../specs/replay-video/CORE-REPLAY-RENDER-MODE-ARCHITECTURE.md)
 - [Deployment specification](../specs/delivery/DEPLOYMENT-README.md)
-- [Replay/video issue analysis](../specs/replay-video/JOURNEY-REPLAY-VIDEO-ISSUES.md)
 - [Replay core documentation](../specs/replay-video/CORE-UI-REPLAY-README-REPLAY.md)
 - [Screen media recorder](../specs/replay-video/CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)

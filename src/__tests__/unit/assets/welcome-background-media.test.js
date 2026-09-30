@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-22
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,6 +17,7 @@
 import {
     applyWelcomeBackgroundToImage,
     applyWelcomeBackgroundToVideo,
+    applyWelcomeMediaCredit,
     bannerMediaCatalog,
     getWelcomeBackgroundMedia,
     getWelcomeBackgroundCatalogSchema,
@@ -153,6 +154,20 @@ describe('welcome background media catalog', () => {
 
         expect(applyWelcomeBackgroundToImage(imageElement, {imageSources: []})).toBe(false)
         expect(imageElement.hidden).toBe(true)
+    })
+
+    it('applies the active video provider credit to the splash link', () => {
+        const creditLink = document.createElement('a')
+        const selectedChoice = bannerMediaCatalog.outdoor[0]
+
+        expect(applyWelcomeMediaCredit(creditLink, selectedChoice)).toBe(true)
+        expect(creditLink.href).toBe(selectedChoice.credit.url)
+        expect(creditLink.textContent).toBe(selectedChoice.credit.label)
+        expect(creditLink.hidden).toBe(false)
+
+        expect(applyWelcomeMediaCredit(creditLink, {credit: null})).toBe(false)
+        expect(creditLink.hasAttribute('href')).toBe(false)
+        expect(creditLink.hidden).toBe(true)
     })
 
     it('exposes the supported catalog dimensions for future additions', () => {

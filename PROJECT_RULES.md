@@ -33,6 +33,7 @@ This is the canonical source for the project's AI-agent and development rules.
 
 - **State Management:** Always use `valtio`. Mapping: `$deepestAttribute` for proxy, `deepestAttribute` for snapshot.
 - **UI:** Strictly use WebAwesome 3 components and FontAwesome. No external CSS libraries.
+- **Web Awesome UI first:** For every UI request, inspect the installed Web Awesome components, APIs, and React wrappers before designing a custom solution. Prefer a suitable Web Awesome component or utility. Implement custom UI behavior only when Web Awesome cannot meet the requirement; validate that limitation against the installed component references and briefly explain why custom behavior is necessary before implementing it.
 - **UI colors:** Whenever a frontend UI color is requested or introduced, use the corresponding color from the Web Awesome palette or design tokens. Do not invent arbitrary color values outside that palette.
 - **Web Awesome first:** Prefer Web Awesome components and their React wrappers whenever a suitable component exists.
 - **Icons:** Use `wa-icon` and its React wrapper directly. Public icon names must use the Font Awesome `iconName` in kebab case, never JavaScript export names such as `faCameraSliders` or internal prefixes such as `fak` and `fakd`. Omit `family` for the default `classic` family and provide it for other families. Keep the generic resolver in `src/Utils/useWebAwesomeKits.js` and pass kit imports into it from the application bootstrap.
@@ -40,7 +41,8 @@ This is the canonical source for the project's AI-agent and development rules.
 - **Custom behavior:** Prefer native Web Awesome APIs. Use minimal custom handling when necessary to implement the requested behavior and the native API is insufficient.
 - **CSS:** Use nested syntax with `&` selector. Every CSS custom property must have an English comment explaining its purpose.
 - **Backend:** Runtime must be **Bun**. Server framework must be **Elysia**.
-- **Vite:** Never run `bun run dev` manually. `vite build` is allowed.
+- **Vite:** Agents must not start `bun run dev`; `vite build` is allowed. Keep the PWA service worker enabled during development so local behavior matches production and cache testing is available by default.
+- **PWA cache testing:** In Edge DevTools, inspect **Application > Service Workers** and **Cache Storage**, ensure **Bypass for network** is disabled, and load target resources online before testing them offline.
 
 ### Timeline isolation
 
@@ -96,6 +98,7 @@ This is the canonical source for the project's AI-agent and development rules.
 
 - **Commit Messages:** Must follow the key-based format: `feat`, `fix`, `refactor`, `docs`, `style`, `test`, `chore`.
 - **Commit Logic:** Never create commits automatically. Only create a commit when the user explicitly requests it. Do not stage or commit proactively on your own initiative.
+- **Commit authorization scope:** A previous commit request authorizes only the commit scope explicitly requested at that time. After completing later work, leave changes uncommitted and wait for a new explicit commit request.
 - **Commit Granularity:** Before creating commits, always review the pending changes and group them by coherent theme. Each commit must cover one focused topic to preserve a fine-grained, reviewable history.
 - **Project rules changes:** Every modification to `PROJECT_RULES.md` must be isolated in a dedicated commit, submitted through a dedicated pull request, and merged into `main`.
 - **Local preparation and delivery:** Complete the authorized local edits and applicable checks before requesting any remaining Git authorization. The required commit, pull request, and merge workflow remains mandatory for delivery, but does not prohibit local preparation. Report local readiness and pending delivery steps accurately. Do not stage, commit, push, or merge unless the applicable authorization is already present.

@@ -7,18 +7,21 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-24
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 /**
- * Shared state for the transient Draft and Replay HQ recording monitor.
+ * Shared state for the transient Replay export monitor.
  */
 
 const listeners = new Set()
+
+export const REPLAY_DEFERRED_EXPORT_READY_EVENT = 'lgs-replay-deferred-export-ready'
+export const REPLAY_DEFERRED_EXPORT_CANCEL_EVENT = 'lgs-replay-deferred-export-cancel'
 
 let state = {
     active: false,
@@ -65,13 +68,13 @@ export const subscribeReplayRecordingMonitor = listener => {
 export const getReplayRecordingMonitorSnapshot = () => snapshot
 
 /**
- * Start a monitor lifecycle for Draft or HQ recording.
+ * Start a monitor lifecycle for a Replay export.
  *
  * @param {Object} options - Monitor mode and optional frame metadata.
  * @returns {Object} Current monitor snapshot.
  */
 export const startReplayRecordingMonitor = ({
-    mode = 'draft',
+    mode = 'hq',
     frameCount = null,
     videoDurationMillis = null,
 } = {}) => {
@@ -134,7 +137,7 @@ export const publishReplayRecordingMonitorFrame = ({
 }
 
 /**
- * Update monitor progress and recorder metrics without replacing its frame.
+ * Update export progress and metrics without replacing its frame.
  *
  * @param {Object} metrics - Runtime phase, progress, and encoder metrics.
  * @returns {Object} Current monitor snapshot.

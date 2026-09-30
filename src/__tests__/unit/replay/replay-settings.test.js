@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-14
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,7 +38,7 @@ import {
     REPLAY_READINESS_POLICY_ADAPTIVE, REPLAY_READINESS_POLICY_OFF,
     REPLAY_EFFECT_GLOW, REPLAY_EFFECT_NEON, REPLAY_EFFECT_NONE,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
-    getJourneyReplayCameraPresetKey, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplayReadiness, normalizeJourneyReplaySettings,
+    getJourneyReplayCameraPresetKey, getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplayReadiness, normalizeJourneyReplaySettings,
 }                                                                      from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { gpx }                                                         from '@tmcw/togeojson'
 import { applyGpxStyleExtensionProperties, extractLgsTrackProperties } from '@Utils/JourneyGpxUtils'
@@ -220,6 +220,38 @@ describe('replay settings normalization', () => {
                                            }).playback.tilePreloadHorizonMs).toBe(3000)
     })
 
+    it('forces Simple Replay camera, hidden-track, and tile-readiness settings', () => {
+        const previousLgs = globalThis.lgs
+        globalThis.lgs = {
+            settings: {
+                ui: {
+                    replay: {
+                        userMode: 'basic',
+                        simple: {
+                            includeHiddenTracks: true,
+                            readiness: {enabled: true, prewarmEnabled: true},
+                            camera: {canDrift: true, canRoll: true},
+                        },
+                    },
+                },
+            },
+        }
+
+        try {
+            expect(getJourneyReplaySettings()).toMatchObject({
+                includeHiddenTracks: false,
+                readiness: {enabled: false, prewarmEnabled: false},
+                camera: {canDrift: false, canRoll: false},
+            })
+        } finally {
+            if (previousLgs === undefined) {
+                delete globalThis.lgs
+            } else {
+                globalThis.lgs = previousLgs
+            }
+        }
+    })
+
     it('keeps a default tolerance zone aligned to the window and clamps custom rectangles', () => {
         const camera = normalizeJourneyReplayCamera({})
         expect(camera.hysteresis.zone).toEqual({
@@ -245,7 +277,7 @@ describe('replay settings normalization', () => {
     })
 
     it('normalizes the hide other journeys switch as a boolean', () => {
-        expect(defaultJourneyReplaySettings().hideOtherJourneys).toBe(false)
+        expect(defaultJourneyReplaySettings().hideOtherJourneys).toBe(true)
         expect(normalizeJourneyReplaySettings({hideOtherJourneys: true}).hideOtherJourneys).toBe(true)
         expect(normalizeJourneyReplaySettings({hideOtherJourneys: 0}).hideOtherJourneys).toBe(false)
     })
@@ -416,10 +448,10 @@ describe('replay settings normalization', () => {
         expect(replayFrameLeadSeconds({fps: 15, frameIntervalMs: 1000 / 60})).toBeCloseTo(1 / 60, 6)
     })
 
-    it('uses Draft and HQ cadence defaults when no output interval is available', () => {
-        expect(replayCameraFrameLeadSeconds({renderMode: 'draft'})).toBeCloseTo(1 / 15, 6)
+    it('uses Interactive and HQ cadence defaults when no output interval is available', () => {
+        expect(replayCameraFrameLeadSeconds({renderMode: 'interactive'})).toBeCloseTo(1 / 15, 6)
         expect(replayCameraFrameLeadSeconds({renderMode: 'hq'})).toBeCloseTo(1 / 60, 6)
-        expect(replayCameraFrameLeadSeconds({renderMode: 'draft', frameIntervalMs: 1000 / 60}))
+        expect(replayCameraFrameLeadSeconds({renderMode: 'interactive', frameIntervalMs: 1000 / 60}))
             .toBeCloseTo(1 / 60, 6)
     })
 

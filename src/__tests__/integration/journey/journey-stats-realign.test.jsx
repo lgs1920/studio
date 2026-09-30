@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -333,14 +333,14 @@ describe('JourneyStats', () => {
         expect(widgetCanvasRefresh).not.toHaveBeenCalled()
         await waitFor(() => expect(widgetCanvasRefresh).toHaveBeenCalledWith('journey-stats-widget#1'))
 
-        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.ui.video.recordingHQ = true
 
         await waitFor(() => expect(widget.textContent).toContain('120'))
         await waitFor(() => expect(widgetCanvasRefresh).toHaveBeenCalledTimes(2))
     })
 
     it('updates dynamic stats when the replay frame sample changes', async () => {
-        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.ui.video.recordingHQ = true
         globalThis.lgs.stores.replay.dynamicFrameState = {
             active: true,
             playing: true,
@@ -392,7 +392,7 @@ describe('JourneyStats', () => {
     })
 
     it('hides the journey stats widget on the video board while recording is active and the replay is not near the end', async () => {
-        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.ui.video.recordingHQ = true
         globalThis.lgs.stores.replay.playing = true
         globalThis.lgs.stores.replay.progress = 0.1
 

@@ -2765,3 +2765,295 @@
 ## 2026-09-22 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/da39ce5654dec9a39f753236fad8fb4ef6cea7fe)
 
 - Recorded automatically from Git history.
+
+## 2026-09-22 — [`feat(ui): simplify widget entry points (#523)`](https://github.com/lgs1920/studio/commit/96afa6f56cb840c2c12fa1e7216217f81c2550f8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`refactor(ui): reorganize journey details sections`](https://github.com/lgs1920/studio/commit/acb638eda9b9b28b20b3da7e3a7b47974784fa75)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`style(ui): refine track style sections`](https://github.com/lgs1920/studio/commit/e32c8432aacb3cc5fd8f64fdf316497f36a6086c)
+
+- Recorded automatically from Git history.
+
+## 2026-09-22 — [`fix(ui): remove standard video entry button`](https://github.com/lgs1920/studio/commit/b872e326eeb4705f0ee86cbdae51f2a313c58958)
+
+- Recorded automatically from Git history.
+
+## 2026-09-24 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/1c0aca09ae050ecdd63c8def62dc2d50c9570b4e)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-09-25 — [`chore(deps): update frontend dependencies`](https://github.com/lgs1920/studio/commit/8b0a7dca6031457254452acca16cfb80b8c10974)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`docs: refresh replay TODO entries`](https://github.com/lgs1920/studio/commit/bbbdb04b65b5717b474d4448a5ae2dfa80fee0de)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`feat(replay): add Simple and Expert user modes`](https://github.com/lgs1920/studio/commit/fc359f1f45f61cef28c0e495ce9cc0c3ba407ea5)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`fix(crop): restore interactive crop zone handles`](https://github.com/lgs1920/studio/commit/e0070678903e4ad5ee80020dc32d3ca82bb5ffbe)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`fix(replay): filter video widgets during capture`](https://github.com/lgs1920/studio/commit/f7b4946037b5b98a041f177102651c2b42e4729e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`fix(startup): time out stalled worker requests`](https://github.com/lgs1920/studio/commit/cd4da8d458812a1167cc588aadf405080fdf3078)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`fix(cesium): harden viewer startup and surface readiness`](https://github.com/lgs1920/studio/commit/b26119f89245da16c224549d69a1e61f93b95786)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`refactor(ui): remove obsolete video entry widgets`](https://github.com/lgs1920/studio/commit/0d9a5c664683b5418c7a9bac0acdc9e80f622bf6)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`fix(replay): report timeline preparation failures`](https://github.com/lgs1920/studio/commit/e873ae15dc7e012522bced28ae6c2bb663fa6659)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`Merge remote-tracking branch 'origin/feature/replay-user-modes' into feature/replay-user-modes`](https://github.com/lgs1920/studio/commit/643d9aa07bf7a9736684e991b63c5dddae507343)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`test(replay): align integration fixtures with user modes`](https://github.com/lgs1920/studio/commit/4aee595ebecc06852102869592adb749222636d6)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`Merge remote-tracking branch 'origin/feature/replay-user-modes' into feature/replay-user-modes`](https://github.com/lgs1920/studio/commit/102f25440bc85666807a4349c0aa21436994f836)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`docs: expand Web Awesome kit integration guide`](https://github.com/lgs1920/studio/commit/18476e635c56b2f06af4109d9acdbcda9550b43f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`Merge remote-tracking branch 'origin/feature/replay-user-modes' into feature/replay-user-modes`](https://github.com/lgs1920/studio/commit/2c02a484553e34cd554f5a4311624fe383f4922e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`docs: clarify generic icon kit resolution`](https://github.com/lgs1920/studio/commit/e02fdebd429ab152050ba8f428b1063f45bb8e9c)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`feat: count videos by replay mode`](https://github.com/lgs1920/studio/commit/770e2558768330e0ba9a64075ba338d5cd566e49)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`feat: set Simple Replay defaults`](https://github.com/lgs1920/studio/commit/d1c3e9acddd5bcb1950ada6dfc3c241ce4d9c6e9)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`fix: keep crop controls usable during Replay preparation`](https://github.com/lgs1920/studio/commit/8c24de5a8f5af16f4a77b7fee157a84b6aec6e2b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`feat: simplify Replay video creation workflow`](https://github.com/lgs1920/studio/commit/d9f48c58f3a1e5f2f8483e3fb4381c5e3cf727e9)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`docs: record Replay cancellation follow-up`](https://github.com/lgs1920/studio/commit/39757568b942957084d918c03aa86898d5a2ea33)
+
+- Recorded automatically from Git history.
+
+## 2026-09-25 — [`fix: keep the PiP monitor host in the main document`](https://github.com/lgs1920/studio/commit/420279b00b329c3e3c746410ea311a6d05d45de6)
+
+- Recorded automatically from Git history.
+
+## 2026-09-26 — [`feat: improve Simple Replay preparation settings`](https://github.com/lgs1920/studio/commit/5fa082b67813805b74d815d901f572175447575e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-26 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/42fc8ff9e179c389f211d7cc820418fb2c86a04d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-26 — [`feat: use Web Install API for PWA installation`](https://github.com/lgs1920/studio/commit/dcca71b31503052510e13a2086dd51a4483fc0b6)
+
+- Recorded automatically from Git history.
+
+## 2026-09-26 — [`feat(startup): render welcome route in static splash`](https://github.com/lgs1920/studio/commit/7c715aac57afeb27bf95e58952e12d8f4c3fcde2)
+
+- Recorded automatically from Git history.
+
+## 2026-09-26 — [`Merge remote-tracking branch 'origin/feature/replay-user-modes' into feature/replay-user-modes`](https://github.com/lgs1920/studio/commit/c337c781974babb7c5acb3833fba328a91f03d5f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-26 — [`fix(replay): orient entry point icons`](https://github.com/lgs1920/studio/commit/db3a2d36a29d27bf7980cef6f4c84d25370c1529)
+
+- Recorded automatically from Git history.
+
+## 2026-09-27 — [`Merge remote-tracking branch 'origin/feature/replay-user-modes' into feature/replay-user-modes`](https://github.com/lgs1920/studio/commit/91c664f17381cf1c503f2d00cec03a1b6656372b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-27 — [`fix(replay): align preparation and video capture flows`](https://github.com/lgs1920/studio/commit/9279c8050c8ebb597220b4deb3fbd60f4b38c4ca)
+
+- Recorded automatically from Git history.
+
+## 2026-09-27 — [`feat(replay): align preparation settings controls`](https://github.com/lgs1920/studio/commit/d7db87b7545f55f2c54c44bf18aec14f4bb022d5)
+
+- Recorded automatically from Git history.
+
+## 2026-09-27 — [`fix(startup): align splash route startup and colors`](https://github.com/lgs1920/studio/commit/8927d4a6e0e5e536513c04c1ae4560ee4fe8f59b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-27 — [`feat(replay): expose settings from expert timeline`](https://github.com/lgs1920/studio/commit/3d61cc5c6261f0d1a00492e6ca6dfa6a26c02881)
+
+- Recorded automatically from Git history.
+
+## 2026-09-27 — [`docs: remove obsolete GitNexus guidance`](https://github.com/lgs1920/studio/commit/c317ceefec180d99750074fde202bd21d0ffe35f)
+
+- Recorded automatically from Git history.
+
+## 2026-09-27 — [`docs: clarify recording stop behavior`](https://github.com/lgs1920/studio/commit/28a1356493c405a80098b3aaf3c822e2801d8712)
+
+- Recorded automatically from Git history.
+
+## 2026-09-27 — [`fix(replay): align expert timeline recording controls`](https://github.com/lgs1920/studio/commit/41006054ed37c27c04ac68f3725aefde67cab122)
+
+- Recorded automatically from Git history.
+
+## 2026-09-27 — [`fix(replay): preserve full duration and capture frames`](https://github.com/lgs1920/studio/commit/7d531e69c0e34a5e869e4aee40e158c87d531e62)
+
+- Recorded automatically from Git history.
+
+## 2026-09-27 — [`fix(replay): configure Timeline widget controls`](https://github.com/lgs1920/studio/commit/36e863d9e04b215ea50efa0c1577f4ff3315abef)
+
+- Recorded automatically from Git history.
+
+## 2026-09-27 — [`fix(replay): unify simple and expert settings menus`](https://github.com/lgs1920/studio/commit/3dfe05d935f66a72b3ef5650401ac03d574b7f5c)
+
+- Recorded automatically from Git history.
+
+## 2026-09-27 — [`fix(replay): enforce camera controls by user mode`](https://github.com/lgs1920/studio/commit/017852a33cbefb7d8d442fe80c5247da940a443d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-27 — [`chore(replay): remove unused timeline import`](https://github.com/lgs1920/studio/commit/d434bca315aed9b0f9a03c63627b013ebe4cf1dc)
+
+- Recorded automatically from Git history.
+
+## 2026-09-27 — [`docs: require explicit commit authorization`](https://github.com/lgs1920/studio/commit/91897ec49a21aebd2e8dca96d07a7bf07facabc8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-27 — [`feat(replay): use frame-by-frame export for replay video`](https://github.com/lgs1920/studio/commit/2e15ddc2969bd9487e9ab4efad0c31340314f9a5)
+
+- Recorded automatically from Git history.
+
+## 2026-09-27 — [`docs(replay): document deterministic video export`](https://github.com/lgs1920/studio/commit/05dde960cc44e89e20b68df792d64cd820b32c49)
+
+- Recorded automatically from Git history.
+
+## 2026-09-27 — [`fix(replay): keep widgets mounted during HQ export`](https://github.com/lgs1920/studio/commit/71ab3a85f2efc1865016a5a0cff8c69fd6a80fad)
+
+- Recorded automatically from Git history.
+
+## 2026-09-27 — [`docs(replay): close credits visibility investigation`](https://github.com/lgs1920/studio/commit/8a8c37d42947b507fc855dc96b5c842ae1c4011d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-27 — [`docs(replay): align docs with Simple and Expert modes`](https://github.com/lgs1920/studio/commit/b07e171c43b57536c291c5a02c13e642eecaa42b)
+
+- Recorded automatically from Git history.
+
+## 2026-09-27 — [`fix(replay): prevent credits widget from collapsing`](https://github.com/lgs1920/studio/commit/107ec4dee718cf9c802b76298a729c05df97077c)
+
+- Recorded automatically from Git history.
+
+## 2026-09-27 — [`fix(widget): make logo scalable`](https://github.com/lgs1920/studio/commit/62634e9a97c77a29459e0a52cab870445828ba45)
+
+- Recorded automatically from Git history.
+
+## 2026-09-27 — [`refactor(replay): remove standalone video recorder`](https://github.com/lgs1920/studio/commit/e56c63259f931e9739b624d2ffe48d6a25ea6a58)
+
+- Recorded automatically from Git history.
+
+## 2026-09-28 — [`fix(replay): stabilize video widget composition`](https://github.com/lgs1920/studio/commit/d4ea8786ced90f63cb859d0732fc572543b7ac81)
+
+- Recorded automatically from Git history.
+
+## 2026-09-28 — [`fix(ui): resolve popup anchors to elements`](https://github.com/lgs1920/studio/commit/733f20cd418e95b44149a4fd30414c7b15f66c7e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-28 — [`chore: remove temporary debug logs`](https://github.com/lgs1920/studio/commit/fdc43b2a8d103e2b3d5218e6776653b165e0895e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-28 — [`fix(replay): add cancel control for browser recording`](https://github.com/lgs1920/studio/commit/5db0ee18d318d5e3754cf6a058fc12d0980ccfbe)
+
+- Recorded automatically from Git history.
+
+## 2026-09-28 — [`fix(cesium): harden startup and render recovery`](https://github.com/lgs1920/studio/commit/42224c8cd3302eeb80c199b1c5125610b6ca01e4)
+
+- Recorded automatically from Git history.
+
+## 2026-09-28 — [`fix(vite): keep service worker opt-in during development`](https://github.com/lgs1920/studio/commit/83918ae1ea569d9bbb782bf1a350fe9e117e06bc)
+
+- Recorded automatically from Git history.
+
+## 2026-09-29 — [`docs(pwa): keep service worker enabled in development`](https://github.com/lgs1920/studio/commit/029aa118b59cfbb059f5cad0d521794b6d5798ee)
+
+- Recorded automatically from Git history.
+
+## 2026-09-29 — [`fix(pwa): keep service worker active during development`](https://github.com/lgs1920/studio/commit/ce5013e6a287f6f85d6e53913126c41ed29ea847)
+
+- Recorded automatically from Git history.
+
+## 2026-09-29 — [`fix(replay): restrict Simple Replay widget controls`](https://github.com/lgs1920/studio/commit/f90b6ecb439c5bf60f52794039e8db406bff25d8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-29 — [`fix(replay): sync Expert camera preparation`](https://github.com/lgs1920/studio/commit/c58832e16b62a312e19686ce491a2836e3a4f16d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-29 — [`feat(startup): show splash initialization progress`](https://github.com/lgs1920/studio/commit/4009cfabb4f6435f22fe98481985d3ee6effa38e)
+
+- Recorded automatically from Git history.
+
+## 2026-09-29 — [`fix(replay): reposition compass during crop resize`](https://github.com/lgs1920/studio/commit/24629214e3d2fe886099312048d69c544726cdf2)
+
+- Recorded automatically from Git history.
+
+## 2026-09-29 — [`fix(replay): keep compass visible during crop resize`](https://github.com/lgs1920/studio/commit/29710e63a9265ba73f9bbffaae09f53d8288caac)
+
+- Recorded automatically from Git history.
+
+## 2026-09-29 — [`fix(replay): mask widgets only after crop resize`](https://github.com/lgs1920/studio/commit/4f958cc6d393bfe9d9c8d2f3a37f745722404188)
+
+- Recorded automatically from Git history.
+
+## 2026-09-29 — [`fix(replay): sync camera guide with playback`](https://github.com/lgs1920/studio/commit/f1aac332670137801429b38935add145e8ad40f3)
+
+- Recorded automatically from Git history.
+
+## 2026-09-29 — [`style(startup): unify welcome and splash status`](https://github.com/lgs1920/studio/commit/f89710cfad17acf49497b2ee92fd81d0254791d8)
+
+- Recorded automatically from Git history.
+
+## 2026-09-29 — [`fix(startup): load fonts before React`](https://github.com/lgs1920/studio/commit/17524aefc917ea52c8e27af6981f8d1e12f1099c)
+
+- Recorded automatically from Git history.
+
+## 2026-09-29 — [`fix(startup): show ready message briefly`](https://github.com/lgs1920/studio/commit/5522a42a8b7e49e3c71f22b9ffcbaee5841637bc)
+
+- Recorded automatically from Git history.
+
+## 2026-09-29 — [`Merge remote-tracking branch 'origin/feature/replay-user-modes' into feature/replay-user-modes`](https://github.com/lgs1920/studio/commit/1dad2cddc3c74f3aedb3ef333816af679a03d64f)
+
+- Recorded automatically from Git history.

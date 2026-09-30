@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-04
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,20 +17,17 @@
 /**
  * @file VideoDownloadAndShareDialog.jsx
  * @description Optimized component for previewing and downloading recorded videos.
- * Keeps preview state render-safe while using recorder data with fallbacks.
+ * Keeps preview state render-safe while using captured media data with fallbacks.
  * Uses Web Awesome components and icons.
  * All refs prefixed with _, no default export, no semicolons.
  */
 import { RecordingInfo } from '@Components/MainUI/video/RecordingInfo'
 import { LGSPopup }      from '@Components/LGSPopup'
-import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
-import { exportReplayDeferredMp4 } from '@Core/ui/replay/ReplayDeferredExporter'
-import { buildReplayVideoRenderSpec } from '@Core/ui/replay/ReplayVideoRenderSpec'
-import { cancelVideoEditing, prepareVideoCaptureUi } from '@Components/MainUI/video/videoEditingCleanup'
-import { VIDEO_CROP_ZONE } from '@Core/constants'
-import { CountApi } from '@Utils/CountApi'
+import {ReplayMediaCapture} from '@Core/ui/replay/ReplayMediaCapture'
+import { REPLAY_DEFERRED_EXPORT_READY_EVENT } from '@Core/ui/replay/ReplayRecordingMonitor'
+import { cancelVideoEditing } from '@Components/MainUI/video/videoEditingCleanup'
 import {
-    WaButton, WaButtonGroup, WaDialog, WaDropdown, WaDropdownItem, WaIcon, WaInput, WaTooltip,
+    WaButton, WaDialog, WaIcon, WaInput, WaTooltip,
 }                        from '@web.awesome.me/webawesome-pro/dist/react'
 import {
     UIToast,
@@ -38,26 +35,12 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react'
 import './style.css'
 
-const VIDEO_DRAFT_SUFFIX = '-draft'
 const DEFAULT_VIDEO_FILENAME = 'video'
 const DEFAULT_IMAGE_FILENAME = 'record'
 
 const sanitizeFilenameStem = (value, fallback = DEFAULT_VIDEO_FILENAME) => {
     const sanitized = `${value ?? ''}`.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim()
     return sanitized || fallback
-}
-
-const stripVideoDraftSuffix = (value, fallback = DEFAULT_VIDEO_FILENAME) => {
-    let stem = sanitizeFilenameStem(value, fallback)
-    while (stem.toLowerCase().endsWith(VIDEO_DRAFT_SUFFIX)) {
-        stem = stem.slice(0, -VIDEO_DRAFT_SUFFIX.length).trim()
-    }
-    return stem || fallback
-}
-
-const withVideoDraftSuffix = (value, fallback = DEFAULT_VIDEO_FILENAME) => {
-    const stem = stripVideoDraftSuffix(value, fallback)
-    return `${stem}${VIDEO_DRAFT_SUFFIX}`
 }
 
 /**
@@ -70,7 +53,6 @@ const preFocusVideoReplayScene = async ({linked = false} = {}) => {
         return
     }
 
-    globalThis.__?.ui?.replayVideoSync?.stopJourneyReplay?.({deferSceneRestore: false})
     await Promise.resolve(globalThis.__?.ui?.replay?.restorePlaybackScene?.({force: true}))
 }
 
@@ -86,50 +68,6 @@ const clearVideoReplayRuntimeState = () => {
     replayStore.dynamicFrameState = null
     replayStore.resolvedFrameState = null
     replayStore.replayFramePhase = null
-    if (replayStore.deferredExportPlan?.runtime) {
-        replayStore.deferredExportPlan.runtime.frameState = null
-        replayStore.deferredExportPlan.runtime.resolvedFrameState = null
-    }
-}
-
-const resolveHqExportRenderSpec = async () => {
-    const replayStore = globalThis.lgs?.stores?.replay ?? null
-    const existingPlan = replayStore?.deferredExportPlan ?? null
-    const widgetManager = globalThis.__?.ui?.widgetManager ?? null
-
-    try {
-        await widgetManager?.syncCropDimensionsFromElement?.(VIDEO_CROP_ZONE, false, 'before-hq-export')
-    }
-    catch {
-        // The cached replay crop remains usable when the cropper is not mounted.
-    }
-
-    const cropRect = widgetManager?.getWidgetConfig?.(VIDEO_CROP_ZONE)?.cropDimensions
-                     ?? replayStore?.videoCropRect
-                     ?? existingPlan?.renderSpec?.cropRect
-                     ?? null
-    const sourceCanvas = globalThis.lgs?.canvas ?? null
-
-    if (!cropRect && !sourceCanvas) {
-        return null
-    }
-
-    const renderSpec = buildReplayVideoRenderSpec({
-        cropRect,
-        video:        globalThis.lgs?.stores?.ui?.video ?? null,
-        settings:     globalThis.lgs?.settings?.ui?.video ?? null,
-        device:       globalThis.__?.device ?? null,
-        sourceCanvas,
-        fps:          existingPlan?.renderSpec?.fps ?? null,
-        qualityIndex: existingPlan?.renderSpec?.qualityIndex ?? null,
-        captureMode:  existingPlan?.renderSpec?.captureMode ?? existingPlan?.captureMode ?? null,
-    })
-
-    if (replayStore && renderSpec.cropRect) {
-        replayStore.videoCropRect = {...renderSpec.cropRect}
-    }
-
-    return renderSpec
 }
 
 const normalizeExtension = (value, fallback = 'mp4') => {
@@ -147,17 +85,12 @@ export const VideoDownloadAndShareDialog = () => {
     const [canDownloadAndShare, setCanDownloadAndShare] = useState(false)
     const [isRecordingInfoOpen, setIsRecordingInfoOpen] = useState(false)
     const [mediaUrl, setMediaUrl] = useState(null)
-    const [hqMedia, setHqMedia] = useState(null)
-    const [hqExportStatus, setHqExportStatus] = useState('idle')
+    const [deferredMediaData, setDeferredMediaData] = useState(null)
     const _mainVideo = useRef(null)
     const _blurredVideo = useRef(null)
     const _recordingInfoButton = useRef(null)
     const _recordingInfoPopup = useRef(null)
     const _mediaBlob = useRef({blob: null, url: null, filename: ''})
-    const _hqMediaUrl = useRef(null)
-    const _hqExportAbortController = useRef(null)
-    const _dialogHiddenForHqExport = useRef(false)
-    const _suppressNextDialogHideCleanup = useRef(false)
     const _shareInFlight = useRef(false)
     const _dialogCleanupDone = useRef(true)
     const _replayScenePreFocused = useRef(false)
@@ -168,30 +101,20 @@ export const VideoDownloadAndShareDialog = () => {
             URL.revokeObjectURL(url)
         }
     }, [])
-    const releaseHqMediaUrl = useCallback(() => {
-        const url = _hqMediaUrl.current
-        if (url) {
-            _hqMediaUrl.current = null
-            URL.revokeObjectURL(url)
-        }
-    }, [])
-    const getVideoExtension = useCallback(() => __.recorder.mediaData?.extension || lgs.settings.ui.video.format, [])
-    const getVideoMimeType = useCallback(() => __.recorder.mediaData?.mimeType || 'video/mp4', [])
-    const getRecorderFilenameStem = useCallback((fallback = DEFAULT_VIDEO_FILENAME) => (
-        sanitizeFilenameStem(__.recorder.filename?.({}) || fallback, fallback)
+    const getVideoExtension = useCallback(() => deferredMediaData?.extension
+        || __.mediaCapture.mediaData?.extension
+        || lgs.settings.ui.video.format, [deferredMediaData])
+    const getVideoMimeType = useCallback(() => deferredMediaData?.mimeType
+        || __.mediaCapture.mediaData?.mimeType
+        || 'video/mp4', [deferredMediaData])
+    const getMediaFilenameStem = useCallback((fallback = DEFAULT_VIDEO_FILENAME) => (
+        sanitizeFilenameStem(__.mediaCapture.filename?.({}) || fallback, fallback)
     ), [])
     const isReplayVideoLinked = lgs.stores?.replay?.recordingSync === true
-    const getDraftFilenameStem = useCallback(() => (
-        isReplayVideoLinked
-            ? withVideoDraftSuffix(_mediaBlob.current.filename || getRecorderFilenameStem(), DEFAULT_VIDEO_FILENAME)
-            : sanitizeFilenameStem(_mediaBlob.current.filename || getRecorderFilenameStem(), DEFAULT_VIDEO_FILENAME)
-    ), [getRecorderFilenameStem, isReplayVideoLinked])
-    const getHqFilenameStem = useCallback(() => (
-        stripVideoDraftSuffix(_mediaBlob.current.filename || getRecorderFilenameStem(), DEFAULT_VIDEO_FILENAME)
-    ), [getRecorderFilenameStem])
-    const getHqExportFilename = useCallback(() => buildMediaFilename(getHqFilenameStem(), 'mp4'), [getHqFilenameStem])
-    const hasHqMedia = Boolean(hqMedia?.blob instanceof Blob)
-    const isHqExporting = hqExportStatus === 'exporting'
+                                || lgs.stores?.replay?.simplePreparationActive === true
+    const getVideoFilenameStem = useCallback(() => (
+        sanitizeFilenameStem(_mediaBlob.current.filename || getMediaFilenameStem(), DEFAULT_VIDEO_FILENAME)
+    ), [getMediaFilenameStem])
 
     /**
      * Prepare the final replay camera view before showing the media dialog.
@@ -214,28 +137,8 @@ export const VideoDownloadAndShareDialog = () => {
         }
     }, [isReplayVideoLinked])
 
-    const downloadBlobFile = useCallback((blob, downloadFilename) => {
-        if (!(blob instanceof Blob) || !downloadFilename) {
-            return
-        }
-
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = downloadFilename
-        link.click()
-        setTimeout(() => URL.revokeObjectURL(url), 100)
-    }, [])
-
-    const waitForAnimationFrame = useCallback(() => new Promise(resolve => {
-        const raf = globalThis.requestAnimationFrame
-                    ?? globalThis.window?.requestAnimationFrame?.bind(globalThis.window)
-                    ?? (callback => setTimeout(callback, 0))
-        raf(() => raf(() => resolve()))
-    }), [])
-
     /**
-     * Safely accesses media data from recorder with fallback.
+     * Safely accesses media data with fallback values.
      * @returns {Object} Media stats with default values
      */
     const getMediaData = useCallback(() => {
@@ -251,15 +154,14 @@ export const VideoDownloadAndShareDialog = () => {
         }
 
         try {
-            if (__.recorder.isVideo() && hqMedia?.mediaData) {
-                return hqMedia.mediaData
+            if (deferredMediaData) {
+                return {...fallback, ...deferredMediaData}
             }
-
-            const data = __.recorder?.mediaData
+            const data = __.mediaCapture?.mediaData
             if (!data || typeof data !== 'object') {
                 return fallback
             }
-            if (__.recorder.isVideo()) {
+            if (__.mediaCapture.isVideo()) {
                 return {
                     size:       Number(data.size) || 0,
                     duration:   Number(data.duration) || 0,
@@ -290,39 +192,9 @@ export const VideoDownloadAndShareDialog = () => {
         catch {
             return fallback
         }
-    }, [hqMedia])
+    }, [deferredMediaData])
 
-    /**
-     * Initialize stop recording handler with blob validation.
-     */
     useEffect(() => {
-
-        const handleStopRecording = async (event) => {
-            const blob = event.detail?.blob
-            if (!(blob instanceof Blob) || blob.size === 0) {
-                console.error('Invalid video blob received')
-                return
-            }
-
-            releaseMediaUrl()
-            const url = URL.createObjectURL(blob)
-            const safeFilename = getDraftFilenameStem()
-
-            _mediaBlob.current = {
-                blob,
-                url,
-                filename: safeFilename,
-                type:     ScreenMediaRecorder.VIDEO,
-            }
-            _dialogCleanupDone.current = false
-            setMediaUrl(url)
-            setFilename(safeFilename)
-            setCanDownloadAndShare(true)
-            void CountApi.sendDraftVideo()
-            await prepareReplaySceneForDialog()
-            setDialogOpen(true)
-        }
-
         const handleCapture = (event) => {
             try {
                 const imageBlob = event.detail?.blob
@@ -332,17 +204,18 @@ export const VideoDownloadAndShareDialog = () => {
 
                 releaseMediaUrl()
                 const imageUrl = URL.createObjectURL(imageBlob)
-                const safeFilename = sanitizeFilenameStem(getRecorderFilenameStem(DEFAULT_IMAGE_FILENAME), DEFAULT_IMAGE_FILENAME)
+                const safeFilename = sanitizeFilenameStem(getMediaFilenameStem(DEFAULT_IMAGE_FILENAME), DEFAULT_IMAGE_FILENAME)
                 _mediaBlob.current = {
                     blob:     imageBlob,
                     url:      imageUrl,
                     filename: safeFilename,
-                    type:     ScreenMediaRecorder.IMAGE,
+                    type:     ReplayMediaCapture.IMAGE,
                 }
                 _dialogCleanupDone.current = false
                 setMediaUrl(imageUrl)
                 setFilename(safeFilename)
                 setCanDownloadAndShare(true)
+                setDeferredMediaData(null)
                 setDialogOpen(true)
             }
             catch (error) {
@@ -355,17 +228,45 @@ export const VideoDownloadAndShareDialog = () => {
             }
         }
 
+        const handleDeferredReplayExport = async (event) => {
+            const {blob, filename = DEFAULT_VIDEO_FILENAME, mediaData = {}} = event.detail ?? {}
+            if (!(blob instanceof Blob) || blob.size <= 0) {
+                UIToast.error({caption: 'Replay video', text: 'The generated video is empty.'})
+                return
+            }
 
-        __.recorder.addEventListener(ScreenMediaRecorder.events.STOP, handleStopRecording)
-        __.recorder.addEventListener(ScreenMediaRecorder.events.CAPTURED, handleCapture)
+            releaseMediaUrl()
+            const url = URL.createObjectURL(blob)
+            const safeFilename = sanitizeFilenameStem(`${filename}`.replace(/\.[^.]+$/, ''), DEFAULT_VIDEO_FILENAME)
+            _mediaBlob.current = {
+                blob,
+                url,
+                filename: safeFilename,
+                type: ReplayMediaCapture.VIDEO,
+                source: 'deferred-replay',
+                mediaData,
+            }
+            __.mediaCapture.type = ReplayMediaCapture.VIDEO
+            setDeferredMediaData(mediaData)
+            _dialogCleanupDone.current = false
+            setMediaUrl(url)
+            setFilename(safeFilename)
+            setCanDownloadAndShare(true)
+            await prepareReplaySceneForDialog()
+            setDialogOpen(true)
+        }
+
+
+        __.mediaCapture.addEventListener(ReplayMediaCapture.events.CAPTURED, handleCapture)
+        globalThis.window?.addEventListener(REPLAY_DEFERRED_EXPORT_READY_EVENT, handleDeferredReplayExport)
 
         return () => {
-            __.recorder.removeEventListener(ScreenMediaRecorder.events.STOP, handleStopRecording)
-            __.recorder.removeEventListener(ScreenMediaRecorder.events.CAPTURED, handleCapture)
+            __.mediaCapture.removeEventListener(ReplayMediaCapture.events.CAPTURED, handleCapture)
+            globalThis.window?.removeEventListener(REPLAY_DEFERRED_EXPORT_READY_EVENT, handleDeferredReplayExport)
             releaseMediaUrl()
-            void __.recorder?.releaseMedia?.()
+            void __.mediaCapture?.releaseMedia?.()
         }
-    }, [getDraftFilenameStem, prepareReplaySceneForDialog, releaseMediaUrl])
+    }, [getMediaFilenameStem, prepareReplaySceneForDialog, releaseMediaUrl])
 
     /**
      * Sync blurred video with main video playback.
@@ -445,202 +346,40 @@ export const VideoDownloadAndShareDialog = () => {
         const value = event.target?.value || ''
         const sanitized = value.replace(/[^a-zA-Z0-9_\-\s]/g, '')
         _mediaBlob.current.filename = sanitized
-        releaseHqMediaUrl()
-        setHqMedia(null)
-        setHqExportStatus('idle')
         const canProceed = sanitized.length > 0
         setCanDownloadAndShare(canProceed)
         setFilename(sanitized)
-    }, [releaseHqMediaUrl])
+    }, [])
 
     /**
-     * Resolve the media blob the dialog should expose.
-     *
-     * The final dialog prefers the replay HQ export when the replay pipeline
-     * prepared a deferred master plan. Otherwise it falls back to the recorder
-     * blob produced by the live draft.
+     * Resolve the video or screenshot already present in the dialog.
      */
-    const resolveSmartVideoBlob = useCallback(async (target = 'auto') => {
-        if (!__.recorder.isVideo()) {
+    const resolveSmartVideoBlob = useCallback(async () => {
+        if (!__.mediaCapture.isVideo()) {
             return {
                 blob:      _mediaBlob.current.blob,
                 filename:   sanitizeFilenameStem(_mediaBlob.current.filename, DEFAULT_IMAGE_FILENAME),
                 extension:  getVideoExtension(),
                 mimeType:   getVideoMimeType(),
-                isDeferred: false,
-            }
-        }
-
-        const hqAvailable = hqMedia?.blob instanceof Blob
-        const useHqMedia = target === 'hq' || (target === 'auto' && hqAvailable)
-        if (useHqMedia && hqAvailable) {
-            return {
-                blob:      hqMedia.blob,
-                filename:   hqMedia.filename || getHqFilenameStem(),
-                extension:  hqMedia.extension || getVideoExtension(),
-                mimeType:   hqMedia.mimeType || getVideoMimeType(),
-                isDeferred: true,
             }
         }
 
         return {
             blob:      _mediaBlob.current.blob,
-            filename:   getDraftFilenameStem(),
+            filename:   getVideoFilenameStem(),
             extension:  getVideoExtension(),
             mimeType:   getVideoMimeType(),
-            isDeferred: false,
         }
-    }, [getDraftFilenameStem, getHqFilenameStem, getVideoExtension, getVideoMimeType, hqMedia])
-
-    const startHqExport = useCallback(async () => {
-        if (isHqExporting || !__.recorder.isVideo() || !isReplayVideoLinked) {
-            return
-        }
-
-        const wasTimelinePreviewActive = lgs.stores.ui.video.timelinePreviewActive === true
-        Object.assign(lgs.stores.ui.video, {
-            editing:    true,
-            recordingHQ: true,
-            finalizing: true,
-        })
-        prepareVideoCaptureUi()
-        const hqRenderSpec = await resolveHqExportRenderSpec()
-        const exportFilename = getHqExportFilename()
-        const controller = new AbortController()
-        _hqExportAbortController.current = controller
-        setHqExportStatus('exporting')
-        _dialogHiddenForHqExport.current = true
-        _suppressNextDialogHideCleanup.current = true
-        setDialogOpen(false)
-
-        try {
-            await waitForAnimationFrame()
-            releaseHqMediaUrl()
-            setHqMedia(null)
-            const hqMediaMetadata = lgs.stores.replay?.deferredExportPlan?.mediaMetadata
-                                      ?? __.recorder?.mediaData?.metadata
-                                      ?? null
-            const result = await exportReplayDeferredMp4({
-                replay: lgs.stores.replay,
-                journey: lgs.theJourney,
-                controller: __.ui.replay?.controller ?? null,
-                sourceCanvas: lgs.canvas,
-                dimensions: hqRenderSpec?.dimensions ?? lgs.stores.replay?.deferredExportPlan?.dimensions ?? null,
-                captureMode: hqRenderSpec?.captureMode ?? lgs.stores.replay?.deferredExportPlan?.captureMode ?? null,
-                filename: exportFilename,
-                signal: controller.signal,
-                abortController: controller,
-                mediaMetadata: hqMediaMetadata,
-            })
-
-            const draftMediaData = getMediaData()
-            const hqMetadata = result.plan?.mediaMetadata
-                              ?? hqMediaMetadata
-                              ?? draftMediaData.metadata
-                              ?? {}
-            const hqDuration = Number(result.plan?.videoTimeline?.durationMillis)
-                               || Number(result.plan?.manifest?.metadata?.replayDurationMillis)
-                               || Number(draftMediaData.duration)
-                               || 0
-            const hqFrameCount = Number(result.frameCount) || Number(result.plan?.manifest?.frameCount) || 0
-            const hqFps = Number(result.plan?.renderSpec?.fps)
-                          || Number(result.plan?.videoTimeline?.fps)
-                          || Number(draftMediaData.fps)
-                          || 0
-            const hqDimensions = result.plan?.dimensions
-                                  ?? lgs.stores.replay?.deferredExportPlan?.dimensions
-                                  ?? result.plan?.renderSpec?.dimensions
-                                  ?? result.manifest?.metadata?.dimensions
-                                  ?? draftMediaData.dimensions
-            const payload = {
-                blob:       result.blob,
-                url:        URL.createObjectURL(result.blob),
-                filename:   getHqFilenameStem() || result.plan?.label || DEFAULT_VIDEO_FILENAME,
-                extension:  result.extension || getVideoExtension(),
-                mimeType:   result.mimeType || getVideoMimeType(),
-                mediaData:  {
-                    ...draftMediaData,
-                    size:       Number(result.blob?.size) || 0,
-                    duration:   hqDuration,
-                    fps:        hqFps,
-                    averageFps: hqDuration > 0 && hqFrameCount > 0 ? hqFrameCount / (hqDuration / 1000) : hqFps,
-                    dimensions: {
-                        width:  Number(hqDimensions?.width) || 0,
-                        height: Number(hqDimensions?.height) || 0,
-                    },
-                    quality:    {name: 'HQ'},
-                    ratio:      draftMediaData.ratio || {label: 'Unknown'},
-                    metadata:   hqMetadata,
-                },
-                isDeferred: true,
-            }
-            _hqMediaUrl.current = payload.url
-            _mediaBlob.current.filename = payload.filename
-            setFilename(payload.filename)
-            setHqMedia(payload)
-            setHqExportStatus('ready')
-            void CountApi.sendHqVideo()
-            Object.assign(lgs.stores.ui.video, {
-                editing:    false,
-                recordingHQ: false,
-                finalizing: false,
-                timelinePreviewActive: wasTimelinePreviewActive,
-            })
-            _dialogHiddenForHqExport.current = false
-            _suppressNextDialogHideCleanup.current = false
-            await prepareReplaySceneForDialog()
-            setDialogOpen(true)
-        }
-        catch (error) {
-            if (error?.name === 'AbortError') {
-                setHqExportStatus('idle')
-            }
-            else {
-                console.error('HQ export failed:', error?.message, error?.stack)
-                UIToast.error({
-                    caption: 'Replay export',
-                    text:    'Unable to create the HQ video.',
-                })
-                setHqExportStatus('idle')
-            }
-            Object.assign(lgs.stores.ui.video, {
-                editing:    false,
-                recordingHQ: false,
-                finalizing: false,
-                timelinePreviewActive: wasTimelinePreviewActive,
-            })
-            _dialogHiddenForHqExport.current = false
-            _suppressNextDialogHideCleanup.current = false
-            await prepareReplaySceneForDialog({force: true})
-            setDialogOpen(true)
-        }
-        finally {
-            _hqExportAbortController.current = null
-        }
-    }, [__.recorder, getHqExportFilename, getHqFilenameStem, getMediaData, getVideoExtension, getVideoMimeType, isHqExporting, isReplayVideoLinked, prepareReplaySceneForDialog, releaseHqMediaUrl, waitForAnimationFrame])
-
-    /**
-     * Starts the linked Replay HQ export requested by the preparation timeline.
-     */
-    useEffect(() => {
-        const handleStartHqExport = () => {
-            if (globalThis.lgs?.stores?.replay?.recordingSync === true) {
-                void startHqExport()
-            }
-        }
-
-        globalThis.window?.addEventListener('lgs:video:start-hq-export', handleStartHqExport)
-        return () => globalThis.window?.removeEventListener('lgs:video:start-hq-export', handleStartHqExport)
-    }, [startHqExport])
+    }, [getVideoFilenameStem, getVideoExtension, getVideoMimeType])
 
     /**
      * Handle share action with Web Share API fallback.
      */
-    const handleShare = useCallback(async (target = 'auto') => {
+    const handleShare = useCallback(async () => {
         if (_shareInFlight.current) {
             return
         }
-        const exportMedia = await resolveSmartVideoBlob(target)
+        const exportMedia = await resolveSmartVideoBlob()
         const blob = exportMedia.blob
         if (!(blob instanceof Blob) || blob.size === 0) {
             UIToast.error({
@@ -651,7 +390,7 @@ export const VideoDownloadAndShareDialog = () => {
         }
 
         _shareInFlight.current = true
-        const isVideo = __.recorder.isVideo()
+        const isVideo = __.mediaCapture.isVideo()
         const extension = isVideo ? exportMedia.extension || getVideoExtension() : lgs.settings.ui.video.image
         const file = new File(
             [blob],
@@ -710,38 +449,34 @@ export const VideoDownloadAndShareDialog = () => {
     }, [getVideoExtension, getVideoMimeType, resolveSmartVideoBlob])
 
     const mediaData = getMediaData()
-    const isVideo = __.recorder.isVideo()
+    const isVideo = __.mediaCapture.isVideo()
     const canShare = __.app.canShare()
-    const previewMediaUrl = hqMedia?.url ?? mediaUrl
+    const previewMediaUrl = mediaUrl
 
     /**
-     * Handle download via recorder API.
+     * Download the available Replay video or screenshot.
      */
-    /**
-     * Download the current media choice.
-     *
-     * For replay-linked videos, this may trigger the HQ export first.
-     */
-    const handleDownload = useCallback(async (target = 'auto') => {
+    const handleDownload = useCallback(async () => {
         try {
-            if (__.recorder.isVideo()) {
-                const media = await resolveSmartVideoBlob(target)
+            if (__.mediaCapture.isVideo()) {
+                const media = await resolveSmartVideoBlob()
                 const blob = media.blob
                 if (!blob || blob.size === 0) {
                     return
                 }
                 const downloadFilename = buildMediaFilename(media.filename, media.extension || getVideoExtension(), DEFAULT_VIDEO_FILENAME)
-                if (media.isDeferred) {
-                    downloadBlobFile(blob, downloadFilename)
+                if (_mediaBlob.current.source === 'deferred-replay') {
+                    const link = document.createElement('a')
+                    link.href = _mediaBlob.current.url
+                    link.download = downloadFilename
+                    link.click()
                 }
                 else {
-                    await __.recorder.download({
-                                                   filename: downloadFilename,
-                                               })
+                    await __.mediaCapture.download({filename: downloadFilename})
                 }
             }
             else {
-                await __.recorder.download({
+                await __.mediaCapture.download({
                                                filename: buildMediaFilename(_mediaBlob.current.filename, lgs.settings.ui.video.image, DEFAULT_IMAGE_FILENAME),
                                            })
             }
@@ -749,21 +484,7 @@ export const VideoDownloadAndShareDialog = () => {
         catch (error) {
             console.error('Download failed:', error.message)
         }
-    }, [downloadBlobFile, getVideoExtension, resolveSmartVideoBlob])
-
-    const handleShareVariantSelect = useCallback((event) => {
-        const target = event?.detail?.item?.value
-        if (target === 'draft' || target === 'hq') {
-            void handleShare(target)
-        }
-    }, [handleShare])
-
-    const handleDownloadVariantSelect = useCallback((event) => {
-        const target = event?.detail?.item?.value
-        if (target === 'draft' || target === 'hq') {
-            void handleDownload(target)
-        }
-    }, [handleDownload])
+    }, [getVideoExtension, resolveSmartVideoBlob])
 
     /**
      * Handle cancel and cleanup.
@@ -774,9 +495,6 @@ export const VideoDownloadAndShareDialog = () => {
             return
         }
         _dialogCleanupDone.current = true
-        _hqExportAbortController.current?.abort?.()
-        _dialogHiddenForHqExport.current = false
-        _suppressNextDialogHideCleanup.current = false
         await prepareReplaySceneForDialog()
         _replayScenePreFocused.current = false
         clearVideoReplayRuntimeState()
@@ -784,39 +502,27 @@ export const VideoDownloadAndShareDialog = () => {
         setIsRecordingInfoOpen(false)
         cancelVideoEditing()
         releaseMediaUrl()
-        releaseHqMediaUrl()
         _mediaBlob.current = {blob: null, url: null, filename: ''}
-        setHqMedia(null)
-        setHqExportStatus('idle')
-        _hqExportAbortController.current = null
         setMediaUrl(null)
         Object.assign(lgs.stores.ui.video, {
             preRecording:     false,
-            recording:        false,
             recordingHQ:      false,
             paused:           false,
             size:             0,
-            recordedDuration: 0,
-            recordedSize:     0,
-            currentFps:       0,
             editing:          false,
             finalizing:       false,
         })
         setCanDownloadAndShare(false)
         setFilename('')
-        void __.recorder?.releaseMedia?.()
-    }, [prepareReplaySceneForDialog, releaseHqMediaUrl, releaseMediaUrl])
+        void __.mediaCapture?.releaseMedia?.()
+        setDeferredMediaData(null)
+    }, [prepareReplaySceneForDialog, releaseMediaUrl])
 
     /**
      * Keep the cleanup aligned with the native dialog close flow.
      */
     const handleDialogHide = useCallback((event) => {
         if (event?.target && event?.currentTarget && event.target !== event.currentTarget) {
-            return
-        }
-
-        if (_dialogHiddenForHqExport.current || _hqExportAbortController.current || _suppressNextDialogHideCleanup.current) {
-            _suppressNextDialogHideCleanup.current = false
             return
         }
 
@@ -942,131 +648,31 @@ export const VideoDownloadAndShareDialog = () => {
                         </WaButton>
                     </div>
                     {canShare && (
-                        hasHqMedia ? (
-                            <>
-                                <WaTooltip for="video-preview-share">{'Share'}</WaTooltip>
-                                <WaButtonGroup label="Share video">
-                                    <WaButton
-                                        id="video-preview-share"
-                                        appearance="filled"
-                                        variant="brand"
-                                        disabled={!canDownloadAndShare}
-                                        onClick={() => void handleShare('hq')}
-                                    >
-                                        <WaIcon
-                                            slot="start"
-                                            className="video-preview-action-icon"
-                                            name="share-nodes"
-                                            variant="regular"
-                                        />
-                                        {'Share'}
-                                    </WaButton>
-                                    <WaDropdown placement="bottom-end" onWaSelect={handleShareVariantSelect}>
-                                        <WaButton
-                                            slot="trigger"
-                                            appearance="filled"
-                                            variant="brand"
-                                            disabled={!canDownloadAndShare}
-                                        >
-                                            <WaIcon name="chevron-down" label="Share options"/>
-                                        </WaButton>
-                                        <WaDropdownItem value="hq">
-                                            <WaIcon slot="icon" name="film" variant="regular"/>
-                                            {'Share HQ'}
-                                        </WaDropdownItem>
-                                        <WaDropdownItem value="draft">
-                                            <WaIcon slot="icon" name="file-video" variant="regular"/>
-                                            {'Share draft'}
-                                        </WaDropdownItem>
-                                    </WaDropdown>
-                                </WaButtonGroup>
-                            </>
-                        ) : (
-                            <>
-                                <WaTooltip for="video-preview-share">{'Share your video'}</WaTooltip>
-                                <WaButton
-                                    id="video-preview-share"
-                                    appearance="filled"
-                                    variant="brand"
-                                    disabled={!canDownloadAndShare}
-                                    onClick={() => void handleShare()}
-                                >
-                                    <WaIcon
-                                        slot="start"
-                                        className="video-preview-action-icon"
-                                        name="share-nodes"
-                                        variant="regular"
-                                    />
-                                    {'Share'}
-                                </WaButton>
-                            </>
-                        )
-                    )}
-                    {hasHqMedia ? (
                         <>
-                            <WaTooltip for="video-preview-download">{'Save HQ video'}</WaTooltip>
-                            <WaButtonGroup label="Download video">
-                                <WaButton
-                                    id="video-preview-download"
-                                    appearance="filled"
-                                    variant="brand"
-                                    disabled={!canDownloadAndShare}
-                                    onClick={() => void handleDownload('hq')}
-                                >
-                                    <WaIcon slot="start" className="video-preview-action-icon" name="download" variant="regular"/>
-                                    {'Download'}
-                                </WaButton>
-                                <WaDropdown placement="bottom-end" onWaSelect={handleDownloadVariantSelect}>
-                                    <WaButton
-                                        slot="trigger"
-                                        appearance="filled"
-                                        variant="brand"
-                                        disabled={!canDownloadAndShare}
-                                    >
-                                        <WaIcon name="chevron-down" label="Download options"/>
-                                    </WaButton>
-                                    <WaDropdownItem value="hq">
-                                        <WaIcon slot="icon" name="film" variant="regular"/>
-                                        {'Download HQ'}
-                                    </WaDropdownItem>
-                                    <WaDropdownItem value="draft">
-                                        <WaIcon slot="icon" name="file-video" variant="regular"/>
-                                        {'Download draft'}
-                                    </WaDropdownItem>
-                                </WaDropdown>
-                            </WaButtonGroup>
-                        </>
-                    ) : (
-                        <>
-                            <WaTooltip for="video-preview-download">{'Save your video'}</WaTooltip>
+                            <WaTooltip for="video-preview-share">{'Share your video'}</WaTooltip>
                             <WaButton
-                                id="video-preview-download"
+                                id="video-preview-share"
                                 appearance="filled"
                                 variant="brand"
                                 disabled={!canDownloadAndShare}
-                                onClick={() => void handleDownload()}
+                                onClick={() => void handleShare()}
                             >
-                                <WaIcon slot="start" className="video-preview-action-icon" name="download" variant="regular"/>
-                                {'Download'}
+                                <WaIcon slot="start" className="video-preview-action-icon" name="share-nodes" variant="regular"/>
+                                {'Share'}
                             </WaButton>
                         </>
                     )}
-                    {!hasHqMedia && isReplayVideoLinked && (
-                        <div className="video-preview-create-hq-action">
-                            <WaTooltip for="video-preview-create-hq">{isHqExporting ? 'Creating HQ video' : 'Create an HQ version'}</WaTooltip>
-                            <WaButton
-                                id="video-preview-create-hq"
-                                appearance="outlined"
-                                variant="neutral"
-                                disabled={!__?.recorder.isVideo() || isHqExporting}
-                                onClick={() => void startHqExport()}
-                                aria-label="Create HQ video"
-                            >
-                                <WaIcon slot="start" className="video-preview-action-icon" name={isHqExporting ? 'spinner-third' : 'film'} variant="regular"/>
-                                {isHqExporting ? 'Creating HQ...' : 'Create HQ'}
-                            </WaButton>
-                        </div>
-                    )}
+                    <WaTooltip for="video-preview-download">{'Save your video'}</WaTooltip>
+                    <WaButton
+                        id="video-preview-download"
+                        appearance="filled"
+                        variant="brand"
+                        disabled={!canDownloadAndShare}
+                        onClick={() => void handleDownload()}
+                    >
+                        <WaIcon slot="start" className="video-preview-action-icon" name="download" variant="regular"/>
+                        {'Download'}
+                    </WaButton>
                 </div>
             </div>
             </WaDialog>

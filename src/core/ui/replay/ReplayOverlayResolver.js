@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -158,8 +158,8 @@ export const resolveReplayExportFrameState = (replay = defaultReplayStore()) => 
 /**
  * Return the active dynamic replay frame, regardless of its producer.
  *
- * Draft recording publishes `dynamicFrameState` from the playback controller.
- * HQ export publishes `runtime.frameState` from the deferred exporter.
+ * Interactive playback publishes `dynamicFrameState` from the replay controller.
+ * Video export publishes `runtime.frameState` from the deferred exporter.
  */
 export const resolveReplayDynamicFrameState = (replay = defaultReplayStore()) => (
     resolveReplayExportFrameState(replay)
@@ -198,7 +198,7 @@ export const hasJourneyReplayStopClips = () => {
 export const isVideoWidgetEditorPhase = () => {
     const video = globalThis.lgs?.stores?.ui?.video ?? null
     return Boolean(video?.editing || video?.preRecording)
-           && !video?.recording
+           && !video?.recordingHQ
            && !video?.finalizing
            && !video?.snapshot
 }
@@ -220,7 +220,12 @@ export const shouldRenderVideoBoardWidget = ({
                                                   replay = null,
                                               } = {}) => {
     const isHqExporting = replay?.deferredExportPlan?.runtime?.status === 'exporting'
-    const isVideoCaptureActive = video?.preRecording || video?.recording || isHqExporting
+    const isVideoCaptureActive = video?.editing
+                                  || video?.preRecording
+                                  || video?.recordingHQ
+                                  || video?.snapshot
+                                  || video?.finalizing
+                                  || isHqExporting
 
     return Boolean(widgetEditor || (widgetsBoard === VIDEO_WIDGETS_BOARD && isVideoCaptureActive))
 }

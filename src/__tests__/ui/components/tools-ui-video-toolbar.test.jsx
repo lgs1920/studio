@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -48,7 +48,7 @@ vi.mock('@Components/MainUI/video/VideoSettingsInfo', () => ({
 }))
 
 vi.mock('@Components/MainUI/video/VideoRecordingScreenArea', () => ({
-    VideoRecordingScreenArea: () => null,
+    VideoRecordingScreenArea: () => <div data-testid="video-recording-screen-area"/>,
 }))
 
 vi.mock('@Components/MainUI/widgets/SceneWidgetsRenderer', () => ({
@@ -145,14 +145,21 @@ describe('ToolsUI linked replay video editing', () => {
         await waitFor(() => expect(document.getElementById('lgs1920-container')?.classList.contains('lgs-video-crop-input-mode')).toBe(true))
     })
 
+    it('keeps the recording surface mounted during deterministic Replay export', () => {
+        globalThis.lgs.stores.ui.video.recordingHQ = true
+        const {getByTestId} = render(<ToolsUI/>)
+
+        expect(getByTestId('video-recording-screen-area')).toBeTruthy()
+    })
+
     it('returns an interrupted linked recording to the canonical Replay preparation state', async () => {
         const enterReplayPreparation = globalThis.__.ui.replay.enterReplayPreparation
         render(<ToolsUI/>)
 
-        globalThis.lgs.stores.ui.video.recording = true
-        await waitFor(() => expect(globalThis.lgs.stores.ui.video.recording).toBe(true))
+        globalThis.lgs.stores.ui.video.recordingHQ = true
+        await waitFor(() => expect(globalThis.lgs.stores.ui.video.recordingHQ).toBe(true))
 
-        globalThis.lgs.stores.ui.video.recording = false
+        globalThis.lgs.stores.ui.video.recordingHQ = false
         globalThis.lgs.stores.ui.video.editing = true
 
         await waitFor(() => expect(enterReplayPreparation).toHaveBeenCalledWith(expect.objectContaining({

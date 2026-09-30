@@ -13,14 +13,15 @@ project state is kept locally, and exports are explicit user actions. IndexedDB 
 settings, and cached runtime data.
 
 The current product surface is built around Cesium. Users can move between 2D and 3D views, focus the camera
-on journeys or POIs, run orbit and panorama camera modes, and record the scene with selected overlays. The widget system
-is also part of the core workflow: widgets can be positioned, resized, locked, ordered, reduced, and captured by the
-video/snapshot pipeline.
+on journeys or POIs, run orbit and panorama camera modes, and export Journey Replay videos or screenshots with
+selected overlays. The widget system is also part of the core workflow: widgets can be positioned, resized, locked,
+ordered, reduced, and included in Replay media.
 
-Replay and media export are active parts of the codebase. Journey Replay already has a sampler, playback controller,
-Cesium renderer, camera behavior, recorder synchronization, replay clips, overlay visibility rules, and a deferred HQ
-MP4 export path. The current Replay UI still uses start/stop clip lists, but the underlying video stack already works
-with deterministic frames and replay phases.
+Replay and media export are active parts of the codebase. Journey Replay has a sampler, playback controller, Cesium
+renderer, camera behavior, replay clips, overlay visibility rules, and a deterministic MP4 export path. All video
+video creation uses Replay MP4 export. The current Replay UI still uses
+start/stop clip lists, while video export renders deterministic frames and
+replay phases.
 
 The repository already contains the main product surface used by the studio:
 
@@ -36,12 +37,12 @@ The repository already contains the main product surface used by the studio:
 - Video crop dimensions persist across editor sessions, with crop snapping limited to the composition bounds
 - Geocoding tools and coordinate utilities
 - Journey Replay playback and replay-aware video synchronization
-- Replay Draft final-frame synchronization and bounded trace rendering
+- Interactive Replay frame synchronization and bounded trace rendering
 - Double-clicking a linked Replay timeline action opens or toggles its editor target
-- Video recording, deferred HQ export, and image snapshot workflows
-- Mobile video preview actions keep HQ video creation on a dedicated right-aligned row
+- Replay MP4 export and image snapshot workflows
+- Mobile video preview actions keep Replay export actions on a dedicated right-aligned row
 - Linked replay video editing temporarily hides the Journey toolbar without changing its saved visibility setting
-- Deterministic HQ camera following for navigation and dynamic corrections, including 1.5-second transitions
+- Deterministic export camera following for navigation and dynamic corrections, including 1.5-second transitions
 - Crop-aware collision tracking and visible diagnostic overlays across video formats
 - IndexedDB persistence for editor state and loaded content
 - Privacy-first local workspace for imported journeys and generated media
@@ -79,11 +80,11 @@ The repository already contains the main product surface used by the studio:
 
 ### Media Workflows
 
-- Video crop area and recording UI
+- Replay video crop area and export UI
 - Snapshot capture
 - Media composition through canvas overlays
-- Recorder pipeline based on Mediabunny
-- Replay-aware recording sync and explicit HQ MP4 generation
+- MP4 export pipeline based on Mediabunny
+- Replay playback synchronization and deterministic MP4 export
 - Dynamic overlay visibility for replay-driven widgets
 
 ### Journey Reports
@@ -109,7 +110,7 @@ The repository already contains the main product surface used by the studio:
 
 LGS1920 Studio is a privacy-first, local-first geospatial editor for importing and managing outdoor journeys,
 tracks, and points of interest. It provides Cesium 2D/3D visualization, journey editing, elevation-aware statistics,
-camera controls, widgets, replay, snapshots, video recording, and PDF/HTML journey reports. Projects and imported data
+camera controls, widgets, replay, snapshots, Replay video export, and PDF/HTML journey reports. Projects and imported data
 are persisted locally in the browser, with explicit export and sharing actions.
 
 ### 1.1 — Extended Activity Imports
@@ -126,7 +127,7 @@ Technical spec: [Journey import formats](tech-doc/todo/JOURNEY_IMPORT_FORMATS_SP
 
 Replace the current separate Replay `start` / `replay` / `stop` clip UI with a track-based timeline inside the Replay
 drawer. The timeline will combine start clips, one locked journey replay, stop clips, and widget clips across up to 20
-widget tracks. The same timeline state will drive Draft recording and HQ export deterministically.
+widget tracks. The timeline state will drive interactive Replay and deterministic MP4 export from the same frame definition.
 
 Technical specs: [Replay Timeline preparation implementation](tech-doc/specs/replay-video/CORE-REPLAY-TIMELINE-IMPLEMENTATION.md) for the delivered preparation surface and [Replay track timeline editor evolution](tech-doc/todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md) for the complete editor.
 
@@ -154,7 +155,6 @@ points include:
 - [Replay architecture](tech-doc/specs/replay-video/CORE-REPLAY-ARCHITECTURE.md)
 - [Replay implementation status](tech-doc/specs/replay-video/CORE-REPLAY-IMPLEMENTATION-STATUS.md)
 - [Replay quality validation](tech-doc/specs/replay-video/CORE-REPLAY-QUALITY-VALIDATION.md)
-- [Replay audit](tech-doc/specs/replay-video/REPLAY-AUDIT.md)
 - [Replay Timeline preparation implementation](tech-doc/specs/replay-video/CORE-REPLAY-TIMELINE-IMPLEMENTATION.md)
 - [Replay track timeline editor evolution](tech-doc/todo/CORE-REPLAY-TRACK-TIMELINE-EDITOR-EVOLUTION.md)
 - [Drone camera path architecture](tech-doc/specs/replay-video/CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)
@@ -162,7 +162,7 @@ points include:
 - [Clip altitude data alignment](tech-doc/todo/CORE-CLIP-ALTITUDE-DATA-ALIGNMENT-SPEC.md)
 - [POI animation during replay](tech-doc/todo/CORE-POI-ANIMATION-DURING-REPLAY-SPEC.md)
 - [Widget manager](tech-doc/specs/ui-widgets/CORE-WIDGET-MANAGER-README.md)
-- [Screen media recorder](tech-doc/specs/replay-video/CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)
+- [Replay media capture](tech-doc/specs/replay-video/CORE-SCREEN-MEDIA-RECORDER-RECORDER-README.md)
 - [Canvas overlay composer](tech-doc/specs/replay-video/CORE-SCREEN-MEDIA-RECORDER-COMPOSER-README.md)
 - [Deployment and backend environment handling](tech-doc/specs/delivery/DEPLOYMENT-README.md)
 - [All technical docs](tech-doc/README.md)
@@ -237,7 +237,7 @@ Tests are organized under `src/__tests__/` by responsibility:
 
 ## Project Layout
 
-- `src/core/`: application core, stores, camera / scene managers, DB layer, widget manager, media recorder
+- `src/core/`: application core, stores, camera / scene managers, DB layer, widget manager, Replay media capture
 - `src/components/`: React UI components for editing, map controls, widgets, video tools, and panels
 - `src/Utils/`: Cesium and app utilities
 - `public/`: static configuration, widgets catalog, service worker, images, changelog, and runtime assets

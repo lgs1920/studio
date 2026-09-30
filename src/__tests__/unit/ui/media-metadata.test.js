@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-19
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { describe, expect, it } from 'vitest'
-import { normalizeMediabunnyMetadataTags } from '@Core/ui/screen-media-recorder/recorder/MediaMetadata'
+import { normalizeMediabunnyMetadataTags } from '@Core/ui/replay/ReplayMediaMetadata'
 
 describe('normalizeMediabunnyMetadataTags', () => {
     it('removes application-only metadata before MP4 muxing', () => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-11-30
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,8 +23,12 @@ import {
     VideoQualityToolbar,
 }                                                                          from '@Components/MainUI/video/toolbox/VideoQualityToolbar'
 import {
-    ScreenMediaRecorder,
-}                                                                          from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+    DEFAULT_REPLAY_VIDEO_FPS_INDEX,
+    DEFAULT_REPLAY_VIDEO_QUALITY_INDEX,
+    REPLAY_VIDEO_FPS,
+    REPLAY_VIDEO_PRESETS,
+    REPLAY_VIDEO_QUALITY,
+}                                                                          from '@Core/ui/replay/ReplayVideoSettings'
 import { LGSPopup }                                                        from '@Components/LGSPopup'
 import {
     WaButton,
@@ -39,6 +43,7 @@ export const VideoPresetToolbar = memo(({
     embedded = false,
     idPrefix = 'video-preset',
     inlineCustom = false,
+    compactSimple = false,
     mainTheme = false,
 }) => {
     const $video = lgs.stores.ui.video
@@ -59,7 +64,7 @@ export const VideoPresetToolbar = memo(({
      * @returns {string}
      */
     const getPresets = useCallback((fpsIndex, qualityIndex) => {
-        for (const [key, p] of ScreenMediaRecorder.VIDEO_PRESETS) {
+        for (const [key, p] of REPLAY_VIDEO_PRESETS) {
             if (key === 'custom') {
                 continue
             }
@@ -68,7 +73,7 @@ export const VideoPresetToolbar = memo(({
                 return {key, ...p}
             }
         }
-        return {key: 'custom', ...ScreenMediaRecorder.VIDEO_PRESETS.get('custom')}
+        return {key: 'custom', ...REPLAY_VIDEO_PRESETS.get('custom')}
     }, [])
 
     const getSafeIndex = useCallback((value, list, fallback) => {
@@ -76,8 +81,8 @@ export const VideoPresetToolbar = memo(({
     }, [])
 
     useEffect(() => {
-        const safeFps = getSafeIndex($videoSettings?.fps, ScreenMediaRecorder.FPS, ScreenMediaRecorder.DEFAULT_FPS_INDEX)
-        const safeQuality = getSafeIndex($videoSettings?.quality, ScreenMediaRecorder.QUALITY, ScreenMediaRecorder.DEFAULT_QUALITY_INDEX)
+        const safeFps = getSafeIndex($videoSettings?.fps, REPLAY_VIDEO_FPS, DEFAULT_REPLAY_VIDEO_FPS_INDEX)
+        const safeQuality = getSafeIndex($videoSettings?.quality, REPLAY_VIDEO_QUALITY, DEFAULT_REPLAY_VIDEO_QUALITY_INDEX)
 
         if ($video.fps !== safeFps) {
             $video.fps = safeFps
@@ -115,7 +120,7 @@ export const VideoPresetToolbar = memo(({
             return
         }
 
-        const config = ScreenMediaRecorder.VIDEO_PRESETS.get(key)
+        const config = REPLAY_VIDEO_PRESETS.get(key)
         if (config) {
             // Update proxy indexes
             $video.fps = config.fps
@@ -141,7 +146,7 @@ export const VideoPresetToolbar = memo(({
         right:  'chevron-right',
     }[side] ?? 'chevron-up')
 
-    const presetButtons = Array.from(ScreenMediaRecorder.VIDEO_PRESETS).map(([key, value]) => (
+    const presetButtons = Array.from(REPLAY_VIDEO_PRESETS).map(([key, value]) => (
         <Fragment key={key}>
             <WaButton
                 className={classNames('video-choice-button', {'is-selected': key === preset})}
@@ -158,9 +163,9 @@ export const VideoPresetToolbar = memo(({
             </WaButton>
 
             {value.submenu && inlineCustom && key === 'custom' && open ? (
-                <div className={`video-preset-custom video-preset-custom--inline ${themeClass}`}>
+                <div className={`video-preset-custom video-preset-custom--inline ${compactSimple ? 'video-preset-custom--simple' : ''} ${themeClass}`}>
                     <VideoFPSToolbar choicesOnMap={!mainTheme}/>
-                    <VideoQualityToolbar choicesOnMap={!mainTheme}/>
+                    <VideoQualityToolbar choicesOnMap={!mainTheme} compactSimple={compactSimple}/>
                 </div>
             ) : value.submenu && (
                 <LGSPopup
@@ -172,10 +177,10 @@ export const VideoPresetToolbar = memo(({
                     distance={4}
                     onWaReposition={handlePopupReposition}
                 >
-                    <div className={`video-preset-custom lgs-card ${themeClass}`}
+                    <div className={`video-preset-custom lgs-card ${compactSimple ? 'video-preset-custom--simple' : ''} ${themeClass}`}
                          style={{opacity: mainTheme ? 1 : toolbars.opacity}}>
                         <VideoFPSToolbar choicesOnMap={!mainTheme}/>
-                        <VideoQualityToolbar choicesOnMap={!mainTheme}/>
+                        <VideoQualityToolbar choicesOnMap={!mainTheme} compactSimple={compactSimple}/>
                     </div>
                 </LGSPopup>
             )}

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-10-12
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 /**
  * Singleton class that manages resizable functionality for widgets.
  */
-import { LGS_ANIMATION_RESIZING } from '@Core/constants'
+import { LGS_ANIMATION_RESIZING, VIDEO_CROP_ZONE } from '@Core/constants'
 import { constrainWidgetDimensions } from './widgetResizeUtils'
 
 /**
@@ -85,6 +85,7 @@ export class WidgetResizable {
 
     #resizeDirection = ''
     #resizeStartPosition = {left: 0, top: 0}
+    #resizeStartCropDimensions = null
     #pendingCropUpdateFrame = null
     #pendingCropUpdateConfig = null
     /**
@@ -255,6 +256,13 @@ export class WidgetResizable {
         if (config.isCropper) {
             const after = {left: finalLeft, top: finalTop, width, height}
             config.cropDimensions = after
+            if (config.id === VIDEO_CROP_ZONE && this.#resizeStartCropDimensions &&
+                (width !== this.#resizeStartCropDimensions.width || height !== this.#resizeStartCropDimensions.height)) {
+                const cropperState = globalThis.lgs?.stores?.ui?.video?.cropper
+                if (cropperState) {
+                    cropperState.resizing = true
+                }
+            }
             if (!prevCropDimensions ||
                 prevCropDimensions.left !== after.left ||
                 prevCropDimensions.top !== after.top ||
@@ -291,6 +299,22 @@ export class WidgetResizable {
         }
         const config = this.#widgetManager.getWidgetConfig(this.#widgetManager.retrieveElementId(event.target))
 
+        if (config?.isCropper && config.id === VIDEO_CROP_ZONE) {
+            const initialWidth = Number(config.cropDimensions?.width)
+            const initialHeight = Number(config.cropDimensions?.height)
+            this.#resizeStartCropDimensions = {
+                width: Number.isFinite(initialWidth)
+                    ? Math.round(initialWidth)
+                    : Math.round(__.app.parsePx(event.target.style.width || '0')),
+                height: Number.isFinite(initialHeight)
+                    ? Math.round(initialHeight)
+                    : Math.round(__.app.parsePx(event.target.style.height || '0')),
+            }
+        }
+        else {
+            this.#resizeStartCropDimensions = null
+        }
+
         if (config?.resizeFromCenter) {
             event.setFixedDirection?.([0, 0])
         }
@@ -319,6 +343,7 @@ export class WidgetResizable {
     onResizeEnd = async event => {
         this.#widgetManager.isResizing = false
         this.#resizeStartPosition = {left: 0, top: 0}
+        this.#resizeStartCropDimensions = null
         this.#flushPendingCropUpdate()
 
         event.target.classList.remove('resizing', LGS_ANIMATION_RESIZING, `direction-${this.#cardinalDirections[this.#resizeDirection]}`)
@@ -336,6 +361,20 @@ export class WidgetResizable {
             config.cropDimensions = {left, top, width, height}
             this.#widgetCropper.applyCropToOverlay(config)
             this.#widgetCropper.dispatchCropUpdate(config, 'end')
+            if (config.id === VIDEO_CROP_ZONE) {
+                const cropperState = globalThis.lgs?.stores?.ui?.video?.cropper
+                if (cropperState) {
+                    // The cropper queued its final widget reposition first, so release the mask afterward.
+                    if (typeof requestAnimationFrame === 'function') {
+                        requestAnimationFrame(() => {
+                            cropperState.resizing = false
+                        })
+                    }
+                    else {
+                        cropperState.resizing = false
+                    }
+                }
+            }
             this.#persistWidgetsForBoard(config.id)
         }
         else {

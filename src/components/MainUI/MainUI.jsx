@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-22
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,13 +28,12 @@ import { PanoramaWidget } from '@Components/MainUI/PanoramaWidget'
 import { OrbitWidget }       from '@Components/MainUI/OrbitWidget'
 import { OrbitButton }       from '@Components/MainUI/OrbitButton'
 import { EditorPanelButton } from '@Editor/EditorPanelButton'
-import { VideoButton }       from '@Components/MainUI/video/VideoButton'
 import { VideoDownloadAndShareDialog } from '@Components/MainUI/video/VideoDownloadAndShareDialog'
 import { ReplayRecordingMonitorWidget } from '@Components/MainUI/video/ReplayRecordingMonitorWidget'
-import { TextButton }        from '@Components/Text/TextButton'
 import { TracksEditor }                         from '@Components/TracksEditor/TracksEditor'
 import { JourneyGroupsDrawer }                  from '@Editor/groups/JourneyGroupsDrawer'
 import { JourneyReplayButton }         from '@Components/JourneyReplay/JourneyReplayButton'
+import { REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT } from '@Core/ui/replay/ReplayUserModes'
 import { JourneyReplayDrawer }         from '@Components/JourneyReplay/JourneyReplayDrawer'
 import {
     BOTTOM, END, EVENTS, MENU_BOTTOM_END, MENU_BOTTOM_START, MENU_END_END, MENU_END_START, MENU_START_END,
@@ -88,20 +87,6 @@ export const MainUI = memo(() => {
 
     const closeDrawer = useCallback(() => {
         __.ui.drawerManager.close()
-    }, [])
-
-    /**
-     * Starts the synchronized Replay video entry point.
-     *
-     * @returns {void} Nothing.
-     */
-    const startReplayVideo = useCallback(() => {
-        __.ui.replayVideoSync?.arm?.({
-            autoStopRecording: true,
-            resetToStart:      true,
-        })
-        lgs.stores.ui.video.timelinePreviewActive = true
-        lgs.stores.ui.video.editing = true
     }, [])
 
     const handleKeyDown = useCallback((event) => {
@@ -233,14 +218,14 @@ export const MainUI = memo(() => {
             return
         }
 
-        if (theJourney || video.editing || video.recording || video.preRecording || video.snapshot || video.finalizing) {
+        if (theJourney || video.editing || video.recordingHQ || video.preRecording || video.snapshot || video.finalizing) {
             lgs.stores.ui.mainUI.callForActions.active = false
         }
-    }, [theJourney, mainUI.callForActions.active, video.editing, video.recording, video.preRecording, video.snapshot, video.finalizing])
+    }, [theJourney, mainUI.callForActions.active, video.editing, video.recordingHQ, video.preRecording, video.snapshot, video.finalizing])
 
     const tooltipDir = toolBar.fromStart ? 'right' : 'left'
     const {primaryEntrance, secondaryEntrance} = arrangeDrawers()
-    const videoCaptureActive = video.preRecording || video.recording || video.snapshot || video.finalizing
+    const videoCaptureActive = video.preRecording || video.recordingHQ || video.snapshot || video.finalizing
     const isJourneyReplayUiHidden = replay.mainUiHidden === true
 
     return (
@@ -259,29 +244,32 @@ export const MainUI = memo(() => {
                                     <POIEditButton tooltip={tooltipDir}/>
                                     <EditorPanelButton tooltip={tooltipDir}/>
                                     {/* <ProfileButton tooltip={tooltipDir}/> */}
-                                    <TextButton tooltip={tooltipDir}/>
                                     <InformationButton tooltip={tooltipDir}/>
                                     <SupportUIButton tooltip={tooltipDir}/>
                                 </div>
                                 <div id="secondary-buttons-bar" className={secondaryEntrance}>
-                                    {!video.recording && <Compass sensitivity={100}/>}
+                                    {!video.recordingHQ && <Compass sensitivity={100}/>}
                                     <div id="secondary-buttons-bar-content">
                                         <SceneModeSelector tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                         <GeocodingButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                         <OrbitButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>
                                         {!videoCaptureActive && <FullScreenButton tooltip={toolBar.fromStart ? 'left' : 'right'}/>}
                                         <div className="video-entry-actions">
-                                            <VideoButton
+                                            <JourneyReplayButton
+                                                id="launch-basic-replay"
                                                 tooltip={toolBar.fromStart ? 'left' : 'right'}
-                                                className="square-button"
+                                                tooltipText="Basic Replay"
+                                                ariaLabel="Basic Replay"
+                                                mode={REPLAY_USER_MODE_BASIC}
+                                                variant="brand"
                                                 appearance="filled"
                                             />
                                             <JourneyReplayButton
-                                                id="launch-the-replay-video"
+                                                id="launch-expert-replay"
                                                 tooltip={toolBar.fromStart ? 'left' : 'right'}
-                                                tooltipText="Record a synchronized Replay video"
-                                                ariaLabel="Record a synchronized Replay video"
-                                                onClick={startReplayVideo}
+                                                tooltipText="Expert Replay"
+                                                ariaLabel="Expert Replay"
+                                                mode={REPLAY_USER_MODE_EXPERT}
                                                 variant="brand"
                                                 appearance="filled"
                                             />
@@ -301,7 +289,7 @@ export const MainUI = memo(() => {
 
                                 </div>
                                 <div id="bottom-right-ui">
-                                    {!video.recording && <CreditsBar/>}
+                                    {!video.recordingHQ && <CreditsBar/>}
                                 </div>
                             </>
                         )}
@@ -319,7 +307,10 @@ export const MainUI = memo(() => {
                         <JourneyGroupsDrawer/>
                         <JourneyReplayDrawer/>
                         <MapPOIEditPanel/>
-                        <WidgetManagementDrawer/>
+                        {replay.simplePreparationActive !== true
+                         && !video.preRecording && !video.recordingHQ && !video.snapshot && !video.finalizing && (
+                            <WidgetManagementDrawer/>
+                        )}
                         <WidgetEditorPanel/>
                     </div>
                     <SupportUI/>
@@ -327,7 +318,7 @@ export const MainUI = memo(() => {
                     {mainUI.callForActions.active && <CallForActions/>}
                 </>
             )}
-            {video.editing && <CameraAdjustmentOverlay/>}
+            {video.editing && !videoCaptureActive && <CameraAdjustmentOverlay/>}
             <ContextMenuRenderer/>
             <VideoDownloadAndShareDialog/>
             <ReplayRecordingMonitorWidget/>

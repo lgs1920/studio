@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-01-26
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { CREDITS_WIDGET, LGS_VISUAL_WIDGET, LOGO_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { COMPASS_WIDGET, CREDITS_WIDGET, LGS_VISUAL_WIDGET, LOGO_WIDGET, SCENE_WIDGETS_BOARD, VIDEO_CROP_ZONE, VIDEO_WIDGETS_BOARD } from '@Core/constants'
 import { v4 as uuid }        from 'uuid'
 import { fitWidgetDimensionsToBounds, isNonDistortingWidget } from './widgetResizeUtils'
 
@@ -49,11 +49,10 @@ export class WidgetCoreControls {
     }
 
     /**
-     * Keeps video widgets inside the crop using edge percentages.
-     * Percentages are calculated from the live widget rectangle; persisted
-     * anchors and the previous crop are deliberately ignored.
+     * Keeps video widgets inside the crop and carries their relative position
+     * forward when the crop changes dimensions.
      */
-    repositionWidgetsForBoard = (widgetsBoard, nextBoardRect = null) => {
+    repositionWidgetsForBoard = (widgetsBoard, nextBoardRect = null, previousBoardRect = null) => {
         if (widgetsBoard !== VIDEO_WIDGETS_BOARD || typeof document === 'undefined') {
             return 0
         }
@@ -73,10 +72,25 @@ export class WidgetCoreControls {
                 height: nextBoardRect.height,
             }
             : nextBoardRect
-        const source = measured?.width > 0 && measured?.height > 0 ? measured : fallback
+        const previousFallback = previousBoardRect && container
+            ? {
+                left: container.left + previousBoardRect.left,
+                top: container.top + previousBoardRect.top,
+                width: previousBoardRect.width,
+                height: previousBoardRect.height,
+            }
+            : previousBoardRect
+        // Crop updates provide the cropper's current dimensions in its own
+        // coordinate space. Prefer that value to the live DOM measurement,
+        // which can still report the cropper's temporary 1–2 px layout while
+        // React and ResizeObserver settle.
+        const source = fallback ?? (measured?.width > 0 && measured?.height > 0 ? measured : null)
         if (!source || source.width <= 0 || source.height <= 0) {
             return 0
         }
+
+        const hasPreviousBoardRect = previousFallback?.width > 0 && previousFallback?.height > 0
+        const positionSource = hasPreviousBoardRect ? previousFallback : source
 
         const boardRect = {
             left: source.left ?? 0,
@@ -85,6 +99,12 @@ export class WidgetCoreControls {
             height: source.height,
             right: source.right ?? (source.left ?? 0) + source.width,
             bottom: source.bottom ?? (source.top ?? 0) + source.height,
+        }
+        const positionRect = {
+            left: positionSource.left ?? 0,
+            top: positionSource.top ?? 0,
+            width: positionSource.width,
+            height: positionSource.height,
         }
         const clamp = (value, min, max) => Math.max(min, Math.min(value, max))
         let adapted = 0
@@ -110,19 +130,24 @@ export class WidgetCoreControls {
             const bottom = 100 - top - height
             const fits = left >= 0 && top >= 0 && right >= 0 && bottom >= 0
             const widgetType = config.id.split('#')[0]
-            const forcedAnchor = widgetType === CREDITS_WIDGET
-                ? 'bottom-left'
-                : widgetType === LOGO_WIDGET
-                    ? 'bottom-right'
-                    : null
-            if (fits && !forcedAnchor) {
+            const forcedAnchor = widgetType === COMPASS_WIDGET
+                ? 'top-left'
+                : widgetType === CREDITS_WIDGET
+                    ? 'bottom-left'
+                    : widgetType === LOGO_WIDGET
+                        ? 'bottom-right'
+                        : null
+            if (fits && !forcedAnchor && !hasPreviousBoardRect) {
                 continue
             }
 
+            const relativeLeft = ((rect.left - positionRect.left) / positionRect.width) * 100
+            const relativeTop = ((rect.top - positionRect.top) / positionRect.height) * 100
+
             const currentScaleX = Number.isFinite(Number(config.scale?.x)) && Number(config.scale.x) > 0 ? Number(config.scale.x) : 1
             const currentScaleY = Number.isFinite(Number(config.scale?.y)) && Number(config.scale.y) > 0 ? Number(config.scale.y) : 1
-            // This is intentionally not constrained by minScale or the
-            // widget minimum dimensions: the crop is the hard boundary.
+            // Anchored widgets fit inside the crop while respecting their
+            // configured scale limits whenever the crop has enough room.
             const fixedWidget = Boolean(forcedAnchor)
             const baseWidth = rect.width / currentScaleX
             const baseHeight = rect.height / currentScaleY
@@ -131,11 +156,13 @@ export class WidgetCoreControls {
                 boardRect.width / (fixedWidget ? baseWidth : rect.width),
                 boardRect.height / (fixedWidget ? baseHeight : rect.height),
             ), 0, 1)
+            const fitScale = Math.min(boardRect.width / baseWidth, boardRect.height / baseHeight)
+            const minimumScale = Number.isFinite(Number(config.minScale)) ? Number(config.minScale) : 0
+            const maximumScale = Number.isFinite(Number(config.maxScale)) ? Number(config.maxScale) : Number.POSITIVE_INFINITY
             const fixedScale = Math.max(0, Math.min(
-                currentScaleX,
-                currentScaleY,
-                boardRect.width / baseWidth,
-                boardRect.height / baseHeight,
+                fitScale,
+                maximumScale,
+                Math.max(minimumScale, Math.min(currentScaleX, currentScaleY)),
             ))
             const nextScale = {
                 x: fixedWidget ? fixedScale : currentScaleX * scaleFactor,
@@ -148,16 +175,24 @@ export class WidgetCoreControls {
             const renderedWidthRatio = (renderedWidth / boardRect.width) * 100
             const renderedHeightRatio = (renderedHeight / boardRect.height) * 100
             const margin = Number.isFinite(Number(config.margin)) ? Number(config.margin) : 0
-            const marginLeftRatio = (margin / boardRect.width) * 100
-            const marginTopRatio = (margin / boardRect.height) * 100
-            const nextLeft = forcedAnchor === 'bottom-left'
+            const edgeMargins = config.edgeMargins ?? {}
+            const edgeMargin = edge => Number.isFinite(Number(edgeMargins[edge]))
+                ? Number(edgeMargins[edge])
+                : margin
+            const marginLeftRatio = (edgeMargin('left') / boardRect.width) * 100
+            const marginRightRatio = (edgeMargin('right') / boardRect.width) * 100
+            const marginTopRatio = (edgeMargin('top') / boardRect.height) * 100
+            const marginBottomRatio = (edgeMargin('bottom') / boardRect.height) * 100
+            const nextLeft = forcedAnchor === 'bottom-left' || forcedAnchor === 'top-left'
                 ? marginLeftRatio
                 : forcedAnchor === 'bottom-right'
-                    ? Math.max(0, 100 - renderedWidthRatio - marginLeftRatio)
-                    : clamp(left, 0, 100 - renderedWidthRatio)
-            const nextTop = forcedAnchor
-                ? Math.max(0, 100 - renderedHeightRatio - marginTopRatio)
-                : clamp(top, 0, 100 - renderedHeightRatio)
+                    ? Math.max(0, 100 - renderedWidthRatio - marginRightRatio)
+                    : clamp(hasPreviousBoardRect ? relativeLeft : left, 0, 100 - renderedWidthRatio)
+            const nextTop = forcedAnchor === 'top-left'
+                ? marginTopRatio
+                : forcedAnchor
+                    ? Math.max(0, 100 - renderedHeightRatio - marginBottomRatio)
+                    : clamp(hasPreviousBoardRect ? relativeTop : top, 0, 100 - renderedHeightRatio)
             const screenLeft = boardRect.left + (nextLeft / 100) * boardRect.width
             const screenTop = boardRect.top + (nextTop / 100) * boardRect.height
             const currentLeft = Number.parseFloat(element.style.left || '')
@@ -370,9 +405,15 @@ export class WidgetCoreControls {
 
         let left
         let top
-        if ((config.fromDB || config.fromRuntime || config.isCropper) && hasRuntimePosition) {
+        if ((config.fromDB || config.fromRuntime) && hasRuntimePosition) {
             left = config.position.left
             top = config.position.top
+        }
+        else if (config.isCropper &&
+            Number.isFinite(config.cropDimensions?.left) &&
+            Number.isFinite(config.cropDimensions?.top)) {
+            left = config.cropDimensions.left
+            top = config.cropDimensions.top
         }
         else {
             left = config.isCropper
@@ -485,7 +526,9 @@ export class WidgetCoreControls {
 
             if (config.skipInitialElementResizeSync) {
                 config.skipInitialElementResizeSync = false
-                return
+                if (!config.fitContentWidth) {
+                    return
+                }
             }
 
             const computedStyle = window.getComputedStyle(element)
@@ -1141,7 +1184,7 @@ export class WidgetCoreControls {
             Number.isFinite(config.dimensions?.height) &&
             config.dimensions.width > 0 &&
             config.dimensions.height > 0) {
-            element.style.width = `${config.dimensions.width}px`
+            element.style.width = config.fitContentWidth ? '' : `${config.dimensions.width}px`
             element.style.height = `${config.dimensions.height}px`
         }
 
@@ -1166,6 +1209,13 @@ export class WidgetCoreControls {
 
         if (config.rotate && config.rotate !== 0) {
             __.ui.widgetManager.transform.setRotate(element, config.rotate)
+        }
+
+        // Crop dimensions are restored directly on the target element, so refresh
+        // Moveable after the final transform is in place to keep the handles aligned.
+        if (config.isCropper) {
+            moveable.current.updateRect()
+            requestAnimationFrame(() => moveable.current?.updateRect())
         }
 
         config.skipInitialElementResizeSync = Boolean(config.fromDB || config.fromRuntime)

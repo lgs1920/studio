@@ -164,8 +164,8 @@ The export boundary must:
 1. validate anchors, handles, timing, easing, orientation, and coordinates;
 2. convert local ENU points to public GPS coordinates and absolute heights;
 3. remove Three.js objects and editor-only metadata from the runtime payload;
-4. preserve enough precision for deterministic preview, draft recording, and
-   HQ export to evaluate the same poses.
+4. preserve enough precision for Simple and Expert Replay to evaluate the same
+   poses during preview and export.
 
 ## Proposed Files
 
@@ -189,7 +189,8 @@ interaction.
 - invalid control points, timing, or easing values are rejected before export;
 - the exported definition contains no Three.js instances or editor-only fields;
 - target points and orbit pivots remain visible and selectable;
-- preview, draft recording, and HQ export use identical deterministic samples.
+- Simple and Expert use identical deterministic camera samples during preview
+  and export.
 
 ## Roadmap
 

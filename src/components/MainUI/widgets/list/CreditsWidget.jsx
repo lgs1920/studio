@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-14
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import { CreditsBar }                          from '@Components/MainUI/credits/CreditsBar'
 import { Widget }                              from '@Components/MainUI/widgets/Widget'
-import { HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { HOUR, LGS_VISUAL_WIDGET, MULTI_PURPOSE_WIDGETS } from '@Core/constants'
 import { shouldRenderVideoBoardWidget }        from '@Core/ui/replay/ReplayOverlayResolver'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { useEffect, useMemo, useRef } from 'react'
@@ -38,6 +38,7 @@ export const CreditsWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
     const contextState = useOptionalSnapshot(context, CREDITS_WIDGET_CONTEXT_FALLBACK)
     const video = useSnapshot(lgs.stores.ui.video)
     const replay = useSnapshot(lgs.stores.replay)
+    const simpleReplay = replay.simplePreparationActive === true
     const widgetEditor = contextState.widgetEditor
     const widgetsBoard = contextState.widgetsBoard || persistedWidgetsBoard || ''
     const shouldRender = shouldRenderVideoBoardWidget({
@@ -90,6 +91,7 @@ export const CreditsWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
         return {
             container,
             captureExclude: ['[data-widget-capture="exclude"]'],
+            contextMenuEnabled: !simpleReplay,
             contextMenu:     {
                 canReset:    true,
                 canMaximize: false,
@@ -113,15 +115,16 @@ export const CreditsWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
             persist:         true,
             transient:       true,
             dynamic:         true,
+            fitContentWidth: true,
             ttl:             HOUR,
             mandatory:       true,
             stopPropagation: true,
             widgetsBoard:    widgetsBoard,
             zIndex:          zIndex ?? 10000,
         }
-    }, [container, id, widgetsBoard, zIndex])
+    }, [container, id, simpleReplay, widgetsBoard, zIndex])
 
-    // Render in widget editor and during draft recording capture.
+    // Render in the widget editor and during Replay video capture.
     if (!shouldRender || !container) {
         return null
     }

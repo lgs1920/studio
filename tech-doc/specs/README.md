@@ -1,8 +1,7 @@
 # Current Implementation Documentation
 
 The `specs` directory is organized by engineering domain. Documents here
-describe implemented behavior, current architecture, validation evidence, or
-historical decisions that remain useful for understanding the implementation.
+describe implemented behavior, current architecture, or validation evidence.
 
 - [Replay, camera, and video](replay-video/README.md)
 - [Cesium, mapping, and environment](cesium/README.md)

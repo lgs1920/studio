@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-17
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,19 +16,7 @@
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
-
-const countMocks = vi.hoisted(() => ({
-    sendDraftVideo: vi.fn(async () => true),
-    sendHqVideo:    vi.fn(async () => true),
-}))
-
-vi.mock('@Utils/CountApi', () => ({
-    CountApi: {
-        sendDraftVideo: countMocks.sendDraftVideo,
-        sendHqVideo:    countMocks.sendHqVideo,
-    },
-}))
+import { REPLAY_DEFERRED_EXPORT_READY_EVENT } from '@Core/ui/replay/ReplayRecordingMonitor'
 
 vi.mock('@Components/MainUI/video/RecordingInfo', () => ({
     RecordingInfo: ({mediaData}) => (
@@ -47,23 +35,6 @@ vi.mock('@Components/LGSPopup', () => ({
 
 vi.mock('@Components/MainUI/video/videoEditingCleanup', () => ({
     cancelVideoEditing: vi.fn(),
-    prepareVideoCaptureUi: vi.fn(),
-}))
-
-vi.mock('@Core/ui/replay/ReplayDeferredExporter', () => ({
-    exportReplayDeferredMp4: vi.fn(async ({dimensions} = {}) => ({
-        blob: new Blob(['hq-video'], {type: 'video/mp4'}),
-        mimeType: 'video/mp4',
-        extension: 'mp4',
-        filename: 'recording-master.mp4',
-        frameCount: 30,
-        plan: {
-            label: 'recording-master',
-            dimensions,
-            renderSpec: {fps: 30},
-            videoTimeline: {durationMillis: 1000},
-        },
-    })),
 }))
 
 vi.mock('@Utils/UIToast', () => ({
@@ -196,8 +167,7 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', async () => {
     }
 })
 
-import { cancelVideoEditing, prepareVideoCaptureUi } from '@Components/MainUI/video/videoEditingCleanup'
-import { exportReplayDeferredMp4 } from '@Core/ui/replay/ReplayDeferredExporter'
+import { cancelVideoEditing } from '@Components/MainUI/video/videoEditingCleanup'
 import { VideoDownloadAndShareDialog } from '@Components/MainUI/video/VideoDownloadAndShareDialog'
 
 class FakeRecorder extends EventTarget {
@@ -215,14 +185,14 @@ class FakeRecorder extends EventTarget {
             quality: {name: 'HD'},
             ratio:   {label: '16:9'},
             metadata: {
-                status: 'draft',
+                status: 'ready',
                 artist: 'LGS1920',
                 album:  'Your Adventures',
                 genre:  'Adventures Replay',
                 publisher: 'LGS1920 Studio',
                 encodedBy: 'Mediabunny',
                 comment: 'Journey title\nRecorded on 2026-08-19',
-                title: 'Journey title (draft version)',
+                title: 'Journey title',
                 description: 'Journey title',
                 raw: {
                     '©pub': 'LGS1920 Studio',
@@ -245,7 +215,6 @@ describe('VideoDownloadAndShareDialog', () => {
         recorder = new FakeRecorder()
         globalThis.URL.createObjectURL = vi.fn()
             .mockImplementationOnce(() => 'blob:recording')
-            .mockImplementationOnce(() => 'blob:hq')
             .mockImplementation(() => 'blob:extra')
         globalThis.URL.revokeObjectURL = vi.fn()
         globalThis.requestAnimationFrame = vi.fn((callback) => callback())
@@ -253,13 +222,10 @@ describe('VideoDownloadAndShareDialog', () => {
         globalThis.navigator.share = vi.fn(async () => undefined)
 
         globalThis.__ = {
-            recorder,
+            mediaCapture: recorder,
             ui: {
                 replay: {
                     restorePlaybackScene: vi.fn(),
-                },
-                replayVideoSync: {
-                    stopJourneyReplay: vi.fn(),
                 },
                 widgetManager: {
                     syncCropDimensionsFromElement: vi.fn(async () => null),
@@ -316,9 +282,11 @@ describe('VideoDownloadAndShareDialog', () => {
     const openDialog = async () => {
         render(<VideoDownloadAndShareDialog/>)
         await act(async () => {
-            recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.STOP, {
+            window.dispatchEvent(new CustomEvent(REPLAY_DEFERRED_EXPORT_READY_EVENT, {
                 detail: {
                     blob: new Blob(['video'], {type: 'video/mp4'}),
+                    filename: 'recording.mp4',
+                    mediaData: recorder.mediaData,
                 },
             }))
         })
@@ -331,7 +299,6 @@ describe('VideoDownloadAndShareDialog', () => {
         })
         expect(globalThis.__.ui.replay.restorePlaybackScene).toHaveBeenCalledTimes(1)
         expect(globalThis.__.ui.replay.restorePlaybackScene).toHaveBeenCalledWith({force: true})
-        expect(globalThis.__.ui.replayVideoSync.stopJourneyReplay).toHaveBeenCalledWith({deferSceneRestore: false})
         expect(cancelVideoEditing).toHaveBeenCalledTimes(1)
         expect(globalThis.URL.revokeObjectURL).toHaveBeenCalledWith('blob:recording')
         expect(recorder.releaseMedia).toHaveBeenCalledTimes(1)
@@ -377,9 +344,11 @@ describe('VideoDownloadAndShareDialog', () => {
 
         render(<VideoDownloadAndShareDialog/>)
         await act(async () => {
-            recorder.dispatchEvent(new CustomEvent(ScreenMediaRecorder.events.STOP, {
+            window.dispatchEvent(new CustomEvent(REPLAY_DEFERRED_EXPORT_READY_EVENT, {
                 detail: {
                     blob: new Blob(['video'], {type: 'video/mp4'}),
+                    filename: 'recording.mp4',
+                    mediaData: recorder.mediaData,
                 },
             }))
             await Promise.resolve()
@@ -416,26 +385,25 @@ describe('VideoDownloadAndShareDialog', () => {
         expect(screen.queryByTestId('video-preview-dialog')).not.toBeNull()
     })
 
-    it('shares the live recording by default', async () => {
+    it('shares the Replay export by default', async () => {
         await openDialog()
 
-        expect(countMocks.sendDraftVideo).toHaveBeenCalledTimes(1)
 
-        expect(screen.getByLabelText('File name input').value).toBe('recording-draft')
+        expect(screen.getByLabelText('File name input').value).toBe('recording')
         expect(screen.getByRole('button', {name: 'Share'}).getAttribute('appearance')).toBe('filled')
 
         await act(async () => {
             fireEvent.click(screen.getByRole('button', {name: 'Share'}))
         })
 
-        expect(exportReplayDeferredMp4).not.toHaveBeenCalled()
         expect(globalThis.navigator.share).toHaveBeenCalledTimes(1)
         expect(globalThis.navigator.share.mock.calls[0][0].files[0]).toBeInstanceOf(File)
-        expect(globalThis.navigator.share.mock.calls[0][0].files[0].name).toBe('recording-draft.mp4')
+        expect(globalThis.navigator.share.mock.calls[0][0].files[0].name).toBe('recording.mp4')
     })
 
-    it('forces the live draft filename on download', async () => {
+    it('downloads the available Replay video without a version suffix', async () => {
         await openDialog()
+        const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
 
         expect(screen.getByRole('button', {name: 'Download'}).getAttribute('appearance')).toBe('filled')
 
@@ -443,128 +411,46 @@ describe('VideoDownloadAndShareDialog', () => {
             fireEvent.click(screen.getByRole('button', {name: 'Download'}))
         })
 
-        expect(recorder.download).toHaveBeenCalledWith({
-            filename: 'recording-draft.mp4',
-        })
+        expect(anchorClick).toHaveBeenCalledOnce()
+        expect(anchorClick.mock.instances[0]?.download).toBe('recording.mp4')
     })
 
-    it('keeps standalone videos independent from replay and HQ export', async () => {
-        globalThis.lgs.stores.replay = {}
-
-        await openDialog()
-
-        expect(screen.queryByRole('button', {name: 'Create HQ video'})).toBeNull()
-        expect(screen.getByLabelText('File name input').value).toBe('recording')
-        expect(globalThis.__.ui.replayVideoSync.stopJourneyReplay).not.toHaveBeenCalled()
-        expect(globalThis.__.ui.replay.restorePlaybackScene).not.toHaveBeenCalled()
+    it('previews and downloads the frame-by-frame Replay export', async () => {
+        render(<VideoDownloadAndShareDialog/>)
+        const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
 
         await act(async () => {
-            fireEvent.click(screen.getByRole('button', {name: 'Share'}))
+            window.dispatchEvent(new CustomEvent(REPLAY_DEFERRED_EXPORT_READY_EVENT, {
+                detail: {
+                    blob: new Blob(['frame-by-frame video'], {type: 'video/mp4'}),
+                    filename: 'journey-replay.mp4',
+                    mediaData: {
+                        size: 20,
+                        duration: 2000,
+                        fps: 30,
+                        dimensions: {width: 1280, height: 720},
+                        quality: {name: 'High'},
+                        ratio: {label: '16:9'},
+                        metadata: {status: 'ready'},
+                        mimeType: 'video/mp4',
+                        extension: 'mp4',
+                    },
+                },
+            }))
         })
 
-        expect(globalThis.navigator.share.mock.calls[0][0].files[0].name).toBe('recording.mp4')
+        expect(screen.getByLabelText('File name input').value).toBe('journey-replay')
+        expect(screen.getByTestId('recording-info').getAttribute('data-dimensions')).toBe('1280x720')
 
         await act(async () => {
             fireEvent.click(screen.getByRole('button', {name: 'Download'}))
         })
 
-        expect(recorder.download).toHaveBeenCalledWith({
-            filename: 'recording.mp4',
-        })
+        expect(anchorClick).toHaveBeenCalledTimes(1)
+        expect(anchorClick.mock.instances[0]?.download).toBe('journey-replay.mp4')
     })
 
-    it('creates an HQ video from the final dialog and switches to HQ actions once ready', async () => {
-        globalThis.lgs.stores.replay = {
-            recordingSync: true,
-            deferredExportPlan: {
-                dimensions: {width: 320, height: 180},
-                runtime:    {contextKey: 'ctx-1'},
-            },
-        }
-
-        await openDialog()
-
-        expect(screen.getByTestId('recording-info').getAttribute('data-dimensions')).toBe('640x360')
-        expect(screen.getByTestId('recording-info').getAttribute('data-quality')).toBe('HD')
-        expect(screen.getByTestId('recording-info').getAttribute('data-metadata-status')).toBe('draft')
-        expect(screen.getByRole('button', {name: 'Create HQ video'}).closest('.video-preview-create-hq-action')).not.toBeNull()
-        expect(screen.queryByLabelText('HQ camera')).toBeNull()
-
-        await act(async () => {
-            fireEvent.click(screen.getByRole('button', {name: 'Create HQ video'}))
-        })
-
-        expect(countMocks.sendDraftVideo).toHaveBeenCalledTimes(1)
-        expect(countMocks.sendHqVideo).toHaveBeenCalledTimes(1)
-        expect(prepareVideoCaptureUi).toHaveBeenCalledTimes(1)
-        expect(exportReplayDeferredMp4).toHaveBeenCalledTimes(1)
-        expect(exportReplayDeferredMp4.mock.calls[0]?.[0]).toMatchObject({
-            dimensions: {width: 320, height: 180},
-            filename:   'recording.mp4',
-            mediaMetadata: {
-                status:      'draft',
-                album:       'Your Adventures',
-                genre:       'Adventures Replay',
-                publisher:   'LGS1920 Studio',
-                encodedBy:   'Mediabunny',
-                comment:     'Journey title\nRecorded on 2026-08-19',
-                title:       'Journey title (draft version)',
-                description: 'Journey title',
-                raw: {
-                    '©pub': 'LGS1920 Studio',
-                    '©too': 'Mediabunny',
-                },
-            },
-        })
-        expect(document.querySelector('video.main-video')?.getAttribute('src')).toBe('blob:hq')
-        expect(screen.getByLabelText('File name input').value).toBe('recording')
-        expect(screen.queryByRole('button', {name: 'Create HQ video'})).toBeNull()
-        expect(screen.getByRole('button', {name: 'Share'}).getAttribute('appearance')).toBe('filled')
-        expect(screen.getByTestId('recording-info').getAttribute('data-dimensions')).toBe('320x180')
-        expect(screen.getByTestId('recording-info').getAttribute('data-quality')).toBe('HQ')
-        expect(screen.getByTestId('recording-info').getAttribute('data-metadata-status')).toBe('draft')
-
-        await act(async () => {
-            fireEvent.click(screen.getByRole('button', {name: 'Share'}))
-        })
-
-        expect(globalThis.navigator.share).toHaveBeenCalledTimes(1)
-        expect(globalThis.navigator.share.mock.calls[0][0].files[0]).toBeInstanceOf(File)
-        expect(globalThis.navigator.share.mock.calls[0][0].files[0].name).toBe('recording.mp4')
-        await expect(globalThis.navigator.share.mock.calls[0][0].files[0].text()).resolves.toBe('hq-video')
-
-        await act(async () => {
-            fireEvent.click(screen.getByRole('button', {name: 'Share draft'}))
-        })
-
-        expect(globalThis.navigator.share).toHaveBeenCalledTimes(2)
-        expect(globalThis.navigator.share.mock.calls[1][0].files[0]).toBeInstanceOf(File)
-        expect(globalThis.navigator.share.mock.calls[1][0].files[0].name).toBe('recording-draft.mp4')
-        await expect(globalThis.navigator.share.mock.calls[1][0].files[0].text()).resolves.toBe('video')
-    })
-
-    it('starts direct HQ export from linked timeline preparation without a Draft blob', async () => {
-        globalThis.lgs.stores.replay = {
-            recordingSync: true,
-            deferredExportPlan: null,
-        }
-        globalThis.lgs.stores.ui.video.timelinePreviewActive = true
-
-        render(<VideoDownloadAndShareDialog/>)
-
-        await act(async () => {
-            globalThis.window.dispatchEvent(new globalThis.CustomEvent('lgs:video:start-hq-export'))
-            await Promise.resolve()
-        })
-
-        await waitFor(() => expect(exportReplayDeferredMp4).toHaveBeenCalledTimes(1))
-        expect(countMocks.sendDraftVideo).not.toHaveBeenCalled()
-        expect(countMocks.sendHqVideo).toHaveBeenCalledTimes(1)
-        expect(prepareVideoCaptureUi).toHaveBeenCalledTimes(1)
-        expect(screen.getByTestId('video-preview-dialog')).not.toBeNull()
-    })
-
-    it('preserves non-draft video metadata in the recording information', async () => {
+    it('preserves video metadata in the recording information', async () => {
         recorder.mediaData.metadata = {
             status: 'published',
             artist: 'LGS1920',
@@ -575,179 +461,4 @@ describe('VideoDownloadAndShareDialog', () => {
         expect(screen.getByTestId('recording-info').getAttribute('data-metadata-status')).toBe('published')
     })
 
-    it('recomputes HQ dimensions from the current crop before exporting', async () => {
-        const sourceCanvas = document.createElement('canvas')
-        sourceCanvas.width = 1280
-        sourceCanvas.height = 720
-        sourceCanvas.getBoundingClientRect = vi.fn(() => ({
-            left:   0,
-            top:    0,
-            width:  640,
-            height: 360,
-        }))
-        globalThis.__.device.dpr = 2
-        globalThis.__.ui.widgetManager.getWidgetConfig.mockReturnValue({
-            cropDimensions: {left: 0, top: 0, width: 640, height: 360},
-        })
-        globalThis.lgs.canvas = sourceCanvas
-        globalThis.lgs.stores.ui.video.fps = 0
-        globalThis.lgs.stores.ui.video.quality = 0
-        globalThis.lgs.stores.replay = {
-            recordingSync: true,
-            deferredExportPlan: {
-                dimensions: {width: 960, height: 540},
-                runtime:    {contextKey: 'stale-dimensions'},
-            },
-        }
-
-        await openDialog()
-
-        await act(async () => {
-            fireEvent.click(screen.getByRole('button', {name: 'Create HQ video'}))
-        })
-
-        expect(prepareVideoCaptureUi).toHaveBeenCalledTimes(1)
-        expect(globalThis.__.ui.widgetManager.syncCropDimensionsFromElement).toHaveBeenCalledWith(
-            'video-crop-zone',
-            false,
-            'before-hq-export',
-        )
-        expect(exportReplayDeferredMp4).toHaveBeenCalledWith(expect.objectContaining({
-            dimensions: {width: 1280, height: 720},
-            captureMode: 'speed',
-        }))
-        expect(globalThis.lgs.stores.replay.videoCropRect).toEqual({
-            left:   0,
-            top:    0,
-            width:  640,
-            height: 360,
-        })
-    })
-
-    it('downloads HQ and draft videos from the split button once HQ is ready', async () => {
-        globalThis.lgs.stores.replay = {
-            recordingSync: true,
-            deferredExportPlan: {
-                dimensions: {width: 320, height: 180},
-                runtime:    {contextKey: 'ctx-1'},
-            },
-        }
-
-        await openDialog()
-
-        await act(async () => {
-            fireEvent.click(screen.getByRole('button', {name: 'Create HQ video'}))
-        })
-        expect(screen.queryByRole('button', {name: 'Create HQ video'})).toBeNull()
-        await waitFor(() => {
-            expect(screen.getByRole('button', {name: 'Download HQ'})).not.toBeNull()
-        })
-
-        const originalCreateElement = document.createElement.bind(document)
-        const anchor = {
-            href:     '',
-            download: '',
-            click:    vi.fn(),
-        }
-        vi.spyOn(document, 'createElement').mockImplementation((tagName, options) => {
-            if (tagName === 'a') {
-                return anchor
-            }
-
-            return originalCreateElement(tagName, options)
-        })
-
-        await act(async () => {
-            fireEvent.click(screen.getByRole('button', {name: 'Download HQ'}))
-        })
-
-        expect(anchor.download).toBe('recording.mp4')
-        expect(anchor.click).toHaveBeenCalledTimes(1)
-
-        await act(async () => {
-            fireEvent.click(screen.getByRole('button', {name: 'Download draft'}))
-        })
-
-        expect(recorder.download).toHaveBeenCalledWith({
-            filename: 'recording-draft.mp4',
-        })
-    })
-
-    it('restores the live dialog when HQ creation is aborted', async () => {
-        let abortController = null
-        exportReplayDeferredMp4.mockImplementationOnce(({signal, abortController: controller}) => {
-            abortController = controller
-            return new Promise((_, reject) => {
-                if (signal?.aborted) {
-                    reject(new DOMException('The HQ export was aborted.', 'AbortError'))
-                    return
-                }
-
-                signal?.addEventListener?.('abort', () => {
-                    reject(new DOMException('The HQ export was aborted.', 'AbortError'))
-                }, {once: true})
-            })
-        })
-
-        globalThis.lgs.stores.replay = {
-            recordingSync: true,
-            deferredExportPlan: {runtime: {contextKey: 'ctx-1'}},
-        }
-
-        await openDialog()
-
-        await act(async () => {
-            fireEvent.click(screen.getByRole('button', {name: 'Create HQ video'}))
-        })
-
-        expect(screen.queryByTestId('video-preview-dialog')).toBeNull()
-
-        await act(async () => {
-            abortController.abort()
-        })
-
-        expect(screen.queryByTestId('video-preview-dialog')).not.toBeNull()
-        expect(screen.getByLabelText('File name input').value).toBe('recording-draft')
-        expect(screen.getByRole('button', {name: 'Share'})).not.toBeNull()
-        expect(screen.queryByRole('button', {name: 'Share HQ'})).toBeNull()
-        expect(globalThis.__.ui.replay.restorePlaybackScene).toHaveBeenCalledTimes(2)
-    })
-
-    it('switches the app back into editing mode while HQ creation is running', async () => {
-        let resolveExport = null
-        exportReplayDeferredMp4.mockImplementationOnce(() => new Promise((resolve) => {
-            resolveExport = resolve
-        }))
-
-        globalThis.lgs.stores.replay = {
-            recordingSync: true,
-            deferredExportPlan: {runtime: {contextKey: 'ctx-1'}},
-        }
-
-        await openDialog()
-
-        await act(async () => {
-            fireEvent.click(screen.getByRole('button', {name: 'Create HQ video'}))
-        })
-
-        expect(globalThis.lgs.stores.ui.video.editing).toBe(true)
-        expect(globalThis.lgs.stores.ui.video.recordingHQ).toBe(true)
-        expect(globalThis.lgs.stores.ui.video.finalizing).toBe(true)
-        expect(screen.queryByTestId('video-preview-dialog')).toBeNull()
-
-        await act(async () => {
-            resolveExport({
-                blob: new Blob(['hq-video'], {type: 'video/mp4'}),
-                mimeType: 'video/mp4',
-                extension: 'mp4',
-                filename: 'recording-master.mp4',
-                plan: {label: 'recording-master'},
-            })
-        })
-
-        expect(globalThis.lgs.stores.ui.video.editing).toBe(false)
-        expect(globalThis.lgs.stores.ui.video.recordingHQ).toBe(false)
-        expect(globalThis.lgs.stores.ui.video.finalizing).toBe(false)
-        expect(screen.queryByTestId('video-preview-dialog')).not.toBeNull()
-    })
 })

@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-22
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,24 +28,22 @@ const CAMERA_INPUT_PROPERTIES = [
 /**
  * Returns the runtime state that controls access to Cesium input.
  *
- * Only an active synchronized recording blocks Cesium. Video preparation,
- * non-synchronized recording, and HQ export without the sync link leave scene
+ * Only an active synchronized Replay export blocks Cesium. Video preparation
+ * and Replay export without the sync link leave scene
  * and camera input available.
  *
- * @returns {{preRecording: boolean, recording: boolean, recordingHQ: boolean, recordingSync: boolean, blocked: boolean}} Cesium input state.
+ * @returns {{preRecording: boolean, recordingHQ: boolean, recordingSync: boolean, blocked: boolean}} Cesium input state.
  */
 export const getCesiumInputState = () => {
     const video = globalThis.lgs?.stores?.ui?.video
     const recordingHQ = video?.recordingHQ === true
-    const recording = video?.recording === true || recordingHQ
     const recordingSync = globalThis.lgs?.stores?.replay?.recordingSync === true
 
     return {
         preRecording: video?.preRecording === true,
-        recording,
         recordingHQ,
         recordingSync,
-        blocked:      recording && recordingSync,
+        blocked:      recordingHQ && recordingSync,
     }
 }
 

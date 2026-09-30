@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -419,7 +419,7 @@ describe('logical replay clip camera path', () => {
             },
         }
         vi.stubGlobal('lgs', {
-            settings: {ui: {replay: {camera: {positionMode: 'system', pitch: -63}}}},
+            settings: {ui: {replay: {userMode: 'expert', camera: {positionMode: 'system', pitch: -63}}}},
         })
 
         const plan = await resolveJourneyReplayClipCameraPlan(mode, {

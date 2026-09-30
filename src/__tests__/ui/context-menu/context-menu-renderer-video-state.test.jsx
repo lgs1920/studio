@@ -8,8 +8,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-22
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -86,7 +86,7 @@ describe('ContextMenuRenderer video state', () => {
     })
 
     it('does not render a context menu during synchronized recording', () => {
-        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.ui.video.recordingHQ = true
         globalThis.lgs.stores.replay.recordingSync = true
 
         render(<ContextMenuRenderer/>)
@@ -106,7 +106,7 @@ describe('ContextMenuRenderer video state', () => {
     })
 
     it('keeps the full context menu available during non-synchronized recording', () => {
-        globalThis.lgs.stores.ui.video.recording = true
+        globalThis.lgs.stores.ui.video.recordingHQ = true
 
         render(<ContextMenuRenderer/>)
 

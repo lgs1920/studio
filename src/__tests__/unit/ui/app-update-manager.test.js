@@ -7,22 +7,32 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-18
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import {AppUpdateManager} from '@Core/ui/AppUpdateManager'
 import {afterEach, describe, expect, it, vi} from 'vitest'
 
 describe('AppUpdateManager webapp updates', () => {
+    const serviceWorkerDescriptor = Object.getOwnPropertyDescriptor(navigator, 'serviceWorker')
+
     afterEach(() => {
         globalThis.lgs = undefined
+        if (serviceWorkerDescriptor) {
+            Object.defineProperty(navigator, 'serviceWorker', serviceWorkerDescriptor)
+        }
+        else {
+            delete navigator.serviceWorker
+        }
+        vi.unstubAllEnvs()
+        vi.resetModules()
     })
 
     it('automatically activates a new service worker outside the installed PWA', async () => {
+        vi.stubEnv('DEV', false)
         const serviceWorkerListeners = new Map()
         const waitingWorker = {
             postMessage: vi.fn(),
@@ -52,6 +62,7 @@ describe('AppUpdateManager webapp updates', () => {
             },
         }
 
+        const {AppUpdateManager} = await import('@Core/ui/AppUpdateManager')
         new AppUpdateManager()
         await Promise.resolve()
         await Promise.resolve()
@@ -62,5 +73,44 @@ describe('AppUpdateManager webapp updates', () => {
         await Promise.resolve()
 
         expect(waitingWorker.postMessage).toHaveBeenCalledWith({type: 'SKIP_WAITING'})
+    })
+
+    it('registers the app service worker in development', async () => {
+        vi.stubEnv('DEV', true)
+        const serviceWorkerListeners = new Map()
+        const registration = {
+            addEventListener: vi.fn(),
+            update: vi.fn().mockResolvedValue(),
+        }
+        const serviceWorker = {
+            addEventListener: vi.fn((eventName, listener) => serviceWorkerListeners.set(eventName, listener)),
+            controller: {},
+            getRegistration: vi.fn().mockResolvedValue(registration),
+            register: vi.fn().mockResolvedValue(registration),
+        }
+
+        Object.defineProperty(navigator, 'serviceWorker', {
+            configurable: true,
+            value: serviceWorker,
+        })
+        globalThis.lgs = {
+            pwa: false,
+            stores: {
+                ui: {
+                    appUpdate: {},
+                },
+            },
+        }
+
+        const {AppUpdateManager} = await import('@Core/ui/AppUpdateManager')
+        new AppUpdateManager()
+        await Promise.resolve()
+        await Promise.resolve()
+        await Promise.resolve()
+        await Promise.resolve()
+
+        expect(serviceWorker.register).toHaveBeenCalledWith('/service-worker-pwa.js', {updateViaCache: 'none'})
+        expect(registration.update).toHaveBeenCalledOnce()
+        expect(serviceWorkerListeners.has('controllerchange')).toBe(true)
     })
 })

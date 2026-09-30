@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-03
- * Last modified: 2026-09-22
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -253,7 +253,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
     const useVideoStatsPlaceholder = isDynamicMode
                                      && isVideoBoard
                                      && Boolean(video.editing || video.preRecording)
-                                     && !video.recording
+                                     && !video.recordingHQ
                                      && !video.finalizing
                                      && !video.snapshot
     const element = useMemo(() => {

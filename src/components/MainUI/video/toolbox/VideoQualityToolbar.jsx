@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2025-09-22
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,13 +18,13 @@
  * File: VideoQualityToolbar.jsx
  ******************************************************************************/
 
-import { ScreenMediaRecorder } from '@Core/ui/screen-media-recorder/recorder/ScreenMediaRecorder'
+import {REPLAY_VIDEO_QUALITY} from '@Core/ui/replay/ReplayVideoSettings'
 import classNames   from 'classnames'
 import { WaButton, WaTooltip }          from '@web.awesome.me/webawesome-pro/dist/react'
 import { Fragment } from 'react'
 import { useSnapshot }                  from 'valtio'
 
-export const VideoQualityToolbar = ({choicesOnMap = false}) => {
+export const VideoQualityToolbar = ({choicesOnMap = false, compactSimple = false}) => {
     const $video = lgs.stores.ui.video
     const $videoSettings = lgs.settings.ui.video
     const video = useSnapshot($video)
@@ -44,7 +44,7 @@ export const VideoQualityToolbar = ({choicesOnMap = false}) => {
             <div className={classNames('buttons-bar-on-map', {
                 'video-choice-buttons video-choice-buttons-on-map': choicesOnMap,
             })}>
-                {ScreenMediaRecorder.QUALITY.map(({name, short}, index) => (
+                {REPLAY_VIDEO_QUALITY.map(({name, short}, index) => (
                     <Fragment key={index}>
                         <WaTooltip placement="bottom" for={`q-${index}`}>{name}</WaTooltip>
                         <WaButton
@@ -55,7 +55,7 @@ export const VideoQualityToolbar = ({choicesOnMap = false}) => {
                             appearance={index === video.quality ? 'outlined' : 'plain'}
                             onClick={() => handleChangeQuality(index)}
                         >
-                            {short}
+                            {compactSimple ? ['Med', 'High', 'Ultra'][index] : short}
                         </WaButton>
                     </Fragment>
                 ))}

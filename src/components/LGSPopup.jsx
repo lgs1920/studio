@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-09
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WaPopup as WaPopupBase }                                          from '@web.awesome.me/webawesome-pro/dist/react'
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
 
 const resolveAnchorElement = (anchor) => {
     if (!anchor || typeof Element === 'undefined') {
@@ -45,9 +45,27 @@ export const LGSPopup = forwardRef(function LGSPopup(props, ref) {
               flip                      = true,
               shift                     = true,
               ...restProps
-          } = props
+    } = props
+    const [resolvedAnchor, setResolvedAnchor] = useState(() => typeof anchor === 'string' ? null : anchor)
 
     useImperativeHandle(ref, () => innerRef.current, [])
+
+    useEffect(() => {
+        if (typeof anchor !== 'string') {
+            setResolvedAnchor(anchor ?? null)
+            return
+        }
+
+        const popup = innerRef.current
+        const root = popup?.getRootNode?.()
+        const rootAnchor = typeof root?.getElementById === 'function'
+                           ? root.getElementById(anchor)
+                           : null
+        const documentAnchor = popup?.ownerDocument?.getElementById(anchor)
+                               ?? (typeof document !== 'undefined' ? document.getElementById(anchor) : null)
+
+        setResolvedAnchor(rootAnchor ?? documentAnchor ?? null)
+    }, [anchor])
 
     const requestClose = useCallback((event) => {
         onRequestClose?.(event)
@@ -112,7 +130,7 @@ export const LGSPopup = forwardRef(function LGSPopup(props, ref) {
         }
     }, [active, anchor, closeOnEscape, closeOnOutsidePointerDown, onRequestClose, outsideAnchors, requestClose])
 
-    return <WaPopupBase ref={innerRef} active={active} anchor={anchor} flip={flip} shift={shift} {...restProps} />
+    return <WaPopupBase ref={innerRef} active={active} anchor={resolvedAnchor} flip={flip} shift={shift} {...restProps} />
 })
 
 export default LGSPopup

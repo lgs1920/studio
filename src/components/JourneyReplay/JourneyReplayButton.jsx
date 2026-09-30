@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-03
- * Last modified: 2026-07-03
+ * Created on: 2026-05-05
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,8 +16,17 @@
 
 import { REPLAY_DRAWER } from '@Core/constants'
 import { REPLAY_LABEL } from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import {
+    hasExpertReplayConfiguration,
+    initializeExpertReplayFromSimple,
+    normalizeExpertReplayCamera,
+    REPLAY_USER_MODE_BASIC,
+    REPLAY_USER_MODE_EXPERT,
+    resolveSimpleReplaySettings,
+} from '@Core/ui/replay/ReplayUserModes'
 import { TunnelTooltip } from '@Components/Tunnel/Tunnel'
 import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
+import {useProxyValue} from '@Utils/ValtioUtils'
 import { useCallback } from 'react'
 import { useSnapshot } from 'valtio'
 
@@ -25,6 +34,7 @@ export const JourneyReplayButton = (props) => {
     const $video = lgs.stores.ui.video
     const replay = useSnapshot(lgs.stores.replay)
     const video = useSnapshot($video)
+    const journeySlug = useProxyValue(lgs.stores.main, main => main.theJourney?.slug ?? null, null)
     const {
         id = 'launch-the-replay-editor',
         tooltip = 'right',
@@ -33,73 +43,160 @@ export const JourneyReplayButton = (props) => {
         tooltipPlacement = tooltip,
         variant = 'brand',
         appearance = 'Filled',
-        size = undefined,
+        size,
         showOnlyWhenLinked = false,
         tooltipStyle = 'wa',
-        selected = undefined,
+        selected,
         onClick = null,
-              ariaLabel   = `${REPLAY_LABEL} Settings`,
+        mode = null,
+        ariaLabel   = `${REPLAY_LABEL} Settings`,
     } = props ?? {}
     const isLinked = replay.recordingSync === true
     const isDrawerOpen = selected !== undefined ? selected : __.ui.drawerManager?.isCurrent?.(REPLAY_DRAWER) === true
-    const visible = lgs.theJourney
-                  && !video.recording
+    const currentJourney = lgs.stores.main?.theJourney ?? lgs.theJourney
+    const visible = Boolean(journeySlug ?? currentJourney?.slug)
+                  && !video.recordingHQ
                   && !video.preRecording
                   && !video.snapshot
                   && (!showOnlyWhenLinked || isLinked)
     const buttonClassName = isDrawerOpen ? `${className} is-selected`.trim() : className
-
+    const isBasicMode = mode === REPLAY_USER_MODE_BASIC
+    const isBasicPreparationActive = isBasicMode && replay.simplePreparationActive === true
+    const buttonAriaLabel = isBasicPreparationActive ? 'Start Basic Replay' : ariaLabel
+    const buttonTooltipText = isBasicPreparationActive ? 'Start Basic Replay' : tooltipText
     const handleClick = useCallback(() => {
+        const journey = lgs.stores.main?.theJourney ?? lgs.theJourney
+        if (!journey) {
+            return
+        }
         if (typeof onClick === 'function') {
             onClick()
             return
         }
-        __.ui.drawerManager.open(REPLAY_DRAWER)
-    }, [onClick])
-
-    return (
-        <>
-            {visible &&
-                tooltipStyle === 'tunnel'
-                    ? (
-                        <TunnelTooltip
-                            anchorId={id}
-                            tooltip={tooltipText}
-                            icon="drone"
-                            placement={tooltipPlacement}
-                        >
-                            <WaButton
-                                className={buttonClassName}
-                                id={id}
-                                onClick={handleClick}
-                                variant={variant}
-                                appearance={appearance}
-                                size={size}
-                                aria-label={ariaLabel}
-                                aria-pressed={isDrawerOpen}
-                            >
-                                <WaIcon name="drone" variant="regular"/>
-                            </WaButton>
-                        </TunnelTooltip>
-                    )
-                    : (
-                        <>
-                            <WaTooltip for={id} placement={tooltipPlacement}>{tooltipText}</WaTooltip>
-                            <WaButton
-                                className={buttonClassName}
-                                id={id}
-                                onClick={handleClick}
-                                variant={variant}
-                                appearance={appearance}
-                                size={size}
-                                aria-label={ariaLabel}
-                                aria-pressed={isDrawerOpen}
-                            >
-                                <WaIcon name="drone" variant="regular"/>
-                            </WaButton>
-                        </>
-                    )
+        if (mode === REPLAY_USER_MODE_BASIC) {
+            const simple = resolveSimpleReplaySettings({
+                journey: journey.replay?.simple,
+                user: lgs.settings.ui.replay.simple,
+            })
+            simple.camera = {
+                ...simple.camera,
+                altitudeMode: 'constant',
+                debug: false,
             }
-        </>
+            lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_BASIC
+            lgs.stores.replay.userMode = REPLAY_USER_MODE_BASIC
+            lgs.settings.ui.replay.simple = simple
+            lgs.settings.ui.replay.duration = simple.duration
+            lgs.settings.ui.replay.camera = simple.camera
+            lgs.stores.replay.camera = simple.camera
+            lgs.stores.replay.duration = simple.duration
+            lgs.stores.replay.simplePreparationActive = true
+            lgs.settings.ui.replay.recordingSync = false
+            lgs.stores.replay.recordingSync = false
+            if (lgs.stores.ui.video.cropper) {
+                Object.assign(lgs.stores.ui.video.cropper, {
+                    ratioEditor:  true,
+                    widgetEditor: false,
+                    draggable:    true,
+                    resizable:    true,
+                })
+            }
+            lgs.stores.ui.video.editing = true
+            void Promise.resolve(__.ui.replay?.enterReplayPreparation?.({
+                journey,
+                shouldApply: () => lgs.stores.replay.simplePreparationActive === true,
+            })).catch(() => undefined)
+            return
+        }
+        if (mode === REPLAY_USER_MODE_EXPERT) {
+            lgs.stores.replay.simplePreparationActive = false
+            lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_EXPERT
+            lgs.stores.replay.userMode = REPLAY_USER_MODE_EXPERT
+            let shouldPersistExpertCamera = false
+            if (journey && !hasExpertReplayConfiguration(journey)) {
+                const simple = resolveSimpleReplaySettings({
+                    journey: journey.replay?.simple,
+                    user: lgs.settings.ui.replay.simple,
+                })
+                const replay = initializeExpertReplayFromSimple(journey, simple)
+                journey.replay = replay
+                shouldPersistExpertCamera = true
+            }
+            const expertReplay = journey?.replay?.expert
+            const expertCamera = normalizeExpertReplayCamera(expertReplay?.camera)
+            if (expertReplay) {
+                shouldPersistExpertCamera = shouldPersistExpertCamera
+                                          || expertReplay.camera?.positionMode !== expertCamera.positionMode
+                expertReplay.camera = expertCamera
+            }
+            if (shouldPersistExpertCamera) {
+                void journey?.persistToDatabase?.()
+            }
+            if (expertCamera) {
+                lgs.settings.ui.replay.camera = expertCamera
+                lgs.stores.replay.camera = expertCamera
+            }
+            if (expertReplay) {
+                lgs.settings.ui.replay.progression = expertReplay.progression
+                lgs.settings.ui.replay.profileInfo = expertReplay.profileInfo
+                lgs.stores.replay.progression = expertReplay.progression
+                lgs.stores.replay.profileInfo = expertReplay.profileInfo
+            }
+            lgs.settings.ui.replay.recordingSync = true
+            lgs.stores.replay.recordingSync = true
+            lgs.stores.ui.video.timelinePreviewActive = true
+            if (lgs.stores.ui.video.cropper) {
+                Object.assign(lgs.stores.ui.video.cropper, {
+                    ratioEditor:  true,
+                    widgetEditor: true,
+                    draggable:    true,
+                    resizable:    true,
+                })
+            }
+            lgs.stores.ui.video.editing = true
+            return
+        }
+        __.ui.drawerManager.open(REPLAY_DRAWER)
+    }, [mode, onClick])
+
+    const button = (
+        <WaButton
+            className={buttonClassName}
+            id={id}
+            onClick={handleClick}
+            variant={variant}
+            appearance={appearance}
+            size={size}
+            aria-label={buttonAriaLabel}
+            aria-pressed={isDrawerOpen}
+        >
+            <WaIcon
+                name={isBasicMode ? 'video-down-to-line' : 'drone'}
+                rotate={isBasicMode ? 45 : 0}
+                variant="regular"
+            />
+        </WaButton>
     )
+
+    if (!visible) {
+        return null
+    }
+
+    return tooltipStyle === 'tunnel'
+        ? (
+            <TunnelTooltip
+                anchorId={id}
+                tooltip={buttonTooltipText}
+                icon={isBasicMode ? 'video-down-to-line' : 'drone'}
+                placement={tooltipPlacement}
+            >
+                {button}
+            </TunnelTooltip>
+        )
+        : (
+            <>
+                <WaTooltip for={id} placement={tooltipPlacement}>{buttonTooltipText}</WaTooltip>
+                {button}
+            </>
+        )
 }

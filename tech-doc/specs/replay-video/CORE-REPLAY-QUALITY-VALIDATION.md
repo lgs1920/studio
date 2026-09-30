@@ -1,12 +1,16 @@
 # Replay Quality Validation
 
-Status: required replay validation contract
+Status: validation contract for interactive Replay and deterministic Replay
+video export
 
 Date: 2026-08-24
 
 ## Purpose
 
-Replay correctness is visual and temporal. Mock-only validation cannot establish
+Simple and Expert configure the same Replay mechanism. Capture paths consume
+that Replay state; they are not user-facing Replay modes. Linked Replay video
+uses the deterministic deferred MP4 exporter. Replay correctness is visual and
+temporal. Mock-only validation cannot establish
 that a generated video contains the trace, follows the camera, waits for the
 right scene, or preserves phase continuity. Apply this matrix proportionally to
 every replay change.
@@ -28,7 +32,8 @@ narrow crop, and at least one high-resolution output profile.
 ### Frame and timeline
 
 - A logical timestamp resolves the expected phase and progress.
-- Draft and HQ intents match at selected timestamps.
+- Interactive playback and deferred-export intents match at selected
+  timestamps.
 - Scrub requests are latest-request-wins and obsolete qualification is aborted.
 - Holds preserve logical time and fixed camera state.
 - First, phase-boundary, last replay, and final scene frames are exact.
@@ -36,25 +41,25 @@ narrow crop, and at least one high-resolution output profile.
 ### Camera
 
 - The first replay camera does not depend on an unrelated preview pose.
-- Every deterministic HQ frame applies its resolved camera command.
+- Every deterministic export frame applies its resolved camera command.
 - Start clip endpoints equal the replay-entry command.
 - Stop clips preserve continuity and land on their declared endpoint.
 - Navigation and Dynamic crop decisions are deterministic for the same inputs.
-- Moving the interactive camera cannot change isolated HQ camera poses.
+- Moving the interactive camera cannot change isolated export camera poses.
 - Obsolete cleanup cannot move the camera after session replacement.
 
 ### Trace and marker
 
-- A non-zero HQ replay frame contains visible completed trace geometry.
-- HQ bypasses Draft wall-clock geometry throttling.
+- A non-zero export frame contains visible completed trace geometry.
+- Export rendering does not use interactive-playback wall-clock throttling.
 - The marker follows the same sample used by the trace.
 - Start and stop visibility rules do not leak into the replay phase.
 - The final captured frame contains the declared completed trace.
 
 ### Render target and lifecycle
 
-- Camera, scene, canvas, and data sources resolve to the explicit HQ target.
-- Interactive viewer camera and entities remain unchanged during isolated HQ.
+- Camera, scene, canvas, and data sources resolve to the explicit export target.
+- Interactive viewer camera and entities remain unchanged during isolated export.
 - Initialization failure announces and tests the visible-scene fallback.
 - Success, cancellation, encoding failure, and readiness failure all clear the
   target and destroy the isolated host.
@@ -71,7 +76,7 @@ narrow crop, and at least one high-resolution output profile.
 For every change affecting camera, trace, clips, readiness, crop, overlays,
 render hosts, or encoding:
 
-1. generate a real HQ video from an applicable reference journey;
+1. generate a real deferred-export video from an applicable reference journey;
 2. inspect trace visibility and progression;
 3. inspect camera movement and phase transitions;
 4. inspect first and final frames;
@@ -87,7 +92,8 @@ substitute for visual evidence.
 - Slider dragging must not compile a complete trajectory or block the main
   thread.
 - Settled scrub qualification must be cancellable and bounded.
-- HQ frame work may increase export wall time but must not change video time.
+- Deferred-export frame work may increase export wall time but must not change
+  video time.
 - Long-journey tests must measure maximum main-thread task duration and memory.
 - Isolated host creation and destruction must not leak WebGL contexts.
 

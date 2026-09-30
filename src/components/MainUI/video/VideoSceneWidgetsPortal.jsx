@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-28
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,29 +16,41 @@
 
 import { DynamicWidget } from '@Components/MainUI/widgets/DynamicWidget'
 import { WidgetPreviewContext } from '@Components/MainUI/widgets/Widget'
-import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { MULTI_PURPOSE_WIDGETS, VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { WidgetDynamicRenderer } from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
+import {
+    filterReplayVideoWidgetKeys,
+    getReplayVideoWidgetTypes,
+} from '@Core/ui/replay/ReplayVideoWidgetPolicy'
+import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { memo, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useSnapshot } from 'valtio'
+
+const VIDEO_WIDGETS_CONTEXT_FALLBACK = {resizing: false}
 
 export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     const list = useSnapshot(lgs.stores.ui.widget.list)
     const video = useSnapshot(lgs.stores.ui.video)
     const replay = useSnapshot(lgs.stores.replay)
+    const cropperState = useOptionalSnapshot(context, VIDEO_WIDGETS_CONTEXT_FALLBACK)
     // The editor can stay open while the video widgets are shown in preview.
     // Rehydration and invalidation must only run while an actual capture phase
     // is active, otherwise the portal loops during normal editor use.
     const videoCaptureActive = video.preRecording === true
-                              || video.recording === true
+                              || video.recordingHQ === true
                               || video.snapshot === true
                               || video.finalizing === true
-    const previewOnly = video.editing === true && video.cropper?.widgetEditor === false
-    const synchronizedRecording = (video.recording === true || video.recordingHQ === true)
+    const synchronizedRecording = video.recordingHQ === true
                                   && replay.recordingSync === true
+    const simpleReplay = replay.simplePreparationActive === true
+    const previewOnly = videoCaptureActive || synchronizedRecording
     const _rehydrateKey = useRef('')
-    const widgetEntries = Array.from(list.entries())
+    const allWidgetEntries = Array.from(list.entries())
         .filter(([, props]) => props?.widgetsBoard === VIDEO_WIDGETS_BOARD)
         .sort(([, a], [, b]) => (b.zIndex || 0) - (a.zIndex || 0))
+    const widgetEntries = allWidgetEntries
+        .filter(([key]) => filterReplayVideoWidgetKeys([key], {simpleReplay}).length > 0)
     const widgetIds = widgetEntries.map(([key]) => key).join('|')
 
     const [boardElement, setBoardElement] = useState(null)
@@ -53,6 +65,17 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
         let cancelled = false
         let frame = null
 
+        const queueBoardResolution = () => {
+            if (cancelled || frame) {
+                return
+            }
+
+            frame = requestAnimationFrame(() => {
+                frame = null
+                resolveBoardElement()
+            })
+        }
+
         const resolveBoardElement = () => {
             if (cancelled) {
                 return
@@ -62,15 +85,22 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
                                     ?? document.querySelector(`#${VIDEO_WIDGETS_BOARD}.defined`)
             setBoardElement(current => current === nextBoardElement ? current : nextBoardElement)
 
-            if (!nextBoardElement) {
-                frame = requestAnimationFrame(resolveBoardElement)
+            if (nextBoardElement && frame) {
+                cancelAnimationFrame(frame)
+                frame = null
+            }
+            else if (!nextBoardElement) {
+                queueBoardResolution()
             }
         }
 
+        const observer = new MutationObserver(resolveBoardElement)
+        observer.observe(document.body, {childList: true, subtree: true})
         resolveBoardElement()
 
         return () => {
             cancelled = true
+            observer.disconnect()
             if (frame) {
                 cancelAnimationFrame(frame)
             }
@@ -108,7 +138,29 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     }, [boardElement])
 
     useEffect(() => {
-        if (!boardReady || hidden || !videoCaptureActive || widgetEntries.length === 0) {
+        if (hidden || !boardReady || typeof document === 'undefined') {
+            return
+        }
+
+        const renderer = WidgetDynamicRenderer.instance
+        const registeredWidgetTypes = new Set(
+            widgetIds.split('|').filter(Boolean).map(widgetId => widgetId.split('#')[0]),
+        )
+        for (const widgetType of getReplayVideoWidgetTypes({simpleReplay})) {
+            const alreadyRegistered = registeredWidgetTypes.has(widgetType)
+            if (!alreadyRegistered) {
+                void renderer.renderWidget(MULTI_PURPOSE_WIDGETS, widgetType, {
+                    widgetsBoard: VIDEO_WIDGETS_BOARD,
+                    forceRefresh: true,
+                }).catch(error => {
+                    console.error(`[LGS1920][ReplayWidgets] Failed to mount ${widgetType}`, error)
+                })
+            }
+        }
+    }, [boardReady, hidden, simpleReplay, widgetIds])
+
+    useEffect(() => {
+        if (!boardReady || hidden || !videoCaptureActive || !widgetIds) {
             return
         }
 
@@ -123,7 +175,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
 
         __.ui.widgetManager.invalidateRuntimeByBoard(VIDEO_WIDGETS_BOARD)
         void __.ui.widgetManager.rehydrateWidgetsByBoard(VIDEO_WIDGETS_BOARD)
-    }, [boardReady, hidden, videoCaptureActive, widgetIds])
+    }, [boardReady, hidden, simpleReplay, videoCaptureActive, widgetIds])
 
     useEffect(() => {
         if (!videoCaptureActive) {
@@ -143,7 +195,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     return createPortal(
         <WidgetPreviewContext.Provider value={previewOnly}>
             <div
-            className={`video-scene-widgets-portal${previewOnly ? ' video-scene-widgets-portal-preview' : ''}${videoCaptureActive ? ' video-scene-widgets-portal-capture' : ''}${synchronizedRecording ? ' video-scene-widgets-portal-input-blocked' : ''}`}
+            className={`video-scene-widgets-portal${previewOnly ? ' video-scene-widgets-portal-preview' : ''}${videoCaptureActive ? ' video-scene-widgets-portal-capture' : ''}${synchronizedRecording ? ' video-scene-widgets-portal-input-blocked' : ''}${cropperState.resizing ? ' video-scene-widgets-portal-resizing' : ''}`}
             data-widgets-board={VIDEO_WIDGETS_BOARD}
             style={{
                 position: 'fixed',
@@ -153,7 +205,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
             }}
         >
             {widgetEntries.map(([key, props]) => (
-                <div key={key} style={{pointerEvents: synchronizedRecording ? 'none' : 'auto'}}>
+                <div key={key} style={{pointerEvents: previewOnly ? 'none' : 'auto'}}>
                     <DynamicWidget
                         id={key}
                         props={props}

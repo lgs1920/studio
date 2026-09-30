@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -250,6 +250,44 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(propertyValue(cursor?.point?.color)?.toCssColorString()).toBe(Color.fromCssColorString('#ff2525').toCssColorString())
         expect(propertyValue(cursor?.point?.outlineColor)?.toCssColorString()).toBe(Color.fromCssColorString('#ffffff').toCssColorString())
         expect(propertyValue(cursor?.point?.outlineWidth)).toBe(1.5)
+    })
+
+    it('uses the effective Simple colors instead of stale Expert presentation state', () => {
+        const dataSources = makeDataSources()
+        const replay = defaultJourneyReplaySettings()
+        replay.userMode = 'basic'
+        replay.simple = {
+            presentation: {
+                progression: {
+                    fill: {color: '#ff2525'},
+                    border: {color: '#ff2525'},
+                },
+            },
+        }
+        installReplayGlobals({
+            dataSources,
+            replay,
+        })
+        globalThis.lgs.stores.replay.simplePreparationActive = true
+        globalThis.lgs.stores.replay.progression = {
+            ...replay.progression,
+            fill: {...replay.progression.fill, color: '#001122'},
+            border: {...replay.progression.border, color: '#334455'},
+        }
+        const journey = makeJourney([
+            makeTrack({
+                slug:        'track#journey#gpx#main',
+                coordinates: [[2, 48, 120], [2.001, 48.001, 130], [2.002, 48.002, 140]],
+            }),
+        ])
+        const sampler = new JourneyReplayPathSampler({journey})
+        const renderer = new JourneyReplayCesiumRenderer()
+
+        renderer.show({sampler})
+        renderer.update({sample: sampler.atProgress(0.5), sampler, forceGeometry: true})
+
+        const cursor = replayEntity(dataSources, '#cursor')
+        expect(propertyValue(cursor?.point?.color)?.toCssColorString()).toBe(Color.fromCssColorString('#ff2525').toCssColorString())
     })
 
     it('uses fill and border opacity for the shared Glow effect', () => {
@@ -620,7 +658,7 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(Number.isFinite(cursorSize)).toBe(true)
     })
 
-    it('keeps the complete point set for the Draft trace', () => {
+    it('keeps the complete point set for the Interactive trace', () => {
         const dataSources = makeDataSources()
         const replay = defaultJourneyReplaySettings()
         installReplayGlobals({dataSources, replay})

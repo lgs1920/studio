@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -289,7 +289,35 @@ export const restoreJourneyReplayPOIVisibility = (mode) => {
         }
 
         state.replayPOIVisibilityState.clear()
+        globalThis.lgs?.scene?.requestRender?.()
     }
+
+/**
+ * Hide every visible POI while Replay camera preparation is in progress.
+ *
+ * @param {object} mode - Replay session mode.
+ * @returns {void}
+ */
+export const hideJourneyReplayPOIsForPreparation = mode => {
+    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+    const candidates = call.replayPOICandidates?.() ?? []
+    if (typeof call.setPOIEntityVisibility !== 'function') {
+        return
+    }
+    for (const poi of candidates) {
+        if (!poi?.id) {
+            continue
+        }
+        if (!state.replayPOIVisibilityState.has(poi.id)) {
+            state.replayPOIVisibilityState.set(poi.id, {
+                visible: call.isPOIVisibleBeforePlayback?.(poi) ?? poi.visible !== false,
+            })
+        }
+        call.setPOIEntityVisibility(poi, false)
+    }
+    globalThis.lgs?.scene?.requestRender?.()
+}
 
 export const hideGloballyHiddenPOIs = (mode) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]

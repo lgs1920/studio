@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-22
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,20 +25,46 @@ vi.mock('@Components/MainUI/WelcomeHeroControls', () => ({
     WelcomeHeroControls: () => <div aria-label="Welcome hero controls"/>,
 }))
 
-vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => ({
-    WaButton: ({children, href, ...props}) => href
-        ? <a href={href} {...props}>{children}</a>
-        : <button {...props}>{children}</button>,
-    WaFormatDate: ({date, ...props}) => <time {...props}>{date}</time>,
-    WaIcon: ({name, animation, ...props}) => <span data-animation={animation} data-icon={name} {...props}/>,
-}))
+vi.mock('@web.awesome.me/webawesome-pro/dist/react', async () => {
+    const {forwardRef} = await import('react')
+
+    return {
+        WaAnimation: forwardRef(({children, delay, duration, easing, fill, iterations, name, play}, ref) => (
+            <wa-animation
+                ref={ref}
+                data-name={name}
+                data-duration={duration}
+                data-delay={delay}
+                data-easing={easing}
+                data-fill={fill}
+                data-iterations={iterations}
+                data-play={play === undefined ? 'unset' : String(play)}
+            >
+                {children}
+            </wa-animation>
+        )),
+        WaButton: ({children, href, ...props}) => href
+            ? <a href={href} {...props}>{children}</a>
+            : <button {...props}>{children}</button>,
+        WaFormatDate: ({date, ...props}) => <time {...props}>{date}</time>,
+        WaIcon: ({name, animation, ...props}) => <span data-animation={animation} data-icon={name} {...props}/>,
+        WaSpinner: props => <wa-spinner {...props}/>,
+    }
+})
 
 import { WelcomeBranding } from '@Components/MainUI/WelcomeBranding'
 import { WelcomeHero } from '@Components/MainUI/WelcomeHero'
+import {
+    mountWelcomeHeroRouteInSplash,
+    stopWelcomeHeroRouteInSplash,
+} from '@Components/MainUI/WelcomeHeroRouteBootstrap'
 
 describe('WelcomeHero', () => {
     afterEach(() => {
         cleanup()
+        stopWelcomeHeroRouteInSplash()
+        vi.unstubAllGlobals()
+        document.querySelector('#lgs-boot-splash-status')?.remove()
         vi.useRealTimers()
         globalThis.lgs = undefined
         globalThis.__ = undefined
@@ -71,6 +97,49 @@ describe('WelcomeHero', () => {
         expect(onEnter).toHaveBeenCalledTimes(1)
     })
 
+    it('uses one finite Web Awesome fade-in-up animation for the splash CTA group', () => {
+        globalThis.lgs = {
+            versions: {studio: '1.0.0'},
+            configuration: {website: {domain: 'lgs1920.fr', protocol: 'https'}},
+        }
+        globalThis.__ = {app: {buildUrl: ({domain, protocol}) => `${protocol}://${domain}`}}
+
+        const {rerender} = render(<WelcomeHero initComplete appReady/>)
+
+        const animations = [...document.querySelectorAll('wa-animation')]
+        expect(animations).toHaveLength(1)
+        expect(animations[0].dataset.name).toBe('fadeInUp')
+        expect(animations.every(animation => animation.dataset.duration === '650')).toBe(true)
+        expect(animations.every(animation => animation.dataset.iterations === '1')).toBe(true)
+        expect(animations[0].dataset.play).toBe('unset')
+        expect(animations[0].play).toBe(true)
+        expect(animations[0].querySelectorAll('.welcome-enter-call-for-action-inner > *')).toHaveLength(2)
+
+        // Web Awesome clears `play` when the finite animation finishes.
+        animations[0].play = false
+        rerender(<WelcomeHero initComplete={false} appReady={false}/>)
+        expect(animations[0].play).toBe(false)
+    })
+
+    it('skips splash CTA animation when reduced motion is preferred', () => {
+        vi.stubGlobal('matchMedia', vi.fn(() => ({
+            matches: true,
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+        })))
+        globalThis.lgs = {
+            versions: {studio: '1.0.0'},
+            configuration: {website: {domain: 'lgs1920.fr', protocol: 'https'}},
+        }
+        globalThis.__ = {app: {buildUrl: ({domain, protocol}) => `${protocol}://${domain}`}}
+
+        render(<WelcomeHero initComplete appReady/>)
+
+        expect(document.querySelectorAll('wa-animation')).toHaveLength(0)
+        expect(screen.getByRole('link', {name: /Visit Our Site/})).toBeTruthy()
+        expect(screen.getByRole('button', {name: /Enter Studio/})).toBeTruthy()
+    })
+
     it('renders the build date with Web Awesome', () => {
         globalThis.lgs = {
             versions: {studio: '1.0.0'},
@@ -86,18 +155,29 @@ describe('WelcomeHero', () => {
 
     it('does not allow entering Studio before the application is ready', () => {
         const onEnter = vi.fn()
+        const splashStatusElement = document.createElement('p')
+        splashStatusElement.id = 'lgs-boot-splash-status'
+        document.body.append(splashStatusElement)
         globalThis.lgs = {
             versions: {studio: '1.0.0'},
             build: {id: 'build-42'},
         }
 
-        render(<WelcomeHero initComplete={false} appReady={false} onEnter={onEnter}/>)
+        const {rerender} = render(<WelcomeHero initComplete={false} appReady={false} onEnter={onEnter}/>)
 
         const button = screen.getByRole('button', {name: /Enter Studio/})
+        const initializationMessage = screen.getByRole('status')
 
         expect(button.disabled).toBe(true)
-        expect(screen.getByText('Studio is getting ready and loading your data. Please wait.')).toBeTruthy()
+        expect(initializationMessage.textContent).toBe('Starting Studio services…')
+        expect(initializationMessage.classList.contains('welcome-initialization-message')).toBe(true)
+        expect(splashStatusElement.textContent).toBe('Starting Studio services…')
+        expect(document.querySelector('.welcome-enter-button [data-icon="clapperboard-play"]')).toBeTruthy()
         expect(screen.queryByRole('progressbar')).toBeNull()
+
+        rerender(<WelcomeHero initComplete={false} appReady={false} initializationStep="journey" onEnter={onEnter}/>)
+        expect(splashStatusElement.textContent).toBe('Loading your current journey…')
+        expect(initializationMessage.textContent).toBe('Loading your current journey…')
 
         fireEvent.click(button)
 
@@ -112,7 +192,7 @@ describe('WelcomeHero', () => {
 
         render(<WelcomeHero initComplete appReady/>)
 
-        expect(screen.queryByText('Studio is getting ready and loading your data. Please wait.')).toBeNull()
+        expect(screen.queryByText('Starting Studio services…')).toBeNull()
         expect(screen.queryByRole('progressbar')).toBeNull()
         expect(screen.getByRole('button', {name: /Enter Studio/}).disabled).toBe(false)
         expect(document.querySelector('.welcome-enter-call-for-action')).toBeTruthy()
@@ -227,24 +307,33 @@ describe('WelcomeHero', () => {
 
         splashElement.remove()
     })
+
+    it('mounts the route before the application root is ready and cleans it up', async () => {
+        const splashElement = document.createElement('div')
+        splashElement.id = 'lgs-boot-splash'
+        document.body.append(splashElement)
+
+        expect(mountWelcomeHeroRouteInSplash()).toBe(true)
+        await act(async () => {})
+
+        expect(splashElement.querySelector('[data-lgs-boot-route-host] .welcome-hero-route')).toBeTruthy()
+
+        stopWelcomeHeroRouteInSplash()
+
+        expect(splashElement.querySelector('[data-lgs-boot-route-host]')).toBeNull()
+        splashElement.remove()
+    })
 })
 
 describe('WelcomeBranding', () => {
-    it('renders the logo, slogan, and loading cog while the CTA enters', () => {
+    it('renders the logo, slogan, and loading spinner while the CTA enters', () => {
         render(<WelcomeBranding/>)
 
         expect(document.querySelector('.welcome-branding-logo img')?.getAttribute('src'))
             .toBe('/assets/logo/logo-horizontal.png')
         expect(document.querySelector('.welcome-branding-logo source')?.getAttribute('srcset'))
             .toBe('/assets/logo/logo-vertical.png')
-        expect(document.querySelector('.welcome-branding-cog [data-icon="gear"]')?.getAttribute('data-animation'))
-            .toBe('spin')
-        expect(document.querySelector('.welcome-branding-cog [data-icon="gear"]')?.getAttribute('canvas'))
-            .toBe('auto')
-        expect(document.querySelector('.welcome-branding-cog [data-icon="gear"]')?.getAttribute('variant'))
-            .toBe('regular')
-        expect(document.querySelector('.welcome-branding-cog [data-icon="gear"]')?.getAttribute('style'))
-            .toBeNull()
+        expect(document.querySelector('.welcome-branding-spinner wa-spinner')).toBeTruthy()
         expect(document.querySelector('.welcome-branding')?.classList.contains('welcome-branding-cta-visible')).toBe(false)
         expect(screen.getByLabelText('LGS1920 slogan')).toBeTruthy()
     })

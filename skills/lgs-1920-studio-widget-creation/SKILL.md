@@ -27,7 +27,7 @@ The current widget model is documented in [widget-architecture.md](references/wi
    - Is it available on the scene board, the video crop board, or both?
    - Is it mandatory, singleton, removable, hideable, lockable, scalable, editable, reducible, or fixed?
    - Which journey, replay, profile, or map state is required?
-   - Which parts must remain visible and stable during snapshots and HQ video export?
+   - Which parts must remain visible and stable during snapshots and Replay export video export?
 
 3. Add or update the catalog entry in `public/widgets.yaml`.
    - Use a unique kebab-case ID and an existing group unless a new group is justified.
@@ -59,7 +59,7 @@ The current widget model is documented in [widget-architecture.md](references/wi
    - Test grid settings, snapping, margins, bounds, selection scope, keyboard movement, scaling, and persisted positions when relevant.
    - Test background toggles, credits anchoring and scaling, mandatory Logo presence, and dynamic Stats updates when relevant.
    - Test hide/show from the context menu and ordering panel, rehydration of `visible`, selected-widget clearing, and mandatory-widget protection when relevant.
-   - Test snapshot and HQ replay export paths when the widget appears in captured output. Confirm visibility, z-index, crop alignment, and cleanup after cancellation or completion.
+   - Test snapshot and Replay export replay export paths when the widget appears in captured output. Confirm visibility, z-index, crop alignment, and cleanup after cancellation or completion.
 
 7. Add focused tests beside the affected code. Run the smallest relevant test set, then `bun run lint` and an allowed production build when the change crosses module boundaries. Do not run `bun run dev`.
 

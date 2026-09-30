@@ -8,17 +8,17 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-03
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 /**
- * Shared logical replay camera tracking for Draft and HQ rendering.
+ * Shared logical replay camera tracking for Interactive and HQ rendering.
  */
 
-import {finiteNumber} from './JourneyReplayRuntime'
+import {currentJourneyReplayCameraSettings, finiteNumber} from './JourneyReplayRuntime'
 import {
     replayAdaptiveTrackingTiming,
     replayCameraFrameLeadSeconds,
@@ -116,7 +116,7 @@ const standardCameraFrame = frame => frame ? {
 /**
  * Apply a non-playback drawer refresh through the live Cesium adapter. This
  * keeps manual camera edits and transform reset behavior outside the logical
- * Draft/HQ timeline while still writing one complete target-locked pose.
+ * Interactive/HQ timeline while still writing one complete target-locked pose.
  *
  * @param {object} mode - Replay session mode.
  * @param {object} view - Resolved camera view.
@@ -259,7 +259,7 @@ export const applyResolvedReplayCameraView = (mode, {
 }
 
 /**
- * Resolve a camera view for one tracking sample with one shared Draft/HQ
+ * Resolve a camera view for one tracking sample with one shared Interactive/HQ
  * logical algorithm.
  *
  * @param {object} mode - Replay session mode.
@@ -490,7 +490,7 @@ const replayCameraLogicalNow = (mode, {
 /**
  * Update the replay camera from one logical replay frame.
  *
- * Draft and HQ use this same resolver. Only the source of `logicalNow` and the
+ * Interactive and HQ use this same resolver. Only the source of `logicalNow` and the
  * frame scheduling adapter differ between both render modes.
  *
  * @param {object} mode - Replay session mode.
@@ -565,11 +565,7 @@ export const updateCamera = (mode, {
         viewer.trackedEntity = undefined
     }
 
-    const cameraSettings = normalizeJourneyReplayCamera(
-        globalThis.lgs?.settings?.ui?.replay?.camera
-        ?? globalThis.lgs?.stores?.replay?.camera
-        ?? settings.camera,
-    )
+    const cameraSettings = currentJourneyReplayCameraSettings()
     if (cameraSettings.canFixHiddenMarker === false) {
         resetReplayCameraPitchCorrection(mode)
     }
@@ -580,7 +576,7 @@ export const updateCamera = (mode, {
                                       && !(
                                           globalThis.lgs?.settings?.ui?.replay?.recordingSync === true
                                           || globalThis.lgs?.stores?.replay?.recordingSync === true
-                                          || globalThis.lgs?.stores?.ui?.video?.recording === true
+                                          || globalThis.lgs?.stores?.ui?.video?.recordingHQ === true
                                       )
     if (state.cameraApplyingView) {
         if (!deterministicCamera && source !== 'refresh') {
@@ -657,7 +653,7 @@ export const updateCamera = (mode, {
         logicalFrame.cameraPose = nominalView
     }
 
-    if (exportMode || globalThis.lgs?.stores?.ui?.video?.recording === true) {
+    if (exportMode || globalThis.lgs?.stores?.ui?.video?.recordingHQ === true) {
         call.traceCameraTiming({
             logicalNow,
             exportMode,
@@ -794,7 +790,7 @@ export const updateCamera = (mode, {
             : navigationCameraView
         const viewport = call.viewportRectForCesiumSurface()
         const runtimeTracking = replayRuntimeTrackingSettings(
-            globalThis.lgs?.settings?.ui?.replay?.camera ?? cameraSettings,
+            cameraSettings,
             viewport,
             adaptiveTrackingTiming,
         )
@@ -950,7 +946,7 @@ export const updateCamera = (mode, {
     if (markerSettings.mode === REPLAY_MARKER_MODE_HYSTERESIS) {
         const viewport = call.viewportRectForCesiumSurface()
         const runtimeTracking = replayRuntimeTrackingSettings(
-            globalThis.lgs?.settings?.ui?.replay?.camera ?? cameraSettings,
+            cameraSettings,
             viewport,
             adaptiveTrackingTiming,
         )
