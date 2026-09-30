@@ -14,7 +14,7 @@
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { act, cleanup, render, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 import { proxyMap } from 'valtio/utils'
@@ -570,23 +570,49 @@ describe('Widget snap behavior', () => {
         expect(view.container.querySelector('.lgs-widget')?.classList.contains('recording-locked')).toBe(true)
     })
 
-    it.each(['playing', 'paused'])('blocks widget mouse interaction while Replay is %s', replayState => {
+    it.each(['active', 'playing', 'paused'])('keeps widget mouse interaction while Replay is %s', replayState => {
         installGlobals()
+        lgs.stores.ui.widget.current = {id: 'snap-widget#test', rotate: 0}
         const props = {
             isVisible: true,
             config:    {id: 'snap-widget', group: 'test-widgets', draggable: true},
-            children:  <button type="button">Widget action</button>,
         }
-        const view = render(<Widget {...props}/> )
+        const widgetAction = vi.fn()
+        const view = renderWidget(props.config, <button type="button" onClick={widgetAction}>Widget action</button>)
 
         lgs.stores.replay[replayState] = true
-        view.rerender(<Widget {...props}/> )
+        view.rerender(
+            <Widget isVisible={props.isVisible} config={props.config}>
+                <button type="button" onClick={widgetAction}>Widget action</button>
+            </Widget>,
+        )
 
         const container = view.container.querySelector('.lgs-widget-container')
-        expect(container?.classList.contains('replay-playback-input-blocked')).toBe(true)
-        expect(container?.style.pointerEvents).toBe('none')
+        expect(container?.classList.contains('replay-playback-input-blocked')).toBe(false)
+        expect(container?.style.pointerEvents).toBe('auto')
+        expect(latestMoveableProps().draggable).toBe(true)
+        expect(latestMoveableProps().style.pointerEvents).toBe('auto')
+        fireEvent.click(view.getByRole('button', {name: 'Widget action'}))
+        expect(widgetAction).toHaveBeenCalledOnce()
+    })
+
+    it('uses the defined crop zone as an input shield during Replay', () => {
+        installGlobals()
+        lgs.stores.replay.active = true
+
+        const {container} = renderWidget({
+            id:        'video-crop-zone',
+            type:      LGS_VISUAL_WIDGET,
+            isCropper: true,
+            resizable: true,
+        })
+
+        expect(container.querySelector('.lgs-widget-container')?.style.pointerEvents).toBe('auto')
+        expect(container.querySelector('.lgs-widget-container')?.classList.contains('replay-crop-zone-input-shield'))
+            .toBe(true)
         expect(latestMoveableProps().draggable).toBe(false)
         expect(latestMoveableProps().style.pointerEvents).toBe('none')
+
     })
 
     it('keeps the selected cropper content transparent while preserving its moveable handles', () => {

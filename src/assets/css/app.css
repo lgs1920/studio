@@ -496,8 +496,13 @@ body.lgs-app-booting #cesium-viewer {
     pointer-events: none !important;
 }
 
-.lgs-widget-container.replay-playback-input-blocked,
-.lgs-widget-container.replay-playback-input-blocked * {
+/* During Replay, the crop frame intercepts map input while its widget controls
+   and the widgets rendered above it remain interactive. */
+.lgs-widget-container.replay-crop-zone-input-shield {
+    pointer-events: auto !important;
+}
+
+.lgs-widget-container.replay-crop-zone-input-shield * {
     pointer-events: none !important;
 }
 

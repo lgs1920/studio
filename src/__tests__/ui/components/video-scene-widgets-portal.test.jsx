@@ -205,17 +205,18 @@ describe('VideoSceneWidgetsPortal', () => {
         expect(document.querySelector('.video-scene-widgets-portal-input-blocked')).not.toBeNull()
     })
 
-    it.each(['playing', 'paused'])('blocks video widget input while Replay is %s', async replayState => {
+    it.each(['active', 'playing', 'paused'])('keeps video widget input available while Replay is %s', async replayState => {
         globalThis.lgs.stores.replay[replayState] = true
 
-        render(<VideoSceneWidgetsPortal context={proxy({})}/> )
+        render(<VideoSceneWidgetsPortal context={proxy({})}/>)
 
         await waitFor(() => {
-            expect(document.querySelector('.video-scene-widgets-portal-input-blocked')).not.toBeNull()
+            expect(document.querySelector('.video-scene-widgets-portal [data-testid="dynamic-widget"]')).not.toBeNull()
         })
         expect(document.querySelector('.video-scene-widgets-portal [data-testid="dynamic-widget"]')
             ?.parentElement?.style.pointerEvents)
-            .toBe('none')
+            .toBe('auto')
+        expect(document.querySelector('.video-scene-widgets-portal-input-blocked')).toBeNull()
     })
 
     it('registers required Replay widgets on a fresh Expert crop board without forcing Compass', async () => {

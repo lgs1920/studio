@@ -191,8 +191,8 @@ export class CanvasEventManager {
     }
 
     /**
-     * Prevents pointer and mouse input from reaching Cesium while Replay
-     * playback or synchronized video recording owns the scene camera.
+     * Prevents pointer and mouse input from reaching Cesium and the video crop
+     * shield while Replay or synchronized video recording owns the scene camera.
      * @private
      */
     #setupSynchronizedInputGuard() {
@@ -210,7 +210,10 @@ export class CanvasEventManager {
             }
 
             const path = event.composedPath?.() ?? []
-            if (!path.includes(canvas) && event.target !== canvas) {
+            const blockedTarget = path.some(target => target === canvas
+                || (target instanceof Element
+                    && target.matches('.lgs-widget-container[data-widget^="video-crop-zone"]')))
+            if (!blockedTarget && event.target !== canvas) {
                 return
             }
 

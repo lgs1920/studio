@@ -24,6 +24,7 @@ const CAMERA_INPUT_PROPERTIES = [
     'enableTilt',
     'enableLook',
 ]
+const REPLAY_CROP_ZONE_INPUT_SHIELD_CLASS = 'replay-crop-zone-input-shield'
 
 /**
  * Returns the runtime state that controls access to Cesium input.
@@ -37,9 +38,19 @@ const CAMERA_INPUT_PROPERTIES = [
 export const getCesiumInputState = () => {
     const video = globalThis.lgs?.stores?.ui?.video
     const replay = globalThis.lgs?.stores?.replay
+    const replayController = globalThis.__?.ui?.replay
     const recordingHQ = video?.recordingHQ === true
     const recordingSync = replay?.recordingSync === true
-    const replayPlaybackActive = replay?.playing === true || replay?.paused === true
+    const replayPlaybackActive = replay?.active === true
+                                 || replay?.playing === true
+                                 || replay?.paused === true
+                                 || replay?.clipSequenceActive === true
+                                 || replay?.dynamicFrameState?.active === true
+                                 || replay?.dynamicFrameState?.playing === true
+                                 || replay?.dynamicFrameState?.paused === true
+                                 || replayController?.running === true
+                                 || replayController?.playing === true
+                                 || replayController?.paused === true
 
     return {
         preRecording: video?.preRecording === true,
@@ -53,7 +64,7 @@ export const getCesiumInputState = () => {
 /**
  * Returns whether Cesium scene and camera input must currently be blocked.
  *
- * @returns {boolean} True during Replay playback or synchronized recording.
+ * @returns {boolean} True during an active Replay session or synchronized recording.
  */
 export const isCesiumInputBlocked = () => getCesiumInputState().blocked
 
@@ -155,6 +166,20 @@ export class CesiumInputGate {
     }
 
     /**
+     * Adds or removes the transparent event shield on the defined Replay crop zone.
+     *
+     * @param {boolean} enabled - Whether the crop zone should intercept pointer input.
+     * @returns {void}
+     * @private
+     */
+    #setCropZoneInputShield = enabled => {
+        const cropZones = globalThis.document?.querySelectorAll?.(
+            '.lgs-widget-container[data-widget^="video-crop-zone"]',
+        ) ?? []
+        cropZones.forEach(cropZone => cropZone.classList.toggle(REPLAY_CROP_ZONE_INPUT_SHIELD_CLASS, enabled))
+    }
+
+    /**
      * Synchronizes native Cesium camera input with the current video phase.
      *
      * Reapplying disabled flags while blocked prevents camera flights from
@@ -168,10 +193,12 @@ export class CesiumInputGate {
         if (blocked) {
             if (!this.#blocked) {
                 this.#savedCameraInput = this.#captureCameraInput()
+                this.#setCropZoneInputShield(true)
             }
             this.#setCameraInput(false)
         }
         else if (this.#blocked) {
+            this.#setCropZoneInputShield(false)
             this.#restoreCameraInput()
         }
 
@@ -195,6 +222,7 @@ export class CesiumInputGate {
         this.#cleanups.forEach(cleanup => cleanup())
         this.#cleanups = []
         if (this.#blocked) {
+            this.#setCropZoneInputShield(false)
             this.#restoreCameraInput()
         }
         this.#blocked = false

@@ -153,10 +153,20 @@ describe('CanvasEventManager', () => {
         expect(event.defaultPrevented).toBe(true)
     })
 
-    it.each(['playing', 'paused'])('blocks canvas input while Replay is %s', replayState => {
+    it.each(['active', 'playing', 'paused'])('blocks canvas and crop-zone input while Replay is %s', replayState => {
         const canvasInput = vi.fn()
+        const cropZoneInput = vi.fn()
+        const regularWidgetInput = vi.fn()
         const cesiumAction = vi.fn()
         const controller = viewer.scene.screenSpaceCameraController
+        const cropZone = document.createElement('div')
+        cropZone.className = 'lgs-widget-container'
+        cropZone.dataset.widget = 'video-crop-zone#test'
+        const regularWidget = document.createElement('div')
+        regularWidget.className = 'lgs-widget-container'
+        regularWidget.dataset.widget = 'credits#test'
+        document.body.append(cropZone)
+        document.body.append(regularWidget)
         manager.onMouseDown(cesiumAction)
         canvas.addEventListener('pointerdown', canvasInput)
         globalThis.lgs.stores.replay[replayState] = true
@@ -170,6 +180,33 @@ describe('CanvasEventManager', () => {
         expect(event.defaultPrevented).toBe(true)
         expect(controller.enableInputs).toBe(false)
         expect(controller.enableZoom).toBe(false)
+
+        const cropEvent = new PointerEvent('pointerdown', {bubbles: true, cancelable: true})
+        cropZone.addEventListener('pointerdown', cropZoneInput)
+        cropZone.dispatchEvent(cropEvent)
+        expect(cropZoneInput).not.toHaveBeenCalled()
+        expect(cropEvent.defaultPrevented).toBe(true)
+        const widgetEvent = new PointerEvent('pointerdown', {bubbles: true, cancelable: true})
+        regularWidget.addEventListener('pointerdown', regularWidgetInput)
+        regularWidget.dispatchEvent(widgetEvent)
+        expect(regularWidgetInput).toHaveBeenCalledTimes(1)
+        expect(widgetEvent.defaultPrevented).toBe(false)
+        cropZone.remove()
+        regularWidget.remove()
+    })
+
+    it('blocks canvas input from the live Replay controller before store projection catches up', () => {
+        const canvasInput = vi.fn()
+        const controller = viewer.scene.screenSpaceCameraController
+        canvas.addEventListener('pointerdown', canvasInput)
+        globalThis.__.ui = {replay: {running: true, playing: true, paused: false}}
+
+        const event = new PointerEvent('pointerdown', {bubbles: true, cancelable: true})
+        canvas.dispatchEvent(event)
+
+        expect(canvasInput).not.toHaveBeenCalled()
+        expect(event.defaultPrevented).toBe(true)
+        expect(controller.enableInputs).toBe(false)
     })
 
     it('applies the exact video phase matrix to Cesium actions and camera controls', () => {

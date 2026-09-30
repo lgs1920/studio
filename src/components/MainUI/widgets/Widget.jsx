@@ -448,7 +448,10 @@ const WidgetHost = ({
     const $video = lgs.stores.ui.video
     const video = useSnapshot($video)
     const replay = useSnapshot(lgs.stores.replay)
-    const replayPlaybackActive = replay.playing === true || replay.paused === true
+    const replayPlaybackActive = replay.active === true
+                                 || replay.playing === true
+                                 || replay.paused === true
+                                 || replay.clipSequenceActive === true
 
     const throttleRotate = 0
     const [widgetId] = useState(() => {
@@ -594,7 +597,7 @@ const WidgetHost = ({
 
     const synchronizedRecording = video.recordingHQ === true
                                   && globalThis.lgs?.stores?.replay?.recordingSync === true
-    const interactionLocked = replayPlaybackActive || previewOnly
+    const interactionLocked = previewOnly
                               || (((video.preRecording && !config.isCropper) || video.recordingHQ || video.snapshot || video.finalizing)
                                   && config.type === LGS_VISUAL_WIDGET)
     const inputBlocked = replayPlaybackActive || previewOnly
@@ -603,7 +606,9 @@ const WidgetHost = ({
     // The crop surface is visual only. Moveable renders its handles in a
     // separate sibling control box, so the empty crop area can reach Cesium.
     const cropPassThrough = Boolean(config.isCropper)
-    const canInteract = !replayPlaybackActive && !effectiveLocked && (!interactionLocked || isReplayRecordingMonitor)
+    const canInteract = !effectiveLocked
+                        && (!interactionLocked || isReplayRecordingMonitor)
+                        && (!replayPlaybackActive || !config.isCropper)
     const canDrag = canInteract && (config?.draggable ?? true)
     const canResize = canInteract && !effectiveCollapsed && (config?.resizable ?? false)
     const canScale = canInteract && !effectiveCollapsed && (config?.scalable ?? false)
@@ -1853,12 +1858,12 @@ const WidgetHost = ({
     return (
         <div
             className={classNames('lgs-widget-container', containerClassName, {
-                'replay-playback-input-blocked': replayPlaybackActive,
+                'replay-crop-zone-input-shield': replayPlaybackActive && cropPassThrough,
             })}
             data-widget={widgetId}
             style={{
                 zIndex:        activeZIndex,
-                pointerEvents: replayPlaybackActive || cropPassThrough || !isWidgetVisible ? 'none' : 'auto',
+                pointerEvents: !isWidgetVisible ? 'none' : (cropPassThrough && !replayPlaybackActive ? 'none' : 'auto'),
             }}
         >
             <div
@@ -1938,7 +1943,7 @@ const WidgetHost = ({
                 className={classNames('lgs-widget-control-box', moveableClassName)}
                 style={{
                     opacity:      showMoveableControls ? 1 : 0,
-                    pointerEvents: showMoveableControls && !replayPlaybackActive ? 'auto' : 'none',
+                    pointerEvents: showMoveableControls && (!replayPlaybackActive || !config.isCropper) ? 'auto' : 'none',
                 }}
                 container={actualContainer ?? lgs.canvas}
                 origin={false}
