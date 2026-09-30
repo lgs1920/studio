@@ -480,6 +480,13 @@ describe('replay camera angle map guide', () => {
             })
             return event
         }
+        globalThis.lgs = {stores: {replay: {playing: true}}}
+        const playbackPointerDown = pointerEvent('pointerdown', projectedAnchor.x + 50, projectedAnchor.y)
+        dragTarget.dispatchEvent(playbackPointerDown)
+        expect(playbackPointerDown.defaultPrevented).toBe(true)
+        expect(cameraController.enableRotate).toBe(true)
+        expect(cesiumPointerListeners.pointerdown).not.toHaveBeenCalled()
+        globalThis.lgs = undefined
         dragTarget.dispatchEvent(pointerEvent('pointerdown', projectedAnchor.x + 50, projectedAnchor.y))
         expect(cameraController.enableRotate).toBe(false)
         cameraGuideSvg.dispatchEvent(pointerEvent('pointermove', projectedAnchor.x, projectedAnchor.y + 50))

@@ -2087,6 +2087,13 @@ const bindGuideDragInteractions = (viewer, record) => {
      * @returns {void}
      */
     const pointerDownListener = event => {
+        const replay = globalThis.lgs?.stores?.replay
+        if (replay?.playing === true || replay?.paused === true) {
+            event.preventDefault()
+            event.stopPropagation()
+            event.stopImmediatePropagation?.()
+            return
+        }
         if (event.button !== 0 || !record.projectedAnchor || typeof record.onCameraChange !== 'function') {
             return
         }
