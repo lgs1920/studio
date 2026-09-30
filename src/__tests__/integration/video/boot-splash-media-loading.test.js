@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-21
- * Last modified: 2026-09-29
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -95,7 +95,7 @@ const registerBootSplashMediaLoadingTests = () => {
         expect(splashStyle).toContain('--track-color: var(--hero-route-poi-color)')
         expect(splashStyle).toContain('.welcome-initialization-message')
         expect(splashStyle).toContain('font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;')
-        expect(splashStyle).toContain('font-size: var(--lgs-font-size-s, .75rem);')
+        expect(splashStyle).toContain('font-size: calc(var(--lgs-font-size-s, .75rem) + .125rem);')
         expect(splashStyle).toContain('drop-shadow(0 0 .32rem color-mix(in oklab, var(--hero-route-poi-color) 82%, transparent))')
         expect(splashStyle).toContain('drop-shadow(0 0 .72rem color-mix(in oklab, var(--hero-route-poi-color) 88%, transparent))')
         expect(splashStyle).toContain('filter: drop-shadow(0 0 8px color-mix(in oklab, var(--hero-route-glow-color) 42%, transparent))')
