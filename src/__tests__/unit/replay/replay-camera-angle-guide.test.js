@@ -339,7 +339,7 @@ describe('replay camera angle map guide', () => {
         expect(overlay).not.toBeNull()
         expect(overlay.style.pointerEvents).toBe('none')
         expect(overlay.style.zIndex).toBe('2')
-        expect(overlay.querySelectorAll('path')).toHaveLength(6)
+        expect(overlay.querySelectorAll('path')).toHaveLength(7)
         const outerPath = overlay.querySelector('path[data-part="outer"]')
         const innerPath = overlay.querySelector('path[data-part="inner"]')
         const cameraGuideSvg = outerPath.ownerSVGElement
@@ -421,7 +421,28 @@ describe('replay camera angle map guide', () => {
         expect(overlay.querySelector('text[data-part="angle-label"]').textContent).toBe('-135°')
         cameraGuideSvg.dispatchEvent(pointerEvent('pointerup', cameraMarkerX, cameraMarkerY))
         expect(cameraChangeListener.mock.lastCall[0].headingOffset).toBeCloseTo(135, 2)
-        expect(cameraChangeListener.mock.lastCall[0].altitude).toBeCloseTo(600, 8)
+        expect(cameraChangeListener.mock.lastCall[0].altitude).toBeCloseTo(900, 8)
+        const tipDragTarget = overlay.querySelector('[data-part="cone-tip-drag-target"]')
+        const dragTipX = Number(tipDragTarget.getAttribute('cx'))
+        const dragTipY = Number(tipDragTarget.getAttribute('cy'))
+        const tipDeltaX = dragTipX - projectedAnchor.x
+        const tipDeltaY = dragTipY - projectedAnchor.y
+        const tipRadius = Math.hypot(tipDeltaX, tipDeltaY)
+        const tipDragX = projectedAnchor.x + (tipDeltaX * 1.25)
+        const tipDragY = projectedAnchor.y + (tipDeltaY * 1.25)
+        const cameraChangeCallsBeforeTipDrag = cameraChangeListener.mock.calls.length
+        tipDragTarget.dispatchEvent(pointerEvent('pointerdown', dragTipX, dragTipY))
+        cameraGuideSvg.dispatchEvent(pointerEvent('pointermove', tipDragX, tipDragY))
+        expect(cameraChangeListener).toHaveBeenCalledTimes(cameraChangeCallsBeforeTipDrag)
+        expect(overlay.querySelector('text[data-part="angle-label"]').textContent).toBe('-135°')
+        cameraGuideSvg.dispatchEvent(pointerEvent('pointerup', tipDragX, tipDragY))
+        expect(cameraChangeListener).toHaveBeenCalledTimes(cameraChangeCallsBeforeTipDrag + 1)
+        expect(cameraChangeListener.mock.lastCall[0].headingOffset).toBeCloseTo(135, 2)
+        expect(cameraChangeListener.mock.lastCall[0].altitude).toBeCloseTo(1125, 8)
+        expect(Math.hypot(
+            Number(tipDragTarget.getAttribute('cx')) - projectedAnchor.x,
+            Number(tipDragTarget.getAttribute('cy')) - projectedAnchor.y,
+        )).toBeGreaterThan(tipRadius)
         expect(Object.values(cesiumPointerListeners).every(listener => listener.mock.calls.length === 0)).toBe(true)
         for (const [type, listener] of Object.entries(cesiumPointerListeners)) {
             container.removeEventListener(type, listener)
@@ -451,6 +472,9 @@ describe('replay camera angle map guide', () => {
         const angleArcElement = overlay.querySelector('[data-part="camera-angle-arc"]')
         expect(angleArcElement.getAttribute('stroke-dasharray')).toBe('6 5')
         expect(cameraAxis.getAttribute('stroke')).toBe(angleArcElement.getAttribute('stroke'))
+        expect(cameraAxis.getAttribute('stroke-dasharray')).toBe(angleArcElement.getAttribute('stroke-dasharray'))
+        expect(cameraAxis.getAttribute('stroke-width')).toBe(angleArcElement.getAttribute('stroke-width'))
+        expect(cameraAxis.getAttribute('stroke-linecap')).toBe(angleArcElement.getAttribute('stroke-linecap'))
         const arcPoints = [...angleArcElement.getAttribute('d').matchAll(/(?:M|L) ([-\d.]+) ([-\d.]+)/g)]
             .map(([, x, y]) => ({x: Number(x), y: Number(y)}))
         const cameraAxisX = Number(cameraAxis.getAttribute('x2')) - Number(cameraAxis.getAttribute('x1'))
@@ -465,33 +489,83 @@ describe('replay camera angle map guide', () => {
         const routeStart = routeAfter.getAttribute('d').match(/^M ([-\d.]+) ([-\d.]+)/).slice(1).map(Number)
         expect(routeStart[0]).toBeCloseTo(Number(cameraAxis.getAttribute('x1')), 3)
         expect(routeStart[1]).toBeCloseTo(Number(cameraAxis.getAttribute('y1')), 3)
-        const firstCurve = routeAfter.getAttribute('d').match(/^M ([-\d.]+) ([-\d.]+) Q ([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+)/)
-            .slice(1)
-            .map(Number)
-        const routeCurveDistance = Array.from({length: 101}, (_, index) => {
-            const ratio = index / 100
-            const inverseRatio = 1 - ratio
-            const point = {
-                x: (inverseRatio ** 2 * firstCurve[0]) + (2 * inverseRatio * ratio * firstCurve[2]) + (ratio ** 2 * firstCurve[4]),
-                y: (inverseRatio ** 2 * firstCurve[1]) + (2 * inverseRatio * ratio * firstCurve[3]) + (ratio ** 2 * firstCurve[5]),
-            }
-            return Math.hypot(point.x - arcPoints.at(-1).x, point.y - arcPoints.at(-1).y)
-        }).reduce((closest, distance) => Math.min(closest, distance), Number.POSITIVE_INFINITY)
-        expect(routeCurveDistance).toBeLessThan(1)
         const labelRotation = Number(angleLabel.getAttribute('transform').match(/^rotate\(([-\d.]+)/)?.[1]) * Math.PI / 180
+        const labelX = Number(angleLabel.getAttribute('x'))
+        const labelY = Number(angleLabel.getAttribute('y'))
         expect(Math.abs((Math.cos(labelRotation) * cameraAxisX) + (Math.sin(labelRotation) * cameraAxisY)))
             .toBeLessThan(0.001 * Math.hypot(cameraAxisX, cameraAxisY))
+        const labelOffsetX = labelX - Number(cameraAxis.getAttribute('x1'))
+        const labelOffsetY = labelY - Number(cameraAxis.getAttribute('y1'))
+        expect((labelOffsetX * cameraAxisX) + (labelOffsetY * cameraAxisY)).toBeGreaterThan(0)
+        expect(Math.hypot(labelOffsetX, labelOffsetY)).toBeLessThan(Math.hypot(arcStartX, arcStartY))
         const coneVertices = outerPath.getAttribute('d').match(/^M ([-\d.]+) ([-\d.]+) L ([-\d.]+) ([-\d.]+) L ([-\d.]+) ([-\d.]+)/)
             .slice(1)
             .map(Number)
         const [baseLeftX, baseLeftY, tipX, tipY, baseRightX, baseRightY] = coneVertices
-        const labelX = Number(angleLabel.getAttribute('x'))
-        const labelY = Number(angleLabel.getAttribute('y'))
+        const coneBaseWidth = Math.hypot(baseRightX - baseLeftX, baseRightY - baseLeftY)
+        expect(Math.hypot(arcStartX, arcStartY)).toBeCloseTo(coneBaseWidth * 0.4, 3)
+        const arcRadii = arcPoints.map(point => Math.hypot(
+            point.x - Number(cameraAxis.getAttribute('x1')),
+            point.y - Number(cameraAxis.getAttribute('y1')),
+        ))
+        expect(arcRadii.every(radius => Math.abs(radius - arcRadii[0]) < 0.001)).toBe(true)
+        const firstRouteCurve = routeAfter.getAttribute('d').match(/^M ([-\d.]+) ([-\d.]+) Q ([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+)/)
+            ?.slice(1)
+            .map(Number)
+        expect(firstRouteCurve).not.toBeNull()
+        const routeCurveDistance = Array.from({length: 101}, (_, index) => {
+            const ratio = index / 100
+            const inverse = 1 - ratio
+            const routeX = (inverse ** 2 * firstRouteCurve[0])
+                + (2 * inverse * ratio * firstRouteCurve[2])
+                + (ratio ** 2 * firstRouteCurve[4])
+            const routeY = (inverse ** 2 * firstRouteCurve[1])
+                + (2 * inverse * ratio * firstRouteCurve[3])
+                + (ratio ** 2 * firstRouteCurve[5])
+            return Math.hypot(arcPoints.at(-1).x - routeX, arcPoints.at(-1).y - routeY)
+        }).reduce((closest, distance) => Math.min(closest, distance), Infinity)
+        expect(routeCurveDistance).toBeLessThan(1)
         const pointInCone = ((baseLeftX - labelX) * (tipY - labelY) - (tipX - labelX) * (baseLeftY - labelY))
                 * ((tipX - labelX) * (baseRightY - labelY) - (baseRightX - labelX) * (tipY - labelY)) >= 0
             && ((tipX - labelX) * (baseRightY - labelY) - (baseRightX - labelX) * (tipY - labelY))
                 * ((baseRightX - labelX) * (baseLeftY - labelY) - (baseLeftX - labelX) * (baseRightY - labelY)) >= 0
         expect(pointInCone).toBe(true)
+        const angleArcClipId = angleArcElement.getAttribute('clip-path').match(/^url\(#(.+)\)$/)?.[1]
+        const angleArcClip = overlay.querySelector(`#${angleArcClipId}`)
+        expect(angleArcClip?.tagName.toLowerCase()).toBe('clippath')
+        const insetClipPath = angleArcClip?.querySelector('path')?.getAttribute('d')
+        expect(insetClipPath).not.toBe(outerPath.getAttribute('d'))
+        expect(insetClipPath).toMatch(/^M /)
+        const insetVertices = [...insetClipPath.matchAll(/(?:M|L) ([-\d.]+) ([-\d.]+)/g)]
+            .map(([, x, y]) => ({x: Number(x), y: Number(y)}))
+        expect(insetVertices).toHaveLength(5)
+        const coneEdges = [
+            [{x: baseLeftX, y: baseLeftY}, {x: tipX, y: tipY}],
+            [{x: tipX, y: tipY}, {x: baseRightX, y: baseRightY}],
+        ]
+        const distanceToEdge = (point, [start, end]) => {
+            const edgeX = end.x - start.x
+            const edgeY = end.y - start.y
+            const ratio = Math.max(0, Math.min(1, (
+                ((point.x - start.x) * edgeX) + ((point.y - start.y) * edgeY)
+            ) / ((edgeX ** 2) + (edgeY ** 2))))
+            return Math.hypot(
+                point.x - start.x - (ratio * edgeX),
+                point.y - start.y - (ratio * edgeY),
+            )
+        }
+        for (const insetVertex of insetVertices.slice(0, 3)) {
+            expect(Math.min(...coneEdges.map(edge => distanceToEdge(insetVertex, edge))))
+                .toBeCloseTo(6, 3)
+        }
+        const simulationEndpoint = arcPoints.at(-1)
+        const clipCrossProducts = insetVertices.map((start, index) => {
+            const end = insetVertices[(index + 1) % insetVertices.length]
+            return ((end.x - start.x) * (simulationEndpoint.y - start.y))
+                - ((end.y - start.y) * (simulationEndpoint.x - start.x))
+        })
+        expect(clipCrossProducts.every(value => value >= 0)
+            || clipCrossProducts.every(value => value <= 0)).toBe(true)
         expect(overlay.querySelector('[data-part="camera-angle-arc"]')?.getAttribute('d')).toMatch(/^M /)
         expect((overlay.querySelector('[data-part="camera-angle-arc"]')?.getAttribute('d').match(/L /g) ?? []).length).toBeGreaterThan(10)
         expect(overlay.querySelector('[data-part="camera-position-axis"]')).not.toBeNull()
@@ -499,7 +573,9 @@ describe('replay camera angle map guide', () => {
         const lines = overlay.querySelectorAll('line')
         expect(lines).toHaveLength(4)
         expect([...lines].filter(line => line.dataset.part !== 'camera-position-axis').every(line => line.getAttribute('stroke-width') === '1')).toBe(true)
-        expect([...lines].every(line => line.getAttribute('stroke-linecap') === 'butt')).toBe(true)
+        expect([...lines].filter(line => line.dataset.part !== 'camera-position-axis')
+            .every(line => line.getAttribute('stroke-linecap') === 'butt')).toBe(true)
+        expect(cameraAxis.getAttribute('stroke-linecap')).toBe('round')
         expect(lines[0].getAttribute('stroke')).toBe(gradientStops[0].getAttribute('stop-color'))
         const icons = overlay.querySelectorAll('img')
         expect(icons).toHaveLength(1)
