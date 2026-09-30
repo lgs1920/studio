@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-09-29
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,9 +30,11 @@ import {
     resolveJourneyReplayCameraAngleGuide,
     updateJourneyReplayCameraAngleGuide,
 } from '@Core/ui/replay/JourneyReplayCameraAngleGuide'
+import {fadeJourneyForReplayPreparation} from '@Core/ui/replay/JourneyReplayPreparationAppearance'
 import {isJourneyReplayCameraActive, isJourneyReplayVideoCaptureActive} from '@Core/ui/replay/JourneyReplayRuntime'
 import {
     REPLAY_USER_MODE_BASIC,
+    REPLAY_USER_MODE_EXPERT,
     syncJourneyExpertReplayCamera,
     syncJourneySimpleReplayCamera,
 } from '@Core/ui/replay/ReplayUserModes'
@@ -92,6 +94,18 @@ export const JourneyReplayCameraAngleGuide = () => {
     }, [])
 
     useEffect(() => {
+        const isPreparingReplay = guideVisible
+            && !replaying
+            && (video.editing === true || drawers.open === REPLAY_DRAWER)
+            && [REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT].includes(replaySettings.userMode)
+        if (!isPreparingReplay) {
+            return undefined
+        }
+
+        return fadeJourneyForReplayPreparation(lgs.viewer, lgs.stores.main.theJourney)
+    }, [drawers.open, guideVisible, journeySlug, replaySettings.userMode, replaying, video.editing])
+
+    useEffect(() => {
         const viewer = lgs.viewer
         if (!guideVisible || cameraPositionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
             removeJourneyReplayCameraAngleGuide(viewer)
@@ -106,6 +120,7 @@ export const JourneyReplayCameraAngleGuide = () => {
                 positionMode:  cameraPositionMode,
             },
             journey,
+            pois: lgs.stores.main.components?.pois?.list,
         })
         if (!mountJourneyReplayCameraAngleGuide(viewer, guide, {}, {onCameraChange: updateCameraFromGuide})) {
             removeJourneyReplayCameraAngleGuide(viewer)
@@ -126,6 +141,7 @@ export const JourneyReplayCameraAngleGuide = () => {
                 positionMode:  cameraPositionMode,
             },
             journey: lgs.stores.main.theJourney,
+            pois: lgs.stores.main.components?.pois?.list,
             sample: replaySample,
         })
         if (!guide) {
