@@ -44,6 +44,7 @@ const CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS = 1200
 const CAMERA_ANGLE_GUIDE_CONE_BASE_HALF_WIDTH_METERS = 240
 const CAMERA_ANGLE_GUIDE_DEPARTURE_DISTANCE_METERS = 300
 const CAMERA_ANGLE_GUIDE_ACTIVITY_DISTANCE_METERS = 200
+const CAMERA_ANGLE_GUIDE_DRAG_SNAP_STEP_DEGREES = 5
 const EARTH_RADIUS_METERS = 6378137
 const CAMERA_ANGLE_GUIDE_MAX_SCREEN_RATIO = 0.2
 const CAMERA_ANGLE_GUIDE_INNER_HEIGHT_RATIO = 0.95
@@ -2089,6 +2090,7 @@ const bindGuideDragInteractions = (viewer, record) => {
             startAltitude: record.guide.cameraAltitude ?? CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS,
             startRadius: Math.hypot(deltaX, deltaY),
             startOffset: record.guide.offsetRadians,
+            shiftPressed: event.shiftKey === true,
             startMapAngle: tipAltitudeOnly ? null : mapBearingFromPointer(event),
             cameraController,
             previousRotateEnabled: cameraController?.enableRotate,
@@ -2108,10 +2110,38 @@ const bindGuideDragInteractions = (viewer, record) => {
         globalThis.addEventListener?.('pointermove', pointerMoveListener, true)
         globalThis.addEventListener?.('pointerup', pointerUpListener, true)
         globalThis.addEventListener?.('pointercancel', pointerUpListener, true)
+        globalThis.addEventListener?.('keydown', dragModifierKeyDownListener, true)
+        globalThis.addEventListener?.('keyup', dragModifierKeyUpListener, true)
         record.dragState.removePointerListeners = () => {
             globalThis.removeEventListener?.('pointermove', pointerMoveListener, true)
             globalThis.removeEventListener?.('pointerup', pointerUpListener, true)
             globalThis.removeEventListener?.('pointercancel', pointerUpListener, true)
+            globalThis.removeEventListener?.('keydown', dragModifierKeyDownListener, true)
+            globalThis.removeEventListener?.('keyup', dragModifierKeyUpListener, true)
+        }
+    }
+
+    /**
+     * Track Shift presses during an active pointer drag.
+     *
+     * @param {KeyboardEvent} event - Keyboard event.
+     * @returns {void}
+     */
+    const dragModifierKeyDownListener = event => {
+        if (record.dragState && event.key === 'Shift') {
+            record.dragState.shiftPressed = true
+        }
+    }
+
+    /**
+     * Track Shift releases during an active pointer drag.
+     *
+     * @param {KeyboardEvent} event - Keyboard event.
+     * @returns {void}
+     */
+    const dragModifierKeyUpListener = event => {
+        if (record.dragState && event.key === 'Shift') {
+            record.dragState.shiftPressed = false
         }
     }
 
@@ -2142,10 +2172,14 @@ const bindGuideDragInteractions = (viewer, record) => {
                 ? domAngleDeltaFrom(dragState.startMapAngle, mapAngle)
                 : domAngleDeltaFrom(dragState.startAngle, angle)
             : 0
-        const offset = dragState.startOffset + angleDelta
-        const rawDegrees = offset * 180 / Math.PI
-        const dragDegrees = event.shiftKey ? Math.round(rawDegrees / 5) * 5 : rawDegrees
-        const headingOffset = ((dragDegrees + 180) % 360 + 360) % 360 - 180
+        const shiftPressed = event.shiftKey === true || dragState.shiftPressed
+        const angleDeltaDegrees = angleDelta * 180 / Math.PI
+        const snappedDeltaDegrees = shiftPressed
+            ? Math.round(angleDeltaDegrees / CAMERA_ANGLE_GUIDE_DRAG_SNAP_STEP_DEGREES)
+                * CAMERA_ANGLE_GUIDE_DRAG_SNAP_STEP_DEGREES
+            : angleDeltaDegrees
+        const rawDegrees = (dragState.startOffset * 180 / Math.PI) + snappedDeltaDegrees
+        const headingOffset = ((rawDegrees + 180) % 360 + 360) % 360 - 180
         const altitude = dragState.altitudeDraggable
             ? Math.max(
                 CAMERA_ANGLE_GUIDE_MIN_CAMERA_ALTITUDE_METERS,

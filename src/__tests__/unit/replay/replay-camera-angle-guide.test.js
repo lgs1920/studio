@@ -331,22 +331,23 @@ describe('replay camera angle map guide', () => {
                 },
             },
         }
+        const tracedJourney = {
+            tracks: new Map([['track-1', {
+                content: {
+                    geometry: {
+                        type: 'LineString',
+                        coordinates: [[2, 48, 100], [2.0004, 48.0002, 105], [2.001, 48.001, 110], [2.0015, 48.0015, 115], [2.002, 48.002, 120]],
+                    },
+                },
+            }]]),
+            activitySettings: {icon: 'bicycle'},
+        }
         const guide = resolveJourneyReplayCameraAngleGuide({
             camera: {
                 headingOffset: 0,
                 positionMode:  'ahead',
             },
-            journey: {
-                tracks: new Map([['track-1', {
-                    content: {
-                        geometry: {
-                            type: 'LineString',
-                            coordinates: [[2, 48, 100], [2.0004, 48.0002, 105], [2.001, 48.001, 110], [2.0015, 48.0015, 115], [2.002, 48.002, 120]],
-                        },
-                    },
-                }]]),
-                activitySettings: {icon: 'bicycle'},
-            },
+            journey: tracedJourney,
         })
 
         const cameraChangeListener = vi.fn()
@@ -534,24 +535,28 @@ describe('replay camera angle map guide', () => {
             Number(tipDragTarget.getAttribute('cy')) - projectedAnchor.y,
         )).toBeGreaterThan(tipRadius)
         mapPickEnabled = false
+        expect(updateJourneyReplayCameraAngleGuide(viewer, resolveJourneyReplayCameraAngleGuide({
+            camera: {headingOffset: 133, positionMode: 'ahead'},
+            journey: tracedJourney,
+        }))).toBe(true)
         const snappedDragAngle = 17 * Math.PI / 180
         const cameraChangeCallsBeforeShiftDrag = cameraChangeListener.mock.calls.length
         dragTarget.dispatchEvent(pointerEvent('pointerdown', projectedAnchor.x + 50, projectedAnchor.y))
+        window.dispatchEvent(new KeyboardEvent('keydown', {key: 'Shift', bubbles: true}))
         cameraGuideSvg.dispatchEvent(pointerEvent(
             'pointermove',
             projectedAnchor.x + (Math.cos(snappedDragAngle) * 50),
             projectedAnchor.y + (Math.sin(snappedDragAngle) * 50),
-            true,
         ))
-        expect(overlay.querySelector('text[data-part="angle-label"]').textContent).toBe('-30°')
+        expect(overlay.querySelector('text[data-part="angle-label"]').textContent).toBe('-32°')
+        window.dispatchEvent(new KeyboardEvent('keyup', {key: 'Shift', bubbles: true}))
         cameraGuideSvg.dispatchEvent(pointerEvent(
             'pointerup',
             projectedAnchor.x + (Math.cos(snappedDragAngle) * 50),
             projectedAnchor.y + (Math.sin(snappedDragAngle) * 50),
-            true,
         ))
         expect(cameraChangeListener).toHaveBeenCalledTimes(cameraChangeCallsBeforeShiftDrag + 1)
-        expect(cameraChangeListener.mock.lastCall[0].headingOffset).toBe(150)
+        expect(cameraChangeListener.mock.lastCall[0].headingOffset).toBe(148)
         expect(Object.values(cesiumPointerListeners).every(listener => listener.mock.calls.length === 0)).toBe(true)
         for (const [type, listener] of Object.entries(cesiumPointerListeners)) {
             container.removeEventListener(type, listener)
@@ -574,7 +579,7 @@ describe('replay camera angle map guide', () => {
         const angleLabel = overlay.querySelector('text[data-part="angle-label"]')
         const cameraAxis = overlay.querySelector('[data-part="camera-position-axis"]')
         expect(angleLabel).not.toBeNull()
-        expect(angleLabel.textContent).toBe('-30°')
+        expect(angleLabel.textContent).toBe('-32°')
         expect(angleLabel.getAttribute('fill')).toBe('rgb(0,184,184)')
         expect(angleLabel.getAttribute('opacity')).toBe('1')
         expect(angleLabel.getAttribute('transform')).toMatch(/^rotate\(/)
