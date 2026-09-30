@@ -13,7 +13,7 @@ replay:
   direction: 1
   loop: false
   scope: all-tracks
-  hideOtherJourneys: false
+  hideOtherJourneys: true
   hideAllPoisDuringJourneyReplay: false
   animateAllPoisDuringJourneyReplay: false
   progression:

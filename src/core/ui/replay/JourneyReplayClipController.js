@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,6 +22,7 @@ import {Math as CesiumMath} from 'cesium'
 import {CameraUtils} from '@Utils/cesium/CameraUtils'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
 import {REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP, normalizeJourneyReplayClips} from './JourneyReplayClips'
+import {REPLAY_USER_MODE_BASIC} from './ReplayUserModeConstants'
 import {
     currentJourneyReplayCameraSettings, currentJourneyReplaySample, finiteNumber, replayStore,
 } from './JourneyReplayRuntime'
@@ -834,6 +835,10 @@ export const clipSettings = (mode) => {
 export const clipListForSlot = (mode, slot) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
+
+        if (getJourneyReplaySettings()?.userMode === REPLAY_USER_MODE_BASIC) {
+            return []
+        }
 
         const clips = call.clipSettings()
         return slot === REPLAY_CLIP_SLOT_STOP ? clips.stop : clips.start

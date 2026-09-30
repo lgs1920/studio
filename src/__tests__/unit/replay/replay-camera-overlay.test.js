@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-09-29
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -276,6 +276,7 @@ describe('replay camera diagnostics overlay', () => {
             hideOtherJourneys: false,
         })
 
+        expect(call.hideOtherJourneysVisibility).not.toHaveBeenCalled()
         expect(setVisible).toHaveBeenCalledWith(true)
         expect(updateOverlay).toHaveBeenCalledWith(settings.camera.hysteresis)
     })

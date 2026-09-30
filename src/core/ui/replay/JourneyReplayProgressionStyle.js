@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified: 2026-09-27
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -230,7 +230,7 @@ export const defaultJourneyReplaySettings = () => ({
     direction:   1,
     loop:        false,
     scope:       DEFAULT_REPLAY_SCOPE,
-    hideOtherJourneys: false,
+    hideOtherJourneys: true,
     inheritHideOtherJourneys: true,
     progression: defaultJourneyReplayProgressionStyle(),
     profileInfo: defaultJourneyReplayProfileInfoStyle(),

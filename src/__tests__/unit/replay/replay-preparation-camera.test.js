@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-26
- * Last modified: 2026-09-29
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -240,6 +240,7 @@ describe('replay preparation camera', () => {
             setReplayPreparationPivot: vi.fn(),
             updateCameraSettingsFromCesiumControls: vi.fn(),
             bindCesiumCameraBridge:   vi.fn(),
+            hideOtherJourneysVisibility: vi.fn(),
         }
         const mode = {
             [JOURNEY_REPLAY_INTERNAL_STATE]: {sceneRestorePromise},
@@ -260,6 +261,7 @@ describe('replay preparation camera', () => {
         resolveSceneRestore()
         await expect(preparation).resolves.toBe(true)
         expect(call.captureCameraState).toHaveBeenCalledOnce()
+        expect(call.hideOtherJourneysVisibility).toHaveBeenCalledOnce()
         expect(call.setReplayPreparationPivot).toHaveBeenCalledWith(sample)
         expect(call.lockReplayCameraToAnchor).toHaveBeenCalledOnce()
     })

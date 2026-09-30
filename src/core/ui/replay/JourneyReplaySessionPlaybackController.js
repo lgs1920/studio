@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-29
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -188,11 +188,14 @@ export const configure = (mode, options = {}) => {
             includeHiddenTracks,
             smoothing,
         })
-        const clips = resolveJourneyReplayRuntimeClips({
+        const resolvedClips = resolveJourneyReplayRuntimeClips({
             clips:         options.clips,
             settingsClips: replay.clips,
             journey,
         })
+        const clips = simpleReplay
+            ? {...resolvedClips, start: [], stop: []}
+            : resolvedClips
 
         if (state.samplerConfigKey !== samplerConfigKey || !state.sampler) {
             state.sampler = new JourneyReplayPathSampler({
@@ -355,6 +358,7 @@ export const enterReplayPreparation = async (mode, {
                                                   shouldApply = null,
                                               } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
+    const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
     const canApply = typeof shouldApply === 'function' ? shouldApply : () => true
     const preparationToken = (state.preparationTransitionToken ?? 0) + 1
     state.preparationTransitionToken = preparationToken
@@ -368,8 +372,20 @@ export const enterReplayPreparation = async (mode, {
         return false
     }
 
+    const simplePreparation = globalThis.lgs?.stores?.replay?.simplePreparationActive === true
+                               || getJourneyReplaySettings().userMode === REPLAY_USER_MODE_BASIC
+    if (simplePreparation) {
+        call.hideOtherJourneysVisibility()
+    }
+
+    JourneyReplayVisibilityController.hideJourneyReplayPOIsForPreparation(mode)
+
     const prepared = await prepareReplayCamera(mode, {journey})
-    return prepared === true && isCurrentTransition()
+    const preparationSucceeded = prepared === true && isCurrentTransition()
+    if (!preparationSucceeded) {
+        JourneyReplayVisibilityController.restoreJourneyReplayPOIVisibility(mode)
+    }
+    return preparationSucceeded
 }
 
 /**
@@ -440,14 +456,15 @@ export const start = (mode, options = {}) => {
     call.resetCameraInterpolationState()
     traceStartStep('reset-camera-interpolation-state.end')
 
-        const shouldHideOtherJourneys = options.hideOtherJourneys
-                                        ?? getJourneyReplayHideOtherJourneys()
+        const shouldHideOtherJourneys = getJourneyReplaySettings().userMode === REPLAY_USER_MODE_BASIC
+                                        || (options.hideOtherJourneys ?? getJourneyReplayHideOtherJourneys())
         const videoReplayLinked = call.isReplayVideoLinked()
         state.logicalCameraTrajectory = false
         state.videoReplayClipLogicalTrajectory = videoReplayLinked
         void globalThis.__?.ui?.cameraManager?.stopRotate?.()
         call.setJourneyReplayOrbitAllowed(false)
         call.restoreOtherJourneysVisibility()
+        call.restoreJourneyReplayPOIVisibility()
         call.hideCurrentJourneyVisibility()
         if (shouldHideOtherJourneys) {
             call.hideOtherJourneysVisibility()
@@ -748,7 +765,7 @@ export const preparePlaybackSceneForExport = async (mode, {
         call.setJourneyReplayOrbitAllowed(false)
         call.restoreOtherJourneysVisibility()
         call.hideCurrentJourneyVisibility()
-        if (hideOtherJourneys) {
+        if (getJourneyReplaySettings().userMode === REPLAY_USER_MODE_BASIC || hideOtherJourneys) {
             call.hideOtherJourneysVisibility()
         }
         if (sampler?.hasSamples) {

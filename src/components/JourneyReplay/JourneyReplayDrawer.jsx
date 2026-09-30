@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-09-29
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -415,7 +415,6 @@ export const JourneyReplayDrawer = memo(() => {
     const replayState = useSnapshot(lgs.stores.replay)
     ensureJourneyReplaySettings()
     const replaySettings = useSnapshot(lgs.settings.ui.replay)
-    const journeySettings = useOptionalSnapshot(lgs.settings.journey, {hideOtherJourneys: false})
     const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
     const {drawer: drawerPlacement} = useSnapshot(lgs.editorSettingsProxy.menu)
     const swatches = useOptionalSnapshot(lgs.settings.swatches, {list: []}).list.join(';')
@@ -490,9 +489,9 @@ export const JourneyReplayDrawer = memo(() => {
     const animateAllPoisDuringJourneyReplay = replaySettings.animateAllPoisDuringJourneyReplay === true
     const cameraPresetKey = getJourneyReplayCameraPresetKey(camera)
     const marker = normalizeJourneyReplayMarker(replaySettings.marker)
-    const hideOtherJourneys = replayState.inheritHideOtherJourneys === false
+    const hideOtherJourneys = !isExpertMode || (replayState.inheritHideOtherJourneys === false
                                ? replayState.hideOtherJourneys === true
-                               : replayState.hideOtherJourneys === true || journeySettings.hideOtherJourneys === true
+                               : true)
     const durationLocked = replayState.active || replayState.playing || replayState.paused
     const [poiVisibilityOverrides, setPoiVisibilityOverrides] = useState({})
     const [, setPoiRevision] = useState(0)
@@ -1403,15 +1402,17 @@ export const JourneyReplayDrawer = memo(() => {
                             <p className="replay-empty-state">{`Import or select a journey to use ${REPLAY_LABEL}.`}</p>
                         ) : (
                              <>
-                                 <WaSwitch
-                                     label-at-start
-                                     size="xs"
-                                     className="replay-hide-other-journeys-switch half-width"
-                                     checked={hideOtherJourneys}
-                                     onChange={updateHideOtherJourneys}
-                                 >
-                                     {'Hide other journeys'}
-                                 </WaSwitch>
+                                 {isExpertMode && (
+                                     <WaSwitch
+                                         label-at-start
+                                         size="xs"
+                                         className="replay-hide-other-journeys-switch half-width"
+                                         checked={hideOtherJourneys}
+                                         onChange={updateHideOtherJourneys}
+                                     >
+                                         {'Hide other journeys'}
+                                     </WaSwitch>
+                                 )}
                                  <div className="replay-total-duration-row" aria-live="polite">
                                      <span className="replay-total-duration-label">{'Total duration (s)'}</span>
                                      <strong className="replay-total-duration-value">{formatSeconds(totalVideoDurationSeconds)}</strong>

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-09-29
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -897,19 +897,30 @@ describe('JourneyReplayDrawer', () => {
     })
 
     it('toggles hiding other journeys from the drawer', async () => {
+        globalThis.lgs.settings.ui.replay.userMode = 'expert'
+        globalThis.lgs.stores.replay.userMode = 'expert'
         const view = render(<JourneyReplayDrawer/>)
         const hideOtherJourneysSwitch = view.getByLabelText('Hide other journeys')
 
-        expect(hideOtherJourneysSwitch.checked).toBe(false)
+        expect(hideOtherJourneysSwitch.checked).toBe(true)
 
         fireEvent.click(hideOtherJourneysSwitch)
 
         await waitFor(() => {
-            expect(globalThis.lgs.stores.replay.hideOtherJourneys).toBe(true)
-            expect(__.ui.replay.setHideOtherJourneys).toHaveBeenCalledWith(true)
-            expect(globalThis.lgs.settings.ui.replay.hideOtherJourneys).toBe(true)
-            expect(hideOtherJourneysSwitch.checked).toBe(true)
+            expect(globalThis.lgs.stores.replay.hideOtherJourneys).toBe(false)
+            expect(__.ui.replay.setHideOtherJourneys).toHaveBeenCalledWith(false)
+            expect(globalThis.lgs.settings.ui.replay.hideOtherJourneys).toBe(false)
+            expect(hideOtherJourneysSwitch.checked).toBe(false)
         })
+    })
+
+    it('does not expose the other-journeys switch in Simple Replay', () => {
+        globalThis.lgs.settings.ui.replay.userMode = 'basic'
+        globalThis.lgs.stores.replay.userMode = 'basic'
+
+        const view = render(<JourneyReplayDrawer/>)
+
+        expect(view.queryByLabelText('Hide other journeys')).toBeNull()
     })
 
     it('shows the total video duration above the tabs', () => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-26
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -277,7 +277,7 @@ describe('replay settings normalization', () => {
     })
 
     it('normalizes the hide other journeys switch as a boolean', () => {
-        expect(defaultJourneyReplaySettings().hideOtherJourneys).toBe(false)
+        expect(defaultJourneyReplaySettings().hideOtherJourneys).toBe(true)
         expect(normalizeJourneyReplaySettings({hideOtherJourneys: true}).hideOtherJourneys).toBe(true)
         expect(normalizeJourneyReplaySettings({hideOtherJourneys: 0}).hideOtherJourneys).toBe(false)
     })

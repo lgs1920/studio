@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-30
- * Last modified: 2026-09-13
+ * Last modified: 2026-09-30
  *
  *
  * Copyright © 2026 LGS1920
@@ -59,6 +59,29 @@ describe('journey visibility policy', () => {
         expect(getJourneyReplayHideOtherJourneys()).toBe(false)
         globalThis.lgs.settings.journey.hideOtherJourneys = true
         expect(getJourneyReplayHideOtherJourneys()).toBe(true)
+    })
+
+    it('always hides other journeys in Simple Replay', () => {
+        globalThis.lgs.settings.ui.replay = {
+            userMode: 'basic',
+            hideOtherJourneys: false,
+            inheritHideOtherJourneys: false,
+        }
+
+        expect(getJourneyReplayHideOtherJourneys()).toBe(true)
+    })
+
+    it('defaults Expert Replay to hiding other journeys but honors its explicit drawer setting', () => {
+        globalThis.lgs.settings.ui.replay = {
+            userMode: 'expert',
+            hideOtherJourneys: false,
+            inheritHideOtherJourneys: true,
+        }
+
+        expect(getJourneyReplayHideOtherJourneys()).toBe(true)
+
+        globalThis.lgs.settings.ui.replay.inheritHideOtherJourneys = false
+        expect(getJourneyReplayHideOtherJourneys()).toBe(false)
     })
 
     it('refreshes every journey with the current visibility policy', async () => {
