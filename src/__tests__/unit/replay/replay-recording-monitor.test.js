@@ -17,6 +17,7 @@
 import {afterEach, describe, expect, it, vi} from 'vitest'
 
 import {
+    connectReplayRecordingMonitorPreview,
     getReplayRecordingMonitorSnapshot,
     publishReplayRecordingMonitorFrame,
     startReplayRecordingMonitor,
@@ -28,9 +29,10 @@ import {
 describe('ReplayRecordingMonitor', () => {
     afterEach(() => {
         stopReplayRecordingMonitor()
+        vi.restoreAllMocks()
     })
 
-    it('publishes the exact composed canvas and HQ progress metadata', () => {
+    it('publishes a stable copy of the composed canvas and HQ progress metadata', () => {
         const canvas = document.createElement('canvas')
         canvas.width = 320
         canvas.height = 180
@@ -60,13 +62,73 @@ describe('ReplayRecordingMonitor', () => {
             mode: 'hq',
             phase: 'rendering',
             progress: 0.4,
-            frameCanvas: canvas,
+            frameCanvas: expect.any(HTMLCanvasElement),
             processedFrames: 4,
             size: 2048,
             elapsedMillis: 1200,
             estimatedRemainingMillis: 3800,
             videoDurationMillis: 5000,
         })
+        expect(getReplayRecordingMonitorSnapshot().frameCanvas).not.toBe(canvas)
+    })
+
+    it('copies each composed frame synchronously and reconnects from its stable snapshot', () => {
+        const targetCanvas = document.createElement('canvas')
+        const drawImage = vi.fn()
+        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
+        vi.spyOn(targetCanvas, 'getContext').mockReturnValue({drawImage})
+        const disconnect = connectReplayRecordingMonitorPreview(targetCanvas)
+        const frames = Array.from({length: 3}, () => document.createElement('canvas'))
+        frames.forEach(canvas => {
+            canvas.width = 320
+            canvas.height = 180
+        })
+
+        startReplayRecordingMonitor({mode: 'hq'})
+        frames.forEach(canvas => publishReplayRecordingMonitorFrame({canvas, mode: 'hq'}))
+
+        const stableFrame = getReplayRecordingMonitorSnapshot().frameCanvas
+        expect(drawImage).toHaveBeenCalled()
+        expect(drawImage.mock.calls.slice(-3).map(([canvas]) => canvas)).toEqual([stableFrame, stableFrame, stableFrame])
+        expect(stableFrame).not.toBe(frames[2])
+        expect(targetCanvas).toMatchObject({width: 320, height: 180})
+
+        disconnect()
+
+        const replacementCanvas = document.createElement('canvas')
+        const replacementDrawImage = vi.fn()
+        vi.spyOn(replacementCanvas, 'getContext').mockReturnValue({drawImage: replacementDrawImage})
+        const disconnectReplacement = connectReplayRecordingMonitorPreview(replacementCanvas)
+        expect(replacementDrawImage).toHaveBeenCalledWith(stableFrame, 0, 0, 320, 180)
+        disconnectReplacement()
+    })
+
+    it('accepts preview canvases from another window realm', () => {
+        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
+        const sourceCanvas = document.createElement('canvas')
+        sourceCanvas.width = 320
+        sourceCanvas.height = 180
+        startReplayRecordingMonitor({mode: 'hq'})
+        publishReplayRecordingMonitorFrame({canvas: sourceCanvas, mode: 'hq'})
+
+        const drawImage = vi.fn()
+        const externalCanvas = {
+            nodeName: 'CANVAS',
+            width: 0,
+            height: 0,
+            getContext: vi.fn().mockReturnValue({drawImage}),
+        }
+        const disconnect = connectReplayRecordingMonitorPreview(externalCanvas)
+
+        expect(drawImage).toHaveBeenCalledWith(
+            getReplayRecordingMonitorSnapshot().frameCanvas,
+            0,
+            0,
+            320,
+            180,
+        )
+        expect(externalCanvas).toMatchObject({width: 320, height: 180})
+        disconnect()
     })
 
     it('notifies subscribers and clears the frame on terminal cleanup', () => {

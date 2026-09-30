@@ -69,6 +69,7 @@ import {ReplayRecordingMonitorWidget} from '@Components/MainUI/video/ReplayRecor
 import {
     REPLAY_DEFERRED_EXPORT_CANCEL_EVENT,
     getReplayRecordingMonitorSnapshot,
+    publishReplayRecordingMonitorFrame,
     startReplayRecordingMonitor,
     stopReplayRecordingMonitor,
     updateReplayRecordingMonitor,
@@ -409,5 +410,47 @@ describe('ReplayRecordingMonitorWidget', () => {
 
         closePipButton?.dispatchEvent(new Event('click', {bubbles: true}))
         await waitFor(() => expect(externalWindow.close).toHaveBeenCalledTimes(1))
+    })
+
+    it('keeps the live preview connected through Picture-in-Picture and back inline', async () => {
+        const externalDocument = document.implementation.createHTMLDocument('Recording')
+        const externalWindow = {
+            document: externalDocument,
+            close:     vi.fn(),
+            addEventListener:    vi.fn(),
+            removeEventListener: vi.fn(),
+        }
+        const drawImageCalls = []
+        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => {
+            const drawImage = vi.fn()
+            drawImageCalls.push(drawImage)
+            return {drawImage}
+        })
+        globalThis.documentPictureInPicture = {
+            requestWindow: vi.fn().mockResolvedValue(externalWindow),
+        }
+        startReplayRecordingMonitor({mode: 'hq'})
+        render(<ReplayRecordingMonitorWidget/>)
+
+        fireEvent.click(screen.getByRole('button', {name: 'Open Recording window in Picture-in-Picture'}))
+        await waitFor(() => {
+            expect(externalDocument.body.querySelector('.replay-recording-monitor-preview canvas')).not.toBeNull()
+        })
+
+        const pipCanvas = externalDocument.body.querySelector('.replay-recording-monitor-preview canvas')
+        const sourceCanvas = document.createElement('canvas')
+        sourceCanvas.width = 320
+        sourceCanvas.height = 180
+        publishReplayRecordingMonitorFrame({canvas: sourceCanvas, mode: 'hq'})
+        const stableFrame = getReplayRecordingMonitorSnapshot().frameCanvas
+        expect(drawImageCalls.at(-1)?.mock.calls.at(-1)?.[0]).toBe(stableFrame)
+
+        externalDocument.body.querySelector('#replay-monitor-pip-close')
+            .dispatchEvent(new Event('click', {bubbles: true}))
+        await waitFor(() => expect(externalWindow.close).toHaveBeenCalledTimes(1))
+        await waitFor(() => expect(document.querySelector('.replay-recording-monitor-preview canvas')).not.toBeNull())
+
+        expect(document.querySelector('.replay-recording-monitor-preview canvas')).not.toBe(pipCanvas)
+        expect(drawImageCalls.at(-1)?.mock.calls.at(-1)?.[0]).toBe(stableFrame)
     })
 })

@@ -69,6 +69,8 @@ narrow crop, and at least one high-resolution output profile.
   Studio viewer and its canvas.
 - The canvas copied to each encoded frame is the same main Cesium canvas that
   displays the Replay trace and applies its camera command.
+- The recording monitor copies each composed frame before the exporter reuses
+  its working canvas; the preview does not flash black between frames.
 - Explicit isolated-render workflows resolve to the owner-scoped target and do
   not move the interactive Studio camera.
 - Success, cancellation, encoding failure, and readiness failure release any

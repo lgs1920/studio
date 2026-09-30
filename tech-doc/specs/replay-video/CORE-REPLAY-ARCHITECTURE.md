@@ -144,7 +144,12 @@ captured widget board and is hosted by the generic `Widget` component. During
 ordinary Replay it hosts the canonical transport, real-time scrub slider,
 snapshot action, and settings action. During linked Replay export it switches
 to the latest final composed frame, recording progress, runtime metrics, and
-icon-only lifecycle actions.
+icon-only lifecycle actions. Each composed frame is copied synchronously into
+the monitor preview before the exporter reuses its working canvas, preventing
+the monitor from displaying an intermediate cleared frame. The monitor retains a
+stable snapshot of that frame and reconnects its preview whenever React mounts a
+new canvas, including when the surface moves to or returns from Document PiP.
+Canvas recognition accepts same-origin canvases from the PiP window realm.
 
 The surface is a read-only projection of replay and recording authorities. It
 does not resolve frames, drive the replay clock, move either camera, qualify the

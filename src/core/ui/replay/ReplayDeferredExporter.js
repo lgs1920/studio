@@ -1925,6 +1925,13 @@ export const runReplayDeferredMp4Export = async ({
     let previousReplayExportFrame = null
     let previousReplayExportSample = null
     const exportStartedAt = runtimeNow()
+    const flushReplayRenderTarget = () => {
+        const scene = replayMode?.cesiumScene?.()
+                      ?? globalThis.lgs?.scene
+                      ?? globalThis.lgs?.viewer?.scene
+                      ?? null
+        scene?.render?.()
+    }
     const exportRuntimeStatus = () => {
         if (signal?.aborted) {
             return 'warm'
@@ -2262,6 +2269,7 @@ export const runReplayDeferredMp4Export = async ({
                                 height: composerHeight,
                                 fps: 0,
                                 outputDpr: composerOutputDpr,
+                                flushWebGLBuffer: flushReplayRenderTarget,
                             })
                         }
                         catch {
@@ -2307,6 +2315,7 @@ export const runReplayDeferredMp4Export = async ({
                         }
                     }
                     else {
+                        flushReplayRenderTarget()
                         context.clearRect(0, 0, canvas.width, canvas.height)
                         context.drawImage(frameSource, 0, 0, frameSource.width, frameSource.height, 0, 0, canvas.width, canvas.height)
                     }

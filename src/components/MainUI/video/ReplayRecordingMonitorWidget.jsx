@@ -19,6 +19,7 @@ import '@Components/MainUI/video/style.css'
 import {captureReplayCropSnapshot} from '@Core/ui/ReplayCropSnapshot'
 import {
     REPLAY_DEFERRED_EXPORT_CANCEL_EVENT,
+    connectReplayRecordingMonitorPreview,
     getReplayRecordingMonitorSnapshot,
     stopReplayRecordingMonitor,
     subscribeReplayRecordingMonitor,
@@ -201,7 +202,7 @@ const ReplayRecordingProgress = ({percentage}) => (
  * @returns {JSX.Element|null} Monitor widget content.
  */
 const ReplayRecordingMonitorSurface = ({snapshot}) => {
-    const _canvas = useRef(null)
+    const _previewCleanup = useRef(null)
     const _pictureInPictureWindow = useRef(null)
     const _pictureInPictureCleanup = useRef(null)
     const [pictureInPictureWindow, setPictureInPictureWindow] = useState(null)
@@ -269,20 +270,14 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
         zIndex:         MONITOR_WIDGET_Z_INDEX,
     }), [])
 
-    useEffect(() => {
-        const canvas = _canvas.current
-        const source = snapshot.frameCanvas
-        if (!canvas || !(source instanceof HTMLCanvasElement)) {
-            return
-        }
+    const setPreviewCanvas = useCallback(canvas => {
+        _previewCleanup.current?.()
+        _previewCleanup.current = canvas
+            ? connectReplayRecordingMonitorPreview(canvas)
+            : null
+    }, [])
 
-        if (canvas.width !== source.width || canvas.height !== source.height) {
-            canvas.width = source.width
-            canvas.height = source.height
-        }
-        const context = canvas.getContext('2d', {alpha: false})
-        context?.drawImage(source, 0, 0, source.width, source.height)
-    }, [snapshot.frameCanvas, snapshot.frameVersion])
+    useEffect(() => () => _previewCleanup.current?.(), [])
 
     useEffect(() => () => closePictureInPicture(), [closePictureInPicture])
 
@@ -419,7 +414,7 @@ const ReplayRecordingMonitorSurface = ({snapshot}) => {
             {recordingActive && (
                 <>
                     <div className="replay-recording-monitor-preview">
-                        <canvas ref={_canvas} aria-label="Latest encoded recording frame"/>
+                        <canvas ref={setPreviewCanvas} aria-label="Latest encoded recording frame"/>
                     </div>
                     <div className="replay-recording-monitor-metrics">
                         <span className="replay-recording-monitor-metric-remaining" title="Remaining time">

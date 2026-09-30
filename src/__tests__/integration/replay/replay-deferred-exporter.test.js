@@ -1077,6 +1077,10 @@ describe('ReplayDeferredExporter', () => {
             expect(setRenderTarget).not.toHaveBeenCalled()
             expect(clearRenderTarget).not.toHaveBeenCalled()
             expect(CanvasOverlayComposer.instances[0].sourceCanvas).toBe(sourceCanvas)
+            expect(CanvasOverlayComposer.instances[0].options.flushWebGLBuffer).toEqual(expect.any(Function))
+            const renderCountBeforeFlush = globalThis.lgs.scene.render.mock.calls.length
+            CanvasOverlayComposer.instances[0].options.flushWebGLBuffer()
+            expect(globalThis.lgs.scene.render).toHaveBeenCalledTimes(renderCountBeforeFlush + 1)
             expect(result.plan.runtime.exportElapsedMillis).toBe(result.plan.manifest.frameCount * 40)
             expect(result.plan.runtime.exportAverageFrameMillis).toBeCloseTo(40, 1)
             expect(result.plan.runtime.exportEstimatedTotalMillis).toBeCloseTo(result.plan.runtime.exportElapsedMillis, 1)

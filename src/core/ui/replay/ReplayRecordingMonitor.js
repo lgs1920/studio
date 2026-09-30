@@ -41,8 +41,19 @@ let state = {
 }
 
 let snapshot = state
+let monitorPreviewCanvas = null
+let publishedFrameCanvas = null
 
 const hasFiniteNumber = value => value !== null && value !== undefined && Number.isFinite(Number(value))
+
+/**
+ * Recognize canvases created by the main window or another same-origin window.
+ *
+ * @param {HTMLCanvasElement|null} element - Candidate canvas.
+ * @returns {boolean} Whether the value exposes a canvas node and context.
+ */
+const isCanvasElement = element => element?.nodeName === 'CANVAS'
+                                  && typeof element.getContext === 'function'
 
 const notify = () => {
     snapshot = {...state}
@@ -66,6 +77,65 @@ export const subscribeReplayRecordingMonitor = listener => {
  * @returns {Object} Immutable-by-convention monitor snapshot.
  */
 export const getReplayRecordingMonitorSnapshot = () => snapshot
+
+/**
+ * Connect the live monitor preview canvas to synchronous frame publication.
+ *
+ * The export reuses its source canvas for the next frame immediately after
+ * publication, so a React effect can otherwise copy an intermediate cleared
+ * frame. Copying while the composed frame is still current keeps the preview
+ * stable and lets it advance at the export frame cadence.
+ *
+ * @param {HTMLCanvasElement|null} canvas - Visible inline or Picture-in-Picture canvas.
+ * @returns {Function} Disconnect callback.
+ */
+export const connectReplayRecordingMonitorPreview = canvas => {
+    monitorPreviewCanvas = isCanvasElement(canvas) ? canvas : null
+    if (monitorPreviewCanvas && isCanvasElement(state.frameCanvas)) {
+        copyReplayMonitorFrame(state.frameCanvas, monitorPreviewCanvas)
+    }
+
+    return () => {
+        if (monitorPreviewCanvas === canvas) {
+            monitorPreviewCanvas = null
+        }
+    }
+}
+
+/**
+ * Copy a fully composed export frame into the stable visible monitor surface.
+ *
+ * @param {HTMLCanvasElement} source - Current composed frame.
+ * @param {HTMLCanvasElement} target - Monitor preview canvas.
+ * @returns {void}
+ */
+const copyReplayMonitorFrame = (source, target) => {
+    if (!source || !target) {
+        return
+    }
+
+    if (target.width !== source.width || target.height !== source.height) {
+        target.width = source.width
+        target.height = source.height
+    }
+
+    target.getContext('2d', {alpha: false})?.drawImage(source, 0, 0, source.width, source.height)
+}
+
+/**
+ * Preserve the latest composed frame independently of the exporter's reused canvas.
+ *
+ * @param {HTMLCanvasElement} source - Current composed export frame.
+ * @returns {HTMLCanvasElement} Stable copy of the composed frame.
+ */
+const snapshotReplayMonitorFrame = source => {
+    if (!publishedFrameCanvas) {
+        publishedFrameCanvas = document.createElement('canvas')
+    }
+
+    copyReplayMonitorFrame(source, publishedFrameCanvas)
+    return publishedFrameCanvas
+}
 
 /**
  * Start a monitor lifecycle for a Replay export.
@@ -116,9 +186,12 @@ export const publishReplayRecordingMonitorFrame = ({
     frameCount = null,
     processedFrames = null,
 } = {}) => {
-    if (!(canvas instanceof HTMLCanvasElement)) {
+    if (!isCanvasElement(canvas)) {
         return snapshot
     }
+
+    const frameCanvas = snapshotReplayMonitorFrame(canvas)
+    copyReplayMonitorFrame(frameCanvas, monitorPreviewCanvas)
 
     state = {
         ...state,
@@ -129,7 +202,7 @@ export const publishReplayRecordingMonitorFrame = ({
         frameIndex: hasFiniteNumber(frameIndex) ? Number(frameIndex) : state.frameIndex,
         frameCount: hasFiniteNumber(frameCount) ? Number(frameCount) : state.frameCount,
         processedFrames: hasFiniteNumber(processedFrames) ? Number(processedFrames) : state.processedFrames,
-        frameCanvas: canvas,
+        frameCanvas,
         frameVersion: state.frameVersion + 1,
     }
     notify()
