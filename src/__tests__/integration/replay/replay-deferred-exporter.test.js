@@ -905,7 +905,7 @@ describe('ReplayDeferredExporter', () => {
         })
     })
 
-    it('routes HQ export frames through start, replay, and stop clip phases', async () => {
+    it('renders product HQ export from the main Studio Cesium canvas through every clip phase', async () => {
         let now = 0
         const performanceNow = vi.spyOn(globalThis.performance, 'now').mockImplementation(() => now)
         const sourceCanvas = document.createElement('canvas')
@@ -929,22 +929,7 @@ describe('ReplayDeferredExporter', () => {
         })
         const preparePlaybackSceneForExport = vi.fn(() => true)
         const restorePlaybackScene = vi.fn()
-        const isolatedCanvas = document.createElement('canvas')
-        isolatedCanvas.width = 320
-        isolatedCanvas.height = 180
-        const isolatedTarget = {
-            viewer: {camera: {setView: vi.fn()}},
-            scene: {camera: {setView: vi.fn()}, requestRender: vi.fn()},
-            canvas: isolatedCanvas,
-        }
-        const isolatedRenderHost = {
-            initialize: vi.fn(() => Promise.resolve()),
-            renderTarget: vi.fn(() => isolatedTarget),
-            canvas: vi.fn(() => isolatedCanvas),
-            prepareForCapture: vi.fn(() => Promise.resolve(true)),
-            destroy: vi.fn(),
-        }
-        const isolatedRenderHostFactory = vi.fn(() => isolatedRenderHost)
+        const isolatedRenderHostFactory = vi.fn()
         const setRenderTarget = vi.fn()
         const clearRenderTarget = vi.fn()
         const interactiveCamera = {
@@ -1088,18 +1073,10 @@ describe('ReplayDeferredExporter', () => {
             expect(restorePlaybackScene).toHaveBeenCalledTimes(2)
             expect(restorePlaybackScene).toHaveBeenNthCalledWith(1, {force: true})
             expect(restorePlaybackScene).toHaveBeenNthCalledWith(2, {force: true})
-            expect(isolatedRenderHostFactory).toHaveBeenCalledWith(expect.objectContaining({
-                dimensions: {width: 320, height: 180},
-                viewportDimensions: {width: 320, height: 180},
-                cropProjection: expect.objectContaining({
-                    kind: 'perspective',
-                    crop: {left: 0, top: 0, width: 320, height: 180},
-                }),
-            }))
-            expect(setRenderTarget).toHaveBeenCalledWith(isolatedTarget)
-            expect(clearRenderTarget).toHaveBeenCalledWith(isolatedTarget)
-            expect(isolatedRenderHost.prepareForCapture).toHaveBeenCalled()
-            expect(isolatedRenderHost.destroy).toHaveBeenCalledOnce()
+            expect(isolatedRenderHostFactory).not.toHaveBeenCalled()
+            expect(setRenderTarget).not.toHaveBeenCalled()
+            expect(clearRenderTarget).not.toHaveBeenCalled()
+            expect(CanvasOverlayComposer.instances[0].sourceCanvas).toBe(sourceCanvas)
             expect(result.plan.runtime.exportElapsedMillis).toBe(result.plan.manifest.frameCount * 40)
             expect(result.plan.runtime.exportAverageFrameMillis).toBeCloseTo(40, 1)
             expect(result.plan.runtime.exportEstimatedTotalMillis).toBeCloseTo(result.plan.runtime.exportElapsedMillis, 1)

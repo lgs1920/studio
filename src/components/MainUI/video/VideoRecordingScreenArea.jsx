@@ -178,6 +178,7 @@ export const VideoRecordingScreenArea = memo(() => {
                 dimensions:   renderSpec.dimensions,
                 captureMode:  'deferred-master',
                 sourceCanvas: lgs.canvas,
+                renderHostMode: 'visible',
                 signal:       abortController.signal,
                 abortController,
                 mediaMetadata,
