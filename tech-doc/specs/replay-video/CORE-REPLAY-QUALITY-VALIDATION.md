@@ -7,9 +7,11 @@ Date: 2026-08-24
 
 ## Purpose
 
-Simple and Expert configure the same Replay mechanism. Capture paths consume
-that Replay state; they are not user-facing Replay modes. Linked Replay video
-uses the deterministic deferred MP4 exporter. Replay correctness is visual and
+Simple and Expert configure the same Replay mechanism and use the active mode's
+camera settings. Capture paths consume that Replay state; they are not
+user-facing Replay modes. Linked Replay video uses the deterministic deferred
+MP4 exporter. Product export advances the main Studio Cesium viewer, then copies
+that viewer's canvas into the video composer. Replay correctness is visual and
 temporal. Mock-only validation cannot establish
 that a generated video contains the trace, follows the camera, waits for the
 right scene, or preserves phase continuity. Apply this matrix proportionally to
@@ -45,7 +47,12 @@ narrow crop, and at least one high-resolution output profile.
 - Start clip endpoints equal the replay-entry command.
 - Stop clips preserve continuity and land on their declared endpoint.
 - Navigation and Dynamic crop decisions are deterministic for the same inputs.
-- Moving the interactive camera cannot change isolated export camera poses.
+- Replay camera height, pitch, and heading/offset resolve to the expected
+  target-relative camera range and angle in both Simple and Expert.
+- Each product export frame applies its camera command to the main Studio
+  viewer before the viewer canvas is copied into the output frame.
+- The export camera does not come from a second Cesium viewer or a stale
+  preparation pose.
 - Obsolete cleanup cannot move the camera after session replacement.
 
 ### Trace and marker
@@ -58,11 +65,14 @@ narrow crop, and at least one high-resolution output profile.
 
 ### Render target and lifecycle
 
-- Camera, scene, canvas, and data sources resolve to the explicit export target.
-- Interactive viewer camera and entities remain unchanged during isolated export.
-- Initialization failure announces and tests the visible-scene fallback.
-- Success, cancellation, encoding failure, and readiness failure all clear the
-  target and destroy the isolated host.
+- Product export camera, scene, canvas, and replay trace resolve to the main
+  Studio viewer and its canvas.
+- The canvas copied to each encoded frame is the same main Cesium canvas that
+  displays the Replay trace and applies its camera command.
+- Explicit isolated-render workflows resolve to the owner-scoped target and do
+  not move the interactive Studio camera.
+- Success, cancellation, encoding failure, and readiness failure release any
+  explicit target and destroy an isolated host when one was allocated.
 
 ### Composition and encoding
 

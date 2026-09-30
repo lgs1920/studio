@@ -14,12 +14,17 @@ TODO specifications stored beside the current replay documentation.
 ## Simple and Expert modes
 
 Simple and Expert are user-facing Replay configurations over the same Replay
-session, frame resolver, and camera/runtime. Simple applies a restricted
-preparation and widget policy; Expert exposes additional camera and replay
-controls. These modes do not select different replay engines. All video files
-are produced by the deferred MP4 exporter from fixed Replay frame timestamps,
-then opened in the standard video preview and sharing dialog. `ReplayMediaCapture`
-handles screenshots and completed-media handoff.
+session, frame resolver, and camera/runtime. Simple provides a guided
+preparation with a restricted set of controls and widgets. Expert exposes
+additional camera, clip, and Replay controls. The selected mode changes
+configuration and preparation policy, not the Replay engine or video renderer.
+Both modes use the configured Replay camera and the same playback and MP4
+export path. The current camera configuration controls heading/angle, pitch,
+and camera height. Cesium range (the perceived zoom) is derived from camera
+height and pitch, then carried in the same camera command used for interactive
+playback and export. Start/stop clips may define their own camera movement.
+Completed videos open in the standard preview and sharing dialog.
+`ReplayMediaCapture` handles screenshots and completed-media handoff.
 
 ## Functional architecture
 
@@ -30,7 +35,7 @@ Replay modes:
 | Policy | Time source | Render target | Primary purpose |
 | --- | --- | --- | --- |
 | Interactive playback | Monotonic wall time | Interactive Studio viewer | Immediate preview and controls |
-| Deferred Replay capture | Fixed video frame timestamps | Isolated export Cesium host by default | Deterministic MP4 production |
+| Deferred Replay capture | Fixed video frame timestamps | Main Studio Cesium viewer and canvas | Deterministic MP4 production |
 | Scrubbing | Latest slider request | Interactive Studio viewer | Real-time manual positioning |
 
 Each path must resolve equivalent visual state for the same logical time. They
@@ -94,13 +99,17 @@ empty or stale.
 ### Render targets
 
 `ReplayRenderTarget` associates a replay session with an explicit viewer, scene,
-and canvas without replacing global Studio objects.
+and canvas without replacing global Studio objects. Interactive playback and
+the product MP4 export both use the main Studio Cesium viewer. During MP4
+export, the frame renderer advances Replay on that viewer, draws the trace
+there, and copies the main Cesium canvas into the video composer for each fixed
+frame timestamp. The main viewer is the sole camera authority; the video
+composer receives pixels and overlays, not a second Cesium camera.
 
-`IsolatedHqReplayRenderHost` owns a no-loop `CesiumWidget`, an independent
-camera, and independent Cesium runtime resources. It reproduces the active
-imagery, terrain, base 3D Tiles layer, and environment from a
-`ReplaySceneDescriptor`. The exporter falls back explicitly to the visible
-Studio scene if isolated initialization fails.
+`IsolatedHqReplayRenderHost` remains an available off-screen host for explicit
+isolated-render workflows and tests. It owns a no-loop `CesiumWidget`, a
+separate camera, and independent Cesium runtime resources. It is not selected
+by the Simple or Expert product MP4 flow.
 
 Camera, trace, clip, visibility, prewarming, readiness, and capture operations
 must resolve the active session render target. They must not access the global
@@ -112,10 +121,12 @@ Transient slider requests apply immediately and coalesce to the latest request.
 A settled request uses `ReplaySceneFrameQualifier`, supports cancellation, and
 waits within bounded readiness budgets.
 
-Export scene readiness belongs to the isolated render host. Moving replay and
-clip frames use bounded moving-frame readiness; holds and final frames may
-request settled quality. Readiness delays export wall time but never changes
-logical video time.
+Export scene readiness belongs to the active render target. Product MP4 export
+qualifies frames on the main Studio viewer; explicit isolated-render workflows
+qualify frames on their isolated host. Moving replay and clip frames use
+bounded moving-frame readiness; holds and final frames may request settled
+quality. Readiness delays export wall time but never changes logical video
+time.
 
 ### Composition and encoding
 
@@ -147,7 +158,10 @@ Picture-in-Picture before terminal cleanup.
 - One logical timestamp resolves one complete visual frame.
 - Playback, capture, and scrub consume the same canonical camera contract.
 - Deferred-export camera and trace updates are independent of wall-clock pacing.
-- An isolated deferred export never moves the interactive Studio camera.
+- Product MP4 export resolves and applies each frame camera command on the main
+  Studio viewer before copying its canvas into the video composer.
+- An explicitly isolated render target never moves the interactive Studio
+  camera.
 - A render owner writes camera and entities only to its active render target.
 - Obsolete sessions cannot restore camera or scene state.
 - Cancellation and every terminal exporter path release the target and destroy

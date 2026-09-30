@@ -2,7 +2,7 @@
 
 Status: current implementation inventory
 
-Date: 2026-09-29
+Date: 2026-09-30
 
 ## Purpose
 
@@ -15,8 +15,13 @@ and target behavior belong in the current architecture and focused TODO specs.
 Simple and Expert are user-facing configuration modes for the same Replay
 session, frame resolver, camera/runtime, and timeline. They do not select
 separate replay engines. Simple applies a restricted preparation and widget
-policy; Expert exposes the additional camera and replay controls. Both modes
-share interactive playback and the deterministic Replay export path.
+policy and uses the guided camera configuration; Expert exposes the additional
+camera, clip, and replay controls. Both modes use the active mode's normalized
+camera settings for interactive preparation/playback and the same deterministic
+Replay export path. Camera heading/offset sets the horizontal angle, pitch sets
+the viewing angle, and configured camera height determines the target-relative
+range used as zoom. Start/stop clips can override the camera for their own
+phases.
 
 Simple and Expert Replay recording use the deferred MP4 exporter, publish
 deterministic frame progress to the Replay monitor, and hand the completed MP4
@@ -31,9 +36,6 @@ Simple/Expert support is present but incomplete:
   `journey.replay.expert.camera` and persist after editing settles. Progression
   and profile-info drawer edits are still not consistently written back to the
   journey configuration.
-- The Simple launch path stores `positionMode: 'system'`, while the effective
-  Simple camera resolver forces a behind-camera position. Persisted and
-  applied settings can therefore disagree.
 - Some Simple behavior is keyed to transient
   `replay.simplePreparationActive`, while other behavior reads persisted
   `userMode`. Render plans and context signatures do not consistently include
@@ -57,8 +59,10 @@ Simple/Expert support is present but incomplete:
 - Canonical camera-command continuity across transitions and clips.
 - Explicit owner-scoped viewer, scene, and canvas render targets.
 - Isolated no-loop export `CesiumWidget` implementation with scene descriptor
-  replication and visible-scene fallback, connected to Simple and Expert Replay
-  recording.
+  replication, retained for explicit isolated-render workflows and tests.
+- Simple and Expert product MP4 recording renders Replay trace and camera
+  frames in the main Studio Cesium viewer, then copies its canvas into the video
+  composer. The main Cesium camera is the only product Replay camera source.
 - Deterministic Replay MP4 export at fixed frame timestamps, with monitor
   pause/cancel controls and preview/share handoff.
 - Unified transient Replay transport and export monitor hosted by

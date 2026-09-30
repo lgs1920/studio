@@ -6,7 +6,6 @@
 - [Replay timeline preparation implementation](CORE-REPLAY-TIMELINE-IMPLEMENTATION.md)
 - [LGS1920 Timeline Web Component](CORE-LGS1920-TIMELINE-WEBCOMPONENT-SPEC.md)
 - [Replay implementation status](CORE-REPLAY-IMPLEMENTATION-STATUS.md)
-- [Replay implementation status](CORE-REPLAY-IMPLEMENTATION-STATUS.md)
 - [Replay core implementation](CORE-UI-REPLAY-README-REPLAY.md)
 - [Replay camera tracking zones](REPLAY_CAMERA_TRACKING_ZONES.md)
 - [Drone camera path architecture](CORE-DRONE-CAMERA-PATH-ARCHITECTURE.md)

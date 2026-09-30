@@ -1,6 +1,15 @@
 # Replay Core
 
-Simple and Expert Replay both use deterministic deferred MP4 export.
+Simple and Expert Replay both use deterministic deferred MP4 export and share
+the same journey sampler, Replay session, camera resolver, and frame timeline.
+Simple is the guided preparation mode: it applies the compact Simple camera
+settings and a restricted control/widget policy. Expert exposes the additional
+camera and clip controls. Both modes use the active mode's camera settings for
+preparation, playback, and export. Camera height and pitch determine the
+target-relative range (the visible zoom); heading and heading offset determine
+the horizontal angle. Start and stop clips may add their own camera movement.
+The MP4 flow draws each frame in the main Studio Cesium viewer, then copies its
+canvas into the video composer with the selected overlays.
 
 This directory contains the runtime core for the replay mode.
 
