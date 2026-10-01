@@ -26,7 +26,8 @@ import {
 const ROUTE_DURATION = 13_000
 const ROUTE_CYCLE_FADE_DURATION = 180
 const ROUTE_CYCLE_MIN_TRACE_OPACITY = 0.72
-const ROUTE_EDGE_OVERSHOOT_PX = 8
+const ROUTE_CYCLE_END_HOLD_DURATION = 50
+const ROUTE_EDGE_OVERSHOOT_PX = 16
 const ROUTE_BASE_ROTATION_X = 0.42
 const ROUTE_BASE_ROTATION_Y = -0.62
 const ROUTE_BASE_ROTATION_Z = 0.06
@@ -185,6 +186,8 @@ const getScreenEdgePoint = (edge, depth) => {
             ? -1 - verticalOffset
             : randomBetween(-0.62, 0.62)
     const raycaster = new THREE.Raycaster()
+    camera.updateMatrixWorld(true)
+    sceneRoot.updateMatrixWorld(true)
     raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera)
     const distance = (camera.position.z - depth) / -raycaster.ray.direction.z
     const worldPoint = raycaster.ray.at(distance, new THREE.Vector3())
@@ -326,7 +329,7 @@ let reducedMotion = false
 let visible = true
 let animationFrame = null
 let startedAt = null
-let activeRouteCycle = 0
+let routeEndFrameRendered = false
 let poiReached = POI_PROGRESS.map(() => false)
 let viewportWidth = 0
 let viewportHeight = 0
@@ -451,19 +454,27 @@ const render = (timestamp) => {
     if (!renderer || !route) return
     if (startedAt === null && timestamp > 0) startedAt = timestamp
     const elapsedSinceStart = startedAt === null || timestamp < startedAt ? 0 : timestamp - startedAt
-    const currentRouteCycle = Math.floor(elapsedSinceStart / ROUTE_DURATION)
+    let elapsed = reducedMotion ? ROUTE_DURATION : elapsedSinceStart
 
-    if (!reducedMotion && currentRouteCycle !== activeRouteCycle) {
-        const previousExitEdge = route.exitEdge
-        // Match the endpoint projection transform at both ends of each animation cycle.
-        sceneRoot.rotation.set(ROUTE_BASE_ROTATION_X, ROUTE_BASE_ROTATION_Y, ROUTE_BASE_ROTATION_Z)
-        sceneRoot.updateMatrixWorld(true)
-        rebuild({previousExitEdge})
-        activeRouteCycle = currentRouteCycle
+    if (!reducedMotion && elapsedSinceStart >= ROUTE_DURATION) {
+        if (routeEndFrameRendered) {
+            const previousExitEdge = route.exitEdge
+            // Match the endpoint projection transform at both ends of each animation cycle.
+            sceneRoot.rotation.set(ROUTE_BASE_ROTATION_X, ROUTE_BASE_ROTATION_Y, ROUTE_BASE_ROTATION_Z)
+            sceneRoot.updateMatrixWorld(true)
+            rebuild({previousExitEdge})
+            startedAt = timestamp
+            routeEndFrameRendered = false
+            elapsed = 0
+        } else {
+            routeEndFrameRendered = true
+            elapsed = ROUTE_DURATION
+        }
     }
 
-    const elapsed = reducedMotion ? ROUTE_DURATION : elapsedSinceStart % ROUTE_DURATION
-    const progress = reducedMotion ? 1 : Math.max(0, Math.min(1, elapsed / ROUTE_DURATION))
+    const progress = reducedMotion
+        ? 1
+        : Math.max(0, Math.min(1, elapsed / (ROUTE_DURATION - ROUTE_CYCLE_END_HOLD_DURATION)))
     const cycleFade = Math.max(0, Math.min(1, elapsed / ROUTE_CYCLE_FADE_DURATION, (ROUTE_DURATION - elapsed) / ROUTE_CYCLE_FADE_DURATION))
     const cycleOpacity = reducedMotion ? 1 : cycleFade
     const traceOpacity = ROUTE_CYCLE_MIN_TRACE_OPACITY + (1 - ROUTE_CYCLE_MIN_TRACE_OPACITY) * cycleOpacity
