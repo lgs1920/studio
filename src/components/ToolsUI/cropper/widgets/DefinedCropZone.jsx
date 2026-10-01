@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-21
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -121,7 +121,7 @@ export const DefinedCropZone = memo(function DefinedCropZone({
         className,
         {
             'video-pre-recording-in-progress': video.preRecording,
-            'video-recording-in-progress':     video.recordingHQ,
+            'video-recording-in-progress':     video.exporting,
             'video-finalizing-in-progress': video.finalizing,
             'photo-snapshot-in-progress':      video.snapshot,
             finalizing:                        video.finalizing,

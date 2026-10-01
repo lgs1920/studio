@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -284,7 +284,7 @@ describe('ReplayDeferredExporter', () => {
         expect(plan.videoTimeline.durationMillis).toBe(12500)
     })
 
-    it('builds the shared interactive and HQ video render spec from crop, fps, quality, and dpr', () => {
+    it('builds the shared interactive and export video render spec from crop, fps, quality, and dpr', () => {
         const spec = buildReplayVideoRenderSpec({
             cropRect: {left: 10, top: 20, width: 640, height: 360},
             video: {
@@ -826,7 +826,7 @@ describe('ReplayDeferredExporter', () => {
         expect(result.plan.runtime.exportFileSize).toBeGreaterThan(0)
     })
 
-    it('keeps the HQ composer canvas at the exact MP4 dimensions when crop and output ratios differ', async () => {
+    it('keeps the export composer canvas at the exact MP4 dimensions when crop and output ratios differ', async () => {
         const sourceCanvas = document.createElement('canvas')
         sourceCanvas.width = 1280
         sourceCanvas.height = 800
@@ -930,7 +930,7 @@ describe('ReplayDeferredExporter', () => {
         })
     })
 
-    it('renders product HQ export from the main Studio Cesium canvas through every clip phase', async () => {
+    it('renders product Replay export from the main Studio Cesium canvas through every clip phase', async () => {
         let now = 0
         const performanceNow = vi.spyOn(globalThis.performance, 'now').mockImplementation(() => now)
         const sourceCanvas = document.createElement('canvas')
@@ -1136,10 +1136,10 @@ describe('ReplayDeferredExporter', () => {
         }
     })
 
-    it('restores the Interactive scene when HQ preparation fails', async () => {
+    it('restores the Interactive scene when export preparation fails', async () => {
         const restorePlaybackScene = vi.fn(() => Promise.resolve())
         const preparePlaybackSceneForExport = vi.fn(async () => {
-            throw new Error('HQ preparation failed')
+            throw new Error('export preparation failed')
         })
 
         globalThis.lgs = {
@@ -1180,7 +1180,7 @@ describe('ReplayDeferredExporter', () => {
                 getContext: () => ({clearRect: vi.fn(), drawImage: vi.fn()}),
             }),
             download: vi.fn(),
-        })).rejects.toThrow('HQ preparation failed')
+        })).rejects.toThrow('export preparation failed')
 
         expect(restorePlaybackScene).toHaveBeenCalledTimes(2)
         expect(restorePlaybackScene).toHaveBeenNthCalledWith(1, {force: true})

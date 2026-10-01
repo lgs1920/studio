@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-12-13
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,7 +29,7 @@ export const SceneWidgetsRenderer = () => {
     const {list, docked} = useSnapshot($widget)
     const video = useSnapshot($video)
 
-    const isVideoSceneActive = video.editing || video.preRecording || video.recordingHQ || video.snapshot || video.finalizing
+    const isVideoSceneActive = video.editing || video.preRecording || video.exporting || video.snapshot || video.finalizing
 
     const sceneWidgets = useMemo(() => {
         return Array.from(list.entries()).filter(([, props]) => props?.widgetsBoard === SCENE_WIDGETS_BOARD)

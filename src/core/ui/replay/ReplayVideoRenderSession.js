@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,7 +31,7 @@ export class ReplayVideoRenderSession {
     #beforeFrame = null
     #afterFrame = null
     #resolveSample = null
-    #renderMode = 'hq'
+    #renderMode = 'export'
     #definition = null
     #renderPlan = null
     #frameResolver = null
@@ -44,7 +44,7 @@ export class ReplayVideoRenderSession {
                     beforeFrame = null,
                     afterFrame = null,
                     resolveSample = null,
-                    renderMode = 'hq',
+                    renderMode = 'export',
                     renderSpec = null,
                     initialCameraState = null,
                     visibleOverlayIds = [],

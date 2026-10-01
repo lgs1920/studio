@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -29,7 +29,7 @@ import {createReplayDefinition} from '@Core/ui/replay/ReplayDefinition'
 import {createReplayRenderPlan} from '@Core/ui/replay/ReplayRenderPlan'
 import {createReplayTrackPathDescriptor} from '@Core/ui/replay/ReplayTrackPathDescriptor'
 import {
-    publishReplayFrameState, REPLAY_FRAME_PUBLICATION_TARGET_HQ,
+    publishReplayFrameState, REPLAY_FRAME_PUBLICATION_TARGET_EXPORT,
 }                              from '@Core/ui/replay/ReplayFramePublisher'
 import {
     buildReplayVideoTimeline, replayClipSignature, resolveReplayVideoFramePhase,
@@ -65,8 +65,8 @@ import {
     normalizeJourneyReplayReadiness,
 }                              from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {
-    IsolatedHqReplayRenderHost,
-}                              from '@Core/ui/replay/IsolatedHqReplayRenderHost'
+    IsolatedReplayRenderHost,
+}                              from '@Core/ui/replay/IsolatedReplayRenderHost'
 import {
     captureReplayCropProjection,
 }                              from '@Core/ui/replay/ReplayCropFrustum'
@@ -74,7 +74,7 @@ import {
     captureReplaySceneDescriptor,
 }                              from '@Core/ui/replay/ReplaySceneDescriptor'
 import {
-    REPLAY_RENDER_MODE_HQ, createReplayRenderContext, createReplayRenderModeContract,
+    REPLAY_RENDER_MODE_EXPORT, createReplayRenderContext, createReplayRenderModeContract,
 }                              from '@Core/ui/replay/ReplayRenderModeContract'
 import {
     CanvasOverlayComposer,
@@ -172,15 +172,15 @@ export const isReplayExportFrameSettled = ({frame = null, phase = null} = {}) =>
 }
 
 /**
- * Create the default isolated HQ replay render host.
+ * Create the default isolated Replay render host.
  *
  * @param {Object} options - Host construction options.
- * @returns {IsolatedHqReplayRenderHost} New isolated host.
+ * @returns {IsolatedReplayRenderHost} New isolated host.
  */
-const defaultIsolatedReplayRenderHostFactory = options => new IsolatedHqReplayRenderHost(options)
+const defaultIsolatedReplayRenderHostFactory = options => new IsolatedReplayRenderHost(options)
 
 /**
- * Pre-warm a small rolling prefix of the HQ camera path through Cesium.
+ * Pre-warm a small rolling prefix of the export camera path through Cesium.
  *
  * The active scene camera is moved sequentially because Cesium can only
  * calculate view-dependent tile requests for one active camera. The initial
@@ -245,7 +245,7 @@ const prewarmReplayScenePrefix = async ({
     try {
         for (let sampleIndex = 1; sampleIndex <= sampleCount; sampleIndex += 1) {
             if (signal?.aborted) {
-                throw new DOMException('The HQ tile pre-warm was aborted.', 'AbortError')
+                throw new DOMException('The export tile pre-warm was aborted.', 'AbortError')
             }
 
             const futureFrame = timeline.frameAtTimeMs(sampleIndex * sampleStepMs)
@@ -472,7 +472,7 @@ export const captureReplayDeferredExportContext = ({
         captureMode,
     })
     const renderContext = createReplayRenderContext({
-        renderMode: REPLAY_RENDER_MODE_HQ,
+        renderMode: REPLAY_RENDER_MODE_EXPORT,
         durationMillis: resolvedDurationMillis,
         direction: controller?.direction ?? replay?.direction,
         clipSignature: replayClipSignature(resolveReplayExportClips({replay})),
@@ -510,7 +510,7 @@ const getReplayExportQuality = () => {
     return [QUALITY_MEDIUM, QUALITY_HIGH, QUALITY_VERY_HIGH][qualityIndex] ?? QUALITY_MEDIUM
 }
 
-// Keep the browser's fastest supported encoder as the default for HQ exports.
+// Keep the browser's fastest supported encoder as the default for Replay exports.
 const getReplayExportHardwareAcceleration = () => 'no-preference'
 
 const withTimeout = async (promise, timeoutMs, message) => {
@@ -615,7 +615,7 @@ const resolveReplayExportVideoOutput = async ({width, height, browser = globalTh
             height:               safe.height,
             bitrate,
             alpha:                'discard',
-            // HQ is an offline export. Realtime mode may drop frames when the
+            // The export runs offline. Realtime mode may drop frames when the
             // encoder is temporarily overloaded, which makes camera motion
             // appear stepped even though the rendered timeline is smooth.
             latencyMode:          'quality',
@@ -748,10 +748,10 @@ export const waitForReplayWidgetsReady = async ({
 const delay = millis => new Promise(resolve => setTimeout(resolve, millis))
 
 /**
- * Publish the deterministic HQ replay frame consumed by dynamic widgets.
+ * Publish the deterministic Replay export frame consumed by dynamic widgets.
  *
  * This mirrors the live controller's `dynamicFrameState`, but it is scoped to
- * the deferred export plan so the HQ renderer controls the widget clock.
+ * the deferred export plan so the export renderer controls the widget clock.
  */
 const publishReplayExportFrameState = ({
                                            plan = null,
@@ -805,7 +805,7 @@ const publishReplayExportFrameState = ({
         phase,
         source:          'exporter',
         updatedAt:       globalThis.performance?.now?.() ?? Date.now(),
-        renderMode:      'hq',
+        renderMode:      'export',
         planId:          plan.renderPlan?.id ?? plan.runtime?.contextKey ?? null,
         intentResolved:  true,
         cameraPose:      cameraPose
@@ -826,7 +826,7 @@ const publishReplayExportFrameState = ({
     return publishReplayFrameState({
         replay,
         plan,
-        target: REPLAY_FRAME_PUBLICATION_TARGET_HQ,
+        target: REPLAY_FRAME_PUBLICATION_TARGET_EXPORT,
         frameState,
         intentOptions: {
             planId: plan.renderPlan?.id ?? plan.runtime?.contextKey ?? null,
@@ -1102,7 +1102,7 @@ export class ReplayDeferredExporter {
                     afterFrame = null,
                     resolveSample = null,
                     buildArtifact = null,
-                    renderMode = REPLAY_RENDER_MODE_HQ,
+                    renderMode = REPLAY_RENDER_MODE_EXPORT,
                     renderSpec = null,
                     initialCameraState = null,
                     visibleOverlayIds = [],
@@ -1303,7 +1303,7 @@ export class ReplayDeferredExporter {
             codec:                outputConfig.codec,
             bitrate:              outputConfig.bitrate,
             alpha:                'discard',
-            // HQ is an offline, timestamped export. Realtime mode may drop
+            // The export uses fixed timestamps. Realtime mode may drop
             // frames while the encoder is slower than the requested FPS.
             latencyMode:          'quality',
             hardwareAcceleration: outputConfig.hardwareAcceleration,
@@ -1563,7 +1563,7 @@ export const prepareReplayDeferredExportPlan = ({
         visibleOverlayIds: replayContext.context?.visibleOverlayIds ?? [],
         trackPathDescriptor,
         qualityPolicy: replay?.readiness ?? null,
-        source: 'hq',
+        source: 'export',
     })
     const renderPlan = createReplayRenderPlan({
         definition,
@@ -1597,7 +1597,7 @@ export const prepareReplayDeferredExportPlan = ({
                    ?? controller?.currentSample?.()
                    ?? null
         },
-        renderMode: REPLAY_RENDER_MODE_HQ,
+        renderMode: REPLAY_RENDER_MODE_EXPORT,
         renderSpec: effectiveRenderSpec,
         initialCameraState: replayContext.context?.cameraState ?? null,
         visibleOverlayIds: replayContext.context?.visibleOverlayIds ?? [],
@@ -1619,7 +1619,7 @@ export const prepareReplayDeferredExportPlan = ({
         renderPlan,
         renderContract: replayContext.context?.renderContract
                          ?? createReplayRenderModeContract({
-                             renderMode: REPLAY_RENDER_MODE_HQ,
+                             renderMode: REPLAY_RENDER_MODE_EXPORT,
                              initialCameraState: replayContext.context?.cameraState,
                              renderSpec: effectiveRenderSpec,
                              visibleOverlayIds: replayContext.context?.visibleOverlayIds,
@@ -1739,7 +1739,7 @@ export const warmReplayDeferredExportPlan = async ({
  * Return the current export plan if the runtime context still matches.
  *
  * When the replay crop, overlay set, or sync state changes, a new plan is
- * prepared so the HQ export does not reuse stale assumptions.
+ * prepared so the Replay export does not reuse stale assumptions.
  */
 export const resolveReplayDeferredExportPlan = ({
                                                     replay = defaultReplayStore(),
@@ -1970,7 +1970,7 @@ export const runReplayDeferredMp4Export = async ({
         plan.runtime.abortController = abortController ?? null
     }
     startReplayRecordingMonitor({
-        mode: 'hq',
+        mode: 'export',
         frameCount: plan.manifest?.frameCount ?? null,
         videoDurationMillis: plan.videoTimeline?.durationMillis
                              ?? plan.manifest?.durationMillis
@@ -1981,7 +1981,7 @@ export const runReplayDeferredMp4Export = async ({
     installReplayExportRuntimeControls({plan, abortController})
 
     try {
-        // Always leave a previous Interactive scene before preparing HQ. This restores
+        // Always leave a previous Interactive scene before preparing export. This restores
         // the original track and camera focus when the user switches modes or
         // aborts between the two exports.
         const restoreStartedAt = runtimeNow()
@@ -2038,7 +2038,7 @@ export const runReplayDeferredMp4Export = async ({
                     await isolatedRenderHost.initialize()
                     isolatedRenderTarget = isolatedRenderHost.renderTarget?.() ?? null
                     if (!isolatedRenderTarget) {
-                        throw new Error('The isolated HQ render host did not expose a render target')
+                        throw new Error('The isolated Replay render host did not expose a render target')
                     }
                     replayMode.setRenderTarget(isolatedRenderTarget)
                     replayVideoTraceDebug('export.render-host.isolated.ready', {
@@ -2166,14 +2166,14 @@ export const runReplayDeferredMp4Export = async ({
             onFileSize: bytes => {
                 updateReplayExportFileSize({plan, bytes})
                 updateReplayRecordingMonitor({
-                    mode: 'hq',
+                    mode: 'export',
                     size: bytes,
                 })
             },
             renderFrame: async ({canvas, context, frame}) => {
                 await waitForReplayExportResume({plan, signal})
                 if (signal?.aborted) {
-                    throw new DOMException('The HQ export was aborted.', 'AbortError')
+                    throw new DOMException('The Replay export was aborted.', 'AbortError')
                 }
 
                 const phase = resolveReplayVideoFramePhase({
@@ -2333,7 +2333,7 @@ export const runReplayDeferredMp4Export = async ({
                 }
                 publishReplayRecordingMonitorFrame({
                     canvas,
-                    mode: 'hq',
+                    mode: 'export',
                     phase: plan.runtime?.exportStopRequested === true
                            ? 'finalizing'
                            : phase?.kind ?? 'rendering',
@@ -2349,7 +2349,7 @@ export const runReplayDeferredMp4Export = async ({
             onFrame: async frame => {
                 const exportRuntime = updateReplayExportCreationProgress({plan, frame})
                 updateReplayRecordingMonitor({
-                    mode: 'hq',
+                    mode: 'export',
                     phase: plan.runtime?.exportStopRequested === true ? 'finalizing' : 'encoding',
                     progress: monitorProgressForFrame({
                         frame,
@@ -2366,7 +2366,7 @@ export const runReplayDeferredMp4Export = async ({
         })
 
         if (signal?.aborted) {
-            throw new DOMException('The HQ export was aborted.', 'AbortError')
+            throw new DOMException('The Replay export was aborted.', 'AbortError')
         }
         const expectedFrameCount = Math.max(0, finiteNumber(plan.manifest?.frameCount, result.frameCount) ?? 0)
         const renderedFrameCount = Math.max(0, finiteNumber(result.frameCount, result.frames?.length ?? 0) ?? 0)
@@ -2383,7 +2383,7 @@ export const runReplayDeferredMp4Export = async ({
             })
         }
         updateReplayRecordingMonitor({
-            mode:     'hq',
+            mode:     'export',
             phase:    'finalizing',
             progress: wasStoppedEarly && expectedFrameCount > 0
                       ? clampProgress(renderedFrameCount / expectedFrameCount)

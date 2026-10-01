@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -146,7 +146,7 @@ describe('ToolsUI linked replay video editing', () => {
     })
 
     it('keeps the recording surface mounted during deterministic Replay export', () => {
-        globalThis.lgs.stores.ui.video.recordingHQ = true
+        globalThis.lgs.stores.ui.video.exporting = true
         const {getByTestId} = render(<ToolsUI/>)
 
         expect(getByTestId('video-recording-screen-area')).toBeTruthy()
@@ -156,10 +156,10 @@ describe('ToolsUI linked replay video editing', () => {
         const enterReplayPreparation = globalThis.__.ui.replay.enterReplayPreparation
         render(<ToolsUI/>)
 
-        globalThis.lgs.stores.ui.video.recordingHQ = true
-        await waitFor(() => expect(globalThis.lgs.stores.ui.video.recordingHQ).toBe(true))
+        globalThis.lgs.stores.ui.video.exporting = true
+        await waitFor(() => expect(globalThis.lgs.stores.ui.video.exporting).toBe(true))
 
-        globalThis.lgs.stores.ui.video.recordingHQ = false
+        globalThis.lgs.stores.ui.video.exporting = false
         globalThis.lgs.stores.ui.video.editing = true
 
         await waitFor(() => expect(enterReplayPreparation).toHaveBeenCalledWith(expect.objectContaining({

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -300,7 +300,7 @@ export const dispose = (mode, ) => {
  * @param {object} mode - Replay session mode.
  * @param {object} [options] - Reset options.
  * @param {boolean} [options.preserveSavedCameraState=false] - Preserve the entry camera state.
- * @param {boolean} [options.preserveConstrainedPath=true] - Preserve the Interactive/HQ shared path.
+ * @param {boolean} [options.preserveConstrainedPath=true] - Preserve the interactive/export shared path.
  * @returns {void}
  */
 export const resetCameraController = (mode, {
@@ -903,7 +903,7 @@ export const bindRenderer = (mode, ) => {
                             ...extra,
                         })
                     }
-                    // `seek()` is also used to publish each deterministic HQ
+                    // `seek()` is also used to publish each deterministic export
                     // frame. The export renderer applies that frame below;
                     // running the live listener here would update the camera a
                     // second time with a different clock and create jitter.
@@ -1060,7 +1060,7 @@ export const bindRenderer = (mode, ) => {
                 const notifyStopClipsCompleteAfterFinalWidgetFrame = (afterFrame = null) => {
                     const video = globalThis.lgs?.stores?.ui?.video
                     const replayExportActive = replayStore()?.recordingSync === true
-                                               || video?.recordingHQ === true
+                                               || video?.exporting === true
                                                || video?.finalizing === true
                     if (replayExportActive) {
                         if (token === state.clipSequenceToken) {
@@ -1097,7 +1097,7 @@ export const bindRenderer = (mode, ) => {
                     call.setContinuousRender(false)
                     const video = globalThis.lgs?.stores?.ui?.video
                     if (replayStore()?.recordingSync === true
-                        || video?.recordingHQ === true
+                        || video?.exporting === true
                         || video?.finalizing === true) {
                         // The deferred export still needs the final Replay frame.
                         state.sceneRestoreDeferred = true

@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 /**
- * On-demand resolver shared by Interactive, HQ, and interactive scrubbing.
+ * On-demand resolver shared by Interactive, export, and interactive scrubbing.
  */
 
 import {createReplayFrameIntent} from './ReplayFrameIntent'
@@ -301,7 +301,7 @@ export class ReplayFrameResolver {
     }
 
     /**
-     * Resolve one frame asynchronously for qualification and HQ preparation.
+     * Resolve one frame asynchronously for qualification and export preparation.
      *
      * @param {Object} options - Frame and override options.
      * @returns {Promise<Object>} Canonical replay frame intent.

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -160,7 +160,7 @@ describe('JourneyReplayRuntime', () => {
                 settings: {ui: {replay: {recordingSync: true}}},
                 stores: {
                     replay: {recordingSync: true},
-                    ui: {video: {recordingHQ: true}},
+                    ui: {video: {exporting: true}},
                 },
             }
 

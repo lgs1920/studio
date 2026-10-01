@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-26
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -1032,7 +1032,7 @@ describe('Journey replay camera paths', () => {
     })
 
     it.each([REPLAY_CAMERA_POSITION_BEHIND, REPLAY_CAMERA_POSITION_AHEAD])(
-        'resolves identical Interactive and HQ Dynamic frames in %s position mode',
+        'resolves identical Dynamic frames for interactive playback and export in %s position mode',
         positionMode => {
             vi.stubGlobal('lgs', {
                 settings: {
@@ -1112,9 +1112,9 @@ describe('Journey replay camera paths', () => {
             }
 
             const interactive = resolveFrame(false)
-            const hq = resolveFrame(true)
-            expect(interactive.frame).toEqual(hq.frame)
-            expect(interactive.view).toEqual(hq.view)
+            const exportFrame = resolveFrame(true)
+            expect(interactive.frame).toEqual(exportFrame.frame)
+            expect(interactive.view).toEqual(exportFrame.view)
             expect(interactive.view.sample).toEqual(predictedSample)
         },
     )
@@ -1224,7 +1224,7 @@ describe('Journey replay camera paths', () => {
         expect(visibilityModes).toEqual(['current'])
     })
 
-    it('resets the HQ follower before restoring the nominal pitch', () => {
+    it('resets the export camera follower before restoring the nominal pitch', () => {
         vi.stubGlobal('lgs', {
             settings: {
                 ui: {
@@ -3035,7 +3035,7 @@ describe('Journey replay camera paths', () => {
         expect(point.y).toBeLessThanOrEqual(65)
     })
 
-    it('returns the same constrained path frame for Interactive and HQ progress', () => {
+    it('returns the same constrained path frame for interactive playback and export progress', () => {
         const path = buildConstrainedReplayCameraPath({
             sampleAtProgress: progress => ({
                 progress,
@@ -3074,16 +3074,16 @@ describe('Journey replay camera paths', () => {
         })
 
         const interactiveFrame = sampleConstrainedReplayCameraPath(path, 0.625)
-        const hqFrame = sampleConstrainedReplayCameraPath(path, 0.625)
+        const exportFrame = sampleConstrainedReplayCameraPath(path, 0.625)
 
-        expect(interactiveFrame.destination).toEqual(hqFrame.destination)
-        expect(interactiveFrame.direction).toEqual(hqFrame.direction)
-        expect(interactiveFrame.up).toEqual(hqFrame.up)
+        expect(interactiveFrame.destination).toEqual(exportFrame.destination)
+        expect(interactiveFrame.direction).toEqual(exportFrame.direction)
+        expect(interactiveFrame.up).toEqual(exportFrame.up)
     })
 
-    it('preserves the compiled path between Interactive cleanup and HQ preparation', () => {
+    it('preserves the compiled path between interactive playback cleanup and export preparation', () => {
         const constrainedReplayCameraPath = {
-            key:  'shared-interactive-hq-path',
+            key:  'shared-interactive-export-path',
             path: {frames: []},
         }
         const mode = {

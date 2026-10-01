@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -99,7 +99,7 @@ describe('ReplayRecordingMonitorWidget', () => {
                         editing: false,
                         preRecording: false,
                         recording: false,
-                        recordingHQ: false,
+                        exporting: false,
                         snapshot: false,
                         finalizing: false,
                     }),
@@ -132,7 +132,7 @@ describe('ReplayRecordingMonitorWidget', () => {
     })
 
     it('preloads the Recording Picture-in-Picture bootstrap while recording', async () => {
-        startReplayRecordingMonitor({mode: 'hq'})
+        startReplayRecordingMonitor({mode: 'export'})
 
         render(<ReplayRecordingMonitorWidget/>)
 
@@ -169,7 +169,7 @@ describe('ReplayRecordingMonitorWidget', () => {
             },
         }
         startReplayRecordingMonitor({
-            mode: 'hq',
+            mode: 'export',
             frameCount: 10,
             videoDurationMillis: 10000,
         })
@@ -266,7 +266,7 @@ describe('ReplayRecordingMonitorWidget', () => {
     })
 
     it('uses blinking warning states for preparation and finalization', async () => {
-        startReplayRecordingMonitor({mode: 'hq'})
+        startReplayRecordingMonitor({mode: 'export'})
         render(<ReplayRecordingMonitorWidget/>)
 
         expect(screen.getByText('Preparing')).not.toBeNull()
@@ -284,9 +284,9 @@ describe('ReplayRecordingMonitorWidget', () => {
         })
     })
 
-    it('keeps HQ export in Recording while the video store is finalizing', () => {
+    it('keeps Replay export in Recording while the video store is finalizing', () => {
         globalThis.lgs.stores.ui.video.finalizing = true
-        startReplayRecordingMonitor({mode: 'hq'})
+        startReplayRecordingMonitor({mode: 'export'})
         updateReplayRecordingMonitor({phase: 'encoding', progress: 0.4})
 
         render(<ReplayRecordingMonitorWidget/>)
@@ -298,7 +298,7 @@ describe('ReplayRecordingMonitorWidget', () => {
 
     it('calculates Replay export duration and remaining time from frame progress', () => {
         startReplayRecordingMonitor({
-            mode: 'hq',
+            mode: 'export',
             videoDurationMillis: 10000,
         })
         updateReplayRecordingMonitor({
@@ -329,7 +329,7 @@ describe('ReplayRecordingMonitorWidget', () => {
         globalThis.documentPictureInPicture = {
             requestWindow: vi.fn().mockResolvedValue(externalWindow),
         }
-        startReplayRecordingMonitor({mode: 'hq'})
+        startReplayRecordingMonitor({mode: 'export'})
 
         render(<ReplayRecordingMonitorWidget/>)
         fireEvent.click(screen.getByRole('button', {name: 'Open Recording window in Picture-in-Picture'}))
@@ -362,7 +362,7 @@ describe('ReplayRecordingMonitorWidget', () => {
         globalThis.documentPictureInPicture = {
             requestWindow: vi.fn().mockResolvedValue(externalWindow),
         }
-        startReplayRecordingMonitor({mode: 'hq'})
+        startReplayRecordingMonitor({mode: 'export'})
 
         render(<ReplayRecordingMonitorWidget/>)
         fireEvent.click(screen.getByRole('button', {name: 'Open Recording window in Picture-in-Picture'}))
@@ -390,7 +390,7 @@ describe('ReplayRecordingMonitorWidget', () => {
         globalThis.documentPictureInPicture = {
             requestWindow: vi.fn().mockResolvedValue(externalWindow),
         }
-        startReplayRecordingMonitor({mode: 'hq'})
+        startReplayRecordingMonitor({mode: 'export'})
         render(<ReplayRecordingMonitorWidget/>)
 
         fireEvent.click(screen.getByRole('button', {name: 'Open Recording window in Picture-in-Picture'}))
@@ -429,7 +429,7 @@ describe('ReplayRecordingMonitorWidget', () => {
         globalThis.documentPictureInPicture = {
             requestWindow: vi.fn().mockResolvedValue(externalWindow),
         }
-        startReplayRecordingMonitor({mode: 'hq'})
+        startReplayRecordingMonitor({mode: 'export'})
         render(<ReplayRecordingMonitorWidget/>)
 
         fireEvent.click(screen.getByRole('button', {name: 'Open Recording window in Picture-in-Picture'}))
@@ -441,7 +441,7 @@ describe('ReplayRecordingMonitorWidget', () => {
         const sourceCanvas = document.createElement('canvas')
         sourceCanvas.width = 320
         sourceCanvas.height = 180
-        publishReplayRecordingMonitorFrame({canvas: sourceCanvas, mode: 'hq'})
+        publishReplayRecordingMonitorFrame({canvas: sourceCanvas, mode: 'export'})
         const stableFrame = getReplayRecordingMonitorSnapshot().frameCanvas
         expect(drawImageCalls.at(-1)?.mock.calls.at(-1)?.[0]).toBe(stableFrame)
 

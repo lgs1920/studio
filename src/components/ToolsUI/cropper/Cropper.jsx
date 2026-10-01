@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-14
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -54,7 +54,7 @@ export const Cropper = memo(({overlay = false, hideVideoWidgets = false, hideWid
                ? {...config.cropDimensions}
                : {left: 0, top: 0, width: 0, height: 0}
     })
-    const captureActive = Boolean(video.preRecording || video.recordingHQ || video.snapshot || video.finalizing)
+    const captureActive = Boolean(video.preRecording || video.exporting || video.snapshot || video.finalizing)
     const interactiveCrop = cropper.ratioEditor === true
                             || simplePreparationActive === true
                             || (video.editing === true && replay.recordingSync === true)

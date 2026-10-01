@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-28
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,10 +38,10 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
     // Rehydration and invalidation must only run while an actual capture phase
     // is active, otherwise the portal loops during normal editor use.
     const videoCaptureActive = video.preRecording === true
-                              || video.recordingHQ === true
+                              || video.exporting === true
                               || video.snapshot === true
                               || video.finalizing === true
-    const synchronizedRecording = video.recordingHQ === true
+    const synchronizedRecording = video.exporting === true
                                   && replay.recordingSync === true
     const simpleReplay = replay.simplePreparationActive === true
     const previewOnly = videoCaptureActive || synchronizedRecording

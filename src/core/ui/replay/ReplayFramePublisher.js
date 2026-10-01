@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,7 +24,7 @@ import {
 } from './ReplayFrameIntent'
 
 export const REPLAY_FRAME_PUBLICATION_TARGET_INTERACTIVE = 'interactive'
-export const REPLAY_FRAME_PUBLICATION_TARGET_HQ = 'hq'
+export const REPLAY_FRAME_PUBLICATION_TARGET_EXPORT = 'export'
 
 /**
  * Attach a canonical intent to the existing flat compatibility frame state.
@@ -64,7 +64,7 @@ export const publishReplayFrameState = ({
         return null
     }
 
-    if (target === REPLAY_FRAME_PUBLICATION_TARGET_HQ) {
+    if (target === REPLAY_FRAME_PUBLICATION_TARGET_EXPORT) {
         if (!plan?.runtime) {
             return null
         }
@@ -86,10 +86,10 @@ export const publishReplayFrameState = ({
 }
 
 /**
- * Resolve the active HQ frame publication when an export is running.
+ * Resolve the active export frame publication when an export is running.
  *
  * @param {Object|null} replay - Replay store or snapshot.
- * @returns {Object|null} Active HQ frame publication.
+ * @returns {Object|null} Active export frame publication.
  */
 export const resolvePublishedReplayExportFrame = (replay = globalThis.lgs?.stores?.replay ?? null) => {
     const runtime = replay?.deferredExportPlan?.runtime ?? null

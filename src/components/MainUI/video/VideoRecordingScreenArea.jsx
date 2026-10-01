@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-30
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -162,7 +162,7 @@ export const VideoRecordingScreenArea = memo(() => {
 
         Object.assign($video, {
             preRecording: false,
-            recordingHQ:  true,
+            exporting:  true,
             finalizing:   false,
             paused:       false,
             editing:      false,
@@ -210,7 +210,7 @@ export const VideoRecordingScreenArea = memo(() => {
                         fps: result.plan?.videoTimeline?.fps ?? renderSpec.fps,
                         averageFps: result.plan?.videoTimeline?.fps ?? renderSpec.fps,
                         dimensions,
-                        quality: REPLAY_VIDEO_QUALITY[$video.quality] ?? {name: 'Replay HQ'},
+                        quality: REPLAY_VIDEO_QUALITY[$video.quality] ?? {name: 'Replay export'},
                         ratio: {label: `${dimensions.width}×${dimensions.height}`},
                         metadata: mediaMetadata,
                         mimeType: result.blob.type || 'video/mp4',
@@ -232,7 +232,7 @@ export const VideoRecordingScreenArea = memo(() => {
             if (startToken === _recordingStartToken.current) {
                 Object.assign($video, {
                     preRecording: false,
-                    recordingHQ:  false,
+                    exporting:  false,
                     finalizing:   false,
                     paused:       false,
                     editing:      true,
@@ -288,7 +288,7 @@ export const VideoRecordingScreenArea = memo(() => {
         }
         catch (error) {
             if (startToken === _recordingStartToken.current) {
-                Object.assign($video, {preRecording: false, recordingHQ: false, finalizing: false, editing: true})
+                Object.assign($video, {preRecording: false, exporting: false, finalizing: false, editing: true})
                 restoreVideoCaptureUi()
             }
             UIToast.error({caption: 'Replay video', text: error?.message ?? 'Replay video could not be started.'})
@@ -450,7 +450,7 @@ export const VideoRecordingScreenArea = memo(() => {
         return null
     }
 
-    const synchronizedRecording = video.recordingHQ
+    const synchronizedRecording = video.exporting
                                   && (lgs.stores.replay.recordingSync === true
                                       || lgs.stores.replay.simplePreparationActive === true)
 

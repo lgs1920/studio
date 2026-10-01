@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-20
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -46,7 +46,7 @@ export const WidgetManagementDrawer = () => {
     const drawerRoot = __.ui.drawerManager.drawerRoot
     const isVideoBoardContext = video.editing
         || video.preRecording
-        || video.recordingHQ
+        || video.exporting
         || video.snapshot
         || video.finalizing
         || video.cropper?.widgetEditor === true

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -140,7 +140,7 @@ describe('getReplayVideoOverlayMetrics', () => {
         )
     })
 
-    it('can bypass replay widget visibility filtering during HQ export', () => {
+    it('can bypass replay widget visibility filtering during Replay export', () => {
         const widgetEl = document.createElement('div')
         widgetEl.hidden = true
         const widgetCanvas = document.createElement('canvas')

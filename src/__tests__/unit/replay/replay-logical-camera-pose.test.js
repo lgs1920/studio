@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -75,7 +75,7 @@ describe('Journey replay logical camera pose', () => {
         expect(pose.heading).toBeCloseTo(axisHeading + (Math.PI / 6))
     })
 
-    it('uses the predicted path heading for HQ Navigation system mode', () => {
+    it('uses the predicted path heading for export Navigation system mode', () => {
         const pose = resolveJourneyReplayLogicalCameraPose({
             sample: {
                 progress: 0.5,

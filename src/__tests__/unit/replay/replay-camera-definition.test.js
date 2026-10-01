@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -109,7 +109,7 @@ describe('canonical replay camera definition', () => {
         expect(pose.canonical).toBe(true)
     })
 
-    it('resolves the sample once before evaluating the same camera for Interactive and HQ', () => {
+    it('resolves the sample once before evaluating the same camera for interactive playback and export', () => {
         const cameraDefinition = createCameraFixture()
         const timeline = buildReplayVideoTimeline({replayDurationMillis: 1000, fps: 10})
         const definition = createReplayDefinition({timeline, cameraDefinition})
@@ -130,18 +130,18 @@ describe('canonical replay camera definition', () => {
         const resolver = new ReplayFrameResolver({plan, resolveSample, resolveCameraPose})
 
         const interactive = resolver.resolveAtTimeSync(400, {renderMode: 'interactive'})
-        const hq = resolver.resolveAtTimeSync(400, {renderMode: 'hq'})
+        const exportFrame = resolver.resolveAtTimeSync(400, {renderMode: 'export'})
 
         expect(resolveSample).toHaveBeenCalledTimes(2)
         expect(resolveCameraPose).toHaveBeenCalledTimes(2)
         expect(resolveCameraPose.mock.calls[0][0].sample).toBe(sample)
-        expect(interactive.scene.cameraPose).toEqual(hq.scene.cameraPose)
-        expect(interactive.scene.cameraCommand).toEqual(hq.scene.cameraCommand)
+        expect(interactive.scene.cameraPose).toEqual(exportFrame.scene.cameraPose)
+        expect(interactive.scene.cameraCommand).toEqual(exportFrame.scene.cameraCommand)
         expect(interactive.scene.cameraCommand).toEqual(expect.objectContaining({
             type: 'set-target-view',
             rangeMeters: expect.any(Number),
         }))
         expect(interactive.resolved).toBe(false)
-        expect(hq.resolved).toBe(false)
+        expect(exportFrame.resolved).toBe(false)
     })
 })

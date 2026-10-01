@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,7 +24,7 @@ import {
 import {
     attachReplayFrameIntent,
     publishReplayFrameState,
-    REPLAY_FRAME_PUBLICATION_TARGET_HQ,
+    REPLAY_FRAME_PUBLICATION_TARGET_EXPORT,
     resolvePublishedReplayFrame,
 } from '@Core/ui/replay/ReplayFramePublisher'
 import {
@@ -41,7 +41,7 @@ describe('ReplayFrameIntent', () => {
         const intent = createReplayFrameIntent({
             planId: 'plan-a',
             resolved: true,
-            renderMode: 'hq',
+            renderMode: 'export',
             source: 'exporter',
             frameId: 12,
             frameIndex: 10,
@@ -60,10 +60,10 @@ describe('ReplayFrameIntent', () => {
 
         expect(intent).toEqual(expect.objectContaining({
             version: REPLAY_FRAME_INTENT_VERSION,
-            id: 'plan-a:hq:exporter:12:500',
+            id: 'plan-a:export:exporter:12:500',
             planId: 'plan-a',
             resolved: true,
-            renderMode: 'hq',
+            renderMode: 'export',
         }))
         expect(intent.frame).toEqual(expect.objectContaining({
             id: 12,
@@ -147,15 +147,15 @@ describe('ReplayFramePublisher', () => {
         expect(resolvePublishedReplayFrame(replay)).toBe(resolved)
     })
 
-    it('publishes resolved HQ frames inside the active export plan', () => {
+    it('publishes resolved export frames inside the active export plan', () => {
         const replay = {}
-        const plan = {runtime: {status: 'exporting', contextKey: 'plan-hq'}}
+        const plan = {runtime: {status: 'exporting', contextKey: 'plan-export'}}
         const published = publishReplayFrameState({
             replay,
             plan,
-            target: REPLAY_FRAME_PUBLICATION_TARGET_HQ,
+            target: REPLAY_FRAME_PUBLICATION_TARGET_EXPORT,
             frameState,
-            intentOptions: {planId: 'plan-hq', resolved: true},
+            intentOptions: {planId: 'plan-export', resolved: true},
         })
 
         expect(plan.runtime.frameState).toBe(published)
@@ -176,7 +176,7 @@ describe('ReplayFramePublisher', () => {
 describe('ReplayFrameResult', () => {
     it('links readiness and diagnostics to one frame intent', () => {
         const result = createReplayFrameResult({
-            intentId: 'plan-a:hq:exporter:12:500',
+            intentId: 'plan-a:export:exporter:12:500',
             status: REPLAY_FRAME_RESULT_DEGRADED,
             readiness: {status: 'timeout', waitedMillis: 250},
             encoded: true,
@@ -185,7 +185,7 @@ describe('ReplayFrameResult', () => {
 
         expect(result).toEqual(expect.objectContaining({
             version: REPLAY_FRAME_RESULT_VERSION,
-            intentId: 'plan-a:hq:exporter:12:500',
+            intentId: 'plan-a:export:exporter:12:500',
             status: REPLAY_FRAME_RESULT_DEGRADED,
             encoded: true,
             completedAt: 750,

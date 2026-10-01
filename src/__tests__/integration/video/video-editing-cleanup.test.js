@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -135,7 +135,7 @@ describe('cancelVideoEditing', () => {
         Object.assign(lgs.stores.ui.video, {
             editing: true,
             preRecording: true,
-            recordingHQ: true,
+            exporting: true,
             paused: true,
             size: 512,
             timelinePreviewActive: linkedPreparation,
@@ -168,7 +168,7 @@ describe('cancelVideoEditing', () => {
         expect(lgs.stores.ui.video).toEqual(expect.objectContaining({
             editing: false,
             preRecording: false,
-            recordingHQ: false,
+            exporting: false,
             paused: false,
             size: 0,
             timelinePreviewActive: false,

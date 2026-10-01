@@ -7,15 +7,15 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-26
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 /**
- * Crop-aware Cesium frustum helpers for isolated Replay HQ rendering.
+ * Crop-aware Cesium frustum helpers for isolated Replay export rendering.
  */
 
 import {OrthographicOffCenterFrustum, PerspectiveFrustum} from 'cesium'
@@ -178,7 +178,7 @@ export const captureReplayCropProjection = ({
 }
 
 /**
- * Create the Cesium frustum used by the isolated HQ camera.
+ * Create the Cesium frustum used by the isolated export camera.
  *
  * @param {Object|null} projection - Serializable crop projection.
  * @returns {Object|null} Cesium frustum or null for invalid input.

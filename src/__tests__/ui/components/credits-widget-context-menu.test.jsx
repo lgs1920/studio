@@ -8,8 +8,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-30
- * Last modified: 2026-09-30
+ * Created on: 2026-09-29
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -45,7 +45,7 @@ describe('CreditsWidget context menu', () => {
                         editing:      true,
                         finalizing:   false,
                         preRecording: false,
-                        recordingHQ:  false,
+                        exporting:  false,
                         snapshot:     false,
                     }),
                 },

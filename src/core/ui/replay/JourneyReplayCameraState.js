@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -875,7 +875,7 @@ export const cesiumScene = (mode) => {
  * Resolve the active Cesium viewer for this replay session.
  *
  * @param {Object} mode - Replay session mode.
- * @returns {Object|null} Explicit HQ target or Studio viewer.
+ * @returns {Object|null} Explicit export target or Studio viewer.
  */
 export const cesiumViewer = mode => replayViewerFor(mode)
 
@@ -911,7 +911,7 @@ export const timeNormalizedSmoothingFactor = (mode, factor, deltaSeconds = null)
         }
 
         // Smoothing factors are calibrated for one 60 FPS update. Rebase them
-        // on elapsed replay time so HQ at 30 FPS keeps the same video duration.
+        // on elapsed replay time so an an export at 30 FPS keeps the same video duration.
         const referenceFrameSeconds = 1 / 60
         return 1 - Math.pow(1 - baseFactor, delta / referenceFrameSeconds)
     }

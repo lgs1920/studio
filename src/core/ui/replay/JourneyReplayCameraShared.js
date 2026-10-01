@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -69,7 +69,7 @@ export const REPLAY_NAVIGATION_MAX_LATERAL_DRIFT_METERS = 40
 export const REPLAY_NAVIGATION_MIN_TURN_DRIFT_DEGREES = 12
 // Navigation lookahead must stay time-based. A zero metric floor lets the
 // sampler use the route speed and the requested horizon instead of turning a
-// two-second HQ prediction into a much longer low-speed distance prediction.
+// two-second export prediction into a much longer low-speed distance prediction.
 export const REPLAY_NAVIGATION_LOOKAHEAD_MINIMUM_METERS = 0
 // A predictive Navigation exit must remain stable before it becomes a camera
 // correction. Hard current exits do not use this confirmation window.

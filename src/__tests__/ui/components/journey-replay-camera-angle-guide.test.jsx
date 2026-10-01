@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-30
- * Last modified: 2026-09-30
+ * Created on: 2026-09-29
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -89,7 +89,7 @@ describe('JourneyReplayCameraAngleGuide component', () => {
                     video: proxy({
                         editing:      false,
                         preRecording: false,
-                        recordingHQ:  false,
+                        exporting:  false,
                         snapshot:     false,
                         finalizing:   false,
                     }),
@@ -168,7 +168,7 @@ describe('JourneyReplayCameraAngleGuide component', () => {
                     video: proxy({
                         editing:      true,
                         preRecording: false,
-                        recordingHQ:  false,
+                        exporting:  false,
                         snapshot:     false,
                         finalizing:   false,
                     }),
@@ -220,7 +220,7 @@ describe('JourneyReplayCameraAngleGuide component', () => {
                     video: proxy({
                         editing:      true,
                         preRecording: false,
-                        recordingHQ:  false,
+                        exporting:  false,
                         snapshot:     false,
                         finalizing:   false,
                     }),
@@ -283,7 +283,7 @@ describe('JourneyReplayCameraAngleGuide component', () => {
                 replay: proxy({active: false, liveSample: null, sample: null}),
                 ui: {
                     drawers: proxy({open: null}),
-                    video: proxy({editing: true, preRecording: false, recordingHQ: false, snapshot: false, finalizing: false}),
+                    video: proxy({editing: true, preRecording: false, exporting: false, snapshot: false, finalizing: false}),
                 },
             },
             viewer: {},
@@ -319,7 +319,7 @@ describe('JourneyReplayCameraAngleGuide component', () => {
                 replay: proxy({active: false, liveSample: null, sample: null}),
                 ui: {
                     drawers: proxy({open: null}),
-                    video: proxy({editing: true, preRecording: false, recordingHQ: false, snapshot: false, finalizing: false}),
+                    video: proxy({editing: true, preRecording: false, exporting: false, snapshot: false, finalizing: false}),
                 },
             },
             viewer: {},

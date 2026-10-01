@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-11-07
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -61,7 +61,7 @@ export const WidgetsPanelContent = ({groups, themeClassName = 'wa-theme-lgs1920-
     const [isInitialized, setIsInitialized] = useState(false)
     const isVideoBoardContext = video.editing
         || video.preRecording
-        || video.recordingHQ
+        || video.exporting
         || video.snapshot
         || video.finalizing
         || video.cropper?.widgetEditor === true

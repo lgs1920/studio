@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-24
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,9 +17,9 @@
 /**
  * Explicit Cesium render targets owned by replay sessions.
  *
- * Interactive replay falls back to Studio's viewer. HQ export installs an
- * isolated target for the lifetime of the export so camera and trace writes
- * cannot leak into the visible map.
+ * Interactive playback and product export use Studio's viewer. Explicit
+ * isolated render workflows install an owner-scoped target so camera and trace writes
+ * remain separate from the visible map.
  */
 
 const replayRenderTargets = new WeakMap()
@@ -82,7 +82,7 @@ export const replayViewerFor = owner => replayRenderTargetFor(owner)?.viewer
 /**
  * Resolve the camera used by a replay render target.
  *
- * Interactive replay writes to the canonical Studio camera. HQ replay writes
+ * Interactive replay writes to the canonical Studio camera. Replay export writes
  * to the isolated target camera and must not leak those writes to the map.
  *
  * @param {Object} owner - Replay session owner.

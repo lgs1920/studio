@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-22
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -75,7 +75,7 @@ describe('CanvasEventManager', () => {
         globalThis.lgs = {
             stores:   {
                 replay: proxy({recordingSync: false}),
-                ui:     {video: proxy({preRecording: false, recording: false, recordingHQ: false})},
+                ui:     {video: proxy({preRecording: false, recording: false, exporting: false})},
             },
             settings: {ui: {replay: {recordingSync: false}}},
         }
@@ -143,7 +143,7 @@ describe('CanvasEventManager', () => {
     it('blocks canvas input during synchronized recording', () => {
         const canvasInput = vi.fn()
         canvas.addEventListener('pointerdown', canvasInput)
-        globalThis.lgs.stores.ui.video.recordingHQ = true
+        globalThis.lgs.stores.ui.video.exporting = true
         globalThis.lgs.stores.replay.recordingSync = true
 
         const event = new PointerEvent('pointerdown', {bubbles: true, cancelable: true})
@@ -235,7 +235,7 @@ describe('CanvasEventManager', () => {
         expectCameraInput(true)
 
         globalThis.lgs.stores.ui.video.preRecording = false
-        globalThis.lgs.stores.ui.video.recordingHQ = true
+        globalThis.lgs.stores.ui.video.exporting = true
         leftDown()
         expect(down).toHaveBeenCalledTimes(1)
         expectCameraInput(false)
@@ -245,13 +245,13 @@ describe('CanvasEventManager', () => {
         expect(down).toHaveBeenCalledTimes(2)
         expectCameraInput(true)
 
-        globalThis.lgs.stores.ui.video.recordingHQ = true
+        globalThis.lgs.stores.ui.video.exporting = true
         globalThis.lgs.stores.replay.recordingSync = true
         leftDown()
         expect(down).toHaveBeenCalledTimes(2)
         expectCameraInput(false)
 
-        globalThis.lgs.stores.ui.video.recordingHQ = false
+        globalThis.lgs.stores.ui.video.exporting = false
         globalThis.lgs.stores.replay.recordingSync = false
         leftDown()
         expect(down).toHaveBeenCalledTimes(3)
@@ -262,7 +262,7 @@ describe('CanvasEventManager', () => {
         const down = vi.fn()
         manager.onMouseDown(down)
         globalThis.lgs.settings.ui.replay.recordingSync = true
-        globalThis.lgs.stores.ui.video.recordingHQ = true
+        globalThis.lgs.stores.ui.video.exporting = true
 
         inputActions.get(`${ScreenSpaceEventType.LEFT_DOWN}:`)({
             position: {x: 10, y: 20},
@@ -282,7 +282,7 @@ describe('CanvasEventManager', () => {
         manager.onRightClick(rightClick)
         manager.onMouseMove(move)
         manager.onWheel(wheel)
-        globalThis.lgs.stores.ui.video.recordingHQ = true
+        globalThis.lgs.stores.ui.video.exporting = true
         globalThis.lgs.stores.replay.recordingSync = true
 
         inputActions.get(`${ScreenSpaceEventType.LEFT_DOWN}:`)({position: {x: 10, y: 20}})
@@ -301,13 +301,13 @@ describe('CanvasEventManager', () => {
         const controller = viewer.scene.screenSpaceCameraController
         controller.enableLook = false
 
-        globalThis.lgs.stores.ui.video.recordingHQ = true
+        globalThis.lgs.stores.ui.video.exporting = true
         globalThis.lgs.stores.replay.recordingSync = true
         expect(controller.enableLook).toBe(false)
         expect(controller.enableRotate).toBe(false)
         expect(controller.enableInputs).toBe(false)
 
-        globalThis.lgs.stores.ui.video.recordingHQ = false
+        globalThis.lgs.stores.ui.video.exporting = false
         expect(controller.enableLook).toBe(false)
         expect(controller.enableRotate).toBe(true)
         expect(controller.enableInputs).toBe(true)
@@ -318,7 +318,7 @@ describe('CanvasEventManager', () => {
         const hudInput = vi.fn()
         hud.addEventListener('pointerdown', hudInput)
         document.body.append(hud)
-        globalThis.lgs.stores.ui.video.recordingHQ = true
+        globalThis.lgs.stores.ui.video.exporting = true
         globalThis.lgs.stores.replay.recordingSync = true
 
         const event = new PointerEvent('pointerdown', {bubbles: true, cancelable: true})
@@ -388,7 +388,7 @@ describe('CanvasEventManager', () => {
         expect(longTap).toHaveBeenCalledOnce()
 
         const pickCount = viewer.scene.pick.mock.calls.length
-        globalThis.lgs.stores.ui.video.recordingHQ = true
+        globalThis.lgs.stores.ui.video.exporting = true
         globalThis.lgs.stores.replay.recordingSync = true
         touchDown()
         touchUp()
@@ -403,7 +403,7 @@ describe('CanvasEventManager', () => {
     it('keeps canvas input available during non-synchronized recording', () => {
         const canvasInput = vi.fn()
         canvas.addEventListener('pointerdown', canvasInput)
-        globalThis.lgs.stores.ui.video.recordingHQ = true
+        globalThis.lgs.stores.ui.video.exporting = true
 
         const event = new PointerEvent('pointerdown', {bubbles: true, cancelable: true})
         canvas.dispatchEvent(event)

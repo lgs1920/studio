@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-20
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -69,7 +69,7 @@ export const VideoRecordingSettingsToolbar = memo(({
     const _cropSyncPromise = useRef(null)
     const shouldShowToolbar = video.editing === true
                               && !video.preRecording
-                              && !video.recordingHQ
+                              && !video.exporting
                               && !video.snapshot
                               && !video.finalizing
     const simplePreparation = replay.simplePreparationActive === true
@@ -78,7 +78,7 @@ export const VideoRecordingSettingsToolbar = memo(({
                         && replay.recordingSync === true
                         && replay.active === true
                         && !video.preRecording
-                        && !video.recordingHQ
+                        && !video.exporting
                         && !video.snapshot
                         && !video.finalizing
     const showVideoOptions = mode !== 'actions'

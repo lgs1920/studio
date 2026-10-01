@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-22
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -33,13 +33,13 @@ const REPLAY_CROP_ZONE_INPUT_SHIELD_CLASS = 'replay-crop-zone-input-shield'
  * Video preparation and Replay export without the sync link leave scene
  * and camera input available.
  *
- * @returns {{preRecording: boolean, recordingHQ: boolean, recordingSync: boolean, replayPlaybackActive: boolean, blocked: boolean}} Cesium input state.
+ * @returns {{preRecording: boolean, exporting: boolean, recordingSync: boolean, replayPlaybackActive: boolean, blocked: boolean}} Cesium input state.
  */
 export const getCesiumInputState = () => {
     const video = globalThis.lgs?.stores?.ui?.video
     const replay = globalThis.lgs?.stores?.replay
     const replayController = globalThis.__?.ui?.replay
-    const recordingHQ = video?.recordingHQ === true
+    const exporting = video?.exporting === true
     const recordingSync = replay?.recordingSync === true
     const replayPlaybackActive = replay?.active === true
                                  || replay?.playing === true
@@ -54,10 +54,10 @@ export const getCesiumInputState = () => {
 
     return {
         preRecording: video?.preRecording === true,
-        recordingHQ,
+        exporting,
         recordingSync,
         replayPlaybackActive,
-        blocked:      replayPlaybackActive || (recordingHQ && recordingSync),
+        blocked:      replayPlaybackActive || (exporting && recordingSync),
     }
 }
 

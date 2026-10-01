@@ -2,13 +2,13 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: replay-isolated-hq-render-host.test.js
+ * File: replay-isolated-render-host.test.js
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-10-01
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,7 +18,7 @@ import {describe, expect, it, vi} from 'vitest'
 import {PerspectiveFrustum} from 'cesium'
 
 import {createReplayCameraCommand} from '@Core/ui/replay/ReplayCameraCommand'
-import {IsolatedHqReplayRenderHost} from '@Core/ui/replay/IsolatedHqReplayRenderHost'
+import {IsolatedReplayRenderHost} from '@Core/ui/replay/IsolatedReplayRenderHost'
 import {captureReplayCropProjection} from '@Core/ui/replay/ReplayCropFrustum'
 import {captureReplaySceneDescriptor} from '@Core/ui/replay/ReplaySceneDescriptor'
 
@@ -33,7 +33,7 @@ const createCollection = values => ({
     get: index => values[index],
 })
 
-describe('IsolatedHqReplayRenderHost', () => {
+describe('IsolatedReplayRenderHost', () => {
     it('captures providers and display settings without sharing live imagery layers', () => {
         const provider = {id: 'imagery-provider'}
         const sourceLayer = {imageryProvider: provider, alpha: 0.4, show: true}
@@ -103,7 +103,7 @@ describe('IsolatedHqReplayRenderHost', () => {
             base3dDefinition: {id: 'tileset'},
             environment: {globe: {}, fog: {}},
         }
-        const host = new IsolatedHqReplayRenderHost({
+        const host = new IsolatedReplayRenderHost({
             dimensions: {width: 1920, height: 1080},
             descriptor,
             container,

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,19 +32,19 @@ describe('ReplayRecordingMonitor', () => {
         vi.restoreAllMocks()
     })
 
-    it('publishes a stable copy of the composed canvas and HQ progress metadata', () => {
+    it('publishes a stable copy of the composed canvas and export progress metadata', () => {
         const canvas = document.createElement('canvas')
         canvas.width = 320
         canvas.height = 180
 
         startReplayRecordingMonitor({
-            mode: 'hq',
+            mode: 'export',
             frameCount: 10,
             videoDurationMillis: 5000,
         })
         publishReplayRecordingMonitorFrame({
             canvas,
-            mode: 'hq',
+            mode: 'export',
             phase: 'rendering',
             progress: 0.4,
             frameIndex: 3,
@@ -59,7 +59,7 @@ describe('ReplayRecordingMonitor', () => {
 
         expect(getReplayRecordingMonitorSnapshot()).toMatchObject({
             active: true,
-            mode: 'hq',
+            mode: 'export',
             phase: 'rendering',
             progress: 0.4,
             frameCanvas: expect.any(HTMLCanvasElement),
@@ -84,8 +84,8 @@ describe('ReplayRecordingMonitor', () => {
             canvas.height = 180
         })
 
-        startReplayRecordingMonitor({mode: 'hq'})
-        frames.forEach(canvas => publishReplayRecordingMonitorFrame({canvas, mode: 'hq'}))
+        startReplayRecordingMonitor({mode: 'export'})
+        frames.forEach(canvas => publishReplayRecordingMonitorFrame({canvas, mode: 'export'}))
 
         const stableFrame = getReplayRecordingMonitorSnapshot().frameCanvas
         expect(drawImage).toHaveBeenCalled()
@@ -108,8 +108,8 @@ describe('ReplayRecordingMonitor', () => {
         const sourceCanvas = document.createElement('canvas')
         sourceCanvas.width = 320
         sourceCanvas.height = 180
-        startReplayRecordingMonitor({mode: 'hq'})
-        publishReplayRecordingMonitorFrame({canvas: sourceCanvas, mode: 'hq'})
+        startReplayRecordingMonitor({mode: 'export'})
+        publishReplayRecordingMonitorFrame({canvas: sourceCanvas, mode: 'export'})
 
         const drawImage = vi.fn()
         const externalCanvas = {
@@ -134,7 +134,7 @@ describe('ReplayRecordingMonitor', () => {
     it('notifies subscribers and clears the frame on terminal cleanup', () => {
         const listener = vi.fn()
         const unsubscribe = subscribeReplayRecordingMonitor(listener)
-        startReplayRecordingMonitor({mode: 'hq'})
+        startReplayRecordingMonitor({mode: 'export'})
         stopReplayRecordingMonitor()
         unsubscribe()
 

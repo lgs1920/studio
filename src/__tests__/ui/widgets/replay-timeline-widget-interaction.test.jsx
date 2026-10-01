@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-08
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -137,7 +137,7 @@ const installGlobals = () => {
                     fps:                  0,
                     preRecording:         false,
                     recording:             false,
-                    recordingHQ:           false,
+                    exporting:           false,
                     finalizing:            false,
                 },
                 widget: {current: {id: null, rotate: 0}, list: proxyMap()},

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-20
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -30,7 +30,7 @@ const resolveCurrentBoard = () => {
 
     if (lgs.stores.ui.video.editing
         || lgs.stores.ui.video.preRecording
-        || lgs.stores.ui.video.recordingHQ
+        || lgs.stores.ui.video.exporting
         || lgs.stores.ui.video.snapshot
         || lgs.stores.ui.video.finalizing
         || lgs.stores.ui.video.cropper?.widgetEditor === true

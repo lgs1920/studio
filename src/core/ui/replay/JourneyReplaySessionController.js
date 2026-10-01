@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -1140,7 +1140,7 @@ export class JourneyReplaySessionController {
     /**
      * Return the camera state captured before replay entry.
      *
-     * @returns {Object|null} The pre-replay camera snapshot used for restoration and HQ preparation.
+     * @returns {Object|null} The pre-replay camera snapshot used for restoration and export preparation.
      */
     get savedCameraState() {
         return cloneReplayCameraState(this[JOURNEY_REPLAY_INTERNAL_STATE].savedCameraState)

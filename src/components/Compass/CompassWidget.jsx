@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-14
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -40,7 +40,7 @@ export const CompassWidget = ({id, context, zIndex, widgetsBoard: persistedWidge
     const fixedVideoCompass = widgetsBoard === VIDEO_WIDGETS_BOARD
     const simpleReplay = replay.simplePreparationActive === true
     const showDuringVideoCapture = widgetsBoard === VIDEO_WIDGETS_BOARD
-        && (video.editing || video.preRecording || video.recordingHQ || video.snapshot || video.finalizing)
+        && (video.editing || video.preRecording || video.exporting || video.snapshot || video.finalizing)
     const container = useMemo(() => __.ui.widgetManager.resolveWidgetsBoardContainer(widgetsBoard), [widgetsBoard])
 
     // Memoize widget configuration

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -623,7 +623,7 @@ describe('JourneyReplayCesiumRenderer', () => {
         expect(Cartesian3.equals(renderedEnd, Cartesian3.fromDegrees(guideEnd.longitude, guideEnd.latitude, 0))).toBe(true)
     })
 
-    it('can align the HQ marker with the trace without forcing a geometry rebuild', () => {
+    it('can align the export marker with the trace without forcing a geometry rebuild', () => {
         const dataSources = makeDataSources()
         installReplayGlobals({dataSources})
         const journey = makeJourney([

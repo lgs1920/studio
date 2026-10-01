@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-22
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -62,7 +62,7 @@ describe('ContextMenuRenderer video state', () => {
                         editing:      false,
                         preRecording: false,
                         recording:    false,
-                        recordingHQ:  false,
+                        exporting:  false,
                         snapshot:     false,
                         finalizing:   false,
                     }),
@@ -86,7 +86,7 @@ describe('ContextMenuRenderer video state', () => {
     })
 
     it('does not render a context menu during synchronized recording', () => {
-        globalThis.lgs.stores.ui.video.recordingHQ = true
+        globalThis.lgs.stores.ui.video.exporting = true
         globalThis.lgs.stores.replay.recordingSync = true
 
         render(<ContextMenuRenderer/>)
@@ -95,8 +95,8 @@ describe('ContextMenuRenderer video state', () => {
         expect(hideContextMenu).toHaveBeenCalledOnce()
     })
 
-    it('does not render a context menu during synchronized HQ recording', () => {
-        globalThis.lgs.stores.ui.video.recordingHQ = true
+    it('does not render a context menu during synchronized export recording', () => {
+        globalThis.lgs.stores.ui.video.exporting = true
         globalThis.lgs.stores.replay.recordingSync = true
 
         render(<ContextMenuRenderer/>)
@@ -106,7 +106,7 @@ describe('ContextMenuRenderer video state', () => {
     })
 
     it('keeps the full context menu available during non-synchronized recording', () => {
-        globalThis.lgs.stores.ui.video.recordingHQ = true
+        globalThis.lgs.stores.ui.video.exporting = true
 
         render(<ContextMenuRenderer/>)
 
@@ -115,7 +115,7 @@ describe('ContextMenuRenderer video state', () => {
     })
 
     it('keeps the replay monitor context menu available during synchronized recording', () => {
-        globalThis.lgs.stores.ui.video.recordingHQ = true
+        globalThis.lgs.stores.ui.video.exporting = true
         globalThis.lgs.stores.replay.recordingSync = true
         globalThis.lgs.stores.ui.contextMenu.type = 'widget'
         globalThis.lgs.stores.ui.contextMenu.targetId = REPLAY_RECORDING_MONITOR_WIDGET_ID

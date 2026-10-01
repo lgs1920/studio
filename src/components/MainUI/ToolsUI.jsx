@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-19
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -73,7 +73,7 @@ export const ToolsUI = () => {
     }, [renderLinkedTimeline])
 
     useEffect(() => {
-        const captureActive = video.preRecording || video.recordingHQ || video.snapshot || video.finalizing
+        const captureActive = video.preRecording || video.exporting || video.snapshot || video.finalizing
         const replayLinked = replay.recordingSync === true || replay.simplePreparationActive === true
         const preparationActive = video.editing && replayLinked && !captureActive
         if (!preparationActive) {
@@ -98,7 +98,7 @@ export const ToolsUI = () => {
         return () => {
             transitionActive = false
         }
-    }, [replay.recordingSync, replay.simplePreparationActive, video.editing, video.finalizing, video.preRecording, video.recordingHQ, video.snapshot])
+    }, [replay.recordingSync, replay.simplePreparationActive, video.editing, video.finalizing, video.preRecording, video.exporting, video.snapshot])
 
     useEffect(() => {
         const appContainer = document.getElementById('lgs1920-container')
@@ -108,13 +108,13 @@ export const ToolsUI = () => {
 
         const cropInputMode = video.editing
             || video.preRecording
-            || video.recordingHQ
+            || video.exporting
             || video.snapshot
             || video.finalizing
         appContainer.classList.toggle('lgs-video-crop-input-mode', cropInputMode)
 
         return () => appContainer.classList.remove('lgs-video-crop-input-mode')
-    }, [video.editing, video.preRecording, video.recordingHQ, video.snapshot, video.finalizing])
+    }, [video.editing, video.preRecording, video.exporting, video.snapshot, video.finalizing])
 
     return (
         <div id="lgs-tools-ui">
@@ -144,7 +144,7 @@ export const ToolsUI = () => {
             ) : (
 
                 <>
-                    {(video.preRecording || video.recordingHQ || video.snapshot || video.finalizing) &&
+                    {(video.preRecording || video.exporting || video.snapshot || video.finalizing) &&
                         <VideoRecordingScreenArea/>}
                     <CameraAndTargetPanel/>
                     {usage && <JourneyToolbarWidget id={JOURNEY_TOOLBAR_WIDGET}/>}

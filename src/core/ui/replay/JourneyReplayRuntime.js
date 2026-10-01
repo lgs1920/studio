@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -53,7 +53,7 @@ const optionalFiniteNumber = value => {
 
 /**
  * Build a normalized replay frame payload shared by live playback, clip
- * playback, and HQ export.
+ * playback, and Replay export.
  *
  * @param {object} options - Frame payload options.
  * @returns {object} Normalized frame payload.
@@ -307,7 +307,7 @@ export const isJourneyReplayVideoCaptureActive = () => {
                               || settings?.recordingSync === true
                               || store?.simplePreparationActive === true
     const videoCaptureActive = video?.preRecording === true
-                                || video?.recordingHQ === true
+                                || video?.exporting === true
                                 || video?.snapshot === true
                                 || video?.finalizing === true
     const captureStateKnown = Boolean(video)

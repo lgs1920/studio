@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-07-10
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -474,11 +474,6 @@
     margin: 0;
 }
 
-#video-preview-dialog .video-preview-create-hq-action {
-    display: inline-flex;
-    align-items: center;
-}
-
 #video-preview-dialog .video-file-actions {
     position: relative;
     width: 100%;
@@ -817,11 +812,6 @@
 
     #video-preview-dialog .video-preview-close-action {
         display: none;
-    }
-
-    #video-preview-dialog .video-preview-create-hq-action {
-        flex: 0 0 100%;
-        justify-content: flex-end;
     }
 
 }

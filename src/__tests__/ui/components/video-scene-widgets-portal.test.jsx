@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-27
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -190,9 +190,9 @@ describe('VideoSceneWidgetsPortal', () => {
         )
     })
 
-    it('rehydrates the video board during deterministic HQ recording', async () => {
+    it('rehydrates the video board during deterministic export recording', async () => {
         globalThis.lgs.stores.ui.video.editing = false
-        globalThis.lgs.stores.ui.video.recordingHQ = true
+        globalThis.lgs.stores.ui.video.exporting = true
         globalThis.lgs.stores.replay.recordingSync = true
 
         render(<VideoSceneWidgetsPortal context={proxy({})}/>)

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -448,9 +448,9 @@ describe('replay settings normalization', () => {
         expect(replayFrameLeadSeconds({fps: 15, frameIntervalMs: 1000 / 60})).toBeCloseTo(1 / 60, 6)
     })
 
-    it('uses Interactive and HQ cadence defaults when no output interval is available', () => {
+    it('uses interactive playback and export cadence defaults when no output interval is available', () => {
         expect(replayCameraFrameLeadSeconds({renderMode: 'interactive'})).toBeCloseTo(1 / 15, 6)
-        expect(replayCameraFrameLeadSeconds({renderMode: 'hq'})).toBeCloseTo(1 / 60, 6)
+        expect(replayCameraFrameLeadSeconds({renderMode: 'export'})).toBeCloseTo(1 / 60, 6)
         expect(replayCameraFrameLeadSeconds({renderMode: 'interactive', frameIntervalMs: 1000 / 60}))
             .toBeCloseTo(1 / 60, 6)
     })

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -65,7 +65,7 @@ export const JourneyReplayCameraAngleGuide = () => {
     const replaying = isJourneyReplayCameraActive(replay)
     const replaySample = replaying ? replay.liveSample ?? replay.sample : null
     const captureActive = video.preRecording !== true && (
-        video.recordingHQ === true
+        video.exporting === true
         || video.snapshot === true
         || video.finalizing === true
         || isJourneyReplayVideoCaptureActive()

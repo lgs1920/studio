@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-18
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -543,7 +543,7 @@ describe('Widget snap behavior', () => {
         expect(view.container.querySelector('.lgs-widget')?.classList.contains('recording-locked')).toBe(false)
 
         lgs.stores.ui.video.preRecording = false
-        lgs.stores.ui.video.recordingHQ = true
+        lgs.stores.ui.video.exporting = true
         view.rerender(
             <Widget isVisible={true} config={{
                 id:             'snap-widget',
@@ -662,7 +662,7 @@ describe('Widget snap behavior', () => {
         expect(latestMoveableProps().resizable).toBe(true)
         expect(latestMoveableProps().style.pointerEvents).toBe('auto')
 
-        lgs.stores.ui.video.recordingHQ = true
+        lgs.stores.ui.video.exporting = true
         rerender(
             <Widget isVisible={true} config={{
                 id: 'video-crop-zone', group: 'test-widgets', type: LGS_VISUAL_WIDGET,

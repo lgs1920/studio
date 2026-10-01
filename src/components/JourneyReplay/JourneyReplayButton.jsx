@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-05
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -55,7 +55,7 @@ export const JourneyReplayButton = (props) => {
     const isDrawerOpen = selected !== undefined ? selected : __.ui.drawerManager?.isCurrent?.(REPLAY_DRAWER) === true
     const currentJourney = lgs.stores.main?.theJourney ?? lgs.theJourney
     const visible = Boolean(journeySlug ?? currentJourney?.slug)
-                  && !video.recordingHQ
+                  && !video.exporting
                   && !video.preRecording
                   && !video.snapshot
                   && (!showOnlyWhenLinked || isLinked)

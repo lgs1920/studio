@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -153,13 +153,13 @@ const installReplayGlobals = (journey, {dataSources = null} = {}) => {
     }
 }
 
-describe('JourneyReplayMode HQ export frames', () => {
+describe('JourneyReplayMode Replay export frames', () => {
     afterEach(() => {
         delete globalThis.lgs
         delete globalThis.__
     })
 
-    it('hides the replay marker before and during HQ start clips', async () => {
+    it('hides the replay marker before and during export start clips', async () => {
         const journey = makeJourney([
             makeTrack({
                 slug:        'track#journey#gpx#main',
@@ -258,7 +258,7 @@ describe('JourneyReplayMode HQ export frames', () => {
         }))
     })
 
-    it('descends progressively during HQ landing clips', async () => {
+    it('descends progressively during export landing clips', async () => {
         const journey = makeJourney([
             makeTrack({
                 slug:        'track#journey#gpx#main',
@@ -311,7 +311,7 @@ describe('JourneyReplayMode HQ export frames', () => {
         )).toBeGreaterThan(1)
     })
 
-    it('uses the replay camera heading for HQ zoom clip frames instead of snapping to north', async () => {
+    it('uses the replay camera heading for export zoom clip frames instead of snapping to north', async () => {
         const destinationForHeading = async heading => {
             const journey = makeJourney([
                 makeTrack({
@@ -359,7 +359,7 @@ describe('JourneyReplayMode HQ export frames', () => {
         expect(Cartesian3.distance(northDestination, replayAngleDestination)).toBeGreaterThan(100)
     })
 
-    it('uses the replay camera position mode for HQ zoom clip headings', async () => {
+    it('uses the replay camera position mode for export zoom clip headings', async () => {
         const destinationForCameraMode = async ({positionMode, heading = 0, headingOffset = 0}) => {
             const journey = makeJourney([
                 makeTrack({
@@ -423,7 +423,7 @@ describe('JourneyReplayMode HQ export frames', () => {
         expect(Cartesian3.distance(behindDestination, offsetBehindDestination)).toBeGreaterThan(100)
     })
 
-    it('renders HQ replay frames from the export controller sample', async () => {
+    it('renders Replay export frames from the export controller sample', async () => {
         const journey = makeJourney([
             makeTrack({
                 slug:        'track#journey#gpx#main',
@@ -479,7 +479,7 @@ describe('JourneyReplayMode HQ export frames', () => {
         }))
     })
 
-    it('updates the camera only through the deterministic HQ frame path', async () => {
+    it('updates the camera only through the deterministic export frame path', async () => {
         const journey = makeJourney([
             makeTrack({
                 slug:        'track#journey#gpx#main',
@@ -506,7 +506,7 @@ describe('JourneyReplayMode HQ export frames', () => {
         expect(renderer.update).toHaveBeenCalledTimes(1)
     })
 
-    it('uses the corrected up vector for deterministic HQ navigation following', async () => {
+    it('uses the corrected up vector for deterministic export navigation following', async () => {
         const journey = makeJourney([
             makeTrack({
                 slug:        'track#journey#gpx#main',
@@ -564,7 +564,7 @@ describe('JourneyReplayMode HQ export frames', () => {
         }))
     })
 
-    it('uses the corrected up vector for deterministic HQ dynamic following', async () => {
+    it('uses the corrected up vector for deterministic export dynamic following', async () => {
         const journey = makeJourney([
             makeTrack({
                 slug:        'track#journey#gpx#main',
@@ -609,7 +609,7 @@ describe('JourneyReplayMode HQ export frames', () => {
         }))
     })
 
-    it('keeps the replay trace visible on the final HQ scene frame after stop clips', async () => {
+    it('keeps the replay trace visible on the final export scene frame after stop clips', async () => {
         const journey = makeJourney([
             makeTrack({
                 slug:        'track#journey#gpx#main',
@@ -666,7 +666,7 @@ describe('JourneyReplayMode HQ export frames', () => {
     })
 
 
-    it('prepares the replay renderer for HQ export even when playback is not already configured', async () => {
+    it('prepares the replay renderer for Replay export even when playback is not already configured', async () => {
         const journey = makeJourney([
             makeTrack({
                 slug:        'track#journey#gpx#main',
@@ -721,7 +721,7 @@ describe('JourneyReplayMode HQ export frames', () => {
         }))
     })
 
-    it('renders a visible completed trace on HQ stop clips after export preparation', async () => {
+    it('renders a visible completed trace on export stop clips after export preparation', async () => {
         const dataSources = makeDataSources()
         const journey = makeJourney([
             makeTrack({

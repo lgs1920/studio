@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -113,7 +113,7 @@ export const cancelVideoRecording = async ({invalidateRecording = null} = {}) =>
         if (videoStore) {
             Object.assign(videoStore, {
                 preRecording: false,
-                recordingHQ:  false,
+                exporting:  false,
                 snapshot:     false,
                 paused:       false,
                 size:         0,

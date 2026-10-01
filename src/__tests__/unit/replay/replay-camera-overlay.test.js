@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -218,7 +218,7 @@ describe('replay camera diagnostics overlay', () => {
         expect(container.querySelector('.replay-tolerance-zone-overlay')).toBeNull()
     })
 
-    it('restores linked diagnostics visibility when preparing the HQ scene', async () => {
+    it('restores linked diagnostics visibility when preparing the export scene', async () => {
         const settings = defaultJourneyReplaySettings()
         settings.userMode = 'expert'
         settings.camera.debug = true

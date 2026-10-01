@@ -2,20 +2,20 @@
  *
  * This file is part of the LGS1920/studio project.
  *
- * File: IsolatedHqReplayRenderHost.js
+ * File: IsolatedReplayRenderHost.js
  *
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-10-01
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 /**
- * Isolated Cesium render host for deterministic HQ replay frames.
+ * Isolated Cesium render host for deterministic Replay export frames.
  */
 
 import {CesiumWidget, ImageryLayer} from 'cesium'
@@ -61,10 +61,10 @@ const normalizeReplayHostViewportDimensions = dimensions => ({
 const createReplayHostContainer = dimensions => {
     const container = globalThis.document?.createElement?.('div')
     if (!container) {
-        throw new Error('An isolated HQ replay host requires a DOM document')
+        throw new Error('An isolated Replay render host requires a DOM document')
     }
 
-    container.dataset.replayRenderHost = 'hq'
+    container.dataset.replayRenderHost = 'isolated'
     container.setAttribute('aria-hidden', 'true')
     container.style.position = 'fixed'
     container.style.left = '-100000px'
@@ -114,7 +114,7 @@ const applyReplayHostEnvironment = (scene, descriptor) => {
 /**
  * Own a hidden CesiumWidget with no default render loop or interactive camera.
  */
-export class IsolatedHqReplayRenderHost {
+export class IsolatedReplayRenderHost {
     #dimensions
     #viewportDimensions
     #descriptor
@@ -131,7 +131,7 @@ export class IsolatedHqReplayRenderHost {
     #destroyed = false
 
     /**
-     * Create an isolated HQ host without allocating Cesium resources yet.
+     * Create an isolated render host without allocating Cesium resources yet.
      *
      * @param {Object} options - Host dimensions, scene descriptor, and factories.
      */
@@ -179,17 +179,17 @@ export class IsolatedHqReplayRenderHost {
     /**
      * Initialize the isolated widget and clone active scene layers.
      *
-     * @returns {Promise<IsolatedHqReplayRenderHost>} Initialized host.
+     * @returns {Promise<IsolatedReplayRenderHost>} Initialized host.
      */
     initialize = async () => {
         if (this.#destroyed) {
-            throw new Error('Cannot initialize a destroyed HQ replay render host')
+            throw new Error('Cannot initialize a destroyed isolated Replay render host')
         }
         if (this.#widget) {
             return this
         }
         if (!this.#descriptor) {
-            throw new Error('Cannot initialize an HQ replay host without a scene descriptor')
+            throw new Error('Cannot initialize the isolated Replay render host without a scene descriptor')
         }
 
         this.#container ??= createReplayHostContainer(this.#viewportDimensions)
@@ -227,7 +227,7 @@ export class IsolatedHqReplayRenderHost {
             const tileset = await this.#createTileset(this.#descriptor.base3dDefinition)
             if (this.#destroyed) {
                 tileset?.destroy?.()
-                throw new DOMException('HQ replay host initialization was aborted', 'AbortError')
+                throw new DOMException('Replay export host initialization was aborted', 'AbortError')
             }
             this.#widget.scene?.primitives?.add?.(tileset)
         }
@@ -293,7 +293,7 @@ export class IsolatedHqReplayRenderHost {
     } = {}) => {
         await this.initialize()
         if (signal?.aborted || this.#destroyed) {
-            throw new DOMException('HQ replay frame rendering was aborted', 'AbortError')
+            throw new DOMException('Replay export frame rendering was aborted', 'AbortError')
         }
 
         const appliedFrame = applyReplayCesiumCameraCommand({
@@ -302,7 +302,7 @@ export class IsolatedHqReplayRenderHost {
             scene: this.#widget.scene,
         })
         if (!appliedFrame) {
-            throw new Error('The HQ replay frame does not contain an applicable camera command')
+            throw new Error('The Replay export frame does not contain an applicable camera command')
         }
 
         this.#widget.resize?.()
@@ -334,7 +334,7 @@ export class IsolatedHqReplayRenderHost {
     } = {}) => {
         await this.initialize()
         if (signal?.aborted || this.#destroyed) {
-            throw new DOMException('HQ replay frame preparation was aborted', 'AbortError')
+            throw new DOMException('Replay export frame preparation was aborted', 'AbortError')
         }
 
         this.#widget.resize?.()

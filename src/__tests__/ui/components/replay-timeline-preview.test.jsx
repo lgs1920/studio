@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -105,7 +105,7 @@ describe('ReplayTimelinePreview', () => {
                         fps: 0,
                         preRecording: false,
                         recording: false,
-                        recordingHQ: false,
+                        exporting: false,
                         finalizing: false,
                     }),
                 },
@@ -262,7 +262,7 @@ describe('ReplayTimelinePreview', () => {
         expect(globalThis.__.ui.replay.stop).toHaveBeenCalledOnce()
         expect(globalThis.lgs.stores.replay.toolbarVisible).toBe(false)
         expect(globalThis.lgs.stores.ui.video.preRecording).toBe(false)
-        expect(globalThis.lgs.stores.ui.video.recordingHQ).toBe(false)
+        expect(globalThis.lgs.stores.ui.video.exporting).toBe(false)
     })
 
     it('routes the timeline start control through the canonical settled scrub scheduler', async () => {

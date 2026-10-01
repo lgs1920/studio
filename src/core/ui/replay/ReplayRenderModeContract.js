@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@
  */
 
 export const REPLAY_RENDER_MODE_INTERACTIVE = 'interactive'
-export const REPLAY_RENDER_MODE_HQ = 'hq'
+export const REPLAY_RENDER_MODE_EXPORT = 'export'
 export const REPLAY_RENDER_MODE_CONTRACT_VERSION = 1
 
 const finiteNumber = (value, fallback = null) => {
@@ -108,8 +108,8 @@ const cloneCameraState = cameraState => {
  * @param {string} mode - Requested replay render mode.
  * @returns {string} The normalized render mode.
  */
-export const normalizeReplayRenderMode = mode => mode === REPLAY_RENDER_MODE_HQ
-    ? REPLAY_RENDER_MODE_HQ
+export const normalizeReplayRenderMode = mode => mode === REPLAY_RENDER_MODE_EXPORT
+    ? REPLAY_RENDER_MODE_EXPORT
     : REPLAY_RENDER_MODE_INTERACTIVE
 
 /**
@@ -147,19 +147,19 @@ export const createReplayRenderModeContract = ({
         outputProfile: cloneValue(outputProfile),
         scheduling: {
             realtime:    mode === REPLAY_RENDER_MODE_INTERACTIVE,
-            frameByFrame: mode === REPLAY_RENDER_MODE_HQ,
+            frameByFrame: mode === REPLAY_RENDER_MODE_EXPORT,
         },
     }
 }
 
 /**
- * Build the immutable context key used to reuse or invalidate a warm HQ plan.
+ * Build the immutable context key used to reuse or invalidate a warm export plan.
  *
  * @param {Object} options - Replay and render context inputs.
  * @returns {Object} Normalized context and serialized key.
  */
 export const createReplayRenderContext = ({
-                                                renderMode = REPLAY_RENDER_MODE_HQ,
+                                                renderMode = REPLAY_RENDER_MODE_EXPORT,
                                                 durationMillis = null,
                                                 direction = 1,
                                                 clipSignature = null,

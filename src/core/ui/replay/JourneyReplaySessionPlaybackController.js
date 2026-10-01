@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -130,7 +130,7 @@ import {
 } from './JourneyReplaySessionShared'
 
 /**
- * Ensure linked replay diagnostics are visible before either Interactive or HQ
+ * Ensure linked replay diagnostics are visible before either interactive playback or export
  * rendering starts.
  *
  * @param {object} mode - Replay mode.
@@ -604,7 +604,7 @@ export const start = (mode, options = {}) => {
                     state.deferStartCameraRecenter = false
                     state.skipNextImmediateStartRecenter = true
                     // Do not compile the constrained camera path synchronously here.
-                    // That bulk compilation freezes Interactive and HQ replay startup.
+                    // That bulk compilation freezes Interactive and Replay export startup.
                     traceStartStep('controller.start.begin', {phase: 'start-clips'})
                     startResult = state.controller.start({
                         progress: options.progress ?? 0,
@@ -628,7 +628,7 @@ export const start = (mode, options = {}) => {
                 skipNextImmediateStartRecenter: state.skipNextImmediateStartRecenter,
             })
             // Do not compile the constrained camera path synchronously here.
-            // That bulk compilation freezes Interactive and HQ replay startup.
+            // That bulk compilation freezes Interactive and Replay export startup.
             traceStartStep('controller.start.begin', {phase: 'no-start-clips'})
             startResult = state.controller.start({
                 progress: options.progress ?? 0,
@@ -755,7 +755,7 @@ export const preparePlaybackSceneForExport = async (mode, {
             }
         }
 
-        // Do not compile the constrained camera path synchronously during HQ preparation.
+        // Do not compile the constrained camera path synchronously during export preparation.
         // Export preparation must return control to the fixed-frame renderer immediately.
 
         call.setJourneyReplayOrbitAllowed(false)
@@ -1043,7 +1043,7 @@ export const renderReplayExportFrame = async (mode, {phase = null, frame = null,
                 state.renderer.update({
                     sample,
                     sampler:       state.sampler,
-                    // HQ frames are produced faster than wall-clock playback. Bypass the
+                    // Export frames are produced faster than wall-clock playback. Bypass the
                     // interactive renderer throttle so every encoded frame owns its trace.
                     forceGeometry: true,
                     syncCursorToTrace: true,
@@ -1063,7 +1063,7 @@ export const renderReplayExportFrame = async (mode, {phase = null, frame = null,
                                      ?? finiteNumber(phase?.frameIntervalMs)
                                      ?? null,
                     phase,
-                    source:          'hq-export',
+                    source:          'replay-export',
                 })
                 call.updateCamera({
                     sample,
@@ -1103,7 +1103,7 @@ export const renderReplayExportFrame = async (mode, {phase = null, frame = null,
         }
         const hideClipCursor = phase?.slot === REPLAY_CLIP_SLOT_START
                                || phase?.slot === REPLAY_CLIP_SLOT_STOP
-        // HQ must capture the final Cesium trace after the last scene render.
+        // The export must capture the final Cesium trace after the last scene render.
         // Freeze it as terrain-compatible geometry for that frame so a dynamic
         // CallbackProperty cannot leave the encoded frame one render behind.
         const isFinalExportFrame = phase?.isFinalSceneFrame === true

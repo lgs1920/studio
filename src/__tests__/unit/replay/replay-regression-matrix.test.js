@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,7 +23,7 @@ import {
 import {
     createReplayRenderModeContract,
     REPLAY_RENDER_MODE_INTERACTIVE,
-    REPLAY_RENDER_MODE_HQ,
+    REPLAY_RENDER_MODE_EXPORT,
 } from '@Core/ui/replay/ReplayRenderModeContract'
 import {describe, expect, it} from 'vitest'
 
@@ -33,7 +33,7 @@ import {
     REPLAY_REGRESSION_VIEWPORTS,
 } from './replay-regression-fixtures'
 
-const renderModes = [REPLAY_RENDER_MODE_INTERACTIVE, REPLAY_RENDER_MODE_HQ]
+const renderModes = [REPLAY_RENDER_MODE_INTERACTIVE, REPLAY_RENDER_MODE_EXPORT]
 
 describe('replay regression matrix', () => {
     it('freezes the navigation Z1 geometry for standard and narrow crops', () => {
@@ -51,9 +51,9 @@ describe('replay regression matrix', () => {
         const narrowBounds = replayToleranceZoneBounds(narrowZone)
 
         expect(trackingByRenderMode[REPLAY_RENDER_MODE_INTERACTIVE].navigation.triggerZone)
-            .toEqual(trackingByRenderMode[REPLAY_RENDER_MODE_HQ].navigation.triggerZone)
+            .toEqual(trackingByRenderMode[REPLAY_RENDER_MODE_EXPORT].navigation.triggerZone)
         expect(narrowTrackingByRenderMode[REPLAY_RENDER_MODE_INTERACTIVE].navigation.triggerZone)
-            .toEqual(narrowTrackingByRenderMode[REPLAY_RENDER_MODE_HQ].navigation.triggerZone)
+            .toEqual(narrowTrackingByRenderMode[REPLAY_RENDER_MODE_EXPORT].navigation.triggerZone)
         expect(standardBounds.left).toBeCloseTo(0.35, 6)
         expect(standardBounds.top).toBeCloseTo(0.35, 6)
         expect(standardBounds.right).toBeCloseTo(0.65, 6)
@@ -71,9 +71,9 @@ describe('replay regression matrix', () => {
         ]))
         const viewport = REPLAY_REGRESSION_VIEWPORTS.standard
         const interactiveTracking = trackingByRenderMode[REPLAY_RENDER_MODE_INTERACTIVE]
-        const hqTracking = trackingByRenderMode[REPLAY_RENDER_MODE_HQ]
+        const exportTracking = trackingByRenderMode[REPLAY_RENDER_MODE_EXPORT]
 
-        expect(interactiveTracking).toEqual(hqTracking)
+        expect(interactiveTracking).toEqual(exportTracking)
         expect(interactiveTracking.navigation.targetZone).toBeUndefined()
         expect(replayIsWindowPointOutsideToleranceZone({
                                                               point:  {x: viewport.width * 0.5, y: viewport.height * 0.5},
@@ -96,9 +96,9 @@ describe('replay regression matrix', () => {
         ]))
         const viewport = REPLAY_REGRESSION_VIEWPORTS.standard
         const interactiveTracking = trackingByRenderMode[REPLAY_RENDER_MODE_INTERACTIVE]
-        const hqTracking = trackingByRenderMode[REPLAY_RENDER_MODE_HQ]
+        const exportTracking = trackingByRenderMode[REPLAY_RENDER_MODE_EXPORT]
 
-        expect(interactiveTracking).toEqual(hqTracking)
+        expect(interactiveTracking).toEqual(exportTracking)
         const dynamicTriggerBounds = replayToleranceZoneBounds(interactiveTracking.dynamic.triggerZone)
         const dynamicTargetBounds = replayToleranceZoneBounds(interactiveTracking.dynamic.targetZone)
 
@@ -138,12 +138,12 @@ describe('replay regression matrix', () => {
 
     it('freezes one-frame lookahead from each mode configured cadence', () => {
         const configuredInteractiveFps = 12
-        const configuredHqFps = 48
+        const configuredExportFps = 48
 
         expect(replayFrameLeadSeconds({fps: configuredInteractiveFps})).toBeCloseTo(1 / configuredInteractiveFps, 6)
-        expect(replayFrameLeadSeconds({fps: configuredHqFps})).toBeCloseTo(1 / configuredHqFps, 6)
-        expect(replayFrameLeadSeconds({fps: configuredInteractiveFps, frameIntervalMs: 1000 / configuredHqFps}))
-            .toBeCloseTo(1 / configuredHqFps, 6)
+        expect(replayFrameLeadSeconds({fps: configuredExportFps})).toBeCloseTo(1 / configuredExportFps, 6)
+        expect(replayFrameLeadSeconds({fps: configuredInteractiveFps, frameIntervalMs: 1000 / configuredExportFps}))
+            .toBeCloseTo(1 / configuredExportFps, 6)
     })
 
     it('freezes the shared initial camera and logical frame while keeping scheduling separate', () => {
@@ -153,17 +153,17 @@ describe('replay regression matrix', () => {
             cameraPose:        {heading: 0.4, pitch: -0.7, cameraHeight: 2400},
             initialCameraState: REPLAY_REGRESSION_CAMERA_STATE,
         })
-        const hq = createReplayRenderModeContract({
-            renderMode:        REPLAY_RENDER_MODE_HQ,
+        const exportContract = createReplayRenderModeContract({
+            renderMode:        REPLAY_RENDER_MODE_EXPORT,
             logicalFrame:      REPLAY_REGRESSION_LOGICAL_FRAME,
             cameraPose:        {heading: 0.4, pitch: -0.7, cameraHeight: 2400},
             initialCameraState: REPLAY_REGRESSION_CAMERA_STATE,
         })
 
-        expect(interactive.initialCameraState).toEqual(hq.initialCameraState)
-        expect(interactive.logicalFrame).toEqual(hq.logicalFrame)
-        expect(interactive.cameraPose).toEqual(hq.cameraPose)
+        expect(interactive.initialCameraState).toEqual(exportContract.initialCameraState)
+        expect(interactive.logicalFrame).toEqual(exportContract.logicalFrame)
+        expect(interactive.cameraPose).toEqual(exportContract.cameraPose)
         expect(interactive.scheduling).toEqual({realtime: true, frameByFrame: false})
-        expect(hq.scheduling).toEqual({realtime: false, frameByFrame: true})
+        expect(exportContract.scheduling).toEqual({realtime: false, frameByFrame: true})
     })
 })

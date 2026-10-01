@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-20
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -95,11 +95,11 @@ export const Compass = ({fixed, inWidget = false, entity, syncBounds = true}) =>
             return
         }
 
-        const isHqRecording = lgs.stores.ui.video?.recordingHQ === true
-        const hqFrame = isHqRecording ? resolvePublishedReplayExportFrame() : null
+        const isExporting = lgs.stores.ui.video?.exporting === true
+        const exportFrame = isExporting ? resolvePublishedReplayExportFrame() : null
         const heading = resolveCompassCameraHeading({
-            hqFrame,
-            fallbackHeading: isHqRecording ? null : lgs.camera?.heading,
+            exportFrame,
+            fallbackHeading: isExporting ? null : lgs.camera?.heading,
         })
         if (heading === null) {
             return

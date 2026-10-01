@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -140,7 +140,7 @@ const resolveReplayFrameWindow = replayState => {
 }
 
 /**
- * Return the deterministic frame currently rendered by the HQ exporter.
+ * Return the deterministic frame currently rendered by the Replay exporter.
  *
  * This state wins over the live controller/store snapshot so dynamic widgets
  * can render the exact frame being encoded instead of the last live replay
@@ -198,7 +198,7 @@ export const hasJourneyReplayStopClips = () => {
 export const isVideoWidgetEditorPhase = () => {
     const video = globalThis.lgs?.stores?.ui?.video ?? null
     return Boolean(video?.editing || video?.preRecording)
-           && !video?.recordingHQ
+           && !video?.exporting
            && !video?.finalizing
            && !video?.snapshot
 }
@@ -219,13 +219,13 @@ export const shouldRenderVideoBoardWidget = ({
                                                   video = null,
                                                   replay = null,
                                               } = {}) => {
-    const isHqExporting = replay?.deferredExportPlan?.runtime?.status === 'exporting'
+    const isReplayExporting = replay?.deferredExportPlan?.runtime?.status === 'exporting'
     const isVideoCaptureActive = video?.editing
                                   || video?.preRecording
-                                  || video?.recordingHQ
+                                  || video?.exporting
                                   || video?.snapshot
                                   || video?.finalizing
-                                  || isHqExporting
+                                  || isReplayExporting
 
     return Boolean(widgetEditor || (widgetsBoard === VIDEO_WIDGETS_BOARD && isVideoCaptureActive))
 }

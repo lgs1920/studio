@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-04
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -506,7 +506,7 @@ export const VideoDownloadAndShareDialog = () => {
         setMediaUrl(null)
         Object.assign(lgs.stores.ui.video, {
             preRecording:     false,
-            recordingHQ:      false,
+            exporting:      false,
             paused:           false,
             size:             0,
             editing:          false,

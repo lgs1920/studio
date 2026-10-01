@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-17
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -244,10 +244,10 @@ const replayCameraFootprintKey = scene => {
  */
 const createAbortError = () => {
     if (typeof DOMException === 'function') {
-        return new DOMException('The HQ replay tile readiness wait was aborted.', 'AbortError')
+        return new DOMException('The Replay export tile readiness wait was aborted.', 'AbortError')
     }
 
-    const error = new Error('The HQ replay tile readiness wait was aborted.')
+    const error = new Error('The Replay export tile readiness wait was aborted.')
     error.name = 'AbortError'
     return error
 }
@@ -372,7 +372,7 @@ const createTileFailureError = (failure, source) => {
         : failure?.message
           ?? failure?.url
           ?? (typeof failure === 'string' ? failure : 'Unknown tile failure')
-    return new Error(`HQ replay export could not load ${source}: ${message}`)
+    return new Error(`Replay export could not load ${source}: ${message}`)
 }
 
 /**
@@ -420,7 +420,7 @@ const restoreReplayTilesetSettings = settings => {
 }
 
 /**
- * Keep more 2D globe tiles resident for the duration of an HQ export.
+ * Keep more 2D globe tiles resident for the duration of a Replay export.
  *
  * Cesium owns the actual tile cache. We only increase its retention window
  * while frames are traversed and restore the user's setting afterwards.
@@ -679,7 +679,7 @@ export const prepareReplaySceneTilesForCapture = async ({
 }
 
 /**
- * Create a short-lived readiness coordinator for one HQ export.
+ * Create a short-lived readiness coordinator for one Replay export.
  *
  * The coordinator reuses successful camera footprints until Cesium reports
  * new pending work or cache eviction. It never changes Cesium's read-only

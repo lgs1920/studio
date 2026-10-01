@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-02
- * Last modified on: 2026-07-02
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -51,7 +51,7 @@ export const shouldShowVideoStatsWidget = ({
 /**
  * Resolve the journey sample used by dynamic Stats.
  *
- * The shared replay frame state is preferred so Stats, Profile, and HQ export
+ * The shared replay frame state is preferred so Stats, Profile, and Replay export
  * widgets all render from the same tick.
  */
 export const resolveDynamicJourneyReplayStatsSample = ({

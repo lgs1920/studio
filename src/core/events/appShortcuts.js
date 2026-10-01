@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -87,7 +87,7 @@ const isReplayCameraPreparationActive = () => {
 
     const videoPreparationActive = video?.editing === true
         && !video.preRecording
-        && !video.recordingHQ
+        && !video.exporting
         && !video.snapshot
         && !video.finalizing
     const replayDrawerOpen = lgs.stores.ui?.drawers?.open === REPLAY_DRAWER
@@ -489,7 +489,7 @@ const editSelectedWidget = () => {
 const selectedWidgetContext = () => {
     const video = lgs.stores?.ui?.video
 
-    if (video?.preRecording || video?.recordingHQ || video?.snapshot || video?.finalizing) {
+    if (video?.preRecording || video?.exporting || video?.snapshot || video?.finalizing) {
         return null
     }
 

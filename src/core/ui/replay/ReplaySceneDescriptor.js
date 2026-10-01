@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-24
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -79,7 +79,7 @@ const captureReplayImageryLayerDescriptor = layer => {
 }
 
 /**
- * Capture the active scene sources required by an isolated HQ replay host.
+ * Capture the active scene sources required by an isolated Replay export host.
  *
  * @param {Object} options - Source viewer and active 3D layer definition.
  * @returns {Object|null} Runtime scene descriptor.

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 import {describe, expect, it} from 'vitest'
 import {
     createReplayRenderContext, createReplayRenderModeContract, REPLAY_RENDER_MODE_INTERACTIVE,
-    REPLAY_RENDER_MODE_HQ,
+    REPLAY_RENDER_MODE_EXPORT,
 } from '@Core/ui/replay/ReplayRenderModeContract'
 import {updateReplayFrameRenderContract} from '@Core/ui/replay/JourneyReplayRuntime'
 
@@ -39,7 +39,7 @@ describe('Replay render mode contract', () => {
         pixelBudget:      921600,
     }
 
-    it('keeps visual inputs identical while isolating Interactive and HQ scheduling', () => {
+    it('keeps visual inputs identical while isolating interactive playback and export scheduling', () => {
         const common = {
             logicalFrame,
             cameraPose: {heading: 0.5, pitch: -0.75, roll: 0.35, cameraHeight: 1000},
@@ -52,18 +52,18 @@ describe('Replay render mode contract', () => {
             visibleOverlayIds: ['journey-stats-widget'],
         }
         const interactive = createReplayRenderModeContract({renderMode: REPLAY_RENDER_MODE_INTERACTIVE, ...common})
-        const hq = createReplayRenderModeContract({renderMode: REPLAY_RENDER_MODE_HQ, ...common})
+        const exportContract = createReplayRenderModeContract({renderMode: REPLAY_RENDER_MODE_EXPORT, ...common})
 
-        expect(interactive.logicalFrame).toEqual(hq.logicalFrame)
-        expect(interactive.cameraPose).toEqual(hq.cameraPose)
+        expect(interactive.logicalFrame).toEqual(exportContract.logicalFrame)
+        expect(interactive.cameraPose).toEqual(exportContract.cameraPose)
         expect(interactive.cameraPose.roll).toBeCloseTo(0.35, 8)
-        expect(interactive.trackPath).toEqual(hq.trackPath)
+        expect(interactive.trackPath).toEqual(exportContract.trackPath)
         expect(interactive.trackPath).toBe(common.trackPath)
-        expect(hq.trackPath).toBe(common.trackPath)
-        expect(interactive.renderSpec).toEqual(hq.renderSpec)
-        expect(interactive.initialCameraState).toEqual(hq.initialCameraState)
+        expect(exportContract.trackPath).toBe(common.trackPath)
+        expect(interactive.renderSpec).toEqual(exportContract.renderSpec)
+        expect(interactive.initialCameraState).toEqual(exportContract.initialCameraState)
         expect(interactive.scheduling).toEqual({realtime: true, frameByFrame: false})
-        expect(hq.scheduling).toEqual({realtime: false, frameByFrame: true})
+        expect(exportContract.scheduling).toEqual({realtime: false, frameByFrame: true})
     })
 
     it('invalidates a warm context when replay or render inputs change', () => {

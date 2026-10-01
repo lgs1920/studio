@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -194,7 +194,7 @@ const ReplayRecordingProgress = ({percentage}) => (
 )
 
 /**
- * Display normal Replay transport or the latest composed Interactive/HQ frame in a
+ * Display normal Replay transport or the latest composed interactive/export frame in a
  * host-managed widget outside the captured video widget board.
  *
  * @param {Object} props - Monitor properties.

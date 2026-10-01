@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-26
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -327,7 +327,7 @@ export const selectCameraTransferMode = (distanceMeters, thresholdKm = CAMERA_TR
  *
  * The returned object exposes a deterministic `sampleAt` function and a sampled
  * point cache so the same path can be replayed in live preview, interactive export,
- * or HQ export.
+ * or Replay export.
  *
  * @param {object} options - Path construction options.
  * @param {Cartesian3} options.start - Start position.

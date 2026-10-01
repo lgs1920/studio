@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-17
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -94,7 +94,7 @@ describe('ReplaySceneTileReadiness', () => {
         coordinator.dispose()
     })
 
-    it('retains the globe tile cache during HQ capture and restores it afterwards', () => {
+    it('retains the globe tile cache during export capture and restores it afterwards', () => {
         const scene = {
             globe: {
                 tileCacheSize: 100,

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -147,17 +147,17 @@ describe('lazy replay render plan', () => {
         expect(sampleSpy).toHaveBeenCalledTimes(1)
     })
 
-    it('produces equivalent Interactive and HQ visual intent at the same time', () => {
+    it('produces equivalent interactive playback and export visual intent at the same time', () => {
         const {resolver} = createLazyFixture()
 
         const interactive = resolver.resolveAtTimeSync(400, {renderMode: 'interactive', source: 'interactive'})
-        const hq = resolver.resolveAtTimeSync(400, {renderMode: 'hq', source: 'hq'})
+        const exportFrame = resolver.resolveAtTimeSync(400, {renderMode: 'export', source: 'export'})
 
-        expect(interactive.frame).toEqual(hq.frame)
-        expect(interactive.timeline).toEqual(hq.timeline)
-        expect(interactive.replay).toEqual(hq.replay)
-        expect(interactive.scene).toEqual(hq.scene)
-        expect(interactive.composition).toEqual(hq.composition)
+        expect(interactive.frame).toEqual(exportFrame.frame)
+        expect(interactive.timeline).toEqual(exportFrame.timeline)
+        expect(interactive.replay).toEqual(exportFrame.replay)
+        expect(interactive.scene).toEqual(exportFrame.scene)
+        expect(interactive.composition).toEqual(exportFrame.composition)
         expect(replayFrameIntentToLogicalFrame(interactive)).toEqual(expect.objectContaining({
             progress: 0.4,
             frameTimeMs: 400,

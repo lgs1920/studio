@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-01-31
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -41,7 +41,7 @@ export const JourneyStatsWidget = ({
     const video = useSnapshot(lgs.stores.ui.video)
     const widgetsBoard = contextState.widgetsBoard
                          || persistedWidgetsBoard
-                         || (video.editing || video.preRecording || video.recordingHQ || video.snapshot || video.finalizing
+                         || (video.editing || video.preRecording || video.exporting || video.snapshot || video.finalizing
                              ? VIDEO_WIDGETS_BOARD
                              : '')
     const journey = lgs.theJourney
