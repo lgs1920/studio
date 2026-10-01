@@ -3170,3 +3170,55 @@
 ## 2026-09-30 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/64bd9896877de9a657ff61c8539b91665defd286)
 
 - Recorded automatically from Git history.
+
+## 2026-09-30 — [`feat(replay): connect timeline transport controls`](https://github.com/lgs1920/studio/commit/9890623133f68b3ed87640c6f26208f2d59fe83a)
+
+- Recorded automatically from Git history.
+
+## 2026-09-30 — [`fix(replay): block canvas input without disabling widgets`](https://github.com/lgs1920/studio/commit/1fb841d5ffcf7a3b6d898002a3856d98bb21456d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-30 — [`fix(replay): suppress clips in Simple mode`](https://github.com/lgs1920/studio/commit/e922ca2a7cbedc8a92ea70c576cc2ea8c57a140f)
+
+- Recorded automatically from Git history.
+
+## 2026-10-01 — [`refactor(replay): replace HQ naming with export terminology`](https://github.com/lgs1920/studio/commit/98d94fbe7c3d910a9decdbe4d95cbe4f4abe3423)
+
+- Recorded automatically from Git history.
+
+## 2026-10-01 — [`docs(replay): remove obsolete HQ naming`](https://github.com/lgs1920/studio/commit/fbb595a3456865732e4b85bb60caff9317e904d4)
+
+- Recorded automatically from Git history.
+
+## 2026-10-01 — [`refactor(replay): finish export camera test naming`](https://github.com/lgs1920/studio/commit/06d46ec79970e5591507d8719fc0774342200913)
+
+- Recorded automatically from Git history.
+
+## 2026-10-01 — [`fix(replay): hide camera overlays during linked dry run`](https://github.com/lgs1920/studio/commit/0b300a6f505856501c73c5a6f7ad433d8c0be45c)
+
+- Recorded automatically from Git history.
+
+## 2026-10-01 — [`fix(home): smooth welcome route animation loop`](https://github.com/lgs1920/studio/commit/af6dc7e6df7dc40310c20bd5968be10425333a99)
+
+- Recorded automatically from Git history.
+
+## 2026-10-01 — [`docs(todo): track Replay camera angle synchronization`](https://github.com/lgs1920/studio/commit/abd66396bc9c2dc2ad451568e0326c0a20e9e604)
+
+- Recorded automatically from Git history.
+
+## 2026-10-01 — [`fix(home): ensure route exits before cycling`](https://github.com/lgs1920/studio/commit/46d0d9f0ff9e092d6fee7aa70decc1f73d6a4e74)
+
+- Recorded automatically from Git history.
+
+## 2026-10-01 — [`fix(replay): sync Expert camera drawer and guide`](https://github.com/lgs1920/studio/commit/61c59fda72c7cfb0047f952b41bcfc868651d118)
+
+- Recorded automatically from Git history.
+
+## 2026-10-01 — [`refactor(replay): remove obsolete Expert reset helper`](https://github.com/lgs1920/studio/commit/f21859888508e3a507c1f86d76e5166275f2553c)
+
+- Recorded automatically from Git history.
+
+## 2026-10-01 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/e81660bf99b2a0b831349605d0c63e2515ebdbac)
+
+- Recorded automatically from Git history.
