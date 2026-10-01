@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-13
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,6 +24,12 @@ import {
 } from './welcomeHeroRouteProjection'
 
 const ROUTE_DURATION = 13_000
+const ROUTE_CYCLE_FADE_DURATION = 180
+const ROUTE_CYCLE_MIN_TRACE_OPACITY = 0.72
+const ROUTE_EDGE_OVERSHOOT_PX = 8
+const ROUTE_BASE_ROTATION_X = 0.42
+const ROUTE_BASE_ROTATION_Y = -0.62
+const ROUTE_BASE_ROTATION_Z = 0.06
 const ROUTE_PATH_SAMPLE_COUNT = 260
 const TRAIL_PATH_SAMPLE_COUNT = 320
 const ROUTE_TURNS = 2
@@ -37,6 +43,7 @@ const NEON_MIDDLE_RADIUS = 0.046
 const NEON_CORE_RADIUS = 0.018
 const ROUTE_EDGE_FADE_LENGTH = 0.14
 const ROUTE_HEAD_MIN_OPACITY = 0.24
+const ROUTE_LINE_OPACITY = 0.96
 const ROUTE_SHAPE_STRETCH = 0.16
 const ROUTE_SHAPE_SQUEEZE = 0.09
 const ROUTE_SHAPE_CYCLE = 5_800
@@ -61,6 +68,7 @@ const GLOW_VERTEX_SHADER = `
 const GLOW_FRAGMENT_SHADER = `
     precision mediump float;
     uniform vec3 uColor;
+    uniform float uOpacity;
     varying float vAlpha;
 
     void main() {
@@ -68,7 +76,7 @@ const GLOW_FRAGMENT_SHADER = `
         float distanceFromCenter = length(centeredPoint);
         float softEdge = 1.0 - smoothstep(0.08, 0.5, distanceFromCenter);
         float brightCore = 1.0 - smoothstep(0.0, 0.18, distanceFromCenter);
-        float alpha = vAlpha * (softEdge * 0.82 + brightCore * 0.36);
+        float alpha = vAlpha * (softEdge * 0.82 + brightCore * 0.36) * uOpacity;
 
         if (alpha <= 0.005) discard;
         gl_FragColor = vec4(uColor, alpha);
@@ -90,6 +98,7 @@ const NEON_FRAGMENT_SHADER = `
     uniform vec3 uGlowColor;
     uniform float uGlowMix;
     uniform float uOpacity;
+    uniform float uCycleOpacity;
     uniform float uPastSpan;
     uniform float uFutureSpan;
     uniform float uProgress;
@@ -103,7 +112,7 @@ const NEON_FRAGMENT_SHADER = `
         float fade = smoothstep(0.0, 1.0, normalizedFade);
         float colorFade = smoothstep(0.0, 1.0, normalizedFade) * uGlowMix;
         vec3 color = mix(uBaseColor, uGlowColor, colorFade);
-        float alpha = fade * uOpacity;
+        float alpha = fade * uOpacity * uCycleOpacity;
 
         if (alpha <= 0.004) discard;
         gl_FragColor = vec4(color, alpha);
@@ -123,6 +132,7 @@ const createNeonMaterial = (baseColor, glowColor, opacity, glowMix) => new THREE
     transparent: true,
     uniforms: {
         uBaseColor: {value: toColor(baseColor)},
+        uCycleOpacity: {value: 1},
         uFutureSpan: {value: TRAIL_LEAD_DURATION / ROUTE_DURATION},
         uGlowColor: {value: toColor(glowColor)},
         uGlowMix: {value: glowMix},
@@ -140,6 +150,7 @@ const createGlowMaterial = (color) => new THREE.ShaderMaterial({
     transparent: true,
     uniforms: {
         uColor: {value: toColor(color)},
+        uOpacity: {value: 1},
         uSize: {value: 1.55},
     },
     vertexShader: GLOW_VERTEX_SHADER,
@@ -151,23 +162,52 @@ const getNormal = (direction) => {
     return normal.normalize()
 }
 
-const createRoute = (routeColor, glowColor) => {
+/**
+ * Projects a canvas-edge point a few CSS pixels beyond the viewport into route-local coordinates.
+ *
+ * @param {string} edge - Canvas edge used by the route endpoint.
+ * @param {number} depth - World-space Z position for the endpoint.
+ * @returns {THREE.Vector3} Route-local endpoint just outside the canvas.
+ */
+const getScreenEdgePoint = (edge, depth) => {
+    const width = Math.max(1, viewportWidth)
+    const height = Math.max(1, viewportHeight)
+    const horizontalOffset = ROUTE_EDGE_OVERSHOOT_PX * 2 / width
+    const verticalOffset = ROUTE_EDGE_OVERSHOOT_PX * 2 / height
+    const ndcX = edge === 'left'
+        ? -1 - horizontalOffset
+        : edge === 'right'
+            ? 1 + horizontalOffset
+            : randomBetween(-0.62, 0.62)
+    const ndcY = edge === 'top'
+        ? 1 + verticalOffset
+        : edge === 'bottom'
+            ? -1 - verticalOffset
+            : randomBetween(-0.62, 0.62)
+    const raycaster = new THREE.Raycaster()
+    raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera)
+    const distance = (camera.position.z - depth) / -raycaster.ray.direction.z
+    const worldPoint = raycaster.ray.at(distance, new THREE.Vector3())
+
+    return sceneRoot.worldToLocal(worldPoint)
+}
+
+/**
+ * Creates a route with entry and exit points attached to different canvas edges.
+ *
+ * @param {{r: number, g: number, b: number}} routeColor - Current route color.
+ * @param {{r: number, g: number, b: number}} glowColor - Current route glow color.
+ * @param {{previousExitEdge?: string|null, entryEdge?: string|null, exitEdge?: string|null}} [edgeOptions] - Edge constraints for this route.
+ * @returns {object} Route geometry, materials, and edge metadata.
+ */
+const createRoute = (routeColor, glowColor, {previousExitEdge = null, entryEdge: requestedEntryEdge = null, exitEdge: requestedExitEdge = null} = {}) => {
     const edges = ['left', 'right', 'top', 'bottom']
-    const entryEdge = edges[Math.floor(Math.random() * edges.length)]
-    let exitEdge = edges[Math.floor(Math.random() * edges.length)]
-
-    while (exitEdge === entryEdge) exitEdge = edges[Math.floor(Math.random() * edges.length)]
-
-    const edgePoint = (edge, depth) => {
-        const z = depth === 'entry' ? randomBetween(2.25, 3.25) : randomBetween(-4.2, -2.65)
-        if (edge === 'left') return new THREE.Vector3(-4.45, randomBetween(-2.35, 2.35), z)
-        if (edge === 'right') return new THREE.Vector3(4.45, randomBetween(-2.35, 2.35), z)
-        if (edge === 'top') return new THREE.Vector3(randomBetween(-3.25, 3.25), 2.95, z)
-        return new THREE.Vector3(randomBetween(-3.25, 3.25), -2.95, z)
-    }
-
-    const entryPoint = edgePoint(entryEdge, 'entry')
-    const exitPoint = edgePoint(exitEdge, 'exit')
+    const availableEntryEdges = edges.filter(edge => edge !== previousExitEdge)
+    const entryEdge = requestedEntryEdge ?? availableEntryEdges[Math.floor(Math.random() * availableEntryEdges.length)]
+    const availableExitEdges = edges.filter(edge => edge !== entryEdge)
+    const exitEdge = requestedExitEdge ?? availableExitEdges[Math.floor(Math.random() * availableExitEdges.length)]
+    const entryPoint = getScreenEdgePoint(entryEdge, randomBetween(2.25, 3.25))
+    const exitPoint = getScreenEdgePoint(exitEdge, randomBetween(-4.2, -2.65))
     const center = new THREE.Vector3(randomBetween(-0.45, 0.45), randomBetween(-0.25, 0.35), randomBetween(0.15, 0.55))
     const startAngle = randomBetween(0, Math.PI * 2)
     const direction = Math.random() < 0.5 ? -1 : 1
@@ -217,7 +257,7 @@ const createRoute = (routeColor, glowColor) => {
         depthWrite: false,
         gapSize: ROUTE_GAP_SIZE,
         linewidth: ROUTE_LINE_WIDTH,
-        opacity: 0.96,
+        opacity: ROUTE_LINE_OPACITY,
         transparent: true,
     })
     routeMaterial.onBeforeCompile = (shader) => {
@@ -233,7 +273,7 @@ const createRoute = (routeColor, glowColor) => {
             float alpha = opacity * edgeOpacity;`,
         )
     }
-    routeMaterial.resolution.set(1, 1)
+    routeMaterial.resolution.set(Math.max(1, viewportWidth), Math.max(1, viewportHeight))
     const routeLine = new Line2(routeGeometry, routeMaterial)
     routeLine.computeLineDistances()
     routeLine.frustumCulled = false
@@ -270,6 +310,8 @@ const createRoute = (routeColor, glowColor) => {
         pathPoints,
         poiPositions: POI_PROGRESS.map(progress => curve.getPointAt(progress)),
         routeMaterial,
+        entryEdge,
+        exitEdge,
     }
 }
 
@@ -284,6 +326,7 @@ let reducedMotion = false
 let visible = true
 let animationFrame = null
 let startedAt = null
+let activeRouteCycle = 0
 let poiReached = POI_PROGRESS.map(() => false)
 let viewportWidth = 0
 let viewportHeight = 0
@@ -293,21 +336,38 @@ const requestFrame = (callback) => globalThis.requestAnimationFrame?.(callback)
     ?? globalThis.setTimeout(() => callback(globalThis.performance.now()), 16)
 const cancelFrame = (frame) => globalThis.cancelAnimationFrame?.(frame) ?? globalThis.clearTimeout(frame)
 
+/**
+ * Updates the camera, renderer, and route endpoints for a viewport resize.
+ *
+ * @param {number} width - Canvas width in CSS pixels.
+ * @param {number} height - Canvas height in CSS pixels.
+ * @param {number} pixelRatio - Device pixel ratio requested by the host.
+ * @returns {void}
+ */
 const resize = (width, height, pixelRatio) => {
     if (!renderer || !width || !height) return
+    const sizeChanged = width !== viewportWidth || height !== viewportHeight
+    const routeEdges = route && {entryEdge: route.entryEdge, exitEdge: route.exitEdge}
     viewportWidth = width
     viewportHeight = height
     renderer.setPixelRatio(Math.min(pixelRatio || 1, MAX_PIXEL_RATIO))
     renderer.setSize(width, height, false)
     camera.aspect = width / height
     camera.updateProjectionMatrix()
-    route.routeMaterial.resolution.set(width, height)
+    route?.routeMaterial.resolution.set(width, height)
     const aspect = width / height
     const isMobile = width < 720
     const scale = isMobile ? Math.max(0.36, Math.min(0.5, aspect * 0.58)) : Math.max(0.54, Math.min(0.72, aspect * 0.46))
     sceneRoot.scale.set(scale, scale, scale)
     sceneRoot.position.x = isMobile ? 0 : 1.35
     sceneRoot.position.y = isMobile ? -1.5 : 0.05
+    sceneRoot.rotation.set(ROUTE_BASE_ROTATION_X, ROUTE_BASE_ROTATION_Y, ROUTE_BASE_ROTATION_Z)
+    sceneRoot.updateMatrixWorld(true)
+
+    if (sizeChanged && routeEdges) {
+        // Reproject both endpoints after the camera and scene scale change.
+        rebuild(routeEdges)
+    }
 }
 
 const projectPois = (timestamp) => {
@@ -342,8 +402,15 @@ const projectPois = (timestamp) => {
     self.postMessage({type: 'poi-positions', positions})
 }
 
-const rebuild = () => {
-    const nextRoute = createRoute(routeColor, glowColor)
+/**
+ * Replaces the active route and resets its route-point reveal state.
+ *
+ * @param {{previousExitEdge?: string, entryEdge?: string, exitEdge?: string}} [edgeOptions] - Edge constraints for the replacement route.
+ * @returns {void}
+ */
+const rebuild = (edgeOptions = {}) => {
+    sceneRoot.updateMatrixWorld(true)
+    const nextRoute = createRoute(routeColor, glowColor, edgeOptions)
     if (route) {
         sceneRoot.remove(route.group)
         route.group.traverse(object => {
@@ -354,7 +421,6 @@ const rebuild = () => {
     }
     route = nextRoute
     sceneRoot.add(route.group)
-    startedAt = null
     poiReached = POI_PROGRESS.map(() => false)
     POI_PROGRESS.forEach((_, index) => self.postMessage({type: 'poi', index, revealed: false}))
 }
@@ -375,15 +441,32 @@ const applyPalette = (nextRouteColor, nextGlowColor) => {
     route.markerMaterial.uniforms.uColor.value.copy(toColor(glowColor))
 }
 
+/**
+ * Advances the active route cycle and renders its current frame.
+ *
+ * @param {number} timestamp - Animation-frame timestamp in milliseconds.
+ * @returns {void}
+ */
 const render = (timestamp) => {
     if (!renderer || !route) return
     if (startedAt === null && timestamp > 0) startedAt = timestamp
-    const elapsed = startedAt === null ? 0 : (timestamp - startedAt) % ROUTE_DURATION
-    const progress = reducedMotion ? 1 : Math.max(0, Math.min(1, elapsed / ROUTE_DURATION))
-    if (!reducedMotion && progress < 0.02 && poiReached.some(Boolean)) {
-        poiReached = POI_PROGRESS.map(() => false)
-        POI_PROGRESS.forEach((_, index) => self.postMessage({type: 'poi', index, revealed: false}))
+    const elapsedSinceStart = startedAt === null || timestamp < startedAt ? 0 : timestamp - startedAt
+    const currentRouteCycle = Math.floor(elapsedSinceStart / ROUTE_DURATION)
+
+    if (!reducedMotion && currentRouteCycle !== activeRouteCycle) {
+        const previousExitEdge = route.exitEdge
+        // Match the endpoint projection transform at both ends of each animation cycle.
+        sceneRoot.rotation.set(ROUTE_BASE_ROTATION_X, ROUTE_BASE_ROTATION_Y, ROUTE_BASE_ROTATION_Z)
+        sceneRoot.updateMatrixWorld(true)
+        rebuild({previousExitEdge})
+        activeRouteCycle = currentRouteCycle
     }
+
+    const elapsed = reducedMotion ? ROUTE_DURATION : elapsedSinceStart % ROUTE_DURATION
+    const progress = reducedMotion ? 1 : Math.max(0, Math.min(1, elapsed / ROUTE_DURATION))
+    const cycleFade = Math.max(0, Math.min(1, elapsed / ROUTE_CYCLE_FADE_DURATION, (ROUTE_DURATION - elapsed) / ROUTE_CYCLE_FADE_DURATION))
+    const cycleOpacity = reducedMotion ? 1 : cycleFade
+    const traceOpacity = ROUTE_CYCLE_MIN_TRACE_OPACITY + (1 - ROUTE_CYCLE_MIN_TRACE_OPACITY) * cycleOpacity
     POI_PROGRESS.forEach((poiProgress, index) => {
         if ((reducedMotion || progress >= Math.max(0, poiProgress - POI_REVEAL_LEAD)) && !poiReached[index]) {
             poiReached[index] = true
@@ -392,14 +475,19 @@ const render = (timestamp) => {
     })
     route.neonMaterials.forEach(material => {
         material.uniforms.uProgress.value = progress
+        material.uniforms.uCycleOpacity.value = traceOpacity
     })
+    route.routeMaterial.opacity = ROUTE_LINE_OPACITY * cycleOpacity
+    route.markerMaterial.uniforms.uOpacity.value = traceOpacity
     route.curve.getPointAt(progress, route.marker.position)
     route.markerMaterial.uniforms.uSize.value = reducedMotion ? 1.55 : 1.55 + Math.sin(timestamp * 0.008) * 0.1
-    sceneRoot.rotation.x = reducedMotion ? 0.42 : 0.46 + Math.sin(timestamp * 0.00025) * 0.18
-    sceneRoot.rotation.y = reducedMotion ? -0.62 : Math.sin(timestamp * 0.00032) * 0.68
-    sceneRoot.rotation.z = reducedMotion ? 0.06 : Math.sin(timestamp * 0.00023) * 0.1
+    const routePhase = progress * Math.PI * 2
+    sceneRoot.rotation.x = ROUTE_BASE_ROTATION_X + Math.sin(routePhase) * 0.18
+    sceneRoot.rotation.y = ROUTE_BASE_ROTATION_Y * (0.5 + Math.cos(routePhase) * 0.5) + Math.sin(routePhase) * 0.68
+    sceneRoot.rotation.z = ROUTE_BASE_ROTATION_Z + Math.sin(routePhase) * 0.1
     const shapeWave = Math.sin(timestamp / ROUTE_SHAPE_CYCLE * Math.PI * 2)
-    route.group.scale.set(reducedMotion ? 1 : 1 + shapeWave * ROUTE_SHAPE_STRETCH, reducedMotion ? 1 : 1 - shapeWave * ROUTE_SHAPE_SQUEEZE, 1)
+    const routeShapeWave = Math.sin(routePhase) * (0.92 + shapeWave * 0.08)
+    route.group.scale.set(reducedMotion ? 1 : 1 + routeShapeWave * ROUTE_SHAPE_STRETCH, reducedMotion ? 1 : 1 - routeShapeWave * ROUTE_SHAPE_SQUEEZE, 1)
     projectPois(timestamp)
     renderer.render(scene, camera)
 }
@@ -427,14 +515,19 @@ self.onmessage = ({data}) => {
         camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100)
         camera.position.set(0, 0, WELCOME_ROUTE_CAMERA_DISTANCE)
         camera.lookAt(0, 0, 0)
-        rebuild()
         resize(data.width, data.height, data.pixelRatio)
+        sceneRoot.rotation.set(ROUTE_BASE_ROTATION_X, ROUTE_BASE_ROTATION_Y, ROUTE_BASE_ROTATION_Z)
+        sceneRoot.updateMatrixWorld(true)
+        rebuild()
         schedule()
         self.postMessage({type: 'ready'})
         return
     }
 
-    if (data.type === 'resize') resize(data.width, data.height, data.pixelRatio)
+    if (data.type === 'resize') {
+        resize(data.width, data.height, data.pixelRatio)
+        schedule()
+    }
     if (data.type === 'palette') {
         applyPalette(data.routeColor, data.glowColor)
         schedule()
