@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-30
- * Last modified: 2026-09-30
+ * Created on: 2026-09-25
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,6 @@ import {
     initializeExpertReplayFromSimple,
     normalizeSimpleReplaySettings,
     normalizeReplayUserMode,
-    resetExpertReplayFromSimple,
     resolveSimpleReplaySettings,
     syncJourneyExpertReplayCamera,
     REPLAY_USER_MODE_BASIC,
@@ -104,15 +103,6 @@ describe('Replay user modes', () => {
             camera: {positionMode: 'system'},
         }).expert.camera.positionMode).toBe('behind')
         expect(initializeExpertReplayFromSimple(existing, simple)).toBe(existing.replay)
-    })
-
-    it('resets Expert only through the explicit reset operation', () => {
-        const simple = defaultSimpleReplaySettings()
-        const journey = {replay: {expert: {camera: {altitude: 500}, timeline: {zoomPercent: 50}}}}
-        const reset = resetExpertReplayFromSimple(journey, simple)
-
-        expect(reset.expert.camera.altitude).toBe(simple.camera.altitude)
-        expect(reset.expert.timeline.zoomPercent).toBe(50)
     })
 
     it('uses and persists the edited Expert camera as the journey replay camera', () => {

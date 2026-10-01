@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-30
- * Last modified: 2026-09-30
+ * Created on: 2026-09-25
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -332,20 +332,3 @@ export const initializeExpertReplayFromSimple = (journey, simple) => {
         },
     }
 }
-
-/**
- * Reset Expert camera and presentation settings from Simple Replay explicitly.
- *
- * @param {Object} journey - Journey data to update.
- * @param {Object} simple - Effective Simple Replay settings.
- * @returns {Object} Journey replay data.
- */
-export const resetExpertReplayFromSimple = (journey, simple) => ({
-    ...(journey?.replay ?? {}),
-    expert: {
-        ...journey?.replay?.expert,
-        camera: normalizeExpertReplayCamera(simple?.camera),
-        progression: normalizeJourneyReplayProgressionStyle(simple?.presentation?.progression),
-        profileInfo: normalizeJourneyReplayProfileInfo(simple?.presentation?.profileInfo),
-    },
-})
