@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -39,6 +39,11 @@ import {
 } from './JourneyReplayProgressionStyle'
 
 export {replayCameraSettingsFromArrowKey}
+
+/**
+ * Event emitted when direct map-guide interaction changes Replay camera settings.
+ */
+export const REPLAY_CAMERA_ANGLE_GUIDE_CHANGE_EVENT = 'lgs:replay:camera-angle-guide-change'
 
 const CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS = 1200
 const CAMERA_ANGLE_GUIDE_CONE_BASE_HALF_WIDTH_METERS = 240

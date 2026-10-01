@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { cleanup, fireEvent, render, waitFor }            from '@testing-library/react'
-import { useState }                                        from 'react'
+import { act, cleanup, fireEvent, render, waitFor }       from '@testing-library/react'
+import { forwardRef, useState }                            from 'react'
 import { REPLAY_DRAWER }                               from '@Core/constants'
 import {
     defaultJourneyReplaySettings, REPLAY_CAMERA_PRESET_ULTRA_SMOOTH, REPLAY_MARKER_MODE_HYSTERESIS,
@@ -24,10 +24,32 @@ import {
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { createJourneyReplayClipInstance }                          from '@Core/ui/replay/JourneyReplayClips'
 import { JourneyReplayDrawer }                                from '@Components/JourneyReplay/JourneyReplayDrawer'
+import { JourneyReplayCameraAngleGuide } from '@Components/JourneyReplay/JourneyReplayCameraAngleGuide'
 import { ELEVATION_UNITS, UnitUtils }                      from '@Utils/UnitUtils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy }                                           from 'valtio'
 import { proxyMap }                                        from 'valtio/utils'
+
+const cameraGuideHarness = vi.hoisted(() => ({
+    mount: vi.fn(() => true),
+    remove: vi.fn(),
+    resolve: vi.fn(({camera}) => ({
+        angleDegrees: -(camera.headingOffset ?? 0),
+        anchor: {height: 0, latitude: 48, longitude: 2},
+        coneHeading: camera.headingOffset ?? 0,
+        mode: camera.positionMode === 'ahead' ? 'Ahead' : 'Behind',
+    })),
+    changeEvent: 'lgs:replay:camera-angle-guide-change',
+    update: vi.fn(() => true),
+}))
+
+vi.mock('@Core/ui/replay/JourneyReplayCameraAngleGuide', () => ({
+    REPLAY_CAMERA_ANGLE_GUIDE_CHANGE_EVENT: cameraGuideHarness.changeEvent,
+    mountJourneyReplayCameraAngleGuide: cameraGuideHarness.mount,
+    removeJourneyReplayCameraAngleGuide: cameraGuideHarness.remove,
+    resolveJourneyReplayCameraAngleGuide: cameraGuideHarness.resolve,
+    updateJourneyReplayCameraAngleGuide: cameraGuideHarness.update,
+}))
 
 vi.mock('@Components/DrawerFooter', () => ({
     default: () => <div data-testid="drawer-footer"/>,
@@ -99,12 +121,12 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => {
             <select aria-label={label} value={value} onChange={onChange} {...props}>{children}</select>
         </label>
     )
-    const WaSlider = ({label, onInput, value, ...props}) => (
+    const WaSlider = forwardRef(({label, onInput, value, ...props}, ref) => (
         <label>
             {label}
-            <input type="range" aria-label={label} value={value} onInput={onInput} {...props}/>
+            <input ref={ref} type="range" aria-label={label} value={value} onInput={onInput} {...props}/>
         </label>
-    )
+    ))
     const WaSwitch = ({children, checked, onChange, onInput, ...props}) => (
         <label>
             <input type="checkbox" checked={checked} onChange={onInput ?? onChange} {...props}/>
@@ -300,6 +322,7 @@ describe('JourneyReplayDrawer', () => {
 
     afterEach(() => {
         cleanup()
+        vi.clearAllMocks()
         globalThis.lgs = undefined
         globalThis.__ = undefined
         vi.unstubAllGlobals()
@@ -313,6 +336,7 @@ describe('JourneyReplayDrawer', () => {
         expect(view.queryByText('Sync with Video')).toBeNull()
         expect(view.queryByRole('button', {name: 'Start Journey Replay'})).toBeNull()
         expect(view.queryByRole('button', {name: 'Pause Journey Replay'})).toBeNull()
+        expect(view.queryByRole('button', {name: 'Reset Expert Replay from Simple Replay'})).toBeNull()
     })
 
     it('commits pitch edits while typing', async () => {
@@ -658,6 +682,125 @@ describe('JourneyReplayDrawer', () => {
         expect(globalThis.lgs.viewer.entities.getById('journey-start').show).toBe(true)
         expect(globalThis.lgs.viewer.entities.getById('journey-stop').show).toBe(true)
         setTimeoutSpy.mockRestore()
+    })
+
+    it('synchronizes the preparation camera sliders and map guide in both directions without moving Cesium', async () => {
+        const camera = {
+            ...defaultJourneyReplaySettings().camera,
+            headingOffset: 0,
+            positionMode: 'behind',
+        }
+        const journey = proxy({
+            replay: {expert: {camera}},
+            slug: 'journey-a',
+        })
+        globalThis.lgs.theJourney = journey
+        globalThis.lgs.stores.main.theJourney = journey
+        globalThis.lgs.settings.ui.replay.userMode = 'expert'
+        globalThis.lgs.settings.ui.replay.camera = proxy({...camera})
+        globalThis.lgs.stores.replay.userMode = 'expert'
+        globalThis.lgs.stores.replay.camera = proxy({...camera})
+        globalThis.lgs.stores.ui.video.editing = true
+
+        const view = render(
+            <>
+                <JourneyReplayDrawer/>
+                <JourneyReplayCameraAngleGuide/>
+            </>,
+        )
+        fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
+
+        const angleSlider = view.getByLabelText('Camera angle')
+        await waitFor(() => expect(cameraGuideHarness.mount).toHaveBeenCalled())
+        globalThis.__.ui.replay.refreshCamera.mockClear()
+        globalThis.__.ui.replay.refresh.mockClear()
+        globalThis.lgs.stores.replay.cameraUpdateSource = null
+
+        fireEvent.input(angleSlider, {target: {value: '35'}})
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.replay.camera.headingOffset).toBe(-35)
+            expect(cameraGuideHarness.update).toHaveBeenLastCalledWith(
+                expect.anything(),
+                expect.objectContaining({angleDegrees: 35, coneHeading: -35}),
+                expect.objectContaining({onCameraChange: expect.any(Function)}),
+            )
+        })
+        expect(angleSlider.value).toBe('35')
+        expect(globalThis.__.ui.replay.refreshCamera).not.toHaveBeenCalled()
+        expect(globalThis.__.ui.replay.refresh).toHaveBeenLastCalledWith({camera: false})
+        expect(globalThis.lgs.stores.replay.cameraUpdateSource).toBe(null)
+
+        fireEvent.change(view.getByLabelText('Camera position'), {target: {value: 'ahead'}})
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.replay.camera.positionMode).toBe('ahead')
+            expect(globalThis.lgs.stores.replay.camera.positionMode).toBe('ahead')
+            expect(view.getByLabelText('Camera position').value).toBe('ahead')
+            expect(cameraGuideHarness.mount).toHaveBeenLastCalledWith(
+                expect.anything(),
+                expect.objectContaining({mode: 'Ahead'}),
+                {},
+                expect.objectContaining({onCameraChange: expect.any(Function)}),
+            )
+        })
+        expect(globalThis.__.ui.replay.refreshCamera).not.toHaveBeenCalled()
+
+        act(() => {
+            cameraGuideHarness.mount.mock.calls.at(-1)[3].onCameraChange({headingOffset: -25})
+        })
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.replay.camera.headingOffset).toBe(-25)
+            expect(view.getByLabelText('Camera angle').value).toBe('25')
+            expect(document.activeElement).toBe(view.getByLabelText('Camera angle'))
+        })
+        expect(globalThis.lgs.stores.replay.camera.headingOffset).toBe(-25)
+
+        act(() => {
+            globalThis.lgs.stores.replay.recordingSync = true
+            globalThis.lgs.stores.replay.active = true
+        })
+        await waitFor(() => expect(cameraGuideHarness.remove).toHaveBeenCalled())
+        globalThis.__.ui.replay.refreshCamera.mockClear()
+        globalThis.lgs.stores.replay.cameraUpdateSource = null
+        fireEvent.input(angleSlider, {target: {value: '15'}})
+
+        await waitFor(() => {
+            expect(globalThis.lgs.settings.ui.replay.camera.headingOffset).toBe(-15)
+            expect(globalThis.__.ui.replay.refreshCamera).toHaveBeenCalledTimes(1)
+        })
+        expect(globalThis.lgs.stores.replay.cameraUpdateSource).toBe('drawer')
+    })
+
+    it('keeps the advanced camera setup closed and focuses the range after a map-guide change', async () => {
+        globalThis.lgs.settings.ui.replay.userMode = 'expert'
+        globalThis.lgs.settings.ui.replay.camera.positionMode = 'behind'
+        globalThis.lgs.stores.replay.userMode = 'expert'
+        globalThis.lgs.stores.replay.camera.positionMode = 'behind'
+        globalThis.lgs.stores.ui.video.editing = true
+
+        const view = render(
+            <>
+                <JourneyReplayDrawer/>
+                <JourneyReplayCameraAngleGuide/>
+            </>,
+        )
+
+        await waitFor(() => expect(cameraGuideHarness.mount).toHaveBeenCalled())
+
+        act(() => {
+            cameraGuideHarness.mount.mock.calls.at(-1)[3].onCameraChange({headingOffset: -25})
+        })
+
+        await waitFor(() => {
+            const angleSlider = view.getByLabelText('Camera angle')
+            expect(globalThis.lgs.settings.ui.replay.camera.headingOffset).toBe(-25)
+            expect(globalThis.lgs.stores.replay.camera.headingOffset).toBe(-25)
+            expect(angleSlider.value).toBe('25')
+            expect(document.activeElement).toBe(angleSlider)
+        })
+        expect(view.queryByTestId('replay-advanced-camera-popup')).toBeNull()
     })
 
     it('shows the ground offset label when the camera mode is ground offset', () => {

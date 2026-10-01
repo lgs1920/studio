@@ -26,6 +26,7 @@ import {
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {
     mountJourneyReplayCameraAngleGuide,
+    REPLAY_CAMERA_ANGLE_GUIDE_CHANGE_EVENT,
     removeJourneyReplayCameraAngleGuide,
     resolveJourneyReplayCameraAngleGuide,
     updateJourneyReplayCameraAngleGuide,
@@ -63,7 +64,12 @@ export const JourneyReplayCameraAngleGuide = () => {
     const replay = useSnapshot(lgs.stores.replay)
     const replaySettings = useOptionalSnapshot(lgs.settings?.ui?.replay, DEFAULT_REPLAY_ANGLE_GUIDE_SETTINGS)
     const journeySlug = useProxyValue(lgs.stores.main, main => main.theJourney?.slug ?? null, null)
-    const camera = normalizeJourneyReplayCamera(getJourneyReplaySettings().camera ?? replaySettings.camera)
+    const cameraSettings = replaySettings.userMode === REPLAY_USER_MODE_BASIC
+        ? replay.simplePreparationActive === true && replay.camera
+            ? replay.camera
+            : replaySettings.simple?.camera ?? getJourneyReplaySettings().camera
+        : replay.camera ?? replaySettings.camera
+    const camera = normalizeJourneyReplayCamera(cameraSettings)
     const cameraHeadingOffset = camera.headingOffset
     const cameraPositionMode = camera.positionMode
     const replaying = isJourneyReplayCameraActive(replay)
@@ -97,6 +103,7 @@ export const JourneyReplayCameraAngleGuide = () => {
             syncJourneyExpertReplayCamera(nextCamera)
         }
         lgs.stores.replay.camera = nextCamera
+        globalThis.window?.dispatchEvent?.(new Event(REPLAY_CAMERA_ANGLE_GUIDE_CHANGE_EVENT))
     }, [])
 
     useEffect(() => {
@@ -119,7 +126,7 @@ export const JourneyReplayCameraAngleGuide = () => {
         }
 
         const journey = lgs.stores.main.theJourney
-        const currentCamera = normalizeJourneyReplayCamera(getJourneyReplaySettings().camera)
+        const currentCamera = camera
         const guide = resolveJourneyReplayCameraAngleGuide({
             camera: {
                 headingOffset: currentCamera.headingOffset,

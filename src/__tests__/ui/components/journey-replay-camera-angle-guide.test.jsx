@@ -21,6 +21,7 @@ import {proxy} from 'valtio'
 const guideHarness = vi.hoisted(() => ({
     mount:   vi.fn(() => true),
     remove:  vi.fn(),
+    changeEvent: 'lgs:replay:camera-angle-guide-change',
     resolve: vi.fn(({camera, sample}) => ({
         angleDegrees: -(camera.headingOffset ?? 0),
         anchor: sample
@@ -34,6 +35,7 @@ const guideHarness = vi.hoisted(() => ({
 }))
 
 vi.mock('@Core/ui/replay/JourneyReplayCameraAngleGuide', () => ({
+    REPLAY_CAMERA_ANGLE_GUIDE_CHANGE_EVENT: guideHarness.changeEvent,
     mountJourneyReplayCameraAngleGuide: guideHarness.mount,
     removeJourneyReplayCameraAngleGuide: guideHarness.remove,
     resolveJourneyReplayCameraAngleGuide: guideHarness.resolve,

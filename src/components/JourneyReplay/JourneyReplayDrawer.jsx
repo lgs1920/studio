@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,14 +50,16 @@ import {
 }                 from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { normalizeJourneyReplayClips } from '@Core/ui/replay/JourneyReplayClips'
 import { normalizeJourneyReplayPOISettings } from '@Core/ui/replay/JourneyReplayPOISettings'
+import { REPLAY_CAMERA_ANGLE_GUIDE_CHANGE_EVENT } from '@Core/ui/replay/JourneyReplayCameraAngleGuide'
 import {
-    resetExpertReplayFromSimple,
     normalizeExpertReplayCamera,
-    resolveSimpleReplaySettings,
     syncJourneyExpertReplayCamera,
     REPLAY_USER_MODE_EXPERT,
 } from '@Core/ui/replay/ReplayUserModes'
-import { isJourneyReplayCameraActive } from '@Core/ui/replay/JourneyReplayRuntime'
+import {
+    isJourneyReplayCameraActive,
+    isJourneyReplayDryRunActive,
+} from '@Core/ui/replay/JourneyReplayRuntime'
 import { ELEVATION_UNITS, UnitUtils } from '@Utils/UnitUtils'
 import {
     WaBadge, WaButton, WaColorPicker, WaDetails, WaDivider, WaIcon, WaNumberInput, WaOption, WaSelect, WaSlider,
@@ -413,6 +415,9 @@ export const JourneyReplayDrawer = memo(() => {
     const currentJourney = lgs.theJourney ?? lgs.stores.main.theJourney
     const poiList = lgs.stores.main.components.pois.list
     const replayState = useSnapshot(lgs.stores.replay)
+    const videoState = useSnapshot(lgs.stores.ui.video)
+    const videoCameraPreparationActive = videoState.editing === true
+        && !isJourneyReplayDryRunActive(replayState, videoState)
     ensureJourneyReplaySettings()
     const replaySettings = useSnapshot(lgs.settings.ui.replay)
     const {current: unitSystem} = useSnapshot(lgs.settings.unitSystem)
@@ -422,6 +427,7 @@ export const JourneyReplayDrawer = memo(() => {
     const hasJourney = Boolean(journeySlug)
     const previousJourneySlug = useRef(journeySlug)
     const drawerRef = useRef(null)
+    const _cameraAngleSlider = useRef(null)
     const progression = normalizeJourneyReplayProgressionStyle(replaySettings.progression)
     const effectMode = progression.effect.mode
     const fillColor = toOpaqueColorValue(progression.fill.color)
@@ -715,17 +721,19 @@ export const JourneyReplayDrawer = memo(() => {
         if (isExpertMode) {
             syncJourneyExpertReplayCamera(nextCamera)
         }
-        lgs.stores.replay.cameraUpdateSource = 'drawer'
-        if (cameraUpdateSourceClearTimer.current !== null) {
-            clearTimeout(cameraUpdateSourceClearTimer.current)
-        }
-        if (cameraDraftField.current === null) {
-            cameraUpdateSourceClearTimer.current = setTimeout(() => {
-                if (lgs.stores.replay.cameraUpdateSource === 'drawer') {
-                    lgs.stores.replay.cameraUpdateSource = null
-                }
-                cameraUpdateSourceClearTimer.current = null
-            }, 120)
+        if (syncCamera) {
+            lgs.stores.replay.cameraUpdateSource = 'drawer'
+            if (cameraUpdateSourceClearTimer.current !== null) {
+                clearTimeout(cameraUpdateSourceClearTimer.current)
+            }
+            if (cameraDraftField.current === null) {
+                cameraUpdateSourceClearTimer.current = setTimeout(() => {
+                    if (lgs.stores.replay.cameraUpdateSource === 'drawer') {
+                        lgs.stores.replay.cameraUpdateSource = null
+                    }
+                    cameraUpdateSourceClearTimer.current = null
+                }, 120)
+            }
         }
         if (replayState.active || replayState.playing || replayState.paused) {
             lgs.stores.replay.cameraUserAdjusted = true
@@ -745,8 +753,11 @@ export const JourneyReplayDrawer = memo(() => {
             return
         }
 
-        void updateCamera({positionMode: REPLAY_CAMERA_POSITION_BEHIND})
-    }, [isExpertMode, replaySettings.camera.positionMode, updateCamera])
+        void updateCamera(
+            {positionMode: REPLAY_CAMERA_POSITION_BEHIND},
+            {syncCamera: !videoCameraPreparationActive},
+        )
+    }, [isExpertMode, replaySettings.camera.positionMode, updateCamera, videoCameraPreparationActive])
 
     const updateReadiness = useCallback((updates, {refresh = false} = {}) => {
         const currentReadiness = normalizeJourneyReplayReadiness(lgs.settings.ui.replay.readiness)
@@ -1063,30 +1074,29 @@ export const JourneyReplayDrawer = memo(() => {
         setActiveTab(tab)
     }, [])
 
-    /**
-     * Reset the current journey's Expert camera and presentation from Simple Replay.
-     *
-     * @returns {Promise<void>} Resolves after the explicit reset is persisted.
-     */
-    const resetExpertFromSimple = useCallback(async () => {
-        if (!currentJourney) {
-            return
+    useEffect(() => {
+        const target = globalThis.window
+        if (!target?.addEventListener) {
+            return undefined
         }
 
-        const simple = resolveSimpleReplaySettings({
-            journey: currentJourney.replay?.simple,
-            user: replaySettings.simple,
-        })
-        const replay = resetExpertReplayFromSimple(currentJourney, simple)
-        currentJourney.replay = replay
-        await currentJourney.persistToDatabase?.()
-        lgs.settings.ui.replay.camera = replay.expert.camera
-        lgs.settings.ui.replay.progression = replay.expert.progression
-        lgs.settings.ui.replay.profileInfo = replay.expert.profileInfo
-        lgs.stores.replay.camera = replay.expert.camera
-        lgs.stores.replay.progression = replay.expert.progression
-        lgs.stores.replay.profileInfo = replay.expert.profileInfo
-    }, [currentJourney, replaySettings.simple])
+        /**
+         * Reveal map-guide angle edits in the drawer's camera control.
+         *
+         * @returns {void}
+         */
+        const handleCameraAngleGuideChange = () => {
+            if (hasJourney
+                && isExpertMode
+                && activeTab === REPLAY_TAB_RUNNER
+                && drawerOpen === REPLAY_DRAWER) {
+                _cameraAngleSlider.current?.focus()
+            }
+        }
+
+        target.addEventListener(REPLAY_CAMERA_ANGLE_GUIDE_CHANGE_EVENT, handleCameraAngleGuideChange)
+        return () => target.removeEventListener(REPLAY_CAMERA_ANGLE_GUIDE_CHANGE_EVENT, handleCameraAngleGuideChange)
+    }, [activeTab, drawerOpen, hasJourney, isExpertMode])
 
     const updateHideOtherJourneys = useCallback((event) => {
         const enabled = Boolean(event?.target?.checked)
@@ -1251,8 +1261,8 @@ export const JourneyReplayDrawer = memo(() => {
         const nextMode = event.target.value === REPLAY_CAMERA_POSITION_AHEAD
             ? REPLAY_CAMERA_POSITION_AHEAD
             : REPLAY_CAMERA_POSITION_BEHIND
-        void updateCamera({positionMode: nextMode})
-    }, [updateCamera])
+        void updateCamera({positionMode: nextMode}, {syncCamera: !videoCameraPreparationActive})
+    }, [updateCamera, videoCameraPreparationActive])
 
     const updateCameraHeadingOffset = useCallback((event) => {
         const sliderValue = Number(event.target.value)
@@ -1264,8 +1274,8 @@ export const JourneyReplayDrawer = memo(() => {
                              REPLAY_CAMERA_HEADING_OFFSET_MIN,
                              REPLAY_CAMERA_HEADING_OFFSET_MAX,
                          ),
-                     }, {immediate: true})
-    }, [camera.headingOffset, updateCamera])
+                     }, {immediate: true, syncCamera: !videoCameraPreparationActive})
+    }, [camera.headingOffset, updateCamera, videoCameraPreparationActive])
 
     const updateCameraPreset = useCallback((event) => {
         const presetKey = event.target.value
@@ -1381,16 +1391,6 @@ export const JourneyReplayDrawer = memo(() => {
                                     onClick={() => setAdvancedCameraPopupOpen(!advancedCameraPopupOpen)}
                                 >
                                     <WaIcon name="camera-sliders" size="l"/>
-                                </WaButton>
-                                <WaButton
-                                    size="s"
-                                    appearance="outlined"
-                                    variant="brand"
-                                    aria-label="Reset Expert Replay from Simple Replay"
-                                    onClick={resetExpertFromSimple}
-                                >
-                                    <WaIcon name="arrow-rotate-left" variant="regular"/>
-                                    {' Reset from Simple Replay'}
                                 </WaButton>
                             </>
                         )}
@@ -1512,6 +1512,7 @@ export const JourneyReplayDrawer = memo(() => {
                                                         </WaSelect>
                                                         <JourneyReplayStyleField>
                                                             <WaSlider
+                                                                ref={_cameraAngleSlider}
                                                                 label="Camera angle"
                                                                 size="s"
                                                                 min={REPLAY_CAMERA_HEADING_OFFSET_MIN}
