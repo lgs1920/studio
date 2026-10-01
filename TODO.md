@@ -1,15 +1,12 @@
 Implementation requests for Codex:
 
-### 1. External Timeline Control
+### 1. Reactivite drawer Replay et UI d'angle dcamera
 
-> Implement external timeline control with support for two modes: **Dry Run** and **Action Mode**. In Action Mode, initiating the timeline control should automatically trigger the replay. Keep the internal control via sliders functional.
-> Que proposes-tu ?
-
-Audit 2026-09-18: **not implemented** in the Studio adapter. The generic
-Timeline emits public events, but Dry Run and Action Mode are not connected to
-Replay commands.
-### 2. Additional Slot & Studio Video Settings
-
+Dans le drawer replay, l'UI qui permet de modifier l'angle de camera et sa poistion (ahead/behind)
+n'est pas reactive avec lUI dediée en préparation video.
+QUand on agit sur les lsiders ou selection, c'est la camera cesium qui est impacté , il faut que cela soit l'UI
+preparation video (rotation du cone et valorisation de l'angle)
+Il faut aussi veiller à ce que la ractivit soit bi directionnelle entre les deuix UI.
 
 ### 10. Implement replay rimeline pour integrer les widgets
 
