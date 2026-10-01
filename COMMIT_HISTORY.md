@@ -3138,3 +3138,35 @@
 ## 2026-09-30 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/20dfa1f15ce812b998dc9e4894703ba8c83a167b)
 
 - Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-09-30 — [`fix(replay): refine camera angle guide interactions`](https://github.com/lgs1920/studio/commit/fc1180401509d8ea8b24ff9cc9a11c912a63b71a)
+
+- Recorded automatically from Git history.
+
+## 2026-09-30 — [`fix(replay): keep POIs hidden during camera preparation`](https://github.com/lgs1920/studio/commit/413e330ce9285d6cf2fe1271fce7a4ff8f2993f6)
+
+- Recorded automatically from Git history.
+
+## 2026-09-30 — [`fix(replay): make shifted camera angle snap reliable`](https://github.com/lgs1920/studio/commit/83f97e1e5afd91ba2d0334e4c45b1df78bd83d19)
+
+- Recorded automatically from Git history.
+
+## 2026-09-30 — [`fix(replay): snap shifted camera angles to five degrees`](https://github.com/lgs1920/studio/commit/4e7602e8dc0dbe4996479f415d91e351ef81d02d)
+
+- Recorded automatically from Git history.
+
+## 2026-09-30 — [`fix(replay): emphasize snapped camera angle`](https://github.com/lgs1920/studio/commit/a2d6eec93dda14d164496326c80c991ce7602426)
+
+- Recorded automatically from Git history.
+
+## 2026-09-30 — [`fix(replay): block pointer input during playback`](https://github.com/lgs1920/studio/commit/cbf4095d02e6f9a0fb864bd76a3ec675717726c6)
+
+- Recorded automatically from Git history.
+
+## 2026-09-30 — [`fix(replay): block camera guide input during playback`](https://github.com/lgs1920/studio/commit/7d6a7ac7087918ee05d9649312bc7e65550a9483)
+
+- Recorded automatically from Git history.
+
+## 2026-09-30 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/64bd9896877de9a657ff61c8539b91665defd286)
+
+- Recorded automatically from Git history.
