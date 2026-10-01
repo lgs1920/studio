@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 
@@ -291,7 +291,10 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(prepareVideoCaptureUi).not.toHaveBeenCalled()
         expect(globalThis.lgs.stores.ui.video.preRecording).toBe(false)
 
-        globalThis.lgs.stores.replay.active = false
+        act(() => {
+            globalThis.lgs.stores.replay.active = false
+            globalThis.lgs.stores.replay.paused = false
+        })
         await vi.waitFor(() => expect(recordButton.disabled).toBe(false))
     })
 

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -124,6 +124,40 @@ describe('CameraAdjustmentOverlay', () => {
             />,
         )
 
+        expect(view.queryByLabelText('Replay camera angle')).toBeNull()
+    })
+
+    it('hides the Replay camera angle metric during linked Replay dry run', () => {
+        globalThis.lgs = {
+            stores: {
+                replay: proxy({
+                    active: true,
+                    recordingSync: true,
+                    userMode: 'expert',
+                    camera: {headingOffset: -30, positionMode: 'behind'},
+                }),
+                ui: {
+                    video: proxy({
+                        editing: true,
+                        preRecording: false,
+                        exporting: false,
+                        snapshot: false,
+                        finalizing: false,
+                    }),
+                },
+            },
+        }
+
+        const view = render(
+            <CameraAdjustmentOverlay
+                config={{id: 'camera-adjustment-widget'}}
+                isVisible
+                values={{height: '1 200 m', level: 'L12', pitch: '-45°'}}
+                visible
+            />,
+        )
+
+        expect(view.getByText('1 200 m')).toBeTruthy()
         expect(view.queryByLabelText('Replay camera angle')).toBeNull()
     })
 

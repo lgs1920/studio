@@ -209,7 +209,8 @@ vertical when the drawer is narrow.
 Replay transport, seek, zoom, local edit projection, and preparation cleanup
 are connected. Timeline playback uses interactive Replay only; it does not
 start video capture. The Record action is disabled while linked Replay is
-playing or paused. Double-click navigation, domain-level visibility and
+playing or paused. The camera angle guide and Replay angle metric are hidden
+during that dry run. Double-click navigation, domain-level visibility and
 ordering persistence, and the future `journey.replay.timeline` authoring model
 are not connected. The Web Component handles local controls, title editing,
 visibility actions, track/clip drags, and emits their public events; the host

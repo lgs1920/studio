@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,6 +21,7 @@ import {
     REPLAY_CAMERA_POSITION_BEHIND,
     REPLAY_CAMERA_POSITION_SYSTEM,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import {isJourneyReplayDryRunActive} from '@Core/ui/replay/JourneyReplayRuntime'
 import {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT} from '@Core/ui/replay/ReplayUserModes'
 import { foot, meter, UnitUtils } from '@Utils/UnitUtils'
 import { cameraViewToSlippyLevel } from '@Utils/cesium/CameraLevel'
@@ -146,8 +147,10 @@ export const CameraAdjustmentOverlay = memo(({
     const replay = useOptionalSnapshot(lgs.stores?.replay, DEFAULT_REPLAY_OVERLAY_STATE)
     const video = useOptionalSnapshot(lgs.stores?.ui?.video, DEFAULT_VIDEO_OVERLAY_STATE)
     const replayCamera = replay.camera ?? {}
+    const dryRunActive = isJourneyReplayDryRunActive(replay, video)
     const hasReplayCameraAngle = replay.userMode === REPLAY_USER_MODE_EXPERT
         && video.editing === true
+        && !dryRunActive
         && replayCamera.positionMode !== REPLAY_CAMERA_POSITION_SYSTEM
         && Number.isFinite(Number(replayCamera.headingOffset))
     const replayCameraDirection = replayCamera.positionMode === REPLAY_CAMERA_POSITION_AHEAD

@@ -316,6 +316,28 @@ export const isJourneyReplayVideoCaptureActive = () => {
 }
 
 /**
+ * Return whether linked Replay is playing interactively without video capture.
+ *
+ * @param {Object|null} [replay=replayStore()] - Replay runtime state.
+ * @param {Object|null} [video=globalThis.lgs.stores.ui.video] - Video capture state.
+ * @returns {boolean} Whether linked Replay is in a dry run.
+ */
+export const isJourneyReplayDryRunActive = (
+    replay = replayStore(),
+    video = globalThis.lgs?.stores?.ui?.video,
+) => {
+    const replayLinked = replay?.recordingSync === true
+                         || globalThis.lgs?.settings?.ui?.replay?.recordingSync === true
+    const captureActive = !video
+                          || video.preRecording === true
+                          || video.exporting === true
+                          || video.snapshot === true
+                          || video.finalizing === true
+
+    return replayLinked && isJourneyReplayCameraActive(replay) && !captureActive
+}
+
+/**
  * Returns whether the replay trace should be visible in the live scene.
  *
  * The trace belongs to Replay playback itself and must remain visible when

@@ -44,6 +44,12 @@ vi.mock('@Core/ui/replay/JourneyReplayRuntime', () => ({
     isJourneyReplayCameraActive: replay => Boolean(
         replay?.active || replay?.playing || replay?.paused || replay?.clipSequenceActive,
     ),
+    isJourneyReplayDryRunActive: (replay, video) => replay?.recordingSync === true
+        && Boolean(replay?.active || replay?.playing || replay?.paused || replay?.clipSequenceActive)
+        && video?.preRecording !== true
+        && video?.exporting !== true
+        && video?.snapshot !== true
+        && video?.finalizing !== true,
     isJourneyReplayVideoCaptureActive: () => false,
 }))
 
@@ -73,7 +79,7 @@ describe('JourneyReplayCameraAngleGuide component', () => {
             active:        false,
             liveSample:    null,
             sample:        null,
-            recordingSync: true,
+            recordingSync: false,
         })
         globalThis.lgs = {
             settings: {
@@ -255,6 +261,38 @@ describe('JourneyReplayCameraAngleGuide component', () => {
                 sample,
             }))
         })
+    })
+
+    it('hides the camera angle guide during linked Replay dry run', async () => {
+        globalThis.lgs = {
+            settings: {
+                ui: {
+                    replay: proxy({
+                        userMode: 'expert',
+                        camera: {headingOffset: 10, positionMode: 'behind'},
+                    }),
+                },
+            },
+            stores: {
+                main: proxy({theJourney: {slug: 'journey-a', tracks: new Map()}}),
+                replay: proxy({active: true, liveSample: null, sample: null, recordingSync: true}),
+                ui: {
+                    drawers: proxy({open: null}),
+                    video: proxy({
+                        editing: true,
+                        preRecording: false,
+                        exporting: false,
+                        snapshot: false,
+                        finalizing: false,
+                    }),
+                },
+            },
+            viewer: {},
+        }
+
+        render(<JourneyReplayCameraAngleGuide/>)
+        await waitFor(() => expect(guideHarness.remove).toHaveBeenCalled())
+        expect(guideHarness.mount).not.toHaveBeenCalled()
     })
 
     it('persists dragged cone angle and altitude through Simple camera settings', async () => {

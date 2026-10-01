@@ -32,6 +32,7 @@ import {
     normalizeSimpleReplayDuration,
     SIMPLE_REPLAY_DURATIONS,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
+import {isJourneyReplayDryRunActive} from '@Core/ui/replay/JourneyReplayRuntime'
 import { WaButton, WaIcon, WaTooltip } from '@web.awesome.me/webawesome-pro/dist/react'
 import { memo, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useSnapshot } from 'valtio'
@@ -74,13 +75,7 @@ export const VideoRecordingSettingsToolbar = memo(({
                               && !video.finalizing
     const simplePreparation = replay.simplePreparationActive === true
     const compactReplaySettings = simplePreparation || timelineSettings
-    const dryRunActive = timelineSettings
-                        && replay.recordingSync === true
-                        && replay.active === true
-                        && !video.preRecording
-                        && !video.exporting
-                        && !video.snapshot
-                        && !video.finalizing
+    const dryRunActive = timelineSettings && isJourneyReplayDryRunActive(replay, video)
     const showVideoOptions = mode !== 'actions'
     const showActions = mode !== 'video-options'
 
@@ -178,7 +173,7 @@ export const VideoRecordingSettingsToolbar = memo(({
      * @returns {Promise<void>} Completion promise.
      */
     const handleReplayRecording = useCallback(async () => {
-        if (timelineSettings && $replay.recordingSync === true && $replay.active === true) {
+        if (timelineSettings && isJourneyReplayDryRunActive($replay, $video)) {
             return
         }
         if (!__.mediaCapture) {

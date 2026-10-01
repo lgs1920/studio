@@ -17,7 +17,7 @@
 import {REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP} from '@Core/ui/replay/JourneyReplayClips'
 import {
     currentJourneyReplayCameraSettings, currentJourneyReplayPoiBehavior, finiteNumber, isJourneyReplayCameraActive,
-    isJourneyReplayTraceActive, isJourneyReplayVideoCaptureActive,
+    isJourneyReplayDryRunActive, isJourneyReplayTraceActive, isJourneyReplayVideoCaptureActive,
     publishReplayClipFrameState, resetRuntimeProgress,
 } from '@Core/ui/replay/JourneyReplayRuntime'
 import {describe, expect, it} from 'vitest'
@@ -37,6 +37,16 @@ describe('JourneyReplayRuntime', () => {
         expect(isJourneyReplayCameraActive({active: true})).toBe(true)
         expect(isJourneyReplayCameraActive({paused: true})).toBe(true)
         expect(isJourneyReplayCameraActive({clipSequenceActive: true})).toBe(true)
+    })
+
+    it('identifies linked interactive playback without classifying video capture as a dry run', () => {
+        const replay = {active: true, recordingSync: true}
+        const video = {preRecording: false, exporting: false, snapshot: false, finalizing: false}
+
+        expect(isJourneyReplayDryRunActive(replay, video)).toBe(true)
+        expect(isJourneyReplayDryRunActive({...replay, recordingSync: false}, video)).toBe(false)
+        expect(isJourneyReplayDryRunActive(replay, {...video, exporting: true})).toBe(false)
+        expect(isJourneyReplayDryRunActive({...replay, paused: true}, {...video, preRecording: true})).toBe(false)
     })
 
     it('uses the prepared Simple camera while forcing diagnostics off', () => {

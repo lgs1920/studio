@@ -31,7 +31,11 @@ import {
     updateJourneyReplayCameraAngleGuide,
 } from '@Core/ui/replay/JourneyReplayCameraAngleGuide'
 import {fadeJourneyForReplayPreparation} from '@Core/ui/replay/JourneyReplayPreparationAppearance'
-import {isJourneyReplayCameraActive, isJourneyReplayVideoCaptureActive} from '@Core/ui/replay/JourneyReplayRuntime'
+import {
+    isJourneyReplayCameraActive,
+    isJourneyReplayDryRunActive,
+    isJourneyReplayVideoCaptureActive,
+} from '@Core/ui/replay/JourneyReplayRuntime'
 import {
     REPLAY_USER_MODE_BASIC,
     REPLAY_USER_MODE_EXPERT,
@@ -64,6 +68,7 @@ export const JourneyReplayCameraAngleGuide = () => {
     const cameraPositionMode = camera.positionMode
     const replaying = isJourneyReplayCameraActive(replay)
     const replaySample = replaying ? replay.liveSample ?? replay.sample : null
+    const dryRunActive = isJourneyReplayDryRunActive(replay, video)
     const captureActive = video.preRecording !== true && (
         video.exporting === true
         || video.snapshot === true
@@ -71,6 +76,7 @@ export const JourneyReplayCameraAngleGuide = () => {
         || isJourneyReplayVideoCaptureActive()
     )
     const guideVisible = !captureActive
+                         && !dryRunActive
                          && (video.editing === true || drawers.open === REPLAY_DRAWER || replaying)
     /**
      * Persist camera-guide adjustments without moving the Cesium camera.
