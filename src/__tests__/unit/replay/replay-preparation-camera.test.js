@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-26
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-01
  *
  *
  * Copyright © 2026 LGS1920
@@ -58,12 +58,12 @@ describe('replay preparation camera', () => {
         const camera = {
             lookAtTransform: vi.fn(),
         }
-        const hqCamera = {
+        const exportCamera = {
             lookAtTransform: vi.fn(),
         }
         globalThis.lgs = {
             camera,
-            viewer: {camera: hqCamera},
+            viewer: {camera: exportCamera},
         }
         const mode = {
             [JOURNEY_REPLAY_INTERNAL_STATE]: {cameraApplyingView: false},
@@ -88,7 +88,7 @@ describe('replay preparation camera', () => {
                                                cameraPosition: Cartesian3.add(target, new Cartesian3(1000, -500, 300), new Cartesian3()),
                                            })).toBe(true)
         expect(camera.lookAtTransform).toHaveBeenCalledTimes(2)
-        expect(hqCamera.lookAtTransform).not.toHaveBeenCalled()
+        expect(exportCamera.lookAtTransform).not.toHaveBeenCalled()
         expect(camera.lookAtTransform.mock.calls[0][0]).not.toBe(Matrix4.IDENTITY)
         expect(camera.lookAtTransform.mock.calls[1][0]).not.toBe(Matrix4.IDENTITY)
         expect(camera.lookAtTransform.mock.calls[1][1].heading).toBe(0.4)
