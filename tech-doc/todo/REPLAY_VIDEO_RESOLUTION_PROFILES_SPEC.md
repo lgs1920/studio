@@ -146,7 +146,7 @@ When an explicit profile is selected:
 - disable the control when no valid crop or ratio can be resolved;
 - display a preparation state before the export actually starts;
 - preserve the choice throughout preparation and export;
-- prevent changes while `hqExportStatus === 'exporting'`.
+- prevent changes while `exportStatus === 'exporting'`.
 
 Example layout:
 

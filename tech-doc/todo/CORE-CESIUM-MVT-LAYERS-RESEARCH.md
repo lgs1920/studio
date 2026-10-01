@@ -435,7 +435,7 @@ implementation therefore needs to:
 - Add a serializable vector layer descriptor containing source URL metadata,
   extent, zoom range, feature ID property, clamping mode, style, and provider
   credential reference
-- Recreate MVT providers in `IsolatedHqReplayRenderHost`
+- Recreate MVT providers in `IsolatedReplayRenderHost`
 - Include MVT providers in replay tile readiness and loading decisions
 - Avoid serializing raw secrets into replay descriptors or exported projects
 - Decide whether video export requires live network access, an application

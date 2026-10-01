@@ -21,7 +21,7 @@ Replay commands.
 >   inserted.
 
 Audit 2026-09-18: **partial**. Local track and clip interactions are available,
-but double-click navigation, domain persistence, and complete Draft/HQ
+but double-click navigation, domain persistence, and complete Draft/export
 consumption remain open.
 
 ### 11. Journey Change Animation

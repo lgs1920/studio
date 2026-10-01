@@ -106,7 +106,7 @@ there, and copies the main Cesium canvas into the video composer for each fixed
 frame timestamp. The main viewer is the sole camera authority; the video
 composer receives pixels and overlays, not a second Cesium camera.
 
-`IsolatedHqReplayRenderHost` remains an available off-screen host for explicit
+`IsolatedReplayRenderHost` remains an available off-screen host for explicit
 isolated-render workflows and tests. It owns a no-loop `CesiumWidget`, a
 separate camera, and independent Cesium runtime resources. It is not selected
 by the Simple or Expert product MP4 flow.

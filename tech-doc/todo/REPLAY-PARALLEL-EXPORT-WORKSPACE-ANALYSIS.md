@@ -29,7 +29,7 @@ The following statements are verified against the current Replay source.
 - `prepareVideoCaptureUi()` hides the interactive MainUI and sets
   `replay.mainUiHidden = true` in
   `src/components/MainUI/video/videoEditingCleanup.js`.
-- `ReplayDeferredExporter` creates an `IsolatedHqReplayRenderHost` by default.
+- `ReplayDeferredExporter` creates an `IsolatedReplayRenderHost` by default.
   The host owns a hidden, no-loop `CesiumWidget` with its own scene, camera,
   canvas, imagery, terrain, and supported 3D Tiles resources.
 - The current isolated host is still created on the main thread. It is not a
@@ -114,7 +114,7 @@ Worker alone.
 
 ### Implementation shape
 
-1. Define a versioned `ReplayHqWorkerRequest` and `ReplayHqWorkerEvent`
+1. Define a versioned `ReplayExportWorkerRequest` and `ReplayExportWorkerEvent`
    protocol. Requests must contain serializable data only.
 2. Freeze the export snapshot before the first frame: timeline, render spec,
    crop rectangle, camera definition, scene descriptor identity, and widget
