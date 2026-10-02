@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -239,6 +239,40 @@ describe('ReplayTimelinePreview', () => {
         }))
     })
 
+    it('maps absolute seeks to Replay progress after pre-Replay clips', async () => {
+        globalThis.lgs.stores.replay.clips = {
+            catalog: {
+                intro: {id: 'intro', slots: ['start'], defaults: {duration: 2}},
+            },
+            start: [{clipId: 'intro'}],
+            stop: [],
+        }
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+
+        expect(timelineElement.timeline.durationMillis).toBe(6_000)
+
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-seek', {
+            bubbles: true,
+            detail: {timeMillis: 2_000, settled: true},
+        }))
+
+        expect(globalThis.__.ui.replay.seek).toHaveBeenCalledWith(0, expect.objectContaining({
+            settled: true,
+            source: 'timeline-scrub',
+        }))
+
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-seek', {
+            bubbles: true,
+            detail: {timeMillis: 3_500, settled: true},
+        }))
+
+        expect(globalThis.__.ui.replay.seek).toHaveBeenLastCalledWith(0.375, expect.objectContaining({
+            settled: true,
+            source: 'timeline-scrub',
+        }))
+    })
+
     it('routes timeline transport requests to interactive Replay without starting video capture', async () => {
         const {container} = render(<ReplayTimelinePreview/>)
         const timelineElement = container.querySelector('lgs1920-timeline')
@@ -263,6 +297,27 @@ describe('ReplayTimelinePreview', () => {
         expect(globalThis.lgs.stores.replay.toolbarVisible).toBe(false)
         expect(globalThis.lgs.stores.ui.video.preRecording).toBe(false)
         expect(globalThis.lgs.stores.ui.video.exporting).toBe(false)
+    })
+
+    it('starts at the Replay phase without replaying preceding start clips', () => {
+        globalThis.lgs.stores.replay.clips = {
+            catalog: {
+                intro: {id: 'intro', slots: ['start'], defaults: {duration: 2}},
+            },
+            start: [{clipId: 'intro'}],
+            stop: [],
+        }
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-play', {
+            detail: {timeMillis: 2_000, source: 'timeline-play'},
+        }))
+
+        expect(globalThis.__.ui.replay.start).toHaveBeenCalledWith({
+            progress: 0,
+            skipStartClips: true,
+        })
     })
 
     it('routes the timeline start control through the canonical settled scrub scheduler', async () => {
@@ -950,4 +1005,5 @@ describe('ReplayTimelinePreview', () => {
         rerender(<ReplayTimelinePreview/>)
         expect(container.querySelector('lgs1920-timeline')).toBeNull()
     })
+
 })

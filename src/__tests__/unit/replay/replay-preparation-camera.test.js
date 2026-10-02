@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-26
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,6 +50,70 @@ describe('replay preparation camera', () => {
         expect(call.configure).not.toHaveBeenCalled()
         expect(call.captureCameraState).not.toHaveBeenCalled()
         expect(renderer.clear).not.toHaveBeenCalled()
+    })
+
+    it('skips pre-Replay clips when timeline playback starts inside the Replay phase', () => {
+        const journey = {}
+        const sample = {longitude: 2, latitude: 48, altitude: 120}
+        const clip = {clipId: 'intro'}
+        const replayEntryCameraState = {
+            destination: {longitude: 2, latitude: 48, height: 1200},
+            orientation: {heading: 0, pitch: -0.8, roll: 0},
+            altitude: 1200,
+            pivot: null,
+        }
+        const sampler = {
+            hasSamples: true,
+            atProgress: vi.fn(() => sample),
+        }
+        const controller = {
+            videoTimeline: {phases: [{kind: 'pre-replay'}, {kind: 'replay'}]},
+            start: vi.fn(() => sample),
+        }
+        const call = {
+            bindCesiumCameraBridge: vi.fn(),
+            cancelActiveCameraFlight: vi.fn(),
+            captureJourneyReplayDrawerStateBeforePlayback: vi.fn(),
+            capturePlaybackCameraSettings: vi.fn(),
+            clipListForSlot: vi.fn(slot => slot === 'pre-replay' ? [clip] : []),
+            configure: vi.fn(() => sampler),
+            currentReplayClipCameraState: vi.fn(() => ({sample})),
+            hideCurrentJourneyVisibility: vi.fn(),
+            hideOtherJourneysVisibility: vi.fn(),
+            isReplayVideoLinked: vi.fn(() => false),
+            now: vi.fn(() => 0),
+            placeCameraAtPlaybackStart: vi.fn(() => false),
+            playJourneyReplayClips: vi.fn(async () => true),
+            prepareNearbyPOIsForPlayback: vi.fn(),
+            resetCameraInterpolationState: vi.fn(),
+            restoreJourneyReplayPOIVisibility: vi.fn(),
+            restoreOtherJourneysVisibility: vi.fn(),
+            setJourneyReplayOrbitAllowed: vi.fn(),
+        }
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                clipSequenceToken: 0,
+                controller,
+                renderer: {clear: vi.fn()},
+                replayCameraPrepared: true,
+                replayEntryCameraState,
+            },
+            [JOURNEY_REPLAY_INTERNAL_CALL]: call,
+        }
+        globalThis.lgs = {
+            settings: {ui: {replay: {userMode: 'expert'}}},
+            theJourney: journey,
+            stores: {
+                replay: {toolbarVisible: false},
+            },
+        }
+
+        expect(start(mode, {progress: 0, skipStartClips: true, hideOtherJourneys: false})).toBe(sample)
+
+        expect(call.clipListForSlot).not.toHaveBeenCalledWith('pre-replay')
+        expect(call.playJourneyReplayClips).not.toHaveBeenCalled()
+        expect(call.placeCameraAtPlaybackStart).toHaveBeenCalledWith(sample, 0)
+        expect(controller.start).toHaveBeenCalledWith({progress: 0})
     })
 
     it('locks Cesium navigation to the replay anchor', () => {

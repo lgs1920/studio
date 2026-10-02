@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,6 +38,8 @@ import {VideoRecordingSettingsToolbar} from './toolbox/VideoRecordingSettingsToo
 import {
     buildReplayPreparationTimeline,
 } from '@Core/ui/replay/ReplayPreparationTimeline'
+import {resolveReplayVideoFramePhase} from '@Core/ui/replay/ReplayVideoTimeline'
+import {REPLAY_CLIP_SLOT_PRE_REPLAY} from '@Core/ui/replay/JourneyReplayClips'
 import {
     groupWidgetEntries,
 } from '@Core/ui/widget-manager/WidgetGroupUtils'
@@ -195,6 +197,23 @@ const resolveCurrentTimeMillis = (replay, projection) => {
     const frame = replay?.dynamicFrameState ?? replay?.resolvedFrameState ?? null
     const timeMillis = Number(frame?.frameTimeMs ?? frame?.phase?.frameTimeMs ?? 0)
     return Math.max(0, Math.min(projection.durationMillis, Number.isFinite(timeMillis) ? timeMillis : 0))
+}
+
+/**
+ * Resolve the Replay controller position represented by an absolute timeline time.
+ *
+ * @param {Object|null} videoTimeline - Canonical start, Replay, and stop timeline.
+ * @param {number} timeMillis - Absolute timeline time in milliseconds.
+ * @returns {Object} Replay progress and whether preceding start clips should be skipped.
+ */
+const resolveReplayPositionAtTime = (videoTimeline, timeMillis) => {
+    const phase = resolveReplayVideoFramePhase({timeline: videoTimeline, frameTimeMs: timeMillis})
+    const hasStartClips = videoTimeline?.phases?.some(item => item.kind === REPLAY_CLIP_SLOT_PRE_REPLAY) === true
+
+    return {
+        progress: phase.progress,
+        skipStartClips: hasStartClips && phase.kind !== REPLAY_CLIP_SLOT_PRE_REPLAY,
+    }
 }
 
 /**
@@ -665,7 +684,7 @@ export const ReplayTimelinePreview = forwardRef(({
     const updateTimelineTime = useCallback((value, settled = false) => {
         const timeMillis = normalizeTimelineTime(value)
         const durationMillis = Number(timeline.durationMillis)
-        const progress = durationMillis > 0 ? timeMillis / durationMillis : 0
+        const {progress} = resolveReplayPositionAtTime(projection.timeline, timeMillis)
         const pendingPlayhead = {timeMillis}
         _pendingPlayhead.current = pendingPlayhead
         persistTimelineView({currentTimeMillis: timeMillis})
@@ -690,7 +709,7 @@ export const ReplayTimelinePreview = forwardRef(({
         else {
             _scrubScheduler.current?.request(progress)
         }
-    }, [applyTimelinePlayheadTime, normalizeTimelineTime, persistTimelineView, timeline.durationMillis])
+    }, [applyTimelinePlayheadTime, normalizeTimelineTime, persistTimelineView, projection.timeline, timeline.durationMillis])
 
     const handleTimelineSeek = useCallback(event => {
         const detail = event?.detail ?? {}
@@ -706,17 +725,19 @@ export const ReplayTimelinePreview = forwardRef(({
     const handleTimelinePlay = useCallback(event => {
         const replayMode = __.ui.replay
         const detail = event?.detail ?? {}
-        const durationMillis = Number(timeline.durationMillis)
         const timeMillis = normalizeTimelineTime(detail.timeMillis)
-        const progress = durationMillis > 0 ? timeMillis / durationMillis : 0
+        const {progress, skipStartClips} = resolveReplayPositionAtTime(projection.timeline, timeMillis)
 
         lgs.stores.replay.toolbarVisible = true
         if (lgs.stores.replay.paused === true) {
             return replayMode?.resume?.()
         }
 
-        return replayMode?.start?.({progress})
-    }, [normalizeTimelineTime, timeline.durationMillis])
+        return replayMode?.start?.({
+            progress,
+            ...(skipStartClips ? {skipStartClips: true} : {}),
+        })
+    }, [normalizeTimelineTime, projection.timeline])
 
     /**
      * Pause the canonical interactive Replay clock.

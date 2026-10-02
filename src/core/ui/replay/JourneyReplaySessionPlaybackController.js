@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -496,7 +496,10 @@ export const start = (mode, options = {}) => {
         traceStartStep('capture-playback-camera-settings.begin')
         call.capturePlaybackCameraSettings()
         traceStartStep('capture-playback-camera-settings.end')
-        const startList = call.clipListForSlot(REPLAY_CLIP_SLOT_START)
+        // Preserve the canonical phase offset while skipping clips before a timeline start in Replay.
+        const startList = options.skipStartClips === true
+            ? []
+            : call.clipListForSlot(REPLAY_CLIP_SLOT_START)
         if (!hasReplayEntryCameraState && startList.length > 0) {
             state.replayEntryCameraState = state.savedCameraState
                 ? {
