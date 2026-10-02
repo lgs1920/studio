@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-30
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -84,7 +84,7 @@ describe('IonLayerUtils Cesium cache', () => {
 
         expect(firstName).toBe('cesium-ion-assets')
         expect(CacheManager).toHaveBeenCalledTimes(1)
-        expect(CacheManager).toHaveBeenCalledWith('cesium-ion-assets', 500 * 1024 * 1024)
+        expect(CacheManager).toHaveBeenCalledWith('cesium-ion-assets', 512 * 1024 * 1024)
         expect(globalThis.__.app.cesiumCache).toBeInstanceOf(CacheManager)
 
         const firstCache = globalThis.__.app.cesiumCache

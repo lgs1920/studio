@@ -102,6 +102,7 @@ The repository already contains the main product surface used by the studio:
 - Settings and widget configuration from YAML files in `public/`
 - Shared shortcut catalog displayed in the information drawer, with PDF export
 - PWA service worker and version-aware caching
+- Adjustable local map tile, terrain, and 3D Tiles cache: [Cartographic cache documentation](tech-doc/specs/data/CORE-CACHE-README.md)
 - PWA installation and update behavior: [PWA technical documentation](tech-doc/specs/platform/PWA-README.md)
 
 ## Roadmap

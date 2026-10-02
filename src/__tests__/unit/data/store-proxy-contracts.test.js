@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-05
- * Last modified: 2026-09-22
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -213,6 +213,7 @@ describe('Valtio static guardrails', () => {
         const allowedMaxByFile = {
             'src/core/LGS1920Context.js':                         4,
             'src/core/settings/SettingsSection.js':               3,
+            'src/core/cache/CartographicCacheController.js':      1,
             'src/core/stores/StoresManager.js':                   6,
             'src/Utils/ValtioUtils.js':                           2,
             'src/components/AppUpdate.jsx':                       2,

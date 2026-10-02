@@ -7,100 +7,62 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-03-22
- * Last modified: 2026-03-16
+ * Created on: 2026-03-18
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-/**
- * CacheManager: Controls the persistent Cesium cache.
- * Provides a robust interface to communicate with the LGS1920 Service Worker.
- */
+import { DEFAULT_TILE_CACHE_BYTES } from '../../../public/cartographic-cache-policy.js'
+
+/** Communicate with the cartographic service worker using bounded acknowledgements. */
 export class CacheManager {
-    /**
-     * @param {string} cacheName
-     * @param {number} maxQuota
-     */
-    constructor(cacheName, maxQuota) {
+    /** Create a cartographic bridge, retaining the legacy Ion scope identifier. */
+    constructor(cacheName = 'cartographic', maxQuota = DEFAULT_TILE_CACHE_BYTES) {
         this.cacheName = cacheName
         this.maxQuota = maxQuota
-        this.sourceTag = 'LGS_CACHE_MANAGER'
-        this._initListeners()
     }
 
-    /**
-     * Initializes listener for messages received from the Service Worker.
-     * Dispatches global CustomEvents for UI updates.
-     * @private
-     */
-    _initListeners() {
-        // Correct target: navigator.serviceWorker
-        if (!('serviceWorker' in navigator)) {
-            return
+    /** Send one command, closing both ports on success, failure, or timeout. */
+    request = (type, payload = {}) => {
+        const controller = globalThis.navigator?.serviceWorker?.controller
+        if (!controller || typeof MessageChannel !== 'function') {
+            return Promise.resolve({available: false, usage: 0, maxBytes: this.maxQuota, effectiveMaxBytes: 0})
         }
-
-        // Utilisation de navigator.serviceWorker au lieu de navigator
-        navigator.serviceWorker.addEventListener('message', (event) => {
-            if (event.data?.source !== this.sourceTag) {
-                return
-            }
-
-            if (event.data.type === 'BROADCAST_EVENT') {
-                window.dispatchEvent(new CustomEvent(event.data.eventName, {
-                    detail: event.data.payload,
-                }))
-            }
-        })
-    }
-
-    /**
-     * Calculates the current cache usage (in bytes) for Cesium assets.
-     * @returns {Promise<number>}
-     */
-    async getUsage() {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             const channel = new MessageChannel()
-            channel.port1.onmessage = (e) => resolve(e.data.usage)
-
-            const sw = navigator.serviceWorker.controller
-            if (sw) {
-                const name = typeof this.cacheName === 'string'
-                             ? this.cacheName
-                             : this.cacheName.cacheName
-
-                sw.postMessage(
-                    {
-                        type:      'GET_USAGE',
-                        source:    this.sourceTag,
-                        cacheName: name,
-                    },
-                    [channel.port2],
-                )
+            /** Release the timeout and channel after completing the command. */
+            const finish = (result, error) => {
+                clearTimeout(timeout)
+                channel.port1.close()
+                channel.port2.close()
+                if (error) reject(error)
+                else resolve(result)
             }
-            else {
-                resolve(0)
+            const timeout = setTimeout(() => finish(null, new Error('The cartographic cache did not respond.')), 8000)
+            channel.port1.onmessage = event => {
+                if (event.data?.error) finish(null, new Error('The cartographic cache is unavailable.'))
+                else finish(event.data)
             }
+            channel.port1.onmessageerror = () => finish(null, new Error('The cartographic cache response could not be read.'))
+            try { controller.postMessage({source: 'LGS_CACHE_MANAGER', type, ...payload}, [channel.port2]) }
+            catch (error) { finish(null, error) }
         })
     }
 
-    /**
-     * Purges the entire Cesium cache via the Service Worker.
-     * Triggers a 'lgs:cache-cleared' event upon success.
-     */
-    clear() {
-        const sw = navigator.serviceWorker.controller
-        if (sw) {
-            const name = typeof this.cacheName === 'string'
-                         ? this.cacheName
-                         : this.cacheName.cacheName
+    /** Return the tracked payload usage without rereading all cached tiles. */
+    getUsage = async () => (await this.getStatus()).usage
 
-            sw.postMessage({
-                               type:      'CLEAR_CACHE',
-                               source:    this.sourceTag,
-                               cacheName: name,
-                           })
-        }
+    /** Return the configured budget, effective budget, and cached usage. */
+    getStatus = () => this.request('GET_TILE_CACHE_STATUS')
+
+    /** Apply the global cartographic budget and explicit provider routing rules. */
+    configure = (maxBytes, rules) => {
+        this.maxQuota = maxBytes
+        return this.request('CONFIGURE_TILE_CACHE', {maxBytes, rules})
     }
+
+    /** Purge only the requested cartographic scope and await completion. */
+    clear = () => this.request('CLEAR_CACHE', {scope: this.cacheName === 'cesium-ion-assets' ? 'ion' : 'all'})
 }

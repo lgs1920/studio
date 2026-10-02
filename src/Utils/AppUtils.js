@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-02-02
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,6 +21,7 @@ import {
 import { ElevationServer }          from '@Core/Elevation/ElevationServer'
 import { Settings }                 from '@Core/settings/Settings'
 import { SettingsSection }          from '@Core/settings/SettingsSection'
+import { cartographicCacheController } from '@Core/cache/CartographicCacheController'
 import { ionTokenManager }          from '@Core/ui/IonTokenManager'
 import { ensureJourneyReplaySettings } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import axios                        from 'axios'
@@ -435,6 +436,8 @@ export class AppUtils {
             await lgs.settings.add(section)
         })
         await Promise.all(promises)
+
+        cartographicCacheController.init()
 
         Object.assign(lgs.stores.replay, ensureJourneyReplaySettings({resetTransient: true}))
 

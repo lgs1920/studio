@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-13
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,10 +18,12 @@
  * Unified LGS1920 Studio Service Worker
  * Manages PWA versioning, dynamic asset caching, and Cesium persistent storage.
  */
-const CESIUM_CACHE = 'cesium-ion-assets'
+import { createCartographicCache } from './cartographic-cache.js'
+
+/** Persistent tile cache with an independent payload budget. */
+const cartographicCache = createCartographicCache()
 const APP_CACHE_PREFIX = 'lgs-studio-'
 const BUILD_METADATA_KEY = 'build_metadata'
-const MAX_CESIUM_ENTRIES = 700
 const CACHEABLE_DESTINATIONS = new Set(['script', 'style', 'image', 'font', 'manifest', 'worker'])
 const BLOCKED_CACHE_PATHS = [/^\/api(\/|$)/i, /^\/auth(\/|$)/i]
 const STATIC_FILE_EXTENSIONS = /\.(?:css|js|mjs|map|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|otf|eot|wasm|webmanifest|txt|json)$/i
@@ -211,53 +213,13 @@ self.addEventListener('fetch', event => {
         return
     }
 
-    if (url.hostname === 'assets.ion.cesium.com') {
-        event.respondWith(handleCesiumFetch(event).catch(() => new Response('Offline', {
-            status:     503,
-            statusText: 'Offline',
-        })))
-        return
-    }
-
     if (event.request.method === 'GET' && url.protocol.startsWith('http')) {
-        event.respondWith(handleAppFetch(event).catch(() => new Response('Offline', {
-            status:     503,
-            statusText: 'Offline',
-        })))
+        const response = cartographicCache.handle(event.request, () => handleAppFetch(event))
+            .catch(() => new Response('Offline', {status: 503, statusText: 'Offline'}))
+        event.respondWith(response)
+        event.waitUntil(response.then(() => undefined))
     }
 })
-
-/**
- * Handles persistent caching of Cesium assets.
- * @param {FetchEvent} event
- */
-async function handleCesiumFetch(event) {
-    const {request} = event
-    if (isRangeRequest(request)) {
-        return fetch(request)
-    }
-
-    const cache = await caches.open(CESIUM_CACHE)
-    const cachedResp = await cache.match(request)
-    if (cachedResp) {
-        return cachedResp
-    }
-
-    try {
-        const networkResp = await fetch(request)
-        if (networkResp && !isPartialResponse(networkResp) && (networkResp.ok || networkResp.type === 'opaque')) {
-            event.waitUntil(
-                cache.put(request, networkResp.clone())
-                    .then(() => trimCacheByEntries(cache, MAX_CESIUM_ENTRIES))
-                    .catch(() => null),
-            )
-        }
-        return networkResp
-    }
-    catch {
-        return new Response('Offline', {status: 503, statusText: 'Offline'})
-    }
-}
 
 /**
  * Handles standard application resource caching.
@@ -446,61 +408,29 @@ async function staleWhileRevalidate(event) {
     return new Response('Offline', {status: 503, statusText: 'Offline'})
 }
 
-async function trimCacheByEntries(cache, maxEntries) {
-    const keys = await cache.keys()
-    if (keys.length <= maxEntries) {
-        return
-    }
-
-    const keysToDelete = keys.slice(0, keys.length - maxEntries)
-    await Promise.all(keysToDelete.map(key => cache.delete(key)))
-}
-
-const isManagedCacheName = cacheName =>
-    typeof cacheName === 'string'
-    && (cacheName === CESIUM_CACHE || cacheName.startsWith('cesium-ion-assets-') || cacheName.startsWith(APP_CACHE_PREFIX))
-
-self.addEventListener('message', async event => {
+/** Handle acknowledged cartographic commands independently of application caches. */
+self.addEventListener('message', event => {
     if (event.data?.type === 'SKIP_WAITING') {
         event.waitUntil(self.skipWaiting())
         return
     }
-
-    if (event.data?.source !== 'LGS_CACHE_MANAGER') {
-        return
-    }
-
-    const {type, cacheName} = event.data
+    if (event.data?.source !== 'LGS_CACHE_MANAGER') return
+    const {type, scope, maxBytes, rules} = event.data
     const replyPort = event.ports?.[0]
-
-    if (type === 'GET_USAGE') {
-        if (!replyPort) {
-            return
-        }
-        if (!isManagedCacheName(cacheName)) {
-            replyPort.postMessage({error: 'invalid_cache_name'})
-            return
-        }
-
-        const cache = await caches.open(cacheName)
-        const keys = await cache.keys()
-
-        let totalSize = 0
-        for (const req of keys) {
-            const res = await cache.match(req)
-            if (res) {
-                const blob = await res.blob()
-                totalSize += blob.size
+    /** Execute one command and keep the worker alive through its acknowledgement. */
+    const respond = async () => {
+        try {
+            let result
+            if (type === 'CONFIGURE_TILE_CACHE') result = await cartographicCache.configure({maxBytes, rules})
+            else if (type === 'GET_USAGE' || type === 'GET_TILE_CACHE_STATUS') result = await cartographicCache.status()
+            else if (type === 'CLEAR_CACHE') {
+                result = await cartographicCache.clear(scope ?? 'all')
+                await notifyClients('lgs:cache-cleared', {scope: scope ?? 'all'})
             }
+            else return
+            replyPort?.postMessage(result)
         }
-        replyPort.postMessage({usage: totalSize})
+        catch { replyPort?.postMessage({error: 'cache_unavailable', available: false}) }
     }
-
-    if (type === 'CLEAR_CACHE') {
-        if (!isManagedCacheName(cacheName)) {
-            return
-        }
-        await caches.delete(cacheName)
-        await notifyClients('lgs:cache-cleared', {cacheName})
-    }
+    event.waitUntil(respond())
 })

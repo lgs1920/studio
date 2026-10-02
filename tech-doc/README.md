@@ -63,7 +63,7 @@ below by engineering domain rather than storage directory.
 - [Settings synchronization](specs/data/SETTINGS_SYNC_GUIDE.md)
 - [Internal database architecture](specs/data/CORE-INTERNAL-DATABASE-ARCHITECTURE.md)
 - [LocalDB API reference](specs/data/CORE-LOCALDB-API-REFERENCE.md)
-- [Cache](specs/data/CORE-CACHE-README.md)
+- [Local cartographic cache](specs/data/CORE-CACHE-README.md)
 
 ### Planned
 

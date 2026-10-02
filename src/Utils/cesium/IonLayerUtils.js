@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-26
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@ import { CacheManager } from '@Core/cache/CacheManager'
 import { Cesium3DTileset, Google2DImageryProvider, Ion, IonImageryProvider, IonResource, createGooglePhotorealistic3DTileset } from 'cesium'
 
 const CESIUM_CACHE_NAME = 'cesium-ion-assets'
-const DEFAULT_CACHE_QUOTA = 500 * 1024 * 1024
+const DEFAULT_CACHE_QUOTA = 512 * 1024 * 1024
 
 const normalizeToken = value => typeof value === 'string' ? value.trim() : ''
 
@@ -29,6 +29,7 @@ export class IonLayerUtils {
     static lastSyncedToken = null
     static tokenCacheName = () => CESIUM_CACHE_NAME
 
+    /** Synchronize the Ion cache bridge and await cleanup when the active token changes. */
     static async syncCesiumCache(token = getActiveToken(), {purgePrevious = true} = {}) {
         const normalizedToken = normalizeToken(token)
         if (!normalizedToken) {
@@ -41,7 +42,7 @@ export class IonLayerUtils {
         if (currentCache?.cacheName === cacheName) {
             if (purgePrevious && IonLayerUtils.lastSyncedToken !== null && IonLayerUtils.lastSyncedToken !== normalizedToken) {
                 try {
-                    currentCache.clear?.()
+                    await currentCache.clear?.()
                 }
                 catch (error) {
                     console.error('[IonLayerUtils] Failed to clear Cesium cache after token change:', error)
@@ -54,7 +55,7 @@ export class IonLayerUtils {
 
         if (purgePrevious && currentCache?.cacheName && currentCache.cacheName !== cacheName) {
             try {
-                currentCache.clear?.()
+                await currentCache.clear?.()
             }
             catch (error) {
                 console.error('[IonLayerUtils] Failed to clear previous Cesium cache:', error)
@@ -85,12 +86,12 @@ export class IonLayerUtils {
 
     /**
      * Clears the optional Cesium Ion cache without creating a replacement cache.
-     * @returns {Promise<void>} A promise that resolves after the clear request is sent.
+     * @returns {Promise<void>} Resolves after the purge acknowledgement or a handled bridge failure.
      */
     static async clearCesiumCache() {
         const currentCache = globalThis.__?.app?.cesiumCache
         try {
-            currentCache?.clear?.()
+            await (currentCache ?? new CacheManager(CESIUM_CACHE_NAME, DEFAULT_CACHE_QUOTA)).clear?.()
         }
         catch (error) {
             console.error('[IonLayerUtils] Failed to clear Cesium cache:', error)

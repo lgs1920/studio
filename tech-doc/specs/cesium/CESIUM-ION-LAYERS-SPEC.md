@@ -33,19 +33,19 @@ terrain: reearth-world
 - `imageryProviderFromLayer()` creates Ion or Google 2D imagery providers with that credential;
 - `createTileset()` creates Ion tilesets with an explicit resource and temporarily scopes the credential for Google
   Photorealistic 3D Tiles;
-- `clearCesiumCache()` clears the existing optional cache without creating a new one.
+- `clearCesiumCache()` awaits an Ion-only cartographic purge and resets the optional Ion bridge.
 
 The default Cesium viewer uses `imageryProvider: false` and `baseLayerPicker: false`. Non-Ion providers are constructed
 without Ion credentials. Direct URL terrain and 3D tiles remain independent from Ion.
 
 ## Cache contract
 
-The service worker keeps the existing persistent `cesium-ion-assets` cache for Ion asset responses. The application
-creates its `CacheManager` only immediately before the first Ion resource is requested. Range requests, API endpoints,
-and non-Ion requests are not made part of this application-level Ion flow.
-
-Changing or removing the provider token clears the existing cache. No cache object is created merely because Studio
-starts or because a personal credential exists in the vault.
+Ion asset payloads use the [local cartographic cache](../data/CORE-CACHE-README.md), with
+HTTP freshness enforcement, a shared byte budget, and hashed request identities.
+The optional Ion `CacheManager` bridge is created immediately before the first Ion
+resource request. Changing or removing the provider token awaits an Ion-only purge,
+including when the bridge has not yet been initialized in the current session.
+Other provider responses, saved journeys, and PWA resources remain separate.
 
 ## Access flow
 

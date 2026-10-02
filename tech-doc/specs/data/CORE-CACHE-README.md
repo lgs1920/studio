@@ -1,94 +1,88 @@
-# LGS1920 Cache Management System
+# Local Cartographic Cache
 
-## Overview
+Status: current implementation
 
-This project uses a unified Service Worker architecture to manage two distinct caching strategies, ensuring high
-performance for both application code and heavy 3D assets.
+## Scope and settings
 
-1. **Application Assets**: Version-aware caching (Stale-while-revalidate) with automatic cleanup on build updates via
-   metadata tracking.
-2. **Cesium Assets**: Persistent, high-capacity caching for 3D tiles, managed via a dedicated `CacheManager` class.
+Studio keeps map tile, terrain, and direct 3D Tiles responses in a dedicated local
+CacheStorage cache. Journeys, GPX files, POI data, statistics, rendered videos,
+provider APIs, and Google tile endpoints are outside this cache. The PWA shell
+retains its separate version-aware application cache.
 
-## Architecture & Components
+**Settings > Global Settings > Cartographic cache** exposes:
 
-### 1. Service Worker (service-worker-pwa.js)
+- a maximum payload budget of 256 MiB, 512 MiB (default), 1 GiB, or 2 GiB;
+- current cached payload usage;
+- the effective budget when browser storage pressure reduces the configured cap;
+- an acknowledged purge of cartographic responses only.
 
-* **Versioning**: Tracks `build.json`, `version.json`, and `branch.json` to trigger application cache invalidation upon
-  deployment updates.
-* **Fetch Logic**: Splits requests based on origin. Requests to `assets.ion.cesium.com` are handled by a persistent
-  strategy, while standard HTTP GET requests use stale-while-revalidate.
-* **Storage Management**: Calculates cache usage dynamically by iterating through cached Blobs to provide precise
-  storage reporting, bypassing CORS restrictions on headers.
+The preference is `app.tileCacheMaxBytes` in `public/settings.yaml`. The existing
+Valtio settings owner persists it in IndexedDB and preserves it during hydration.
+Changing the budget does not prefetch resources. Reducing it triggers eviction.
 
-### 2. CacheManager (CacheManager.js)
+## Storage and routing
 
-The `CacheManager` acts as the client-side interface to the persistent Cesium cache.
+`public/service-worker-pwa.js` delegates cartographic requests to
+`public/cartographic-cache.js`. The response cache is `lgs-cartographic-tiles-v1`;
+small accounting records and credential-free configuration live in
+`lgs-cartographic-metadata-v1`.
 
-* **getUsage()**: Asynchronously returns the current byte-size of the Cesium cache via `MessageChannel`.
-* **clear()**: Requests a cache purge from the Service Worker and broadcasts a `lgs:cache-cleared` event upon
-  completion.
-* **Event Handling**: Automatically listens for Service Worker messages and dispatches `CustomEvent` objects to the
-  global window scope for UI reactivity.
+The application supplies source rules built from its configured provider catalog.
+Rules restrict persistence to imagery tile operations, terrain resources, and
+3D content under configured source roots. WMS and WMTS capability and feature
+queries are excluded. WMS routing supports the existing allowlisted PHP proxy.
+A catalog layer can opt out with `cache: false`.
 
-## Quota Management & Storage
+Ion content requests are scoped by their authenticated request identity. Only
+SHA-256 resource keys are persisted: original request URLs and authorization
+headers are not written to the response or accounting cache. The cache does not
+forward credentials to other providers. Responses themselves remain readable by
+scripts executing in the Studio origin; this is not encrypted storage.
 
-To prevent browser storage exhaustion:
+The old `cesium-ion-assets` caches are discarded on first initialization because
+they lack trustworthy size and freshness metadata.
 
-* **Quota Enforcement**: The `maxQuota` parameter passed to `CacheManager` acts as an advisory limit for UI-level
-  monitoring.
-* **Automatic Cleanup**: During Service Worker activation, old caches matching the `lgs-studio-` prefix are
-  automatically purged.
-* **Manual Purge**: The `clear()` method allows users to explicitly release disk space without affecting the core PWA
-  application files.
+## Freshness and limits
 
-## Integration
+A response is persisted only when its visible HTTP headers establish a positive
+freshness lifetime through `max-age` or `Expires`. `Age` and `Date` reduce the
+remaining lifetime. `no-store`, `no-cache`, opaque responses, wildcard `Vary`,
+range requests, partial responses, and resources larger than the effective
+budget are excluded. Cross-origin responses without readable freshness headers
+retain the browser's HTTP caching behavior.
 
-### Initialization
+Fresh entries are reused locally. Expired entries still present at access time
+are revalidated with `ETag` or `Last-Modified`; a 304 updates their freshness.
+If conditional headers cause a CORS failure, Studio retries the original request.
+Maintenance removes expired entries. Provider permissions and attribution remain
+applicable; this cache does not authorize offline use or bulk downloading.
 
-Ensure the `CacheManager` is initialized after the Service Worker registration:
+The budget measures response payload bytes, rather than all browser disk overhead.
+Per-resource metadata makes routine usage reporting independent of rereading
+binary contents. Eviction protects soft reserves of 20% for imagery and 10% for
+terrain against growing 3D content. 3D resources use the remaining capacity and
+can borrow unused reserves. The hard overall cap takes precedence when individual
+resources cannot fit alongside the reserves. LRU ordering applies within the
+eligible categories.
 
-```javascript
-import { CacheManager } from './CacheManager'
+`navigator.storage.estimate()` is consulted with bounded frequency. The effective
+cap leaves origin storage for IndexedDB and concurrent writes. A quota failure
+reduces retention and preserves the downloaded network response. CacheStorage
+or hashing failures also preserve network loading.
 
-// Global application object setup
-window.__ = window.__ || {app: {}, ui: {}}
+## Lifecycle and validation
 
-__.app.cesiumCache = new CacheManager('cesium-ion-assets', 524288000)
+`CartographicCacheController` synchronizes the hydrated preference and resends it
+after service worker controller changes. `CacheManager` uses acknowledged
+MessageChannel commands with an eight-second timeout and closes both ports on
+completion or failure. No cache operation requires backend storage.
 
-```
+Cache mutations are serialized. Concurrent identical requests share a download;
+returned responses can be consumed independently. A purge invalidates pending
+download writes. Ion credential changes await an Ion-only purge, preserving
+unrelated cartographic resources and the PWA shell.
 
-### UI Monitoring
-
-Monitor cache growth periodically:
-
-```javascript
-setInterval(async () => {
-    const bytes = await __.app.cesiumCache.getUsage()
-    const mb = (bytes / (1024 * 1024)).toFixed(2)
-
-    if (__.ui?.updateCacheStats) {
-        __.ui.updateCacheStats({used: mb})
-    }
-}, 30000)
-
-```
-
-### Events
-
-The system dispatches global events that can be captured anywhere in the application:
-
-```javascript
-window.addEventListener('lgs:cache-cleared', (e) => {
-    console.log('Cache successfully cleared:', e.detail.cacheName)
-})
-
-```
-
-## Error Handling & Debugging
-
-* **SW Unavailable**: If `navigator.serviceWorker.controller` is null, methods resolve silently to prevent UI breakage.
-* **CORS & Opaque Responses**: Calculation via `blob.size` prevents `SecurityError` when accessing cross-origin assets.
-* **Cache Corruption**: The system strictly enforces string-based identifiers. If a cache named `[object Object]`
-  appears, ensure `CacheManager` methods are not passing full object instances.
-* **Communication Isolation**: Every request via `MessageChannel` is isolated, ensuring the main thread remains stable
-  even if a background process fails.
+Regression tests cover source classification, freshness, byte accounting, worker
+restart recovery, budget reduction, LRU, storage pressure, failure fallback,
+request coalescing, credential isolation, purge races, message acknowledgements,
+settings hydration, native Web Awesome controls, and refresh cleanup.

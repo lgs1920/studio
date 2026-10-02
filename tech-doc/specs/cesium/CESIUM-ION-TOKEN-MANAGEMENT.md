@@ -25,7 +25,7 @@ Startup follows this sequence:
 4. Mark the provider credential as available or unavailable.
 5. Leave `Cesium.Ion.defaultAccessToken` unset.
 
-Startup does not create an Ion resource, access an Ion API, request an Ion asset, or initialize the Ion cache.
+Startup does not create an Ion resource, access an Ion API, request an Ion asset, or initialize the optional Ion cache bridge. The shared local cartographic cache is configured independently.
 
 ## Resource behavior
 
@@ -34,7 +34,7 @@ terrain provider, or Ion-backed tileset, it:
 
 - obtains the provider-level credential;
 - rejects the operation when no credential is available;
-- initializes the optional persistent cache lazily;
+- initializes the optional Ion cache bridge lazily;
 - passes the credential explicitly to the Cesium factory whenever the API supports an access-token option.
 
 Google Photorealistic 3D Tiles is the Cesium exception: Cesium 1.144 obtains its Ion resource through the global Ion
@@ -55,7 +55,7 @@ not require Ion.
 Removing the provider token:
 
 - deletes `cesium_ion_token` from the vault;
-- clears the optional Ion cache;
+- awaits a purge of Ion entries in the local cartographic cache;
 - locks Ion-dependent catalog entries;
 - changes an active Ion base to `arcgis-normal`;
 - changes an active Ion terrain to `reearth-world`;
@@ -67,7 +67,7 @@ A persisted Ion selection without a usable token is normalized to the same non-I
 
 Automated tests cover:
 
-- startup without a token and without Ion cache initialization;
+- startup without a token and without Ion cache bridge initialization;
 - provider-level token loading and saving;
 - migration from legacy layer credentials;
 - removal and non-Ion fallback;

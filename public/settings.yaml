@@ -16,6 +16,7 @@ version: 1.0
 # Application settings
 ########################################
 app:
+  tileCacheMaxBytes: 536870912 # Persistent cartographic payload budget (512 MiB)
   lastVisit: null         # Last visit date
   firstVisit: true        # Is it the first visit ?
   changelogToRead: true   # Used to check if there are news to read
