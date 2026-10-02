@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-01-21
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,9 +22,24 @@
 }
 
 .geocoding-dialog-title {
-    display: inline-flex;
+    display: flex;
     align-items: center;
+    width: 100%;
     gap: var(--lgs-gutter-xs);
+
+    & > span {
+        flex: 1;
+    }
+
+    & .geocoding-location-button {
+        flex-shrink: 0;
+        margin-left: auto;
+    }
+}
+
+.geocoding-location-error {
+    margin: 0;
+    color: var(--wa-color-danger-on-normal);
 }
 
 .geocoding-widget-shell {

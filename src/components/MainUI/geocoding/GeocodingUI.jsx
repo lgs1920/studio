@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-05-10
- * Last modified: 2026-05-10
+ * Created on: 2025-01-21
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -36,9 +36,13 @@ export const GeocodingUI = () => {
     const store = lgs.stores.main.components.geocoder
     const geocoder = useSnapshot(store)
     const address = useRef(null)
+    const geolocationRequestId = useRef(0)
+    const displayCloseTimer = useRef(null)
     const [exactMatch, setExactMatch] = useState(false)
     const [coordinates, setCoordinates] = useState(false)
     const [ddCoordinates, setDdCoordinates] = useState(false)
+    const [isLocating, setIsLocating] = useState(false)
+    const [locationError, setLocationError] = useState('')
 
     const resetSearchState = () => {
         __.ui.geocoder.init()
@@ -49,9 +53,17 @@ export const GeocodingUI = () => {
     }
 
     const resetTransientState = ({keepInput = false} = {}) => {
+        geolocationRequestId.current += 1
+        if (displayCloseTimer.current !== null) {
+            window.clearTimeout(displayCloseTimer.current)
+            displayCloseTimer.current = null
+        }
+
         resetSearchState()
         store.dialog.loading = false
         store.dialog.submitDisabled = true
+        setIsLocating(false)
+        setLocationError('')
 
         if (!keepInput && address.current) {
             address.current.value = ''
@@ -63,6 +75,12 @@ export const GeocodingUI = () => {
     }
 
     const requestClose = () => {
+        geolocationRequestId.current += 1
+        if (displayCloseTimer.current !== null) {
+            window.clearTimeout(displayCloseTimer.current)
+            displayCloseTimer.current = null
+        }
+
         store.dialog.visible = false
     }
 
@@ -85,8 +103,22 @@ export const GeocodingUI = () => {
         store.dialog.mounted = false
     }
 
-    const showPOI = async (geoPoint) => {
-        __.ui.poiManager.getPointFromGeoJson(geoPoint, true).then(point => {
+    /**
+     * Focus the map on a point and optionally close the dialog after a delay.
+     * @param {Object} geoPoint - GeoJSON point to display.
+     * @param {{closeAfter?: number, shouldContinue?: () => boolean}} [options] - Optional close delay and cancellation guard.
+     * @returns {Promise<void>} Resolves after the point has been prepared for display.
+     */
+    const showPOI = async (geoPoint, {closeAfter = 0, shouldContinue = () => true} = {}) => {
+        /**
+         * Start focusing the map on a prepared point and schedule its optional close.
+         * @param {Object} point - Prepared map point.
+         */
+        const focusPoint = (point) => {
+            if (!shouldContinue()) {
+                return
+            }
+
             __.ui.sceneManager.focus(point, {
                 target:     point,
                 lookAt:     true,
@@ -106,9 +138,23 @@ export const GeocodingUI = () => {
                     return false
                 },
             })
-        })
 
-        requestClose()
+            if (closeAfter > 0) {
+                if (displayCloseTimer.current !== null) {
+                    window.clearTimeout(displayCloseTimer.current)
+                }
+                displayCloseTimer.current = window.setTimeout(requestClose, closeAfter)
+            }
+        }
+
+        const displayPromise = __.ui.poiManager.getPointFromGeoJson(geoPoint, true).then(focusPoint)
+
+        if (closeAfter > 0) {
+            await displayPromise
+        }
+        else {
+            requestClose()
+        }
     }
 
     const handleSubmit = async (event) => {
@@ -183,8 +229,18 @@ export const GeocodingUI = () => {
                         }, 8 * SECOND)
     }
 
-    const handleChange = () => {
+    /**
+     * Synchronize search validation and coordinate mode with the current input value.
+     * @param {{preserveGeolocationRequest?: boolean}} [options] - Whether the current location request remains active.
+     */
+    const handleChange = ({preserveGeolocationRequest = false} = {}) => {
+        if (!preserveGeolocationRequest) {
+            geolocationRequestId.current += 1
+            setIsLocating(false)
+        }
+
         const value = (address.current?.value || '').trimStart()
+        setLocationError('')
         if (address.current && address.current.value !== value) {
             address.current.value = value
         }
@@ -201,6 +257,85 @@ export const GeocodingUI = () => {
         setCoordinates(isCoordinates)
         setExactMatch(isCoordinates)
         store.dialog.submitDisabled = !isCoordinates && value.length < lgs.settings.ui.geocoder.minQuery
+    }
+
+    /**
+     * Resolve the device position and place a readable location or its coordinates in the search field.
+     * @returns {Promise<void>} Resolves after the current position has been handled.
+     */
+    const handleLocate = async () => {
+        const geolocation = globalThis.navigator?.geolocation
+
+        if (!geolocation) {
+            setLocationError('Device location is not available in this browser.')
+            return
+        }
+
+        const requestId = ++geolocationRequestId.current
+        let isDisplayingLocation = false
+        setIsLocating(true)
+        setLocationError('')
+
+        try {
+            const position = await new Promise((resolve, reject) => {
+                geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: false,
+                    maximumAge:         60_000,
+                    timeout:             15_000,
+                })
+            })
+
+            if (requestId !== geolocationRequestId.current) {
+                return
+            }
+
+            const {latitude, longitude} = position.coords
+            let location = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+
+            try {
+                const details = await __.ui.geocoder.getCoordinateLocationDetails({longitude, latitude})
+                if (details.location) {
+                    location = details.location
+                }
+            }
+            catch {
+                // Keep the coordinates when reverse geocoding cannot resolve the device position.
+            }
+
+            if (requestId !== geolocationRequestId.current || !address.current) {
+                return
+            }
+
+            address.current.value = location
+            handleChange({preserveGeolocationRequest: true})
+            isDisplayingLocation = true
+            await showPOI(turf.point([longitude, latitude]), {
+                closeAfter:     5 * SECOND,
+                shouldContinue: () => requestId === geolocationRequestId.current,
+            })
+        }
+        catch (error) {
+            if (requestId !== geolocationRequestId.current) {
+                return
+            }
+
+            const message = isDisplayingLocation
+                ? 'The device location was found but could not be displayed on the map.'
+                : error?.code === 1
+                    ? 'Location permission was denied. Allow location access in your browser settings and try again.'
+                    : error?.code === 2
+                        ? 'Your current location is unavailable.'
+                        : error?.code === 3
+                            ? 'The location request timed out. Please try again.'
+                            : 'The device location could not be retrieved.'
+
+            setLocationError(message)
+        }
+        finally {
+            if (requestId === geolocationRequestId.current) {
+                setIsLocating(false)
+            }
+        }
     }
 
     useEffect(() => {
@@ -234,9 +369,31 @@ export const GeocodingUI = () => {
             <div slot="label" className="geocoding-dialog-title">
                 <WaIcon name="map-location-dot" variant="regular"/>
                 <span>{'Search location'}</span>
+                <WaTooltip for="geocoder-use-current-location" placement="top">
+                    {'Use my current location'}
+                </WaTooltip>
+                <WaButton
+                    id="geocoder-use-current-location"
+                    className="square-button geocoding-location-button"
+                    appearance="outlined"
+                    size="s"
+                    type="button"
+                    aria-label="Use my current location"
+                    aria-busy={isLocating}
+                    loading={isLocating}
+                    disabled={isLocating}
+                    onClick={handleLocate}
+                >
+                    <WaIcon name="location-crosshairs"/>
+                </WaButton>
             </div>
 
             <div className="geocoding-dialog">
+                {locationError &&
+                    <p className="geocoding-location-error" role="alert">
+                        {locationError}
+                    </p>
+                }
                 <form onSubmit={handlePrimarySubmit}>
                     <div className="geocoding-form">
                         <WaInput
