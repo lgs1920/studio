@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-03
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,6 +23,7 @@ import {
     resolveReplayVideoStatsWidgetVisibility,
 }                                                       from '@Core/ui/replay/ReplayOverlayResolver'
 import { Widget2Canvas }                                from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
+import { registerReplayWidgetFrameRenderer } from '@Core/ui/replay/ReplayWidgetFrameRenderers'
 import {
     DEFAULT_JOURNEY_STATS_DATE_TIME_STACK,
     JOURNEY_STATS_TEXT_ITEM_MAP,
@@ -41,7 +42,10 @@ import { DISTANCE_UNITS, ELEVATION_UNITS, PACE_UNITS, SPEED_UNITS, UnitUtils } f
 import { useOptionalSnapshot, useProxyValue }             from '@Utils/ValtioUtils'
 import { WaIcon }                                       from '@web.awesome.me/webawesome-pro/dist/react'
 import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useSnapshot }                                  from 'valtio'
+import { useSnapshot }                           from 'valtio'
+
+/** Hidden dynamic content needs no frame-dependent metrics or DOM measurements. */
+const EMPTY_DYNAMIC_STATS_METRICS = {distance: 0, positive: {elevation: 0}, duration: 0}
 
 const scaleValue = (value, correction = 1) => {
     const numericValue = Number(value)
@@ -171,6 +175,8 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
     const [journeyLocationState, setJourneyLocationState] = useState({slug: null, value: ''})
     const widgetRef = useRef(null)
     const canvasRefreshFrames = useRef({first: null, second: null, widgetId: null})
+    const _layoutFrame = useRef(null)
+    const _captureLayoutState = useRef(null)
 
     /**
      * Cancels a pending delayed refresh for the dynamic widget capture.
@@ -195,7 +201,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
      * two animation frames to resize and recenter the widget.
      */
     const scheduleCanvasRefresh = useCallback(() => {
-        if (!id) {
+        if (!id || !Widget2Canvas.get(id)) {
             return
         }
 
@@ -209,7 +215,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
         }
 
         if (typeof globalThis.requestAnimationFrame !== 'function') {
-            Widget2Canvas.refresh(id)
+            Widget2Canvas.refresh(id, {onlyIfDirty: true})
             return
         }
 
@@ -227,7 +233,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                 frames.widgetId = null
 
                 if (scheduledWidgetId) {
-                    Widget2Canvas.refresh(scheduledWidgetId)
+                    Widget2Canvas.refresh(scheduledWidgetId, {onlyIfDirty: true})
                 }
             })
         })
@@ -246,10 +252,15 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
     const unitSystem = useSnapshot($unitSystem)
     const currentUnitSystem = unitSystem.current
     const isImperial = currentUnitSystem === 'imperial'
-    const replay = useSnapshot(lgs.stores.replay)
     const video = useSnapshot(lgs.stores.ui.video)
     const isDynamicMode = mode === 'dynamic'
     const isVideoBoard = widgetsBoard === VIDEO_WIDGETS_BOARD
+    const replayWidgetVisible = useProxyValue(lgs.stores.replay,
+        state => !isVideoBoard || resolveReplayVideoStatsWidgetVisibility({mode, replay: state}), true,
+        {sync: video.exporting === true})
+    const isVisible = Boolean(journeySlug && journey) && replayWidgetVisible
+    const replay = useOptionalSnapshot(isVisible && isDynamicMode ? lgs.stores.replay : undefined,
+        undefined, {sync: video.exporting === true})
     const useVideoStatsPlaceholder = isDynamicMode
                                      && isVideoBoard
                                      && Boolean(video.editing || video.preRecording)
@@ -264,10 +275,10 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
     }, [id, configuration])
 
     const replayController = __.ui?.replay?.controller ?? null
-    const replayFrameState = resolveReplayDynamicFrameState(replay)
+    const replayFrameState = isVisible && isDynamicMode ? resolveReplayDynamicFrameState(replay) : null
 
     const dynamicReplaySample = useMemo(() => {
-        if (!isDynamicMode) {
+        if (!isDynamicMode || !isVisible) {
             return null
         }
 
@@ -276,13 +287,16 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                    replay,
                    controller: replayController,
                })
-    }, [isDynamicMode, replay, replayController, replayFrameState])
+    }, [isDynamicMode, isVisible, replay, replayController, replayFrameState])
 
     /**
      * Merges metrics based on defined data source (global, external, user)
      */
     const displayMetrics = useMemo(() => {
         if (isDynamicMode) {
+            if (!isVisible) {
+                return EMPTY_DYNAMIC_STATS_METRICS
+            }
             return buildDynamicJourneyReplayStatsMetrics(replay, journey, dynamicReplaySample)
         }
 
@@ -305,10 +319,10 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                 ...(source === 'user' ? {...(external.positive || {}), ...(user.positive || {})} : {}),
             }
         }
-    }, [dynamicReplaySample, element.dataSource, fallbackMetrics, replay, isDynamicMode, metricsSnap])
+    }, [dynamicReplaySample, element.dataSource, fallbackMetrics, journey, replay, isDynamicMode, isVisible, metricsSnap])
 
     useLayoutEffect(() => {
-        if (!isVideoBoard || !id) {
+        if (!isVideoBoard || !id || !isVisible || video.exporting) {
             cancelScheduledDynamicRefresh()
             return
         }
@@ -318,7 +332,8 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
         id,
         isDynamicMode,
         isVideoBoard,
-        replayFrameState,
+        isVisible,
+        video.exporting,
         displayMetrics.distance,
         displayMetrics.positive?.elevation,
         displayMetrics.duration,
@@ -372,7 +387,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
         min: formatPace(displayMetrics?.minPace),
     }), [displayMetrics?.averagePace, displayMetrics?.minPace, formatPace])
 
-    const hasDuration = isDynamicMode ? Boolean(replay?.elapsedMillis) : (journey?.hasTime ?? false)
+    const hasDuration = isDynamicMode ? displayMetrics.duration > 0 : (journey?.hasTime ?? false)
     const hasElevation = isDynamicMode
                          ? displayMetrics?.hasElevation !== false
                          : (journey?.hasAltitude ?? false)
@@ -435,6 +450,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
         displayMetrics.distance,
         displayMetrics.positive?.elevation,
         hasElevation,
+        isDynamicMode,
         element,
         formattedDuration,
         showAltitudeRow,
@@ -447,12 +463,19 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
         useVideoStatsPlaceholder,
     ])
 
-    const syncWidgetFrame = useCallback((attempt = 0) => {
+    /** Measure and center content before capture, without persisting export geometry. */
+    const syncWidgetFrame = useCallback((options = {}) => {
         if (!id) {
             return
         }
 
-        requestAnimationFrame(() => {
+        if (_layoutFrame.current !== null) {
+            cancelAnimationFrame(_layoutFrame.current)
+            _layoutFrame.current = null
+        }
+        /** Settle measured bounds without a capture-time animation delay. */
+        const synchronize = () => {
+            _layoutFrame.current = null
             const widgetManager = globalThis.__?.ui?.widgetManager
             if (!widgetManager) {
                 return
@@ -461,9 +484,6 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
             const moveable = widgetManager.getMoveable(id)?.current
 
             if (!moveable) {
-                if (attempt < 6) {
-                    setTimeout(() => syncWidgetFrame(attempt + 1), 50)
-                }
                 return
             }
 
@@ -472,6 +492,12 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
 
             if (!moveable || !target || !content || !target.contains(content)) {
                 moveable?.updateRect?.()
+                return
+            }
+
+            // Equal displayed markup needs no temporary resize or layout invalidation.
+            const layoutState = `${content.outerHTML}|${target.style.cssText}`
+            if (options.force !== true && _captureLayoutState.current === layoutState) {
                 return
             }
 
@@ -502,7 +528,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
                 if (config) {
                     config.dimensions = {width, height}
                     config.position = {left: nextLeft, top: nextTop}
-                    if (config.persist && config.runtimeReady) {
+                    if (config.persist && config.runtimeReady && !lgs.stores.ui.video.exporting) {
                         void widgetManager.saveWidgetPosition(id, config)
                     }
                 }
@@ -518,9 +544,29 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
             }
 
             moveable.updateRect()
-            requestAnimationFrame(() => moveable.updateRect())
-        })
+            _captureLayoutState.current = `${content.outerHTML}|${target.style.cssText}`
+        }
+        if (options.immediate === true || lgs.stores.ui.video.exporting) {
+            synchronize()
+        }
+        else {
+            _layoutFrame.current = requestAnimationFrame(synchronize)
+        }
     }, [id])
+
+    useEffect(() => () => {
+        if (_layoutFrame.current !== null) {
+            cancelAnimationFrame(_layoutFrame.current)
+        }
+    }, [])
+
+    // React text is committed first, then the exporter settles layout before rasterization.
+    useEffect(() => isVideoBoard
+        ? registerReplayWidgetFrameRenderer(id, () => {
+            cancelScheduledDynamicRefresh()
+            syncWidgetFrame({immediate: true})
+        })
+        : undefined, [cancelScheduledDynamicRefresh, id, isVideoBoard, syncWidgetFrame])
 
     useEffect(() => {
         let isMounted = true
@@ -558,7 +604,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
             return
         }
 
-        const observer = new ResizeObserver(syncWidgetFrame)
+        const observer = new ResizeObserver(() => syncWidgetFrame({force: true}))
         observer.observe(widgetRef.current)
         syncWidgetFrame()
 
@@ -787,18 +833,6 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
 
         return group.items.map(renderTextItem)
     }
-
-    const isVisible = useMemo(() => {
-        if (!journeySlug || !journey) {
-            return false
-        }
-
-        if (!isVideoBoard) {
-            return true
-        }
-
-        return resolveReplayVideoStatsWidgetVisibility({mode, replay})
-    }, [replay, isVideoBoard, journey, journeySlug, mode])
 
     const widgetStyle = useMemo(() => (
         isVisible

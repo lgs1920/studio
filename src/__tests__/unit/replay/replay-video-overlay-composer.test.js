@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,11 +17,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
     buildReplayVideoComposerOverlays,
+    flushReplayVideoOverlayCanvases,
     getReplayVideoOverlayMetrics,
     isReplayVideoWidgetReady,
     resolveReplayVideoWidgetScale,
 } from '@Core/ui/replay/ReplayVideoOverlayComposer'
 import { Widget2Canvas } from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
+import { registerReplayWidgetFrameRenderer } from '@Core/ui/replay/ReplayWidgetFrameRenderers'
 
 describe('getReplayVideoOverlayMetrics', () => {
     beforeEach(() => {
@@ -391,5 +393,106 @@ describe('Replay video widget capture canvas resolution', () => {
                 h: 90,
             }),
         )
+    })
+})
+
+describe('Replay widget frame capture', () => {
+    const unregister = []
+
+    beforeEach(() => {
+        globalThis.__ = {ui: {widgetManager: {getElementById: vi.fn()}}}
+        globalThis.lgs = {stores: {replay: {recordingSync: true, active: true, playing: true}}}
+    })
+
+    afterEach(() => {
+        unregister.splice(0).forEach(cleanup => cleanup())
+        vi.restoreAllMocks()
+        vi.useRealTimers()
+        globalThis.__ = undefined
+        globalThis.lgs = undefined
+    })
+
+    it('flushes and composes the same visible set across the final replay boundary', async () => {
+        const elements = new Map(['dynamic-stats-widget#video', 'journey-stats-widget#video'].map(widgetId => {
+            const element = document.createElement('div')
+            const canvas = document.createElement('canvas')
+            canvas.className = 'lgs-widget-canvas'
+            element.append(canvas)
+            return [widgetId, element]
+        }))
+        __.ui.widgetManager.getElementById.mockImplementation(widgetId => elements.get(widgetId))
+        const flush = vi.spyOn(Widget2Canvas, 'flush').mockResolvedValue(true)
+        const dynamicRender = vi.fn()
+        const journeyRender = vi.fn()
+        unregister.push(registerReplayWidgetFrameRenderer('dynamic-stats-widget#video', dynamicRender))
+        unregister.push(registerReplayWidgetFrameRenderer('journey-stats-widget#video', journeyRender))
+        const composer = {beginUpdate: vi.fn(), addOverlay: vi.fn(), endUpdate: vi.fn()}
+        for (const replayFrameIndex of [4, 8, 4]) {
+            lgs.stores.replay.framePhase = {kind: 'replay', replayFrameIndex, replayFrameCount: 10}
+            const keys = await flushReplayVideoOverlayCanvases({widgetKeys: [...elements.keys()], strict: true})
+            const expected = replayFrameIndex === 8 ? 'journey-stats-widget#video' : 'dynamic-stats-widget#video'
+            expect(keys).toEqual([expected])
+            expect(flush).toHaveBeenLastCalledWith(expected, {onlyIfDirty: true})
+            buildReplayVideoComposerOverlays({composer, widgetKeys: keys})
+            expect(composer.addOverlay).toHaveBeenLastCalledWith(elements.get(expected).firstChild, expect.any(Object))
+        }
+        expect(flush).toHaveBeenCalledTimes(3)
+        expect(dynamicRender).toHaveBeenCalledTimes(2)
+        expect(journeyRender).toHaveBeenCalledTimes(1)
+    })
+
+    it('does no capture or discovery for an explicitly empty widget set', async () => {
+        const flush = vi.spyOn(Widget2Canvas, 'flush').mockResolvedValue(true)
+        expect(await flushReplayVideoOverlayCanvases({widgetKeys: []})).toEqual([])
+        expect(flush).not.toHaveBeenCalled()
+        expect(__.ui.widgetManager.getElementById).not.toHaveBeenCalled()
+    })
+
+    it('respects user-hidden widgets before a positive overlay visibility hint', async () => {
+        const element = document.createElement('div')
+        element.dataset.videoOverlayVisible = 'true'
+        __.ui.widgetManager.getElementById.mockReturnValue(element)
+        lgs.stores.ui = {widget: {list: new Map([['custom-widget', {visible: false}]])}}
+        const flush = vi.spyOn(Widget2Canvas, 'flush').mockResolvedValue(true)
+        expect(await flushReplayVideoOverlayCanvases({widgetKeys: ['custom-widget']})).toEqual([])
+        expect(flush).not.toHaveBeenCalled()
+    })
+
+    it('rejects a timed-out visible capture instead of encoding stale pixels', async () => {
+        vi.useFakeTimers()
+        __.ui.widgetManager.getElementById.mockReturnValue(document.createElement('div'))
+        vi.spyOn(Widget2Canvas, 'flush').mockReturnValue(new Promise(() => {}))
+        const capture = flushReplayVideoOverlayCanvases({widgetKeys: ['custom-widget'], strict: true, timeoutMs: 100})
+        const rejection = expect(capture).rejects.toThrow('custom-widget')
+        await vi.advanceTimersByTimeAsync(100)
+        await rejection
+        expect(vi.getTimerCount()).toBe(0)
+    })
+
+    it('aborts an in-flight widget capture and releases its timeout', async () => {
+        vi.useFakeTimers()
+        __.ui.widgetManager.getElementById.mockReturnValue(document.createElement('div'))
+        const controller = new AbortController()
+        vi.spyOn(Widget2Canvas, 'flush').mockImplementation(() => {
+            controller.abort()
+            return new Promise(() => {})
+        })
+        await expect(flushReplayVideoOverlayCanvases({
+            widgetKeys: ['custom-widget'], strict: true, signal: controller.signal,
+        })).rejects.toMatchObject({name: 'AbortError'})
+        expect(vi.getTimerCount()).toBe(0)
+    })
+
+    it('preserves a replacement renderer when an obsolete component unmounts', async () => {
+        const obsolete = vi.fn()
+        const replacement = vi.fn()
+        const releaseObsolete = registerReplayWidgetFrameRenderer('custom-widget', obsolete)
+        unregister.push(registerReplayWidgetFrameRenderer('custom-widget', replacement))
+        releaseObsolete()
+        __.ui.widgetManager.getElementById.mockReturnValue(document.createElement('div'))
+        vi.spyOn(Widget2Canvas, 'flush').mockResolvedValue(true)
+        await flushReplayVideoOverlayCanvases({widgetKeys: ['custom-widget'], frameState: {index: 7}})
+        expect(obsolete).not.toHaveBeenCalled()
+        expect(replacement).toHaveBeenCalledWith({index: 7})
     })
 })

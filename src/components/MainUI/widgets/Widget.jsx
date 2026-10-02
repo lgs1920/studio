@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-19
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -26,6 +26,7 @@ import {
 import {
     Widget2Canvas,
 }                                 from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
+import { resolveVideoOverlayVisibility } from '@Core/ui/replay/ReplayOverlayResolver'
 import {
     buildCenteredGridLines,
     DEFAULT_WIDGET_GRID_SETTINGS,
@@ -1708,6 +1709,14 @@ const WidgetHost = ({
                             outerTransforms: true,
                             outerShadows:    true,
                             widgetId,
+                            isVisible: () => {
+                                const entry = lgs.stores.ui.widget.list.get(widgetId)
+                                if (entry?.visible === false && config.canHide !== false) {
+                                    return false
+                                }
+                                return config.widgetsBoard !== VIDEO_WIDGETS_BOARD
+                                    || resolveVideoOverlayVisibility({widgetId, widgetEl: _widget.current})
+                            },
                             debugTiming: false,//config.refreshMode === 'both',
                             refreshMode:     config.refreshMode ?? (interactionLocked ? 'live' : 'mutation'),
                         })

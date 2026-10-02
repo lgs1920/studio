@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,6 +19,7 @@ import { resolveVideoOverlayVisibility } from '@Core/ui/replay/ReplayOverlayReso
 import { getReplayVideoWidgetKeys } from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import { normalizeReplayVideoCropRect } from '@Core/ui/replay/ReplayVideoRenderSpec'
 import { replayVideoTraceDebug } from '@Core/ui/replay/ReplayVideoTraceDebug'
+import { renderReplayWidgetFrames } from '@Core/ui/replay/ReplayWidgetFrameRenderers'
 import { Widget2Canvas } from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
 
 const DEFAULT_METRICS_CACHE_TTL_MS = 750
@@ -142,35 +143,87 @@ export const resolveReplayVideoWidgetScale = (el, configScale) => {
 
 const getSortedVideoWidgetKeys = ({widgetKeys = null, widgetsBoard = VIDEO_WIDGETS_BOARD} = {}) => {
     return getReplayVideoWidgetKeys({
-        widgetKeys: widgetKeys?.length ? widgetKeys : null,
+        widgetKeys: Array.isArray(widgetKeys) ? widgetKeys : null,
         widgetsBoard,
     })
 }
 
+/** Resolve the same visible widget set for capture and composition on this frame. */
+export const getVisibleReplayVideoWidgetKeys = ({
+    widgetKeys = null,
+    widgetsBoard = VIDEO_WIDGETS_BOARD,
+    replay = globalThis.lgs?.stores?.replay ?? null,
+    controller = globalThis.__?.ui?.replay?.controller ?? null,
+} = {}) => getSortedVideoWidgetKeys({widgetKeys, widgetsBoard}).filter(widgetId => {
+    const widgetEl = globalThis.__?.ui?.widgetManager?.getElementById?.(widgetId)
+    return Boolean(widgetEl) && resolveVideoOverlayVisibility({widgetId, widgetEl, replay, controller})
+})
+
 /**
- * Flush every mounted DOM mirror used by the video compositor.
+ * Render visible widgets and flush their dirty DOM mirrors for the current frame.
  *
  * @param {object} options - Flush options.
  * @param {string[]|null} [options.widgetKeys=null] - Optional widget IDs to flush.
  * @param {string} [options.widgetsBoard='video'] - Board containing the overlays.
  * @param {number} [options.timeoutMs=1000] - Maximum wait per overlay mirror.
- * @returns {Promise<void>} Resolves after all available mirrors are idle.
+ * @param {object|null} [options.frameState=null] - Canonical frame supplied to widget renderers.
+ * @param {Set|null} [options.captureMirrors=null] - Mirrors owned by this export session.
+ * @param {boolean} [options.strict=false] - Reject incomplete captures rather than reuse stale pixels.
+ * @param {AbortSignal|null} [options.signal=null] - Export cancellation signal.
+ * @returns {Promise<string[]>} Visible widget IDs whose mirrors are ready to compose.
  */
 export const flushReplayVideoOverlayCanvases = async ({
                                                          widgetKeys = null,
                                                          widgetsBoard = VIDEO_WIDGETS_BOARD,
                                                          timeoutMs = OVERLAY_FLUSH_TIMEOUT_MS,
+                                                         replay = globalThis.lgs?.stores?.replay ?? null,
+                                                         controller = globalThis.__?.ui?.replay?.controller ?? null,
+                                                         frameState = null,
+                                                         captureMirrors = null,
+                                                         strict = false,
+                                                         signal = null,
                                                      } = {}) => {
-    const keys = getSortedVideoWidgetKeys({widgetKeys, widgetsBoard})
-    await Promise.all(keys.map(widgetId => {
+    const keys = getVisibleReplayVideoWidgetKeys({widgetKeys, widgetsBoard, replay, controller})
+    await renderReplayWidgetFrames({widgetKeys: keys, frameState})
+    await Promise.all(keys.map(async widgetId => {
         let timeoutId = null
-        const flush = Promise.resolve(Widget2Canvas.flush(widgetId)).catch(() => false)
-        const timeout = new Promise(resolve => {
-            timeoutId = setTimeout(() => resolve(false), timeoutMs)
-        })
-
-        return Promise.race([flush, timeout]).finally(() => clearTimeout(timeoutId))
+        let abort = null
+        const mirror = Widget2Canvas.get(widgetId)
+        if (captureMirrors && mirror) {
+            mirror.setFrameDriven(true)
+            captureMirrors.add(mirror)
+        }
+        try {
+            const result = await Promise.race([
+                Widget2Canvas.flush(widgetId, {onlyIfDirty: true}),
+                new Promise(resolve => {
+                    timeoutId = setTimeout(() => resolve(false), timeoutMs)
+                }),
+                new Promise((_, reject) => {
+                    abort = () => reject(new DOMException('Replay widget capture was aborted.', 'AbortError'))
+                    if (signal?.aborted) {
+                        abort()
+                    }
+                    else {
+                        signal?.addEventListener('abort', abort, {once: true})
+                    }
+                }),
+            ])
+            if (strict && result === false) {
+                throw new Error(`Replay widget capture did not complete: ${widgetId}`)
+            }
+        }
+        catch (error) {
+            if (strict || signal?.aborted) {
+                throw error
+            }
+        }
+        finally {
+            clearTimeout(timeoutId)
+            signal?.removeEventListener('abort', abort)
+        }
     }))
+    return keys
 }
 
 const resolveMetrics = ({widgetId, widgetEl, metricsCache = null, metricsCacheTtlMs = DEFAULT_METRICS_CACHE_TTL_MS} = {}) => {
@@ -180,12 +233,13 @@ const resolveMetrics = ({widgetId, widgetEl, metricsCache = null, metricsCacheTt
 
     const now = globalThis.performance?.now?.() ?? Date.now()
     const cached = metricsCache.get(widgetId)
-    if (cached && (now - cached.time) < metricsCacheTtlMs) {
+    const revision = Widget2Canvas.get(widgetId)?.getCaptureRevision?.() ?? null
+    if (cached && cached.element === widgetEl && cached.revision === revision && (now - cached.time) < metricsCacheTtlMs) {
         return cached.metrics
     }
 
     const metrics = getReplayVideoOverlayMetrics(widgetEl)
-    metricsCache.set(widgetId, {time: now, metrics})
+    metricsCache.set(widgetId, {time: now, metrics, element: widgetEl, revision})
     return metrics
 }
 

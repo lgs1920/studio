@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-20
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,6 +22,7 @@ import { resolveCompassWidgetDimensions }            from '@Components/MainUI/co
 import { resolveCompassCameraHeading }               from '@Components/MainUI/compass/CompassCameraHeading'
 import { COMPASS_FLAT, COMPASS_FULL, COMPASS_LIGHT, COMPASS_MODERN } from '@Core/constants'
 import { resolvePublishedReplayExportFrame }         from '@Core/ui/replay/ReplayFramePublisher'
+import { registerReplayWidgetFrameRenderer } from '@Core/ui/replay/ReplayWidgetFrameRenderers'
 import { Math as CMath }               from 'cesium'
 import classNames                      from 'classnames'
 import { colord }                                  from 'colord'
@@ -115,6 +116,11 @@ export const Compass = ({fixed, inWidget = false, entity, syncBounds = true}) =>
                                        : `rotate(${headingDegrees}deg)`
         _lastHeading.current = headingDegrees
     }, [baseTransform])
+
+    // Export applies heading before SVG capture, even when rAF is throttled.
+    useEffect(() => inWidget && !fixed
+        ? registerReplayWidgetFrameRenderer(entity, updateRotation)
+        : undefined, [entity, fixed, inWidget, updateRotation])
 
     /**
      * Maps store configuration to CSS variables.
@@ -308,7 +314,9 @@ export const Compass = ({fixed, inWidget = false, entity, syncBounds = true}) =>
 
         if (!fixed) {
             const tick = () => {
-                updateRotation()
+                if (!lgs.stores.ui.video?.exporting) {
+                    updateRotation()
+                }
                 _animationFrame.current = window.requestAnimationFrame(tick)
             }
 

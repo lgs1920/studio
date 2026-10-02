@@ -8,22 +8,24 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { cleanup, render, waitFor } from '@testing-library/react'
+import { act, cleanup, render, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy } from 'valtio'
 import { VIDEO_WIDGETS_BOARD } from '@Core/constants'
+import { commitReplayWidgetFrame, renderReplayWidgetFrames } from '@Core/ui/replay/ReplayWidgetFrameRenderers'
 
 const widgetCanvasRefresh = vi.hoisted(() => vi.fn())
 
 vi.mock('@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas', () => ({
     Widget2Canvas: {
         refresh: widgetCanvasRefresh,
+        get: () => ({}),
     },
 }))
 
@@ -291,7 +293,7 @@ describe('JourneyStats', () => {
         expect(widget.dataset.videoOverlayVisible).toBe('true')
         expect(widget.textContent).toContain('120')
         expect(widget.querySelector('.journey-stats-placeholder')).toBeNull()
-        await waitFor(() => expect(widgetCanvasRefresh).toHaveBeenCalledWith('journey-stats-widget#1'))
+        await waitFor(() => expect(widgetCanvasRefresh).toHaveBeenCalledWith('journey-stats-widget#1', {onlyIfDirty: true}))
     })
 
     it('uses placeholder values for dynamic stats on the video board before recording starts', async () => {
@@ -331,12 +333,12 @@ describe('JourneyStats', () => {
         expect(widget.querySelector('.journey-stats-placeholder')).not.toBeNull()
         expect(widget.textContent).not.toContain('120')
         expect(widgetCanvasRefresh).not.toHaveBeenCalled()
-        await waitFor(() => expect(widgetCanvasRefresh).toHaveBeenCalledWith('journey-stats-widget#1'))
+        await waitFor(() => expect(widgetCanvasRefresh).toHaveBeenCalledWith('journey-stats-widget#1', {onlyIfDirty: true}))
 
         globalThis.lgs.stores.ui.video.exporting = true
 
         await waitFor(() => expect(widget.textContent).toContain('120'))
-        await waitFor(() => expect(widgetCanvasRefresh).toHaveBeenCalledTimes(2))
+        expect(widgetCanvasRefresh).toHaveBeenCalledTimes(1)
     })
 
     it('updates dynamic stats when the replay frame sample changes', async () => {
@@ -420,5 +422,82 @@ describe('JourneyStats', () => {
         expect(widget).not.toBeNull()
         expect(widget.style.visibility).toBe('hidden')
         expect(widget.dataset.videoOverlayVisible).toBe('false')
+    })
+
+    it('commits export text and layout without waiting for animation frames', async () => {
+        lgs.stores.ui.video.exporting = true
+        lgs.stores.replay.deferredExportPlan = {
+            runtime: {status: 'exporting', frameState: null, resolvedFrameState: null},
+        }
+        const {container} = render(<JourneyStats
+            id="dynamic-stats-widget#capture"
+            mode="dynamic"
+            widgetsBoard={VIDEO_WIDGETS_BOARD}
+            units={{distance: 'm', elevation: 'm', speed: 'km/h', pace: 'min/km'}}
+        />)
+        vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation(() => 1)
+        try {
+            await act(async () => {
+                const frameState = commitReplayWidgetFrame(() => {
+                    const nextFrame = {
+                        active: true, playing: true, progress: 0.4,
+                        sample: {distanceFromStart: 222, cumulativeElevationGain: 99, journeyElapsedMillis: 7000},
+                    }
+                    lgs.stores.replay.deferredExportPlan.runtime.frameState = nextFrame
+                    return nextFrame
+                })
+                expect(container.textContent).toContain('222')
+                await renderReplayWidgetFrames({widgetKeys: ['dynamic-stats-widget#capture'], frameState})
+                expect(target.style.width).toBe('140px')
+                const settledMeasurements = updateRect.mock.calls.length
+                commitReplayWidgetFrame(() => {
+                    lgs.stores.replay.deferredExportPlan.runtime.frameState = {...frameState, progress: 0.5}
+                })
+                await renderReplayWidgetFrames({widgetKeys: ['dynamic-stats-widget#capture']})
+                expect(updateRect).toHaveBeenCalledTimes(settledMeasurements)
+                commitReplayWidgetFrame(() => {
+                    lgs.stores.replay.deferredExportPlan.runtime.frameState = {
+                        ...frameState,
+                        phase: {kind: 'replay', replayFrameIndex: 9, replayFrameCount: 10},
+                    }
+                })
+                expect(container.querySelector('.journey-stats-widget').dataset.videoOverlayVisible).toBe('false')
+                commitReplayWidgetFrame(() => {
+                    lgs.stores.replay.deferredExportPlan.runtime.frameState = {
+                        ...frameState,
+                        phase: {kind: 'replay', replayFrameIndex: 3, replayFrameCount: 10},
+                    }
+                })
+                expect(container.querySelector('.journey-stats-widget').dataset.videoOverlayVisible).toBe('true')
+            })
+            expect(widgetCanvasRefresh).not.toHaveBeenCalled()
+        }
+        finally {
+            vi.restoreAllMocks()
+        }
+    })
+
+    it('does not rerender hidden dynamic stats for every replay sample', async () => {
+        lgs.stores.replay.framePhase = {kind: 'pre-replay'}
+        const formatDate = vi.spyOn(__.ui.ui, 'formatJourneyDurationDates')
+        try {
+            render(<JourneyStats
+                id="dynamic-stats-widget#hidden"
+                mode="dynamic"
+                widgetsBoard={VIDEO_WIDGETS_BOARD}
+                units={{distance: 'm', elevation: 'm', speed: 'km/h', pace: 'min/km'}}
+            />)
+            const initialRenders = formatDate.mock.calls.length
+            await act(async () => {
+                lgs.stores.replay.sample = {distanceFromStart: 120}
+                lgs.stores.replay.elapsedMillis = 1000
+                lgs.stores.replay.progress = 0.2
+            })
+            expect(formatDate).toHaveBeenCalledTimes(initialRenders)
+            expect(widgetCanvasRefresh).not.toHaveBeenCalled()
+        }
+        finally {
+            formatDate.mockRestore()
+        }
     })
 })

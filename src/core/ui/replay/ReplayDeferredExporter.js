@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -35,8 +35,9 @@ import {
     buildReplayVideoTimeline, replayClipSignature, resolveReplayVideoFramePhase,
 }                              from '@Core/ui/replay/ReplayVideoTimeline'
 import {
-    buildReplayVideoComposerOverlays, flushReplayVideoOverlayCanvases, isReplayVideoWidgetReady,
+    buildReplayVideoComposerOverlays, flushReplayVideoOverlayCanvases, getVisibleReplayVideoWidgetKeys, isReplayVideoWidgetReady,
 }                              from '@Core/ui/replay/ReplayVideoOverlayComposer'
+import { commitReplayWidgetFrame } from '@Core/ui/replay/ReplayWidgetFrameRenderers'
 import {
     ReplayVideoRenderSession,
 }                              from '@Core/ui/replay/ReplayVideoRenderSession'
@@ -823,7 +824,8 @@ const publishReplayExportFrameState = ({
         visibleOverlayIds: plan.runtime?.context?.visibleOverlayIds ?? [],
     })
 
-    return publishReplayFrameState({
+    // Synchronous Valtio consumers must commit before any widget pixels are read.
+    return commitReplayWidgetFrame(() => publishReplayFrameState({
         replay,
         plan,
         target: REPLAY_FRAME_PUBLICATION_TARGET_EXPORT,
@@ -833,7 +835,7 @@ const publishReplayExportFrameState = ({
             resolved: true,
             logicalFrame,
         },
-    })
+    }))
 }
 
 const clearReplayExportFrameState = (plan = null) => {
@@ -1296,6 +1298,8 @@ export class ReplayDeferredExporter {
             if (stableContext?.drawImage && stableContext?.clearRect) {
                 encoderCanvas = stableCanvas
                 encoderContext = stableContext
+                // Copy also replaces transparent source pixels without a separate clear.
+                encoderContext.globalCompositeOperation = 'copy'
             }
         }
 
@@ -1425,7 +1429,7 @@ export class ReplayDeferredExporter {
                     })
                     renderedFrames.push(renderResult ?? rendered)
                     if (encoderContext) {
-                        encoderContext.clearRect(0, 0, outputDimensions.width, outputDimensions.height)
+                        // Replace the full encoder frame in one draw, including transparent source pixels.
                         encoderContext.drawImage(
                             canvas,
                             0,
@@ -1927,6 +1931,8 @@ export const runReplayDeferredMp4Export = async ({
     let exportSucceeded = false
     let replayComposer = null
     let replayComposerFallback = false
+    const captureMirrors = new Set()
+    const overlayMetricsCache = new Map()
     let restoreReplaySceneTileCache = null
     let replaySceneTileReadinessCoordinator = null
     let replaySceneTileReadinessOptions = null
@@ -2140,7 +2146,7 @@ export const runReplayDeferredMp4Export = async ({
             sample: controller?.currentSample?.() ?? replay?.sample ?? null,
         })
 
-        const widgetKeys = getReplayVideoWidgetKeys()
+        const widgetKeys = getVisibleReplayVideoWidgetKeys({replay, controller})
         await waitForReplayWidgetsReady({widgetKeys})
         await prewarmReplayScenePrefix({
             plan,
@@ -2281,6 +2287,8 @@ export const runReplayDeferredMp4Export = async ({
                                 fps: 0,
                                 outputDpr: composerOutputDpr,
                                 flushWebGLBuffer: flushReplayRenderTarget,
+                                continuousRendering: false,
+                                outputCanvas: canvas,
                             })
                         }
                         catch {
@@ -2304,7 +2312,14 @@ export const runReplayDeferredMp4Export = async ({
                                 sourceCanvasHeight: frameSource.height,
                             })
                         }
-                        await flushReplayVideoOverlayCanvases()
+                        const visibleWidgetKeys = await flushReplayVideoOverlayCanvases({
+                            replay,
+                            controller,
+                            frameState: plan.runtime?.frameState,
+                            captureMirrors,
+                            strict: true,
+                            signal,
+                        })
                         buildReplayVideoComposerOverlays({
                             composer:      replayComposer,
                             cropRect:      cropRect ?? {left: 0, top: 0, width: canvas.width, height: canvas.height},
@@ -2316,11 +2331,13 @@ export const runReplayDeferredMp4Export = async ({
                                 : null,
                             replay,
                             controller,
+                            widgetKeys: visibleWidgetKeys,
+                            metricsCache: overlayMetricsCache,
                         })
                         await replayComposer.renderFrame()
 
                         const composedCanvas = replayComposer.getCanvas?.()
-                        if (composedCanvas) {
+                        if (composedCanvas && composedCanvas !== canvas) {
                             context.clearRect(0, 0, canvas.width, canvas.height)
                             context.drawImage(composedCanvas, 0, 0, composedCanvas.width, composedCanvas.height, 0, 0, canvas.width, canvas.height)
                         }
@@ -2410,6 +2427,11 @@ export const runReplayDeferredMp4Export = async ({
     }
     finally {
         stopReplayRecordingMonitor()
+        for (const mirror of captureMirrors) {
+            mirror.setFrameDriven(false)
+        }
+        captureMirrors.clear()
+        overlayMetricsCache.clear()
         replayVideoTraceDebug('export.camera.ownership.end', {
             hasEndReplayCameraExport: typeof replayMode?.endReplayCameraExport === 'function',
         })

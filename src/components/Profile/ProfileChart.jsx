@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-06-05
- * Last modified: 2026-06-05
+ * Created on: 2024-05-02
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,6 +28,7 @@ import {
     normalizeJourneyReplayTrace,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import { resolveReplayVisibilityState } from '@Core/ui/replay/ReplayOverlayResolver'
+import { registerReplayWidgetFrameRenderer } from '@Core/ui/replay/ReplayWidgetFrameRenderers'
 import { CHART_ELEVATION_VS_DISTANCE, DISTANCE, ELEVATION, POINT, TIME } from '@Core/ui/Profiler'
 import { INTERNATIONAL } from '@Utils/UnitUtils'
 import { colord }        from 'colord'
@@ -1476,6 +1477,21 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
 
         let frame = null
         const replayStore = lgs.stores.replay
+        /** Paint the canonical frame immediately when deterministic capture requests it. */
+        const renderCaptureFrame = () => {
+            if (frame !== null) {
+                cancelAnimationFrame(frame)
+                frame = null
+            }
+            const chart = _instance.current?.getEchartsInstance?.()
+            const option = replayProfileOption(replayStore, chart)
+            if (!chart || !option) {
+                return
+            }
+            chart.setOption(option, {replaceMerge: ['graphic'], silent: true, lazyUpdate: false})
+            chart.getZr?.().flush?.()
+        }
+        const unregisterCapture = registerReplayWidgetFrameRenderer(configId ?? id, renderCaptureFrame)
         const renderJourneyReplayProgress = (controllerSampleOverride = null, nextJourneyReplayState = replayStore) => {
             if (frame !== null) {
                 return
@@ -1495,7 +1511,9 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
             })
         }
         const applyJourneyReplayProgress = () => {
-            renderJourneyReplayProgress()
+            if (!globalThis.lgs?.stores?.ui?.video?.exporting) {
+                renderJourneyReplayProgress()
+            }
         }
 
         applyJourneyReplayProgress()
@@ -1505,8 +1523,9 @@ export const ProfileChart = ({data, id, configId, width, height, preview = false
                 cancelAnimationFrame(frame)
             }
             unsubscribe()
+            unregisterCapture()
         }
-    }, [replayProfileOption, preview])
+    }, [configId, id, replayProfileOption, preview])
 
     usePreviewChartResize(_instance, preview, [width, height, padding, borderWidth])
 

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -388,6 +388,13 @@ export const resolveVideoOverlayVisibility = ({
     replay = undefined,
     controller = undefined,
 } = {}) => {
+    const widgetEntry = globalThis.lgs?.stores?.ui?.widget?.list?.get?.(widgetId)
+    const config = globalThis.__?.ui?.widgetManager?.getWidgetConfig?.(widgetId)
+    if ((widgetEntry?.visible === false && config?.canHide !== false)
+        || widgetEl?.hidden === true
+        || widgetEl?.closest?.('.lgs-widget-user-hidden, [hidden]')) {
+        return false
+    }
     const overlayRoot = resolveVideoOverlayRoot(widgetEl)
     const mode = videoOverlayModeForWidgetId(widgetId)
                  ?? overlayRoot?.dataset?.videoOverlayMode

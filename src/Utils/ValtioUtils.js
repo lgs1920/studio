@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-04-29
- * Last modified: 2026-09-22
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,9 +27,10 @@ const EMPTY_FALLBACK = {}
  *
  * @param {Object|undefined|null} state - Source state, ideally a Valtio proxy
  * @param {Object} [fallback={}] - Stable fallback state shape
+ * @param {{sync?: boolean}} [options] - Optional deterministic subscription settings.
  * @returns {Object} Render-optimized snapshot
  */
-export const useOptionalSnapshot = (state, fallback = EMPTY_FALLBACK) => {
+export const useOptionalSnapshot = (state, fallback = EMPTY_FALLBACK, options) => {
     const fallbackProxy = useMemo(() => proxy({...fallback}), [fallback])
 
     const snapshotSource = useMemo(() => {
@@ -40,7 +41,7 @@ export const useOptionalSnapshot = (state, fallback = EMPTY_FALLBACK) => {
         return proxyStateMap.has(state) ? state : proxy(state)
     }, [fallbackProxy, state])
 
-    return useSnapshot(snapshotSource)
+    return useSnapshot(snapshotSource, options)
 }
 
 /**
@@ -49,16 +50,17 @@ export const useOptionalSnapshot = (state, fallback = EMPTY_FALLBACK) => {
  * @param {Object|undefined|null} state - Source Valtio proxy
  * @param {Function} selector - Function returning the value used by the component
  * @param {*} [fallback] - Value returned when the source or selector is absent
+ * @param {{sync?: boolean}} [options] - Use synchronous notifications at a deterministic capture boundary.
  * @returns {*} Selected reactive value
  */
-export const useProxyValue = (state, selector, fallback = undefined) => {
+export const useProxyValue = (state, selector, fallback = undefined, {sync = false} = {}) => {
     const subscribeToState = useCallback((onStoreChange) => {
         if (!state || typeof state !== 'object' || !proxyStateMap.has(state)) {
             return () => {}
         }
 
-        return subscribe(state, onStoreChange)
-    }, [state])
+        return subscribe(state, onStoreChange, sync)
+    }, [state, sync])
 
     const getValue = useCallback(() => {
         if (!state || typeof state !== 'object') {
