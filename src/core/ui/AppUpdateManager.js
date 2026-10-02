@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-27
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -410,10 +410,12 @@ export class AppUpdateManager {
         }
     }
 
+    /** Attempt the optional Ion purge without preventing a service worker replacement. */
     applyUpdateWithCacheReset = async () => {
         // Purge Cesium tiles if they exist globally
         if (window.__?.app?.cesiumCache) {
-            window.__.app.cesiumCache.clear()
+            try { await window.__.app.cesiumCache.clear() }
+            catch { /* Replacing an obsolete worker can repair an unavailable cache bridge. */ }
         }
 
         await this.applyUpdate()

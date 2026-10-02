@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-18
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -112,5 +112,44 @@ describe('AppUpdateManager webapp updates', () => {
         expect(serviceWorker.register).toHaveBeenCalledWith('/service-worker-pwa.js', {updateViaCache: 'none'})
         expect(registration.update).toHaveBeenCalledOnce()
         expect(serviceWorkerListeners.has('controllerchange')).toBe(true)
+    })
+})
+
+describe('AppUpdateManager cache reset', () => {
+    const originalUtilities = window.__
+
+    afterEach(() => {
+        window.__ = originalUtilities
+        globalThis.lgs = undefined
+        vi.restoreAllMocks()
+        vi.resetModules()
+    })
+
+    it('waits for the cache purge acknowledgement before applying the update', async () => {
+        globalThis.lgs = undefined
+        const {AppUpdateManager} = await import('@Core/ui/AppUpdateManager')
+        const manager = new AppUpdateManager()
+        const apply = vi.spyOn(manager, 'applyUpdate').mockResolvedValue()
+        let acknowledge
+        const clear = vi.fn(() => new Promise(resolve => { acknowledge = resolve }))
+        window.__ = {app: {cesiumCache: {clear}}}
+
+        const update = manager.applyUpdateWithCacheReset()
+        expect(clear).toHaveBeenCalledOnce()
+        expect(apply).not.toHaveBeenCalled()
+        acknowledge()
+        await update
+        expect(apply).toHaveBeenCalledOnce()
+    })
+
+    it('still replaces an obsolete worker when the cache bridge cannot acknowledge', async () => {
+        globalThis.lgs = undefined
+        const {AppUpdateManager} = await import('@Core/ui/AppUpdateManager')
+        const manager = new AppUpdateManager()
+        const apply = vi.spyOn(manager, 'applyUpdate').mockResolvedValue()
+        window.__ = {app: {cesiumCache: {clear: vi.fn().mockRejectedValue(new Error('Cache command timed out'))}}}
+
+        await manager.applyUpdateWithCacheReset()
+        expect(apply).toHaveBeenCalledOnce()
     })
 })
