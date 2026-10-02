@@ -71,6 +71,15 @@ Simple/Expert support is present but incomplete:
   frame, progress, dynamic duration/remaining-time metrics, icon-only lifecycle
   actions, inline fallback, and Picture-in-Picture cleanup.
 - Logical crop viewport and physical output scaling for export and widgets.
+- Visibility-aware widget capture with dirty bitmap reuse, synchronous export
+  preparation for Stats/Compass/Profile, bounded cancellable capture, and
+  lifecycle restoration of mirror scheduling. Export composition draws directly
+  into the working frame with no autonomous compositor loop or intermediate
+  full-frame copy. Browser regression scenarios cover real SnapDOM, Cesium
+  crop pixel parity, and deterministic MP4 encoding, but complete browser
+  validation remains pending: Chromium WebGL initialization is unavailable
+  in the current environment. Reference-journey export validation and total
+  export-time benchmarks have not been completed.
 - Crop-aware isolated export camera frustums and readiness identity for 2D,
   terrain, and 3D Tiles capture.
 - Frame-accurate export trace updates and deterministic Navigation camera updates.

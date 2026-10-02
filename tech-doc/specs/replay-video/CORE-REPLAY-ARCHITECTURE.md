@@ -137,6 +137,28 @@ readiness, overlay composition, encoding, cancellation, and cleanup.
 physical output surface. Mediabunny encodes the product frame timeline and must
 not become a replay clock.
 
+Export commits synchronous Valtio widget consumers through
+`ReplayWidgetFrameRenderers` before reading DOM pixels. Mounted widgets register
+imperative preparation with lifecycle-owned teardown: Stats settles its bounds,
+Compass applies the published heading, and Profile paints and flushes its chart.
+Capture and composition resolve the same visible widget set on each frame,
+including user visibility and the dynamic/summary Stats phase transition.
+Visible capture failures, timeouts, and cancellation stop export rather than
+encoding a stale widget bitmap.
+
+`Widget2Canvas` observes dirty content even in manual mode, drains pending
+mutations before capture, and reuses unchanged bitmaps. Hidden content is not
+rasterized and is refreshed when it reappears. Export temporarily owns mirror
+refresh scheduling and restores each mirror's original policy on every exit.
+SnapDOM remains responsible for complete DOM widget fidelity and differential
+recapture. Its unchanged capture results can reuse their rasterized canvas;
+canvas-backed surfaces still copy current frame pixels directly.
+
+The export compositor has no autonomous animation loop and draws directly into
+the working export canvas. This removes the intermediate full-frame copy after
+Cesium composition. The separate stable encoder canvas remains necessary for
+codec keep-alive submissions while the next frame is being prepared.
+
 ### Replay transport and recording monitor
 
 `ReplayRecordingMonitorWidget` is the single transient Replay surface outside the
