@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-28
- * Last modified: 2026-04-28
+ * Created on: 2025-11-18
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -47,6 +47,7 @@ export class CanvasOverlayComposer {
     #blurBufferDirty = true
     #running = false
     #continuousRendering = true
+    #ownsOutputCanvas = true
 
     // Cached source rect to avoid allocations inside the render loop.
     #srcRect = {x: 0, y: 0, w: 0, h: 0}
@@ -60,6 +61,8 @@ export class CanvasOverlayComposer {
      * @param {number} [options.fps=0] - Target FPS for composition (0 = no throttle).
      * @param {number} [options.outputDpr=window.devicePixelRatio] - Backing-store scale for the output canvas.
      * @param {Function|null} [options.flushWebGLBuffer=null] - Optional callback to flush a WebGL scene.
+     * @param {boolean} [options.continuousRendering=true] - Enable the background loop for interactive composition.
+     * @param {HTMLCanvasElement|null} [options.outputCanvas=null] - Optional caller-owned output surface.
      */
     constructor(sourceCanvas, options = {}) {
         if (!(sourceCanvas instanceof HTMLCanvasElement)) {
@@ -75,6 +78,8 @@ export class CanvasOverlayComposer {
                   fps = 0,
                   outputDpr = window.devicePixelRatio || 1,
                   flushWebGLBuffer = null,
+                  continuousRendering = true,
+                  outputCanvas = null,
               } = options
 
         this.#clip = clip ? {...clip} : null
@@ -84,8 +89,10 @@ export class CanvasOverlayComposer {
         this.#fixedMinFrameMs = this.#minFrameMs
         this.#dpr = Math.max(1, Number(outputDpr) || 1)
         this.#flushWebGLBuffer = typeof flushWebGLBuffer === 'function' ? flushWebGLBuffer : null
+        this.#continuousRendering = continuousRendering !== false
 
-        this.#outputCanvas = document.createElement('canvas')
+        this.#ownsOutputCanvas = !(outputCanvas instanceof HTMLCanvasElement)
+        this.#outputCanvas = this.#ownsOutputCanvas ? document.createElement('canvas') : outputCanvas
         this.#ctx = this.#outputCanvas.getContext('2d', {alpha: false, desynchronized: true})
         this.#blurCanvas = document.createElement('canvas')
         this.#blurCtx = this.#blurCanvas.getContext('2d', {alpha: false, desynchronized: true})
@@ -411,7 +418,7 @@ export class CanvasOverlayComposer {
             cancelAnimationFrame(this.#raf)
         }
         this.#raf = null
-        if (this.#outputCanvas) {
+        if (this.#outputCanvas && this.#ownsOutputCanvas) {
             this.#outputCanvas.width = 0
             this.#outputCanvas.height = 0
         }

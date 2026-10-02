@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-09
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -404,5 +404,127 @@ describe('Widget2Canvas refresh modes', () => {
 
         expect(snapdomToCanvasMock).toHaveBeenCalledTimes(3)
         expect(snapdomToCanvasMock.mock.calls[2][0]).toBe(target)
+    })
+
+    it('reuses an unchanged bitmap across deterministic frames', async () => {
+        mirror = new Widget2Canvas(target, {refreshMode: 'manual'})
+        await mirror.init()
+        for (let frame = 0, frameCount = 30; frame < frameCount; frame++) {
+            expect(await mirror.flush({onlyIfDirty: true})).toBe(true)
+        }
+        expect(snapdomToCanvasMock).toHaveBeenCalledTimes(1)
+        expect(rafCallbacks).toHaveLength(0)
+    })
+
+    it('drains a pending mutation and captures immediately in manual mode', async () => {
+        mirror = new Widget2Canvas(target, {refreshMode: 'manual'})
+        await mirror.init()
+        child.textContent = 'next encoded frame'
+        expect(await mirror.flush({onlyIfDirty: true})).toBe(true)
+        expect(snapdomToCanvasMock).toHaveBeenCalledTimes(2)
+        expect(rafCallbacks).toHaveLength(0)
+    })
+
+    it('suspends hidden captures and refreshes the current content on reappearance', async () => {
+        let visible = false
+        mirror = new Widget2Canvas(target, {isVisible: () => visible})
+        await mirror.init()
+        child.textContent = 'hidden update'
+        await flushMicrotasks()
+        expect(snapdomToCanvasMock).not.toHaveBeenCalled()
+        expect(rafCallbacks).toHaveLength(0)
+        visible = true
+        expect(await mirror.flush({onlyIfDirty: true})).toBe(true)
+        expect(snapdomToCanvasMock).toHaveBeenCalledTimes(1)
+        visible = false
+        child.textContent = 'second hidden update'
+        expect(await mirror.flush({onlyIfDirty: true})).toBe(false)
+        visible = true
+        expect(await mirror.flush({onlyIfDirty: true})).toBe(true)
+        expect(snapdomToCanvasMock).toHaveBeenCalledTimes(2)
+    })
+
+    it('promotes a scheduled capture without waiting for rAF or doing duplicate work', async () => {
+        mirror = new Widget2Canvas(target)
+        await mirror.init()
+        child.textContent = 'scheduled update'
+        await flushMicrotasks()
+        expect(rafCallbacks).toHaveLength(1)
+        expect(await mirror.flush({onlyIfDirty: true})).toBe(true)
+        expect(snapdomToCanvasMock).toHaveBeenCalledTimes(2)
+        expect(await mirror.flush({onlyIfDirty: true})).toBe(true)
+        expect(snapdomToCanvasMock).toHaveBeenCalledTimes(2)
+    })
+
+    it('reuses the raster when SnapDOM returns the same immutable result', async () => {
+        const result = {
+            toCanvas: vi.fn(async () => document.createElement('canvas')),
+        }
+        snapdomMock.mockResolvedValueOnce(result).mockResolvedValueOnce(result)
+        mirror = new Widget2Canvas(target)
+        await mirror.init()
+        await mirror.flush()
+        expect(result.toCanvas).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not recreate a mirror destroyed during rasterization', async () => {
+        let finishCapture
+        snapdomMock.mockImplementationOnce(() => new Promise(resolve => {
+            finishCapture = () => resolve({toCanvas: async () => document.createElement('canvas')})
+        }))
+        mirror = new Widget2Canvas(target, {widgetId: 'obsolete-widget'})
+        const initialization = mirror.init()
+        mirror.destroy()
+        finishCapture()
+        await initialization
+        expect(mirror.getCanvas()).toBeNull()
+        expect(Widget2Canvas.get('obsolete-widget')).toBeNull()
+        expect(document.querySelector('.lgs-widget-canvas')).toBeNull()
+        expect(rafCallbacks).toHaveLength(0)
+    })
+
+    it('recaptures changes made during capture before reporting export readiness', async () => {
+        let finishCapture
+        mirror = new Widget2Canvas(target, {refreshMode: 'manual'})
+        await mirror.init()
+        mirror.setFrameDriven(true)
+        snapdomToCanvasMock.mockImplementationOnce(() => new Promise(resolve => {
+            finishCapture = () => resolve(document.createElement('canvas'))
+        }))
+        child.textContent = 'first'
+        const flush = mirror.flush({onlyIfDirty: true})
+        await flushMicrotasks()
+        child.textContent = 'latest'
+        await flushMicrotasks()
+        finishCapture()
+        expect(await flush).toBe(true)
+        expect(snapdomToCanvasMock).toHaveBeenCalledTimes(3)
+        expect(rafCallbacks).toHaveLength(0)
+    })
+
+    it('invalidates an unchanged DOM bitmap when its layout size changes', async () => {
+        let width = 100
+        Object.defineProperties(target, {
+            offsetWidth: {configurable: true, get: () => width},
+            offsetHeight: {configurable: true, value: 50},
+        })
+        target.getBoundingClientRect = () => ({left: 0, top: 0, width, height: 50})
+        mirror = new Widget2Canvas(target, {refreshMode: 'manual', captureWholeWidget: true, scale: 1})
+        await mirror.init()
+        const captures = snapdomMock.mock.calls.length
+        width = 120
+        expect(await mirror.flush({onlyIfDirty: true})).toBe(true)
+        expect(snapdomMock).toHaveBeenCalledTimes(captures + 1)
+        expect(mirror.getCanvas().width).toBe(120)
+    })
+
+    it('reports failed capture and retries on the next flush', async () => {
+        mirror = new Widget2Canvas(target, {refreshMode: 'manual'})
+        await mirror.init()
+        child.textContent = 'changed'
+        snapdomMock.mockRejectedValueOnce(new Error('Rasterization failed'))
+        expect(await mirror.flush({onlyIfDirty: true})).toBe(false)
+        expect(await mirror.flush({onlyIfDirty: true})).toBe(true)
+        expect(snapdomToCanvasMock).toHaveBeenCalledTimes(2)
     })
 })

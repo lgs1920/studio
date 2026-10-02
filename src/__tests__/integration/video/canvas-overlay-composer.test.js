@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,6 +23,7 @@ describe('CanvasOverlayComposer recording path', () => {
     afterEach(() => {
         composer?.dispose()
         vi.restoreAllMocks()
+        vi.unstubAllGlobals()
     })
 
     test('renders a clipped source with a blurred overlay during a manual capture', async () => {
@@ -37,8 +38,8 @@ describe('CanvasOverlayComposer recording path', () => {
         overlayCanvas.getBoundingClientRect = () => ({width: 240, height: 120, left: 110, top: 80})
 
         const flushWebGLBuffer = vi.fn()
-        globalThis.requestAnimationFrame = vi.fn(() => 1)
-        globalThis.cancelAnimationFrame = vi.fn()
+        vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1))
+        vi.stubGlobal('cancelAnimationFrame', vi.fn())
         composer = new CanvasOverlayComposer(sourceCanvas, {
             clip: {x: 10, y: 20, width: 400, height: 225},
             width: 400,
@@ -65,5 +66,35 @@ describe('CanvasOverlayComposer recording path', () => {
         expect(outputCanvas.height).toBe(225)
         expect(flushWebGLBuffer).toHaveBeenCalledOnce()
         expect(globalThis.cancelAnimationFrame).toHaveBeenCalled()
+    })
+
+    test('renders only requested frames when constructed for deterministic export', async () => {
+        const sourceCanvas = document.createElement('canvas')
+        sourceCanvas.width = 320
+        sourceCanvas.height = 180
+        const flushWebGLBuffer = vi.fn()
+        vi.stubGlobal('requestAnimationFrame', vi.fn())
+        composer = new CanvasOverlayComposer(sourceCanvas, {
+            width: 320, height: 180, outputDpr: 1,
+            continuousRendering: false, flushWebGLBuffer,
+        })
+        await composer.renderFrame()
+        await composer.renderFrame()
+        expect(flushWebGLBuffer).toHaveBeenCalledTimes(2)
+        expect(requestAnimationFrame).not.toHaveBeenCalled()
+    })
+
+    test('composes directly into the caller-owned frame without disposing its pixels', async () => {
+        const source = document.createElement('canvas')
+        const outputCanvas = document.createElement('canvas')
+        source.width = 320
+        source.height = 180
+        composer = new CanvasOverlayComposer(source, {
+            width: 320, height: 180, outputDpr: 1, continuousRendering: false, outputCanvas,
+        })
+        expect(await composer.renderFrame()).toBe(outputCanvas)
+        composer.dispose()
+        expect(outputCanvas.width).toBe(320)
+        expect(outputCanvas.height).toBe(180)
     })
 })

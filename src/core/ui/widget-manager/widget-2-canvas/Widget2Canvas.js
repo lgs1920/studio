@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-11-14
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-02
  *
  *
  * Copyright © 2026 LGS1920
@@ -51,6 +51,15 @@ export class Widget2Canvas {
     #partsDirty = true
     #captureSandbox = null
     #captureGeometry = null
+    #buffer = null
+    #rasterCache = new WeakMap()
+    #dirty = true
+    #revision = 0
+    #refreshFrame = null
+    #refreshRun = null
+    #frameDriven = false
+    #refreshError = null
+    #layoutSize = null
 
     #timingLabel = 'Widget2Canvas'
 
@@ -68,19 +77,27 @@ export class Widget2Canvas {
         this.#timingLabel = `Widget2Canvas:${this.#widgetId ?? 'unknown'}`
     }
 
+    /** Register the mirror and capture its first visible frame under the normal flush policy. */
     init = async () => {
         if (this.#widgetId) {
             Widget2Canvas.#instances.set(this.#widgetId, this)
         }
-        if (!this.#shouldUseLiveLoop() || !this.#refreshLiveCanvas()) {
-            await this.refresh()
-        }
         this.#setupRefreshLoop()
+        if (this.#isVisible() && (!this.#shouldUseLiveLoop() || !this.#refreshLiveCanvas())) {
+            const ready = await this.flush({onlyIfDirty: true})
+            if (!ready && !this.#destroyed) {
+                throw this.#refreshError ?? new Error('Widget capture did not complete')
+            }
+        }
     }
 
+    /** Resolve transient visibility without changing the user's widget settings. */
+    #isVisible = () => this.#options.isVisible?.() !== false
+
+    /** Manual capture still observes dirtiness without scheduling automatic rasterization. */
     #shouldUseMutationObserver = () => {
         const mode = this.#options.refreshMode ?? 'mutation'
-        return mode === 'mutation' || mode === 'live' || mode === 'tick' || mode === 'both'
+        return mode === 'manual' || mode === 'mutation' || mode === 'live' || mode === 'tick' || mode === 'both'
     }
 
     #shouldUseLiveLoop = () => {
@@ -88,6 +105,7 @@ export class Widget2Canvas {
         return mode === 'live' || mode === 'tick' || mode === 'both'
     }
 
+    /** Own mutation observation and optional live drawing until destruction. */
     #setupRefreshLoop = () => {
         if (this.#observer || this.#destroyed || !this.#original) {
             return
@@ -100,7 +118,9 @@ export class Widget2Canvas {
                 }
 
                 this.#handleMutations(mutations)
-                this.requestRefresh({afterFrame: true})
+                if (!this.#frameDriven && this.#options.refreshMode !== 'manual' && this.#isVisible()) {
+                    this.requestRefresh({afterFrame: true, onlyIfDirty: true})
+                }
             })
 
             this.#observer.observe(this.#original, {
@@ -116,13 +136,15 @@ export class Widget2Canvas {
         }
     }
 
+    /** Copy frame-driven canvas content while the mirror's automatic policy is active. */
     #startLiveLoop = () => {
-        if (this.#tickLoopActive || this.#destroyed || !this.#original) {
+        if (this.#frameDriven || this.#tickLoopActive || this.#destroyed || !this.#original) {
             return
         }
 
         this.#tickLoopActive = true
 
+        /** Skip raster work for hidden widgets and coalesce with an active refresh. */
         const tick = () => {
             this.#tickFrame = null
 
@@ -130,8 +152,9 @@ export class Widget2Canvas {
                 return
             }
 
-            if (!this.#refreshLiveCanvas() && this.#options.refreshMode === 'both') {
-                this.requestRefresh()
+            if (this.#isVisible() && !this.#refreshing && !this.#pendingRefresh
+                && !this.#refreshLiveCanvas() && this.#options.refreshMode === 'both') {
+                this.requestRefresh({onlyIfDirty: true})
             }
 
             if (this.#tickLoopActive && !this.#destroyed && this.#original) {
@@ -142,37 +165,111 @@ export class Widget2Canvas {
         this.#tickFrame = requestAnimationFrame(tick)
     }
 
-    requestRefresh = ({afterFrame = false} = {}) => {
+    /** Let deterministic export own refreshes and restore the original policy on release. */
+    setFrameDriven = (enabled = true) => {
+        this.#frameDriven = enabled
+        if (enabled) {
+            this.#tickLoopActive = false
+            if (this.#tickFrame !== null) {
+                cancelAnimationFrame(this.#tickFrame)
+                this.#tickFrame = null
+            }
+        }
+        else if (this.#shouldUseLiveLoop()) {
+            this.#startLiveLoop()
+        }
+    }
+
+    /** Coalesce refresh requests, promoting scheduled work when export needs it now. */
+    requestRefresh = ({afterFrame = false, onlyIfDirty = false} = {}) => {
         if (this.#destroyed || !this.#original) {
             return false
         }
 
+        this.#consumeMutations()
+        if (!this.#isVisible()) {
+            this.#dirty = true
+            return false
+        }
+        if (!onlyIfDirty) {
+            this.#dirty = true
+            this.#revision += 1
+            this.#parts.forEach(entry => {
+                if (entry.role === 'dynamic') {
+                    entry.dirty = true
+                }
+            })
+        }
+        const hasLiveCanvas = this.#original instanceof HTMLCanvasElement
+                              || Boolean(this.#original.querySelector('canvas'))
+        if (!this.#dirty && this.#layoutSize) {
+            const nextSize = this.#readLogicalSize()
+            if (nextSize.width !== this.#layoutSize.width || nextSize.height !== this.#layoutSize.height) {
+                this.#markAllPartsDirty()
+                this.#dirty = true
+                this.#revision += 1
+            }
+        }
+        if (hasLiveCanvas) {
+            this.#dirty = true
+            this.#parts.forEach(entry => {
+                if (entry.element instanceof HTMLCanvasElement || entry.element.querySelector?.('canvas')) {
+                    entry.dirty = true
+                }
+            })
+        }
+        if (onlyIfDirty && !this.#dirty && !hasLiveCanvas) {
+            return true
+        }
+
+        if (this.#pendingRefresh && !this.#refreshing && !afterFrame && this.#refreshRun) {
+            cancelAnimationFrame(this.#refreshFrame)
+            this.#refreshFrame = null
+            const run = this.#refreshRun
+            this.#refreshRun = null
+            void run()
+            return true
+        }
+
         if (this.#pendingRefresh || this.#refreshing) {
-            this.#queuedRefresh = true
+            this.#queuedRefresh ||= this.#dirty
             return true
         }
 
         this.#pendingRefresh = true
+        /** Finish queued invalidations before notifying the capture readiness barrier. */
         const run = async () => {
+            this.#refreshRun = null
+            this.#refreshFrame = null
+            this.#refreshError = null
             try {
                 if (this.#shouldUseLiveLoop() && this.#refreshLiveCanvas()) {
                     return
                 }
                 await this.refresh()
             }
+            catch (error) {
+                this.#refreshError = error
+                this.#dirty = true
+            }
             finally {
                 this.#pendingRefresh = false
-                if (this.#queuedRefresh && !this.#destroyed && this.#original) {
+                if (!this.#refreshError && this.#queuedRefresh && !this.#destroyed && this.#original) {
                     this.#queuedRefresh = false
-                    this.requestRefresh({afterFrame: true})
-                    return
+                    if (!this.requestRefresh({afterFrame: this.#frameDriven ? false : afterFrame, onlyIfDirty: true})) {
+                        this.#resolveRefreshIdleWaiters(false)
+                    }
                 }
-                this.#resolveRefreshIdleWaiters(true)
+                else {
+                    this.#queuedRefresh = false
+                    this.#resolveRefreshIdleWaiters(!this.#refreshError)
+                }
             }
         }
 
         if (afterFrame) {
-            requestAnimationFrame(() => void run())
+            this.#refreshRun = run
+            this.#refreshFrame = requestAnimationFrame(() => void run())
         }
         else {
             void run()
@@ -180,18 +277,42 @@ export class Widget2Canvas {
         return true
     }
 
-    flush = ({afterFrame = false} = {}) => {
+    /** Flush dirty content without waiting for a background-tab animation frame. */
+    flush = ({afterFrame = false, onlyIfDirty = false} = {}) => {
         if (this.#destroyed || !this.#original) {
             return Promise.resolve(false)
         }
 
-        this.requestRefresh({afterFrame})
+        if (!this.requestRefresh({afterFrame, onlyIfDirty})) {
+            return Promise.resolve(false)
+        }
         return this.waitForIdle()
+    }
+
+    /** Drain undelivered mutations before deciding whether a bitmap can be reused. */
+    #consumeMutations = () => {
+        const mutations = this.#observer?.takeRecords() ?? []
+        if (mutations.length) {
+            this.#handleMutations(mutations)
+        }
+    }
+
+    /** Reuse the widget composition surface until its physical dimensions change. */
+    #getBuffer = (width, height) => {
+        this.#buffer ??= document.createElement('canvas')
+        if (this.#buffer.width !== width) {
+            this.#buffer.width = width
+        }
+        if (this.#buffer.height !== height) {
+            this.#buffer.height = height
+        }
+        this.#buffer.getContext('2d')?.clearRect(0, 0, width, height)
+        return this.#buffer
     }
 
     waitForIdle = () => {
         if (!this.#pendingRefresh && !this.#refreshing && !this.#queuedRefresh) {
-            return Promise.resolve(true)
+            return Promise.resolve(!this.#refreshError)
         }
 
         return new Promise(resolve => {
@@ -292,7 +413,10 @@ export class Widget2Canvas {
         return null
     }
 
+    /** Invalidate affected parts and their raster revision from observed DOM changes. */
     #handleMutations = (mutations) => {
+        this.#dirty = true
+        this.#revision += 1
         let shouldRescan = false
 
         for (const mutation of mutations) {
@@ -327,9 +451,7 @@ export class Widget2Canvas {
             return null
         }
 
-        const buffer = document.createElement('canvas')
-        buffer.width = Math.ceil(logicalW * scale)
-        buffer.height = Math.ceil(logicalH * scale)
+        const buffer = this.#getBuffer(Math.ceil(logicalW * scale), Math.ceil(logicalH * scale))
         const ctx = buffer.getContext('2d')
         const parentRect = this.#original.getBoundingClientRect()
         const renderScaleX = parentRect.width > 0 ? (parentRect.width / logicalW) : 1
@@ -503,8 +625,9 @@ export class Widget2Canvas {
         ctx.restore?.()
     }
 
+    /** Copy live child canvases into a reusable composition buffer without DOM capture. */
     #refreshLiveCanvas = () => {
-        if (!this.#original || this.#destroyed) {
+        if (!this.#original || this.#destroyed || !this.#isVisible()) {
             return false
         }
 
@@ -520,9 +643,7 @@ export class Widget2Canvas {
             return false
         }
 
-        const buffer = document.createElement('canvas')
-        buffer.width = Math.ceil(logicalW * scale)
-        buffer.height = Math.ceil(logicalH * scale)
+        const buffer = this.#getBuffer(Math.ceil(logicalW * scale), Math.ceil(logicalH * scale))
         const ctx = buffer.getContext('2d')
         const parentRect = this.#original.getBoundingClientRect()
         const renderScaleX = parentRect.width > 0 ? (parentRect.width / logicalW) : 1
@@ -546,6 +667,7 @@ export class Widget2Canvas {
         })
 
         this.#updateCanvas(buffer)
+        this.#dirty = false
         return true
     }
 
@@ -553,7 +675,7 @@ export class Widget2Canvas {
      * Main refresh logic. Composites all widget parts into a single canvas.
      */
     refresh = async () => {
-        if (!this.#original || this.#destroyed) {
+        if (!this.#original || this.#destroyed || !this.#isVisible()) {
             return
         }
 
@@ -562,6 +684,9 @@ export class Widget2Canvas {
             return
         }
         this.#refreshing = true
+        this.#consumeMutations()
+        const revision = this.#revision
+        this.#layoutSize = this.#readLogicalSize()
         const startedAt = this.#shouldLogTiming() ? performance.now() : 0
 
         try {
@@ -586,6 +711,12 @@ export class Widget2Canvas {
                 this.#logTiming('refresh', startedAt)
             }
             this.#refreshing = false
+            this.#consumeMutations()
+            this.#dirty = this.#revision !== revision
+            if (this.#dirty) {
+                this.#markAllPartsDirty()
+            }
+            this.#queuedRefresh ||= this.#dirty
         }
     }
 
@@ -680,7 +811,10 @@ export class Widget2Canvas {
         let canvas = null
         if (typeof snapdom === 'function') {
             capture = await snapdom(el, options)
-            canvas = await capture.toCanvas()
+            const cached = this.#rasterCache.get(el)
+            // SnapDOM's unchanged result can also reuse its already rasterized pixels.
+            canvas = cached?.capture === capture ? cached.canvas : await capture.toCanvas()
+            this.#rasterCache.set(el, {capture, canvas})
         }
         else {
             canvas = await snapdom.toCanvas(el, options)
@@ -744,6 +878,9 @@ export class Widget2Canvas {
      * @param {{width?: number, height?: number, offsetX?: number|null, offsetY?: number|null}|null} dimensions - Logical capture dimensions in CSS pixels.
      */
     #updateCanvas = (source, dimensions = null) => {
+        if (this.#destroyed || !this.#original || !source) {
+            return
+        }
         const scale = Number(this.#options.scale) > 0 ? Number(this.#options.scale) : 1
         const sourceWidth = Number(source?.width) || 0
         const sourceHeight = Number(source?.height) || 0
@@ -811,6 +948,9 @@ export class Widget2Canvas {
      */
     getCaptureGeometry = () => this.#captureGeometry
 
+    /** Return a content revision for invalidating composition metadata. */
+    getCaptureRevision = () => this.#revision
+
     #shouldLogTiming = () => this.#options.debugTiming === true
 
     #logTiming = (phase, startedAt) => {
@@ -834,6 +974,11 @@ export class Widget2Canvas {
             cancelAnimationFrame(this.#tickFrame)
         }
         this.#tickFrame = null
+        if (this.#refreshFrame !== null) {
+            cancelAnimationFrame(this.#refreshFrame)
+        }
+        this.#refreshFrame = null
+        this.#refreshRun = null
         this.#pendingRefresh = false
         this.#queuedRefresh = false
         this.#refreshing = false
@@ -847,5 +992,7 @@ export class Widget2Canvas {
         this.#parts.clear()
         this.#partOrder = []
         this.#partsDirty = true
+        this.#buffer = null
+        this.#rasterCache = new WeakMap()
     }
 }
