@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-02-27
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -292,7 +292,11 @@ export class AppUpdateManager {
             }
         }, {passive: true})
 
-        const registrationPromise = navigator.serviceWorker.register('/service-worker-pwa.js', {updateViaCache: 'none'})
+        // Development serves the worker's ES modules directly, while production bundles an IIFE.
+        const registrationPromise = navigator.serviceWorker.register('/service-worker-pwa.js', {
+            updateViaCache: 'none',
+            ...(import.meta.env.DEV ? {type: 'module'} : {}),
+        })
             .catch(() => null)
         let timeoutId
         const timeoutPromise = new Promise(resolve => {

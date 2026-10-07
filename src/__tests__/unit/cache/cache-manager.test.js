@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-02
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -80,7 +80,10 @@ describe('CacheManager acknowledged commands', () => {
 
     it('returns an unavailable state when the page is not controlled', async () => {
         vi.stubGlobal('navigator', {})
-        await expect(new CacheManager().getStatus()).resolves.toMatchObject({available: false, usage: 0})
+        await expect(new CacheManager().getStatus()).resolves.toMatchObject({available: false, usage: 0, reason: expect.stringContaining('Service workers are unavailable')})
+        const {serviceWorker} = bridgeFixture()
+        serviceWorker.controller = null
+        await expect(new CacheManager().getStatus()).resolves.toMatchObject({available: false, reason: expect.stringContaining('no active service worker')})
     })
 
     it('cleans up ports and rejects when posting fails', async () => {
@@ -92,6 +95,25 @@ describe('CacheManager acknowledged commands', () => {
 })
 
 describe('cartographic preference lifecycle', () => {
+    it('publishes the unavailable reason and clears it after recovery', async () => {
+        const bridge = new CacheManager()
+        vi.spyOn(bridge, 'getStatus')
+            .mockResolvedValueOnce({available: false, reason: 'This page has no active service worker.'})
+            .mockRejectedValueOnce(new Error('The cartographic cache did not respond.'))
+            .mockResolvedValueOnce({available: true, usage: 10})
+        const controller = new CartographicCacheController(bridge)
+        try {
+            Object.assign($cartographicCache, {checking: true, error: ''})
+            await controller.refresh()
+            expect($cartographicCache).toMatchObject({checking: false, available: false, error: 'This page has no active service worker.'})
+            await controller.refresh()
+            expect($cartographicCache.error).toBe('The cartographic cache did not respond.')
+            await controller.refresh()
+            expect($cartographicCache).toMatchObject({checking: false, available: true, error: ''})
+        }
+        finally { controller.destroy() }
+    })
+
     it('normalizes hydration and synchronizes changes without duplicate listeners', async () => {
         const {serviceWorker} = bridgeFixture()
         const bridge = new CacheManager()

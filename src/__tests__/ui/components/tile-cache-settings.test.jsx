@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-02
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -48,7 +48,7 @@ import { SettingsSection } from '@Core/settings/SettingsSection'
 beforeEach(() => {
     mocks.refresh.mockClear()
     mocks.clear.mockReset().mockResolvedValue(undefined)
-    Object.assign($cartographicCache, {usage: 320 * 1024 ** 2, available: true, effectiveMaxBytes: 512 * 1024 ** 2})
+    Object.assign($cartographicCache, {usage: 320 * 1024 ** 2, available: true, checking: false, error: '', effectiveMaxBytes: 512 * 1024 ** 2})
     vi.stubGlobal('lgs', {settings: {app: proxy({tileCacheMaxBytes: 512 * 1024 ** 2})}})
 })
 
@@ -104,6 +104,32 @@ describe('cartographic cache settings', () => {
         unmount()
         await vi.advanceTimersByTimeAsync(5000)
         expect(mocks.refresh).toHaveBeenCalledTimes(2)
+    })
+
+    it('uses a warning summary only after unavailability is confirmed and restores it on recovery', async () => {
+        const {container} = render(<TileCacheSettings/>)
+        const summary = container.querySelector('[slot="summary"]')
+        expect(summary.querySelector('wa-icon').name).toBe('map')
+        expect(summary.style.color).toBe('')
+        await act(async () => {
+            $cartographicCache.available = false
+            $cartographicCache.error = 'This page has no active service worker.'
+        })
+        expect(summary.querySelector('wa-icon').name).toBe('triangle-exclamation')
+        expect(summary.style.color).toBe('var(--wa-color-warning-on-quiet)')
+        expect(screen.getByRole('status').textContent).toContain('This page has no active service worker.')
+        await act(async () => { $cartographicCache.available = true })
+        expect(summary.querySelector('wa-icon').name).toBe('map')
+        expect(summary.style.color).toBe('')
+    })
+
+    it('shows a neutral summary while checking the initial availability', () => {
+        Object.assign($cartographicCache, {available: false, checking: true})
+        const {container} = render(<TileCacheSettings/>)
+        expect(screen.getByRole('status').textContent).toBe('Checking cartographic cache availability…')
+        expect(container.querySelector('[slot="summary"] wa-icon').name).toBe('map')
+        expect(container.querySelector('[slot="summary"]').style.color).toBe('')
+        expect(container.querySelector('wa-button').disabled).toBe(true)
     })
 
     it('preserves the selected budget through existing settings hydration', () => {

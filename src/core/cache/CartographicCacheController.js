@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-02
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,6 +25,7 @@ export const $cartographicCache = proxy({
     maxBytes: DEFAULT_TILE_CACHE_BYTES,
     effectiveMaxBytes: 0,
     available: false,
+    checking: true,
     error: '',
 })
 
@@ -44,11 +45,15 @@ export class CartographicCacheController {
         const version = ++this.#version
         try {
             const result = await operation()
-            if (version === this.#version) Object.assign($cartographicCache, result, {error: ''})
+            if (version === this.#version) Object.assign($cartographicCache, result, {checking: false, error: result.reason ?? ''})
             return result
         }
-        catch {
-            if (version === this.#version) Object.assign($cartographicCache, {available: false, error: 'The cartographic cache is unavailable.'})
+        catch (error) {
+            if (version === this.#version) Object.assign($cartographicCache, {
+                available: false,
+                checking: false,
+                error: error instanceof Error ? error.message : 'The cartographic cache is unavailable.',
+            })
             return null
         }
     }

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-18
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -73,6 +73,7 @@ describe('AppUpdateManager webapp updates', () => {
         await Promise.resolve()
 
         expect(waitingWorker.postMessage).toHaveBeenCalledWith({type: 'SKIP_WAITING'})
+        expect(serviceWorker.register).toHaveBeenCalledWith('/service-worker-pwa.js', {updateViaCache: 'none'})
     })
 
     it('registers the app service worker in development', async () => {
@@ -109,7 +110,7 @@ describe('AppUpdateManager webapp updates', () => {
         await Promise.resolve()
         await Promise.resolve()
 
-        expect(serviceWorker.register).toHaveBeenCalledWith('/service-worker-pwa.js', {updateViaCache: 'none'})
+        expect(serviceWorker.register).toHaveBeenCalledWith('/service-worker-pwa.js', {updateViaCache: 'none', type: 'module'})
         expect(registration.update).toHaveBeenCalledOnce()
         expect(serviceWorkerListeners.has('controllerchange')).toBe(true)
     })

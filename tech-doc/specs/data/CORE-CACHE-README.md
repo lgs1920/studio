@@ -16,6 +16,12 @@ retains its separate version-aware application cache.
 - the effective budget when browser storage pressure reduces the configured cap;
 - an acknowledged purge of cartographic responses only.
 
+The panel starts with a neutral availability check. Confirmed unavailability
+replaces its summary icon with a warning triangle and applies the theme's warning
+text color to both icon and label. The status explains missing browser support,
+an uncontrolled page, or communication failures when the cause is known. Recovery
+restores the normal map icon and summary color.
+
 The preference is `app.tileCacheMaxBytes` in `public/settings.yaml`. The existing
 Valtio settings owner persists it in IndexedDB and preserves it during hydration.
 Changing the budget does not prefetch resources. Reducing it triggers eviction.
@@ -76,6 +82,11 @@ or hashing failures also preserve network loading.
 after service worker controller changes. `CacheManager` uses acknowledged
 MessageChannel commands with an eight-second timeout and closes both ports on
 completion or failure. No cache operation requires backend storage.
+
+Development registers `service-worker-pwa.js` as a module because Vite serves its
+source imports directly. Production retains classic worker registration for the
+bundled IIFE. Registering the development source as a classic worker fails before
+the cartographic cache can initialize.
 
 Cache mutations are serialized. Concurrent identical requests share a download;
 returned responses can be consumed independently. A purge invalidates pending

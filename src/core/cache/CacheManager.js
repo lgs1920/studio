@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-03-18
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-07
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,7 +28,12 @@ export class CacheManager {
     request = (type, payload = {}) => {
         const controller = globalThis.navigator?.serviceWorker?.controller
         if (!controller || typeof MessageChannel !== 'function') {
-            return Promise.resolve({available: false, usage: 0, maxBytes: this.maxQuota, effectiveMaxBytes: 0})
+            const reason = !globalThis.navigator?.serviceWorker
+                ? 'Service workers are unavailable in this browser or connection.'
+                : !controller
+                    ? 'This page has no active service worker. Reload Studio after the worker activates.'
+                    : 'Communication with the service worker is unavailable.'
+            return Promise.resolve({available: false, usage: 0, maxBytes: this.maxQuota, effectiveMaxBytes: 0, reason})
         }
         return new Promise((resolve, reject) => {
             const channel = new MessageChannel()
