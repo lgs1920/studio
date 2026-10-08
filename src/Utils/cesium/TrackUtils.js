@@ -196,11 +196,6 @@ const splitTrackCoordinatesAtAltitudeJumps = coordinates => {
         renderedSegments.push(currentSegment)
     }
 
-    if (didSplit && renderedSegments.length === 0) {
-        // Keep the source line when altitude splitting would remove every renderable segment.
-        return [coordinates]
-    }
-
     return didSplit ? renderedSegments : [coordinates]
 }
 
