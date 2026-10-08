@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-04-25
- * Last modified: 2026-04-25
+ * Created on: 2025-01-21
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -43,7 +43,7 @@ export const SelectLocation = ({select}) => {
                                     className="lgs--card-hoverable select-location-item"
                                     onClick={() => select(key)}
                                 >
-                                        <span lassName="select-location-item-label">
+                                        <span className="select-location-item-label">
                                             {value.properties.display_name}
                                         </span>
                                     <WaIcon name="chevron-right" variant="regular"/>
