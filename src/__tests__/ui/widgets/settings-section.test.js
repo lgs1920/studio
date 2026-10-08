@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-02
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -73,6 +73,7 @@ describe('SettingsSection', () => {
                     },
                 },
                 journey: {
+                    hideOtherJourneys: false,
                     activity: {
                         default: 'trek',
                         types: [
@@ -120,6 +121,7 @@ describe('SettingsSection', () => {
                     },
                 },
                 journey: {
+                    hideOtherJourneys: false,
                     activity: {
                         default: 'trek',
                         types:   [
@@ -204,6 +206,23 @@ describe('SettingsSection', () => {
 
         expect(section.content.activity.types[0].maxSpeed).toBe(4.25)
         expect(lgs.configuration.journey.activity.types[0].maxSpeed).toBe(4.25)
+    })
+
+    it('keeps the persisted hide other journeys preference on restart', async () => {
+        lgs.db.settings.get.mockResolvedValue({
+            hideOtherJourneys: true,
+        })
+
+        const section = new SettingsSection('journey')
+        await section.init()
+
+        expect(section.content.hideOtherJourneys).toBe(true)
+        expect(lgs.configuration.journey.hideOtherJourneys).toBe(true)
+        expect(lgs.db.settings.put).toHaveBeenCalledWith(
+            'journey',
+            expect.objectContaining({hideOtherJourneys: true}),
+            SETTINGS_STORE,
+        )
     })
 
     it('keeps user replay settings while adding new default keys', () => {

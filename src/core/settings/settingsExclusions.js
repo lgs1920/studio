@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-12-21
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ export const SETTING_EXCLUSIONS = [
         'layers.base', 'layers.base3d', 'layers.tiles3d', 'layers.terrain', 'layers.overlay',
         'layers.filter', 'layers.colorSettings',
         'app', 'scene', 'starter', 'coordinateSystem', 'unitSystem', 'poi.filter',
-        'journey.activity',
+        'journey.activity', 'journey.hideOtherJourneys',
         'ui.camera', 'swatches.current',
         'ui.menu', 'ui.poi.rotate', 'ui.poi.focusOnEdit', 'ui.journeyToolbar',
         'ui.compass.mode', 'ui.video.fps', 'ui.video.quality', 'ui.video.ratio', 'ui.pwa',
