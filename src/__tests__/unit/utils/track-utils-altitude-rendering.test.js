@@ -18,7 +18,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ClassificationType, GeoJsonPrimitive, HeightReference } from 'cesium'
 import { TrackUtils } from '@Utils/cesium/TrackUtils'
 
-describe('TrackUtils track altitude rendering', () => {
+describe('TrackUtils track terrain rendering', () => {
     const previousLgs = globalThis.lgs
 
     afterEach(() => {
@@ -26,7 +26,7 @@ describe('TrackUtils track altitude rendering', () => {
         globalThis.lgs = previousLgs
     })
 
-    it('keeps GPX altitude and cuts large jumps in the entity rendering path', async () => {
+    it('clamps GPX tracks to terrain without splitting altitude jumps', async () => {
         const entitiesById = new Map()
         const baseEntity = {
             id:       'track-line',
@@ -100,21 +100,16 @@ describe('TrackUtils track altitude rendering', () => {
         const loadedContent = source.load.mock.calls[0][0]
 
         expect(polylines).toHaveLength(3)
-        expect(polylines.every(entity => entity.polyline.clampToGround === false)).toBe(true)
-        expect(baseEntity.polyline.classificationType).toBeUndefined()
+        expect(polylines.every(entity => entity.polyline.clampToGround === true)).toBe(true)
         expect(existingMainEntity.polyline.positions).toEqual(['position'])
-        expect(loadedContent.geometry).toEqual({
-            type:        'MultiLineString',
-            coordinates: [coordinates.slice(0, 2), coordinates.slice(2)],
-        })
+        expect(loadedContent.geometry).toEqual({type: 'LineString', coordinates})
         expect(source.load).toHaveBeenCalledWith(
             expect.any(Object),
-            expect.objectContaining({clampToGround: false}),
+            expect.objectContaining({clampToGround: true}),
         )
-        expect(source.__lgsTrackHeightMode).toBe('gpx-altitude')
     })
 
-    it('keeps terrain clamping for tracks without GPX elevations', async () => {
+    it('clamps tracks without recorded elevations to terrain', async () => {
         const source = {
             name: 'track-terrain-fallback',
             load: vi.fn(async () => {}),
@@ -159,10 +154,9 @@ describe('TrackUtils track altitude rendering', () => {
             expect.any(Object),
             expect.objectContaining({clampToGround: true}),
         )
-        expect(source.__lgsTrackHeightMode).toBe('terrain')
     })
 
-    it('renders primitive GPX tracks at their recorded altitude', async () => {
+    it('clamps primitive GPX tracks to terrain', async () => {
         const primitive = {polylines: {show: true}, show: true}
         const fromGeoJson = vi.spyOn(GeoJsonPrimitive, 'fromGeoJson').mockReturnValue(primitive)
         vi.spyOn(TrackUtils, 'applyTrackPrimitiveStyle').mockReturnValue(true)
@@ -211,7 +205,7 @@ describe('TrackUtils track altitude rendering', () => {
 
         expect(fromGeoJson).toHaveBeenCalledWith(
             expect.objectContaining({geometry: expect.objectContaining({type: 'LineString'})}),
-            expect.objectContaining({heightReference: HeightReference.NONE}),
+            expect.objectContaining({heightReference: HeightReference.CLAMP_TO_GROUND}),
         )
         expect(scene.primitives.add).toHaveBeenCalledWith(primitive)
     })

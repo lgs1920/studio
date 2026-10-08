@@ -33,8 +33,8 @@ import {
 }                                                      from '@Utils/cesium/trackRenderStyle'
 import { CountApi }                                     from '@Utils/CountApi'
 import {
-    BoundingSphere, BufferPolyline, BufferPolylineMaterial, Cartesian2, Cartesian3, Cartographic, ClassificationType,
-    Color as CColor, CustomDataSource, GeoJsonDataSource, GeoJsonPrimitive, HeightReference, HorizontalOrigin, Math as M,
+    BoundingSphere, BufferPolyline, BufferPolylineMaterial, Cartesian2, Cartesian3, Cartographic, Color as CColor,
+    CustomDataSource, GeoJsonDataSource, GeoJsonPrimitive, HeightReference, HorizontalOrigin, Math as M,
     PolylineDashMaterialProperty, PolylineOutlineMaterialProperty, Rectangle, sampleTerrainMostDetailed, VerticalOrigin,
 }                                                      from 'cesium'
 import { UIToast }                                     from '../UIToast.js'
@@ -68,9 +68,6 @@ const TRACK_MIN_SCREEN_WIDTH = 1
 const TRACK_MAX_SCREEN_WIDTH = 256
 const TRACK_WIDTH_CHANGE_EPSILON = 0.25
 const TRACK_PRIMITIVE_MIN_POINTS = 4096
-const TRACK_GPX_ALTITUDE_JUMP_MIN_HEIGHT_METERS = 30
-const TRACK_HEIGHT_MODE_GPX = 'gpx-altitude'
-const TRACK_HEIGHT_MODE_TERRAIN = 'terrain'
 
 const isTrackStyleEntity = entity => `${entity?.id ?? ''}`.includes(TRACK_STYLE_ENTITY_MARKER)
 const isTrackLocatorMarkerEntity = entity => `${entity?.id ?? ''}`.includes(TRACK_LOCATOR_MARKER_ENTITY_MARKER)
@@ -129,110 +126,6 @@ const canUseTrackPrimitive = (track, style, renderMode) => renderMode === 'primi
                                               && trackPointCount(track) >= TRACK_PRIMITIVE_MIN_POINTS
                                               && style.dash.enabled === false
                                               && style.underlay.enabled === false
-
-/**
- * Determine whether a rendered track contains GPX elevations for every coordinate.
- *
- * @param {object} content - Render-ready GeoJSON content.
- * @returns {boolean} Whether every route coordinate has a finite GPX elevation.
- */
-const hasCompleteTrackAltitude = content => {
-    const geometry = content?.geometry
-    const coordinateSegments = geometry?.type === FEATURE_LINE_STRING
-                               ? [geometry.coordinates]
-                               : geometry?.type === FEATURE_MULTILINE_STRING
-                                 ? geometry.coordinates
-                                 : null
-    const coordinates = coordinateSegments?.flat()
-
-    return Array.isArray(coordinates)
-           && coordinates.length > 0
-           && coordinates.every(coordinate => Array.isArray(coordinate)
-                                              && coordinate[2] !== null
-                                              && coordinate[2] !== ''
-                                              && Number.isFinite(Number(coordinate[2])))
-}
-
-/**
- * Detect a large elevation jump between adjacent GPX coordinates.
- *
- * @param {Array<number>} start - Start coordinate in GeoJSON order.
- * @param {Array<number>} stop - End coordinate in GeoJSON order.
- * @returns {boolean} Whether the GPX elevation difference exceeds the display threshold.
- */
-const hasTrackGpxAltitudeJump = (start, stop) => Number.isFinite(Number(start?.[2]))
-    && Number.isFinite(Number(stop?.[2]))
-    && Math.abs(Number(stop[2]) - Number(start[2])) >= TRACK_GPX_ALTITUDE_JUMP_MIN_HEIGHT_METERS
-
-/**
- * Split one rendered line at large GPX elevation jumps.
- *
- * @param {Array<Array<number>>} coordinates - Coordinates for one track segment.
- * @returns {Array<Array<Array<number>>>} Renderable coordinate runs.
- */
-const splitTrackCoordinatesAtAltitudeJumps = coordinates => {
-    if (!Array.isArray(coordinates) || coordinates.length < 2) {
-        return [coordinates]
-    }
-
-    const renderedSegments = []
-    let currentSegment = [coordinates[0]]
-    let didSplit = false
-
-    for (let index = 1; index < coordinates.length; index++) {
-        if (hasTrackGpxAltitudeJump(coordinates[index - 1], coordinates[index])) {
-            didSplit = true
-            if (currentSegment.length > 1) {
-                renderedSegments.push(currentSegment)
-            }
-            currentSegment = [coordinates[index]]
-            continue
-        }
-
-        currentSegment.push(coordinates[index])
-    }
-
-    if (currentSegment.length > 1) {
-        renderedSegments.push(currentSegment)
-    }
-
-    return didSplit ? renderedSegments : [coordinates]
-}
-
-/**
- * Split a rendered GeoJSON track where GPX altitude jumps exceed the display threshold.
- *
- * @param {object} content - Render-ready GeoJSON content.
- * @returns {object} The original content or a copy with split line geometry.
- */
-const splitTrackGeometryAtAltitudeJumps = content => {
-    const geometry = content?.geometry
-    if (!geometry || !Array.isArray(geometry.coordinates)) {
-        return content
-    }
-
-    const coordinateSegments = geometry.type === FEATURE_LINE_STRING
-                               ? [geometry.coordinates]
-                               : geometry.type === FEATURE_MULTILINE_STRING
-                                 ? geometry.coordinates
-                                 : null
-    if (!coordinateSegments || coordinateSegments.some(segment => !Array.isArray(segment))) {
-        return content
-    }
-
-    const renderedSegments = coordinateSegments.flatMap(splitTrackCoordinatesAtAltitudeJumps)
-    const hasSplit = renderedSegments.length !== coordinateSegments.length
-                      || renderedSegments.some((segment, index) => segment !== coordinateSegments[index])
-    if (!hasSplit) {
-        return content
-    }
-
-    const nextGeometry = geometry.type === FEATURE_LINE_STRING && renderedSegments.length === 1
-                         ? {type: FEATURE_LINE_STRING, coordinates: renderedSegments[0]}
-                         : {type: FEATURE_MULTILINE_STRING, coordinates: renderedSegments}
-
-    return {...content, geometry: nextGeometry}
-}
 
 const removeTrackPrimitive = source => {
     const primitive = source?.__lgsTrackPrimitive
@@ -1249,16 +1142,8 @@ export class TrackUtils {
         return true
     }
 
-    /**
-     * Apply the track style while preserving the selected track height mode.
-     *
-     * @param {object} source - Data source that owns the track entities.
-     * @param {Track} track - Track whose rendering style is applied.
-     * @returns {void}
-     */
     static applyTrackRenderStyle = (source, track) => {
         const style = TrackUtils.getTrackRenderStyle(track)
-        const clampToGround = source.__lgsTrackHeightMode !== TRACK_HEIGHT_MODE_GPX
         TrackUtils.removeTrackWidthUpdater(source)
 
         const baseEntities = source.entities.values.filter(entity => entity.polyline && !isTrackStyleEntity(entity))
@@ -1286,23 +1171,13 @@ export class TrackUtils {
         })
         const activeStyleEntityIds = new Set()
 
-        /**
-         * Create or update one styled track polyline.
-         *
-         * @param {string} entityId - Stable Cesium entity identifier.
-         * @param {Array<Cartesian3>} positions - Track positions to render.
-         * @param {object} material - Material applied to the polyline.
-         * @param {number} zIndex - Ground geometry draw order.
-         * @returns {object} The created or updated Cesium entity.
-         */
         const updateStyleEntity = (entityId, positions, material, zIndex) => {
             activeStyleEntityIds.add(entityId)
             const existing = source.entities.getById(entityId)
             if (existing?.polyline) {
                 existing.polyline.positions = positions
                 existing.polyline.material = material
-                existing.polyline.clampToGround = clampToGround
-                existing.polyline.classificationType = clampToGround ? ClassificationType.TERRAIN : undefined
+                existing.polyline.clampToGround = true
                 existing.polyline.zIndex = zIndex
                 existing.show = true
                 return existing
@@ -1312,8 +1187,7 @@ export class TrackUtils {
                                           id: entityId,
                                           polyline: {
                                               positions,
-                                              clampToGround,
-                                              classificationType: clampToGround ? ClassificationType.TERRAIN : undefined,
+                                              clampToGround: true,
                                               material,
                                               zIndex,
                                           },
@@ -1322,8 +1196,6 @@ export class TrackUtils {
 
         baseEntities.forEach(entity => {
             const positions = entity.polyline.positions
-            entity.polyline.clampToGround = clampToGround
-            entity.polyline.classificationType = clampToGround ? ClassificationType.TERRAIN : undefined
             TrackUtils.setPolylineVisibility(entity, false)
 
             if (style.underlay.enabled) {
@@ -1423,35 +1295,22 @@ export class TrackUtils {
                 const style = TrackUtils.getTrackRenderStyle(track)
                 const usePrimitive = canUseTrackPrimitive(track, style, renderMode)
                 const nextRenderMode = usePrimitive ? 'primitive' : 'entities'
-                const baseRenderContent = getTrackRenderContent(track, {forRender: true})
-                const heightMode = hasCompleteTrackAltitude(baseRenderContent)
-                                  ? TRACK_HEIGHT_MODE_GPX
-                                  : TRACK_HEIGHT_MODE_TERRAIN
-                const terrainProvider = heightMode === TRACK_HEIGHT_MODE_TERRAIN
-                                        ? (lgs.viewer?.terrainProvider ?? null)
-                                        : null
                 const hasGeometry = usePrimitive
                                         ? Boolean(source.__lgsTrackPrimitive)
                                         : hasTrackGeometryEntities(source) && !source.__lgsTrackPrimitive
                 const needsGeometryLoad = !hasGeometry
                                           || source.__lgsTrackGeometryKey !== geometryKey
                                           || source.__lgsRenderSmoothingKey !== smoothingKey
-                                          || source.__lgsTrackHeightMode !== heightMode
-                                          || source.__lgsTrackTerrainProvider !== terrainProvider
                                           || source.__lgsTrackRenderMode !== nextRenderMode
                 if (needsGeometryLoad) {
-                    const renderContent = heightMode === TRACK_HEIGHT_MODE_GPX
-                                          ? splitTrackGeometryAtAltitudeJumps(baseRenderContent)
-                                          : baseRenderContent
+                    const renderContent = getTrackRenderContent(track, {forRender: true})
                     if (usePrimitive) {
                         TrackUtils.removeTrackStyleEntities(source)
                         source.entities.removeAll()
                         removeTrackPrimitive(source)
                         source.__lgsTrackPrimitive = GeoJsonPrimitive.fromGeoJson(renderContent, {
                                                                                      allowPicking:    true,
-                                                                                     heightReference: heightMode === TRACK_HEIGHT_MODE_GPX
-                                                                                                      ? HeightReference.NONE
-                                                                                                      : HeightReference.CLAMP_TO_TERRAIN,
+                                                                                     heightReference: HeightReference.CLAMP_TO_GROUND,
                                                                                      pickObjectFactory: () => ({id: track.slug}),
                                                                                      scene:           lgs.scene,
                                                                                  })
@@ -1460,14 +1319,12 @@ export class TrackUtils {
                     else {
                         removeTrackPrimitive(source)
                         await source.load(renderContent, {
-                            clampToGround: heightMode !== TRACK_HEIGHT_MODE_GPX,
+                            clampToGround: true,
                             name:          track.title,
                         })
                     }
                     source.__lgsTrackGeometryKey = geometryKey
                     source.__lgsRenderSmoothingKey = smoothingKey
-                    source.__lgsTrackHeightMode = heightMode
-                    source.__lgsTrackTerrainProvider = terrainProvider
                     source.__lgsTrackRenderMode = nextRenderMode
                 }
                 const styleKey = trackStyleSignature(style)
