@@ -557,6 +557,106 @@ describe('replay camera angle map guide', () => {
         expect(guide.angleDegrees).toBe(-165)
     })
 
+    it('projects the camera icon flat and the upright activity icon toward the angle camera', () => {
+        const container = document.createElement('div')
+        const canvas = document.createElement('canvas')
+        canvas.width = 1000
+        canvas.height = 800
+        container.appendChild(canvas)
+        document.body.appendChild(container)
+        container.getBoundingClientRect = () => ({left: 0, top: 0, width: 1000, height: 800})
+        canvas.getBoundingClientRect = () => ({left: 0, top: 0, width: 1000, height: 800})
+        Object.defineProperties(container, {
+            clientHeight: {configurable: true, value: 800},
+            clientWidth: {configurable: true, value: 1000},
+        })
+        Object.defineProperties(canvas, {
+            clientHeight: {configurable: true, value: 800},
+            clientWidth: {configurable: true, value: 1000},
+        })
+        const viewer = {
+            container,
+            camera: {
+                changed: {addEventListener: vi.fn(() => vi.fn())},
+                getPixelSize: () => 1,
+                moveStart: {addEventListener: vi.fn(() => vi.fn())},
+            },
+            scene: {
+                canvas,
+                drawingBufferHeight: 800,
+                drawingBufferWidth: 1000,
+                globe: {getHeight: () => 0},
+                cartesianToCanvasCoordinates(position, result) {
+                    const cartographic = Cartographic.fromCartesian(position)
+                    const north = (cartographic.latitude - (48 * Math.PI / 180)) * 6378137
+                    const east = (cartographic.longitude - (2 * Math.PI / 180)) * 6378137 * Math.cos(48 * Math.PI / 180)
+                    result.x = 500 + east
+                    result.y = 400 - (north * 0.35) - (cartographic.height * 0.35)
+                    return result
+                },
+                postRender: {addEventListener: vi.fn(() => vi.fn())},
+                requestRender: vi.fn(),
+                screenSpaceCameraController: {enableRotate: true},
+            },
+        }
+        const planeJourney = {
+            tracks: new Map([['plane-track', {
+                content: {
+                    geometry: {
+                        type: 'LineString',
+                        coordinates: [[2, 48, 0], [2, 48.01, 0], [2.005, 48.01, 0]],
+                    },
+                },
+            }]]),
+            activitySettings: {icon: 'bicycle'},
+        }
+        const guide = resolveJourneyReplayCameraAngleGuide({
+            camera: {cameraAngle: 90, cameraAltitude: 2400},
+            journey: planeJourney,
+        })
+        expect(mountJourneyReplayCameraAngleGuide(viewer, guide, {}, {})).toBe(true)
+
+        /**
+         * Read the affine CSS transform coefficients for an icon.
+         *
+         * @param {HTMLElement} icon - Projected icon.
+         * @returns {Array<number>} CSS matrix coefficients.
+         */
+        const iconMatrixFrom = icon => {
+            const matrix = icon.style.transform.match(/matrix\(([^)]+)\)/)
+            expect(matrix).not.toBeNull()
+            return matrix[1].split(',').map(Number)
+        }
+        /**
+         * Read the projected area scale from an icon's local-plane matrix.
+         *
+         * @param {HTMLElement} icon - Projected icon.
+         * @returns {number} Absolute area scale of its CSS plane matrix.
+         */
+        const projectedAreaScaleFrom = icon => {
+            const [a, b, c, d] = iconMatrixFrom(icon)
+            return Math.abs((a * d) - (b * c))
+        }
+        const cameraIcon = container.querySelector('.replay-camera-angle-guide-dom img')
+        const activityIcon = container.querySelector('[data-part="trace-activity-icon"]')
+        const cameraMatrix = iconMatrixFrom(cameraIcon)
+        const activityMatrix = iconMatrixFrom(activityIcon)
+        expect(cameraIcon.style.transform).toContain('matrix(')
+        expect(activityIcon.style.transform).toContain('matrix(')
+        expect(Math.abs(cameraMatrix[2])).toBeLessThan(0.02)
+        expect(Math.abs(cameraMatrix[3])).toBeGreaterThan(0.25)
+        expect(Math.abs(activityMatrix[1])).toBeGreaterThan(0.1)
+        expect(Math.abs(activityMatrix[2])).toBeLessThan(0.02)
+        expect(Math.abs(activityMatrix[3])).toBeGreaterThan(0.25)
+        expect(projectedAreaScaleFrom(cameraIcon)).toBeGreaterThan(0.25)
+        expect(projectedAreaScaleFrom(cameraIcon)).toBeLessThan(0.45)
+        expect(projectedAreaScaleFrom(activityIcon)).toBeGreaterThan(0.25)
+        expect(projectedAreaScaleFrom(activityIcon)).toBeLessThan(0.45)
+
+        removeJourneyReplayCameraAngleGuide(viewer)
+        container.remove()
+    })
+
     it('mounts a synchronized DOM cone with solid circular icons', () => {
         const container = document.createElement('div')
         const canvas = document.createElement('canvas')
@@ -1071,7 +1171,7 @@ describe('replay camera angle map guide', () => {
         expect(icons[0].src).toContain('video')
         expect(decodeURIComponent(icons[0].src)).toContain('fill="#ffffff"')
         expect(decodeURIComponent(icons[0].src)).toContain('stroke-width="2"')
-        expect(icons[0].style.transform).toContain('rotate(')
+        expect(icons[0].style.transform).toContain('matrix(')
         expect(overlay.style.visibility).toBe('visible')
 
         const behindGuide = resolveJourneyReplayCameraAngleGuide({

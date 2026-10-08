@@ -369,6 +369,56 @@ const bearingBetween = (start, end) => {
 }
 
 /**
+ * Resolve the route bearing at a requested distance from its departure.
+ *
+ * @param {Array<Object>} points - Ordered route points.
+ * @param {number} distanceMeters - Distance from the start in metres.
+ * @returns {number|null} Bearing in radians, or null when the route has no segment.
+ */
+const routeBearingAtDistanceFrom = (points, distanceMeters) => {
+    let travelled = 0
+    for (let index = 1; index < points.length; index += 1) {
+        const segmentDistance = mapDistanceBetween(points[index - 1], points[index])
+        if (travelled + segmentDistance >= distanceMeters) {
+            return bearingBetween(points[index - 1], points[index])
+        }
+        travelled += segmentDistance
+    }
+
+    return points.length > 1 ? bearingBetween(points.at(-2), points.at(-1)) : null
+}
+
+/**
+ * Resolve a vertical icon plane bearing toward the angle camera marker.
+ *
+ * @param {Cartesian3} worldPosition - Icon centre in world coordinates.
+ * @param {Cartesian3|null} targetPosition - Angle camera marker in world coordinates.
+ * @param {number} fallbackBearing - Horizontal bearing used without target position data.
+ * @returns {number} Horizontal bearing for the vertical plane's width axis.
+ */
+const verticalIconBearingFrom = (worldPosition, targetPosition, fallbackBearing) => {
+    const iconPosition = Cartographic.fromCartesian(worldPosition)
+    const targetCartographic = isFiniteCartesianPosition(targetPosition)
+        ? Cartographic.fromCartesian(targetPosition)
+        : null
+    if (!iconPosition || !targetCartographic) {
+        return fallbackBearing
+    }
+
+    const towardAngleCamera = bearingBetween(
+        {
+            latitude: iconPosition.latitude * 180 / Math.PI,
+            longitude: iconPosition.longitude * 180 / Math.PI,
+        },
+        {
+            latitude: targetCartographic.latitude * 180 / Math.PI,
+            longitude: targetCartographic.longitude * 180 / Math.PI,
+        },
+    )
+    return towardAngleCamera - (Math.PI / 2)
+}
+
+/**
 /**
  * Resolve the route section following the journey departure.
  *
@@ -639,6 +689,36 @@ const worldGeometryFrom = (viewer, guide, currentConeLength = null) => {
         groundAnchor,
         transform,
         visibilityAnchor,
+    }
+}
+
+/**
+ * Measure world metres represented by one CSS pixel at a map position.
+ *
+ * @param {Object} viewer - Cesium viewer.
+ * @param {Cartesian3} position - World position used for the scale measurement.
+ * @returns {number|null} World metres per CSS pixel, or null when unavailable.
+ */
+const metersPerCssPixelFrom = (viewer, position) => {
+    const scene = viewer?.scene
+    const camera = viewer?.camera ?? scene?.camera
+    const canvas = scene?.canvas
+    const bufferWidth = Number(scene?.drawingBufferWidth) || Number(canvas?.width)
+    const bufferHeight = Number(scene?.drawingBufferHeight) || Number(canvas?.height)
+    const cssWidth = Number(canvas?.clientWidth) || Number(canvas?.getBoundingClientRect?.().width)
+    if (!camera?.getPixelSize || !position || !Number.isFinite(bufferWidth) || !Number.isFinite(bufferHeight)
+        || !Number.isFinite(cssWidth) || bufferWidth <= 0 || bufferHeight <= 0 || cssWidth <= 0) {
+        return null
+    }
+
+    try {
+        const metersPerBufferPixel = camera.getPixelSize(new BoundingSphere(position, 1), bufferWidth, bufferHeight)
+        return Number.isFinite(metersPerBufferPixel) && metersPerBufferPixel > 0
+            ? metersPerBufferPixel * bufferWidth / cssWidth
+            : null
+    }
+    catch {
+        return null
     }
 }
 
@@ -1656,6 +1736,105 @@ const positionGuideIcon = (icon, point, heading = null) => {
 }
 
 /**
+ * Project a DOM icon's local axes onto a map-tangent or vertical plane.
+ *
+ * @param {Object} viewer - Cesium viewer.
+ * @param {HTMLElement} overlay - DOM overlay.
+ * @param {HTMLElement} icon - Icon to position.
+ * @param {Cartesian3} worldPosition - Icon centre in world coordinates.
+ * @param {{x: number, y: number}|null} screenPosition - Projected icon centre.
+ * @param {number} bearing - Local forward bearing in radians.
+ * @param {{viewProjectionMatrix: Matrix4}|null} projectionFrame - Camera projection frame.
+ * @param {number|null} [fallbackHeading=null] - Screen heading used if planar projection is unavailable.
+ * @param {boolean} [vertical=false] - Whether the icon plane is perpendicular to the map surface.
+ * @param {Cartesian3|null} [verticalTargetPosition=null] - World position the vertical icon faces.
+ * @returns {void}
+ */
+const positionGuideIconInPlane = (
+    viewer,
+    overlay,
+    icon,
+    worldPosition,
+    screenPosition,
+    bearing,
+    projectionFrame,
+    fallbackHeading = null,
+    vertical = false,
+    verticalTargetPosition = null,
+) => {
+    if (!screenPosition || !worldPosition) {
+        positionGuideIcon(icon, null)
+        return
+    }
+
+    const iconWidth = Number.parseFloat(icon.style.width) || CAMERA_ANGLE_GUIDE_ICON_SIZE
+    const iconHeight = Number.parseFloat(icon.style.height) || CAMERA_ANGLE_GUIDE_ICON_SIZE
+    const metersPerCssPixel = metersPerCssPixelFrom(viewer, worldPosition)
+    if (!Number.isFinite(bearing) || !Number.isFinite(metersPerCssPixel) || metersPerCssPixel <= 0) {
+        positionGuideIcon(icon, screenPosition, fallbackHeading)
+        return
+    }
+
+    const localFrame = Transforms.eastNorthUpToFixedFrame(worldPosition)
+    const halfWidthMeters = metersPerCssPixel * iconWidth / 2
+    const halfHeightMeters = metersPerCssPixel * iconHeight / 2
+    const planeBearing = vertical
+        ? verticalIconBearingFrom(worldPosition, verticalTargetPosition, bearing + (Math.PI / 2))
+        : bearing
+    /**
+     * Project one local tangent-plane offset into overlay coordinates.
+     *
+     * @param {number} offsetHeading - Offset bearing in radians.
+     * @param {number} distance - Offset distance in metres.
+     * @returns {{x: number, y: number}|null} Projected offset position.
+     */
+    const projectOffset = (offsetHeading, distance) => projectGuidePosition(
+        viewer,
+        overlay,
+        positionAtHeading(localFrame, offsetHeading, distance),
+        projectionFrame,
+    )
+    const xPositive = projectOffset(planeBearing, halfWidthMeters)
+    const xNegative = projectOffset(planeBearing + Math.PI, halfWidthMeters)
+    const yPositive = vertical
+        ? projectGuidePosition(
+            viewer,
+            overlay,
+            Matrix4.multiplyByPoint(localFrame, new Cartesian3(0, 0, -halfHeightMeters), new Cartesian3()),
+            projectionFrame,
+        )
+        : projectOffset(planeBearing + (Math.PI / 2), halfHeightMeters)
+    const yNegative = vertical
+        ? projectGuidePosition(
+            viewer,
+            overlay,
+            Matrix4.multiplyByPoint(localFrame, new Cartesian3(0, 0, halfHeightMeters), new Cartesian3()),
+            projectionFrame,
+        )
+        : projectOffset(planeBearing - (Math.PI / 2), halfHeightMeters)
+    if (![xPositive, xNegative, yPositive, yNegative].every(Boolean)) {
+        positionGuideIcon(icon, screenPosition, fallbackHeading)
+        return
+    }
+
+    const a = (xPositive.x - xNegative.x) / iconWidth
+    const b = (xPositive.y - xNegative.y) / iconWidth
+    const c = (yPositive.x - yNegative.x) / iconHeight
+    const d = (yPositive.y - yNegative.y) / iconHeight
+    if (![a, b, c, d].every(Number.isFinite)) {
+        positionGuideIcon(icon, screenPosition, fallbackHeading)
+        return
+    }
+
+    icon.style.display = icon.dataset.visibleDisplay ?? 'block'
+    icon.style.left = `${screenPosition.x}px`
+    icon.style.top = `${screenPosition.y}px`
+    icon.style.transformOrigin = 'center center'
+    const matrix = [a, b, c, d].map(value => Number(value.toFixed(6)))
+    icon.style.transform = `translate(-50%, -50%) matrix(${matrix.join(', ')}, 0, 0)`
+}
+
+/**
  * Check whether a Cesium Cartesian contains finite coordinates.
  *
  * @param {Cartesian3|null} position - Cartesian position.
@@ -1798,7 +1977,6 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
         // leave the guide hidden while Cesium is between projections.
         overlay.style.visibility = 'visible'
     }
-    const routeProjectionState = updateRouteGuideOverlay(viewer, record, width, height)
     const routeProjectionFrame = record.screenLocked
         ? record.preparationRouteProjectionFrame ?? record.screenProjectionFrame
         : null
@@ -1846,6 +2024,7 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
         record.coneLength * coneScale,
         record.screenLocked ? record.preparationIconGap : null,
     )
+    const routeProjectionState = updateRouteGuideOverlay(viewer, record, width, height, geometry.videoIconPosition)
     const outer = geometry.outer.map(position => projectGuidePosition(viewer, overlay, position, record.screenProjectionFrame))
     const inner = geometry.inner.map(position => projectGuidePosition(viewer, overlay, position, record.screenProjectionFrame))
     const outerBaseCenter = projectGuidePosition(viewer, overlay, geometry.outerBaseCenter, record.screenProjectionFrame)
@@ -1966,9 +2145,14 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
     const projectedConeHeading = rotationCenter && tip
         ? domAngleFrom(rotationCenter, tip)
         : null
-    positionGuideIcon(
+    positionGuideIconInPlane(
+        viewer,
+        overlay,
         elements.videoIcon,
+        geometry.videoIconPosition,
         videoIcon,
+        record.guide.cameraHeading ?? coneHeading + Math.PI,
+        record.screenProjectionFrame,
         projectedConeHeading === null ? null : projectedConeHeading + Math.PI,
     )
     elements.svg.setAttribute('viewBox', `0 0 ${width} ${height}`)
@@ -1984,9 +2168,10 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
  * @param {Object} record - Mounted guide record.
  * @param {number} width - Overlay width in CSS pixels.
  * @param {number} height - Overlay height in CSS pixels.
+ * @param {Cartesian3} angleCameraPosition - World position of the angle camera marker.
  * @returns {{sections: Array<Array<{x: number, y: number}>>, activityPosition: {x: number, y: number}|null}} Projected route state.
  */
-const updateRouteGuideOverlay = (viewer, record, width, height) => {
+const updateRouteGuideOverlay = (viewer, record, width, height, angleCameraPosition) => {
     const {elements} = record
     const projectionFrame = record.screenLocked
         ? record.preparationRouteProjectionFrame ?? record.screenProjectionFrame
@@ -2029,7 +2214,26 @@ const updateRouteGuideOverlay = (viewer, record, width, height) => {
     else {
         elements.routeResizeHandle.style.display = 'none'
     }
-    positionGuideIcon(elements.activityIcon, routeProjectionState.activityPosition)
+    const activityPoint = record.guide.activityPoint
+    const activityWorldPosition = activityPoint
+        ? terrainClampedPositionFrom(viewer, activityPoint)
+        : null
+    const activityBearing = routeBearingAtDistanceFrom(
+        record.guide.routeSourcePoints ?? record.guide.routeAfter?.[0] ?? [],
+        CAMERA_ANGLE_GUIDE_ACTIVITY_DISTANCE_METERS,
+    ) ?? record.guide.axisHeading
+    positionGuideIconInPlane(
+        viewer,
+        record.overlay,
+        elements.activityIcon,
+        activityWorldPosition,
+        routeProjectionState.activityPosition,
+        activityBearing,
+        projectionFrame,
+        null,
+        true,
+        angleCameraPosition,
+    )
     elements.activityIcon.style.visibility = 'visible'
     elements.routeSvg.setAttribute('viewBox', `0 0 ${width} ${height}`)
     elements.routeSvg.style.visibility = 'visible'

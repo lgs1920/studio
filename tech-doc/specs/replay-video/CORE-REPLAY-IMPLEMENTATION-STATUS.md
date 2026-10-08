@@ -30,6 +30,9 @@ view or frustum changes, keeping it aligned to terrain. The trace, departure mar
 positions over a short animation. Changing the Cesium camera orientation also
 refreshes the guide projection to keep the camera icon aligned to the trace
 without changing `cameraAngle`; Cesium navigation cannot write camera settings.
+The camera icon follows the local map plane. The journey activity icon stands
+perpendicular to that plane and faces the angle camera marker at the cone tip;
+both follow the scene projection.
 Only dragging the camera icon adjusts its azimuth, while the cone tip adjusts
 height. During preparation, dragging the simulated-route arrow changes the
 visible source-trace distance from 60 to 1,200 metres. The complete DOM guide is

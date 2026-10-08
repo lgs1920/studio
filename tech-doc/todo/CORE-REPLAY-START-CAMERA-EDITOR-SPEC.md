@@ -97,6 +97,9 @@ pitch, so changing the apparent zoom is coupled to the altitude model.
 
 During preparation, the camera guide cone and camera icon use the current Cesium
 projection so the cone remains anchored to the route departure as the view changes.
+The camera icon at the cone tip follows the local map plane. The journey
+activity icon stands perpendicular to the map and faces the angle camera marker
+at the cone tip; both follow the scene projection.
 The simulated departure trace is pseudo-clamped: each point uses sampled terrain
 height and is reprojected whenever Cesium's view or frustum changes, keeping the
 DOM line aligned to terrain. The trace, departure marker, and activity icon ease

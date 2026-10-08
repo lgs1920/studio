@@ -371,6 +371,10 @@ cone remains anchored to the route departure while the map is panned or zoomed.
 This does not change the configured camera angle. The simulated departure trace is
 pseudo-clamped: each point uses sampled terrain height and is reprojected when
 Cesium's view or frustum changes, so the DOM line stays aligned to the terrain.
+The camera icon at the cone tip is projected onto the local map plane. The
+journey activity icon stands in a vertical plane perpendicular to the map and
+faces the angle camera marker at the cone tip. Both follow the current scene
+projection.
 The trace, departure marker, and activity icon ease to their new positions over
 a short animation. Changing the Cesium camera orientation refreshes the guide
 projection so the camera icon stays aligned to the route at the same
