@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -237,6 +237,7 @@ describe('ReplayTimelinePreview', () => {
             settled: true,
             source: 'timeline-scrub',
         }))
+        expect(globalThis.lgs.stores.replay.timeline.currentTimeMillis).toBe(3_000)
     })
 
     it('maps absolute seeks to Replay progress after pre-Replay clips', async () => {
@@ -261,6 +262,7 @@ describe('ReplayTimelinePreview', () => {
             settled: true,
             source: 'timeline-scrub',
         }))
+        expect(globalThis.lgs.stores.replay.timeline.currentTimeMillis).toBe(2_000)
 
         timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-seek', {
             bubbles: true,
@@ -271,6 +273,7 @@ describe('ReplayTimelinePreview', () => {
             settled: true,
             source: 'timeline-scrub',
         }))
+        expect(globalThis.lgs.stores.replay.timeline.currentTimeMillis).toBe(3_500)
     })
 
     it('routes timeline transport requests to interactive Replay without starting video capture', async () => {
@@ -340,6 +343,7 @@ describe('ReplayTimelinePreview', () => {
     it('does not recenter the timeline when a seek stays inside the viewport', async () => {
         const {container} = render(<ReplayTimelinePreview/>)
         const timelineElement = container.querySelector('lgs1920-timeline')
+        await waitFor(() => expect(lgs.stores.replay.preparationTimeline?.tracks).toHaveLength(3))
         timelineElement.isCurrentTimeNearViewportEdge = vi.fn(() => false)
         timelineElement.ensureCurrentTimeVisible = vi.fn()
 
@@ -371,6 +375,7 @@ describe('ReplayTimelinePreview', () => {
             </Profiler>,
         )
         const timelineElement = container.querySelector('lgs1920-timeline')
+        await waitFor(() => expect(lgs.stores.replay.preparationTimeline?.tracks).toHaveLength(3))
         timelineElement.isCurrentTimeNearViewportEdge = vi.fn(() => false)
         timelineElement.ensureCurrentTimeVisible = vi.fn()
         const initialCommits = commits
@@ -413,6 +418,26 @@ describe('ReplayTimelinePreview', () => {
         expect(trackAssignments).toBe(0)
         expect(timelineElement.isCurrentTimeNearViewportEdge).toHaveBeenCalled()
         expect(timelineElement.ensureCurrentTimeVisible).not.toHaveBeenCalled()
+    })
+
+    it('publishes the initial widget tracks and stores timeline visibility edits', async () => {
+        const {container} = render(<ReplayTimelinePreview/>)
+        const timelineElement = container.querySelector('lgs1920-timeline')
+
+        await waitFor(() => expect(lgs.stores.replay.preparationTimeline?.tracks).toHaveLength(3))
+        expect(lgs.stores.replay.preparationTimeline.sourceSignature).toBe(timelineElement.timeline.projectionRevision)
+        expect(lgs.stores.replay.preparationTimeline.tracks.find(track => track.id === 'dynamic-stats-widget')
+            .clips[0].visible).toBe(true)
+
+        const tracks = JSON.parse(JSON.stringify(timelineElement.tracks))
+        tracks.find(track => track.id === 'dynamic-stats-widget').visible = false
+        timelineElement.dispatchEvent(new CustomEvent('lgs1920-timeline-track-visibility-change', {
+            bubbles: true,
+            detail: {tracks},
+        }))
+
+        await waitFor(() => expect(lgs.stores.replay.preparationTimeline.tracks
+            .find(track => track.id === 'dynamic-stats-widget').visible).toBe(false))
     })
 
     it('keeps the optimistic playhead while Replay publishes a stale frame', async () => {
@@ -503,6 +528,7 @@ describe('ReplayTimelinePreview', () => {
                 set: setCurrentTime,
             })
 
+            globalThis.lgs.stores.replay.playing = true
             globalThis.lgs.stores.replay.dynamicFrameState = {frameTimeMs: 2_000}
             globalThis.lgs.stores.replay.dynamicFrameState = {frameTimeMs: 3_000}
 

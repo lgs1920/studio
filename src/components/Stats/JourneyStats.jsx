@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-02-03
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -256,7 +256,7 @@ export const JourneyStats = memo(({id, metrics, units, style = {}, mode = 'journ
     const isDynamicMode = mode === 'dynamic'
     const isVideoBoard = widgetsBoard === VIDEO_WIDGETS_BOARD
     const replayWidgetVisible = useProxyValue(lgs.stores.replay,
-        state => !isVideoBoard || resolveReplayVideoStatsWidgetVisibility({mode, replay: state}), true,
+        state => !isVideoBoard || resolveReplayVideoStatsWidgetVisibility({mode, widgetId: id, replay: state}), true,
         {sync: video.exporting === true})
     const isVisible = Boolean(journeySlug && journey) && replayWidgetVisible
     const replay = useOptionalSnapshot(isVisible && isDynamicMode ? lgs.stores.replay : undefined,

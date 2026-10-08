@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -145,10 +145,11 @@ describe('ReplayFramePublisher', () => {
 
         expect(nextPending.intentResolved).toBe(false)
         expect(resolvePublishedReplayFrame(replay)).toBe(resolved)
+        expect(replay.timeline.currentTimeMillis).toBe(16)
     })
 
     it('publishes resolved export frames inside the active export plan', () => {
-        const replay = {}
+        const replay = {timeline: {currentTimeMillis: 250}}
         const plan = {runtime: {status: 'exporting', contextKey: 'plan-export'}}
         const published = publishReplayFrameState({
             replay,
@@ -161,6 +162,7 @@ describe('ReplayFramePublisher', () => {
         expect(plan.runtime.frameState).toBe(published)
         expect(plan.runtime.resolvedFrameState).toBe(published)
         expect(resolvePublishedReplayFrame({deferredExportPlan: plan})).toBe(published)
+        expect(replay.timeline.currentTimeMillis).toBe(250)
     })
 
     it('attaches compatibility metadata without mutating the source frame', () => {

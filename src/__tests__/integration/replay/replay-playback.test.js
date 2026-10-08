@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -122,6 +122,7 @@ describe('replay phase 1 playback controller', () => {
         const sampler = new JourneyReplayPathSampler({journey})
         const previousLgs = globalThis.lgs
         const frames = []
+        let now = 0
 
         globalThis.lgs = {
             events: {
@@ -136,11 +137,12 @@ describe('replay phase 1 playback controller', () => {
                     playing:        false,
                     paused:         false,
                     progress:       0,
-                    elapsedMillis:   null,
-                    durationMillis:  null,
+                    elapsedMillis:  null,
+                    durationMillis: null,
                     sample:         null,
                     totalDistance:  0,
                     captureFps:     30,
+                    timeline:       {},
                 }),
             },
         }
@@ -152,7 +154,7 @@ describe('replay phase 1 playback controller', () => {
                     return frames.length
                 },
                 cancelFrame: () => {},
-                now:         () => 0,
+                now:         () => now,
             })
 
             controller.configure({sampler, duration: 10})
@@ -181,6 +183,10 @@ describe('replay phase 1 playback controller', () => {
                     scheduling: {realtime: true, frameByFrame: false},
                 }),
             }))
+
+            now = 1250
+            frames.shift()()
+            expect(globalThis.lgs.stores.replay.timeline.currentTimeMillis).toBe(1250)
         }
         finally {
             globalThis.lgs = previousLgs

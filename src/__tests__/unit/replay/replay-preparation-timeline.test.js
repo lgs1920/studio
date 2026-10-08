@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -228,6 +228,23 @@ describe('ReplayPreparationTimeline', () => {
                 colorClasses: ['wa-neutral', 'wa-neutral-blue'],
             }),
         ])
+    })
+
+    it('keeps widget clips visible by default while the track carries widget visibility', () => {
+        const projection = buildReplayPreparationTimeline({
+            replayDurationMillis: 4000,
+            fps: 10,
+            widgetOrder: [{id: 'text-widget#hidden', visible: false, canHide: true}],
+        })
+        const widgetTrack = projection.tracks.find(track => track.id === 'text-widget#hidden')
+
+        expect(widgetTrack.visible).toBe(false)
+        expect(widgetTrack.actions[0].visible).toBe(true)
+        expect(buildReplayPreparationTimeline({
+            replayDurationMillis: 4000,
+            fps: 10,
+            widgetOrder: [{id: 'text-widget#hidden', visible: true, canHide: true}],
+        }).signature).not.toBe(projection.signature)
     })
 
     it('projects widgets sharing widgetGroup into one track with all widget clips', () => {

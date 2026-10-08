@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-11-07
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { WidgetDynamicRenderer }         from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
-import { WidgetContentOnlyContext } from '@Components/MainUI/widgets/Widget'
+import { WidgetContentOnlyContext } from '@Components/MainUI/widgets/WidgetContexts'
 import { WaSpinner } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { Suspense, useEffect, useState } from 'react'

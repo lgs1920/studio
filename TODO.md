@@ -31,3 +31,6 @@ Create a feature issue for `1.0.0/backlog/LGS1920/chdenat`.
 
 
 Bind the popup opened by the cog icon to the widget instead of the button.
+
+Perform a complete Replay audit without changing code. Check alignment between automatic playback, manual timeline
+scrubbing, and recording, including whether Replay displays widgets according to their timeline definitions.

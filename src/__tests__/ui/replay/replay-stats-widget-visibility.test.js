@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-02
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -18,6 +18,7 @@ import {
     isVideoWidgetEditorPhase,
     resolveReplayExportFrameState,
     resolveReplayVisibilityState,
+    resolveReplayVideoStatsWidgetVisibility,
     resolveVideoOverlayVisibility,
     shouldRenderVideoBoardWidget,
     shouldShowDynamicStatsWidget,
@@ -401,6 +402,187 @@ describe('replay stats widget visibility', () => {
 
         expect(resolveVideoOverlayVisibility({widgetId: 'dynamic-stats-widget#1'})).toBe(false)
         expect(resolveVideoOverlayVisibility({widgetId: 'journey-stats-widget#1'})).toBe(true)
+    })
+
+    it('uses the active timeline track and clip visibility for each Replay frame', () => {
+        const replay = {
+            recordingSync: true,
+            dynamicFrameState: {
+                active: true,
+                frameTimeMs: 2000,
+            },
+            preparationTimeline: {
+                timeline: {durationMillis: 5000},
+                tracks: [{
+                    id: 'text-widget#1',
+                    widgetId: 'text-widget#1',
+                    widgetIds: ['text-widget#1'],
+                    visible: true,
+                    clips: [{
+                        start: 1,
+                        end: 3,
+                        visible: true,
+                        metadata: {widgetId: 'text-widget#1'},
+                    }],
+                }],
+            },
+        }
+        globalThis.lgs.stores.ui.widget = {
+            list: new Map([['text-widget#1', {visible: false}]]),
+        }
+
+        expect(resolveVideoOverlayVisibility({widgetId: 'text-widget#1', replay})).toBe(true)
+
+        replay.preparationTimeline.tracks[0].clips[0].visible = false
+        expect(resolveVideoOverlayVisibility({widgetId: 'text-widget#1', replay})).toBe(false)
+
+        replay.preparationTimeline.tracks[0].clips[0].visible = true
+        replay.dynamicFrameState.frameTimeMs = 3000
+        expect(resolveVideoOverlayVisibility({widgetId: 'text-widget#1', replay})).toBe(false)
+
+        replay.dynamicFrameState.frameTimeMs = 5000
+        replay.dynamicFrameState.phase = {isFinalSceneFrame: true}
+        replay.preparationTimeline.tracks[0].clips[0].end = 5
+        expect(resolveVideoOverlayVisibility({widgetId: 'text-widget#1', replay})).toBe(true)
+
+        replay.preparationTimeline.tracks[0].visible = false
+        expect(resolveVideoOverlayVisibility({widgetId: 'text-widget#1', replay})).toBe(false)
+    })
+
+    it('uses the canonical timeline playhead over stale preparation and active-frame times', () => {
+        const replay = {
+            recordingSync: true,
+            timeline: {currentTimeMillis: 1000},
+            dynamicFrameState: {active: true, frameTimeMs: 2500},
+            preparationTimeline: {
+                timeline: {durationMillis: 5000, currentTimeMillis: 4000},
+                tracks: [{
+                    id: 'text-widget#manual',
+                    widgetId: 'text-widget#manual',
+                    visible: true,
+                    clips: [{
+                        start: 0.5,
+                        end: 1.5,
+                        visible: true,
+                        metadata: {widgetId: 'text-widget#manual'},
+                    }],
+                }],
+            },
+        }
+
+        expect(resolveVideoOverlayVisibility({widgetId: 'text-widget#manual', replay})).toBe(true)
+
+        replay.playing = true
+        expect(resolveVideoOverlayVisibility({widgetId: 'text-widget#manual', replay})).toBe(false)
+        replay.playing = false
+        expect(resolveVideoOverlayVisibility({widgetId: 'text-widget#manual', replay})).toBe(true)
+
+        replay.timeline.currentTimeMillis = 2000
+        expect(resolveVideoOverlayVisibility({widgetId: 'text-widget#manual', replay})).toBe(false)
+    })
+
+    it('uses the prepared playhead for timeline visibility before Replay starts', () => {
+        const replay = {
+            recordingSync: true,
+            dynamicFrameState: {active: false, frameTimeMs: 9000},
+            preparationTimeline: {
+                timeline: {durationMillis: 10000, currentTimeMillis: 0},
+                tracks: [{
+                    id: 'text-widget#prepared',
+                    widgetId: 'text-widget#prepared',
+                    visible: true,
+                    clips: [{
+                        start: 2,
+                        end: 8,
+                        visible: true,
+                        metadata: {widgetId: 'text-widget#prepared'},
+                    }],
+                }],
+            },
+        }
+
+        expect(resolveVideoOverlayVisibility({widgetId: 'text-widget#prepared', replay})).toBe(false)
+
+        replay.preparationTimeline.timeline.currentTimeMillis = 5000
+        expect(resolveVideoOverlayVisibility({widgetId: 'text-widget#prepared', replay})).toBe(true)
+    })
+
+    it('matches widget members through clips on a grouped timeline track', () => {
+        const replay = {
+            recordingSync: true,
+            dynamicFrameState: {active: true, frameTimeMs: 4000},
+            preparationTimeline: {
+                timeline: {durationMillis: 10000},
+                tracks: [{
+                    id: 'widget-group#one',
+                    widgetGroup: 'widget-group#one',
+                    visible: true,
+                    clips: [{
+                        start: 2,
+                        end: 8,
+                        visible: true,
+                        metadata: {widgetId: 'text-widget#member'},
+                    }],
+                }],
+            },
+        }
+
+        expect(resolveVideoOverlayVisibility({widgetId: 'text-widget#member', replay})).toBe(true)
+
+        replay.dynamicFrameState.frameTimeMs = 1000
+        expect(resolveVideoOverlayVisibility({widgetId: 'text-widget#member', replay})).toBe(false)
+    })
+
+    it('lets the timeline override stats editor visibility during active Replay', () => {
+        const replay = {
+            recordingSync: true,
+            active: true,
+            dynamicFrameState: {
+                active: true,
+                frameTimeMs: 4000,
+            },
+            preparationTimeline: {
+                timeline: {durationMillis: 10000},
+                tracks: [{
+                    id: 'dynamic-stats-widget',
+                    widgetId: 'dynamic-stats-widget',
+                    visible: true,
+                    clips: [{start: 0, end: 2, visible: true}],
+                }],
+            },
+        }
+
+        expect(resolveReplayVideoStatsWidgetVisibility({mode: 'dynamic', replay})).toBe(false)
+    })
+
+    it('resolves widget visibility against the exact deferred export frame', () => {
+        globalThis.lgs.stores.ui.video.exporting = true
+        globalThis.lgs.stores.replay.preparationTimeline = {
+            timeline: {durationMillis: 5000},
+            tracks: [{
+                id: 'text-widget#export',
+                widgetId: 'text-widget#export',
+                visible: true,
+                clips: [{
+                    start: 1,
+                    end: 3,
+                    visible: true,
+                    metadata: {widgetId: 'text-widget#export'},
+                }],
+            }],
+        }
+        globalThis.lgs.stores.replay.deferredExportPlan = {
+            runtime: {
+                status: 'exporting',
+                frameState: {active: true, frameTimeMs: 2000},
+            },
+        }
+        globalThis.lgs.stores.replay.timeline = {currentTimeMillis: 4000}
+
+        expect(resolveVideoOverlayVisibility({widgetId: 'text-widget#export'})).toBe(true)
+
+        globalThis.lgs.stores.replay.deferredExportPlan.runtime.frameState.frameTimeMs = 4000
+        expect(resolveVideoOverlayVisibility({widgetId: 'text-widget#export'})).toBe(false)
     })
 
     it('respects explicit dataset visibility for non-replay overlays', () => {

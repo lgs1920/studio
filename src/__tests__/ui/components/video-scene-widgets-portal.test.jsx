@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-27
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,7 +28,7 @@ vi.mock('@Components/MainUI/widgets/DynamicWidget', () => ({
     DynamicWidget: ({id}) => <div data-testid="dynamic-widget" data-widget-id={id}/>,
 }))
 
-vi.mock('@Components/MainUI/widgets/Widget', () => ({
+vi.mock('@Components/MainUI/widgets/WidgetContexts', () => ({
     WidgetPreviewContext: {
         Provider: ({children}) => children,
     },

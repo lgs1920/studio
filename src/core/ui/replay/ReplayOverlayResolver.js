@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -167,6 +167,129 @@ export const resolveReplayDynamicFrameState = (replay = defaultReplayStore()) =>
     ?? null
 )
 
+/**
+ * Collect the widget instances represented by a timeline track.
+ *
+ * @param {Object} track - Public Replay timeline track.
+ * @returns {string[]} Widget instance identifiers.
+ */
+const getReplayTimelineTrackWidgetIds = track => {
+    const clipWidgetIds = (track?.clips ?? []).map(clip => clip?.metadata?.widgetId ?? clip?.widgetId)
+    const ids = [track?.widgetId, ...(Array.isArray(track?.widgetIds) ? track.widgetIds : []), ...clipWidgetIds]
+    if (ids.filter(Boolean).length === 0 && !track?.widgetGroup) {
+        ids.push(track?.id)
+    }
+    return ids.filter(Boolean).map(String)
+}
+
+/**
+ * Resolve a widget's visibility from its active Replay timeline track and clips.
+ *
+ * @param {Object} options - Visibility resolution options.
+ * @param {string} [options.widgetId=''] - Widget instance identifier.
+ * @param {string|null} [options.mode=null] - Replay stats mode when no widget ID is supplied.
+ * @param {Object|null} [options.replay] - Replay store or snapshot.
+ * @param {Object|null} [options.controller] - Optional active Replay controller.
+ * @returns {boolean|null} Timeline visibility, or null when no applicable track exists.
+ */
+export const resolveReplayTimelineWidgetVisibility = ({
+    widgetId = '',
+    mode = null,
+    replay,
+    controller,
+} = {}) => {
+    const replayState = replay ?? defaultReplayStore()
+    const preparationTimeline = replayState?.preparationTimeline
+    const tracks = preparationTimeline?.tracks
+    if (!Array.isArray(tracks) || !isJourneyReplayLinked(replayState)) {
+        return null
+    }
+
+    const exportFrameState = resolveReplayExportFrameState(replayState)
+    const dynamicFrameState = exportFrameState
+                              ?? (replayState?.dynamicFrameState?.active === true
+                                  ? replayState.dynamicFrameState
+                                  : resolveReplayDynamicFrameState(replayState))
+    const visibilityState = resolveReplayVisibilityState({replay: replayState, controller})
+    const exportFrameTimeMs = finiteNumber(exportFrameState?.frameTimeMs
+                                           ?? exportFrameState?.phase?.frameTimeMs)
+    const replayTimelineTimeMs = finiteNumber(replayState?.timeline?.currentTimeMillis)
+    const activeFrameTimeMs = dynamicFrameState?.active === true || isReplayRuntimeActive(visibilityState)
+        ? finiteNumber(dynamicFrameState?.frameTimeMs
+                       ?? dynamicFrameState?.phase?.frameTimeMs
+                       ?? visibilityState?.frameTimeMs)
+        : null
+    const preparedPlayheadTimeMs = finiteNumber(
+        preparationTimeline.timeline?.currentTimeMillis
+        ?? globalThis.lgs?.settings?.ui?.replay?.timeline?.currentTimeMillis,
+    )
+    const advancingFrameTimeMs = replayState?.playing === true || replayState?.clipSequenceActive === true
+        ? activeFrameTimeMs
+        : null
+    const frameTimeMs = exportFrameTimeMs
+                       ?? advancingFrameTimeMs
+                       ?? replayTimelineTimeMs
+                       ?? activeFrameTimeMs
+                       ?? preparedPlayheadTimeMs
+                       ?? finiteNumber(dynamicFrameState?.frameTimeMs
+                                       ?? dynamicFrameState?.phase?.frameTimeMs
+                                       ?? visibilityState?.frameTimeMs)
+                       ?? 0
+
+    const resolvedWidgetId = widgetId
+                             || (mode === 'dynamic' ? 'dynamic-stats-widget'
+                                 : mode === 'journey' ? 'journey-stats-widget' : '')
+    if (!resolvedWidgetId) {
+        return null
+    }
+
+    const requestedWidgetType = String(resolvedWidgetId).split('#')[0]
+    const exactTracks = tracks.filter(track => getReplayTimelineTrackWidgetIds(track).includes(String(resolvedWidgetId)))
+    const matchingTracks = exactTracks.length > 0
+        ? exactTracks
+        : tracks.filter(track => getReplayTimelineTrackWidgetIds(track).some(id => id.split('#')[0] === requestedWidgetType))
+    if (matchingTracks.length === 0) {
+        return null
+    }
+
+    const timelineDurationMillis = finiteNumber(preparationTimeline.timeline?.durationMillis)
+    const isFinalTimelineFrame = dynamicFrameState?.phase?.isFinalSceneFrame === true
+                                  || (timelineDurationMillis !== null && frameTimeMs >= timelineDurationMillis)
+    return matchingTracks.some(track => {
+        if (track.visible === false) {
+            return false
+        }
+
+        const memberIds = getReplayTimelineTrackWidgetIds(track)
+        return (track.clips ?? []).some(clip => {
+            if (clip.visible === false) {
+                return false
+            }
+
+            const clipWidgetId = clip.metadata?.widgetId ?? clip.widgetId ?? null
+            const matchesWidget = clipWidgetId
+                ? String(clipWidgetId) === String(resolvedWidgetId)
+                  || (!String(resolvedWidgetId).includes('#')
+                      && String(clipWidgetId).split('#')[0] === requestedWidgetType)
+                : memberIds.length === 1
+            if (!matchesWidget) {
+                return false
+            }
+
+            const startMillis = finiteNumber(clip.startMillis)
+                                ?? (finiteNumber(clip.start) !== null ? Number(clip.start) * 1000 : null)
+            const endMillis = finiteNumber(clip.endMillis)
+                              ?? (finiteNumber(clip.end) !== null ? Number(clip.end) * 1000 : null)
+            if (startMillis === null || endMillis === null || endMillis <= startMillis) {
+                return false
+            }
+
+            return frameTimeMs >= startMillis
+                   && (frameTimeMs < endMillis || (isFinalTimelineFrame && frameTimeMs <= endMillis))
+        })
+    })
+}
+
 const resolveVideoOverlayRoot = (widgetEl = null) => {
     if (!widgetEl) {
         return null
@@ -283,6 +406,10 @@ export const resolveReplayVisibilityState = ({
                         ?? finiteNumber(replayController?.sampler?.durationMillis)
                         ?? (controllerDuration !== null ? controllerDuration * 1000 : null)
                         ?? finiteNumber(replayState?.durationMillis),
+        frameTimeMs:   finiteNumber(dynamicFrameState?.frameTimeMs
+                                    ?? dynamicFrameState?.phase?.frameTimeMs
+                                    ?? framePhase?.frameTimeMs
+                                    ?? replayState?.frameTimeMs),
         framePhase,
         phase:            framePhase,
         frameIndex:       finiteNumber(dynamicFrameState?.index ?? dynamicFrameState?.frameIndex ?? replayState?.frameIndex),
@@ -312,11 +439,17 @@ export const getJourneyReplayRemainingMillis = (replay = defaultReplayStore()) =
  */
 const resolveReplayStatsWidgetVisibility = ({
     mode = 'journey',
+    widgetId = '',
     replay = defaultReplayStore(),
     controller = undefined,
     includeEditorPhase = false,
     linked = undefined,
 } = {}) => {
+    const timelineVisibility = resolveReplayTimelineWidgetVisibility({widgetId, mode, replay, controller})
+    if (timelineVisibility !== null) {
+        return timelineVisibility
+    }
+
     if (includeEditorPhase && isVideoWidgetEditorPhase()) {
         return true
     }
@@ -346,6 +479,7 @@ const resolveReplayStatsWidgetVisibility = ({
 
 export const resolveReplayVideoStatsWidgetVisibility = ({
     mode = 'journey',
+    widgetId = '',
     replay = defaultReplayStore(),
     controller = undefined,
     includeEditorPhase = true,
@@ -353,6 +487,7 @@ export const resolveReplayVideoStatsWidgetVisibility = ({
 } = {}) => (
     resolveReplayStatsWidgetVisibility({
         mode,
+        widgetId,
         replay,
         controller,
         includeEditorPhase,
@@ -388,6 +523,11 @@ export const resolveVideoOverlayVisibility = ({
     replay = undefined,
     controller = undefined,
 } = {}) => {
+    const timelineVisibility = resolveReplayTimelineWidgetVisibility({widgetId, replay, controller})
+    if (timelineVisibility !== null) {
+        return timelineVisibility
+    }
+
     const widgetEntry = globalThis.lgs?.stores?.ui?.widget?.list?.get?.(widgetId)
     const config = globalThis.__?.ui?.widgetManager?.getWidgetConfig?.(widgetId)
     if ((widgetEntry?.visible === false && config?.canHide !== false)

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -46,6 +46,7 @@ import {
 import {WidgetDynamicRenderer} from '@Core/ui/widget-manager/dynamic-render/WidgetDynamicRender'
 import {getReplayVideoWidgetTypes} from '@Core/ui/replay/ReplayVideoWidgetPolicy'
 import {createReplayScrubScheduler} from '@Core/ui/replay/ReplayScrubScheduler'
+import {publishReplayTimelineTime} from '@Core/ui/replay/ReplayFramePublisher'
 import {useOptionalSnapshot, useProxyValue} from '@Utils/ValtioUtils'
 import '@lgs1920/timeline'
 import './replay-timeline-preview.css'
@@ -195,6 +196,18 @@ const resolveReplayDurationMillis = (replay, replaySettings = {}) => {
  */
 const resolveCurrentTimeMillis = (replay, projection) => {
     const frame = replay?.dynamicFrameState ?? replay?.resolvedFrameState ?? null
+    if (replay?.playing === true || replay?.clipSequenceActive === true) {
+        const frameTimeMillis = Number(frame?.frameTimeMs ?? frame?.phase?.frameTimeMs)
+        if (Number.isFinite(frameTimeMillis)) {
+            return Math.max(0, Math.min(projection.durationMillis, frameTimeMillis))
+        }
+    }
+
+    const timelineTimeMillis = Number(replay?.timeline?.currentTimeMillis)
+    if (Number.isFinite(timelineTimeMillis)) {
+        return Math.max(0, Math.min(projection.durationMillis, timelineTimeMillis))
+    }
+
     const timeMillis = Number(frame?.frameTimeMs ?? frame?.phase?.frameTimeMs ?? 0)
     return Math.max(0, Math.min(projection.durationMillis, Number.isFinite(timeMillis) ? timeMillis : 0))
 }
@@ -556,7 +569,8 @@ export const ReplayTimelinePreview = forwardRef(({
         return nextProjection
     }, [projectionJourney, projectionReplay, projectionReplaySettings, video.fps, widgetOrder])
     const preparationTimeline = replay.preparationTimeline
-    const hasCurrentPreparationTimeline = preparationTimeline?.sourceSignature === projection.signature
+    const hasCurrentPreparationTimeline = preparationTimeline != null
+        && (preparationTimeline.sourceSignature == null || preparationTimeline.sourceSignature === projection.signature)
     const preparedTimeline = hasCurrentPreparationTimeline ? preparationTimeline?.timeline ?? null : null
     const persistedTimelineView = replaySettings?.timeline ?? {}
     const persistedZoomPercent = Number(persistedTimelineView.zoomPercent)
@@ -612,6 +626,28 @@ export const ReplayTimelinePreview = forwardRef(({
     const tracks = useMemo(() => cloneReplayTimelineTracks(
         Array.isArray(preparationTracks) ? preparationTracks : baseTracks,
     ), [preparationTracks, baseTracks])
+
+    useEffect(() => {
+        const currentPreparationTimeline = lgs.stores.replay.preparationTimeline
+        const hasCompatiblePreparationTimeline = currentPreparationTimeline?.sourceSignature == null
+                                                 ? Array.isArray(currentPreparationTimeline?.tracks)
+                                                 : currentPreparationTimeline.sourceSignature === projection.signature
+        if (!linkedPreparation || hasCompatiblePreparationTimeline) {
+            return
+        }
+
+        // Publish the base projection before edits so frame composition always has timeline visibility data.
+        lgs.stores.replay.preparationTimeline = {
+            sourceSignature: projection.signature,
+            timeline: {
+                durationMillis: timeline.durationMillis,
+                rangeStartMillis: timeline.rangeStartMillis,
+                rangeEndMillis: timeline.rangeEndMillis,
+            },
+            tracks: cloneReplayTimelineTracks(baseTracks),
+        }
+    }, [baseTracks, linkedPreparation, projection.signature, timeline.durationMillis, timeline.rangeEndMillis, timeline.rangeStartMillis])
+
     const sliderMinMillis = Number.isFinite(Number(timeline.rangeStartMillis))
         ? Number(timeline.rangeStartMillis)
         : 0
@@ -646,13 +682,18 @@ export const ReplayTimelinePreview = forwardRef(({
         persistTimelineView({verticalScrollTop: normalizedScrollTop})
     }, [persistTimelineView])
 
-    const applyReplayScrub = useCallback(({progress, settled, signal, requestId}) => __.ui.replay?.seek?.(progress, {
-        qualifyScene: true,
-        settled,
-        signal,
-        requestId,
-        source: 'timeline-scrub',
-    }), [])
+    const applyReplayScrub = useCallback(({progress, settled, signal, requestId}) => {
+        const timeMillis = _pendingPlayhead.current?.timeMillis
+        const result = __.ui.replay?.seek?.(progress, {
+            qualifyScene: true,
+            settled,
+            signal,
+            requestId,
+            source: 'timeline-scrub',
+        })
+        publishReplayTimelineTime({replay: lgs.stores.replay, timeMillis})
+        return result
+    }, [])
     const _scrubScheduler = useRef(null)
     /**
      * Apply a time to the timeline's lightweight playhead path.
@@ -688,6 +729,7 @@ export const ReplayTimelinePreview = forwardRef(({
         const pendingPlayhead = {timeMillis}
         _pendingPlayhead.current = pendingPlayhead
         persistTimelineView({currentTimeMillis: timeMillis})
+        publishReplayTimelineTime({replay: lgs.stores.replay, timeMillis})
         if (_timeline.current) {
             applyTimelinePlayheadTime(_timeline.current, timeMillis)
             if (_timeline.current.isCurrentTimeNearViewportEdge?.()) {
@@ -728,6 +770,8 @@ export const ReplayTimelinePreview = forwardRef(({
         const timeMillis = normalizeTimelineTime(detail.timeMillis)
         const {progress, skipStartClips} = resolveReplayPositionAtTime(projection.timeline, timeMillis)
 
+        persistTimelineView({currentTimeMillis: timeMillis})
+        publishReplayTimelineTime({replay: lgs.stores.replay, timeMillis})
         lgs.stores.replay.toolbarVisible = true
         if (lgs.stores.replay.paused === true) {
             return replayMode?.resume?.()
@@ -737,7 +781,7 @@ export const ReplayTimelinePreview = forwardRef(({
             progress,
             ...(skipStartClips ? {skipStartClips: true} : {}),
         })
-    }, [normalizeTimelineTime, projection.timeline])
+    }, [normalizeTimelineTime, persistTimelineView, projection.timeline])
 
     /**
      * Pause the canonical interactive Replay clock.
@@ -847,6 +891,7 @@ export const ReplayTimelinePreview = forwardRef(({
                 timeline,
                 tracks,
             }
+            publishReplayTimelineTime({replay: replayStore, timeMillis: currentTimeMillis})
             if (typeof element.applyControlledState === 'function') {
                 element.applyControlledState(controlledState)
             }
@@ -946,7 +991,8 @@ export const ReplayTimelinePreview = forwardRef(({
 
         const syncPlayback = () => {
             const replayStore = lgs.stores.replay
-            if (hasPublishedReplayFrame(replayStore)) {
+            const hasTimelinePlayhead = Number.isFinite(Number(replayStore.timeline?.currentTimeMillis))
+            if (hasPublishedReplayFrame(replayStore) || hasTimelinePlayhead) {
                 const publishedTimeMillis = resolveCurrentTimeMillis(replayStore, {
                     durationMillis: projectionDurationMillis,
                 })
@@ -984,10 +1030,14 @@ export const ReplayTimelinePreview = forwardRef(({
         syncPlayback()
         const replayStore = lgs.stores.replay
         const unsubscribers = [
+            subscribeKey(replayStore, 'timeline', schedulePlaybackSync),
             subscribeKey(replayStore, 'dynamicFrameState', schedulePlaybackSync),
             subscribeKey(replayStore, 'resolvedFrameState', schedulePlaybackSync),
             subscribeKey(replayStore, 'playing', schedulePlaybackSync),
         ]
+        if (replayStore.timeline && typeof replayStore.timeline === 'object') {
+            unsubscribers.push(subscribeKey(replayStore.timeline, 'currentTimeMillis', schedulePlaybackSync))
+        }
         return () => {
             unsubscribers.forEach(unsubscribe => unsubscribe())
             if (scheduledFrameId !== null) {

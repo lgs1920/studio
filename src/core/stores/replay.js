@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-06
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -47,6 +47,7 @@ export const replay = {
     recordingSync:  false,
     deferredExportPlan: null,
     preparationTimeline: null,
+    timeline: {},
     videoCropRect:  null,
     readiness:      {...defaults.readiness},
     orbitAllowed:   true,

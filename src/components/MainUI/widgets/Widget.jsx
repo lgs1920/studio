@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-09-19
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,13 +20,17 @@ import {
     LGS_WIDGET_SCALE_EFFECTIVE,
     REPLAY_RECORDING_MONITOR_WIDGET_ID,
     SCENE_WIDGETS_BOARD,
+    VIDEO_WIDGETS_BOARD,
     WIDGET_EDITOR_PRE_RENDER_EVENT,
     WIDGETS_CAPABILITIES, WIDGETS_EDITOR_DRAWER,
 } from '@Core/constants'
 import {
     Widget2Canvas,
 }                                 from '@Core/ui/widget-manager/widget-2-canvas/Widget2Canvas'
-import { resolveVideoOverlayVisibility } from '@Core/ui/replay/ReplayOverlayResolver'
+import {
+    resolveReplayTimelineWidgetVisibility,
+    resolveVideoOverlayVisibility,
+} from '@Core/ui/replay/ReplayOverlayResolver'
 import {
     buildCenteredGridLines,
     DEFAULT_WIDGET_GRID_SETTINGS,
@@ -36,9 +40,10 @@ import {resolveWidgetResizeLimits} from '@Core/ui/widget-manager/widgetResizeUti
 import { useOptionalSnapshot }     from '@Utils/ValtioUtils'
 import { WaIcon }                 from '@web.awesome.me/webawesome-pro/dist/react'
 import classNames                 from 'classnames'
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Moveable                   from 'react-moveable'
 import { useSnapshot }            from 'valtio'
+import { WidgetContentOnlyContext, WidgetPreviewContext } from '@Components/MainUI/widgets/WidgetContexts'
 import { resolveActiveWidgetZIndex } from './widgetZIndex'
 
 const COLLAPSED_WIDGET_SIZE = 40
@@ -130,9 +135,6 @@ const buildWidgetCenterGuidelines = widgetElements => widgetElements.reduce((res
     })
     return result
 }, {verticalGuidelines: [], horizontalGuidelines: []})
-
-export const WidgetPreviewContext = createContext(false)
-export const WidgetContentOnlyContext = createContext(false)
 
 /**
  * Render widget content in the external-window host without scene controls.
@@ -484,6 +486,11 @@ const WidgetHost = ({
     const widgetEntry = widgetListSnapshot.get(widgetId)
     const canHide = config.canHide ?? widgetDefinition?.canHide ?? false
     const isWidgetVisible = !canHide || widgetEntry?.visible !== false
+    const hasReplayWidgetTimeline = Array.isArray(replay.preparationTimeline?.tracks)
+    const replayTimelineVisibility = config.widgetsBoard === VIDEO_WIDGETS_BOARD && hasReplayWidgetTimeline
+        ? resolveReplayTimelineWidgetVisibility({widgetId, replay})
+        : null
+    const renderedWidgetVisible = replayTimelineVisibility ?? isWidgetVisible
     const collapsedIcon = useMemo(
         () => resolveCollapsedWidgetIcon(config.icon, widgetDefinition?.icon),
         [config.icon, widgetDefinition?.icon],
@@ -1711,11 +1718,13 @@ const WidgetHost = ({
                             widgetId,
                             isVisible: () => {
                                 const entry = lgs.stores.ui.widget.list.get(widgetId)
+                                if (config.widgetsBoard === VIDEO_WIDGETS_BOARD) {
+                                    return resolveVideoOverlayVisibility({widgetId, widgetEl: _widget.current})
+                                }
                                 if (entry?.visible === false && config.canHide !== false) {
                                     return false
                                 }
-                                return config.widgetsBoard !== VIDEO_WIDGETS_BOARD
-                                    || resolveVideoOverlayVisibility({widgetId, widgetEl: _widget.current})
+                                return true
                             },
                             debugTiming: false,//config.refreshMode === 'both',
                             refreshMode:     config.refreshMode ?? (interactionLocked ? 'live' : 'mutation'),
@@ -1872,7 +1881,7 @@ const WidgetHost = ({
             data-widget={widgetId}
             style={{
                 zIndex:        activeZIndex,
-                pointerEvents: !isWidgetVisible ? 'none' : (cropPassThrough && !replayPlaybackActive ? 'none' : 'auto'),
+                pointerEvents: !renderedWidgetVisible ? 'none' : (cropPassThrough && !replayPlaybackActive ? 'none' : 'auto'),
             }}
         >
             <div
@@ -1891,7 +1900,7 @@ const WidgetHost = ({
                     'crop-pass-through': cropPassThrough,
                     'recording-locked': inputBlocked,
                     'lgs-widget-preview-only': previewOnly,
-                    'lgs-widget-user-hidden': !isWidgetVisible,
+                    'lgs-widget-user-hidden': !renderedWidgetVisible,
                     'lgs-widget-docked': isDocked,
                 })}
                 ref={(el) => {

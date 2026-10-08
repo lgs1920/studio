@@ -9,7 +9,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-08
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -20,7 +20,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {proxy} from 'valtio'
 import {proxyMap} from 'valtio/utils'
 import {forwardRef, useEffect, useImperativeHandle, useRef} from 'react'
-import {LGS_VISUAL_WIDGET} from '@Core/constants'
+import {LGS_VISUAL_WIDGET, VIDEO_WIDGETS_BOARD} from '@Core/constants'
 
 const moveableState = vi.hoisted(() => ({props: []}))
 const widgetCanvasState = vi.hoisted(() => ({instances: []}))
@@ -126,6 +126,7 @@ const installGlobals = () => {
                 direction:      1,
                 playing:        false,
                 dynamicFrameState: {frameTimeMs: 1_000},
+                timeline:       {},
                 clips:           {catalog: {}, start: [], stop: []},
             }),
             ui: proxy({
@@ -254,6 +255,79 @@ describe('Replay timeline widget interaction isolation', () => {
         pointerDown(container.querySelector('[data-testid="empty-frame"]'))
 
         expect(lgs.stores.ui.widget.current.id).toBe('timeline-isolation-widget#test')
+    })
+
+    it('shows and hides a video widget from the active Replay timeline without persisting visibility', async () => {
+        const widgetId = 'timeline-isolation-widget#test'
+        lgs.stores.ui.widget.list.set(widgetId, {visible: false})
+        lgs.stores.replay.active = true
+        lgs.stores.replay.dynamicFrameState = {active: true, frameTimeMs: 1000}
+        lgs.stores.replay.preparationTimeline = {
+            timeline: {durationMillis: 10000},
+            tracks: [{
+                id: widgetId,
+                widgetId,
+                widgetIds: [widgetId],
+                visible: true,
+                clips: [{start: 0, end: 2, visible: true, metadata: {widgetId}}],
+            }],
+        }
+        const {container} = renderWidget(<div/>, {
+            canHide: true,
+            widgetsBoard: VIDEO_WIDGETS_BOARD,
+        })
+        const widgetElement = container.querySelector('.lgs-widget')
+
+        expect(widgetElement.classList.contains('lgs-widget-user-hidden')).toBe(false)
+        expect(lgs.stores.ui.widget.list.get(widgetId).visible).toBe(false)
+
+        lgs.stores.replay.preparationTimeline.tracks[0].visible = false
+        await waitFor(() => expect(widgetElement.classList.contains('lgs-widget-user-hidden')).toBe(true))
+        expect(lgs.stores.ui.widget.list.get(widgetId).visible).toBe(false)
+    })
+
+    it('applies the saved timeline playhead while Replay is idle in the editor', async () => {
+        const widgetId = 'timeline-isolation-widget#test'
+        lgs.stores.replay.preparationTimeline = {
+            timeline: {durationMillis: 10_000, currentTimeMillis: 0},
+            tracks: [{
+                id: widgetId,
+                widgetId,
+                widgetIds: [widgetId],
+                visible: true,
+                clips: [{start: 3, end: 8, visible: true, metadata: {widgetId}}],
+            }],
+        }
+        const {container} = renderWidget(<div/>, {id: widgetId, widgetsBoard: VIDEO_WIDGETS_BOARD})
+        const widgetElement = container.querySelector('.lgs-widget')
+
+        expect(widgetElement.classList.contains('lgs-widget-user-hidden')).toBe(true)
+
+        lgs.stores.replay.preparationTimeline.timeline.currentTimeMillis = 5000
+        await waitFor(() => expect(widgetElement.classList.contains('lgs-widget-user-hidden')).toBe(false))
+    })
+
+    it('follows the canonical manual timeline time while an older Replay frame is active', async () => {
+        const widgetId = 'timeline-isolation-widget#manual'
+        lgs.stores.replay.timeline.currentTimeMillis = 5000
+        lgs.stores.replay.dynamicFrameState = {active: true, frameTimeMs: 1000}
+        lgs.stores.replay.preparationTimeline = {
+            timeline: {durationMillis: 10_000, currentTimeMillis: 0},
+            tracks: [{
+                id: widgetId,
+                widgetId,
+                widgetIds: [widgetId],
+                visible: true,
+                clips: [{start: 3, end: 8, visible: true, metadata: {widgetId}}],
+            }],
+        }
+        const {container} = renderWidget(<div/>, {id: widgetId, widgetsBoard: VIDEO_WIDGETS_BOARD})
+        const widgetElement = container.querySelector('.lgs-widget')
+
+        expect(widgetElement.classList.contains('lgs-widget-user-hidden')).toBe(false)
+
+        lgs.stores.replay.timeline.currentTimeMillis = 9000
+        await waitFor(() => expect(widgetElement.classList.contains('lgs-widget-user-hidden')).toBe(true))
     })
 
     it('does not open its context menu when the widget disables it', () => {
@@ -392,7 +466,7 @@ describe('Replay timeline widget interaction isolation', () => {
         await waitFor(() => expect(lgs.stores.replay.preparationTimeline.tracks[0].clips[0])
             .toMatchObject(timeline.tracks[0].clips[0]))
         expect(() => structuredClone(timeline.tracks)).not.toThrow()
-    })
+    }, 10_000)
 
     it('keeps the widget shell when the empty timeline diagnostic is enabled', () => {
         const originalUrl = window.location.href

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -70,6 +70,7 @@ export const cancelVideoEditing = () => {
         lgs.stores.replay.simplePreparationActive = false
         videoStore.timelinePreviewActive = false
     }
+    lgs.stores.replay.preparationTimeline = null
     videoStore.editing = false
     __.ui.widgetManager.disposeByGroup(CROP_TOOLS_WIDGETS, true)
 

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -22,6 +22,7 @@ import {ReplayFrameResolver} from './ReplayFrameResolver'
 import {createReplayDefinition} from './ReplayDefinition'
 import {createReplayRenderPlan} from './ReplayRenderPlan'
 import {createReplayTrackPathDescriptor} from './ReplayTrackPathDescriptor'
+import {publishReplayTimelineTime} from './ReplayFramePublisher'
 import {buildReplayVideoTimeline, resolveReplayVideoFramePhase} from './ReplayVideoTimeline'
 
 export const REPLAY_EVENT_START = 'replay/start'
@@ -571,6 +572,12 @@ export class JourneyReplayPlaybackController {
         store.liveSample = sample
         store.dynamicStatsTick = frameNow
         store.replayFramePhase = phase
+        if (store.deferredExportPlan?.runtime?.status !== 'exporting') {
+            publishReplayTimelineTime({
+                replay: store,
+                timeMillis: phase.frameTimeMs ?? frameTimeMs,
+            })
+        }
         const initialCameraState = globalThis.__?.ui?.replay?.savedCameraState
                                    ?? deferredRenderContract?.initialCameraState
                                    ?? null

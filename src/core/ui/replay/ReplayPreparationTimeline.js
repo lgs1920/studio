@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-29
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -446,7 +446,7 @@ const buildWidgetActions = (timeline, frameTimeline, modeDefinition) => {
             icon: modeDefinition.icon,
             resizable: modeDefinition.resizable !== false,
             timelineColor: modeDefinition.timelineColor,
-            visible: modeDefinition.visible,
+            visible: true,
         }))
     }
 
@@ -478,7 +478,7 @@ const buildStaticWidgetActions = (timeline, widgetDefinition) => {
         icon: widgetDefinition.icon,
         timelineColor: widgetDefinition.timelineColor,
         resizable: widgetDefinition.resizable !== false,
-        visible: widgetDefinition.visible,
+        visible: true,
     })]
 }
 
@@ -523,13 +523,19 @@ const timelineSignature = ({timeline, tracks}) => JSON.stringify({
         id: track.id,
         editable: track.editable,
         clipResizable: track.clipResizable,
+        visible: track.visible !== false,
+        canHide: track.canHide === true,
+        widgetGroup: track.widgetGroup ?? null,
+        widgetIds: track.widgetIds ?? null,
         actions: track.actions.map(action => [
             action.id,
+            action.widgetId,
             action.startMillis,
             action.endMillis,
             action.editable,
             action.selectable,
             action.resizable,
+            action.visible !== false,
         ]),
     })),
 })

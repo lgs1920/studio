@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,6 +25,32 @@ import {
 
 export const REPLAY_FRAME_PUBLICATION_TARGET_INTERACTIVE = 'interactive'
 export const REPLAY_FRAME_PUBLICATION_TARGET_EXPORT = 'export'
+
+/**
+ * Publish the canonical absolute timeline position to the interactive Replay store.
+ *
+ * @param {Object} options - Timeline position and store inputs.
+ * @param {Object|null} [options.replay] - Replay store receiving the position.
+ * @param {number|null} [options.timeMillis] - Absolute timeline time in milliseconds.
+ * @returns {number|null} Published time or null when no valid time was supplied.
+ */
+export const publishReplayTimelineTime = ({
+                                                replay = globalThis.lgs?.stores?.replay ?? null,
+                                                timeMillis = null,
+                                            } = {}) => {
+    if (!replay || timeMillis === null || timeMillis === undefined || timeMillis === '') {
+        return null
+    }
+
+    const normalizedTimeMillis = Number(timeMillis)
+    if (!Number.isFinite(normalizedTimeMillis)) {
+        return null
+    }
+
+    replay.timeline ??= {}
+    replay.timeline.currentTimeMillis = normalizedTimeMillis
+    return normalizedTimeMillis
+}
 
 /**
  * Attach a canonical intent to the existing flat compatibility frame state.
@@ -77,6 +103,12 @@ export const publishReplayFrameState = ({
 
     if (!replay) {
         return null
+    }
+    if (replay.deferredExportPlan?.runtime?.status !== 'exporting') {
+        publishReplayTimelineTime({
+            replay,
+            timeMillis: publishedFrame.frameTimeMs ?? publishedFrame.phase?.frameTimeMs,
+        })
     }
     replay.dynamicFrameState = publishedFrame
     if (publishedFrame.intentResolved) {
