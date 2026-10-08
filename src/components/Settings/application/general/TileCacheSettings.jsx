@@ -8,14 +8,14 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-02
- * Last modified: 2026-10-07
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
 import { $cartographicCache, cartographicCacheController } from '@Core/cache/CartographicCacheController'
-import { TILE_CACHE_BUDGETS, normalizeTileCacheBudget } from '../../../../../public/cartographic-cache-policy.js'
+import {TILE_CACHE_BUDGETS, normalizeTileCacheBudget} from '@Core/cache/CartographicCachePolicy'
 import { WaButton, WaDivider, WaIcon, WaOption, WaSelect } from '@web.awesome.me/webawesome-pro/dist/react'
 import { useEffect, useState } from 'react'
 import { useSnapshot } from 'valtio'

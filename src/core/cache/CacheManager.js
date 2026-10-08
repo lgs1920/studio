@@ -8,13 +8,13 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-03-18
- * Last modified: 2026-10-07
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
 
-import { DEFAULT_TILE_CACHE_BYTES } from '../../../public/cartographic-cache-policy.js'
+import {DEFAULT_TILE_CACHE_BYTES} from './CartographicCachePolicy'
 
 /** Communicate with the cartographic service worker using bounded acknowledgements. */
 export class CacheManager {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-02
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,12 @@ import { webcrypto } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import YAML from 'yaml'
 import { createCartographicCache, TILE_CACHE_NAME, TILE_CACHE_METADATA_NAME } from '../../../../public/cartographic-cache.js'
-import { buildTileCacheRules, classifyTileRequest, normalizeTileCacheBudget, tileFreshnessDeadline } from '../../../../public/cartographic-cache-policy.js'
+import { buildTileCacheRules, DEFAULT_TILE_CACHE_BYTES, normalizeTileCacheBudget } from '@Core/cache/CartographicCachePolicy'
+import {
+    classifyTileRequest,
+    DEFAULT_TILE_CACHE_BYTES as WORKER_DEFAULT_TILE_CACHE_BYTES,
+    tileFreshnessDeadline,
+} from '../../../../public/cartographic-cache-policy.js'
 
 /** Create an isolated CacheStorage double that clones bodies at the browser boundary. */
 const createStorage = () => {
@@ -74,6 +79,10 @@ const deferred = () => {
 describe('cartographic routing and freshness', () => {
     const providers = YAML.parse(readFileSync('public/layers-terrains.yaml', 'utf8')).providers
     const rules = buildTileCacheRules(providers)
+
+    it('keeps the app and static worker fallback cache budgets aligned', () => {
+        expect(DEFAULT_TILE_CACHE_BYTES).toBe(WORKER_DEFAULT_TILE_CACHE_BYTES)
+    })
 
     it('covers the default ArcGIS imagery, Re:Earth terrain, and direct 3D content', () => {
         expect(classifyTileRequest(new Request('https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer/tile/22869/12/123/456'), rules)?.kind).toBe('imagery')

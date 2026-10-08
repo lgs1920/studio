@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-10-02
- * Last modified: 2026-10-07
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,7 +16,7 @@
 
 import { proxy, subscribe } from 'valtio'
 import { CacheManager } from './CacheManager'
-import { buildTileCacheRules, DEFAULT_TILE_CACHE_BYTES, normalizeTileCacheBudget } from '../../../public/cartographic-cache-policy.js'
+import {buildTileCacheRules, DEFAULT_TILE_CACHE_BYTES, normalizeTileCacheBudget} from './CartographicCachePolicy'
 
 /** Transient cache diagnostics, separate from persisted application preferences. */
 export const $cartographicCache = proxy({
