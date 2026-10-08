@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-26
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -50,6 +50,7 @@ import {
     cameraViewForSample,
 } from '@Core/ui/replay/JourneyReplayCameraGuide'
 import {
+    replayCameraHeadingForAngle,
     replayDurationPaceFactor,
 } from '@Core/ui/replay/JourneyReplayCameraMath'
 import {
@@ -74,7 +75,6 @@ import {
     cancelCameraBezierTransition,
     cameraCollisionForFrame,
     cameraCollisionForSample,
-    replayCameraPositionModeFromHeading,
 } from '@Core/ui/replay/JourneyReplayCameraState'
 import {
     resetCameraInterpolationState,
@@ -209,27 +209,15 @@ describe('Journey replay camera paths', () => {
         expect(call.cameraRedirectPitchLimits).toHaveBeenCalledOnce()
     })
 
-    it('switches between Behind and Ahead when the live angle crosses ninety degrees', () => {
-        expect(replayCameraPositionModeFromHeading({
-            axisHeading: 0,
-            cameraHeading: 100 * Math.PI / 180,
-            positionMode: 'behind',
-        })).toEqual({positionMode: 'ahead', headingOffset: -80})
-
-        expect(replayCameraPositionModeFromHeading({
-            axisHeading: 0,
-            cameraHeading: Math.PI,
-            positionMode: 'behind',
-        })).toEqual({positionMode: 'ahead', headingOffset: 0})
-
-        expect(replayCameraPositionModeFromHeading({
-            axisHeading: 0,
-            cameraHeading: 90 * Math.PI / 180,
-            positionMode: 'behind',
-        })).toEqual({positionMode: 'behind', headingOffset: 90})
+    it('uses one normalized route-relative camera angle', () => {
+        expect(replayCameraHeadingForAngle({axisHeading: 0, cameraAngle: 100}))
+            .toBeCloseTo(280 * Math.PI / 180, 8)
+        expect(replayCameraHeadingForAngle({axisHeading: 0, cameraAngle: 0}))
+            .toBeCloseTo(Math.PI, 8)
+        expect(replayCameraHeadingForAngle({axisHeading: 0, cameraAngle: 180})).toBe(0)
     })
 
-    it('applies the exact configured pose on a post-replay refresh', () => {
+    it('applies the configured route-relative pose on a post-replay refresh', () => {
         vi.stubGlobal('lgs', {
             viewer: {
                 camera: {
@@ -240,8 +228,7 @@ describe('Journey replay camera paths', () => {
         const {mode, call} = makeMode()
         call.smoothRadians = vi.fn(() => -0.88 * Math.PI / 180)
         const cameraSettings = {
-            positionMode: 'system',
-            heading:      35,
+            cameraAngle: -145,
             pitch:        -11,
             altitude:     1000,
         }

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -25,16 +25,16 @@ import {
     BoundingSphere,
     Cartesian2,
     Cartesian3,
+    Cartesian4,
     Cartographic,
     Color,
     Matrix4,
     Transforms,
 } from 'cesium'
 import {
-    REPLAY_CAMERA_HEADING_OFFSET_MAX,
-    REPLAY_CAMERA_HEADING_OFFSET_MIN,
-    REPLAY_CAMERA_POSITION_AHEAD,
-    REPLAY_CAMERA_POSITION_SYSTEM,
+    REPLAY_CAMERA_ANGLE_MAX,
+    REPLAY_CAMERA_ANGLE_MIN,
+    normalizeJourneyReplayCamera,
     replayCameraSettingsFromArrowKey,
 } from './JourneyReplayProgressionStyle'
 
@@ -61,6 +61,9 @@ const CAMERA_ANGLE_GUIDE_ROUTE_DASH_LENGTH_PIXELS = 16
 const CAMERA_ANGLE_GUIDE_ROUTE_DASH_GAP_PIXELS = 4.8
 const CAMERA_ANGLE_GUIDE_MAX_ROUTE_POINTS = 16
 const CAMERA_ANGLE_GUIDE_ROUTE_WINDOW_METERS = 600
+const CAMERA_ANGLE_GUIDE_ROUTE_MAX_WINDOW_METERS = 1200
+const CAMERA_ANGLE_GUIDE_ROUTE_MIN_WINDOW_METERS = 60
+const CAMERA_ANGLE_GUIDE_ROUTE_RESIZE_KEY_STEP_METERS = 25
 const CAMERA_ANGLE_GUIDE_ROUTE_START_MARKER_RADIUS_PIXELS = CAMERA_ANGLE_GUIDE_ROUTE_STROKE_PIXELS * 1.5
 const CAMERA_ANGLE_GUIDE_LOOP_CLOSURE_DISTANCE_METERS = 100
 const CAMERA_ANGLE_GUIDE_ANGLE_ARC_BASE_RATIO = 0.4
@@ -75,6 +78,9 @@ const CAMERA_ANGLE_GUIDE_MAX_CONE_SCALE = 3.5
 const CAMERA_ANGLE_GUIDE_ELEVATION_OFFSET_METERS = 5
 const CAMERA_ANGLE_GUIDE_PICK_HEIGHT_TOLERANCE_METERS = 12
 const CAMERA_ANGLE_GUIDE_DEPTH_CLEARANCE_METERS = 8
+const CAMERA_ANGLE_GUIDE_PREPARATION_ORIENTATION_EPSILON_RADIANS = Math.PI / 1800
+const CAMERA_ANGLE_GUIDE_ROUTE_PROJECTION_ANIMATION_DURATION_MS = 180
+const CAMERA_ANGLE_GUIDE_PROJECTION_FRAME_EPSILON = 1e-12
 const CAMERA_ANGLE_GUIDE_CONE_ALPHA = 0.32
 const CAMERA_ANGLE_GUIDE_OVERLAY_CLASS = 'replay-camera-angle-guide-dom'
 const SVG_NAMESPACE = 'http://www.w3.org/2000/svg'
@@ -192,6 +198,45 @@ const departurePointFrom = (points, distanceMeters = CAMERA_ANGLE_GUIDE_DEPARTUR
 }
 
 /**
+ * Measure the total ground distance represented by an ordered route.
+ *
+ * @param {Array<Object>} points - Route coordinates in trace order.
+ * @returns {number} Route length in metres.
+ */
+const routeLengthMetersFrom = points => points.slice(1).reduce(
+    (distance, point, index) => distance + mapDistanceBetween(points[index], point),
+    0,
+)
+
+/**
+ * Sample a route window at evenly spaced distances from its departure.
+ *
+ * @param {Array<Object>} points - Full route coordinates in trace order.
+ * @param {number} windowMeters - Requested ground distance from the start.
+ * @returns {Array<Object>} Sampled route window, capped to the guide point budget.
+ */
+const routeWindowPointsFrom = (points, windowMeters) => {
+    if (points.length < 2) {
+        return points
+    }
+
+    const routeLength = routeLengthMetersFrom(points)
+    const visibleDistance = Math.min(Math.max(0, windowMeters), routeLength)
+    if (visibleDistance <= 0) {
+        return [points[0]]
+    }
+
+    const pointCount = Math.min(
+        CAMERA_ANGLE_GUIDE_MAX_ROUTE_POINTS,
+        Math.max(2, Math.ceil(visibleDistance / (CAMERA_ANGLE_GUIDE_ROUTE_WINDOW_METERS / (CAMERA_ANGLE_GUIDE_MAX_ROUTE_POINTS - 1))) + 1),
+    )
+    return Array.from({length: pointCount}, (_, index) => departurePointFrom(
+        points,
+        visibleDistance * index / (pointCount - 1),
+    ))
+}
+
+/**
  * Resolve the first valid coordinate and the point 300 metres into the trace.
  *
  * @param {Array<Array>} coordinates - Track coordinates.
@@ -260,34 +305,11 @@ const journeyRouteSegmentsFrom = journey => {
         const fromEnd = selectedSegments.length > 1 && index === selectedSegments.length - 1
         const ordered = fromEnd ? [...segment.source].reverse() : segment.source
         const validPoints = ordered.map(mapPositionFrom).filter(Boolean)
-        const window = [validPoints[0]]
-        let distance = 0
-        for (let pointIndex = 1; pointIndex < validPoints.length; pointIndex += 1) {
-            const previous = validPoints[pointIndex - 1]
-            const point = validPoints[pointIndex]
-            const segmentDistance = mapDistanceBetween(previous, point)
-            if (distance + segmentDistance >= CAMERA_ANGLE_GUIDE_ROUTE_WINDOW_METERS) {
-                const remainingRatio = (CAMERA_ANGLE_GUIDE_ROUTE_WINDOW_METERS - distance) / segmentDistance
-                window.push({
-                    height: previous.height + ((point.height - previous.height) * remainingRatio),
-                    latitude: previous.latitude + ((point.latitude - previous.latitude) * remainingRatio),
-                    longitude: previous.longitude + ((point.longitude - previous.longitude) * remainingRatio),
-                })
-                break
-            }
-            window.push(point)
-            distance += segmentDistance
-        }
-        const pointCount = Math.min(window.length, CAMERA_ANGLE_GUIDE_MAX_ROUTE_POINTS)
-        const sampled = pointCount <= 1
-            ? window
-            : Array.from({length: pointCount}, (_, pointIndex) => window[
-                Math.round(pointIndex * (window.length - 1) / (pointCount - 1))
-            ])
-        const points = fromEnd ? sampled.reverse() : sampled
+        const points = routeWindowPointsFrom(validPoints, CAMERA_ANGLE_GUIDE_ROUTE_WINDOW_METERS)
         return {
             activityPoint: departurePointFrom(validPoints, CAMERA_ANGLE_GUIDE_ACTIVITY_DISTANCE_METERS),
             points,
+            sourcePoints: validPoints,
             segmentIndex: segment.segmentIndex,
             trackIndex: segment.trackIndex,
             trackSlug: segment.trackSlug,
@@ -355,14 +377,24 @@ const bearingBetween = (start, end) => {
  */
 const routePartsFrom = segments => {
     const firstSegment = segments[0]?.points ?? []
-    const first = firstSegment[0] ?? null
+    const sourcePoints = segments[0]?.sourcePoints ?? firstSegment
+    const routeMaxWindowMeters = Math.min(
+        CAMERA_ANGLE_GUIDE_ROUTE_MAX_WINDOW_METERS,
+        routeLengthMetersFrom(sourcePoints),
+    )
+    const routeWindowMeters = Math.min(CAMERA_ANGLE_GUIDE_ROUTE_WINDOW_METERS, routeMaxWindowMeters)
+    const routeWindow = routeWindowPointsFrom(sourcePoints, routeWindowMeters)
+    const first = sourcePoints[0] ?? firstSegment[0] ?? null
     return {
-        after: firstSegment.length > 1 ? [firstSegment] : [],
+        after: routeWindow.length > 1 ? [routeWindow] : [],
         activityPoint: segments[0]?.activityPoint ?? (firstSegment.length > 1
             ? departurePointFrom(firstSegment, CAMERA_ANGLE_GUIDE_ACTIVITY_DISTANCE_METERS)
             : first),
         positionKey: segments.map(segment => `${segment.trackSlug ?? ''}:${segment.segmentIndex}:${segment.points.length}`).join('|'),
+        sourcePoints,
         start: first,
+        windowMeters: routeWindowMeters,
+        maxWindowMeters: routeMaxWindowMeters,
     }
 }
 
@@ -421,21 +453,6 @@ const departureTangentHeadingFrom = points => points.length > 1
     : null
 
 /**
- * Clamp the user-facing angle while preserving the drawer sign convention.
- *
- * @param {number} value - Persisted replay heading offset.
- * @returns {number} Display angle in degrees.
- */
-const displayAngleFrom = value => {
-    const numericValue = Number(value)
-    if (!Number.isFinite(numericValue)) {
-        return 0
-    }
-    const clampedValue = Math.max(REPLAY_CAMERA_HEADING_OFFSET_MIN, Math.min(REPLAY_CAMERA_HEADING_OFFSET_MAX, -numericValue))
-    return Math.round(clampedValue)
-}
-
-/**
  * Resolve live map guide geometry from the replay sample, or the departure
  * geometry while Replay is being prepared.
  *
@@ -447,10 +464,10 @@ const displayAngleFrom = value => {
  * @returns {Object|null} Renderer-independent guide geometry.
  */
 export const resolveJourneyReplayCameraAngleGuide = ({journey, camera, pois, sample = null} = {}) => {
-    const positionMode = camera?.positionMode
-    if (!journey || positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
+    if (!journey) {
         return null
     }
+    const cameraSettings = normalizeJourneyReplayCamera(camera ?? {})
 
     const direction = directionFromReplaySample(sample)
         ?? firstTrackDirection(firstTrackSegment(firstTrackFrom(journey)))
@@ -464,31 +481,31 @@ export const resolveJourneyReplayCameraAngleGuide = ({journey, camera, pois, sam
     const routeParts = routePartsFrom(routeSegments)
     const departureRoute = routeParts.after[0] ?? direction.points
     const axisHeading = direction.axisHeading ?? departureTangentHeadingFrom(departureRoute)
-    const angleDegrees = displayAngleFrom(camera?.headingOffset)
-    const baseHeading = positionMode === REPLAY_CAMERA_POSITION_AHEAD
-        ? axisHeading + Math.PI
-        : axisHeading
-    const angleRadians = -angleDegrees * Math.PI / 180
-    const cameraHeading = baseHeading + angleRadians
+    const angleDegrees = Math.max(REPLAY_CAMERA_ANGLE_MIN, Math.min(REPLAY_CAMERA_ANGLE_MAX, cameraSettings.cameraAngle))
+    const angleRadians = angleDegrees * Math.PI / 180
+    const cameraPositionHeading = axisHeading + angleRadians
+    const cameraHeading = cameraPositionHeading + Math.PI
 
     return {
         anchor,
         angleDegrees,
         axisHeading,
         cameraGroundHeight: direction.cameraGroundHeight ?? direction.next.height,
-        cameraAltitude: camera?.altitude,
+        cameraAltitude: cameraSettings.altitude,
         cameraHeading,
-        coneHeading: cameraHeading + Math.PI,
+        coneHeading: cameraPositionHeading,
         coneHeight: Math.max(anchor.height, direction.cameraGroundHeight ?? direction.next.height) + CAMERA_ANGLE_GUIDE_ELEVATION_OFFSET_METERS,
         directionPoint: direction.directionPoint,
         looped,
-        mode: positionMode === REPLAY_CAMERA_POSITION_AHEAD ? 'Ahead' : 'Behind',
         offsetRadians: angleRadians,
-        baseHeading,
+        baseHeading: axisHeading,
         activityIcon: journey.activitySettings?.icon ?? 'person-hiking',
         activityPoint: routeParts.activityPoint,
         routeAfter: routeParts.after,
         routePositionKey: routeParts.positionKey,
+        routeSourcePoints: routeParts.sourcePoints,
+        routeWindowMeters: routeParts.windowMeters,
+        routeMaxWindowMeters: routeParts.maxWindowMeters,
         routeStart: routeParts.start,
     }
 }
@@ -523,6 +540,31 @@ const positionAtHeadingOffset = (transform, heading, forward, lateral = 0) => Ma
 const positionAtHeading = (transform, heading, distance) => positionAtHeadingOffset(transform, heading, distance)
 
 /**
+ * Measure the current Cesium world-space scale at a map position.
+ *
+ * @param {Object} viewer - Cesium viewer.
+ * @param {Cartesian3} position - World position used for the scale measurement.
+ * @returns {number|null} World metres per CSS pixel, or null when unavailable.
+ */
+const metersPerPixelFrom = (viewer, position) => {
+    const scene = viewer?.scene
+    const camera = viewer?.camera
+    const width = Number(scene?.drawingBufferWidth ?? viewer?.canvas?.clientWidth)
+    const height = Number(scene?.drawingBufferHeight ?? viewer?.canvas?.clientHeight)
+    if (!position || !camera?.getPixelSize || !Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+        return null
+    }
+
+    try {
+        const metersPerPixel = camera.getPixelSize(new BoundingSphere(position, 1), width, height)
+        return Number.isFinite(metersPerPixel) && metersPerPixel > 0 ? metersPerPixel : null
+    }
+    catch {
+        return null
+    }
+}
+
+/**
  * Resolve the world-space cone length allowed by the current map viewport.
  *
  * The initial length is capped to twenty percent of the smallest viewport
@@ -535,28 +577,19 @@ const positionAtHeading = (transform, heading, distance) => positionAtHeadingOff
  * @returns {number} Cone length in metres.
  */
 const coneLengthFrom = (viewer, anchor, currentLength = CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS) => {
-    const scene = viewer?.scene
-    const camera = viewer?.camera
-    const width = Number(scene?.drawingBufferWidth ?? viewer?.canvas?.clientWidth)
-    const height = Number(scene?.drawingBufferHeight ?? viewer?.canvas?.clientHeight)
     const safeCurrentLength = Number.isFinite(currentLength) && currentLength > 0
         ? currentLength
         : CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS
-    if (!camera?.getPixelSize || !Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    const metersPerPixel = metersPerPixelFrom(viewer, anchor)
+    if (!Number.isFinite(metersPerPixel)) {
         return safeCurrentLength
     }
 
-    try {
-        const metersPerPixel = camera.getPixelSize(new BoundingSphere(anchor, 1), width, height)
-        if (!Number.isFinite(metersPerPixel) || metersPerPixel <= 0) {
-            return safeCurrentLength
-        }
-        const viewportLimit = metersPerPixel * Math.min(width, height) * CAMERA_ANGLE_GUIDE_MAX_SCREEN_RATIO
-        return Math.max(1, Math.min(safeCurrentLength, viewportLimit))
-    }
-    catch {
-        return safeCurrentLength
-    }
+    const scene = viewer?.scene
+    const width = Number(scene?.drawingBufferWidth ?? viewer?.canvas?.clientWidth)
+    const height = Number(scene?.drawingBufferHeight ?? viewer?.canvas?.clientHeight)
+    const viewportLimit = metersPerPixel * Math.min(width, height) * CAMERA_ANGLE_GUIDE_MAX_SCREEN_RATIO
+    return Math.max(1, Math.min(safeCurrentLength, viewportLimit))
 }
 
 /**
@@ -610,18 +643,6 @@ const worldGeometryFrom = (viewer, guide, currentConeLength = null) => {
 }
 
 /**
- * Resolve a fixed height offset that places the journey route on the cone plane.
- *
- * @param {Cartesian3} anchor - Elevated cone anchor.
- * @param {Object} guide - Camera guide with route departure coordinates.
- * @returns {number} Height offset applied consistently to route points.
- */
-const routeHeightOffsetFrom = (anchor, guide) => (
-    (Cartographic.fromCartesian(anchor)?.height ?? guide.anchor.height)
-    - (guide.routeStart?.height ?? guide.anchor.height)
-)
-
-/**
  * Resolve a small world-space gap corresponding to the icon separation.
  *
  * @param {Object} viewer - Cesium viewer.
@@ -659,13 +680,16 @@ const iconGapFrom = (viewer, anchor, pixelGap = CAMERA_ANGLE_GUIDE_ICON_GAP_PIXE
  * @param {Object} guide - Resolved guide geometry.
  * @param {number} coneHeading - Current cone heading in radians.
  * @param {number|null} coneLength - Optional viewport-capped cone length.
+ * @param {number|null} fixedIconGap - Optional world-space icon gap for a fixed preparation guide.
  * @returns {{cameraEnd: Cartesian3, videoIconPosition: Cartesian3, inner: Array<Cartesian3>, innerBaseCenter: Cartesian3, outer: Array<Cartesian3>, outerBaseCenter: Cartesian3}} Cone vertices.
  */
-const coneGeometryFrom = (viewer, anchor, transform, guide, coneHeading = guide.coneHeading, coneLength = null) => {
+const coneGeometryFrom = (viewer, anchor, transform, guide, coneHeading = guide.coneHeading, coneLength = null, fixedIconGap = null) => {
     const length = Number.isFinite(coneLength) && coneLength > 0
         ? coneLength
         : coneLengthFrom(viewer, anchor)
-    const iconGap = iconGapFrom(viewer, anchor)
+    const iconGap = Number.isFinite(fixedIconGap) && fixedIconGap >= 0
+        ? fixedIconGap
+        : iconGapFrom(viewer, anchor)
     const baseHalfWidth = Math.min(CAMERA_ANGLE_GUIDE_CONE_BASE_HALF_WIDTH_METERS, length * 0.32)
     const innerBaseHalfWidth = baseHalfWidth * CAMERA_ANGLE_GUIDE_INNER_HEIGHT_RATIO
     const outerBaseLeft = positionAtHeadingOffset(transform, coneHeading, 0, -baseHalfWidth)
@@ -791,10 +815,28 @@ const cssColorFrom = color => color.toCssColorString()
  * @param {Cartesian3} position - World position.
  * @returns {{canvas: {x: number, y: number}, dom: {x: number, y: number}}|null} Projected coordinates.
  */
-const guideProjectionFrom = (viewer, overlay, position) => {
+const guideProjectionFrom = (viewer, overlay, position, projectionFrame = null) => {
     const scene = viewer?.scene
     const canvas = scene?.canvas
-    const projected = scene?.cartesianToCanvasCoordinates?.(position, new Cartesian2())
+    let projected = null
+    if (projectionFrame?.viewProjectionMatrix && canvas) {
+        const clip = Matrix4.multiplyByVector(
+            projectionFrame.viewProjectionMatrix,
+            new Cartesian4(position.x, position.y, position.z, 1),
+            new Cartesian4(),
+        )
+        if (Number.isFinite(clip.w) && clip.w > 0) {
+            const canvasWidth = Number(canvas.clientWidth) || Number(canvas.width) || 1
+            const canvasHeight = Number(canvas.clientHeight) || Number(canvas.height) || 1
+            projected = {
+                x: ((clip.x / clip.w) + 1) * canvasWidth / 2,
+                y: (1 - (clip.y / clip.w)) * canvasHeight / 2,
+            }
+        }
+    }
+    else {
+        projected = scene?.cartesianToCanvasCoordinates?.(position, new Cartesian2())
+    }
     if (!projected || !canvas || !overlay) {
         return null
     }
@@ -825,7 +867,69 @@ const guideProjectionFrom = (viewer, overlay, position) => {
  * @param {Cartesian3} position - World position.
  * @returns {{x: number, y: number}|null} Overlay coordinates.
  */
-const projectGuidePosition = (viewer, overlay, position) => guideProjectionFrom(viewer, overlay, position)?.dom ?? null
+const projectGuidePosition = (viewer, overlay, position, projectionFrame = null) => guideProjectionFrom(
+    viewer,
+    overlay,
+    position,
+    projectionFrame,
+)?.dom ?? null
+
+/**
+ * Capture the Cesium projection used to stabilize the preparation guide.
+ *
+ * @param {Object} viewer - Cesium viewer.
+ * @returns {{viewProjectionMatrix: Matrix4}|null} Captured projection frame.
+ */
+const cameraProjectionFrameFrom = viewer => {
+    const camera = viewer?.camera ?? viewer?.scene?.camera
+    const viewMatrix = camera?.viewMatrix
+    const projectionMatrix = camera?.frustum?.projectionMatrix
+    if (!viewMatrix || !projectionMatrix) {
+        return null
+    }
+
+    return {
+        viewProjectionMatrix: Matrix4.multiply(projectionMatrix, viewMatrix, new Matrix4()),
+    }
+}
+
+/**
+ * Detect any visible change in Cesium's view or projection matrix.
+ *
+ * @param {{viewProjectionMatrix: Matrix4}|null} currentFrame - Latest camera projection.
+ * @param {{viewProjectionMatrix: Matrix4}|null} previousFrame - Last rendered camera projection.
+ * @returns {boolean} Whether the projection changed beyond floating-point noise.
+ */
+const cameraProjectionFrameChanged = (currentFrame, previousFrame) => {
+    const currentMatrix = currentFrame?.viewProjectionMatrix
+    const previousMatrix = previousFrame?.viewProjectionMatrix
+    if (!currentMatrix || !previousMatrix) {
+        return currentMatrix !== previousMatrix
+    }
+
+    for (let index = 0; index < 16; index += 1) {
+        if (Math.abs(currentMatrix[index] - previousMatrix[index]) > CAMERA_ANGLE_GUIDE_PROJECTION_FRAME_EPSILON) {
+            return true
+        }
+    }
+    return false
+}
+
+/**
+ * Read the active Cesium camera orientation when available.
+ *
+ * @param {Object} viewer - Cesium viewer.
+ * @returns {{heading: number, pitch: number, roll: number}|null} Camera orientation in radians.
+ */
+const cameraOrientationFrom = viewer => {
+    const camera = viewer?.camera ?? viewer?.scene?.camera
+    const orientation = {
+        heading: Number(camera?.heading),
+        pitch: Number(camera?.pitch),
+        roll: Number(camera?.roll),
+    }
+    return Object.values(orientation).every(Number.isFinite) ? orientation : null
+}
 
 /**
  * Recenter projected base endpoints on their projected Cesium base center.
@@ -1149,6 +1253,19 @@ const svgBezierSamplesFrom = points => {
 }
 
 /**
+ * Resolve the active route endpoints before projection onto terrain.
+ *
+ * @param {Object} record - Mounted guide record.
+ * @param {number} [windowMeters] - Route length currently shown.
+ * @returns {Array<Object>} Departure and visible route-end coordinates.
+ */
+const routeBoundaryPositionsFrom = (record, windowMeters = record.routeWindowMeters) => {
+    const sourcePoints = record.guide.routeSourcePoints ?? record.guide.routeAfter?.[0] ?? []
+    const routePoints = routeWindowPointsFrom(sourcePoints, windowMeters)
+    return routePoints.length > 1 ? [routePoints[0], routePoints.at(-1)] : []
+}
+
+/**
  * Find the closest point on a sampled route to a projected trace position.
  *
  * @param {Array<{x: number, y: number}>} points - Sampled SVG curve.
@@ -1181,6 +1298,49 @@ const closestRoutePointFrom = (points, target) => {
 }
 
 /**
+ * Resolve the nearest along-route ratio for a projected pointer position.
+ *
+ * @param {Array<{x: number, y: number}>} points - Samples from the maximum route window.
+ * @param {{x: number, y: number}} target - Pointer position in overlay coordinates.
+ * @returns {number} Nearest route progress from zero to one.
+ */
+const routeProgressFrom = (points, target) => {
+    if (points.length < 2) {
+        return 0
+    }
+
+    let totalLength = 0
+    const segmentLengths = points.slice(1).map((point, index) => {
+        const length = Math.hypot(point.x - points[index].x, point.y - points[index].y)
+        totalLength += length
+        return length
+    })
+    if (totalLength <= 0) {
+        return 0
+    }
+
+    let travelled = 0
+    let closestDistance = Infinity
+    let closestProgress = 0
+    points.slice(1).forEach((end, index) => {
+        const start = points[index]
+        const deltaX = end.x - start.x
+        const deltaY = end.y - start.y
+        const segmentLength = segmentLengths[index]
+        const ratio = segmentLength > 0
+            ? Math.max(0, Math.min(1, (((target.x - start.x) * deltaX) + ((target.y - start.y) * deltaY)) / (segmentLength ** 2)))
+            : 0
+        const distance = Math.hypot(target.x - (start.x + (ratio * deltaX)), target.y - (start.y + (ratio * deltaY)))
+        if (distance < closestDistance) {
+            closestDistance = distance
+            closestProgress = (travelled + (segmentLength * ratio)) / totalLength
+        }
+        travelled += segmentLength
+    })
+    return closestProgress
+}
+
+/**
  * Convert projected points to a straight SVG path.
  *
  * @param {Array<{x: number, y: number}>} points - Projected map-plane points.
@@ -1205,19 +1365,21 @@ const svgRoutePathFrom = sections => sections
  * @param {Object} viewer - Cesium viewer.
  * @param {HTMLElement} overlay - Guide overlay.
  * @param {Array<Array<Object>>} sections - Geographic route sections.
+ * @param {{viewProjectionMatrix: Matrix4}|null} projectionFrame - Optional fixed projection frame.
  * @returns {Array<Array<{x: number, y: number}>>} Projected visible route sections.
  */
-const projectedRouteSectionsFrom = (viewer, overlay, sections, heightOffset = CAMERA_ANGLE_GUIDE_ELEVATION_OFFSET_METERS) => {
+const projectedRouteSectionsFrom = (
+    viewer,
+    overlay,
+    sections,
+    projectionFrame = null,
+) => {
     const projectedSections = []
     sections.forEach(section => {
         let visiblePoints = []
         section.forEach(point => {
-            const worldPosition = Cartesian3.fromDegrees(
-                point.longitude,
-                point.latitude,
-                point.height + heightOffset,
-            )
-            const projectedPoint = projectGuidePosition(viewer, overlay, worldPosition)
+            const worldPosition = terrainClampedPositionFrom(viewer, point)
+            const projectedPoint = projectGuidePosition(viewer, overlay, worldPosition, projectionFrame)
             if (projectedPoint) {
                 visiblePoints.push(projectedPoint)
             }
@@ -1234,6 +1396,112 @@ const projectedRouteSectionsFrom = (viewer, overlay, sections, heightOffset = CA
         }
     })
     return projectedSections
+}
+
+/**
+ * Project the terrain-clamped route and its activity marker into one camera frame.
+ *
+ * @param {Object} viewer - Cesium viewer.
+ * @param {Object} record - Mounted guide record.
+ * @param {{viewProjectionMatrix: Matrix4}|null} projectionFrame - Camera projection to use.
+ * @param {number} [requestedWindowMeters] - Route length to project.
+ * @returns {{sections: Array<Array<{x: number, y: number}>>, activityPosition: {x: number, y: number}|null}} Projected route state.
+ */
+const routeProjectionStateFrom = (viewer, record, projectionFrame, requestedWindowMeters = record.routeWindowMeters) => {
+    const {overlay} = record
+    const sourcePoints = record.guide.routeSourcePoints ?? []
+    const routePoints = sourcePoints.length > 1
+        ? routeWindowPointsFrom(sourcePoints, requestedWindowMeters)
+        : record.guide.routeAfter?.[0] ?? []
+    const sections = projectedRouteSectionsFrom(
+        viewer,
+        overlay,
+        routePoints.length > 1 ? [routePoints] : [],
+        projectionFrame,
+    )
+    const activityPoint = record.guide.activityPoint
+    const activityProjection = activityPoint
+        ? projectGuidePosition(
+            viewer,
+            overlay,
+            terrainClampedPositionFrom(viewer, activityPoint),
+            projectionFrame,
+        )
+        : null
+
+    return {
+        activityPosition: closestRoutePointFrom(
+            svgBezierSamplesFrom(sections[0] ?? []),
+            activityProjection,
+        ),
+        sections,
+    }
+}
+
+/**
+ * Interpolate between two projected positions.
+ *
+ * @param {{x: number, y: number}|null} start - Starting position.
+ * @param {{x: number, y: number}|null} end - Target position.
+ * @param {number} progress - Interpolation progress from zero to one.
+ * @returns {{x: number, y: number}|null} Interpolated position.
+ */
+const interpolateProjectedPositionFrom = (start, end, progress) => {
+    if (!start || !end) {
+        return progress < 1 ? start : end
+    }
+
+    return {
+        x: start.x + ((end.x - start.x) * progress),
+        y: start.y + ((end.y - start.y) * progress),
+    }
+}
+
+/**
+ * Interpolate route points when both camera projections contain the same route shape.
+ *
+ * @param {Object} start - Starting projected route state.
+ * @param {Object} end - Target projected route state.
+ * @param {number} progress - Interpolation progress from zero to one.
+ * @returns {Object|null} Interpolated state, or null when the route shapes differ.
+ */
+const interpolateRouteProjectionStateFrom = (start, end, progress) => {
+    if (start.sections.length !== end.sections.length
+        || start.sections.some((section, index) => section.length !== end.sections[index]?.length)) {
+        return null
+    }
+
+    return {
+        activityPosition: interpolateProjectedPositionFrom(start.activityPosition, end.activityPosition, progress),
+        sections: start.sections.map((section, sectionIndex) => section.map((point, pointIndex) =>
+            interpolateProjectedPositionFrom(point, end.sections[sectionIndex][pointIndex], progress),
+        )),
+    }
+}
+
+/**
+ * Clamp a Replay trace point to the rendered Cesium terrain surface.
+ *
+ * @param {Object} viewer - Cesium viewer.
+ * @param {Object} point - Geographic Replay trace point.
+ * @returns {Cartesian3} World position on terrain, falling back to the ellipsoid surface.
+ */
+const terrainClampedPositionFrom = (viewer, point) => {
+    let terrainHeight = null
+    try {
+        terrainHeight = viewer?.scene?.globe?.getHeight?.(
+            Cartographic.fromDegrees(point.longitude, point.latitude),
+        ) ?? null
+    }
+    catch {
+        terrainHeight = null
+    }
+
+    return Cartesian3.fromDegrees(
+        point.longitude,
+        point.latitude,
+        Number.isFinite(terrainHeight) ? terrainHeight : 0,
+    )
 }
 
 /**
@@ -1425,6 +1693,27 @@ const isGuidePickProjectionConsistent = (scene, position, expectedCanvasPoint) =
 }
 
 /**
+ * Check whether a projected route boundary lies inside the Cesium viewport.
+ *
+ * @param {Object} viewer - Cesium viewer.
+ * @param {Object|null} projection - Projected route boundary.
+ * @returns {boolean} Whether the projected point is inside the canvas.
+ */
+const isGuideProjectionInViewport = (viewer, projection) => {
+    const canvas = viewer?.scene?.canvas
+    const width = Number(canvas?.clientWidth) || Number(canvas?.width)
+    const height = Number(canvas?.clientHeight) || Number(canvas?.height)
+    if (!projection || !Number.isFinite(width) || !Number.isFinite(height)) {
+        return false
+    }
+
+    return projection.canvas.x >= 0
+        && projection.canvas.x <= width
+        && projection.canvas.y >= 0
+        && projection.canvas.y <= height
+}
+
+/**
  * Check whether the elevated departure anchor is visible in the current map.
  * The pick altitude is allowed to differ from the simulated trace altitude;
  * only a pick clearly above the elevated guide can occlude it.
@@ -1433,12 +1722,16 @@ const isGuidePickProjectionConsistent = (scene, position, expectedCanvasPoint) =
  * @param {HTMLElement} overlay - DOM overlay.
  * @param {Cartesian3} position - Elevated departure position.
  * @param {boolean} checkDepth - Whether the current rendered depth may be used.
+ * @param {{viewProjectionMatrix: Matrix4}|null} [projectionFrame] - Optional camera projection.
  * @returns {boolean} Whether the departure point can currently be seen.
  */
-const isGuideWorldPositionVisible = (viewer, overlay, position, checkDepth) => {
-    const projection = guideProjectionFrom(viewer, overlay, position)
+const isGuideWorldPositionVisible = (viewer, overlay, position, checkDepth, projectionFrame = null) => {
+    const projection = guideProjectionFrom(viewer, overlay, position, projectionFrame)
     if (!projection) {
         return true
+    }
+    if (!isGuideProjectionInViewport(viewer, projection)) {
+        return false
     }
 
     const scene = viewer?.scene
@@ -1505,16 +1798,39 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
         // leave the guide hidden while Cesium is between projections.
         overlay.style.visibility = 'visible'
     }
-    updateRouteGuideOverlay(viewer, record, width, height)
-    if (!isGuideWorldPositionVisible(viewer, overlay, record.visibilityAnchor, checkDepth)) {
+    const routeProjectionState = updateRouteGuideOverlay(viewer, record, width, height)
+    const routeProjectionFrame = record.screenLocked
+        ? record.preparationRouteProjectionFrame ?? record.screenProjectionFrame
+        : null
+    const routeBoundaries = routeBoundaryPositionsFrom(record)
+    const routeBoundariesVisible = routeBoundaries.length === 2
+        && routeBoundaries.every(point => isGuideWorldPositionVisible(
+            viewer,
+            overlay,
+            terrainClampedPositionFrom(viewer, point),
+            checkDepth,
+            routeProjectionFrame,
+        ))
+    const cameraAnchorVisible = record.screenLocked || isGuideWorldPositionVisible(
+        viewer,
+        overlay,
+        record.visibilityAnchor,
+        checkDepth,
+        routeProjectionFrame,
+    )
+    if (!routeBoundariesVisible || !cameraAnchorVisible) {
         elements.svg.style.visibility = 'hidden'
+        elements.routeSvg.style.visibility = 'hidden'
+        elements.activityIcon.style.visibility = 'hidden'
         elements.videoIcon.style.display = 'none'
-        overlay.style.visibility = 'visible'
+        overlay.style.visibility = 'hidden'
         return 'hidden'
     }
     elements.svg.style.visibility = 'visible'
     const coneHeading = record.guide.coneHeading
-    record.coneLength = coneLengthFrom(viewer, record.anchor, record.coneLength)
+    if (!record.screenLocked || !Number.isFinite(record.coneLength)) {
+        record.coneLength = coneLengthFrom(viewer, record.anchor, record.coneLength)
+    }
     const coneScale = Number.isFinite(record.guide.cameraAltitude)
         ? Math.max(
             CAMERA_ANGLE_GUIDE_MIN_CONE_SCALE,
@@ -1528,12 +1844,13 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
         record.guide,
         coneHeading,
         record.coneLength * coneScale,
+        record.screenLocked ? record.preparationIconGap : null,
     )
-    const outer = geometry.outer.map(position => projectGuidePosition(viewer, overlay, position))
-    const inner = geometry.inner.map(position => projectGuidePosition(viewer, overlay, position))
-    const outerBaseCenter = projectGuidePosition(viewer, overlay, geometry.outerBaseCenter)
-    const innerBaseCenter = projectGuidePosition(viewer, overlay, geometry.innerBaseCenter)
-    const videoIcon = projectGuidePosition(viewer, overlay, geometry.videoIconPosition)
+    const outer = geometry.outer.map(position => projectGuidePosition(viewer, overlay, position, record.screenProjectionFrame))
+    const inner = geometry.inner.map(position => projectGuidePosition(viewer, overlay, position, record.screenProjectionFrame))
+    const outerBaseCenter = projectGuidePosition(viewer, overlay, geometry.outerBaseCenter, record.screenProjectionFrame)
+    const innerBaseCenter = projectGuidePosition(viewer, overlay, geometry.innerBaseCenter, record.screenProjectionFrame)
+    const videoIcon = projectGuidePosition(viewer, overlay, geometry.videoIconPosition, record.screenProjectionFrame)
 
     if (outer.some(point => !point) || inner.some(point => !point)) {
         // Keep the last valid cone visible while Cesium temporarily has no
@@ -1557,12 +1874,7 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
         innerBaseCenter,
         baseWidthScale,
     )
-    const projectedRoute = projectedRouteSectionsFrom(
-        viewer,
-        overlay,
-        record.guide.routeAfter ?? [],
-        record.routeHeightOffset,
-    )[0]
+    const projectedRoute = routeProjectionState.sections[0]
     elements.angleLabel.textContent = angleLabelFrom(record.guide.angleDegrees)
     const requestedArcRadius = Math.hypot(outerRight.x - outerLeft.x, outerRight.y - outerLeft.y)
         * CAMERA_ANGLE_GUIDE_ANGLE_ARC_BASE_RATIO
@@ -1672,21 +1984,27 @@ const updateGuideOverlay = (viewer, record, checkDepth = true) => {
  * @param {Object} record - Mounted guide record.
  * @param {number} width - Overlay width in CSS pixels.
  * @param {number} height - Overlay height in CSS pixels.
- * @returns {void}
+ * @returns {{sections: Array<Array<{x: number, y: number}>>, activityPosition: {x: number, y: number}|null}} Projected route state.
  */
 const updateRouteGuideOverlay = (viewer, record, width, height) => {
-    const {elements, overlay} = record
-    const projectedRoute = projectedRouteSectionsFrom(
-        viewer,
-        overlay,
-        record.guide.routeAfter ?? [],
-        record.routeHeightOffset,
-    )
+    const {elements} = record
+    const projectionFrame = record.screenLocked
+        ? record.preparationRouteProjectionFrame ?? record.screenProjectionFrame
+        : record.screenProjectionFrame
+    const routeProjectionState = record.screenLocked && record.displayedRouteProjectionState
+        ? record.displayedRouteProjectionState
+        : routeProjectionStateFrom(viewer, record, projectionFrame)
+    if (record.screenLocked) {
+        record.displayedRouteProjectionState = routeProjectionState
+    }
+    const projectedRoute = routeProjectionState.sections
+    const routeEnd = projectedRoute.at(-1)?.at(-1) ?? null
     const routeAfterPath = svgRoutePathFrom(projectedRoute)
     elements.routeAfter.setAttribute('d', routeAfterPath)
-    elements.routeAfter.setAttribute('stroke-dasharray', record.guide.looped
-        ? `${CAMERA_ANGLE_GUIDE_ROUTE_DASH_LENGTH_PIXELS} ${CAMERA_ANGLE_GUIDE_ROUTE_DASH_GAP_PIXELS}`
-        : 'none')
+    elements.routeAfter.setAttribute(
+        'stroke-dasharray',
+        `${CAMERA_ANGLE_GUIDE_ROUTE_DASH_LENGTH_PIXELS} ${CAMERA_ANGLE_GUIDE_ROUTE_DASH_GAP_PIXELS}`,
+    )
     elements.routeAfter.style.display = routeAfterPath ? 'block' : 'none'
     const routeStart = projectedRoute[0]?.[0] ?? null
     if (routeStart) {
@@ -1697,21 +2015,25 @@ const updateRouteGuideOverlay = (viewer, record, width, height) => {
     else {
         elements.routeStartMarker.style.display = 'none'
     }
-    const activityPoint = record.guide.activityPoint
-    const activityPosition = activityPoint
-        ? projectGuidePosition(viewer, overlay, Cartesian3.fromDegrees(
-            activityPoint.longitude,
-            activityPoint.latitude,
-            activityPoint.height + record.routeHeightOffset,
-        ))
-        : null
-    const activityCurvePoint = closestRoutePointFrom(
-        svgBezierSamplesFrom(projectedRoute[0] ?? []),
-        activityPosition,
-    )
-    positionGuideIcon(elements.activityIcon, activityCurvePoint)
+    if (routeEnd && record.screenLocked && record.guide.routeMaxWindowMeters > CAMERA_ANGLE_GUIDE_ROUTE_MIN_WINDOW_METERS) {
+        elements.routeResizeHandle.setAttribute('cx', routeEnd.x)
+        elements.routeResizeHandle.setAttribute('cy', routeEnd.y)
+        elements.routeResizeHandle.setAttribute('aria-valuemin', Math.round(Math.min(
+            CAMERA_ANGLE_GUIDE_ROUTE_MIN_WINDOW_METERS,
+            record.guide.routeMaxWindowMeters,
+        )))
+        elements.routeResizeHandle.setAttribute('aria-valuemax', Math.round(record.guide.routeMaxWindowMeters))
+        elements.routeResizeHandle.setAttribute('aria-valuenow', Math.round(record.routeWindowMeters))
+        elements.routeResizeHandle.style.display = 'block'
+    }
+    else {
+        elements.routeResizeHandle.style.display = 'none'
+    }
+    positionGuideIcon(elements.activityIcon, routeProjectionState.activityPosition)
+    elements.activityIcon.style.visibility = 'visible'
     elements.routeSvg.setAttribute('viewBox', `0 0 ${width} ${height}`)
     elements.routeSvg.style.visibility = 'visible'
+    return routeProjectionState
 }
 
 /**
@@ -1777,14 +2099,15 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor, activityIconName}
         width:        '100%',
         zIndex:       '1',
     })
-    svg.style.cursor = 'grab'
+    svg.style.cursor = 'default'
     const interactionPath = createSvgElement('path', {
         'data-part': 'cone-drag-target',
         fill: 'transparent',
         'pointer-events': 'fill',
     })
-    interactionPath.style.cursor = 'grab'
-    interactionPath.style.pointerEvents = 'fill'
+    interactionPath.style.cursor = 'default'
+    interactionPath.style.pointerEvents = 'none'
+    interactionPath.setAttribute('pointer-events', 'none')
     const tipDragTarget = createSvgElement('circle', {
         'data-part': 'cone-tip-drag-target',
         fill: 'transparent',
@@ -1801,7 +2124,7 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor, activityIconName}
         'data-part': 'inner',
         fill:        `url(#replay-camera-angle-guide-inner-gradient-${++cameraAngleGuideGradientCounter})`,
     })
-    inner.style.pointerEvents = 'fill'
+    inner.style.pointerEvents = 'none'
     const innerGradientId = inner.getAttribute('fill').slice(5, -1)
     const innerGradient = createSvgElement('linearGradient', {
         id:            innerGradientId,
@@ -1869,13 +2192,23 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor, activityIconName}
         'stroke-linejoin': 'round',
         'stroke-width': CAMERA_ANGLE_GUIDE_ROUTE_STROKE_PIXELS,
     })
-    const routeAfter = createRoutePath('journey-route-after')
+    const routeAfter = createRoutePath('journey-route-after', true)
     routeAfter.setAttribute('stroke-linecap', 'butt')
     const routeStartMarker = createSvgElement('circle', {
         'data-part': 'journey-route-start',
         fill: cssColorFrom(headingColor),
         r: CAMERA_ANGLE_GUIDE_ROUTE_START_MARKER_RADIUS_PIXELS,
     })
+    const routeResizeHandle = createSvgElement('circle', {
+        'aria-label': 'Drag to adjust the simulated route length',
+        'data-part': 'journey-route-resize-handle',
+        fill: 'transparent',
+        r: '14',
+        role: 'slider',
+        tabindex: '0',
+    })
+    routeResizeHandle.style.cursor = 'grab'
+    routeResizeHandle.style.pointerEvents = 'all'
     const routeArrowMarkerId = `replay-camera-angle-guide-route-arrow-${++cameraAngleGuideArrowCounter}`
     const routeArrowMarker = createSvgElement('marker', {
         id: routeArrowMarkerId,
@@ -1924,7 +2257,7 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor, activityIconName}
         angleSnapMarker,
         tipDragTarget,
     )
-    routeSvg.append(routeDefinitions, routeAfter, routeStartMarker)
+    routeSvg.append(routeDefinitions, routeAfter, routeStartMarker, routeResizeHandle)
 
     const createIcon = (image) => {
         const icon = document.createElement('img')
@@ -1995,6 +2328,7 @@ const createGuideOverlay = ({viewer, headingColor, aheadColor, activityIconName}
             routeSvg,
             routeAfter,
             routeStartMarker,
+            routeResizeHandle,
             activityIcon,
             activityGlyph,
         },
@@ -2023,7 +2357,164 @@ const updateGuideGeometry = (viewer, record, checkDepth = true) => {
 }
 
 /**
- * Bind pointer dragging to camera-angle adjustments on the cone hit area.
+ * Schedule an animation frame and return a cancellation function.
+ *
+ * @param {Function} callback - Frame callback receiving a high-resolution timestamp.
+ * @returns {Function} Cancellation function.
+ */
+const scheduleGuideAnimationFrame = callback => {
+    if (typeof globalThis.requestAnimationFrame === 'function') {
+        const requestId = globalThis.requestAnimationFrame(callback)
+        return () => globalThis.cancelAnimationFrame?.(requestId)
+    }
+
+    const timeoutId = globalThis.setTimeout(() => callback(Date.now()), 16)
+    return () => globalThis.clearTimeout(timeoutId)
+}
+
+/**
+ * Set the preparation route window and immediately redraw its terrain projection.
+ *
+ * @param {Object} viewer - Cesium viewer.
+ * @param {Object} record - Mounted guide record.
+ * @param {number} windowMeters - Requested route length in metres.
+ * @returns {void}
+ */
+const updateRouteWindow = (viewer, record, windowMeters) => {
+    const maximum = record.guide.routeMaxWindowMeters
+    const minimum = Math.min(CAMERA_ANGLE_GUIDE_ROUTE_MIN_WINDOW_METERS, maximum)
+    const nextWindow = Math.max(minimum, Math.min(maximum, windowMeters))
+    if (Math.abs(nextWindow - record.routeWindowMeters) < 1) {
+        return
+    }
+
+    record.routeWindowMeters = nextWindow
+    cancelRouteProjectionAnimation(record)
+    const projectionFrame = record.screenLocked
+        ? record.preparationRouteProjectionFrame ?? record.screenProjectionFrame
+        : record.screenProjectionFrame
+    record.displayedRouteProjectionState = routeProjectionStateFrom(viewer, record, projectionFrame)
+    updateGuideGeometry(viewer, record, false)
+}
+
+/**
+ * Resize the simulated route by dragging its endpoint along the source trace.
+ *
+ * @param {Object} viewer - Cesium viewer.
+ * @param {Object} record - Mounted guide record.
+ * @param {{x: number, y: number}} pointer - Pointer position in overlay coordinates.
+ * @returns {void}
+ */
+const resizeRouteFromPointer = (viewer, record, pointer) => {
+    const maximum = record.guide.routeMaxWindowMeters
+    const minimum = Math.min(CAMERA_ANGLE_GUIDE_ROUTE_MIN_WINDOW_METERS, maximum)
+    if (maximum <= minimum) {
+        return
+    }
+
+    const projectionFrame = record.screenLocked
+        ? record.preparationRouteProjectionFrame ?? record.screenProjectionFrame
+        : record.screenProjectionFrame
+    const maximumRoute = routeProjectionStateFrom(viewer, record, projectionFrame, maximum)
+    const routeSamples = maximumRoute.sections.flatMap(section => svgBezierSamplesFrom(section))
+    const progress = routeProgressFrom(routeSamples, pointer)
+    updateRouteWindow(viewer, record, Math.max(minimum, maximum * progress))
+}
+
+/**
+ * Cancel the active simulated-route projection animation.
+ *
+ * @param {Object} record - Mounted guide record.
+ * @returns {void}
+ */
+const cancelRouteProjectionAnimation = record => {
+    record.routeProjectionAnimation?.cancelFrame?.()
+    record.routeProjectionAnimation = null
+}
+
+/**
+ * Animate the simulated route into the latest Cesium projection.
+ *
+ * @param {Object} viewer - Cesium viewer.
+ * @param {Object} record - Mounted guide record.
+ * @param {{viewProjectionMatrix: Matrix4}|null} projectionFrame - Target camera projection.
+ * @returns {boolean} Whether a new route projection was scheduled.
+ */
+const animateRouteProjectionTo = (viewer, record, projectionFrame) => {
+    const previousFrame = record.preparationRouteProjectionFrame
+    if (!cameraProjectionFrameChanged(projectionFrame, previousFrame)) {
+        return false
+    }
+
+    const targetState = routeProjectionStateFrom(viewer, record, projectionFrame)
+    const startState = record.displayedRouteProjectionState
+    record.preparationRouteProjectionFrame = projectionFrame
+    const activeAnimation = record.routeProjectionAnimation
+    if (activeAnimation) {
+        if (!interpolateRouteProjectionStateFrom(activeAnimation.startState, targetState, 0)) {
+            cancelRouteProjectionAnimation(record)
+            record.displayedRouteProjectionState = targetState
+            updateGuideGeometry(viewer, record, false)
+            return true
+        }
+
+        activeAnimation.targetState = targetState
+        return true
+    }
+
+    if (!startState || !interpolateRouteProjectionStateFrom(startState, targetState, 0)) {
+        record.displayedRouteProjectionState = targetState
+        updateGuideGeometry(viewer, record, false)
+        return true
+    }
+
+    const animation = {
+        cancelFrame: null,
+        startedAt: null,
+        startState,
+        targetState,
+    }
+    record.routeProjectionAnimation = animation
+    /**
+     * Render one interpolation step for the projected route.
+     *
+     * @param {number} timestamp - High-resolution animation timestamp.
+     * @returns {void}
+     */
+    const animate = timestamp => {
+        if (record.routeProjectionAnimation !== animation) {
+            return
+        }
+
+        animation.cancelFrame = null
+        const frameTime = Number.isFinite(timestamp) ? timestamp : Date.now()
+        animation.startedAt ??= frameTime
+        const progress = Math.min(
+            1,
+            Math.max(0, (frameTime - animation.startedAt) / CAMERA_ANGLE_GUIDE_ROUTE_PROJECTION_ANIMATION_DURATION_MS),
+        )
+        const easedProgress = 1 - ((1 - progress) ** 3)
+        record.displayedRouteProjectionState = interpolateRouteProjectionStateFrom(
+            animation.startState,
+            animation.targetState,
+            easedProgress,
+        )
+        updateGuideGeometry(viewer, record, false)
+
+        if (progress < 1) {
+            animation.cancelFrame = scheduleGuideAnimationFrame(animate)
+            return
+        }
+
+        record.displayedRouteProjectionState = animation.targetState
+        record.routeProjectionAnimation = null
+    }
+    animation.cancelFrame = scheduleGuideAnimationFrame(animate)
+    return true
+}
+
+/**
+ * Bind azimuth dragging to the camera icon and altitude dragging to the cone tip.
  *
  * @param {Object} viewer - Cesium viewer.
  * @param {Object} record - Mounted guide record.
@@ -2092,7 +2583,15 @@ const bindGuideDragInteractions = (viewer, record) => {
      * @returns {void}
      */
     const pointerDownListener = event => {
-        if (event.button !== 0 || !record.projectedAnchor || typeof record.onCameraChange !== 'function') {
+        if (event.button !== 0 || !record.projectedAnchor) {
+            return
+        }
+        const cameraIconDrag = event.currentTarget === record.elements.videoIcon
+        const tipAltitudeOnly = event.target === record.elements.tipDragTarget
+        const routeLengthDrag = event.currentTarget === record.elements.routeResizeHandle
+        if ((!cameraIconDrag && !tipAltitudeOnly && !routeLengthDrag)
+            || (routeLengthDrag && !record.screenLocked)
+            || (!routeLengthDrag && typeof record.onCameraChange !== 'function')) {
             return
         }
         const point = pointerPositionFrom(event)
@@ -2102,17 +2601,17 @@ const bindGuideDragInteractions = (viewer, record) => {
             return
         }
         const cameraController = viewer.scene?.screenSpaceCameraController
-        const tipAltitudeOnly = event.target === record.elements.tipDragTarget
         record.dragState = {
             pointerId: event.pointerId,
-            altitudeDraggable: true,
-            angleDraggable: !tipAltitudeOnly,
+            altitudeDraggable: !routeLengthDrag,
+            angleDraggable: cameraIconDrag,
+            routeDraggable: routeLengthDrag,
             startAngle: Math.atan2(deltaY, deltaX),
             startAltitude: record.guide.cameraAltitude ?? CAMERA_ANGLE_GUIDE_CAMERA_LENGTH_METERS,
             startRadius: Math.hypot(deltaX, deltaY),
             startOffset: record.guide.offsetRadians,
             shiftPressed: event.shiftKey === true,
-            startMapAngle: tipAltitudeOnly ? null : mapBearingFromPointer(event),
+            startMapAngle: tipAltitudeOnly || record.screenLocked ? null : mapBearingFromPointer(event),
             cameraController,
             previousRotateEnabled: cameraController?.enableRotate,
         }
@@ -2122,10 +2621,11 @@ const bindGuideDragInteractions = (viewer, record) => {
         event.preventDefault()
         event.stopPropagation()
         event.stopImmediatePropagation?.()
-        hitArea.style.cursor = 'grabbing'
-        record.elements.videoIcon.style.cursor = 'grabbing'
-        record.elements.tipDragTarget.style.cursor = 'grabbing'
-        record.elements.interactionPath.style.cursor = 'grabbing'
+        hitArea.style.cursor = 'default'
+        record.elements.videoIcon.style.cursor = cameraIconDrag ? 'grabbing' : 'grab'
+        record.elements.tipDragTarget.style.cursor = tipAltitudeOnly ? 'grabbing' : 'ns-resize'
+        record.elements.routeResizeHandle.style.cursor = routeLengthDrag ? 'grabbing' : 'grab'
+        record.elements.interactionPath.style.cursor = 'default'
         record.elements.inner.style.cursor = 'grabbing'
         hitArea.setPointerCapture?.(event.pointerId)
         globalThis.addEventListener?.('pointermove', pointerMoveListener, true)
@@ -2185,27 +2685,31 @@ const bindGuideDragInteractions = (viewer, record) => {
         event.stopPropagation()
         event.stopImmediatePropagation?.()
         const point = pointerPositionFrom(event)
+        if (dragState.routeDraggable) {
+            resizeRouteFromPointer(viewer, record, point)
+            return
+        }
         const deltaX = point.x - record.projectedAnchor.x
         const deltaY = point.y - record.projectedAnchor.y
         if (Math.hypot(deltaX, deltaY) < 1) {
             return
         }
-        const mapAngle = dragState.angleDraggable ? mapBearingFromPointer(event) : null
+        const mapAngle = dragState.angleDraggable && !record.screenLocked ? mapBearingFromPointer(event) : null
         const angle = Math.atan2(deltaY, deltaX)
         const angleDelta = dragState.angleDraggable
             ? Number.isFinite(dragState.startMapAngle) && Number.isFinite(mapAngle)
                 ? domAngleDeltaFrom(dragState.startMapAngle, mapAngle)
                 : domAngleDeltaFrom(dragState.startAngle, angle)
             : 0
-        const offset = dragState.startOffset + angleDelta
-        const rawDegrees = offset * 180 / Math.PI
+        const angleRadians = dragState.startOffset + angleDelta
+        const rawDegrees = angleRadians * 180 / Math.PI
         const shiftPressed = dragState.angleDraggable && (event.shiftKey === true || dragState.shiftPressed)
         dragState.snapActive = shiftPressed
         const dragDegrees = shiftPressed
             ? Math.round(rawDegrees / CAMERA_ANGLE_GUIDE_DRAG_SNAP_STEP_DEGREES)
                 * CAMERA_ANGLE_GUIDE_DRAG_SNAP_STEP_DEGREES
             : rawDegrees
-        const headingOffset = ((dragDegrees + 180) % 360 + 360) % 360 - 180
+        const cameraAngle = ((dragDegrees + 180) % 360 + 360) % 360 - 180
         const altitude = dragState.altitudeDraggable
             ? Math.max(
                 CAMERA_ANGLE_GUIDE_MIN_CAMERA_ALTITUDE_METERS,
@@ -2215,19 +2719,19 @@ const bindGuideDragInteractions = (viewer, record) => {
                 ),
             )
             : dragState.startAltitude
-        const offsetRadians = headingOffset * Math.PI / 180
+        const offsetRadians = cameraAngle * Math.PI / 180
         record.guide = {
             ...record.guide,
-            angleDegrees: displayAngleFrom(headingOffset),
+            angleDegrees: cameraAngle,
             cameraAltitude: altitude,
-            cameraHeading: record.guide.baseHeading + offsetRadians,
-            coneHeading: record.guide.baseHeading + offsetRadians + Math.PI,
+            cameraHeading: record.guide.baseHeading + offsetRadians + Math.PI,
+            coneHeading: record.guide.baseHeading + offsetRadians,
             offsetRadians,
         }
         updateGuideGeometry(viewer, record, false)
         dragState.pendingUpdates = {
             altitude,
-            headingOffset,
+            cameraAngle,
         }
     }
 
@@ -2248,10 +2752,11 @@ const bindGuideDragInteractions = (viewer, record) => {
         if (dragState.cameraController && typeof dragState.previousRotateEnabled === 'boolean') {
             dragState.cameraController.enableRotate = dragState.previousRotateEnabled
         }
-        hitArea.style.cursor = 'grab'
+        hitArea.style.cursor = 'default'
         record.elements.videoIcon.style.cursor = 'grab'
         record.elements.tipDragTarget.style.cursor = 'ns-resize'
-        record.elements.interactionPath.style.cursor = 'grab'
+        record.elements.routeResizeHandle.style.cursor = 'grab'
+        record.elements.interactionPath.style.cursor = 'default'
         record.elements.inner.style.cursor = 'grab'
         if (event && hitArea.hasPointerCapture?.(event.pointerId)) {
             hitArea.releasePointerCapture(event.pointerId)
@@ -2277,12 +2782,47 @@ const bindGuideDragInteractions = (viewer, record) => {
         finishDrag(event)
     }
 
+    /**
+     * Adjust the route window from keyboard input on its endpoint handle.
+     *
+     * @param {KeyboardEvent} event - Keyboard interaction.
+     * @returns {void}
+     */
+    const routeResizeKeyDownListener = event => {
+        const minimum = Math.min(CAMERA_ANGLE_GUIDE_ROUTE_MIN_WINDOW_METERS, record.guide.routeMaxWindowMeters)
+        const maximum = record.guide.routeMaxWindowMeters
+        let nextWindow = record.routeWindowMeters
+        if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
+            nextWindow -= CAMERA_ANGLE_GUIDE_ROUTE_RESIZE_KEY_STEP_METERS
+        }
+        else if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
+            nextWindow += CAMERA_ANGLE_GUIDE_ROUTE_RESIZE_KEY_STEP_METERS
+        }
+        else if (event.key === 'Home') {
+            nextWindow = minimum
+        }
+        else if (event.key === 'End') {
+            nextWindow = maximum
+        }
+        else {
+            return
+        }
+
+        event.preventDefault()
+        event.stopPropagation()
+        updateRouteWindow(viewer, record, nextWindow)
+    }
+
     hitArea.addEventListener('pointerdown', pointerDownListener)
     record.elements.videoIcon.addEventListener('pointerdown', pointerDownListener)
+    record.elements.routeResizeHandle.addEventListener('pointerdown', pointerDownListener)
+    record.elements.routeResizeHandle.addEventListener('keydown', routeResizeKeyDownListener)
     record.removeDragListeners = () => {
         finishDrag()
         hitArea.removeEventListener('pointerdown', pointerDownListener)
         record.elements.videoIcon.removeEventListener('pointerdown', pointerDownListener)
+        record.elements.routeResizeHandle.removeEventListener('pointerdown', pointerDownListener)
+        record.elements.routeResizeHandle.removeEventListener('keydown', routeResizeKeyDownListener)
     }
 }
 
@@ -2303,6 +2843,7 @@ export const removeJourneyReplayCameraAngleGuide = viewer => {
     record.removePostRenderListener?.()
     record.removeCameraMoveStartListener?.()
     record.removeDragListeners?.()
+    cancelRouteProjectionAnimation(record)
     if (record.canvasWheelListener) {
         viewer.scene?.canvas?.removeEventListener?.('wheel', record.canvasWheelListener, true)
     }
@@ -2338,7 +2879,7 @@ export const mountJourneyReplayCameraAngleGuide = (viewer, guide, colors = {}, c
         typeof colors === 'string' ? null : colors?.aheadColor,
         lessLuminousColorFrom(headingColor).toCssColorString(),
     )
-    const coneColor = guide.mode === 'Ahead' ? aheadColor : headingColor
+    const coneColor = headingColor
     const overlayParts = createGuideOverlay({
         aheadColor,
         activityIconName: guide.activityIcon,
@@ -2351,21 +2892,60 @@ export const mountJourneyReplayCameraAngleGuide = (viewer, guide, colors = {}, c
 
     const record = Object.assign({}, worldGeometry, overlayParts, {
         guide,
-        routeHeightOffset: routeHeightOffsetFrom(worldGeometry.anchor, guide),
         onCameraChange: callbacks.onCameraChange,
+        screenLocked: callbacks.screenLocked === true,
+        screenProjectionFrame: callbacks.screenLocked === true ? cameraProjectionFrameFrom(viewer) : null,
+        preparationCameraOrientation: callbacks.screenLocked === true ? cameraOrientationFrom(viewer) : null,
+        preparationRouteProjectionFrame: callbacks.screenLocked === true ? cameraProjectionFrameFrom(viewer) : null,
+        displayedRouteProjectionState: null,
+        routeProjectionAnimation: null,
+        routeWindowMeters: guide.routeWindowMeters ?? CAMERA_ANGLE_GUIDE_ROUTE_WINDOW_METERS,
+        preparationIconGap: callbacks.screenLocked === true ? iconGapFrom(viewer, worldGeometry.anchor) : null,
         depthProbePending: true,
         projectionRetryCount: 0,
     })
     cameraAngleGuideRecords.set(viewer, record)
     record.removeCameraChangedListener = viewer.camera?.changed?.addEventListener?.(() => {
+        if (record.screenLocked) {
+            const cameraOrientation = cameraOrientationFrom(viewer)
+            const previousOrientation = record.preparationCameraOrientation
+            const orientationChanged = cameraOrientation !== null && (previousOrientation === null
+                || Object.keys(cameraOrientation).some(axis => {
+                    const difference = cameraOrientation[axis] - previousOrientation[axis]
+                    const angularDelta = Math.atan2(Math.sin(difference), Math.cos(difference))
+                    return Math.abs(angularDelta) >= CAMERA_ANGLE_GUIDE_PREPARATION_ORIENTATION_EPSILON_RADIANS
+                }))
+            if (!orientationChanged) {
+                return
+            }
+
+            record.preparationCameraOrientation = cameraOrientation
+            record.screenProjectionFrame = cameraProjectionFrameFrom(viewer) ?? record.screenProjectionFrame
+            record.depthProbePending = true
+            updateGuideGeometry(viewer, record, false)
+            viewer.scene?.requestRender?.()
+            return
+        }
         record.depthProbePending = true
         updateGuideGeometry(viewer, record, false)
         viewer.scene?.requestRender?.()
     })
     record.removeCameraMoveStartListener = viewer.camera?.moveStart?.addEventListener?.(() => {
+        if (record.screenLocked) {
+            return
+        }
         record.depthProbePending = true
     })
     record.removePostRenderListener = viewer.scene?.postRender?.addEventListener?.(() => {
+        if (record.screenLocked) {
+            const projectionFrame = cameraProjectionFrameFrom(viewer)
+            if (cameraProjectionFrameChanged(projectionFrame, record.screenProjectionFrame)) {
+                record.screenProjectionFrame = projectionFrame
+                record.preparationIconGap = iconGapFrom(viewer, record.anchor)
+                record.depthProbePending = true
+            }
+            animateRouteProjectionTo(viewer, record, projectionFrame)
+        }
         if (!record.depthProbePending) {
             return
         }
@@ -2397,7 +2977,7 @@ export const mountJourneyReplayCameraAngleGuide = (viewer, guide, colors = {}, c
  */
 export const updateJourneyReplayCameraAngleGuide = (viewer, guide, callbacks = {}) => {
     const record = viewer ? cameraAngleGuideRecords.get(viewer) : null
-    if (!record || !guide || record.guide.mode !== guide.mode) {
+    if (!record || !guide) {
         return false
     }
     if (typeof callbacks.onCameraChange === 'function') {
@@ -2405,17 +2985,16 @@ export const updateJourneyReplayCameraAngleGuide = (viewer, guide, callbacks = {
     }
 
     const geometryChanged = guideGeometryKeyFrom(record.guide) !== guideGeometryKeyFrom(guide)
-    const routeGeometryChanged = record.guide.routePositionKey !== guide.routePositionKey
     const angleChanged = record.guide.coneHeading !== guide.coneHeading
         || record.guide.angleDegrees !== guide.angleDegrees
     if (record.guide.activityIcon !== guide.activityIcon) {
         record.elements.activityGlyph.setAttribute('name', guide.activityIcon || 'person-hiking')
     }
     if (geometryChanged) {
+        cancelRouteProjectionAnimation(record)
+        record.displayedRouteProjectionState = null
+        record.routeWindowMeters = guide.routeWindowMeters ?? CAMERA_ANGLE_GUIDE_ROUTE_WINDOW_METERS
         Object.assign(record, worldGeometryFrom(viewer, guide, record.coneLength))
-    }
-    if (routeGeometryChanged) {
-        record.routeHeightOffset = routeHeightOffsetFrom(record.anchor, guide)
     }
     record.guide = guide
     if (geometryChanged || angleChanged) {

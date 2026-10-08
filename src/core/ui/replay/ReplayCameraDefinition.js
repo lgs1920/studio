@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-24
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,7 +24,7 @@ import {
     normalizeJourneyReplayMarker,
 } from './JourneyReplayProgressionStyle'
 
-export const REPLAY_CAMERA_DEFINITION_VERSION = 1
+export const REPLAY_CAMERA_DEFINITION_VERSION = 2
 export const REPLAY_CAMERA_ANCHOR_SAMPLE = 'sample'
 export const REPLAY_CAMERA_RANGE_DERIVED_FROM_ALTITUDE = 'derived-from-altitude'
 
@@ -126,15 +126,13 @@ export const createReplayCameraDefinition = ({
             start: normalizedAnchor,
         },
         position: {
-            mode: camera.positionMode,
+            cameraAngleDegrees: camera.cameraAngle,
             altitudeMode: camera.altitudeMode,
             altitudeMeters: camera.altitude,
             rangeMode: REPLAY_CAMERA_RANGE_DERIVED_FROM_ALTITUDE,
             nominalRangeMeters: resolveReplayCameraMetricRange(camera.altitude, pitchRadians),
         },
         orientation: {
-            headingRadians: replayCameraRadians(camera.heading),
-            headingOffsetRadians: replayCameraRadians(camera.headingOffset),
             pitchRadians,
             roll: {
                 enabled: camera.canRoll,
@@ -160,7 +158,7 @@ export const createReplayCameraDefinition = ({
  * @returns {boolean} True for a supported camera definition.
  */
 export const isReplayCameraDefinition = definition => Boolean(
-    definition?.version === REPLAY_CAMERA_DEFINITION_VERSION
+    [1, REPLAY_CAMERA_DEFINITION_VERSION].includes(definition?.version)
     && definition?.position
     && definition?.orientation,
 )
@@ -179,12 +177,17 @@ export const replayCameraSettingsFromDefinition = definition => {
         throw new TypeError('A versioned replay camera definition is required')
     }
 
+    const legacyPosition = definition.version === 1
     return normalizeJourneyReplayCamera({
-        positionMode: definition.position.mode,
+        ...(legacyPosition ? {
+            positionMode: definition.position.mode,
+            headingOffset: replayCameraDegrees(definition.orientation.headingOffsetRadians),
+            heading: replayCameraDegrees(definition.orientation.headingRadians),
+        } : {
+            cameraAngle: definition.position.cameraAngleDegrees,
+        }),
         altitudeMode: definition.position.altitudeMode,
         altitude: definition.position.altitudeMeters,
-        heading: replayCameraDegrees(definition.orientation.headingRadians),
-        headingOffset: replayCameraDegrees(definition.orientation.headingOffsetRadians),
         pitch: replayCameraDegrees(definition.orientation.pitchRadians),
         canDrift: definition.tracking?.driftEnabled,
         canFixHiddenMarker: definition.tracking?.hiddenMarkerCorrectionEnabled,

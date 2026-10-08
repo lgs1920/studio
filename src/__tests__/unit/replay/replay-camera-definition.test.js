@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-24
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,11 +37,9 @@ import {buildReplayVideoTimeline} from '@Core/ui/replay/ReplayVideoTimeline'
  */
 const createCameraFixture = (overrides = {}) => createReplayCameraDefinition({
     cameraSettings: {
-        positionMode: 'ahead',
+        cameraAngle: 30,
         altitudeMode: 'ground-offset',
         altitude: 300,
-        heading: 10,
-        headingOffset: 30,
         pitch: -45,
         canRoll: false,
         ...overrides.cameraSettings,
@@ -67,8 +65,8 @@ describe('canonical replay camera definition', () => {
         })
         expect(definition.position.altitudeMeters).toBe(300)
         expect(definition.position.nominalRangeMeters).toBeCloseTo(300 / Math.sin(Math.PI / 4), 8)
-        expect(definition.orientation.headingRadians).toBeCloseTo(10 * Math.PI / 180, 8)
-        expect(definition.orientation.headingOffsetRadians).toBeCloseTo(Math.PI / 6, 8)
+        expect(definition.version).toBe(2)
+        expect(definition.position.cameraAngleDegrees).toBe(30)
         expect(definition.orientation.pitchRadians).toBeCloseTo(-Math.PI / 4, 8)
         expect(definition.orientation.roll.enabled).toBe(false)
     })
@@ -78,14 +76,33 @@ describe('canonical replay camera definition', () => {
         const settings = replayCameraSettingsFromDefinition(definition)
 
         expect(settings).toEqual(expect.objectContaining({
-            positionMode: 'ahead',
+            cameraAngle: 30,
             altitudeMode: 'ground-offset',
             altitude: 300,
-            heading: 10,
-            headingOffset: 30,
             pitch: -45,
             canRoll: false,
         }))
+    })
+
+    it('migrates version-one camera definitions into the single-angle setting', () => {
+        const settings = replayCameraSettingsFromDefinition({
+            version: 1,
+            position: {
+                mode: 'behind',
+                altitudeMode: 'constant',
+                altitudeMeters: 1000,
+            },
+            orientation: {
+                headingRadians: 0,
+                headingOffsetRadians: Math.PI / 6,
+                pitchRadians: -Math.PI / 3,
+            },
+            tracking: {},
+            marker: {mode: 'trace'},
+        })
+
+        expect(settings.cameraAngle).toBe(-150)
+        expect(settings.positionMode).toBeUndefined()
     })
 
     it('evaluates one target-relative pose with an effective metric range', () => {

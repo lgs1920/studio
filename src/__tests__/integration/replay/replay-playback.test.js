@@ -17,7 +17,7 @@
 import { REPLAY_DRAWER }                                           from '@Core/constants'
 import { createJourneyReplayClipInstance }                                from '@Core/ui/replay/JourneyReplayClips'
 import {
-    replayAngularDelta, replayCameraHeadingForPositionMode, replayCameraHeadingWithHysteresis,
+    replayAngularDelta, replayCameraHeadingWithHysteresis,
     replayCameraRangeFromPitch, replayCameraRecenterDuration, replayCameraRecenterHeight,
     replayCameraRecenterHorizontalDistance, replayHeadingEasingFactor, replayHeadingFromLocalAxisAngle,
     replayIsWindowPointOutsideToleranceZone, replayPitchLookaheadFactor, JourneyReplayMode, replayTargetSampleForClip,
@@ -32,7 +32,6 @@ import {
 }                                                                      from '@Core/ui/replay/JourneyReplayPlaybackController'
 import {
     defaultJourneyReplaySettings as defaultJourneyReplaySettingsBase, REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
-    REPLAY_CAMERA_HEADING_OFFSET_MAX, REPLAY_CAMERA_POSITION_AHEAD, REPLAY_CAMERA_POSITION_BEHIND, REPLAY_CAMERA_POSITION_SYSTEM,
     REPLAY_CAMERA_PRESET_DEFAULT, REPLAY_CAMERA_PRESET_ULTRA_SMOOTH,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
     getJourneyReplayCameraPresetKey, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplaySettings,
@@ -476,7 +475,7 @@ describe('replay phase 1 playback controller', () => {
         const replay = defaultJourneyReplaySettings()
         replay.camera = {
             ...replay.camera,
-            positionMode: REPLAY_CAMERA_POSITION_AHEAD,
+            cameraAngle: 0,
         }
         const renderer = {
             clear:  vi.fn(),
@@ -1479,19 +1478,19 @@ describe('replay phase 1 playback controller', () => {
             mode.start()
             globalThis.lgs.settings.ui.replay.camera = {
                 ...globalThis.lgs.settings.ui.replay.camera,
-                altitude: 9800,
-                heading:  -75,
-                pitch:    -31,
+                altitude:   9800,
+                cameraAngle: -75,
+                pitch:      -31,
             }
             globalThis.lgs.stores.replay.camera = globalThis.lgs.settings.ui.replay.camera
 
             mode.stop({emit: false})
 
             expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(2400)
-            expect(globalThis.lgs.settings.ui.replay.camera.heading).toBe(40)
+            expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(180)
             expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBe(-22)
             expect(globalThis.lgs.stores.replay.camera.altitude).toBe(2400)
-            expect(globalThis.lgs.stores.replay.camera.heading).toBe(40)
+            expect(globalThis.lgs.stores.replay.camera.cameraAngle).toBe(180)
             expect(globalThis.lgs.stores.replay.camera.pitch).toBe(-22)
         }
         finally {

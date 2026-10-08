@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,13 +17,14 @@
 import { REPLAY_DRAWER }                                           from '@Core/constants'
 import { createJourneyReplayClipInstance }                                from '@Core/ui/replay/JourneyReplayClips'
 import {
-    replayAngularDelta, replayCameraFrameLeadSeconds, replayCameraHeadingForPositionMode, replayCameraHeadingWithHysteresis,
+    replayAngularDelta, replayCameraFrameLeadSeconds, replayCameraHeadingWithHysteresis,
     replayCameraRangeFromPitch, replayCameraRecenterDuration, replayFrameLeadSeconds, replayCameraRecenterHeight,
     replayCameraRecenterHorizontalDistance, replayHeadingEasingFactor, replayHeadingFromLocalAxisAngle,
     replayIsWindowPointOutsideToleranceZone, replayPitchLookaheadFactor, JourneyReplayMode, replayTargetSampleForClip,
     replayToleranceZoneBounds, replayCenteredZone, replayRuntimeTrackingSettings, replayAdaptiveTrackingTiming,
     replayDynamicTargetPointInZone,
 }                                                                      from '@Core/ui/replay/JourneyReplayMode'
+import {replayCameraHeadingForAngle} from '@Core/ui/replay/JourneyReplayCameraMath'
 import {
     REPLAY_SCOPE_ALL_TRACKS, REPLAY_SCOPE_CURRENT_TRACK, REPLAY_SCOPE_VISIBLE_TRACKS, JourneyReplayPathSampler,
 }                                                                      from '@Core/ui/replay/JourneyReplayPathSampler'
@@ -33,7 +34,6 @@ import {
 }                                                                      from '@Core/ui/replay/JourneyReplayPlaybackController'
 import {
     defaultJourneyReplaySettings, REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
-    REPLAY_CAMERA_HEADING_OFFSET_MAX, REPLAY_CAMERA_POSITION_AHEAD, REPLAY_CAMERA_POSITION_BEHIND, REPLAY_CAMERA_POSITION_SYSTEM,
     REPLAY_CAMERA_PRESET_DEFAULT, REPLAY_CAMERA_PRESET_ULTRA_SMOOTH,
     REPLAY_READINESS_POLICY_ADAPTIVE, REPLAY_READINESS_POLICY_OFF,
     REPLAY_EFFECT_GLOW, REPLAY_EFFECT_NEON, REPLAY_EFFECT_NONE,
@@ -140,32 +140,26 @@ describe('replay settings normalization', () => {
         })
     })
 
-    it('defaults camera position mode behind and accepts ahead', () => {
-        expect(normalizeJourneyReplayCamera({}).positionMode).toBe(REPLAY_CAMERA_POSITION_SYSTEM)
-        expect(normalizeJourneyReplayCamera({positionMode: REPLAY_CAMERA_POSITION_BEHIND}).positionMode)
-            .toBe(REPLAY_CAMERA_POSITION_BEHIND)
-        expect(normalizeJourneyReplayCamera({positionMode: REPLAY_CAMERA_POSITION_AHEAD}).positionMode)
-            .toBe(REPLAY_CAMERA_POSITION_AHEAD)
+    it('normalizes a single route-relative camera angle and migrates legacy positions', () => {
+        expect(normalizeJourneyReplayCamera({}).cameraAngle).toBe(180)
+        expect(normalizeJourneyReplayCamera({positionMode: 'behind', headingOffset: 0}).cameraAngle).toBe(180)
+        expect(normalizeJourneyReplayCamera({positionMode: 'ahead', headingOffset: 0}).cameraAngle).toBe(0)
+        expect(normalizeJourneyReplayCamera({positionMode: 'behind', headingOffset: 15}).cameraAngle).toBe(-165)
+        expect(normalizeJourneyReplayCamera({cameraAngle: 90, positionMode: 'behind'}).cameraAngle).toBe(90)
     })
 
-    it('keeps behind and ahead as distinct camera positions', () => {
-        const camera = normalizeJourneyReplayCamera({positionMode: REPLAY_CAMERA_POSITION_BEHIND})
-        expect(camera.positionMode).toBe(REPLAY_CAMERA_POSITION_BEHIND)
-    })
-
-    it('normalizes pitch and altitude settings while preserving the camera mode', () => {
+    it('normalizes pitch, altitude, and a complete camera-angle rotation', () => {
         const camera = normalizeJourneyReplayCamera({
             altitudeMode: 'constant',
             altitude:     1500,
-            headingOffset: 240,
+            cameraAngle: 240,
             pitch:        -50,
-            positionMode: REPLAY_CAMERA_POSITION_AHEAD,
         })
 
         expect(camera.altitude).toBe(1500)
-        expect(camera.headingOffset).toBe(REPLAY_CAMERA_HEADING_OFFSET_MAX)
+        expect(camera.cameraAngle).toBe(-120)
         expect(camera.pitch).toBe(-50)
-        expect(camera.positionMode).toBe(REPLAY_CAMERA_POSITION_AHEAD)
+        expect(camera.positionMode).toBeUndefined()
     })
 
     it('normalizes camera altitude as a single persisted value', () => {
@@ -525,17 +519,13 @@ describe('replay settings normalization', () => {
         expect(replayHeadingFromLocalAxisAngle(Math.PI / 2)).toBeCloseTo(0, 6)
     })
 
-    it('places behind on the trace heading and ahead on the opposite side', () => {
-        expect(replayCameraHeadingForPositionMode({
-            axisHeading:   0.75,
-            positionMode: REPLAY_CAMERA_POSITION_BEHIND,
-            headingOffset: 15,
-        })).toBeCloseTo(0.75 + (Math.PI / 12), 6)
-        expect(replayCameraHeadingForPositionMode({
-            axisHeading:   0.75,
-            positionMode: REPLAY_CAMERA_POSITION_AHEAD,
-            headingOffset: -15,
-        })).toBeCloseTo(0.75 + Math.PI - (Math.PI / 12), 6)
+    it('points the camera back toward the trace from its configured azimuth', () => {
+        expect(replayCameraHeadingForAngle({axisHeading: 0.75, cameraAngle: 180}))
+            .toBeCloseTo(0.75, 6)
+        expect(replayCameraHeadingForAngle({axisHeading: 0.75, cameraAngle: 90}))
+            .toBeCloseTo(0.75 + (Math.PI * 1.5), 6)
+        expect(replayCameraHeadingForAngle({axisHeading: 0.75, cameraAngle: 0}))
+            .toBeCloseTo(0.75 + Math.PI, 6)
     })
 
     it('keeps the last heading when the requested change stays within hysteresis', () => {

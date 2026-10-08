@@ -9,6 +9,14 @@ synchronized Replay drawer and map editor remains TODO.
 
 Date: 2026-08-05
 
+> The camera-position model and preparation interactions described below are
+> superseded by the current single-angle contract in
+> [Replay Camera Tracking and Temporary Pitch](../specs/replay-video/REPLAY_CAMERA_TRACKING_ZONES.md).
+> `cameraAngle` is the only persisted azimuth. Cesium navigation during
+> preparation does not edit it; dragging the camera icon does. The remaining
+> TODO here concerns start-camera and clip continuity, range ownership, and
+> related editor lifecycle work.
+
 ## 1. Purpose
 
 Improve the beginning of Journey Replay video playback by making the replay
@@ -25,19 +33,19 @@ conflict resolution.
 
 ### 2.1 Replay camera settings
 
-The normalized replay camera currently contains:
+The normalized replay camera contains one `cameraAngle`, measured from the
+route tangent (`0°` along the trace, positive to the right, `±180°` behind), and
+the camera always looks back toward the replay anchor. Older `positionMode`,
+`heading`, and `headingOffset` values are migrated during normalization. It
+also contains:
 
-- `positionMode`: `system`, `behind`, or `ahead`;
-- `heading` for `system` mode;
-- `headingOffset` for `behind` and `ahead` modes;
 - `pitch`;
 - one `altitude` value interpreted as absolute altitude or ground offset;
 - camera behaviour capabilities and sensitivities;
 - hysteresis tracking settings.
 
-The renderer-independent pose resolver already derives a camera pose from a
-replay sample and the selected position mode. It can therefore provide the
-foundation for an anchored start camera editor.
+The renderer-independent pose resolver derives the camera pose from a replay
+sample and the route-relative camera angle.
 
 ### 2.2 Start sequence
 
@@ -58,9 +66,9 @@ started and allows a start clip and the replay camera to use different poses.
 
 ### 2.3 Drawer and map synchronization
 
-The Replay drawer writes both the persisted replay settings and the runtime
-replay store. Cesium camera interactions can also read the live camera and
-write both values back.
+The Replay drawer and camera guide write normalized settings to the persisted
+replay configuration and runtime store. During preparation, Cesium navigation
+does not write those settings back.
 
 The current bridge uses several transient guards and timers:
 
@@ -87,10 +95,18 @@ journey when the existing replay camera behaviour enables it.
 Zoom is also indirect. The camera range is derived from camera altitude and
 pitch, so changing the apparent zoom is coupled to the altitude model.
 
-When `positionMode` is `behind` or `ahead`, manual heading changes from the
-Cesium camera are not persisted as a direct heading. The current bridge only
-persists heading for `system` mode, which prevents reliable manual adjustment
-of the angle relative to the trace axis.
+During preparation, the camera guide cone and camera icon use the current Cesium
+projection so the cone remains anchored to the route departure as the view changes.
+The simulated departure trace is pseudo-clamped: each point uses sampled terrain
+height and is reprojected whenever Cesium's view or frustum changes, keeping the
+DOM line aligned to terrain. The trace, departure marker, and activity icon ease
+to their new positions over a short animation. A Cesium camera-orientation
+change refreshes the guide projection so its camera icon remains aligned to the
+trace at the unchanged `cameraAngle`. Cesium camera events do not write Replay
+settings. Dragging the camera icon is the explicit map interaction for changing
+`cameraAngle`; the cone tip changes camera height. During preparation, the route
+arrow resizes the displayed source-trace window from 60 to 1,200 metres, and the
+guide is hidden if either route endpoint leaves the viewport or is terrain-occluded.
 
 ## 3. Product contract
 
@@ -113,16 +129,15 @@ current Cesium camera position.
 When replay start camera editing is active:
 
 1. the camera is focused on the replay start anchor;
-2. `behind` and `ahead` remain respected;
+2. the configured route-relative `cameraAngle` remains respected;
 3. the user can change heading, pitch, and zoom/range;
-4. the user can change the heading offset relative to the trace axis;
+4. the user can change the camera azimuth relative to the trace axis;
 5. the anchor remains fixed;
-6. map panning or any interaction that changes the anchor is rejected or
-   converted into a heading, pitch, or range change;
+6. map panning and zooming remain Cesium navigation and do not change the
+   camera guide or persisted camera settings;
 7. the drawer and the map immediately display the same normalized values.
 
-The editor must not silently turn a manual `behind` or `ahead` adjustment into
-`system` mode.
+The editor must not infer a camera-angle edit from incidental Cesium navigation.
 
 ### 3.3 Automatic replay ownership
 
@@ -152,8 +167,7 @@ start pose.
 Every start clip must:
 
 - keep the replay start anchor as its geographic target;
-- preserve the replay camera's `behind`, `ahead`, or `system` positioning;
-- preserve the replay camera's trace-relative heading offset, pitch, and range
+- preserve the replay camera's route-relative `cameraAngle`, pitch, and range
   at the effective replay endpoint;
 - use clip parameters only for intermediate camera values or explicit clip
   effects;
@@ -212,9 +226,7 @@ Extend `ui.replay.camera` with an explicit persisted range value:
 
 ```js
 {
-  positionMode: 'behind',
-  heading: 0,
-  headingOffset: 20,
+  cameraAngle: 160,
   pitch: -65,
   roll: 0,
   range: 1200,
@@ -291,24 +303,18 @@ Programmatic `setView` calls must carry a suppression transaction or revision
 so their resulting Cesium `changed` event cannot be interpreted as a new user
 edit.
 
-### 5.2 User interaction extraction
+### 5.2 User interaction ownership
 
-After an authorized map interaction completes, the bridge must extract:
-
-- heading relative to the local replay anchor frame;
-- pitch;
-- range/zoom;
-- heading offset when `behind` or `ahead` is active.
-
-It must not extract a new geographic target or roll from the live camera. The
-existing effective roll must be preserved.
+Cesium navigation during preparation changes only the preview map view. It
+must not be extracted into Replay camera settings. The camera icon is the
+explicit map control for `cameraAngle`; the cone tip controls camera height.
+The drawer's camera controls update the same normalized settings directly.
 
 ### 5.3 Drawer behaviour
 
 The drawer should expose the same canonical values as the map editor:
 
-- position mode;
-- angle relative to trace axis for `behind` and `ahead`;
+- the single angle relative to the route tangent;
 - pitch;
 - zoom/range;
 - altitude mode only where it remains meaningful for the product.
@@ -387,8 +393,7 @@ playback owns the camera, unless the explicit editor mode is active.
 - Keep the direct roll editor control absent while retaining roll in the data
   model.
 - Add a pure resolver for the replay start anchor and pose.
-- Add tests for `system`, `behind`, and `ahead`.
-- Add tests proving that heading offset is relative to the trace axis.
+- Add tests proving that `cameraAngle` is relative to the route tangent.
 
 ### Phase 2: Introduce the canonical camera command
 
@@ -401,7 +406,8 @@ playback owns the camera, unless the explicit editor mode is active.
 
 - Add explicit start-camera edit mode.
 - Lock the replay start target.
-- Extract heading, pitch, and zoom/range from authorized map interactions.
+- Keep Cesium navigation independent from Replay settings during preparation.
+- Allow the camera icon to edit azimuth and the cone tip to edit height.
 - Preserve the effective roll resolved from the persisted camera and start clips.
 - Prevent programmatic Cesium events from creating feedback updates.
 
@@ -409,7 +415,7 @@ playback owns the camera, unless the explicit editor mode is active.
 
 - Route all drawer controls through the canonical command.
 - Add the start-anchor focus action.
-- Add heading, pitch, and zoom controls consistent with the map editor.
+- Add angle, pitch, and zoom controls consistent with the map editor.
 - Do not add a standalone roll control.
 - Preserve focused text input during external updates.
 
@@ -433,8 +439,7 @@ playback owns the camera, unless the explicit editor mode is active.
 
 ### Unit tests
 
-- Start pose resolution for all position modes.
-- Heading offset and trace-axis angle conversion.
+- Start pose resolution for the route-relative camera angle.
 - Pitch, roll, and range/zoom normalization, including default roll inheritance.
 - Anchored camera frame reconstruction.
 - Start clip endpoint resolution.
@@ -446,7 +451,8 @@ playback owns the camera, unless the explicit editor mode is active.
 - Map edits update the drawer state.
 - Map pan cannot move the replay start anchor.
 - Focused drawer text survives external Cesium notifications.
-- `Behind` and `Ahead` preserve their mode when heading is edited.
+- Cesium pan and zoom do not change the Replay camera angle during preparation.
+- Dragging the camera icon updates the angle; dragging the cone does not.
 
 ### Integration tests
 
@@ -468,7 +474,7 @@ playback owns the camera, unless the explicit editor mode is active.
 - The replay start roll defaults to `0` and has no direct editor field.
 - A non-zero roll produced by a start clip is preserved and used by the first
   replay frame.
-- `Behind` and `Ahead` remain usable and the trace-relative angle is editable.
+- Any route-relative camera angle is editable without selecting a position mode.
 - Drawer and map show the same camera values after every committed edit.
 - Start clips visibly adapt to the configured replay start camera.
 - The first replay frame is visually continuous with the end of the start clips.

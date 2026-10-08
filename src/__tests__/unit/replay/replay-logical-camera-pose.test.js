@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -37,7 +37,7 @@ describe('Journey replay logical camera pose', () => {
                 },
             },
             cameraSettings: {
-                positionMode: 'ahead',
+                cameraAngle: 0,
                 altitudeMode: 'ground-offset',
                 altitude:     300,
                 pitch:        -45,
@@ -52,7 +52,7 @@ describe('Journey replay logical camera pose', () => {
         expect(pose.logical).toBe(true)
     })
 
-    it('applies the configured Basic camera angle relative to the trace heading', () => {
+    it('places a positive camera azimuth to the right of the route and faces back toward it', () => {
         const axisHeading = Math.PI / 2
         const pose = resolveJourneyReplayLogicalCameraPose({
             sample: {
@@ -63,8 +63,7 @@ describe('Journey replay logical camera pose', () => {
             },
             axisHeading,
             cameraSettings: {
-                positionMode: 'behind',
-                headingOffset: 30,
+                cameraAngle: 90,
                 altitudeMode: 'constant',
                 altitude: 1000,
                 pitch: -60,
@@ -72,10 +71,10 @@ describe('Journey replay logical camera pose', () => {
             markerSettings: {},
         })
 
-        expect(pose.heading).toBeCloseTo(axisHeading + (Math.PI / 6))
+        expect(pose.heading).toBeCloseTo(0)
     })
 
-    it('uses the predicted path heading for export Navigation system mode', () => {
+    it('uses the predicted path tangent when resolving a straight-behind camera angle', () => {
         const pose = resolveJourneyReplayLogicalCameraPose({
             sample: {
                 progress: 0.5,
@@ -84,15 +83,13 @@ describe('Journey replay logical camera pose', () => {
                 altitude: 120,
             },
             cameraSettings: {
-                positionMode: 'system',
-                heading:      0,
+                cameraAngle: 180,
                 altitudeMode: 'constant',
                 altitude:     1000,
                 pitch:        -60,
             },
             markerSettings: {mode: 'navigation'},
             axisHeading: 0.8,
-            useAxisHeadingForSystem: true,
         })
 
         expect(pose.heading).toBeCloseTo(0.8, 6)
@@ -201,7 +198,7 @@ describe('Journey replay logical camera pose', () => {
         }
         const settings = {
             ...defaults,
-            positionMode: 'ahead',
+            cameraAngle: 90,
             altitudeMode: 'constant',
             altitude: 1000,
             pitch: -45,

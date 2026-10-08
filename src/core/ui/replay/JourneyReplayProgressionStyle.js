@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -49,8 +49,8 @@ export const REPLAY_CAMERA_POSITION_SYSTEM = 'system'
 export const REPLAY_CAMERA_PREVIEW_MODE_TERRAIN = 'terrain'
 export const REPLAY_CAMERA_HEADING_OFFSET_MIN = -180
 export const REPLAY_CAMERA_HEADING_OFFSET_MAX = 180
-const REPLAY_CAMERA_HEADING_MIN = -180
-const REPLAY_CAMERA_HEADING_MAX = 180
+export const REPLAY_CAMERA_ANGLE_MIN = -180
+export const REPLAY_CAMERA_ANGLE_MAX = 180
 const REPLAY_CAMERA_KEYBOARD_STEP_DEGREES = 1
 export const REPLAY_CAMERA_PRESET_CUSTOM = 'custom'
 export const REPLAY_CAMERA_PRESET_DEFAULT = 'default'
@@ -132,13 +132,12 @@ export const DEFAULT_REPLAY_MARKER = {
 }
 
 export const DEFAULT_REPLAY_CAMERA = {
-    positionMode:  REPLAY_CAMERA_POSITION_SYSTEM,
     altitudeMode:  REPLAY_CAMERA_ALTITUDE_CONSTANT,
     // Single persisted altitude value.
     // In fixed mode it is an absolute altitude; in ground-offset mode it is
     // the offset above the rendered replay marker.
     altitude:      1200,
-    headingOffset: 0,
+    cameraAngle:  180,
     debug:         false,
     canDrift:      true,
     canFixHiddenMarker: true,
@@ -151,7 +150,6 @@ export const DEFAULT_REPLAY_CAMERA = {
         tilePreloadHorizonMs: 1000,
     },
     pitch:         -65,
-    heading:       0,
     hysteresis:    {
         // Keep the beta.2 tolerance envelope: a wide inner zone prevents
         // small route changes from starting a new camera correction.
@@ -263,6 +261,15 @@ const wrappedReplayAngle = (currentAngle, delta, minimum, maximum) => {
         : nextAngle < minimum
             ? maximum
             : nextAngle
+}
+
+const wrappedReplayCameraAngle = value => {
+    const angle = finiteNumber(value)
+    if (angle === null) {
+        return DEFAULT_REPLAY_CAMERA.cameraAngle
+    }
+    const wrapped = ((angle + 180) % 360 + 360) % 360 - 180
+    return wrapped === -180 && angle > 0 ? 180 : wrapped
 }
 
 const finiteNumber = value => {
@@ -417,18 +424,33 @@ export const normalizeJourneyReplayMarker = (marker = {}) => ({
  * - `zone`: outer viewport crop rectangle, expressed as normalized top/left/width/height.
  * - `easing`: smoothness of the recenter flight.
  *
- * `headingOffset` is used by the Behind/Ahead camera modes to bias the nominal trace-facing heading.
+ * `cameraAngle` is the camera's position azimuth relative to the route tangent.
+ * The camera view always faces back toward the replay anchor.
  * `canDrift`, `canFixHiddenMarker`, and `canRoll` gate the corresponding
  * replay camera behaviours while keeping them enabled by default. Sensitivity
  * values scale the corresponding motion without changing the default output.
  *
  */
 export const normalizeJourneyReplayCamera = (camera = {}) => ({
-    positionMode: camera?.positionMode === REPLAY_CAMERA_POSITION_AHEAD
-                  ? REPLAY_CAMERA_POSITION_AHEAD
-                  : camera?.positionMode === REPLAY_CAMERA_POSITION_BEHIND
-                    ? REPLAY_CAMERA_POSITION_BEHIND
-                    : REPLAY_CAMERA_POSITION_SYSTEM,
+    cameraAngle: wrappedReplayCameraAngle(
+        finiteNumber(camera?.cameraAngle) !== null
+            ? camera.cameraAngle
+            : camera?.positionMode === REPLAY_CAMERA_POSITION_AHEAD
+                ? clampJourneyReplayNumber(
+                    camera?.headingOffset,
+                    0,
+                    REPLAY_CAMERA_HEADING_OFFSET_MIN,
+                    REPLAY_CAMERA_HEADING_OFFSET_MAX,
+                )
+                : camera?.positionMode === REPLAY_CAMERA_POSITION_BEHIND
+                    ? 180 + clampJourneyReplayNumber(
+                        camera?.headingOffset,
+                        0,
+                        REPLAY_CAMERA_HEADING_OFFSET_MIN,
+                        REPLAY_CAMERA_HEADING_OFFSET_MAX,
+                    )
+                    : DEFAULT_REPLAY_CAMERA.cameraAngle,
+    ),
     altitudeMode: camera?.altitudeMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET
                   ? REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET
                   : REPLAY_CAMERA_ALTITUDE_CONSTANT,
@@ -440,13 +462,6 @@ export const normalizeJourneyReplayCamera = (camera = {}) => ({
         true,
     ),
     pitch:        clampJourneyReplayNumber(camera?.pitch, DEFAULT_REPLAY_CAMERA.pitch, -89, -5, true),
-    heading:      clampJourneyReplayNumber(camera?.heading, DEFAULT_REPLAY_CAMERA.heading, -180, 180),
-    headingOffset: clampJourneyReplayNumber(
-        camera?.headingOffset,
-        DEFAULT_REPLAY_CAMERA.headingOffset,
-        REPLAY_CAMERA_HEADING_OFFSET_MIN,
-        REPLAY_CAMERA_HEADING_OFFSET_MAX,
-    ),
     debug:         camera?.debug === true,
     canDrift:      camera?.canDrift !== false,
     canFixHiddenMarker: camera?.canFixHiddenMarker !== false,
@@ -506,8 +521,7 @@ export const normalizeJourneyReplayCamera = (camera = {}) => ({
 /**
  * Apply one arrow-key adjustment to replay camera settings.
  *
- * Up/down change only the heading. Left/right change only the displayed
- * Ahead/Behind angle, which uses the inverse persisted offset convention.
+ * Left/right change the camera position azimuth. Up/down adjust camera pitch.
  *
  * @param {Object} camera - Current replay camera settings.
  * @param {string} key - Browser keyboard key.
@@ -518,42 +532,16 @@ export const replayCameraSettingsFromArrowKey = (camera, key) => {
     const next = {...current}
     switch (key) {
         case 'ArrowUp':
-            next.heading = wrappedReplayAngle(
-                current.heading,
-                REPLAY_CAMERA_KEYBOARD_STEP_DEGREES,
-                REPLAY_CAMERA_HEADING_MIN,
-                REPLAY_CAMERA_HEADING_MAX,
-            )
+            next.pitch = clampJourneyReplayNumber(current.pitch + REPLAY_CAMERA_KEYBOARD_STEP_DEGREES, current.pitch, -89, -5)
             break
         case 'ArrowDown':
-            next.heading = wrappedReplayAngle(
-                current.heading,
-                -REPLAY_CAMERA_KEYBOARD_STEP_DEGREES,
-                REPLAY_CAMERA_HEADING_MIN,
-                REPLAY_CAMERA_HEADING_MAX,
-            )
+            next.pitch = clampJourneyReplayNumber(current.pitch - REPLAY_CAMERA_KEYBOARD_STEP_DEGREES, current.pitch, -89, -5)
             break
         case 'ArrowRight':
-            if (current.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
-                return null
-            }
-            next.headingOffset = wrappedReplayAngle(
-                current.headingOffset,
-                -REPLAY_CAMERA_KEYBOARD_STEP_DEGREES,
-                REPLAY_CAMERA_HEADING_OFFSET_MIN,
-                REPLAY_CAMERA_HEADING_OFFSET_MAX,
-            )
+            next.cameraAngle = wrappedReplayAngle(current.cameraAngle, REPLAY_CAMERA_KEYBOARD_STEP_DEGREES, REPLAY_CAMERA_ANGLE_MIN, REPLAY_CAMERA_ANGLE_MAX)
             break
         case 'ArrowLeft':
-            if (current.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
-                return null
-            }
-            next.headingOffset = wrappedReplayAngle(
-                current.headingOffset,
-                REPLAY_CAMERA_KEYBOARD_STEP_DEGREES,
-                REPLAY_CAMERA_HEADING_OFFSET_MIN,
-                REPLAY_CAMERA_HEADING_OFFSET_MAX,
-            )
+            next.cameraAngle = wrappedReplayAngle(current.cameraAngle, -REPLAY_CAMERA_KEYBOARD_STEP_DEGREES, REPLAY_CAMERA_ANGLE_MIN, REPLAY_CAMERA_ANGLE_MAX)
             break
         default:
             return null
@@ -676,7 +664,6 @@ const resolveReplaySimpleSettingsForRuntime = ({journey, user} = {}) => {
         },
         camera: {
             ...defaultJourneyReplayCameraStyle(),
-            positionMode: REPLAY_CAMERA_POSITION_BEHIND,
             altitudeMode: 'constant',
             debug: false,
         },
@@ -703,16 +690,25 @@ const resolveReplaySimpleSettingsForRuntime = ({journey, user} = {}) => {
             profileInfo: defaultJourneyReplayProfileInfoStyle(),
         },
     }
-    const camera = normalizeJourneyReplayCamera({
+    const cameraSettings = {
         ...product.camera,
         ...(user?.camera ?? {}),
         ...(journey?.camera ?? {}),
         altitudeMode: 'constant',
-        positionMode: REPLAY_CAMERA_POSITION_BEHIND,
         canDrift: false,
         canRoll: false,
         debug: false,
-    })
+    }
+    const hasUserAngle = user?.camera?.cameraAngle !== null
+        && user?.camera?.cameraAngle !== undefined
+        && Number.isFinite(Number(user.camera.cameraAngle))
+    const hasJourneyAngle = journey?.camera?.cameraAngle !== null
+        && journey?.camera?.cameraAngle !== undefined
+        && Number.isFinite(Number(journey.camera.cameraAngle))
+    if (!hasUserAngle && !hasJourneyAngle) {
+        cameraSettings.cameraAngle = undefined
+    }
+    const camera = normalizeJourneyReplayCamera(cameraSettings)
     const marker = normalizeJourneyReplayMarker({
         ...product.marker,
         ...(user?.marker ?? {}),

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,8 +19,6 @@
  */
 
 const REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET = 'ground-offset'
-const REPLAY_CAMERA_POSITION_AHEAD = 'ahead'
-const REPLAY_CAMERA_POSITION_SYSTEM = 'system'
 const SAFE_TOP_DOWN_PITCH = -(Math.PI / 2 - 0.0001)
 const MAX_REPLAY_CAMERA_ROLL = Math.PI / 4
 const MIN_REPLAY_ROLL_SPEED_METERS_PER_SECOND = 0.5
@@ -250,7 +248,6 @@ export const resolveJourneyReplayLogicalCameraRoll = ({sample = null, sampler = 
  *
  * @param {Object} options - Logical pose inputs.
  * @param {number|null} [options.axisHeading] - Canonical path heading in radians.
- * @param {boolean} [options.useAxisHeadingForSystem=false] - Let Navigation use the path heading in system position mode.
  * @returns {Object|null} A renderer-independent camera pose.
  */
 export const resolveJourneyReplayLogicalCameraPose = ({
@@ -260,7 +257,6 @@ export const resolveJourneyReplayLogicalCameraPose = ({
                                                            cameraSettings = null,
                                                            markerSettings = null,
                                                            axisHeading = null,
-                                                           useAxisHeadingForSystem = false,
                                                        } = {}) => {
     if (!sample || !cameraSettings) {
         return null
@@ -268,13 +264,9 @@ export const resolveJourneyReplayLogicalCameraPose = ({
 
     const anchorSample = markerPositionForSample(sample, markerSettings)
     const resolvedAxisHeading = finiteNumber(axisHeading) ?? pathHeadingForSample(sample)
-    const positionMode = cameraSettings.positionMode ?? REPLAY_CAMERA_POSITION_SYSTEM
-    const headingOffset = degreesToRadians(clamp(finiteNumber(cameraSettings.headingOffset) ?? 0, -180, 180)) ?? 0
-    const desiredHeading = positionMode === REPLAY_CAMERA_POSITION_SYSTEM
-                           ? useAxisHeadingForSystem && finiteNumber(axisHeading) !== null
-                               ? resolvedAxisHeading
-                               : degreesToRadians(cameraSettings.heading) ?? resolvedAxisHeading
-                           : (positionMode === REPLAY_CAMERA_POSITION_AHEAD ? resolvedAxisHeading + Math.PI : resolvedAxisHeading) + headingOffset
+    const cameraAngle = degreesToRadians(clamp(finiteNumber(cameraSettings.cameraAngle) ?? 180, -180, 180)) ?? Math.PI
+    const fullTurn = Math.PI * 2
+    const desiredHeading = ((resolvedAxisHeading + Math.PI + cameraAngle) % fullTurn + fullTurn) % fullTurn
     const normalizedPitch = finiteNumber(cameraSettings.pitch) ?? -65
     const pitch = normalizedPitch <= -89
                   ? SAFE_TOP_DOWN_PITCH

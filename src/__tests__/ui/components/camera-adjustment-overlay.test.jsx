@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -40,14 +40,13 @@ afterEach(() => {
 })
 
 describe('CameraAdjustmentOverlay', () => {
-    it('shares the camera metrics and renders the replay Behind angle', () => {
+    it('shares the camera metrics and renders the replay camera angle', () => {
         globalThis.lgs = {
             stores: {
                 replay: proxy({
                     userMode: 'expert',
                     camera: {
-                        headingOffset: -30,
-                        positionMode:  'behind',
+                        cameraAngle: -30,
                     },
                 }),
                 ui: {
@@ -71,18 +70,16 @@ describe('CameraAdjustmentOverlay', () => {
         expect(view.getByText('L12')).toBeTruthy()
         const angleMetric = view.getByLabelText('Replay camera angle')
         expect(angleMetric.textContent).toContain('30°')
-        expect([...angleMetric.children].map(element => element.tagName)).toEqual(['SPAN', 'STRONG', 'SPAN'])
+        expect([...angleMetric.children].map(element => element.tagName)).toEqual(['SPAN', 'STRONG'])
         expect(angleMetric.querySelector('[data-icon="video"]')).not.toBeNull()
-        const direction = view.container.querySelector('.camera-adjustment-angle-direction')
-        expect(direction?.dataset.direction).toBe('behind')
-        expect(direction?.dataset.icon).toBe('caret-up')
+        expect(view.container.querySelector('.camera-adjustment-angle-direction')).toBeNull()
     })
 
     it('hides the replay camera angle outside video preparation', () => {
         globalThis.lgs = {
             stores: {
                 replay: proxy({
-                    camera: {headingOffset: -30, positionMode: 'behind'},
+                    camera: {cameraAngle: -30},
                 }),
                 ui: {
                     video: proxy({editing: false}),
@@ -102,12 +99,12 @@ describe('CameraAdjustmentOverlay', () => {
         expect(view.queryByLabelText('Replay camera angle')).toBeNull()
     })
 
-    it('hides the replay camera angle in Basic Replay', () => {
+    it('shows the replay camera angle in Basic Replay preparation', () => {
         globalThis.lgs = {
             stores: {
                 replay: proxy({
                     userMode: 'basic',
-                    camera: {headingOffset: -30, positionMode: 'behind'},
+                    camera: {cameraAngle: -30},
                 }),
                 ui: {
                     video: proxy({editing: true}),
@@ -124,7 +121,7 @@ describe('CameraAdjustmentOverlay', () => {
             />,
         )
 
-        expect(view.queryByLabelText('Replay camera angle')).toBeNull()
+        expect(view.getByLabelText('Replay camera angle').textContent).toContain('-30°')
     })
 
     it('hides the Replay camera angle metric during linked Replay dry run', () => {
@@ -134,7 +131,7 @@ describe('CameraAdjustmentOverlay', () => {
                     active: true,
                     recordingSync: true,
                     userMode: 'expert',
-                    camera: {headingOffset: -30, positionMode: 'behind'},
+                    camera: {cameraAngle: -30},
                 }),
                 ui: {
                     video: proxy({
@@ -161,14 +158,13 @@ describe('CameraAdjustmentOverlay', () => {
         expect(view.queryByLabelText('Replay camera angle')).toBeNull()
     })
 
-    it('renders an upward solid chevron for the replay Ahead angle', () => {
+    it('does not display a separate Ahead or Behind direction', () => {
         globalThis.lgs = {
             stores: {
                 replay: proxy({
                     userMode: 'expert',
                     camera: {
-                        headingOffset: 30,
-                        positionMode:  'ahead',
+                        cameraAngle: 30,
                     },
                 }),
                 ui: {
@@ -186,9 +182,8 @@ describe('CameraAdjustmentOverlay', () => {
             />,
         )
 
-        const direction = view.container.querySelector('.camera-adjustment-angle-direction')
-        expect(direction?.dataset.direction).toBe('ahead')
-        expect(direction?.dataset.icon).toBe('caret-down')
+        expect(view.getByLabelText('Replay camera angle').textContent).toContain('30°')
+        expect(view.container.querySelector('.camera-adjustment-angle-direction')).toBeNull()
     })
 
     it('shows the widget after any camera change', async () => {
@@ -209,7 +204,7 @@ describe('CameraAdjustmentOverlay', () => {
             scene: {},
             settings: {unitSystem: proxy({current: 'metric'})},
             stores: {
-                replay: proxy({camera: {headingOffset: 0, positionMode: 'system'}}),
+                replay: proxy({camera: {cameraAngle: 180}}),
                 ui: {video: proxy({preRecording: false})},
             },
         }
@@ -250,7 +245,7 @@ describe('CameraAdjustmentOverlay', () => {
             scene: {},
             settings: {unitSystem: proxy({current: 'metric'})},
             stores: {
-                replay: proxy({camera: {headingOffset: 0, positionMode: 'system'}}),
+                replay: proxy({camera: {cameraAngle: 180}}),
                 ui: {video: proxy({preRecording: false})},
             },
         }

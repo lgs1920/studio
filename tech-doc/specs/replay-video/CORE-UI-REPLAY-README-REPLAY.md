@@ -6,8 +6,11 @@ Simple is the guided preparation mode: it applies the compact Simple camera
 settings and a restricted control/widget policy. Expert exposes the additional
 camera and clip controls. Both modes use the active mode's camera settings for
 preparation, playback, and export. Camera height and pitch determine the
-target-relative range (the visible zoom); heading and heading offset determine
-the horizontal angle. Start and stop clips may add their own camera movement.
+target-relative range (the visible zoom); one `cameraAngle` determines the
+camera azimuth relative to the route tangent. `0°` is along the trace, `+90°`
+is to its right, `-90°` is to its left, and `±180°` is behind it. The camera
+always looks back toward the replay anchor. Start and stop clips may add their
+own camera movement.
 The MP4 flow draws each frame in the main Studio Cesium viewer, then copies its
 canvas into the video composer with the selected overlays.
 
@@ -355,10 +358,33 @@ no pitch correction owns the frame, it applies the selected tracking behavior:
 - Dynamic selects a normal or extended future sample from the current marker's
   Z1/Z2 classification and applies that resolved pose on every logical update.
 
-Both modes respect the selected `Behind`, `Ahead`, or `System` position. The
-`Behind` and `Ahead` headings include the configured heading offset. Turn drift
-uses the same limits in both modes; the active logical path applies its heading
-component and speed-dependent roll (lateral displacement remains diagnostic).
+Both modes use the same route-relative `cameraAngle`; there are no separate
+`Behind`, `Ahead`, or `System` position modes. Turn drift uses the same limits
+in both modes; the active logical path applies its heading component and
+speed-dependent roll (lateral displacement remains diagnostic).
+
+### Replay camera preparation controls
+
+While the Replay drawer or video editor is preparing a replay, the map guide
+updates the guide cone and camera icon from the current Cesium projection so the
+cone remains anchored to the route departure while the map is panned or zoomed.
+This does not change the configured camera angle. The simulated departure trace is
+pseudo-clamped: each point uses sampled terrain height and is reprojected when
+Cesium's view or frustum changes, so the DOM line stays aligned to the terrain.
+The trace, departure marker, and activity icon ease to their new positions over
+a short animation. Changing the Cesium camera orientation refreshes the guide
+projection so the camera icon stays aligned to the route at the same
+`cameraAngle`; this does not change the saved angle. The camera icon is the only azimuth drag handle;
+dragging the cone surface does not change the angle, and dragging the cone tip
+changes camera height. The Expert drawer angle control edits the same
+`cameraAngle` value. In preparation, dragging the route arrow shortens or
+extends the displayed source-trace window from 60 to 1,200 metres, and the route
+is recalculated from the journey coordinates. The guide and simulation are
+hidden if either route endpoint is outside the viewport or terrain-occluded.
+
+In Expert preparation, the arrow keys adjust camera angle and pitch by one
+degree: `ArrowLeft`/`ArrowRight` change azimuth, while `ArrowUp`/`ArrowDown`
+change pitch. Holding Shift disables these shortcuts.
 
 The camera capability flags are normalized with `true` defaults and gate their
 features independently: `canDrift` enables turn drift, `canFixHiddenMarker`

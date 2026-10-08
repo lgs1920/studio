@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -336,6 +336,22 @@ export const isJourneyReplayDryRunActive = (
 
     return replayLinked && isJourneyReplayCameraActive(replay) && !captureActive
 }
+
+/**
+ * Return whether video editing is preparing a Replay instead of playing it.
+ *
+ * Cesium navigation during preparation must not write camera settings back to
+ * the Replay configuration. Explicit Replay controls and the camera guide own
+ * those edits.
+ *
+ * @param {Object|null} [replay=replayStore()] - Replay runtime state.
+ * @param {Object|null} [video=globalThis.lgs.stores.ui.video] - Video editing state.
+ * @returns {boolean} Whether Replay camera settings are being prepared.
+ */
+export const isJourneyReplayCameraPreparationActive = (
+    replay = replayStore(),
+    video = globalThis.lgs?.stores?.ui?.video,
+) => video?.editing === true && !isJourneyReplayDryRunActive(replay, video)
 
 /**
  * Returns whether the replay trace should be visible in the live scene.

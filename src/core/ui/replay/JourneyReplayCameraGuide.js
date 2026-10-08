@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -28,11 +28,10 @@ import {TrackUtils} from '@Utils/cesium/TrackUtils'
 import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
 import {finiteNumber, replayStore} from './JourneyReplayRuntime'
 import {
-    clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForPositionMode, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
+    clamp, lerp, hasFiniteLonLat, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayCameraHeadingForAngle, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
 } from './JourneyReplayCameraMath'
 import {
-    REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET, REPLAY_CAMERA_POSITION_AHEAD,
-    REPLAY_CAMERA_HEADING_OFFSET_MAX, REPLAY_CAMERA_HEADING_OFFSET_MIN, REPLAY_CAMERA_POSITION_SYSTEM,
+    REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
     getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker,
 } from './JourneyReplayProgressionStyle'
@@ -830,35 +829,16 @@ export const cameraViewForSample = (mode, {
                           : normalizedPitch <= -89
                             ? SAFE_TOP_DOWN_PITCH
                             : degreesToRadians(normalizedPitch)
-            let desiredHeading
-            if (collision && cameraSettings.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
-                desiredHeading = call.headingFromPositionProperty(progress)
-            }
-            else if (cameraSettings.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
-                if (Number.isFinite(cameraSettings?.heading)) {
-                    desiredHeading = degreesToRadians(cameraSettings.heading)
-                }
-                else {
-                    desiredHeading = finiteNumber(previousHeading)
-                        ?? finiteNumber((call.cesiumViewer?.() ?? globalThis.lgs?.viewer)?.camera?.heading)
-                        ?? 0
-                }
-            }
-            else {
-                desiredHeading = replayCameraHeadingForPositionMode({
-                                                                        axisHeading:  call.headingFromPositionProperty(progress),
-                                                                        positionMode: cameraSettings.positionMode,
-                                                                        headingOffset: cameraSettings.headingOffset,
-                                                                    })
-            }
+            const desiredHeading = replayCameraHeadingForAngle({
+                axisHeading: call.headingFromPositionProperty(progress),
+                cameraAngle: cameraSettings.cameraAngle,
+            })
             const heading = immediateSource
                             ? desiredHeading
                             : replayCameraHeadingWithHysteresis({
                                                                         previousHeading,
                                                                         nextHeading: desiredHeading,
-                                                                        threshold:   cameraSettings.positionMode === REPLAY_CAMERA_POSITION_SYSTEM
-                                                                                     ? CAMERA_HEADING_HYSTERESIS_RADIANS
-                                                                                     : CAMERA_HEADING_MIN_CHANGE_RADIANS,
+                                                                        threshold:   CAMERA_HEADING_MIN_CHANGE_RADIANS,
                                                                     })
             const smoothHeading = immediateSource
                                   ? heading

@@ -18,10 +18,23 @@ separate replay engines. Simple applies a restricted preparation and widget
 policy and uses the guided camera configuration; Expert exposes the additional
 camera, clip, and replay controls. Both modes use the active mode's normalized
 camera settings for interactive preparation/playback and the same deterministic
-Replay export path. Camera heading/offset sets the horizontal angle, pitch sets
-the viewing angle, and configured camera height determines the target-relative
-range used as zoom. Start/stop clips can override the camera for their own
-phases.
+Replay export path. Pitch sets the viewing angle and configured camera height
+determines the target-relative range used as zoom. The single `cameraAngle` is
+measured from the route tangent:
+`0°` is along the trace, `+90°` right, `-90°` left, and `±180°` behind. The
+camera always looks back toward the replay anchor. During Simple or Expert
+preparation, the cone and camera icon use the current Cesium projection so the
+cone remains anchored to the route departure as the map moves. The simulated
+departure trace uses sampled terrain height and is reprojected whenever Cesium's
+view or frustum changes, keeping it aligned to terrain. The trace, departure marker, and activity icon ease to their new
+positions over a short animation. Changing the Cesium camera orientation also
+refreshes the guide projection to keep the camera icon aligned to the trace
+without changing `cameraAngle`; Cesium navigation cannot write camera settings.
+Only dragging the camera icon adjusts its azimuth, while the cone tip adjusts
+height. During preparation, dragging the simulated-route arrow changes the
+visible source-trace distance from 60 to 1,200 metres. The complete DOM guide is
+hidden while either route endpoint is outside the viewport or terrain-occluded.
+Start/stop clips can override the camera for their own phases.
 
 Simple and Expert Replay recording use the deferred MP4 exporter, publish
 deterministic frame progress to the Replay monitor, and hand the completed MP4

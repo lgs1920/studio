@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2024-04-17
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -772,11 +772,11 @@ export const JourneySettings = () => {
                                             <WaInput
                                                 appearance="filled"
                                                 type="number"
-                                                label="Orientation"
-                                                value={simpleReplay.camera.heading}
+                                                label="Camera angle"
+                                                value={simpleReplay.camera.cameraAngle}
                                                 min={-180}
                                                 max={180}
-                                                onChange={event => setSimpleReplayCamera('heading', Number(event.target.value))}
+                                                onChange={event => setSimpleReplayCamera('cameraAngle', Number(event.target.value))}
                                             />
                                             <WaInput
                                                 appearance="filled"

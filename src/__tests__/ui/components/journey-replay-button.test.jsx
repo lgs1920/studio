@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-28
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -92,17 +92,14 @@ describe('JourneyReplayButton synchronized video entry point', () => {
         }))
         expect(globalThis.lgs.stores.ui.video.editing).toBe(true)
         expect(globalThis.lgs.settings.ui.replay.simple.camera).toMatchObject({
-            headingOffset: -24,
+            cameraAngle: 156,
             pitch: -48,
-            positionMode: 'behind',
         })
         expect(globalThis.lgs.settings.ui.replay.camera).toMatchObject({
-            headingOffset: -24,
-            positionMode: 'behind',
+            cameraAngle: 156,
         })
         expect(globalThis.lgs.stores.replay.camera).toMatchObject({
-            headingOffset: -24,
-            positionMode: 'behind',
+            cameraAngle: 156,
         })
         expect(globalThis.lgs.settings.ui.replay.simple.camera.debug).toBe(false)
         expect(globalThis.lgs.stores.replay.simplePreparationActive).toBe(true)
@@ -116,7 +113,7 @@ describe('JourneyReplayButton synchronized video entry point', () => {
         expect(globalThis.lgs.stores.replay.userMode).toBe('basic')
     })
 
-    it('forces a journey-relative camera position when entering Expert Replay', () => {
+    it('migrates a legacy Simple camera to one angle when entering Expert Replay', () => {
         globalThis.lgs.theJourney.replay = {
             simple: {camera: {positionMode: 'system'}},
         }
@@ -131,9 +128,9 @@ describe('JourneyReplayButton synchronized video entry point', () => {
 
         fireEvent.click(screen.getByRole('button', {name: 'Expert Replay'}))
 
-        expect(globalThis.lgs.theJourney.replay.expert.camera.positionMode).toBe('behind')
-        expect(globalThis.lgs.settings.ui.replay.camera.positionMode).toBe('behind')
-        expect(globalThis.lgs.stores.replay.camera.positionMode).toBe('behind')
+        expect(globalThis.lgs.theJourney.replay.expert.camera.cameraAngle).toBe(180)
+        expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(180)
+        expect(globalThis.lgs.stores.replay.camera.cameraAngle).toBe(180)
         expect(globalThis.lgs.stores.replay.userMode).toBe('expert')
     })
 
@@ -169,8 +166,8 @@ describe('JourneyReplayButton synchronized video entry point', () => {
 
         fireEvent.click(screen.getByRole('button', {name: 'Expert Replay'}))
 
-        expect(globalThis.lgs.settings.ui.replay.camera).toMatchObject(expertCamera)
-        expect(globalThis.lgs.stores.replay.camera).toMatchObject(expertCamera)
+        expect(globalThis.lgs.settings.ui.replay.camera).toMatchObject({debug: true, cameraAngle: 0})
+        expect(globalThis.lgs.stores.replay.camera).toMatchObject({debug: true, cameraAngle: 0})
         expect(globalThis.lgs.settings.ui.replay.userMode).toBe('expert')
         expect(globalThis.lgs.stores.replay.userMode).toBe('expert')
         expect(globalThis.lgs.settings.ui.replay.recordingSync).toBe(true)

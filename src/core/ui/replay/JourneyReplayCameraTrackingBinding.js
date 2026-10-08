@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-03
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -298,7 +298,6 @@ const replayCameraViewForTrackingSample = (mode, {
             cameraSettings,
             markerSettings,
             axisHeading,
-            useAxisHeadingForSystem: markerSettings?.mode === REPLAY_MARKER_MODE_NAVIGATION,
         })
         const drift = cameraSettings.canDrift !== false
             && typeof call.replayTurnDriftForProgress === 'function'

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,7 @@
 import { REPLAY_DRAWER }                                           from '@Core/constants'
 import { createJourneyReplayClipInstance }                                from '@Core/ui/replay/JourneyReplayClips'
 import {
-    replayAngularDelta, replayCameraHeadingForPositionMode, replayCameraHeadingWithHysteresis,
+    replayAngularDelta, replayCameraHeadingWithHysteresis,
     replayCameraRangeFromPitch, replayCameraRecenterDuration, replayCameraRecenterHeight,
     replayCameraRecenterHorizontalDistance, replayHeadingEasingFactor, replayHeadingFromLocalAxisAngle,
     replayIsWindowPointOutsideToleranceZone, replayPitchLookaheadFactor, JourneyReplayMode, replayTargetSampleForClip,
@@ -32,7 +32,7 @@ import {
 }                                                                      from '@Core/ui/replay/JourneyReplayPlaybackController'
 import {
     defaultJourneyReplaySettings as defaultJourneyReplaySettingsBase, REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
-    REPLAY_CAMERA_HEADING_OFFSET_MAX, REPLAY_CAMERA_POSITION_AHEAD, REPLAY_CAMERA_POSITION_BEHIND, REPLAY_CAMERA_POSITION_SYSTEM,
+    REPLAY_CAMERA_POSITION_SYSTEM,
     REPLAY_CAMERA_PRESET_DEFAULT, REPLAY_CAMERA_PRESET_ULTRA_SMOOTH,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
     getJourneyReplayCameraPresetKey, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker, normalizeJourneyReplaySettings,
@@ -458,10 +458,10 @@ describe('replay camera tracking', () => {
             cameraChanged()
             moveEnd?.()
 
-            expect(globalThis.lgs.settings.ui.replay.camera.heading).toBeCloseTo(80, 0)
+            expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBeCloseTo(-134, 0)
             expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBeCloseTo(-45, 0)
             expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(3000)
-            expect(globalThis.lgs.stores.replay.camera.heading).toBeCloseTo(80, 0)
+            expect(globalThis.lgs.stores.replay.camera.cameraAngle).toBeCloseTo(-134, 0)
         }
         finally {
             vi.useRealTimers()
@@ -2509,8 +2509,7 @@ describe('replay camera tracking', () => {
         const baseJourneyReplay = defaultJourneyReplaySettings()
         const cameraSettings = normalizeJourneyReplayCamera({
                                                              ...baseJourneyReplay.camera,
-                                                             positionMode: REPLAY_CAMERA_POSITION_SYSTEM,
-                                                             heading:      0,
+                                                             cameraAngle:  180,
                                                              pitch:        -45,
                                                              altitude:     1800,
                                                          })
@@ -2648,8 +2647,7 @@ describe('replay camera tracking', () => {
         const baseJourneyReplay = defaultJourneyReplaySettings()
         const cameraSettings = normalizeJourneyReplayCamera({
                                                              ...baseJourneyReplay.camera,
-                                                             positionMode: REPLAY_CAMERA_POSITION_SYSTEM,
-                                                             heading:      0,
+                                                             cameraAngle:  146,
                                                              pitch:        -45,
                                                              altitude:     1800,
                                                          })
@@ -2761,11 +2759,11 @@ describe('replay camera tracking', () => {
 
             const targetCartesian = Cartesian3.fromDegrees(2, 48, 120)
             const targetTransform = Transforms.eastNorthUpToFixedFrame(targetCartesian)
-            const east = Matrix4.getColumn(targetTransform, 0, new Cartesian3())
+            const north = Matrix4.getColumn(targetTransform, 1, new Cartesian3())
             const delta = Cartesian3.subtract(flyToCalls[0].destination, targetCartesian, new Cartesian3())
 
             expect(flyToCalls).toHaveLength(1)
-            expect(Math.abs(Cartesian3.dot(delta, east))).toBeGreaterThan(200)
+            expect(Cartesian3.dot(delta, north)).toBeLessThan(-200)
             expect(flyToCalls[0].duration).toBeLessThanOrEqual(1)
         }
         finally {

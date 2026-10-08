@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -27,8 +27,7 @@ import { REPLAY_DRAWER } from '@Core/constants'
 import classNames from 'classnames'
 import {
     clampJourneyReplayNumber, DEFAULT_REPLAY_CAMERA, DEFAULT_REPLAY_SCOPE, ensureJourneyReplaySettings, REPLAY_CAMERA_ALTITUDE_CONSTANT,
-    REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET, REPLAY_CAMERA_POSITION_AHEAD, REPLAY_CAMERA_POSITION_BEHIND,
-    REPLAY_CAMERA_HEADING_OFFSET_MAX, REPLAY_CAMERA_HEADING_OFFSET_MIN, REPLAY_CAMERA_POSITION_SYSTEM,
+    REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET, REPLAY_CAMERA_ANGLE_MAX, REPLAY_CAMERA_ANGLE_MIN,
     REPLAY_LABEL, REPLAY_MARKER_MODE_HYSTERESIS,
     REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE, REPLAY_PROFILE_MARKER_BORDER_MAX_WIDTH,
     REPLAY_PROFILE_MARKER_BORDER_MIN_WIDTH, REPLAY_PROFILE_MARKER_FILL_MAX_SIZE,
@@ -503,12 +502,10 @@ export const JourneyReplayDrawer = memo(() => {
     const [, setPoiRevision] = useState(0)
     const [cameraDrafts, setCameraDrafts] = useState({
         altitude: null,
-        heading:  null,
         pitch:    null,
     })
     const cameraDraftValues = useRef({
         altitude: null,
-        heading:  null,
         pitch:    null,
     })
     const cameraDraftBaseline = useRef(null)
@@ -748,17 +745,6 @@ export const JourneyReplayDrawer = memo(() => {
         }
     }, [isExpertMode, replayState.active, replayState.paused, replayState.playing, replayState.sample, refreshJourneyReplay, stopRotateIfNeeded])
 
-    useEffect(() => {
-        if (!isExpertMode || replaySettings.camera.positionMode !== REPLAY_CAMERA_POSITION_SYSTEM) {
-            return
-        }
-
-        void updateCamera(
-            {positionMode: REPLAY_CAMERA_POSITION_BEHIND},
-            {syncCamera: !videoCameraPreparationActive},
-        )
-    }, [isExpertMode, replaySettings.camera.positionMode, updateCamera, videoCameraPreparationActive])
-
     const updateReadiness = useCallback((updates, {refresh = false} = {}) => {
         const currentReadiness = normalizeJourneyReplayReadiness(lgs.settings.ui.replay.readiness)
         const currentPreloadHorizon = Number(normalizeJourneyReplayCamera(lgs.settings.ui.replay.camera).playback.tilePreloadHorizonMs)
@@ -840,14 +826,13 @@ export const JourneyReplayDrawer = memo(() => {
         cameraDraftBaseline.current = {
             field,
             altitude: camera.altitude,
-            heading:  camera.heading ?? 0,
             pitch:    camera.pitch,
         }
         setCameraDrafts(current => ({
             ...current,
             [field]: String(value),
         }))
-    }, [camera.altitude, camera.heading, camera.pitch])
+    }, [camera.altitude, camera.pitch])
 
     const updateCameraDraft = useCallback((field, value) => {
         if (cameraDraftField.current !== field) {
@@ -923,24 +908,6 @@ export const JourneyReplayDrawer = memo(() => {
         updateCamera({pitch: nextPitch})
         return true
     }, [camera.pitch, updateCamera])
-
-    const commitCameraHeading = useCallback((rawValue) => {
-        if (String(rawValue ?? '').trim() === '') {
-            return false
-        }
-        const currentHeading = camera.heading ?? 0
-        const parsedHeading = Number(rawValue)
-        if (!Number.isFinite(parsedHeading) || parsedHeading < -180 || parsedHeading > 180) {
-            return false
-        }
-        const nextHeading = clampJourneyReplayNumber(parsedHeading, currentHeading, -180, 180)
-        if (nextHeading === currentHeading) {
-            return false
-        }
-
-        updateCamera({heading: nextHeading})
-        return true
-    }, [camera.heading, updateCamera])
 
     const updateDuration = useCallback((event) => {
         if (durationLocked) {
@@ -1064,7 +1031,6 @@ export const JourneyReplayDrawer = memo(() => {
 
     const altitudeDisplayValue = cameraDrafts.altitude ?? String(Math.round(UnitUtils.convert(camera.altitude).to(altitudeUnit)))
     const pitchDisplayValue = cameraDrafts.pitch ?? String(camera.pitch)
-    const headingDisplayValue = cameraDrafts.heading ?? String(camera.heading ?? 0)
 
     const updateActiveTab = useCallback((event) => {
         setActiveTab(event?.detail?.name ?? REPLAY_TAB_RUNNER)
@@ -1255,27 +1221,18 @@ export const JourneyReplayDrawer = memo(() => {
         })
     }, [camera.altitude, camera.altitudeMode, replayState.sample, updateCamera])
 
-    const cameraAngleDisplayOffset = -camera.headingOffset
-
-    const updateCameraPositionMode = useCallback((event) => {
-        const nextMode = event.target.value === REPLAY_CAMERA_POSITION_AHEAD
-            ? REPLAY_CAMERA_POSITION_AHEAD
-            : REPLAY_CAMERA_POSITION_BEHIND
-        void updateCamera({positionMode: nextMode}, {syncCamera: !videoCameraPreparationActive})
-    }, [updateCamera, videoCameraPreparationActive])
-
-    const updateCameraHeadingOffset = useCallback((event) => {
+    const updateCameraAngle = useCallback((event) => {
         const sliderValue = Number(event.target.value)
-        const nextHeadingOffset = Number.isFinite(sliderValue) ? -sliderValue : camera.headingOffset
+        const nextCameraAngle = Number.isFinite(sliderValue) ? sliderValue : camera.cameraAngle
         updateCamera({
-                         headingOffset: clampJourneyReplayNumber(
-                             nextHeadingOffset,
-                             camera.headingOffset,
-                             REPLAY_CAMERA_HEADING_OFFSET_MIN,
-                             REPLAY_CAMERA_HEADING_OFFSET_MAX,
-                         ),
-                     }, {immediate: true, syncCamera: !videoCameraPreparationActive})
-    }, [camera.headingOffset, updateCamera, videoCameraPreparationActive])
+            cameraAngle: clampJourneyReplayNumber(
+                nextCameraAngle,
+                camera.cameraAngle,
+                REPLAY_CAMERA_ANGLE_MIN,
+                REPLAY_CAMERA_ANGLE_MAX,
+            ),
+        }, {immediate: true, syncCamera: !videoCameraPreparationActive})
+    }, [camera.cameraAngle, updateCamera, videoCameraPreparationActive])
 
     const updateCameraPreset = useCallback((event) => {
         const presetKey = event.target.value
@@ -1498,33 +1455,22 @@ export const JourneyReplayDrawer = memo(() => {
                                                     <section className="replay-style-subsection">
                                                         <h4 className="replay-style-subtitle">{'Position'}</h4>
                                                         <div className="replay-fieldset">
-                                                        <WaSelect appearance="filled"
-                                                            label="Camera position"
-                                                            label-at-start
-                                                            size="s"
-                                                            value={camera.positionMode}
-                                                            onChange={updateCameraPositionMode}
-                                                            className="half-width">
-                                                            <WaOption
-                                                                value={REPLAY_CAMERA_POSITION_BEHIND}>{'Behind'}</WaOption>
-                                                            <WaOption
-                                                                value={REPLAY_CAMERA_POSITION_AHEAD}>{'Ahead'}</WaOption>
-                                                        </WaSelect>
                                                         <JourneyReplayStyleField>
                                                             <WaSlider
                                                                 ref={_cameraAngleSlider}
                                                                 label="Camera angle"
                                                                 size="s"
-                                                                min={REPLAY_CAMERA_HEADING_OFFSET_MIN}
-                                                                max={REPLAY_CAMERA_HEADING_OFFSET_MAX}
+                                                                min={REPLAY_CAMERA_ANGLE_MIN}
+                                                                max={REPLAY_CAMERA_ANGLE_MAX}
                                                                 step="1"
-                                                                value={cameraAngleDisplayOffset}
+                                                                value={camera.cameraAngle}
                                                                 withTooltip
                                                                 label-at-start half-width
                                                                 valueFormatter={value => `${Math.round(Number(value) || 0)}°`}
-                                                                onInput={updateCameraHeadingOffset}
+                                                                onInput={updateCameraAngle}
                                                             />
                                                         </JourneyReplayStyleField>
+                                                        <small className="replay-camera-angle-hint">{'0° along trace · +90° right · −90° left · ±180° opposite'}</small>
                                                         </div>
                                                     </section>
                                                 )}
@@ -1600,36 +1546,6 @@ export const JourneyReplayDrawer = memo(() => {
                                                                     }))
                                                                 }
                                                                 clearCameraDraft('pitch')
-                                                            }}
-                                                            label-at-start className="half-width"/>
-                                                        <WaNumberInput
-                                                            label="Heading (deg)"
-                                                            size="s"
-                                                            appearance="filled"
-                                                            min="-180"
-                                                            max="180"
-                                                            step="1"
-                                                            value={headingDisplayValue}
-                                                            onFocus={() => beginCameraDraft('heading', headingDisplayValue)}
-                                                            onInput={event => {
-                                                                const nextValue = event.target.value
-                                                                cameraDraftValues.current.heading = nextValue
-                                                                setCameraDrafts(current => ({
-                                                                    ...current,
-                                                                    heading: nextValue,
-                                                                }))
-                                                                commitCameraHeading(nextValue)
-                                                            }}
-                                                            onBlur={event => {
-                                                                const currentValue = cameraDraftValues.current.heading ?? event.target.value
-                                                                const committed = commitCameraHeading(currentValue)
-                                                                if (!committed && cameraDraftBaseline.current?.field === 'heading') {
-                                                                    setCameraDrafts(current => ({
-                                                                        ...current,
-                                                                        heading: String(cameraDraftBaseline.current.heading),
-                                                                    }))
-                                                                }
-                                                                clearCameraDraft('heading')
                                                             }}
                                                             label-at-start className="half-width"/>
                                                     </div>

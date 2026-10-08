@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -43,15 +43,15 @@ describe('Replay user modes', () => {
         const resolved = resolveSimpleReplaySettings({
             product,
             user: {camera: {altitude: 900}},
-            journey: {camera: {heading: 45}},
+            journey: {camera: {cameraAngle: 45}},
         })
 
         expect(resolved.camera.altitude).toBe(900)
-        expect(resolved.camera.heading).toBe(45)
+        expect(resolved.camera.cameraAngle).toBe(45)
         expect(resolved.camera.altitudeMode).toBe('constant')
     })
 
-    it('keeps Simple Replay in progressive Navigation mode behind the journey without camera debug', () => {
+    it('keeps Simple Replay behind by default while migrating legacy side settings', () => {
         const defaults = defaultSimpleReplaySettings()
         const normalized = normalizeSimpleReplaySettings({
             camera: {debug: true, positionMode: 'ahead'},
@@ -59,10 +59,10 @@ describe('Replay user modes', () => {
             trace: {mode: 'full'},
         })
 
-        expect(defaults.camera).toMatchObject({debug: false, positionMode: 'behind'})
+        expect(defaults.camera).toMatchObject({debug: false, cameraAngle: 180})
         expect(defaults.marker.mode).toBe('navigation')
         expect(defaults.trace.mode).toBe('progressive')
-        expect(normalized.camera).toMatchObject({debug: false, positionMode: 'behind'})
+        expect(normalized.camera).toMatchObject({debug: false, cameraAngle: 0})
         expect(normalized.marker.mode).toBe('navigation')
         expect(normalized.trace.mode).toBe('progressive')
     })
@@ -101,7 +101,7 @@ describe('Replay user modes', () => {
         expect(initialized.expert.camera.altitude).toBe(simple.camera.altitude)
         expect(initializeExpertReplayFromSimple({replay: {start: [], stop: []}}, {
             camera: {positionMode: 'system'},
-        }).expert.camera.positionMode).toBe('behind')
+        }).expert.camera.cameraAngle).toBe(180)
         expect(initializeExpertReplayFromSimple(existing, simple)).toBe(existing.replay)
     })
 

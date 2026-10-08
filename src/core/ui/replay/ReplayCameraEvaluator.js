@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-13
- * Last modified: 2026-09-13
+ * Created on: 2026-08-24
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -58,7 +58,6 @@ export const resolveReplayCameraPose = ({
     sampler = null,
     progress = sample?.progress ?? 0,
     axisHeading = null,
-    useAxisHeadingForSystem = false,
 } = {}) => {
     if (!isReplayCameraDefinition(definition) || !sample) {
         return null
@@ -71,7 +70,6 @@ export const resolveReplayCameraPose = ({
         cameraSettings: replayCameraSettingsFromDefinition(definition),
         markerSettings: definition.marker,
         axisHeading,
-        useAxisHeadingForSystem,
     })
     if (!pose) {
         return null
@@ -96,7 +94,6 @@ export const resolveReplayCameraPose = ({
 export const createReplayCameraPoseResolver = ({
     definition = null,
     sampler = null,
-    useAxisHeadingForSystem = false,
 } = {}) => {
     /**
      * Resolve the camera contribution for one lazy frame context.
@@ -110,7 +107,6 @@ export const createReplayCameraPoseResolver = ({
         sampler,
         progress: context?.progress,
         axisHeading: context?.axisHeading ?? null,
-        useAxisHeadingForSystem,
     })
 
     return resolveCameraPose

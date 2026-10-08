@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-28
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -17,7 +17,11 @@
 import {Cartesian3} from 'cesium'
 import {defaultJourneyReplaySettings, REPLAY_MARKER_MODE_HYSTERESIS} from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {bindMarkerInteractions} from '@Core/ui/replay/JourneyReplayCameraBinding'
-import {persistCameraSettings, updateCameraFromCesiumControls} from '@Core/ui/replay/JourneyReplayCameraState'
+import {
+    persistCameraSettings,
+    updateCameraFromCesiumControls,
+    updateCameraSettingsFromCesiumControls,
+} from '@Core/ui/replay/JourneyReplayCameraState'
 import {applyCameraFrame} from '@Core/ui/replay/JourneyReplayCameraTransition'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from '@Core/ui/replay/JourneyReplayInternal'
 import {afterEach, describe, expect, it, vi} from 'vitest'
@@ -147,10 +151,10 @@ describe('JourneyReplay camera interaction lifecycle', () => {
 
     it('persists the Basic camera angle relative to the replay trace', () => {
         const settings = defaultJourneyReplaySettings()
-        const camera = {...settings.camera, headingOffset: 0, positionMode: 'behind'}
+        const camera = {...settings.camera, cameraAngle: 180}
         const persistToDatabase = vi.fn()
         const journey = {
-            replay: {simple: {camera: {...camera, headingOffset: -12}}},
+            replay: {simple: {camera: {...camera, cameraAngle: 168}}},
             persistToDatabase,
         }
         settings.userMode = 'basic'
@@ -166,24 +170,53 @@ describe('JourneyReplay camera interaction lifecycle', () => {
             const next = persistCameraSettings({
                 [JOURNEY_REPLAY_INTERNAL_CALL]: {},
                 [JOURNEY_REPLAY_INTERNAL_STATE]: {},
-            }, {headingOffset: 32})
+            }, {cameraAngle: 32})
 
-            expect(next).toMatchObject({headingOffset: 32, positionMode: 'behind'})
+            expect(next).toMatchObject({cameraAngle: 32})
             expect(globalThis.lgs.settings.ui.replay.simple.camera).toMatchObject({
-                headingOffset: 32,
-                positionMode: 'behind',
+                cameraAngle: 32,
             })
             expect(journey.replay.simple.camera).toMatchObject({
-                headingOffset: 32,
-                positionMode: 'behind',
+                cameraAngle: 32,
             })
-            expect(globalThis.lgs.stores.replay.camera).toMatchObject({headingOffset: 32})
+            expect(globalThis.lgs.stores.replay.camera).toMatchObject({cameraAngle: 32})
             vi.advanceTimersByTime(250)
             expect(persistToDatabase).toHaveBeenCalledOnce()
         }
         finally {
             vi.useRealTimers()
         }
+    })
+
+    it('does not derive Replay camera settings from Cesium navigation during preparation', () => {
+        const settings = defaultJourneyReplaySettings()
+        const persistSettings = vi.fn()
+        const syncCamera = vi.fn()
+        globalThis.lgs = {
+            settings: {ui: {replay: settings}},
+            stores: {
+                replay: {camera: settings.camera, cameraUpdateSource: null},
+                ui: {video: {editing: true}},
+            },
+        }
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {
+                persistCameraSettings: persistSettings,
+            },
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                cameraApplyingView: false,
+                cameraPointerActive: true,
+                cameraUserAdjusting: true,
+                suppressPlaybackCameraSync: false,
+            },
+            syncCameraFromCesiumControls: syncCamera,
+        }
+
+        expect(updateCameraSettingsFromCesiumControls(mode, {longitude: 2, latitude: 48, progress: 0})).toBeNull()
+        updateCameraFromCesiumControls(mode, {userInteraction: true})
+
+        expect(persistSettings).not.toHaveBeenCalled()
+        expect(syncCamera).not.toHaveBeenCalled()
     })
 
     it('ignores unauthorised Cesium move events once replay is inactive', () => {

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-16
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,9 +19,6 @@ import { JourneyReplayPlaybackController } from '@Core/ui/replay/JourneyReplayPl
 import { REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP } from '@Core/ui/replay/JourneyReplayClips'
 import {
     defaultJourneyReplaySettings as defaultJourneyReplaySettingsBase,
-    REPLAY_CAMERA_POSITION_AHEAD,
-    REPLAY_CAMERA_POSITION_BEHIND,
-    REPLAY_CAMERA_POSITION_SYSTEM,
     REPLAY_MARKER_MODE_HYSTERESIS,
     REPLAY_MARKER_MODE_NAVIGATION,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
@@ -311,8 +308,8 @@ describe('JourneyReplayMode Replay export frames', () => {
         )).toBeGreaterThan(1)
     })
 
-    it('uses the replay camera heading for export zoom clip frames instead of snapping to north', async () => {
-        const destinationForHeading = async heading => {
+    it('uses the route-relative camera angle for export zoom clip frames', async () => {
+        const destinationForCameraAngle = async cameraAngle => {
             const journey = makeJourney([
                 makeTrack({
                     slug:        'track#journey#gpx#main',
@@ -320,7 +317,7 @@ describe('JourneyReplayMode Replay export frames', () => {
                 }),
             ])
             installReplayGlobals(journey)
-            globalThis.lgs.settings.ui.replay.camera.heading = heading
+            globalThis.lgs.settings.ui.replay.camera.cameraAngle = cameraAngle
             globalThis.lgs.stores.replay.camera = globalThis.lgs.settings.ui.replay.camera
 
             const setView = vi.fn(options => {
@@ -353,14 +350,14 @@ describe('JourneyReplayMode Replay export frames', () => {
             return setView.mock.calls[0][0].destination
         }
 
-        const northDestination = await destinationForHeading(0)
-        const replayAngleDestination = await destinationForHeading(45)
+        const defaultAngleDestination = await destinationForCameraAngle(180)
+        const rightSideDestination = await destinationForCameraAngle(90)
 
-        expect(Cartesian3.distance(northDestination, replayAngleDestination)).toBeGreaterThan(100)
+        expect(Cartesian3.distance(defaultAngleDestination, rightSideDestination)).toBeGreaterThan(100)
     })
 
-    it('uses the replay camera position mode for export zoom clip headings', async () => {
-        const destinationForCameraMode = async ({positionMode, heading = 0, headingOffset = 0}) => {
+    it('uses the route-relative camera angle for export zoom clip headings', async () => {
+        const destinationForCameraAngle = async cameraAngle => {
             const journey = makeJourney([
                 makeTrack({
                     slug:        'track#journey#gpx#main',
@@ -368,9 +365,7 @@ describe('JourneyReplayMode Replay export frames', () => {
                 }),
             ])
             installReplayGlobals(journey)
-            globalThis.lgs.settings.ui.replay.camera.positionMode = positionMode
-            globalThis.lgs.settings.ui.replay.camera.heading = heading
-            globalThis.lgs.settings.ui.replay.camera.headingOffset = headingOffset
+            globalThis.lgs.settings.ui.replay.camera.cameraAngle = cameraAngle
             globalThis.lgs.stores.replay.camera = globalThis.lgs.settings.ui.replay.camera
 
             const setView = vi.fn(options => {
@@ -403,24 +398,13 @@ describe('JourneyReplayMode Replay export frames', () => {
             return setView.mock.calls[0][0].destination
         }
 
-        const fixedDestination = await destinationForCameraMode({
-            positionMode: REPLAY_CAMERA_POSITION_SYSTEM,
-            heading: 150,
-        })
-        const behindDestination = await destinationForCameraMode({
-            positionMode: REPLAY_CAMERA_POSITION_BEHIND,
-        })
-        const aheadDestination = await destinationForCameraMode({
-            positionMode: REPLAY_CAMERA_POSITION_AHEAD,
-        })
-        const offsetBehindDestination = await destinationForCameraMode({
-            positionMode: REPLAY_CAMERA_POSITION_BEHIND,
-            headingOffset: 30,
-        })
+        const behindDestination = await destinationForCameraAngle(180)
+        const alongTraceDestination = await destinationForCameraAngle(0)
+        const rightSideDestination = await destinationForCameraAngle(90)
 
-        expect(Cartesian3.distance(fixedDestination, behindDestination)).toBeGreaterThan(100)
-        expect(Cartesian3.distance(behindDestination, aheadDestination)).toBeGreaterThan(100)
-        expect(Cartesian3.distance(behindDestination, offsetBehindDestination)).toBeGreaterThan(100)
+        expect(Cartesian3.distance(behindDestination, alongTraceDestination)).toBeGreaterThan(100)
+        expect(Cartesian3.distance(behindDestination, rightSideDestination)).toBeGreaterThan(100)
+        expect(Cartesian3.distance(alongTraceDestination, rightSideDestination)).toBeGreaterThan(100)
     })
 
     it('renders Replay export frames from the export controller sample', async () => {

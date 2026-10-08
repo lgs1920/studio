@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-05
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -126,7 +126,10 @@ export const JourneyReplayButton = (props) => {
             const expertCamera = normalizeExpertReplayCamera(expertReplay?.camera)
             if (expertReplay) {
                 shouldPersistExpertCamera = shouldPersistExpertCamera
-                                          || expertReplay.camera?.positionMode !== expertCamera.positionMode
+                                          || expertReplay.camera?.cameraAngle !== expertCamera.cameraAngle
+                                          || expertReplay.camera?.positionMode !== undefined
+                                          || expertReplay.camera?.headingOffset !== undefined
+                                          || expertReplay.camera?.heading !== undefined
                 expertReplay.camera = expertCamera
             }
             if (shouldPersistExpertCamera) {

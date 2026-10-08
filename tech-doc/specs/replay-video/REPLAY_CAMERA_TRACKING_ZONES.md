@@ -45,23 +45,44 @@ look-ahead samples.
 The nominal pose is recalculated from the current logical replay sample. It is
 never derived from the current Cesium camera orientation.
 
-The position modes behave as follows:
+The camera uses one `cameraAngle` azimuth relative to the route tangent in both
+Simple and Expert Replay. `0°` places the camera along the departure direction,
+`+90°` places it to the right, `-90°` to the left, and `±180°` behind the
+trace. The camera view always points back toward the replay anchor. Its view
+heading is the route-axis heading plus 180 degrees plus `cameraAngle`.
 
-- `Behind`: route-axis heading plus the configured heading offset;
-- `Ahead`: route-axis heading plus 180 degrees and the configured heading
-  offset;
-- `System`: configured heading, except Navigation may use the route axis when
-  an axis heading is available.
+The former `positionMode`, `heading`, and `headingOffset` settings are accepted
+only while normalizing older saved configurations; normalized settings and
+camera definitions contain `cameraAngle` alone. Pitch comes from the configured
+camera pitch. Values at or below -89 degrees use a safe near-top-down pitch to
+avoid a singular orientation. Camera height is either the configured constant
+altitude or the sample height plus the configured ground offset.
 
-The configured heading offset is normalized before use. Pitch comes from the
-configured camera pitch. Values at or below -89 degrees use a safe near-top-down
-pitch to avoid a singular orientation. Camera height is either the configured
-constant altitude or the sample height plus the configured ground offset.
+Navigation and Dynamic use this same resolver and the same route-relative
+camera angle. Neither tracking mode selects a separate Ahead/Behind/System
+position.
 
-Navigation and Dynamic use this same resolver. Neither tracking mode may force
-`Ahead` or bypass the selected `Behind`, `Ahead`, or `System` behavior.
+### 2.1 Preparation camera guide
 
-### 2.1 Camera capability flags
+During Simple or Expert preparation, the camera guide cone and camera icon use
+the current Cesium projection, keeping the cone anchored to the route departure
+as the map is panned or zoomed without changing the configured camera angle.
+The simulated departure trace is pseudo-clamped: each point uses the sampled
+terrain height and is reprojected whenever Cesium's view or frustum changes,
+keeping the DOM trace aligned with the terrain. The trace, departure marker, and
+activity icon ease to their new positions over a short animation. A Cesium
+camera-orientation change also refreshes the guide projection so its camera icon
+remains aligned to the route at the same `cameraAngle`. Cesium camera events
+never write Replay camera settings. The camera icon is the only azimuth drag
+handle; the cone surface is visual, while its tip remains the altitude handle.
+The Replay drawer's camera-angle control and the icon drag both update the same
+`cameraAngle` setting. The route arrow can be dragged along the source trace to
+resize the displayed simulation between 60 and 1,200 metres; keyboard users can
+adjust it with the arrow keys or jump to either limit with Home and End. The
+guide and simulation are hidden whenever their departure or selected route end
+is outside the viewport or occluded by the terrain.
+
+### 2.2 Camera capability flags
 
 The normalized `ui.replay.camera` settings expose three independent boolean
 capabilities. They default to `true` and are shared by playback and export:
@@ -349,7 +370,7 @@ used to distinguish zone tracking from temporary visibility correction.
 - `src/core/ui/replay/JourneyReplayCameraPitchController.js`: temporary pitch
   state machine and limits.
 - `src/core/ui/replay/JourneyReplayLogicalCameraPose.js`: nominal
-  renderer-independent pose and Behind/Ahead/System behavior.
+  renderer-independent pose and route-relative `cameraAngle` behavior.
 - `src/core/ui/replay/JourneyReplayCameraVisibility.js`: geometric and rendered
   visibility plus redirect candidates.
 - `src/core/ui/replay/JourneyReplayCameraMath.js`: runtime zones and adaptive

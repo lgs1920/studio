@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-29
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,13 +23,12 @@ const guideHarness = vi.hoisted(() => ({
     remove:  vi.fn(),
     changeEvent: 'lgs:replay:camera-angle-guide-change',
     resolve: vi.fn(({camera, sample}) => ({
-        angleDegrees: -(camera.headingOffset ?? 0),
+        angleDegrees: camera.cameraAngle ?? 180,
         anchor: sample
             ? {height: sample.altitude, latitude: sample.latitude, longitude: sample.longitude}
             : {height: 0, latitude: 48, longitude: 2},
-        coneHeading: camera.headingOffset ?? 0,
+        coneHeading: (camera.cameraAngle ?? 180) * Math.PI / 180,
         followViewerHeading: Boolean(sample),
-        mode: camera.positionMode === 'ahead' ? 'Ahead' : 'Behind',
     })),
     update: vi.fn(() => true),
 }))
@@ -73,8 +72,7 @@ describe('JourneyReplayCameraAngleGuide component', () => {
         const replaySettings = proxy({
             userMode: 'expert',
             camera: {
-                headingOffset: 20,
-                positionMode:  'behind',
+                cameraAngle: 20,
             },
         })
         const replay = proxy({
@@ -127,29 +125,28 @@ describe('JourneyReplayCameraAngleGuide component', () => {
             expect(guideHarness.mount).toHaveBeenCalled()
             expect(guideHarness.mount).toHaveBeenCalledWith(
                 expect.anything(),
-                expect.objectContaining({mode: 'Behind'}),
+                expect.objectContaining({angleDegrees: 20}),
                 {},
-                expect.objectContaining({onCameraChange: expect.any(Function)}),
+                expect.objectContaining({onCameraChange: expect.any(Function), screenLocked: false}),
             )
             expect(guideHarness.resolve).toHaveBeenLastCalledWith(expect.objectContaining({sample}))
             expect(guideHarness.update).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({
                 anchor: {height: 150, latitude: 48.5, longitude: 2.5},
-                mode:   'Behind',
             }), expect.objectContaining({onCameraChange: expect.any(Function)}))
         })
 
         act(() => {
-            replaySettings.camera.headingOffset = 35
+            replaySettings.camera.cameraAngle = 35
         })
 
         await waitFor(() => {
             expect(guideHarness.resolve).toHaveBeenLastCalledWith(expect.objectContaining({
-                camera: expect.objectContaining({headingOffset: 35}),
+                camera: expect.objectContaining({cameraAngle: 35}),
                 sample,
             }))
             expect(guideHarness.update).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({
-                angleDegrees: -35,
-                coneHeading: 35,
+                angleDegrees: 35,
+                coneHeading: (35 * Math.PI) / 180,
             }), expect.objectContaining({onCameraChange: expect.any(Function)}))
         })
         expect(guideHarness.mount).toHaveBeenCalledTimes(1)
@@ -162,8 +159,7 @@ describe('JourneyReplayCameraAngleGuide component', () => {
                     replay: proxy({
                         userMode: 'basic',
                         camera: {
-                            headingOffset: 10,
-                            positionMode:  'behind',
+                            cameraAngle: 10,
                         },
                     }),
                 },
@@ -191,10 +187,9 @@ describe('JourneyReplayCameraAngleGuide component', () => {
             expect.anything(),
             expect.objectContaining({
                 anchor: {height: 0, latitude: 48, longitude: 2},
-                mode:   'Behind',
             }),
             {},
-            expect.objectContaining({onCameraChange: expect.any(Function)}),
+            expect.objectContaining({onCameraChange: expect.any(Function), screenLocked: true}),
         ))
     })
 
@@ -214,8 +209,7 @@ describe('JourneyReplayCameraAngleGuide component', () => {
                     replay: proxy({
                         userMode: 'basic',
                         camera: {
-                            headingOffset: 0,
-                            positionMode:  'system',
+                            cameraAngle: 180,
                         },
                     }),
                 },
@@ -242,12 +236,12 @@ describe('JourneyReplayCameraAngleGuide component', () => {
         await waitFor(() => {
             expect(guideHarness.mount).toHaveBeenCalledWith(
                 expect.anything(),
-                expect.objectContaining({mode: 'Behind'}),
+                expect.objectContaining({angleDegrees: 180}),
                 {},
-                expect.objectContaining({onCameraChange: expect.any(Function)}),
+                expect.objectContaining({onCameraChange: expect.any(Function), screenLocked: true}),
             )
             expect(guideHarness.resolve).toHaveBeenLastCalledWith(expect.objectContaining({
-                camera: expect.objectContaining({positionMode: 'behind'}),
+                camera: expect.objectContaining({cameraAngle: 180}),
             }))
         })
 
@@ -259,7 +253,7 @@ describe('JourneyReplayCameraAngleGuide component', () => {
 
         await waitFor(() => {
             expect(guideHarness.resolve).toHaveBeenLastCalledWith(expect.objectContaining({
-                camera: expect.objectContaining({positionMode: 'behind'}),
+                camera: expect.objectContaining({cameraAngle: 180}),
                 sample,
             }))
         })
@@ -271,7 +265,7 @@ describe('JourneyReplayCameraAngleGuide component', () => {
                 ui: {
                     replay: proxy({
                         userMode: 'expert',
-                        camera: {headingOffset: 10, positionMode: 'behind'},
+                        camera: {cameraAngle: 10},
                     }),
                 },
             },
@@ -300,8 +294,7 @@ describe('JourneyReplayCameraAngleGuide component', () => {
     it('persists dragged cone angle and altitude through Simple camera settings', async () => {
         const simpleCamera = {
             altitude: 1200,
-            headingOffset: 0,
-            positionMode: 'behind',
+            cameraAngle: 180,
         }
         const journey = {
             replay: {simple: {camera: {...simpleCamera}}},
@@ -332,24 +325,24 @@ describe('JourneyReplayCameraAngleGuide component', () => {
         render(<JourneyReplayCameraAngleGuide/>)
         await waitFor(() => expect(guideHarness.mount).toHaveBeenCalled())
         act(() => {
-            guideHarness.mount.mock.calls.at(-1)[3].onCameraChange({altitude: 600, headingOffset: 30})
+            guideHarness.mount.mock.calls.at(-1)[3].onCameraChange({altitude: 600, cameraAngle: -150})
         })
 
-        expect(settings.simple.camera).toMatchObject({altitude: 600, headingOffset: 30})
-        expect(journey.replay.simple.camera).toMatchObject({altitude: 600, headingOffset: 30})
-        expect(globalThis.lgs.stores.replay.camera).toMatchObject({altitude: 600, headingOffset: 30})
+        expect(settings.simple.camera).toMatchObject({altitude: 600, cameraAngle: -150})
+        expect(journey.replay.simple.camera).toMatchObject({altitude: 600, cameraAngle: -150})
+        expect(globalThis.lgs.stores.replay.camera).toMatchObject({altitude: 600, cameraAngle: -150})
         expect(refresh).not.toHaveBeenCalled()
         expect(refreshCamera).not.toHaveBeenCalled()
     })
 
     it('persists an Expert camera angle without moving Cesium', async () => {
-        const journey = {replay: {expert: {camera: {altitude: 900, headingOffset: 0, positionMode: 'behind'}}}}
+        const journey = {replay: {expert: {camera: {altitude: 900, cameraAngle: 180}}}}
         const refresh = vi.fn()
         const refreshCamera = vi.fn()
         globalThis.__ = {ui: {replay: {refresh, refreshCamera}}}
         const settings = proxy({
             userMode: 'expert',
-            camera: {altitude: 900, headingOffset: 0, positionMode: 'behind'},
+            camera: {altitude: 900, cameraAngle: 180},
         })
         globalThis.lgs = {
             theJourney: journey,
@@ -370,13 +363,13 @@ describe('JourneyReplayCameraAngleGuide component', () => {
         act(() => {
             guideHarness.mount.mock.calls.at(-1)[3].onCameraChange({
                 altitude: 900,
-                headingOffset: -40,
+                cameraAngle: -40,
             })
         })
 
-        expect(settings.camera).toMatchObject({altitude: 900, headingOffset: -40})
-        expect(journey.replay.expert.camera).toMatchObject({altitude: 900, headingOffset: -40})
-        expect(globalThis.lgs.stores.replay.camera).toMatchObject({altitude: 900, headingOffset: -40})
+        expect(settings.camera).toMatchObject({altitude: 900, cameraAngle: -40})
+        expect(journey.replay.expert.camera).toMatchObject({altitude: 900, cameraAngle: -40})
+        expect(globalThis.lgs.stores.replay.camera).toMatchObject({altitude: 900, cameraAngle: -40})
         expect(refresh).not.toHaveBeenCalled()
         expect(refreshCamera).not.toHaveBeenCalled()
     })

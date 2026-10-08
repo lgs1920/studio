@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -31,14 +31,17 @@ import {
     applyReplayCesiumCameraCommand,
     replayCesiumCameraFrameAboveTerrain,
 } from './ReplayCesiumCameraAdapter'
-import {currentJourneyReplayCameraSettings, finiteNumber, replayStore} from './JourneyReplayRuntime'
+import {
+    currentJourneyReplayCameraSettings,
+    finiteNumber,
+    isJourneyReplayCameraPreparationActive,
+    replayStore,
+} from './JourneyReplayRuntime'
 import {
     clamp, lerp, hasFiniteLonLat, projectReplayTargetInCameraFrame, sanitizeOrientationRadians, replayHeadingFromLocalAxisAngle, replayPitchLookaheadFactor, replayAngularDelta, replayHeadingEasingFactor, replayCameraRecenterDuration, replayTargetSampleForClip, replayCameraRangeFromPitch, replayCameraRecenterHeight, replayCameraRecenterHorizontalDistance, replayToleranceZoneBounds, replayCenteredZone, replayCenteredSquareZone, replayNavigationZone, replayRuntimeTrackingSettings, replayDynamicTargetPointInZone, replayIsWindowPointOutsideToleranceZone, replayInnerToleranceZoneBounds, replayInsetBounds, replayWindowCollisionFromPoint, interpolateRadians, smoothClipProgress, replayCameraHeadingWithHysteresis, degreesToRadians, radiansToDegrees, safeCartesianFromLonLat, safeCartographicFromCartesian, cameraGuideSampleFromRawSamples, projectToLocalMeters, cartographicToLonLat
 } from './JourneyReplayCameraMath'
 import {
-    REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET, REPLAY_CAMERA_POSITION_AHEAD,
-    REPLAY_CAMERA_HEADING_OFFSET_MAX, REPLAY_CAMERA_HEADING_OFFSET_MIN, REPLAY_CAMERA_POSITION_BEHIND,
-    REPLAY_CAMERA_POSITION_SYSTEM,
+    REPLAY_CAMERA_ALTITUDE_CONSTANT, REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET,
     REPLAY_MARKER_MODE_HYSTERESIS, REPLAY_MARKER_MODE_NAVIGATION, REPLAY_MARKER_MODE_TRACE,
     getJourneyReplaySettings, normalizeJourneyReplayCamera, normalizeJourneyReplayMarker,
 } from './JourneyReplayProgressionStyle'
@@ -264,60 +267,30 @@ const cameraPoseAroundReplayAnchor = (camera, anchor) => {
 const interactiveReplayCamera = mode => replayCameraFor(mode)
 
 /**
- * Resolve the closest Ahead/Behind representation for a live camera heading.
- *
- * The interactive angle supports a complete rotation, while mouse-driven
- * synchronization keeps the closest side of the trace by switching between
- * Ahead and Behind when the current side crosses ninety degrees.
+ * Resolve the single route-relative camera angle from a live view heading.
  *
  * @param {object} options - Heading and current position inputs.
  * @param {number|null} options.axisHeading - Trace tangent heading in radians.
  * @param {number|null} options.cameraHeading - Live camera heading in radians.
- * @param {string} options.positionMode - Current Ahead/Behind mode.
- * @returns {{positionMode: string, headingOffset: number}|null} Normalized representation.
+ * @returns {{cameraAngle: number}|null} Normalized route-relative camera angle.
  */
-export const replayCameraPositionModeFromHeading = ({
+export const replayCameraAngleFromHeading = ({
     axisHeading,
     cameraHeading,
-    positionMode,
 } = {}) => {
-    if (positionMode !== REPLAY_CAMERA_POSITION_AHEAD
-        && positionMode !== REPLAY_CAMERA_POSITION_BEHIND) {
-        return null
-    }
-
     const resolvedAxisHeading = finiteNumber(axisHeading)
     const resolvedCameraHeading = finiteNumber(cameraHeading)
     if (resolvedAxisHeading === null || resolvedCameraHeading === null) {
         return null
     }
 
-    const candidates = [
-        {
-            positionMode: REPLAY_CAMERA_POSITION_BEHIND,
-            delta: replayAngularDelta(resolvedAxisHeading, resolvedCameraHeading),
-        },
-        {
-            positionMode: REPLAY_CAMERA_POSITION_AHEAD,
-            delta: replayAngularDelta(resolvedAxisHeading + Math.PI, resolvedCameraHeading),
-        },
-    ]
-    const current = candidates.find(candidate => candidate.positionMode === positionMode)
-    const alternate = candidates.find(candidate => candidate.positionMode !== positionMode)
-    const selected = Math.abs(current?.delta ?? Math.PI) <= Math.PI / 2
-        ? current
-        : alternate
-    if (!selected || selected.delta === null) {
+    const delta = replayAngularDelta(resolvedAxisHeading + Math.PI, resolvedCameraHeading)
+    if (delta === null) {
         return null
     }
 
     return {
-        positionMode: selected.positionMode,
-        headingOffset: clamp(
-            Math.round(CesiumMath.toDegrees(selected.delta)),
-            REPLAY_CAMERA_HEADING_OFFSET_MIN,
-            REPLAY_CAMERA_HEADING_OFFSET_MAX,
-        ),
+        cameraAngle: Math.round(CesiumMath.toDegrees(delta)),
     }
 }
 
@@ -711,7 +684,6 @@ export const persistCameraSettings =  (mode, updates) => {
             ...(isBasicMode
                 ? {
                     altitudeMode: REPLAY_CAMERA_ALTITUDE_CONSTANT,
-                    positionMode: REPLAY_CAMERA_POSITION_BEHIND,
                     debug: false,
                 }
                 : {}),
@@ -731,7 +703,6 @@ export const persistCameraSettings =  (mode, updates) => {
                         ...(simple.camera ?? {}),
                         ...next,
                         altitudeMode: REPLAY_CAMERA_ALTITUDE_CONSTANT,
-                        positionMode: REPLAY_CAMERA_POSITION_BEHIND,
                         debug: false,
                     },
                 }
@@ -754,6 +725,10 @@ export const updateCameraSettingsFromCesiumControls = (mode, sample, {altitudeMo
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
+        if (isJourneyReplayCameraPreparationActive()) {
+            return null
+        }
+
         const camera = interactiveReplayCamera(mode)
         if (!camera || !sample) {
             return null
@@ -772,24 +747,14 @@ export const updateCameraSettingsFromCesiumControls = (mode, sample, {altitudeMo
                 : clamp(Math.round(CesiumMath.toDegrees(pitchRadians)), -89, -5),
         }
 
-        const headingDeg = headingRadians !== null && headingRadians !== undefined
-            ? clamp(Math.round(CesiumMath.toDegrees(headingRadians)), -180, 180)
-            : undefined
-        if (headingDeg !== undefined && currentCameraSettings.positionMode === REPLAY_CAMERA_POSITION_SYSTEM) {
-            next.heading = headingDeg
-        }
-        if (headingRadians !== null
-            && headingRadians !== undefined
-            && currentCameraSettings.positionMode !== REPLAY_CAMERA_POSITION_SYSTEM) {
+        if (headingRadians !== null && headingRadians !== undefined) {
             const axisHeading = call.headingFromPositionProperty?.(sample?.progress ?? state.controller?.progress ?? 0)
-            const positionAndOffset = replayCameraPositionModeFromHeading({
+            const angle = replayCameraAngleFromHeading({
                 axisHeading,
                 cameraHeading: headingRadians,
-                positionMode: currentCameraSettings.positionMode,
             })
-            if (positionAndOffset) {
-                next.positionMode = positionAndOffset.positionMode
-                next.headingOffset = positionAndOffset.headingOffset
+            if (angle) {
+                next.cameraAngle = angle.cameraAngle
             }
         }
 
@@ -820,6 +785,9 @@ export const updateCameraFromCesiumControls = (mode, {userInteraction = false} =
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
         const store = replayStore()
+        if (isJourneyReplayCameraPreparationActive()) {
+            return
+        }
         if (state.suppressPlaybackCameraSync) {
             return
         }

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -21,7 +21,7 @@
 import {Cartesian3, Cartographic, Math as CesiumMath} from 'cesium'
 import {finiteNumber} from './JourneyReplayRuntime'
 import {
-    REPLAY_CAMERA_POSITION_AHEAD, REPLAY_CAMERA_HEADING_OFFSET_MAX, REPLAY_CAMERA_HEADING_OFFSET_MIN,
+    REPLAY_CAMERA_ANGLE_MAX, REPLAY_CAMERA_ANGLE_MIN,
 } from './JourneyReplayProgressionStyle'
 
 const CAMERA_HEADING_HYSTERESIS_RADIANS = CesiumMath.toRadians(16)
@@ -183,10 +183,12 @@ export const replayDurationPaceFactor = (durationSeconds, totalDistance = 0) => 
     return 1 + (durationScale * 0.08) + (distanceScale * 0.04)
 }
 
-export const replayCameraHeadingForPositionMode = ({axisHeading = 0, positionMode, headingOffset = 0} = {}) => {
+export const replayCameraHeadingForAngle = ({axisHeading = 0, cameraAngle = 180} = {}) => {
     const heading = finiteNumber(axisHeading) ?? 0
-    const offset = degreesToRadians(clamp(finiteNumber(headingOffset) ?? 0, REPLAY_CAMERA_HEADING_OFFSET_MIN, REPLAY_CAMERA_HEADING_OFFSET_MAX)) ?? 0
-    return (positionMode === REPLAY_CAMERA_POSITION_AHEAD ? heading + Math.PI : heading) + offset
+    const angle = degreesToRadians(clamp(finiteNumber(cameraAngle) ?? 180, REPLAY_CAMERA_ANGLE_MIN, REPLAY_CAMERA_ANGLE_MAX)) ?? Math.PI
+    const fullTurn = Math.PI * 2
+    const viewHeading = heading + Math.PI + angle
+    return ((viewHeading % fullTurn) + fullTurn) % fullTurn
 }
 
 export const replayAngularDelta = (from, to) => {

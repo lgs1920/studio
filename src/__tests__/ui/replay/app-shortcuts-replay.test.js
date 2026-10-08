@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-09-30
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -199,15 +199,14 @@ describe('app replay shortcuts', () => {
         expect(globalThis.__.ui.sceneManager.focus).toHaveBeenCalled()
     })
 
-    it('adjusts replay camera heading and angle from arrows without map focus', async () => {
+    it('adjusts replay camera pitch and angle from arrows during Expert preparation', async () => {
         const canvas = document.createElement('canvas')
         document.body.appendChild(canvas)
         globalThis.lgs.viewer = {scene: {canvas}}
         globalThis.lgs.settings.ui.replay.camera = {
             ...globalThis.lgs.settings.ui.replay.camera,
-            heading:       10,
-            headingOffset: 0,
-            positionMode:  'behind',
+            cameraAngle: 10,
+            pitch: -50,
         }
         globalThis.lgs.settings.ui.replay.userMode = 'expert'
         globalThis.lgs.stores.replay.camera = globalThis.lgs.settings.ui.replay.camera
@@ -224,14 +223,14 @@ describe('app replay shortcuts', () => {
 
         window.dispatchEvent(new KeyboardEvent('keydown', {bubbles: true, cancelable: true, key: 'ArrowUp'}))
         await Promise.resolve()
-        expect(globalThis.lgs.settings.ui.replay.camera.heading).toBe(11)
-        expect(globalThis.lgs.settings.ui.replay.camera.headingOffset).toBe(0)
+        expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBe(-49)
+        expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(10)
 
         window.dispatchEvent(new KeyboardEvent('keydown', {bubbles: true, cancelable: true, key: 'ArrowRight'}))
         await Promise.resolve()
 
-        expect(globalThis.lgs.settings.ui.replay.camera.heading).toBe(11)
-        expect(globalThis.lgs.settings.ui.replay.camera.headingOffset).toBe(-1)
+        expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBe(-49)
+        expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(11)
         expect(globalThis.__.ui.replay.refreshCamera).toHaveBeenCalledTimes(2)
         expect(globalThis.__.ui.replay.refreshCamera).toHaveBeenLastCalledWith(expect.objectContaining({
             preparation: true,
@@ -247,9 +246,8 @@ describe('app replay shortcuts', () => {
         globalThis.lgs.viewer = {scene: {canvas}}
         globalThis.lgs.settings.ui.replay.camera = {
             ...globalThis.lgs.settings.ui.replay.camera,
-            heading:       10,
-            headingOffset: 0,
-            positionMode:  'behind',
+            cameraAngle: 10,
+            pitch: -50,
         }
         globalThis.lgs.stores.replay.camera = globalThis.lgs.settings.ui.replay.camera
         globalThis.lgs.stores.ui.video = proxy({editing: true})
@@ -266,7 +264,8 @@ describe('app replay shortcuts', () => {
         window.dispatchEvent(new KeyboardEvent('keydown', {bubbles: true, cancelable: true, key: 'ArrowRight'}))
         await Promise.resolve()
 
-        expect(globalThis.lgs.settings.ui.replay.camera.headingOffset).toBe(0)
+        expect(globalThis.lgs.settings.ui.replay.camera.cameraAngle).toBe(10)
+        expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBe(-50)
         expect(globalThis.__.ui.replay.refreshCamera).not.toHaveBeenCalled()
         removers.forEach(remove => remove?.())
         canvas.remove()

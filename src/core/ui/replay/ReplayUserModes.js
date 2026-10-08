@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,8 +19,6 @@ import {
     DEFAULT_REPLAY_PROGRESSION,
     DEFAULT_REPLAY_PROFILE_INFO,
     DEFAULT_SIMPLE_REPLAY_DURATION,
-    REPLAY_CAMERA_POSITION_AHEAD,
-    REPLAY_CAMERA_POSITION_BEHIND,
     REPLAY_MARKER_MODE_NAVIGATION,
     REPLAY_TRACE_MODE_PROGRESSIVE,
     defaultJourneyReplayCameraStyle,
@@ -55,16 +53,12 @@ export const normalizeReplayUserMode = mode => mode === REPLAY_USER_MODE_EXPERT
     : REPLAY_USER_MODE_BASIC
 
 /**
- * Normalize an Expert Replay camera with an explicit journey-relative position.
+ * Normalize an Expert Replay camera using the shared route-relative angle.
  *
  * @param {Object} camera - Candidate Expert camera settings.
  * @returns {Object} Normalized Expert camera settings.
  */
-export const normalizeExpertReplayCamera = (camera = {}) => normalizeJourneyReplayCamera(Object.assign({}, camera, {
-    positionMode: camera?.positionMode === REPLAY_CAMERA_POSITION_AHEAD
-        ? REPLAY_CAMERA_POSITION_AHEAD
-        : REPLAY_CAMERA_POSITION_BEHIND,
-}))
+export const normalizeExpertReplayCamera = camera => normalizeJourneyReplayCamera(camera ?? {})
 
 /**
  * Synchronize an Expert camera edit with the current journey and persist it
@@ -143,7 +137,6 @@ export const syncJourneySimpleReplayCamera = (camera) => {
 
     const nextCamera = normalizeJourneyReplayCamera(Object.assign({}, simple.camera, camera, {
         altitudeMode: 'constant',
-        positionMode: REPLAY_CAMERA_POSITION_BEHIND,
         debug: false,
     }))
     journey.replay = {
@@ -177,11 +170,10 @@ export const defaultSimpleReplaySettings = () => ({
     duration: DEFAULT_SIMPLE_REPLAY_DURATION,
     camera: {
         ...defaultJourneyReplayCameraStyle(),
-        positionMode: REPLAY_CAMERA_POSITION_BEHIND,
         altitudeMode: 'constant',
         debug: false,
         altitude: DEFAULT_REPLAY_CAMERA.altitude,
-        heading: DEFAULT_REPLAY_CAMERA.heading,
+        cameraAngle: DEFAULT_REPLAY_CAMERA.cameraAngle,
         pitch: DEFAULT_REPLAY_CAMERA.pitch,
     },
     presentation: {
@@ -221,13 +213,17 @@ export const defaultSimpleReplaySettings = () => ({
  */
 export const normalizeSimpleReplaySettings = (settings = {}) => {
     const defaults = defaultSimpleReplaySettings()
-    const camera = normalizeJourneyReplayCamera({
+    const cameraSettings = {
         ...defaults.camera,
         ...(settings?.camera ?? {}),
         altitudeMode: 'constant',
-        positionMode: REPLAY_CAMERA_POSITION_BEHIND,
         debug: false,
-    })
+    }
+    const savedCameraAngle = settings?.camera?.cameraAngle
+    if (savedCameraAngle === null || savedCameraAngle === undefined || !Number.isFinite(Number(savedCameraAngle))) {
+        cameraSettings.cameraAngle = undefined
+    }
+    const camera = normalizeJourneyReplayCamera(cameraSettings)
     const presentation = settings?.presentation ?? {}
 
     return {

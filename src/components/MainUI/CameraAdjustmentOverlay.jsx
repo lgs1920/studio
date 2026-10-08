@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-27
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -16,11 +16,6 @@
 
 import { Widget } from '@Components/MainUI/widgets/Widget'
 import { LGS_WIDGET, SCENE_WIDGETS, SCENE_WIDGETS_BOARD } from '@Core/constants'
-import {
-    REPLAY_CAMERA_POSITION_AHEAD,
-    REPLAY_CAMERA_POSITION_BEHIND,
-    REPLAY_CAMERA_POSITION_SYSTEM,
-} from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {isJourneyReplayDryRunActive} from '@Core/ui/replay/JourneyReplayRuntime'
 import {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT} from '@Core/ui/replay/ReplayUserModes'
 import { foot, meter, UnitUtils } from '@Utils/UnitUtils'
@@ -63,7 +58,7 @@ const DEFAULT_REPLAY_OVERLAY_STATE = {
     playing:       false,
     recordingSync: false,
     userMode:      REPLAY_USER_MODE_BASIC,
-    camera:        {positionMode: REPLAY_CAMERA_POSITION_SYSTEM, headingOffset: 0},
+    camera:        {cameraAngle: 180},
 }
 
 const DEFAULT_VIDEO_OVERLAY_STATE = {
@@ -148,15 +143,10 @@ export const CameraAdjustmentOverlay = memo(({
     const video = useOptionalSnapshot(lgs.stores?.ui?.video, DEFAULT_VIDEO_OVERLAY_STATE)
     const replayCamera = replay.camera ?? {}
     const dryRunActive = isJourneyReplayDryRunActive(replay, video)
-    const hasReplayCameraAngle = replay.userMode === REPLAY_USER_MODE_EXPERT
+    const hasReplayCameraAngle = [REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT].includes(replay.userMode)
         && video.editing === true
         && !dryRunActive
-        && replayCamera.positionMode !== REPLAY_CAMERA_POSITION_SYSTEM
-        && Number.isFinite(Number(replayCamera.headingOffset))
-    const replayCameraDirection = replayCamera.positionMode === REPLAY_CAMERA_POSITION_AHEAD
-        ? 'ahead'
-        : replayCamera.positionMode === REPLAY_CAMERA_POSITION_BEHIND ? 'behind' : null
-    const replayCameraChevron = replayCameraDirection === 'behind' ? 'caret-up' : 'caret-down'
+        && Number.isFinite(Number(replayCamera.cameraAngle))
     const cameraChangeTimer = useRef(null)
     const _dragging = useRef(false)
     const _child = useRef({})
@@ -286,15 +276,7 @@ export const CameraAdjustmentOverlay = memo(({
                 {hasReplayCameraAngle && (
                     <span className="camera-adjustment-metric" aria-label="Replay camera angle">
                         <WaIcon name="video" variant="regular"/>
-                        <strong>{`${Math.round(-Number(replayCamera.headingOffset))}°`}</strong>
-                        {replayCameraDirection && (
-                            <WaIcon
-                                className="camera-adjustment-angle-direction"
-                                data-direction={replayCameraDirection}
-                                name={replayCameraChevron}
-                                variant="solid"
-                            />
-                        )}
+                        <strong>{`${Math.round(Number(replayCamera.cameraAngle))}°`}</strong>
                     </span>
                 )}
                 {locked && onUnlock && (

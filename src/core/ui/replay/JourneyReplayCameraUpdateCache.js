@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-27
- * Last modified: 2026-09-13
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -102,11 +102,9 @@ const cameraSettingsKey = cameraSettings => {
     }
 
     return [
-        cameraSettings.positionMode ?? 'null',
         cameraSettings.altitudeMode ?? 'null',
         finiteNumberKey(cameraSettings.altitude),
-        finiteNumberKey(cameraSettings.headingOffset),
-        finiteNumberKey(cameraSettings.heading),
+        finiteNumberKey(cameraSettings.cameraAngle),
         finiteNumberKey(cameraSettings.pitch),
         cameraSettings.canDrift === false ? '0' : '1',
         cameraSettings.canFixHiddenMarker === false ? '0' : '1',
