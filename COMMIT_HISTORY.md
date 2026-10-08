@@ -3222,3 +3222,71 @@
 ## 2026-10-01 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/e81660bf99b2a0b831349605d0c63e2515ebdbac)
 
 - Recorded automatically from Git history.
+
+## 2026-10-01 — [`chore: update dependencies`](https://github.com/lgs1920/studio/commit/9c903f9e6d2afed9c5d3ef889c6eb8a1f4aaec8d)
+
+- Signed-off-by: chdenat <christian.denat@orange.fr>
+
+## 2026-10-02 — [`feat(cache): add adjustable local cartographic cache`](https://github.com/lgs1920/studio/commit/96c3172bb96c01c7d9ee91dd6bfef3f5add61df0)
+
+- Recorded automatically from Git history.
+
+## 2026-10-02 — [`fix(pwa): await cache purge before activating updates`](https://github.com/lgs1920/studio/commit/38ae548427db054e9cc62743f58b7d73876203f3)
+
+- Recorded automatically from Git history.
+
+## 2026-10-02 — [`fix(replay): honor phase offsets when seeking and starting`](https://github.com/lgs1920/studio/commit/55da085574543e8440247874c25fa12483349bf3)
+
+- Recorded automatically from Git history.
+
+## 2026-10-02 — [`perf(capture): reuse widget rasters and compose into owned canvases`](https://github.com/lgs1920/studio/commit/24015252630c4b99728efca6bc175d98bc2ca0ef)
+
+- Recorded automatically from Git history.
+
+## 2026-10-02 — [`perf(replay): synchronize visible widget capture with export frames`](https://github.com/lgs1920/studio/commit/beafaa99070ea93c92af065d4b6731961a575a8a)
+
+- Recorded automatically from Git history.
+
+## 2026-10-02 — [`docs(replay): describe deterministic widget capture and validation limits`](https://github.com/lgs1920/studio/commit/49333e55108e39a737de70234c90f54af702c167)
+
+- Recorded automatically from Git history.
+
+## 2026-10-02 — [`feat: display device location on map`](https://github.com/lgs1920/studio/commit/9d7527329943ad9512828e32aa74fd1ab5dd685a)
+
+- Recorded automatically from Git history.
+
+## 2026-10-07 — [`fix(cache): clarify local cache availability`](https://github.com/lgs1920/studio/commit/a0dc6e01673e1127dade1770f7b100d3d8186879)
+
+- Recorded automatically from Git history.
+
+## 2026-10-08 — [`fix(settings): preserve hide other journeys preference`](https://github.com/lgs1920/studio/commit/86942856fe0d8659c7d1ee96867de0dd45283cae)
+
+- Recorded automatically from Git history.
+
+## 2026-10-08 — [`fix(track): preserve GPX altitude during rendering`](https://github.com/lgs1920/studio/commit/d82e48ce9d2b5448f2544ff84b1e8c5499b7087b)
+
+- Recorded automatically from Git history.
+
+## 2026-10-08 — [`refactor(cache): move cartographic policy into core`](https://github.com/lgs1920/studio/commit/be5581b75fc56e0c93886bbfdeff5651d90222b4)
+
+- Recorded automatically from Git history.
+
+## 2026-10-08 — [`refactor(widgets): keep orbit hint toggle private`](https://github.com/lgs1920/studio/commit/2894f76e020abe98b6b1a2f340bec9c5134027da)
+
+- Recorded automatically from Git history.
+
+## 2026-10-08 — [`fix(replay): honor timeline visibility for widgets`](https://github.com/lgs1920/studio/commit/6cc1b9db25864443b6d66f65a079e8631930411b)
+
+- Recorded automatically from Git history.
+
+## 2026-10-08 — [`feat(replay): unify camera angle and preparation guide`](https://github.com/lgs1920/studio/commit/2bb87ea3477eb4c4379f2162a0e1b33774ed47e6)
+
+- Recorded automatically from Git history.
+
+## 2026-10-08 — [`fix(track): keep GPX traces visible after altitude splitting`](https://github.com/lgs1920/studio/commit/0c62e457fdeb36f87746318026028c80a229ef33)
+
+- Recorded automatically from Git history.
+
+## 2026-10-08 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/b0f1cb4dc4554dbde36690ecedb1f5b600d9befb)
+
+- Recorded automatically from Git history.
