@@ -24,7 +24,7 @@ import {isResolvedReplayFrameIntent} from './ReplayFrameIntent'
 import {attachReplayFrameIntent, publishReplayFrameState} from './ReplayFramePublisher'
 import {createReplayRenderModeContract} from './ReplayRenderModeContract'
 import {getJourneyReplaySettings, normalizeJourneyReplayCamera} from './JourneyReplayProgressionStyle'
-import {REPLAY_USER_MODE_BASIC} from './ReplayUserModeConstants'
+import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
 
 /**
  * Converts a value to a finite number.
@@ -262,11 +262,11 @@ export const replayStore = () => globalThis.lgs?.stores?.replay
  *
  * @returns {Object} Réglages caméra normalisés pour le Replay courant.
  */
-export const currentJourneyReplayCameraSettings = () => {
-    const settings = getJourneyReplaySettings()
+export const currentJourneyReplayCameraSettings = (options = {}) => {
+    const settings = getJourneyReplaySettings(options)
     const store = replayStore()
     const simplePreparation = store?.simplePreparationActive === true
-    const basicMode = settings.userMode === REPLAY_USER_MODE_BASIC || simplePreparation
+    const basicMode = isJourneyReplayBasicMode()
     const camera = simplePreparation && store?.camera
         ? {...settings.camera, ...store.camera}
         : settings.camera
@@ -403,7 +403,7 @@ export const currentJourneyReplaySample = controller => controller?.currentSampl
 export const currentJourneyReplayPoiBehavior = () => {
     const settings = getJourneyReplaySettings()
     const store = replayStore()
-    const simpleMode = store?.simplePreparationActive === true
+    const simpleMode = isJourneyReplayBasicMode()
     return {
         hideAllPoisDuringJourneyReplay: settings.hideAllPoisDuringJourneyReplay === true
                                         || (!simpleMode && store?.hideAllPoisDuringJourneyReplay === true),

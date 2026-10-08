@@ -192,7 +192,7 @@ vi.mock('@web.awesome.me/webawesome-pro/dist/react', () => {
 
 describe('JourneyReplayDrawer', () => {
     beforeEach(() => {
-        const replay = proxy(defaultJourneyReplaySettings())
+        const replay = proxy({...defaultJourneyReplaySettings(), userMode: 'expert'})
         replay.marker.mode = REPLAY_MARKER_MODE_NAVIGATION
         const poiList = proxyMap()
         poiList.set('poi-1', {
@@ -370,6 +370,7 @@ describe('JourneyReplayDrawer', () => {
             persistToDatabase: vi.fn(),
         }
         globalThis.lgs.theJourney = journey
+        globalThis.lgs.stores.main.theJourney = journey
         globalThis.lgs.settings.ui.replay.userMode = 'expert'
         globalThis.lgs.settings.ui.replay.camera = camera
         globalThis.lgs.stores.replay.camera = proxy({...camera})
@@ -455,6 +456,8 @@ describe('JourneyReplayDrawer', () => {
     })
 
     it('keeps camera azimuth controls in Expert Replay only', () => {
+        globalThis.lgs.settings.ui.replay.userMode = 'basic'
+        globalThis.lgs.stores.replay.userMode = 'basic'
         const view = render(<JourneyReplayDrawer/>)
         fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
 
@@ -586,13 +589,14 @@ describe('JourneyReplayDrawer', () => {
     it('shows and persists capability-specific camera sensitivities', async () => {
         const view = render(<JourneyReplayDrawer/>)
         fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
+        const popup = view.getByTestId('replay-advanced-camera-popup')
 
-        expect(view.getAllByRole('slider')).toHaveLength(3)
+        expect(popup.querySelectorAll('.replay-camera-sensitivity-slider')).toHaveLength(3)
         expect(view.getByText('Add drift')).toBeTruthy()
         expect(view.getByText('Add roll')).toBeTruthy()
         expect(view.getByText('Add hidden marker correction')).toBeTruthy()
 
-        const sensitivityInputs = view.getAllByRole('slider')
+        const sensitivityInputs = popup.querySelectorAll('.replay-camera-sensitivity-slider')
         fireEvent.input(sensitivityInputs[2], {target: {value: '0.25'}})
 
         await waitFor(() => {
@@ -600,13 +604,14 @@ describe('JourneyReplayDrawer', () => {
             expect(globalThis.lgs.stores.replay.camera.rollSensitivity).toBe(0.25)
         })
 
-        fireEvent.click(view.getByLabelText('Add drift'))
-        fireEvent.click(view.getByLabelText('Add roll'))
-        fireEvent.click(view.getByLabelText('Add hidden marker correction'))
+        for (const label of ['Add drift', 'Add roll', 'Add hidden marker correction']) {
+            fireEvent.click(view.getByLabelText(label))
+            await waitFor(() => {
+                expect(view.getByLabelText(label).checked).toBe(false)
+            })
+        }
 
-        await waitFor(() => {
-            expect(view.queryAllByRole('slider')).toHaveLength(0)
-        })
+        expect(popup.querySelectorAll('.replay-camera-sensitivity-slider')).toHaveLength(0)
     })
 
     it('shows the debug camera switch as a Replay setting and keeps it disabled by default', async () => {

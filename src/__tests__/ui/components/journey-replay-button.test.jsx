@@ -69,7 +69,9 @@ describe('JourneyReplayButton synchronized video entry point', () => {
     it('prepares Basic Replay on the map and exposes video launch controls', async () => {
         const enterReplayPreparation = vi.fn()
         globalThis.__.ui.replay = {enterReplayPreparation}
+        globalThis.lgs.settings.ui.replay.duration = 60
         globalThis.lgs.settings.ui.replay.simple = {
+            duration: 10,
             camera: {headingOffset: 8, pitch: -48, positionMode: 'behind'},
         }
         globalThis.lgs.theJourney.replay = {
@@ -101,6 +103,8 @@ describe('JourneyReplayButton synchronized video entry point', () => {
         expect(globalThis.lgs.stores.replay.camera).toMatchObject({
             cameraAngle: 156,
         })
+        expect(globalThis.lgs.settings.ui.replay.duration).toBe(60)
+        expect(globalThis.lgs.stores.replay.duration).toBe(10)
         expect(globalThis.lgs.settings.ui.replay.simple.camera.debug).toBe(false)
         expect(globalThis.lgs.stores.replay.simplePreparationActive).toBe(true)
         await waitFor(() => {
@@ -111,6 +115,30 @@ describe('JourneyReplayButton synchronized video entry point', () => {
 
         expect(globalThis.lgs.settings.ui.replay.userMode).toBe('basic')
         expect(globalThis.lgs.stores.replay.userMode).toBe('basic')
+    })
+
+    it('restores the Expert duration after leaving Basic Replay', () => {
+        globalThis.lgs.settings.ui.replay.duration = 60
+        globalThis.lgs.settings.ui.replay.simple = {duration: 10}
+        globalThis.lgs.theJourney.replay = {
+            expert: {camera: {altitude: 900, pitch: -60}},
+        }
+
+        const {unmount} = render(
+            <JourneyReplayButton id="launch-basic-replay-duration" mode="basic" ariaLabel="Basic Replay"/>,
+        )
+        fireEvent.click(screen.getByRole('button', {name: 'Basic Replay'}))
+        expect(globalThis.lgs.stores.replay.duration).toBe(10)
+        expect(globalThis.lgs.settings.ui.replay.duration).toBe(60)
+
+        unmount()
+        render(
+            <JourneyReplayButton id="launch-expert-replay-duration" mode="expert" ariaLabel="Expert Replay"/>,
+        )
+        fireEvent.click(screen.getByRole('button', {name: 'Expert Replay'}))
+
+        expect(globalThis.lgs.stores.replay.duration).toBe(60)
+        expect(globalThis.lgs.settings.ui.replay.duration).toBe(60)
     })
 
     it('migrates a legacy Simple camera to one angle when entering Expert Replay', () => {

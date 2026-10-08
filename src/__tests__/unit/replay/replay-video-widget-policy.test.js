@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-30
- * Last modified: 2026-09-30
+ * Created on: 2026-09-25
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -45,6 +45,10 @@ describe('Replay video widget policy', () => {
     })
 
     it('allows every content widget and excludes capture infrastructure', () => {
+        globalThis.lgs = {
+            settings: {ui: {replay: {userMode: 'expert'}}},
+            stores: {replay: {userMode: 'expert', simplePreparationActive: false}},
+        }
         expect(filterReplayVideoWidgetKeys([
             'journey-stats-widget#1',
             'compass-widget#1',
@@ -97,7 +101,9 @@ describe('Replay video widget policy', () => {
             },
         }
         globalThis.lgs = {
+            settings: {ui: {replay: {userMode: 'expert'}}},
             stores: {
+                replay: {userMode: 'basic', simplePreparationActive: false},
                 ui: {
                     widget: {
                         list: new Map([

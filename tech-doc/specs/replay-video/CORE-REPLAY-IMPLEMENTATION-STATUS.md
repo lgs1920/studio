@@ -47,16 +47,17 @@ handoff; it does not encode video.
 
 Simple/Expert support is present but incomplete:
 
-- Expert camera settings are initialized from Simple settings on first entry.
-  Camera edits from the drawer and direct map interaction now synchronize with
-  `journey.replay.expert.camera` and persist after editing settles. Progression
-  and profile-info drawer edits are still not consistently written back to the
-  journey configuration.
-- Some Simple behavior is keyed to transient
-  `replay.simplePreparationActive`, while other behavior reads persisted
-  `userMode`. Render plans and context signatures do not consistently include
-  the effective mode/configuration, leaving widget policy and cached plans
-  vulnerable to stale mode state.
+- Expert camera and progression settings are initialized from Simple settings
+  on first entry. Camera edits from the drawer and direct map interaction, plus
+  progression edits from the drawer, synchronize with `journey.replay.expert`
+  and persist after editing settles. Profile-info edits still need a matching
+  journey writeback.
+- Replay mode resolution now treats an active Simple preparation as Basic,
+  then prefers the saved mode over the runtime store's default. Remaining
+  render-plan and context signatures still need to include the effective
+  mode/configuration consistently. Replay now resolves the selected journey
+  from the main store before the legacy global reference and keeps the live
+  camera pitch when Basic preparation rebuilds its sampler.
 - Simple defaults differ between runtime normalization and
   `public/replay.yaml`; align the defaults so imported and freshly-created
   settings resolve consistently.

@@ -32,14 +32,23 @@ import {
     normalizeSimpleReplayDuration,
 } from './JourneyReplayProgressionStyle'
 
-import {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT} from './ReplayUserModeConstants'
+import {
+    currentReplayJourney,
+    REPLAY_USER_MODE_BASIC,
+    REPLAY_USER_MODE_EXPERT,
+    resolveJourneyReplayUserMode,
+} from './ReplayUserModeConstants'
 
 export {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT}
 export const DEFAULT_REPLAY_USER_MODE = REPLAY_USER_MODE_BASIC
 
 const clone = value => JSON.parse(JSON.stringify(value))
 const expertCameraPersistTimers = new WeakMap()
+const expertProgressionPersistTimers = new WeakMap()
 const simpleCameraPersistTimers = new WeakMap()
+const simpleProgressionPersistTimers = new WeakMap()
+const simpleTracePersistTimers = new WeakMap()
+const simpleDurationPersistTimers = new WeakMap()
 const EXPERT_CAMERA_PERSIST_DELAY_MS = 250
 
 /**
@@ -70,8 +79,8 @@ export const normalizeExpertReplayCamera = camera => normalizeJourneyReplayCamer
 export const syncJourneyExpertReplayCamera = (camera) => {
     const lgs = globalThis.lgs
     const replaySettings = lgs?.settings?.ui?.replay
-    const journey = lgs?.theJourney
-    if (replaySettings?.userMode !== REPLAY_USER_MODE_EXPERT || !journey) {
+    const journey = currentReplayJourney()
+    if (resolveJourneyReplayUserMode() !== REPLAY_USER_MODE_EXPERT || !journey || !replaySettings) {
         return null
     }
 
@@ -120,6 +129,50 @@ export const syncJourneyExpertReplayCamera = (camera) => {
 }
 
 /**
+ * Synchronize Expert progression edits with the journey configuration used by
+ * Replay resolution and persist them after editing settles.
+ *
+ * @param {Object} progression - Complete normalized progression settings.
+ * @returns {Object|null} The synchronized progression, or null outside Expert mode.
+ */
+export const syncJourneyExpertReplayProgression = progression => {
+    const lgs = globalThis.lgs
+    const replaySettings = lgs?.settings?.ui?.replay
+    const journey = currentReplayJourney()
+    if (resolveJourneyReplayUserMode() !== REPLAY_USER_MODE_EXPERT || !journey || !replaySettings) {
+        return null
+    }
+
+    const replay = journey.replay ?? {}
+    const expert = replay.expert ?? {}
+    const nextProgression = normalizeJourneyReplayProgressionStyle(progression)
+    journey.replay = {
+        ...replay,
+        expert: {
+            ...expert,
+            progression: nextProgression,
+        },
+    }
+    replaySettings.progression = nextProgression
+    if (lgs?.stores?.replay) {
+        lgs.stores.replay.progression = nextProgression
+    }
+
+    if (typeof journey.persistToDatabase === 'function') {
+        const pendingTimer = expertProgressionPersistTimers.get(journey)
+        if (pendingTimer !== undefined) {
+            clearTimeout(pendingTimer)
+        }
+        expertProgressionPersistTimers.set(journey, setTimeout(() => {
+            expertProgressionPersistTimers.delete(journey)
+            void journey.persistToDatabase()
+        }, EXPERT_CAMERA_PERSIST_DELAY_MS))
+    }
+
+    return nextProgression
+}
+
+/**
  * Keep an explicitly configured journey Simple camera in sync with its live
  * preparation edits, then persist it after a short quiet period.
  *
@@ -127,8 +180,7 @@ export const syncJourneyExpertReplayCamera = (camera) => {
  * @returns {Object|null} The synchronized camera, or null without journey-level Simple settings.
  */
 export const syncJourneySimpleReplayCamera = (camera) => {
-    const lgs = globalThis.lgs
-    const journey = lgs?.stores?.main?.theJourney ?? lgs?.theJourney
+    const journey = currentReplayJourney()
     const replay = journey?.replay
     const simple = replay?.simple
     if (!journey || !simple || typeof simple !== 'object') {
@@ -159,6 +211,126 @@ export const syncJourneySimpleReplayCamera = (camera) => {
     }
 
     return nextCamera
+}
+
+/**
+ * Synchronize Simple Replay progression edits with explicit journey settings.
+ *
+ * @param {Object} progression - Complete normalized progression settings.
+ * @returns {Object|null} The synchronized progression, or null without journey-level Simple settings.
+ */
+export const syncJourneySimpleReplayProgression = progression => {
+    const journey = currentReplayJourney()
+    const replay = journey?.replay
+    const simple = replay?.simple
+    if (!journey || !simple || typeof simple !== 'object') {
+        return null
+    }
+
+    const nextProgression = normalizeJourneyReplayProgressionStyle(progression)
+    journey.replay = {
+        ...replay,
+        simple: {
+            ...simple,
+            presentation: {
+                ...(simple.presentation ?? {}),
+                progression: nextProgression,
+            },
+        },
+    }
+
+    if (typeof journey.persistToDatabase === 'function') {
+        const pendingTimer = simpleProgressionPersistTimers.get(journey)
+        if (pendingTimer !== undefined) {
+            clearTimeout(pendingTimer)
+        }
+        simpleProgressionPersistTimers.set(journey, setTimeout(() => {
+            simpleProgressionPersistTimers.delete(journey)
+            void journey.persistToDatabase()
+        }, EXPERT_CAMERA_PERSIST_DELAY_MS))
+    }
+
+    return nextProgression
+}
+
+/**
+ * Synchronize Simple Replay trace style edits with explicit journey settings.
+ * The Simple mode keeps its supported progressive rendering policy.
+ *
+ * @param {Object} trace - Complete trace settings.
+ * @returns {Object|null} The synchronized trace settings, or null without journey-level Simple settings.
+ */
+export const syncJourneySimpleReplayTrace = trace => {
+    const journey = currentReplayJourney()
+    const replay = journey?.replay
+    const simple = replay?.simple
+    if (!journey || !simple || typeof simple !== 'object') {
+        return null
+    }
+
+    const nextTrace = normalizeJourneyReplayTrace({
+        ...(simple.trace ?? {}),
+        ...trace,
+        mode: REPLAY_TRACE_MODE_PROGRESSIVE,
+    })
+    journey.replay = {
+        ...replay,
+        simple: {
+            ...simple,
+            trace: nextTrace,
+        },
+    }
+
+    if (typeof journey.persistToDatabase === 'function') {
+        const pendingTimer = simpleTracePersistTimers.get(journey)
+        if (pendingTimer !== undefined) {
+            clearTimeout(pendingTimer)
+        }
+        simpleTracePersistTimers.set(journey, setTimeout(() => {
+            simpleTracePersistTimers.delete(journey)
+            void journey.persistToDatabase()
+        }, EXPERT_CAMERA_PERSIST_DELAY_MS))
+    }
+
+    return nextTrace
+}
+
+/**
+ * Synchronize an edited Simple Replay duration with an explicitly configured
+ * journey and persist it after editing settles.
+ *
+ * @param {number} duration - Replay duration in seconds.
+ * @returns {number|null} The synchronized duration, or null without journey-level Simple settings.
+ */
+export const syncJourneySimpleReplayDuration = duration => {
+    const journey = currentReplayJourney()
+    const replay = journey?.replay
+    const simple = replay?.simple
+    if (!journey || !simple || typeof simple !== 'object') {
+        return null
+    }
+
+    const nextDuration = normalizeSimpleReplayDuration(duration)
+    journey.replay = {
+        ...replay,
+        simple: {
+            ...simple,
+            duration: nextDuration,
+        },
+    }
+
+    if (typeof journey.persistToDatabase === 'function') {
+        const pendingTimer = simpleDurationPersistTimers.get(journey)
+        if (pendingTimer !== undefined) {
+            clearTimeout(pendingTimer)
+        }
+        simpleDurationPersistTimers.set(journey, setTimeout(() => {
+            simpleDurationPersistTimers.delete(journey)
+            void journey.persistToDatabase()
+        }, EXPERT_CAMERA_PERSIST_DELAY_MS))
+    }
+
+    return nextDuration
 }
 
 /**

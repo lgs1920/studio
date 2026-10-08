@@ -22,9 +22,11 @@ import {
     normalizeReplayUserMode,
     resolveSimpleReplaySettings,
     syncJourneyExpertReplayCamera,
+    syncJourneyExpertReplayProgression,
     REPLAY_USER_MODE_BASIC,
     REPLAY_USER_MODE_EXPERT,
 } from '@Core/ui/replay/ReplayUserModes'
+import {isJourneyReplayBasicMode, resolveJourneyReplayUserMode} from '@Core/ui/replay/ReplayUserModeConstants'
 import {
     getJourneyReplaySettings,
     normalizeJourneyReplaySettings,
@@ -36,6 +38,18 @@ describe('Replay user modes', () => {
         expect(normalizeReplayUserMode()).toBe(REPLAY_USER_MODE_BASIC)
         expect(normalizeReplayUserMode('unknown')).toBe(REPLAY_USER_MODE_BASIC)
         expect(normalizeReplayUserMode(REPLAY_USER_MODE_EXPERT)).toBe(REPLAY_USER_MODE_EXPERT)
+    })
+
+    it('prefers the saved mode to the runtime store default while Simple preparation stays Basic', () => {
+        const settings = {userMode: REPLAY_USER_MODE_EXPERT}
+        const replay = {userMode: REPLAY_USER_MODE_BASIC, simplePreparationActive: false}
+
+        expect(resolveJourneyReplayUserMode({settings, replay})).toBe(REPLAY_USER_MODE_EXPERT)
+        expect(isJourneyReplayBasicMode({settings, replay})).toBe(false)
+        expect(resolveJourneyReplayUserMode({settings, replay: {...replay, simplePreparationActive: true}}))
+            .toBe(REPLAY_USER_MODE_BASIC)
+        expect(resolveJourneyReplayUserMode({settings: {}, replay: {userMode: REPLAY_USER_MODE_EXPERT}}))
+            .toBe(REPLAY_USER_MODE_EXPERT)
     })
 
     it('resolves journey settings over user and product settings', () => {
@@ -76,6 +90,60 @@ describe('Replay user modes', () => {
             userMode: REPLAY_USER_MODE_EXPERT,
             camera: {debug: true},
         }).camera.debug).toBe(true)
+    })
+
+    it('resolves Expert settings when the runtime store still has its default Basic mode', () => {
+        const previousLgs = globalThis.lgs
+        globalThis.lgs = {
+            settings: {ui: {replay: {camera: {altitude: 1300}}}},
+            stores: {replay: {userMode: REPLAY_USER_MODE_EXPERT, simplePreparationActive: false}},
+            theJourney: {replay: {expert: {camera: {altitude: 2100}}}},
+        }
+
+        try {
+            const settings = getJourneyReplaySettings()
+            expect(settings.userMode).toBe(REPLAY_USER_MODE_EXPERT)
+            expect(settings.camera.altitude).toBe(2100)
+        } finally {
+            if (previousLgs === undefined) {
+                delete globalThis.lgs
+            } else {
+                globalThis.lgs = previousLgs
+            }
+        }
+    })
+
+    it('uses the selected journey for Expert camera settings and synchronization', () => {
+        const previousLgs = globalThis.lgs
+        const selectedJourney = {
+            slug: 'selected-journey',
+            replay: {expert: {camera: {altitude: 900, pitch: -60}}},
+        }
+        const previousJourney = {
+            slug: 'previous-journey',
+            replay: {expert: {camera: {altitude: 900, pitch: -12}}},
+        }
+        globalThis.lgs = {
+            settings: {ui: {replay: {camera: {altitude: 900, pitch: -65}}}},
+            stores: {
+                main: {theJourney: selectedJourney},
+                replay: {userMode: REPLAY_USER_MODE_EXPERT},
+            },
+            theJourney: previousJourney,
+        }
+
+        try {
+            expect(getJourneyReplaySettings().camera.pitch).toBe(-60)
+            syncJourneyExpertReplayCamera({altitude: 900, pitch: -35})
+            expect(selectedJourney.replay.expert.camera.pitch).toBe(-35)
+            expect(previousJourney.replay.expert.camera.pitch).toBe(-12)
+        } finally {
+            if (previousLgs === undefined) {
+                delete globalThis.lgs
+            } else {
+                globalThis.lgs = previousLgs
+            }
+        }
     })
 
     it('defaults Simple Replay to 15 seconds and accepts only the supported durations', () => {
@@ -138,6 +206,53 @@ describe('Replay user modes', () => {
             expect(journey.replay.expert.timeline).toEqual({zoomPercent: 70})
             expect(globalThis.lgs.stores.replay.camera).toMatchObject({altitude: 2400, pitch: -42})
             expect(getJourneyReplaySettings().camera).toMatchObject({altitude: 2400, pitch: -42})
+            expect(persistToDatabase).not.toHaveBeenCalled()
+
+            vi.advanceTimersByTime(250)
+            expect(persistToDatabase).toHaveBeenCalledOnce()
+        } finally {
+            vi.useRealTimers()
+            if (previousLgs === undefined) {
+                delete globalThis.lgs
+            } else {
+                globalThis.lgs = previousLgs
+            }
+        }
+    })
+
+    it('uses and persists the edited Expert progression instead of an older journey value', () => {
+        const previousLgs = globalThis.lgs
+        const persistToDatabase = vi.fn()
+        const journey = {
+            replay: {
+                expert: {
+                    progression: {fill: {color: '#112233'}},
+                    profileInfo: {color: '#ffffff'},
+                },
+            },
+            persistToDatabase,
+        }
+        const progression = {
+            ...defaultSimpleReplaySettings().presentation.progression,
+            fill: {
+                ...defaultSimpleReplaySettings().presentation.progression.fill,
+                color: '#445566',
+            },
+        }
+        globalThis.lgs = {
+            settings: {ui: {replay: {userMode: REPLAY_USER_MODE_EXPERT}}},
+            stores: {replay: {userMode: REPLAY_USER_MODE_BASIC, simplePreparationActive: false}},
+            theJourney: journey,
+        }
+        vi.useFakeTimers()
+
+        try {
+            expect(isJourneyReplayBasicMode()).toBe(false)
+            syncJourneyExpertReplayProgression(progression)
+
+            expect(journey.replay.expert.progression.fill.color).toBe('#445566')
+            expect(globalThis.lgs.stores.replay.progression.fill.color).toBe('#445566')
+            expect(getJourneyReplaySettings().progression.fill.color).toBe('#445566')
             expect(persistToDatabase).not.toHaveBeenCalled()
 
             vi.advanceTimersByTime(250)

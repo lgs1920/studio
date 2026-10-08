@@ -32,7 +32,7 @@ import {
     TrackUtils,
 }                                                                                          from '@Utils/cesium/TrackUtils'
 import { Journey }                                                                         from '@Core/Journey'
-import {isJourneyReplayBasicMode}                                                            from './ReplayUserModeConstants'
+import {currentReplayJourney, isJourneyReplayBasicMode}                                    from './ReplayUserModeConstants'
 import {
     ArcType, Cartesian2, Cartesian3, Cartographic, CatmullRomSpline, Color, ExtrapolationType, JulianDate,
     EasingFunction, HeightReference, HorizontalOrigin, LinearApproximation, Math as CesiumMath, Matrix4,
@@ -156,15 +156,13 @@ export const configure = (mode, options = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
         const store = replayStore()
-        const journey = options.journey
-            ?? globalThis.lgs?.theJourney
-            ?? globalThis.lgs?.stores?.main?.theJourney
+        const journey = options.journey ?? currentReplayJourney()
 
         if (!journey) {
             return null
         }
 
-        const replay = getJourneyReplaySettings()
+        const replay = getJourneyReplaySettings({journey})
         const simpleReplay = isJourneyReplayBasicMode()
         const includeHiddenTracks = simpleReplay
             ? false
@@ -176,7 +174,11 @@ export const configure = (mode, options = {}) => {
         const trace = options.trace ?? replay.trace
         const smoothing = normalizeJourneyReplaySmoothing(options.smoothing ?? replay.smoothing)
         const marker = options.marker ?? replay.marker
-        const camera = simpleReplay ? replay.camera : options.camera ?? replay.camera
+        const camera = simpleReplay
+            ? store?.simplePreparationActive === true
+                ? currentJourneyReplayCameraSettings({journey})
+                : replay.camera
+            : options.camera ?? replay.camera
         const readiness = normalizeJourneyReplayReadiness(simpleReplay
             ? {...replay.readiness, enabled: false, prewarmEnabled: false}
             : options.readiness ?? replay.readiness)
@@ -247,9 +249,7 @@ export const configure = (mode, options = {}) => {
  * @returns {Promise<boolean>} Whether the replay anchor was prepared.
  */
 export const prepareReplayCamera = async (mode, {
-                                               journey = globalThis.lgs?.theJourney
-                                                   ?? globalThis.lgs?.stores?.main?.theJourney
-                                                   ?? null,
+                                               journey = currentReplayJourney(),
                                            } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -306,8 +306,8 @@ export const prepareReplayCamera = async (mode, {
     }
     state.replayPreparationSample = sample
 
-    const replaySettings = getJourneyReplaySettings()
-    const cameraSettings = currentJourneyReplayCameraSettings()
+    const replaySettings = getJourneyReplaySettings({journey})
+    const cameraSettings = currentJourneyReplayCameraSettings({journey})
     const markerSettings = normalizeJourneyReplayMarker(
         globalThis.lgs?.stores?.replay?.marker ?? replaySettings.marker,
     )
@@ -353,7 +353,7 @@ export const prepareReplayCamera = async (mode, {
  * @returns {Promise<boolean>} Whether the preparation state was applied.
  */
 export const enterReplayPreparation = async (mode, {
-                                                  journey = globalThis.lgs?.theJourney ?? null,
+                                                  journey = currentReplayJourney(),
                                                   shouldApply = null,
                                               } = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
@@ -416,9 +416,7 @@ export const leaveReplayPreparation = (mode) => {
 export const start = (mode, options = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-    const journey = options.journey
-        ?? globalThis.lgs?.theJourney
-        ?? globalThis.lgs?.stores?.main?.theJourney
+    const journey = options.journey ?? currentReplayJourney()
     if (!journey) {
         return null
     }

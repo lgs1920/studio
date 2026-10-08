@@ -18,7 +18,12 @@ import { defaultJourneyReplayClips, normalizeJourneyReplayClips } from './Journe
 import {
     TRACK_RENDER_SMOOTHING_MAX_STEP, TRACK_RENDER_SMOOTHING_MIN_STEP, normalizeTrackRenderSmoothing,
 } from '@Utils/cesium/trackRenderSmoothing'
-import {REPLAY_USER_MODE_BASIC, REPLAY_USER_MODE_EXPERT} from './ReplayUserModeConstants'
+import {
+    REPLAY_USER_MODE_BASIC,
+    REPLAY_USER_MODE_EXPERT,
+    currentReplayJourney,
+    resolveJourneyReplayUserMode,
+} from './ReplayUserModeConstants'
 
 export const REPLAY_PROGRESSION_FILL_MIN_WIDTH = 1
 export const REPLAY_PROGRESSION_FILL_MAX_WIDTH = 10
@@ -771,13 +776,20 @@ export const getJourneyReplayCameraPresetUpdates = presetKey => {
     } : null
 }
 
-export const getJourneyReplaySettings = () => normalizeJourneyReplaySettings(
+export const getJourneyReplaySettings = ({journey = currentReplayJourney()} = {}) => normalizeJourneyReplaySettings(
     (() => {
+        const replaySource = globalThis.lgs?.settings?.ui?.replay
+            ?? globalThis.lgs?.configuration?.ui?.replay
         const settings = normalizeJourneyReplaySettings(
-            globalThis.lgs?.settings?.ui?.replay
-            ?? globalThis.lgs?.configuration?.ui?.replay,
+            {
+                ...(replaySource ?? {}),
+                userMode: resolveJourneyReplayUserMode({
+                    settings: replaySource,
+                    replay: globalThis.lgs?.stores?.replay,
+                }),
+            },
         )
-        const journeyReplay = globalThis.lgs?.theJourney?.replay
+        const journeyReplay = journey?.replay
         const simple = resolveReplaySimpleSettingsForRuntime({
             journey: journeyReplay?.simple,
             user: settings.simple,

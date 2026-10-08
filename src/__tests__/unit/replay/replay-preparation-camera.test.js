@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-26
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -19,7 +19,7 @@ import {afterEach, describe, expect, it, vi} from 'vitest'
 import {defaultJourneyReplaySettings} from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from '@Core/ui/replay/JourneyReplayInternal'
 import {lockReplayCameraToAnchor} from '@Core/ui/replay/JourneyReplayCameraState'
-import {enterReplayPreparation, leaveReplayPreparation, prepareReplayCamera, refreshCamera, start} from '@Core/ui/replay/JourneyReplaySessionPlaybackController'
+import {configure, enterReplayPreparation, leaveReplayPreparation, prepareReplayCamera, refreshCamera, start} from '@Core/ui/replay/JourneyReplaySessionPlaybackController'
 
 afterEach(() => {
     delete globalThis.__
@@ -27,6 +27,52 @@ afterEach(() => {
 })
 
 describe('replay preparation camera', () => {
+    it('keeps the prepared Basic pitch when Replay reconfigures against the selected journey', () => {
+        const settings = defaultJourneyReplaySettings()
+        settings.userMode = 'basic'
+        settings.simple = {
+            camera: {...settings.camera, pitch: -65},
+        }
+        const journey = {
+            slug: 'selected-journey',
+            replay: {simple: {camera: {...settings.camera, pitch: -65}}},
+        }
+        const staleJourney = {
+            slug: 'previous-journey',
+            replay: {simple: {camera: {...settings.camera, pitch: -10}}},
+        }
+        const sampler = {hasSamples: true, totalDistance: 1200}
+        const configureController = vi.fn()
+        const mode = {
+            [JOURNEY_REPLAY_INTERNAL_STATE]: {
+                sampler,
+                samplerConfigKey: 'same-sampler',
+                controller: {configure: configureController},
+            },
+            [JOURNEY_REPLAY_INTERNAL_CALL]: {
+                samplerConfigurationKey: vi.fn(() => 'same-sampler'),
+                bindCesiumCameraBridge: vi.fn(),
+            },
+        }
+        globalThis.lgs = {
+            theJourney: staleJourney,
+            settings: {ui: {replay: settings}},
+            stores: {
+                main: {theJourney: journey},
+                replay: {
+                    userMode: 'basic',
+                    simplePreparationActive: true,
+                    camera: {...settings.camera, pitch: -32},
+                },
+            },
+        }
+
+        expect(configure(mode)).toBe(sampler)
+        expect(globalThis.lgs.stores.replay.journeySlug).toBe('selected-journey')
+        expect(globalThis.lgs.stores.replay.camera.pitch).toBe(-32)
+        expect(configureController).toHaveBeenCalledWith(expect.objectContaining({sampler}))
+    })
+
     it('does not prepare or start Replay without a Journey, even when an old sampler remains', async () => {
         const call = {
             configure:          vi.fn(),

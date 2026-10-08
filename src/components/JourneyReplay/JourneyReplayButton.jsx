@@ -86,7 +86,6 @@ export const JourneyReplayButton = (props) => {
             lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_BASIC
             lgs.stores.replay.userMode = REPLAY_USER_MODE_BASIC
             lgs.settings.ui.replay.simple = simple
-            lgs.settings.ui.replay.duration = simple.duration
             lgs.settings.ui.replay.camera = simple.camera
             lgs.stores.replay.camera = simple.camera
             lgs.stores.replay.duration = simple.duration
@@ -139,6 +138,7 @@ export const JourneyReplayButton = (props) => {
                 lgs.settings.ui.replay.camera = expertCamera
                 lgs.stores.replay.camera = expertCamera
             }
+            lgs.stores.replay.duration = lgs.settings.ui.replay.duration
             if (expertReplay) {
                 lgs.settings.ui.replay.progression = expertReplay.progression
                 lgs.settings.ui.replay.profileInfo = expertReplay.profileInfo

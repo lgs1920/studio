@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-02
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -81,7 +81,7 @@ import {
     CanvasOverlayComposer,
 }                              from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 import {REPLAY_VIDEO_FPS} from '@Core/ui/replay/ReplayVideoSettings'
-import {REPLAY_USER_MODE_BASIC, isJourneyReplayBasicMode} from '@Core/ui/replay/ReplayUserModeConstants'
+import {isJourneyReplayBasicMode} from '@Core/ui/replay/ReplayUserModeConstants'
 import {
     normalizeMediabunnyMetadataTags,
 }                              from '@Core/ui/replay/ReplayMediaMetadata'
@@ -395,9 +395,7 @@ const resolveReplayExportClips = ({replay = defaultReplayStore()} = {}) => {
         ?? {},
     )
 
-    if (replay?.userMode === REPLAY_USER_MODE_BASIC
-        || replay?.simplePreparationActive === true
-        || isJourneyReplayBasicMode()) {
+    if (isJourneyReplayBasicMode({replay})) {
         return {...clips, start: [], stop: []}
     }
 

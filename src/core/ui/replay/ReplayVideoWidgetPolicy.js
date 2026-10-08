@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-09-30
- * Last modified: 2026-09-30
+ * Created on: 2026-09-25
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -23,6 +23,7 @@ import {
     VIDEO_CROP_ZONE,
     VIDEO_WIDGETS_BOARD,
 } from '@Core/constants'
+import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
 
 /**
  * Widget types that must be registered automatically on every Replay video
@@ -58,7 +59,7 @@ export const getReplayVideoWidgetType = widgetId => typeof widgetId === 'string'
     ? widgetId.split('#')[0]
     : ''
 
-const isSimpleReplayActive = () => globalThis.lgs?.stores?.replay?.simplePreparationActive === true
+const isSimpleReplayActive = () => isJourneyReplayBasicMode()
 
 /**
  * Return the widget types that Replay must register for the active mode.

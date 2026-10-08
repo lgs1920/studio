@@ -47,7 +47,7 @@ import {
 } from './JourneyReplayProgressionStyle'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
 import {replayCameraFor, replaySceneFor, replayViewerFor} from './ReplayRenderTarget'
-import {REPLAY_USER_MODE_BASIC} from './ReplayUserModeConstants'
+import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
 import {syncJourneyExpertReplayCamera, syncJourneySimpleReplayCamera} from './ReplayUserModes'
 
 import {
@@ -677,7 +677,7 @@ export const persistCameraSettings =  (mode, updates) => {
 
         const replaySettings = getJourneyReplaySettings()
         const current = replaySettings.camera
-        const isBasicMode = replaySettings.userMode === REPLAY_USER_MODE_BASIC
+        const isBasicMode = isJourneyReplayBasicMode()
         const next = normalizeJourneyReplayCamera({
             ...current,
             ...updates,

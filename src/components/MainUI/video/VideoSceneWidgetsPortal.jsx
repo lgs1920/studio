@@ -22,6 +22,7 @@ import {
     filterReplayVideoWidgetKeys,
     getReplayVideoWidgetTypes,
 } from '@Core/ui/replay/ReplayVideoWidgetPolicy'
+import {isJourneyReplayBasicMode} from '@Core/ui/replay/ReplayUserModeConstants'
 import { useOptionalSnapshot } from '@Utils/ValtioUtils'
 import { memo, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -43,7 +44,7 @@ export const VideoSceneWidgetsPortal = memo(({context, hidden = false}) => {
                               || video.finalizing === true
     const synchronizedRecording = video.exporting === true
                                   && replay.recordingSync === true
-    const simpleReplay = replay.simplePreparationActive === true
+    const simpleReplay = isJourneyReplayBasicMode({replay})
     const previewOnly = videoCaptureActive || synchronizedRecording
     const _rehydrateKey = useRef('')
     const allWidgetEntries = Array.from(list.entries())
