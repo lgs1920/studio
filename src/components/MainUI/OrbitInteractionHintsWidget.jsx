@@ -7,8 +7,8 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-07-13
- * Last modified: 2026-07-13
+ * Created on: 2026-04-29
+ * Last modified: 2026-10-08
  *
  *
  * Copyright © 2026 LGS1920
@@ -119,7 +119,7 @@ const PlusMinus = () => (
   </>
 );
 
-export const toggleOrbitInteractionHintsWidget = () => {
+const toggleOrbitInteractionHintsWidget = () => {
   const widgetList = lgs.stores.ui.widget.list;
   if (widgetList.has(ORBIT_INTERACTION_HINTS_WIDGET)) {
     widgetList.delete(ORBIT_INTERACTION_HINTS_WIDGET);
