@@ -19,6 +19,7 @@
  */
 
 import {Math as CesiumMath} from 'cesium'
+import turfCentroid from '@turf/centroid'
 import {CameraUtils} from '@Utils/cesium/CameraUtils'
 import {TrackUtils} from '@Utils/cesium/TrackUtils'
 import {REPLAY_CLIP_SLOT_START, REPLAY_CLIP_SLOT_STOP, normalizeJourneyReplayClips} from './JourneyReplayClips'
@@ -34,6 +35,7 @@ import {replayVideoTraceDebug} from './ReplayVideoTraceDebug'
 import {JOURNEY_REPLAY_INTERNAL_CALL, JOURNEY_REPLAY_INTERNAL_STATE} from './JourneyReplayInternal'
 import {resolveJourneyReplayLogicalCameraPose} from './JourneyReplayLogicalCameraPose'
 import {createReplayCameraCommand} from './ReplayCameraCommand'
+import {SIMPLE_REPLAY_TRACE_FOCUS_INSTANCE_ID} from './JourneyReplaySimpleFocus'
 
 const SAFE_TOP_DOWN_PITCH = -(Math.PI / 2 - 0.0001)
 const LANDING_CAMERA_GROUND_OFFSET_METERS = 20
@@ -79,26 +81,72 @@ export const interpolateReplayExportSample = (mode, start = null, end = null, ra
         }
     }
 
+/**
+ * Resolve the target sample for a Replay focus clip.
+ *
+ * @param {Object} mode - Replay mode.
+ * @param {Object|null} sample - Current Replay sample used as a fallback.
+ * @param {string} [targetMode='centroid'] - Focus target selector.
+ * @returns {Promise<Object|null>} The resolved focus target sample.
+ */
 export const focusTargetSampleForReplayExport = async (mode, sample, targetMode = 'centroid') => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        if (normalizeReplayFocusTarget(targetMode) === 'last-point') {
+    const normalizedTarget = normalizeReplayFocusTarget(targetMode)
+    if (normalizedTarget === 'last-point') {
+        return sample
+    }
+
+    if (normalizedTarget === 'trace-centroid') {
+        const traceSamples = (state.sampler?.samples ?? []).filter(point => (
+            finiteNumber(point?.longitude) !== null && finiteNumber(point?.latitude) !== null
+        ))
+        const coordinates = traceSamples
+            .map(point => [finiteNumber(point.longitude), finiteNumber(point.latitude)])
+        if (coordinates.length === 0) {
             return sample
         }
 
-        const centroid = await globalThis.__?.ui?.sceneManager?.getJourneyCentroid?.(globalThis.lgs?.theJourney ?? null)
-        if (!centroid) {
-            return sample
-        }
+        const center = turfCentroid({
+            type: 'Feature',
+            properties: {},
+            geometry: {
+                type: 'MultiPoint',
+                coordinates,
+            },
+        }).geometry.coordinates
+        const [longitude, latitude] = center
+        const altitudes = traceSamples
+            .map(point => finiteNumber(point.altitude ?? point.height))
+            .filter(Number.isFinite)
+        const meanAltitude = altitudes.length > 0
+            ? altitudes.reduce((total, altitude) => total + altitude, 0) / altitudes.length
+            : finiteNumber(sample?.altitude ?? sample?.height) ?? 0
+        const target = Object.assign({}, sample, {
+            longitude,
+            latitude,
+            altitude: meanAltitude,
+        })
 
         return {
-            ...sample,
-            longitude: centroid.longitude,
-            latitude:  centroid.latitude,
-            altitude:  finiteNumber(centroid.height ?? centroid.altitude) ?? finiteNumber(sample?.altitude ?? sample?.height) ?? 0,
+            ...target,
+            altitude: finiteNumber(call.markerRenderHeightForSample?.(target)) ?? target.altitude,
         }
     }
+
+    const centroid = await globalThis.__?.ui?.sceneManager?.getJourneyCentroid?.(globalThis.lgs?.theJourney ?? null)
+    if (!centroid) {
+        return sample
+    }
+
+    return {
+        ...sample,
+        longitude: centroid.longitude,
+        latitude:  centroid.latitude,
+        altitude:  finiteNumber(centroid.height ?? centroid.altitude) ?? finiteNumber(sample?.altitude ?? sample?.height) ?? 0,
+    }
+}
 
 export const replayExportBaseView = (mode, {sample, progress = 0, cameraSettings = null} = {}) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
@@ -176,7 +224,7 @@ const normalizeReplayFocusTarget = targetMode => {
         || normalized === 'last-point'
         || normalized === 'lastpoint'
         ? 'last-point'
-        : 'centroid'
+        : normalized === 'trace-centroid' || normalized === 'trace' ? 'trace-centroid' : 'centroid'
 }
 
 export const currentReplayClipCameraState = (mode, {initial = false, sample = null} = {}) => {
@@ -497,12 +545,21 @@ export const resolveJourneyReplayClipCameraPlan = (mode, {
                     plan.kind = 'focus'
                     plan.focusTarget = target
                     plan.rpm = Number.isFinite(Number(clip?.params?.rpm)) ? Number(clip.params.rpm) : 0
+                    const heightDelta = clip?.id === SIMPLE_REPLAY_TRACE_FOCUS_INSTANCE_ID
+                        ? finiteNumber(clip?.params?.heightDelta) ?? 0
+                        : 0
+                    const focusStartHeight = finiteNumber(continuityStartView.height)
+                        ?? finiteNumber(baseView.cameraHeight)
+                        ?? finiteNumber(clipHeight)
+                        ?? 0
                     plan.endView = {
                         ...baseStartView,
                         sample: target,
                         heading: baseView.heading,
                         pitch:   clipPitch,
-                        height:  clipCameraHeightForSample(target),
+                        height:  heightDelta !== 0
+                            ? focusStartHeight + heightDelta
+                            : clipCameraHeightForSample(target),
                         cameraSettings: clipCamera,
                     }
                     plan.pathMode = clip?.params?.pathMode ?? clip?.params?.path ?? null
@@ -833,16 +890,17 @@ export const clipSettings = (mode) => {
 }
 
 export const clipListForSlot = (mode, slot) => {
-    const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
 
-        if (isJourneyReplayBasicMode()) {
-            return []
-        }
-
-        const clips = call.clipSettings()
-        return slot === REPLAY_CLIP_SLOT_STOP ? clips.stop : clips.start
+    if (isJourneyReplayBasicMode()) {
+        return slot === REPLAY_CLIP_SLOT_STOP
+            ? createSimpleReplayTraceFocusClips(currentJourneyReplayCameraSettings()).stop
+            : []
     }
+
+    const clips = call.clipSettings()
+    return slot === REPLAY_CLIP_SLOT_STOP ? clips.stop : clips.start
+}
 
 export const placeCameraAtPlaybackStart = (mode, sample, progress = 0) => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]

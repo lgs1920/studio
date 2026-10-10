@@ -82,6 +82,7 @@ import {
 }                              from '@Core/ui/screen-media-recorder/composer/CanvasOverlayComposer'
 import {REPLAY_VIDEO_FPS} from '@Core/ui/replay/ReplayVideoSettings'
 import {isJourneyReplayBasicMode} from '@Core/ui/replay/ReplayUserModeConstants'
+import {createSimpleReplayTraceFocusClips} from '@Core/ui/replay/JourneyReplaySimpleFocus'
 import {
     normalizeMediabunnyMetadataTags,
 }                              from '@Core/ui/replay/ReplayMediaMetadata'
@@ -364,7 +365,7 @@ const resolveReplayExportClips = ({replay = defaultReplayStore()} = {}) => {
     )
 
     if (isJourneyReplayBasicMode({replay})) {
-        return {...clips, start: [], stop: []}
+        return createSimpleReplayTraceFocusClips(replay?.camera ?? currentJourneyReplayCameraSettings())
     }
 
     return clips

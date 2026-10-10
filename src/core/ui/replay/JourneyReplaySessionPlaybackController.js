@@ -16,6 +16,7 @@
 
 import {captureReplayEntryCameraState, replayOwnedCameraFor} from './ReplayCameraOwnership'
 import {replayCameraFor} from './ReplayRenderTarget'
+import {createSimpleReplayTraceFocusClips} from './JourneyReplaySimpleFocus'
 
 
 /**
@@ -204,7 +205,7 @@ export const configure = (mode, options = {}) => {
             journey,
         })
         const clips = simpleReplay
-            ? {...resolvedClips, start: [], stop: []}
+            ? createSimpleReplayTraceFocusClips(camera)
             : resolvedClips
 
         if (state.samplerConfigKey !== samplerConfigKey || !state.sampler) {

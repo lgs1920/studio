@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-14
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -260,7 +260,7 @@ describe('ReplayDeferredExporter', () => {
         expect(replay.deferredExportPlan).toBe(result.plan)
     })
 
-    it('omits configured start and stop clips from a Simple Replay export timeline', () => {
+    it('includes the fixed trace-focus outro in a Simple Replay export timeline', () => {
         globalThis.lgs = {
             settings: {ui: {replay: {userMode: REPLAY_USER_MODE_EXPERT}}},
         }
@@ -280,8 +280,12 @@ describe('ReplayDeferredExporter', () => {
             fps: 30,
         })
 
-        expect(plan.videoTimeline.phases.map(phase => phase.kind)).toEqual(['replay'])
-        expect(plan.videoTimeline.durationMillis).toBe(12500)
+        expect(plan.videoTimeline.phases.map(phase => phase.kind)).toEqual(['replay', 'post-replay'])
+        expect(plan.videoTimeline.phases[1].clip).toMatchObject({
+            id: 'simple-trace-focus',
+            params: {duration: 4, focusTarget: 'trace-centroid', heightDelta: 2000, rpm: 15},
+        })
+        expect(plan.videoTimeline.durationMillis).toBe(16500)
     })
 
     it('builds the shared interactive and export video render spec from crop, fps, quality, and dpr', () => {

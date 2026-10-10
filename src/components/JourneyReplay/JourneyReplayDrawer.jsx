@@ -50,6 +50,7 @@ import {
 import { normalizeJourneyReplayClips } from '@Core/ui/replay/JourneyReplayClips'
 import { normalizeJourneyReplayPOISettings } from '@Core/ui/replay/JourneyReplayPOISettings'
 import { REPLAY_CAMERA_ANGLE_GUIDE_CHANGE_EVENT } from '@Core/ui/replay/JourneyReplayCameraAngleGuide'
+import { SIMPLE_REPLAY_TRACE_FOCUS_DURATION_SECONDS } from '@Core/ui/replay/JourneyReplaySimpleFocus'
 import {currentReplayJourney} from '@Core/ui/replay/ReplayUserModeConstants'
 import {
     normalizeSimpleReplaySettings,
@@ -519,11 +520,13 @@ export const JourneyReplayDrawer = memo(() => {
     const cameraUpdateSourceClearTimer = useRef(null)
     const nearbyPoisRefreshTimer = useRef(null)
     const totalVideoDurationSeconds = useMemo(() => {
-        const clipDurationSeconds = [...(clips.start ?? []), ...(clips.stop ?? [])]
-            .reduce((total, clip) => total + Math.max(0, finiteNumber(clip?.params?.duration) ?? 0), 0)
+        const clipDurationSeconds = isExpertMode
+            ? [...(clips.start ?? []), ...(clips.stop ?? [])]
+                .reduce((total, clip) => total + Math.max(0, finiteNumber(clip?.params?.duration) ?? 0), 0)
+            : SIMPLE_REPLAY_TRACE_FOCUS_DURATION_SECONDS
 
         return Math.max(0, finiteNumber(effectiveReplaySettings.duration) ?? 0) + clipDurationSeconds
-    }, [clips.start, clips.stop, effectiveReplaySettings.duration, replayState.duration])
+    }, [clips.start, clips.stop, effectiveReplaySettings.duration, isExpertMode, replayState.duration])
 
     useEffect(() => {
         const replayRuntime = lgs.stores.replay
