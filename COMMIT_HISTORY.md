@@ -3290,3 +3290,19 @@
 ## 2026-10-08 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/b0f1cb4dc4554dbde36690ecedb1f5b600d9befb)
 
 - Recorded automatically from Git history.
+
+## 2026-10-08 — [`fix(track): restore prior GPX split behavior`](https://github.com/lgs1920/studio/commit/565008404fe8b6e828e61bd44a0580776253d47c)
+
+- Recorded automatically from Git history.
+
+## 2026-10-08 — [`fix(track): restore terrain clamping for GPX routes`](https://github.com/lgs1920/studio/commit/0e700e820c6be8ebe9433eca2ade07d7c951d262)
+
+- Recorded automatically from Git history.
+
+## 2026-10-08 — [`fix(replay): orient activity icon toward angle camera`](https://github.com/lgs1920/studio/commit/144ec802a85e3c70c7537702e2438f06866f923a)
+
+- Recorded automatically from Git history.
+
+## 2026-10-08 — [`Merge remote-tracking branch 'origin/1.0.0' into 1.0.0`](https://github.com/lgs1920/studio/commit/d98158de75129742ac51fd800471ba36c31b8442)
+
+- Recorded automatically from Git history.
