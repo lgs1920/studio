@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -187,10 +187,7 @@ export const syncJourneySimpleReplayCamera = (camera) => {
         return null
     }
 
-    const nextCamera = normalizeJourneyReplayCamera(Object.assign({}, simple.camera, camera, {
-        altitudeMode: 'constant',
-        debug: false,
-    }))
+    const nextCamera = normalizeJourneyReplayCamera(Object.assign({}, simple.camera, camera))
     journey.replay = {
         ...replay,
         simple: {
@@ -342,8 +339,7 @@ export const defaultSimpleReplaySettings = () => ({
     duration: DEFAULT_SIMPLE_REPLAY_DURATION,
     camera: {
         ...defaultJourneyReplayCameraStyle(),
-        altitudeMode: 'constant',
-        debug: false,
+        altitudeMode: DEFAULT_REPLAY_CAMERA.altitudeMode,
         altitude: DEFAULT_REPLAY_CAMERA.altitude,
         cameraAngle: DEFAULT_REPLAY_CAMERA.cameraAngle,
         pitch: DEFAULT_REPLAY_CAMERA.pitch,
@@ -388,8 +384,6 @@ export const normalizeSimpleReplaySettings = (settings = {}) => {
     const cameraSettings = {
         ...defaults.camera,
         ...(settings?.camera ?? {}),
-        altitudeMode: 'constant',
-        debug: false,
     }
     const savedCameraAngle = settings?.camera?.cameraAngle
     if (savedCameraAngle === null || savedCameraAngle === undefined || !Number.isFinite(Number(savedCameraAngle))) {
@@ -400,10 +394,7 @@ export const normalizeSimpleReplaySettings = (settings = {}) => {
 
     return {
         duration: normalizeSimpleReplayDuration(settings?.duration),
-        camera: {
-            ...camera,
-            altitudeMode: 'constant',
-        },
+        camera,
         presentation: {
             progression: normalizeJourneyReplayProgressionStyle({
                 ...defaults.presentation.progression,

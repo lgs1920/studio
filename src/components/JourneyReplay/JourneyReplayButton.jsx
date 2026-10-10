@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-05
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -80,8 +80,7 @@ export const JourneyReplayButton = (props) => {
             })
             simple.camera = {
                 ...simple.camera,
-                altitudeMode: 'constant',
-                debug: false,
+                debug: true,
             }
             lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_BASIC
             lgs.stores.replay.userMode = REPLAY_USER_MODE_BASIC
@@ -103,7 +102,8 @@ export const JourneyReplayButton = (props) => {
             lgs.stores.ui.video.editing = true
             void Promise.resolve(__.ui.replay?.enterReplayPreparation?.({
                 journey,
-                shouldApply: () => lgs.stores.replay.simplePreparationActive === true,
+                shouldApply: () => lgs.stores.replay.simplePreparationActive === true
+                    && lgs.stores.ui.video.editing === true,
             })).catch(() => undefined)
             return
         }
@@ -157,6 +157,11 @@ export const JourneyReplayButton = (props) => {
                 })
             }
             lgs.stores.ui.video.editing = true
+            void Promise.resolve(__.ui.replay?.enterReplayPreparation?.({
+                journey,
+                shouldApply: () => lgs.settings.ui.replay.userMode === REPLAY_USER_MODE_EXPERT
+                    && lgs.stores.ui.video.editing === true,
+            })).catch(() => undefined)
             return
         }
         __.ui.drawerManager.open(REPLAY_DRAWER)

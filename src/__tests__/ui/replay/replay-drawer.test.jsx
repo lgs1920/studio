@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-02
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -327,6 +327,40 @@ describe('JourneyReplayDrawer', () => {
         vi.unstubAllGlobals()
     })
 
+    it('keeps the prepared Simple camera when recording changes the runtime duration', async () => {
+        lgs.settings.ui.replay.userMode = 'basic'
+        lgs.stores.main.theJourney.replay = {simple: {camera: {
+            ...defaultJourneyReplaySettings().camera, altitude: 539, pitch: -5,
+        }}}
+        const view = render(<JourneyReplayDrawer/>)
+        await act(async () => {
+            lgs.stores.replay.simplePreparationActive = true
+            lgs.stores.replay.camera = {...lgs.stores.replay.camera, altitude: 2630, pitch: -23}
+            lgs.stores.ui.video.preRecording = true
+            lgs.stores.replay.duration += 1
+        })
+
+        expect(lgs.stores.replay.camera).toMatchObject({altitude: 2630, pitch: -23})
+        expect(view.getByLabelText('Pitch (deg)').value).toBe('-23')
+    })
+
+    it('keeps the prepared height and pitch when only the Simple cone angle changes', async () => {
+        lgs.settings.ui.replay.userMode = 'basic'
+        lgs.stores.main.theJourney.replay = {simple: {camera: {
+            ...defaultJourneyReplaySettings().camera, altitude: 539, pitch: -5,
+        }}}
+        lgs.stores.replay.simplePreparationActive = true
+        lgs.stores.replay.camera = {...lgs.stores.replay.camera, altitude: 2630, pitch: -23}
+        lgs.stores.ui.video.editing = true
+        render(<JourneyReplayCameraAngleGuide/>)
+        await act(async () => {
+            cameraGuideHarness.mount.mock.calls.at(-1)[3].onCameraChange({cameraAngle: -113})
+        })
+
+        expect(lgs.stores.replay.camera).toMatchObject({altitude: 2630, pitch: -23, cameraAngle: -113})
+        expect(lgs.stores.main.theJourney.replay.simple.camera).toMatchObject({altitude: 2630, pitch: -23, cameraAngle: -113})
+    })
+
     it('keeps the drawer limited to Replay configuration', () => {
         const view = render(<JourneyReplayDrawer/>)
 
@@ -336,6 +370,17 @@ describe('JourneyReplayDrawer', () => {
         expect(view.queryByRole('button', {name: 'Start Journey Replay'})).toBeNull()
         expect(view.queryByRole('button', {name: 'Pause Journey Replay'})).toBeNull()
         expect(view.queryByRole('button', {name: 'Reset Expert Replay from Simple Replay'})).toBeNull()
+    })
+
+    it('keeps normal Cesium rotation independent while editing the prepared pitch', async () => {
+        globalThis.lgs.stores.ui.mainUI = proxy({rotate: {running: true}})
+        const view = render(<JourneyReplayDrawer/>)
+        const pitchInput = view.getByLabelText('Pitch (deg)')
+        fireEvent.focus(pitchInput)
+        fireEvent.input(pitchInput, {target: {value: '-38'}})
+        await waitFor(() => expect(globalThis.lgs.settings.ui.replay.camera.pitch).toBe(-38))
+        expect(globalThis.__.ui.cameraManager.stopRotate).not.toHaveBeenCalled()
+        expect(globalThis.lgs.stores.ui.mainUI.rotate.running).toBe(true)
     })
 
     it('commits pitch edits while typing', async () => {
@@ -453,6 +498,23 @@ describe('JourneyReplayDrawer', () => {
             expect(globalThis.lgs.stores.replay.camera.groundOffset).toBeUndefined()
             expect(view.getByLabelText('Ground offset (m)')).toBeTruthy()
         })
+    })
+
+    it('converts the prepared altitude without borrowing normal Cesium height', async () => {
+        lgs.settings.ui.replay.userMode = 'basic'
+        lgs.settings.ui.replay.simple = {camera: {...defaultJourneyReplaySettings().camera, altitude: 2630, pitch: -23}}
+        lgs.stores.replay.simplePreparationActive = true
+        lgs.stores.replay.camera = {...lgs.settings.ui.replay.simple.camera}
+        lgs.stores.replay.sample = {longitude: 2, latitude: 48}
+        lgs.viewer.camera = {positionCartographic: {height: 1300}, pitch: -0.1}
+        const view = render(<JourneyReplayDrawer/>)
+
+        fireEvent.change(view.getByLabelText('Camera altitude'), {target: {value: 'ground-offset'}})
+        await waitFor(() => expect(lgs.stores.replay.camera).toMatchObject({altitude: 2330, pitch: -23, altitudeMode: 'ground-offset'}))
+        expect(lgs.settings.ui.replay.simple.camera).toMatchObject({altitude: 2330, pitch: -23, altitudeMode: 'ground-offset'})
+        fireEvent.change(view.getByLabelText('Camera altitude'), {target: {value: 'constant'}})
+        await waitFor(() => expect(lgs.stores.replay.camera).toMatchObject({altitude: 2630, pitch: -23, altitudeMode: 'constant'}))
+        expect(lgs.viewer.camera.positionCartographic.height).toBe(1300)
     })
 
     it('keeps camera azimuth controls in Expert Replay only', () => {
@@ -628,6 +690,20 @@ describe('JourneyReplayDrawer', () => {
             expect(globalThis.lgs.settings.ui.replay.camera.debug).toBe(true)
             expect(globalThis.lgs.stores.replay.camera.debug).toBe(true)
         })
+    })
+
+    it('forces Basic Replay camera diagnostics even when the persisted switch is off', async () => {
+        globalThis.lgs.settings.ui.replay.simple = {camera: {...defaultJourneyReplaySettings().camera, debug: false}}
+        globalThis.lgs.settings.ui.replay.userMode = 'basic'
+        globalThis.lgs.stores.replay.userMode = 'basic'
+        const view = render(<JourneyReplayDrawer/>)
+        fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
+
+        const debugSwitch = await view.findByLabelText('Debug camera')
+        expect(debugSwitch.checked).toBe(true)
+        expect(debugSwitch.disabled).toBe(true)
+        expect(globalThis.lgs.settings.ui.replay.simple.camera.debug).toBe(false)
+        expect(globalThis.lgs.stores.replay.camera.debug).toBe(true)
     })
 
     it('applies the camera angle slider without mutating the Cesium scene', async () => {
@@ -855,7 +931,7 @@ describe('JourneyReplayDrawer', () => {
         })
     })
 
-    it('commits altitude edits on blur when the value is valid', async () => {
+    it('commits valid altitude edits before blur and retains them on blur', async () => {
         const view = render(<JourneyReplayDrawer/>)
         const altitudeInput = view.getByLabelText('Altitude (m)')
 
@@ -863,8 +939,8 @@ describe('JourneyReplayDrawer', () => {
         fireEvent.input(altitudeInput, {target: {value: '1500'}})
 
         expect(altitudeInput.value).toBe('1500')
-        expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(1200)
-        expect(globalThis.lgs.stores.replay.camera.altitude).toBe(1200)
+        expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(1500)
+        expect(globalThis.lgs.stores.replay.camera.altitude).toBe(1500)
 
         fireEvent.blur(altitudeInput)
         await waitFor(() => {
@@ -885,15 +961,15 @@ describe('JourneyReplayDrawer', () => {
 
         fireEvent.input(altitudeInput, {target: {value: '10'}})
         expect(altitudeInput.value).toBe('10')
-        expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(1200)
+        expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(10)
 
         fireEvent.input(altitudeInput, {target: {value: '100'}})
         expect(altitudeInput.value).toBe('100')
-        expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(1200)
+        expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(100)
 
         fireEvent.input(altitudeInput, {target: {value: '1000'}})
         expect(altitudeInput.value).toBe('1000')
-        expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(1200)
+        expect(globalThis.lgs.settings.ui.replay.camera.altitude).toBe(1000)
 
         fireEvent.blur(altitudeInput)
 

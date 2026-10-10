@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-03
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -634,7 +634,6 @@ export const normalizeJourneyReplaySettings = (settings = {}) => {
         marker:      normalizeJourneyReplayMarker(settings?.marker),
         camera:      normalizeJourneyReplayCamera({
             ...(settings?.camera ?? {}),
-            ...(userMode === REPLAY_USER_MODE_BASIC ? {debug: false} : {}),
         }),
         clips:       clips,
         ...(timelineSettings ? {
@@ -669,8 +668,7 @@ const resolveReplaySimpleSettingsForRuntime = ({journey, user} = {}) => {
         },
         camera: {
             ...defaultJourneyReplayCameraStyle(),
-            altitudeMode: 'constant',
-            debug: false,
+            altitudeMode: REPLAY_CAMERA_ALTITUDE_CONSTANT,
         },
         marker: {
             ...defaultJourneyReplayMarkerStyle(),
@@ -699,10 +697,8 @@ const resolveReplaySimpleSettingsForRuntime = ({journey, user} = {}) => {
         ...product.camera,
         ...(user?.camera ?? {}),
         ...(journey?.camera ?? {}),
-        altitudeMode: 'constant',
         canDrift: false,
         canRoll: false,
-        debug: false,
     }
     const hasUserAngle = user?.camera?.cameraAngle !== null
         && user?.camera?.cameraAngle !== undefined
@@ -800,7 +796,7 @@ export const getJourneyReplaySettings = ({journey = currentReplayJourney()} = {}
                 duration: simple.duration,
                 includeHiddenTracks: simple.includeHiddenTracks,
                 readiness: normalizeJourneyReplayReadiness(simple.readiness),
-                camera: simple.camera,
+                camera: {...simple.camera, debug: true},
                 marker: simple.marker,
                 trace: simple.trace,
                 progression: simple.presentation.progression,

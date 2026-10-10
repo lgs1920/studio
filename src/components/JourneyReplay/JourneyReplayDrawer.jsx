@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-05-04
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -52,11 +52,11 @@ import { normalizeJourneyReplayPOISettings } from '@Core/ui/replay/JourneyReplay
 import { REPLAY_CAMERA_ANGLE_GUIDE_CHANGE_EVENT } from '@Core/ui/replay/JourneyReplayCameraAngleGuide'
 import {currentReplayJourney} from '@Core/ui/replay/ReplayUserModeConstants'
 import {
-    normalizeExpertReplayCamera,
     normalizeSimpleReplaySettings,
     syncJourneyExpertReplayCamera,
     syncJourneyExpertReplayProgression,
     syncJourneySimpleReplayDuration,
+    syncJourneySimpleReplayCamera,
     syncJourneySimpleReplayProgression,
     syncJourneySimpleReplayTrace,
     REPLAY_USER_MODE_EXPERT,
@@ -460,12 +460,11 @@ export const JourneyReplayDrawer = memo(() => {
     const remainingUseDefinedTrackStyle = trace.remaining.useDefinedTrackStyle !== false
     const remainingColor = toOpaqueColorValue(trace.remaining.color)
     const isExpertMode = effectiveReplaySettings.userMode === REPLAY_USER_MODE_EXPERT
-    const camera = isExpertMode
-        ? normalizeExpertReplayCamera(effectiveReplaySettings.camera)
-        : normalizeJourneyReplayCamera({
-            ...effectiveReplaySettings.camera,
-            debug: false,
-        })
+    const preparedSimpleCamera = replayState.simplePreparationActive === true
+        && previousJourneySlug.current === journeySlug
+        ? replayState.camera
+        : null
+    const camera = normalizeJourneyReplayCamera(preparedSimpleCamera ?? effectiveReplaySettings.camera)
     const readiness = normalizeJourneyReplayReadiness(effectiveReplaySettings.readiness)
     const [activeTab, setActiveTab] = useState(REPLAY_TAB_RUNNER)
     const [advancedCameraPopupOpen, setAdvancedCameraPopupOpen] = useState(false)
@@ -547,7 +546,11 @@ export const JourneyReplayDrawer = memo(() => {
         replayRuntime.trace = normalizeJourneyReplayTrace(effectiveReplaySettings.trace)
         replayRuntime.smoothing = normalizeJourneyReplaySmoothing(effectiveReplaySettings.smoothing)
         replayRuntime.marker = normalizeJourneyReplayMarker(effectiveReplaySettings.marker)
-        replayRuntime.camera = normalizeJourneyReplayCamera(effectiveReplaySettings.camera)
+        // Runtime duration/style updates must not rehydrate older persisted camera
+        // values over the live Simple preparation. Explicit camera controls own it.
+        if (journeyChanged || replayRuntime.simplePreparationActive !== true) {
+            replayRuntime.camera = normalizeJourneyReplayCamera(effectiveReplaySettings.camera)
+        }
         replayRuntime.readiness = normalizeJourneyReplayReadiness(effectiveReplaySettings.readiness)
         replayRuntime.hideAllPoisDuringJourneyReplay = effectiveReplaySettings.hideAllPoisDuringJourneyReplay === true
         replayRuntime.animateAllPoisDuringJourneyReplay = effectiveReplaySettings.animateAllPoisDuringJourneyReplay === true
@@ -676,6 +679,9 @@ export const JourneyReplayDrawer = memo(() => {
     }, [])
 
     const stopRotateIfNeeded = useCallback(async (mode = null) => {
+        if (!isJourneyReplayCameraActive(lgs.stores.replay)) {
+            return
+        }
         const replayMarker = normalizeJourneyReplayMarker(lgs.settings.ui.replay.marker)
         const rotationRunning = lgs.stores.ui?.mainUI?.rotate?.running === true
         const effectiveMode = mode ?? replayMarker.mode
@@ -749,10 +755,10 @@ export const JourneyReplayDrawer = memo(() => {
     ])
 
     const updateCamera = useCallback(async (updates, {syncCamera = true, immediate = false} = {}) => {
-        if (!immediate || lgs.stores.ui?.mainUI?.rotate?.running === true) {
-            await stopRotateIfNeeded()
-        }
-        const nextCamera = mergeCamera(camera, updates)
+        // Commit configuration before awaiting Cesium rotation shutdown. A Record
+        // click can arrive during that await, and must already see the edited values.
+        const currentCamera = normalizeJourneyReplayCamera(lgs.stores.replay.camera ?? camera)
+        const nextCamera = mergeCamera(currentCamera, updates)
         if (isExpertMode) {
             lgs.settings.ui.replay.camera = nextCamera
             syncJourneyExpertReplayCamera(nextCamera)
@@ -768,6 +774,14 @@ export const JourneyReplayDrawer = memo(() => {
             }
         }
         lgs.stores.replay.camera = nextCamera
+        if (!isExpertMode && (updates.altitude !== undefined || updates.pitch !== undefined)) {
+            console.info('[Replay camera] preparation setting update', {
+                altitude: nextCamera.altitude,
+                altitudeMode: nextCamera.altitudeMode,
+                pitch: nextCamera.pitch,
+                source: 'drawer',
+            })
+        }
         if (syncCamera) {
             lgs.stores.replay.cameraUpdateSource = 'drawer'
             if (cameraUpdateSourceClearTimer.current !== null) {
@@ -784,6 +798,9 @@ export const JourneyReplayDrawer = memo(() => {
         }
         if (replayState.active || replayState.playing || replayState.paused) {
             lgs.stores.replay.cameraUserAdjusted = true
+        }
+        if (!immediate || lgs.stores.ui?.mainUI?.rotate?.running === true) {
+            await stopRotateIfNeeded()
         }
         refreshJourneyReplay(syncCamera)
         if (syncCamera) {
@@ -848,11 +865,9 @@ export const JourneyReplayDrawer = memo(() => {
 
     const updateDebugCamera = useCallback(event => {
         updateCamera({
-            debug: isExpertMode
-                ? getChecked(event)
-                : false,
+            debug: getChecked(event),
         })
-    }, [isExpertMode, updateCamera])
+    }, [updateCamera])
 
     useEffect(() => () => {
         if (cameraUpdateSourceClearTimer.current !== null) {
@@ -1258,23 +1273,19 @@ export const JourneyReplayDrawer = memo(() => {
             updateCamera({altitudeMode: nextMode})
             return
         }
-        // Keep the same visual camera height by converting the single altitude value
-        // between absolute altitude and terrain offset when the mode changes.
-        const currentCameraHeight = Number(lgs.viewer?.camera?.positionCartographic?.height)
-        const fallbackAbsoluteHeight = Number.isFinite(currentCameraHeight) ? currentCameraHeight : camera.altitude
-        const currentTerrainHeight = replayState.sample
-                                     ? terrainHeightAt(replayState.sample)
-                                     : terrainHeightAt({
-                                           ...(lgs.viewer?.camera?.positionCartographic ?? {}),
-                                           radians: true,
-                                       })
-        const nextAltitude = nextMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET
-                             ? currentTerrainHeight === null
-                               ? fallbackAbsoluteHeight
-                               : clampJourneyReplayNumber(fallbackAbsoluteHeight - currentTerrainHeight, fallbackAbsoluteHeight, 10, 100000)
-                             : currentTerrainHeight === null
-                               ? fallbackAbsoluteHeight
-                               : clampJourneyReplayNumber(fallbackAbsoluteHeight + currentTerrainHeight, fallbackAbsoluteHeight, 10, 100000)
+        // Convert only the configured Replay altitude around its own sample.
+        // Normal Cesium navigation must never become a preparation input.
+        const currentTerrainHeight = replayState.sample ? terrainHeightAt(replayState.sample) : null
+        const nextAltitude = currentTerrainHeight === null
+            ? camera.altitude
+            : clampJourneyReplayNumber(
+                camera.altitude + (nextMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET
+                    ? -currentTerrainHeight
+                    : currentTerrainHeight),
+                camera.altitude,
+                10,
+                100000,
+            )
 
         updateCamera({
             altitudeMode: nextMode,
@@ -1562,6 +1573,9 @@ export const JourneyReplayDrawer = memo(() => {
                                                             onFocus={() => beginCameraDraft('altitude', altitudeDisplayValue)}
                                                             onInput={event => {
                                                                 updateCameraDraft('altitude', event.target.value)
+                                                                // Keep Replay's runtime settings current while the number input is
+                                                                // edited, because Record can be clicked before blur commits the value.
+                                                                commitCameraAltitude(event.target.value, {syncCamera: false})
                                                             }}
                                                             onChange={event => {
                                                                 updateCameraDraft('altitude', event.target.value)
@@ -1595,6 +1609,11 @@ export const JourneyReplayDrawer = memo(() => {
                                                                     ...current,
                                                                     pitch: nextValue,
                                                                 }))
+                                                                commitCameraPitch(nextValue)
+                                                            }}
+                                                            onChange={event => {
+                                                                const nextValue = event.target.value
+                                                                cameraDraftValues.current.pitch = nextValue
                                                                 commitCameraPitch(nextValue)
                                                             }}
                                                             onBlur={event => {
@@ -1656,6 +1675,7 @@ export const JourneyReplayDrawer = memo(() => {
                                                             size="xs"
                                                             label-at-start
                                                             checked={camera.debug === true}
+                                                            disabled={!isExpertMode}
                                                             onChange={updateDebugCamera}
                                                         >
                                                             {'Debug camera'}

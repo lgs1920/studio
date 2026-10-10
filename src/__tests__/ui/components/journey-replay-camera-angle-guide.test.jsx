@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-29
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -41,7 +41,8 @@ vi.mock('@Core/ui/replay/JourneyReplayCameraAngleGuide', () => ({
     updateJourneyReplayCameraAngleGuide: guideHarness.update,
 }))
 
-vi.mock('@Core/ui/replay/JourneyReplayRuntime', () => ({
+vi.mock('@Core/ui/replay/JourneyReplayRuntime', async importOriginal => ({
+    ...await importOriginal(),
     isJourneyReplayCameraActive: replay => Boolean(
         replay?.active || replay?.playing || replay?.paused || replay?.clipSequenceActive,
     ),

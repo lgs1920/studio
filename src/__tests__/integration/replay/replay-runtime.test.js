@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -49,7 +49,7 @@ describe('JourneyReplayRuntime', () => {
         expect(isJourneyReplayDryRunActive({...replay, paused: true}, {...video, preRecording: true})).toBe(false)
     })
 
-    it('uses the prepared Simple camera while forcing diagnostics off', () => {
+    it('uses the prepared Simple camera and preserves enabled diagnostics', () => {
         const previousLgs = globalThis.lgs
         try {
             globalThis.lgs = {
@@ -74,7 +74,7 @@ describe('JourneyReplayRuntime', () => {
             expect(currentJourneyReplayCameraSettings()).toMatchObject({
                 altitude: 1250,
                 pitch: -32,
-                debug: false,
+                debug: true,
             })
         }
         finally {

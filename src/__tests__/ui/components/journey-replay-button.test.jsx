@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-08-28
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -92,6 +92,11 @@ describe('JourneyReplayButton synchronized video entry point', () => {
             journey: globalThis.lgs.theJourney,
             shouldApply: expect.any(Function),
         }))
+        const preparationOptions = enterReplayPreparation.mock.calls[0][0]
+        expect(preparationOptions.shouldApply()).toBe(true)
+        globalThis.lgs.stores.ui.video.editing = false
+        expect(preparationOptions.shouldApply()).toBe(false)
+        globalThis.lgs.stores.ui.video.editing = true
         expect(globalThis.lgs.stores.ui.video.editing).toBe(true)
         expect(globalThis.lgs.settings.ui.replay.simple.camera).toMatchObject({
             cameraAngle: 156,
@@ -105,7 +110,7 @@ describe('JourneyReplayButton synchronized video entry point', () => {
         })
         expect(globalThis.lgs.settings.ui.replay.duration).toBe(60)
         expect(globalThis.lgs.stores.replay.duration).toBe(10)
-        expect(globalThis.lgs.settings.ui.replay.simple.camera.debug).toBe(false)
+        expect(globalThis.lgs.settings.ui.replay.simple.camera.debug).toBe(true)
         expect(globalThis.lgs.stores.replay.simplePreparationActive).toBe(true)
         await waitFor(() => {
             const icon = screen.getByRole('button', {name: 'Start Basic Replay'}).querySelector('[data-icon="video-down-to-line"]')
@@ -177,6 +182,8 @@ describe('JourneyReplayButton synchronized video entry point', () => {
     })
 
     it('opens Expert Replay in the crop zone with all widgets and the timeline', () => {
+        const enterReplayPreparation = vi.fn()
+        globalThis.__.ui.replay = {enterReplayPreparation}
         const expertCamera = {debug: true, positionMode: 'ahead'}
         globalThis.lgs.theJourney.replay = {expert: {camera: expertCamera}}
         globalThis.lgs.settings.ui.replay.userMode = 'basic'
@@ -209,6 +216,7 @@ describe('JourneyReplayButton synchronized video entry point', () => {
             draggable: true,
             resizable: true,
         })
+        expect(enterReplayPreparation).toHaveBeenCalledWith(expect.objectContaining({journey: globalThis.lgs.theJourney}))
         expect(globalThis.__.ui.drawerManager.open).not.toHaveBeenCalled()
     })
 

@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -24,7 +24,7 @@ import {isResolvedReplayFrameIntent} from './ReplayFrameIntent'
 import {attachReplayFrameIntent, publishReplayFrameState} from './ReplayFramePublisher'
 import {createReplayRenderModeContract} from './ReplayRenderModeContract'
 import {getJourneyReplaySettings, normalizeJourneyReplayCamera} from './JourneyReplayProgressionStyle'
-import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
+import {isJourneyReplayBasicMode, REPLAY_USER_MODE_BASIC} from './ReplayUserModeConstants'
 
 /**
  * Converts a value to a finite number.
@@ -253,27 +253,26 @@ export const updateReplayFrameRenderContract = ({
 export const replayStore = () => globalThis.lgs?.stores?.replay
 
 /**
- * Résout les réglages caméra utilisés par la préparation et la capture Replay.
+ * Resolve the camera settings used by Replay preparation and capture.
  *
- * La préparation Simple met à jour la caméra d’exécution alors que les
- * réglages effectifs restent ceux de la configuration produit. La capture
- * doit reprendre cette caméra préparée et le mode Basic ne doit jamais
- * activer les diagnostics.
+ * Simple preparation updates the runtime camera while effective settings may
+ * still reflect the configured values. Prefer the prepared camera during that
+ * phase and force camera diagnostics in Basic mode.
  *
- * @returns {Object} Réglages caméra normalisés pour le Replay courant.
+ * @param {Object} [options] - Replay settings resolution options.
+ * @returns {Object} Normalized camera settings for the current Replay.
  */
 export const currentJourneyReplayCameraSettings = (options = {}) => {
     const settings = getJourneyReplaySettings(options)
     const store = replayStore()
     const simplePreparation = store?.simplePreparationActive === true
-    const basicMode = isJourneyReplayBasicMode()
     const camera = simplePreparation && store?.camera
         ? {...settings.camera, ...store.camera}
         : settings.camera
 
     return normalizeJourneyReplayCamera({
         ...camera,
-        ...(basicMode ? {debug: false} : {}),
+        debug: settings.userMode === REPLAY_USER_MODE_BASIC || camera.debug === true,
     })
 }
 

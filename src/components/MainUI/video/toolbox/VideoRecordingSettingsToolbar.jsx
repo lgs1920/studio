@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-20
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -173,6 +173,8 @@ export const VideoRecordingSettingsToolbar = memo(({
      * @returns {Promise<void>} Completion promise.
      */
     const handleReplayRecording = useCallback(async () => {
+        const runtimeCamera = $replay.camera
+        console.info(`[Replay camera] Record button | journey=${lgs.theJourney?.slug ?? 'none'} prep=${$replay.simplePreparationActive === true} editing=${$video.editing === true} runtime=H${runtimeCamera?.altitude}/P${runtimeCamera?.pitch}/A${runtimeCamera?.cameraAngle}`)
         if (timelineSettings && isJourneyReplayDryRunActive($replay, $video)) {
             return
         }
@@ -181,6 +183,8 @@ export const VideoRecordingSettingsToolbar = memo(({
             return
         }
 
+        // Finish map rotation and its position update before freezing preparation/crop state.
+        await __.ui.cameraManager?.stopRotate?.()
         await syncCropFrame('before-recording')
         const prepared = await __.ui.replay?.prepareReplayCamera?.({journey: lgs.theJourney})
         if (prepared === false) {

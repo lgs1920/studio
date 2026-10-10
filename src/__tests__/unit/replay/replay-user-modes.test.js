@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-09-25
- * Last modified: 2026-10-08
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -32,6 +32,7 @@ import {
     normalizeJourneyReplaySettings,
 } from '@Core/ui/replay/JourneyReplayProgressionStyle'
 import {describe, expect, it, vi} from 'vitest'
+import {currentJourneyReplayCameraSettings} from '@Core/ui/replay/JourneyReplayRuntime'
 
 describe('Replay user modes', () => {
     it('defaults to Basic and normalizes unknown modes', () => {
@@ -65,7 +66,23 @@ describe('Replay user modes', () => {
         expect(resolved.camera.altitudeMode).toBe('constant')
     })
 
-    it('keeps Simple Replay behind by default while migrating legacy side settings', () => {
+    it.each(['constant', 'ground-offset'])('preserves the prepared Simple pitch and %s altitude mode', altitudeMode => {
+        const camera = {altitude: 2630, pitch: -23, cameraAngle: -113, altitudeMode}
+        expect(normalizeSimpleReplaySettings({camera}).camera).toMatchObject(camera)
+        expect(resolveSimpleReplaySettings({user: {camera}}).camera).toMatchObject(camera)
+        vi.stubGlobal('lgs', {
+            settings: {ui: {replay: {userMode: 'basic', simple: {camera}}}},
+            stores: {main: {theJourney: {slug: 'prepared'}}, replay: {simplePreparationActive: false}},
+        })
+        try {
+            expect(getJourneyReplaySettings().camera).toMatchObject(camera)
+        }
+        finally {
+            vi.unstubAllGlobals()
+        }
+    })
+
+    it('keeps Simple Replay behind by default and preserves the camera debug setting', () => {
         const defaults = defaultSimpleReplaySettings()
         const normalized = normalizeSimpleReplaySettings({
             camera: {debug: true, positionMode: 'ahead'},
@@ -76,16 +93,32 @@ describe('Replay user modes', () => {
         expect(defaults.camera).toMatchObject({debug: false, cameraAngle: 180})
         expect(defaults.marker.mode).toBe('navigation')
         expect(defaults.trace.mode).toBe('progressive')
-        expect(normalized.camera).toMatchObject({debug: false, cameraAngle: 0})
+        expect(normalized.camera).toMatchObject({debug: true, cameraAngle: 0})
         expect(normalized.marker.mode).toBe('navigation')
         expect(normalized.trace.mode).toBe('progressive')
     })
 
-    it('forces camera debug off in Basic settings while preserving the stored Expert value', () => {
+    it.each([false, true])('forces Simple runtime diagnostics despite saved and prepared debug=false, preparation: %s', simplePreparationActive => {
+        vi.stubGlobal('lgs', {
+            settings: {ui: {replay: {userMode: 'basic', simple: {camera: {debug: false}}}}},
+            stores: {replay: {simplePreparationActive, camera: {debug: false}}},
+            theJourney: {replay: {simple: {camera: {debug: false}}}},
+        })
+        try {
+            expect(getJourneyReplaySettings().camera.debug).toBe(true)
+            expect(currentJourneyReplayCameraSettings().debug).toBe(true)
+            expect(lgs.theJourney.replay.simple.camera.debug).toBe(false)
+        }
+        finally {
+            vi.unstubAllGlobals()
+        }
+    })
+
+    it('preserves the camera debug setting in both user modes', () => {
         expect(normalizeJourneyReplaySettings({
             userMode: REPLAY_USER_MODE_BASIC,
             camera: {debug: true},
-        }).camera.debug).toBe(false)
+        }).camera.debug).toBe(true)
         expect(normalizeJourneyReplaySettings({
             userMode: REPLAY_USER_MODE_EXPERT,
             camera: {debug: true},

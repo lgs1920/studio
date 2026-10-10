@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-05
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -60,6 +60,7 @@ describe('VideoRecordingSettingsToolbar', () => {
                     open: vi.fn(),
                     toggle: vi.fn(),
                 },
+                cameraManager: {stopRotate: vi.fn(async () => {})},
                 replay: {
                     prepareReplayCamera: vi.fn(async () => true),
                 },
@@ -251,7 +252,20 @@ describe('VideoRecordingSettingsToolbar', () => {
         expect(screen.queryByText('Duration')).toBeNull()
     })
 
-    it('exposes the video launch action during simple preparation', async () => {
+    it('waits for map rotation to stop before preparing a recording', async () => {
+        lgs.stores.replay.simplePreparationActive = true
+        let finishRotation
+        __.ui.cameraManager.stopRotate.mockImplementation(() => new Promise(resolve => { finishRotation = resolve }))
+        render(<VideoRecordingSettingsToolbar/>)
+        fireEvent.click(screen.getByRole('button', {name: 'Record'}))
+        await vi.waitFor(() => expect(__.ui.cameraManager.stopRotate).toHaveBeenCalledOnce())
+        expect(__.ui.replay.prepareReplayCamera).not.toHaveBeenCalled()
+        expect(lgs.stores.ui.video.preRecording).toBe(false)
+        finishRotation()
+        await vi.waitFor(() => expect(lgs.stores.ui.video.preRecording).toBe(true))
+    })
+
+    it('stops map rotation before preparing and entering Simple pre-recording', async () => {
         globalThis.lgs.stores.replay.simplePreparationActive = true
         render(<VideoRecordingSettingsToolbar/>)
 
@@ -263,6 +277,8 @@ describe('VideoRecordingSettingsToolbar', () => {
         await vi.waitFor(() => expect(globalThis.lgs.stores.ui.video.preRecording).toBe(true))
         expect(globalThis.lgs.stores.ui.video.editing).toBe(false)
         expect(prepareVideoCaptureUi).toHaveBeenCalledTimes(1)
+        expect(__.ui.cameraManager.stopRotate).toHaveBeenCalledOnce()
+        expect(__.ui.cameraManager.stopRotate.mock.invocationCallOrder[0]).toBeLessThan(__.ui.replay.prepareReplayCamera.mock.invocationCallOrder[0])
         expect(globalThis.__.ui.replay.prepareReplayCamera).toHaveBeenCalledWith({
             journey: globalThis.lgs.theJourney,
         })
