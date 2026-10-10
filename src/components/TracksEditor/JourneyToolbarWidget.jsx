@@ -7,13 +7,12 @@
  * Author : LGS1920 Team
  * email: studio@lgs1920.fr
  *
- * Created on: 2026-02-28
- * Last modified: 2026-02-28
+ * Created on: 2025-09-25
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
  ******************************************************************************/
-
 
 import { Widget } from '@Components/MainUI/widgets/Widget'
 import { JOURNEY_TOOLBAR_WIDGET, LGS_TOOLBAR } from '@Core/constants'
@@ -36,6 +35,8 @@ export const JourneyToolbarWidget = ({id}) => {
 
     const $journeyToolbar = lgs.settings.ui.journeyToolbar
     const journeyToolbar = useSnapshot($journeyToolbar)
+    const video = useSnapshot(lgs.stores.ui.video)
+    const captureActive = video.preRecording || video.exporting || video.recording || video.snapshot || video.finalizing
     const [journeyToolbarTemporarilyHidden, setJourneyToolbarTemporarilyHidden] = useState(
         __.ui.replay?.isJourneyToolbarTemporarilyHidden?.() === true,
     )
@@ -69,7 +70,7 @@ export const JourneyToolbarWidget = ({id}) => {
     }, [])
 
     return (
-        <Widget isVisible={journeyEditor.list.length > 0 && journeyToolbar.show && !journeyToolbarTemporarilyHidden}
+        <Widget isVisible={journeyEditor.list.length > 0 && journeyToolbar.show && !journeyToolbarTemporarilyHidden && !captureActive}
                 config={config}>
             <JourneyToolbar/>
         </Widget>

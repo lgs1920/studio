@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-03-29
- * Last modified: 2026-09-22
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -60,6 +60,8 @@ export const JourneyToolbar = (props) => {
     const journeySelectionDisabled = !journeysReady || typeof lgs.getJourneyBySlug === 'function'
         && journeyEditor.list.some(slug => !lgs.getJourneyBySlug(slug))
 
+    const video = useSnapshot(lgs.stores.ui.video)
+    const captureActive = video.preRecording || video.exporting || video.recording || video.snapshot || video.finalizing
     const replayState = useSnapshot(lgs.stores.replay)
     const replayActive = replayState.active || replayState.playing || replayState.paused
     const rotationAllowedByJourneyReplay = !replayActive && replayState.orbitAllowed !== false
@@ -213,7 +215,7 @@ export const JourneyToolbar = (props) => {
 
     return (
         <>
-            {journeyEditor.list.length > 0 && journeyToolbar.show && !journeyToolbarTemporarilyHidden &&
+            {journeyEditor.list.length > 0 && journeyToolbar.show && !journeyToolbarTemporarilyHidden && !captureActive &&
                 <WaCard className="journey-toolbar lgs--toolbar wa-theme-lgs1920-on-map"
                         ref={_journeyToolbar}>
                     <JourneySelector onChange={newJourneySelection}

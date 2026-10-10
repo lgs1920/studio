@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-07-22
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -127,13 +127,18 @@ describe('ToolsUI linked replay video editing', () => {
         globalThis.lgs = undefined
     })
 
-    it('hides the Journey toolbar while linked video editing is open and restores it on close', async () => {
+    it('keeps the Journey toolbar hidden from pre-recording through export and restores it afterward', async () => {
         render(<ToolsUI/>)
 
-        globalThis.lgs.stores.ui.video.editing = true
+        globalThis.lgs.stores.ui.video.preRecording = true
         await waitFor(() => expect(globalThis.__.ui.replay.hideJourneyToolbarVisibility).toHaveBeenCalledTimes(1))
 
-        globalThis.lgs.stores.ui.video.editing = false
+        globalThis.lgs.stores.ui.video.preRecording = false
+        globalThis.lgs.stores.ui.video.exporting = true
+        await waitFor(() => expect(globalThis.lgs.stores.ui.video.exporting).toBe(true))
+        expect(__.ui.replay.restoreJourneyToolbarVisibility).not.toHaveBeenCalled()
+
+        globalThis.lgs.stores.ui.video.exporting = false
         await waitFor(() => expect(globalThis.__.ui.replay.restoreJourneyToolbarVisibility).toHaveBeenCalledTimes(1))
         expect(globalThis.lgs.settings.ui.journeyToolbar.show).toBe(true)
     })

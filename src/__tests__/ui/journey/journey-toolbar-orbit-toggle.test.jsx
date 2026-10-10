@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2026-06-14
- * Last modified: 2026-09-22
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -98,6 +98,7 @@ describe('JourneyToolbar orbit toggle', () => {
                     }),
                 }),
                 ui: proxy({
+                    video: proxy({}),
                     mainUI: proxy({
                         rotate: proxy({
                             running: true,
@@ -115,6 +116,22 @@ describe('JourneyToolbar orbit toggle', () => {
         cleanup()
         globalThis.__ = undefined
         globalThis.lgs = undefined
+    })
+
+    it.each(['preRecording', 'exporting', 'recording'])('masks the active Journey toolbar during %s and restores its saved visibility', async phase => {
+        const {container} = render(<JourneyToolbar/>)
+        expect(container.querySelector('#focus-journey-toolbar')).toBeTruthy()
+        lgs.stores.ui.video[phase] = true
+        await waitFor(() => expect(container.querySelector('#focus-journey-toolbar')).toBeNull())
+        expect(lgs.settings.ui.journeyToolbar.show).toBe(true)
+        lgs.stores.ui.video[phase] = false
+        await waitFor(() => expect(container.querySelector('#focus-journey-toolbar')).toBeTruthy())
+        lgs.settings.ui.journeyToolbar.show = false
+        lgs.stores.ui.video[phase] = true
+        await waitFor(() => expect(container.querySelector('#focus-journey-toolbar')).toBeNull())
+        lgs.stores.ui.video[phase] = false
+        expect(lgs.settings.ui.journeyToolbar.show).toBe(false)
+        await waitFor(() => expect(container.querySelector('#focus-journey-toolbar')).toBeNull())
     })
 
     it('stops the running orbit and focuses the journey', async () => {

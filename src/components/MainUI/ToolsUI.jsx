@@ -8,7 +8,7 @@
  * email: studio@lgs1920.fr
  *
  * Created on: 2025-08-19
- * Last modified: 2026-10-01
+ * Last modified: 2026-10-10
  *
  *
  * Copyright © 2026 LGS1920
@@ -38,7 +38,7 @@ export const ToolsUI = () => {
     const replay = useSnapshot(lgs.stores.replay)
     const widget = useSnapshot(lgs.stores.ui.widget)
     const $cropper = lgs.stores.ui.video.cropper
-    const _journeyToolbarHiddenByVideoEditor = useRef(false)
+    const _journeyToolbarHiddenByVideoCapture = useRef(false)
     const _replayPreparationActive = useRef(false)
 
     const renderLinkedTimeline = video.editing === true
@@ -47,24 +47,20 @@ export const ToolsUI = () => {
         && widget.docked?.id?.split('#')[0] !== REPLAY_TIMELINE_WIDGET
 
     useEffect(() => {
-        const linkedReplay = replay.recordingSync === true
-            || replay.simplePreparationActive === true
-            || lgs.settings?.ui?.replay?.recordingSync === true
-        const videoEditing = video.editing === true
+        const captureActive = video.preRecording || video.exporting || video.recording || video.snapshot || video.finalizing
         const replayPlaying = replay.active || replay.playing || replay.paused
 
-        if (linkedReplay && videoEditing && !_journeyToolbarHiddenByVideoEditor.current
+        if (captureActive && !_journeyToolbarHiddenByVideoCapture.current
             && !__.ui.replay?.isJourneyToolbarTemporarilyHidden?.()) {
             __.ui.replay?.hideJourneyToolbarVisibility?.()
-            _journeyToolbarHiddenByVideoEditor.current = true
-            return
+            _journeyToolbarHiddenByVideoCapture.current = true
         }
 
-        if ((!linkedReplay || !videoEditing) && _journeyToolbarHiddenByVideoEditor.current && !replayPlaying) {
+        if (!captureActive && _journeyToolbarHiddenByVideoCapture.current && !replayPlaying) {
             __.ui.replay?.restoreJourneyToolbarVisibility?.()
-            _journeyToolbarHiddenByVideoEditor.current = false
+            _journeyToolbarHiddenByVideoCapture.current = false
         }
-    }, [replay.active, replay.paused, replay.playing, replay.recordingSync, video.editing])
+    }, [replay.active, replay.paused, replay.playing, video.preRecording, video.exporting, video.recording, video.snapshot, video.finalizing])
 
     useEffect(() => {
         if (renderLinkedTimeline) {
