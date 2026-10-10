@@ -78,10 +78,6 @@ export const JourneyReplayButton = (props) => {
                 journey: journey.replay?.simple,
                 user: lgs.settings.ui.replay.simple,
             })
-            simple.camera = {
-                ...simple.camera,
-                debug: true,
-            }
             lgs.settings.ui.replay.userMode = REPLAY_USER_MODE_BASIC
             lgs.stores.replay.userMode = REPLAY_USER_MODE_BASIC
             lgs.settings.ui.replay.simple = simple

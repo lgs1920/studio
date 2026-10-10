@@ -110,7 +110,7 @@ describe('JourneyReplayButton synchronized video entry point', () => {
         })
         expect(globalThis.lgs.settings.ui.replay.duration).toBe(60)
         expect(globalThis.lgs.stores.replay.duration).toBe(10)
-        expect(globalThis.lgs.settings.ui.replay.simple.camera.debug).toBe(true)
+        expect(globalThis.lgs.settings.ui.replay.simple.camera.debug).toBe(false)
         expect(globalThis.lgs.stores.replay.simplePreparationActive).toBe(true)
         await waitFor(() => {
             const icon = screen.getByRole('button', {name: 'Start Basic Replay'}).querySelector('[data-icon="video-down-to-line"]')

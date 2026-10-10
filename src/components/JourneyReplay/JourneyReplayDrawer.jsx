@@ -1668,19 +1668,22 @@ export const JourneyReplayDrawer = memo(() => {
                                                          <div className="replay-advanced-camera-scrollbars">
                                                              <LGSScrollbars autoHide={false}>
                                                                  <div className="replay-fieldset">
-                                                        <WaDivider/>
-                                                        <h4 className="replay-style-subtitle">{'Diagnostics'}</h4>
-                                                        <WaSwitch
-                                                            className="replay-debug-camera-switch half-width"
-                                                            size="xs"
-                                                            label-at-start
-                                                            checked={camera.debug === true}
-                                                            disabled={!isExpertMode}
-                                                            onChange={updateDebugCamera}
-                                                        >
-                                                            {'Debug camera'}
-                                                        </WaSwitch>
-                                                        <WaDivider/>
+                                                        {isExpertMode && (
+                                                            <>
+                                                                <WaDivider/>
+                                                                <h4 className="replay-style-subtitle">{'Diagnostics'}</h4>
+                                                                <WaSwitch
+                                                                    className="replay-debug-camera-switch half-width"
+                                                                    size="xs"
+                                                                    label-at-start
+                                                                    checked={camera.debug === true}
+                                                                    onChange={updateDebugCamera}
+                                                                >
+                                                                    {'Debug camera'}
+                                                                </WaSwitch>
+                                                                <WaDivider/>
+                                                            </>
+                                                        )}
                                                         <h4 className="replay-style-subtitle">{'Tile readiness'}</h4>
                                                         <WaSwitch
                                                             className="replay-readiness-switch half-width"

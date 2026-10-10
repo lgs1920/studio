@@ -187,7 +187,7 @@ export const syncJourneySimpleReplayCamera = (camera) => {
         return null
     }
 
-    const nextCamera = normalizeJourneyReplayCamera(Object.assign({}, simple.camera, camera))
+    const nextCamera = normalizeJourneyReplayCamera(Object.assign({}, simple.camera, camera, {debug: false}))
     journey.replay = {
         ...replay,
         simple: {
@@ -389,7 +389,10 @@ export const normalizeSimpleReplaySettings = (settings = {}) => {
     if (savedCameraAngle === null || savedCameraAngle === undefined || !Number.isFinite(Number(savedCameraAngle))) {
         cameraSettings.cameraAngle = undefined
     }
-    const camera = normalizeJourneyReplayCamera(cameraSettings)
+    const camera = normalizeJourneyReplayCamera({
+        ...cameraSettings,
+        debug: false,
+    })
     const presentation = settings?.presentation ?? {}
 
     return {

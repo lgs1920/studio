@@ -132,15 +132,21 @@ import {
 } from './JourneyReplaySessionShared'
 
 /**
- * Ensure Replay diagnostics are visible before playback or export starts.
- * Simple diagnostics do not require recording synchronization to be enabled.
+ * Ensure enabled Expert Replay diagnostics are visible before linked playback
+ * or export starts, and remove any stale overlay during Simple Replay.
  *
  * @param {object} mode - Replay mode.
  * @returns {boolean} Whether Replay diagnostics were enabled.
  */
 const ensureReplayVideoDiagnosticsOverlay = mode => {
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
-    if (!call.isReplayVideoLinked() && !isJourneyReplayBasicMode()) {
+    if (isJourneyReplayBasicMode()) {
+        call.removeToleranceZoneOverlay()
+        call.setToleranceZoneOverlayVisible(false)
+        return false
+    }
+
+    if (!call.isReplayVideoLinked()) {
         return false
     }
 

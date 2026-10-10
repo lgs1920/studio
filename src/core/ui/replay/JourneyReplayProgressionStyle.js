@@ -796,7 +796,7 @@ export const getJourneyReplaySettings = ({journey = currentReplayJourney()} = {}
                 duration: simple.duration,
                 includeHiddenTracks: simple.includeHiddenTracks,
                 readiness: normalizeJourneyReplayReadiness(simple.readiness),
-                camera: {...simple.camera, debug: true},
+                camera: {...simple.camera, debug: false},
                 marker: simple.marker,
                 trace: simple.trace,
                 progression: simple.presentation.progression,

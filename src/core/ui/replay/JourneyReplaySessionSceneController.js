@@ -831,9 +831,14 @@ export const bindRenderer = (mode, ) => {
                     }
                     state.lastPlaybackUpdateProgressKey = null
                     traceStep('set-tolerance-zone-visible.begin')
-                    call.setToleranceZoneOverlayVisible(true)
                     const startCameraSettings = currentJourneyReplayCameraSettings()
-                    call.updateToleranceZoneOverlay(startCameraSettings.hysteresis)
+                    call.setToleranceZoneOverlayVisible(startCameraSettings.debug === true)
+                    if (startCameraSettings.debug === true) {
+                        call.updateToleranceZoneOverlay(startCameraSettings.hysteresis)
+                    }
+                    else {
+                        call.removeToleranceZoneOverlay()
+                    }
                     traceStep('set-tolerance-zone-visible.end')
                     traceStep('hide-journey-toolbar.begin')
                     call.hideJourneyToolbarVisibility()

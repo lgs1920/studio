@@ -24,7 +24,7 @@ import {isResolvedReplayFrameIntent} from './ReplayFrameIntent'
 import {attachReplayFrameIntent, publishReplayFrameState} from './ReplayFramePublisher'
 import {createReplayRenderModeContract} from './ReplayRenderModeContract'
 import {getJourneyReplaySettings, normalizeJourneyReplayCamera} from './JourneyReplayProgressionStyle'
-import {isJourneyReplayBasicMode, REPLAY_USER_MODE_BASIC} from './ReplayUserModeConstants'
+import {isJourneyReplayBasicMode} from './ReplayUserModeConstants'
 
 /**
  * Converts a value to a finite number.
@@ -257,7 +257,7 @@ export const replayStore = () => globalThis.lgs?.stores?.replay
  *
  * Simple preparation updates the runtime camera while effective settings may
  * still reflect the configured values. Prefer the prepared camera during that
- * phase and force camera diagnostics in Basic mode.
+ * phase while disabling diagnostics throughout Simple Replay.
  *
  * @param {Object} [options] - Replay settings resolution options.
  * @returns {Object} Normalized camera settings for the current Replay.
@@ -272,7 +272,7 @@ export const currentJourneyReplayCameraSettings = (options = {}) => {
 
     return normalizeJourneyReplayCamera({
         ...camera,
-        debug: settings.userMode === REPLAY_USER_MODE_BASIC || camera.debug === true,
+        debug: !isJourneyReplayBasicMode() && camera.debug === true,
     })
 }
 

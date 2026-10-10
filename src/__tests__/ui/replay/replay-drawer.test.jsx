@@ -692,18 +692,16 @@ describe('JourneyReplayDrawer', () => {
         })
     })
 
-    it('forces Basic Replay camera diagnostics even when the persisted switch is off', async () => {
-        globalThis.lgs.settings.ui.replay.simple = {camera: {...defaultJourneyReplaySettings().camera, debug: false}}
+    it('hides camera diagnostics in Simple Replay even when they are persisted as enabled', async () => {
+        globalThis.lgs.settings.ui.replay.simple = {camera: {...defaultJourneyReplaySettings().camera, debug: true}}
         globalThis.lgs.settings.ui.replay.userMode = 'basic'
         globalThis.lgs.stores.replay.userMode = 'basic'
+        globalThis.lgs.stores.replay.camera.debug = true
         const view = render(<JourneyReplayDrawer/>)
         fireEvent.click(view.getByRole('button', {name: 'Advanced camera setup'}))
 
-        const debugSwitch = await view.findByLabelText('Debug camera')
-        expect(debugSwitch.checked).toBe(true)
-        expect(debugSwitch.disabled).toBe(true)
-        expect(globalThis.lgs.settings.ui.replay.simple.camera.debug).toBe(false)
-        expect(globalThis.lgs.stores.replay.camera.debug).toBe(true)
+        expect(view.queryByLabelText('Debug camera')).toBeNull()
+        expect(view.queryByRole('heading', {name: 'Diagnostics', level: 4})).toBeNull()
     })
 
     it('applies the camera angle slider without mutating the Cesium scene', async () => {
