@@ -2,7 +2,7 @@
 
 Status: current implementation inventory
 
-Date: 2026-09-30
+Date: 2026-10-10
 
 ## Purpose
 
@@ -37,7 +37,10 @@ Only dragging the camera icon adjusts its azimuth, while the cone tip adjusts
 height. During preparation, dragging the simulated-route arrow changes the
 visible source-trace distance from 60 to 1,200 metres. The complete DOM guide is
 hidden while either route endpoint is outside the viewport or terrain-occluded.
-Start/stop clips can override the camera for their own phases.
+Simple Replay disables camera diagnostics and adds a fixed four-second
+trace-centroid focus phase after playback. Expert Replay exposes the camera
+diagnostics setting and uses configured start/stop clips that can override the
+camera for their own phases.
 
 Simple and Expert Replay recording use the deferred MP4 exporter, publish
 deterministic frame progress to the Replay monitor, and hand the completed MP4

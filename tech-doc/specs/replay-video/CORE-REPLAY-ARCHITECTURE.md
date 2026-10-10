@@ -72,13 +72,16 @@ earlier preview, while retaining its normal-camera return snapshot. Recording
 cleanup cannot persist the older baseline over newer preparation edits. Pending
 cleanup also preserves edits made while a new preparation is active, before
 that preparation has been validated.
-Simple Replay forces runtime camera diagnostics, including when persisted or
-prepared settings specify `debug: false` and recording synchronization is off.
+Simple Replay disables camera diagnostics, including when persisted or prepared
+settings enable them. Expert Replay exposes the diagnostics setting.
 Diagnostics label ground offset separately from absolute Replay height.
 Recording diagnostics report the altitude mode, configured pitch, altitude,
 and angle alongside the rendered marker height and applied Cesium entry pose.
 Deferred export context uses Replay entry state only and never the normal return
 snapshot or an arbitrary live map view.
+
+Simple Replay adds a fixed four-second trace-centroid focus phase after its
+playback. Expert Replay uses its configured start and stop clips.
 
 ## Functional architecture
 
