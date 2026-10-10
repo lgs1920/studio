@@ -259,6 +259,8 @@ export const prepareReplayCamera = async (mode, {
     if (!journey) {
         return false
     }
+    // Flush a pending wheel/drag edit before capturing the preparation settings.
+    call.updateCameraFromCesiumControls?.()
     const store = replayStore()
     const simplePreparation = isJourneyReplayBasicMode()
         && (store?.simplePreparationActive === true

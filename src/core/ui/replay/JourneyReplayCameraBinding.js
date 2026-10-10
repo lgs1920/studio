@@ -382,6 +382,7 @@ export const bindMarkerInteractions = (mode) => {
             if (!preparation && !isJourneyReplayCameraActive(replayStore())) return
             if (preparation && pointer && !state.cameraPointerActive) {
                 state.preparationPointerPitch = finiteNumber(camera.pitch)
+                state.preparationPointerHeight = finiteNumber(camera.positionCartographic?.height)
             }
             if (state.suppressPlaybackCameraSync) {
                 if (!pointer) {
@@ -404,7 +405,7 @@ export const bindMarkerInteractions = (mode) => {
             state.cameraUserAdjusting = true
             call.startCameraLiveSyncLoop()
         }
-        const manualEnd = ({immediate = false} = {}) => {
+        const manualEnd = ({immediate = false, deferPreparation = false} = {}) => {
             if (!state.cameraPointerActive && !state.cameraUserAdjusting) {
                 return
             }
@@ -434,13 +435,14 @@ export const bindMarkerInteractions = (mode) => {
             }
             const finish = () => {
                 state.cameraManualInteractionTimer = null
-                state.cameraUserAdjusting = false
                 call.updateCameraFromCesiumControls({userInteraction: true})
+                state.cameraUserAdjusting = false
                 state.preparationPointerPitch = null
+                state.preparationPointerHeight = null
                 refreshToleranceCameraAfterManualMove()
                 call.stopCameraLiveSyncLoop()
             }
-            if (immediate || preparation) {
+            if (immediate || (preparation && !deferPreparation)) {
                 finish()
                 return
             }
@@ -475,7 +477,8 @@ export const bindMarkerInteractions = (mode) => {
         const mouseUp = () => manualEnd()
         const wheel = () => {
             manualStart({pointer: true})
-            manualEnd()
+            // Cesium applies wheel zoom on its next scene update, after this event.
+            manualEnd({deferPreparation: true})
         }
         const listenerOptions = {passive: true, capture: true}
         camera.changed?.addEventListener?.(cameraChanged)

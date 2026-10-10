@@ -100,6 +100,52 @@ afterEach(() => {
 })
 
 describe('Replay with the real Cesium camera', () => {
+    it.each(['constant', 'ground-offset'])('retains mouse-prepared H3454 / P-30 in Simple recording with %s altitude', async altitudeMode => {
+        const {camera, mode, journey, settings} = installScene({userMode: 'basic', terrainHeight: 2969, altitude: 485, pitch: -45, cameraAngle: 65})
+        settings.simple.camera.altitudeMode = altitudeMode
+        journey.replay.simple.camera.altitudeMode = altitudeMode
+        lgs.stores.replay.camera.altitudeMode = altitudeMode
+        vi.useFakeTimers()
+        try {
+            await mode.enterReplayPreparation({journey})
+            const canvas = lgs.viewer.canvas
+            canvas.dispatchEvent(new MouseEvent('pointerdown', {bubbles: true}))
+            camera.setView({destination: Cartesian3.fromDegrees(2, 47.995, 3454), orientation: {heading: 1.7, pitch: -Math.PI / 6, roll: 0}})
+            canvas.dispatchEvent(new MouseEvent('pointerup', {bubbles: true}))
+            expect(lgs.stores.replay.camera).toMatchObject({pitch: -30, altitude: altitudeMode === 'constant' ? 3454 : 485, altitudeMode, cameraAngle: 65})
+            await mode.prepareReplayCamera()
+            await mode.preparePlaybackSceneForExport()
+            const target = Cartesian3.fromDegrees(2, 48, 2969)
+            const local = Matrix4.inverseTransformation(Transforms.eastNorthUpToFixedFrame(target), new Matrix4())
+            const direction = Matrix4.multiplyByPointAsVector(local, camera.directionWC, new Cartesian3())
+            expect(Math.asin(direction.z)).toBeCloseTo(-Math.PI / 6, 8)
+            expect(camera.positionCartographic.height).toBeCloseTo(3454, 0)
+        }
+        finally {
+            mode.dispose()
+            await mode.waitForSceneRestore()
+            vi.useRealTimers()
+        }
+    })
+
+    it('flushes pending mouse wheel height before Record without changing pitch or cone angle', async () => {
+        const {camera, mode, journey} = installScene({userMode: 'basic', pitch: -30, altitude: 485, cameraAngle: 65})
+        vi.useFakeTimers()
+        try {
+            await mode.enterReplayPreparation({journey})
+            lgs.viewer.canvas.dispatchEvent(new WheelEvent('wheel'))
+            // Cesium applies wheel movement after dispatch, on the scene update.
+            camera.setView({destination: Cartesian3.fromDegrees(2, 47.995, 3454), orientation: {heading: camera.heading, pitch: camera.pitch, roll: camera.roll}})
+            await mode.prepareReplayCamera()
+            expect(lgs.stores.replay.camera).toMatchObject({altitude: 3454, pitch: -30, cameraAngle: 65})
+        }
+        finally {
+            mode.dispose()
+            await mode.waitForSceneRestore()
+            vi.useRealTimers()
+        }
+    })
+
     it.each([
         ['basic', 'playback'], ['basic', 'export'],
         ['expert', 'playback'], ['expert', 'export'],

@@ -669,7 +669,7 @@ export const persistCameraSettings =  (mode, updates) => {
 /** Keep normal Cesium navigation outside persisted Replay configuration. */
 export const updateCameraSettingsFromCesiumControls = () => null
 
-/** Accept an intentional preparation mouse tilt without importing map height or heading. */
+/** Commit intentional preparation pitch and height edits in the selected altitude mode. */
 export const updateCameraFromCesiumControls = mode => {
     const state = mode[JOURNEY_REPLAY_INTERNAL_STATE]
     const call = mode[JOURNEY_REPLAY_INTERNAL_CALL]
@@ -683,16 +683,28 @@ export const updateCameraFromCesiumControls = mode => {
     }
     const camera = globalThis.lgs?.viewer?.camera ?? globalThis.lgs?.camera
     const pitch = finiteNumber(camera?.pitch)
-    if (pitch === null || Math.abs(pitch - state.preparationPointerPitch) < 1e-7) {
+    const height = finiteNumber(camera?.positionCartographic?.height)
+    const pitchChanged = pitch !== null && Math.abs(pitch - state.preparationPointerPitch) >= 1e-7
+    const heightChanged = height !== null && state.preparationPointerHeight !== null
+        && state.preparationPointerHeight !== undefined && Math.abs(height - state.preparationPointerHeight) >= 0.5
+    if (!pitchChanged && !heightChanged) {
         return
     }
     const current = currentJourneyReplayCameraSettings()
-    const nextPitch = clamp(Math.round(CesiumMath.toDegrees(pitch)), -89, -5)
-    if (nextPitch === current.pitch) {
+    const nextPitch = pitchChanged ? clamp(Math.round(CesiumMath.toDegrees(pitch)), -89, -5) : current.pitch
+    const sample = state.replayPreparationSample ?? replay?.sample
+    const markerHeight = sample ? finiteNumber(call.markerRenderHeightForSample?.(sample)) : null
+    const requestedAltitude = !heightChanged
+        ? current.altitude
+        : current.altitudeMode === REPLAY_CAMERA_ALTITUDE_GROUND_OFFSET
+            ? markerHeight === null ? current.altitude : height - markerHeight
+            : height
+    const altitude = clamp(Math.round(requestedAltitude), 10, 100000)
+    if (nextPitch === current.pitch && altitude === current.altitude) {
         return
     }
-    call.persistCameraSettings({...current, pitch: nextPitch})
-    console.info(`[Replay camera] preparation setting update | source=mouse pitch=${nextPitch} altitude=${current.altitude} angle=${current.cameraAngle}`)
+    call.persistCameraSettings({...current, pitch: nextPitch, altitude})
+    console.info(`[Replay camera] preparation setting update | source=mouse pitch=${nextPitch} altitude=${altitude} mode=${current.altitudeMode} cesiumHeight=${height} markerHeight=${markerHeight} angle=${current.cameraAngle}`)
     call.refreshReplayDiagnosticsOverlay?.()
 }
 
