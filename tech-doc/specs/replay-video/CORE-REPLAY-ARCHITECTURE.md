@@ -22,9 +22,63 @@ Both modes use the configured Replay camera and the same playback and MP4
 export path. The current camera configuration controls heading/angle, pitch,
 and camera height. Cesium range (the perceived zoom) is derived from camera
 height and pitch, then carried in the same camera command used for interactive
-playback and export. Start/stop clips may define their own camera movement.
+playback and export. Simple tracking resolves its Navigation marker policy from the active Simple
+configuration, even when the separate Expert marker setting is trace-only.
+Startup and live camera commands aim at the same rendered terrain marker;
+GPX elevation does not replace that target. Supported pitch values, including
+`-89°`, remain unchanged by live tracking and deterministic pose resolution.
+When a configured absolute altitude falls below the rendered target, entry and
+tracking use the target's minimum terrain clearance before deriving range from
+the requested pitch. They never borrow the normal map camera's distance. This
+safety adjustment leaves the persisted altitude and altitude mode unchanged.
+Start/stop clips may define their own camera movement.
 Completed videos open in the standard preview and sharing dialog.
 `ReplayMediaCapture` handles screenshots and completed-media handoff.
+
+## Normal map and Replay camera ownership
+
+Persisted Replay camera settings belong to the selected journey and are edited
+through Replay controls. During video preparation, explicit mouse tilt and zoom
+on the map also edit Replay pitch and height. Gesture-start values distinguish
+these inputs from automatic camera movements and unchanged gestures. Pointer
+release commits drag edits synchronously, and preparation flushes pending wheel
+updates before Record. Constant altitude stores absolute prepared height. Ground
+offset stores that height minus the rendered Replay target height. Neither input
+rewrites the cone angle. Ordinary Cesium navigation and playback/capture
+camera feedback never write Replay settings.
+Entering Simple or Expert video preparation stops and awaits an existing normal
+map orbit before framing the canonical journey departure in a static
+North-oriented view with Replay pitch and height. This explicit entry boundary
+waits for prior scene restoration and successful preparation, and rejects stale
+transitions. It never supplies normal camera values to Replay settings. Subsequent preparation computes the Replay guide without moving,
+locking, or capturing the normal map camera or changing its geographic pivot. Drawer refreshes and
+timeline seeks cannot apply a camera update without a playback camera lease;
+the session call bridge enforces this boundary.
+
+At playback or capture start, the session leases its physical render-target
+camera and saves the current normal view separately from the Replay entry pose.
+Replay applies its configured angle, pitch, and height before start clips.
+The normal camera manager suspends reads and persistence while the main camera
+is leased. A lifecycle revision rejects asynchronous reads that overlap a lease.
+Isolated export cameras acquire their own leases and leave main-view persistence
+independent.
+
+Completion, cancellation, and disposal restore the saved world-space position,
+direction, up vector, Cesium reference frame, and map pivot before
+releasing ownership. No journey focus flight runs during handback. Reentrant starts retain the original return view. A stale
+session cannot restore or release a camera borrowed by a newer session.
+A successful new preparation invalidates the Replay settings baseline from an
+earlier preview, while retaining its normal-camera return snapshot. Recording
+cleanup cannot persist the older baseline over newer preparation edits. Pending
+cleanup also preserves edits made while a new preparation is active, before
+that preparation has been validated.
+Simple Replay forces runtime camera diagnostics, including when persisted or
+prepared settings specify `debug: false` and recording synchronization is off.
+Diagnostics label ground offset separately from absolute Replay height.
+Recording diagnostics report the altitude mode, configured pitch, altitude,
+and angle alongside the rendered marker height and applied Cesium entry pose.
+Deferred export context uses Replay entry state only and never the normal return
+snapshot or an arbitrary live map view.
 
 ## Functional architecture
 
@@ -159,7 +213,21 @@ the working export canvas. This removes the intermediate full-frame copy after
 Cesium composition. The separate stable encoder canvas remains necessary for
 codec keep-alive submissions while the next frame is being prepared.
 
-### Replay transport and recording monitor
+### Recording preparation and map controls
+
+During Simple preparation, the runtime camera is authoritative for the drawer
+and partial cone edits. Duration or style hydration must not replace it with an
+older journey camera. Successful preparation persists that validated camera
+before recording transitions, so releasing the preparation flag cannot change
+the height, pitch, or angle used by export.
+
+The Record action awaits completion of any normal map rotation before resolving
+the preparation camera and crop. Journey Toolbar rendering is masked throughout
+pre-recording, recording, export, and finalization without changing its persisted
+visibility setting. Replay scene cleanup cannot expose it during capture. After
+capture ends, the toolbar returns only when its saved visibility allows it.
+
+## Replay transport and recording monitor
 
 `ReplayRecordingMonitorWidget` is the single transient Replay surface outside the
 captured widget board and is hosted by the generic `Widget` component. During

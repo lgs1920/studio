@@ -41,9 +41,20 @@ Preserve these boundaries:
   compatibility projections, not new replay clocks.
 - Qualification and readiness work must be cancellable and bounded; slider
   interaction must not synchronously compile a complete trajectory.
-- Replay camera preparation owns its keyboard adjustments only while the
-  preparation surface is active, and a preparation transition must restore the
-  main-scene pivot without overwriting a newer camera update.
+- Follow [the normal Cesium and Replay camera ownership rules](../../PROJECT_RULES.md#normal-cesium-and-replay-camera-ownership).
+  Entering video preparation stops and awaits normal map rotation and presents
+  a North-oriented view of the canonical departure using Replay pitch and height.
+  Only this explicit entry boundary frames the map, after successful preparation
+  and stale-transition checks.
+  Subsequent preparation edits and guide refreshes do not move the map camera
+  or infer Replay settings from that normal view. Playback saves the current normal view before applying the configured
+  Replay pose, then restores that view and its Cesium reference frame on every terminal path. Keep the normal
+  return snapshot separate from the Replay entry pose and export context.
+  During video preparation only, explicit mouse tilt and zoom on the map are Replay pitch and height inputs. Compare against gesture-start values and flush pending wheel changes before Record. Preserve the cone angle. Constant altitude stores absolute prepared height and ground offset stores height minus the rendered Replay target height. Automatic camera events, unchanged gestures, playback/capture, and ordinary map navigation never persist Replay configuration. Suspend normal
+  map persistence while Replay borrows its camera and reject overlapping async
+  reads. Validate public drawer refresh, timeline seek, start, pause, resume, stop,
+  and disposal with a real Cesium `Camera`. Test repeated starts, stale cleanup,
+  cancellation, and isolated export.
 
 Add focused tests for every fix or feature. If a change can alter generated
 pixels, camera motion, trace progression, timing, or composition, do not report
